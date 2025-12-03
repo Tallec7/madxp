@@ -66,25 +66,6 @@
             }
         }
 
-        &.program-mode-btn {
-            color: #7c3aed;
-            border-color: #7c3aed;
-            background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
-            font-size: 1.1em;
-            font-weight: bold;
-            padding: 20px;
-            margin: 20px 10px;
-            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
-
-            &:hover, &:focus {
-                background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
-                border-color: #6d28d9;
-                box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
-                transform: translateY(-2px);
-                transition: all 0.2s;
-            }
-        }
-
         &.back {
             border: 0;
             color: #525151;

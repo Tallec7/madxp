@@ -36,8 +36,4 @@ export class SocketService {
       console.error('socket service : not called on due to not initialized');
     }
   }
-
-  public sendCommand(command: Command) {
-    this.emit('command', command);
-  }
 }
