@@ -11,7 +11,9 @@ const server = http.createServer(app);
 const io = socketIO(server);
 
 app.use(express.static(path.resolve(__dirname)));
-app.all('/{*any}', (req, res) => res.status(200).sendFile(`/`, { root: path.resolve(__dirname) }));
+app.get('*', (req, res) => {
+	res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 io.on('connection', (socket) => {
 	console.log('Télécommande connectée');

@@ -1,5 +1,6 @@
 import { Injectable } from "@angular/core";
 import { Command } from "../interfaces/command.interface";
+import { environment } from "../../environments/environment";
 
 declare let io: any;
 
@@ -9,7 +10,8 @@ export class SocketService {
 
   public initialize() {
     try {
-      this.socket = io();
+      console.log('Connecting to socket server:', environment.socketUrl);
+      this.socket = io(environment.socketUrl);
     } catch (e) {
       if (e instanceof ReferenceError) {
           console.error('socket service : not initialized, reference error')
