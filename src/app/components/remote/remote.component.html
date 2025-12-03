@@ -8,6 +8,11 @@
         <span class="material-icons">video_camera_back</span>
         Boucle partenaires
     </button>
+
+    <button class="program-mode-btn" (click)="goToProgram()">
+        <span class="material-icons">playlist_play</span>
+        Mode Programmation
+    </button>
 }
 
 @for(category of !selectedSubCategory ? configuration.categories : selectedSubCategory?.subCategories; track $index) {

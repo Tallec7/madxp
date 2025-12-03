@@ -1,0 +1,258 @@
+<div class="program-container">
+  <!-- Header avec bouton retour -->
+  <header class="program-header">
+    <button class="back-button" (click)="goBack()">
+      <span class="icon">←</span>
+      Retour
+    </button>
+    <h1 class="header-title">Mode Programmation</h1>
+    <div class="header-spacer"></div>
+  </header>
+
+  <div class="program-content">
+    <!-- Liste des programmes (sidebar) -->
+    <aside class="programs-sidebar">
+      <div class="sidebar-header">
+        <h2>Programmes</h2>
+        <button class="btn-create" (click)="createNewProgram()">
+          + Nouveau
+        </button>
+      </div>
+
+      <div class="programs-list">
+        <div
+          *ngFor="let program of programs"
+          class="program-card"
+          [class.active]="selectedProgram?.id === program.id"
+          [class.playing]="isProgramPlaying(program.id)"
+          (click)="selectProgram(program)"
+        >
+          <div class="program-card-header">
+            <span class="program-icon">{{ getProgramTypeIcon(program.type) }}</span>
+            <div class="program-info">
+              <h3 class="program-name">{{ program.name }}</h3>
+              <p class="program-meta">
+                {{ program.items.length }} vidéo{{ program.items.length !== 1 ? 's' : '' }}
+                <span *ngIf="program.items.length > 0">
+                  · {{ formatDuration(getTotalDuration(program)) }}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <div class="program-card-footer" *ngIf="isProgramPlaying(program.id)">
+            <span class="playing-indicator">
+              <span class="pulse"></span>
+              En lecture
+            </span>
+          </div>
+
+          <button
+            class="btn-delete-program"
+            (click)="deleteProgram(program); $event.stopPropagation()"
+            title="Supprimer le programme"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Zone principale d'édition -->
+    <main class="program-editor" *ngIf="selectedProgram">
+      <!-- En-tête du programme sélectionné -->
+      <div class="editor-header">
+        <div class="editor-title-section">
+          <input
+            *ngIf="isEditingProgram || isCreatingProgram"
+            type="text"
+            [(ngModel)]="selectedProgram.name"
+            class="program-name-input"
+            placeholder="Nom du programme"
+          />
+          <h2 *ngIf="!isEditingProgram && !isCreatingProgram" class="editor-title">
+            {{ selectedProgram.name }}
+          </h2>
+
+          <div class="editor-options">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="selectedProgram.autoPlay" (change)="savePrograms()" />
+              <span>Lecture auto</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="selectedProgram.loop" (change)="savePrograms()" />
+              <span>Boucle</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="editor-actions">
+          <button
+            *ngIf="!isEditingProgram && !isCreatingProgram"
+            class="btn-secondary"
+            (click)="editProgram()"
+          >
+            ✏️ Modifier
+          </button>
+
+          <button
+            *ngIf="isEditingProgram"
+            class="btn-primary"
+            (click)="saveProgramEdit()"
+          >
+            ✅ Enregistrer
+          </button>
+
+          <button
+            *ngIf="isCreatingProgram"
+            class="btn-primary"
+            (click)="saveNewProgram()"
+          >
+            ✅ Créer
+          </button>
+
+          <button
+            *ngIf="isCreatingProgram"
+            class="btn-secondary"
+            (click)="cancelNewProgram()"
+          >
+            ❌ Annuler
+          </button>
+
+          <button
+            *ngIf="!isProgramPlaying(selectedProgram.id) && selectedProgram.items.length > 0"
+            class="btn-play"
+            (click)="playProgram(selectedProgram)"
+          >
+            ▶️ Lancer
+          </button>
+
+          <button
+            *ngIf="isProgramPlaying(selectedProgram.id)"
+            class="btn-stop"
+            (click)="stopProgram()"
+          >
+            ⏹️ Arrêter
+          </button>
+        </div>
+      </div>
+
+      <!-- Liste des vidéos du programme (drag & drop) -->
+      <div class="program-playlist">
+        <h3 class="section-title">Playlist ({{ selectedProgram.items.length }})</h3>
+
+        <div *ngIf="selectedProgram.items.length === 0" class="empty-state">
+          <p class="empty-icon">📹</p>
+          <p class="empty-text">Aucune vidéo dans ce programme</p>
+          <p class="empty-hint">Ajoutez des vidéos depuis la bibliothèque ci-dessous</p>
+        </div>
+
+        <div class="playlist-items">
+          <div
+            *ngFor="let item of selectedProgram.items; let i = index"
+            class="playlist-item"
+            [class.dragging]="draggedItemIndex === i"
+            draggable="true"
+            (dragstart)="onDragStart(i)"
+            (dragover)="onDragOver($event)"
+            (drop)="onDrop($event, i)"
+            (dragend)="onDragEnd()"
+          >
+            <span class="drag-handle">⋮⋮</span>
+            <span class="item-number">{{ i + 1 }}.</span>
+            <div class="item-info">
+              <span class="item-name">{{ item.videoName }}</span>
+              <span class="item-meta">{{ item.category }} › {{ item.subcategory }}</span>
+            </div>
+
+            <div class="item-actions">
+              <button
+                class="btn-icon"
+                (click)="moveItemUp(i)"
+                [disabled]="i === 0"
+                title="Monter"
+              >
+                ↑
+              </button>
+              <button
+                class="btn-icon"
+                (click)="moveItemDown(i)"
+                [disabled]="i === selectedProgram.items.length - 1"
+                title="Descendre"
+              >
+                ↓
+              </button>
+              <button
+                class="btn-icon btn-remove"
+                (click)="removeItemFromProgram(item.id)"
+                title="Retirer"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bibliothèque de vidéos -->
+      <div class="video-library">
+        <h3 class="section-title">Bibliothèque de vidéos</h3>
+
+        <!-- Sélection de catégorie -->
+        <div class="category-selector">
+          <label class="selector-label">Catégorie :</label>
+          <div class="category-buttons">
+            <button
+              *ngFor="let category of availableCategories"
+              class="category-btn"
+              [class.active]="selectedCategory === category"
+              (click)="onCategorySelect(category)"
+            >
+              {{ category }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Sélection de sous-catégorie -->
+        <div class="subcategory-selector" *ngIf="selectedCategory">
+          <label class="selector-label">Sous-catégorie :</label>
+          <div class="subcategory-buttons">
+            <button
+              *ngFor="let subcategory of getSubcategories(selectedCategory)"
+              class="subcategory-btn"
+              [class.active]="selectedSubCategory === subcategory"
+              (click)="onSubCategorySelect(subcategory)"
+            >
+              {{ subcategory }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Liste des vidéos disponibles -->
+        <div class="available-videos" *ngIf="availableVideos.length > 0">
+          <div
+            *ngFor="let video of availableVideos"
+            class="video-item"
+            (click)="addVideoToProgram(video)"
+          >
+            <span class="video-icon">🎬</span>
+            <span class="video-name">{{ video.name }}</span>
+            <button class="btn-add">+ Ajouter</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Message si aucun programme sélectionné -->
+    <main class="program-editor empty" *ngIf="!selectedProgram">
+      <div class="empty-state-large">
+        <p class="empty-icon-large">📋</p>
+        <h2>Sélectionnez un programme</h2>
+        <p class="empty-text-large">
+          Choisissez un programme dans la liste de gauche<br />
+          ou créez-en un nouveau pour commencer
+        </p>
+      </div>
+    </main>
+  </div>
+</div>

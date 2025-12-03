@@ -1,0 +1,47 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="logo-section">
+      <h1 class="app-title">NÉOPRO</h1>
+      <p class="app-subtitle">Système de contrôle d'affichage</p>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-group">
+        <label for="password" class="form-label">Mot de passe</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          [(ngModel)]="password"
+          (input)="onPasswordChange()"
+          [disabled]="isLoading"
+          class="form-input"
+          placeholder="Entrez le mot de passe"
+          autocomplete="current-password"
+          autofocus
+        />
+      </div>
+
+      <div class="error-message" *ngIf="errorMessage">
+        <span class="error-icon">⚠️</span>
+        {{ errorMessage }}
+      </div>
+
+      <button
+        type="submit"
+        class="submit-button"
+        [disabled]="isLoading || !password"
+      >
+        <span *ngIf="!isLoading">Se connecter</span>
+        <span *ngIf="isLoading" class="loading-spinner">
+          <span class="spinner"></span>
+          Connexion...
+        </span>
+      </button>
+    </form>
+
+    <div class="footer">
+      <p class="footer-text">Kalon Partners - Handball</p>
+    </div>
+  </div>
+</div>

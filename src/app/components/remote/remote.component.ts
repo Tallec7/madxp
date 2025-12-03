@@ -61,4 +61,8 @@ export class RemoteComponent implements OnInit {
     console.log('back');
     this.location.back();
   }
+
+  public goToProgram() {
+    this.router.navigate(['/program']);
+  }
 }
