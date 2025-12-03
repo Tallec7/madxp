@@ -8,7 +8,7 @@ const server = http.createServer(app);
 // Configuration CORS pour permettre les connexions depuis votre site Apache
 const io = socketIO(server, {
 	cors: {
-		origin: "*", // En production, remplacez par l'URL exacte de votre site Apache
+		origin: ["https://neopro.kalonpartners.bzh", "http://localhost:4200"], // Votre site en production + dev local
 		methods: ["GET", "POST"],
 		credentials: true
 	}
