@@ -14,10 +14,21 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Mode admin (real ou demo)
+ADMIN_MODE="real"
+if [[ "$1" == "demo" || "$1" == "--demo" ]]; then
+    ADMIN_MODE="demo"
+fi
+
+ROOT_DIR="$(pwd)"
+LOG_DIR="${ROOT_DIR}/logs"
+mkdir -p "$LOG_DIR"
+
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║         NEOPRO - LOCAL DEVELOPMENT SETUP                      ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
+echo -e "${BLUE}⚙️  Admin mode:${NC} ${ADMIN_MODE}"
 
 # Vérifier Node.js
 if ! command -v node &> /dev/null; then
@@ -104,15 +115,21 @@ else
 fi
 
 # 2. Démarrer l'interface admin (mode démo)
-echo -e "${GREEN}[2/3]${NC} Démarrage Admin Interface - MODE DEMO (port 8080)..."
+echo -e "${GREEN}[2/3]${NC} Démarrage Admin Interface (port 8080)..."
 cd raspberry/admin
-node admin-server-demo.js > ../../logs/admin.log 2>&1 &
+if [ "$ADMIN_MODE" = "demo" ]; then
+    echo "→ Mode DEMO (données mockées, pas d'écriture disque)"
+    node admin-server-demo.js > ../../logs/admin.log 2>&1 &
+else
+    echo "→ Mode RÉEL (uploads stockés dans ${ROOT_DIR}/public/videos)"
+    NEOPRO_DIR="${ROOT_DIR}/public" node admin-server.js > ../../logs/admin.log 2>&1 &
+fi
 PID_ADMIN=$!
 cd ../..
 sleep 2
 
 if ps -p $PID_ADMIN > /dev/null; then
-    echo -e "${GREEN}✓${NC} Admin Interface started (PID: $PID_ADMIN)"
+    echo -e "${GREEN}✓${NC} Admin Interface started (PID: $PID_ADMIN, mode: ${ADMIN_MODE})"
 else
     echo -e "${RED}❌ Échec démarrage Admin${NC}"
     exit 1
@@ -139,7 +156,12 @@ echo "   • Remote: http://localhost:4200/remote"
 echo ""
 echo -e "${BLUE}🎛️  Admin Interface (MODE DEMO):${NC}"
 echo "   • Dashboard: http://localhost:8080"
-echo "   • Données mockées pour démo"
+if [ "$ADMIN_MODE" = "demo" ]; then
+    echo "   • Données mockées, aucun fichier écrit (lancer ./dev-local.sh real pour tester les uploads)"
+else
+    echo "   • Mode réel, uploads copiés dans ${ROOT_DIR}/public/videos/"
+    echo "   • Lancer ./dev-local.sh demo pour repasser en données mockées"
+fi
 echo ""
 echo -e "${BLUE}🔌 Socket.IO Server:${NC}"
 echo "   • Port: 3000"

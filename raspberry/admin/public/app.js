@@ -72,7 +72,9 @@ function switchTab(tab) {
 async function loadDashboard() {
     try {
         const response = await fetch('/api/system');
+        console.log('[admin-ui] GET /api/system -> status', response.status);
         const data = await response.json();
+        console.log('[admin-ui] /api/system payload', data);
 
         if (data.error) {
             console.error('Error loading system info:', data.error);
@@ -130,6 +132,11 @@ async function loadDashboard() {
 }
 
 function updateServicesGrid(services) {
+    if (!services || typeof services !== 'object') {
+        console.warn('[admin-ui] Services data missing or invalid:', services);
+        return;
+    }
+
     const grid = document.getElementById('services-grid');
     grid.innerHTML = '';
 
@@ -150,7 +157,9 @@ function updateServicesGrid(services) {
 async function loadVideos() {
     try {
         const response = await fetch('/api/videos');
+        console.log('[admin-ui] GET /api/videos -> status', response.status);
         const data = await response.json();
+        console.log('[admin-ui] /api/videos payload', data);
 
         const list = document.getElementById('videos-list');
         list.innerHTML = '';
@@ -359,6 +368,11 @@ async function uploadVideo() {
     }
 
     const formData = new FormData(form);
+    console.log('[admin-ui] Upload video request', {
+        category: formData.get('category'),
+        subcategory: formData.get('subcategory'),
+        file: fileInput.files[0]?.name
+    });
 
     progressDiv.style.display = 'block';
     progressBar.style.width = '0%';
@@ -370,7 +384,9 @@ async function uploadVideo() {
             body: formData
         });
 
+        console.log('[admin-ui] POST /api/videos/upload -> status', response.status);
         const data = await response.json();
+        console.log('[admin-ui] /api/videos/upload payload', data);
 
         if (data.success) {
             progressBar.style.width = '100%';

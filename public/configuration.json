@@ -4,71 +4,160 @@
     },
     "version": "1.0",
     "sponsors": [
-        { "name": "Boucle partenaires", "path": "videos/BOUCLE_PARTENAIRES/BOUCLE_PARTENAIRES_H264.mp4", "type": "video/mp4" } 
+        {
+            "name": "Boucle partenaires",
+            "path": "videos/BOUCLE_PARTENAIRES/BOUCLE_PARTENAIRES_H264.mp4",
+            "type": "video/mp4"
+        }
     ],
-    "categories": [{
-        "id": "Focus-partenaires",
-        "name": "Focus partenaires",
-        "videos": [
-            { "name": "Boucle partenaire H265", "path": "videos/FOCUS_PARTENAIRE/BOUCLE_PARTENAIRES_H265.mp4", "type": "video/mp4" }
-        ]
-    },
-    {
-        "id": "Info-club",
-        "name": "Info club",
-        "videos": [
-            { "name": "Octobre rose", "path": "videos/INFOS_CLUB/OCTOBRE_ROSE.mp4", "type": "video/mp4" }
-        ]
-    },
-    {
-        "id": "Match_SM1",
-        "name": "Match SM1",
-        "subCategories": [
-            { 
-                "id": "But",
-                "name": "But",
-                "videos": [
-                    { "name": "3", "path": "videos/MATCH_SM1/BUT/JOUEUR_03.mp4", "type": "video/mp4" },
-                    { "name": "5", "path": "videos/MATCH_SM1/JOUEUR_05.mp4", "type": "video/mp4" }
-                ]
-            },
-            { 
-                "id": "Jingle",
-                "name": "Jingle",
-                "videos": [
-                    { "name": "2min", "path": "videos/MATCH_SM1/JINGLE/2_MIN.mp4", "type": "video/mp4" },
-                    { "name": "Penalty", "path": "videos/MATCH_SM1/JINGLE/PENALTY.mp4", "type": "video/mp4" },
-                    { "name": "Temps-mort", "path": "videos/MATCH_SM1/JINGLE/TEMPS_MORT.mp4", "type": "video/mp4" },
-                    { "name": "Mi-temps", "path": "videos/MATCH_SM1/JINGLE/MI_TEMPS.mp4", "type": "video/mp4" },
-                    { "name": "Victoire", "path": "videos/MATCH_SM1/JINGLE/VICTOIRE.mp4", "type": "video/mp4" }
-                ]
-            }
-        ]
-    },
-    {
-        "id": "Match_SF",
-        "name": "Match SF",
-        "subCategories": [
-            { 
-                "id": "But",
-                "name": "But",
-                "videos": [
-                    { "name": "3", "path": "videos/MATCH_SF/BUT/JOUEUR_03.mp4", "type": "video/mp4" },
-                    { "name": "5", "path": "videos/MATCH_SF/BUT/JOUEUR_05.mp4", "type": "video/mp4" }
-                ]
-            },
-            { 
-                "id": "Jingle",
-                "name": "Jingle",
-                "videos": [
-                    { "name": "2min", "path": "videos/MATCH_SF/JINGLE/2_MIN.mp4", "type": "video/mp4" },
-                    { "name": "Penalty", "path": "videos/MATCH_SF/JINGLE/PENALTY.mp4", "type": "video/mp4" },
-                    { "name": "Temps-mort", "path": "videos/MATCH_SF/JINGLE/TEMPS_MORT.mp4", "type": "video/mp4" },
-                    { "name": "Mi-temps", "path": "videos/MATCH_SF/JINGLE/MI_TEMPS.mp4", "type": "video/mp4" },
-                    { "name": "Victoire", "path": "videos/MATCH_SF/JINGLE/VICTOIRE.mp4", "type": "video/mp4" }
-                ]
-            }
-        ]
-    }
+    "categories": [
+        {
+            "id": "Focus-partenaires",
+            "name": "Focus partenaires",
+            "videos": [
+                {
+                    "name": "Boucle partenaire H265",
+                    "path": "videos/FOCUS_PARTENAIRE/BOUCLE_PARTENAIRES_H265.mp4",
+                    "type": "video/mp4"
+                }
+            ]
+        },
+        {
+            "id": "Info-club",
+            "name": "Info club",
+            "videos": [
+                {
+                    "name": "Octobre rose",
+                    "path": "videos/INFOS_CLUB/OCTOBRE_ROSE.mp4",
+                    "type": "video/mp4"
+                }
+            ]
+        },
+        {
+            "id": "Match_SM1",
+            "name": "Match SM1",
+            "subCategories": [
+                {
+                    "id": "But",
+                    "name": "But",
+                    "videos": [
+                        {
+                            "name": "3",
+                            "path": "videos/MATCH_SM1/BUT/JOUEUR_03.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "5",
+                            "path": "videos/MATCH_SM1/BUT/JOUEUR_05.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "renders joueur 02m",
+                            "path": "videos/MATCH_SM1/BUT/renders_joueur_02m.mp4",
+                            "type": "video/mp4"
+                        }
+                    ]
+                },
+                {
+                    "id": "Jingle",
+                    "name": "Jingle",
+                    "videos": [
+                        {
+                            "name": "2min",
+                            "path": "videos/MATCH_SM1/JINGLE/2_MIN.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "Penalty",
+                            "path": "videos/MATCH_SM1/JINGLE/PENALTY.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "Temps-mort",
+                            "path": "videos/MATCH_SM1/JINGLE/TEMPS_MORT.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "Mi-temps",
+                            "path": "videos/MATCH_SM1/JINGLE/MI_TEMPS.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "Victoire",
+                            "path": "videos/MATCH_SM1/JINGLE/VICTOIRE.mp4",
+                            "type": "video/mp4"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "Match_SF",
+            "name": "Match SF",
+            "subCategories": [
+                {
+                    "id": "But",
+                    "name": "But",
+                    "videos": [
+                        {
+                            "name": "3",
+                            "path": "videos/MATCH_SF/BUT/JOUEUR_03.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "5",
+                            "path": "videos/MATCH_SF/BUT/JOUEUR_05.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "joueur 02",
+                            "path": "videos/MATCH_SF/BUT/joueur_02.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "vide o 44",
+                            "path": "videos/MATCH_SF/BUT/vide__o_44.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "vide omm44",
+                            "path": "videos/MATCH_SF/BUT/vide__omm44.mp4",
+                            "type": "video/mp4"
+                        }
+                    ]
+                },
+                {
+                    "id": "Jingle",
+                    "name": "Jingle",
+                    "videos": [
+                        {
+                            "name": "2min",
+                            "path": "videos/MATCH_SF/JINGLE/2_MIN.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "Penalty",
+                            "path": "videos/MATCH_SF/JINGLE/PENALTY.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "Temps-mort",
+                            "path": "videos/MATCH_SF/JINGLE/TEMPS_MORT.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "Mi-temps",
+                            "path": "videos/MATCH_SF/JINGLE/MI_TEMPS.mp4",
+                            "type": "video/mp4"
+                        },
+                        {
+                            "name": "Victoire",
+                            "path": "videos/MATCH_SF/JINGLE/VICTOIRE.mp4",
+                            "type": "video/mp4"
+                        }
+                    ]
+                }
+            ]
+        }
     ]
 }

@@ -23,6 +23,8 @@ Accessible depuis n'importe quel appareil connecté au WiFi `NEOPRO-[CLUB]`.
 - Organisation par catégories
 - Liste complète de la bibliothèque
 - Suppression de vidéos
+- Les catégories/sous-catégories sont résolues automatiquement d'après `configuration.json` (la structure peut donc varier selon chaque club)
+- Chaque upload ou suppression met à jour automatiquement `configuration.json` pour garder la télécommande synchronisée
 
 ### 📡 Réseau
 - Configuration WiFi client pour SSH distant
@@ -101,7 +103,8 @@ Environment=ADMIN_PORT=8888
 ```
 
 ### Répertoire d'installation
-Par défaut : `/home/pi/neopro`
+Par défaut : `/home/pi/neopro`.
+En développement local, le serveur détecte automatiquement `public/` si seuls les médias y existent (pour que l'upload alimente `public/videos`). Vous pouvez forcer un autre chemin avec la variable d'environnement `NEOPRO_DIR`.
 
 ## Développement
 

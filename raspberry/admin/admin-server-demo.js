@@ -9,10 +9,12 @@
  */
 
 const express = require('express');
+const multer = require('multer');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.ADMIN_PORT || 8080;
+const upload = multer();
 
 // Middleware
 app.use(express.json());
@@ -119,7 +121,8 @@ app.get('/api/system', (req, res) => {
       ...MOCK_DATA.system.cpu,
       usage: Math.floor(Math.random() * 30) + 20
     },
-    temperature: (Math.random() * 15 + 45).toFixed(1)
+    temperature: (Math.random() * 15 + 45).toFixed(1),
+    services: MOCK_DATA.services
   };
 
   res.json(data);
@@ -153,22 +156,23 @@ app.get('/api/videos', (req, res) => {
 /**
  * API: Upload vidéo (simulé)
  */
-app.post('/api/videos/upload', (req, res) => {
+app.post('/api/videos/upload', upload.single('video'), (req, res) => {
   const category = req.body.category;
   const subcategory = req.body.subcategory;
+  const filename = req.file?.originalname || 'demo-video.mp4';
 
   console.log(`[DEMO] POST /api/videos/upload - Category: ${category}, Subcategory: ${subcategory || 'none'}`);
 
   // Simuler un upload réussi
   setTimeout(() => {
     const path = subcategory
-      ? `${category}/${subcategory}/demo-video.mp4`
-      : `${category}/demo-video.mp4`;
+      ? `${category || 'Unknown'}/${subcategory}/demo-video.mp4`
+      : `${category || 'Unknown'}/demo-video.mp4`;
 
     res.json({
       success: true,
       message: 'Vidéo uploadée avec succès (mode démo)',
-      filename: 'demo-video.mp4',
+      filename,
       path: path
     });
   }, 1500);

@@ -17,7 +17,8 @@ const express = require('express');
 const multer = require('multer');
 const { exec } = require('child_process');
 const { promisify } = require('util');
-const fs = require('fs').promises;
+const fsCore = require('fs');
+const fs = fsCore.promises;
 const path = require('path');
 const os = require('os');
 
@@ -26,32 +27,349 @@ const execAsync = promisify(exec);
 // Configuration
 const app = express();
 const PORT = process.env.ADMIN_PORT || 8080;
-const NEOPRO_DIR = '/home/pi/neopro';
+const DEFAULT_NEOPRO_DIR = path.resolve(__dirname, '..', '..');
+const PUBLIC_NEOPRO_DIR = path.join(DEFAULT_NEOPRO_DIR, 'public');
+const hasRootVideos = fsCore.existsSync(path.join(DEFAULT_NEOPRO_DIR, 'videos'));
+const hasPublicVideos = fsCore.existsSync(path.join(PUBLIC_NEOPRO_DIR, 'videos'));
+// Use repo root on Raspberry Pi, fall back to /public during local dev where only public/videos exists
+const RESOLVED_NEOPRO_DIR =
+  process.env.NEOPRO_DIR ||
+  (hasRootVideos
+    ? DEFAULT_NEOPRO_DIR
+    : hasPublicVideos
+      ? PUBLIC_NEOPRO_DIR
+      : DEFAULT_NEOPRO_DIR);
+const NEOPRO_DIR = RESOLVED_NEOPRO_DIR;
+const neoproSource = process.env.NEOPRO_DIR
+  ? 'env NEOPRO_DIR'
+  : hasRootVideos
+    ? 'repo root'
+    : hasPublicVideos
+      ? 'public/'
+      : 'default repo root';
 const VIDEOS_DIR = path.join(NEOPRO_DIR, 'videos');
+const TEMP_UPLOAD_DIR = path.join(NEOPRO_DIR, 'uploads-temp');
 const LOGS_DIR = path.join(NEOPRO_DIR, 'logs');
+const CONFIG_FILE_CANDIDATES = [
+  process.env.CONFIG_PATH,
+  path.join(NEOPRO_DIR, 'configuration.json'),
+  path.join(NEOPRO_DIR, 'webapp', 'configuration.json'),
+  path.join(DEFAULT_NEOPRO_DIR, 'public', 'configuration.json'),
+  path.join(PUBLIC_NEOPRO_DIR, 'configuration.json')
+].filter((value, index, self) => value && self.indexOf(value) === index);
+const VIDEO_MAPPING_CACHE_DURATION = 60 * 1000; // 1 minute cache pour limiter les lectures disque
+let videoMappingCache = null;
+let videoMappingCacheTime = 0;
+const CONFIG_JSON_INDENT = 4;
+
+console.log(`[admin] NEOPRO_DIR resolved to ${NEOPRO_DIR} (${neoproSource})`);
+console.log(`[admin] Videos directory: ${VIDEOS_DIR}`);
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuration multer pour upload de vidéos
-const storage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const category = req.body.category || 'autres';
-    const subcategory = req.body.subcategory;
+async function resolveConfigurationPath() {
+  for (const candidate of CONFIG_FILE_CANDIDATES) {
+    try {
+      const stats = await fs.stat(candidate);
+      if (stats.isFile()) {
+        console.log('[admin] configuration.json detected at', candidate);
+        return candidate;
+      }
+    } catch (error) {
+      // Ignorer et tester la suivante
+    }
+  }
+  console.warn('[admin] Aucun configuration.json trouvé parmi', CONFIG_FILE_CANDIDATES);
+  return null;
+}
 
-    // Si sous-catégorie, créer le chemin avec sous-dossier
-    let uploadPath;
-    if (subcategory) {
-      uploadPath = path.join(VIDEOS_DIR, category, subcategory.toUpperCase());
+function sanitizeSegment(value, fallback) {
+  if (!value) {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+  return trimmed
+    .replace(/[^a-zA-Z0-9]/g, '_')
+    .replace(/_+/g, '_')
+    .toUpperCase();
+}
+
+function extractPathSegments(videoPath) {
+  if (!videoPath) {
+    return null;
+  }
+  const normalized = videoPath.replace(/\\/g, '/');
+  const withoutPrefix = normalized.startsWith('videos/')
+    ? normalized.slice('videos/'.length)
+    : normalized;
+
+  const segments = withoutPrefix.split('/').filter(Boolean);
+  if (segments.length === 0) {
+    return null;
+  }
+
+  return {
+    category: segments[0],
+    subcategory: segments.length > 1 ? segments[1] : null
+  };
+}
+
+async function loadVideoPathMapping() {
+  if (videoMappingCache && Date.now() - videoMappingCacheTime < VIDEO_MAPPING_CACHE_DURATION) {
+    return videoMappingCache;
+  }
+
+  const mapping = { categories: {}, subcategories: {} };
+
+  try {
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      console.warn('[admin] Impossible de localiser configuration.json pour déterminer les dossiers vidéo');
     } else {
-      uploadPath = path.join(VIDEOS_DIR, category);
+      const configRaw = await fs.readFile(configPath, 'utf8');
+      const config = JSON.parse(configRaw);
+      const categories = config.categories || [];
+
+      for (const category of categories) {
+        if (!category || !category.id) continue;
+        const categoryKey = category.id.trim().toLowerCase();
+        let categoryDir = null;
+
+        const directVideos = category.videos || [];
+        for (const video of directVideos) {
+          const parsed = extractPathSegments(video.path);
+          if (parsed?.category) {
+            categoryDir = parsed.category;
+            break;
+          }
+        }
+
+        const subcategories = category.subCategories || [];
+        for (const sub of subcategories) {
+          if (!sub || !sub.id) continue;
+          const subKey = `${categoryKey}::${sub.id.trim().toLowerCase()}`;
+          let subDir = null;
+
+          const subVideos = sub.videos || [];
+          for (const video of subVideos) {
+            const parsed = extractPathSegments(video.path);
+            if (parsed?.subcategory) {
+              subDir = parsed.subcategory;
+            }
+            if (parsed?.category && !categoryDir) {
+              categoryDir = parsed.category;
+            }
+            if (subDir && categoryDir) {
+              break;
+            }
+          }
+
+          if (subDir) {
+            mapping.subcategories[subKey] = subDir;
+          }
+        }
+
+        if (categoryDir) {
+          mapping.categories[categoryKey] = categoryDir;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('[admin] Erreur lors du chargement de configuration.json:', error.message);
+  }
+
+  videoMappingCache = mapping;
+  videoMappingCacheTime = Date.now();
+  return mapping;
+}
+
+async function resolveUploadDirectories(categoryId, subcategoryId) {
+  const mapping = await loadVideoPathMapping();
+  const normalizedCategoryKey = (categoryId || '').trim().toLowerCase();
+  const fallbackCategory = sanitizeSegment(categoryId, 'AUTRES');
+  const resolvedCategory = mapping.categories[normalizedCategoryKey] || fallbackCategory;
+
+  let resolvedSubcategory = null;
+  if (subcategoryId) {
+    const normalizedSubKey = `${normalizedCategoryKey}::${subcategoryId.trim().toLowerCase()}`;
+    resolvedSubcategory = mapping.subcategories[normalizedSubKey]
+      || sanitizeSegment(subcategoryId, null);
+  }
+
+  return {
+    category: resolvedCategory || 'AUTRES',
+    subcategory: resolvedSubcategory
+  };
+}
+
+function createVideoEntry(filename, relativePath, mimeType) {
+  const baseName = path.basename(filename, path.extname(filename));
+  const displayName = baseName
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return {
+    name: displayName || filename,
+    path: relativePath,
+    type: mimeType || 'video/mp4'
+  };
+}
+
+async function ensureCategoryStructure(
+  config,
+  categoryId,
+  subcategoryId,
+  resolvedCategoryDir,
+  resolvedSubcategoryDir
+) {
+  config.categories = config.categories || [];
+  const normalizedCategoryId = (categoryId || resolvedCategoryDir || 'Autres').trim();
+  const normalizedCategoryKey = normalizedCategoryId.toLowerCase();
+
+  let category = config.categories.find(
+    cat => (cat.id || '').trim().toLowerCase() === normalizedCategoryKey
+  );
+
+  if (!category) {
+    category = {
+      id: normalizedCategoryId,
+      name: normalizedCategoryId,
+      videos: []
+    };
+    config.categories.push(category);
+  }
+
+  if (subcategoryId || resolvedSubcategoryDir) {
+    category.subCategories = category.subCategories || [];
+    const normalizedSubId = (subcategoryId || resolvedSubcategoryDir).trim();
+    const normalizedSubKey = normalizedSubId.toLowerCase();
+
+    let subCategory = category.subCategories.find(
+      sub => (sub.id || '').trim().toLowerCase() === normalizedSubKey
+    );
+
+    if (!subCategory) {
+      subCategory = {
+        id: normalizedSubId,
+        name: normalizedSubId,
+        videos: []
+      };
+      category.subCategories.push(subCategory);
     }
 
+    subCategory.videos = subCategory.videos || [];
+    return subCategory.videos;
+  }
+
+  category.videos = category.videos || [];
+  return category.videos;
+}
+
+async function updateConfigurationWithVideo(
+  categoryId,
+  subcategoryId,
+  resolvedCategory,
+  resolvedSubcategory,
+  filename,
+  mimeType
+) {
+  const configPath = await resolveConfigurationPath();
+  if (!configPath) {
+    throw new Error('Impossible de localiser configuration.json pour mettre à jour la télécommande');
+  }
+
+  const configRaw = await fs.readFile(configPath, 'utf8');
+  const config = JSON.parse(configRaw);
+
+  const targetVideos = await ensureCategoryStructure(
+    config,
+    categoryId,
+    subcategoryId,
+    resolvedCategory,
+    resolvedSubcategory
+  );
+  const relativePath = ['videos', resolvedCategory || sanitizeSegment(categoryId, 'AUTRES')];
+  if (resolvedSubcategory) {
+    relativePath.push(resolvedSubcategory);
+  }
+  relativePath.push(filename);
+  const finalPath = relativePath.filter(Boolean).join('/');
+
+  const alreadyExists = targetVideos.some(video => video.path === finalPath);
+
+  if (!alreadyExists) {
+    const newEntry = createVideoEntry(filename, finalPath, mimeType);
+    targetVideos.push(newEntry);
+    await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
+    videoMappingCache = null;
+    videoMappingCacheTime = 0;
+    console.log('[admin] configuration.json updated with new video entry', newEntry);
+  } else {
+    console.log('[admin] configuration.json already references video path', finalPath);
+  }
+}
+
+async function removeVideoFromConfig(relativePath) {
+  const configPath = await resolveConfigurationPath();
+  if (!configPath) {
+    console.warn('[admin] Impossible de localiser configuration.json pour supprimer la vidéo', relativePath);
+    return;
+  }
+
+  const configRaw = await fs.readFile(configPath, 'utf8');
+  const config = JSON.parse(configRaw);
+  let updated = false;
+
+  const removeFromList = (videos = []) => {
+    const index = videos.findIndex(video => video.path === relativePath);
+    if (index !== -1) {
+      videos.splice(index, 1);
+      updated = true;
+    }
+  };
+
+  for (const category of config.categories || []) {
+    removeFromList(category.videos);
+    for (const sub of category.subCategories || []) {
+      removeFromList(sub.videos);
+    }
+  }
+
+  if (updated) {
+    await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
+    videoMappingCache = null;
+    videoMappingCacheTime = 0;
+    console.log('[admin] configuration.json cleaned from video path', relativePath);
+  }
+}
+
+async function cleanupEmptyDirs(dirPath, stopAt) {
+  const resolvedStop = path.resolve(stopAt);
+  let current = path.resolve(dirPath);
+
+  while (current.startsWith(resolvedStop) && current !== resolvedStop) {
+    const entries = await fs.readdir(current);
+    if (entries.length === 0) {
+      await fs.rmdir(current);
+      current = path.dirname(current);
+    } else {
+      break;
+    }
+  }
+}
+
+const storage = multer.diskStorage({
+  destination: async (req, file, cb) => {
     try {
-      await fs.mkdir(uploadPath, { recursive: true });
-      cb(null, uploadPath);
+      await fs.mkdir(TEMP_UPLOAD_DIR, { recursive: true });
+      cb(null, TEMP_UPLOAD_DIR);
     } catch (error) {
       cb(error);
     }
@@ -93,6 +411,11 @@ async function execCommand(command) {
   } catch (error) {
     return { success: false, error: error.message };
   }
+}
+
+// S'assurer qu'un dossier existe (utile en dev local)
+async function ensureDirectory(dirPath) {
+  await fs.mkdir(dirPath, { recursive: true });
 }
 
 // Obtenir les informations système
@@ -198,9 +521,20 @@ async function getServicesStatus() {
   const services = ['neopro-app', 'nginx', 'hostapd', 'dnsmasq', 'avahi-daemon'];
   const statuses = {};
 
+  if (os.platform() !== 'linux') {
+    services.forEach(service => {
+      statuses[service] = 'unavailable';
+    });
+    return statuses;
+  }
+
   for (const service of services) {
     const result = await execCommand(`systemctl is-active ${service}`);
-    statuses[service] = result.output.trim() === 'active' ? 'running' : 'stopped';
+    if (!result.success || !result.output) {
+      statuses[service] = 'unknown';
+    } else {
+      statuses[service] = result.output.trim() === 'active' ? 'running' : 'stopped';
+    }
   }
 
   return statuses;
@@ -235,6 +569,8 @@ app.get('/api/config', async (req, res) => {
 // API: Liste des vidéos
 app.get('/api/videos', async (req, res) => {
   try {
+    await ensureDirectory(VIDEOS_DIR);
+    console.log('[admin] GET /api/videos - listing directory:', VIDEOS_DIR);
     const videos = await listVideosRecursive(VIDEOS_DIR);
     res.json({ videos });
   } catch (error) {
@@ -276,13 +612,49 @@ app.post('/api/videos/upload', upload.single('video'), async (req, res) => {
       return res.status(400).json({ error: 'Aucun fichier fourni' });
     }
 
+    const { category, subcategory } = await resolveUploadDirectories(
+      req.body.category,
+      req.body.subcategory
+    );
+    const targetDir = subcategory
+      ? path.join(VIDEOS_DIR, category, subcategory)
+      : path.join(VIDEOS_DIR, category);
+    await fs.mkdir(targetDir, { recursive: true });
+    const targetPath = path.join(targetDir, req.file.filename);
+    await fs.rename(req.file.path, targetPath);
+    await updateConfigurationWithVideo(
+      req.body.category,
+      req.body.subcategory,
+      category,
+      subcategory,
+      req.file.filename,
+      req.file.mimetype
+    );
+
+    console.log('[admin] Upload directory resolved', {
+      requestedCategory: req.body.category,
+      requestedSubcategory: req.body.subcategory,
+      resolvedCategory: category,
+      resolvedSubcategory: subcategory,
+      targetPath
+    });
+
+    console.log('[admin] POST /api/videos/upload', {
+      filename: req.file.filename,
+      tempPath: req.file.path,
+      finalPath: targetPath,
+      size: req.file.size,
+      category: req.body.category,
+      subcategory: req.body.subcategory
+    });
+
     res.json({
       success: true,
       message: 'Vidéo uploadée avec succès',
       file: {
         name: req.file.filename,
         size: (req.file.size / 1024 / 1024).toFixed(2) + ' MB',
-        path: req.file.path
+        path: targetPath
       }
     });
   } catch (error) {
@@ -294,16 +666,21 @@ app.post('/api/videos/upload', upload.single('video'), async (req, res) => {
 app.delete('/api/videos/:category/:filename', async (req, res) => {
   try {
     const { category, filename } = req.params;
-    const filePath = path.join(VIDEOS_DIR, category, filename);
+    const normalizedCategory = (category || '').replace(/\\/g, '/');
+    const filePath = path.join(VIDEOS_DIR, normalizedCategory, filename);
+    const relativePath = ['videos', normalizedCategory, filename]
+      .filter(Boolean)
+      .join('/')
+      .replace(/\\/g, '/');
 
-    // Vérifier que le fichier existe
     await fs.access(filePath);
-
-    // Supprimer
     await fs.unlink(filePath);
+    await cleanupEmptyDirs(path.dirname(filePath), VIDEOS_DIR);
+    await removeVideoFromConfig(relativePath);
 
-    res.json({ success: true, message: 'Vidéo supprimée' });
+    res.json({ success: true, message: 'Vidéo supprimée', path: relativePath });
   } catch (error) {
+    console.error('[admin] Error deleting video:', error);
     res.status(500).json({ error: 'Impossible de supprimer la vidéo' });
   }
 });
