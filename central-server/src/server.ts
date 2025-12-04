@@ -13,6 +13,8 @@ import socketService from './services/socket.service';
 import authRoutes from './routes/auth.routes';
 import sitesRoutes from './routes/sites.routes';
 import groupsRoutes from './routes/groups.routes';
+import contentRoutes from './routes/content.routes';
+import updatesRoutes from './routes/updates.routes';
 
 dotenv.config();
 
@@ -83,6 +85,8 @@ app.get('/health', async (_req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/sites', sitesRoutes);
 app.use('/api/groups', groupsRoutes);
+app.use('/api', contentRoutes);
+app.use('/api', updatesRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({
