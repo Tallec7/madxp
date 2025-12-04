@@ -919,7 +919,13 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   }
 
   subscribeToDeploymentProgress(): void {
-    const sub = this.socketService.on<any>('deploy_progress').subscribe(data => {
+    const sub = this.socketService.on('deploy_progress').subscribe(event => {
+      const data = event as {
+        deploymentId: string;
+        progress: number;
+        deployedCount: number;
+        status: Deployment['status'];
+      };
       const deployment = this.deployments.find(d => d.id === data.deploymentId);
       if (deployment) {
         deployment.progress = data.progress;

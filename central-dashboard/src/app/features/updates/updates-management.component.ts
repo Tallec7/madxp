@@ -1059,7 +1059,13 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
   }
 
   subscribeToDeploymentProgress(): void {
-    const sub = this.socketService.on<any>('update_progress').subscribe(data => {
+    const sub = this.socketService.on('update_progress').subscribe(event => {
+      const data = event as {
+        deploymentId: string;
+        progress: number;
+        deployedCount: number;
+        status: UpdateDeployment['status'];
+      };
       const deployment = this.deployments.find(d => d.id === data.deploymentId);
       if (deployment) {
         deployment.progress = data.progress;

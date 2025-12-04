@@ -6,6 +6,12 @@ import { GroupsService } from '../../core/services/groups.service';
 import { SitesService } from '../../core/services/sites.service';
 import { Group, Site } from '../../core/models';
 
+type GroupMetadataForm = {
+  sport?: string;
+  region?: string;
+  target_version?: string;
+};
+
 @Component({
   selector: 'app-groups-list',
   standalone: true,
@@ -59,12 +65,12 @@ import { Group, Site } from '../../core/models';
             </div>
             <div class="stat-item" *ngIf="group.metadata?.region">
               <span class="stat-icon">📍</span>
-              <span class="stat-value">{{ group.metadata.region }}</span>
+              <span class="stat-value">{{ group.metadata?.region }}</span>
               <span class="stat-label">Région</span>
             </div>
             <div class="stat-item" *ngIf="group.metadata?.sport">
               <span class="stat-icon">⚽</span>
-              <span class="stat-value">{{ group.metadata.sport }}</span>
+              <span class="stat-value">{{ group.metadata?.sport }}</span>
               <span class="stat-label">Sport</span>
             </div>
           </div>
@@ -593,7 +599,11 @@ export class GroupsListComponent implements OnInit {
     name: '',
     type: 'sport' as 'sport' | 'geography' | 'version' | 'custom',
     description: '',
-    metadata: {} as Record<string, any>
+    metadata: {
+      sport: '',
+      region: '',
+      target_version: ''
+    } as GroupMetadataForm
   };
 
   selectedSiteIds: string[] = [];
@@ -692,11 +702,13 @@ export class GroupsListComponent implements OnInit {
   createGroup(): void {
     if (!this.isFormValid()) return;
 
+    const metadataPayload = this.buildMetadataPayload();
+
     const groupData = {
       name: this.groupForm.name,
       type: this.groupForm.type,
       description: this.groupForm.description || undefined,
-      metadata: Object.keys(this.groupForm.metadata).length > 0 ? this.groupForm.metadata : undefined,
+      metadata: metadataPayload,
       site_ids: this.selectedSiteIds.length > 0 ? this.selectedSiteIds : undefined
     };
 
@@ -718,16 +730,20 @@ export class GroupsListComponent implements OnInit {
       name: group.name,
       type: group.type,
       description: group.description || '',
-      metadata: { ...group.metadata } || {}
+      metadata: {
+        sport: (group.metadata as GroupMetadataForm)?.sport || '',
+        region: (group.metadata as GroupMetadataForm)?.region || '',
+        target_version: (group.metadata as GroupMetadataForm)?.target_version || ''
+      }
     };
 
     // Load current sites for this group
-    this.groupsService.loadGroup(group.id).subscribe({
-      next: (groupDetail) => {
-        this.selectedSiteIds = groupDetail.sites?.map(s => s.id) || [];
+    this.groupsService.getGroupSites(group.id).subscribe({
+      next: (groupSites) => {
+        this.selectedSiteIds = groupSites.sites?.map((site: Site) => site.id) || [];
         this.showEditModal = true;
       },
-      error: (error) => {
+      error: (error: any) => {
         alert('Erreur lors du chargement du groupe: ' + (error.error?.error || error.message));
       }
     });
@@ -736,11 +752,13 @@ export class GroupsListComponent implements OnInit {
   updateGroup(): void {
     if (!this.isFormValid() || !this.editingGroupId) return;
 
+    const metadataPayload = this.buildMetadataPayload();
+
     const groupData = {
       name: this.groupForm.name,
       type: this.groupForm.type,
       description: this.groupForm.description || undefined,
-      metadata: Object.keys(this.groupForm.metadata).length > 0 ? this.groupForm.metadata : undefined,
+      metadata: metadataPayload,
       site_ids: this.selectedSiteIds
     };
 
@@ -769,6 +787,19 @@ export class GroupsListComponent implements OnInit {
     }
   }
 
+  private buildMetadataPayload(): Record<string, string> | undefined {
+    const cleaned = Object.entries(this.groupForm.metadata)
+      .filter(([, value]) => !!value && value.trim().length > 0)
+      .reduce((acc, [key, value]) => {
+        if (value) {
+          acc[key] = value.trim();
+        }
+        return acc;
+      }, {} as Record<string, string>);
+
+    return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+  }
+
   closeModals(): void {
     this.showCreateModal = false;
     this.showEditModal = false;
@@ -780,7 +811,11 @@ export class GroupsListComponent implements OnInit {
       name: '',
       type: 'sport',
       description: '',
-      metadata: {}
+      metadata: {
+        sport: '',
+        region: '',
+        target_version: ''
+      }
     };
     this.selectedSiteIds = [];
   }

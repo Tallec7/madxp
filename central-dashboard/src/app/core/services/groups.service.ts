@@ -12,8 +12,8 @@ export class GroupsService {
 
   constructor(private api: ApiService) {}
 
-  loadGroups(): Observable<{ total: number; groups: Group[] }> {
-    return this.api.get<{ total: number; groups: Group[] }>('/groups').pipe(
+  loadGroups(filters?: Record<string, any>): Observable<{ total: number; groups: Group[] }> {
+    return this.api.get<{ total: number; groups: Group[] }>('/groups', filters).pipe(
       tap(response => this.groupsSubject.next(response.groups))
     );
   }
@@ -22,17 +22,21 @@ export class GroupsService {
     return this.api.get<Group>(`/groups/${id}`);
   }
 
+  loadGroup(id: string): Observable<Group> {
+    return this.getGroup(id);
+  }
+
   getGroupSites(id: string): Observable<{ group_id: string; total: number; sites: Site[] }> {
     return this.api.get(`/groups/${id}/sites`);
   }
 
-  createGroup(data: Partial<Group>): Observable<Group> {
+  createGroup(data: Partial<Group> & { site_ids?: string[] }): Observable<Group> {
     return this.api.post<Group>('/groups', data).pipe(
       tap(() => this.loadGroups().subscribe())
     );
   }
 
-  updateGroup(id: string, data: Partial<Group>): Observable<Group> {
+  updateGroup(id: string, data: Partial<Group> & { site_ids?: string[] }): Observable<Group> {
     return this.api.put<Group>(`/groups/${id}`, data).pipe(
       tap(() => this.loadGroups().subscribe())
     );

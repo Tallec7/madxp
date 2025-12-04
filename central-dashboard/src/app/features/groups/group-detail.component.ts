@@ -7,6 +7,12 @@ import { SitesService } from '../../core/services/sites.service';
 import { Group, Site } from '../../core/models';
 import { Subscription } from 'rxjs';
 
+type GroupMetadataForm = {
+  sport?: string;
+  region?: string;
+  target_version?: string;
+};
+
 @Component({
   selector: 'app-group-detail',
   standalone: true,
@@ -147,7 +153,7 @@ import { Subscription } from 'rxjs';
       </div>
 
       <!-- Metadata card -->
-      <div class="card metadata-card" *ngIf="group.metadata && Object.keys(group.metadata).length > 0">
+      <div class="card metadata-card" *ngIf="hasMetadata()">
         <h2>Métadonnées du groupe</h2>
         <div class="metadata-grid">
           <div class="metadata-item" *ngFor="let key of getMetadataKeys()">
@@ -820,7 +826,11 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
   editForm = {
     name: '',
     description: '',
-    metadata: {} as Record<string, any>
+    metadata: {
+      sport: '',
+      region: '',
+      target_version: ''
+    } as GroupMetadataForm
   };
 
   private subscriptions = new Subscription();
@@ -845,11 +855,11 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
 
   loadGroup(id: string): void {
     this.groupsService.loadGroup(id).subscribe({
-      next: (group) => {
+      next: (group: Group) => {
         this.group = group;
         this.initEditForm();
       },
-      error: (error) => {
+      error: (error: any) => {
         alert('Erreur lors du chargement du groupe: ' + (error.error?.error || error.message));
       }
     });
@@ -868,7 +878,11 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
     this.editForm = {
       name: this.group.name,
       description: this.group.description || '',
-      metadata: { ...this.group.metadata } || {}
+      metadata: {
+        sport: (this.group.metadata as GroupMetadataForm)?.sport || '',
+        region: (this.group.metadata as GroupMetadataForm)?.region || '',
+        target_version: (this.group.metadata as GroupMetadataForm)?.target_version || ''
+      }
     };
   }
 
@@ -918,6 +932,10 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
 
   getMetadataKeys(): string[] {
     return this.group?.metadata ? Object.keys(this.group.metadata) : [];
+  }
+
+  hasMetadata(): boolean {
+    return !!(this.group?.metadata && Object.keys(this.group.metadata).length > 0);
   }
 
   formatMetadataKey(key: string): string {
@@ -981,10 +999,12 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
   updateGroup(): void {
     if (!this.group) return;
 
+    const metadataPayload = this.buildMetadataPayload(this.editForm.metadata);
+
     const data = {
       name: this.editForm.name,
       description: this.editForm.description || undefined,
-      metadata: Object.keys(this.editForm.metadata).length > 0 ? this.editForm.metadata : undefined
+      metadata: metadataPayload
     };
 
     this.groupsService.updateGroup(this.group.id, data).subscribe({
@@ -996,6 +1016,19 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
         alert('Erreur lors de la mise à jour: ' + (error.error?.error || error.message));
       }
     });
+  }
+
+  private buildMetadataPayload(metadata: GroupMetadataForm): Record<string, string> | undefined {
+    const cleaned = Object.entries(metadata)
+      .filter(([, value]) => !!value && value.trim().length > 0)
+      .reduce((acc, [key, value]) => {
+        if (value) {
+          acc[key] = value.trim();
+        }
+        return acc;
+      }, {} as Record<string, string>);
+
+    return Object.keys(cleaned).length > 0 ? cleaned : undefined;
   }
 
   deleteGroup(): void {

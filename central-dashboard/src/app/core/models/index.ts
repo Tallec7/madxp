@@ -36,12 +36,20 @@ export interface Site {
   updated_at: Date;
 }
 
+export interface GroupMetadata {
+  sport?: string;
+  region?: string;
+  target_version?: string;
+  [key: string]: any;
+}
+
 export interface Group {
   id: string;
   name: string;
   description: string | null;
   type: 'sport' | 'geography' | 'version' | 'custom';
   filters: Record<string, any> | null;
+  metadata?: GroupMetadata | null;
   created_at: Date;
   updated_at: Date;
   site_count?: number;
