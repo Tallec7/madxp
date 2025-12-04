@@ -341,6 +341,41 @@
         </footer>
     </div>
 
+    <!-- Edit Video Modal -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content modal-content-wide">
+            <h3>Modifier la vidéo</h3>
+            <p id="edit-current-path" class="modal-subtitle"></p>
+            <form id="edit-video-form">
+                <input type="hidden" id="edit-original-path">
+                <div class="form-group">
+                    <label for="edit-display-name">Nom affiché</label>
+                    <input type="text" id="edit-display-name" placeholder="Nom visible sur la télécommande">
+                </div>
+                <div class="form-group">
+                    <label for="edit-category">Catégorie</label>
+                    <input type="text" id="edit-category" list="edit-category-options" placeholder="Ex: Match_SM1" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-subcategory">Sous-catégorie</label>
+                    <input type="text" id="edit-subcategory" list="edit-subcategory-options" placeholder="Ex: But">
+                    <small class="form-hint">Laissez vide pour enregistrer la vidéo directement dans la catégorie.</small>
+                </div>
+                <div class="form-group">
+                    <label for="edit-filename">Nom du fichier (avec extension)</label>
+                    <input type="text" id="edit-filename" required>
+                    <small class="form-hint">Le nom de fichier doit conserver l'extension (.mp4, .mkv, ...).</small>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Annuler</button>
+                    <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <datalist id="edit-category-options"></datalist>
+    <datalist id="edit-subcategory-options"></datalist>
+
     <!-- Modal -->
     <div id="modal" class="modal">
         <div class="modal-content">
