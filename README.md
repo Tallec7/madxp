@@ -67,25 +67,53 @@ sudo reboot
 - Angular CLI 20.3.3
 - npm ou yarn
 
-### Installation
+### 🚀 Méthode 1 : Script automatique (Recommandé)
+
+Lance automatiquement Angular + Socket.IO + Admin Interface :
 
 ```bash
 # Cloner le repository
 git clone https://github.com/Tallec7/neopro.git
 cd neopro
 
+# Lancer tous les services en une commande
+./dev-local.sh
+```
+
+**Le script démarre :**
+- ✅ Angular dev server (port 4200)
+- ✅ Socket.IO server (port 3000)
+- ✅ Admin interface MODE DEMO (port 8080)
+
+**URLs disponibles :**
+- http://localhost:4200 - Application Neopro
+- http://localhost:4200/tv - Mode TV
+- http://localhost:4200/remote - Télécommande
+- http://localhost:8080 - Interface Admin (données mockées)
+
+Appuyez sur `Ctrl+C` pour arrêter tous les services.
+
+### 🔧 Méthode 2 : Manuel
+
+```bash
 # Installer les dépendances
 npm install
+cd server-render && npm install && cd ..
+cd raspberry/admin && npm install && cd ../..
 
-# Démarrer le serveur de dev
+# Terminal 1: Angular
 ng serve
 # App disponible sur http://localhost:4200
 
-# Démarrer le serveur Socket.IO
+# Terminal 2: Socket.IO
 cd server-render
-npm install
 node server.js
 # Socket.IO sur http://localhost:3000
+
+# Terminal 3: Admin Interface (mode démo)
+cd raspberry/admin
+node admin-server-demo.js
+# Admin sur http://localhost:8080
 ```
 
 ### Build

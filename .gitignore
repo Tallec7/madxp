@@ -7,3 +7,6 @@ node_modules*
 dist/
 
 .angular/
+
+# Local development logs
+logs/*.log
