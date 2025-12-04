@@ -1,16 +1,61 @@
 # Neopro
 
-Système de gestion et d'affichage vidéo pour événements sportifs.
+Système de gestion et d'affichage vidéo pour événements sportifs avec gestion de flotte centralisée.
 
 ## 🎯 Vue d'ensemble
 
 Neopro permet aux clubs sportifs de gérer l'affichage de vidéos (sponsors, buts, jingles) sur écran TV durant les matchs, avec contrôle à distance depuis mobile/tablette.
 
-**Deux modes de déploiement :**
-- **Cloud** : Application web hébergée (neopro.kalonpartners.bzh)
-- **Raspberry Pi** : Solution autonome locale pour les clubs (ce repository)
+**Architecture hybride :**
+- **Raspberry Pi local** : Solution autonome pour chaque club (fonctionne sans internet)
+- **Gestion centralisée** : Dashboard web pour l'équipe NEOPRO
+- **Synchronisation** : Déploiement de contenu et mises à jour à distance
+
+**Nouveauté 2025** : Système complet de gestion de flotte permettant à l'équipe NEOPRO de gérer tous les boîtiers depuis un dashboard unique.
 
 ## 📦 Architecture
+
+### Architecture globale (Nouveauté 2025)
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│              QUARTIER GÉNÉRAL NEOPRO                         │
+│                                                              │
+│  ┌────────────────────────────────────────────────────┐    │
+│  │  Central Dashboard (Angular)                        │    │
+│  │  • Gestion des sites                                │    │
+│  │  • Déploiement de contenu                           │    │
+│  │  • Mises à jour OTA                                 │    │
+│  │  • Monitoring temps réel                            │    │
+│  └────────────────────────────────────────────────────┘    │
+│                          ↓                                   │
+│  ┌────────────────────────────────────────────────────┐    │
+│  │  Central Server (Node.js + PostgreSQL)             │    │
+│  │  • REST API + WebSocket                             │    │
+│  │  • Authentification JWT                             │    │
+│  │  • Stockage métriques                               │    │
+│  │  • Gestion des groupes                              │    │
+│  └────────────────────────────────────────────────────┘    │
+│                                                              │
+│         Hébergé sur Render.com (~$14.50/mois)              │
+└──────────────────────────────────────────────────────────────┘
+                          ↓ Internet (WebSocket)
+              ┌───────────┴───────────┬─────────────┐
+              ↓                       ↓             ↓
+┌─────────────────────┐  ┌─────────────────┐  ┌──────────────┐
+│   CLUB RENNES       │  │  CLUB NANTES    │  │  CLUB ...    │
+│                     │  │                 │  │              │
+│  Raspberry Pi       │  │  Raspberry Pi   │  │  Raspberry   │
+│  ├── App locale     │  │  ├── App locale │  │  ├── App...  │
+│  ├── WiFi Hotspot   │  │  ├── WiFi...    │  │  ├── WiFi... │
+│  ├── Sync Agent ◄───┼──┼──┼─ Sync...◄────┼──┼──┼─ Sync...  │
+│  └── TV Display     │  │  └── TV...      │  │  └── TV...   │
+│                     │  │                 │  │              │
+│  Autonome (offline) │  │  Autonome       │  │  Autonome    │
+└─────────────────────┘  └─────────────────┘  └──────────────┘
+```
+
+### Architecture locale (par club)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -25,7 +70,7 @@ Neopro permet aux clubs sportifs de gérer l'affichage de vidéos (sponsors, but
 │  • Angular App (Nginx port 80)                        │
 │  • Socket.IO Server (Node.js port 3000)               │
 │  • Admin Interface (Express port 8080)                │
-│  • Monitoring Agent                                    │
+│  • Sync Agent → Connexion au serveur central          │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -248,15 +293,24 @@ Voir [raspberry/monitoring/](raspberry/monitoring/) pour la configuration.
 
 ## 📚 Documentation
 
+### 🆕 Gestion de flotte (2025)
+- **[QUICK_START.md](QUICK_START.md)** - Démarrage rapide : ajouter votre premier boîtier (5 min)
+- **[ADMIN_GUIDE.md](ADMIN_GUIDE.md)** - Guide complet d'administration de la flotte
+- **[FLEET_MANAGEMENT_SPECS.md](FLEET_MANAGEMENT_SPECS.md)** - Spécifications techniques complètes
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Résumé de l'implémentation
+- **[COMPONENTS_GUIDE.md](central-dashboard/COMPONENTS_GUIDE.md)** - Guide des composants UI
+- **[FINAL_UI_COMPLETION.md](FINAL_UI_COMPLETION.md)** - Statut final du projet
+
 ### Pour les clubs
-- **[GUIDE-CLUB.md](raspberry/GUIDE-CLUB.md)** - Utilisation quotidienne
+- **[GUIDE-CLUB.md](raspberry/GUIDE-CLUB.md)** - Utilisation quotidienne du boîtier
 - **[GUIDE-DEMO.md](raspberry/GUIDE-DEMO.md)** - Démo commerciale
 
 ### Pour les développeurs
 - **[raspberry/README.md](raspberry/README.md)** - Installation Raspberry Pi
-- **[raspberry/admin/README.md](raspberry/admin/README.md)** - Interface admin
+- **[raspberry/admin/README.md](raspberry/admin/README.md)** - Interface admin locale
 - **[raspberry/tools/README.md](raspberry/tools/README.md)** - Outils maintenance
-- **[server-render/README.md](server-render/README.md)** - Serveur Socket.IO
+- **[central-server/README.md](central-server/README.md)** - Serveur central API
+- **[raspberry/sync-agent/README.md](raspberry/sync-agent/README.md)** - Agent de synchronisation
 
 ## 🆘 Support
 
