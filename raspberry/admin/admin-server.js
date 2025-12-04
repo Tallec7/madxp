@@ -39,7 +39,15 @@ app.use(express.static(path.join(__dirname, 'public')));
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     const category = req.body.category || 'autres';
-    const uploadPath = path.join(VIDEOS_DIR, category);
+    const subcategory = req.body.subcategory;
+
+    // Si sous-catégorie, créer le chemin avec sous-dossier
+    let uploadPath;
+    if (subcategory) {
+      uploadPath = path.join(VIDEOS_DIR, category, subcategory.toUpperCase());
+    } else {
+      uploadPath = path.join(VIDEOS_DIR, category);
+    }
 
     try {
       await fs.mkdir(uploadPath, { recursive: true });

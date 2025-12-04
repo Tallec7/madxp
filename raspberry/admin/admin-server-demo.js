@@ -153,14 +153,22 @@ app.get('/api/videos', (req, res) => {
  * API: Upload vidéo (simulé)
  */
 app.post('/api/videos/upload', (req, res) => {
-  console.log('[DEMO] POST /api/videos/upload');
+  const category = req.body.category;
+  const subcategory = req.body.subcategory;
+
+  console.log(`[DEMO] POST /api/videos/upload - Category: ${category}, Subcategory: ${subcategory || 'none'}`);
 
   // Simuler un upload réussi
   setTimeout(() => {
+    const path = subcategory
+      ? `${category}/${subcategory}/demo-video.mp4`
+      : `${category}/demo-video.mp4`;
+
     res.json({
       success: true,
       message: 'Vidéo uploadée avec succès (mode démo)',
-      filename: 'demo-video.mp4'
+      filename: 'demo-video.mp4',
+      path: path
     });
   }, 1500);
 });

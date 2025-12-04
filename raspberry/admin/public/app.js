@@ -302,6 +302,32 @@ function initForms() {
         await uploadVideo();
     });
 
+    // Category selector - show subcategories for Match categories
+    const categorySelect = document.getElementById('video-category');
+    const subcategoryGroup = document.getElementById('subcategory-group');
+    const subcategorySelect = document.getElementById('video-subcategory');
+
+    categorySelect.addEventListener('change', (e) => {
+        const category = e.target.value;
+
+        // Show subcategories only for Match_SM1 and Match_SF
+        if (category === 'Match_SM1' || category === 'Match_SF') {
+            subcategoryGroup.style.display = 'block';
+            subcategorySelect.required = true;
+
+            // Populate subcategories
+            subcategorySelect.innerHTML = `
+                <option value="">-- Sélectionner --</option>
+                <option value="But">But</option>
+                <option value="Jingle">Jingle</option>
+            `;
+        } else {
+            subcategoryGroup.style.display = 'none';
+            subcategorySelect.required = false;
+            subcategorySelect.value = '';
+        }
+    });
+
     // WiFi form
     const wifiForm = document.getElementById('wifi-form');
     wifiForm.addEventListener('submit', async (e) => {
