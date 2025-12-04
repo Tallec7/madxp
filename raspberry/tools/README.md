@@ -112,29 +112,6 @@ fi
 
 ---
 
-### `quick-install.sh`
-Installation interactive en un clic.
-
-```bash
-sudo ./quick-install.sh
-```
-
-**Utilise pour :** Installer Neopro de manière guidée
-
-**Interface :**
-- Bannière ASCII art
-- Configuration interactive
-- Barre de progression
-- Validation des entrées
-- Écran récapitulatif
-
-**Demande :**
-- Nom du club
-- Mot de passe WiFi
-- Confirmation
-
----
-
 ## 🔄 Workflows
 
 ### Créer une image master
@@ -302,9 +279,9 @@ my_custom_repair() {
 - GitHub Issues: [Créer un ticket]
 
 **Documentation complète :**
-- `../README-COMPLET.md`
-- `../GUIDE-UTILISATEUR.md`
-- `../PHASE3-COMPLETE.md`
+- `../README.md` - Installation technique
+- `../GUIDE-CLUB.md` - Guide utilisateur clubs
+- `../GUIDE-DEMO.md` - Guide démonstration
 
 ---
 
