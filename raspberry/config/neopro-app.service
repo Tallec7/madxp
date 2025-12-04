@@ -1,0 +1,32 @@
+# Systemd service pour l'application Neopro
+# Lance automatiquement le serveur Node.js et l'interface web au démarrage
+
+[Unit]
+Description=Neopro Application Server
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/neopro
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+# Commande de lancement du serveur Node.js
+ExecStart=/usr/bin/node /home/pi/neopro/server/server.js
+
+# Redémarrage automatique en cas de crash
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=neopro-app
+
+# Limites de sécurité
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
