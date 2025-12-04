@@ -1,0 +1,15 @@
+# Dossier de déploiement (généré par build-raspberry.sh)
+deploy/
+
+# Archive de déploiement
+*.tar.gz
+
+# Backups
+backups/
+
+# Logs
+*.log
+
+# Fichiers temporaires
+*.tmp
+*.bak

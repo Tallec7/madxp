@@ -8,7 +8,14 @@ const server = http.createServer(app);
 // Configuration CORS pour permettre les connexions depuis votre site Apache
 const io = socketIO(server, {
 	cors: {
-		origin: ["https://neopro.kalonpartners.bzh", "http://localhost:4200"], // Votre site en production + dev local
+		origin: [
+			"https://neopro.kalonpartners.bzh", // Site démo production
+			"http://localhost:4200", // Dev local
+			"http://neopro.local", // Raspberry Pi (mDNS)
+			"http://neopro.local:4200", // Raspberry Pi avec port
+			"http://192.168.4.1", // Raspberry Pi Hotspot (IP fixe)
+			"http://192.168.4.1:4200" // Raspberry Pi Hotspot avec port
+		],
 		methods: ["GET", "POST"],
 		credentials: true
 	}

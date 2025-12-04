@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neopro Admin - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <h1>🎮 Neopro Admin</h1>
+            </div>
+            <div class="header-info">
+                <span id="hostname">Loading...</span>
+                <span id="current-time">--:--:--</span>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav">
+            <button class="nav-btn active" data-tab="dashboard">
+                📊 Dashboard
+            </button>
+            <button class="nav-btn" data-tab="videos">
+                🎬 Vidéos
+            </button>
+            <button class="nav-btn" data-tab="network">
+                📡 Réseau
+            </button>
+            <button class="nav-btn" data-tab="logs">
+                📜 Logs
+            </button>
+            <button class="nav-btn" data-tab="system">
+                ⚙️ Système
+            </button>
+        </nav>
+
+        <!-- Content -->
+        <main class="content">
+
+            <!-- Tab: Dashboard -->
+            <div id="tab-dashboard" class="tab-content active">
+                <h2>État du système</h2>
+
+                <div class="cards-grid">
+                    <!-- CPU Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>💻 CPU</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="metric">
+                                <span class="metric-label">Utilisation</span>
+                                <span class="metric-value" id="cpu-usage">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Coeurs</span>
+                                <span class="metric-value" id="cpu-cores">--</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="cpu-progress"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Memory Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>🧠 Mémoire</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="metric">
+                                <span class="metric-label">Utilisée</span>
+                                <span class="metric-value" id="mem-used">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Total</span>
+                                <span class="metric-value" id="mem-total">--</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="mem-progress"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Temperature Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>🌡️ Température</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="metric-large" id="temperature">--</div>
+                        </div>
+                    </div>
+
+                    <!-- Disk Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>💾 Stockage</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="metric">
+                                <span class="metric-label">Utilisé</span>
+                                <span class="metric-value" id="disk-used">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Total</span>
+                                <span class="metric-value" id="disk-total">--</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="disk-progress"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Services Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>🔧 Services</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="services-grid" id="services-grid">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Uptime -->
+                <div class="info-box">
+                    <span>⏱️ Uptime: <strong id="uptime">--</strong></span>
+                </div>
+            </div>
+
+            <!-- Tab: Videos -->
+            <div id="tab-videos" class="tab-content">
+                <h2>Gestion des vidéos</h2>
+
+                <!-- Upload Form -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📤 Upload une vidéo</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="upload-form" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="video-file">Fichier vidéo (MP4, MKV, MOV - max 500MB)</label>
+                                <input type="file" id="video-file" name="video" accept="video/*" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="video-category">Catégorie</label>
+                                <select id="video-category" name="category" required>
+                                    <option value="Focus-partenaires">Focus Partenaires</option>
+                                    <option value="Info-club">Info Club</option>
+                                    <option value="Match_SM1">Match SM1</option>
+                                    <option value="Match_SF">Match SF</option>
+                                    <option value="autres">Autres</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                📤 Upload
+                            </button>
+                        </form>
+                        <div id="upload-progress" class="upload-progress" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="upload-progress-bar"></div>
+                            </div>
+                            <span id="upload-status">Uploading...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Videos List -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📁 Bibliothèque vidéos</h3>
+                        <button class="btn btn-secondary" onclick="refreshVideos()">🔄 Actualiser</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="videos-list" id="videos-list">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Network -->
+            <div id="tab-network" class="tab-content">
+                <h2>Configuration réseau</h2>
+
+                <!-- WiFi Client Config -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📡 WiFi Client (Accès distant)</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="info-text">
+                            Configurez le Raspberry Pi pour se connecter au WiFi local du club.
+                            Cela permet l'accès SSH distant pour les mises à jour.
+                        </p>
+                        <form id="wifi-form">
+                            <div class="form-group">
+                                <label for="wifi-ssid">SSID du WiFi</label>
+                                <input type="text" id="wifi-ssid" name="ssid" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="wifi-password">Mot de passe</label>
+                                <input type="password" id="wifi-password" name="password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                💾 Configurer
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Network Info -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>🌐 Informations réseau</h3>
+                        <button class="btn btn-secondary" onclick="refreshNetwork()">🔄 Actualiser</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="network-info">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Logs -->
+            <div id="tab-logs" class="tab-content">
+                <h2>Logs système</h2>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📜 Logs</h3>
+                        <div class="btn-group">
+                            <button class="btn btn-sm active" data-log="app">Application</button>
+                            <button class="btn btn-sm" data-log="nginx">Nginx</button>
+                            <button class="btn btn-sm" data-log="system">Système</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="logs-container">
+                            <pre id="logs-content">Chargement des logs...</pre>
+                        </div>
+                        <button class="btn btn-secondary" onclick="refreshLogs()">🔄 Actualiser</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: System -->
+            <div id="tab-system" class="tab-content">
+                <h2>Administration système</h2>
+
+                <!-- Services Control -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>🔧 Contrôle des services</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="services-control">
+                            <div class="service-control-item">
+                                <span>Application Neopro</span>
+                                <button class="btn btn-warning" onclick="restartService('neopro-app')">
+                                    🔄 Redémarrer
+                                </button>
+                            </div>
+                            <div class="service-control-item">
+                                <span>Serveur Web (Nginx)</span>
+                                <button class="btn btn-warning" onclick="restartService('nginx')">
+                                    🔄 Redémarrer
+                                </button>
+                            </div>
+                            <div class="service-control-item">
+                                <span>Mode Kiosque</span>
+                                <button class="btn btn-warning" onclick="restartService('neopro-kiosk')">
+                                    🔄 Redémarrer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Update System -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📦 Mise à jour</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="info-text">
+                            Uploadez une archive de mise à jour (.tar.gz) pour mettre à jour l'application.
+                            Un backup automatique sera créé.
+                        </p>
+                        <form id="update-form" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="update-file">Archive de mise à jour (.tar.gz)</label>
+                                <input type="file" id="update-file" name="package" accept=".tar.gz" required>
+                            </div>
+                            <button type="submit" class="btn btn-warning">
+                                📦 Mettre à jour
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Power Controls -->
+                <div class="card danger-zone">
+                    <div class="card-header">
+                        <h3>⚠️ Zone dangereuse</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="power-controls">
+                            <button class="btn btn-danger" onclick="confirmAction('reboot')">
+                                🔄 Redémarrer le système
+                            </button>
+                            <button class="btn btn-danger" onclick="confirmAction('shutdown')">
+                                🔴 Éteindre le système
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span>Neopro v1.0.0 | Raspberry Pi Admin Panel</span>
+            <span id="last-update">Dernière mise à jour: --</span>
+        </footer>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title">Confirmation</h3>
+            <p id="modal-message"></p>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+                <button class="btn btn-danger" id="modal-confirm">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

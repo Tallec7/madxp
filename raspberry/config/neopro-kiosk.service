@@ -1,0 +1,46 @@
+# Systemd service pour le mode Kiosque Neopro
+# Lance Chromium en fullscreen sur /tv au démarrage
+
+[Unit]
+Description=Neopro Kiosk Mode (TV Display)
+After=graphical.target neopro-app.service
+Wants=graphical.target
+
+[Service]
+Type=simple
+User=pi
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+
+# Attendre que le serveur soit prêt
+ExecStartPre=/bin/sleep 10
+
+# Lancement de Chromium en mode kiosque
+ExecStart=/usr/bin/chromium-browser \
+  --kiosk \
+  --noerrdialogs \
+  --disable-infobars \
+  --disable-session-crashed-bubble \
+  --disable-restore-session-state \
+  --disable-features=TranslateUI \
+  --no-first-run \
+  --fast \
+  --fast-start \
+  --disable-component-update \
+  --disable-background-networking \
+  --disable-sync \
+  --disable-translate \
+  --disable-cloud-import \
+  --disable-print-preview \
+  --disable-hang-monitor \
+  --disable-popup-blocking \
+  --enable-features=OverlayScrollbar \
+  --incognito \
+  http://neopro.local/tv
+
+# Redémarrage automatique
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target

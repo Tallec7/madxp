@@ -1,0 +1,32 @@
+# Systemd service pour l'interface Web Admin Neopro
+# Accessible sur http://neopro.local:8080
+
+[Unit]
+Description=Neopro Web Admin Panel
+After=network.target neopro-app.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/neopro/admin
+Environment=NODE_ENV=production
+Environment=ADMIN_PORT=8080
+
+# Commande de lancement du serveur admin
+ExecStart=/usr/bin/node /home/pi/neopro/admin/admin-server.js
+
+# Redémarrage automatique en cas de crash
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=neopro-admin
+
+# Limites de sécurité
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
