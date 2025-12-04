@@ -155,12 +155,15 @@ async function loadVideos() {
         const list = document.getElementById('videos-list');
         list.innerHTML = '';
 
-        if (data.videos.length === 0) {
+        // L'API retourne directement un tableau, pas un objet avec videos
+        const videos = Array.isArray(data) ? data : (data.videos || []);
+
+        if (videos.length === 0) {
             list.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Aucune vidéo trouvée</p>';
             return;
         }
 
-        data.videos.forEach(video => {
+        videos.forEach(video => {
             const item = document.createElement('div');
             item.className = 'video-item';
             item.innerHTML = `

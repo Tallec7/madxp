@@ -146,7 +146,8 @@ app.get('/api/services', (req, res) => {
  */
 app.get('/api/videos', (req, res) => {
   console.log('[DEMO] GET /api/videos');
-  res.json(MOCK_DATA.videos);
+  // Retourner le même format que le vrai serveur
+  res.json({ videos: MOCK_DATA.videos });
 });
 
 /**
