@@ -1,9 +1,9 @@
 import { Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET: Secret = process.env.JWT_SECRET || 'your-secret-key';
 
 export interface JwtPayload {
   id: string;
@@ -11,7 +11,7 @@ export interface JwtPayload {
   role: 'admin' | 'operator' | 'viewer';
 }
 
-export const authenticate = async (
+export const authenticate = (
   req: AuthRequest,
   res: Response,
   next: NextFunction
@@ -28,7 +28,7 @@ export const authenticate = async (
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     req.user = decoded;
 
-    next();
+    return next();
   } catch (error) {
     logger.error('Erreur d\'authentification:', error);
     return res.status(401).json({ error: 'Token invalide ou expiré' });
@@ -48,11 +48,12 @@ export const requireRole = (...allowedRoles: Array<'admin' | 'operator' | 'viewe
       });
     }
 
-    next();
+    return next();
   };
 };
 
 export const generateToken = (user: JwtPayload): string => {
-  const expiresIn = process.env.JWT_EXPIRES_IN || '8h';
-  return jwt.sign(user, JWT_SECRET, { expiresIn });
+  const expiresIn = (process.env.JWT_EXPIRES_IN || '8h') as SignOptions['expiresIn'];
+  const options: SignOptions = { expiresIn };
+  return jwt.sign(user, JWT_SECRET, options);
 };

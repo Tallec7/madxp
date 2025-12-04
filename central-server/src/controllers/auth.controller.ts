@@ -5,11 +5,25 @@ import { generateToken } from '../middleware/auth';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 
-export const login = async (req: Request, res: Response) => {
-  try {
-    const { email, password } = req.body;
+type UserRow = {
+  id: string;
+  email: string;
+  password_hash: string;
+  full_name: string;
+  role: 'admin' | 'operator' | 'viewer';
+  created_at?: Date;
+  last_login_at?: Date;
+};
 
-    const result = await query(
+type PasswordRow = {
+  password_hash: string;
+};
+
+export const login = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { email, password } = req.body as { email: string; password: string };
+
+    const result = await query<UserRow>(
       'SELECT id, email, password_hash, full_name, role FROM users WHERE email = $1',
       [email]
     );
@@ -36,7 +50,7 @@ export const login = async (req: Request, res: Response) => {
 
     logger.info('User logged in', { email: user.email, role: user.role });
 
-    res.json({
+    return res.json({
       token,
       user: {
         id: user.id,
@@ -47,13 +61,13 @@ export const login = async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('Login error:', error);
-    res.status(500).json({ error: 'Erreur lors de la connexion' });
+    return res.status(500).json({ error: 'Erreur lors de la connexion' });
   }
 };
 
 export const logout = async (req: AuthRequest, res: Response) => {
   logger.info('User logged out', { email: req.user?.email });
-  res.json({ message: 'Déconnexion réussie' });
+  return res.json({ message: 'Déconnexion réussie' });
 };
 
 export const me = async (req: AuthRequest, res: Response) => {
@@ -62,7 +76,7 @@ export const me = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Non authentifié' });
     }
 
-    const result = await query(
+    const result = await query<UserRow>(
       'SELECT id, email, full_name, role, created_at, last_login_at FROM users WHERE id = $1',
       [req.user.id]
     );
@@ -71,10 +85,10 @@ export const me = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    res.json(result.rows[0]);
+    return res.json(result.rows[0]);
   } catch (error) {
     logger.error('Get current user error:', error);
-    res.status(500).json({ error: 'Erreur lors de la récupération des informations' });
+    return res.status(500).json({ error: 'Erreur lors de la récupération des informations' });
   }
 };
 
@@ -84,9 +98,9 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Non authentifié' });
     }
 
-    const { current_password, new_password } = req.body;
+    const { current_password, new_password } = req.body as { current_password: string; new_password: string };
 
-    const result = await query(
+    const result = await query<PasswordRow>(
       'SELECT password_hash FROM users WHERE id = $1',
       [req.user.id]
     );
@@ -111,9 +125,9 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
 
     logger.info('Password changed', { userId: req.user.id });
 
-    res.json({ message: 'Mot de passe modifié avec succès' });
+    return res.json({ message: 'Mot de passe modifié avec succès' });
   } catch (error) {
     logger.error('Change password error:', error);
-    res.status(500).json({ error: 'Erreur lors du changement de mot de passe' });
+    return res.status(500).json({ error: 'Erreur lors du changement de mot de passe' });
   }
 };

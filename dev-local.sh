@@ -20,6 +20,10 @@ if [[ "$1" == "demo" || "$1" == "--demo" ]]; then
     ADMIN_MODE="demo"
 fi
 
+# Désactiver la télémétrie Angular pour éviter les prompts bloquants
+export NG_CLI_ANALYTICS=false
+export ANGULAR_CLI_ANALYTICS=false
+
 ROOT_DIR="$(pwd)"
 LOG_DIR="${ROOT_DIR}/logs"
 mkdir -p "$LOG_DIR"
@@ -85,6 +89,36 @@ else
     echo -e "${GREEN}✓${NC} Dépendances admin OK"
 fi
 
+if [ ! -d "central-server/node_modules" ]; then
+    echo "Installation des dépendances central server..."
+    cd central-server
+    npm install
+    cd ..
+else
+    echo -e "${GREEN}✓${NC} Dépendances central server OK"
+fi
+
+if [ ! -f "central-server/.env" ]; then
+    if [ -f "central-server/.env.example" ]; then
+        cp central-server/.env.example central-server/.env
+        echo -e "${YELLOW}⚠${NC} central-server/.env créé depuis .env.example. Pensez à configurer DATABASE_URL et JWT_SECRET."
+    else
+        echo -e "${RED}❌ Aucun fichier .env pour central-server${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✓${NC} central-server/.env trouvé"
+fi
+
+if [ ! -d "central-dashboard/node_modules" ]; then
+    echo "Installation des dépendances central dashboard..."
+    cd central-dashboard
+    npm install
+    cd ..
+else
+    echo -e "${GREEN}✓${NC} Dépendances central dashboard OK"
+fi
+
 echo ""
 echo -e "${BLUE}🚀 Démarrage des services...${NC}"
 echo ""
@@ -93,14 +127,14 @@ echo ""
 cleanup() {
     echo ""
     echo -e "${YELLOW}🛑 Arrêt de tous les services...${NC}"
-    kill $PID_ANGULAR $PID_SOCKET $PID_ADMIN 2>/dev/null
+    kill ${PID_ANGULAR:-} ${PID_SOCKET:-} ${PID_ADMIN:-} ${PID_CENTRAL_SERVER:-} ${PID_CENTRAL_DASHBOARD:-} 2>/dev/null
     exit 0
 }
 
 trap cleanup SIGINT SIGTERM
 
 # 1. Démarrer le serveur Socket.IO
-echo -e "${GREEN}[1/3]${NC} Démarrage Socket.IO server (port 3000)..."
+echo -e "${GREEN}[1/5]${NC} Démarrage Socket.IO server (port 3000)..."
 cd server-render
 node server.js > ../logs/socket.log 2>&1 &
 PID_SOCKET=$!
@@ -115,7 +149,7 @@ else
 fi
 
 # 2. Démarrer l'interface admin (mode démo)
-echo -e "${GREEN}[2/3]${NC} Démarrage Admin Interface (port 8080)..."
+echo -e "${GREEN}[2/5]${NC} Démarrage Admin Interface (port 8080)..."
 cd raspberry/admin
 if [ "$ADMIN_MODE" = "demo" ]; then
     echo "→ Mode DEMO (données mockées, pas d'écriture disque)"
@@ -136,13 +170,44 @@ else
 fi
 
 # 3. Démarrer Angular Dev Server
-echo -e "${GREEN}[3/3]${NC} Démarrage Angular dev server (port 4200)..."
+echo -e "${GREEN}[3/5]${NC} Démarrage Angular dev server (port 4200)..."
 ng serve > logs/angular.log 2>&1 &
 PID_ANGULAR=$!
 
 # Attendre que Angular soit prêt
 echo -e "${YELLOW}⏳ Compilation Angular en cours...${NC}"
 sleep 5
+
+# 4. Démarrer le central server (API + WebSocket)
+echo -e "${GREEN}[4/5]${NC} Démarrage Central Server (port 3001)..."
+cd central-server
+npm run dev > ../logs/central-server.log 2>&1 &
+PID_CENTRAL_SERVER=$!
+cd ..
+sleep 2
+
+if ps -p $PID_CENTRAL_SERVER > /dev/null; then
+    echo -e "${GREEN}✓${NC} Central Server started (PID: $PID_CENTRAL_SERVER)"
+else
+    echo -e "${RED}❌ Échec démarrage Central Server${NC}"
+    echo "Vérifiez central-server/.env et votre base PostgreSQL locale."
+    exit 1
+fi
+
+# 5. Démarrer le central dashboard
+echo -e "${GREEN}[5/5]${NC} Démarrage Central Dashboard (port 4300)..."
+cd central-dashboard
+NG_CLI_ANALYTICS=false ANGULAR_CLI_ANALYTICS=false npm run start -- --port 4300 --host 127.0.0.1 > ../logs/central-dashboard.log 2>&1 &
+PID_CENTRAL_DASHBOARD=$!
+cd ..
+sleep 5
+
+if ps -p $PID_CENTRAL_DASHBOARD > /dev/null; then
+    echo -e "${GREEN}✓${NC} Central Dashboard started (PID: $PID_CENTRAL_DASHBOARD)"
+else
+    echo -e "${RED}❌ Échec démarrage Central Dashboard${NC}"
+    exit 1
+fi
 
 echo ""
 echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
@@ -166,10 +231,19 @@ echo ""
 echo -e "${BLUE}🔌 Socket.IO Server:${NC}"
 echo "   • Port: 3000"
 echo ""
+echo -e "${BLUE}🛠️  Central Server:${NC}"
+echo "   • API:    http://localhost:3001/api"
+echo "   • Health: http://localhost:3001/health"
+echo ""
+echo -e "${BLUE}📊 Central Dashboard:${NC}"
+echo "   • http://localhost:4300"
+echo ""
 echo -e "${BLUE}📋 Logs en direct:${NC}"
 echo "   • tail -f logs/angular.log"
 echo "   • tail -f logs/socket.log"
 echo "   • tail -f logs/admin.log"
+echo "   • tail -f logs/central-server.log"
+echo "   • tail -f logs/central-dashboard.log"
 echo ""
 echo -e "${YELLOW}Appuyez sur Ctrl+C pour arrêter tous les services${NC}"
 echo ""
