@@ -9,3 +9,6 @@ dist/
 .angular/
 .DS_Store
 package-lock.json
+
+# Local development logs
+logs/*.log
