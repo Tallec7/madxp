@@ -6,6 +6,7 @@
 let currentTab = 'dashboard';
 let currentLogService = 'app';
 let refreshInterval = null;
+let cachedVideos = [];
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', () => {
@@ -161,38 +162,261 @@ async function loadVideos() {
         const data = await response.json();
         console.log('[admin-ui] /api/videos payload', data);
 
+        cachedVideos = Array.isArray(data) ? data : (data.videos || []);
+
         const list = document.getElementById('videos-list');
+        if (!list) {
+            return;
+        }
         list.innerHTML = '';
 
-        // L'API retourne directement un tableau, pas un objet avec videos
-        const videos = Array.isArray(data) ? data : (data.videos || []);
-
-        if (videos.length === 0) {
-            list.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Aucune vidéo trouvée</p>';
+        if (cachedVideos.length === 0) {
+            list.innerHTML = '<p class="video-empty-state">Aucune vidéo trouvée</p>';
             return;
         }
 
-        videos.forEach(video => {
-            const item = document.createElement('div');
-            item.className = 'video-item';
-            item.innerHTML = `
-                <div class="video-info">
-                    <div class="video-name">${video.name}</div>
-                    <div class="video-meta">
-                        ${video.category} • ${video.size}
-                    </div>
-                </div>
-                <div class="video-actions">
-                    <button class="btn btn-danger btn-sm" onclick="deleteVideo('${video.category}', '${video.name}')">
-                        🗑️ Supprimer
-                    </button>
-                </div>
-            `;
-            list.appendChild(item);
-        });
+        const groupedVideos = groupVideosByCategory(cachedVideos);
+        renderVideoGroups(list, groupedVideos);
+        updateVideoSuggestions(cachedVideos);
     } catch (error) {
         console.error('Error loading videos:', error);
     }
+}
+
+function groupVideosByCategory(videos) {
+    const groups = new Map();
+
+    videos.forEach(video => {
+        const { categoryLabel, subcategoryLabel } = parseVideoCategory(video);
+        const groupKey = categoryLabel || 'Autres';
+
+        if (!groups.has(groupKey)) {
+            groups.set(groupKey, {
+                name: groupKey,
+                directVideos: [],
+                subgroups: new Map()
+            });
+        }
+
+        const group = groups.get(groupKey);
+        const preparedVideo = {
+            ...video,
+            displayLabel: video.displayName || formatVideoName(video.name),
+            fullPath: `videos/${video.path}`
+        };
+
+        if (subcategoryLabel) {
+            if (!group.subgroups.has(subcategoryLabel)) {
+                group.subgroups.set(subcategoryLabel, []);
+            }
+            group.subgroups.get(subcategoryLabel).push(preparedVideo);
+        } else {
+            group.directVideos.push(preparedVideo);
+        }
+    });
+
+    return Array.from(groups.values()).map(group => {
+        const subgroups = Array.from(group.subgroups.entries()).map(([name, items]) => ({
+            name,
+            videos: items.sort((a, b) => a.displayLabel.localeCompare(b.displayLabel, 'fr'))
+        }));
+
+        return {
+            name: group.name,
+            directVideos: group.directVideos.sort((a, b) => a.displayLabel.localeCompare(b.displayLabel, 'fr')),
+            subgroups,
+            total: group.directVideos.length + subgroups.reduce((sum, sg) => sum + sg.videos.length, 0)
+        };
+    }).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+}
+
+function renderVideoGroups(container, groups) {
+    groups.forEach(group => {
+        const groupEl = document.createElement('div');
+        groupEl.className = 'video-group';
+
+        const header = document.createElement('div');
+        header.className = 'video-group-header';
+
+        const titleWrapper = document.createElement('div');
+        const title = document.createElement('h4');
+        title.textContent = group.name;
+        const count = document.createElement('span');
+        count.className = 'video-count';
+        count.textContent = `${group.total} vidéo${group.total > 1 ? 's' : ''}`;
+
+        titleWrapper.appendChild(title);
+        titleWrapper.appendChild(count);
+        header.appendChild(titleWrapper);
+        groupEl.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'video-subgroups';
+
+        if (group.directVideos.length > 0) {
+            body.appendChild(createVideoSubgroup('Vidéos directes', group.directVideos));
+        }
+
+        group.subgroups.forEach(subgroup => {
+            body.appendChild(createVideoSubgroup(subgroup.name, subgroup.videos));
+        });
+
+        if (group.directVideos.length === 0 && group.subgroups.length === 0) {
+            const empty = document.createElement('p');
+            empty.className = 'video-empty-state';
+            empty.textContent = 'Aucune vidéo dans cette catégorie';
+            body.appendChild(empty);
+        }
+
+        groupEl.appendChild(body);
+        container.appendChild(groupEl);
+    });
+}
+
+function createVideoSubgroup(name, videos) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'video-subgroup';
+
+    const header = document.createElement('div');
+    header.className = 'video-subgroup-header';
+    const title = document.createElement('h5');
+    title.textContent = name;
+    const count = document.createElement('span');
+    count.className = 'video-count';
+    count.textContent = `${videos.length} vidéo${videos.length > 1 ? 's' : ''}`;
+    header.appendChild(title);
+    header.appendChild(count);
+    wrapper.appendChild(header);
+
+    const list = document.createElement('div');
+    list.className = 'video-rows';
+
+    videos.forEach(video => {
+        list.appendChild(createVideoRow(video));
+    });
+
+    wrapper.appendChild(list);
+    return wrapper;
+}
+
+function createVideoRow(video) {
+    const row = document.createElement('div');
+    row.className = 'video-row';
+
+    const info = document.createElement('div');
+    info.className = 'video-row-info';
+
+    const title = document.createElement('div');
+    title.className = 'video-row-title';
+    title.textContent = video.displayLabel;
+
+    const meta = document.createElement('div');
+    meta.className = 'video-row-meta';
+    const metaParts = [
+        video.size,
+        formatVideoDate(video.modified)
+    ].filter(Boolean);
+    meta.textContent = metaParts.join(' • ');
+
+    const pathInfo = document.createElement('div');
+    pathInfo.className = 'video-row-path';
+    pathInfo.textContent = video.fullPath;
+
+    info.appendChild(title);
+    info.appendChild(meta);
+    info.appendChild(pathInfo);
+
+    const actions = document.createElement('div');
+    actions.className = 'video-row-actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn btn-secondary btn-sm';
+    editBtn.textContent = '✏️ Modifier';
+    editBtn.addEventListener('click', () => openEditModal(video.path));
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn btn-danger btn-sm';
+    deleteBtn.textContent = '🗑️ Supprimer';
+    deleteBtn.addEventListener('click', () => deleteVideo(video.category, video.name));
+
+    actions.appendChild(editBtn);
+    actions.appendChild(deleteBtn);
+
+    row.appendChild(info);
+    row.appendChild(actions);
+
+    return row;
+}
+
+function parseVideoCategory(video) {
+    const rawCategory = (video.category === '.' ? '' : (video.category || ''));
+    const segments = rawCategory.split(/[/\\]/).filter(Boolean);
+
+    const categoryLabel = video.configCategory || segments[0] || 'Autres';
+    const subcategoryLabel = video.configSubcategory || (segments.length > 1 ? segments.slice(1).join(' / ') : '');
+
+    return { categoryLabel, subcategoryLabel };
+}
+
+function formatVideoName(filename = '') {
+    return filename
+        .replace(/\.[^.]+$/, '')
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function formatVideoDate(value) {
+    if (!value) {
+        return '';
+    }
+    try {
+        const date = new Date(value);
+        return date.toLocaleString('fr-FR');
+    } catch {
+        return '';
+    }
+}
+
+function updateVideoSuggestions(videos) {
+    const categories = new Set();
+    const subcategories = new Set();
+
+    videos.forEach(video => {
+        const { categoryLabel, subcategoryLabel } = parseVideoCategory(video);
+        if (categoryLabel) {
+            categories.add(categoryLabel);
+        }
+        if (video.configCategory) {
+            categories.add(video.configCategory);
+        }
+        if (subcategoryLabel) {
+            subcategories.add(subcategoryLabel);
+        }
+        if (video.configSubcategory) {
+            subcategories.add(video.configSubcategory);
+        }
+    });
+
+    setDatalistOptions('edit-category-options', categories);
+    setDatalistOptions('edit-subcategory-options', subcategories);
+}
+
+function setDatalistOptions(elementId, values) {
+    const datalist = document.getElementById(elementId);
+    if (!datalist) {
+        return;
+    }
+
+    datalist.innerHTML = '';
+    Array.from(values)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, 'fr'))
+        .forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            datalist.appendChild(option);
+        });
 }
 
 function refreshVideos() {
@@ -353,6 +577,14 @@ function initForms() {
         e.preventDefault();
         await updateSystem();
     });
+
+    const editForm = document.getElementById('edit-video-form');
+    if (editForm) {
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await submitVideoEdition();
+        });
+    }
 }
 
 async function uploadVideo() {
@@ -562,4 +794,98 @@ function showNotification(message, type = 'info') {
     };
 
     alert(`${icons[type]} ${message}`);
+}
+
+function openEditModal(videoPath) {
+    const modal = document.getElementById('edit-modal');
+    const form = document.getElementById('edit-video-form');
+    if (!modal || !form) {
+        return;
+    }
+
+    const video = cachedVideos.find(item => item.path === videoPath);
+    if (!video) {
+        showNotification('Vidéo introuvable', 'error');
+        return;
+    }
+
+    document.getElementById('edit-original-path').value = video.path;
+    document.getElementById('edit-display-name').value = video.displayName || formatVideoName(video.name);
+    document.getElementById('edit-filename').value = video.name;
+
+    const { categoryLabel, subcategoryLabel } = parseVideoCategory(video);
+    document.getElementById('edit-category').value = categoryLabel || '';
+    document.getElementById('edit-subcategory').value = subcategoryLabel || '';
+
+    const pathLabel = document.getElementById('edit-current-path');
+    if (pathLabel) {
+        pathLabel.textContent = `Chemin actuel : videos/${video.path}`;
+    }
+
+    modal.classList.add('active');
+}
+
+function closeEditModal() {
+    const modal = document.getElementById('edit-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+    resetEditForm();
+}
+
+function resetEditForm() {
+    const form = document.getElementById('edit-video-form');
+    if (form) {
+        form.reset();
+    }
+
+    const pathLabel = document.getElementById('edit-current-path');
+    if (pathLabel) {
+        pathLabel.textContent = '';
+    }
+
+    const originalInput = document.getElementById('edit-original-path');
+    if (originalInput) {
+        originalInput.value = '';
+    }
+}
+
+async function submitVideoEdition() {
+    const originalPath = document.getElementById('edit-original-path').value;
+    const category = document.getElementById('edit-category').value.trim();
+    const subcategory = document.getElementById('edit-subcategory').value.trim();
+    const displayName = document.getElementById('edit-display-name').value.trim();
+    const filename = document.getElementById('edit-filename').value.trim();
+
+    if (!originalPath || !category || !filename) {
+        showNotification('Catégorie et nom de fichier requis', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/videos/edit', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                originalPath,
+                categoryId: category,
+                subcategoryId: subcategory,
+                displayName,
+                newFilename: filename
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Vidéo mise à jour', 'success');
+            closeEditModal();
+            loadVideos();
+        } else {
+            showNotification('Erreur: ' + (data.error || 'Impossible de modifier la vidéo'), 'error');
+        }
+    } catch (error) {
+        console.error('Error editing video:', error);
+        showNotification('Erreur lors de la modification', 'error');
+    }
 }

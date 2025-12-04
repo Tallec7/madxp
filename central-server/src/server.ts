@@ -41,7 +41,7 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.use((req: Request, _res: Response, next: NextFunction) => {
   logger.debug('Request', {
     method: req.method,
     path: req.path,
@@ -50,7 +50,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
   res.json({
     service: 'NEOPRO Central Server',
     version: '1.0.0',
@@ -59,7 +59,7 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
-app.get('/health', async (req: Request, res: Response) => {
+app.get('/health', async (_req: Request, res: Response) => {
   try {
     await pool.query('SELECT 1');
 
@@ -91,7 +91,7 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   logger.error('Unhandled error:', {
     error: err.message,
     stack: err.stack,
@@ -129,12 +129,11 @@ const startServer = async () => {
 
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM signal received: closing HTTP server');
-  httpServer.close(() => {
+  httpServer.close(async () => {
     logger.info('HTTP server closed');
-    pool.end(() => {
-      logger.info('Database pool closed');
-      process.exit(0);
-    });
+    await pool.end();
+    logger.info('Database pool closed');
+    process.exit(0);
   });
 });
 

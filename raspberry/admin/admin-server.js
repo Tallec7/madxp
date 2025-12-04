@@ -60,6 +60,9 @@ const CONFIG_FILE_CANDIDATES = [
 const VIDEO_MAPPING_CACHE_DURATION = 60 * 1000; // 1 minute cache pour limiter les lectures disque
 let videoMappingCache = null;
 let videoMappingCacheTime = 0;
+const VIDEO_METADATA_CACHE_DURATION = 60 * 1000;
+let videoMetadataCache = null;
+let videoMetadataCacheTime = 0;
 const CONFIG_JSON_INDENT = 4;
 
 console.log(`[admin] NEOPRO_DIR resolved to ${NEOPRO_DIR} (${neoproSource})`);
@@ -98,6 +101,21 @@ function sanitizeSegment(value, fallback) {
     .replace(/[^a-zA-Z0-9]/g, '_')
     .replace(/_+/g, '_')
     .toUpperCase();
+}
+
+function sanitizeFilename(value, fallback) {
+  if (!value) {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+  const cleaned = trimmed
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_+/g, '_')
+    .toLowerCase();
+  return cleaned || fallback;
 }
 
 function extractPathSegments(videoPath) {
@@ -189,6 +207,71 @@ async function loadVideoPathMapping() {
   return mapping;
 }
 
+function invalidateVideoCaches() {
+  videoMappingCache = null;
+  videoMappingCacheTime = 0;
+  videoMetadataCache = null;
+  videoMetadataCacheTime = 0;
+}
+
+async function getVideoMetadataFromConfig() {
+  if (videoMetadataCache && Date.now() - videoMetadataCacheTime < VIDEO_METADATA_CACHE_DURATION) {
+    return videoMetadataCache;
+  }
+
+  const metadata = {};
+  try {
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      videoMetadataCache = metadata;
+      videoMetadataCacheTime = Date.now();
+      return metadata;
+    }
+
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+
+    for (const category of config.categories || []) {
+      if (!category) continue;
+      const categoryId = (category.id || category.name || '').trim();
+
+      (category.videos || []).forEach(video => {
+        if (!video?.path) {
+          return;
+        }
+        metadata[video.path.replace(/\\/g, '/')] = {
+          displayName: video.name,
+          categoryId: categoryId,
+          subcategoryId: null
+        };
+      });
+
+      for (const sub of category.subCategories || []) {
+        if (!sub) {
+          continue;
+        }
+        const subId = (sub.id || sub.name || '').trim();
+        (sub.videos || []).forEach(video => {
+          if (!video?.path) {
+            return;
+          }
+          metadata[video.path.replace(/\\/g, '/')] = {
+            displayName: video.name,
+            categoryId: categoryId,
+            subcategoryId: subId || null
+          };
+        });
+      }
+    }
+  } catch (error) {
+    console.warn('[admin] Unable to build configuration video metadata map:', error.message);
+  }
+
+  videoMetadataCache = metadata;
+  videoMetadataCacheTime = Date.now();
+  return metadata;
+}
+
 async function resolveUploadDirectories(categoryId, subcategoryId) {
   const mapping = await loadVideoPathMapping();
   const normalizedCategoryKey = (categoryId || '').trim().toLowerCase();
@@ -208,15 +291,39 @@ async function resolveUploadDirectories(categoryId, subcategoryId) {
   };
 }
 
-function createVideoEntry(filename, relativePath, mimeType) {
+function buildDisplayNameFromFilename(filename) {
   const baseName = path.basename(filename, path.extname(filename));
-  const displayName = baseName
+  return baseName
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function resolveDisplayName(filename, providedName) {
+  const fallback = buildDisplayNameFromFilename(filename);
+  const cleaned = (providedName || '').trim();
+  return cleaned || fallback || filename;
+}
+
+function guessMimeFromExtension(filename) {
+  const ext = path.extname(filename || '').toLowerCase();
+  switch (ext) {
+    case '.mkv':
+      return 'video/x-matroska';
+    case '.mov':
+      return 'video/quicktime';
+    case '.avi':
+      return 'video/x-msvideo';
+    default:
+      return 'video/mp4';
+  }
+}
+
+function createVideoEntry(filename, relativePath, mimeType, displayName) {
+  const resolvedName = resolveDisplayName(filename, displayName);
 
   return {
-    name: displayName || filename,
+    name: resolvedName,
     path: relativePath,
     type: mimeType || 'video/mp4'
   };
@@ -278,7 +385,8 @@ async function updateConfigurationWithVideo(
   resolvedCategory,
   resolvedSubcategory,
   filename,
-  mimeType
+  mimeType,
+  displayName
 ) {
   const configPath = await resolveConfigurationPath();
   if (!configPath) {
@@ -305,11 +413,10 @@ async function updateConfigurationWithVideo(
   const alreadyExists = targetVideos.some(video => video.path === finalPath);
 
   if (!alreadyExists) {
-    const newEntry = createVideoEntry(filename, finalPath, mimeType);
+    const newEntry = createVideoEntry(filename, finalPath, mimeType, displayName);
     targetVideos.push(newEntry);
     await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
-    videoMappingCache = null;
-    videoMappingCacheTime = 0;
+    invalidateVideoCaches();
     console.log('[admin] configuration.json updated with new video entry', newEntry);
   } else {
     console.log('[admin] configuration.json already references video path', finalPath);
@@ -344,8 +451,7 @@ async function removeVideoFromConfig(relativePath) {
 
   if (updated) {
     await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
-    videoMappingCache = null;
-    videoMappingCacheTime = 0;
+    invalidateVideoCaches();
     console.log('[admin] configuration.json cleaned from video path', relativePath);
   }
 }
@@ -375,10 +481,7 @@ const storage = multer.diskStorage({
     }
   },
   filename: (req, file, cb) => {
-    // Nettoyer le nom de fichier
-    const cleanName = file.originalname
-      .replace(/[^a-zA-Z0-9._-]/g, '_')
-      .toLowerCase();
+    const cleanName = sanitizeFilename(file.originalname, file.originalname);
     cb(null, cleanName);
   }
 });
@@ -571,14 +674,15 @@ app.get('/api/videos', async (req, res) => {
   try {
     await ensureDirectory(VIDEOS_DIR);
     console.log('[admin] GET /api/videos - listing directory:', VIDEOS_DIR);
-    const videos = await listVideosRecursive(VIDEOS_DIR);
+    const metadata = await getVideoMetadataFromConfig();
+    const videos = await listVideosRecursive(VIDEOS_DIR, VIDEOS_DIR, metadata);
     res.json({ videos });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-async function listVideosRecursive(dir, baseDir = dir) {
+async function listVideosRecursive(dir, baseDir = dir, metadata = {}) {
   const files = await fs.readdir(dir, { withFileTypes: true });
   const videos = [];
 
@@ -586,16 +690,23 @@ async function listVideosRecursive(dir, baseDir = dir) {
     const fullPath = path.join(dir, file.name);
 
     if (file.isDirectory()) {
-      const subVideos = await listVideosRecursive(fullPath, baseDir);
+      const subVideos = await listVideosRecursive(fullPath, baseDir, metadata);
       videos.push(...subVideos);
     } else if (file.name.match(/\.(mp4|mkv|mov|avi)$/i)) {
       const stats = await fs.stat(fullPath);
       const relativePath = path.relative(baseDir, fullPath);
+      const normalizedRelative = relativePath.replace(/\\/g, '/');
+      const relativeDir = path.dirname(normalizedRelative);
+      const configurationPath = ['videos', normalizedRelative].filter(Boolean).join('/');
+      const configEntry = metadata[configurationPath];
 
       videos.push({
         name: file.name,
-        path: relativePath,
-        category: path.dirname(relativePath),
+        path: normalizedRelative,
+        category: relativeDir,
+        displayName: configEntry?.displayName || buildDisplayNameFromFilename(file.name),
+        configCategory: configEntry?.categoryId || null,
+        configSubcategory: configEntry?.subcategoryId || null,
         size: (stats.size / 1024 / 1024).toFixed(2) + ' MB',
         modified: stats.mtime
       });
@@ -628,7 +739,8 @@ app.post('/api/videos/upload', upload.single('video'), async (req, res) => {
       category,
       subcategory,
       req.file.filename,
-      req.file.mimetype
+      req.file.mimetype,
+      req.body.displayName
     );
 
     console.log('[admin] Upload directory resolved', {
@@ -682,6 +794,94 @@ app.delete('/api/videos/:category/:filename', async (req, res) => {
   } catch (error) {
     console.error('[admin] Error deleting video:', error);
     res.status(500).json({ error: 'Impossible de supprimer la vidéo' });
+  }
+});
+
+app.put('/api/videos/edit', async (req, res) => {
+  try {
+    const {
+      originalPath,
+      categoryId,
+      subcategoryId,
+      displayName,
+      newFilename
+    } = req.body || {};
+
+    const normalizedOriginal = (originalPath || '')
+      .replace(/\\/g, '/')
+      .replace(/^\/+/, '')
+      .replace(/^videos\//i, '');
+    const cleanCategoryId = (categoryId || '').trim();
+    const cleanSubcategoryId = (subcategoryId || '').trim();
+    const requestedFilename = sanitizeFilename(newFilename, null);
+
+    if (!normalizedOriginal || normalizedOriginal.includes('..')) {
+      return res.status(400).json({ error: 'Chemin de fichier invalide' });
+    }
+
+    if (!cleanCategoryId) {
+      return res.status(400).json({ error: 'Catégorie requise' });
+    }
+
+    const sourcePath = path.join(VIDEOS_DIR, normalizedOriginal);
+    await fs.access(sourcePath);
+
+    const currentFilename = path.basename(normalizedOriginal);
+    const currentExt = path.extname(currentFilename);
+    let finalFilename = requestedFilename || currentFilename;
+    if (!path.extname(finalFilename) && currentExt) {
+      finalFilename = `${finalFilename}${currentExt}`;
+    }
+
+    const { category: resolvedCategory, subcategory: resolvedSubcategory } =
+      await resolveUploadDirectories(cleanCategoryId, cleanSubcategoryId || null);
+
+    const destinationDir = resolvedSubcategory
+      ? path.join(VIDEOS_DIR, resolvedCategory, resolvedSubcategory)
+      : path.join(VIDEOS_DIR, resolvedCategory);
+    await fs.mkdir(destinationDir, { recursive: true });
+
+    const destinationPath = path.join(destinationDir, finalFilename);
+    const shouldMove = path.resolve(destinationPath) !== path.resolve(sourcePath);
+
+    if (shouldMove) {
+      await fs.rename(sourcePath, destinationPath);
+      await cleanupEmptyDirs(path.dirname(sourcePath), VIDEOS_DIR);
+    }
+
+    const originalConfigPath = ['videos', normalizedOriginal]
+      .filter(Boolean)
+      .join('/')
+      .replace(/\\/g, '/');
+    const relativeDestinationPath = path
+      .relative(VIDEOS_DIR, destinationPath)
+      .replace(/\\/g, '/');
+
+    await removeVideoFromConfig(originalConfigPath);
+    await updateConfigurationWithVideo(
+      cleanCategoryId,
+      cleanSubcategoryId || null,
+      resolvedCategory,
+      resolvedSubcategory,
+      finalFilename,
+      guessMimeFromExtension(finalFilename),
+      displayName
+    );
+
+    res.json({
+      success: true,
+      message: 'Vidéo mise à jour',
+      video: {
+        path: relativeDestinationPath,
+        displayName: resolveDisplayName(finalFilename, displayName),
+        category: path.dirname(relativeDestinationPath),
+        configCategory: cleanCategoryId,
+        configSubcategory: cleanSubcategoryId || null
+      }
+    });
+  } catch (error) {
+    console.error('[admin] Error editing video:', error);
+    res.status(500).json({ error: 'Impossible de modifier la vidéo' });
   }
 });
 
