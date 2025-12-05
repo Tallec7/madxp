@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
+import dns from 'node:dns';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -17,6 +18,9 @@ import contentRoutes from './routes/content.routes';
 import updatesRoutes from './routes/updates.routes';
 
 dotenv.config();
+
+// Render ne supporte pas encore IPv6 en sortie, on force la résolution IPv4 des hôtes (Supabase)
+dns.setDefaultResultOrder('ipv4first');
 
 const app = express();
 const httpServer = http.createServer(app);
