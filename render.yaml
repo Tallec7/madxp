@@ -5,6 +5,7 @@ services:
     env: node
     region: frankfurt
     plan: starter
+    rootDirectory: central-server
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /health
