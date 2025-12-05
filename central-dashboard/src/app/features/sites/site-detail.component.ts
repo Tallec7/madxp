@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { SitesService } from '../../core/services/sites.service';
 import { Site, Metrics } from '../../core/models';
@@ -8,7 +9,7 @@ import { Subscription, interval } from 'rxjs';
 @Component({
   selector: 'app-site-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   template: `
     <div class="page-container" *ngIf="site; else loading">
       <div class="page-header">
@@ -182,6 +183,36 @@ import { Subscription, interval } from 'rxjs';
           <div class="api-key-label">API Key:</div>
           <code class="api-key-value">{{ site.api_key }}</code>
           <button class="btn-icon" (click)="copyApiKey()" title="Copier">📋</button>
+        </div>
+      </div>
+
+      <!-- Configuration du site -->
+      <div class="card">
+        <div class="card-header-row">
+          <h3>Configuration du site</h3>
+          <button class="btn btn-primary" (click)="showConfigEditor = !showConfigEditor" [disabled]="site.status !== 'online'">
+            {{ showConfigEditor ? 'Fermer' : 'Modifier la configuration' }}
+          </button>
+        </div>
+        <div *ngIf="showConfigEditor" class="config-editor">
+          <div class="config-warning">
+            Modifiez la configuration JSON du site. Les changements seront appliqués immédiatement.
+          </div>
+          <textarea
+            class="config-textarea"
+            [(ngModel)]="configJson"
+            [placeholder]="configPlaceholder"
+            rows="20"
+          ></textarea>
+          <div class="config-actions">
+            <button class="btn btn-secondary" (click)="formatConfig()">Formater JSON</button>
+            <button class="btn btn-secondary" (click)="validateConfig()">Valider</button>
+            <button class="btn btn-primary" (click)="deployConfig()" [disabled]="!isConfigValid || sendingCommand">
+              {{ sendingCommand ? 'Envoi en cours...' : 'Deployer la configuration' }}
+            </button>
+          </div>
+          <div *ngIf="configError" class="config-error">{{ configError }}</div>
+          <div *ngIf="configSuccess" class="config-success">{{ configSuccess }}</div>
         </div>
       </div>
 
@@ -504,6 +535,109 @@ import { Subscription, interval } from 'rxjs';
       gap: 1rem;
     }
 
+    .card-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .card-header-row h3 {
+      margin: 0;
+      border: none;
+      padding: 0;
+    }
+
+    .config-editor {
+      margin-top: 1rem;
+    }
+
+    .config-warning {
+      padding: 0.75rem 1rem;
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-radius: 6px;
+      color: #92400e;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
+    .config-textarea {
+      width: 100%;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.875rem;
+      padding: 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      background: #f8fafc;
+      resize: vertical;
+      min-height: 300px;
+    }
+
+    .config-textarea:focus {
+      outline: none;
+      border-color: #2563eb;
+      background: white;
+    }
+
+    .config-actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .config-error {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: #fef2f2;
+      border: 1px solid #ef4444;
+      border-radius: 6px;
+      color: #b91c1c;
+      font-size: 0.875rem;
+    }
+
+    .config-success {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: #ecfdf5;
+      border: 1px solid #10b981;
+      border-radius: 6px;
+      color: #065f46;
+      font-size: 0.875rem;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #1d4ed8;
+    }
+
+    .btn-primary:disabled {
+      background: #93c5fd;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .btn-secondary:hover {
+      background: #cbd5e1;
+    }
+
     @media (max-width: 768px) {
       .info-grid {
         grid-template-columns: 1fr;
@@ -511,6 +645,10 @@ import { Subscription, interval } from 'rxjs';
 
       .actions-grid {
         grid-template-columns: 1fr;
+      }
+
+      .config-actions {
+        flex-direction: column;
       }
     }
   `]
@@ -522,6 +660,34 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   showApiKey = false;
   siteId!: string;
   Math = Math;
+
+  // Configuration editor
+  showConfigEditor = false;
+  configJson = '';
+  configError = '';
+  configSuccess = '';
+  isConfigValid = false;
+  sendingCommand = false;
+
+  configPlaceholder = `{
+  "remote": {
+    "title": "Telecommande Neopro - MON_CLUB"
+  },
+  "auth": {
+    "password": "MotDePasseWiFi",
+    "clubName": "MON_CLUB",
+    "sessionDuration": 28800000
+  },
+  "sync": {
+    "enabled": true,
+    "serverUrl": "https://neopro-central-server.onrender.com",
+    "siteName": "ID_SITE",
+    "clubName": "MON_CLUB"
+  },
+  "version": "1.0",
+  "sponsors": [],
+  "categories": []
+}`;
 
   private refreshSubscription?: Subscription;
 
@@ -617,35 +783,71 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   }
 
   restartService(service: string): void {
-    if (confirm(`Redémarrer le service ${service} ?`)) {
-      alert('Fonctionnalité en cours d\'implémentation');
-      // TODO: Implémenter l'envoi de commande via API
+    if (confirm(`Redemarrer le service ${service} ?`)) {
+      this.sendingCommand = true;
+      this.sitesService.sendCommand(this.siteId, 'restart_service', { service }).subscribe({
+        next: (response) => {
+          this.sendingCommand = false;
+          alert(`Commande envoyee ! ID: ${response.commandId}`);
+        },
+        error: (error) => {
+          this.sendingCommand = false;
+          alert('Erreur: ' + (error.error?.error || error.message));
+        }
+      });
     }
   }
 
   getLogs(): void {
-    alert('Fonctionnalité en cours d\'implémentation');
-    // TODO: Implémenter la récupération des logs
+    this.sendingCommand = true;
+    this.sitesService.sendCommand(this.siteId, 'get_logs', { service: 'neopro-app', lines: 100 }).subscribe({
+      next: (response) => {
+        this.sendingCommand = false;
+        alert(`Commande envoyee ! Les logs seront disponibles sous peu. ID: ${response.commandId}`);
+      },
+      error: (error) => {
+        this.sendingCommand = false;
+        alert('Erreur: ' + (error.error?.error || error.message));
+      }
+    });
   }
 
   getSystemInfo(): void {
-    alert('Fonctionnalité en cours d\'implémentation');
-    // TODO: Implémenter la récupération des infos système
+    this.sendingCommand = true;
+    this.sitesService.sendCommand(this.siteId, 'get_system_info', {}).subscribe({
+      next: (response) => {
+        this.sendingCommand = false;
+        alert(`Commande envoyee ! ID: ${response.commandId}`);
+      },
+      error: (error) => {
+        this.sendingCommand = false;
+        alert('Erreur: ' + (error.error?.error || error.message));
+      }
+    });
   }
 
   rebootSite(): void {
-    if (confirm('⚠️ Êtes-vous sûr de vouloir redémarrer le Raspberry Pi ?')) {
-      alert('Fonctionnalité en cours d\'implémentation');
-      // TODO: Implémenter la commande de reboot
+    if (confirm('Etes-vous sur de vouloir redemarrer le Raspberry Pi ?')) {
+      this.sendingCommand = true;
+      this.sitesService.sendCommand(this.siteId, 'reboot', {}).subscribe({
+        next: (response) => {
+          this.sendingCommand = false;
+          alert(`Commande de redemarrage envoyee ! Le site sera temporairement hors ligne.`);
+        },
+        error: (error) => {
+          this.sendingCommand = false;
+          alert('Erreur: ' + (error.error?.error || error.message));
+        }
+      });
     }
   }
 
   regenerateApiKey(): void {
-    if (confirm('Régénérer la clé API ? L\'ancienne clé ne fonctionnera plus.')) {
+    if (confirm('Regenerer la cle API ? L\'ancienne cle ne fonctionnera plus.')) {
       this.sitesService.regenerateApiKey(this.siteId).subscribe({
         next: (site) => {
           this.site = site;
-          alert('Clé API régénérée avec succès !');
+          alert('Cle API regeneree avec succes !');
         },
         error: (error) => {
           alert('Erreur: ' + (error.error?.error || error.message));
@@ -657,7 +859,76 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   copyApiKey(): void {
     if (this.site?.api_key) {
       navigator.clipboard.writeText(this.site.api_key);
-      alert('Clé API copiée !');
+      alert('Cle API copiee !');
+    }
+  }
+
+  // Configuration editor methods
+  formatConfig(): void {
+    this.configError = '';
+    this.configSuccess = '';
+    try {
+      const parsed = JSON.parse(this.configJson);
+      this.configJson = JSON.stringify(parsed, null, 2);
+      this.isConfigValid = true;
+      this.configSuccess = 'JSON formate avec succes';
+    } catch (e: any) {
+      this.configError = `Erreur de syntaxe JSON: ${e.message}`;
+      this.isConfigValid = false;
+    }
+  }
+
+  validateConfig(): void {
+    this.configError = '';
+    this.configSuccess = '';
+    try {
+      const parsed = JSON.parse(this.configJson);
+
+      // Validation basique de la structure
+      if (!parsed.auth) {
+        throw new Error('La section "auth" est requise');
+      }
+      if (!parsed.auth.clubName) {
+        throw new Error('Le champ "auth.clubName" est requis');
+      }
+
+      this.isConfigValid = true;
+      this.configSuccess = 'Configuration valide !';
+    } catch (e: any) {
+      this.configError = e.message;
+      this.isConfigValid = false;
+    }
+  }
+
+  deployConfig(): void {
+    if (!this.isConfigValid) {
+      this.validateConfig();
+      if (!this.isConfigValid) return;
+    }
+
+    this.configError = '';
+    this.configSuccess = '';
+
+    try {
+      const configuration = JSON.parse(this.configJson);
+
+      if (!confirm('Deployer cette configuration sur le site ? Les changements seront appliques immediatement.')) {
+        return;
+      }
+
+      this.sendingCommand = true;
+      this.sitesService.sendCommand(this.siteId, 'update_config', { configuration }).subscribe({
+        next: (response) => {
+          this.sendingCommand = false;
+          this.configSuccess = `Configuration deployee avec succes ! ID: ${response.commandId}`;
+        },
+        error: (error) => {
+          this.sendingCommand = false;
+          this.configError = 'Erreur: ' + (error.error?.error || error.message);
+        }
+      });
+    } catch (e: any) {
+      this.configError = `Erreur JSON: ${e.message}`;
     }
   }
 }

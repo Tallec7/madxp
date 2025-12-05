@@ -43,4 +43,17 @@ router.post(
   sitesController.regenerateApiKey
 );
 
+router.post(
+  '/:id/command',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sitesController.sendCommand
+);
+
+router.get(
+  '/:id/command/:commandId',
+  authenticate,
+  sitesController.getCommandStatus
+);
+
 export default router;

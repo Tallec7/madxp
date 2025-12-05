@@ -249,3 +249,99 @@ export const getSiteStats = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Erreur lors de la récupération des statistiques' });
   }
 };
+
+export const sendCommand = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { command, data } = req.body;
+
+    if (!command) {
+      return res.status(400).json({ error: 'Commande requise' });
+    }
+
+    // Vérifier que le site existe
+    const siteResult = await query('SELECT id, site_name, status FROM sites WHERE id = $1', [id]);
+    if (siteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    const site = siteResult.rows[0];
+
+    // Importer le service socket
+    const socketService = (await import('../services/socket.service')).default;
+
+    // Vérifier que le site est connecté
+    if (!socketService.isConnected(id)) {
+      return res.status(503).json({
+        error: 'Site non connecté',
+        status: site.status
+      });
+    }
+
+    // Créer un enregistrement de commande
+    const commandId = uuidv4();
+    await query(
+      `INSERT INTO remote_commands (id, site_id, command_type, command_data, status, executed_by)
+       VALUES ($1, $2, $3, $4, 'pending', $5)`,
+      [commandId, id, command, data ? JSON.stringify(data) : null, req.user?.id]
+    );
+
+    // Envoyer la commande via socket
+    const sent = socketService.sendCommand(id, {
+      id: commandId,
+      type: command,
+      data: data || {},
+    });
+
+    if (!sent) {
+      await query(
+        `UPDATE remote_commands SET status = 'failed', error_message = 'Échec envoi' WHERE id = $1`,
+        [commandId]
+      );
+      return res.status(503).json({ error: 'Échec de l\'envoi de la commande' });
+    }
+
+    // Mettre à jour le statut
+    await query(
+      `UPDATE remote_commands SET status = 'executing', executed_at = NOW() WHERE id = $1`,
+      [commandId]
+    );
+
+    logger.info('Command sent to site', {
+      siteId: id,
+      siteName: site.site_name,
+      command,
+      commandId,
+      sentBy: req.user?.email
+    });
+
+    res.json({
+      success: true,
+      commandId,
+      message: 'Commande envoyée',
+    });
+  } catch (error) {
+    logger.error('Send command error:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'envoi de la commande' });
+  }
+};
+
+export const getCommandStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, commandId } = req.params;
+
+    const result = await query(
+      `SELECT * FROM remote_commands WHERE id = $1 AND site_id = $2`,
+      [commandId, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Commande non trouvée' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    logger.error('Get command status error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération du statut' });
+  }
+};

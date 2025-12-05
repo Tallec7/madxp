@@ -111,11 +111,8 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
         echo 'Serveur installé'
     fi
 
-    # Installation vidéos (optionnel - seulement nouveaux fichiers)
-    if [ -d ~/deploy/videos ]; then
-        sudo cp -rn ~/deploy/videos/* ${RASPBERRY_DIR}/videos/ 2>/dev/null || true
-        echo 'Vidéos synchronisées'
-    fi
+    # NOTE: Les vidéos ne sont pas déployées ici
+    # Elles sont gérées par le sync-agent depuis Google Drive
 
     # Installation sync-agent
     if [ -d ~/deploy/sync-agent ]; then

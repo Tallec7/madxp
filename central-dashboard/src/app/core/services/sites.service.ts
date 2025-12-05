@@ -59,4 +59,12 @@ export class SitesService {
       this.sitesSubject.next([...sites]);
     }
   }
+
+  sendCommand(id: string, command: string, data?: any): Observable<{ success: boolean; commandId: string; message: string }> {
+    return this.api.post(`/sites/${id}/command`, { command, data });
+  }
+
+  getCommandStatus(siteId: string, commandId: string): Observable<any> {
+    return this.api.get(`/sites/${siteId}/command/${commandId}`);
+  }
 }

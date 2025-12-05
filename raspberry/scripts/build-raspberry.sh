@@ -56,7 +56,7 @@ print_step "Préparation du package de déploiement..."
 # Créer le dossier de déploiement
 DEPLOY_DIR="raspberry/deploy"
 rm -rf ${DEPLOY_DIR}
-mkdir -p ${DEPLOY_DIR}/{webapp,server,videos,sync-agent}
+mkdir -p ${DEPLOY_DIR}/{webapp,server,sync-agent}
 
 # Copier le build Angular
 cp -r dist/neopro/browser/* ${DEPLOY_DIR}/webapp/
@@ -73,16 +73,13 @@ if [ -d "raspberry/sync-agent" ]; then
     print_success "Sync-agent copié"
 fi
 
-# Copier les vidéos d'exemple (optionnel)
-if [ -d "public/videos" ]; then
-    print_warning "Copie des vidéos (peut être long selon la taille)..."
-    cp -r public/videos/* ${DEPLOY_DIR}/videos/
-fi
+# NOTE: Les vidéos ne sont PAS incluses dans le déploiement
+# Elles sont gérées par le sync-agent depuis Google Drive
+# Cela permet de garder l'archive de déploiement légère
 
-# Copier la configuration
-if [ -f "public/configuration.json" ]; then
-    cp public/configuration.json ${DEPLOY_DIR}/webapp/
-fi
+# NOTE: configuration.json n'est PAS inclus dans le déploiement
+# Chaque club a sa propre configuration qui ne doit pas être écrasée
+# La configuration est gérée via l'interface d'admin ou manuellement
 
 print_success "Package de déploiement créé"
 
@@ -115,7 +112,6 @@ echo "     ssh pi@neopro.local"
 echo "     tar -xzf neopro-raspberry-deploy.tar.gz"
 echo "     sudo cp -r deploy/webapp/* /home/pi/neopro/webapp/"
 echo "     sudo cp -r deploy/server/* /home/pi/neopro/server/"
-echo "     sudo cp -r deploy/videos/* /home/pi/neopro/videos/"
 echo "     sudo systemctl restart neopro-app"
 echo "     sudo systemctl restart nginx"
 echo ""
