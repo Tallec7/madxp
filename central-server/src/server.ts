@@ -1,7 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import dns from 'node:dns';
-import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
@@ -27,11 +26,6 @@ const allowedOrigins =
     .map((origin) => origin.trim())
     .filter(Boolean) || [];
 
-const corsOptions = {
-  origin: allowedOrigins.length > 0 ? allowedOrigins : '*',
-  credentials: true,
-};
-
 const app = express();
 const httpServer = http.createServer(app);
 
@@ -40,8 +34,34 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 
 app.use(helmet());
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+const resolveOrigin = (origin?: string | undefined) => {
+  if (!origin) return null;
+  if (allowedOrigins.length === 0) {
+    return origin;
+  }
+  return allowedOrigins.includes(origin) ? origin : null;
+};
+
+app.use((req, res, next) => {
+  if (req.headers.origin) {
+    const matchedOrigin = resolveOrigin(req.headers.origin);
+    if (matchedOrigin) {
+      res.header('Access-Control-Allow-Origin', matchedOrigin);
+      res.header('Vary', 'Origin');
+      res.header('Access-Control-Allow-Credentials', 'true');
+    }
+  } else if (allowedOrigins.length === 0) {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
 
 app.use(compression());
 
