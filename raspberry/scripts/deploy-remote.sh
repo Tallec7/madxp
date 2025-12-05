@@ -56,13 +56,17 @@ fi
 
 # Test de connexion SSH
 print_step "Test de connexion SSH..."
-if ! ssh -o ConnectTimeout=5 -o BatchMode=yes ${RASPBERRY_USER}@${RASPBERRY_IP} exit 2>/dev/null; then
+print_warning "Vous allez devoir entrer le mot de passe SSH du Raspberry Pi"
+if ! ssh -o ConnectTimeout=10 ${RASPBERRY_USER}@${RASPBERRY_IP} exit; then
     print_error "Impossible de se connecter à ${RASPBERRY_USER}@${RASPBERRY_IP}"
     echo "Vérifiez que:"
     echo "  • Le Raspberry Pi est allumé et accessible"
-    echo "  • Vous êtes connecté au bon réseau WiFi"
-    echo "  • L'adresse IP est correcte"
+    echo "  • Vous êtes connecté au bon réseau WiFi (NEOPRO-...)"
+    echo "  • L'adresse IP est correcte (neopro.local ou 192.168.4.1)"
     echo "  • SSH est activé sur le Raspberry Pi"
+    echo ""
+    echo "💡 Conseil: Configurez une clé SSH pour éviter de retaper le mot de passe:"
+    echo "   ssh-copy-id ${RASPBERRY_USER}@${RASPBERRY_IP}"
     exit 1
 fi
 print_success "Connexion SSH OK"
@@ -113,8 +117,31 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
         echo 'Vidéos synchronisées'
     fi
 
-    # Permissions
-    sudo chown -R pi:pi ${RASPBERRY_DIR}
+    # Installation sync-agent
+    if [ -d ~/deploy/sync-agent ]; then
+        sudo mkdir -p ${RASPBERRY_DIR}/sync-agent
+        sudo cp -r ~/deploy/sync-agent/* ${RASPBERRY_DIR}/sync-agent/
+        echo 'Sync-agent installé'
+    fi
+
+    # Permissions correctes pour nginx
+    echo 'Configuration des permissions...'
+    sudo chmod 755 /home/pi
+    sudo chmod 755 ${RASPBERRY_DIR}
+    sudo chown -R www-data:www-data ${RASPBERRY_DIR}/webapp/
+    sudo find ${RASPBERRY_DIR}/webapp -type f -exec chmod 644 {} \;
+    sudo find ${RASPBERRY_DIR}/webapp -type d -exec chmod 755 {} \;
+    # configuration.json doit être éditable par pi (pour admin server)
+    if [ -f ${RASPBERRY_DIR}/webapp/configuration.json ]; then
+        sudo chown pi:pi ${RASPBERRY_DIR}/webapp/configuration.json
+        sudo chmod 664 ${RASPBERRY_DIR}/webapp/configuration.json
+    fi
+    sudo chown -R pi:pi ${RASPBERRY_DIR}/server
+    sudo chown -R pi:pi ${RASPBERRY_DIR}/admin
+    sudo chown -R pi:pi ${RASPBERRY_DIR}/sync-agent
+    sudo chown -R pi:pi ${RASPBERRY_DIR}/videos
+    sudo chown -R pi:pi ${RASPBERRY_DIR}/logs
+    echo 'Permissions configurées'
 
     # Nettoyage
     rm -rf ~/deploy ~/neopro-deploy.tar.gz

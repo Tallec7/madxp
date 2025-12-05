@@ -77,16 +77,16 @@ LOCATION_REGION=${region}
 LOCATION_COUNTRY=${country}
 SPORTS=${sports}
 
-NEOPRO_ROOT=/home/neopro
-VIDEOS_PATH=/home/neopro/videos
-CONFIG_PATH=/home/neopro/public/configuration.json
-BACKUP_PATH=/home/neopro/backups
+NEOPRO_ROOT=/home/pi/neopro
+VIDEOS_PATH=/home/pi/neopro/videos
+CONFIG_PATH=/home/pi/neopro/public/configuration.json
+BACKUP_PATH=/home/pi/neopro/backups
 
 HEARTBEAT_INTERVAL=30000
 METRICS_INTERVAL=300000
 
 LOG_LEVEL=info
-LOG_PATH=/home/neopro/logs/sync-agent.log
+LOG_PATH=/home/pi/neopro/logs/sync-agent.log
 
 AUTO_UPDATE_ENABLED=true
 AUTO_UPDATE_HOUR=3

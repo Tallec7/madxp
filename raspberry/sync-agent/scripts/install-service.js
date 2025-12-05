@@ -16,8 +16,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=neopro
-Group=neopro
+User=pi
+Group=pi
 WorkingDirectory=${AGENT_PATH}
 ExecStart=/usr/bin/node ${AGENT_SCRIPT}
 Restart=always

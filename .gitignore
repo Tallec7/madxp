@@ -12,3 +12,8 @@ package-lock.json
 
 # Local development logs
 logs/*.log
+
+# Configurations avec mots de passe
+raspberry/configs/*-configuration.json
+!raspberry/configs/TEMPLATE-configuration.json
+raspberry/deploy/

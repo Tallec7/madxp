@@ -33,15 +33,14 @@ echo "║         BUILD NEOPRO POUR RASPBERRY PI                         ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
-# Vérifier qu'on est dans le bon répertoire
+# Vérifier qu'on est dans le bon répertoire (racine du projet)
+# Ce script doit être appelé depuis la racine avec: npm run build:raspberry
 if [ ! -f "package.json" ]; then
     echo "❌ Erreur: package.json non trouvé"
     echo "Ce script doit être exécuté depuis la racine du projet"
+    echo "Usage: npm run build:raspberry (ou ./raspberry/scripts/build-raspberry.sh depuis la racine)"
     exit 1
 fi
-
-# Retour à la racine du projet
-cd ..
 
 print_step "Installation des dépendances..."
 npm install
@@ -57,7 +56,7 @@ print_step "Préparation du package de déploiement..."
 # Créer le dossier de déploiement
 DEPLOY_DIR="raspberry/deploy"
 rm -rf ${DEPLOY_DIR}
-mkdir -p ${DEPLOY_DIR}/{webapp,server,videos}
+mkdir -p ${DEPLOY_DIR}/{webapp,server,videos,sync-agent}
 
 # Copier le build Angular
 cp -r dist/neopro/browser/* ${DEPLOY_DIR}/webapp/
@@ -67,6 +66,12 @@ cp -r dist/neopro/browser/* ${DEPLOY_DIR}/webapp/
 
 # Copier le serveur Node.js
 cp -r server-render/* ${DEPLOY_DIR}/server/
+
+# Copier le sync-agent
+if [ -d "raspberry/sync-agent" ]; then
+    cp -r raspberry/sync-agent/* ${DEPLOY_DIR}/sync-agent/
+    print_success "Sync-agent copié"
+fi
 
 # Copier les vidéos d'exemple (optionnel)
 if [ -d "public/videos" ]; then

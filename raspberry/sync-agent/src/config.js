@@ -30,10 +30,10 @@ const config = {
   },
 
   paths: {
-    root: process.env.NEOPRO_ROOT || '/home/neopro',
-    videos: process.env.VIDEOS_PATH || '/home/neopro/videos',
-    config: process.env.CONFIG_PATH || '/home/neopro/public/configuration.json',
-    backup: process.env.BACKUP_PATH || '/home/neopro/backups',
+    root: process.env.NEOPRO_ROOT || '/home/pi/neopro',
+    videos: process.env.VIDEOS_PATH || '/home/pi/neopro/videos',
+    config: process.env.CONFIG_PATH || '/home/pi/neopro/public/configuration.json',
+    backup: process.env.BACKUP_PATH || '/home/pi/neopro/backups',
   },
 
   monitoring: {
@@ -43,7 +43,7 @@ const config = {
 
   logging: {
     level: process.env.LOG_LEVEL || 'info',
-    path: process.env.LOG_PATH || '/home/neopro/logs/sync-agent.log',
+    path: process.env.LOG_PATH || '/home/pi/neopro/logs/sync-agent.log',
   },
 
   updates: {

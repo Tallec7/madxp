@@ -27,7 +27,7 @@ const execAsync = promisify(exec);
 // Configuration
 const app = express();
 const PORT = process.env.ADMIN_PORT || 8080;
-const DEFAULT_NEOPRO_DIR = path.resolve(__dirname, '..', '..');
+const DEFAULT_NEOPRO_DIR = path.resolve(__dirname, '..');
 const PUBLIC_NEOPRO_DIR = path.join(DEFAULT_NEOPRO_DIR, 'public');
 const hasRootVideos = fsCore.existsSync(path.join(DEFAULT_NEOPRO_DIR, 'videos'));
 const hasPublicVideos = fsCore.existsSync(path.join(PUBLIC_NEOPRO_DIR, 'videos'));

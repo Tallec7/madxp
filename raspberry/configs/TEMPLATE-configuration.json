@@ -1,26 +1,26 @@
 {
     "remote": {
-        "title": "Télécommande Néopro - NANTES"
+        "title": "Télécommande Néopro - [NOM_DU_CLUB]"
     },
     "auth": {
-        "password": "VotreMotDePasseWiFi123",
-        "clubName": "NANTES",
+        "password": "CHANGER_CE_MOT_DE_PASSE",
+        "clubName": "[NOM_DU_CLUB]",
         "sessionDuration": 28800000
     },
     "sync": {
         "enabled": true,
         "serverUrl": "https://neopro-central-server.onrender.com",
-        "siteName": "MB",
-        "clubName": "NANTES",
+        "siteName": "[NOM_DU_SITE]",
+        "clubName": "[NOM_DU_CLUB]",
         "location": {
-            "city": "NN",
+            "city": "[VILLE]",
             "region": "Bretagne",
             "country": "France"
         },
         "sports": ["handball"],
         "contact": {
-            "email": "",
-            "phone": ""
+            "email": "[EMAIL]",
+            "phone": "[TELEPHONE]"
         }
     },
     "version": "1.0",

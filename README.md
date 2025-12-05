@@ -1,123 +1,194 @@
-# Neopro
+# Neopro - Système de télévision interactive pour clubs sportifs
 
-Système de gestion et d'affichage vidéo pour événements sportifs avec gestion de flotte centralisée.
+## 🚀 Vous êtes ici pour :
 
-## 🎯 Vue d'ensemble
+### 0️⃣ TOUT NOUVEAU Raspberry Pi (première installation)
 
-Neopro permet aux clubs sportifs de gérer l'affichage de vidéos (sponsors, buts, jingles) sur écran TV durant les matchs, avec contrôle à distance depuis mobile/tablette.
+⚠️ **Si votre Raspberry Pi n'a jamais été configuré**, suivez d'abord le guide complet :
 
-**Architecture hybride :**
-- **Raspberry Pi local** : Solution autonome pour chaque club (fonctionne sans internet)
-- **Gestion centralisée** : Dashboard web pour l'équipe NEOPRO
-- **Synchronisation** : Déploiement de contenu et mises à jour à distance
+👉 **[Guide d'installation complète](docs/INSTALLATION_COMPLETE.md)**
 
-**Nouveauté 2025** : Système complet de gestion de flotte permettant à l'équipe NEOPRO de gérer tous les boîtiers depuis un dashboard unique.
+Ce guide couvre :
+1. Flash de la carte SD
+2. Installation système (install.sh) - 30 min
+3. Configuration du club (setup-new-club.sh) - 10 min
 
-## 📦 Architecture
+---
 
-### Architecture globale (Nouveauté 2025)
+### 1️⃣ Configurer un NOUVEAU club (Raspberry Pi déjà installé)
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│              QUARTIER GÉNÉRAL NEOPRO                         │
-│                                                              │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │  Central Dashboard (Angular)                        │    │
-│  │  • Gestion des sites                                │    │
-│  │  • Déploiement de contenu                           │    │
-│  │  • Mises à jour OTA                                 │    │
-│  │  • Monitoring temps réel                            │    │
-│  └────────────────────────────────────────────────────┘    │
-│                          ↓                                   │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │  Central Server (Node.js + PostgreSQL)             │    │
-│  │  • REST API + WebSocket                             │    │
-│  │  • Authentification JWT                             │    │
-│  │  • Stockage métriques                               │    │
-│  │  • Gestion des groupes                              │    │
-│  └────────────────────────────────────────────────────┘    │
-│                                                              │
-│         Hébergé sur Render.com (~$14.50/mois)              │
-└──────────────────────────────────────────────────────────────┘
-                          ↓ Internet (WebSocket)
-              ┌───────────┴───────────┬─────────────┐
-              ↓                       ↓             ↓
-┌─────────────────────┐  ┌─────────────────┐  ┌──────────────┐
-│   CLUB RENNES       │  │  CLUB NANTES    │  │  CLUB ...    │
-│                     │  │                 │  │              │
-│  Raspberry Pi       │  │  Raspberry Pi   │  │  Raspberry   │
-│  ├── App locale     │  │  ├── App locale │  │  ├── App...  │
-│  ├── WiFi Hotspot   │  │  ├── WiFi...    │  │  ├── WiFi... │
-│  ├── Sync Agent ◄───┼──┼──┼─ Sync...◄────┼──┼──┼─ Sync...  │
-│  └── TV Display     │  │  └── TV...      │  │  └── TV...   │
-│                     │  │                 │  │              │
-│  Autonome (offline) │  │  Autonome       │  │  Autonome    │
-└─────────────────────┘  └─────────────────┘  └──────────────┘
-```
-
-### Architecture locale (par club)
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    CLUB SPORTIF                         │
-│                                                         │
-│  Raspberry Pi (192.168.4.1 / neopro.local)            │
-│  ├── WiFi Hotspot: NEOPRO-[CLUB]                      │
-│  ├── TV (HDMI) → Mode Kiosque /tv                     │
-│  └── Mobile/Tablette → Remote control /remote         │
-│                                                         │
-│  Services:                                             │
-│  • Angular App (Nginx port 80)                        │
-│  • Socket.IO Server (Node.js port 3000)               │
-│  • Admin Interface (Express port 8080)                │
-│  • Sync Agent → Connexion au serveur central          │
-└─────────────────────────────────────────────────────────┘
-```
-
-## 🚀 Installation Raspberry Pi
-
-### Nouveau Raspberry Pi ?
-
-**Guide complet d'initialisation :**
-- **[raspberry/QUICK_SETUP.md](raspberry/QUICK_SETUP.md)** - Guide pas à pas depuis zéro (30-40 min)
-
-### Quick Start (résumé)
+⚠️ **Prérequis :** Le Raspberry Pi doit déjà être configuré avec `install.sh` (voir section 0️⃣)
 
 ```bash
-# 1. Flasher Raspberry Pi OS sur carte SD avec Raspberry Pi Imager
-#    - Activer SSH et WiFi temporaire dans les paramètres
-
-# 2. Copier les fichiers
-scp -r raspberry/ pi@raspberrypi.local:~/
-
-# 3. Installer Neopro
-ssh pi@raspberrypi.local
-cd raspberry
-sudo ./install.sh NOM_CLUB MotDePasseWiFi
-
-# 4. Déployer l'application et les contenus
-# Option recommandée : script automatique depuis votre poste
-./scripts/deploy-to-pi.sh neopro.local pi
-
-# Option manuelle (si vous préférez copier à la main)
-scp -r dist/neopro/browser/* pi@neopro.local:/home/pi/neopro/webapp/
-scp -r videos/* pi@neopro.local:/home/pi/neopro/videos/
-scp public/configuration.json pi@neopro.local:/home/pi/neopro/webapp/
-
-# 5. Redémarrer et tester (si nécessaire)
-sudo reboot
+./raspberry/scripts/setup-new-club.sh
 ```
 
-**Durée totale :** 30-40 minutes
+**Durée : 5-10 minutes**
 
-### Documentation complète
+Ce script va tout faire automatiquement :
+- ✅ Collecter les infos du club (nom, localisation, contact)
+- ✅ Créer le mot de passe d'accès
+- ✅ Builder l'application
+- ✅ Déployer sur le Raspberry Pi
+- ✅ Connecter au serveur central
 
-- **[raspberry/QUICK_SETUP.md](raspberry/QUICK_SETUP.md)** - Guide d'initialisation complet (NOUVEAU)
-- **[raspberry/UPDATE_GUIDE.md](raspberry/UPDATE_GUIDE.md)** - Guide de mise à jour pour Pi existant (NOUVEAU)
-- **[raspberry/RECONFIGURE_GUIDE.md](raspberry/RECONFIGURE_GUIDE.md)** - Guide de reconfiguration (nom, SSID, WiFi) (NOUVEAU)
-- **[raspberry/README.md](raspberry/README.md)** - Documentation technique détaillée
-- **[raspberry/GUIDE-CLUB.md](raspberry/GUIDE-CLUB.md)** - Guide utilisateur pour les clubs
-- **[raspberry/GUIDE-DEMO.md](raspberry/GUIDE-DEMO.md)** - Guide démo commerciale (5 min)
+**Informations à préparer :**
+- Nom du club (ex: CESSON, RENNES)
+- Ville, région
+- Email de contact
+- Mot de passe souhaité (12+ caractères)
+- Adresse du Pi (neopro.local par défaut)
+
+---
+
+### 2️⃣ Mettre à jour un boîtier existant
+
+#### Option A : Via l'interface web (RECOMMANDÉ)
+
+1. Connectez-vous à `http://neopro.local:8080`
+2. Modifiez la configuration dans l'éditeur
+3. Cliquez sur "Sauvegarder et Redémarrer"
+
+**C'est tout !** L'interface redémarre automatiquement avec la nouvelle config.
+
+#### Option B : Via script (pour changements techniques)
+
+```bash
+# 1. Modifier la configuration
+nano raspberry/configs/CLUB_NAME-configuration.json
+
+# 2. Copier dans public/
+cp raspberry/configs/CLUB_NAME-configuration.json public/configuration.json
+
+# 3. Builder
+npm run build:raspberry
+
+# 4. Déployer
+npm run deploy:raspberry neopro.local
+```
+
+---
+
+## 📱 Accès aux interfaces
+
+Une fois configuré, votre boîtier est accessible via :
+
+| Interface | URL | Usage |
+|-----------|-----|-------|
+| **Login** | http://neopro.local/login | Page de connexion |
+| **TV** | http://neopro.local/tv | Mode télévision (après login) |
+| **Remote** | http://neopro.local/remote | Télécommande (après login) |
+| **Admin** | http://neopro.local:8080 | Interface d'administration |
+
+**WiFi :** NEOPRO-[NOM_DU_CLUB]
+
+---
+
+## 🔧 Dépannage rapide
+
+### Le boîtier ne répond pas
+
+```bash
+# 1. Vérifier que le Pi est accessible
+ping neopro.local
+
+# 2. Voir les logs
+ssh pi@neopro.local 'sudo journalctl -u neopro-app -n 50'
+
+# 3. Redémarrer
+ssh pi@neopro.local 'sudo reboot'
+```
+
+### Erreur 500 sur /tv ou /remote
+
+```bash
+# Diagnostic complet
+ssh pi@neopro.local
+cd /home/pi/neopro
+./scripts/diagnose-pi.sh
+```
+
+### Le site n'apparaît pas sur le serveur central
+
+```bash
+# Vérifier le sync-agent
+ssh pi@neopro.local 'sudo systemctl status neopro-sync'
+
+# Voir les logs du sync
+ssh pi@neopro.local 'sudo journalctl -u neopro-sync -n 50'
+
+# Réenregistrer
+ssh pi@neopro.local
+cd /home/pi/neopro/sync-agent
+sudo node scripts/register-site.js
+sudo systemctl restart neopro-sync
+```
+
+---
+
+## 📊 Serveur central
+
+**Dashboard :** https://neopro-central.onrender.com
+
+Vous y verrez :
+- 🟢 Liste des sites en ligne
+- 📊 Statistiques de chaque club
+- ⚠️ Alertes en cas de problème
+- 📈 Métriques d'utilisation
+
+---
+
+## 📚 Documentation complète
+
+Pour plus de détails :
+
+- **[docs/REFERENCE.md](docs/REFERENCE.md)** - Documentation technique complète
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Dépannage approfondi
+
+---
+
+## 🏗️ Architecture du projet
+
+```
+neopro/
+├── src/                          # Application Angular (webapp)
+├── raspberry/
+│   ├── scripts/
+│   │   ├── setup-new-club.sh    # ⭐ Configuration nouveau club
+│   │   ├── build-raspberry.sh   # Build pour Pi
+│   │   └── deploy-remote.sh     # Déploiement SSH
+│   ├── configs/                  # Configurations par club
+│   ├── server/                   # Serveur Node.js (API locale)
+│   ├── admin/                    # Interface admin (port 8080)
+│   └── sync-agent/              # Agent de synchronisation central
+├── central-server/               # Serveur central (Render.com)
+└── central-dashboard/            # Dashboard de gestion
+```
+
+---
+
+## 🆘 Support
+
+- **Diagnostic automatique :** `./raspberry/scripts/diagnose-pi.sh`
+- **Documentation :** [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+- **Logs application :** `ssh pi@neopro.local 'sudo journalctl -u neopro-app -f'`
+- **Logs sync :** `ssh pi@neopro.local 'sudo journalctl -u neopro-sync -f'`
+
+---
+
+## 🎯 Checklist nouveau club
+
+- [ ] Script `setup-new-club.sh` exécuté
+- [ ] Application accessible sur http://neopro.local/login
+- [ ] Login fonctionne avec le mot de passe configuré
+- [ ] Accès à /tv et /remote OK
+- [ ] Interface admin accessible (port 8080)
+- [ ] Site visible sur le dashboard central (🟢 En ligne)
+- [ ] Vidéos du club copiées et configurées
+- [ ] WiFi NEOPRO-[CLUB] fonctionnel
+- [ ] Utilisateurs formés
+
+---
 
 ## 💻 Développement local
 
@@ -125,258 +196,31 @@ sudo reboot
 
 - Node.js 20+
 - Angular CLI 20.3.3
-- npm ou yarn
 
-### 🚀 Méthode 1 : Script automatique (Recommandé)
-
-Lance automatiquement Angular + Socket.IO + Admin Interface :
+### Démarrage rapide
 
 ```bash
-# Cloner le repository
-git clone https://github.com/Tallec7/neopro.git
-cd neopro
-
-# Lancer tous les services en une commande
+# Script automatique (recommandé)
 ./dev-local.sh
-```
 
-**Le script démarre :**
-- ✅ Angular dev server (port 4200)
-- ✅ Socket.IO server (port 3000)
-- ✅ Admin interface MODE DEMO (port 8080)
-
-**URLs disponibles :**
-- http://localhost:4200 - Application Neopro
-- http://localhost:4200/tv - Mode TV
-- http://localhost:4200/remote - Télécommande
-- http://localhost:8080 - Interface Admin (données mockées)
-
-Appuyez sur `Ctrl+C` pour arrêter tous les services.
-
-### 🔧 Méthode 2 : Manuel
-
-```bash
-# Installer les dépendances
+# Ou manuel
 npm install
-cd server-render && npm install && cd ..
-cd raspberry/admin && npm install && cd ../..
-
-# Terminal 1: Angular
-ng serve
-# App disponible sur http://localhost:4200
-
-# Terminal 2: Socket.IO
-cd server-render
-node server.js
-# Socket.IO sur http://localhost:3000
-
-# Terminal 3: Admin Interface (mode démo)
-cd raspberry/admin
-node admin-server-demo.js
-# Admin sur http://localhost:8080
+ng serve                          # http://localhost:4200
+cd server-render && node server.js  # Socket.IO port 3000
+cd raspberry/admin && node admin-server-demo.js  # Admin port 8080
 ```
 
-### Build
+### Build et déploiement
 
 ```bash
-# Build standard
-ng build
-
 # Build pour Raspberry Pi
 npm run build:raspberry
-```
 
-### Déploiement
-
-```bash
-# Déploiement vers Raspberry Pi
+# Déployer
 npm run deploy:raspberry neopro.local
 ```
 
-## 📁 Structure du projet
-
-```
-neopro/
-├── src/                          # Application Angular
-│   ├── app/
-│   │   ├── tv/                  # Mode TV (affichage)
-│   │   ├── remote/              # Télécommande mobile
-│   │   └── login/               # Authentification
-│   └── environments/
-│       ├── environment.ts       # Dev
-│       ├── environment.prod.ts  # Production cloud
-│       └── environment.raspberry.ts  # Raspberry Pi
-│
-├── server-render/               # Serveur Socket.IO
-│   ├── server.js
-│   └── README.md
-│
-└── raspberry/                   # Système Raspberry Pi
-    ├── install.sh              # Installation principale
-    ├── README.md               # Doc technique
-    ├── GUIDE-CLUB.md          # Guide utilisateur
-    ├── GUIDE-DEMO.md          # Guide démo
-    │
-    ├── config/                 # Configs système
-    │   ├── hostapd.conf       # WiFi hotspot
-    │   ├── dnsmasq.conf       # DHCP
-    │   └── *.service          # Services systemd
-    │
-    ├── scripts/                # Build & deploy
-    │   ├── build-raspberry.sh
-    │   └── deploy-remote.sh
-    │
-    ├── admin/                  # Interface admin web
-    │   ├── admin-server.js
-    │   └── public/
-    │
-    ├── monitoring/             # Monitoring centralisé
-    │   ├── client/monitoring-agent.js
-    │   └── server/monitoring-server.js
-    │
-    └── tools/                  # Outils maintenance
-        ├── prepare-image.sh   # Préparation image SD
-        ├── clone-sd-card.sh   # Clonage SD
-        ├── healthcheck.sh     # Vérification système
-        └── recovery.sh        # Réparation auto
-```
-
-## 🎮 Utilisation
-
-### URLs d'accès
-
-| Service | URL | Description |
-|---------|-----|-------------|
-| Application | `http://neopro.local` | Page login |
-| Mode TV | `http://neopro.local/tv` | Affichage automatique |
-| Remote | `http://neopro.local/remote` | Contrôle mobile |
-| Admin | `http://neopro.local:8080` | Interface administration |
-
-**Fallback IP :** `192.168.4.1` (si mDNS ne fonctionne pas)
-
-### Workflow match
-
-1. **Avant le match** - Allumer le Raspberry Pi (30s)
-2. **TV affiche** - Boucle sponsors automatiquement
-3. **Mobile** - Se connecter au WiFi NEOPRO-[CLUB]
-4. **Remote** - Ouvrir neopro.local/remote
-5. **Pendant le match** - Sélectionner vidéos depuis le mobile
-6. **Retour auto** - Sponsors après chaque vidéo
-
-## 🛠️ Maintenance
-
-### Vérification système
-
-```bash
-ssh pi@neopro.local
-./raspberry/tools/healthcheck.sh
-```
-
-### Réparation automatique
-
-```bash
-ssh pi@neopro.local
-sudo ./raspberry/tools/recovery.sh --auto
-```
-
-### Interface Admin
-
-- **Dashboard** : État système (CPU, RAM, température)
-- **Vidéos** : Upload, gestion, suppression
-- **Réseau** : Configuration WiFi
-- **Logs** : Visualisation temps réel
-- **Système** : Redémarrage, mise à jour OTA
-
-## 📊 Monitoring centralisé
-
-Le système inclut un monitoring centralisé pour superviser tous les Raspberry Pi déployés :
-
-- Collecte de métriques toutes les 5 minutes
-- Alertes email/webhook automatiques
-- API REST pour gestion de flotte
-- Dashboard temps réel
-
-Voir [raspberry/monitoring/](raspberry/monitoring/) pour la configuration.
-
-## 🔒 Sécurité
-
-- Réseau isolé (Hotspot WiFi)
-- Mot de passe WiFi personnalisé
-- Validation des uploads
-- Backups automatiques avant mise à jour
-- SSH désactivable
-
-## 📚 Documentation
-
-### 🆕 Gestion de flotte (2025)
-- **[QUICK_START.md](QUICK_START.md)** - Démarrage rapide : ajouter votre premier boîtier (5 min)
-- **[ADMIN_GUIDE.md](ADMIN_GUIDE.md)** - Guide complet d'administration de la flotte
-- **[FLEET_MANAGEMENT_SPECS.md](FLEET_MANAGEMENT_SPECS.md)** - Spécifications techniques complètes
-- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Résumé de l'implémentation
-- **[COMPONENTS_GUIDE.md](central-dashboard/COMPONENTS_GUIDE.md)** - Guide des composants UI
-- **[FINAL_UI_COMPLETION.md](FINAL_UI_COMPLETION.md)** - Statut final du projet
-
-### Pour les clubs
-- **[GUIDE-CLUB.md](raspberry/GUIDE-CLUB.md)** - Utilisation quotidienne du boîtier
-- **[GUIDE-DEMO.md](raspberry/GUIDE-DEMO.md)** - Démo commerciale
-
-### Pour les développeurs
-- **[raspberry/README.md](raspberry/README.md)** - Installation Raspberry Pi
-- **[raspberry/admin/README.md](raspberry/admin/README.md)** - Interface admin locale
-- **[raspberry/tools/README.md](raspberry/tools/README.md)** - Outils maintenance
-- **[central-server/README.md](central-server/README.md)** - Serveur central API
-- **[raspberry/sync-agent/README.md](raspberry/sync-agent/README.md)** - Agent de synchronisation
-
-## 🆘 Support
-
-- **Email** : support@neopro.fr
-- **GitHub** : [Créer une issue](https://github.com/Tallec7/neopro/issues)
-- **Monitoring** : https://monitoring.neopro.fr
-
-## 📋 Checklist déploiement club
-
-- [ ] Image SD flashée
-- [ ] Installation complète (`./install.sh`)
-- [ ] Application copiée (`dist/neopro/browser/`)
-- [ ] Vidéos copiées (`videos/`)
-- [ ] Healthcheck OK (`./tools/healthcheck.sh`)
-- [ ] Test TV (affichage sponsors)
-- [ ] Test Remote (contrôle mobile)
-- [ ] Interface Admin accessible
-
-## 🧪 Tests
-
-```bash
-# Tests unitaires
-ng test
-
-# E2E tests
-ng e2e
-
-# Healthcheck système Raspberry Pi
-./raspberry/tools/healthcheck.sh
-```
-
-## 🤝 Contribution
-
-1. Fork le projet
-2. Créer une branche (`git checkout -b feature/AmazingFeature`)
-3. Commit (`git commit -m 'Add AmazingFeature'`)
-4. Push (`git push origin feature/AmazingFeature`)
-5. Ouvrir une Pull Request
-
-## 📄 Licence
-
-MIT
-
-## 👥 Auteurs
-
-- **Neopro** - Système de gestion vidéo sportive
-- **Kalon Partners** - Développement et hébergement
-
 ---
 
-**Version :** 1.0.0
-**Date :** Décembre 2024
-**Angular :** 20.3.3
-**Node.js :** 20+
+**Version :** 1.0
+**Dernière mise à jour :** 5 décembre 2025

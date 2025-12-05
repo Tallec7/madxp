@@ -313,6 +313,12 @@ configure_mdns() {
     echo "neopro" > /etc/hostname
     sed -i 's/127.0.1.1.*/127.0.1.1\tneopro.local neopro/' /etc/hosts
 
+    # Empêcher cloud-init de réinitialiser le hostname (si présent)
+    if [ -f /etc/cloud/cloud.cfg ]; then
+        sed -i 's/preserve_hostname: false/preserve_hostname: true/' /etc/cloud/cloud.cfg
+        echo "preserve_hostname: true" >> /etc/cloud/cloud.cfg.d/99_hostname.cfg
+    fi
+
     # Redémarrage Avahi
     systemctl restart avahi-daemon
 
