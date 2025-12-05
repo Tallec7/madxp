@@ -10,6 +10,9 @@ Ce dossier contient tous les fichiers nécessaires pour installer Neopro sur un 
 **Raspberry Pi existant ?** Mettez à jour votre installation :
 - **[UPDATE_GUIDE.md](UPDATE_GUIDE.md)** - Guide de mise à jour pour un Pi déjà configuré (5-60 min)
 
+**Changer de club ou reconfigurer ?** Modifiez le nom, SSID, WiFi :
+- **[RECONFIGURE_GUIDE.md](RECONFIGURE_GUIDE.md)** - Guide de reconfiguration (nom club, SSID, WiFi) (10-40 min)
+
 **Déjà installé ?** Ce README contient la documentation technique détaillée.
 
 ## Architecture
