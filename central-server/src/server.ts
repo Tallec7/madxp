@@ -43,23 +43,38 @@ const resolveOrigin = (origin?: string | undefined) => {
 };
 
 app.use((req, res, next) => {
-  if (req.headers.origin) {
-    const matchedOrigin = resolveOrigin(req.headers.origin);
+  const origin = req.headers.origin;
+
+  // Déterminer l'origine à autoriser
+  let allowedOrigin: string | null = null;
+
+  if (origin) {
+    const matchedOrigin = resolveOrigin(origin);
     if (matchedOrigin) {
-      res.header('Access-Control-Allow-Origin', matchedOrigin);
+      allowedOrigin = matchedOrigin;
+    }
+  } else if (allowedOrigins.length === 0) {
+    allowedOrigin = '*';
+  }
+
+  // Toujours définir les headers CORS si une origine est autorisée
+  if (allowedOrigin) {
+    res.header('Access-Control-Allow-Origin', allowedOrigin);
+    if (allowedOrigin !== '*') {
       res.header('Vary', 'Origin');
       res.header('Access-Control-Allow-Credentials', 'true');
     }
-  } else if (allowedOrigins.length === 0) {
-    res.header('Access-Control-Allow-Origin', '*');
   }
 
+  // Toujours définir ces headers pour les requêtes OPTIONS
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
 
+  // Gérer les requêtes preflight
   if (req.method === 'OPTIONS') {
     return res.sendStatus(204);
   }
+
   next();
 });
 
