@@ -7,6 +7,9 @@ Ce dossier contient tous les fichiers nécessaires pour installer Neopro sur un 
 **Nouveau Raspberry Pi ?** Suivez le guide pas à pas :
 - **[QUICK_SETUP.md](QUICK_SETUP.md)** - Guide complet d'initialisation depuis zéro (30-40 min)
 
+**Raspberry Pi existant ?** Mettez à jour votre installation :
+- **[UPDATE_GUIDE.md](UPDATE_GUIDE.md)** - Guide de mise à jour pour un Pi déjà configuré (5-60 min)
+
 **Déjà installé ?** Ce README contient la documentation technique détaillée.
 
 ## Architecture

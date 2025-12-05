@@ -109,6 +109,7 @@ sudo reboot
 ### Documentation complète
 
 - **[raspberry/QUICK_SETUP.md](raspberry/QUICK_SETUP.md)** - Guide d'initialisation complet (NOUVEAU)
+- **[raspberry/UPDATE_GUIDE.md](raspberry/UPDATE_GUIDE.md)** - Guide de mise à jour pour Pi existant (NOUVEAU)
 - **[raspberry/README.md](raspberry/README.md)** - Documentation technique détaillée
 - **[raspberry/GUIDE-CLUB.md](raspberry/GUIDE-CLUB.md)** - Guide utilisateur pour les clubs
 - **[raspberry/GUIDE-DEMO.md](raspberry/GUIDE-DEMO.md)** - Guide démo commerciale (5 min)
