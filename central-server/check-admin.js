@@ -1,8 +1,20 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+const DEFAULT_URL = 'postgresql://postgres:postgres@localhost:5432/neopro_central';
+const connectionString = process.env.DATABASE_URL || DEFAULT_URL;
+const shouldUseSSL =
+  process.env.NODE_ENV === 'production' ||
+  (process.env.DATABASE_SSL || '').toLowerCase() === 'true' ||
+  connectionString.includes('supabase.co');
+
+if (shouldUseSSL) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/neopro_central',
+  connectionString,
+  ssl: shouldUseSSL ? { rejectUnauthorized: false } : false,
 });
 
 async function checkAdmin() {

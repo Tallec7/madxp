@@ -13,11 +13,7 @@ export interface User {
 }
 
 export interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: 'admin' | 'operator' | 'viewer';
-  };
+  user?: Express.AuthenticatedUser;
 }
 
 // Site types

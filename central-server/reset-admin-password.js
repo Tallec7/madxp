@@ -2,12 +2,20 @@ const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 require('dotenv').config();
 
+const DEFAULT_URL = 'postgresql://postgres:postgres@localhost:5432/neopro_central';
+const connectionString = process.env.DATABASE_URL || DEFAULT_URL;
+const shouldUseSSL =
+  process.env.NODE_ENV === 'production' ||
+  (process.env.DATABASE_SSL || '').toLowerCase() === 'true' ||
+  connectionString.includes('supabase.co');
+
+if (shouldUseSSL) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'neopro',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  connectionString,
+  ssl: shouldUseSSL ? { rejectUnauthorized: false } : false,
 });
 
 async function resetAdminPassword() {

@@ -67,40 +67,40 @@ import { Subscription, interval } from 'rxjs';
         <div class="card">
           <h3>Métriques actuelles</h3>
           <div class="metrics-grid" *ngIf="currentMetrics; else noMetrics">
-            <div class="metric" [class.warning]="(currentMetrics?.cpu_usage ?? 0) > 80">
+            <div class="metric" [class.warning]="(currentMetrics.cpu_usage ?? 0) > 80">
               <div class="metric-icon">💻</div>
               <div class="metric-info">
                 <div class="metric-label">CPU</div>
                 <div class="metric-value">{{ currentMetrics.cpu_usage?.toFixed(1) || 0 }}%</div>
               </div>
               <div class="metric-bar">
-                <div class="metric-fill" [style.width.%]="currentMetrics?.cpu_usage ?? 0"></div>
+                <div class="metric-fill" [style.width.%]="currentMetrics.cpu_usage ?? 0"></div>
               </div>
             </div>
 
-            <div class="metric" [class.warning]="(currentMetrics?.memory_usage ?? 0) > 80">
+            <div class="metric" [class.warning]="(currentMetrics.memory_usage ?? 0) > 80">
               <div class="metric-icon">🧠</div>
               <div class="metric-info">
                 <div class="metric-label">RAM</div>
                 <div class="metric-value">{{ currentMetrics.memory_usage?.toFixed(1) || 0 }}%</div>
               </div>
               <div class="metric-bar">
-                <div class="metric-fill" [style.width.%]="currentMetrics?.memory_usage ?? 0"></div>
+                <div class="metric-fill" [style.width.%]="currentMetrics.memory_usage ?? 0"></div>
               </div>
             </div>
 
-            <div class="metric" [class.warning]="(currentMetrics?.temperature ?? 0) > 70" [class.critical]="(currentMetrics?.temperature ?? 0) > 80">
+            <div class="metric" [class.warning]="(currentMetrics.temperature ?? 0) > 70" [class.critical]="(currentMetrics.temperature ?? 0) > 80">
               <div class="metric-icon">🌡️</div>
               <div class="metric-info">
                 <div class="metric-label">Température</div>
                 <div class="metric-value">{{ currentMetrics.temperature?.toFixed(1) || 0 }}°C</div>
               </div>
               <div class="metric-bar">
-                <div class="metric-fill" [style.width.%]="Math.min(currentMetrics?.temperature ?? 0, 100)"></div>
+                <div class="metric-fill" [style.width.%]="Math.min(currentMetrics.temperature ?? 0, 100)"></div>
               </div>
             </div>
 
-            <div class="metric" [class.warning]="(currentMetrics?.disk_usage ?? 0) > 80" [class.critical]="(currentMetrics?.disk_usage ?? 0) > 90">
+            <div class="metric" [class.warning]="(currentMetrics.disk_usage ?? 0) > 80" [class.critical]="(currentMetrics.disk_usage ?? 0) > 90">
               <div class="metric-icon">💾</div>
               <div class="metric-info">
                 <div class="metric-label">Disque</div>

@@ -1,8 +1,9 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import logger from '../config/logger';
 import pool from '../config/database';
+import { AuthRequest } from '../types';
 
-export const getVideos = async (req: Request, res: Response) => {
+export const getVideos = async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       `SELECT id, filename as name, original_name, category, subcategory,
@@ -19,7 +20,7 @@ export const getVideos = async (req: Request, res: Response) => {
   }
 };
 
-export const getVideo = async (req: Request, res: Response) => {
+export const getVideo = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -43,7 +44,7 @@ export const getVideo = async (req: Request, res: Response) => {
   }
 };
 
-export const createVideo = async (req: Request, res: Response) => {
+export const createVideo = async (req: AuthRequest, res: Response) => {
   try {
     const { filename, original_name, category, subcategory, file_size, duration, storage_path, thumbnail_url, metadata } = req.body;
 
@@ -62,7 +63,7 @@ export const createVideo = async (req: Request, res: Response) => {
   }
 };
 
-export const updateVideo = async (req: Request, res: Response) => {
+export const updateVideo = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { filename, original_name, category, subcategory, file_size, duration, storage_path, thumbnail_url, metadata } = req.body;
@@ -96,7 +97,7 @@ export const updateVideo = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteVideo = async (req: Request, res: Response) => {
+export const deleteVideo = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -117,7 +118,7 @@ export const deleteVideo = async (req: Request, res: Response) => {
   }
 };
 
-export const getDeployments = async (req: Request, res: Response) => {
+export const getDeployments = async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       `SELECT cd.id, cd.video_id, cd.target_type, cd.target_id, cd.status, cd.progress,
@@ -142,7 +143,7 @@ export const getDeployments = async (req: Request, res: Response) => {
   }
 };
 
-export const getDeployment = async (req: Request, res: Response) => {
+export const getDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -174,7 +175,7 @@ export const getDeployment = async (req: Request, res: Response) => {
   }
 };
 
-export const createDeployment = async (req: Request, res: Response) => {
+export const createDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { video_id, target_type, target_id } = req.body;
 
@@ -193,7 +194,7 @@ export const createDeployment = async (req: Request, res: Response) => {
   }
 };
 
-export const updateDeployment = async (req: Request, res: Response) => {
+export const updateDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { status, progress, error_message } = req.body;
@@ -222,7 +223,7 @@ export const updateDeployment = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteDeployment = async (req: Request, res: Response) => {
+export const deleteDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 

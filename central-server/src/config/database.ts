@@ -4,13 +4,28 @@ import logger from './logger';
 
 dotenv.config();
 
+const shouldUseSSL =
+  process.env.NODE_ENV === 'production' ||
+  (process.env.DATABASE_SSL || '').toLowerCase() === 'true';
+
+if (shouldUseSSL) {
+  // Allow connecting to managed Postgres instances that present self-signed certs (e.g. Supabase).
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 const poolConfig: PoolConfig = {
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: shouldUseSSL ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 };
+
+logger.info('Database SSL configuration', {
+  NODE_ENV: process.env.NODE_ENV,
+  DATABASE_SSL: process.env.DATABASE_SSL,
+  shouldUseSSL,
+});
 
 const pool = new Pool(poolConfig);
 

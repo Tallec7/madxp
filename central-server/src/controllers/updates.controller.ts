@@ -1,8 +1,9 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import logger from '../config/logger';
 import pool from '../config/database';
+import { AuthRequest } from '../types';
 
-export const getUpdates = async (req: Request, res: Response) => {
+export const getUpdates = async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       `SELECT id, version, changelog as release_notes, package_url as file_url,
@@ -18,7 +19,7 @@ export const getUpdates = async (req: Request, res: Response) => {
   }
 };
 
-export const getUpdate = async (req: Request, res: Response) => {
+export const getUpdate = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -41,7 +42,7 @@ export const getUpdate = async (req: Request, res: Response) => {
   }
 };
 
-export const createUpdate = async (req: Request, res: Response) => {
+export const createUpdate = async (req: AuthRequest, res: Response) => {
   try {
     const { version, changelog, package_url, package_size, checksum } = req.body;
 
@@ -60,7 +61,7 @@ export const createUpdate = async (req: Request, res: Response) => {
   }
 };
 
-export const updateUpdate = async (req: Request, res: Response) => {
+export const updateUpdate = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { version, changelog, package_url, package_size, checksum } = req.body;
@@ -89,7 +90,7 @@ export const updateUpdate = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteUpdate = async (req: Request, res: Response) => {
+export const deleteUpdate = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -110,7 +111,7 @@ export const deleteUpdate = async (req: Request, res: Response) => {
   }
 };
 
-export const getUpdateDeployments = async (req: Request, res: Response) => {
+export const getUpdateDeployments = async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       `SELECT ud.id, ud.update_id, ud.target_type, ud.target_id, ud.status, ud.progress,
@@ -135,7 +136,7 @@ export const getUpdateDeployments = async (req: Request, res: Response) => {
   }
 };
 
-export const getUpdateDeployment = async (req: Request, res: Response) => {
+export const getUpdateDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -167,7 +168,7 @@ export const getUpdateDeployment = async (req: Request, res: Response) => {
   }
 };
 
-export const createUpdateDeployment = async (req: Request, res: Response) => {
+export const createUpdateDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { update_id, target_type, target_id } = req.body;
 
@@ -186,7 +187,7 @@ export const createUpdateDeployment = async (req: Request, res: Response) => {
   }
 };
 
-export const updateUpdateDeployment = async (req: Request, res: Response) => {
+export const updateUpdateDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { status, progress, error_message, backup_path } = req.body;
@@ -216,7 +217,7 @@ export const updateUpdateDeployment = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteUpdateDeployment = async (req: Request, res: Response) => {
+export const deleteUpdateDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
