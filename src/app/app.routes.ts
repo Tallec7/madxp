@@ -17,7 +17,7 @@ const getConfiguration: ResolveFn<Configuration> = () => {
 export const routes: Routes = [
     { path: '', redirectTo: 'tv', pathMatch: 'full' },
     { path: 'login', component: LoginComponent },
-    { path: 'tv', component: TvComponent, resolve: { configuration: getConfiguration }, canActivate: [authGuard] },
+    { path: 'tv', component: TvComponent, resolve: { configuration: getConfiguration } },
     { path: 'remote', component: RemoteComponent, resolve: { configuration: getConfiguration }, canActivate: [authGuard] },
     { path: '**', redirectTo: 'tv' }
 ];
