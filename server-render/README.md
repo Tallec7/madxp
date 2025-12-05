@@ -63,6 +63,19 @@ npm start
 
 Le serveur démarre sur http://localhost:3000
 
+## Synchronisation avec Raspberry Pi
+
+⚠️ **Important** : Ce dossier est la **source de vérité** pour le serveur.
+
+Après avoir modifié `server.js` ou `package.json`, synchronisez avec le dossier raspberry :
+
+```bash
+cd raspberry/scripts/
+./sync-server.sh
+```
+
+Cela copiera automatiquement les fichiers vers `raspberry/server/` pour l'installation autonome sur Raspberry Pi.
+
 ## Endpoints
 
 - `GET /` - Status du serveur et nombre de connexions
