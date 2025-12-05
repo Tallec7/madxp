@@ -88,7 +88,7 @@ install_dependencies() {
         unclutter \
         xdotool \
         x11-xserver-utils \
-        chromium-browser
+        chromium
 
     print_success "Dépendances installées"
 }
