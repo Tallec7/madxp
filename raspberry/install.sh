@@ -179,7 +179,7 @@ install_app() {
     mkdir -p ${INSTALL_DIR}/{server,webapp,admin,videos,logs,backups}
 
     # Copie du serveur Node.js
-    cp -r ../server-render/* ${INSTALL_DIR}/server/
+    cp -r ./server/* ${INSTALL_DIR}/server/
 
     # Installation des dépendances Node.js
     cd ${INSTALL_DIR}/server
