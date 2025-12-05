@@ -22,8 +22,13 @@ dotenv.config();
 // Render ne supporte pas encore IPv6 en sortie, on force la résolution IPv4 des hôtes (Supabase)
 dns.setDefaultResultOrder('ipv4first');
 
+const allowedOrigins =
+  process.env.ALLOWED_ORIGINS?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean) || [];
+
 const corsOptions = {
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  origin: allowedOrigins.length > 0 ? allowedOrigins : '*',
   credentials: true,
 };
 
