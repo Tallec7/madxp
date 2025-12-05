@@ -76,31 +76,40 @@ Neopro permet aux clubs sportifs de gérer l'affichage de vidéos (sponsors, but
 
 ## 🚀 Installation Raspberry Pi
 
-### Quick Start
+### Nouveau Raspberry Pi ?
+
+**Guide complet d'initialisation :**
+- **[raspberry/QUICK_SETUP.md](raspberry/QUICK_SETUP.md)** - Guide pas à pas depuis zéro (30-40 min)
+
+### Quick Start (résumé)
 
 ```bash
-# 1. Flasher Raspberry Pi OS sur carte SD
+# 1. Flasher Raspberry Pi OS sur carte SD avec Raspberry Pi Imager
+#    - Activer SSH et WiFi temporaire dans les paramètres
+
 # 2. Copier les fichiers
 scp -r raspberry/ pi@raspberrypi.local:~/
 
-# 3. Installer
+# 3. Installer Neopro
 ssh pi@raspberrypi.local
 cd raspberry
 sudo ./install.sh NOM_CLUB MotDePasseWiFi
 
-# 4. Copier l'application
+# 4. Copier l'application (après reboot automatique)
 scp -r dist/neopro/browser/* pi@neopro.local:/home/pi/neopro/webapp/
 scp -r videos/* pi@neopro.local:/home/pi/neopro/videos/
+scp public/configuration.json pi@neopro.local:/home/pi/neopro/webapp/
 
-# 5. Redémarrer
+# 5. Redémarrer et tester
 sudo reboot
 ```
 
-**Durée totale :** 20 minutes
+**Durée totale :** 30-40 minutes
 
 ### Documentation complète
 
-- **[raspberry/README.md](raspberry/README.md)** - Installation et configuration technique
+- **[raspberry/QUICK_SETUP.md](raspberry/QUICK_SETUP.md)** - Guide d'initialisation complet (NOUVEAU)
+- **[raspberry/README.md](raspberry/README.md)** - Documentation technique détaillée
 - **[raspberry/GUIDE-CLUB.md](raspberry/GUIDE-CLUB.md)** - Guide utilisateur pour les clubs
 - **[raspberry/GUIDE-DEMO.md](raspberry/GUIDE-DEMO.md)** - Guide démo commerciale (5 min)
 

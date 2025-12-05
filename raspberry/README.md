@@ -2,6 +2,13 @@
 
 Ce dossier contient tous les fichiers nécessaires pour installer Neopro sur un Raspberry Pi et le configurer comme système autonome local (sans Internet).
 
+## Guide de démarrage
+
+**Nouveau Raspberry Pi ?** Suivez le guide pas à pas :
+- **[QUICK_SETUP.md](QUICK_SETUP.md)** - Guide complet d'initialisation depuis zéro (30-40 min)
+
+**Déjà installé ?** Ce README contient la documentation technique détaillée.
+
 ## Architecture
 
 ```
@@ -24,66 +31,122 @@ Raspberry Pi (Serveur local)
 
 ## Installation
 
+**Pour un guide détaillé pas à pas, consultez [QUICK_SETUP.md](QUICK_SETUP.md)**
+
+Résumé technique pour utilisateurs expérimentés :
+
+### Vue d'ensemble du processus
+
+```
+1. Flasher carte SD (Raspberry Pi Imager)
+   ↓
+2. Premier boot + mise à jour système
+   ↓
+3. Copier dossier raspberry/ via SCP
+   ↓
+4. Exécuter install.sh (15-20 min)
+   ↓
+5. Copier application + vidéos + config
+   ↓
+6. Reboot final
+   ↓
+✅ Système opérationnel
+```
+
 ### 1. Préparation de la carte SD
 
-Flasher Raspberry Pi OS sur la carte SD avec Raspberry Pi Imager :
-- OS : Raspberry Pi OS (64-bit) avec Desktop
-- Configurer SSH et WiFi temporaire pour l'installation
+**Outil :** [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
 
-### 2. Premier démarrage
+**Configuration minimale :**
+- **OS :** Raspberry Pi OS (64-bit) avec Desktop
+- **Hostname :** `raspberrypi` (sera changé en `neopro` par install.sh)
+- **User :** `pi` avec mot de passe
+- **SSH :** Activé (authentification par mot de passe)
+- **WiFi :** Configuré temporairement pour l'installation
+
+### 2. Premier démarrage et mise à jour
 
 ```bash
-# Connexion SSH au Raspberry Pi
+# Connexion SSH
 ssh pi@raspberrypi.local
 
-# Mise à jour initiale
+# Mise à jour système (obligatoire)
 sudo apt-get update
 sudo apt-get upgrade -y
 ```
 
-### 3. Copie des fichiers
+### 3. Copie des fichiers d'installation
 
 ```bash
 # Depuis votre machine de développement
-# Copier le dossier raspberry/ vers le Pi
 scp -r raspberry/ pi@raspberrypi.local:~/
-
-# Se connecter au Pi
-ssh pi@raspberrypi.local
-cd ~/raspberry
 ```
 
-### 4. Lancement de l'installation
+### 4. Installation Neopro
 
 ```bash
-# Syntax: sudo ./install.sh [NOM_CLUB] [MOT_PASSE_WIFI]
+# SSH au Raspberry Pi
+ssh pi@raspberrypi.local
+cd ~/raspberry
+
+# Syntaxe: sudo ./install.sh [NOM_CLUB] [MOT_PASSE_WIFI]
 sudo ./install.sh CESSON MySecurePass123
 ```
 
-**Paramètres :**
+**Paramètres obligatoires :**
 - `NOM_CLUB` : Nom du club (ex: CESSON, NANTES, DEMO)
   - Sera utilisé pour le SSID WiFi : `NEOPRO-CESSON`
-- `MOT_PASSE_WIFI` : Mot de passe du Hotspot WiFi (8+ caractères)
+  - Sera utilisé dans le fichier de configuration
+- `MOT_PASSE_WIFI` : Mot de passe du Hotspot WiFi (8+ caractères minimum)
 
-**Durée d'installation :** 15-20 minutes
+**Ce que fait install.sh :**
+- ✅ Installation de Node.js 20.x et dépendances système
+- ✅ Configuration du Hotspot WiFi (hostapd + dnsmasq)
+- ✅ Configuration mDNS (neopro.local)
+- ✅ Installation et configuration Nginx
+- ✅ Création des services systemd (neopro-app, neopro-admin, neopro-kiosk)
+- ✅ Configuration du mode Kiosque Chromium
+- ✅ Création de l'arborescence de dossiers
+- ✅ Redémarrage automatique
 
-### 5. Copie de l'application et des vidéos
+**Durée :** 15-20 minutes
+
+⚠️ **Ne pas interrompre le script pendant l'installation**
+
+### 5. Déploiement de l'application
+
+Après le redémarrage automatique (attendre 2 minutes) :
 
 ```bash
-# Copier le build Angular
+# Copier l'application Angular buildée
 scp -r dist/neopro/browser/* pi@neopro.local:/home/pi/neopro/webapp/
 
 # Copier les vidéos
 scp -r public/videos/* pi@neopro.local:/home/pi/neopro/videos/
 
-# Copier la configuration
+# Copier la configuration du club
 scp public/configuration.json pi@neopro.local:/home/pi/neopro/webapp/
 ```
 
-### 6. Redémarrage final
+**Note :** Le hostname est maintenant `neopro.local` (changé par install.sh)
+
+### 6. Redémarrage final et vérification
 
 ```bash
+# Redémarrage
+ssh pi@neopro.local
 sudo reboot
+
+# Vérification des services (après reboot)
+ssh pi@neopro.local
+sudo systemctl status neopro-app
+sudo systemctl status nginx
+sudo systemctl status hostapd
+sudo systemctl status neopro-kiosk
+
+# Healthcheck complet
+cd /home/pi/neopro/tools
+./healthcheck.sh
 ```
 
 ## Utilisation
@@ -169,51 +232,212 @@ Le Raspberry Pi aura alors 2 connexions :
 
 ## Dépannage
 
-### Le Hotspot ne fonctionne pas
+### Problèmes courants lors de l'installation
+
+#### Je ne trouve pas raspberrypi.local après le premier boot
+
+**Solutions :**
+```bash
+# 1. Attendre 2-3 minutes (le Pi peut être lent au premier boot)
+
+# 2. Essayer de ping
+ping raspberrypi.local
+
+# 3. Scanner le réseau pour trouver l'IP
+# Sur Mac/Linux :
+arp -a | grep -i "b8:27:eb\|dc:a6:32\|e4:5f:01"
+
+# Sur Windows :
+arp -a | findstr "b8-27-eb dc-a6-32 e4-5f-01"
+
+# 4. Se connecter avec l'IP trouvée
+ssh pi@[IP_TROUVEE]
+
+# 5. Vérifier la connexion WiFi sur le Pi
+sudo iwconfig
+```
+
+#### install.sh échoue ou se bloque
+
+**Vérifications :**
+```bash
+# 1. Vérifier la connexion Internet
+ping -c 4 google.com
+
+# 2. Vérifier l'espace disque
+df -h
+
+# 3. Voir les logs d'installation en temps réel
+tail -f ~/raspberry/install.log  # Si disponible
+
+# 4. Relancer l'installation
+cd ~/raspberry
+sudo ./install.sh CESSON MyPass123
+```
+
+#### Les fichiers SCP ne se copient pas
 
 ```bash
-# Vérifier les services
+# Vérifier la connexion SSH
+ssh pi@raspberrypi.local "echo 'Connexion OK'"
+
+# Vérifier les permissions
+ssh pi@raspberrypi.local "ls -la ~/"
+
+# Copier avec verbose pour voir les erreurs
+scp -v -r raspberry/ pi@raspberrypi.local:~/
+```
+
+### Problèmes après installation
+
+#### Le Hotspot WiFi n'apparaît pas
+
+```bash
+# 1. Vérifier les services
 sudo systemctl status hostapd
 sudo systemctl status dnsmasq
 
-# Redémarrer
-sudo systemctl restart hostapd dnsmasq
+# 2. Voir les logs
+sudo journalctl -u hostapd -n 50
+sudo journalctl -u dnsmasq -n 50
+
+# 3. Vérifier la configuration
+cat /etc/hostapd/hostapd.conf
+cat /etc/dnsmasq.conf
+
+# 4. Redémarrer les services
+sudo systemctl restart hostapd
+sudo systemctl restart dnsmasq
+
+# 5. Vérifier l'interface WiFi
+iwconfig
+# wlan0 doit être en mode "Master"
+
+# 6. Redémarrer complètement
+sudo reboot
 ```
 
-### neopro.local ne fonctionne pas
+#### neopro.local ne fonctionne pas
 
 ```bash
-# Vérifier Avahi
+# 1. Vérifier Avahi (mDNS)
 sudo systemctl status avahi-daemon
 
-# Vérifier le hostname
-hostname -f  # Doit afficher "neopro"
+# 2. Vérifier le hostname
+hostname        # Doit afficher "neopro"
+hostname -f     # Doit afficher "neopro"
 
-# Alternative : utiliser l'IP directe
+# 3. Redémarrer Avahi
+sudo systemctl restart avahi-daemon
+
+# 4. Alternative : utiliser l'IP directe
+# Hotspot IP : 192.168.4.1
 http://192.168.4.1
+http://192.168.4.1/tv
+http://192.168.4.1:8080
 ```
 
-### L'application ne démarre pas
+#### L'application web ne se charge pas
 
 ```bash
-# Vérifier le service
+# 1. Vérifier Nginx
+sudo systemctl status nginx
+sudo nginx -t  # Tester la configuration
+
+# 2. Vérifier les logs Nginx
+sudo tail -f /home/pi/neopro/logs/nginx-error.log
+
+# 3. Vérifier que les fichiers sont présents
+ls -la /home/pi/neopro/webapp/
+# Doit contenir : index.html, main-*.js, etc.
+
+# 4. Vérifier les permissions
+sudo chown -R www-data:www-data /home/pi/neopro/webapp/
+sudo chmod -R 755 /home/pi/neopro/webapp/
+
+# 5. Redémarrer Nginx
+sudo systemctl restart nginx
+```
+
+#### L'application Node.js ne démarre pas
+
+```bash
+# 1. Vérifier le service
 sudo systemctl status neopro-app
 
-# Voir les logs
-sudo journalctl -u neopro-app -f
+# 2. Voir les logs détaillés
+sudo journalctl -u neopro-app -n 100 --no-pager
 
-# Redémarrer
+# 3. Vérifier Node.js
+node --version  # Doit être v20.x
+
+# 4. Vérifier les dépendances
+cd /home/pi/neopro/server
+npm install
+
+# 5. Tester manuellement
+node /home/pi/neopro/server/server.js
+
+# 6. Redémarrer le service
 sudo systemctl restart neopro-app
 ```
 
-### Mode Kiosque ne s'affiche pas
+#### Mode Kiosque ne s'affiche pas sur la TV
 
 ```bash
-# Vérifier le service
+# 1. Vérifier le service
 sudo systemctl status neopro-kiosk
 
-# Redémarrer le mode graphique
+# 2. Voir les logs
+sudo journalctl -u neopro-kiosk -n 50
+
+# 3. Vérifier que X11 fonctionne
+echo $DISPLAY  # Doit afficher :0 ou :1
+
+# 4. Tester manuellement Chromium
+DISPLAY=:0 chromium-browser --version
+
+# 5. Redémarrer le mode graphique
 sudo systemctl restart lightdm
+
+# 6. Redémarrer le service kiosk
+sudo systemctl restart neopro-kiosk
+
+# 7. Reboot complet
+sudo reboot
+```
+
+#### Les vidéos ne se chargent pas
+
+```bash
+# 1. Vérifier que les vidéos sont présentes
+ls -la /home/pi/neopro/videos/
+
+# 2. Vérifier les permissions
+sudo chown -R pi:pi /home/pi/neopro/videos/
+sudo chmod -R 755 /home/pi/neopro/videos/
+
+# 3. Vérifier l'espace disque
+df -h
+# /home doit avoir de l'espace disponible
+
+# 4. Vérifier la configuration
+cat /home/pi/neopro/webapp/configuration.json
+
+# 5. Voir les logs de l'application
+sudo journalctl -u neopro-app -f
+```
+
+### Script de diagnostic automatique
+
+```bash
+# Lancer le healthcheck complet
+ssh pi@neopro.local
+cd /home/pi/neopro/tools
+./healthcheck.sh
+
+# Récupération automatique
+sudo ./recovery.sh --auto
 ```
 
 ## Logs
