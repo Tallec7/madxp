@@ -487,33 +487,19 @@ Si vous gérez plusieurs clubs avec le système de gestion de flotte :
 6. Planifier ou lancer immédiatement
 7. Suivre la progression en temps réel
 
-### Via script automatisé
+### Via script automatisé (poste de dev)
+
+Utilisez `./scripts/deploy-to-pi.sh` avec une boucle simple :
 
 ```bash
-# Créer un script de déploiement massif
-cat > deploy-all.sh <<'EOF'
 #!/bin/bash
-
 SITES=("neopro-cesson.local" "neopro-nantes.local" "neopro-rennes.local")
 
-for site in "${SITES[@]}"; do
-  echo "Mise à jour de $site..."
-
-  # Copier l'application
-  scp -r dist/neopro/browser/* pi@$site:/home/pi/neopro/webapp/
-  scp public/configuration.json pi@$site:/home/pi/neopro/webapp/
-
-  # Redémarrer les services
-  ssh pi@$site "sudo systemctl restart neopro-app nginx"
-
-  echo "✅ $site mis à jour"
+for SITE in "${SITES[@]}"; do
+  echo "Déploiement sur $SITE…"
+  ./scripts/deploy-to-pi.sh "$SITE" pi
+  echo "✅ $SITE mis à jour"
 done
-
-echo "🎉 Tous les sites ont été mis à jour !"
-EOF
-
-chmod +x deploy-all.sh
-./deploy-all.sh
 ```
 
 ---

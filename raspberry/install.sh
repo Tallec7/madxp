@@ -8,7 +8,9 @@
 # Exemple: sudo ./install.sh CESSON MyWiFiPass123
 ################################################################################
 
-set -e  # Arrêt en cas d'erreur
+set -euo pipefail  # Arrêt en cas d'erreur et variables non définies détectées
+
+trap 'print_error "Une erreur est survenue. Consultez les logs ci-dessus avant de relancer."' ERR
 
 # Couleurs pour les messages
 RED='\033[0;31m'
@@ -22,6 +24,9 @@ CLUB_NAME="${1:-DEMO}"
 WIFI_PASSWORD="${2:-NeoProWiFi2025}"
 INSTALL_DIR="/home/pi/neopro"
 NODE_VERSION="18"
+WIFI_INTERFACE=""
+WIFI_CHANNEL="6"
+STATIC_IP="192.168.4.1/24"
 
 ################################################################################
 # Fonctions utilitaires
@@ -52,10 +57,116 @@ print_success() {
     echo -e "${GREEN}✓ $1${NC}"
 }
 
+validate_inputs() {
+    local PASS_LENGTH=${#WIFI_PASSWORD}
+    if [ "${PASS_LENGTH}" -lt 8 ] || [ "${PASS_LENGTH}" -gt 63 ]; then
+        print_error "Le mot de passe WiFi doit contenir entre 8 et 63 caractères (actuel: ${PASS_LENGTH})."
+        echo "Veuillez relancer le script avec un mot de passe plus long: sudo ./install.sh ${CLUB_NAME} MonPassSecret123"
+        exit 1
+    fi
+}
+
 check_root() {
     if [ "$EUID" -ne 0 ]; then
         print_error "Ce script doit être exécuté avec sudo"
         exit 1
+    fi
+}
+
+service_exists() {
+    local SERVICE_NAME="$1"
+    systemctl list-unit-files "${SERVICE_NAME}.service" >/dev/null 2>&1
+}
+
+ensure_service_running() {
+    local SERVICE_NAME="$1"
+    if ! service_exists "${SERVICE_NAME}"; then
+        print_warning "Service ${SERVICE_NAME} introuvable sur ce système. Étape ignorée."
+        return
+    fi
+    if ! systemctl is-active --quiet "${SERVICE_NAME}"; then
+        print_error "Le service ${SERVICE_NAME} ne démarre pas correctement."
+        echo "Derniers logs ${SERVICE_NAME} :"
+        journalctl -u "${SERVICE_NAME}" -n 40 || true
+        exit 1
+    fi
+}
+
+restart_service_if_exists() {
+    local SERVICE_NAME="$1"
+    if service_exists "${SERVICE_NAME}"; then
+        if ! systemctl restart "${SERVICE_NAME}"; then
+            print_error "Impossible de redémarrer ${SERVICE_NAME}."
+            echo "Derniers journaux ${SERVICE_NAME}:"
+            journalctl -xeu "${SERVICE_NAME}" -n 40 || true
+            exit 1
+        fi
+    else
+        print_warning "Service ${SERVICE_NAME} non disponible, saut du redémarrage."
+    fi
+}
+
+refresh_wifi_interface() {
+    rfkill unblock wifi || true
+    if [ -z "${WIFI_INTERFACE}" ]; then
+        return
+    fi
+    ip link set "${WIFI_INTERFACE}" down || true
+    ip addr flush dev "${WIFI_INTERFACE}" || true
+    sleep 1
+    ip link set "${WIFI_INTERFACE}" up || true
+}
+
+detect_wifi_interface() {
+    WIFI_INTERFACE=$(iw dev 2>/dev/null | awk '/Interface/ {print $2; exit}')
+    if [ -z "${WIFI_INTERFACE}" ]; then
+        if ip link show wlan0 >/dev/null 2>&1; then
+            WIFI_INTERFACE="wlan0"
+        else
+            print_warning "Impossible de détecter automatiquement l'interface WiFi. Utilisation par défaut de wlan0."
+            WIFI_INTERFACE="wlan0"
+        fi
+    fi
+    print_step "Interface WiFi détectée: ${WIFI_INTERFACE}"
+}
+
+disable_conflicting_wifi_services() {
+    for SERVICE in NetworkManager wpa_supplicant iwd; do
+        if service_exists "${SERVICE}"; then
+            if systemctl is-active --quiet "${SERVICE}"; then
+                print_warning "Arrêt du service ${SERVICE} pour libérer ${WIFI_INTERFACE}."
+                systemctl stop "${SERVICE}" || true
+            fi
+            systemctl disable "${SERVICE}" || true
+        fi
+    done
+}
+
+wait_for_interface_ip() {
+    local RETRIES=10
+    while [ $RETRIES -gt 0 ]; do
+        if ip addr show "${WIFI_INTERFACE}" | grep -q "${STATIC_IP%/*}"; then
+            return 0
+        fi
+        sleep 1
+        ((RETRIES--))
+    done
+    print_warning "Impossible de confirmer l'adresse ${STATIC_IP} sur ${WIFI_INTERFACE}. poursuite de l'installation."
+}
+
+apply_static_ip() {
+    ip addr flush dev "${WIFI_INTERFACE}" || true
+    ip addr add "${STATIC_IP}" dev "${WIFI_INTERFACE}" || true
+    ip link set "${WIFI_INTERFACE}" up || true
+}
+
+ensure_dns_configuration() {
+    if [ ! -f /etc/resolv.conf ]; then
+        print_warning "/etc/resolv.conf absent – ajout d'un DNS de secours (1.1.1.1 / 8.8.8.8)."
+        cat > /etc/resolv.conf << 'EOF'
+nameserver 1.1.1.1
+nameserver 8.8.8.8
+EOF
     fi
 }
 
@@ -85,6 +196,9 @@ install_dependencies() {
         nginx \
         git \
         curl \
+        dhcpcd5 \
+        iw \
+        rfkill \
         unclutter \
         xdotool \
         x11-xserver-utils \
@@ -121,31 +235,67 @@ configure_hotspot() {
     systemctl stop hostapd || true
     systemctl stop dnsmasq || true
 
+    ensure_dns_configuration
+
+    # Désactiver systemd-resolved si actif (conflit avec dnsmasq pour le port 53)
+    if systemctl list-unit-files systemd-resolved.service >/dev/null 2>&1; then
+        if systemctl is-active --quiet systemd-resolved; then
+            print_warning "Désactivation de systemd-resolved (libère le port 53 pour dnsmasq)..."
+            systemctl stop systemd-resolved || true
+            systemctl disable systemd-resolved || true
+        fi
+        rm -f /etc/resolv.conf
+        cat > /etc/resolv.conf << 'EOF'
+nameserver 1.1.1.1
+nameserver 8.8.8.8
+EOF
+    fi
+
     # Configuration de l'interface wlan0
     cat > /etc/dhcpcd.conf << EOF
 # Configuration réseau Neopro
-interface wlan0
-    static ip_address=192.168.4.1/24
+interface ${WIFI_INTERFACE}
+    static ip_address=${STATIC_IP}
     nohook wpa_supplicant
 EOF
 
     # Configuration hostapd (avec personnalisation SSID)
     sed "s/NEOPRO-CLUB/NEOPRO-${CLUB_NAME}/" ./config/hostapd.conf > /etc/hostapd/hostapd.conf
     sed -i "s/wpa_passphrase=.*/wpa_passphrase=${WIFI_PASSWORD}/" /etc/hostapd/hostapd.conf
+    sed -i "s/^interface=.*/interface=${WIFI_INTERFACE}/" /etc/hostapd/hostapd.conf
+    sed -i "s/^channel=.*/channel=${WIFI_CHANNEL}/" /etc/hostapd/hostapd.conf
 
     # Activation de hostapd
     echo 'DAEMON_CONF="/etc/hostapd/hostapd.conf"' > /etc/default/hostapd
 
     # Configuration dnsmasq
-    mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig
+    if [ -f /etc/dnsmasq.conf ]; then
+        mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig
+    fi
     cp ./config/dnsmasq.conf /etc/dnsmasq.conf
+    sed -i "s/^interface=.*/interface=${WIFI_INTERFACE}/" /etc/dnsmasq.conf
 
     # Activation des services
     systemctl unmask hostapd
     systemctl enable hostapd
     systemctl enable dnsmasq
+    systemctl enable dhcpcd || true
 
-    print_success "Hotspot WiFi configuré: NEOPRO-${CLUB_NAME}"
+    # Rafraîchissement de l'interface WiFi puis redémarrage des services
+    refresh_wifi_interface
+    restart_service_if_exists dhcpcd
+    apply_static_ip
+    wait_for_interface_ip
+    restart_service_if_exists dnsmasq
+    restart_service_if_exists hostapd
+    ensure_service_running dnsmasq
+    ensure_service_running hostapd
+
+    if iw dev "${WIFI_INTERFACE}" info 2>/dev/null | grep -q "type AP"; then
+        print_success "Hotspot WiFi démarré: SSID NEOPRO-${CLUB_NAME}"
+    else
+        print_warning "Le hotspot ne signale pas encore le mode AP. Vérifiez manuellement avec 'iw dev ${WIFI_INTERFACE} info'."
+    fi
 }
 
 ################################################################################
@@ -160,12 +310,19 @@ configure_mdns() {
 
     # Changement du hostname
     hostnamectl set-hostname neopro
+    echo "neopro" > /etc/hostname
     sed -i 's/127.0.1.1.*/127.0.1.1\tneopro.local neopro/' /etc/hosts
 
     # Redémarrage Avahi
     systemctl restart avahi-daemon
 
-    print_success "mDNS configuré: neopro.local"
+    ensure_service_running avahi-daemon
+    CURRENT_HOSTNAME=$(hostnamectl --static)
+    if [ "${CURRENT_HOSTNAME}" != "neopro" ]; then
+        print_warning "Hostname actuel (${CURRENT_HOSTNAME}) différent de neopro. Reboot nécessaire."
+    fi
+
+    print_success "mDNS configuré: neopro.local (hostname ${CURRENT_HOSTNAME})"
 }
 
 ################################################################################
@@ -371,10 +528,11 @@ print_summary() {
     echo "  3. Redémarrer le système: sudo reboot"
     echo ""
     echo -e "${YELLOW}Accès:${NC}"
+    echo "  • Connectez votre appareil au WiFi NEOPRO-${CLUB_NAME} pour accéder aux URLs ci-dessous"
     echo "  • Mode TV (sur l'écran): http://neopro.local/tv"
     echo "  • Télécommande (sur mobile): http://neopro.local/remote"
     echo "  • Interface Admin: http://neopro.local:8080"
-    echo "  • SSH distant: ssh pi@[IP_PUBLIQUE]"
+    echo "  • SSH distant: ssh pi@neopro.local (depuis le même réseau WiFi)"
     echo ""
     echo -e "${RED}IMPORTANT:${NC}"
     echo "  • Changez le mot de passe par défaut: passwd"
@@ -400,8 +558,11 @@ main() {
         exit 1
     fi
 
+    validate_inputs
     update_system
     install_dependencies
+    detect_wifi_interface
+    disable_conflicting_wifi_services
     install_nodejs
     configure_hotspot
     configure_mdns

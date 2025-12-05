@@ -95,12 +95,16 @@ ssh pi@raspberrypi.local
 cd raspberry
 sudo ./install.sh NOM_CLUB MotDePasseWiFi
 
-# 4. Copier l'application (après reboot automatique)
+# 4. Déployer l'application et les contenus
+# Option recommandée : script automatique depuis votre poste
+./scripts/deploy-to-pi.sh neopro.local pi
+
+# Option manuelle (si vous préférez copier à la main)
 scp -r dist/neopro/browser/* pi@neopro.local:/home/pi/neopro/webapp/
 scp -r videos/* pi@neopro.local:/home/pi/neopro/videos/
 scp public/configuration.json pi@neopro.local:/home/pi/neopro/webapp/
 
-# 5. Redémarrer et tester
+# 5. Redémarrer et tester (si nécessaire)
 sudo reboot
 ```
 

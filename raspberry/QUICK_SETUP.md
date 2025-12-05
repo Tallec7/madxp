@@ -186,9 +186,24 @@ Attendez 1-2 minutes après le redémarrage, puis reconnectez-vous :
 ssh pi@neopro.local
 ```
 
-### 5.2 Copier l'application Angular
+### 5.2 Déployer automatiquement (recommandé)
 
-Depuis votre **ordinateur de développement** :
+Depuis votre **ordinateur de développement**, à la racine du dépôt :
+
+```bash
+./scripts/deploy-to-pi.sh neopro.local pi
+```
+
+Ce script :
+- lance `npm install` + `npm run build`
+- synchronise `dist/neopro/browser/` vers `/home/pi/neopro/webapp/`
+- synchronise `public/videos/` (si présent)
+- copie `public/configuration.json`
+- redémarre `neopro-app` et `nginx`
+
+### 5.3 Déploiement manuel (alternative)
+
+Si vous devez copier manuellement :
 
 ```bash
 # Se placer dans le projet Neopro
@@ -202,25 +217,15 @@ scp -r dist/neopro/browser/* pi@neopro.local:/home/pi/neopro/webapp/
 
 # Vérifier la copie
 ssh pi@neopro.local "ls -la /home/pi/neopro/webapp/"
-```
 
-Vous devriez voir : `index.html`, `main-*.js`, `polyfills-*.js`, etc.
-
-### 5.3 Copier les vidéos
-
-```bash
 # Copier toutes les vidéos
 scp -r public/videos/* pi@neopro.local:/home/pi/neopro/videos/
 
 # OU copier catégorie par catégorie
 scp -r public/videos/Focus-partenaires/* pi@neopro.local:/home/pi/neopro/videos/Focus-partenaires/
 scp -r public/videos/Info-club/* pi@neopro.local:/home/pi/neopro/videos/Info-club/
-```
 
-### 5.4 Copier la configuration
-
-```bash
-# Configuration du club
+# Copier la configuration du club
 scp public/configuration.json pi@neopro.local:/home/pi/neopro/webapp/
 ```
 

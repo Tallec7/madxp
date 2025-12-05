@@ -108,7 +108,7 @@ sudo ./install.sh CESSON MySecurePass123
 **Ce que fait install.sh :**
 - ✅ Installation de Node.js 20.x et dépendances système
 - ✅ Configuration du Hotspot WiFi (hostapd + dnsmasq)
-- ✅ Configuration mDNS (neopro.local)
+- ✅ Configuration mDNS + hostname (`neopro.local` forcé dans `/etc/hostname` et Avahi)
 - ✅ Installation et configuration Nginx
 - ✅ Création des services systemd (neopro-app, neopro-admin, neopro-kiosk)
 - ✅ Configuration du mode Kiosque Chromium
@@ -123,6 +123,23 @@ sudo ./install.sh CESSON MySecurePass123
 
 Après le redémarrage automatique (attendre 2 minutes) :
 
+#### Option A — Script automatisé (recommandé)
+
+Depuis votre machine de développement, à la racine du dépôt :
+
+```bash
+./scripts/deploy-to-pi.sh neopro.local pi
+```
+
+Ce script :
+- lance `npm install` + `npm run build`
+- synchronise `dist/neopro/browser` vers `/home/pi/neopro/webapp/`
+- synchronise `public/videos` (si présent)
+- copie `public/configuration.json`
+- redémarre `neopro-app` et `nginx`
+
+#### Option B — Copie manuelle
+
 ```bash
 # Copier l'application Angular buildée
 scp -r dist/neopro/browser/* pi@neopro.local:/home/pi/neopro/webapp/
@@ -134,7 +151,7 @@ scp -r public/videos/* pi@neopro.local:/home/pi/neopro/videos/
 scp public/configuration.json pi@neopro.local:/home/pi/neopro/webapp/
 ```
 
-**Note :** Le hostname est maintenant `neopro.local` (changé par install.sh)
+**Note :** Le hostname est maintenant `neopro.local` (forcé par install.sh)
 
 ### 6. Redémarrage final et vérification
 
