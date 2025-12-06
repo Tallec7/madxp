@@ -36,8 +36,9 @@ class SocketService {
       try {
         await this.authenticateAgent(socket, data);
       } catch (error) {
-        logger.error('Agent authentication failed:', error);
-        socket.emit('auth_error', { message: 'Authentification échouée' });
+        const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+        logger.error('Agent authentication failed:', { error: errorMessage, siteId: data?.siteId });
+        socket.emit('auth_error', { message: `Authentification échouée: ${errorMessage}` });
         socket.disconnect();
       }
     });
@@ -50,19 +51,33 @@ class SocketService {
   private async authenticateAgent(socket: Socket, data: SocketData) {
     const { siteId, apiKey } = data;
 
+    logger.info('Authentication attempt', { siteId, apiKeyLength: apiKey?.length });
+
+    if (!siteId || !apiKey) {
+      logger.error('Missing credentials', { hasSiteId: !!siteId, hasApiKey: !!apiKey });
+      throw new Error('Identifiants manquants');
+    }
+
     const result = await query(
       'SELECT id, site_name, api_key FROM sites WHERE id = $1',
       [siteId]
     );
 
     if (result.rows.length === 0) {
-      throw new Error('Site non trouvé');
+      logger.error('Site not found', { siteId });
+      throw new Error(`Site non trouvé: ${siteId}`);
     }
 
-    const site = result.rows[0];
+    const site = result.rows[0] as { id: string; site_name: string; api_key: string };
 
     // Compare API keys using timing-safe comparison
-    if (!secureCompare(site.api_key, apiKey)) {
+    if (!site.api_key || !secureCompare(site.api_key, apiKey)) {
+      logger.error('Invalid API key', {
+        siteId,
+        siteName: site.site_name,
+        storedKeyLength: site.api_key?.length,
+        providedKeyLength: apiKey?.length
+      });
       throw new Error('Clé API invalide');
     }
 

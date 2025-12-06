@@ -86,7 +86,7 @@ export const createSite = async (req: AuthRequest, res: Response) => {
     if (existingResult.rows.length > 0) {
       // Find the highest suffix number
       let maxSuffix = 0;
-      for (const row of existingResult.rows) {
+      for (const row of existingResult.rows as { site_name: string }[]) {
         if (row.site_name === site_name) {
           maxSuffix = Math.max(maxSuffix, 1);
         } else {

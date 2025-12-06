@@ -7,6 +7,9 @@
     "start": "node src/agent.js",
     "dev": "nodemon src/agent.js",
     "install-service": "sudo node scripts/install-service.js",
+    "register": "node scripts/register-site.js",
+    "diagnose": "node scripts/diagnose.js",
+    "resync": "node scripts/resync-apikey.js",
     "test": "node src/test-connection.js"
   },
   "keywords": ["neopro", "raspberry-pi", "sync-agent"],

@@ -22,6 +22,8 @@ class NeoproSyncAgent {
       siteId: config.site.id,
       siteName: config.site.name,
       serverUrl: config.central.url,
+      apiKeyConfigured: !!config.site.apiKey,
+      apiKeyLength: config.site.apiKey?.length || 0,
     });
 
     if (!validateConfig()) {
@@ -76,6 +78,8 @@ class NeoproSyncAgent {
 
   handleAuthError(data) {
     logger.error('❌ Authentication failed', data);
+    logger.error(`Détails: ${data?.message || 'Erreur inconnue'}`);
+    logger.error('Vérifiez que SITE_ID et SITE_API_KEY sont corrects dans /etc/neopro/site.conf');
 
     this.socket.disconnect();
     process.exit(1);
