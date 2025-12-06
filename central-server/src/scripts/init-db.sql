@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS sites (
   last_seen_at TIMESTAMP,
   software_version VARCHAR(50),
   hardware_model VARCHAR(100) DEFAULT 'Raspberry Pi 4',
-  api_key_hash VARCHAR(64) UNIQUE NOT NULL,
+  api_key VARCHAR(255) UNIQUE NOT NULL,
   metadata JSONB DEFAULT '{}',
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),

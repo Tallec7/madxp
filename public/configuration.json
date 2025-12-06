@@ -1,20 +1,20 @@
 {
     "remote": {
-        "title": "Télécommande Néopro - NANTES"
+        "title": "Télécommande Néopro - NLFHANDBALL"
     },
     "auth": {
-        "password": "VotreMotDePasseWiFi123",
-        "clubName": "NANTES",
+        "password": "NantesLoireFeminin25!",
+        "clubName": "NLFHANDBALL",
         "sessionDuration": 28800000
     },
     "sync": {
         "enabled": true,
         "serverUrl": "https://neopro-central-server.onrender.com",
-        "siteName": "MB",
-        "clubName": "NANTES",
+        "siteName": "MANGIN BEAULIEU",
+        "clubName": "NLFHANDBALL",
         "location": {
-            "city": "NN",
-            "region": "Bretagne",
+            "city": "Nantes",
+            "region": "Pays De La Loire",
             "country": "France"
         },
         "sports": ["handball"],

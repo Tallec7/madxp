@@ -11,14 +11,49 @@ const rl = readline.createInterface({
 
 const question = (query) => new Promise((resolve) => rl.question(query, resolve));
 
+/**
+ * Get value from environment variable or prompt user
+ * @param {string} envVar - Environment variable name
+ * @param {string} prompt - Prompt message if env var not set
+ * @param {string} defaultValue - Default value if neither env nor input provided
+ */
+async function getValueOrPrompt(envVar, prompt, defaultValue = '') {
+  const envValue = process.env[envVar];
+  if (envValue) {
+    console.log(`  ${envVar}: ${envValue}`);
+    return envValue;
+  }
+  const input = await question(prompt);
+  return input || defaultValue;
+}
+
 async function registerSite() {
   console.log('🔐 NEOPRO Site Registration');
   console.log('============================\n');
 
+  // Check if running in non-interactive mode (env vars provided)
+  const hasEnvConfig = process.env.SITE_NAME && process.env.CLUB_NAME;
+  if (hasEnvConfig) {
+    console.log('ℹ️  Running with pre-configured values:\n');
+  }
+
   try {
-    const serverUrl = await question('Central Server URL (e.g., https://neopro-central-server.onrender.com): ');
+    // Server URL - default to production
+    const serverUrl = await getValueOrPrompt(
+      'CENTRAL_SERVER_URL',
+      'Central Server URL (e.g., https://neopro-central-server.onrender.com): ',
+      'https://neopro-central-server.onrender.com'
+    );
+
+    // Admin credentials - always prompt for security
+    console.log('\n🔑 Admin credentials (required for authentication):');
     const email = await question('Admin email: ');
-    const password = await question('Admin password: ', { hideEchoBack: true });
+    const password = await question('Admin password: ');
+
+    if (!email || !password) {
+      console.error('\n❌ Email and password are required');
+      process.exit(1);
+    }
 
     console.log('\n🔑 Authenticating...');
 
@@ -31,12 +66,17 @@ async function registerSite() {
 
     console.log('✅ Authenticated successfully\n');
 
-    const siteName = await question('Site Name (e.g., Site Rennes): ');
-    const clubName = await question('Club Name (e.g., Rennes FC): ');
-    const city = await question('City: ');
-    const region = await question('Region (e.g., Bretagne): ');
-    const country = await question('Country (default: France): ') || 'France';
-    const sports = await question('Sports (comma-separated, e.g., football,rugby): ');
+    // Site info - from env vars or prompt
+    if (hasEnvConfig) {
+      console.log('📋 Site configuration:');
+    }
+
+    const siteName = await getValueOrPrompt('SITE_NAME', 'Site Name (e.g., Site Rennes): ');
+    const clubName = await getValueOrPrompt('CLUB_NAME', 'Club Name (e.g., Rennes FC): ');
+    const city = await getValueOrPrompt('LOCATION_CITY', 'City: ');
+    const region = await getValueOrPrompt('LOCATION_REGION', 'Region (e.g., Bretagne): ', 'Bretagne');
+    const country = await getValueOrPrompt('LOCATION_COUNTRY', 'Country (default: France): ', 'France');
+    const sports = await getValueOrPrompt('SPORTS', 'Sports (comma-separated, e.g., football,rugby): ', 'handball');
 
     console.log('\n📝 Creating site...');
 
@@ -95,13 +135,20 @@ MAX_DOWNLOAD_SIZE=1073741824
 ALLOWED_COMMANDS=deploy_video,delete_video,update_software,update_config,reboot,restart_service,get_logs
 `;
 
-    const saveToEtc = await question('\n💾 Save configuration to /etc/neopro/site.conf? (y/n): ');
+    // In non-interactive mode with env vars, auto-save to /etc/neopro
+    let saveToEtc = 'y';
+    if (!hasEnvConfig) {
+      saveToEtc = await question('\n💾 Save configuration to /etc/neopro/site.conf? (y/n): ');
+    } else {
+      console.log('\n💾 Saving configuration to /etc/neopro/site.conf...');
+    }
 
     if (saveToEtc.toLowerCase() === 'y') {
       await fs.ensureDir('/etc/neopro');
       await fs.writeFile('/etc/neopro/site.conf', configContent);
       console.log('✅ Configuration saved to /etc/neopro/site.conf');
     } else {
+      await fs.ensureDir('config');
       await fs.writeFile('config/.env', configContent);
       console.log('✅ Configuration saved to config/.env');
     }

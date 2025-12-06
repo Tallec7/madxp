@@ -1,13 +1,9 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
-import { createHash, timingSafeEqual } from 'crypto';
+import { timingSafeEqual } from 'crypto';
 import { query } from '../config/database';
 import { SocketData, CommandMessage, CommandResult, HeartbeatMessage } from '../types';
 import logger from '../config/logger';
-
-const hashApiKey = (apiKey: string): string => {
-  return createHash('sha256').update(apiKey).digest('hex');
-};
 
 const secureCompare = (a: string, b: string): boolean => {
   if (a.length !== b.length) return false;
@@ -54,15 +50,8 @@ class SocketService {
   private async authenticateAgent(socket: Socket, data: SocketData) {
     const { siteId, apiKey } = data;
 
-    interface SiteAuthRow {
-      id: string;
-      site_name: string;
-      api_key_hash: string;
-      [column: string]: unknown;
-    }
-
-    const result = await query<SiteAuthRow>(
-      'SELECT id, site_name, api_key_hash FROM sites WHERE id = $1',
+    const result = await query(
+      'SELECT id, site_name, api_key FROM sites WHERE id = $1',
       [siteId]
     );
 
@@ -72,9 +61,8 @@ class SocketService {
 
     const site = result.rows[0];
 
-    // Compare hashed API keys using timing-safe comparison
-    const providedHash = hashApiKey(apiKey);
-    if (!secureCompare(site.api_key_hash, providedHash)) {
+    // Compare API keys using timing-safe comparison
+    if (!secureCompare(site.api_key, apiKey)) {
       throw new Error('Clé API invalide');
     }
 

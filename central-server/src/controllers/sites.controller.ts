@@ -1,16 +1,12 @@
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes } from 'crypto';
 import { query } from '../config/database';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 
 const generateApiKey = (): string => {
   return randomBytes(32).toString('hex');
-};
-
-const hashApiKey = (apiKey: string): string => {
-  return createHash('sha256').update(apiKey).digest('hex');
 };
 
 export const getSites = async (req: AuthRequest, res: Response) => {
@@ -80,32 +76,57 @@ export const createSite = async (req: AuthRequest, res: Response) => {
   try {
     const { site_name, club_name, location, sports, hardware_model } = req.body;
 
+    // Check for existing sites with same name and generate unique name if needed
+    let uniqueSiteName = site_name;
+    const existingResult = await query(
+      `SELECT site_name FROM sites WHERE site_name = $1 OR site_name ~ $2`,
+      [site_name, `^${site_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+$`]
+    );
+
+    if (existingResult.rows.length > 0) {
+      // Find the highest suffix number
+      let maxSuffix = 0;
+      for (const row of existingResult.rows) {
+        if (row.site_name === site_name) {
+          maxSuffix = Math.max(maxSuffix, 1);
+        } else {
+          const match = row.site_name.match(/-(\d+)$/);
+          if (match) {
+            maxSuffix = Math.max(maxSuffix, parseInt(match[1], 10) + 1);
+          }
+        }
+      }
+      if (maxSuffix > 0) {
+        uniqueSiteName = `${site_name}-${maxSuffix}`;
+      }
+    }
+
     const id = uuidv4();
     const api_key = generateApiKey();
-    const api_key_hash = hashApiKey(api_key);
 
     const result = await query(
-      `INSERT INTO sites (id, site_name, club_name, location, sports, hardware_model, api_key_hash)
+      `INSERT INTO sites (id, site_name, club_name, location, sports, hardware_model, api_key)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, site_name, club_name, location, sports, hardware_model, status, created_at`,
       [
         id,
-        site_name,
+        uniqueSiteName,
         club_name,
         location ? JSON.stringify(location) : null,
         sports ? JSON.stringify(sports) : null,
         hardware_model || 'Raspberry Pi 4',
-        api_key_hash,
+        api_key,
       ]
     );
 
-    logger.info('Site created', { siteId: id, siteName: site_name, createdBy: req.user?.email });
+    logger.info('Site created', { siteId: id, siteName: uniqueSiteName, createdBy: req.user?.email });
 
     // Return the plain API key only once at creation time
     res.status(201).json({ ...result.rows[0], api_key });
   } catch (error) {
     logger.error('Create site error:', error);
-    res.status(500).json({ error: 'Erreur lors de la création du site' });
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    res.status(500).json({ error: 'Erreur lors de la création du site', details: errorMessage });
   }
 };
 
@@ -194,11 +215,10 @@ export const regenerateApiKey = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     const newApiKey = generateApiKey();
-    const newApiKeyHash = hashApiKey(newApiKey);
 
     const result = await query(
-      'UPDATE sites SET api_key_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id, site_name, club_name, status, updated_at',
-      [newApiKeyHash, id]
+      'UPDATE sites SET api_key = $1, updated_at = NOW() WHERE id = $2 RETURNING id, site_name, club_name, status, updated_at',
+      [newApiKey, id]
     );
 
     if (result.rows.length === 0) {

@@ -71,6 +71,19 @@ else
   log_warn "public/configuration.json not found, skipping"
 fi
 
+log_step "Syncing sync-agent to ${HOST}:${TARGET_DIR}/sync-agent"
+rsync -az --delete \
+  --exclude 'node_modules' \
+  --exclude 'config/.env' \
+  raspberry/sync-agent/ "${USER}@${HOST}:${TARGET_DIR}/sync-agent/"
+log_success "Sync-agent synced"
+
+log_step "Installing sync-agent dependencies"
+ssh "${USER}@${HOST}" "cd ${TARGET_DIR}/sync-agent && npm install --omit=dev" >/dev/null 2>&1 || true
+log_success "Sync-agent dependencies installed"
+
 log_step "Restarting services on ${HOST}"
 ssh "${USER}@${HOST}" "sudo systemctl restart neopro-app nginx" >/dev/null
+# Restart sync-agent if it exists
+ssh "${USER}@${HOST}" "sudo systemctl restart neopro-sync-agent 2>/dev/null || true"
 log_success "Deployment completed"

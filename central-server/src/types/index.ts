@@ -35,7 +35,7 @@ export interface Site {
   last_seen_at: Date | null;
   software_version: string | null;
   hardware_model: string;
-  api_key_hash: string;
+  api_key: string;
   metadata: Record<string, any>;
   created_at: Date;
   updated_at: Date;
