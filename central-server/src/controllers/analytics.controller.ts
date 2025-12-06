@@ -4,6 +4,119 @@ import { AuthRequest } from '../types';
 import logger from '../config/logger';
 
 // ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+// Base interface for QueryResultRow compatibility
+interface QueryRow {
+  [column: string]: unknown;
+}
+
+interface MetricsRow extends QueryRow {
+  cpu_usage: number;
+  memory_usage: number;
+  temperature: number;
+  disk_usage: number;
+  uptime: number;
+  recorded_at: string;
+}
+
+interface SiteRow extends QueryRow {
+  id: string;
+  site_name: string;
+  club_name: string;
+  status: string;
+  last_seen_at: string;
+}
+
+interface AlertStatsRow extends QueryRow {
+  active_alerts: string;
+  alerts_last_30d: string;
+  active: string;
+  acknowledged: string;
+  resolved: string;
+  critical: string;
+  warning: string;
+  info: string;
+}
+
+interface AvgMetricsRow extends QueryRow {
+  avg_cpu: number | null;
+  avg_memory: number | null;
+  avg_temperature: number | null;
+  max_temperature: number | null;
+}
+
+interface HeartbeatRow extends QueryRow {
+  heartbeat_count: string;
+  first_heartbeat: string;
+  last_heartbeat: string;
+}
+
+interface DailyHeartbeatRow extends QueryRow {
+  date: string;
+  heartbeat_count: string;
+  avg_cpu: number | null;
+  avg_temp: number | null;
+}
+
+interface UsageStatsRow extends QueryRow {
+  screen_time_seconds: string;
+  videos_played: string;
+  sessions_count: string;
+  active_days: string;
+  manual_triggers: string;
+  auto_plays: string;
+}
+
+interface DailyStatsRow extends QueryRow {
+  date: string;
+  screen_time: string;
+  videos: string;
+}
+
+interface CategoryStatsRow extends QueryRow {
+  category: string;
+  plays: string;
+  total_duration: string;
+}
+
+interface TopVideoRow extends QueryRow {
+  video_filename: string;
+  category: string;
+  plays: string;
+  total_duration: string;
+  completed_count: string;
+}
+
+interface HealthDataRow extends QueryRow {
+  status: string;
+  last_seen_at: string;
+  cpu_usage: number | null;
+  memory_usage: number | null;
+  temperature: number | null;
+  disk_usage: number | null;
+}
+
+interface GlobalStatsRow extends QueryRow {
+  active_sites: string;
+  total_videos_this_month: string;
+  total_screen_time_this_month: string;
+}
+
+interface TopSiteRow extends QueryRow {
+  id: string;
+  site_name: string;
+  club_name: string;
+  videos_this_month: string;
+  screen_time_this_month: string;
+}
+
+interface DailyCalcRow extends QueryRow {
+  count: string;
+}
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
@@ -38,7 +151,7 @@ export const getClubHealth = async (req: AuthRequest, res: Response) => {
     const { siteId } = req.params;
 
     // Vérifier que le site existe
-    const siteResult = await query('SELECT id, site_name, status, last_seen_at FROM sites WHERE id = $1', [siteId]);
+    const siteResult = await query<SiteRow>('SELECT id, site_name, status, last_seen_at FROM sites WHERE id = $1', [siteId]);
     if (siteResult.rows.length === 0) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
@@ -46,7 +159,7 @@ export const getClubHealth = async (req: AuthRequest, res: Response) => {
     const site = siteResult.rows[0];
 
     // Récupérer les dernières métriques
-    const latestMetrics = await query(
+    const latestMetrics = await query<MetricsRow>(
       `SELECT cpu_usage, memory_usage, temperature, disk_usage, uptime, recorded_at
        FROM metrics
        WHERE site_id = $1
@@ -56,7 +169,7 @@ export const getClubHealth = async (req: AuthRequest, res: Response) => {
     );
 
     // Calculer l'uptime sur 30 jours (basé sur les heartbeats)
-    const uptimeResult = await query(
+    const uptimeResult = await query<HeartbeatRow>(
       `SELECT
          COUNT(*) as heartbeat_count,
          MIN(recorded_at) as first_heartbeat,
@@ -73,7 +186,7 @@ export const getClubHealth = async (req: AuthRequest, res: Response) => {
     const uptimePercent = Math.min(100, (actualHeartbeats / expectedHeartbeats) * 100);
 
     // Compter les alertes actives et récentes
-    const alertsResult = await query(
+    const alertsResult = await query<AlertStatsRow>(
       `SELECT
          COUNT(*) FILTER (WHERE status = 'active') as active_alerts,
          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days') as alerts_last_30d
@@ -83,7 +196,7 @@ export const getClubHealth = async (req: AuthRequest, res: Response) => {
     );
 
     // Moyennes sur 24h
-    const avgResult = await query(
+    const avgResult = await query<AvgMetricsRow>(
       `SELECT
          AVG(cpu_usage) as avg_cpu,
          AVG(memory_usage) as avg_memory,
@@ -175,7 +288,7 @@ export const getClubAvailability = async (req: AuthRequest, res: Response) => {
     const daysNum = Math.min(parseInt(days as string) || 30, 90);
 
     // Récupérer les heartbeats groupés par jour
-    const result = await query(
+    const result = await query<DailyHeartbeatRow>(
       `SELECT
          DATE(recorded_at) as date,
          COUNT(*) as heartbeat_count,
@@ -190,7 +303,7 @@ export const getClubAvailability = async (req: AuthRequest, res: Response) => {
     );
 
     // Calculer l'uptime par jour (2880 heartbeats max par jour)
-    const dailyStats = result.rows.map((row) => ({
+    const dailyStats = result.rows.map((row: DailyHeartbeatRow) => ({
       date: row.date,
       uptime_percent: Math.min(100, Math.round((parseInt(row.heartbeat_count) / 2880) * 100 * 10) / 10),
       avg_cpu: row.avg_cpu ? Math.round(row.avg_cpu * 10) / 10 : null,
@@ -198,7 +311,7 @@ export const getClubAvailability = async (req: AuthRequest, res: Response) => {
     }));
 
     // Calculer les stats globales
-    const totalHeartbeats = result.rows.reduce((sum, row) => sum + parseInt(row.heartbeat_count), 0);
+    const totalHeartbeats = result.rows.reduce((sum: number, row: DailyHeartbeatRow) => sum + parseInt(row.heartbeat_count), 0);
     const expectedTotal = daysNum * 2880;
     const overallUptime = Math.min(100, Math.round((totalHeartbeats / expectedTotal) * 100 * 10) / 10);
 
@@ -245,7 +358,7 @@ export const getClubAlerts = async (req: AuthRequest, res: Response) => {
     const result = await query(sqlQuery, params);
 
     // Calculer les stats
-    const statsResult = await query(
+    const statsResult = await query<AlertStatsRow>(
       `SELECT
          COUNT(*) FILTER (WHERE status = 'active') as active,
          COUNT(*) FILTER (WHERE status = 'acknowledged') as acknowledged,
@@ -258,18 +371,20 @@ export const getClubAlerts = async (req: AuthRequest, res: Response) => {
       [siteId]
     );
 
+    const alertStats = statsResult.rows[0];
+
     res.json({
       site_id: siteId,
       stats: {
         by_status: {
-          active: parseInt(statsResult.rows[0]?.active || '0'),
-          acknowledged: parseInt(statsResult.rows[0]?.acknowledged || '0'),
-          resolved: parseInt(statsResult.rows[0]?.resolved || '0'),
+          active: parseInt(alertStats?.active || '0'),
+          acknowledged: parseInt(alertStats?.acknowledged || '0'),
+          resolved: parseInt(alertStats?.resolved || '0'),
         },
         by_severity: {
-          critical: parseInt(statsResult.rows[0]?.critical || '0'),
-          warning: parseInt(statsResult.rows[0]?.warning || '0'),
-          info: parseInt(statsResult.rows[0]?.info || '0'),
+          critical: parseInt(alertStats?.critical || '0'),
+          warning: parseInt(alertStats?.warning || '0'),
+          info: parseInt(alertStats?.info || '0'),
         },
       },
       alerts: result.rows,
@@ -415,7 +530,7 @@ export const getClubUsage = async (req: AuthRequest, res: Response) => {
     const prevToDate = new Date(fromDate.getTime() - 1);
 
     // Stats période actuelle
-    const currentStats = await query(
+    const currentStats = await query<UsageStatsRow>(
       `SELECT
          COALESCE(SUM(duration_played), 0) as screen_time_seconds,
          COUNT(*) as videos_played,
@@ -431,7 +546,7 @@ export const getClubUsage = async (req: AuthRequest, res: Response) => {
     );
 
     // Stats période précédente
-    const prevStats = await query(
+    const prevStats = await query<UsageStatsRow>(
       `SELECT
          COALESCE(SUM(duration_played), 0) as screen_time_seconds,
          COUNT(*) as videos_played,
@@ -444,7 +559,7 @@ export const getClubUsage = async (req: AuthRequest, res: Response) => {
     );
 
     // Stats quotidiennes
-    const dailyStats = await query(
+    const dailyStats = await query<DailyStatsRow>(
       `SELECT
          DATE(played_at) as date,
          COALESCE(SUM(duration_played), 0) as screen_time,
@@ -478,7 +593,7 @@ export const getClubUsage = async (req: AuthRequest, res: Response) => {
         videos_played: calculatePercentChange(parseInt(current.videos_played), parseInt(prev.videos_played)),
         sessions: calculatePercentChange(parseInt(current.sessions_count), parseInt(prev.sessions_count)),
       },
-      daily: dailyStats.rows.map((row) => ({
+      daily: dailyStats.rows.map((row: DailyStatsRow) => ({
         date: row.date,
         screen_time: parseInt(row.screen_time),
         videos: parseInt(row.videos),
@@ -503,7 +618,7 @@ export const getClubContent = async (req: AuthRequest, res: Response) => {
     const toDate = to ? new Date(to as string) : new Date();
 
     // Stats par catégorie
-    const categoryStats = await query(
+    const categoryStats = await query<CategoryStatsRow>(
       `SELECT
          category,
          COUNT(*) as plays,
@@ -517,7 +632,7 @@ export const getClubContent = async (req: AuthRequest, res: Response) => {
     );
 
     // Top vidéos
-    const topVideos = await query(
+    const topVideos = await query<TopVideoRow>(
       `SELECT
          video_filename,
          category,
@@ -535,7 +650,11 @@ export const getClubContent = async (req: AuthRequest, res: Response) => {
     );
 
     // Vidéos jamais jouées (depuis la liste des vidéos connues)
-    const neverPlayed = await query(
+    interface NeverPlayedRow extends QueryRow {
+      video_filename: string;
+      category: string;
+    }
+    const neverPlayed = await query<NeverPlayedRow>(
       `SELECT DISTINCT vp.video_filename, vp.category
        FROM video_plays vp
        WHERE vp.site_id = $1
@@ -552,7 +671,10 @@ export const getClubContent = async (req: AuthRequest, res: Response) => {
     );
 
     // Taux de complétion moyen
-    const completionRate = await query(
+    interface CompletionRow extends QueryRow {
+      avg_completion: string | null;
+    }
+    const completionRate = await query<CompletionRow>(
       `SELECT
          AVG(CASE WHEN completed THEN 100
              WHEN video_duration > 0 THEN (duration_played::float / video_duration * 100)
@@ -565,7 +687,7 @@ export const getClubContent = async (req: AuthRequest, res: Response) => {
     );
 
     // Calculer les totaux et pourcentages par catégorie
-    const totalPlays = categoryStats.rows.reduce((sum, row) => sum + parseInt(row.plays), 0);
+    const totalPlays = categoryStats.rows.reduce((sum: number, row: CategoryStatsRow) => sum + parseInt(row.plays), 0);
     const byCategory: Record<string, { plays: number; percent: number; duration: number }> = {};
 
     for (const row of categoryStats.rows) {
@@ -581,14 +703,14 @@ export const getClubContent = async (req: AuthRequest, res: Response) => {
       site_id: siteId,
       period: `${fromDate.toISOString().split('T')[0]}/${toDate.toISOString().split('T')[0]}`,
       by_category: byCategory,
-      top_videos: topVideos.rows.map((row) => ({
+      top_videos: topVideos.rows.map((row: TopVideoRow) => ({
         filename: row.video_filename,
         category: row.category,
         plays: parseInt(row.plays),
         total_duration: parseInt(row.total_duration),
         completed_count: parseInt(row.completed_count),
       })),
-      never_played: neverPlayed.rows.map((row) => ({
+      never_played: neverPlayed.rows.map((row: NeverPlayedRow) => ({
         filename: row.video_filename,
         category: row.category,
       })),
@@ -618,10 +740,27 @@ export const getClubDashboard = async (req: AuthRequest, res: Response) => {
     const fromDate = from ? new Date(from as string) : new Date(new Date().setDate(1));
     const toDate = to ? new Date(to as string) : new Date();
 
+    // Local types for this function
+    interface DashboardUsageRow extends QueryRow {
+      screen_time_seconds: string;
+      videos_played: string;
+      active_days: string;
+      manual_triggers: string;
+      auto_plays: string;
+    }
+    interface ContentCategoryRow extends QueryRow {
+      category: string;
+      plays: string;
+    }
+    interface TopVideoSimpleRow extends QueryRow {
+      video_filename: string;
+      plays: string;
+    }
+
     // Récupérer toutes les données en parallèle
     const [healthData, usageData, contentData] = await Promise.all([
       // Health data
-      query(
+      query<HealthDataRow>(
         `SELECT
            s.status, s.last_seen_at,
            m.cpu_usage, m.memory_usage, m.temperature, m.disk_usage
@@ -633,7 +772,7 @@ export const getClubDashboard = async (req: AuthRequest, res: Response) => {
         [siteId]
       ),
       // Usage summary
-      query(
+      query<DashboardUsageRow>(
         `SELECT
            COALESCE(SUM(duration_played), 0) as screen_time_seconds,
            COUNT(*) as videos_played,
@@ -647,7 +786,7 @@ export const getClubDashboard = async (req: AuthRequest, res: Response) => {
         [siteId, fromDate, toDate]
       ),
       // Content summary
-      query(
+      query<ContentCategoryRow>(
         `SELECT
            category,
            COUNT(*) as plays
@@ -665,7 +804,7 @@ export const getClubDashboard = async (req: AuthRequest, res: Response) => {
     const content = contentData.rows;
 
     // Top 5 vidéos
-    const topVideos = await query(
+    const topVideos = await query<TopVideoSimpleRow>(
       `SELECT video_filename, COUNT(*) as plays
        FROM video_plays
        WHERE site_id = $1
@@ -689,7 +828,7 @@ export const getClubDashboard = async (req: AuthRequest, res: Response) => {
     );
 
     // Daily activity
-    const dailyActivity = await query(
+    const dailyActivity = await query<DailyStatsRow>(
       `SELECT
          DATE(played_at) as date,
          COALESCE(SUM(duration_played), 0) as screen_time,
@@ -715,12 +854,12 @@ export const getClubDashboard = async (req: AuthRequest, res: Response) => {
       health: {
         status: health?.status || 'unknown',
         last_seen: health?.last_seen_at,
-        current: health?.cpu_usage
+        current: health?.cpu_usage != null
           ? {
               cpu: Math.round(health.cpu_usage * 10) / 10,
-              memory: Math.round(health.memory_usage * 10) / 10,
-              temperature: Math.round(health.temperature),
-              disk: Math.round(health.disk_usage * 10) / 10,
+              memory: Math.round((health.memory_usage ?? 0) * 10) / 10,
+              temperature: Math.round((health.temperature ?? 0) as number),
+              disk: Math.round((health.disk_usage ?? 0) * 10) / 10,
             }
           : null,
       },
@@ -734,13 +873,13 @@ export const getClubDashboard = async (req: AuthRequest, res: Response) => {
       },
       content: {
         by_category: byCategory,
-        top_videos: topVideos.rows.map((row) => ({
+        top_videos: topVideos.rows.map((row: TopVideoSimpleRow) => ({
           filename: row.video_filename,
           plays: parseInt(row.plays),
         })),
       },
       alerts: recentAlerts.rows,
-      daily_activity: dailyActivity.rows.map((row) => ({
+      daily_activity: dailyActivity.rows.map((row: DailyStatsRow) => ({
         date: row.date,
         screen_time: parseInt(row.screen_time),
         videos: parseInt(row.videos),
@@ -852,7 +991,7 @@ export const calculateDailyStats = async (req: AuthRequest, res: Response) => {
     const dateStr = targetDate.toISOString().split('T')[0];
 
     // Appeler la fonction PostgreSQL pour tous les sites
-    const result = await query(`SELECT calculate_all_daily_stats($1::DATE) as count`, [dateStr]);
+    const result = await query<DailyCalcRow>(`SELECT calculate_all_daily_stats($1::DATE) as count`, [dateStr]);
 
     logger.info('Daily stats calculated', { date: dateStr, sitesProcessed: result.rows[0].count });
 
@@ -874,7 +1013,7 @@ export const calculateDailyStats = async (req: AuthRequest, res: Response) => {
 export const getAnalyticsOverview = async (req: AuthRequest, res: Response) => {
   try {
     // Stats globales
-    const globalStats = await query(`
+    const globalStats = await query<GlobalStatsRow>(`
       SELECT
         COUNT(DISTINCT site_id) as active_sites,
         COALESCE(SUM(videos_played), 0) as total_videos_this_month,
@@ -884,7 +1023,7 @@ export const getAnalyticsOverview = async (req: AuthRequest, res: Response) => {
     `);
 
     // Sites les plus actifs
-    const topSites = await query(`
+    const topSites = await query<TopSiteRow>(`
       SELECT
         s.id, s.site_name, s.club_name,
         COALESCE(SUM(cds.videos_played), 0) as videos_this_month,
@@ -898,7 +1037,13 @@ export const getAnalyticsOverview = async (req: AuthRequest, res: Response) => {
     `);
 
     // Sites inactifs (aucune vidéo ce mois)
-    const inactiveSites = await query(`
+    interface InactiveSiteRow extends QueryRow {
+      id: string;
+      site_name: string;
+      club_name: string;
+      last_seen_at: string | null;
+    }
+    const inactiveSites = await query<InactiveSiteRow>(`
       SELECT s.id, s.site_name, s.club_name, s.last_seen_at
       FROM sites s
       WHERE NOT EXISTS (
@@ -919,7 +1064,7 @@ export const getAnalyticsOverview = async (req: AuthRequest, res: Response) => {
           parseInt(globalStats.rows[0]?.total_screen_time_this_month || '0')
         ),
       },
-      top_sites: topSites.rows.map((row) => ({
+      top_sites: topSites.rows.map((row: TopSiteRow) => ({
         id: row.id,
         site_name: row.site_name,
         club_name: row.club_name,

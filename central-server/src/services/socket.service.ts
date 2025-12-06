@@ -54,7 +54,14 @@ class SocketService {
   private async authenticateAgent(socket: Socket, data: SocketData) {
     const { siteId, apiKey } = data;
 
-    const result = await query(
+    interface SiteAuthRow {
+      id: string;
+      site_name: string;
+      api_key_hash: string;
+      [column: string]: unknown;
+    }
+
+    const result = await query<SiteAuthRow>(
       'SELECT id, site_name, api_key_hash FROM sites WHERE id = $1',
       [siteId]
     );
