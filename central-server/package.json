@@ -9,6 +9,7 @@
     "start": "node dist/server.js",
     "db:migrate": "ts-node src/scripts/migrate.ts",
     "db:seed": "ts-node src/scripts/seed.ts",
+    "create-admin": "ts-node src/scripts/create-admin.ts",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write \"src/**/*.ts\""

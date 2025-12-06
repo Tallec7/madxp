@@ -3,7 +3,13 @@ import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 
-const JWT_SECRET: Secret = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET: Secret = (() => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is required');
+  }
+  return secret;
+})();
 
 export interface JwtPayload {
   id: string;

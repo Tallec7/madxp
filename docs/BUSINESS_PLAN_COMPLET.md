@@ -76,7 +76,7 @@ Les solutions existantes sont soit trop chères (€500-2000+), soit trop comple
 
 - ⚠️ **0 tests automatisés** - Dette technique à résorber
 - ⚠️ **Pas de CI/CD** - Pipeline à mettre en place
-- ⚠️ **Vulnérabilités sécurité** - 3-4 corrections critiques nécessaires
+- ✅ **Vulnérabilités sécurité** - 4/5 corrections critiques effectuées (reste HttpOnly cookies)
 - ⚠️ **Équipe à construire** - Recrutements clés en Phase 1
 
 ---
@@ -512,13 +512,13 @@ Situation actuelle:
 
 ### 4.2.3 Vulnérabilités Sécurité
 
-| Vulnérabilité | Fichier | Sévérité | Description |
-|---------------|---------|----------|-------------|
-| JWT secret par défaut | `central-server/src/middleware/auth.ts:6` | 🔴 CRITIQUE | Fallback `'your-secret-key'` si env var manquante |
-| TLS désactivé | `central-server/src/config/database.ts:13` | 🔴 CRITIQUE | `NODE_TLS_REJECT_UNAUTHORIZED = '0'` |
-| Credentials admin en dur | `central-server/src/scripts/init-db.sql:204-207` | 🔴 CRITIQUE | Password `admin123` dans le code |
-| Token localStorage | `central-dashboard/.../auth.service.ts:26` | 🟠 HAUTE | JWT vulnérable XSS |
-| API key non hashée | `central-server/src/services/socket.service.ts:58` | 🟠 HAUTE | Comparaison plain text |
+| Vulnérabilité | Fichier | Sévérité | Statut |
+|---------------|---------|----------|--------|
+| ~~JWT secret par défaut~~ | `central-server/src/middleware/auth.ts:6` | ~~🔴 CRITIQUE~~ | ✅ CORRIGÉ - Erreur si JWT_SECRET manquant |
+| ~~TLS désactivé~~ | `central-server/src/config/database.ts:11-28` | ~~🔴 CRITIQUE~~ | ✅ CORRIGÉ - TLS activé en production, CA configurable |
+| ~~Credentials admin en dur~~ | `central-server/src/scripts/init-db.sql` | ~~🔴 CRITIQUE~~ | ✅ CORRIGÉ - Script `npm run create-admin` sécurisé |
+| Token localStorage | `central-dashboard/src/app/core/services/auth.service.ts:26` | 🟠 HAUTE | ⏳ À migrer vers HttpOnly cookies |
+| ~~API key non hashée~~ | `central-server/src/services/socket.service.ts:68-71` | ~~🟠 HAUTE~~ | ✅ CORRIGÉ - SHA256 hash + timing-safe compare |
 
 ### 4.2.4 Autres Problèmes
 
@@ -536,10 +536,10 @@ Situation actuelle:
 |---------|------|-------------|
 | Fonctionnalité | 8/10 | Produit complet et utilisable |
 | Qualité code | 5/10 | Lisible mais sans tests |
-| Sécurité | 4/10 | Vulnérabilités critiques à corriger |
+| Sécurité | 7/10 | Vulnérabilités critiques corrigées, reste HttpOnly cookies |
 | Scalabilité | 6/10 | Architecture OK, infra à renforcer |
 | Maintenabilité | 5/10 | Doc OK, mais pas de tests ni CI |
-| **GLOBAL** | **5.5/10** | **Produit viable nécessitant consolidation** |
+| **GLOBAL** | **6.2/10** | **Produit viable avec fondations sécurité solides** |
 
 ---
 

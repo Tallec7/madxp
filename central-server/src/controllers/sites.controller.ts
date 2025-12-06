@@ -1,12 +1,16 @@
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import crypto from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import { query } from '../config/database';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 
 const generateApiKey = (): string => {
-  return crypto.randomBytes(32).toString('hex');
+  return randomBytes(32).toString('hex');
+};
+
+const hashApiKey = (apiKey: string): string => {
+  return createHash('sha256').update(apiKey).digest('hex');
 };
 
 export const getSites = async (req: AuthRequest, res: Response) => {
@@ -78,11 +82,12 @@ export const createSite = async (req: AuthRequest, res: Response) => {
 
     const id = uuidv4();
     const api_key = generateApiKey();
+    const api_key_hash = hashApiKey(api_key);
 
     const result = await query(
-      `INSERT INTO sites (id, site_name, club_name, location, sports, hardware_model, api_key)
+      `INSERT INTO sites (id, site_name, club_name, location, sports, hardware_model, api_key_hash)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
+       RETURNING id, site_name, club_name, location, sports, hardware_model, status, created_at`,
       [
         id,
         site_name,
@@ -90,13 +95,14 @@ export const createSite = async (req: AuthRequest, res: Response) => {
         location ? JSON.stringify(location) : null,
         sports ? JSON.stringify(sports) : null,
         hardware_model || 'Raspberry Pi 4',
-        api_key,
+        api_key_hash,
       ]
     );
 
     logger.info('Site created', { siteId: id, siteName: site_name, createdBy: req.user?.email });
 
-    res.status(201).json(result.rows[0]);
+    // Return the plain API key only once at creation time
+    res.status(201).json({ ...result.rows[0], api_key });
   } catch (error) {
     logger.error('Create site error:', error);
     res.status(500).json({ error: 'Erreur lors de la création du site' });
@@ -188,10 +194,11 @@ export const regenerateApiKey = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     const newApiKey = generateApiKey();
+    const newApiKeyHash = hashApiKey(newApiKey);
 
     const result = await query(
-      'UPDATE sites SET api_key = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
-      [newApiKey, id]
+      'UPDATE sites SET api_key_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id, site_name, club_name, status, updated_at',
+      [newApiKeyHash, id]
     );
 
     if (result.rows.length === 0) {
@@ -200,7 +207,8 @@ export const regenerateApiKey = async (req: AuthRequest, res: Response) => {
 
     logger.info('API key regenerated', { siteId: id, regeneratedBy: req.user?.email });
 
-    res.json(result.rows[0]);
+    // Return the new plain API key only once
+    res.json({ ...result.rows[0], api_key: newApiKey });
   } catch (error) {
     logger.error('Regenerate API key error:', error);
     res.status(500).json({ error: 'Erreur lors de la régénération de la clé API' });

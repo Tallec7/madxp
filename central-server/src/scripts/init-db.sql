@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS sites (
   last_seen_at TIMESTAMP,
   software_version VARCHAR(50),
   hardware_model VARCHAR(100) DEFAULT 'Raspberry Pi 4',
-  api_key VARCHAR(255) UNIQUE NOT NULL,
+  api_key_hash VARCHAR(64) UNIQUE NOT NULL,
   metadata JSONB DEFAULT '{}',
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
@@ -200,16 +200,12 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_videos_updated_at BEFORE UPDATE ON videos
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Données de test (utilisateur admin par défaut)
--- Mot de passe: admin123 (à changer en production!)
-INSERT INTO users (email, password_hash, full_name, role)
-VALUES ('admin@neopro.fr', '$2a$10$8K1p/a0dL3.I8pWpTbLcB.W/r6BKWr5m.0mYzKC2Cqk7xH9gJJ8hS', 'Admin NEOPRO', 'admin')
-ON CONFLICT (email) DO NOTHING;
+-- Note: L'utilisateur admin doit être créé via le script de setup avec un mot de passe sécurisé
+-- Exécuter: npm run create-admin après l'initialisation de la base
 
 -- Message de fin
 DO $$
 BEGIN
     RAISE NOTICE 'Base de données initialisée avec succès!';
-    RAISE NOTICE 'Utilisateur par défaut: admin@neopro.fr / admin123';
-    RAISE NOTICE '⚠️  CHANGEZ LE MOT DE PASSE EN PRODUCTION!';
+    RAISE NOTICE '⚠️  Créez un utilisateur admin avec: npm run create-admin';
 END $$;

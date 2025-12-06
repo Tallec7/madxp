@@ -8,14 +8,28 @@ const shouldUseSSL =
   process.env.NODE_ENV === 'production' ||
   (process.env.DATABASE_SSL || '').toLowerCase() === 'true';
 
-if (shouldUseSSL) {
-  // Allow connecting to managed Postgres instances that present self-signed certs (e.g. Supabase).
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-}
+// Build SSL configuration
+const getSslConfig = () => {
+  if (!shouldUseSSL) return false;
+
+  const ca = process.env.DATABASE_SSL_CA;
+  if (ca) {
+    return { ca, rejectUnauthorized: true };
+  }
+
+  // In production, require proper SSL configuration
+  if (process.env.NODE_ENV === 'production') {
+    logger.warn('DATABASE_SSL_CA not set in production - using rejectUnauthorized: true');
+    return { rejectUnauthorized: true };
+  }
+
+  // Development only: allow self-signed certs
+  return { rejectUnauthorized: false };
+};
 
 const poolConfig: PoolConfig = {
   connectionString: process.env.DATABASE_URL,
-  ssl: shouldUseSSL ? { rejectUnauthorized: false } : false,
+  ssl: getSslConfig(),
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
