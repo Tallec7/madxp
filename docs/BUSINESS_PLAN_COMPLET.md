@@ -20,7 +20,9 @@
 10. [KPIs & Métriques](#10-kpis--métriques)
 11. [Risques & Mitigations](#11-risques--mitigations)
 12. [Processus Opérationnels](#12-processus-opérationnels)
-13. [Annexes](#13-annexes)
+13. [Analytics Sponsors & Annonceurs](#13-analytics-sponsors--annonceurs)
+14. [Analytics Club](#14-analytics-club)
+15. [Annexes](#15-annexes)
 
 ---
 
@@ -1402,9 +1404,887 @@ T+24h    POST-MORTEM
 
 ---
 
-# 13. Annexes
+# 13. Analytics Sponsors & Annonceurs
 
-## 13.1 Glossaire
+> **Objectif : Fournir aux clubs et sponsors des données mesurables sur l'exposition des partenaires**
+
+Cette fonctionnalité représente un **différenciateur majeur** face à la concurrence et permet de justifier la valeur des partenariats avec des données concrètes.
+
+## 13.1 Vue d'Ensemble
+
+### Problématique Actuelle
+
+Les clubs sportifs amateurs peinent à :
+- **Justifier leurs tarifs sponsors** auprès des partenaires
+- **Renouveler les contrats** sans données de performance
+- **Attirer de nouveaux sponsors** sans preuves d'exposition
+- **Valoriser leur audience** lors des événements
+
+### Solution NEOPRO Analytics
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    FLUX MÉTRIQUES SPONSORS                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+BOÎTIER RASPBERRY PI                         SERVEUR CENTRAL
+┌─────────────────────┐                      ┌─────────────────────────────┐
+│                     │                      │                             │
+│  Video Player       │                      │  Tables PostgreSQL          │
+│  ├── onPlay()  ────────────────────────────►  sponsor_impressions       │
+│  │   {videoId,      │   Batch toutes      │  ├── site_id                │
+│  │    timestamp,    │   les 5 min         │  ├── video_id               │
+│  │    duration,     │                      │  ├── played_at              │
+│  │    context}      │                      │  ├── duration_played        │
+│  │                  │                      │  ├── completed (bool)       │
+│  ├── onComplete() ──────────────────────────► ├── event_type            │
+│  │                  │                      │  ├── period                 │
+│  └── onInterrupt()──────────────────────────► └── audience_estimate     │
+│                     │                      │                             │
+│  Local Buffer       │                      │  sponsor_analytics (agrégé) │
+│  └── SQLite/JSON    │                      │  ├── daily_impressions      │
+│      (offline mode) │                      │  ├── total_duration         │
+│                     │                      │  └── avg_completion_rate    │
+└─────────────────────┘                      └─────────────────────────────┘
+```
+
+## 13.2 Données Collectées
+
+### Métriques de Diffusion (par vidéo sponsor)
+
+| Métrique | Description | Usage |
+|----------|-------------|-------|
+| **Impressions** | Nombre total d'affichages | Volume d'exposition |
+| **Durée totale** | Temps cumulé à l'écran | Valeur temps d'antenne |
+| **Taux de complétion** | % vidéos vues entièrement | Qualité de l'exposition |
+| **Position boucle** | Rang dans la rotation | Optimisation placement |
+| **Horodatage** | Date/heure précise | Analyse temporelle |
+
+### Métriques de Contexte
+
+| Métrique | Description | Usage |
+|----------|-------------|-------|
+| **Type d'événement** | Match, entraînement, tournoi | Valorisation contexte |
+| **Période** | Avant-match, mi-temps, après-match | Pics d'audience |
+| **Sport** | Handball, volley, basket, etc. | Ciblage sponsors |
+| **Déclenchement** | Auto vs manuel | Engagement opérateur |
+
+### Métriques d'Audience (optionnel)
+
+| Métrique | Source | Précision |
+|----------|--------|-----------|
+| **Estimation manuelle** | Saisie opérateur | Approximative |
+| **Capteur présence** | Hardware additionnel | Moyenne |
+| **Intégration billetterie** | API externe | Précise |
+
+## 13.3 Architecture Technique
+
+### Schéma Base de Données
+
+```sql
+-- Table des impressions sponsors (granulaire)
+CREATE TABLE sponsor_impressions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    site_id UUID REFERENCES sites(id),
+    video_id UUID REFERENCES videos(id),
+
+    -- Données de diffusion
+    played_at TIMESTAMP NOT NULL,
+    duration_played INTEGER NOT NULL,  -- secondes
+    video_duration INTEGER NOT NULL,   -- durée totale vidéo
+    completed BOOLEAN DEFAULT false,
+    interrupted_at INTEGER,            -- seconde d'interruption
+
+    -- Contexte
+    event_type VARCHAR(50),            -- match, training, tournament, other
+    period VARCHAR(50),                -- pre_match, halftime, post_match, loop
+    trigger_type VARCHAR(20),          -- auto, manual
+    position_in_loop INTEGER,
+
+    -- Audience (optionnel)
+    audience_estimate INTEGER,
+
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Index pour requêtes analytics
+CREATE INDEX idx_impressions_video ON sponsor_impressions(video_id, played_at);
+CREATE INDEX idx_impressions_site ON sponsor_impressions(site_id, played_at);
+CREATE INDEX idx_impressions_date ON sponsor_impressions(played_at);
+
+-- Table agrégée (calculée quotidiennement via cron)
+CREATE TABLE sponsor_daily_stats (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    video_id UUID REFERENCES videos(id),
+    site_id UUID REFERENCES sites(id),
+    date DATE NOT NULL,
+
+    -- Métriques agrégées
+    total_impressions INTEGER DEFAULT 0,
+    total_duration_seconds INTEGER DEFAULT 0,
+    completed_plays INTEGER DEFAULT 0,
+    completion_rate DECIMAL(5,2),
+    unique_events INTEGER DEFAULT 0,
+
+    -- Par période
+    pre_match_plays INTEGER DEFAULT 0,
+    match_plays INTEGER DEFAULT 0,
+    post_match_plays INTEGER DEFAULT 0,
+
+    -- Audience
+    total_audience_estimate INTEGER DEFAULT 0,
+
+    UNIQUE(video_id, site_id, date)
+);
+
+-- Vue pour rapports sponsors
+CREATE VIEW sponsor_reports AS
+SELECT
+    v.name as video_name,
+    v.id as video_id,
+    COUNT(*) as total_impressions,
+    SUM(si.duration_played) as total_screen_time_seconds,
+    ROUND(AVG(CASE WHEN si.completed THEN 100 ELSE
+        (si.duration_played::float / si.video_duration * 100) END), 1) as avg_completion_pct,
+    COUNT(DISTINCT si.site_id) as unique_sites,
+    COUNT(DISTINCT DATE(si.played_at)) as active_days,
+    SUM(si.audience_estimate) as estimated_reach
+FROM sponsor_impressions si
+JOIN videos v ON v.id = si.video_id
+GROUP BY v.id, v.name;
+```
+
+### Collecte Côté Boîtier
+
+```typescript
+// raspberry/webapp/src/app/services/sponsor-analytics.service.ts
+
+interface SponsorImpression {
+  videoId: string;
+  playedAt: Date;
+  durationPlayed: number;
+  videoDuration: number;
+  completed: boolean;
+  interruptedAt?: number;
+  eventType?: 'match' | 'training' | 'tournament' | 'other';
+  period?: 'pre_match' | 'halftime' | 'post_match' | 'loop';
+  triggerType: 'auto' | 'manual';
+  positionInLoop?: number;
+  audienceEstimate?: number;
+}
+
+class SponsorAnalyticsService {
+  private buffer: SponsorImpression[] = [];
+  private readonly BATCH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+  constructor() {
+    // Envoi batch périodique
+    setInterval(() => this.flushBuffer(), this.BATCH_INTERVAL);
+
+    // Sauvegarde locale en cas de perte connexion
+    window.addEventListener('beforeunload', () => this.saveToLocalStorage());
+  }
+
+  trackImpression(impression: SponsorImpression): void {
+    this.buffer.push(impression);
+
+    // Flush immédiat si buffer trop grand
+    if (this.buffer.length >= 50) {
+      this.flushBuffer();
+    }
+  }
+
+  private async flushBuffer(): Promise<void> {
+    if (this.buffer.length === 0) return;
+
+    const impressions = [...this.buffer];
+    this.buffer = [];
+
+    try {
+      await this.syncAgent.sendImpressions(impressions);
+    } catch (error) {
+      // Remettre dans le buffer et sauvegarder localement
+      this.buffer = [...impressions, ...this.buffer];
+      this.saveToLocalStorage();
+    }
+  }
+}
+```
+
+### API Endpoints
+
+```typescript
+// GET /api/v1/analytics/sponsors/:sponsorId
+// Récupérer les analytics d'un sponsor
+
+// Response
+{
+  "period": "2025-01-01/2025-01-31",
+  "summary": {
+    "total_impressions": 1247,
+    "total_screen_time": "18h 32min",
+    "total_screen_time_seconds": 66720,
+    "avg_daily_impressions": 40.2,
+    "completion_rate": 94.3,
+    "estimated_reach": 15600,
+    "active_sites": 23,
+    "active_days": 31
+  },
+  "by_video": [
+    {
+      "video_id": "uuid-1",
+      "name": "Sponsor A - 15s",
+      "impressions": 823,
+      "screen_time_seconds": 12345,
+      "completion_rate": 96.1
+    },
+    {
+      "video_id": "uuid-2",
+      "name": "Sponsor A - 30s",
+      "impressions": 424,
+      "screen_time_seconds": 12720,
+      "completion_rate": 91.8
+    }
+  ],
+  "by_site": [
+    {
+      "site_id": "uuid",
+      "site_name": "Cesson Handball",
+      "impressions": 312,
+      "screen_time_seconds": 4680
+    }
+  ],
+  "by_period": {
+    "pre_match": 412,
+    "halftime": 298,
+    "post_match": 537
+  },
+  "by_event_type": {
+    "match": 892,
+    "training": 245,
+    "tournament": 110
+  },
+  "trends": {
+    "daily": [
+      {"date": "2025-01-01", "impressions": 42, "screen_time": 630},
+      {"date": "2025-01-02", "impressions": 38, "screen_time": 570}
+    ],
+    "weekly": [
+      {"week": "2025-W01", "impressions": 285, "screen_time": 4275}
+    ]
+  }
+}
+
+// GET /api/v1/analytics/sponsors/:sponsorId/report/pdf
+// Génère un rapport PDF téléchargeable
+
+// GET /api/v1/analytics/sponsors/:sponsorId/export
+// Export CSV des données brutes
+// Query params: ?format=csv&from=2025-01-01&to=2025-01-31
+
+// POST /api/v1/analytics/impressions
+// Réception batch impressions depuis les boîtiers
+// Body: { impressions: SponsorImpression[] }
+```
+
+## 13.4 Dashboard Sponsor
+
+### Interface Utilisateur
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  NEOPRO - Rapport Sponsor : DÉCATHLON CESSON                    Jan 2025   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐            │
+│  │   IMPRESSIONS    │ │  TEMPS D'ÉCRAN   │ │  AUDIENCE EST.   │            │
+│  │      1,247       │ │    18h 32min     │ │     15,600       │            │
+│  │    ▲ +12% vs M-1 │ │   ▲ +8% vs M-1   │ │   ▲ +15% vs M-1  │            │
+│  └──────────────────┘ └──────────────────┘ └──────────────────┘            │
+│                                                                             │
+│  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐            │
+│  │  TAUX COMPLÉTION │ │  SITES ACTIFS    │ │  JOURS ACTIFS    │            │
+│  │      94.3%       │ │       23         │ │       31         │            │
+│  │    ▲ +2% vs M-1  │ │   ▲ +3 vs M-1    │ │   = vs M-1       │            │
+│  └──────────────────┘ └──────────────────┘ └──────────────────┘            │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  IMPRESSIONS PAR JOUR                                               │   │
+│  │  60│      ╭─╮                                                       │   │
+│  │  40│  ╭───╯ ╰──╮    ╭──╮    ╭──╮       ╭──╮                        │   │
+│  │  20│──╯        ╰────╯  ╰────╯  ╰───────╯  ╰──                      │   │
+│  │   0└────────────────────────────────────────────                    │   │
+│  │     1   5    10   15   20   25   30                                 │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────┐  ┌─────────────────────────────────────────┐  │
+│  │  PAR PÉRIODE            │  │  TOP SITES                              │  │
+│  │                         │  │                                         │  │
+│  │  ████████░░ Avant-match │  │  1. Cesson Handball      312 imp.      │  │
+│  │  ██████░░░░ Mi-temps    │  │  2. Rennes Volley        287 imp.      │  │
+│  │  ██████████ Après-match │  │  3. Betton Basket        198 imp.      │  │
+│  │                         │  │  4. Bruz Football        156 imp.      │  │
+│  └─────────────────────────┘  └─────────────────────────────────────────┘  │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  DÉTAIL VIDÉOS                                                      │   │
+│  │  ┌────────────────────┬──────────┬──────────┬──────────┬─────────┐  │   │
+│  │  │ Vidéo              │ Impress. │ Durée    │ Complet. │ Reach   │  │   │
+│  │  ├────────────────────┼──────────┼──────────┼──────────┼─────────┤  │   │
+│  │  │ Décathlon 15s      │ 823      │ 3h 26min │ 96.1%    │ 10,200  │  │   │
+│  │  │ Décathlon 30s      │ 312      │ 2h 36min │ 91.2%    │ 3,900   │  │   │
+│  │  │ Décathlon Promo    │ 112      │ 0h 56min │ 88.4%    │ 1,500   │  │   │
+│  │  └────────────────────┴──────────┴──────────┴──────────┴─────────┘  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  [📥 Télécharger PDF]  [📊 Export CSV]  [📧 Envoyer au sponsor]           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Rapport PDF Généré
+
+Le rapport PDF inclut :
+
+1. **Page de garde**
+   - Logo club + logo sponsor
+   - Période couverte
+   - Date de génération
+
+2. **Résumé exécutif**
+   - KPIs clés en grand format
+   - Comparaison période précédente
+   - Points forts du mois
+
+3. **Détail des diffusions**
+   - Graphique impressions/jour
+   - Répartition par période
+   - Performance par vidéo
+
+4. **Couverture géographique**
+   - Carte des sites (si multi-sites)
+   - Top 10 sites par impressions
+
+5. **Certificat de diffusion**
+   - Attestation officielle
+   - Signature numérique
+   - Utilisable pour facturation
+
+## 13.5 Fonctionnalités par Phase
+
+### Phase 1 - MVP (2 semaines)
+
+| Fonctionnalité | Effort | Priorité |
+|----------------|--------|----------|
+| Collecte impressions basique | 3-4 jours | P0 |
+| Stockage PostgreSQL | 1 jour | P0 |
+| API stats simples | 2 jours | P0 |
+| Dashboard basique | 3-4 jours | P0 |
+| Export CSV | 1 jour | P1 |
+
+**Livrables MVP :**
+- Tracking automatique de chaque diffusion vidéo
+- Endpoint API pour récupérer les stats
+- Page dashboard avec métriques de base
+- Export CSV des données brutes
+
+### Phase 2 - V1 Complète (4 semaines)
+
+| Fonctionnalité | Effort | Priorité |
+|----------------|--------|----------|
+| Contexte événement (période, type) | 2 jours | P1 |
+| Génération rapport PDF | 3 jours | P1 |
+| Rapports email automatiques | 3 jours | P1 |
+| Dashboard avancé avec graphiques | 1 semaine | P1 |
+| Comparaison périodes | 2 jours | P2 |
+| Gestion sponsors (CRUD) | 2 jours | P1 |
+
+**Livrables V1 :**
+- Contextualisation complète des impressions
+- Rapports PDF professionnels
+- Envoi automatique mensuel aux sponsors
+- Interface graphique complète
+
+### Phase 3 - Avancée (8 semaines)
+
+| Fonctionnalité | Effort | Priorité |
+|----------------|--------|----------|
+| Estimation audience (saisie manuelle) | 2 jours | P2 |
+| Capteur présence (hardware) | 2-4 semaines | P3 |
+| Intégration billetterie | 2 semaines | P3 |
+| Portail sponsor self-service | 2 semaines | P2 |
+| A/B testing créas | 1 semaine | P3 |
+| Benchmark anonymisé | 1 semaine | P3 |
+| Objectifs & alertes | 3 jours | P2 |
+| API partenaires OAuth | 1 semaine | P2 |
+
+## 13.6 Valeur Business
+
+### Pour les Clubs
+
+| Bénéfice | Impact |
+|----------|--------|
+| **Justifier les tarifs** | Négociation basée sur données réelles |
+| **Renouveler les contrats** | Preuve de valeur pour fidélisation |
+| **Attirer nouveaux sponsors** | Dossier commercial professionnel |
+| **Upsell partenaires** | Proposer plus de visibilité avec métriques |
+
+### Pour les Sponsors
+
+| Bénéfice | Impact |
+|----------|--------|
+| **ROI mesurable** | Justification interne de l'investissement |
+| **Optimisation créas** | Données pour améliorer les vidéos |
+| **Transparence** | Confiance dans le partenariat |
+| **Reporting automatisé** | Gain de temps administratif |
+
+### Pour NEOPRO
+
+| Bénéfice | Impact |
+|----------|--------|
+| **Différenciateur majeur** | Avantage concurrentiel fort |
+| **Argument de vente B2B** | Conversion clubs facilitée |
+| **Upsell analytics premium** | Nouvelle source de revenus |
+| **Base pub programmatique** | Préparation Phase 3 |
+| **Data insights marché** | Compréhension usage agrégé |
+
+## 13.7 Modèle de Pricing Analytics
+
+### Option 1 : Inclus dans l'abonnement
+
+| Plan | Analytics inclus |
+|------|------------------|
+| Starter (€19/mois) | Stats basiques (impressions, durée) |
+| Pro (€39/mois) | Stats complètes + export CSV |
+| Business (€29/site) | Tout + rapports PDF + multi-sites |
+| Enterprise | Tout + API + portail sponsor |
+
+### Option 2 : Module complémentaire
+
+| Module | Prix | Contenu |
+|--------|------|---------|
+| Analytics Basic | Gratuit | Impressions, durée totale |
+| Analytics Pro | +€10/mois | Contexte, PDF, comparaisons |
+| Analytics Enterprise | +€25/mois | API, portail sponsor, objectifs |
+
+### Option 3 : Par sponsor
+
+| Formule | Prix | Usage |
+|---------|------|-------|
+| Rapport ponctuel | €15 | PDF one-shot |
+| Suivi mensuel | €5/sponsor/mois | Rapports auto |
+| Portail dédié | €20/sponsor/mois | Accès self-service |
+
+## 13.8 KPIs Module Analytics
+
+| Métrique | Objectif M6 | Objectif M12 |
+|----------|-------------|--------------|
+| Clubs utilisant analytics | 60% | 85% |
+| Rapports générés/mois | 200 | 1,500 |
+| Sponsors avec accès portail | 50 | 500 |
+| NPS sponsors | > 50 | > 60 |
+| Upsell analytics premium | 20% | 35% |
+
+## 13.9 Roadmap Intégration
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    ROADMAP ANALYTICS SPONSORS                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+PHASE 1 (Mois 1-2)
+├── Semaine 1-2: Backend
+│   ├── Tables PostgreSQL
+│   ├── API endpoints
+│   └── Collecte sync-agent
+│
+├── Semaine 3-4: Frontend
+│   ├── Dashboard basique
+│   ├── Export CSV
+│   └── Tests & déploiement
+
+PHASE 2 (Mois 3-4)
+├── Semaine 5-6: Enrichissement
+│   ├── Contexte événement
+│   ├── Génération PDF
+│   └── Gestion sponsors
+│
+├── Semaine 7-8: Automatisation
+│   ├── Rapports email
+│   ├── Scheduler cron
+│   └── Dashboard avancé
+
+PHASE 3 (Mois 5-8)
+├── Mois 5: Audience
+│   ├── Estimation manuelle
+│   ├── Intégration billetterie
+│   └── Capteur présence (R&D)
+│
+├── Mois 6-7: Self-service
+│   ├── Portail sponsor
+│   ├── API OAuth partenaires
+│   └── Objectifs & alertes
+│
+└── Mois 8: Optimisation
+    ├── A/B testing
+    ├── Benchmarks
+    └── Analytics prédictives
+```
+
+---
+
+# 14. Analytics Club
+
+> **Objectif : Donner aux clubs une vision complète de leur utilisation du système pour optimiser l'animation des événements et justifier l'investissement.**
+
+Cette fonctionnalité permet aux clubs de mesurer l'utilisation réelle de leur système NEOPRO et d'identifier les axes d'amélioration.
+
+## 14.1 Données Disponibles
+
+### Données actuellement collectées (sans développement)
+
+| Donnée | Source | Stockage |
+|--------|--------|----------|
+| **Statut online/offline** | Sync-Agent heartbeat | `sites.status`, `sites.last_seen_at` |
+| **CPU, RAM, Température, Disque** | Sync-Agent métriques | `metrics.*` |
+| **Uptime système** | Sync-Agent | `metrics.uptime` |
+| **Version logicielle** | Sites | `sites.software_version` |
+| **Alertes système** | Central Server | `alerts.*` |
+| **Déploiements vidéos** | Central Server | `content_deployments.*` |
+| **Commandes exécutées** | Central Server | `remote_commands.*` |
+| **Vidéos disponibles** | Central Server | `videos.*` |
+
+### Données à collecter (hooks existants)
+
+| Donnée | Source | Hook à implémenter |
+|--------|--------|-------------------|
+| **Lecture vidéo** | TV Player | `player.on('play')`, `player.one('ended')` |
+| **Erreurs lecture** | TV Player | `player.on('error')` |
+| **Déclenchement manuel** | Télécommande | `launchVideo()` |
+| **Navigation catégories** | Télécommande | `selectCategory()` |
+| **Retour boucle sponsors** | Télécommande | `launchSponsors()` |
+
+## 14.2 Architecture Technique
+
+### Schéma Base de Données
+
+```sql
+-- Sessions d'utilisation (quand la TV est active)
+CREATE TABLE club_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    site_id UUID REFERENCES sites(id),
+    started_at TIMESTAMP NOT NULL,
+    ended_at TIMESTAMP,
+    duration_seconds INTEGER,
+    videos_played INTEGER DEFAULT 0,
+    manual_triggers INTEGER DEFAULT 0,
+    auto_plays INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_club_sessions_site ON club_sessions(site_id, started_at);
+
+-- Lectures vidéo individuelles
+CREATE TABLE video_plays (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    site_id UUID REFERENCES sites(id),
+    session_id UUID REFERENCES club_sessions(id),
+    video_filename VARCHAR(255),
+    category VARCHAR(50),           -- sponsor, jingle, ambiance
+    played_at TIMESTAMP NOT NULL,
+    duration_played INTEGER,        -- secondes
+    video_duration INTEGER,         -- durée totale
+    completed BOOLEAN DEFAULT false,
+    trigger_type VARCHAR(20),       -- auto, manual
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_video_plays_site ON video_plays(site_id, played_at);
+CREATE INDEX idx_video_plays_session ON video_plays(session_id);
+
+-- Agrégats quotidiens (calculés par cron)
+CREATE TABLE club_daily_stats (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    site_id UUID REFERENCES sites(id),
+    date DATE NOT NULL,
+
+    -- Activité
+    sessions_count INTEGER DEFAULT 0,
+    screen_time_seconds INTEGER DEFAULT 0,
+    videos_played INTEGER DEFAULT 0,
+    manual_triggers INTEGER DEFAULT 0,
+
+    -- Par catégorie
+    sponsor_plays INTEGER DEFAULT 0,
+    jingle_plays INTEGER DEFAULT 0,
+    ambiance_plays INTEGER DEFAULT 0,
+
+    -- Technique (agrégé depuis metrics)
+    avg_cpu DECIMAL(5,2),
+    avg_memory DECIMAL(5,2),
+    avg_temperature DECIMAL(5,2),
+    uptime_percent DECIMAL(5,2),
+    incidents_count INTEGER DEFAULT 0,
+
+    UNIQUE(site_id, date)
+);
+
+CREATE INDEX idx_club_daily_stats_site ON club_daily_stats(site_id, date);
+```
+
+### Collecte côté Boîtier
+
+```typescript
+// Ajout dans tv.component.ts
+interface VideoPlayEvent {
+  videoFilename: string;
+  category: string;
+  playedAt: Date;
+  durationPlayed: number;
+  videoDuration: number;
+  completed: boolean;
+  triggerType: 'auto' | 'manual';
+}
+
+// Hook sur le player Video.js existant
+player.on('play', () => {
+  this.currentPlayStart = new Date();
+  this.trackVideoStart(video);
+});
+
+player.one('ended', () => {
+  this.trackVideoEnd(video, true);
+});
+
+player.on('error', (error) => {
+  this.trackVideoError(video, error);
+});
+```
+
+```typescript
+// Ajout dans remote.component.ts
+launchVideo(video: Video) {
+  this.socketService.emit('command', { type: 'video', data: video });
+  // Nouveau: tracker le déclenchement manuel
+  this.analyticsService.trackManualTrigger(video);
+}
+```
+
+### API Endpoints
+
+```typescript
+// GET /api/v1/analytics/clubs/:siteId/health
+// Dashboard santé technique
+{
+  "status": "healthy",
+  "current": {
+    "cpu": 23.5,
+    "memory": 45.2,
+    "temperature": 52,
+    "disk_used_percent": 18
+  },
+  "uptime_30d": 99.2,
+  "last_seen": "2025-01-28T14:32:00Z",
+  "alerts_active": 0,
+  "alerts_last_30d": 1
+}
+
+// GET /api/v1/analytics/clubs/:siteId/usage?from=2025-01-01&to=2025-01-31
+// Statistiques d'utilisation
+{
+  "period": "2025-01-01/2025-01-31",
+  "summary": {
+    "screen_time_seconds": 171120,
+    "screen_time_formatted": "47h 32min",
+    "videos_played": 1847,
+    "sessions_count": 24,
+    "active_days": 18,
+    "manual_triggers": 623,
+    "auto_plays": 1224
+  },
+  "comparison_previous": {
+    "screen_time": "+15%",
+    "videos_played": "+8%",
+    "sessions": "+20%"
+  },
+  "daily": [
+    {"date": "2025-01-01", "screen_time": 7200, "videos": 87},
+    {"date": "2025-01-02", "screen_time": 5400, "videos": 62}
+  ]
+}
+
+// GET /api/v1/analytics/clubs/:siteId/content?from=2025-01-01&to=2025-01-31
+// Analytics contenu
+{
+  "by_category": {
+    "sponsor": {"plays": 892, "percent": 48.3},
+    "jingle": {"plays": 412, "percent": 22.3},
+    "ambiance": {"plays": 543, "percent": 29.4}
+  },
+  "top_videos": [
+    {"filename": "but-celebration.mp4", "plays": 187, "category": "jingle"},
+    {"filename": "decathlon-15s.mp4", "plays": 156, "category": "sponsor"}
+  ],
+  "never_played": [
+    {"filename": "intro-match.mp4", "category": "ambiance"},
+    {"filename": "sponsor-old.mp4", "category": "sponsor"}
+  ],
+  "completion_rate": 94.2
+}
+
+// GET /api/v1/analytics/clubs/:siteId/export?format=csv&from=2025-01-01&to=2025-01-31
+// Export données brutes
+```
+
+## 14.3 Dashboard Club
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  NEOPRO - Analytics : CESSON HANDBALL                           Jan 2025   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ══════════════════════════════════════════════════════════════════════════ │
+│  📊 UTILISATION                                                    [Mois ▼] │
+│  ══════════════════════════════════════════════════════════════════════════ │
+│                                                                             │
+│  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐            │
+│  │  TEMPS D'ÉCRAN   │ │  VIDÉOS JOUÉES   │ │  JOURS ACTIFS    │            │
+│  │    47h 32min     │ │     1,847        │ │    18 / 31       │            │
+│  │   ▲ +15% vs M-1  │ │   ▲ +8% vs M-1   │ │   ▲ +3 vs M-1    │            │
+│  └──────────────────┘ └──────────────────┘ └──────────────────┘            │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  ACTIVITÉ QUOTIDIENNE                                               │   │
+│  │  4h│      ■                    ■              ■                     │   │
+│  │  2h│  ■   ■   ■       ■   ■   ■   ■      ■   ■   ■   ■            │   │
+│  │  0 └────────────────────────────────────────────────────            │   │
+│  │     1   5    10   15   20   25   30                                 │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ══════════════════════════════════════════════════════════════════════════ │
+│  🎬 CONTENU                                                                 │
+│  ══════════════════════════════════════════════════════════════════════════ │
+│                                                                             │
+│  ┌───────────────────────────┐  ┌───────────────────────────────────────┐  │
+│  │  PAR CATÉGORIE            │  │  TOP 5 VIDÉOS                         │  │
+│  │                           │  │                                       │  │
+│  │  Sponsors   ████████ 892  │  │  1. but-celebration.mp4    187 plays │  │
+│  │  Jingles    ████░░░░ 412  │  │  2. decathlon-15s.mp4      156 plays │  │
+│  │  Ambiance   █████░░░ 543  │  │  3. timeout.mp4            134 plays │  │
+│  │                           │  │  4. mi-temps.mp4           98 plays  │  │
+│  │  Auto: 66%   Manuel: 34%  │  │  5. sponsor-boulanger.mp4  87 plays  │  │
+│  └───────────────────────────┘  └───────────────────────────────────────┘  │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  ⚠️ VIDÉOS JAMAIS JOUÉES CE MOIS                                    │   │
+│  │  intro-match.mp4, sponsor-old.mp4, test-video.mp4                   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ══════════════════════════════════════════════════════════════════════════ │
+│  🔧 SANTÉ SYSTÈME                                                          │
+│  ══════════════════════════════════════════════════════════════════════════ │
+│                                                                             │
+│  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐            │
+│  │  DISPONIBILITÉ   │ │  TEMPÉRATURE MOY │ │   ESPACE DISQUE  │            │
+│  │     99.2%        │ │      52°C        │ │    18% utilisé   │            │
+│  │   ✓ Excellent    │ │   ✓ Normal       │ │   ✓ OK           │            │
+│  └──────────────────┘ └──────────────────┘ └──────────────────┘            │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  ALERTES CE MOIS : 1                                                │   │
+│  │  └─ 15 Jan 14:32 - Température élevée (72°C) - Résolu après 23min  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  [📥 Export CSV]  [📊 Rapport PDF]                                         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## 14.4 Fonctionnalités par Phase
+
+### Phase 1 - MVP avec données existantes (1 semaine)
+
+| Fonctionnalité | Source données | Effort |
+|----------------|----------------|--------|
+| Dashboard santé (CPU, RAM, temp, disque) | `metrics` existant | 2 jours |
+| Historique disponibilité | `sites.status`, `last_seen_at` | 1 jour |
+| Liste alertes avec historique | `alerts` existant | 1 jour |
+| API endpoints santé | Central Server | 1 jour |
+
+**Livrable :** Dashboard technique avec données déjà collectées
+
+### Phase 2 - Tracking vidéos (2 semaines)
+
+| Fonctionnalité | Modification requise | Effort |
+|----------------|----------------------|--------|
+| Tables `video_plays`, `club_sessions` | PostgreSQL | 1 jour |
+| Hook TV Player (play/end/error) | `tv.component.ts` | 2 jours |
+| Hook télécommande (launch) | `remote.component.ts` | 2 jours |
+| Envoi analytics via sync-agent | `agent.js` | 2 jours |
+| API + stockage central | Central Server | 3 jours |
+
+**Livrable :** Tracking complet des lectures vidéo
+
+### Phase 3 - Analytics avancées (2 semaines)
+
+| Fonctionnalité | Description | Effort |
+|----------------|-------------|--------|
+| Table `club_daily_stats` + cron | Agrégats quotidiens | 2 jours |
+| Comparaison périodes | M vs M-1, tendances | 2 jours |
+| Export CSV | Données brutes | 1 jour |
+| Dashboard Angular complet | Interface utilisateur | 4 jours |
+| Vidéos jamais jouées | Analyse contenu | 1 jour |
+
+**Livrable :** Analytics complètes avec exports
+
+## 14.5 Fonctionnalités Futures
+
+| Fonctionnalité | Complexité | Description |
+|----------------|------------|-------------|
+| **Contexte événement** | Moyenne | Saisie type match/entraînement sur télécommande |
+| **Estimation audience** | Faible | Champ saisie manuelle sur télécommande |
+| **Sessions détaillées** | Moyenne | Détection auto début/fin événement |
+| **Heatmap horaire** | Faible | Agrégation par heure d'activité |
+| **Rapport PDF mensuel** | Moyenne | Génération automatique |
+| **Benchmarks anonymisés** | Élevée | Comparaison clubs similaires |
+| **Alertes personnalisées** | Moyenne | Seuils configurables par club |
+| **Multi-sites consolidé** | Élevée | Vue agrégée pour clubs multi-gymnases |
+
+## 14.6 Valeur Business
+
+### Pour les Clubs
+
+| Bénéfice | Impact |
+|----------|--------|
+| **Visibilité utilisation** | Justifier l'investissement auprès du bureau |
+| **Optimiser le contenu** | Identifier vidéos efficaces vs inutilisées |
+| **Anticiper les problèmes** | Alertes proactives santé système |
+| **Historique activité** | Preuve d'utilisation pour partenaires |
+
+### Pour NEOPRO
+
+| Bénéfice | Impact |
+|----------|--------|
+| **Réduire le churn** | Clubs engagés restent abonnés |
+| **Support proactif** | Détecter clubs en difficulté |
+| **Product insights** | Comprendre l'usage réel |
+| **Success stories** | Données pour marketing |
+
+## 14.7 KPIs Module Analytics Club
+
+| Métrique | Objectif M6 | Objectif M12 |
+|----------|-------------|--------------|
+| Clubs consultant analytics | 50% | 80% |
+| Temps moyen sur dashboard | > 2 min | > 3 min |
+| Exports générés/mois | 50 | 300 |
+| Clubs avec > 50% utilisation | 60% | 75% |
+| Satisfaction feature (NPS) | > 40 | > 50 |
+
+---
+
+# 15. Annexes
+
+## 15.1 Glossaire
 
 | Terme | Définition |
 |-------|------------|
@@ -1421,7 +2301,7 @@ T+24h    POST-MORTEM
 | SLA | Service Level Agreement |
 | Sync Agent | Service Raspberry Pi communiquant avec le cloud |
 
-## 13.2 Liens Utiles
+## 15.2 Liens Utiles
 
 | Ressource | URL |
 |-----------|-----|
@@ -1430,7 +2310,7 @@ T+24h    POST-MORTEM
 | Documentation | docs/REFERENCE.md |
 | Troubleshooting | docs/TROUBLESHOOTING.md |
 
-## 13.3 Contacts
+## 15.3 Contacts
 
 | Rôle | Email | Téléphone |
 |------|-------|-----------|
@@ -1438,7 +2318,7 @@ T+24h    POST-MORTEM
 | Support technique | support@neopro.fr | - |
 | Commercial | sales@neopro.fr | - |
 
-## 13.4 Template Incident Report
+## 15.4 Template Incident Report
 
 ```markdown
 # Incident Report - [INC-XXXX]
@@ -1466,7 +2346,7 @@ T+24h    POST-MORTEM
 - [ ] Action 2 - Owner - Deadline
 ```
 
-## 13.5 Checklist Nouveau Développeur
+## 15.5 Checklist Nouveau Développeur
 
 ```
 JOUR 1-2: SETUP
@@ -1533,8 +2413,9 @@ SEMAINE 2: AUTONOMIE
 ---
 
 **Document préparé par :** Analyse Claude Code
-**Version :** 1.0
+**Version :** 1.2
 **Date :** 6 Décembre 2025
+**Mise à jour :** Ajout sections Analytics Sponsors (13) et Analytics Club (14)
 **Classification :** Confidentiel
 
 ---

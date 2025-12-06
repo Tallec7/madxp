@@ -5,6 +5,7 @@ import { Configuration } from '../../interfaces/configuration.interface';
 import { Category } from '../../interfaces/category.interface';
 import { Video } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
+import { AnalyticsService } from '../../services/analytics.service';
 
 type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos';
 
@@ -28,6 +29,7 @@ export class RemoteComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly socketService = inject(SocketService);
+  private readonly analyticsService = inject(AnalyticsService);
 
   public configuration!: Configuration;
   public currentView: ViewType = 'home';
@@ -120,6 +122,8 @@ export class RemoteComponent implements OnInit {
 
   public launchVideo(video: Video): void {
     console.log('emit video', video);
+    // Tracker le déclenchement manuel
+    this.analyticsService.trackManualTrigger(video);
     this.socketService.emit('command', { type: 'video', data: video });
   }
 

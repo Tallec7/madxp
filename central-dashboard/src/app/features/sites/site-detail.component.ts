@@ -19,6 +19,9 @@ import { Subscription, interval } from 'rxjs';
         <span class="badge" [class]="'badge-' + getStatusBadge(site.status)">
           {{ site.status }}
         </span>
+        <button class="btn btn-primary" [routerLink]="['/sites', siteId, 'analytics']">
+          📊 Analytics
+        </button>
       </div>
 
       <div class="info-grid">

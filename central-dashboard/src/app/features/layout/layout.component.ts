@@ -43,6 +43,10 @@ import { User } from '../../core/models';
             <span class="icon">🔄</span>
             <span>Mises à jour</span>
           </a>
+          <a routerLink="/analytics" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()">
+            <span class="icon">📈</span>
+            <span>Analytics</span>
+          </a>
         </nav>
 
         <div class="sidebar-footer">

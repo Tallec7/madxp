@@ -29,6 +29,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/sites/site-detail.component').then(m => m.SiteDetailComponent)
       },
       {
+        path: 'sites/:id/analytics',
+        loadComponent: () => import('./features/analytics/club-analytics.component').then(m => m.ClubAnalyticsComponent)
+      },
+      {
         path: 'groups',
         loadComponent: () => import('./features/groups/groups-list.component').then(m => m.GroupsListComponent)
       },
@@ -47,6 +51,12 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['admin', 'operator'] },
         loadComponent: () => import('./features/updates/updates-management.component').then(m => m.UpdatesManagementComponent)
+      },
+      {
+        path: 'analytics',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'operator'] },
+        loadComponent: () => import('./features/analytics/analytics-overview.component').then(m => m.AnalyticsOverviewComponent)
       }
     ]
   },

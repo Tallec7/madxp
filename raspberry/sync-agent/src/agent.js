@@ -5,6 +5,7 @@ const logger = require('./logger');
 const { config, validateConfig } = require('./config');
 const metricsCollector = require('./metrics');
 const commands = require('./commands');
+const analyticsCollector = require('./analytics');
 
 class NeoproSyncAgent {
   constructor() {
@@ -12,6 +13,7 @@ class NeoproSyncAgent {
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 10;
     this.heartbeatInterval = null;
+    this.analyticsInterval = null;
     this.connected = false;
   }
 
@@ -69,6 +71,7 @@ class NeoproSyncAgent {
     this.connected = true;
 
     this.startHeartbeat();
+    this.startAnalyticsSync();
   }
 
   handleAuthError(data) {
@@ -86,6 +89,11 @@ class NeoproSyncAgent {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
+    }
+
+    if (this.analyticsInterval) {
+      clearInterval(this.analyticsInterval);
+      this.analyticsInterval = null;
     }
 
     if (reason === 'io server disconnect') {
@@ -215,11 +223,56 @@ class NeoproSyncAgent {
     }
   }
 
+  startAnalyticsSync() {
+    const interval = config.monitoring?.analyticsInterval || 5 * 60 * 1000; // 5 minutes par défaut
+    logger.info('Starting analytics sync', { interval });
+
+    // Envoyer immédiatement les analytics en attente
+    this.sendAnalytics();
+
+    // Puis envoyer périodiquement
+    this.analyticsInterval = setInterval(() => {
+      this.sendAnalytics();
+    }, interval);
+  }
+
+  async sendAnalytics() {
+    if (!this.connected) {
+      return;
+    }
+
+    try {
+      const result = await analyticsCollector.sendToServer(
+        config.central.url,
+        config.site.id
+      );
+
+      if (result.sent > 0) {
+        logger.info('Analytics sent', { sent: result.sent, recorded: result.recorded });
+      }
+    } catch (error) {
+      logger.error('Failed to send analytics:', error);
+    }
+  }
+
   async shutdown() {
     logger.info('Shutting down gracefully...');
 
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
+    }
+
+    if (this.analyticsInterval) {
+      clearInterval(this.analyticsInterval);
+    }
+
+    // Envoyer les analytics restants avant de fermer
+    if (this.connected) {
+      try {
+        await this.sendAnalytics();
+      } catch (error) {
+        logger.warn('Failed to send final analytics:', error.message);
+      }
     }
 
     if (this.socket) {

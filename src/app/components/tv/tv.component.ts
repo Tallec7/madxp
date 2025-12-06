@@ -3,6 +3,7 @@ import videojs from 'video.js';
 import "videojs-playlist";
 import Player from 'video.js/dist/types/player';
 import { SocketService } from '../../services/socket.service';
+import { AnalyticsService } from '../../services/analytics.service';
 import { Video } from '../../interfaces/video.interface';
 import { Configuration } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
@@ -22,14 +23,21 @@ interface PlayerWithPlaylist extends Player {
 })
 export class TvComponent implements OnInit, OnDestroy {
   private readonly socketService = inject(SocketService);
+  private readonly analyticsService = inject(AnalyticsService);
 
   @Input() public configuration: Configuration;
+
+  private lastTriggerType: 'auto' | 'manual' = 'auto';
+  private currentSponsorIndex = 0;
 
   @ViewChild('target', { static: true }) target: ElementRef;
 
   public player: Player;
 
   public ngOnInit() {
+    // Démarrer une session analytics
+    this.analyticsService.startSession();
+
     const options = {
       fullscreen: true,
       autoplay: true,
@@ -51,22 +59,52 @@ export class TvComponent implements OnInit, OnDestroy {
       this.sponsors();
     });
 
+    // Tracker les erreurs de lecture
     this.player.on('error', (error: Event) => {
       console.error('tv player error', error);
-      this.sponsors()
+      // Tracker l'erreur si une vidéo était en cours
+      const currentSrc = this.player.currentSrc();
+      if (currentSrc) {
+        this.analyticsService.trackVideoError({ path: currentSrc, type: 'video/mp4' }, error);
+      }
+      this.sponsors();
+    });
+
+    // Tracker le changement de vidéo dans la playlist (sponsors)
+    this.player.on('play', () => {
+      const currentSrc = this.player.currentSrc();
+      if (currentSrc && this.lastTriggerType === 'auto') {
+        // C'est une vidéo de la boucle sponsors
+        const sponsor = this.configuration.sponsors.find(s => currentSrc.includes(s.path));
+        if (sponsor) {
+          this.analyticsService.trackVideoStart(sponsor, 'auto');
+        }
+      }
+    });
+
+    this.player.on('ended', () => {
+      // Pour les vidéos de la boucle, tracker la fin
+      if (this.lastTriggerType === 'auto') {
+        this.analyticsService.trackVideoEnd(true);
+      }
     });
 
     this.socketService.on('action', (command: Command) => {
       console.log('tv action received', command);
       if (command.type === 'video' && command.data) {
+        this.lastTriggerType = 'manual';
         this.play(command.data);
       } else if (command.type === 'sponsors') {
+        this.lastTriggerType = 'auto';
         this.sponsors();
       }
     });
   }
 
   public ngOnDestroy() {
+    // Terminer la session analytics
+    this.analyticsService.endSession();
+
     if (this.player) {
       this.player.dispose();
     }
@@ -74,10 +112,17 @@ export class TvComponent implements OnInit, OnDestroy {
 
   private play(video: Video) {
     console.log('tv player : play video', video.path);
+
+    // Tracker le début de la vidéo manuelle
+    this.analyticsService.trackVideoStart(video, 'manual');
+
     this.player.src({ src: video.path, type: video.type });
     this.player.one('ended', () => {
       console.log('tv player : video ended', video.path);
-      this.sponsors()
+      // Tracker la fin de la vidéo manuelle
+      this.analyticsService.trackVideoEnd(true);
+      this.lastTriggerType = 'auto';
+      this.sponsors();
     });
     this.player.play();
   }
