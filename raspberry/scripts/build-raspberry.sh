@@ -85,7 +85,9 @@ print_success "Package de déploiement créé"
 
 print_step "Création de l'archive de déploiement..."
 cd raspberry
-tar -czf neopro-raspberry-deploy.tar.gz deploy/
+# Utilisation de --no-mac-metadata pour éviter les avertissements sur Linux
+# lors de l'extraction des attributs étendus macOS (xattr)
+COPYFILE_DISABLE=1 tar -czf neopro-raspberry-deploy.tar.gz deploy/
 cd ..
 print_success "Archive créée: raspberry/neopro-raspberry-deploy.tar.gz"
 
