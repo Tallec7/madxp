@@ -83,7 +83,7 @@ export class AnalyticsService {
   /**
    * Tracker la fin d'une lecture vidéo
    */
-  public trackVideoEnd(completed: boolean = true): void {
+  public trackVideoEnd(completed = true): void {
     if (!this.currentVideo || !this.currentVideoStart) {
       return;
     }
@@ -124,7 +124,7 @@ export class AnalyticsService {
   /**
    * Tracker une erreur de lecture
    */
-  public trackVideoError(video: Video, error: any): void {
+  public trackVideoError(video: Video, error: unknown): void {
     console.error('[Analytics] Video error:', {
       filename: this.getFilename(video.path),
       error,
