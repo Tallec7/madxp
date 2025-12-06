@@ -2,80 +2,36 @@
 
 Dashboard web Angular pour la gestion centralisée de la flotte de boîtiers Raspberry Pi NEOPRO.
 
-## 🎯 Fonctionnalités
+## Fonctionnalités
 
-### ✅ Implémentées (Architecture complète)
+### Implémentées
 
 - **Authentification JWT** avec guards et interceptors
 - **Services API** pour tous les endpoints du serveur central
 - **WebSocket temps réel** pour recevoir les événements des agents
-- **Gestion des sites** (CRUD, filtres, statuts, métriques)
+- **Gestion des sites** (CRUD, filtres, statuts, métriques, commandes à distance)
 - **Gestion des groupes** (sport, géographie, version, custom)
+- **Commandes à distance** (restart service, reboot, logs, infos système)
+- **Gestion du contenu** (vidéos, déploiement)
+- **Gestion des mises à jour** (packages, déploiement)
 - **Architecture modulaire** avec lazy loading
 - **Responsive design** avec SCSS
 
-### 🚧 À compléter (Composants UI)
+### Composants UI
 
-Les services et l'architecture sont prêts. Il reste à créer les composants visuels :
+| Composant | Status | Description |
+|-----------|--------|-------------|
+| Login Component | Implémenté | Formulaire email/password avec JWT |
+| Layout Component | Implémenté | Navigation sidebar + header |
+| Dashboard Component | Implémenté | Vue d'ensemble du parc avec stats |
+| Sites List Component | Implémenté | Liste, filtres, création, édition, suppression |
+| Site Detail Component | Implémenté | Métriques, commandes, logs, infos système |
+| Groups List Component | Implémenté | Liste des groupes avec création/édition |
+| Group Detail Component | Implémenté | Sites membres, actions groupées |
+| Content Management | Implémenté | Gestion et déploiement de vidéos |
+| Updates Management | Implémenté | Gestion des mises à jour logicielles |
 
-#### Pages principales à créer :
-
-1. **Login Component** (`/login`)
-   - Formulaire email/password
-   - Stockage token JWT
-
-2. **Layout Component** (shell principal)
-   - Navigation sidebar
-   - Header avec infos user
-   - Footer
-   - Notification toast
-
-3. **Dashboard Component** (`/dashboard`)
-   - Vue d'ensemble du parc
-   - Cartes statistiques (sites online/offline)
-   - Graphiques d'activité (Chart.js)
-   - Carte géographique (Leaflet)
-   - Alertes récentes
-
-4. **Sites List Component** (`/sites`)
-   - Liste paginée des sites
-   - Filtres (status, sport, région, search)
-   - Création nouveau site
-   - Actions rapides (voir, éditer, supprimer)
-
-5. **Site Detail Component** (`/sites/:id`)
-   - Informations du site
-   - Métriques en temps réel (gauges)
-   - Graphiques historiques
-   - Liste des vidéos déployées
-   - Commandes rapides (reboot, restart, logs)
-
-6. **Groups List Component** (`/groups`)
-   - Liste des groupes avec nombre de sites
-   - Création/édition/suppression
-   - Types de groupes (badges colorés)
-
-7. **Group Detail Component** (`/groups/:id`)
-   - Infos du groupe
-   - Liste des sites membres
-   - Ajout/retrait sites
-   - Actions groupées (déployer vers groupe)
-
-8. **Content Management Component** (`/content`)
-   - Liste vidéos centralisées
-   - Upload nouvelle vidéo (drag & drop)
-   - Déploiement vers sites/groupes
-   - Progression en temps réel
-   - Historique déploiements
-
-9. **Updates Management Component** (`/updates`)
-   - Liste des versions disponibles
-   - Upload nouveau package
-   - Déploiement MAJ vers sites/groupes
-   - Progression et statuts
-   - Historique et rollbacks
-
-## 📁 Structure du projet
+## Structure du projet
 
 ```
 central-dashboard/
@@ -83,62 +39,55 @@ central-dashboard/
 │   ├── app/
 │   │   ├── core/                    # Services core, guards, interceptors
 │   │   │   ├── services/
-│   │   │   │   ├── api.service.ts            ✅ Fait
-│   │   │   │   ├── auth.service.ts           ✅ Fait
-│   │   │   │   ├── socket.service.ts         ✅ Fait
-│   │   │   │   ├── sites.service.ts          ✅ Fait
-│   │   │   │   └── groups.service.ts         ✅ Fait
+│   │   │   │   ├── api.service.ts
+│   │   │   │   ├── auth.service.ts
+│   │   │   │   ├── socket.service.ts
+│   │   │   │   ├── sites.service.ts
+│   │   │   │   └── groups.service.ts
 │   │   │   ├── guards/
-│   │   │   │   └── auth.guard.ts             ✅ Fait
+│   │   │   │   └── auth.guard.ts
 │   │   │   ├── interceptors/
-│   │   │   │   └── auth.interceptor.ts       ✅ Fait
+│   │   │   │   └── auth.interceptor.ts
 │   │   │   └── models/
-│   │   │       └── index.ts                  ✅ Fait (tous les types)
+│   │   │       └── index.ts
 │   │   │
 │   │   ├── features/                # Composants des fonctionnalités
 │   │   │   ├── auth/
-│   │   │   │   └── login.component.ts        🚧 À créer
+│   │   │   │   └── login.component.ts
 │   │   │   ├── layout/
-│   │   │   │   └── layout.component.ts       🚧 À créer
+│   │   │   │   └── layout.component.ts
 │   │   │   ├── dashboard/
-│   │   │   │   └── dashboard.component.ts    🚧 À créer
+│   │   │   │   └── dashboard.component.ts
 │   │   │   ├── sites/
-│   │   │   │   ├── sites-list.component.ts   🚧 À créer
-│   │   │   │   └── site-detail.component.ts  🚧 À créer
+│   │   │   │   ├── sites-list.component.ts
+│   │   │   │   └── site-detail.component.ts
 │   │   │   ├── groups/
-│   │   │   │   ├── groups-list.component.ts  🚧 À créer
-│   │   │   │   └── group-detail.component.ts 🚧 À créer
+│   │   │   │   ├── groups-list.component.ts
+│   │   │   │   └── group-detail.component.ts
 │   │   │   ├── content/
-│   │   │   │   └── content-management.component.ts 🚧 À créer
+│   │   │   │   └── content-management.component.ts
 │   │   │   └── updates/
-│   │   │       └── updates-management.component.ts 🚧 À créer
+│   │   │       └── updates-management.component.ts
 │   │   │
-│   │   ├── shared/                  # Composants réutilisables
-│   │   │   └── components/
-│   │   │       ├── stat-card.component.ts       🚧 À créer
-│   │   │       ├── site-status.component.ts     🚧 À créer
-│   │   │       ├── metrics-chart.component.ts   🚧 À créer
-│   │   │       └── notification-toast.component.ts 🚧 À créer
-│   │   │
-│   │   ├── app.component.ts         ✅ Fait
-│   │   ├── app.routes.ts            ✅ Fait
-│   │   └── app.config.ts            ✅ Fait
+│   │   ├── app.component.ts
+│   │   ├── app.routes.ts
+│   │   └── app.config.ts
 │   │
 │   ├── environments/
-│   │   ├── environment.ts           ✅ Fait (dev)
-│   │   └── environment.prod.ts      ✅ Fait (Render)
+│   │   ├── environment.ts           # Dev
+│   │   └── environment.prod.ts      # Production
 │   │
-│   ├── main.ts                      ✅ Fait
-│   ├── index.html                   ✅ Fait
-│   └── styles.scss                  ✅ Fait
+│   ├── main.ts
+│   ├── index.html
+│   └── styles.scss
 │
-├── angular.json                     ✅ Fait
-├── package.json                     ✅ Fait
-├── tsconfig.json                    ✅ Fait
-└── README.md                        ✅ Fait
+├── angular.json
+├── package.json
+├── tsconfig.json
+└── README.md
 ```
 
-## 🚀 Installation
+## Installation
 
 ### Prérequis
 
@@ -157,8 +106,6 @@ npm install
 ```
 
 ### Configuration
-
-Les environnements sont déjà configurés :
 
 **Development** (`src/environments/environment.ts`) :
 - API: `http://localhost:3001/api`
@@ -186,52 +133,55 @@ npm run build:prod
 
 Les fichiers sont générés dans `/dist/neopro-dashboard`
 
-## 📡 Connexion au serveur central
+## API Services
 
-### Authentication
+### Sites Service
 
 ```typescript
-// Login
-authService.login(email, password).subscribe({
-  next: (response) => {
-    // Token stocké automatiquement
-    // Redirection vers dashboard
-  }
-});
+// Lister les sites
+sitesService.loadSites({ status: 'online' }).subscribe();
 
-// Logout
-authService.logout(); // Nettoie token + redirige login
+// Créer un site
+sitesService.createSite({ site_name: 'Site A', club_name: 'Club A', ... });
+
+// Mettre à jour un site
+sitesService.updateSite(id, { club_name: 'Nouveau nom' });
+
+// Supprimer un site
+sitesService.deleteSite(id);
+
+// Commandes à distance
+sitesService.restartService(id, 'neopro-app');
+sitesService.rebootSite(id);
+sitesService.getLogs(id, 200);
+sitesService.getSystemInfo(id);
 ```
 
-### API Calls
+### Groups Service
 
 ```typescript
-// Exemple : Récupérer tous les sites
-sitesService.loadSites({ status: 'online' }).subscribe(response => {
-  console.log(`${response.total} sites online`);
-});
+// Lister les groupes
+groupsService.loadGroups();
 
-// Exemple : Créer un groupe
+// Créer un groupe
 groupsService.createGroup({
   name: 'Clubs Bretagne',
   type: 'geography',
-  filters: { region: 'Bretagne' }
-}).subscribe(group => {
-  console.log('Groupe créé:', group.id);
+  site_ids: ['uuid1', 'uuid2']
 });
+
+// Commandes groupées
+groupsService.restartAllServices(groupId);
+groupsService.rebootAllSites(groupId);
 ```
 
 ### WebSocket (temps réel)
 
 ```typescript
-// Écouter les événements
 socketService.events$.subscribe(event => {
   switch (event.type) {
     case 'command_completed':
       console.log('Commande terminée:', event.data);
-      break;
-    case 'deploy_progress':
-      console.log('Progression:', event.data.progress);
       break;
     case 'site_status_changed':
       sitesService.updateSiteStatus(event.data.siteId, event.data.status);
@@ -240,7 +190,7 @@ socketService.events$.subscribe(event => {
 });
 ```
 
-## 🎨 UI Framework
+## UI Framework
 
 Le projet utilise **SCSS natif** avec des variables CSS pour le thème.
 
@@ -267,27 +217,14 @@ Le projet utilise **SCSS natif** avec des variables CSS pour le thème.
 <!-- Badges -->
 <span class="badge badge-success">Online</span>
 <span class="badge badge-danger">Offline</span>
-
-<!-- Statuts -->
-<span class="status-online">●</span> En ligne
 ```
 
-## 🔐 Authentification & Autorisation
+## Authentification & Autorisation
 
 ### Guards
 
 - **authGuard** : Vérifie si l'utilisateur est connecté
 - **roleGuard** : Vérifie les rôles requis
-
-```typescript
-// Dans app.routes.ts
-{
-  path: 'content',
-  canActivate: [authGuard, roleGuard],
-  data: { roles: ['admin', 'operator'] },
-  component: ContentManagementComponent
-}
-```
 
 ### Rôles
 
@@ -295,139 +232,10 @@ Le projet utilise **SCSS natif** avec des variables CSS pour le thème.
 - **operator** : Déploiements et modifications
 - **viewer** : Lecture seule
 
-## 📊 Composants à créer (Guide)
-
-### 1. Login Component
-
-```typescript
-// features/auth/login.component.ts
-@Component({
-  template: `
-    <div class="login-container">
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-        <h2>NEOPRO Dashboard</h2>
-        <input formControlName="email" placeholder="Email" />
-        <input formControlName="password" type="password" placeholder="Mot de passe" />
-        <button type="submit" class="btn btn-primary">Se connecter</button>
-        <div *ngIf="error" class="error">{{ error }}</div>
-      </form>
-    </div>
-  `
-})
-export class LoginComponent {
-  loginForm = this.fb.group({
-    email: ['', Validators.required],
-    password: ['', Validators.required]
-  });
-
-  onSubmit() {
-    this.authService.login(email, password).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
-      error: (err) => this.error = err.error.error
-    });
-  }
-}
-```
-
-### 2. Dashboard Component
-
-```typescript
-// features/dashboard/dashboard.component.ts
-@Component({
-  template: `
-    <div class="dashboard">
-      <div class="stats-grid">
-        <app-stat-card title="Sites Total" [value]="stats?.total_sites" />
-        <app-stat-card title="Online" [value]="stats?.online" color="success" />
-        <app-stat-card title="Offline" [value]="stats?.offline" color="secondary" />
-        <app-stat-card title="Erreurs" [value]="stats?.error" color="danger" />
-      </div>
-
-      <div class="charts">
-        <div class="card">
-          <h3>Activité dernières 24h</h3>
-          <canvas baseChart [datasets]="chartData"></canvas>
-        </div>
-      </div>
-
-      <div class="map">
-        <div class="card">
-          <h3>Carte des sites</h3>
-          <div leaflet [leafletOptions]="mapOptions"></div>
-        </div>
-      </div>
-
-      <div class="recent-alerts">
-        <h3>Alertes récentes</h3>
-        <app-alert-list [alerts]="alerts$ | async"></app-alert-list>
-      </div>
-    </div>
-  `
-})
-export class DashboardComponent implements OnInit {
-  stats$ = this.sitesService.stats$;
-
-  ngOnInit() {
-    this.sitesService.loadStats().subscribe();
-  }
-}
-```
-
-### 3. Sites List Component
-
-```typescript
-// features/sites/sites-list.component.ts
-@Component({
-  template: `
-    <div class="sites-list">
-      <div class="header">
-        <h2>Sites ({{ (sites$ | async)?.length }})</h2>
-        <button class="btn btn-primary" (click)="createSite()">+ Nouveau site</button>
-      </div>
-
-      <div class="filters">
-        <input [(ngModel)]="searchTerm" placeholder="Rechercher..." />
-        <select [(ngModel)]="statusFilter">
-          <option value="">Tous les statuts</option>
-          <option value="online">Online</option>
-          <option value="offline">Offline</option>
-        </select>
-      </div>
-
-      <div class="sites-grid">
-        <div *ngFor="let site of sites$ | async" class="card site-card">
-          <div class="site-header">
-            <h3>{{ site.club_name }}</h3>
-            <span [class]="'badge badge-' + getStatusColor(site.status)">
-              {{ site.status }}
-            </span>
-          </div>
-          <p>{{ site.location?.city }}, {{ site.location?.region }}</p>
-          <p>Version: {{ site.software_version }}</p>
-          <div class="actions">
-            <button (click)="viewDetails(site.id)">Détails</button>
-            <button (click)="editSite(site.id)">Éditer</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `
-})
-export class SitesListComponent implements OnInit {
-  sites$ = this.sitesService.sites$;
-
-  ngOnInit() {
-    this.sitesService.loadSites().subscribe();
-  }
-}
-```
-
-## 🚀 Déploiement sur Render
-
-### Fichier de configuration
+## Déploiement sur Render
 
 ```yaml
-# render.yaml (à la racine du dashboard)
+# render.yaml
 services:
   - type: web
     name: neopro-dashboard
@@ -443,22 +251,9 @@ services:
         value: 18
 ```
 
-### Déploiement
-
-1. Push vers GitHub
-2. Connecter repo à Render
-3. Render détecte `render.yaml` automatiquement
-4. Build et déploiement automatique
-
 **Coût :** Gratuit (plan Static Site)
 
-## 📦 Bibliothèques tierces
-
-- **Chart.js** (`chart.js`, `ng2-charts`) : Graphiques
-- **Leaflet** (`leaflet`, `@types/leaflet`) : Cartes
-- **Socket.IO Client** (`socket.io-client`) : WebSocket
-
-## 🔧 Scripts disponibles
+## Scripts disponibles
 
 ```bash
 npm start              # Dev server (port 4200)
@@ -468,43 +263,11 @@ npm test               # Tests unitaires
 npm run lint           # Linter
 ```
 
-## 📝 Next Steps
+## Bibliothèques tierces
 
-### Priorité 1 : Composants essentiels
-
-1. **Login Component** - Accès au dashboard
-2. **Layout Component** - Shell de navigation
-3. **Dashboard Component** - Vue d'ensemble
-
-### Priorité 2 : Gestion de base
-
-4. **Sites List** - Voir tous les sites
-5. **Site Detail** - Détails + métriques
-6. **Groups List** - Gestion groupes
-
-### Priorité 3 : Fonctionnalités avancées
-
-7. **Content Management** - Upload et déploiement vidéos
-8. **Updates Management** - Gestion MAJ logicielles
-
-## 🎯 État d'avancement
-
-| Composant | Status |
-|-----------|--------|
-| Architecture Angular | ✅ 100% |
-| Services API | ✅ 100% |
-| WebSocket Service | ✅ 100% |
-| Auth & Guards | ✅ 100% |
-| Models TypeScript | ✅ 100% |
-| Routing | ✅ 100% |
-| Styles de base | ✅ 100% |
-| **Composants UI** | 🚧 0% |
-
-**Total global : ~60% terminé**
-
-## 📞 Support
-
-L'architecture est complète et fonctionnelle. Les composants UI peuvent être créés progressivement selon les besoins.
+- **Chart.js** (`chart.js`, `ng2-charts`) : Graphiques
+- **Leaflet** (`leaflet`, `@types/leaflet`) : Cartes
+- **Socket.IO Client** (`socket.io-client`) : WebSocket
 
 ---
 

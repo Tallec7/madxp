@@ -2,7 +2,7 @@
 
 Serveur central de gestion de flotte pour les boîtiers Raspberry Pi NEOPRO.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Installation locale
 
@@ -46,7 +46,7 @@ npm run dev
    - URL API : `https://neopro-central-server.onrender.com`
    - WebSocket : `wss://neopro-central-server.onrender.com`
 
-## 📚 API Documentation
+## API Documentation
 
 ### Authentication
 
@@ -81,6 +81,7 @@ Headers: `Authorization: Bearer <token>`
 - Headers: `Authorization: Bearer <token>`
 
 **GET /api/sites/:id**
+
 **GET /api/sites/:id/metrics?hours=24**
 
 **POST /api/sites**
@@ -98,12 +99,75 @@ Headers: `Authorization: Bearer <token>`
 ```
 
 **PUT /api/sites/:id**
+
 **DELETE /api/sites/:id** (admin only)
+
+### Site Commands
+
+**POST /api/sites/:id/command**
+Envoyer une commande à distance au site.
+```json
+{
+  "command": "restart_service",
+  "params": {
+    "service": "neopro-app"
+  }
+}
+```
+
+Commandes disponibles :
+- `restart_service` - Redémarre un service (params: `service`)
+- `reboot` - Redémarre le Raspberry Pi
+
+Response:
+```json
+{
+  "success": true,
+  "message": "Commande envoyée avec succès"
+}
+```
+
+**GET /api/sites/:id/logs?lines=100**
+Récupère les logs du site.
+
+Response:
+```json
+{
+  "logs": [
+    "2025-12-06 10:00:00 - Service started",
+    "2025-12-06 10:00:01 - Connected to central server",
+    ...
+  ]
+}
+```
+
+**GET /api/sites/:id/system-info**
+Récupère les informations système du site.
+
+Response:
+```json
+{
+  "hostname": "neopro-rennes",
+  "os": "Raspbian GNU/Linux 11 (bullseye)",
+  "kernel": "5.15.84-v8+",
+  "architecture": "aarch64",
+  "cpu_model": "Cortex-A72",
+  "cpu_cores": 4,
+  "total_memory": 4294967296,
+  "ip_address": "192.168.1.100",
+  "mac_address": "dc:a6:32:xx:xx:xx"
+}
+```
+
+**POST /api/sites/:id/regenerate-key**
+Régénère la clé API du site.
 
 ### Groups
 
 **GET /api/groups**
+
 **GET /api/groups/:id**
+
 **GET /api/groups/:id/sites**
 
 **POST /api/groups**
@@ -118,6 +182,10 @@ Headers: `Authorization: Bearer <token>`
 }
 ```
 
+**PUT /api/groups/:id**
+
+**DELETE /api/groups/:id**
+
 **POST /api/groups/:id/sites**
 ```json
 {
@@ -127,7 +195,33 @@ Headers: `Authorization: Bearer <token>`
 
 **DELETE /api/groups/:id/sites/:siteId**
 
-## 🔌 WebSocket Protocol
+### Group Commands
+
+**POST /api/groups/:id/command**
+Envoyer une commande à tous les sites du groupe.
+```json
+{
+  "command": "restart_service",
+  "params": {
+    "service": "neopro-app"
+  }
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "message": "Commande envoyée à 5 sites",
+  "results": [
+    { "site_id": "uuid1", "success": true, "message": "OK" },
+    { "site_id": "uuid2", "success": true, "message": "OK" },
+    { "site_id": "uuid3", "success": false, "message": "Site offline" }
+  ]
+}
+```
+
+## WebSocket Protocol
 
 ### Agent Connection (Raspberry Pi)
 
@@ -179,7 +273,7 @@ socket.on('command', (cmd) => {
 });
 ```
 
-## 🗄️ Database Schema
+## Database Schema
 
 Voir `src/scripts/init-db.sql` pour le schéma complet.
 
@@ -187,7 +281,7 @@ Tables principales :
 - `users` - Utilisateurs équipe NEOPRO
 - `sites` - Boîtiers Raspberry Pi
 - `groups` - Groupes de sites
-- `site_groups` - Association sites ↔ groupes
+- `site_groups` - Association sites - groupes
 - `videos` - Vidéos centralisées
 - `content_deployments` - Déploiements de contenu
 - `software_updates` - Mises à jour logicielles
@@ -196,7 +290,7 @@ Tables principales :
 - `metrics` - Historique métriques
 - `alerts` - Alertes actives
 
-## 🔐 Sécurité
+## Sécurité
 
 - **JWT** : Tokens avec expiration 8h
 - **API Keys** : Clé unique par site (32 bytes hex)
@@ -205,7 +299,7 @@ Tables principales :
 - **Helmet** : Headers de sécurité HTTP
 - **PostgreSQL SSL** : Forcé en production
 
-## 📊 Monitoring
+## Monitoring
 
 **GET /health**
 ```json
@@ -218,18 +312,18 @@ Tables principales :
 }
 ```
 
-## 🛠️ Scripts disponibles
+## Scripts disponibles
 
 ```bash
 npm run dev          # Développement avec hot-reload
-npm run build        # Build TypeScript → JavaScript
+npm run build        # Build TypeScript -> JavaScript
 npm start            # Production
 npm run lint         # ESLint
 npm run format       # Prettier
 npm test             # Jest (à implémenter)
 ```
 
-## 🌍 Variables d'environnement
+## Variables d'environnement
 
 Voir `.env.example` pour la liste complète.
 
@@ -238,12 +332,12 @@ Variables critiques :
 - `JWT_SECRET` - Secret pour tokens JWT (généré auto sur Render)
 - `ALLOWED_ORIGINS` - Origines CORS autorisées
 
-## 📝 Logs
+## Logs
 
 - Development : Console colorée
 - Production : Fichiers `logs/error.log` et `logs/combined.log`
 
-## 🚨 Alertes
+## Alertes
 
 Seuils par défaut :
 - Température > 75°C : Warning
@@ -252,7 +346,7 @@ Seuils par défaut :
 - Disque > 95% : Critical
 - Mémoire > 90% : Warning
 
-## 📞 Support
+## Support
 
 Pour toute question, contacter l'équipe NEOPRO.
 
@@ -262,4 +356,4 @@ Pour toute question, contacter l'équipe NEOPRO.
 - Email : `admin@neopro.fr`
 - Password : `admin123`
 
-⚠️ **CHANGEZ LE MOT DE PASSE EN PRODUCTION !**
+**CHANGEZ LE MOT DE PASSE EN PRODUCTION !**

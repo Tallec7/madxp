@@ -51,6 +51,37 @@ export class SitesService {
     return this.api.get(`/sites/${id}/metrics`, { hours });
   }
 
+  // Commandes à distance
+  sendCommand(id: string, command: string, params?: Record<string, any>): Observable<{ success: boolean; message: string }> {
+    return this.api.post(`/sites/${id}/command`, { command, params });
+  }
+
+  restartService(id: string, service: string): Observable<{ success: boolean; message: string }> {
+    return this.sendCommand(id, 'restart_service', { service });
+  }
+
+  rebootSite(id: string): Observable<{ success: boolean; message: string }> {
+    return this.sendCommand(id, 'reboot', {});
+  }
+
+  getLogs(id: string, lines: number = 100): Observable<{ logs: string[] }> {
+    return this.api.get(`/sites/${id}/logs`, { lines });
+  }
+
+  getSystemInfo(id: string): Observable<{
+    hostname: string;
+    os: string;
+    kernel: string;
+    architecture: string;
+    cpu_model: string;
+    cpu_cores: number;
+    total_memory: number;
+    ip_address: string;
+    mac_address: string;
+  }> {
+    return this.api.get(`/sites/${id}/system-info`);
+  }
+
   updateSiteStatus(id: string, status: string): void {
     const sites = this.sitesSubject.value;
     const index = sites.findIndex(s => s.id === id);

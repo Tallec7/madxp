@@ -55,4 +55,29 @@ export class GroupsService {
   removeSiteFromGroup(groupId: string, siteId: string): Observable<void> {
     return this.api.delete<void>(`/groups/${groupId}/sites/${siteId}`);
   }
+
+  // Commandes de groupe
+  sendGroupCommand(groupId: string, command: string, params?: Record<string, any>): Observable<{
+    success: boolean;
+    message: string;
+    results: { site_id: string; success: boolean; message: string }[];
+  }> {
+    return this.api.post(`/groups/${groupId}/command`, { command, params });
+  }
+
+  restartAllServices(groupId: string): Observable<{
+    success: boolean;
+    message: string;
+    results: { site_id: string; success: boolean; message: string }[];
+  }> {
+    return this.sendGroupCommand(groupId, 'restart_service', { service: 'neopro-app' });
+  }
+
+  rebootAllSites(groupId: string): Observable<{
+    success: boolean;
+    message: string;
+    results: { site_id: string; success: boolean; message: string }[];
+  }> {
+    return this.sendGroupCommand(groupId, 'reboot', {});
+  }
 }

@@ -130,7 +130,7 @@ import { Subscription, interval } from 'rxjs';
       <div class="card">
         <h3>Actions rapides</h3>
         <div class="actions-grid">
-          <button class="action-card" (click)="restartService('neopro-app')" [disabled]="site.status !== 'online'">
+          <button class="action-card" (click)="restartService('neopro-app')" [disabled]="site.status !== 'online' || sendingCommand">
             <span class="action-icon">🔄</span>
             <div class="action-content">
               <div class="action-title">Redémarrer l'app</div>
@@ -154,7 +154,7 @@ import { Subscription, interval } from 'rxjs';
             </div>
           </button>
 
-          <button class="action-card warning" (click)="rebootSite()" [disabled]="site.status !== 'online'">
+          <button class="action-card warning" (click)="rebootSite()" [disabled]="site.status !== 'online' || sendingCommand">
             <span class="action-icon">⚡</span>
             <div class="action-content">
               <div class="action-title">Redémarrer</div>
@@ -233,6 +233,94 @@ import { Subscription, interval } from 'rxjs';
         <ng-template #noHistory>
           <p class="no-data">Aucun historique disponible</p>
         </ng-template>
+      </div>
+    </div>
+
+    <!-- Modal Logs -->
+    <div class="modal" *ngIf="showLogsModal" (click)="showLogsModal = false">
+      <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Logs - {{ site?.club_name }}</h2>
+          <button class="modal-close" (click)="showLogsModal = false">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="logs-container" *ngIf="!logsLoading; else logsLoadingTpl">
+            <pre class="logs-content" *ngIf="logs.length > 0; else noLogs">{{ logs.join('\\n') }}</pre>
+            <ng-template #noLogs>
+              <p class="no-data">Aucun log disponible</p>
+            </ng-template>
+          </div>
+          <ng-template #logsLoadingTpl>
+            <div class="loading-inline">
+              <div class="spinner-small"></div>
+              <span>Chargement des logs...</span>
+            </div>
+          </ng-template>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="showLogsModal = false">Fermer</button>
+          <button class="btn btn-primary" (click)="refreshLogs()">Rafraîchir</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal System Info -->
+    <div class="modal" *ngIf="showSystemInfoModal" (click)="showSystemInfoModal = false">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Infos système - {{ site?.club_name }}</h2>
+          <button class="modal-close" (click)="showSystemInfoModal = false">×</button>
+        </div>
+        <div class="modal-body">
+          <div *ngIf="!systemInfoLoading; else sysInfoLoadingTpl">
+            <div class="info-list" *ngIf="systemInfo; else noSysInfo">
+              <div class="info-row">
+                <span class="label">Hostname:</span>
+                <span class="value">{{ systemInfo.hostname }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">OS:</span>
+                <span class="value">{{ systemInfo.os }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Kernel:</span>
+                <span class="value">{{ systemInfo.kernel }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Architecture:</span>
+                <span class="value">{{ systemInfo.architecture }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">CPU:</span>
+                <span class="value">{{ systemInfo.cpu_model }} ({{ systemInfo.cpu_cores }} cores)</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Mémoire totale:</span>
+                <span class="value">{{ formatMemory(systemInfo.total_memory) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Adresse IP:</span>
+                <span class="value monospace">{{ systemInfo.ip_address }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Adresse MAC:</span>
+                <span class="value monospace">{{ systemInfo.mac_address }}</span>
+              </div>
+            </div>
+            <ng-template #noSysInfo>
+              <p class="no-data">Impossible de récupérer les infos système</p>
+            </ng-template>
+          </div>
+          <ng-template #sysInfoLoadingTpl>
+            <div class="loading-inline">
+              <div class="spinner-small"></div>
+              <span>Chargement des infos système...</span>
+            </div>
+          </ng-template>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="showSystemInfoModal = false">Fermer</button>
+        </div>
       </div>
     </div>
 
@@ -638,6 +726,120 @@ import { Subscription, interval } from 'rxjs';
       background: #cbd5e1;
     }
 
+    /* Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 2rem;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-content.modal-large {
+      max-width: 800px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+    }
+
+    .modal-close:hover {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+      padding: 1.5rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .logs-container {
+      background: #1e293b;
+      border-radius: 8px;
+      padding: 1rem;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .logs-content {
+      color: #e2e8f0;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.75rem;
+      line-height: 1.5;
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .loading-inline {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 2rem;
+      justify-content: center;
+      color: #64748b;
+    }
+
+    .spinner-small {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     @media (max-width: 768px) {
       .info-grid {
         grid-template-columns: 1fr;
@@ -688,6 +890,28 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   "sponsors": [],
   "categories": []
 }`;
+
+  // Modals
+  showLogsModal = false;
+  showSystemInfoModal = false;
+
+  // Logs
+  logs: string[] = [];
+  logsLoading = false;
+
+  // System Info
+  systemInfo: {
+    hostname: string;
+    os: string;
+    kernel: string;
+    architecture: string;
+    cpu_model: string;
+    cpu_cores: number;
+    total_memory: number;
+    ip_address: string;
+    mac_address: string;
+  } | null = null;
+  systemInfoLoading = false;
 
   private refreshSubscription?: Subscription;
 
@@ -783,12 +1007,12 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   }
 
   restartService(service: string): void {
-    if (confirm(`Redemarrer le service ${service} ?`)) {
+    if (confirm(`Redémarrer le service ${service} ?`)) {
       this.sendingCommand = true;
-      this.sitesService.sendCommand(this.siteId, 'restart_service', { service }).subscribe({
+      this.sitesService.restartService(this.siteId, service).subscribe({
         next: (response) => {
           this.sendingCommand = false;
-          alert(`Commande envoyee ! ID: ${response.commandId}`);
+          alert(response.message || 'Commande envoyée avec succès');
         },
         error: (error) => {
           this.sendingCommand = false;
@@ -799,40 +1023,53 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   }
 
   getLogs(): void {
-    this.sendingCommand = true;
-    this.sitesService.sendCommand(this.siteId, 'get_logs', { service: 'neopro-app', lines: 100 }).subscribe({
+    this.showLogsModal = true;
+    this.refreshLogs();
+  }
+
+  refreshLogs(): void {
+    this.logsLoading = true;
+    this.sitesService.getLogs(this.siteId, 200).subscribe({
       next: (response) => {
-        this.sendingCommand = false;
-        alert(`Commande envoyee ! Les logs seront disponibles sous peu. ID: ${response.commandId}`);
+        this.logs = response.logs;
+        this.logsLoading = false;
       },
       error: (error) => {
-        this.sendingCommand = false;
-        alert('Erreur: ' + (error.error?.error || error.message));
+        this.logs = [`Erreur lors de la récupération des logs: ${error.error?.error || error.message}`];
+        this.logsLoading = false;
       }
     });
   }
 
   getSystemInfo(): void {
-    this.sendingCommand = true;
-    this.sitesService.sendCommand(this.siteId, 'get_system_info', {}).subscribe({
+    this.showSystemInfoModal = true;
+    this.systemInfoLoading = true;
+    this.sitesService.getSystemInfo(this.siteId).subscribe({
       next: (response) => {
-        this.sendingCommand = false;
-        alert(`Commande envoyee ! ID: ${response.commandId}`);
+        this.systemInfo = response;
+        this.systemInfoLoading = false;
       },
       error: (error) => {
-        this.sendingCommand = false;
+        this.systemInfo = null;
+        this.systemInfoLoading = false;
         alert('Erreur: ' + (error.error?.error || error.message));
       }
     });
   }
 
+  formatMemory(bytes: number): string {
+    if (!bytes) return 'N/A';
+    const gb = bytes / (1024 * 1024 * 1024);
+    return `${gb.toFixed(1)} GB`;
+  }
+
   rebootSite(): void {
-    if (confirm('Etes-vous sur de vouloir redemarrer le Raspberry Pi ?')) {
+    if (confirm('⚠️ Êtes-vous sûr de vouloir redémarrer le Raspberry Pi ?')) {
       this.sendingCommand = true;
-      this.sitesService.sendCommand(this.siteId, 'reboot', {}).subscribe({
+      this.sitesService.rebootSite(this.siteId).subscribe({
         next: (response) => {
           this.sendingCommand = false;
-          alert(`Commande de redemarrage envoyee ! Le site sera temporairement hors ligne.`);
+          alert(response.message || 'Commande de redémarrage envoyée');
         },
         error: (error) => {
           this.sendingCommand = false;
@@ -843,11 +1080,11 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   }
 
   regenerateApiKey(): void {
-    if (confirm('Regenerer la cle API ? L\'ancienne cle ne fonctionnera plus.')) {
+    if (confirm('Régénérer la clé API ? L\'ancienne clé ne fonctionnera plus.')) {
       this.sitesService.regenerateApiKey(this.siteId).subscribe({
         next: (site) => {
           this.site = site;
-          alert('Cle API regeneree avec succes !');
+          alert('Clé API régénérée avec succès !');
         },
         error: (error) => {
           alert('Erreur: ' + (error.error?.error || error.message));
@@ -859,7 +1096,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   copyApiKey(): void {
     if (this.site?.api_key) {
       navigator.clipboard.writeText(this.site.api_key);
-      alert('Cle API copiee !');
+      alert('Clé API copiée !');
     }
   }
 
@@ -871,7 +1108,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       const parsed = JSON.parse(this.configJson);
       this.configJson = JSON.stringify(parsed, null, 2);
       this.isConfigValid = true;
-      this.configSuccess = 'JSON formate avec succes';
+      this.configSuccess = 'JSON formaté avec succès';
     } catch (e: any) {
       this.configError = `Erreur de syntaxe JSON: ${e.message}`;
       this.isConfigValid = false;
@@ -912,7 +1149,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     try {
       const configuration = JSON.parse(this.configJson);
 
-      if (!confirm('Deployer cette configuration sur le site ? Les changements seront appliques immediatement.')) {
+      if (!confirm('Déployer cette configuration sur le site ? Les changements seront appliqués immédiatement.')) {
         return;
       }
 
@@ -920,7 +1157,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       this.sitesService.sendCommand(this.siteId, 'update_config', { configuration }).subscribe({
         next: (response) => {
           this.sendingCommand = false;
-          this.configSuccess = `Configuration deployee avec succes ! ID: ${response.commandId}`;
+          this.configSuccess = `Configuration déployée avec succès !`;
         },
         error: (error) => {
           this.sendingCommand = false;

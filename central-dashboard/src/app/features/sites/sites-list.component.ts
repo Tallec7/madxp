@@ -143,6 +143,42 @@ import { Site } from '../../core/models';
           </div>
         </div>
       </div>
+
+      <!-- Modal Edit Site -->
+      <div class="modal" *ngIf="showEditModal" (click)="closeEditModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>Modifier le site</h2>
+            <button class="modal-close" (click)="closeEditModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Nom du site</label>
+              <input type="text" [(ngModel)]="editSiteData.site_name" placeholder="Ex: Site Rennes">
+            </div>
+            <div class="form-group">
+              <label>Nom du club</label>
+              <input type="text" [(ngModel)]="editSiteData.club_name" placeholder="Ex: Rennes FC">
+            </div>
+            <div class="form-group">
+              <label>Ville</label>
+              <input type="text" [(ngModel)]="editSiteData.location.city" placeholder="Ex: Rennes">
+            </div>
+            <div class="form-group">
+              <label>Région</label>
+              <input type="text" [(ngModel)]="editSiteData.location.region" placeholder="Ex: Bretagne">
+            </div>
+            <div class="form-group">
+              <label>Sports (séparés par des virgules)</label>
+              <input type="text" [(ngModel)]="editSportsInput" placeholder="Ex: football, rugby">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeEditModal()">Annuler</button>
+            <button class="btn btn-primary" (click)="saveEditSite()" [disabled]="!isEditValid()">Enregistrer</button>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
@@ -429,6 +465,7 @@ export class SitesListComponent implements OnInit {
   statusFilter = '';
   regionFilter = '';
   showCreateModal = false;
+  showEditModal = false;
 
   newSite = {
     site_name: '',
@@ -441,6 +478,18 @@ export class SitesListComponent implements OnInit {
   };
 
   sportsInput = '';
+
+  editingSite: Site | null = null;
+  editSiteData = {
+    site_name: '',
+    club_name: '',
+    location: {
+      city: '',
+      region: '',
+      country: 'France'
+    }
+  };
+  editSportsInput = '';
 
   constructor(private sitesService: SitesService) {}
 
@@ -535,8 +584,47 @@ export class SitesListComponent implements OnInit {
   }
 
   editSite(site: Site): void {
-    // TODO: Implémenter modal d'édition
-    alert('Fonctionnalité d\'édition à venir');
+    this.editingSite = site;
+    this.editSiteData = {
+      site_name: site.site_name,
+      club_name: site.club_name,
+      location: {
+        city: site.location?.city || '',
+        region: site.location?.region || '',
+        country: site.location?.country || 'France'
+      }
+    };
+    this.editSportsInput = site.sports?.join(', ') || '';
+    this.showEditModal = true;
+  }
+
+  closeEditModal(): void {
+    this.showEditModal = false;
+    this.editingSite = null;
+  }
+
+  isEditValid(): boolean {
+    return !!(this.editSiteData.site_name && this.editSiteData.club_name &&
+              this.editSiteData.location.city && this.editSiteData.location.region);
+  }
+
+  saveEditSite(): void {
+    if (!this.editingSite || !this.isEditValid()) return;
+
+    const siteData: any = {
+      ...this.editSiteData,
+      sports: this.editSportsInput ? this.editSportsInput.split(',').map(s => s.trim()) : []
+    };
+
+    this.sitesService.updateSite(this.editingSite.id, siteData).subscribe({
+      next: () => {
+        this.closeEditModal();
+        this.loadSites();
+      },
+      error: (error) => {
+        alert('Erreur lors de la modification du site: ' + (error.error?.error || error.message));
+      }
+    });
   }
 
   deleteSite(site: Site): void {

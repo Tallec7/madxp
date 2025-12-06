@@ -1051,8 +1051,16 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
 
     const count = this.group.sites.length;
     if (confirm(`Redémarrer le service NEOPRO sur ${count} site(s) ?`)) {
-      alert('Fonctionnalité en cours de développement');
-      // TODO: Implement via API
+      this.groupsService.restartAllServices(this.group.id).subscribe({
+        next: (response) => {
+          const successCount = response.results.filter(r => r.success).length;
+          const failCount = response.results.filter(r => !r.success).length;
+          alert(`Commande envoyée!\n\nSuccès: ${successCount}\nÉchecs: ${failCount}`);
+        },
+        error: (error) => {
+          alert('Erreur: ' + (error.error?.error || error.message));
+        }
+      });
     }
   }
 
@@ -1061,8 +1069,16 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
 
     const count = this.group.sites.length;
     if (confirm(`⚠️ ATTENTION: Redémarrer ${count} Raspberry Pi ?\n\nCette action redémarrera physiquement tous les appareils.`)) {
-      alert('Fonctionnalité en cours de développement');
-      // TODO: Implement via API
+      this.groupsService.rebootAllSites(this.group.id).subscribe({
+        next: (response) => {
+          const successCount = response.results.filter(r => r.success).length;
+          const failCount = response.results.filter(r => !r.success).length;
+          alert(`Commande de redémarrage envoyée!\n\nSuccès: ${successCount}\nÉchecs: ${failCount}`);
+        },
+        error: (error) => {
+          alert('Erreur: ' + (error.error?.error || error.message));
+        }
+      });
     }
   }
 }
