@@ -80,6 +80,31 @@ export const createSite = async (req: AuthRequest, res: Response) => {
   try {
     const { site_name, club_name, location, sports, hardware_model } = req.body;
 
+    // Check for existing sites with same name and generate unique name if needed
+    let uniqueSiteName = site_name;
+    const existingResult = await query(
+      `SELECT site_name FROM sites WHERE site_name = $1 OR site_name ~ $2`,
+      [site_name, `^${site_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+$`]
+    );
+
+    if (existingResult.rows.length > 0) {
+      // Find the highest suffix number
+      let maxSuffix = 0;
+      for (const row of existingResult.rows) {
+        if (row.site_name === site_name) {
+          maxSuffix = Math.max(maxSuffix, 1);
+        } else {
+          const match = row.site_name.match(/-(\d+)$/);
+          if (match) {
+            maxSuffix = Math.max(maxSuffix, parseInt(match[1], 10) + 1);
+          }
+        }
+      }
+      if (maxSuffix > 0) {
+        uniqueSiteName = `${site_name}-${maxSuffix}`;
+      }
+    }
+
     const id = uuidv4();
     const api_key = generateApiKey();
     const api_key_hash = hashApiKey(api_key);
@@ -90,7 +115,7 @@ export const createSite = async (req: AuthRequest, res: Response) => {
        RETURNING id, site_name, club_name, location, sports, hardware_model, status, created_at`,
       [
         id,
-        site_name,
+        uniqueSiteName,
         club_name,
         location ? JSON.stringify(location) : null,
         sports ? JSON.stringify(sports) : null,
@@ -99,7 +124,7 @@ export const createSite = async (req: AuthRequest, res: Response) => {
       ]
     );
 
-    logger.info('Site created', { siteId: id, siteName: site_name, createdBy: req.user?.email });
+    logger.info('Site created', { siteId: id, siteName: uniqueSiteName, createdBy: req.user?.email });
 
     // Return the plain API key only once at creation time
     res.status(201).json({ ...result.rows[0], api_key });
