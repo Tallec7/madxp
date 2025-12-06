@@ -1,0 +1,851 @@
+Rapport d'assemblage
+
+-----------------------------------------------------------------------------
+Document :
+Nom : NeoPro_Research_v4.pdf
+Mode : Couleurs RVB
+Profil colorimétrique : Display
+Unité : pixels
+Dimensions : 1080 px x 1350 px
+Afficher les images en mode Tracés : INACTIF
+Mettre en évidence les polices substituées : INACTIF
+Mettre en évidence les glyphes substitués : INACTIF
+Conserver le caractère modifiable du texte
+Simuler le papier couleur : INACTIF
+
+-----------------------------------------------------------------------------
+Objets en tons directs :
+
+-----------------------------------------------------------------------------
+Polices manquantes :SANS
+
+-----------------------------------------------------------------------------
+Polices protégées non assemblées :SANS
+
+-----------------------------------------------------------------------------
+Polices :
+Outfit ExtraLight (TrueType)
+Outfit Regular (TrueType)
+Outfit SemiBold (TrueType)
+Outfit Bold (TrueType)
+Playfair Display Regular (TrueType)
+Playfair Display Italic (TrueType)
+Playfair Display Medium Italic (TrueType)
+Playfair Display SemiBold (TrueType)
+Playfair Display SemiBold Italic (TrueType)
+Playfair Display Bold Italic (TrueType)
+Playfair Display ExtraBold (TrueType)
+Playfair Display Black (TrueType)
+ Pr6N R (OTF)
+Myriad Pro (OTF)
+
+-----------------------------------------------------------------------------
+Polices incorporées :
+SANS
+
+-----------------------------------------------------------------------------
+Liens manquants :
+SANS
+
+-----------------------------------------------------------------------------
+Images liées :
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/SPORT_5.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1078,195 x 1347,744 points 
+Résolution : 72,121 x 72,121 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/67723c5746b5cc1b24c4aee8bd57e800.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 6296K, 1200 x 1791 pixels
+Dimensions : 605,943 x 904,369 points 
+Résolution : 142,588 x 142,588 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/67723c5746b5cc1b24c4aee8bd57e800.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 6296K, 1200 x 1791 pixels
+Dimensions : 3647,433 x 2443,841 points 
+Résolution : 23,688 x 52,766 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/67723c5746b5cc1b24c4aee8bd57e800.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 6296K, 1200 x 1791 pixels
+Dimensions : 1308,314 x 1952,658 points 
+Résolution : 66,039 x 66,039 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/67723c5746b5cc1b24c4aee8bd57e800.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 6296K, 1200 x 1791 pixels
+Dimensions : 400,893 x 598,332 points 
+Résolution : 215,519 x 215,519 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/67723c5746b5cc1b24c4aee8bd57e800.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 6296K, 1200 x 1791 pixels
+Dimensions : 508,288 x 696,061 points 
+Résolution : 169,982 x 185,26 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/f761e662ad9e20053da92a85c73293e2.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 3385K, 963 x 1200 pixels
+Dimensions : 741,099 x 923,488 points 
+Résolution : 93,558 x 93,558 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/f761e662ad9e20053da92a85c73293e2.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 3385K, 963 x 1200 pixels
+Dimensions : 741,099 x 923,488 points 
+Résolution : 93,558 x 93,558 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/f761e662ad9e20053da92a85c73293e2.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 3385K, 963 x 1200 pixels
+Dimensions : 741,099 x 923,488 points 
+Résolution : 93,558 x 93,558 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/f761e662ad9e20053da92a85c73293e2.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 3385K, 963 x 1200 pixels
+Dimensions : 741,099 x 923,488 points 
+Résolution : 93,558 x 93,558 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/f761e662ad9e20053da92a85c73293e2.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 3385K, 963 x 1200 pixels
+Dimensions : 741,099 x 923,488 points 
+Résolution : 93,558 x 93,558 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/f761e662ad9e20053da92a85c73293e2.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 3385K, 963 x 1200 pixels
+Dimensions : 741,099 x 923,488 points 
+Résolution : 93,558 x 93,558 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_17.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_16.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_15.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_14.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_12.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_11.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_10.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_09.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_08_1.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_07_1.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_06.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_15.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_14.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_12.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_11.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_10.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_09.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_08_2.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_07_2.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_06.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_14.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_12.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_11.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_10.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_09.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_08_3.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_07_3.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_06.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_12.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_11.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_10.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_09.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_08_4.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_07_4.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_06.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_07_5.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_06.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_08_5.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_07_6.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_06.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_09.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_08_6.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_07_7.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_06.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_10.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_09.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_08_7.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_07_8.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_06.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/7c4588fbb84b5461b6d1716cb4163ac7.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 2820K, 736 x 1308 pixels
+Dimensions : 818,456 x 1454,539 points 
+Résolution : 64,746 x 64,746 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/7c4588fbb84b5461b6d1716cb4163ac7.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 2820K, 736 x 1308 pixels
+Dimensions : 818,456 x 1454,539 points 
+Résolution : 64,746 x 64,746 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/7c4588fbb84b5461b6d1716cb4163ac7.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 2820K, 736 x 1308 pixels
+Dimensions : 818,456 x 1454,539 points 
+Résolution : 64,746 x 64,746 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/7c4588fbb84b5461b6d1716cb4163ac7.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 2820K, 736 x 1308 pixels
+Dimensions : 818,456 x 1454,539 points 
+Résolution : 64,746 x 64,746 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/7c4588fbb84b5461b6d1716cb4163ac7.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 2820K, 736 x 1308 pixels
+Dimensions : 818,456 x 1454,539 points 
+Résolution : 64,746 x 64,746 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/67723c5746b5cc1b24c4aee8bd57e800.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 6296K, 1200 x 1791 pixels
+Dimensions : 631,056 x 941,851 points 
+Résolution : 136,913 x 136,913 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/67eb76094de983e312ce1c4bce2bc6e9.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 5273K, 1200 x 1500 pixels
+Dimensions : 547,314 x 652,506 points 
+Résolution : 157,862 x 165,516 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/67eb76094de983e312ce1c4bce2bc6e9.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 5273K, 1200 x 1500 pixels
+Dimensions : 1503,159 x 1773,861 points 
+Résolution : 57,479 x 60,884 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/21f0d1a80764e59c83226facd148684c.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 5273K, 1200 x 1500 pixels
+Dimensions : 975,171 x 1140,015 points 
+Résolution : 88,6 x 94,736 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/67723c5746b5cc1b24c4aee8bd57e800.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 6296K, 1200 x 1791 pixels
+Dimensions : 680,26 x 854,947 points 
+Résolution : 127,01 x 150,83 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/67723c5746b5cc1b24c4aee8bd57e800.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 6296K, 1200 x 1791 pixels
+Dimensions : 640,826 x 956,433 points 
+Résolution : 134,826 x 134,826 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/f761e662ad9e20053da92a85c73293e2.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 3385K, 963 x 1200 pixels
+Dimensions : 741,099 x 923,488 points 
+Résolution : 93,558 x 93,558 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_08.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/7c4588fbb84b5461b6d1716cb4163ac7.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 2820K, 736 x 1308 pixels
+Dimensions : 818,456 x 1454,539 points 
+Résolution : 64,746 x 64,746 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/7c4588fbb84b5461b6d1716cb4163ac7.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 2820K, 736 x 1308 pixels
+Dimensions : 818,456 x 1454,539 points 
+Résolution : 64,746 x 64,746 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/f761e662ad9e20053da92a85c73293e2.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 3385K, 963 x 1200 pixels
+Dimensions : 963 x 1200 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/785698d204a12cd922050b0a8dd17ef7.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 2013K, 716 x 960 pixels
+Dimensions : 895 x 1200 points 
+Résolution : 57,6 x 57,6 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/67723c5746b5cc1b24c4aee8bd57e800.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 6296K, 1200 x 1791 pixels
+Dimensions : 803,455 x 1199,156 points 
+Résolution : 107,536 x 107,536 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/67eb76094de983e312ce1c4bce2bc6e9.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 5273K, 1200 x 1500 pixels
+Dimensions : 1156,8 x 1446 points 
+Résolution : 74,689 x 74,689 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/21f0d1a80764e59c83226facd148684c.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 5273K, 1200 x 1500 pixels
+Dimensions : 959,325 x 1199,156 points 
+Résolution : 90,063 x 90,063 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/7d364097aa96b8b2eed881e27171df73.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 2152K, 712 x 1032 pixels
+Dimensions : 835,469 x 1210,961 points 
+Résolution : 61,36 x 61,36 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/7c4588fbb84b5461b6d1716cb4163ac7.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 2820K, 736 x 1308 pixels
+Dimensions : 818,456 x 1454,539 points 
+Résolution : 64,746 x 64,746 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/07c52ab05828bb52fc6b094908c53a71.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4608K, 1024 x 1536 pixels
+Dimensions : 800 x 1200 points 
+Résolution : 92,16 x 92,16 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/2d05b72754fa1659da15125c71401638.jpg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 2197K, 750 x 1000 pixels
+Dimensions : 1050,872 x 1401,163 points 
+Résolution : 51,386 x 51,386 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/Background_07.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/SHORTEDITO_01.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1188,047 x 1485,059 points 
+Résolution : 65,452 x 65,452 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/NEWSPORT_01.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce
+
+
+/Utilisateurs/lisebuleon/Documents/Deux points a la ligne/_work/NeoPro/_work/NeoPro_Research_v4_Dossier/Links/TAGLINE_01.jpeg
+Type : RVB
+Bits par pixel : 24
+Couches : 3
+Taille : 4271K, 1080 x 1350 pixels
+Dimensions : 1080 x 1350 points 
+Résolution : 72 x 72 pixels par pouce

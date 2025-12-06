@@ -12,7 +12,7 @@ import { AuthService } from '../../core/services/auth.service';
     <div class="login-container">
       <div class="login-card">
         <div class="login-header">
-          <h1>NEOPRO</h1>
+          <img src="neopro-logo.png" alt="Neopro" class="login-logo" />
           <p>Dashboard Central</p>
         </div>
 
@@ -67,7 +67,7 @@ import { AuthService } from '../../core/services/auth.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--neo-hockey-dark, #2022E9) 0%, var(--neo-purple-dark, #3A0686) 100%);
       padding: 2rem;
     }
 
@@ -85,17 +85,17 @@ import { AuthService } from '../../core/services/auth.service';
       margin-bottom: 2rem;
     }
 
-    .login-header h1 {
-      font-size: 2.5rem;
-      font-weight: 700;
-      color: #2563eb;
-      margin: 0 0 0.5rem 0;
+    .login-logo {
+      max-width: 200px;
+      height: auto;
+      margin-bottom: 1rem;
     }
 
     .login-header p {
       color: #64748b;
       font-size: 1rem;
       margin: 0;
+      font-family: var(--neo-font-body);
     }
 
     .form-group {
@@ -120,8 +120,8 @@ import { AuthService } from '../../core/services/auth.service';
 
     .form-group input:focus {
       outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      border-color: var(--neo-hockey-dark, #2022E9);
+      box-shadow: 0 0 0 3px rgba(32, 34, 233, 0.1);
     }
 
     .form-group input.error {

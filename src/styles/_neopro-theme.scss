@@ -1,0 +1,232 @@
+// =============================================================================
+// NEOPRO DESIGN SYSTEM
+// Charte graphique officielle
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// FONTS
+// -----------------------------------------------------------------------------
+
+@font-face {
+  font-family: 'Outfit';
+  src: url('/fonts/Outfit-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('/fonts/PlayfairDisplay-VariableFont_wght.ttf') format('truetype');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('/fonts/PlayfairDisplay-Italic-VariableFont_wght.ttf') format('truetype');
+  font-weight: 400 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+// -----------------------------------------------------------------------------
+// COLOR PALETTE - Sports
+// -----------------------------------------------------------------------------
+
+:root {
+  // Basket
+  --neo-basket-light: #FF6AA7;
+  --neo-basket-dark: #CC384E;
+
+  // Futsal
+  --neo-futsal-light: #FE5949;
+  --neo-futsal-dark: #951D13;
+
+  // Volley
+  --neo-volley-light: #FAE571;
+  --neo-volley-dark: #FDBE00;
+
+  // Hand
+  --neo-hand-light: #51B28B;
+  --neo-hand-dark: #20473C;
+
+  // Hockey
+  --neo-hockey-light: #A3EFFD;
+  --neo-hockey-dark: #2022E9;
+
+  // Purple (additional sport)
+  --neo-purple-light: #7863F6;
+  --neo-purple-dark: #3A0686;
+
+  // -----------------------------------------------------------------------------
+  // NEUTRAL COLORS
+  // -----------------------------------------------------------------------------
+
+  --neo-black: #000000;
+  --neo-beige: #FEECD8;
+  --neo-grey: #EBEFEE;
+  --neo-white: #FFFFFF;
+
+  // -----------------------------------------------------------------------------
+  // SEMANTIC COLORS (using sport palette)
+  // -----------------------------------------------------------------------------
+
+  --neo-primary: #2022E9;           // Hockey Dark (bleu électrique)
+  --neo-primary-light: #A3EFFD;     // Hockey Light
+  --neo-secondary: #51B28B;         // Hand Light
+  --neo-secondary-dark: #20473C;    // Hand Dark
+
+  --neo-success: #51B28B;           // Hand Light (vert)
+  --neo-success-dark: #20473C;      // Hand Dark
+  --neo-warning: #FDBE00;           // Volley Dark (jaune)
+  --neo-warning-light: #FAE571;     // Volley Light
+  --neo-danger: #FE5949;            // Futsal Light (rouge-orange)
+  --neo-danger-dark: #951D13;       // Futsal Dark
+
+  // -----------------------------------------------------------------------------
+  // BACKGROUND & TEXT
+  // -----------------------------------------------------------------------------
+
+  --neo-bg-primary: #FFFFFF;
+  --neo-bg-secondary: #EBEFEE;      // Neo Grey
+  --neo-bg-tertiary: #FEECD8;       // Neo Beige
+  --neo-bg-dark: #000000;           // Neo Black
+
+  --neo-text-primary: #000000;      // Neo Black
+  --neo-text-secondary: #475569;    // Slate 600
+  --neo-text-muted: #64748b;        // Slate 500
+  --neo-text-light: #FFFFFF;        // White
+
+  --neo-border: #E2E8F0;            // Slate 200
+  --neo-border-dark: #CBD5E1;       // Slate 300
+
+  // -----------------------------------------------------------------------------
+  // TYPOGRAPHY
+  // -----------------------------------------------------------------------------
+
+  --neo-font-heading: 'Playfair Display', Georgia, serif;
+  --neo-font-body: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --neo-font-size-xs: 0.75rem;      // 12px
+  --neo-font-size-sm: 0.875rem;     // 14px
+  --neo-font-size-base: 1rem;       // 16px
+  --neo-font-size-lg: 1.125rem;     // 18px
+  --neo-font-size-xl: 1.25rem;      // 20px
+  --neo-font-size-2xl: 1.5rem;      // 24px
+  --neo-font-size-3xl: 1.875rem;    // 30px
+  --neo-font-size-4xl: 2.25rem;     // 36px
+  --neo-font-size-5xl: 3rem;        // 48px
+
+  --neo-font-weight-light: 300;
+  --neo-font-weight-regular: 400;
+  --neo-font-weight-medium: 500;
+  --neo-font-weight-semibold: 600;
+  --neo-font-weight-bold: 700;
+  --neo-font-weight-extrabold: 800;
+
+  // -----------------------------------------------------------------------------
+  // SPACING
+  // -----------------------------------------------------------------------------
+
+  --neo-space-1: 0.25rem;           // 4px
+  --neo-space-2: 0.5rem;            // 8px
+  --neo-space-3: 0.75rem;           // 12px
+  --neo-space-4: 1rem;              // 16px
+  --neo-space-5: 1.25rem;           // 20px
+  --neo-space-6: 1.5rem;            // 24px
+  --neo-space-8: 2rem;              // 32px
+  --neo-space-10: 2.5rem;           // 40px
+  --neo-space-12: 3rem;             // 48px
+  --neo-space-16: 4rem;             // 64px
+
+  // -----------------------------------------------------------------------------
+  // BORDER RADIUS
+  // -----------------------------------------------------------------------------
+
+  --neo-radius-sm: 0.25rem;         // 4px
+  --neo-radius-md: 0.5rem;          // 8px
+  --neo-radius-lg: 0.75rem;         // 12px
+  --neo-radius-xl: 1rem;            // 16px
+  --neo-radius-2xl: 1.5rem;         // 24px
+  --neo-radius-full: 9999px;
+
+  // -----------------------------------------------------------------------------
+  // SHADOWS
+  // -----------------------------------------------------------------------------
+
+  --neo-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --neo-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --neo-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --neo-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  // -----------------------------------------------------------------------------
+  // TRANSITIONS
+  // -----------------------------------------------------------------------------
+
+  --neo-transition-fast: 150ms ease;
+  --neo-transition-base: 200ms ease;
+  --neo-transition-slow: 300ms ease;
+}
+
+// -----------------------------------------------------------------------------
+// DARK MODE OVERRIDES
+// -----------------------------------------------------------------------------
+
+[data-theme="dark"],
+.dark {
+  --neo-bg-primary: #0f172a;
+  --neo-bg-secondary: #1e293b;
+  --neo-bg-tertiary: #334155;
+
+  --neo-text-primary: #f8fafc;
+  --neo-text-secondary: #cbd5e1;
+  --neo-text-muted: #94a3b8;
+
+  --neo-border: #475569;
+  --neo-border-dark: #64748b;
+}
+
+// -----------------------------------------------------------------------------
+// BASE STYLES
+// -----------------------------------------------------------------------------
+
+.neo-heading {
+  font-family: var(--neo-font-heading);
+  font-weight: var(--neo-font-weight-semibold);
+}
+
+.neo-body {
+  font-family: var(--neo-font-body);
+  font-weight: var(--neo-font-weight-regular);
+}
+
+// -----------------------------------------------------------------------------
+// SPORT-SPECIFIC THEME CLASSES
+// -----------------------------------------------------------------------------
+
+.theme-basket {
+  --neo-sport-light: var(--neo-basket-light);
+  --neo-sport-dark: var(--neo-basket-dark);
+}
+
+.theme-futsal {
+  --neo-sport-light: var(--neo-futsal-light);
+  --neo-sport-dark: var(--neo-futsal-dark);
+}
+
+.theme-volley {
+  --neo-sport-light: var(--neo-volley-light);
+  --neo-sport-dark: var(--neo-volley-dark);
+}
+
+.theme-hand {
+  --neo-sport-light: var(--neo-hand-light);
+  --neo-sport-dark: var(--neo-hand-dark);
+}
+
+.theme-hockey {
+  --neo-sport-light: var(--neo-hockey-light);
+  --neo-sport-dark: var(--neo-hockey-dark);
+}

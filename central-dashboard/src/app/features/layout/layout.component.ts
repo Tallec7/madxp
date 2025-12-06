@@ -13,7 +13,7 @@ import { User } from '../../core/models';
     <div class="layout">
       <aside class="sidebar">
         <div class="sidebar-header">
-          <h1>NEOPRO</h1>
+          <img src="neopro-logo.png" alt="Neopro" class="sidebar-logo" />
           <span class="connection-status" [class.connected]="isConnected">
             <span class="status-dot"></span>
             {{ isConnected ? 'Connecté' : 'Déconnecté' }}
@@ -81,7 +81,7 @@ import { User } from '../../core/models';
 
     .sidebar {
       width: 260px;
-      background: #1e293b;
+      background: var(--neo-black, #000000);
       color: white;
       display: flex;
       flex-direction: column;
@@ -93,11 +93,11 @@ import { User } from '../../core/models';
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    .sidebar-header h1 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin: 0 0 0.5rem 0;
-      color: #60a5fa;
+    .sidebar-logo {
+      max-width: 140px;
+      height: auto;
+      margin-bottom: 0.5rem;
+      filter: brightness(0) invert(1);
     }
 
     .connection-status {
@@ -117,7 +117,7 @@ import { User } from '../../core/models';
     }
 
     .connection-status.connected .status-dot {
-      background: #10b981;
+      background: var(--neo-hand-light, #51B28B);
     }
 
     @keyframes pulse {
@@ -147,8 +147,8 @@ import { User } from '../../core/models';
     }
 
     .nav-item.active {
-      background: rgba(96, 165, 250, 0.1);
-      border-left-color: #60a5fa;
+      background: rgba(32, 34, 233, 0.2);
+      border-left-color: var(--neo-hockey-dark, #2022E9);
       color: white;
     }
 
@@ -175,7 +175,7 @@ import { User } from '../../core/models';
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--neo-hockey-dark, #2022E9) 0%, var(--neo-purple-dark, #3A0686) 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -245,10 +245,10 @@ import { User } from '../../core/models';
       border-left: 4px solid;
     }
 
-    .notification-success { border-left-color: #10b981; }
-    .notification-error { border-left-color: #ef4444; }
-    .notification-warning { border-left-color: #f59e0b; }
-    .notification-info { border-left-color: #3b82f6; }
+    .notification-success { border-left-color: var(--neo-hand-light, #51B28B); }
+    .notification-error { border-left-color: var(--neo-futsal-light, #FE5949); }
+    .notification-warning { border-left-color: var(--neo-volley-dark, #FDBE00); }
+    .notification-info { border-left-color: var(--neo-hockey-dark, #2022E9); }
 
     .notification-icon {
       font-size: 1.25rem;

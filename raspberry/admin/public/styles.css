@@ -1,3 +1,31 @@
+/* =============================================================================
+   NEOPRO FONTS
+   ============================================================================= */
+
+@font-face {
+    font-family: 'Outfit';
+    src: url('./fonts/Outfit-VariableFont_wght.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Playfair Display';
+    src: url('./fonts/PlayfairDisplay-VariableFont_wght.ttf') format('truetype');
+    font-weight: 400 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Playfair Display';
+    src: url('./fonts/PlayfairDisplay-Italic-VariableFont_wght.ttf') format('truetype');
+    font-weight: 400 900;
+    font-style: italic;
+    font-display: swap;
+}
+
 /* Reset et base */
 * {
     margin: 0;
@@ -6,12 +34,38 @@
 }
 
 :root {
-    --primary: #2563eb;
-    --primary-dark: #1e40af;
+    /* NEOPRO Sports Colors */
+    --neo-basket-light: #FF6AA7;
+    --neo-basket-dark: #CC384E;
+    --neo-futsal-light: #FE5949;
+    --neo-futsal-dark: #951D13;
+    --neo-volley-light: #FAE571;
+    --neo-volley-dark: #FDBE00;
+    --neo-hand-light: #51B28B;
+    --neo-hand-dark: #20473C;
+    --neo-hockey-light: #A3EFFD;
+    --neo-hockey-dark: #2022E9;
+    --neo-purple-light: #7863F6;
+    --neo-purple-dark: #3A0686;
+
+    /* NEOPRO Neutrals */
+    --neo-black: #000000;
+    --neo-beige: #FEECD8;
+    --neo-grey: #EBEFEE;
+    --neo-white: #FFFFFF;
+
+    /* Typography */
+    --neo-font-heading: 'Playfair Display', Georgia, serif;
+    --neo-font-body: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* Semantic Colors (mapped to NEOPRO palette) - Dark Mode */
+    --primary: #2022E9;           /* Hockey Dark */
+    --primary-dark: #3A0686;      /* Purple Dark */
+    --primary-light: #A3EFFD;     /* Hockey Light */
     --secondary: #64748b;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
+    --success: #51B28B;           /* Hand Light */
+    --warning: #FDBE00;           /* Volley Dark */
+    --danger: #FE5949;            /* Futsal Light */
     --bg-primary: #0f172a;
     --bg-secondary: #1e293b;
     --bg-tertiary: #334155;
@@ -21,10 +75,14 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--neo-font-body);
     background: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--neo-font-heading);
 }
 
 .container {

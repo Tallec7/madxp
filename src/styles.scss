@@ -1,7 +1,35 @@
 @use '@material-design-icons/font';
-
 @use 'video.js/dist/video-js.css';
 
+// =============================================================================
+// NEOPRO FONTS
+// =============================================================================
+
+@font-face {
+  font-family: 'Outfit';
+  src: url('./fonts/Outfit-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('./fonts/PlayfairDisplay-VariableFont_wght.ttf') format('truetype');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('./fonts/PlayfairDisplay-Italic-VariableFont_wght.ttf') format('truetype');
+  font-weight: 400 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+// Keep Roboto as fallback
 @font-face {
   font-family: 'Roboto';
   src: url('./fonts/Roboto-VariableFont_wdth,wght.ttf') format('truetype');
@@ -16,6 +44,40 @@
   font-style: italic;
 }
 
+// =============================================================================
+// NEOPRO COLOR PALETTE
+// =============================================================================
+
+:root {
+  // Sports colors
+  --neo-basket-light: #FF6AA7;
+  --neo-basket-dark: #CC384E;
+  --neo-futsal-light: #FE5949;
+  --neo-futsal-dark: #951D13;
+  --neo-volley-light: #FAE571;
+  --neo-volley-dark: #FDBE00;
+  --neo-hand-light: #51B28B;
+  --neo-hand-dark: #20473C;
+  --neo-hockey-light: #A3EFFD;
+  --neo-hockey-dark: #2022E9;
+  --neo-purple-light: #7863F6;
+  --neo-purple-dark: #3A0686;
+
+  // Neutrals
+  --neo-black: #000000;
+  --neo-beige: #FEECD8;
+  --neo-grey: #EBEFEE;
+  --neo-white: #FFFFFF;
+
+  // Typography
+  --neo-font-heading: 'Playfair Display', Georgia, serif;
+  --neo-font-body: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+// =============================================================================
+// BASE STYLES
+// =============================================================================
+
 * {
   margin: 0;
   padding: 0;
@@ -23,16 +85,20 @@
 }
 
 body {
-    font-family: Roboto, monospace;
-    background: #ececec;
-    color: #2a2a2a;
-    margin: 0;
+  font-family: var(--neo-font-body);
+  background: var(--neo-grey);
+  color: var(--neo-black);
+  margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--neo-font-heading);
 }
 
 h1 {
-    color: #8d8d8d;
-    padding: 15px 30px;
-    font-size: 2em;
-    text-align: center;
-    font-weight: bold;
+  color: var(--neo-black);
+  padding: 15px 30px;
+  font-size: 2em;
+  text-align: center;
+  font-weight: 600;
 }

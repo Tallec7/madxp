@@ -3,7 +3,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--neo-hockey-dark, #2022E9) 0%, var(--neo-purple-dark, #3A0686) 100%);
   padding: 20px;
 }
 
@@ -33,12 +33,10 @@
   margin-bottom: 40px;
 }
 
-.app-title {
-  font-size: 36px;
-  font-weight: 800;
-  color: #667eea;
-  margin: 0 0 8px 0;
-  letter-spacing: 2px;
+.app-logo {
+  max-width: 200px;
+  height: auto;
+  margin-bottom: 16px;
 }
 
 .app-subtitle {
@@ -46,6 +44,7 @@
   color: #6b7280;
   margin: 0;
   font-weight: 500;
+  font-family: var(--neo-font-body);
 }
 
 .login-form {
@@ -75,8 +74,8 @@
 
   &:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--neo-hockey-dark, #2022E9);
+    box-shadow: 0 0 0 3px rgba(32, 34, 233, 0.1);
   }
 
   &:disabled {
@@ -116,19 +115,20 @@
 .submit-button {
   width: 100%;
   padding: 14px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--neo-hockey-dark, #2022E9) 0%, var(--neo-purple-dark, #3A0686) 100%);
   color: white;
   border: none;
   border-radius: 8px;
   font-size: 16px;
   font-weight: 600;
+  font-family: var(--neo-font-body);
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(32, 34, 233, 0.4);
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 6px 16px rgba(32, 34, 233, 0.5);
   }
 
   &:active:not(:disabled) {
