@@ -105,7 +105,8 @@ export const createSite = async (req: AuthRequest, res: Response) => {
     res.status(201).json({ ...result.rows[0], api_key });
   } catch (error) {
     logger.error('Create site error:', error);
-    res.status(500).json({ error: 'Erreur lors de la création du site' });
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    res.status(500).json({ error: 'Erreur lors de la création du site', details: errorMessage });
   }
 };
 
