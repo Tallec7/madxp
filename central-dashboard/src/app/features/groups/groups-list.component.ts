@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { GroupsService } from '../../core/services/groups.service';
 import { SitesService } from '../../core/services/sites.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { Group, Site } from '../../core/models';
 
 type GroupMetadataForm = {
@@ -610,7 +611,8 @@ export class GroupsListComponent implements OnInit {
 
   constructor(
     private groupsService: GroupsService,
-    private sitesService: SitesService
+    private sitesService: SitesService,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -719,7 +721,7 @@ export class GroupsListComponent implements OnInit {
         this.resetForm();
       },
       error: (error) => {
-        alert('Erreur lors de la création du groupe: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur lors de la création du groupe: ' + (error.error?.error || error.message));
       }
     });
   }
@@ -744,7 +746,7 @@ export class GroupsListComponent implements OnInit {
         this.showEditModal = true;
       },
       error: (error: any) => {
-        alert('Erreur lors du chargement du groupe: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur lors du chargement du groupe: ' + (error.error?.error || error.message));
       }
     });
   }
@@ -769,7 +771,7 @@ export class GroupsListComponent implements OnInit {
         this.resetForm();
       },
       error: (error) => {
-        alert('Erreur lors de la mise à jour du groupe: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur lors de la mise à jour du groupe: ' + (error.error?.error || error.message));
       }
     });
   }
@@ -781,7 +783,7 @@ export class GroupsListComponent implements OnInit {
           this.loadGroups();
         },
         error: (error) => {
-          alert('Erreur lors de la suppression: ' + (error.error?.error || error.message));
+          this.notificationService.error('Erreur lors de la suppression: ' + (error.error?.error || error.message));
         }
       });
     }

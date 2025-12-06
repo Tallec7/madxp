@@ -657,17 +657,8 @@ central-server/src/
 | Feature | Description | Effort |
 |---------|-------------|--------|
 | Wizard onboarding | Configuration guidée premier club | 3 jours |
-| Gestion erreurs globale | Toasts, messages utilisateur | 2 jours |
 | Loading states | Spinners, skeletons | 1 jour |
 | Pagination API | Limit/offset sur tous les endpoints | 2 jours |
-| Modal édition sites | Compléter TODO existant | 1 jour |
-
-### Corrections Bugs
-
-| Bug | Localisation | Effort |
-|-----|--------------|--------|
-| Modal édition non implémenté | `sites-list.component.ts:538` | 4h |
-| API groupes non connectée | `group-detail.component.ts:1055` | 4h |
 
 ## 5.5 Livrables Phase 1
 

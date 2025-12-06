@@ -1,8 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { SocketService } from '../../core/services/socket.service';
+import { NotificationService, Notification } from '../../core/services/notification.service';
 import { User } from '../../core/models';
 
 @Component({
@@ -305,24 +307,35 @@ import { User } from '../../core/models';
     }
   `]
 })
-export class LayoutComponent implements OnInit {
+export class LayoutComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   isConnected = false;
   notifications: Array<{id: number; type: string; message: string}> = [];
   private notificationId = 0;
+  private subscriptions = new Subscription();
 
   constructor(
     private authService: AuthService,
     private socketService: SocketService,
+    private notificationService: NotificationService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    this.authService.currentUser$.subscribe(user => {
-      this.currentUser = user;
-    });
+    this.subscriptions.add(
+      this.authService.currentUser$.subscribe(user => {
+        this.currentUser = user;
+      })
+    );
 
-    this.socketService.events$.subscribe(event => {
+    this.subscriptions.add(
+      this.notificationService.notification$.subscribe(notification => {
+        this.showNotification(notification.type, notification.message);
+      })
+    );
+
+    this.subscriptions.add(
+      this.socketService.events$.subscribe(event => {
       switch (event.type) {
         case 'connected':
           this.isConnected = true;
@@ -342,9 +355,13 @@ export class LayoutComponent implements OnInit {
           this.showNotification('warning', event.data.message);
           break;
       }
-    });
+    }));
 
     this.isConnected = this.socketService.isConnected();
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
   }
 
   canManageContent(): boolean {

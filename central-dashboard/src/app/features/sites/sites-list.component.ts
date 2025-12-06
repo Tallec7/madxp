@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { SitesService } from '../../core/services/sites.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { Site } from '../../core/models';
 
 @Component({
@@ -491,7 +492,10 @@ export class SitesListComponent implements OnInit {
   };
   editSportsInput = '';
 
-  constructor(private sitesService: SitesService) {}
+  constructor(
+    private sitesService: SitesService,
+    private notificationService: NotificationService
+  ) {}
 
   ngOnInit(): void {
     this.loadSites();
@@ -565,7 +569,7 @@ export class SitesListComponent implements OnInit {
         this.resetForm();
       },
       error: (error) => {
-        alert('Erreur lors de la création du site: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur lors de la création du site: ' + (error.error?.error || error.message));
       }
     });
   }
@@ -622,7 +626,7 @@ export class SitesListComponent implements OnInit {
         this.loadSites();
       },
       error: (error) => {
-        alert('Erreur lors de la modification du site: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur lors de la modification du site: ' + (error.error?.error || error.message));
       }
     });
   }
@@ -634,7 +638,7 @@ export class SitesListComponent implements OnInit {
           this.loadSites();
         },
         error: (error) => {
-          alert('Erreur lors de la suppression: ' + (error.error?.error || error.message));
+          this.notificationService.error('Erreur lors de la suppression: ' + (error.error?.error || error.message));
         }
       });
     }

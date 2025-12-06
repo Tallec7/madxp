@@ -5,6 +5,7 @@ import { ApiService } from '../../core/services/api.service';
 import { SitesService } from '../../core/services/sites.service';
 import { GroupsService } from '../../core/services/groups.service';
 import { SocketService } from '../../core/services/socket.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { Site, Group } from '../../core/models';
 import { Subscription } from 'rxjs';
 
@@ -1005,7 +1006,8 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
     private apiService: ApiService,
     private sitesService: SitesService,
     private groupsService: GroupsService,
-    private socketService: SocketService
+    private socketService: SocketService,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -1129,7 +1131,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
         this.createForm = { version: '', description: '', release_notes: '', file: null, is_critical: false };
       },
       error: (error) => {
-        alert('Erreur lors de la création: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur lors de la création: ' + (error.error?.error || error.message));
       }
     });
   }
@@ -1141,7 +1143,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
           this.updates = this.updates.filter(u => u.id !== update.id);
         },
         error: (error) => {
-          alert('Erreur lors de la suppression: ' + (error.error?.error || error.message));
+          this.notificationService.error('Erreur lors de la suppression: ' + (error.error?.error || error.message));
         }
       });
     }
@@ -1182,10 +1184,10 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
           autoRollback: true,
           scheduleReboot: false
         };
-        alert('Déploiement lancé avec succès !');
+        this.notificationService.success('Déploiement lancé avec succès !');
       },
       error: (error) => {
-        alert('Erreur lors du déploiement: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur lors du déploiement: ' + (error.error?.error || error.message));
       }
     });
   }

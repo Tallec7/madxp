@@ -5,6 +5,7 @@ import { ApiService } from '../../core/services/api.service';
 import { SitesService } from '../../core/services/sites.service';
 import { GroupsService } from '../../core/services/groups.service';
 import { SocketService } from '../../core/services/socket.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { Site, Group } from '../../core/models';
 import { Subscription } from 'rxjs';
 
@@ -865,7 +866,8 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     private apiService: ApiService,
     private sitesService: SitesService,
     private groupsService: GroupsService,
-    private socketService: SocketService
+    private socketService: SocketService,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -996,7 +998,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
             this.uploadForm = { title: '', file: null };
           },
           error: (error) => {
-            alert('Erreur lors de l\'upload: ' + (error.error?.error || error.message));
+            this.notificationService.error('Erreur lors de l\'upload: ' + (error.error?.error || error.message));
             this.uploadProgress = 0;
           }
         });
@@ -1011,7 +1013,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
           this.videos = this.videos.filter(v => v.id !== video.id);
         },
         error: (error) => {
-          alert('Erreur lors de la suppression: ' + (error.error?.error || error.message));
+          this.notificationService.error('Erreur lors de la suppression: ' + (error.error?.error || error.message));
         }
       });
     }
@@ -1040,10 +1042,10 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
         this.deployments.unshift(deployment);
         this.activeTab = 'history';
         this.deployForm = { videoId: '', targetType: 'site', targetId: '' };
-        alert('Déploiement lancé avec succès !');
+        this.notificationService.success('Déploiement lancé avec succès !');
       },
       error: (error) => {
-        alert('Erreur lors du déploiement: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur lors du déploiement: ' + (error.error?.error || error.message));
       }
     });
   }

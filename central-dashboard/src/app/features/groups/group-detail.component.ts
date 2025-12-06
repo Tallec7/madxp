@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { GroupsService } from '../../core/services/groups.service';
 import { SitesService } from '../../core/services/sites.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { Group, Site } from '../../core/models';
 import { Subscription } from 'rxjs';
 
@@ -838,7 +839,8 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private groupsService: GroupsService,
-    private sitesService: SitesService
+    private sitesService: SitesService,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -860,7 +862,7 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
         this.initEditForm();
       },
       error: (error: any) => {
-        alert('Erreur lors du chargement du groupe: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur lors du chargement du groupe: ' + (error.error?.error || error.message));
       }
     });
   }
@@ -974,7 +976,7 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
         this.loadGroup(this.group!.id);
       },
       error: (error) => {
-        alert('Erreur lors de l\'ajout des sites: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur lors de l\'ajout des sites: ' + (error.error?.error || error.message));
       }
     });
   }
@@ -990,7 +992,7 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
           this.loadGroup(this.group!.id);
         },
         error: (error) => {
-          alert('Erreur lors du retrait du site: ' + (error.error?.error || error.message));
+          this.notificationService.error('Erreur lors du retrait du site: ' + (error.error?.error || error.message));
         }
       });
     }
@@ -1013,7 +1015,7 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
         this.loadGroup(this.group!.id);
       },
       error: (error) => {
-        alert('Erreur lors de la mise à jour: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur lors de la mise à jour: ' + (error.error?.error || error.message));
       }
     });
   }
@@ -1040,7 +1042,7 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
           window.history.back();
         },
         error: (error) => {
-          alert('Erreur lors de la suppression: ' + (error.error?.error || error.message));
+          this.notificationService.error('Erreur lors de la suppression: ' + (error.error?.error || error.message));
         }
       });
     }
@@ -1055,10 +1057,14 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
         next: (response) => {
           const successCount = response.results.filter(r => r.success).length;
           const failCount = response.results.filter(r => !r.success).length;
-          alert(`Commande envoyée!\n\nSuccès: ${successCount}\nÉchecs: ${failCount}`);
+          if (failCount === 0) {
+            this.notificationService.success(`Commande envoyée! ${successCount} succès`);
+          } else {
+            this.notificationService.warning(`Commande envoyée: ${successCount} succès, ${failCount} échecs`);
+          }
         },
         error: (error) => {
-          alert('Erreur: ' + (error.error?.error || error.message));
+          this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
         }
       });
     }
@@ -1073,10 +1079,14 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
         next: (response) => {
           const successCount = response.results.filter(r => r.success).length;
           const failCount = response.results.filter(r => !r.success).length;
-          alert(`Commande de redémarrage envoyée!\n\nSuccès: ${successCount}\nÉchecs: ${failCount}`);
+          if (failCount === 0) {
+            this.notificationService.success(`Commande de redémarrage envoyée! ${successCount} succès`);
+          } else {
+            this.notificationService.warning(`Commande de redémarrage: ${successCount} succès, ${failCount} échecs`);
+          }
         },
         error: (error) => {
-          alert('Erreur: ' + (error.error?.error || error.message));
+          this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
         }
       });
     }

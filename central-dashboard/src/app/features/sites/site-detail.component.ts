@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { SitesService } from '../../core/services/sites.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { Site, Metrics } from '../../core/models';
 import { Subscription, interval } from 'rxjs';
 
@@ -917,7 +918,8 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   constructor(
     private route: ActivatedRoute,
-    private sitesService: SitesService
+    private sitesService: SitesService,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -943,7 +945,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         this.site = site;
       },
       error: (error) => {
-        alert('Erreur: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
       }
     });
   }
@@ -1012,11 +1014,11 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       this.sitesService.restartService(this.siteId, service).subscribe({
         next: (response) => {
           this.sendingCommand = false;
-          alert(response.message || 'Commande envoyée avec succès');
+          this.notificationService.success(response.message || 'Commande envoyée avec succès');
         },
         error: (error) => {
           this.sendingCommand = false;
-          alert('Erreur: ' + (error.error?.error || error.message));
+          this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
         }
       });
     }
@@ -1052,7 +1054,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       error: (error) => {
         this.systemInfo = null;
         this.systemInfoLoading = false;
-        alert('Erreur: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
       }
     });
   }
@@ -1069,11 +1071,11 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       this.sitesService.rebootSite(this.siteId).subscribe({
         next: (response) => {
           this.sendingCommand = false;
-          alert(response.message || 'Commande de redémarrage envoyée');
+          this.notificationService.success(response.message || 'Commande de redémarrage envoyée');
         },
         error: (error) => {
           this.sendingCommand = false;
-          alert('Erreur: ' + (error.error?.error || error.message));
+          this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
         }
       });
     }
@@ -1084,10 +1086,10 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       this.sitesService.regenerateApiKey(this.siteId).subscribe({
         next: (site) => {
           this.site = site;
-          alert('Clé API régénérée avec succès !');
+          this.notificationService.success('Clé API régénérée avec succès !');
         },
         error: (error) => {
-          alert('Erreur: ' + (error.error?.error || error.message));
+          this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
         }
       });
     }
@@ -1096,7 +1098,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   copyApiKey(): void {
     if (this.site?.api_key) {
       navigator.clipboard.writeText(this.site.api_key);
-      alert('Clé API copiée !');
+      this.notificationService.success('Clé API copiée !');
     }
   }
 
