@@ -1,12 +1,13 @@
 import { Injectable } from "@angular/core";
 import { Command } from "../interfaces/command.interface";
 import { environment } from "../../environments/environment";
+import { Socket } from 'socket.io-client';
 
-declare let io: any;
+declare const io: (url: string) => Socket;
 
 @Injectable({providedIn: 'root'})
 export class SocketService {
-  private socket: any
+  private socket: Socket | undefined;
 
   public initialize() {
     try {

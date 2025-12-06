@@ -18,25 +18,30 @@
           class="form-input"
           placeholder="Entrez le mot de passe"
           autocomplete="current-password"
-          autofocus
         />
       </div>
 
-      <div class="error-message" *ngIf="errorMessage">
-        <span class="error-icon">⚠️</span>
-        {{ errorMessage }}
-      </div>
+      @if (errorMessage) {
+        <div class="error-message">
+          <span class="error-icon">⚠️</span>
+          {{ errorMessage }}
+        </div>
+      }
 
       <button
         type="submit"
         class="submit-button"
         [disabled]="isLoading || !password"
       >
-        <span *ngIf="!isLoading">Se connecter</span>
-        <span *ngIf="isLoading" class="loading-spinner">
-          <span class="spinner"></span>
-          Connexion...
-        </span>
+        @if (!isLoading) {
+          <span>Se connecter</span>
+        }
+        @if (isLoading) {
+          <span class="loading-spinner">
+            <span class="spinner"></span>
+            Connexion...
+          </span>
+        }
       </button>
     </form>
 

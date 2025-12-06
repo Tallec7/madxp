@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, Input, ViewChild } from '@angular/core';
+import { Component, ElementRef, inject, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import videojs from 'video.js';
 import "videojs-playlist";
 import Player from 'video.js/dist/types/player';
@@ -7,14 +7,22 @@ import { Video } from '../../interfaces/video.interface';
 import { Configuration } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
 
+interface PlayerWithPlaylist extends Player {
+  playlist: {
+    first(): void;
+    repeat(value: boolean): void;
+    autoadvance(delay: number): void;
+  };
+}
+
 @Component({
   selector: 'app-tv',
   templateUrl: './tv.component.html',
   styleUrl: './tv.component.scss'
 })
-export class TvComponent {
+export class TvComponent implements OnInit, OnDestroy {
   private readonly socketService = inject(SocketService);
-  
+
   @Input() public configuration: Configuration;
 
   @ViewChild('target', { static: true }) target: ElementRef;
@@ -43,14 +51,14 @@ export class TvComponent {
       this.sponsors();
     });
 
-    this.player.on('error', (error: any) => {
+    this.player.on('error', (error: Event) => {
       console.error('tv player error', error);
       this.sponsors()
     });
 
     this.socketService.on('action', (command: Command) => {
       console.log('tv action received', command);
-      if (command.type === 'video') {
+      if (command.type === 'video' && command.data) {
         this.play(command.data);
       } else if (command.type === 'sponsors') {
         this.sponsors();
@@ -76,9 +84,9 @@ export class TvComponent {
 
   private sponsors() {
     console.log('tv player : play sponsors loop');
-    (this.player as any).playlist.first();
-    (this.player as any).playlist.repeat(true);
-    (this.player as any).playlist.autoadvance(0);
+    (this.player as PlayerWithPlaylist).playlist.first();
+    (this.player as PlayerWithPlaylist).playlist.repeat(true);
+    (this.player as PlayerWithPlaylist).playlist.autoadvance(0);
   }
 
 }

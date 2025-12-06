@@ -1,4 +1,4 @@
-import { ActivatedRouteSnapshot, ResolveFn, Routes } from '@angular/router';
+import { ResolveFn, Routes } from '@angular/router';
 import { TvComponent } from './components/tv/tv.component';
 import { RemoteComponent } from './components/remote/remote.component';
 import { LoginComponent } from './components/login/login.component';
