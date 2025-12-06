@@ -1,16 +1,12 @@
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes } from 'crypto';
 import { query } from '../config/database';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 
 const generateApiKey = (): string => {
   return randomBytes(32).toString('hex');
-};
-
-const hashApiKey = (apiKey: string): string => {
-  return createHash('sha256').update(apiKey).digest('hex');
 };
 
 export const getSites = async (req: AuthRequest, res: Response) => {
@@ -107,10 +103,9 @@ export const createSite = async (req: AuthRequest, res: Response) => {
 
     const id = uuidv4();
     const api_key = generateApiKey();
-    const api_key_hash = hashApiKey(api_key);
 
     const result = await query(
-      `INSERT INTO sites (id, site_name, club_name, location, sports, hardware_model, api_key_hash)
+      `INSERT INTO sites (id, site_name, club_name, location, sports, hardware_model, api_key)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, site_name, club_name, location, sports, hardware_model, status, created_at`,
       [
@@ -120,7 +115,7 @@ export const createSite = async (req: AuthRequest, res: Response) => {
         location ? JSON.stringify(location) : null,
         sports ? JSON.stringify(sports) : null,
         hardware_model || 'Raspberry Pi 4',
-        api_key_hash,
+        api_key,
       ]
     );
 
@@ -220,11 +215,10 @@ export const regenerateApiKey = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     const newApiKey = generateApiKey();
-    const newApiKeyHash = hashApiKey(newApiKey);
 
     const result = await query(
-      'UPDATE sites SET api_key_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id, site_name, club_name, status, updated_at',
-      [newApiKeyHash, id]
+      'UPDATE sites SET api_key = $1, updated_at = NOW() WHERE id = $2 RETURNING id, site_name, club_name, status, updated_at',
+      [newApiKey, id]
     );
 
     if (result.rows.length === 0) {
