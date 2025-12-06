@@ -3,7 +3,7 @@ import { Command } from "../interfaces/command.interface";
 import { environment } from "../../environments/environment";
 
 interface Socket {
-  on(event: string, callback: (data: unknown) => void): void;
+  on<T>(event: string, callback: (data: T) => void): void;
   emit(event: string, data: unknown): void;
 }
 
