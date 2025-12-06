@@ -52,7 +52,7 @@ export class SitesService {
   }
 
   // Commandes à distance
-  sendCommand(id: string, command: string, params?: Record<string, any>): Observable<{ success: boolean; message: string }> {
+  sendCommand(id: string, command: string, params?: Record<string, any>): Observable<{ success: boolean; commandId?: string; message: string }> {
     return this.api.post(`/sites/${id}/command`, { command, params });
   }
 
@@ -89,10 +89,6 @@ export class SitesService {
       sites[index] = { ...sites[index], status: status as any, last_seen_at: new Date() };
       this.sitesSubject.next([...sites]);
     }
-  }
-
-  sendCommand(id: string, command: string, data?: any): Observable<{ success: boolean; commandId: string; message: string }> {
-    return this.api.post(`/sites/${id}/command`, { command, data });
   }
 
   getCommandStatus(siteId: string, commandId: string): Observable<any> {

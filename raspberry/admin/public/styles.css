@@ -1,31 +1,3 @@
-/* =============================================================================
-   NEOPRO FONTS
-   ============================================================================= */
-
-@font-face {
-    font-family: 'Outfit';
-    src: url('./fonts/Outfit-VariableFont_wght.ttf') format('truetype');
-    font-weight: 100 900;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Playfair Display';
-    src: url('./fonts/PlayfairDisplay-VariableFont_wght.ttf') format('truetype');
-    font-weight: 400 900;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Playfair Display';
-    src: url('./fonts/PlayfairDisplay-Italic-VariableFont_wght.ttf') format('truetype');
-    font-weight: 400 900;
-    font-style: italic;
-    font-display: swap;
-}
-
 /* Reset et base */
 * {
     margin: 0;
@@ -54,9 +26,8 @@
     --neo-grey: #EBEFEE;
     --neo-white: #FFFFFF;
 
-    /* Typography */
-    --neo-font-heading: 'Playfair Display', Georgia, serif;
-    --neo-font-body: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    /* Typography - System fonts for better readability */
+    --neo-font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
     /* Semantic Colors (mapped to NEOPRO palette) - Dark Mode */
     --primary: #2022E9;           /* Hockey Dark */
@@ -79,10 +50,6 @@ body {
     background: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.6;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    font-family: var(--neo-font-heading);
 }
 
 .container {

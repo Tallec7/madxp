@@ -13,7 +13,7 @@ import { User } from '../../core/models';
     <div class="layout">
       <aside class="sidebar">
         <div class="sidebar-header">
-          <img src="neopro-logo.png" alt="Neopro" class="sidebar-logo" />
+          <img src="assets/neopro-logo-white.png" alt="Neopro" class="sidebar-logo" />
           <span class="connection-status" [class.connected]="isConnected">
             <span class="status-dot"></span>
             {{ isConnected ? 'Connecté' : 'Déconnecté' }}
@@ -97,7 +97,6 @@ import { User } from '../../core/models';
       max-width: 140px;
       height: auto;
       margin-bottom: 0.5rem;
-      filter: brightness(0) invert(1);
     }
 
     .connection-status {
