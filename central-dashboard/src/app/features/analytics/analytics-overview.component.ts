@@ -65,7 +65,7 @@ interface OverviewData {
         <div class="kpi-card">
           <div class="kpi-icon">✅</div>
           <div class="kpi-content">
-            <div class="kpi-value">{{ data.avg_availability?.toFixed(1) || 0 }}%</div>
+            <div class="kpi-value">{{ data.avg_availability.toFixed(1) }}%</div>
             <div class="kpi-label">Disponibilité moyenne</div>
           </div>
         </div>
@@ -85,7 +85,7 @@ interface OverviewData {
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let site of data.sites_summary">
+            <tr *ngFor="let site of data?.sites_summary">
               <td>
                 <a [routerLink]="['/sites', site.site_id]" class="club-link">
                   {{ site.club_name }}
@@ -105,7 +105,7 @@ interface OverviewData {
                     [class.warning]="site.availability_24h < 90"
                     [class.critical]="site.availability_24h < 50"
                   ></div>
-                  <span class="availability-text">{{ site.availability_24h?.toFixed(1) }}%</span>
+                  <span class="availability-text">{{ site.availability_24h.toFixed(1) }}%</span>
                 </div>
               </td>
               <td>

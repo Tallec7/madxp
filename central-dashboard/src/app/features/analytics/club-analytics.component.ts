@@ -120,7 +120,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
             <div class="simple-chart" *ngIf="usage?.daily_breakdown?.length">
               <div class="chart-bars">
                 <div
-                  *ngFor="let day of usage.daily_breakdown"
+                  *ngFor="let day of usage?.daily_breakdown"
                   class="chart-bar-container"
                   [title]="day.date + ': ' + day.plays + ' lectures'"
                 >
@@ -140,7 +140,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
             <h3>Répartition par catégorie</h3>
             <div class="categories-list" *ngIf="content?.categories_breakdown?.length">
               <div
-                *ngFor="let cat of content.categories_breakdown.slice(0, 5)"
+                *ngFor="let cat of content?.categories_breakdown?.slice(0, 5)"
                 class="category-item"
               >
                 <div class="category-info">
@@ -233,7 +233,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let day of usage.daily_breakdown">
+              <tr *ngFor="let day of usage?.daily_breakdown">
                 <td>{{ formatTableDate(day.date) }}</td>
                 <td>{{ day.plays }}</td>
                 <td>{{ formatDuration(day.duration) }}</td>
@@ -260,7 +260,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let video of content.top_videos">
+              <tr *ngFor="let video of content?.top_videos">
                 <td class="video-name">{{ getVideoName(video.filename) }}</td>
                 <td>{{ video.category || '-' }}</td>
                 <td>{{ video.play_count }}</td>
@@ -268,7 +268,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
                 <td>
                   <div class="completion-bar">
                     <div class="completion-fill" [style.width.%]="video.avg_completion"></div>
-                    <span class="completion-text">{{ video.avg_completion?.toFixed(0) }}%</span>
+                    <span class="completion-text">{{ video.avg_completion.toFixed(0) }}%</span>
                   </div>
                 </td>
               </tr>
@@ -290,7 +290,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let cat of content.categories_breakdown">
+              <tr *ngFor="let cat of content?.categories_breakdown">
                 <td>{{ cat.category || 'Non catégorisé' }}</td>
                 <td>{{ cat.play_count }}</td>
                 <td>{{ formatDuration(cat.total_duration) }}</td>
@@ -305,52 +305,52 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
       <!-- Health Tab -->
       <div class="tab-content" *ngIf="activeTab === 'health'">
         <!-- Current Metrics -->
-        <div class="card" *ngIf="health?.current_metrics">
+        <div class="card" *ngIf="health?.current_metrics as metrics">
           <h3>Métriques actuelles</h3>
           <div class="metrics-grid">
-            <div class="metric" [class.warning]="(health.current_metrics.cpu_usage || 0) > 80">
-              <div class="metric-icon">💻</div>
-              <div class="metric-info">
-                <div class="metric-label">CPU</div>
-                <div class="metric-value">{{ health.current_metrics.cpu_usage?.toFixed(1) }}%</div>
+              <div class="metric" [class.warning]="(metrics.cpu_usage || 0) > 80">
+                <div class="metric-icon">💻</div>
+                <div class="metric-info">
+                  <div class="metric-label">CPU</div>
+                  <div class="metric-value">{{ metrics.cpu_usage.toFixed(1) }}%</div>
+                </div>
+                <div class="metric-bar">
+                  <div class="metric-fill" [style.width.%]="metrics.cpu_usage"></div>
+                </div>
               </div>
-              <div class="metric-bar">
-                <div class="metric-fill" [style.width.%]="health.current_metrics.cpu_usage"></div>
-              </div>
-            </div>
 
-            <div class="metric" [class.warning]="(health.current_metrics.memory_usage || 0) > 80">
-              <div class="metric-icon">🧠</div>
-              <div class="metric-info">
-                <div class="metric-label">RAM</div>
-                <div class="metric-value">{{ health.current_metrics.memory_usage?.toFixed(1) }}%</div>
+              <div class="metric" [class.warning]="(metrics.memory_usage || 0) > 80">
+                <div class="metric-icon">🧠</div>
+                <div class="metric-info">
+                  <div class="metric-label">RAM</div>
+                  <div class="metric-value">{{ metrics.memory_usage.toFixed(1) }}%</div>
+                </div>
+                <div class="metric-bar">
+                  <div class="metric-fill" [style.width.%]="metrics.memory_usage"></div>
+                </div>
               </div>
-              <div class="metric-bar">
-                <div class="metric-fill" [style.width.%]="health.current_metrics.memory_usage"></div>
-              </div>
-            </div>
 
-            <div class="metric" [class.warning]="(health.current_metrics.temperature || 0) > 70">
-              <div class="metric-icon">🌡️</div>
-              <div class="metric-info">
-                <div class="metric-label">Température</div>
-                <div class="metric-value">{{ health.current_metrics.temperature?.toFixed(1) }}°C</div>
+              <div class="metric" [class.warning]="(metrics.temperature || 0) > 70">
+                <div class="metric-icon">🌡️</div>
+                <div class="metric-info">
+                  <div class="metric-label">Température</div>
+                  <div class="metric-value">{{ metrics.temperature.toFixed(1) }}°C</div>
+                </div>
+                <div class="metric-bar">
+                  <div class="metric-fill" [style.width.%]="Math.min(metrics.temperature || 0, 100)"></div>
+                </div>
               </div>
-              <div class="metric-bar">
-                <div class="metric-fill" [style.width.%]="Math.min(health.current_metrics.temperature || 0, 100)"></div>
-              </div>
-            </div>
 
-            <div class="metric" [class.warning]="(health.current_metrics.disk_usage || 0) > 80">
-              <div class="metric-icon">💾</div>
-              <div class="metric-info">
-                <div class="metric-label">Disque</div>
-                <div class="metric-value">{{ health.current_metrics.disk_usage?.toFixed(1) }}%</div>
+              <div class="metric" [class.warning]="(metrics.disk_usage || 0) > 80">
+                <div class="metric-icon">💾</div>
+                <div class="metric-info">
+                  <div class="metric-label">Disque</div>
+                  <div class="metric-value">{{ metrics.disk_usage.toFixed(1) }}%</div>
+                </div>
+                <div class="metric-bar">
+                  <div class="metric-fill" [style.width.%]="metrics.disk_usage"></div>
+                </div>
               </div>
-              <div class="metric-bar">
-                <div class="metric-fill" [style.width.%]="health.current_metrics.disk_usage"></div>
-              </div>
-            </div>
           </div>
         </div>
 

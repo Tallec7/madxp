@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
+import { environment } from '@env/environment';
 
 export interface ClubHealthData {
   site_id: string;
@@ -83,7 +85,9 @@ export interface DashboardData {
   providedIn: 'root'
 })
 export class AnalyticsService {
-  constructor(private api: ApiService) {}
+  private apiUrl = environment.apiUrl;
+
+  constructor(private api: ApiService, private http: HttpClient) {}
 
   // MVP - Health Analytics
   getClubHealth(siteId: string): Observable<ClubHealthData> {
@@ -113,7 +117,16 @@ export class AnalyticsService {
   }
 
   exportClubData(siteId: string, format: 'csv' | 'json' = 'csv', days: number = 30): Observable<Blob> {
-    return this.api.get(`/analytics/clubs/${siteId}/export`, { format, days }, { responseType: 'blob' });
+    const token = localStorage.getItem('neopro_token');
+    const headers = new HttpHeaders({
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    });
+    const params = new HttpParams().set('format', format).set('days', days.toString());
+    return this.http.get(`${this.apiUrl}/analytics/clubs/${siteId}/export`, {
+      headers,
+      params,
+      responseType: 'blob'
+    });
   }
 
   // Admin - Vue d'ensemble
