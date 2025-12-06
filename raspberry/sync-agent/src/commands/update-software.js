@@ -209,7 +209,17 @@ class SoftwareUpdateHandler {
     try {
       logger.info('Extracting and installing update');
 
-      await execAsync(`tar -xzf ${packagePath} -C ${config.paths.root}/`);
+      // Exclude user data directories and configuration from extraction
+      // These should never be overwritten by software updates:
+      // - videos/: user video content (managed by deploy-video.js)
+      // - logs/: runtime logs
+      // - backups/: backup archives
+      // - public/configuration.json: club-specific configuration
+      await execAsync(
+        `tar -xzf ${packagePath} -C ${config.paths.root}/ ` +
+        `--exclude='videos' --exclude='logs' --exclude='backups' ` +
+        `--exclude='public/configuration.json'`
+      );
 
       if (await fs.pathExists(path.join(config.paths.root, 'webapp/package.json'))) {
         await execAsync(`cd ${config.paths.root}/webapp && npm install --production`);

@@ -337,7 +337,7 @@ interface UpdateDeployment {
             </div>
             <div class="form-group">
               <label>Package de mise à jour *</label>
-              <input type="file" accept=".tar.gz,.zip" (change)="onUpdateFileSelected($event)">
+              <input type="file" accept=".tar.gz,.tgz,.gz,.tar,application/gzip,application/x-gzip,application/x-tar,application/x-compressed-tar,.zip,application/zip" (change)="onUpdateFileSelected($event)">
               <div class="file-info" *ngIf="createForm.file">
                 {{ createForm.file.name }} ({{ formatFileSize(createForm.file.size) }})
               </div>
