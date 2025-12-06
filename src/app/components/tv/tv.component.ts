@@ -65,7 +65,7 @@ export class TvComponent implements OnInit, OnDestroy {
       // Tracker l'erreur si une vidéo était en cours
       const currentSrc = this.player.currentSrc();
       if (currentSrc) {
-        this.analyticsService.trackVideoError({ path: currentSrc, type: 'video/mp4' }, error);
+        this.analyticsService.trackVideoError({ name: 'unknown', path: currentSrc, type: 'video/mp4' }, error);
       }
       this.sponsors();
     });

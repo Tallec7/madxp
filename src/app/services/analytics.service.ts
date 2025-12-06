@@ -96,7 +96,7 @@ export class AnalyticsService {
       category: this.detectCategory(this.currentVideo),
       played_at: this.currentVideoStart.toISOString(),
       duration_played: durationPlayed,
-      video_duration: this.currentVideo.duration || durationPlayed,
+      video_duration: durationPlayed,
       completed,
       trigger_type: this.currentTriggerType,
       session_id: this.currentSession || undefined,

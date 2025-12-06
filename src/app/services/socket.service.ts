@@ -1,7 +1,11 @@
 import { Injectable } from "@angular/core";
 import { Command } from "../interfaces/command.interface";
 import { environment } from "../../environments/environment";
-import { Socket } from 'socket.io-client';
+
+interface Socket {
+  on(event: string, callback: (data: unknown) => void): void;
+  emit(event: string, data: unknown): void;
+}
 
 declare const io: (url: string) => Socket;
 
