@@ -17,14 +17,15 @@ const getSslConfig = () => {
     return { ca, rejectUnauthorized: true };
   }
 
-  // In production, require proper SSL configuration
-  if (process.env.NODE_ENV === 'production') {
-    logger.warn('DATABASE_SSL_CA not set in production - using rejectUnauthorized: true');
-    return { rejectUnauthorized: true };
+  // Render PostgreSQL uses self-signed certificates
+  // Allow self-signed certs when DATABASE_SSL_REJECT_UNAUTHORIZED is explicitly set to 'false'
+  const rejectUnauthorized = process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false';
+
+  if (process.env.NODE_ENV === 'production' && rejectUnauthorized) {
+    logger.warn('DATABASE_SSL_CA not set in production - set DATABASE_SSL_REJECT_UNAUTHORIZED=false for Render PostgreSQL');
   }
 
-  // Development only: allow self-signed certs
-  return { rejectUnauthorized: false };
+  return { rejectUnauthorized };
 };
 
 const poolConfig: PoolConfig = {
