@@ -268,73 +268,70 @@ setup_sync_agent() {
         return
     fi
 
-    print_info "Installation des dépendances du sync-agent..."
+    # Demander les credentials admin (seules infos non collectées précédemment)
+    echo ""
+    print_info "Credentials du dashboard central (pour l'enregistrement du site)"
+    read -p "Email admin : " ADMIN_EMAIL
+    read -s -p "Mot de passe admin : " ADMIN_PASSWORD
+    echo ""
 
-    # Installer les dépendances npm (non-interactif)
-    ssh pi@$PI_ADDRESS << 'EOF'
+    if [ -z "$ADMIN_EMAIL" ] || [ -z "$ADMIN_PASSWORD" ]; then
+        print_error "Email et mot de passe requis"
+        return
+    fi
+
+    print_info "Installation des dépendances et enregistrement du site..."
+
+    # Exécuter tout via SSH avec les variables d'environnement
+    ssh pi@$PI_ADDRESS "
         set -e
 
         # Vérifier que le répertoire existe
-        if [ ! -d "/home/pi/neopro/sync-agent" ]; then
-            echo "✗ Le répertoire sync-agent n'existe pas"
-            echo "  Veuillez d'abord copier les fichiers sync-agent sur le Pi"
+        if [ ! -d '/home/pi/neopro/sync-agent' ]; then
+            echo '✗ Le répertoire sync-agent n existe pas'
             exit 1
         fi
 
         cd /home/pi/neopro/sync-agent
 
         # Installer les dépendances
-        echo ">>> Installation des dépendances npm..."
+        echo '>>> Installation des dépendances npm...'
         npm install --omit=dev
 
-        echo ""
-        echo "✓ Dépendances installées"
-EOF
+        echo ''
+        echo '>>> Enregistrement du site sur le serveur central...'
 
-    if [ $? -ne 0 ]; then
-        print_error "Échec de l'installation des dépendances"
-        return
-    fi
+        # Exécuter register-site.js avec les variables d'environnement pré-configurées
+        sudo CENTRAL_SERVER_URL='https://neopro-central-server.onrender.com' \
+             SITE_NAME='$SITE_NAME' \
+             CLUB_NAME='$CLUB_NAME' \
+             LOCATION_CITY='$CITY' \
+             LOCATION_REGION='$REGION' \
+             LOCATION_COUNTRY='$COUNTRY' \
+             SPORTS='$SPORTS' \
+             node scripts/register-site.js <<CREDENTIALS
+$ADMIN_EMAIL
+$ADMIN_PASSWORD
+CREDENTIALS
 
-    print_success "Dépendances installées"
-    echo ""
+        echo ''
+        echo '>>> Installation du service systemd...'
+        sudo npm run install-service
 
-    # L'enregistrement nécessite un terminal interactif
-    print_warning "L'enregistrement sur le serveur central nécessite une session SSH interactive."
-    echo ""
-    print_info "Informations à préparer :"
-    echo "  • URL du serveur central : https://neopro-central-server.onrender.com"
-    echo "  • Email admin du dashboard"
-    echo "  • Mot de passe admin du dashboard"
-    echo "  • Nom du site : $SITE_NAME"
-    echo "  • Nom du club : $CLUB_NAME"
-    echo "  • Ville : $CITY"
-    echo "  • Région : $REGION"
-    echo "  • Pays : $COUNTRY"
-    echo "  • Sports : $SPORTS"
-    echo ""
-
-    read -p "Appuyez sur Entrée pour ouvrir une session SSH interactive..."
-
-    # Ouvrir une session SSH interactive avec les commandes à exécuter
-    echo ""
-    print_info "Exécutez ces commandes dans la session SSH :"
-    echo ""
-    echo -e "  ${GREEN}cd /home/pi/neopro/sync-agent${NC}"
-    echo -e "  ${GREEN}sudo node scripts/register-site.js${NC}"
-    echo -e "  ${GREEN}sudo npm run install-service${NC}"
-    echo -e "  ${GREEN}exit${NC}"
-    echo ""
-
-    # Ouvrir la session SSH interactive
-    ssh -t pi@$PI_ADDRESS "cd /home/pi/neopro/sync-agent && bash"
+        echo ''
+        echo '>>> Vérification du service...'
+        sudo systemctl status neopro-sync --no-pager || true
+    "
 
     if [ $? -eq 0 ]; then
-        print_success "Session SSH terminée"
-        print_info "Vérification du service..."
-        ssh pi@$PI_ADDRESS 'sudo systemctl status neopro-sync --no-pager 2>/dev/null || echo "Service non installé"'
+        print_success "Sync-agent configuré avec succès"
     else
-        print_warning "La session SSH a été interrompue"
+        print_error "Échec de la configuration du sync-agent"
+        print_info "Pour réessayer manuellement :"
+        print_info "  ssh pi@$PI_ADDRESS"
+        print_info "  cd /home/pi/neopro/sync-agent"
+        print_info "  sudo node scripts/register-site.js"
+        print_info "  sudo npm run install-service"
     fi
 }
 
