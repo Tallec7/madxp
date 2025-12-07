@@ -282,48 +282,63 @@ setup_sync_agent() {
 
     print_info "Installation des dépendances et enregistrement du site..."
 
-    # Exécuter tout via SSH avec les variables d'environnement
-    # Note: on utilise des guillemets doubles pour permettre l'expansion des variables locales
+    # Étape 1: Installer les dépendances npm
+    print_info "Installation des dépendances npm..."
+    ssh pi@"$PI_ADDRESS" "cd /home/pi/neopro/sync-agent && npm install --omit=dev"
+
+    # Étape 2: Créer un script d'enregistrement temporaire sur le Pi
+    print_info "Enregistrement du site sur le serveur central..."
+
+    # Créer le script d'enregistrement avec toutes les variables
+    ssh pi@"$PI_ADDRESS" "cat > /tmp/neopro-register.sh << 'SCRIPTEOF'
+#!/bin/bash
+set -e
+
+cd /home/pi/neopro/sync-agent
+
+# Variables d'environnement pour le site
+export CENTRAL_SERVER_URL='https://neopro-central.onrender.com'
+export SITE_NAME=\"\$1\"
+export CLUB_NAME=\"\$2\"
+export LOCATION_CITY=\"\$3\"
+export LOCATION_REGION=\"\$4\"
+export LOCATION_COUNTRY=\"\$5\"
+export SPORTS=\"\$6\"
+
+# Credentials passés via arguments
+ADMIN_EMAIL=\"\$7\"
+ADMIN_PASSWORD=\"\$8\"
+
+# Exécuter register-site.js avec les credentials via stdin
+echo \"\$ADMIN_EMAIL\"
+echo \"\$ADMIN_PASSWORD\"
+echo \"y\"
+SCRIPTEOF
+chmod +x /tmp/neopro-register.sh"
+
+    # Exécuter le script avec les arguments
     ssh pi@"$PI_ADDRESS" "
-        set -e
-
-        # Vérifier que le répertoire existe
-        if [ ! -d '/home/pi/neopro/sync-agent' ]; then
-            echo '✗ Le répertoire sync-agent n existe pas'
-            exit 1
-        fi
-
-        cd /home/pi/neopro/sync-agent
-
-        # Installer les dépendances
-        echo '>>> Installation des dépendances npm...'
-        npm install --omit=dev
-
-        echo ''
-        echo '>>> Enregistrement du site sur le serveur central...'
-
-        # Exécuter register-site.js avec les variables d'environnement pré-configurées
-        sudo CENTRAL_SERVER_URL='https://neopro-central.onrender.com' \\
-             SITE_NAME='${SITE_NAME}' \\
-             CLUB_NAME='${CLUB_FULL_NAME}' \\
-             LOCATION_CITY='${CITY}' \\
-             LOCATION_REGION='${REGION}' \\
-             LOCATION_COUNTRY='${COUNTRY}' \\
-             SPORTS='${SPORTS}' \\
-             node scripts/register-site.js <<CREDENTIALS
-${ADMIN_EMAIL}
-${ADMIN_PASSWORD}
-CREDENTIALS
-
-        echo ''
-        echo '>>> Installation du service systemd...'
-        sudo npm run install-service
-
-        echo ''
-        echo '>>> Vérification du service...'
-        sleep 2
-        sudo systemctl status neopro-sync-agent --no-pager || true
+        /tmp/neopro-register.sh \
+            '${SITE_NAME}' \
+            '${CLUB_FULL_NAME}' \
+            '${CITY}' \
+            '${REGION}' \
+            '${COUNTRY}' \
+            '${SPORTS}' \
+            '${ADMIN_EMAIL}' \
+            '${ADMIN_PASSWORD}' \
+        | sudo -E node /home/pi/neopro/sync-agent/scripts/register-site.js
+        rm -f /tmp/neopro-register.sh
     "
+
+    # Étape 3: Installer le service systemd
+    print_info "Installation du service systemd..."
+    ssh pi@"$PI_ADDRESS" "cd /home/pi/neopro/sync-agent && sudo npm run install-service"
+
+    # Étape 4: Vérifier le service
+    print_info "Vérification du service..."
+    sleep 2
+    ssh pi@"$PI_ADDRESS" "sudo systemctl status neopro-sync-agent --no-pager" || true
 
     if [ $? -eq 0 ]; then
         print_success "Sync-agent configuré avec succès"
