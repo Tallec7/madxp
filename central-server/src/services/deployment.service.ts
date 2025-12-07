@@ -210,6 +210,12 @@ class DeploymentService {
       }
     };
 
+    logger.info('Sending deploy_video command', {
+      siteId,
+      videoUrl,
+      storagePath: deployment.storage_path,
+    });
+
     return socketService.sendCommand(siteId, command);
   }
 
