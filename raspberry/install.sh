@@ -184,11 +184,11 @@ check_prerequisites() {
 
     # Vérifier les fichiers de configuration requis
     local REQUIRED_FILES=(
-        "./config/hostapd.conf"
-        "./config/dnsmasq.conf"
-        "./config/neopro.service"
-        "./config/neopro-app.service"
-        "./config/neopro-admin.service"
+        "./config/systemd/hostapd.conf"
+        "./config/systemd/dnsmasq.conf"
+        "./config/systemd/neopro.service"
+        "./config/systemd/neopro-app.service"
+        "./config/systemd/neopro-admin.service"
         "./server"
         "./admin"
     )
@@ -319,7 +319,7 @@ interface ${WIFI_INTERFACE}
 EOF
 
     # Configuration hostapd (avec personnalisation SSID)
-    sed "s/NEOPRO-CLUB/NEOPRO-${CLUB_NAME}/" ./config/hostapd.conf > /etc/hostapd/hostapd.conf
+    sed "s/NEOPRO-CLUB/NEOPRO-${CLUB_NAME}/" ./config/systemd/hostapd.conf > /etc/hostapd/hostapd.conf
     sed -i "s/wpa_passphrase=.*/wpa_passphrase=${WIFI_PASSWORD}/" /etc/hostapd/hostapd.conf
     sed -i "s/^interface=.*/interface=${WIFI_INTERFACE}/" /etc/hostapd/hostapd.conf
     sed -i "s/^channel=.*/channel=${WIFI_CHANNEL}/" /etc/hostapd/hostapd.conf
@@ -331,7 +331,7 @@ EOF
     if [ -f /etc/dnsmasq.conf ]; then
         mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig
     fi
-    cp ./config/dnsmasq.conf /etc/dnsmasq.conf
+    cp ./config/systemd/dnsmasq.conf /etc/dnsmasq.conf
     sed -i "s/^interface=.*/interface=${WIFI_INTERFACE}/" /etc/dnsmasq.conf
 
     # Activation des services
@@ -365,7 +365,7 @@ configure_mdns() {
     print_step "Configuration mDNS (neopro.local)..."
 
     # Configuration Avahi
-    cp ./config/neopro.service /etc/avahi/services/neopro.service
+    cp ./config/systemd/neopro.service /etc/avahi/services/neopro.service
 
     # Changement du hostname
     hostnamectl set-hostname neopro
