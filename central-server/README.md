@@ -223,6 +223,16 @@ npm run lint         # ESLint
 | DATABASE_SSL | SSL activé | true |
 | JWT_SECRET | Secret JWT | (généré) |
 | ALLOWED_ORIGINS | CORS origins | https://... |
+| SUPABASE_URL | URL projet Supabase | https://xxx.supabase.co |
+| SUPABASE_SERVICE_KEY | Clé service Supabase | eyJhbGci... |
+
+### Supabase Storage
+
+Les vidéos sont stockées temporairement dans Supabase Storage :
+
+1. Créer un bucket `videos` dans Storage (mode public)
+2. Configurer `SUPABASE_URL` et `SUPABASE_SERVICE_KEY`
+3. Les vidéos sont automatiquement supprimées après déploiement vers les sites
 
 ---
 

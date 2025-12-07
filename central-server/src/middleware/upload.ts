@@ -1,30 +1,7 @@
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
 
-// Crée le répertoire uploads s'il n'existe pas
-const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const videoDir = path.join(uploadDir, 'videos');
-if (!fs.existsSync(videoDir)) {
-  fs.mkdirSync(videoDir, { recursive: true });
-}
-
-// Configuration du stockage
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, videoDir);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueId = uuidv4();
-    const ext = path.extname(file.originalname);
-    cb(null, `${uniqueId}${ext}`);
-  }
-});
+// Configuration du stockage en mémoire (pour upload vers Supabase Storage)
+const storage = multer.memoryStorage();
 
 // Filtre pour n'accepter que les vidéos
 const videoFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
@@ -52,5 +29,3 @@ export const uploadVideo = multer({
     fileSize: 500 * 1024 * 1024, // 500MB max
   }
 });
-
-export { uploadDir, videoDir };

@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/database';
 import socketService from './socket.service';
 import logger from '../config/logger';
+import { deleteFile, getPublicUrl } from '../config/supabase';
 
 interface DeploymentTarget {
   siteId: string;
@@ -48,9 +49,8 @@ class DeploymentService {
         return;
       }
 
-      // Construire l'URL de la vidéo
-      const baseUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3001';
-      const videoUrl = `${baseUrl}${deployment.storage_path}`;
+      // Construire l'URL de la vidéo depuis Supabase Storage
+      const videoUrl = getPublicUrl(deployment.storage_path);
       const videoTitle = deployment.metadata?.title || deployment.filename;
 
       // Tenter d'envoyer aux sites connectés
@@ -124,11 +124,9 @@ class DeploymentService {
         count: result.rows.length
       });
 
-      const baseUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3001';
-
       for (const row of result.rows) {
         const deployment = row as unknown as DeploymentRow;
-        const videoUrl = `${baseUrl}${deployment.storage_path}`;
+        const videoUrl = getPublicUrl(deployment.storage_path);
         const videoTitle = deployment.metadata?.title || deployment.filename;
 
         const success = await this.deployToSite(
@@ -239,6 +237,13 @@ class DeploymentService {
 
       // Si tous les sites ont terminé, marquer comme complété
       if (completed && progress >= 100) {
+        // Récupérer le video_id avant de marquer comme complété
+        const videoResult = await query(
+          `SELECT video_id FROM content_deployments WHERE id = $1`,
+          [deploymentId]
+        );
+        const videoId = videoResult.rows[0]?.video_id;
+
         await query(
           `UPDATE content_deployments
            SET status = 'completed', progress = 100, completed_at = NOW()
@@ -247,9 +252,58 @@ class DeploymentService {
         );
 
         logger.info('Deployment completed', { deploymentId });
+
+        // Vérifier si tous les déploiements de cette vidéo sont terminés
+        if (videoId && typeof videoId === 'string') {
+          await this.cleanupVideoIfAllDeploymentsComplete(videoId);
+        }
       }
     } catch (error) {
       logger.error('Error updating deployment progress:', error);
+    }
+  }
+
+  /**
+   * Vérifie si tous les déploiements d'une vidéo sont terminés et supprime la vidéo du stockage
+   */
+  private async cleanupVideoIfAllDeploymentsComplete(videoId: string): Promise<void> {
+    try {
+      // Vérifier s'il reste des déploiements non terminés pour cette vidéo
+      const pendingResult = await query(
+        `SELECT COUNT(*) as count
+         FROM content_deployments
+         WHERE video_id = $1 AND status NOT IN ('completed', 'failed', 'cancelled')`,
+        [videoId]
+      );
+
+      const pendingCount = parseInt(String(pendingResult.rows[0].count), 10);
+
+      if (pendingCount > 0) {
+        logger.info('Video still has pending deployments, not cleaning up', { videoId, pendingCount });
+        return;
+      }
+
+      // Récupérer le storage_path de la vidéo
+      const videoResult = await query(
+        `SELECT storage_path FROM videos WHERE id = $1`,
+        [videoId]
+      );
+
+      if (videoResult.rows.length === 0) {
+        return;
+      }
+
+      const storagePath = videoResult.rows[0].storage_path as string | null;
+
+      // Supprimer le fichier du stockage Supabase
+      if (storagePath) {
+        const deleted = await deleteFile(storagePath);
+        if (deleted) {
+          logger.info('Video file cleaned up from storage after all deployments completed', { videoId, storagePath });
+        }
+      }
+    } catch (error) {
+      logger.error('Error cleaning up video after deployments:', { videoId, error });
     }
   }
 

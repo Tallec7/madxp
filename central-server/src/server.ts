@@ -1,7 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import dns from 'node:dns';
-import path from 'path';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
@@ -84,10 +83,6 @@ app.use(compression());
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Servir les fichiers uploadés
-const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '../uploads');
-app.use('/uploads', express.static(uploadDir));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,

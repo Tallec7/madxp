@@ -1,8 +1,11 @@
 import { Response } from 'express';
+import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
 import logger from '../config/logger';
 import pool from '../config/database';
 import { AuthRequest } from '../types';
 import deploymentService from '../services/deployment.service';
+import { uploadFile, deleteFile } from '../config/supabase';
 
 export const getVideos = async (req: AuthRequest, res: Response) => {
   try {
@@ -64,26 +67,37 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
 
     const { title, category, subcategory } = req.body;
 
+    // Générer un nom de fichier unique
+    const uniqueId = uuidv4();
+    const ext = path.extname(file.originalname);
+    const filename = `${uniqueId}${ext}`;
+
+    // Upload vers Supabase Storage
+    const uploadResult = await uploadFile(file.buffer, filename, file.mimetype);
+
+    if (!uploadResult) {
+      return res.status(500).json({ error: 'Erreur lors de l\'upload vers le stockage' });
+    }
+
     // Utiliser le titre fourni ou le nom original du fichier
     const videoTitle = title || file.originalname;
-    const filename = file.filename;
     const original_name = file.originalname;
     const file_size = file.size;
-    const storage_path = `/uploads/videos/${file.filename}`;
     const mime_type = file.mimetype;
 
     const result = await pool.query(
       `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, metadata, uploaded_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING id, filename as name, original_name, category, subcategory, file_size as size, duration, storage_path as url, thumbnail_url, metadata, created_at, updated_at`,
-      [filename, original_name, category || null, subcategory || null, file_size, mime_type, storage_path, { title: videoTitle }, req.user?.id || null]
+      [filename, original_name, category || null, subcategory || null, file_size, mime_type, uploadResult.path, { title: videoTitle }, req.user?.id || null]
     );
 
-    // Ajouter le titre à la réponse pour l'affichage client
+    // Ajouter le titre et l'URL à la réponse pour l'affichage client
     const video = result.rows[0];
     video.title = videoTitle;
+    video.url = uploadResult.url;
 
-    logger.info('Video created:', { id: video.id, filename, title: videoTitle });
+    logger.info('Video created:', { id: video.id, filename, title: videoTitle, storagePath: uploadResult.path });
     res.status(201).json(video);
   } catch (error) {
     logger.error('Error creating video:', error);
@@ -129,16 +143,30 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
+    // Récupérer le chemin de stockage avant suppression
+    const videoResult = await pool.query(
+      `SELECT storage_path FROM videos WHERE id = $1`,
+      [id]
+    );
+
+    if (videoResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Vidéo non trouvée' });
+    }
+
+    const storagePath = videoResult.rows[0].storage_path as string | null;
+
+    // Supprimer de la base de données
     const result = await pool.query(
       `DELETE FROM videos WHERE id = $1 RETURNING *`,
       [id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Vidéo non trouvée' });
+    // Supprimer du stockage Supabase
+    if (storagePath) {
+      await deleteFile(storagePath);
     }
 
-    logger.info('Video deleted:', { id });
+    logger.info('Video deleted:', { id, storagePath });
     res.json({ message: 'Vidéo supprimée avec succès' });
   } catch (error) {
     logger.error('Error deleting video:', error);

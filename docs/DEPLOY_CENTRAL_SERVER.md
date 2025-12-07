@@ -67,7 +67,14 @@ ADMIN_EMAIL=admin@neopro.fr
 ADMIN_PASSWORD=VotreMotDePasseSecuriseIci123!
 JWT_SECRET=GenerezUneLongueCleAleatoire123456789ABCDEF
 DATABASE_URL=(automatique, fourni par Render)
+SUPABASE_URL=https://votre-projet.supabase.co
+SUPABASE_SERVICE_KEY=votre-service-role-key
 ```
+
+**Configuration Supabase Storage :**
+1. Dans Supabase Dashboard → Storage → New bucket
+2. Nom : `videos`, cocher "Public bucket"
+3. Récupérer l'URL et la clé service dans Settings → API
 
 **Générer un JWT_SECRET** :
 ```bash
