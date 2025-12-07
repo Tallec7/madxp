@@ -94,6 +94,9 @@ check_ssh_connection() {
     return 0
 }
 
+# Variables globales
+WIFI_CONFIGURED=false
+
 ################################################################################
 # Étape 1 : Collecte des informations
 ################################################################################
@@ -291,6 +294,29 @@ deploy_to_pi() {
         print_error "Échec du déploiement"
         exit 1
     fi
+
+    # Configurer le hotspot WiFi avec le nom du club
+    print_step "Configuration du hotspot WiFi"
+
+    # Vérifier si hostapd est installé
+    if ssh -o ConnectTimeout=10 pi@"$PI_ADDRESS" "systemctl is-active hostapd >/dev/null 2>&1"; then
+        print_info "Mise à jour du SSID WiFi vers NEOPRO-$CLUB_NAME..."
+        ssh pi@"$PI_ADDRESS" "
+            sudo sed -i 's/^ssid=.*/ssid=NEOPRO-$CLUB_NAME/' /etc/hostapd/hostapd.conf
+            sudo systemctl restart hostapd
+        "
+        if [ $? -eq 0 ]; then
+            print_success "Hotspot WiFi configuré : NEOPRO-$CLUB_NAME"
+            WIFI_CONFIGURED=true
+        else
+            print_warning "Échec de la configuration du hotspot"
+            WIFI_CONFIGURED=false
+        fi
+    else
+        print_warning "hostapd n'est pas actif sur ce Pi"
+        print_info "Le hotspot WiFi NEOPRO-$CLUB_NAME ne sera pas disponible"
+        WIFI_CONFIGURED=false
+    fi
 }
 
 ################################################################################
@@ -336,49 +362,29 @@ setup_sync_agent() {
     print_info "Installation des dépendances npm..."
     ssh -o StrictHostKeyChecking=accept-new pi@"$PI_ADDRESS" "cd /home/pi/neopro/sync-agent && npm install --omit=dev"
 
-    # Étape 2: Créer un script d'enregistrement temporaire sur le Pi
+    # Étape 2: Enregistrer le site sur le serveur central
     print_info "Enregistrement du site sur le serveur central..."
 
-    # Créer le script d'enregistrement avec toutes les variables
-    ssh pi@"$PI_ADDRESS" "cat > /tmp/neopro-register.sh << 'SCRIPTEOF'
-#!/bin/bash
-set -e
+    # Échapper les caractères spéciaux pour le shell
+    ESCAPED_PASSWORD=$(printf '%s' "$ADMIN_PASSWORD" | sed "s/'/'\\\\''/g")
+    ESCAPED_SITE_NAME=$(printf '%s' "$SITE_NAME" | sed "s/'/'\\\\''/g")
+    ESCAPED_CLUB_NAME=$(printf '%s' "$CLUB_FULL_NAME" | sed "s/'/'\\\\''/g")
 
-cd /home/pi/neopro/sync-agent
-
-# Variables d'environnement pour le site
-export CENTRAL_SERVER_URL='https://neopro-central.onrender.com'
-export SITE_NAME=\"\$1\"
-export CLUB_NAME=\"\$2\"
-export LOCATION_CITY=\"\$3\"
-export LOCATION_REGION=\"\$4\"
-export LOCATION_COUNTRY=\"\$5\"
-export SPORTS=\"\$6\"
-
-# Credentials passés via arguments
-ADMIN_EMAIL=\"\$7\"
-ADMIN_PASSWORD=\"\$8\"
-
-# Exécuter register-site.js avec les credentials via stdin
-echo \"\$ADMIN_EMAIL\"
-echo \"\$ADMIN_PASSWORD\"
-echo \"y\"
-SCRIPTEOF
-chmod +x /tmp/neopro-register.sh"
-
-    # Exécuter le script avec les arguments
+    # Exécuter register-site.js avec les variables d'environnement
+    # Le script détecte SITE_NAME et CLUB_NAME et utilise le mode non-interactif
     ssh pi@"$PI_ADDRESS" "
-        /tmp/neopro-register.sh \
-            '${SITE_NAME}' \
-            '${CLUB_FULL_NAME}' \
-            '${CITY}' \
-            '${REGION}' \
-            '${COUNTRY}' \
-            '${SPORTS}' \
-            '${ADMIN_EMAIL}' \
-            '${ADMIN_PASSWORD}' \
-        | sudo -E node /home/pi/neopro/sync-agent/scripts/register-site.js
-        rm -f /tmp/neopro-register.sh
+        cd /home/pi/neopro/sync-agent
+        export CENTRAL_SERVER_URL='https://neopro-central.onrender.com'
+        export SITE_NAME='${ESCAPED_SITE_NAME}'
+        export CLUB_NAME='${ESCAPED_CLUB_NAME}'
+        export LOCATION_CITY='${CITY}'
+        export LOCATION_REGION='${REGION}'
+        export LOCATION_COUNTRY='${COUNTRY}'
+        export SPORTS='${SPORTS}'
+
+        # Le script attend email et password sur stdin en mode interactif
+        # Mais comme les env vars sont définies, il n'a besoin que des credentials
+        printf '%s\n%s\n' '${ADMIN_EMAIL}' '${ESCAPED_PASSWORD}' | sudo -E node scripts/register-site.js
     "
 
     # Étape 3: Installer le service systemd
@@ -424,12 +430,19 @@ print_summary() {
     echo "  • Mot de passe : ${PASSWORD:0:3}***********"
     echo ""
     echo -e "${BLUE}Accès au boîtier :${NC}"
-    echo "  • WiFi : NEOPRO-$CLUB_NAME"
-    echo "  • URL : http://neopro.local"
-    echo "  • Login : http://neopro.local/login"
-    echo "  • TV : http://neopro.local/tv"
-    echo "  • Remote : http://neopro.local/remote"
-    echo "  • Admin : http://neopro.local:8080"
+    if [ "$WIFI_CONFIGURED" = true ]; then
+        echo "  • WiFi : NEOPRO-$CLUB_NAME"
+    fi
+    echo "  • URL : http://$PI_ADDRESS"
+    echo "  • Login : http://$PI_ADDRESS/login"
+    echo "  • TV : http://$PI_ADDRESS/tv"
+    echo "  • Remote : http://$PI_ADDRESS/remote"
+    echo "  • Admin : http://$PI_ADDRESS:8080"
+    if [ "$WIFI_CONFIGURED" != true ]; then
+        echo ""
+        echo -e "${YELLOW}Note :${NC} Le hotspot WiFi n'est pas actif sur ce Pi."
+        echo "  Accédez au boîtier via l'adresse $PI_ADDRESS sur votre réseau."
+    fi
     echo ""
     echo -e "${BLUE}Serveur central :${NC}"
     echo "  • Dashboard : https://neopro-central.onrender.com"

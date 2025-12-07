@@ -68,10 +68,10 @@ if [ -z "$CLUB_NAME" ]; then
     echo ""
 
     # Lister les configurations existantes
-    CONFIGS=$(ls raspberry/configs/*-configuration.json 2>/dev/null || true)
+    CONFIGS=$(ls raspberry/config/templates/*-configuration.json 2>/dev/null | grep -v TEMPLATE || true)
 
     if [ -z "$CONFIGS" ]; then
-        print_warning "Aucune configuration de club trouvée dans raspberry/configs/"
+        print_warning "Aucune configuration de club trouvée dans raspberry/config/templates/"
         exit 0
     fi
 
@@ -85,7 +85,7 @@ if [ -z "$CLUB_NAME" ]; then
 fi
 
 CLUB_NAME=$(echo "$CLUB_NAME" | tr '[:lower:]' '[:upper:]' | tr -d ' ')
-CONFIG_FILE="raspberry/configs/${CLUB_NAME}-configuration.json"
+CONFIG_FILE="raspberry/config/templates/${CLUB_NAME}-configuration.json"
 
 if [ ! -f "$CONFIG_FILE" ]; then
     print_error "Configuration non trouvée : $CONFIG_FILE"
