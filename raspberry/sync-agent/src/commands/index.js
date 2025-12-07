@@ -18,6 +18,10 @@ const commands = {
     logger.info('Updating configuration', data);
 
     try {
+      if (!data || !data.configuration) {
+        throw new Error('Missing configuration data in update_config command');
+      }
+
       const configPath = config.paths.config;
 
       await fs.writeFile(configPath, JSON.stringify(data.configuration, null, 2));

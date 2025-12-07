@@ -281,7 +281,7 @@ export const getSiteStats = async (req: AuthRequest, res: Response) => {
 export const sendCommand = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { command, data } = req.body;
+    const { command, params: data } = req.body;
 
     if (!command) {
       return res.status(400).json({ error: 'Commande requise' });
