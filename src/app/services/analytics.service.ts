@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Video } from '../interfaces/video.interface';
+import { environment } from '../../environments/environment';
 
 /**
  * Interface pour un événement de lecture vidéo
@@ -17,7 +19,7 @@ export interface VideoPlayEvent {
 
 /**
  * Service d'analytics pour tracker les lectures vidéo
- * Les données sont bufferisées localement et envoyées périodiquement au serveur central via le sync-agent
+ * Les données sont bufferisées localement et envoyées périodiquement au serveur local (sync-agent)
  */
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
@@ -26,12 +28,16 @@ export class AnalyticsService {
   private currentVideoStart: Date | null = null;
   private currentVideo: Video | null = null;
   private currentTriggerType: 'auto' | 'manual' = 'auto';
+  private isSending = false;
 
   private readonly STORAGE_KEY = 'neopro_analytics_buffer';
   private readonly FLUSH_INTERVAL = 5 * 60 * 1000; // 5 minutes
   private readonly MAX_BUFFER_SIZE = 100;
 
-  constructor() {
+  // URL de l'API analytics sur le serveur local (même serveur que Socket.IO)
+  private readonly ANALYTICS_API_URL = environment.socketUrl + '/api/analytics';
+
+  constructor(private http: HttpClient) {
     // Charger le buffer depuis le localStorage au démarrage
     this.loadFromStorage();
 
@@ -203,14 +209,42 @@ export class AnalyticsService {
   }
 
   private flushBuffer(): void {
-    if (this.buffer.length === 0) {
+    if (this.buffer.length === 0 || this.isSending) {
       return;
     }
 
-    // Sauvegarder dans le localStorage pour que le sync-agent puisse le récupérer
+    // Sauvegarder d'abord dans localStorage (backup)
     this.saveToStorage();
 
-    console.log('[Analytics] Buffer flushed to storage:', this.buffer.length, 'events');
+    // Envoyer au serveur local pour que le sync-agent puisse les récupérer
+    this.sendToServer();
+  }
+
+  private sendToServer(): void {
+    if (this.buffer.length === 0 || this.isSending) {
+      return;
+    }
+
+    this.isSending = true;
+    const eventsToSend = [...this.buffer];
+
+    this.http.post<{ success: boolean; received: number; total: number }>(
+      this.ANALYTICS_API_URL,
+      { events: eventsToSend }
+    ).subscribe({
+      next: (response) => {
+        console.log('[Analytics] Sent to server:', response.received, 'events, total buffer:', response.total);
+        // Vider le buffer local après envoi réussi
+        this.buffer = [];
+        this.saveToStorage();
+        this.isSending = false;
+      },
+      error: (error) => {
+        console.error('[Analytics] Failed to send to server:', error.message || error);
+        // Garder les événements dans le buffer pour réessayer plus tard
+        this.isSending = false;
+      }
+    });
   }
 
   private saveToStorage(): void {
