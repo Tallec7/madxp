@@ -226,7 +226,7 @@ print_elapsed_time() {
     local MINUTES=$((ELAPSED / 60))
     local SECONDS=$((ELAPSED % 60))
     echo ""
-    print_info "Durée totale d'installation: ${MINUTES}m ${SECONDS}s"
+    echo -e "${BLUE}Durée totale d'installation: ${MINUTES}m ${SECONDS}s${NC}"
 }
 
 ################################################################################
