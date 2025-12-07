@@ -2,22 +2,39 @@
 
 ## 🎯 Vue d'ensemble
 
-Il y a **2 étapes distinctes** :
+Il y a **2 méthodes** pour installer un nouveau boîtier :
 
-1. **Installation système sur le Raspberry Pi** (une seule fois par Pi)
-   - Configure le système d'exploitation
-   - Install services (nginx, Node.js, etc.)
-   - Configure WiFi hotspot avec SSID NEOPRO-[CLUB]
-   - Configure hostname neopro.local
+### Méthode 1 : Image Golden (RECOMMANDÉE) - 10 min
 
-2. **Configuration du club** (depuis votre Mac/PC)
-   - Crée la configuration du club
-   - Build l'application Angular
-   - Déploie sur le Pi
+Si vous avez une **Image Golden** pré-configurée :
+
+```
+1. Flash image golden (Raspberry Pi Imager)     → 5 min
+2. Premier boot + first-boot-setup.sh           → 1 min
+3. setup-new-club.sh                            → 5 min
+                                        TOTAL : ~10 min
+```
+
+**Guide complet : [GOLDEN_IMAGE.md](GOLDEN_IMAGE.md)**
+
+### Méthode 2 : Installation complète - 45 min
+
+Sans image golden, installation depuis zéro :
+
+```
+1. Flash Raspberry Pi OS Lite                   → 5 min
+2. copy-to-pi.sh + install.sh                   → 30 min
+3. setup-new-club.sh                            → 10 min
+                                        TOTAL : ~45 min
+```
+
+**Cette page décrit la méthode 2.**
 
 ---
 
-## Étape 1 : Installation système (sur le Raspberry Pi)
+## Méthode 2 : Installation complète (sans Image Golden)
+
+### Étape 1 : Installation système (sur le Raspberry Pi)
 
 ### Prérequis
 
@@ -53,13 +70,18 @@ ssh pi@raspberrypi.local
 ### 1.3 Copier les fichiers d'installation
 
 ```bash
-# Depuis votre Mac/PC
+# Depuis votre Mac/PC (méthode recommandée)
 cd /path/to/neopro
+./raspberry/scripts/copy-to-pi.sh raspberrypi.local
+
+# OU méthode manuelle (copie plus de fichiers que nécessaire)
 scp -r raspberry/ pi@raspberrypi.local:~/
 
 # Vérifier
 ssh pi@raspberrypi.local 'ls -la ~/raspberry/'
 ```
+
+**Note :** Le script `copy-to-pi.sh` copie uniquement les fichiers nécessaires à l'installation, excluant les scripts Mac, outils, et fichiers `.DS_Store`.
 
 ### 1.4 Lancer l'installation système
 
@@ -416,7 +438,7 @@ sudo systemctl restart neopro-sync-agent
 
 Une fois que vous avez un Pi installé, vous pouvez :
 
-1. **Cloner la carte SD** pour créer d'autres boîtiers
+1. **Créer une Image Golden** pour accélérer les prochaines installations → [GOLDEN_IMAGE.md](GOLDEN_IMAGE.md)
 2. **Juste changer la config** avec setup-new-club.sh
 3. **Réinstaller** avec un nouveau nom de club
 
@@ -424,4 +446,21 @@ La partie longue (install.sh) n'est à faire qu'une fois par Pi physique.
 
 ---
 
-**Prochaine étape :** [README.md](../README.md) pour l'utilisation quotidienne
+## Scripts disponibles
+
+| Script | Emplacement | Description |
+|--------|-------------|-------------|
+| `copy-to-pi.sh` | `raspberry/scripts/` | Copie intelligente vers Pi |
+| `install.sh` | `raspberry/` | Installation système sur Pi |
+| `setup-new-club.sh` | `raspberry/scripts/` | Configuration club complète |
+| `build-and-deploy.sh` | `raspberry/scripts/` | Mise à jour application |
+| `prepare-golden-image.sh` | `raspberry/tools/` | Prépare Pi pour clonage |
+| `clone-sd-card.sh` | `raspberry/tools/` | Clone carte SD en image |
+| `cleanup-pi.sh` | `raspberry/scripts/` | Nettoie ~/raspberry après install |
+
+---
+
+**Prochaines étapes :**
+- [GOLDEN_IMAGE.md](GOLDEN_IMAGE.md) - Créer une Image Golden
+- [README.md](../README.md) - Utilisation quotidienne
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Dépannage

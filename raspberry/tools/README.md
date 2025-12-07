@@ -6,22 +6,32 @@ Suite d'outils pour le déploiement, la maintenance et le diagnostic des systèm
 
 ## 📦 Outils disponibles
 
-### `prepare-image.sh`
-Prépare un système Neopro pour création d'image réutilisable.
+### `prepare-golden-image.sh` (RECOMMANDÉ)
+Prépare un Raspberry Pi installé pour être cloné en "Image Golden".
+
+```bash
+sudo ./prepare-golden-image.sh
+```
+
+**Utilise pour :** Créer une image master réutilisable pour tous les clubs
+
+**Actions :**
+- Supprime la configuration club (config, vidéos, logs)
+- Réinitialise le WiFi (SSID: NEOPRO-NOUVEAU, Pass: NeoProWiFi2025)
+- Nettoie le sync-agent
+- Supprime les clés SSH (régénérées au boot)
+- Crée `~/first-boot-setup.sh` pour le premier démarrage
+
+⚠️ **IMPORTANT :** Après exécution, éteindre le Pi (ne PAS redémarrer)
+
+---
+
+### `prepare-image.sh` (ancien)
+Ancienne version du script de préparation. Préférer `prepare-golden-image.sh`.
 
 ```bash
 sudo ./prepare-image.sh
 ```
-
-**Utilise pour :** Créer une image master à distribuer aux clubs
-
-**Actions :**
-- Nettoie le système (logs, cache, historique)
-- Généralise la configuration
-- Crée un assistant de première configuration
-- Régénère les clés SSH au prochain boot
-
-⚠️ **IMPORTANT :** Après exécution, éteindre le système (ne PAS redémarrer)
 
 ---
 
@@ -114,32 +124,82 @@ fi
 
 ## 🔄 Workflows
 
-### Créer une image master
+### Process OPTIMAL : Image Golden (10 min par club)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  CRÉATION IMAGE GOLDEN (une seule fois)                         │
+├─────────────────────────────────────────────────────────────────┤
+│  1. Installer un Pi de référence avec install.sh                │
+│  2. Tester avec healthcheck.sh                                  │
+│  3. sudo ./prepare-golden-image.sh                              │
+│  4. Éteindre : sudo shutdown -h now                             │
+│  5. Cloner : sudo ./clone-sd-card.sh neopro-golden-v1.0         │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  NOUVEAU CLUB (5-10 min)                                        │
+├─────────────────────────────────────────────────────────────────┤
+│  1. Flash image golden sur carte SD         (5 min)             │
+│  2. Premier boot : ~/first-boot-setup.sh    (1 min)             │
+│  3. Se connecter au WiFi NEOPRO-NOUVEAU                         │
+│  4. ./raspberry/scripts/setup-new-club.sh   (5 min)             │
+│                                                                 │
+│  TOTAL : ~10 min (vs 45 min sans image golden)                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Créer une image golden
 
 ```bash
-# 1. Installer et configurer
-sudo ../install.sh MASTER MasterPass123
+# 1. Installer et configurer un Pi de référence
+./raspberry/scripts/copy-to-pi.sh raspberrypi.local
+ssh pi@raspberrypi.local
+cd raspberry
+sudo ./install.sh MASTER MasterPass123
 
 # 2. Tester complètement
-../tools/healthcheck.sh
+./healthcheck.sh
 
-# 3. Préparer l'image
-sudo ./prepare-image.sh
+# 3. Préparer l'image golden
+sudo ./tools/prepare-golden-image.sh
 
 # 4. Éteindre (NE PAS redémarrer)
 sudo shutdown -h now
 
-# 5. Créer l'image (depuis une autre machine)
-sudo ./clone-sd-card.sh neopro-master-v1.0
+# 5. Retirer la carte SD, la mettre dans un lecteur sur Mac
+# 6. Créer l'image (depuis Mac)
+sudo ./tools/clone-sd-card.sh neopro-golden-v1.0
 ```
 
-### Installer chez un club
+### Installer chez un club (avec image golden)
 
 ```bash
-# 1. Flash l'image sur carte SD
-# 2. Premier boot → Assistant auto
-# 3. Vérification
-./healthcheck.sh
+# 1. Flash l'image golden sur nouvelle carte SD (Raspberry Pi Imager)
+# 2. Premier boot : exécuter l'assistant
+ssh pi@neopro.local  # Mot de passe par défaut du Pi
+./first-boot-setup.sh
+# → Entrer le nom du club et mot de passe WiFi
+
+# 3. Se connecter au nouveau WiFi NEOPRO-[CLUB]
+# 4. Configurer depuis Mac
+./raspberry/scripts/setup-new-club.sh
+```
+
+### Alternative : Installation sans image golden (45 min)
+
+```bash
+# 1. Flash Raspberry Pi OS Lite
+# 2. Copier les fichiers
+./raspberry/scripts/copy-to-pi.sh raspberrypi.local
+
+# 3. Installer
+ssh pi@raspberrypi.local
+cd raspberry
+sudo ./install.sh MONCLUB MotDePasseWiFi
+
+# 4. Configurer
+./raspberry/scripts/setup-new-club.sh
 ```
 
 ### Maintenance régulière

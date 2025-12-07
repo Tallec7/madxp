@@ -13,12 +13,14 @@
 
 | Situation | Script | Où l'exécuter |
 |-----------|--------|---------------|
+| **Copier fichiers vers Pi** | `raspberry/scripts/copy-to-pi.sh` | Sur Mac |
 | **Nouveau Raspberry Pi** | `raspberry/install.sh` | Sur le Pi |
 | **Nouveau club** | `raspberry/scripts/setup-new-club.sh` | Sur Mac |
 | **Mise à jour** | `npm run deploy:raspberry` | Sur Mac |
 | **Supprimer un club** | `raspberry/scripts/delete-club.sh` | Sur Mac |
 | **Backup un club** | `raspberry/scripts/backup-club.sh` | Sur Mac |
 | **Restaurer un club** | `raspberry/scripts/restore-club.sh` | Sur Mac |
+| **Nettoyage post-install** | `raspberry/scripts/cleanup-pi.sh` | Sur Mac |
 | **Diagnostic** | `raspberry/scripts/diagnose-pi.sh` | Sur le Pi |
 
 ---
@@ -27,13 +29,31 @@
 
 ### 1. Installation d'un NOUVEAU Raspberry Pi (première fois)
 
+#### Étape 0 : Copier les fichiers vers le Pi (depuis Mac)
+
+```bash
+# Copie intelligente (exclut scripts Mac, tools, .DS_Store)
+./raspberry/scripts/copy-to-pi.sh raspberrypi.local
+```
+
+Ce script copie **uniquement** les fichiers nécessaires :
+- `install.sh` - Script d'installation
+- `server/`, `admin/`, `sync-agent/` - Code de l'application
+- `config/systemd/` - Fichiers de configuration
+
+**Fichiers exclus** (restent sur Mac) :
+- `scripts/` - Scripts Mac uniquement
+- `tools/` - Outils SD card
+- `.DS_Store` - Fichiers macOS
+
 #### Étape 1 : Installation système (sur le Pi)
 
 ```bash
-# Se connecter au Pi (via SSH ou clavier/écran)
+# Se connecter au Pi
 ssh pi@raspberrypi.local
 
-# Copier et exécuter le script d'installation
+# Exécuter l'installation
+cd raspberry
 sudo ./install.sh MONCLUB MotDePasseWiFi123
 ```
 
@@ -106,6 +126,7 @@ ssh pi@neopro.local './diagnose-pi.sh'
 | Script | Emplacement | Exécution | Description |
 |--------|-------------|-----------|-------------|
 | `install.sh` | `raspberry/` | Sur Pi | Installation système complète |
+| `copy-to-pi.sh` | `raspberry/scripts/` | Sur Mac | **Copie intelligente vers Pi** (exclut scripts Mac) |
 | `setup-new-club.sh` | `raspberry/scripts/` | Sur Mac | Configuration nouveau club |
 | `delete-club.sh` | `raspberry/scripts/` | Sur Mac | Suppression d'un club |
 | `backup-club.sh` | `raspberry/scripts/` | Sur Mac | Sauvegarde config + vidéos |
@@ -120,6 +141,7 @@ ssh pi@neopro.local './diagnose-pi.sh'
 | `diagnose-pi.sh` | `raspberry/scripts/` | Sur Pi | Diagnostic complet |
 | `fix-hostname.sh` | `raspberry/scripts/` | Sur Pi | Corriger le hostname |
 | `setup-wifi-client.sh` | `raspberry/scripts/` | Sur Pi | Configurer WiFi client (accès internet) |
+| `cleanup-pi.sh` | `raspberry/scripts/` | Sur Mac | **Supprime ~/raspberry après installation**|
 
 ---
 

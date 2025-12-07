@@ -29,18 +29,23 @@
    - Diagnostic complet
 
 4. **[INSTALLATION_COMPLETE.md](INSTALLATION_COMPLETE.md)** - Installation Raspberry Pi
-   - Flash carte SD
+   - Méthode Image Golden (10 min)
+   - Installation complète (45 min)
    - Configuration système
-   - Premier démarrage
+
+5. **[GOLDEN_IMAGE.md](GOLDEN_IMAGE.md)** - Guide Image Golden (NOUVEAU)
+   - Création d'une image pré-configurée
+   - Déploiement rapide de nouveaux boîtiers
+   - Workflow optimal
 
 ### Pour les développeurs
 
-5. **[dev/README.md](dev/README.md)** - Documentation développement
+6. **[dev/README.md](dev/README.md)** - Documentation développement
    - Configuration environnement
    - Conventions de code
    - Tests
 
-6. **[changelog/README.md](changelog/README.md)** - Historique des modifications
+7. **[changelog/README.md](changelog/README.md)** - Historique des modifications
    - Suivi des changements
    - Notes de version
 
@@ -105,7 +110,11 @@ Configuration : `render.yaml` à la racine
 ## 🚀 Par où commencer ?
 
 ### Vous avez un nouveau Raspberry Pi ?
-→ **[INSTALLATION_COMPLETE.md](INSTALLATION_COMPLETE.md)** puis **[README.md](../README.md)** section "1️⃣"
+→ **[GOLDEN_IMAGE.md](GOLDEN_IMAGE.md)** si vous avez une image pré-configurée (10 min)
+→ **[INSTALLATION_COMPLETE.md](INSTALLATION_COMPLETE.md)** pour installation depuis zéro (45 min)
+
+### Vous voulez créer une Image Golden ?
+→ **[GOLDEN_IMAGE.md](GOLDEN_IMAGE.md)** - Guide complet
 
 ### Vous voulez mettre à jour un boîtier ?
 → **[README.md](../README.md)** section "2️⃣ Mettre à jour un boîtier existant"

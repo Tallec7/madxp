@@ -13,3 +13,9 @@ backups/
 # Fichiers temporaires
 *.tmp
 *.bak
+
+# macOS
+.DS_Store
+
+# Node modules (ne doivent pas être copiés)
+node_modules/
