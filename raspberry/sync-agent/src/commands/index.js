@@ -124,6 +124,36 @@ const commands = {
       throw error;
     }
   },
+
+  async get_config() {
+    logger.info('Retrieving site configuration');
+
+    try {
+      const configPath = config.paths.config;
+
+      if (!await fs.pathExists(configPath)) {
+        logger.warn('Configuration file not found', { configPath });
+        return {
+          success: true,
+          configuration: null,
+          message: 'No configuration file found',
+        };
+      }
+
+      const configContent = await fs.readFile(configPath, 'utf8');
+      const configuration = JSON.parse(configContent);
+
+      logger.info('Configuration retrieved successfully');
+
+      return {
+        success: true,
+        configuration,
+      };
+    } catch (error) {
+      logger.error('Failed to retrieve configuration:', error);
+      throw error;
+    }
+  },
 };
 
 module.exports = commands;

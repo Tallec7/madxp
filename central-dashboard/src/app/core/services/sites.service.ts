@@ -94,4 +94,8 @@ export class SitesService {
   getCommandStatus(siteId: string, commandId: string): Observable<any> {
     return this.api.get(`/sites/${siteId}/command/${commandId}`);
   }
+
+  getConfiguration(id: string): Observable<{ success: boolean; commandId?: string; message: string }> {
+    return this.sendCommand(id, 'get_config', {});
+  }
 }

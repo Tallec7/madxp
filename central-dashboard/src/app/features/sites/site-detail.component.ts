@@ -194,21 +194,29 @@ import { Subscription, interval } from 'rxjs';
       <div class="card">
         <div class="card-header-row">
           <h3>Configuration du site</h3>
-          <button class="btn btn-primary" (click)="showConfigEditor = !showConfigEditor" [disabled]="site.status !== 'online'">
+          <button class="btn btn-primary" (click)="toggleConfigEditor()" [disabled]="site.status !== 'online'">
             {{ showConfigEditor ? 'Fermer' : 'Modifier la configuration' }}
           </button>
         </div>
         <div *ngIf="showConfigEditor" class="config-editor">
           <div class="config-warning">
-            Modifiez la configuration JSON du site. Les changements seront appliqués immédiatement.
+            Modifiez la configuration JSON du site. Les changements seront appliques immediatement.
+          </div>
+          <div *ngIf="loadingConfig" class="loading-inline">
+            <div class="spinner-small"></div>
+            <span>Chargement de la configuration...</span>
           </div>
           <textarea
+            *ngIf="!loadingConfig"
             class="config-textarea"
             [(ngModel)]="configJson"
             [placeholder]="configPlaceholder"
             rows="20"
           ></textarea>
-          <div class="config-actions">
+          <div class="config-actions" *ngIf="!loadingConfig">
+            <button class="btn btn-secondary" (click)="loadCurrentConfig()" [disabled]="loadingConfig">
+              Recharger depuis le site
+            </button>
             <button class="btn btn-secondary" (click)="formatConfig()">Formater JSON</button>
             <button class="btn btn-secondary" (click)="validateConfig()">Valider</button>
             <button class="btn btn-primary" (click)="deployConfig()" [disabled]="!isConfigValid || sendingCommand">
@@ -874,6 +882,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   configSuccess = '';
   isConfigValid = false;
   sendingCommand = false;
+  loadingConfig = false;
+  private configCommandId: string | null = null;
+  private configPollSubscription?: Subscription;
 
   configPlaceholder = `{
   "remote": {
@@ -940,6 +951,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.refreshSubscription?.unsubscribe();
+    this.configPollSubscription?.unsubscribe();
   }
 
   loadSite(): void {
@@ -1106,6 +1118,71 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   }
 
   // Configuration editor methods
+  toggleConfigEditor(): void {
+    this.showConfigEditor = !this.showConfigEditor;
+    if (this.showConfigEditor && !this.configJson) {
+      this.loadCurrentConfig();
+    }
+  }
+
+  loadCurrentConfig(): void {
+    this.loadingConfig = true;
+    this.configError = '';
+    this.configSuccess = '';
+    this.configPollSubscription?.unsubscribe();
+
+    this.sitesService.getConfiguration(this.siteId).subscribe({
+      next: (response) => {
+        if (response.commandId) {
+          this.configCommandId = response.commandId;
+          this.pollConfigResult();
+        } else {
+          this.loadingConfig = false;
+          this.configError = 'Erreur: pas de commandId recu';
+        }
+      },
+      error: (error) => {
+        this.loadingConfig = false;
+        this.configError = 'Erreur: ' + (error.error?.error || error.message);
+      }
+    });
+  }
+
+  private pollConfigResult(): void {
+    if (!this.configCommandId) return;
+
+    this.configPollSubscription = interval(1000).subscribe(() => {
+      this.sitesService.getCommandStatus(this.siteId, this.configCommandId!).subscribe({
+        next: (status) => {
+          if (status.status === 'completed') {
+            this.configPollSubscription?.unsubscribe();
+            this.loadingConfig = false;
+
+            if (status.result?.configuration) {
+              this.configJson = JSON.stringify(status.result.configuration, null, 2);
+              this.isConfigValid = true;
+              this.configSuccess = 'Configuration chargee depuis le site';
+            } else if (status.result?.message === 'No configuration file found') {
+              this.configJson = '';
+              this.configError = 'Aucune configuration trouvee sur le site. Creez-en une nouvelle.';
+            } else {
+              this.configError = 'Configuration vide ou invalide';
+            }
+          } else if (status.status === 'failed') {
+            this.configPollSubscription?.unsubscribe();
+            this.loadingConfig = false;
+            this.configError = 'Erreur: ' + (status.error_message || 'Echec de la recuperation');
+          }
+        },
+        error: (error) => {
+          this.configPollSubscription?.unsubscribe();
+          this.loadingConfig = false;
+          this.configError = 'Erreur: ' + (error.error?.error || error.message);
+        }
+      });
+    });
+  }
+
   formatConfig(): void {
     this.configError = '';
     this.configSuccess = '';

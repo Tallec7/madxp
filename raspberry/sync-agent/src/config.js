@@ -55,7 +55,7 @@ const config = {
     maxDownloadSize: parseInt(process.env.MAX_DOWNLOAD_SIZE || '1073741824'),
     allowedCommands: process.env.ALLOWED_COMMANDS
       ? process.env.ALLOWED_COMMANDS.split(',')
-      : ['deploy_video', 'delete_video', 'update_software', 'update_config', 'reboot', 'restart_service', 'get_logs'],
+      : ['deploy_video', 'delete_video', 'update_software', 'update_config', 'reboot', 'restart_service', 'get_logs', 'get_config'],
   },
 };
 
