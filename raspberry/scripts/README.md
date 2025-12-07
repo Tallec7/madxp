@@ -227,9 +227,13 @@ Archive dans `raspberry/backups/CLUB-backup-DATE.tar.gz`
 
 **Ce qu'il fait :**
 1. Supprime l'enregistrement sur le serveur central (optionnel)
-2. Réinitialise le Raspberry Pi (optionnel)
+2. Réinitialise le Raspberry Pi avec 2 options :
+   - **Réinitialisation légère** : supprime config uniquement, garde l'app et les vidéos
+   - **Réinitialisation complète** : supprime TOUT (app Neopro, vidéos, services, config)
 3. Supprime la configuration locale
 4. Supprime la clé SSH connue (optionnel)
+
+**Note :** La réinitialisation complète nécessite de taper "SUPPRIMER" pour confirmer.
 
 ---
 

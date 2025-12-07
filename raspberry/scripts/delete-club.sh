@@ -191,36 +191,90 @@ if [[ $RESET_PI =~ ^[Oo]$ ]]; then
     read -p "Adresse du Raspberry Pi (défaut: neopro.local) : " PI_ADDRESS
     PI_ADDRESS=${PI_ADDRESS:-neopro.local}
 
-    print_warning "Cela va :"
-    echo "  • Arrêter les services neopro"
-    echo "  • Supprimer la configuration du sync-agent"
-    echo "  • Supprimer le fichier configuration.json"
     echo ""
-    read -p "Confirmer la réinitialisation du Pi ? (oui/NON) : " CONFIRM_PI
+    echo "Options de réinitialisation :"
+    echo "  1) Réinitialisation légère (config uniquement)"
+    echo "     → Supprime la configuration, garde l'application et les vidéos"
+    echo "  2) Réinitialisation complète (tout supprimer)"
+    echo "     → Supprime Neopro, les vidéos, et toute la configuration"
+    echo ""
+    read -p "Choix (1/2) : " RESET_CHOICE
 
-    if [ "$CONFIRM_PI" = "oui" ]; then
-        print_info "Connexion au Pi..."
+    if [ "$RESET_CHOICE" = "1" ]; then
+        print_warning "Réinitialisation légère - Cela va :"
+        echo "  • Arrêter les services neopro"
+        echo "  • Supprimer la configuration du sync-agent"
+        echo "  • Supprimer le fichier configuration.json"
+        echo ""
+        read -p "Confirmer ? (oui/NON) : " CONFIRM_PI
 
-        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new pi@"$PI_ADDRESS" "
-            echo '>>> Arrêt des services...'
-            sudo systemctl stop neopro-sync-agent 2>/dev/null || true
-            sudo systemctl disable neopro-sync-agent 2>/dev/null || true
+        if [ "$CONFIRM_PI" = "oui" ]; then
+            print_info "Connexion au Pi..."
 
-            echo '>>> Suppression de la configuration sync-agent...'
-            sudo rm -f /etc/neopro/site.conf 2>/dev/null || true
-            sudo rm -f /home/pi/neopro/sync-agent/.env 2>/dev/null || true
+            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new pi@"$PI_ADDRESS" "
+                echo '>>> Arrêt des services...'
+                sudo systemctl stop neopro-sync-agent 2>/dev/null || true
+                sudo systemctl disable neopro-sync-agent 2>/dev/null || true
 
-            echo '>>> Suppression de configuration.json...'
-            sudo rm -f /home/pi/neopro/webapp/configuration.json 2>/dev/null || true
+                echo '>>> Suppression de la configuration sync-agent...'
+                sudo rm -f /etc/neopro/site.conf 2>/dev/null || true
+                sudo rm -f /home/pi/neopro/sync-agent/.env 2>/dev/null || true
 
-            echo '>>> Nettoyage des logs...'
-            sudo journalctl --rotate 2>/dev/null || true
-            sudo journalctl --vacuum-time=1s 2>/dev/null || true
+                echo '>>> Suppression de configuration.json...'
+                sudo rm -f /home/pi/neopro/webapp/configuration.json 2>/dev/null || true
 
-            echo '✓ Raspberry Pi réinitialisé'
-        " && print_success "Raspberry Pi réinitialisé" || print_error "Échec de la réinitialisation du Pi"
+                echo '>>> Nettoyage des logs...'
+                sudo journalctl --rotate 2>/dev/null || true
+                sudo journalctl --vacuum-time=1s 2>/dev/null || true
+
+                echo '✓ Raspberry Pi réinitialisé (config uniquement)'
+            " && print_success "Raspberry Pi réinitialisé (config)" || print_error "Échec de la réinitialisation du Pi"
+        else
+            print_info "Réinitialisation du Pi annulée"
+        fi
+
+    elif [ "$RESET_CHOICE" = "2" ]; then
+        print_error "ATTENTION : Réinitialisation complète !"
+        print_warning "Cela va TOUT supprimer :"
+        echo "  • Arrêter et supprimer les services neopro"
+        echo "  • Supprimer l'application Neopro (/home/pi/neopro/)"
+        echo "  • Supprimer TOUTES les vidéos téléchargées"
+        echo "  • Supprimer toute la configuration"
+        echo ""
+        read -p "Tapez 'SUPPRIMER' pour confirmer : " CONFIRM_FULL
+
+        if [ "$CONFIRM_FULL" = "SUPPRIMER" ]; then
+            print_info "Connexion au Pi..."
+
+            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new pi@"$PI_ADDRESS" "
+                echo '>>> Arrêt des services...'
+                sudo systemctl stop neopro-sync-agent 2>/dev/null || true
+                sudo systemctl stop neopro-webapp 2>/dev/null || true
+                sudo systemctl disable neopro-sync-agent 2>/dev/null || true
+                sudo systemctl disable neopro-webapp 2>/dev/null || true
+
+                echo '>>> Suppression des fichiers de service...'
+                sudo rm -f /etc/systemd/system/neopro-sync-agent.service 2>/dev/null || true
+                sudo rm -f /etc/systemd/system/neopro-webapp.service 2>/dev/null || true
+                sudo systemctl daemon-reload 2>/dev/null || true
+
+                echo '>>> Suppression de la configuration système...'
+                sudo rm -rf /etc/neopro 2>/dev/null || true
+
+                echo '>>> Suppression de l application Neopro...'
+                sudo rm -rf /home/pi/neopro 2>/dev/null || true
+
+                echo '>>> Nettoyage des logs...'
+                sudo journalctl --rotate 2>/dev/null || true
+                sudo journalctl --vacuum-time=1s 2>/dev/null || true
+
+                echo '✓ Raspberry Pi complètement réinitialisé'
+            " && print_success "Raspberry Pi complètement réinitialisé" || print_error "Échec de la réinitialisation du Pi"
+        else
+            print_info "Réinitialisation complète annulée"
+        fi
     else
-        print_info "Réinitialisation du Pi annulée"
+        print_info "Choix invalide, réinitialisation du Pi ignorée"
     fi
 else
     print_info "Réinitialisation du Pi ignorée"
