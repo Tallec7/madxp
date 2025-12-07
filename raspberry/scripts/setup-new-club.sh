@@ -113,7 +113,7 @@ collect_club_info() {
     fi
 
     # Vérifier si la config existe déjà
-    CONFIG_FILE="raspberry/configs/${CLUB_NAME}-configuration.json"
+    CONFIG_FILE="raspberry/config/templates/${CLUB_NAME}-configuration.json"
     if [ -f "$CONFIG_FILE" ]; then
         print_warning "La configuration pour $CLUB_NAME existe déjà"
         read -p "Voulez-vous la remplacer ? (o/N) : " REPLACE
@@ -211,7 +211,7 @@ create_configuration() {
     print_step "Création du fichier de configuration"
 
     # Copier le template
-    cp raspberry/configs/TEMPLATE-configuration.json "$CONFIG_FILE"
+    cp raspberry/config/templates/TEMPLATE-configuration.json "$CONFIG_FILE"
 
     # Remplacer les placeholders
     # Note: utilisation de sed compatible macOS et Linux

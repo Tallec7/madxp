@@ -55,10 +55,10 @@ Ce script va tout faire automatiquement :
 
 ```bash
 # 1. Modifier la configuration
-nano raspberry/configs/CLUB_NAME-configuration.json
+nano raspberry/config/templates/CLUB_NAME-configuration.json
 
 # 2. Copier dans public/
-cp raspberry/configs/CLUB_NAME-configuration.json public/configuration.json
+cp raspberry/config/templates/CLUB_NAME-configuration.json public/configuration.json
 
 # 3. Builder
 npm run build:raspberry
@@ -128,7 +128,7 @@ sudo systemctl restart neopro-sync
 
 ## 📊 Serveur central
 
-**Dashboard :** https://neopro-central.onrender.com
+**Dashboard :** https://neopro-dashboard.onrender.com
 
 Vous y verrez :
 - 🟢 Liste des sites en ligne
@@ -140,10 +140,12 @@ Vous y verrez :
 
 ## 📚 Documentation complète
 
-Pour plus de détails :
-
-- **[docs/REFERENCE.md](docs/REFERENCE.md)** - Documentation technique complète
-- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Dépannage approfondi
+| Document | Description |
+|----------|-------------|
+| [docs/INDEX.md](docs/INDEX.md) | Index de toute la documentation |
+| [docs/REFERENCE.md](docs/REFERENCE.md) | Documentation technique complète |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Dépannage approfondi |
+| [docs/INSTALLATION_COMPLETE.md](docs/INSTALLATION_COMPLETE.md) | Guide d'installation Raspberry Pi |
 
 ---
 
@@ -151,18 +153,25 @@ Pour plus de détails :
 
 ```
 neopro/
-├── src/                          # Application Angular (webapp)
+├── src/                          # Application Angular (webapp TV/Remote)
+├── public/                       # Assets statiques et configuration
 ├── raspberry/
-│   ├── scripts/
+│   ├── scripts/                  # Scripts de déploiement
 │   │   ├── setup-new-club.sh    # ⭐ Configuration nouveau club
 │   │   ├── build-raspberry.sh   # Build pour Pi
 │   │   └── deploy-remote.sh     # Déploiement SSH
-│   ├── configs/                  # Configurations par club
-│   ├── server/                   # Serveur Node.js (API locale)
+│   ├── config/
+│   │   ├── systemd/             # Services systemd (*.service)
+│   │   └── templates/           # Templates de configuration JSON
+│   ├── server/                   # Serveur Socket.IO local
 │   ├── admin/                    # Interface admin (port 8080)
 │   └── sync-agent/              # Agent de synchronisation central
-├── central-server/               # Serveur central (Render.com)
-└── central-dashboard/            # Dashboard de gestion
+├── central-server/               # API Backend (Render.com + Supabase)
+├── central-dashboard/            # Dashboard admin Angular
+├── server-render/                # Serveur Socket.IO (Render.com)
+├── render.yaml                   # Configuration déploiement Render.com
+├── .env.example                  # Template variables d'environnement
+└── docs/                         # Documentation
 ```
 
 ---
@@ -197,6 +206,16 @@ neopro/
 - Node.js 20+
 - Angular CLI 20.3.3
 
+### Configuration
+
+```bash
+# Copier le fichier d'environnement
+cp .env.example .env
+
+# Modifier avec vos valeurs (Supabase, etc.)
+nano .env
+```
+
 ### Démarrage rapide
 
 ```bash
@@ -222,5 +241,18 @@ npm run deploy:raspberry neopro.local
 
 ---
 
+## 🚀 Déploiement Cloud
+
+| Service | Hébergement | Base de données |
+|---------|-------------|-----------------|
+| Central Server (API) | Render.com | Supabase (PostgreSQL) |
+| Central Dashboard | Render.com (static) | - |
+| Socket Server | Render.com | - |
+
+Configuration : voir `render.yaml`
+
+---
+
 **Version :** 1.0
-**Dernière mise à jour :** 5 décembre 2025
+**Licence :** MIT
+**Dernière mise à jour :** 7 décembre 2025

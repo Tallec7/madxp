@@ -28,42 +28,84 @@
    - Synchronisation
    - Diagnostic complet
 
+4. **[INSTALLATION_COMPLETE.md](INSTALLATION_COMPLETE.md)** - Installation Raspberry Pi
+   - Flash carte SD
+   - Configuration système
+   - Premier démarrage
+
+### Pour les développeurs
+
+5. **[dev/README.md](dev/README.md)** - Documentation développement
+   - Configuration environnement
+   - Conventions de code
+   - Tests
+
+6. **[changelog/README.md](changelog/README.md)** - Historique des modifications
+   - Suivi des changements
+   - Notes de version
+
 ---
 
-## 🗂️ Archive
+## 🏗️ Structure du projet
 
-Les anciens documents sont archivés dans `docs/archive/` pour référence historique :
+```
+neopro/
+├── src/                          # Application Angular (webapp)
+├── public/                       # Assets statiques
+├── raspberry/
+│   ├── scripts/                  # Scripts de déploiement
+│   ├── config/
+│   │   ├── systemd/             # Services systemd
+│   │   └── templates/           # Templates configuration JSON
+│   ├── server/                   # Serveur Socket.IO local
+│   ├── admin/                    # Interface admin
+│   └── sync-agent/              # Agent de synchronisation
+├── central-server/               # API Backend (Render + Supabase)
+├── central-dashboard/            # Dashboard admin Angular
+├── server-render/                # Serveur Socket.IO cloud
+├── docs/
+│   ├── dev/                     # Documentation développement
+│   ├── changelog/               # Historique des modifications
+│   └── *.md                     # Documentation utilisateur
+├── render.yaml                   # Config Render.com
+├── .env.example                  # Variables d'environnement
+├── .prettierrc                   # Config formatage code
+└── LICENSE                       # Licence MIT
+```
 
-- ADMIN_GUIDE.md
-- AUTHENTICATION_GUIDE.md
-- AUTHENTICATION_IMPLEMENTATION.md
-- CENTRAL_FLEET_SETUP.md
-- COMPLETE_SETUP_SUMMARY.md
-- DEPLOY_MANUAL.md
-- DOCUMENTATION_INDEX.md
-- FINAL_UI_COMPLETION.md
-- FLEET_MANAGEMENT_SPECS.md
-- GUIDE-CLUB.md
-- GUIDE-DEMO.md
-- HOW_TO_USE_AUTH.md
-- IMPLEMENTATION_SUMMARY.md
-- QUICK_FIX_500.md
-- QUICK_SETUP.md
-- QUICK_START.md
-- QUICK_START_NEW_CLUB.md
-- RECONFIGURE_GUIDE.md
-- TEST_RESULTS.md
-- TROUBLESHOOTING.md (ancien)
-- UPDATE_GUIDE.md
+---
 
-**Note :** Ces documents contiennent des informations potentiellement utiles mais sont maintenant consolidés dans les 3 documents principaux.
+## 🚀 Déploiement
+
+| Composant | Hébergement | Base de données |
+|-----------|-------------|-----------------|
+| Central Server | Render.com | Supabase (PostgreSQL) |
+| Central Dashboard | Render.com (static) | - |
+| Socket Server | Render.com | - |
+| Raspberry Pi | Local (edge) | - |
+
+Configuration : `render.yaml` à la racine
+
+---
+
+## 📋 Documentation par composant
+
+| Composant | Documentation |
+|-----------|---------------|
+| Application principale | [README.md](../README.md) |
+| Raspberry Pi | [raspberry/README.md](../raspberry/README.md) |
+| Scripts déploiement | [raspberry/scripts/README.md](../raspberry/scripts/README.md) |
+| Templates config | [raspberry/config/templates/README.md](../raspberry/config/templates/README.md) |
+| Central Server | [central-server/README.md](../central-server/README.md) |
+| Central Dashboard | [central-dashboard/README.md](../central-dashboard/README.md) |
+| Socket Server | [server-render/README.md](../server-render/README.md) |
 
 ---
 
 ## 🚀 Par où commencer ?
 
 ### Vous avez un nouveau Raspberry Pi ?
-→ **[README.md](../README.md)** section "1️⃣ Configurer un NOUVEAU club"
+→ **[INSTALLATION_COMPLETE.md](INSTALLATION_COMPLETE.md)** puis **[README.md](../README.md)** section "1️⃣"
 
 ### Vous voulez mettre à jour un boîtier ?
 → **[README.md](../README.md)** section "2️⃣ Mettre à jour un boîtier existant"
@@ -74,6 +116,9 @@ Les anciens documents sont archivés dans `docs/archive/` pour référence histo
 ### Vous voulez comprendre en profondeur ?
 → **[REFERENCE.md](REFERENCE.md)**
 
+### Vous voulez développer ?
+→ Copiez `.env.example` vers `.env` et lancez `./dev-local.sh`
+
 ---
 
-**Dernière mise à jour :** 5 décembre 2025
+**Dernière mise à jour :** 7 décembre 2025

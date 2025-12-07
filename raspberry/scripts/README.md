@@ -273,7 +273,29 @@ ssh pi@neopro.local 'sudo systemctl restart neopro-app nginx'
 
 ---
 
-## 💡 Workflow recommandé
+## 💡 Conseils
+
+### Performances
+
+- Le build prend 1-2 minutes
+- Le déploiement prend 30-60 secondes
+- La configuration du sync-agent prend 1-2 minutes
+
+### Sécurité
+
+- Les scripts ne stockent jamais les mots de passe en clair dans les logs
+- Les configurations avec mots de passe sont dans `.gitignore`
+- Utilisez des mots de passe forts (12+ caractères)
+
+### Organisation
+
+- Créez une configuration par club dans `raspberry/configs/`
+- Documentez les mots de passe dans un gestionnaire sécurisé (hors Git)
+- Gardez un tableau de suivi des clubs déployés
+
+---
+
+## 🔄 Workflow recommandé
 
 ```bash
 # Nouveau club complet

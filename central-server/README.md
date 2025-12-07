@@ -2,7 +2,7 @@
 
 Serveur central de gestion de flotte pour les boîtiers Raspberry Pi NEOPRO.
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Installation locale
 
@@ -12,41 +12,72 @@ npm install
 
 # Copier et configurer les variables d'environnement
 cp .env.example .env
-# Éditer .env avec vos paramètres
-
-# Initialiser la base de données PostgreSQL
-psql -U postgres -d neopro_central -f src/scripts/init-db.sql
+# Éditer .env avec vos paramètres Supabase
 
 # Lancer en développement
 npm run dev
 ```
 
-### Déploiement sur Render.com
+### Configuration Supabase
 
-1. **Créer un compte Render.com** (si pas déjà fait)
-
-2. **Connecter votre repository Git**
-   - Push ce code vers GitHub/GitLab
-   - Connecter le repo à Render
-
-3. **Déployer automatiquement via render.yaml**
-   - Render détectera automatiquement le fichier `render.yaml`
-   - Il créera :
-     - Un Web Service (API + WebSocket)
-     - Une base de données PostgreSQL
-   - Coût : ~$14/mois (Starter plan)
-
-4. **Initialiser la base de données**
+1. Créer un projet sur [supabase.com](https://supabase.com)
+2. Récupérer l'URL de connexion : Project Settings > Database > Connection string > URI
+3. Configurer `.env` :
+   ```
+   DATABASE_URL=postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
+   DATABASE_SSL=true
+   ```
+4. Initialiser les tables :
    ```bash
-   # Se connecter à la DB Render via le Shell
+   # Via Supabase SQL Editor ou psql
    psql $DATABASE_URL -f src/scripts/init-db.sql
    ```
 
-5. **Votre serveur est prêt !**
-   - URL API : `https://neopro-central-server.onrender.com`
-   - WebSocket : `wss://neopro-central-server.onrender.com`
+### Déploiement Render.com
 
-## API Documentation
+Le déploiement est configuré via `render.yaml` à la racine du projet.
+
+1. Connecter votre repository Git à Render
+2. Render détectera automatiquement le fichier `render.yaml`
+3. Configurer manuellement `DATABASE_URL` avec l'URL Supabase dans Environment
+4. Déployer
+
+**URL déployée :** `https://neopro-central-server.onrender.com`
+
+---
+
+## 📂 Structure
+
+```
+central-server/
+├── src/
+│   ├── server.ts              # Point d'entrée
+│   ├── config/
+│   │   ├── database.ts        # Connexion PostgreSQL
+│   │   └── logger.ts          # Winston logging
+│   ├── controllers/           # Logique métier
+│   │   ├── auth.controller.ts
+│   │   ├── sites.controller.ts
+│   │   ├── groups.controller.ts
+│   │   ├── analytics.controller.ts
+│   │   ├── content.controller.ts
+│   │   └── updates.controller.ts
+│   ├── routes/                # Définition routes API
+│   ├── middleware/            # Auth, validation
+│   ├── services/              # Services (Socket.IO)
+│   ├── scripts/               # SQL et scripts admin
+│   │   ├── init-db.sql
+│   │   ├── analytics-tables.sql
+│   │   └── create-admin.ts
+│   └── types/                 # TypeScript definitions
+├── package.json
+├── tsconfig.json
+└── .env.example
+```
+
+---
+
+## 🔌 API Documentation
 
 ### Authentication
 
@@ -71,157 +102,33 @@ Response:
 }
 ```
 
-**GET /api/auth/me**
-Headers: `Authorization: Bearer <token>`
-
 ### Sites
 
-**GET /api/sites**
-- Query params: `status`, `sport`, `region`, `search`
-- Headers: `Authorization: Bearer <token>`
-
-**GET /api/sites/:id**
-
-**GET /api/sites/:id/metrics?hours=24**
-
-**POST /api/sites**
-```json
-{
-  "site_name": "Site Rennes",
-  "club_name": "Rennes FC",
-  "location": {
-    "city": "Rennes",
-    "region": "Bretagne",
-    "country": "France"
-  },
-  "sports": ["football", "futsal"]
-}
-```
-
-**PUT /api/sites/:id**
-
-**DELETE /api/sites/:id** (admin only)
-
-### Site Commands
-
-**POST /api/sites/:id/command**
-Envoyer une commande à distance au site.
-```json
-{
-  "command": "restart_service",
-  "params": {
-    "service": "neopro-app"
-  }
-}
-```
-
-Commandes disponibles :
-- `restart_service` - Redémarre un service (params: `service`)
-- `reboot` - Redémarre le Raspberry Pi
-
-Response:
-```json
-{
-  "success": true,
-  "message": "Commande envoyée avec succès"
-}
-```
-
-**GET /api/sites/:id/logs?lines=100**
-Récupère les logs du site.
-
-Response:
-```json
-{
-  "logs": [
-    "2025-12-06 10:00:00 - Service started",
-    "2025-12-06 10:00:01 - Connected to central server",
-    ...
-  ]
-}
-```
-
-**GET /api/sites/:id/system-info**
-Récupère les informations système du site.
-
-Response:
-```json
-{
-  "hostname": "neopro-rennes",
-  "os": "Raspbian GNU/Linux 11 (bullseye)",
-  "kernel": "5.15.84-v8+",
-  "architecture": "aarch64",
-  "cpu_model": "Cortex-A72",
-  "cpu_cores": 4,
-  "total_memory": 4294967296,
-  "ip_address": "192.168.1.100",
-  "mac_address": "dc:a6:32:xx:xx:xx"
-}
-```
-
-**POST /api/sites/:id/regenerate-key**
-Régénère la clé API du site.
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | /api/sites | Liste des sites |
+| GET | /api/sites/:id | Détail d'un site |
+| GET | /api/sites/:id/metrics | Métriques du site |
+| POST | /api/sites | Créer un site |
+| PUT | /api/sites/:id | Modifier un site |
+| DELETE | /api/sites/:id | Supprimer (admin) |
+| POST | /api/sites/:id/command | Envoyer une commande |
+| GET | /api/sites/:id/logs | Récupérer les logs |
 
 ### Groups
 
-**GET /api/groups**
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | /api/groups | Liste des groupes |
+| GET | /api/groups/:id | Détail d'un groupe |
+| POST | /api/groups | Créer un groupe |
+| PUT | /api/groups/:id | Modifier un groupe |
+| DELETE | /api/groups/:id | Supprimer |
+| POST | /api/groups/:id/command | Commande groupée |
 
-**GET /api/groups/:id**
+---
 
-**GET /api/groups/:id/sites**
-
-**POST /api/groups**
-```json
-{
-  "name": "Clubs Bretagne",
-  "description": "Tous les clubs en Bretagne",
-  "type": "geography",
-  "filters": {
-    "region": "Bretagne"
-  }
-}
-```
-
-**PUT /api/groups/:id**
-
-**DELETE /api/groups/:id**
-
-**POST /api/groups/:id/sites**
-```json
-{
-  "site_ids": ["uuid1", "uuid2", "uuid3"]
-}
-```
-
-**DELETE /api/groups/:id/sites/:siteId**
-
-### Group Commands
-
-**POST /api/groups/:id/command**
-Envoyer une commande à tous les sites du groupe.
-```json
-{
-  "command": "restart_service",
-  "params": {
-    "service": "neopro-app"
-  }
-}
-```
-
-Response:
-```json
-{
-  "success": true,
-  "message": "Commande envoyée à 5 sites",
-  "results": [
-    { "site_id": "uuid1", "success": true, "message": "OK" },
-    { "site_id": "uuid2", "success": true, "message": "OK" },
-    { "site_id": "uuid3", "success": false, "message": "Site offline" }
-  ]
-}
-```
-
-## WebSocket Protocol
+## 🔌 WebSocket Protocol
 
 ### Agent Connection (Raspberry Pi)
 
@@ -250,30 +157,14 @@ socket.emit('heartbeat', {
     cpu: 45.2,
     memory: 62.1,
     temperature: 52.3,
-    disk: 78.5,
-    uptime: 3600000
+    disk: 78.5
   }
 });
 ```
 
-### Commands from Central Server
+---
 
-```javascript
-socket.on('command', (cmd) => {
-  // cmd = { id, type, data }
-
-  // Execute command...
-
-  // Send result
-  socket.emit('command_result', {
-    commandId: cmd.id,
-    status: 'success',
-    result: { ... }
-  });
-});
-```
-
-## Database Schema
+## 🗄️ Database Schema
 
 Voir `src/scripts/init-db.sql` pour le schéma complet.
 
@@ -281,25 +172,23 @@ Tables principales :
 - `users` - Utilisateurs équipe NEOPRO
 - `sites` - Boîtiers Raspberry Pi
 - `groups` - Groupes de sites
-- `site_groups` - Association sites - groupes
-- `videos` - Vidéos centralisées
-- `content_deployments` - Déploiements de contenu
-- `software_updates` - Mises à jour logicielles
-- `update_deployments` - Déploiements de MAJ
-- `remote_commands` - Commandes à distance
 - `metrics` - Historique métriques
 - `alerts` - Alertes actives
 
-## Sécurité
+---
+
+## 🔐 Sécurité
 
 - **JWT** : Tokens avec expiration 8h
 - **API Keys** : Clé unique par site (32 bytes hex)
 - **Rate Limiting** : 100 req/15min en production
 - **CORS** : Origines configurables via env
 - **Helmet** : Headers de sécurité HTTP
-- **PostgreSQL SSL** : Forcé en production
+- **SSL** : Connexion Supabase chiffrée
 
-## Monitoring
+---
+
+## 📊 Health Check
 
 **GET /health**
 ```json
@@ -307,53 +196,43 @@ Tables principales :
   "status": "healthy",
   "database": "connected",
   "uptime": 3600,
-  "memory": { ... },
   "connectedSites": 8
 }
 ```
 
-## Scripts disponibles
+---
+
+## 🛠️ Scripts disponibles
 
 ```bash
 npm run dev          # Développement avec hot-reload
 npm run build        # Build TypeScript -> JavaScript
 npm start            # Production
 npm run lint         # ESLint
-npm run format       # Prettier
-npm test             # Jest (à implémenter)
 ```
-
-## Variables d'environnement
-
-Voir `.env.example` pour la liste complète.
-
-Variables critiques :
-- `DATABASE_URL` - PostgreSQL connection string
-- `JWT_SECRET` - Secret pour tokens JWT (généré auto sur Render)
-- `ALLOWED_ORIGINS` - Origines CORS autorisées
-
-## Logs
-
-- Development : Console colorée
-- Production : Fichiers `logs/error.log` et `logs/combined.log`
-
-## Alertes
-
-Seuils par défaut :
-- Température > 75°C : Warning
-- Température > 80°C : Critical
-- Disque > 90% : Warning
-- Disque > 95% : Critical
-- Mémoire > 90% : Warning
-
-## Support
-
-Pour toute question, contacter l'équipe NEOPRO.
 
 ---
 
-**Compte admin par défaut :**
+## ⚙️ Variables d'environnement
+
+| Variable | Description | Exemple |
+|----------|-------------|---------|
+| NODE_ENV | Environnement | production |
+| PORT | Port serveur | 3001 |
+| DATABASE_URL | URL Supabase | postgresql://... |
+| DATABASE_SSL | SSL activé | true |
+| JWT_SECRET | Secret JWT | (généré) |
+| ALLOWED_ORIGINS | CORS origins | https://... |
+
+---
+
+## ⚠️ Compte admin par défaut
+
 - Email : `admin@neopro.fr`
 - Password : `admin123`
 
 **CHANGEZ LE MOT DE PASSE EN PRODUCTION !**
+
+---
+
+**Dernière mise à jour :** 7 décembre 2025

@@ -1,4 +1,4 @@
-# Raspberry Pi Neopro
+# Raspberry Pi - Composants Neopro
 
 ## 📋 Commandes essentielles
 
@@ -13,6 +13,69 @@
 
 ---
 
+## 📂 Structure
+
+```
+raspberry/
+├── scripts/                  # Scripts de déploiement
+│   ├── setup-new-club.sh    # ⭐ Configuration nouveau club
+│   ├── delete-club.sh       # Suppression d'un club
+│   ├── backup-club.sh       # Sauvegarde d'un club
+│   ├── restore-club.sh      # Restauration d'un club
+│   ├── build-raspberry.sh   # Build Angular pour Pi
+│   ├── deploy-remote.sh     # Déploiement SSH
+│   ├── diagnose-pi.sh       # Diagnostic complet
+│   └── README.md            # Documentation scripts
+│
+├── config/
+│   ├── systemd/             # Services systemd
+│   │   ├── neopro-app.service
+│   │   ├── neopro-admin.service
+│   │   ├── neopro-kiosk.service
+│   │   ├── dnsmasq.conf
+│   │   └── hostapd.conf
+│   └── templates/           # Templates configuration
+│       ├── TEMPLATE-configuration.json
+│       └── README.md
+│
+├── server/                   # Serveur Socket.IO local
+│   ├── server.js
+│   └── package.json
+│
+├── admin/                    # Interface admin (port 8080)
+│   ├── admin-server.js
+│   ├── admin-server-demo.js
+│   └── public/
+│
+├── sync-agent/              # Agent de synchronisation central
+│   ├── src/
+│   │   ├── agent.js
+│   │   ├── analytics.js
+│   │   ├── config.js
+│   │   └── commands/
+│   ├── scripts/
+│   │   ├── register-site.js
+│   │   ├── install-service.js
+│   │   └── diagnose.js
+│   └── README.md
+│
+├── monitoring/              # Monitoring (optionnel)
+│   ├── client/
+│   └── server/
+│
+├── tools/                   # Outils SD card
+│   ├── clone-sd-card.sh
+│   ├── prepare-image.sh
+│   └── recovery.sh
+│
+├── configs/                 # Configurations des clubs (généré)
+├── deploy/                  # Fichiers de déploiement (généré)
+│
+└── install.sh               # Installation système initiale
+```
+
+---
+
 ## 🚀 Guide rapide
 
 ### Mettre à jour un boîtier existant
@@ -21,15 +84,11 @@
 npm run deploy:raspberry
 ```
 
-C'est tout ! Cette commande build et déploie automatiquement.
-
 ### Configurer un nouveau club
 
 ```bash
 ./raspberry/scripts/setup-new-club.sh
 ```
-
-Script interactif qui guide toute la configuration.
 
 ### Installer un nouveau Raspberry Pi
 
@@ -38,28 +97,47 @@ Script interactif qui guide toute la configuration.
 
 ---
 
-## 📂 Structure
+## 📋 Documentation détaillée
 
-```
-raspberry/
-├── install.sh              # Installation système (sur Pi)
-├── scripts/
-│   ├── README.md           # Documentation complète des scripts
-│   ├── setup-new-club.sh   # Configuration nouveau club (sur Mac)
-│   ├── delete-club.sh      # Suppression d'un club (sur Mac)
-│   ├── backup-club.sh      # Sauvegarde d'un club (sur Mac)
-│   ├── restore-club.sh     # Restauration d'un club (sur Mac)
-│   ├── build-raspberry.sh  # Build Angular (sur Mac)
-│   ├── deploy-remote.sh    # Déploiement SSH (sur Mac)
-│   ├── diagnose-pi.sh      # Diagnostic (sur Pi)
-│   └── ...
-├── configs/                # Configurations des clubs
-├── deploy/                 # Fichiers de déploiement (généré)
-└── sync-agent/             # Agent de synchronisation
+| Document | Description |
+|----------|-------------|
+| [scripts/README.md](scripts/README.md) | Guide des scripts de déploiement |
+| [config/templates/README.md](config/templates/README.md) | Guide des templates de configuration |
+| [sync-agent/README.md](sync-agent/README.md) | Documentation sync-agent |
+| [admin/README.md](admin/README.md) | Documentation interface admin |
+| [server/README.md](server/README.md) | Documentation serveur Socket.IO |
+
+---
+
+## 🔧 Services systemd
+
+| Service | Port | Description |
+|---------|------|-------------|
+| neopro-app | 3000 | Serveur Socket.IO |
+| neopro-admin | 8080 | Interface admin |
+| neopro-kiosk | - | Mode kiosk Chromium |
+| neopro-sync | - | Agent synchronisation |
+
+### Commandes utiles
+```bash
+# Status
+sudo systemctl status neopro-app
+
+# Logs
+sudo journalctl -u neopro-app -f
+
+# Redémarrer
+sudo systemctl restart neopro-app
 ```
 
 ---
 
-## 📚 Documentation détaillée
+## 📚 Documentation principale
 
-**[scripts/README.md](scripts/README.md)** - Documentation complète de tous les scripts
+→ **[README.md principal](../README.md)** - Point d'entrée documentation
+→ **[docs/INSTALLATION_COMPLETE.md](../docs/INSTALLATION_COMPLETE.md)** - Installation Raspberry Pi
+→ **[docs/TROUBLESHOOTING.md](../docs/TROUBLESHOOTING.md)** - Dépannage
+
+---
+
+**Dernière mise à jour :** 7 décembre 2025

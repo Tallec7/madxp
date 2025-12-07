@@ -46,7 +46,7 @@ Modifier :
 # Depuis la racine du projet
 
 # 1. Copier la config du club dans public/
-cp raspberry/configs/CESSON-configuration.json public/configuration.json
+cp raspberry/config/templates/CESSON-configuration.json public/configuration.json
 
 # 2. Build et déploiement
 npm run build:raspberry
