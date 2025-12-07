@@ -5,7 +5,7 @@
 #
 # Ce script :
 # 1. Supprime l'enregistrement du site sur le serveur central
-# 2. Supprime la configuration locale (raspberry/configs/)
+# 2. Supprime la configuration locale (raspberry/config/templates/)
 # 3. Optionnellement, réinitialise le Raspberry Pi
 #
 # Usage: ./delete-club.sh [NOM_CLUB]

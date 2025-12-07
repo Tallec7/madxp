@@ -248,50 +248,54 @@ create_configuration() {
 }
 
 ################################################################################
-# Étape 3 : Build de l'application
+# Étape 3 : Adresse du Raspberry Pi
 ################################################################################
 
-build_application() {
-    print_step "Build de l'application Angular"
-
-    # Copier la configuration dans public/
-    cp "$CONFIG_FILE" public/configuration.json
-    print_success "Configuration copiée dans public/"
-
-    # Build
-    print_info "Lancement du build (cela peut prendre quelques minutes)..."
-    npm run build:raspberry
-
-    if [ $? -eq 0 ]; then
-        print_success "Build terminé avec succès"
-    else
-        print_error "Échec du build"
-        exit 1
-    fi
-}
-
-################################################################################
-# Étape 4 : Déploiement sur le Raspberry Pi
-################################################################################
-
-deploy_to_pi() {
-    print_step "Déploiement sur le Raspberry Pi"
+get_pi_address() {
+    print_step "Configuration de la connexion au Raspberry Pi"
+    echo ""
 
     # Demander l'adresse du Pi
     read -p "Adresse du Raspberry Pi (défaut: neopro.local) : " PI_ADDRESS
     PI_ADDRESS=${PI_ADDRESS:-neopro.local}
 
-    print_info "Déploiement vers $PI_ADDRESS..."
-    print_warning "⚠️  Vous allez devoir entrer le mot de passe SSH du Raspberry Pi"
+    # Tester la connexion
+    print_info "Test de connexion vers $PI_ADDRESS..."
+
+    # Vérifier/réinitialiser la clé SSH si nécessaire
+    if ! check_ssh_connection "$PI_ADDRESS"; then
+        print_error "Impossible de se connecter au Raspberry Pi"
+        exit 1
+    fi
+
+    # Test de ping
+    if ping -c 1 -W 5 "$PI_ADDRESS" >/dev/null 2>&1; then
+        print_success "Raspberry Pi accessible"
+    else
+        print_warning "Ping échoué, mais on continue (le Pi peut bloquer ICMP)"
+    fi
+}
+
+################################################################################
+# Étape 4 : Build et déploiement (réutilise build-and-deploy.sh)
+################################################################################
+
+build_and_deploy() {
+    print_step "Build et déploiement de l'application"
+
+    # Copier la configuration dans public/
+    cp "$CONFIG_FILE" public/configuration.json
+    print_success "Configuration copiée dans public/"
+
+    # Utiliser le script build-and-deploy.sh existant
+    print_info "Lancement du build et déploiement (cela peut prendre quelques minutes)..."
+    print_warning "⚠️  Vous allez peut-être devoir entrer le mot de passe SSH du Raspberry Pi"
     echo ""
 
-    # Déploiement
-    npm run deploy:raspberry $PI_ADDRESS
-
-    if [ $? -eq 0 ]; then
-        print_success "Déploiement terminé"
+    if ./raspberry/scripts/build-and-deploy.sh "$PI_ADDRESS"; then
+        print_success "Build et déploiement terminés avec succès"
     else
-        print_error "Échec du déploiement"
+        print_error "Échec du build ou déploiement"
         exit 1
     fi
 
@@ -320,7 +324,34 @@ deploy_to_pi() {
 }
 
 ################################################################################
-# Étape 5 : Configuration du sync-agent
+# Étape 5 : Configuration du hotspot WiFi
+################################################################################
+
+configure_wifi_hotspot() {
+    print_step "Configuration du hotspot WiFi"
+
+    # Vérifier si hostapd est installé
+    if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new pi@"$PI_ADDRESS" "systemctl is-active hostapd >/dev/null 2>&1"; then
+        print_info "Mise à jour du SSID WiFi vers NEOPRO-$CLUB_NAME..."
+        if ssh pi@"$PI_ADDRESS" "
+            sudo sed -i 's/^ssid=.*/ssid=NEOPRO-$CLUB_NAME/' /etc/hostapd/hostapd.conf
+            sudo systemctl restart hostapd
+        "; then
+            print_success "Hotspot WiFi configuré : NEOPRO-$CLUB_NAME"
+            WIFI_CONFIGURED=true
+        else
+            print_warning "Échec de la configuration du hotspot"
+            WIFI_CONFIGURED=false
+        fi
+    else
+        print_warning "hostapd n'est pas actif sur ce Pi"
+        print_info "Le hotspot WiFi NEOPRO-$CLUB_NAME ne sera pas disponible"
+        WIFI_CONFIGURED=false
+    fi
+}
+
+################################################################################
+# Étape 6 : Configuration du sync-agent
 ################################################################################
 
 setup_sync_agent() {
@@ -365,16 +396,18 @@ setup_sync_agent() {
     # Étape 2: Enregistrer le site sur le serveur central
     print_info "Enregistrement du site sur le serveur central..."
 
-    # Échapper les caractères spéciaux pour le shell
-    ESCAPED_PASSWORD=$(printf '%s' "$ADMIN_PASSWORD" | sed "s/'/'\\\\''/g")
+    # Échapper les caractères spéciaux pour le shell (simple quotes)
+    ESCAPED_ADMIN_PASSWORD=$(printf '%s' "$ADMIN_PASSWORD" | sed "s/'/'\\\\''/g")
     ESCAPED_SITE_NAME=$(printf '%s' "$SITE_NAME" | sed "s/'/'\\\\''/g")
     ESCAPED_CLUB_NAME=$(printf '%s' "$CLUB_FULL_NAME" | sed "s/'/'\\\\''/g")
 
-    # Exécuter register-site.js avec les variables d'environnement
-    # Le script détecte SITE_NAME et CLUB_NAME et utilise le mode non-interactif
+    # Exécuter register-site.js avec toutes les variables d'environnement
+    # Y compris ADMIN_EMAIL et ADMIN_PASSWORD pour éviter les prompts interactifs
     ssh pi@"$PI_ADDRESS" "
         cd /home/pi/neopro/sync-agent
         export CENTRAL_SERVER_URL='https://neopro-central.onrender.com'
+        export ADMIN_EMAIL='${ADMIN_EMAIL}'
+        export ADMIN_PASSWORD='${ESCAPED_ADMIN_PASSWORD}'
         export SITE_NAME='${ESCAPED_SITE_NAME}'
         export CLUB_NAME='${ESCAPED_CLUB_NAME}'
         export LOCATION_CITY='${CITY}'
@@ -382,9 +415,7 @@ setup_sync_agent() {
         export LOCATION_COUNTRY='${COUNTRY}'
         export SPORTS='${SPORTS}'
 
-        # Le script attend email et password sur stdin en mode interactif
-        # Mais comme les env vars sont définies, il n'a besoin que des credentials
-        printf '%s\n%s\n' '${ADMIN_EMAIL}' '${ESCAPED_PASSWORD}' | sudo -E node scripts/register-site.js
+        sudo -E node scripts/register-site.js
     "
 
     # Étape 3: Installer le service systemd
@@ -409,7 +440,7 @@ setup_sync_agent() {
 }
 
 ################################################################################
-# Étape 6 : Résumé final
+# Étape 7 : Résumé final
 ################################################################################
 
 print_summary() {
@@ -473,17 +504,26 @@ main() {
         exit 1
     fi
 
+    # Vérifier que les scripts requis existent
+    if [ ! -f "raspberry/scripts/build-and-deploy.sh" ]; then
+        print_error "Script raspberry/scripts/build-and-deploy.sh non trouvé"
+        exit 1
+    fi
+
     # Collecter les informations
     collect_club_info
 
     # Créer la configuration
     create_configuration
 
-    # Build
-    build_application
+    # Demander l'adresse du Pi
+    get_pi_address
 
-    # Déploiement
-    deploy_to_pi
+    # Build et déploiement (utilise build-and-deploy.sh)
+    build_and_deploy
+
+    # Configuration WiFi hotspot
+    configure_wifi_hotspot
 
     # Sync-agent
     setup_sync_agent

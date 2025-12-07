@@ -189,6 +189,12 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     sudo systemctl restart nginx
     sleep 1
 
+    # Redémarrer sync-agent si installé
+    if systemctl list-unit-files neopro-sync-agent.service >/dev/null 2>&1; then
+        sudo systemctl restart neopro-sync-agent
+        sleep 1
+    fi
+
     # Vérification des services
     if systemctl is-active --quiet neopro-app; then
         echo '✓ Service neopro-app: OK'
@@ -202,6 +208,15 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     else
         echo '✗ Service nginx: ERREUR'
         exit 1
+    fi
+
+    # Vérifier sync-agent si installé
+    if systemctl list-unit-files neopro-sync-agent.service >/dev/null 2>&1; then
+        if systemctl is-active --quiet neopro-sync-agent; then
+            echo '✓ Service neopro-sync-agent: OK'
+        else
+            echo '⚠ Service neopro-sync-agent: NON ACTIF (peut être normal si non configuré)'
+        fi
     fi
 "
 print_success "Services redémarrés"

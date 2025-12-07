@@ -27,6 +27,8 @@ NODE_VERSION="18"
 WIFI_INTERFACE=""
 WIFI_CHANNEL="6"
 STATIC_IP="192.168.4.1/24"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+START_TIME=$(date +%s)
 
 ################################################################################
 # Fonctions utilitaires
@@ -168,6 +170,63 @@ nameserver 1.1.1.1
 nameserver 8.8.8.8
 EOF
     fi
+}
+
+check_prerequisites() {
+    print_step "Vérification des prérequis..."
+
+    local ERRORS=0
+
+    # Vérifier qu'on est sur un Raspberry Pi ou système compatible
+    if [ ! -f /proc/device-tree/model ] && [ "$(uname -m)" != "aarch64" ] && [ "$(uname -m)" != "armv7l" ]; then
+        print_warning "Ce système ne semble pas être un Raspberry Pi (architecture: $(uname -m))"
+    fi
+
+    # Vérifier les fichiers de configuration requis
+    local REQUIRED_FILES=(
+        "./config/hostapd.conf"
+        "./config/dnsmasq.conf"
+        "./config/neopro.service"
+        "./config/neopro-app.service"
+        "./config/neopro-admin.service"
+        "./server"
+        "./admin"
+    )
+
+    for file in "${REQUIRED_FILES[@]}"; do
+        if [ ! -e "$file" ]; then
+            print_error "Fichier requis manquant: $file"
+            ERRORS=$((ERRORS + 1))
+        fi
+    done
+
+    # Vérifier la connexion Internet
+    if ! ping -c 1 -W 5 8.8.8.8 >/dev/null 2>&1; then
+        print_error "Pas de connexion Internet (requis pour les installations)"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # Vérifier l'espace disque (minimum 2GB libre)
+    local FREE_SPACE=$(df / | tail -1 | awk '{print $4}')
+    if [ "$FREE_SPACE" -lt 2097152 ]; then
+        print_warning "Espace disque faible: $(( FREE_SPACE / 1024 ))MB libre (recommandé: 2GB+)"
+    fi
+
+    if [ $ERRORS -gt 0 ]; then
+        print_error "$ERRORS erreur(s) détectée(s). Veuillez corriger avant de continuer."
+        exit 1
+    fi
+
+    print_success "Tous les prérequis sont satisfaits"
+}
+
+print_elapsed_time() {
+    local END_TIME=$(date +%s)
+    local ELAPSED=$((END_TIME - START_TIME))
+    local MINUTES=$((ELAPSED / 60))
+    local SECONDS=$((ELAPSED % 60))
+    echo ""
+    print_info "Durée totale d'installation: ${MINUTES}m ${SECONDS}s"
 }
 
 ################################################################################
@@ -339,7 +398,7 @@ install_app() {
     print_step "Installation de l'application Neopro..."
 
     # Création du répertoire
-    mkdir -p ${INSTALL_DIR}/{server,webapp,admin,videos,logs,backups}
+    mkdir -p ${INSTALL_DIR}/{server,webapp,admin,sync-agent,videos,logs,backups}
 
     # Copie du serveur Node.js
     cp -r ./server/* ${INSTALL_DIR}/server/
@@ -356,6 +415,17 @@ install_app() {
     cd ${INSTALL_DIR}/admin
     npm install --production
     cd -
+
+    # Copie du sync-agent
+    if [ -d "./sync-agent" ]; then
+        cp -r ./sync-agent/* ${INSTALL_DIR}/sync-agent/
+        cd ${INSTALL_DIR}/sync-agent
+        npm install --production
+        cd -
+        print_success "Sync-agent installé"
+    else
+        print_warning "Dossier sync-agent non trouvé - sync-agent non installé"
+    fi
 
     # Note: Le build Angular doit être copié séparément
     print_warning "N'oubliez pas de copier le build Angular dans ${INSTALL_DIR}/webapp/"
@@ -428,22 +498,44 @@ EOF
 configure_services() {
     print_step "Configuration des services de démarrage automatique..."
 
+    # Trouver le répertoire des fichiers de service
+    local SERVICE_DIR="./config/systemd"
+    if [ ! -d "$SERVICE_DIR" ]; then
+        SERVICE_DIR="./config"
+    fi
+
     # Service application
-    cp ./config/neopro-app.service /etc/systemd/system/
+    if [ -f "${SERVICE_DIR}/neopro-app.service" ]; then
+        cp "${SERVICE_DIR}/neopro-app.service" /etc/systemd/system/
+        systemctl enable neopro-app.service
+        print_success "Service neopro-app configuré"
+    else
+        print_warning "Fichier neopro-app.service non trouvé"
+    fi
 
     # Service admin
-    cp ./config/neopro-admin.service /etc/systemd/system/
+    if [ -f "${SERVICE_DIR}/neopro-admin.service" ]; then
+        cp "${SERVICE_DIR}/neopro-admin.service" /etc/systemd/system/
+        systemctl enable neopro-admin.service
+        print_success "Service neopro-admin configuré"
+    fi
 
     # Service kiosque (mode TV)
-    cp ./config/neopro-kiosk.service /etc/systemd/system/
+    if [ -f "${SERVICE_DIR}/neopro-kiosk.service" ]; then
+        cp "${SERVICE_DIR}/neopro-kiosk.service" /etc/systemd/system/
+        systemctl enable neopro-kiosk.service
+        print_success "Service neopro-kiosk configuré"
+    fi
+
+    # Service sync-agent
+    if [ -f "${SERVICE_DIR}/neopro-sync-agent.service" ]; then
+        cp "${SERVICE_DIR}/neopro-sync-agent.service" /etc/systemd/system/
+        systemctl enable neopro-sync-agent.service
+        print_success "Service neopro-sync-agent configuré"
+    fi
 
     # Rechargement systemd
     systemctl daemon-reload
-
-    # Activation des services
-    systemctl enable neopro-app.service
-    systemctl enable neopro-admin.service
-    systemctl enable neopro-kiosk.service
 
     print_success "Services configurés pour démarrage automatique"
 }
@@ -554,6 +646,9 @@ main() {
     print_header
     check_root
 
+    # Se placer dans le répertoire du script
+    cd "$SCRIPT_DIR"
+
     echo -e "${YELLOW}Cette installation va configurer ce Raspberry Pi comme système Neopro.${NC}"
     echo -e "${YELLOW}Durée estimée: 15-20 minutes${NC}"
     echo ""
@@ -564,6 +659,7 @@ main() {
         exit 1
     fi
 
+    check_prerequisites
     validate_inputs
     update_system
     install_dependencies
@@ -578,6 +674,7 @@ main() {
     configure_gui
     configure_ssh
     finalize
+    print_elapsed_time
     print_summary
 
     echo -e "${GREEN}Installation terminée!${NC}"

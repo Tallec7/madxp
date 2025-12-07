@@ -77,13 +77,15 @@ sudo ./install.sh NANTES VotreMotDePasseWiFi123
 ```
 
 **Ce que fait install.sh :**
+- ✅ Vérifie les prérequis (connexion Internet, espace disque, fichiers requis)
 - ✅ Met à jour le système
 - ✅ Installe Node.js, nginx, hostapd, dnsmasq
 - ✅ Configure le hostname → `neopro.local`
 - ✅ Configure le WiFi hotspot → `NEOPRO-NANTES`
-- ✅ Configure les services systemd
+- ✅ Installe l'application (server, admin, **sync-agent**)
+- ✅ Configure les services systemd (neopro-app, neopro-admin, neopro-sync-agent)
 - ✅ Configure nginx
-- ✅ Redémarre le Pi
+- ✅ Affiche la durée totale d'installation
 
 ### 1.5 Vérification
 
@@ -161,11 +163,13 @@ cd /path/to/neopro
 - Adresse du Pi (neopro.local)
 
 **Ce que fait le script :**
-- ✅ Crée la configuration dans `raspberry/configs/NANTES-configuration.json`
-- ✅ Build l'application Angular avec cette config
-- ✅ Déploie sur le Pi via SSH
+- ✅ Crée la configuration dans `raspberry/config/templates/NANTES-configuration.json`
+- ✅ Teste la connexion SSH au Pi (avec réinitialisation de clé si nécessaire)
+- ✅ Build l'application Angular (réutilise `build-and-deploy.sh`)
+- ✅ Déploie sur le Pi via SSH avec backup automatique
+- ✅ Configure le hotspot WiFi (SSID `NEOPRO-NANTES`)
 - ✅ Configure le sync-agent pour le serveur central
-- ✅ Affiche un résumé complet
+- ✅ Affiche un résumé complet avec durée d'exécution
 
 **⚠️ Note SSH :** Le script va demander le mot de passe SSH plusieurs fois pendant le déploiement (sauf si vous avez configuré une clé SSH à l'étape 2.2).
 
@@ -227,6 +231,28 @@ sudo ./install.sh NOUVEAU_CLUB NouveauMotDePasseWiFi
 # Le script peut redéployer sur un Pi existant
 ```
 
+### Mise à jour de l'application (sans changer de club)
+
+Pour mettre à jour l'application sans reconfigurer le club :
+
+```bash
+# Depuis votre Mac/PC (à la racine du projet)
+./raspberry/scripts/build-and-deploy.sh
+
+# Ou vers une adresse spécifique
+./raspberry/scripts/build-and-deploy.sh neopro.local
+./raspberry/scripts/build-and-deploy.sh 192.168.4.1
+```
+
+**Ce que fait build-and-deploy.sh :**
+- ✅ Vérifie les prérequis (Node.js, npm, Angular CLI)
+- ✅ Build l'application Angular (optimisé : skip npm install si pas nécessaire)
+- ✅ Crée un backup de la version actuelle sur le Pi
+- ✅ Déploie webapp, server et sync-agent
+- ✅ Redémarre tous les services (neopro-app, nginx, sync-agent)
+- ✅ Vérifie que les services sont actifs
+- ✅ Affiche la durée totale
+
 ---
 
 ## Troubleshooting
@@ -282,6 +308,26 @@ ping 192.168.4.1
 # Quand il demande l'adresse, entrer : 192.168.4.1
 ```
 
+### Le sync-agent ne se connecte pas au serveur central
+
+```bash
+ssh pi@neopro.local
+
+# Vérifier le status du service
+sudo systemctl status neopro-sync-agent
+
+# Voir les logs
+sudo journalctl -u neopro-sync-agent -n 50
+
+# Vérifier la configuration
+cat /etc/neopro/site.conf
+
+# Réenregistrer le site manuellement
+cd /home/pi/neopro/sync-agent
+sudo npm run register
+sudo systemctl restart neopro-sync-agent
+```
+
 ---
 
 ## Schéma récapitulatif
@@ -317,7 +363,8 @@ ping 192.168.4.1
 │  SYSTÈME INSTALLÉ                               │
 │  - Hostname : neopro.local                      │
 │  - WiFi : NEOPRO-CLUB                           │
-│  - Services : nginx, Node.js, etc.              │
+│  - Services : nginx, neopro-app, sync-agent     │
+│  - Dossier : /home/pi/neopro/                   │
 └─────────────────────────────────────────────────┘
                     ↓
 ┌─────────────────────────────────────────────────┐

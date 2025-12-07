@@ -45,10 +45,17 @@ async function registerSite() {
       'https://neopro-central-server.onrender.com'
     );
 
-    // Admin credentials - always prompt for security
-    console.log('\n🔑 Admin credentials (required for authentication):');
-    const email = await question('Admin email: ');
-    const password = await question('Admin password: ');
+    // Admin credentials - from env vars or prompt
+    let email = process.env.ADMIN_EMAIL;
+    let password = process.env.ADMIN_PASSWORD;
+
+    if (email && password) {
+      console.log('\n🔑 Using credentials from environment variables');
+    } else {
+      console.log('\n🔑 Admin credentials (required for authentication):');
+      email = await question('Admin email: ');
+      password = await question('Admin password: ');
+    }
 
     if (!email || !password) {
       console.error('\n❌ Email and password are required');

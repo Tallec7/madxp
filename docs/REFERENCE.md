@@ -87,9 +87,9 @@ Raspberry Pi (neopro.local / 192.168.4.1)
    - Mot de passe (12+ caractères minimum)
 
 2. **Création de la configuration**
-   - Copie `raspberry/configs/TEMPLATE-configuration.json`
+   - Copie `raspberry/config/templates/TEMPLATE-configuration.json`
    - Remplace tous les placeholders
-   - Génère `raspberry/configs/[CLUB_NAME]-configuration.json`
+   - Génère `raspberry/config/templates/[CLUB_NAME]-configuration.json`
 
 3. **Build de l'application**
    - Copie la config dans `public/configuration.json`
@@ -101,15 +101,20 @@ Raspberry Pi (neopro.local / 192.168.4.1)
    - Extraction dans `/home/pi/neopro/webapp/`
    - Configuration des permissions (www-data)
 
-5. **Configuration sync-agent**
+5. **Configuration du hotspot WiFi**
+   - Met à jour le SSID dans `/etc/hostapd/hostapd.conf`
+   - Redémarre hostapd
+   - Le réseau WiFi `NEOPRO-[CLUB]` devient visible
+
+6. **Configuration sync-agent**
    - Installation npm dans `/home/pi/neopro/sync-agent`
    - Enregistrement sur le serveur central
    - Installation du service systemd
    - Démarrage automatique
 
-6. **Résumé**
+7. **Résumé**
    - Affiche toutes les infos du club
-   - URLs d'accès
+   - URLs d'accès (avec WiFi si configuré)
    - Commandes utiles
    - Prochaines étapes
 
@@ -119,11 +124,11 @@ Raspberry Pi (neopro.local / 192.168.4.1)
 
 ```bash
 # Copier le template
-cp raspberry/configs/TEMPLATE-configuration.json \
-   raspberry/configs/CESSON-configuration.json
+cp raspberry/config/templates/TEMPLATE-configuration.json \
+   raspberry/config/templates/CESSON-configuration.json
 
 # Éditer
-nano raspberry/configs/CESSON-configuration.json
+nano raspberry/config/templates/CESSON-configuration.json
 ```
 
 **Structure de la configuration :**
@@ -164,7 +169,7 @@ nano raspberry/configs/CESSON-configuration.json
 
 ```bash
 # Copier la config
-cp raspberry/configs/CESSON-configuration.json public/configuration.json
+cp raspberry/config/templates/CESSON-configuration.json public/configuration.json
 
 # Build
 npm run build:raspberry
@@ -223,10 +228,10 @@ L'interface redémarre automatiquement avec la nouvelle config.
 
 ```bash
 # 1. Modifier localement
-nano raspberry/configs/CESSON-configuration.json
+nano raspberry/config/templates/CESSON-configuration.json
 
 # 2. Copier
-cp raspberry/configs/CESSON-configuration.json public/configuration.json
+cp raspberry/config/templates/CESSON-configuration.json public/configuration.json
 
 # 3. Build
 npm run build:raspberry

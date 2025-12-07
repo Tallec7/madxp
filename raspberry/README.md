@@ -68,7 +68,7 @@ raspberry/
 │   ├── prepare-image.sh
 │   └── recovery.sh
 │
-├── configs/                 # Configurations des clubs (généré)
+├── config/templates/        # Configurations des clubs
 ├── deploy/                  # Fichiers de déploiement (généré)
 │
 └── install.sh               # Installation système initiale

@@ -13,6 +13,7 @@ set -e
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 print_step() {
@@ -27,6 +28,42 @@ print_warning() {
     echo -e "${YELLOW}⚠ $1${NC}"
 }
 
+print_error() {
+    echo -e "${RED}✗ $1${NC}"
+}
+
+check_prerequisites() {
+    local ERRORS=0
+
+    # Vérifier Node.js
+    if ! command -v node &> /dev/null; then
+        print_error "Node.js n'est pas installé"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # Vérifier npm
+    if ! command -v npm &> /dev/null; then
+        print_error "npm n'est pas installé"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # Vérifier Angular CLI
+    if ! command -v ng &> /dev/null; then
+        print_warning "Angular CLI (ng) non trouvé globalement, utilisation de npx"
+    fi
+
+    # Vérifier les répertoires requis
+    if [ ! -d "server-render" ]; then
+        print_error "Répertoire server-render/ non trouvé"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    if [ $ERRORS -gt 0 ]; then
+        print_error "$ERRORS erreur(s) de prérequis"
+        exit 1
+    fi
+}
+
 echo -e "${GREEN}"
 echo "╔════════════════════════════════════════════════════════════════╗"
 echo "║         BUILD NEOPRO POUR RASPBERRY PI                         ║"
@@ -36,19 +73,34 @@ echo -e "${NC}"
 # Vérifier qu'on est dans le bon répertoire (racine du projet)
 # Ce script doit être appelé depuis la racine avec: npm run build:raspberry
 if [ ! -f "package.json" ]; then
-    echo "❌ Erreur: package.json non trouvé"
+    print_error "package.json non trouvé"
     echo "Ce script doit être exécuté depuis la racine du projet"
     echo "Usage: npm run build:raspberry (ou ./raspberry/scripts/build-raspberry.sh depuis la racine)"
     exit 1
 fi
 
-print_step "Installation des dépendances..."
-npm install
-print_success "Dépendances installées"
+print_step "Vérification des prérequis..."
+check_prerequisites
+print_success "Prérequis validés"
+
+# Vérifier si node_modules existe et est récent
+print_step "Vérification des dépendances..."
+if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules" ]; then
+    print_step "Installation des dépendances..."
+    npm install
+    print_success "Dépendances installées"
+else
+    print_success "Dépendances à jour"
+fi
 
 print_step "Build de l'application Angular pour Raspberry Pi..."
 # Build avec configuration production et environment raspberry
-ng build --configuration=production
+# Utiliser npx si ng n'est pas disponible globalement
+if command -v ng &> /dev/null; then
+    ng build --configuration=production
+else
+    npx ng build --configuration=production
+fi
 print_success "Build Angular terminé"
 
 print_step "Préparation du package de déploiement..."

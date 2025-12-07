@@ -14,6 +14,6 @@ package-lock.json
 logs/*.log
 
 # Configurations avec mots de passe
-raspberry/configs/*-configuration.json
-!raspberry/configs/TEMPLATE-configuration.json
+raspberry/config/templates/*-configuration.json
+!raspberry/config/templates/TEMPLATE-configuration.json
 raspberry/deploy/

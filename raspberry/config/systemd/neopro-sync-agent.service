@@ -1,0 +1,37 @@
+# Systemd service pour le Neopro Sync Agent
+# Gère la synchronisation avec le serveur central (heartbeat, vidéos, config)
+
+[Unit]
+Description=Neopro Sync Agent
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/neopro/sync-agent
+Environment=NODE_ENV=production
+
+# Charger la configuration depuis /etc/neopro/site.conf si disponible
+EnvironmentFile=-/etc/neopro/site.conf
+
+# Commande de lancement
+ExecStart=/usr/bin/node /home/pi/neopro/sync-agent/src/index.js
+
+# Redémarrage automatique en cas de crash
+Restart=always
+RestartSec=30
+
+# Délai avant de considérer le service comme démarré
+TimeoutStartSec=30
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=neopro-sync-agent
+
+# Limites de sécurité
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
