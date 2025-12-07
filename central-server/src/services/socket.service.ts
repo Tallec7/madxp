@@ -141,7 +141,7 @@ class SocketService {
           message.metrics.memory,
           message.metrics.temperature,
           message.metrics.disk,
-          message.metrics.uptime,
+          Math.floor(message.metrics.uptime),
         ]
       );
 
