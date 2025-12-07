@@ -84,9 +84,16 @@ fi
 print_success "Package de déploiement créé"
 
 print_step "Création de l'archive de déploiement..."
+
+# Supprimer les attributs étendus macOS (xattr) pour éviter les warnings
+# "Ignoring unknown extended header keyword" lors de l'extraction sur Linux
+if command -v xattr &> /dev/null; then
+    print_step "Suppression des attributs étendus macOS..."
+    xattr -cr ${DEPLOY_DIR} 2>/dev/null || true
+fi
+
 cd raspberry
-# Utilisation de --no-mac-metadata pour éviter les avertissements sur Linux
-# lors de l'extraction des attributs étendus macOS (xattr)
+# COPYFILE_DISABLE=1 empêche tar d'inclure les fichiers ._ (AppleDouble)
 COPYFILE_DISABLE=1 tar -czf neopro-raspberry-deploy.tar.gz deploy/
 cd ..
 print_success "Archive créée: raspberry/neopro-raspberry-deploy.tar.gz"

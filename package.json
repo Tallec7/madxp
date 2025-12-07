@@ -6,7 +6,7 @@
     "start": "ng serve",
     "build": "ng build",
     "build:raspberry": "./raspberry/scripts/build-raspberry.sh",
-    "deploy:raspberry": "./raspberry/scripts/deploy-remote.sh",
+    "deploy:raspberry": "./raspberry/scripts/build-and-deploy.sh",
     "watch": "ng build --watch --configuration development",
     "test": "npm run build && npm run server",
     "server": "node dist/neopro/browser/server.js"

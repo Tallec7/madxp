@@ -57,17 +57,53 @@ fi
 # Test de connexion SSH
 print_step "Test de connexion SSH..."
 print_warning "Vous allez devoir entrer le mot de passe SSH du Raspberry Pi"
-if ! ssh -o ConnectTimeout=10 ${RASPBERRY_USER}@${RASPBERRY_IP} exit; then
-    print_error "Impossible de se connecter à ${RASPBERRY_USER}@${RASPBERRY_IP}"
-    echo "Vérifiez que:"
-    echo "  • Le Raspberry Pi est allumé et accessible"
-    echo "  • Vous êtes connecté au bon réseau WiFi (NEOPRO-...)"
-    echo "  • L'adresse IP est correcte (neopro.local ou 192.168.4.1)"
-    echo "  • SSH est activé sur le Raspberry Pi"
+
+# Tenter la connexion et capturer le résultat
+SSH_OUTPUT=$(ssh -o ConnectTimeout=10 -o BatchMode=yes ${RASPBERRY_USER}@${RASPBERRY_IP} exit 2>&1) || SSH_RESULT=$?
+
+# Vérifier si c'est une erreur de clé SSH (nouveau boîtier ou réinstallation)
+if echo "${SSH_OUTPUT}" | grep -q "REMOTE HOST IDENTIFICATION HAS CHANGED\|Host key verification failed"; then
+    print_warning "La clé SSH du Raspberry Pi a changé (nouveau boîtier ou réinstallation)"
     echo ""
-    echo "💡 Conseil: Configurez une clé SSH pour éviter de retaper le mot de passe:"
-    echo "   ssh-copy-id ${RASPBERRY_USER}@${RASPBERRY_IP}"
-    exit 1
+    read -p "Voulez-vous réinitialiser la clé SSH pour ${RASPBERRY_IP} ? (O/n) : " RESET_KEY
+    RESET_KEY=${RESET_KEY:-O}
+
+    if [[ $RESET_KEY =~ ^[Oo]$ ]]; then
+        print_step "Suppression de l'ancienne clé SSH..."
+        ssh-keygen -R ${RASPBERRY_IP} 2>/dev/null || true
+        # Supprimer aussi l'IP si on utilise un hostname
+        if [[ "${RASPBERRY_IP}" == *".local"* ]] || [[ "${RASPBERRY_IP}" == *".home"* ]]; then
+            RESOLVED_IP=$(getent hosts ${RASPBERRY_IP} 2>/dev/null | awk '{print $1}' || true)
+            if [ -n "${RESOLVED_IP}" ]; then
+                ssh-keygen -R ${RESOLVED_IP} 2>/dev/null || true
+            fi
+        fi
+        print_success "Clé SSH réinitialisée"
+        echo ""
+        print_step "Nouvelle tentative de connexion..."
+        # Réessayer avec StrictHostKeyChecking=accept-new pour accepter la nouvelle clé
+        if ! ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new ${RASPBERRY_USER}@${RASPBERRY_IP} exit; then
+            print_error "Impossible de se connecter après réinitialisation"
+            exit 1
+        fi
+    else
+        print_error "Connexion annulée"
+        exit 1
+    fi
+elif [ -n "${SSH_RESULT}" ] && [ "${SSH_RESULT}" -ne 0 ]; then
+    # Autre erreur SSH - réessayer en mode interactif (pour le mot de passe)
+    if ! ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new ${RASPBERRY_USER}@${RASPBERRY_IP} exit; then
+        print_error "Impossible de se connecter à ${RASPBERRY_USER}@${RASPBERRY_IP}"
+        echo "Vérifiez que:"
+        echo "  • Le Raspberry Pi est allumé et accessible"
+        echo "  • Vous êtes connecté au bon réseau WiFi (NEOPRO-...)"
+        echo "  • L'adresse IP est correcte (neopro.local ou 192.168.4.1)"
+        echo "  • SSH est activé sur le Raspberry Pi"
+        echo ""
+        echo "💡 Conseil: Configurez une clé SSH pour éviter de retaper le mot de passe:"
+        echo "   ssh-copy-id ${RASPBERRY_USER}@${RASPBERRY_IP}"
+        exit 1
+    fi
 fi
 print_success "Connexion SSH OK"
 

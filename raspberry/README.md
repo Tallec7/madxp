@@ -1,77 +1,65 @@
-# Configuration Raspberry Pi - Voir documentation principale
+# Raspberry Pi Neopro
 
-## 📚 Documentation déplacée
+## 📋 Commandes essentielles
 
-La documentation a été réorganisée pour plus de clarté.
+| Action | Commande | Où |
+|--------|----------|-----|
+| **Mise à jour** | `npm run deploy:raspberry` | Mac |
+| **Nouveau club** | `./raspberry/scripts/setup-new-club.sh` | Mac |
+| **Supprimer un club** | `./raspberry/scripts/delete-club.sh` | Mac |
+| **Backup un club** | `./raspberry/scripts/backup-club.sh` | Mac |
+| **Restaurer un club** | `./raspberry/scripts/restore-club.sh` | Mac |
+| **Nouveau Pi** | `sudo ./install.sh CLUB WIFI_PASS` | Pi |
 
-### 🚀 Vous cherchez :
+---
 
-#### Configuration d'un nouveau club ?
-→ **[Voir README.md principal](../README.md)** - Section "1️⃣ Configurer un NOUVEAU club"
+## 🚀 Guide rapide
 
-**TL;DR :**
+### Mettre à jour un boîtier existant
+
+```bash
+npm run deploy:raspberry
+```
+
+C'est tout ! Cette commande build et déploie automatiquement.
+
+### Configurer un nouveau club
+
 ```bash
 ./raspberry/scripts/setup-new-club.sh
 ```
 
-#### Mise à jour d'un boîtier ?
-→ **[Voir README.md principal](../README.md)** - Section "2️⃣ Mettre à jour un boîtier existant"
+Script interactif qui guide toute la configuration.
 
-**TL;DR :**
-```bash
-# Via interface web (recommandé)
-http://neopro.local:8080
+### Installer un nouveau Raspberry Pi
 
-# Via script
-npm run build:raspberry
-npm run deploy:raspberry neopro.local
-```
-
-#### Documentation technique complète ?
-→ **[docs/REFERENCE.md](../docs/REFERENCE.md)**
-
-#### Guide de dépannage ?
-→ **[docs/TROUBLESHOOTING.md](../docs/TROUBLESHOOTING.md)**
+1. **Sur le Pi** : `sudo ./install.sh MONCLUB MotDePasseWiFi123`
+2. **Sur Mac** : `./raspberry/scripts/setup-new-club.sh`
 
 ---
 
-## 📂 Structure de la documentation
+## 📂 Structure
 
 ```
-neopro/
-├── README.md                  ⭐ COMMENCER ICI
-├── docs/
-│   ├── INDEX.md              📖 Index de la documentation
-│   ├── REFERENCE.md          📘 Documentation technique complète
-│   ├── TROUBLESHOOTING.md    🔧 Guide de dépannage
-│   └── archive/              📦 Anciens documents
-│
-└── raspberry/
-    ├── scripts/
-    │   └── setup-new-club.sh ⭐ Script principal nouveau club
-    └── README.md             👈 Vous êtes ici
+raspberry/
+├── install.sh              # Installation système (sur Pi)
+├── scripts/
+│   ├── README.md           # Documentation complète des scripts
+│   ├── setup-new-club.sh   # Configuration nouveau club (sur Mac)
+│   ├── delete-club.sh      # Suppression d'un club (sur Mac)
+│   ├── backup-club.sh      # Sauvegarde d'un club (sur Mac)
+│   ├── restore-club.sh     # Restauration d'un club (sur Mac)
+│   ├── build-raspberry.sh  # Build Angular (sur Mac)
+│   ├── deploy-remote.sh    # Déploiement SSH (sur Mac)
+│   ├── diagnose-pi.sh      # Diagnostic (sur Pi)
+│   └── ...
+├── configs/                # Configurations des clubs
+├── deploy/                 # Fichiers de déploiement (généré)
+└── sync-agent/             # Agent de synchronisation
 ```
 
 ---
 
-## 🛠️ Scripts utiles
+## 📚 Documentation détaillée
 
-### Configuration nouveau club
-```bash
-./raspberry/scripts/setup-new-club.sh
-```
-
-### Build et déploiement
-```bash
-npm run build:raspberry
-npm run deploy:raspberry neopro.local
-```
-
-### Diagnostic
-```bash
-ssh pi@neopro.local './scripts/diagnose-pi.sh'
-```
-
----
-
-**Pour toute la documentation :** [README.md principal](../README.md)
+**[scripts/README.md](scripts/README.md)** - Documentation complète de tous les scripts

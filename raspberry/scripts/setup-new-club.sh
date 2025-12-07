@@ -50,6 +50,51 @@ print_info() {
 }
 
 ################################################################################
+# Fonction utilitaire : Gestion des clés SSH
+################################################################################
+
+# Vérifie la connexion SSH et réinitialise la clé si nécessaire
+# Usage: check_ssh_connection "adresse"
+check_ssh_connection() {
+    local SSH_HOST="$1"
+
+    # Tenter la connexion et capturer le résultat
+    local SSH_OUTPUT
+    SSH_OUTPUT=$(ssh -o ConnectTimeout=10 -o BatchMode=yes pi@"${SSH_HOST}" exit 2>&1) || local SSH_RESULT=$?
+
+    # Vérifier si c'est une erreur de clé SSH (nouveau boîtier ou réinstallation)
+    if echo "${SSH_OUTPUT}" | grep -q "REMOTE HOST IDENTIFICATION HAS CHANGED\|Host key verification failed"; then
+        print_warning "La clé SSH du Raspberry Pi a changé (nouveau boîtier ou réinstallation)"
+        echo ""
+        read -p "Voulez-vous réinitialiser la clé SSH pour ${SSH_HOST} ? (O/n) : " RESET_KEY
+        RESET_KEY=${RESET_KEY:-O}
+
+        if [[ $RESET_KEY =~ ^[Oo]$ ]]; then
+            print_step "Suppression de l'ancienne clé SSH..."
+            ssh-keygen -R "${SSH_HOST}" 2>/dev/null || true
+            # Supprimer aussi l'IP si on utilise un hostname
+            if [[ "${SSH_HOST}" == *".local"* ]] || [[ "${SSH_HOST}" == *".home"* ]]; then
+                local RESOLVED_IP
+                RESOLVED_IP=$(getent hosts "${SSH_HOST}" 2>/dev/null | awk '{print $1}' || true)
+                if [ -n "${RESOLVED_IP}" ]; then
+                    ssh-keygen -R "${RESOLVED_IP}" 2>/dev/null || true
+                fi
+            fi
+            print_success "Clé SSH réinitialisée"
+            return 0
+        else
+            print_error "Connexion annulée"
+            return 1
+        fi
+    elif [ -n "${SSH_RESULT}" ] && [ "${SSH_RESULT}" -ne 0 ]; then
+        # Autre erreur - on laisse passer, sera géré par la commande SSH suivante
+        return 0
+    fi
+
+    return 0
+}
+
+################################################################################
 # Étape 1 : Collecte des informations
 ################################################################################
 
@@ -282,9 +327,14 @@ setup_sync_agent() {
 
     print_info "Installation des dépendances et enregistrement du site..."
 
+    # Vérifier/réinitialiser la clé SSH si nécessaire
+    if ! check_ssh_connection "$PI_ADDRESS"; then
+        return
+    fi
+
     # Étape 1: Installer les dépendances npm
     print_info "Installation des dépendances npm..."
-    ssh pi@"$PI_ADDRESS" "cd /home/pi/neopro/sync-agent && npm install --omit=dev"
+    ssh -o StrictHostKeyChecking=accept-new pi@"$PI_ADDRESS" "cd /home/pi/neopro/sync-agent && npm install --omit=dev"
 
     # Étape 2: Créer un script d'enregistrement temporaire sur le Pi
     print_info "Enregistrement du site sur le serveur central..."
