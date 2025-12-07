@@ -23,7 +23,9 @@ export const getPublicUrl = (path: string): string => {
   if (!supabase || !supabaseUrl) {
     return '';
   }
-  return `${supabaseUrl}/storage/v1/object/public/${STORAGE_BUCKET}/${path}`;
+  // Nettoyer le path : supprimer le slash initial s'il existe
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  return `${supabaseUrl}/storage/v1/object/public/${STORAGE_BUCKET}/${cleanPath}`;
 };
 
 export const uploadFile = async (
