@@ -263,8 +263,8 @@ setup_sync_agent() {
         print_info "Pour le configurer plus tard, exécutez sur le Pi :"
         print_info "  ssh pi@$PI_ADDRESS"
         print_info "  cd /home/pi/neopro/sync-agent"
-        print_info "  sudo node scripts/register-site.js"
-        print_info "  sudo npm run install-service"
+        print_info "  sudo npm run register"
+        print_info "  sudo systemctl restart neopro-sync-agent"
         return
     fi
 
@@ -283,7 +283,8 @@ setup_sync_agent() {
     print_info "Installation des dépendances et enregistrement du site..."
 
     # Exécuter tout via SSH avec les variables d'environnement
-    ssh pi@$PI_ADDRESS "
+    # Note: on utilise des guillemets doubles pour permettre l'expansion des variables locales
+    ssh pi@"$PI_ADDRESS" "
         set -e
 
         # Vérifier que le répertoire existe
@@ -302,16 +303,16 @@ setup_sync_agent() {
         echo '>>> Enregistrement du site sur le serveur central...'
 
         # Exécuter register-site.js avec les variables d'environnement pré-configurées
-        sudo CENTRAL_SERVER_URL='https://neopro-central-server.onrender.com' \
-             SITE_NAME='$SITE_NAME' \
-             CLUB_NAME='$CLUB_NAME' \
-             LOCATION_CITY='$CITY' \
-             LOCATION_REGION='$REGION' \
-             LOCATION_COUNTRY='$COUNTRY' \
-             SPORTS='$SPORTS' \
+        sudo CENTRAL_SERVER_URL='https://neopro-central.onrender.com' \\
+             SITE_NAME='${SITE_NAME}' \\
+             CLUB_NAME='${CLUB_FULL_NAME}' \\
+             LOCATION_CITY='${CITY}' \\
+             LOCATION_REGION='${REGION}' \\
+             LOCATION_COUNTRY='${COUNTRY}' \\
+             SPORTS='${SPORTS}' \\
              node scripts/register-site.js <<CREDENTIALS
-$ADMIN_EMAIL
-$ADMIN_PASSWORD
+${ADMIN_EMAIL}
+${ADMIN_PASSWORD}
 CREDENTIALS
 
         echo ''
@@ -320,7 +321,8 @@ CREDENTIALS
 
         echo ''
         echo '>>> Vérification du service...'
-        sudo systemctl status neopro-sync --no-pager || true
+        sleep 2
+        sudo systemctl status neopro-sync-agent --no-pager || true
     "
 
     if [ $? -eq 0 ]; then
@@ -330,8 +332,8 @@ CREDENTIALS
         print_info "Pour réessayer manuellement :"
         print_info "  ssh pi@$PI_ADDRESS"
         print_info "  cd /home/pi/neopro/sync-agent"
-        print_info "  sudo node scripts/register-site.js"
-        print_info "  sudo npm run install-service"
+        print_info "  sudo npm run register"
+        print_info "  sudo systemctl restart neopro-sync-agent"
     fi
 }
 
@@ -375,9 +377,10 @@ print_summary() {
     echo "  4. Mettre à jour configuration.json avec les bonnes vidéos"
     echo ""
     echo -e "${BLUE}Commandes utiles :${NC}"
-    echo "  • Voir les logs : ssh pi@$PI_ADDRESS 'sudo journalctl -u neopro-app -f'"
+    echo "  • Voir les logs app : ssh pi@$PI_ADDRESS 'sudo journalctl -u neopro-app -f'"
+    echo "  • Voir les logs sync : ssh pi@$PI_ADDRESS 'sudo journalctl -u neopro-sync-agent -f'"
+    echo "  • Diagnostic sync : ssh pi@$PI_ADDRESS 'cd /home/pi/neopro/sync-agent && npm run diagnose'"
     echo "  • Redémarrer : ssh pi@$PI_ADDRESS 'sudo reboot'"
-    echo "  • Sync logs : ssh pi@$PI_ADDRESS 'sudo journalctl -u neopro-sync -f'"
     echo ""
 }
 

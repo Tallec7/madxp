@@ -144,9 +144,21 @@ ALLOWED_COMMANDS=deploy_video,delete_video,update_software,update_config,reboot,
     }
 
     if (saveToEtc.toLowerCase() === 'y') {
-      await fs.ensureDir('/etc/neopro');
-      await fs.writeFile('/etc/neopro/site.conf', configContent);
-      console.log('✅ Configuration saved to /etc/neopro/site.conf');
+      try {
+        await fs.ensureDir('/etc/neopro');
+        await fs.writeFile('/etc/neopro/site.conf', configContent);
+        console.log('✅ Configuration saved to /etc/neopro/site.conf');
+      } catch (err) {
+        if (err.code === 'EACCES') {
+          console.log('\n⚠️  Permission denied. Run with sudo or save manually:');
+          console.log('\n--- Copy this to /etc/neopro/site.conf ---');
+          console.log(configContent);
+          console.log('--- End of config ---\n');
+          console.log('Or run: sudo npm run register');
+        } else {
+          throw err;
+        }
+      }
     } else {
       await fs.ensureDir('config');
       await fs.writeFile('config/.env', configContent);
