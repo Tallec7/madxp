@@ -5,6 +5,16 @@ import { query } from '../config/database';
 import { SocketData, CommandMessage, CommandResult, HeartbeatMessage } from '../types';
 import logger from '../config/logger';
 
+// Import différé pour éviter les dépendances circulaires
+let deploymentService: { processPendingDeploymentsForSite: (siteId: string) => Promise<void> } | null = null;
+const getDeploymentService = async () => {
+  if (!deploymentService) {
+    const module = await import('./deployment.service');
+    deploymentService = module.default;
+  }
+  return deploymentService;
+};
+
 const secureCompare = (a: string, b: string): boolean => {
   if (a.length !== b.length) return false;
   return timingSafeEqual(Buffer.from(a), Buffer.from(b));
@@ -109,6 +119,18 @@ class SocketService {
     });
 
     logger.info('Agent authenticated', { siteId, siteName: site.site_name });
+
+    // Traiter les déploiements en attente pour ce site
+    this.processPendingDeployments(siteId);
+  }
+
+  private async processPendingDeployments(siteId: string) {
+    try {
+      const service = await getDeploymentService();
+      await service.processPendingDeploymentsForSite(siteId);
+    } catch (error) {
+      logger.error('Error processing pending deployments on connect:', { siteId, error });
+    }
   }
 
   private handleDisconnection(socket: Socket) {
@@ -233,25 +255,57 @@ class SocketService {
 
   private async handleDeployProgress(siteId: string, progress: any) {
     try {
-      if (progress.videoId) {
+      const { deploymentId, videoId, progress: progressValue, completed, error } = progress;
+
+      if (deploymentId) {
+        // Mise à jour directe du déploiement
+        if (error) {
+          await query(
+            `UPDATE content_deployments
+             SET status = 'failed', error_message = $1, completed_at = NOW()
+             WHERE id = $2`,
+            [error, deploymentId]
+          );
+        } else if (completed) {
+          await query(
+            `UPDATE content_deployments
+             SET status = 'completed', progress = 100, completed_at = NOW()
+             WHERE id = $1`,
+            [deploymentId]
+          );
+        } else {
+          await query(
+            `UPDATE content_deployments
+             SET progress = $1, status = 'in_progress'
+             WHERE id = $2`,
+            [progressValue || 0, deploymentId]
+          );
+        }
+      } else if (videoId) {
+        // Fallback: mise à jour par videoId
         await query(
           `UPDATE content_deployments
            SET progress = $1, status = 'in_progress'
-           WHERE video_id = $2 AND target_id = $3 OR target_id IN (
+           WHERE video_id = $2 AND (target_id = $3 OR target_id IN (
              SELECT group_id FROM site_groups WHERE site_id = $3
-           )`,
-          [progress.progress, progress.videoId, siteId]
+           ))`,
+          [progressValue || 0, videoId, siteId]
         );
       }
 
+      // Émettre le progress au dashboard
       if (this.io) {
         this.io.emit('deploy_progress', {
           siteId,
+          deploymentId,
+          progress: progressValue,
+          completed,
+          error,
           ...progress,
         });
       }
-    } catch (error) {
-      logger.error('Error handling deploy progress:', error);
+    } catch (err) {
+      logger.error('Error handling deploy progress:', err);
     }
   }
 

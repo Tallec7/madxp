@@ -2,6 +2,7 @@ import { Response } from 'express';
 import logger from '../config/logger';
 import pool from '../config/database';
 import { AuthRequest } from '../types';
+import deploymentService from '../services/deployment.service';
 
 export const getVideos = async (req: AuthRequest, res: Response) => {
   try {
@@ -151,7 +152,7 @@ export const getDeployments = async (req: AuthRequest, res: Response) => {
       `SELECT cd.id, cd.video_id, cd.target_type, cd.target_id, cd.status, cd.progress,
               cd.error_message as error, cd.completed_at as deployed_at,
               cd.created_at, cd.started_at,
-              v.filename as video_name,
+              v.filename, v.original_name, v.metadata,
               CASE
                 WHEN cd.target_type = 'site' THEN s.site_name
                 WHEN cd.target_type = 'group' THEN g.name
@@ -163,7 +164,13 @@ export const getDeployments = async (req: AuthRequest, res: Response) => {
        ORDER BY cd.created_at DESC`
     );
 
-    res.json(result.rows);
+    // Ajouter video_title depuis metadata
+    const deployments = result.rows.map(d => ({
+      ...d,
+      video_title: (d.metadata as { title?: string })?.title || d.original_name || d.filename
+    }));
+
+    res.json(deployments);
   } catch (error) {
     logger.error('Error fetching deployments:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des déploiements' });
@@ -213,8 +220,15 @@ export const createDeployment = async (req: AuthRequest, res: Response) => {
       [video_id, target_type || 'site', target_id, req.user?.id || null]
     );
 
-    logger.info('Deployment created:', { id: result.rows[0].id, video_id, target_type, target_id });
-    res.status(201).json(result.rows[0]);
+    const deployment = result.rows[0];
+    logger.info('Deployment created:', { id: deployment.id, video_id, target_type, target_id });
+
+    // Lancer le déploiement de manière asynchrone
+    deploymentService.startDeployment(deployment.id as string).catch(err => {
+      logger.error('Error starting deployment:', err);
+    });
+
+    res.status(201).json(deployment);
   } catch (error) {
     logger.error('Error creating deployment:', error);
     res.status(500).json({ error: 'Erreur lors de la création du déploiement' });
