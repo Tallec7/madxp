@@ -15,6 +15,10 @@ interface DeploymentRow {
   target_type: string;
   target_id: string;
   filename: string;
+  original_name: string;
+  category: string | null;
+  subcategory: string | null;
+  duration: number | null;
   storage_path: string;
   metadata: { title?: string } | null;
 }
@@ -28,7 +32,7 @@ class DeploymentService {
     try {
       // Récupérer les infos du déploiement
       const deploymentResult = await query(
-        `SELECT cd.*, v.filename, v.storage_path, v.metadata
+        `SELECT cd.*, v.filename, v.original_name, v.category, v.subcategory, v.duration, v.storage_path, v.metadata
          FROM content_deployments cd
          JOIN videos v ON cd.video_id = v.id
          WHERE cd.id = $1`,
@@ -51,7 +55,6 @@ class DeploymentService {
 
       // Construire l'URL de la vidéo depuis Supabase Storage
       const videoUrl = getPublicUrl(deployment.storage_path);
-      const videoTitle = deployment.metadata?.title || deployment.filename;
 
       // Tenter d'envoyer aux sites connectés
       let connectedCount = 0;
@@ -63,7 +66,7 @@ class DeploymentService {
             target.siteId,
             deployment.video_id,
             videoUrl,
-            videoTitle
+            deployment
           );
           if (success) {
             connectedCount++;
@@ -102,7 +105,7 @@ class DeploymentService {
     try {
       // Récupérer les déploiements pending qui ciblent ce site (directement ou via un groupe)
       const result = await query(
-        `SELECT cd.id, cd.video_id, v.filename, v.storage_path, v.metadata
+        `SELECT cd.id, cd.video_id, v.filename, v.original_name, v.category, v.subcategory, v.duration, v.storage_path, v.metadata
          FROM content_deployments cd
          JOIN videos v ON cd.video_id = v.id
          WHERE cd.status IN ('pending', 'in_progress')
@@ -127,14 +130,13 @@ class DeploymentService {
       for (const row of result.rows) {
         const deployment = row as unknown as DeploymentRow;
         const videoUrl = getPublicUrl(deployment.storage_path);
-        const videoTitle = deployment.metadata?.title || deployment.filename;
 
         const success = await this.deployToSite(
           deployment.id,
           siteId,
           deployment.video_id,
           videoUrl,
-          videoTitle
+          deployment
         );
 
         if (success) {
@@ -186,7 +188,7 @@ class DeploymentService {
     siteId: string,
     videoId: string,
     videoUrl: string,
-    videoTitle: string
+    deployment: DeploymentRow
   ): Promise<boolean> {
     if (!socketService.isConnected(siteId)) {
       logger.warn('Site not connected for deployment', { siteId, deploymentId });
@@ -200,8 +202,11 @@ class DeploymentService {
         deploymentId,
         videoId,
         videoUrl,
-        videoTitle,
-        action: 'download'
+        filename: deployment.filename,
+        originalName: deployment.original_name,
+        category: deployment.category || 'default',
+        subcategory: deployment.subcategory || null,
+        duration: deployment.duration || 0,
       }
     };
 

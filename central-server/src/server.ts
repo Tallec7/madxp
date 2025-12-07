@@ -33,6 +33,12 @@ const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
+// Trust proxy pour fonctionner derrière un reverse proxy (Render, etc.)
+// Nécessaire pour express-rate-limit et pour obtenir la vraie IP client
+if (NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 app.use(helmet());
 
 const resolveOrigin = (origin?: string | undefined) => {

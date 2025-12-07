@@ -239,7 +239,12 @@ class SocketService {
         ]
       );
 
-      logger.info('Command result received', { siteId, commandId: result.commandId, status: result.status });
+      logger.info('Command result received', {
+        siteId,
+        commandId: result.commandId,
+        status: result.status,
+        ...(result.status === 'error' && result.error ? { error: result.error } : {}),
+      });
 
       if (this.io) {
         this.io.emit('command_completed', {
