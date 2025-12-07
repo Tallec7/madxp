@@ -6,14 +6,20 @@ import { AuthRequest } from '../types';
 export const getVideos = async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
-      `SELECT id, filename as name, original_name, category, subcategory,
-              file_size as size, duration, storage_path as url,
+      `SELECT id, filename, original_name, category, subcategory,
+              file_size, duration, storage_path as url,
               thumbnail_url, metadata, created_at, updated_at
        FROM videos
        ORDER BY created_at DESC`
     );
 
-    res.json(result.rows);
+    // Ajouter le titre depuis les metadata ou utiliser original_name
+    const videos = result.rows.map(video => ({
+      ...video,
+      title: (video.metadata as { title?: string })?.title || video.original_name || video.filename
+    }));
+
+    res.json(videos);
   } catch (error) {
     logger.error('Error fetching videos:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des vidéos' });
@@ -25,8 +31,8 @@ export const getVideo = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     const result = await pool.query(
-      `SELECT id, filename as name, original_name, category, subcategory,
-              file_size as size, duration, storage_path as url,
+      `SELECT id, filename, original_name, category, subcategory,
+              file_size, duration, storage_path as url,
               thumbnail_url, metadata, created_at, updated_at
        FROM videos
        WHERE id = $1`,
@@ -37,7 +43,10 @@ export const getVideo = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Vidéo non trouvée' });
     }
 
-    res.json(result.rows[0]);
+    const video = result.rows[0];
+    video.title = (video.metadata as { title?: string })?.title || video.original_name || video.filename;
+
+    res.json(video);
   } catch (error) {
     logger.error('Error fetching video:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération de la vidéo' });
@@ -46,17 +55,35 @@ export const getVideo = async (req: AuthRequest, res: Response) => {
 
 export const createVideo = async (req: AuthRequest, res: Response) => {
   try {
-    const { filename, original_name, category, subcategory, file_size, duration, storage_path, thumbnail_url, metadata } = req.body;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: 'Aucun fichier vidéo fourni' });
+    }
+
+    const { title, category, subcategory } = req.body;
+
+    // Utiliser le titre fourni ou le nom original du fichier
+    const videoTitle = title || file.originalname;
+    const filename = file.filename;
+    const original_name = file.originalname;
+    const file_size = file.size;
+    const storage_path = `/uploads/videos/${file.filename}`;
+    const mime_type = file.mimetype;
 
     const result = await pool.query(
-      `INSERT INTO videos (filename, original_name, category, subcategory, file_size, duration, storage_path, thumbnail_url, metadata, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING *`,
-      [filename, original_name, category, subcategory, file_size, duration, storage_path, thumbnail_url, metadata || {}, req.user?.id || null]
+      `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, metadata, uploaded_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id, filename as name, original_name, category, subcategory, file_size as size, duration, storage_path as url, thumbnail_url, metadata, created_at, updated_at`,
+      [filename, original_name, category || null, subcategory || null, file_size, mime_type, storage_path, { title: videoTitle }, req.user?.id || null]
     );
 
-    logger.info('Video created:', { id: result.rows[0].id, filename });
-    res.status(201).json(result.rows[0]);
+    // Ajouter le titre à la réponse pour l'affichage client
+    const video = result.rows[0];
+    video.title = videoTitle;
+
+    logger.info('Video created:', { id: video.id, filename, title: videoTitle });
+    res.status(201).json(video);
   } catch (error) {
     logger.error('Error creating video:', error);
     res.status(500).json({ error: 'Erreur lors de la création de la vidéo' });

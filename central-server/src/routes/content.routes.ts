@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import * as contentController from '../controllers/content.controller';
 import { authenticate, requireRole } from '../middleware/auth';
+import { uploadVideo } from '../middleware/upload';
 
 const router = Router();
 
 // Video routes
 router.get('/videos', authenticate, contentController.getVideos);
 router.get('/videos/:id', authenticate, contentController.getVideo);
-router.post('/videos', authenticate, requireRole('admin', 'operator'), contentController.createVideo);
+router.post('/videos', authenticate, requireRole('admin', 'operator'), uploadVideo.single('video'), contentController.createVideo);
 router.put('/videos/:id', authenticate, requireRole('admin', 'operator'), contentController.updateVideo);
 router.delete('/videos/:id', authenticate, requireRole('admin'), contentController.deleteVideo);
 

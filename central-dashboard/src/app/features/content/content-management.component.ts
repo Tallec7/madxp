@@ -984,26 +984,24 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     formData.append('title', this.uploadForm.title);
     formData.append('video', this.uploadForm.file!);
 
-    // Simulate upload progress (in real implementation, use HttpClient with progress events)
-    this.uploadProgress = 0;
-    const interval = setInterval(() => {
-      this.uploadProgress += 10;
-      if (this.uploadProgress >= 100) {
-        clearInterval(interval);
-        this.apiService.post<Video>('/videos', formData).subscribe({
-          next: (video) => {
-            this.videos.unshift(video);
-            this.showUploadModal = false;
-            this.uploadProgress = 0;
-            this.uploadForm = { title: '', file: null };
-          },
-          error: (error) => {
-            this.notificationService.error('Erreur lors de l\'upload: ' + (error.error?.error || error.message));
-            this.uploadProgress = 0;
-          }
-        });
+    this.uploadProgress = 10;
+
+    this.apiService.upload<Video>('/videos', formData).subscribe({
+      next: (video) => {
+        this.uploadProgress = 100;
+        this.videos.unshift(video);
+        this.showUploadModal = false;
+        setTimeout(() => {
+          this.uploadProgress = 0;
+          this.uploadForm = { title: '', file: null };
+        }, 500);
+        this.notificationService.success('Vidéo uploadée avec succès !');
+      },
+      error: (error) => {
+        this.notificationService.error('Erreur lors de l\'upload: ' + (error.error?.error || error.message));
+        this.uploadProgress = 0;
       }
-    }, 200);
+    });
   }
 
   deleteVideo(video: Video): void {
