@@ -125,6 +125,33 @@ sudo journalctl -u neopro-sync-agent -n 100
 npm run dev
 ```
 
+### Diagnostic de connexion
+
+En cas de problème de connexion ou d'authentification :
+
+```bash
+npm run diagnose
+```
+
+Ce script vérifie :
+- La présence et validité des fichiers de configuration
+- Les variables requises (SITE_ID, SITE_API_KEY, etc.)
+- La connectivité au serveur central
+- L'authentification Socket.IO
+
+### Resynchroniser l'API key
+
+Si l'authentification échoue (API key invalide ou désynchronisée) :
+
+```bash
+npm run resync
+```
+
+Ce script :
+1. Se connecte au serveur central avec vos credentials admin
+2. Régénère une nouvelle API key pour le site
+3. Met à jour automatiquement la configuration locale
+
 ### Test de connexion
 
 ```bash
@@ -417,6 +444,7 @@ sync-agent/
 │   ├── config.js             # Configuration
 │   ├── logger.js             # Winston logger
 │   ├── metrics.js            # Collecte métriques
+│   ├── analytics.js          # Collecte analytics
 │   └── commands/
 │       ├── index.js          # Routeur de commandes
 │       ├── deploy-video.js   # Handler déploiement vidéo
@@ -424,7 +452,9 @@ sync-agent/
 │       └── update-software.js # Handler mise à jour
 ├── scripts/
 │   ├── install-service.js    # Installation service systemd
-│   └── register-site.js      # Enregistrement auprès serveur
+│   ├── register-site.js      # Enregistrement auprès serveur
+│   ├── diagnose.js           # Diagnostic connexion/auth
+│   └── resync-apikey.js      # Resynchronisation API key
 ├── config/
 │   └── .env.example          # Template configuration
 ├── package.json
@@ -473,6 +503,9 @@ ALLOWED_COMMANDS=...,ma_commande
 ### L'agent ne se connecte pas
 
 ```bash
+# Lancer le diagnostic complet
+npm run diagnose
+
 # Vérifier la configuration
 cat /etc/neopro/site.conf
 
@@ -483,11 +516,36 @@ ping neopro-central-server.onrender.com
 sudo journalctl -u neopro-sync-agent -n 50
 ```
 
-### Erreur "Authentication failed"
+### Erreur "Authentication failed" / "Authentification échouée"
 
-- Vérifier que `SITE_ID` et `SITE_API_KEY` sont corrects
-- Vérifier que le site existe dans le serveur central
-- Réenregistrer le site si nécessaire
+Le message d'erreur détaillé indique la cause :
+
+| Message | Cause | Solution |
+|---------|-------|----------|
+| `Site non trouvé: <id>` | Le site n'existe pas sur le serveur | Ré-enregistrer avec `npm run register` |
+| `Clé API invalide` | API key locale ≠ API key serveur | Resync avec `npm run resync` |
+| `Identifiants manquants` | SITE_ID ou SITE_API_KEY vide | Vérifier `/etc/neopro/site.conf` |
+
+**Diagnostic rapide :**
+
+```bash
+# 1. Lancer le diagnostic
+npm run diagnose
+
+# 2. Si API key invalide, resynchroniser
+npm run resync
+# Entrer email/password admin
+
+# 3. Redémarrer le service
+sudo systemctl restart neopro-sync-agent
+```
+
+**Si le site n'existe plus sur le serveur :**
+
+```bash
+npm run register
+sudo systemctl restart neopro-sync-agent
+```
 
 ### Les métriques ne remontent pas
 
@@ -522,4 +580,4 @@ Pour toute question ou problème, contacter l'équipe NEOPRO.
 ---
 
 **Version :** 1.0.0
-**Dernière mise à jour :** Décembre 2024
+**Dernière mise à jour :** Décembre 2025
