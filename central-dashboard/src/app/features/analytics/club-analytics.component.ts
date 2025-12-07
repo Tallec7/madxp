@@ -267,8 +267,8 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
                 <td>{{ formatDuration(video.total_duration) }}</td>
                 <td>
                   <div class="completion-bar">
-                    <div class="completion-fill" [style.width.%]="video.avg_completion"></div>
-                    <span class="completion-text">{{ video.avg_completion.toFixed(0) }}%</span>
+                    <div class="completion-fill" [style.width.%]="video.avg_completion || 0"></div>
+                    <span class="completion-text">{{ (video.avg_completion || 0).toFixed(0) }}%</span>
                   </div>
                 </td>
               </tr>
@@ -312,10 +312,10 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
                 <div class="metric-icon">💻</div>
                 <div class="metric-info">
                   <div class="metric-label">CPU</div>
-                  <div class="metric-value">{{ metrics.cpu_usage.toFixed(1) }}%</div>
+                  <div class="metric-value">{{ (metrics.cpu_usage || 0).toFixed(1) }}%</div>
                 </div>
                 <div class="metric-bar">
-                  <div class="metric-fill" [style.width.%]="metrics.cpu_usage"></div>
+                  <div class="metric-fill" [style.width.%]="metrics.cpu_usage || 0"></div>
                 </div>
               </div>
 
@@ -323,10 +323,10 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
                 <div class="metric-icon">🧠</div>
                 <div class="metric-info">
                   <div class="metric-label">RAM</div>
-                  <div class="metric-value">{{ metrics.memory_usage.toFixed(1) }}%</div>
+                  <div class="metric-value">{{ (metrics.memory_usage || 0).toFixed(1) }}%</div>
                 </div>
                 <div class="metric-bar">
-                  <div class="metric-fill" [style.width.%]="metrics.memory_usage"></div>
+                  <div class="metric-fill" [style.width.%]="metrics.memory_usage || 0"></div>
                 </div>
               </div>
 
@@ -334,7 +334,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
                 <div class="metric-icon">🌡️</div>
                 <div class="metric-info">
                   <div class="metric-label">Température</div>
-                  <div class="metric-value">{{ metrics.temperature.toFixed(1) }}°C</div>
+                  <div class="metric-value">{{ (metrics.temperature || 0).toFixed(1) }}°C</div>
                 </div>
                 <div class="metric-bar">
                   <div class="metric-fill" [style.width.%]="Math.min(metrics.temperature || 0, 100)"></div>
@@ -345,10 +345,10 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
                 <div class="metric-icon">💾</div>
                 <div class="metric-info">
                   <div class="metric-label">Disque</div>
-                  <div class="metric-value">{{ metrics.disk_usage.toFixed(1) }}%</div>
+                  <div class="metric-value">{{ (metrics.disk_usage || 0).toFixed(1) }}%</div>
                 </div>
                 <div class="metric-bar">
-                  <div class="metric-fill" [style.width.%]="metrics.disk_usage"></div>
+                  <div class="metric-fill" [style.width.%]="metrics.disk_usage || 0"></div>
                 </div>
               </div>
           </div>
@@ -371,8 +371,8 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
                 <td>{{ formatMinutes(day.online_minutes) }} / {{ formatMinutes(day.total_minutes) }}</td>
                 <td>
                   <div class="availability-bar">
-                    <div class="availability-fill" [style.width.%]="day.availability_percent"></div>
-                    <span class="availability-text">{{ day.availability_percent.toFixed(1) }}%</span>
+                    <div class="availability-fill" [style.width.%]="day.availability_percent || 0"></div>
+                    <span class="availability-text">{{ (day.availability_percent || 0).toFixed(1) }}%</span>
                   </div>
                 </td>
               </tr>
