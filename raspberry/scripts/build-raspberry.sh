@@ -94,12 +94,12 @@ else
 fi
 
 print_step "Build de l'application Angular pour Raspberry Pi..."
-# Build avec configuration production et environment raspberry
+# Build avec configuration raspberry (utilise environment.raspberry.ts)
 # Utiliser npx si ng n'est pas disponible globalement
 if command -v ng &> /dev/null; then
-    ng build --configuration=production
+    ng build --configuration=raspberry
 else
-    npx ng build --configuration=production
+    npx ng build --configuration=raspberry
 fi
 print_success "Build Angular terminé"
 
