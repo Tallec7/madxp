@@ -45,8 +45,9 @@ Modifier :
 ```bash
 # Depuis la racine du projet
 
-# 1. Copier la config du club dans public/
-cp raspberry/config/templates/CESSON-configuration.json public/configuration.json
+# 1. Copier la config du club dans webapp/
+mkdir -p webapp
+cp raspberry/config/templates/CESSON-configuration.json webapp/configuration.json
 
 # 2. Build et déploiement
 npm run build:raspberry

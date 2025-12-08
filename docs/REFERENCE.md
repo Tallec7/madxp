@@ -92,7 +92,7 @@ Raspberry Pi (neopro.local / 192.168.4.1)
    - Génère `raspberry/config/templates/[CLUB_NAME]-configuration.json`
 
 3. **Build de l'application**
-   - Copie la config dans `public/configuration.json`
+   - Copie la config dans `webapp/configuration.json`
    - Exécute `npm run build:raspberry`
    - Archive dans `raspberry/deploy/neopro-raspberry-[timestamp].tar.gz`
 
@@ -169,7 +169,8 @@ nano raspberry/config/templates/CESSON-configuration.json
 
 ```bash
 # Copier la config
-cp raspberry/config/templates/CESSON-configuration.json public/configuration.json
+mkdir -p webapp
+cp raspberry/config/templates/CESSON-configuration.json webapp/configuration.json
 
 # Build
 npm run build:raspberry
@@ -231,7 +232,8 @@ L'interface redémarre automatiquement avec la nouvelle config.
 nano raspberry/config/templates/CESSON-configuration.json
 
 # 2. Copier
-cp raspberry/config/templates/CESSON-configuration.json public/configuration.json
+mkdir -p webapp
+cp raspberry/config/templates/CESSON-configuration.json webapp/configuration.json
 
 # 3. Build
 npm run build:raspberry
@@ -261,7 +263,7 @@ npm run deploy:raspberry neopro.local
 - `src/app/services/auth.service.ts` - Service d'authentification
 - `src/app/guards/auth.guard.ts` - Protection des routes
 - `src/app/login/login.component.ts` - Page de login
-- `public/configuration.json` - Mot de passe configuré
+- `webapp/configuration.json` - Mot de passe configuré (sur le Pi)
 
 ### Personnaliser le mot de passe
 

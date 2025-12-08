@@ -57,8 +57,9 @@ Ce script va tout faire automatiquement :
 # 1. Modifier la configuration
 nano raspberry/config/templates/CLUB_NAME-configuration.json
 
-# 2. Copier dans public/
-cp raspberry/config/templates/CLUB_NAME-configuration.json public/configuration.json
+# 2. Copier dans webapp/
+mkdir -p webapp
+cp raspberry/config/templates/CLUB_NAME-configuration.json webapp/configuration.json
 
 # 3. Builder
 npm run build:raspberry
