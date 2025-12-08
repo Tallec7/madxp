@@ -723,3 +723,120 @@ body {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* Section Headers */
+.section-header {
+    margin-bottom: 1rem;
+}
+
+.section-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+}
+
+.section-header .hint {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* Config Group */
+.config-group {
+    border-left: 3px solid var(--primary);
+}
+
+/* Orphan Videos Section */
+.orphan-videos-section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 2px dashed var(--warning);
+}
+
+.orphan-header h3 {
+    color: var(--warning);
+}
+
+.orphan-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.orphan-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warning);
+    border-radius: 8px;
+}
+
+.orphan-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.orphan-title {
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+}
+
+.orphan-meta {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+}
+
+.orphan-path {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: monospace;
+    margin-top: 0.25rem;
+}
+
+.orphan-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.orphan-category-select,
+.orphan-subcategory-select {
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.875rem;
+    min-width: 150px;
+}
+
+.orphan-category-select:focus,
+.orphan-subcategory-select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* Responsive orphan rows */
+@media (max-width: 768px) {
+    .orphan-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .orphan-actions {
+        flex-wrap: wrap;
+        margin-top: 0.75rem;
+    }
+
+    .orphan-category-select,
+    .orphan-subcategory-select {
+        flex: 1;
+        min-width: 120px;
+    }
+}

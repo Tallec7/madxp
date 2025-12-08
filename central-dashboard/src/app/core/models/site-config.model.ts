@@ -54,6 +54,16 @@ export interface CategoryConfig {
   subCategories: SubcategoryConfig[];
 }
 
+// TimeCategory pour organiser les catégories dans /remote (Avant-match, Match, Après-match)
+export interface TimeCategoryConfig {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  description: string;
+  categoryIds: string[]; // IDs des catégories assignées à ce bloc
+}
+
 // Configuration complète du site
 export interface SiteConfiguration {
   version: string;
@@ -62,6 +72,7 @@ export interface SiteConfiguration {
   sync: SyncConfig;
   sponsors: SponsorConfig[];
   categories: CategoryConfig[];
+  timeCategories?: TimeCategoryConfig[]; // Organisation des catégories pour /remote
   // Champs optionnels pour extensions futures
   [key: string]: unknown;
 }
@@ -126,6 +137,32 @@ export const DEFAULT_CONFIG: Partial<SiteConfiguration> = {
   },
   sponsors: [],
   categories: [],
+  timeCategories: [
+    {
+      id: 'before',
+      name: 'Avant-match',
+      icon: '🏁',
+      color: 'from-blue-500 to-blue-600',
+      description: 'Échauffement & présentation',
+      categoryIds: [],
+    },
+    {
+      id: 'during',
+      name: 'Match',
+      icon: '▶️',
+      color: 'from-green-500 to-green-600',
+      description: 'Live & animations',
+      categoryIds: [],
+    },
+    {
+      id: 'after',
+      name: 'Après-match',
+      icon: '🏆',
+      color: 'from-purple-500 to-purple-600',
+      description: 'Résultats & remerciements',
+      categoryIds: [],
+    },
+  ],
 };
 
 // Schéma de validation

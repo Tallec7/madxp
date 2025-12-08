@@ -128,9 +128,9 @@ print_success "Upload terminé"
 # Extraction et installation
 print_step "Installation de la nouvelle version..."
 ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
-    # Extraction
+    # Extraction (--warning=no-unknown-keyword supprime les warnings macOS xattr)
     rm -rf ~/deploy
-    tar -xzf ~/neopro-deploy.tar.gz
+    tar --warning=no-unknown-keyword -xzf ~/neopro-deploy.tar.gz
 
     # Installation webapp
     if [ -d ~/deploy/webapp ]; then

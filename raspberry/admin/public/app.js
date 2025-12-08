@@ -157,12 +157,14 @@ function updateServicesGrid(services) {
  */
 async function loadVideos() {
     try {
-        const response = await fetch('/api/videos');
-        console.log('[admin-ui] GET /api/videos -> status', response.status);
-        const data = await response.json();
-        console.log('[admin-ui] /api/videos payload', data);
+        // Charger la configuration ET les vidéos orphelines en parallèle
+        const [configResponse, orphansResponse] = await Promise.all([
+            fetch('/api/configuration'),
+            fetch('/api/videos/orphans')
+        ]);
 
-        cachedVideos = Array.isArray(data) ? data : (data.videos || []);
+        const config = configResponse.ok ? await configResponse.json() : { categories: [] };
+        const orphansData = orphansResponse.ok ? await orphansResponse.json() : { orphans: [] };
 
         const list = document.getElementById('videos-list');
         if (!list) {
@@ -170,17 +172,263 @@ async function loadVideos() {
         }
         list.innerHTML = '';
 
-        if (cachedVideos.length === 0) {
-            list.innerHTML = '<p class="video-empty-state">Aucune vidéo trouvée</p>';
-            return;
+        // Afficher la structure de la configuration
+        renderConfigurationStructure(list, config);
+
+        // Afficher les vidéos orphelines
+        if (orphansData.orphans && orphansData.orphans.length > 0) {
+            renderOrphanVideos(list, orphansData.orphans, config.categories || []);
         }
 
-        const groupedVideos = groupVideosByCategory(cachedVideos);
-        renderVideoGroups(list, groupedVideos);
+        // Mettre à jour les suggestions et le cache
+        cachedVideos = orphansData.orphans || [];
         updateVideoSuggestions(cachedVideos);
     } catch (error) {
         console.error('Error loading videos:', error);
     }
+}
+
+function renderConfigurationStructure(container, config) {
+    const categories = config.categories || [];
+
+    const header = document.createElement('div');
+    header.className = 'section-header';
+    header.innerHTML = '<h3>📁 Configuration télécommande</h3>';
+    container.appendChild(header);
+
+    if (categories.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'config-empty';
+        empty.innerHTML = '<p class="video-empty-state">Aucune catégorie configurée</p>';
+        container.appendChild(empty);
+        return;
+    }
+
+    categories.forEach(category => {
+        const groupEl = document.createElement('div');
+        groupEl.className = 'video-group config-group';
+
+        const categoryHeader = document.createElement('div');
+        categoryHeader.className = 'video-group-header';
+
+        const videoCount = countVideosInCategory(category);
+        const subCount = (category.subCategories || []).length;
+
+        categoryHeader.innerHTML = `
+            <div>
+                <h4>${category.name || category.id || 'Sans nom'}</h4>
+                <span class="video-count">${videoCount} vidéo(s)${subCount > 0 ? ` · ${subCount} sous-cat.` : ''}</span>
+            </div>
+        `;
+        groupEl.appendChild(categoryHeader);
+
+        const body = document.createElement('div');
+        body.className = 'video-subgroups';
+
+        // Vidéos directes de la catégorie
+        if (category.videos && category.videos.length > 0) {
+            body.appendChild(createConfigVideoList('Vidéos directes', category.videos));
+        }
+
+        // Sous-catégories
+        (category.subCategories || []).forEach(subcat => {
+            if (subcat.videos && subcat.videos.length > 0) {
+                body.appendChild(createConfigVideoList(subcat.name || subcat.id, subcat.videos));
+            } else {
+                const emptySubcat = document.createElement('div');
+                emptySubcat.className = 'video-subgroup';
+                emptySubcat.innerHTML = `
+                    <div class="video-subgroup-header">
+                        <h5>${subcat.name || subcat.id}</h5>
+                        <span class="video-count">0 vidéo</span>
+                    </div>
+                    <p class="video-empty-state">Aucune vidéo</p>
+                `;
+                body.appendChild(emptySubcat);
+            }
+        });
+
+        if (!category.videos?.length && !category.subCategories?.length) {
+            const empty = document.createElement('p');
+            empty.className = 'video-empty-state';
+            empty.textContent = 'Aucune vidéo dans cette catégorie';
+            body.appendChild(empty);
+        }
+
+        groupEl.appendChild(body);
+        container.appendChild(groupEl);
+    });
+}
+
+function createConfigVideoList(title, videos) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'video-subgroup';
+
+    const header = document.createElement('div');
+    header.className = 'video-subgroup-header';
+    header.innerHTML = `
+        <h5>${title}</h5>
+        <span class="video-count">${videos.length} vidéo(s)</span>
+    `;
+    wrapper.appendChild(header);
+
+    const list = document.createElement('div');
+    list.className = 'video-rows';
+
+    videos.forEach(video => {
+        const row = document.createElement('div');
+        row.className = 'video-row';
+        row.innerHTML = `
+            <div class="video-row-info">
+                <div class="video-row-title">🎬 ${video.name || 'Sans nom'}</div>
+                <div class="video-row-path">${video.path || ''}</div>
+            </div>
+        `;
+        list.appendChild(row);
+    });
+
+    wrapper.appendChild(list);
+    return wrapper;
+}
+
+function countVideosInCategory(category) {
+    let count = (category.videos || []).length;
+    (category.subCategories || []).forEach(sub => {
+        count += (sub.videos || []).length;
+    });
+    return count;
+}
+
+function renderOrphanVideos(container, orphans, existingCategories) {
+    const section = document.createElement('div');
+    section.className = 'orphan-videos-section';
+
+    const header = document.createElement('div');
+    header.className = 'section-header orphan-header';
+    header.innerHTML = `
+        <h3>⚠️ Vidéos non référencées (${orphans.length})</h3>
+        <p class="hint">Ces vidéos sont sur le disque mais pas dans la configuration</p>
+    `;
+    section.appendChild(header);
+
+    const list = document.createElement('div');
+    list.className = 'orphan-list';
+
+    orphans.forEach(video => {
+        const row = document.createElement('div');
+        row.className = 'orphan-row';
+
+        row.innerHTML = `
+            <div class="orphan-info">
+                <div class="orphan-title">${video.displayName || video.name}</div>
+                <div class="orphan-meta">${video.size} • ${video.category || 'racine'}</div>
+                <div class="orphan-path">videos/${video.path}</div>
+            </div>
+            <div class="orphan-actions">
+                <select class="orphan-category-select" data-path="${video.path}">
+                    <option value="">-- Catégorie --</option>
+                    ${existingCategories.map(cat => `<option value="${cat.id}">${cat.name || cat.id}</option>`).join('')}
+                    <option value="__new__">+ Nouvelle catégorie...</option>
+                </select>
+                <select class="orphan-subcategory-select" data-path="${video.path}" style="display: none;">
+                    <option value="">-- Sous-catégorie (optionnel) --</option>
+                </select>
+                <button class="btn btn-primary btn-sm add-to-config-btn" data-path="${video.path}">
+                    Ajouter
+                </button>
+            </div>
+        `;
+
+        // Event listeners
+        const categorySelect = row.querySelector('.orphan-category-select');
+        const subcategorySelect = row.querySelector('.orphan-subcategory-select');
+        const addBtn = row.querySelector('.add-to-config-btn');
+
+        categorySelect.addEventListener('change', (e) => {
+            const catId = e.target.value;
+            if (catId === '__new__') {
+                const newCat = prompt('Nom de la nouvelle catégorie:');
+                if (newCat) {
+                    const option = document.createElement('option');
+                    option.value = newCat;
+                    option.textContent = newCat;
+                    option.selected = true;
+                    categorySelect.insertBefore(option, categorySelect.lastElementChild);
+                } else {
+                    categorySelect.value = '';
+                }
+                subcategorySelect.style.display = 'none';
+                return;
+            }
+
+            // Afficher les sous-catégories si la catégorie en a
+            const category = existingCategories.find(c => c.id === catId);
+            if (category && category.subCategories && category.subCategories.length > 0) {
+                subcategorySelect.innerHTML = `
+                    <option value="">-- Sans sous-cat. --</option>
+                    ${category.subCategories.map(sub => `<option value="${sub.id}">${sub.name || sub.id}</option>`).join('')}
+                    <option value="__new__">+ Nouvelle sous-cat...</option>
+                `;
+                subcategorySelect.style.display = 'inline-block';
+            } else {
+                subcategorySelect.style.display = 'none';
+            }
+        });
+
+        subcategorySelect.addEventListener('change', (e) => {
+            if (e.target.value === '__new__') {
+                const newSub = prompt('Nom de la nouvelle sous-catégorie:');
+                if (newSub) {
+                    const option = document.createElement('option');
+                    option.value = newSub;
+                    option.textContent = newSub;
+                    option.selected = true;
+                    subcategorySelect.insertBefore(option, subcategorySelect.lastElementChild);
+                } else {
+                    subcategorySelect.value = '';
+                }
+            }
+        });
+
+        addBtn.addEventListener('click', async () => {
+            const videoPath = addBtn.dataset.path;
+            const categoryId = categorySelect.value;
+            const subcategoryId = subcategorySelect.value !== '__new__' ? subcategorySelect.value : '';
+
+            if (!categoryId || categoryId === '__new__') {
+                showNotification('Sélectionnez une catégorie', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/videos/add-to-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        videoPath,
+                        categoryId,
+                        subcategoryId: subcategoryId || null,
+                        displayName: video.displayName
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('Vidéo ajoutée à la configuration', 'success');
+                    loadVideos(); // Recharger
+                } else {
+                    showNotification('Erreur: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Erreur lors de l\'ajout', 'error');
+            }
+        });
+
+        list.appendChild(row);
+    });
+
+    section.appendChild(list);
+    container.appendChild(section);
 }
 
 function groupVideosByCategory(videos) {

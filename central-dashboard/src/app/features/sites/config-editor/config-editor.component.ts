@@ -12,6 +12,8 @@ import {
   ConfigValidationError,
   SponsorConfig,
   CategoryConfig,
+  TimeCategoryConfig,
+  VideoConfig,
   DEFAULT_CONFIG,
 } from '../../../core/models';
 
@@ -244,12 +246,25 @@ import {
                   <div class="videos-section">
                     <div class="section-subheader">
                       <span>Vidéos directes</span>
+                      <button class="btn-add-small" (click)="addVideo(catIndex, null)">+ Ajouter vidéo</button>
                     </div>
                     <div class="videos-list" *ngIf="category.videos && category.videos.length > 0">
-                      <div class="video-item" *ngFor="let video of category.videos; let vidIndex = index">
+                      <div class="video-item-editable" *ngFor="let video of category.videos; let vidIndex = index">
                         <span class="video-icon">🎬</span>
-                        <span class="video-title">{{ video.name }}</span>
-                        <span class="video-filename">{{ video.path }}</span>
+                        <input
+                          type="text"
+                          [value]="video.name"
+                          (input)="updateVideo(catIndex, null, vidIndex, 'name', $any($event.target).value)"
+                          placeholder="Nom de la vidéo"
+                          class="video-name-input"
+                        />
+                        <input
+                          type="text"
+                          [value]="video.path"
+                          (input)="updateVideo(catIndex, null, vidIndex, 'path', $any($event.target).value)"
+                          placeholder="videos/CATEGORIE/fichier.mp4"
+                          class="video-path-input"
+                        />
                         <button class="btn-remove-small" (click)="removeVideo(catIndex, null, vidIndex)">×</button>
                       </div>
                     </div>
@@ -275,13 +290,26 @@ import {
                             class="subcategory-name-input"
                           />
                           <span class="subcategory-stats">{{ subcat.videos?.length || 0 }} vidéo(s)</span>
+                          <button class="btn-add-small" (click)="addVideo(catIndex, subIndex)">+ Vidéo</button>
                           <button class="btn-remove-small" (click)="removeSubcategory(catIndex, subIndex)">×</button>
                         </div>
                         <div class="videos-list" *ngIf="subcat.videos && subcat.videos.length > 0">
-                          <div class="video-item" *ngFor="let video of subcat.videos; let vidIndex = index">
+                          <div class="video-item-editable" *ngFor="let video of subcat.videos; let vidIndex = index">
                             <span class="video-icon">🎬</span>
-                            <span class="video-title">{{ video.name }}</span>
-                            <span class="video-filename">{{ video.path }}</span>
+                            <input
+                              type="text"
+                              [value]="video.name"
+                              (input)="updateVideo(catIndex, subIndex, vidIndex, 'name', $any($event.target).value)"
+                              placeholder="Nom de la vidéo"
+                              class="video-name-input"
+                            />
+                            <input
+                              type="text"
+                              [value]="video.path"
+                              (input)="updateVideo(catIndex, subIndex, vidIndex, 'path', $any($event.target).value)"
+                              placeholder="videos/CATEGORIE/fichier.mp4"
+                              class="video-path-input"
+                            />
                             <button class="btn-remove-small" (click)="removeVideo(catIndex, subIndex, vidIndex)">×</button>
                           </div>
                         </div>
@@ -300,6 +328,47 @@ import {
             <p class="empty-message" *ngIf="config.categories.length === 0">
               Aucune catégorie configurée
             </p>
+          </div>
+
+          <!-- Section Organisation Télécommande (TimeCategories) -->
+          <div class="form-section">
+            <h4 class="section-title">
+              <span class="section-icon">📱</span>
+              Organisation Télécommande
+              <span class="section-hint">(Assigner les catégories aux blocs Avant-match / Match / Après-match)</span>
+            </h4>
+            <div class="time-categories-grid" *ngIf="config.timeCategories?.length">
+              <div class="time-category-card" *ngFor="let timeCategory of config.timeCategories; let tcIndex = index">
+                <div class="time-category-header" [style.background]="'linear-gradient(135deg, var(--tc-color-start), var(--tc-color-end))'">
+                  <span class="tc-icon">{{ timeCategory.icon }}</span>
+                  <span class="tc-name">{{ timeCategory.name }}</span>
+                  <span class="tc-count">{{ getCategoriesInTimeCategory(tcIndex).length }} cat.</span>
+                </div>
+                <div class="time-category-content">
+                  <p class="tc-description">{{ timeCategory.description }}</p>
+                  <div class="tc-categories-list">
+                    <label
+                      class="tc-category-checkbox"
+                      *ngFor="let category of config.categories"
+                    >
+                      <input
+                        type="checkbox"
+                        [checked]="isCategoryInTimeCategory(tcIndex, category.id)"
+                        (change)="toggleCategoryInTimeCategory(tcIndex, category.id)"
+                      />
+                      <span class="checkbox-label">{{ category.name || '(Sans nom)' }}</span>
+                    </label>
+                  </div>
+                  <p class="empty-message-small" *ngIf="config.categories.length === 0">
+                    Créez d'abord des catégories
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="unassigned-warning" *ngIf="getUnassignedCategories().length > 0">
+              <span class="warning-icon">⚠️</span>
+              <span>Catégories non assignées : {{ getUnassignedCategories().map(c => c.name || '(Sans nom)').join(', ') }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -878,6 +947,167 @@ import {
       text-align: center;
     }
 
+    /* Video editable items */
+    .video-item-editable {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: #f8fafc;
+      border-radius: 4px;
+      font-size: 0.8125rem;
+      border: 1px solid #e2e8f0;
+    }
+
+    .video-name-input {
+      flex: 1;
+      min-width: 120px;
+      padding: 0.375rem 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      font-size: 0.8125rem;
+    }
+
+    .video-path-input {
+      flex: 2;
+      min-width: 200px;
+      padding: 0.375rem 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: monospace;
+      color: #64748b;
+    }
+
+    .video-name-input:focus,
+    .video-path-input:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+
+    /* TimeCategories section */
+    .section-hint {
+      font-size: 0.75rem;
+      font-weight: normal;
+      color: #64748b;
+      margin-left: 0.5rem;
+    }
+
+    .time-categories-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      .time-categories-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .time-category-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      background: white;
+    }
+
+    .time-category-header {
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: white;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+    }
+
+    .time-category-card:nth-child(1) .time-category-header {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    }
+
+    .time-category-card:nth-child(2) .time-category-header {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+    }
+
+    .time-category-card:nth-child(3) .time-category-header {
+      background: linear-gradient(135deg, #a855f7, #9333ea);
+    }
+
+    .tc-icon {
+      font-size: 1.25rem;
+    }
+
+    .tc-name {
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .tc-count {
+      font-size: 0.75rem;
+      background: rgba(255,255,255,0.2);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .time-category-content {
+      padding: 1rem;
+    }
+
+    .tc-description {
+      font-size: 0.8125rem;
+      color: #64748b;
+      margin: 0 0 0.75rem 0;
+    }
+
+    .tc-categories-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .tc-category-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      background: #f8fafc;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .tc-category-checkbox:hover {
+      background: #f1f5f9;
+    }
+
+    .tc-category-checkbox input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .tc-category-checkbox .checkbox-label {
+      font-size: 0.875rem;
+      color: #0f172a;
+    }
+
+    .unassigned-warning {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      color: #92400e;
+    }
+
+    .warning-icon {
+      font-size: 1rem;
+    }
+
     /* JSON Editor */
     .json-editor {
       display: flex;
@@ -1313,6 +1543,11 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       sync: { enabled: true, serverUrl: 'https://neopro-central-server.onrender.com', siteName: '', clubName: '' },
       sponsors: [],
       categories: [],
+      timeCategories: [
+        { id: 'before', name: 'Avant-match', icon: '🏁', color: 'from-blue-500 to-blue-600', description: 'Échauffement & présentation', categoryIds: [] },
+        { id: 'during', name: 'Match', icon: '▶️', color: 'from-green-500 to-green-600', description: 'Live & animations', categoryIds: [] },
+        { id: 'after', name: 'Après-match', icon: '🏆', color: 'from-purple-500 to-purple-600', description: 'Résultats & remerciements', categoryIds: [] },
+      ],
     };
   }
 
@@ -1382,6 +1617,15 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       })),
     }));
 
+    // Normalize timeCategories - use config values or defaults
+    const defaultTimeCategories = this.getEmptyConfig().timeCategories!;
+    const normalizedTimeCategories = configuration.timeCategories?.length
+      ? configuration.timeCategories.map(tc => ({
+          ...tc,
+          categoryIds: tc.categoryIds || [],
+        }))
+      : defaultTimeCategories;
+
     this.config = {
       ...this.getEmptyConfig(),
       ...configuration,
@@ -1390,6 +1634,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       sync: { ...this.getEmptyConfig().sync, ...configuration.sync },
       sponsors: configuration.sponsors || [],
       categories: normalizedCategories,
+      timeCategories: normalizedTimeCategories,
     };
     this.originalConfig = JSON.parse(JSON.stringify(this.config));
     this.syncJsonFromConfig();
@@ -1570,6 +1815,78 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       }
     }
     this.onConfigChange();
+  }
+
+  // Videos CRUD
+  addVideo(catIndex: number, subIndex: number | null): void {
+    const newVideo: VideoConfig = {
+      name: '',
+      path: '',
+      type: 'video/mp4',
+    };
+
+    const category = this.config.categories[catIndex];
+    if (subIndex === null) {
+      if (!category.videos) {
+        category.videos = [];
+      }
+      category.videos.push(newVideo);
+    } else {
+      if (category.subCategories && category.subCategories[subIndex]) {
+        if (!category.subCategories[subIndex].videos) {
+          category.subCategories[subIndex].videos = [];
+        }
+        category.subCategories[subIndex].videos.push(newVideo);
+      }
+    }
+    this.onConfigChange();
+  }
+
+  updateVideo(catIndex: number, subIndex: number | null, vidIndex: number, field: 'name' | 'path', value: string): void {
+    const category = this.config.categories[catIndex];
+    let video: VideoConfig | undefined;
+
+    if (subIndex === null) {
+      video = category.videos?.[vidIndex];
+    } else {
+      video = category.subCategories?.[subIndex]?.videos?.[vidIndex];
+    }
+
+    if (video) {
+      video[field] = value;
+      this.onConfigChange();
+    }
+  }
+
+  // TimeCategories management
+  toggleCategoryInTimeCategory(timeCatIndex: number, categoryId: string): void {
+    const timeCategory = this.config.timeCategories?.[timeCatIndex];
+    if (!timeCategory) return;
+
+    const index = timeCategory.categoryIds.indexOf(categoryId);
+    if (index === -1) {
+      timeCategory.categoryIds.push(categoryId);
+    } else {
+      timeCategory.categoryIds.splice(index, 1);
+    }
+    this.onConfigChange();
+  }
+
+  isCategoryInTimeCategory(timeCatIndex: number, categoryId: string): boolean {
+    return this.config.timeCategories?.[timeCatIndex]?.categoryIds.includes(categoryId) || false;
+  }
+
+  getCategoriesInTimeCategory(timeCatIndex: number): CategoryConfig[] {
+    const categoryIds = this.config.timeCategories?.[timeCatIndex]?.categoryIds || [];
+    return this.config.categories.filter(cat => categoryIds.includes(cat.id));
+  }
+
+  getUnassignedCategories(): CategoryConfig[] {
+    const allAssignedIds = new Set<string>();
+    this.config.timeCategories?.forEach(tc => {
+      tc.categoryIds.forEach(id => allAssignedIds.add(id));
+    });
+    return this.config.categories.filter(cat => !allAssignedIds.has(cat.id));
   }
 
   // History

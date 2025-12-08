@@ -1,6 +1,16 @@
 import { Category } from "./category.interface";
 import { Sponsor } from "./sponsor.interface";
 
+// TimeCategory pour organiser les catégories dans /remote (Avant-match, Match, Après-match)
+export interface TimeCategory {
+    id: string;
+    name: string;
+    icon: string;
+    color: string;
+    description: string;
+    categoryIds: string[]; // IDs des catégories assignées à ce bloc
+}
+
 export interface Configuration {
     remote: {
         title: string;
@@ -29,4 +39,5 @@ export interface Configuration {
     version: string;
     categories: Category[];
     sponsors: Sponsor[];
+    timeCategories?: TimeCategory[]; // Organisation des catégories pour /remote
 }

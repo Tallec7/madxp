@@ -1,6 +1,10 @@
 # Changelog
 
-Généré le 2025-12-07
+Généré le 2025-12-08
+
+## ✨ Nouvelles fonctionnalités
+
+- [Configuration Editor: TimeCategories et CRUD vidéos](commits/2025-12-08_config-editor-timecategories.md) - 2025-12-08
 
 ## 🐛 Corrections
 

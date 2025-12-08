@@ -1,22 +1,13 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Configuration } from '../../interfaces/configuration.interface';
+import { Configuration, TimeCategory } from '../../interfaces/configuration.interface';
 import { Category } from '../../interfaces/category.interface';
 import { Video } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 
 type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos';
-
-interface TimeCategory {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-  description: string;
-  categories: string[]; // IDs des catégories de configuration.json
-}
 
 @Component({
   selector: 'app-remote',
@@ -39,15 +30,15 @@ export class RemoteComponent implements OnInit {
   public selectedCategory: Category | null = null;
   public selectedSubCategory: Category | null = null;
 
-  // Organisation par temps de match
-  public timeCategories: TimeCategory[] = [
+  // Organisation par temps de match - valeurs par défaut si non définies dans la config
+  private readonly defaultTimeCategories: TimeCategory[] = [
     {
       id: 'before',
       name: 'Avant-match',
       icon: '🏁',
       color: 'from-blue-500 to-blue-600',
       description: 'Échauffement & présentation',
-      categories: ['Focus-partenaires', 'Info-club']
+      categoryIds: []
     },
     {
       id: 'during',
@@ -55,7 +46,7 @@ export class RemoteComponent implements OnInit {
       icon: '▶️',
       color: 'from-green-500 to-green-600',
       description: 'Live & animations',
-      categories: ['Match_SM1', 'Match_SF']
+      categoryIds: []
     },
     {
       id: 'after',
@@ -63,13 +54,20 @@ export class RemoteComponent implements OnInit {
       icon: '🏆',
       color: 'from-purple-500 to-purple-600',
       description: 'Résultats & remerciements',
-      categories: ['Focus-partenaires', 'Info-club']
+      categoryIds: []
     }
   ];
+
+  public timeCategories: TimeCategory[] = [];
 
   public ngOnInit(): void {
     const data = this.route.snapshot.data['configuration'] as Configuration;
     this.configuration = data;
+
+    // Utiliser les timeCategories de la config, ou les valeurs par défaut
+    this.timeCategories = this.configuration.timeCategories?.length
+      ? this.configuration.timeCategories
+      : this.defaultTimeCategories;
   }
 
   // Navigation
@@ -130,7 +128,7 @@ export class RemoteComponent implements OnInit {
   // Helpers
   public getCategoriesForTimeCategory(timeCategory: TimeCategory): Category[] {
     return this.configuration.categories.filter(cat =>
-      timeCategory.categories.includes(cat.id)
+      timeCategory.categoryIds.includes(cat.id)
     );
   }
 

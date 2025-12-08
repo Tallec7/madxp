@@ -865,6 +865,132 @@ app.put('/api/videos/edit', async (req, res) => {
   }
 });
 
+// API: Configuration complète (configuration.json)
+app.get('/api/configuration', async (req, res) => {
+  try {
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(404).json({ error: 'Configuration non trouvée' });
+    }
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Vidéos orphelines (sur disque mais pas dans config)
+app.get('/api/videos/orphans', async (req, res) => {
+  try {
+    await ensureDirectory(VIDEOS_DIR);
+    const metadata = await getVideoMetadataFromConfig();
+    const allVideos = await listVideosRecursive(VIDEOS_DIR, VIDEOS_DIR, metadata);
+
+    // Filtrer les vidéos non référencées dans la config
+    const orphans = allVideos.filter(video => !video.configCategory);
+
+    res.json({ orphans });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Ajouter une vidéo orpheline à la configuration
+app.post('/api/videos/add-to-config', async (req, res) => {
+  try {
+    const { videoPath, categoryId, subcategoryId, displayName } = req.body;
+
+    if (!videoPath || !categoryId) {
+      return res.status(400).json({ error: 'videoPath et categoryId requis' });
+    }
+
+    // Vérifier que le fichier existe
+    const fullPath = path.join(VIDEOS_DIR, videoPath);
+    try {
+      await fs.access(fullPath);
+    } catch {
+      return res.status(404).json({ error: 'Fichier vidéo non trouvé' });
+    }
+
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(500).json({ error: 'Impossible de localiser configuration.json' });
+    }
+
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+
+    // Trouver ou créer la catégorie
+    config.categories = config.categories || [];
+    let category = config.categories.find(
+      cat => (cat.id || '').toLowerCase() === categoryId.toLowerCase()
+    );
+
+    if (!category) {
+      category = {
+        id: categoryId,
+        name: categoryId,
+        videos: [],
+        subCategories: []
+      };
+      config.categories.push(category);
+    }
+
+    // Préparer l'entrée vidéo
+    const filename = path.basename(videoPath);
+    const fullVideoPath = `videos/${videoPath}`;
+    const mimeType = guessMimeFromExtension(filename);
+    const newEntry = createVideoEntry(
+      filename,
+      fullVideoPath,
+      mimeType,
+      displayName || buildDisplayNameFromFilename(filename)
+    );
+
+    // Ajouter à la bonne sous-catégorie ou directement à la catégorie
+    if (subcategoryId) {
+      category.subCategories = category.subCategories || [];
+      let subCategory = category.subCategories.find(
+        sub => (sub.id || '').toLowerCase() === subcategoryId.toLowerCase()
+      );
+
+      if (!subCategory) {
+        subCategory = {
+          id: subcategoryId,
+          name: subcategoryId,
+          videos: []
+        };
+        category.subCategories.push(subCategory);
+      }
+
+      subCategory.videos = subCategory.videos || [];
+      const alreadyExists = subCategory.videos.some(v => v.path === fullVideoPath);
+      if (!alreadyExists) {
+        subCategory.videos.push(newEntry);
+      }
+    } else {
+      category.videos = category.videos || [];
+      const alreadyExists = category.videos.some(v => v.path === fullVideoPath);
+      if (!alreadyExists) {
+        category.videos.push(newEntry);
+      }
+    }
+
+    await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
+    invalidateVideoCaches();
+
+    res.json({
+      success: true,
+      message: 'Vidéo ajoutée à la configuration',
+      entry: newEntry
+    });
+  } catch (error) {
+    console.error('[admin] Error adding video to config:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: Logs
 app.get('/api/logs/:service', async (req, res) => {
   const { service } = req.params;

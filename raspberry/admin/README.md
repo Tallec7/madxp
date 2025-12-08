@@ -18,12 +18,13 @@ Accessible depuis n'importe quel appareil connecté au WiFi `NEOPRO-[CLUB]`.
 - Rafraîchissement automatique toutes les 5s
 
 ### 🎬 Vidéos
-- Upload de vidéos (MP4, MKV, MOV)
-- Limite: 500MB par fichier
+- **Affichage de la configuration télécommande** : catégories, sous-catégories et vidéos tels que définis dans `configuration.json`
+- **Détection des vidéos orphelines** : vidéos présentes sur le disque mais non référencées dans la configuration
+- **Ajout de vidéos orphelines** : possibilité d'ajouter une vidéo orpheline à une catégorie existante ou nouvelle
+- Upload de vidéos (MP4, MKV, MOV) - Limite: 500MB par fichier
 - Organisation par catégories
-- Liste complète de la bibliothèque
 - Suppression de vidéos
-- Les catégories/sous-catégories sont résolues automatiquement d'après `configuration.json` (la structure peut donc varier selon chaque club)
+- Les catégories/sous-catégories sont résolues automatiquement d'après `configuration.json`
 - Chaque upload ou suppression met à jour automatiquement `configuration.json` pour garder la télécommande synchronisée
 
 ### 📡 Réseau
@@ -75,9 +76,17 @@ sudo systemctl start neopro-admin
 - `POST /api/system/shutdown` - Éteindre
 
 #### Vidéos
-- `GET /api/videos` - Liste vidéos
+- `GET /api/videos` - Liste toutes les vidéos (disque)
+- `GET /api/videos/orphans` - Liste les vidéos non référencées dans la config
 - `POST /api/videos/upload` - Upload (multipart)
+- `POST /api/videos/add-to-config` - Ajoute une vidéo orpheline à la configuration
+  ```json
+  { "videoPath": "MATCH_SF/BUT/video.mp4", "categoryId": "Match_SF", "subcategoryId": "But" }
+  ```
 - `DELETE /api/videos/:category/:filename` - Supprimer
+
+#### Configuration
+- `GET /api/configuration` - Configuration complète (`configuration.json`)
 
 #### Logs
 - `GET /api/logs/:service?lines=100` - Récupérer logs
