@@ -233,7 +233,7 @@ import {
                     class="category-name-input"
                   />
                   <span class="category-stats">
-                    {{ category.videos.length }} vidéo(s)
+                    {{ category.videos?.length || 0 }} vidéo(s)
                     <span *ngIf="category.subCategories?.length"> · {{ category.subCategories.length }} sous-cat.</span>
                   </span>
                   <button class="btn-remove" (click)="removeCategory(catIndex); $event.stopPropagation()">×</button>
@@ -274,7 +274,7 @@ import {
                             placeholder="Nom de la sous-catégorie"
                             class="subcategory-name-input"
                           />
-                          <span class="subcategory-stats">{{ subcat.videos.length }} vidéo(s)</span>
+                          <span class="subcategory-stats">{{ subcat.videos?.length || 0 }} vidéo(s)</span>
                           <button class="btn-remove-small" (click)="removeSubcategory(catIndex, subIndex)">×</button>
                         </div>
                         <div class="videos-list" *ngIf="subcat.videos && subcat.videos.length > 0">
@@ -1372,6 +1372,16 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   }
 
   private setConfig(configuration: SiteConfiguration): void {
+    // Normalize categories to ensure videos and subCategories arrays exist
+    const normalizedCategories = (configuration.categories || []).map(cat => ({
+      ...cat,
+      videos: cat.videos || [],
+      subCategories: (cat.subCategories || []).map(subcat => ({
+        ...subcat,
+        videos: subcat.videos || [],
+      })),
+    }));
+
     this.config = {
       ...this.getEmptyConfig(),
       ...configuration,
@@ -1379,7 +1389,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       auth: { ...this.getEmptyConfig().auth, ...configuration.auth },
       sync: { ...this.getEmptyConfig().sync, ...configuration.sync },
       sponsors: configuration.sponsors || [],
-      categories: configuration.categories || [],
+      categories: normalizedCategories,
     };
     this.originalConfig = JSON.parse(JSON.stringify(this.config));
     this.syncJsonFromConfig();
@@ -1401,6 +1411,16 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   onJsonChange(): void {
     try {
       const parsed = JSON.parse(this.jsonString);
+      // Normalize categories to ensure videos and subCategories arrays exist
+      const normalizedCategories = (parsed.categories || []).map((cat: any) => ({
+        ...cat,
+        videos: cat.videos || [],
+        subCategories: (cat.subCategories || []).map((subcat: any) => ({
+          ...subcat,
+          videos: subcat.videos || [],
+        })),
+      }));
+
       this.config = {
         ...this.getEmptyConfig(),
         ...parsed,
@@ -1408,7 +1428,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
         auth: { ...this.getEmptyConfig().auth, ...parsed.auth },
         sync: { ...this.getEmptyConfig().sync, ...parsed.sync },
         sponsors: parsed.sponsors || [],
-        categories: parsed.categories || [],
+        categories: normalizedCategories,
       };
       this.jsonError = '';
       this.hasChanges = JSON.stringify(this.config) !== JSON.stringify(this.originalConfig);
