@@ -367,7 +367,7 @@ import {
             </div>
             <div class="unassigned-warning" *ngIf="getUnassignedCategories().length > 0">
               <span class="warning-icon">⚠️</span>
-              <span>Catégories non assignées : {{ getUnassignedCategories().map(c => c.name || '(Sans nom)').join(', ') }}</span>
+              <span>Catégories non assignées : {{ getUnassignedCategoriesNames() }}</span>
             </div>
           </div>
         </div>
@@ -1887,6 +1887,12 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       tc.categoryIds.forEach(id => allAssignedIds.add(id));
     });
     return this.config.categories.filter(cat => !allAssignedIds.has(cat.id));
+  }
+
+  getUnassignedCategoriesNames(): string {
+    return this.getUnassignedCategories()
+      .map(c => c.name || '(Sans nom)')
+      .join(', ');
   }
 
   // History
