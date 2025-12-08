@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, BehaviorSubject, tap } from 'rxjs';
 import { ApiService } from './api.service';
-import { Site, SiteStats, Metrics } from '../models';
+import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -97,5 +97,36 @@ export class SitesService {
 
   getConfiguration(id: string): Observable<{ success: boolean; commandId?: string; message: string }> {
     return this.sendCommand(id, 'get_config', {});
+  }
+
+  // Historique des configurations
+  getConfigHistory(id: string, limit = 20, offset = 0): Observable<{ site_id: string; total: number; history: ConfigHistory[] }> {
+    return this.api.get(`/sites/${id}/config-history`, { limit, offset });
+  }
+
+  getConfigVersion(siteId: string, versionId: string): Observable<ConfigHistory> {
+    return this.api.get(`/sites/${siteId}/config-history/${versionId}`);
+  }
+
+  saveConfigVersion(id: string, configuration: SiteConfiguration, comment?: string): Observable<ConfigHistory> {
+    return this.api.post(`/sites/${id}/config-history`, { configuration, comment });
+  }
+
+  compareConfigVersions(id: string, version1: string, version2: string): Observable<{
+    version1: { id: string; deployed_at: Date; configuration: SiteConfiguration };
+    version2: { id: string; deployed_at: Date; configuration: SiteConfiguration };
+    diff: ConfigDiff[];
+  }> {
+    return this.api.get(`/sites/${id}/config-history-compare`, { version1, version2 });
+  }
+
+  previewConfigDiff(id: string, newConfiguration: SiteConfiguration): Observable<{
+    hasChanges: boolean;
+    changesCount: number;
+    diff: ConfigDiff[];
+    currentConfiguration: SiteConfiguration | null;
+    newConfiguration: SiteConfiguration;
+  }> {
+    return this.api.post(`/sites/${id}/config-preview-diff`, { newConfiguration });
   }
 }

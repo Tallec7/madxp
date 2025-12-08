@@ -6,11 +6,12 @@ import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Site, Metrics } from '../../core/models';
 import { Subscription, interval } from 'rxjs';
+import { ConfigEditorComponent } from './config-editor/config-editor.component';
 
 @Component({
   selector: 'app-site-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, ConfigEditorComponent],
   template: `
     <div class="page-container" *ngIf="site; else loading">
       <div class="page-header">
@@ -198,33 +199,12 @@ import { Subscription, interval } from 'rxjs';
             {{ showConfigEditor ? 'Fermer' : 'Modifier la configuration' }}
           </button>
         </div>
-        <div *ngIf="showConfigEditor" class="config-editor">
-          <div class="config-warning">
-            Modifiez la configuration JSON du site. Les changements seront appliques immediatement.
-          </div>
-          <div *ngIf="loadingConfig" class="loading-inline">
-            <div class="spinner-small"></div>
-            <span>Chargement de la configuration...</span>
-          </div>
-          <textarea
-            *ngIf="!loadingConfig"
-            class="config-textarea"
-            [(ngModel)]="configJson"
-            [placeholder]="configPlaceholder"
-            rows="20"
-          ></textarea>
-          <div class="config-actions" *ngIf="!loadingConfig">
-            <button class="btn btn-secondary" (click)="loadCurrentConfig()" [disabled]="loadingConfig">
-              Recharger depuis le site
-            </button>
-            <button class="btn btn-secondary" (click)="formatConfig()">Formater JSON</button>
-            <button class="btn btn-secondary" (click)="validateConfig()">Valider</button>
-            <button class="btn btn-primary" (click)="deployConfig()" [disabled]="!isConfigValid || sendingCommand">
-              {{ sendingCommand ? 'Envoi en cours...' : 'Deployer la configuration' }}
-            </button>
-          </div>
-          <div *ngIf="configError" class="config-error">{{ configError }}</div>
-          <div *ngIf="configSuccess" class="config-success">{{ configSuccess }}</div>
+        <div *ngIf="showConfigEditor" class="config-editor-wrapper">
+          <app-config-editor
+            [siteId]="siteId"
+            [siteName]="site.site_name"
+            (configDeployed)="onConfigDeployed()"
+          ></app-config-editor>
         </div>
       </div>
 
@@ -648,62 +628,8 @@ import { Subscription, interval } from 'rxjs';
       padding: 0;
     }
 
-    .config-editor {
+    .config-editor-wrapper {
       margin-top: 1rem;
-    }
-
-    .config-warning {
-      padding: 0.75rem 1rem;
-      background: #fef3c7;
-      border: 1px solid #f59e0b;
-      border-radius: 6px;
-      color: #92400e;
-      font-size: 0.875rem;
-      margin-bottom: 1rem;
-    }
-
-    .config-textarea {
-      width: 100%;
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-size: 0.875rem;
-      padding: 1rem;
-      border: 2px solid #e2e8f0;
-      border-radius: 8px;
-      background: #f8fafc;
-      resize: vertical;
-      min-height: 300px;
-    }
-
-    .config-textarea:focus {
-      outline: none;
-      border-color: #2563eb;
-      background: white;
-    }
-
-    .config-actions {
-      display: flex;
-      gap: 0.75rem;
-      margin-top: 1rem;
-    }
-
-    .config-error {
-      margin-top: 1rem;
-      padding: 0.75rem 1rem;
-      background: #fef2f2;
-      border: 1px solid #ef4444;
-      border-radius: 6px;
-      color: #b91c1c;
-      font-size: 0.875rem;
-    }
-
-    .config-success {
-      margin-top: 1rem;
-      padding: 0.75rem 1rem;
-      background: #ecfdf5;
-      border: 1px solid #10b981;
-      border-radius: 6px;
-      color: #065f46;
-      font-size: 0.875rem;
     }
 
     .btn {
@@ -877,34 +803,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   // Configuration editor
   showConfigEditor = false;
-  configJson = '';
-  configError = '';
-  configSuccess = '';
-  isConfigValid = false;
   sendingCommand = false;
-  loadingConfig = false;
-  private configCommandId: string | null = null;
-  private configPollSubscription?: Subscription;
-
-  configPlaceholder = `{
-  "remote": {
-    "title": "Telecommande Neopro - MON_CLUB"
-  },
-  "auth": {
-    "password": "MotDePasseWiFi",
-    "clubName": "MON_CLUB",
-    "sessionDuration": 28800000
-  },
-  "sync": {
-    "enabled": true,
-    "serverUrl": "https://neopro-central-server.onrender.com",
-    "siteName": "ID_SITE",
-    "clubName": "MON_CLUB"
-  },
-  "version": "1.0",
-  "sponsors": [],
-  "categories": []
-}`;
 
   // Modals
   showLogsModal = false;
@@ -951,7 +850,6 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.refreshSubscription?.unsubscribe();
-    this.configPollSubscription?.unsubscribe();
   }
 
   loadSite(): void {
@@ -1120,134 +1018,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   // Configuration editor methods
   toggleConfigEditor(): void {
     this.showConfigEditor = !this.showConfigEditor;
-    if (this.showConfigEditor && !this.configJson) {
-      this.loadCurrentConfig();
-    }
   }
 
-  loadCurrentConfig(): void {
-    this.loadingConfig = true;
-    this.configError = '';
-    this.configSuccess = '';
-    this.configPollSubscription?.unsubscribe();
-
-    this.sitesService.getConfiguration(this.siteId).subscribe({
-      next: (response) => {
-        if (response.commandId) {
-          this.configCommandId = response.commandId;
-          this.pollConfigResult();
-        } else {
-          this.loadingConfig = false;
-          this.configError = 'Erreur: pas de commandId recu';
-        }
-      },
-      error: (error) => {
-        this.loadingConfig = false;
-        this.configError = 'Erreur: ' + (error.error?.error || error.message);
-      }
-    });
-  }
-
-  private pollConfigResult(): void {
-    if (!this.configCommandId) return;
-
-    this.configPollSubscription = interval(1000).subscribe(() => {
-      this.sitesService.getCommandStatus(this.siteId, this.configCommandId!).subscribe({
-        next: (status) => {
-          if (status.status === 'completed') {
-            this.configPollSubscription?.unsubscribe();
-            this.loadingConfig = false;
-
-            if (status.result?.configuration) {
-              this.configJson = JSON.stringify(status.result.configuration, null, 2);
-              this.isConfigValid = true;
-              this.configSuccess = 'Configuration chargee depuis le site';
-            } else if (status.result?.message === 'No configuration file found') {
-              this.configJson = '';
-              this.configError = 'Aucune configuration trouvee sur le site. Creez-en une nouvelle.';
-            } else {
-              this.configError = 'Configuration vide ou invalide';
-            }
-          } else if (status.status === 'failed') {
-            this.configPollSubscription?.unsubscribe();
-            this.loadingConfig = false;
-            this.configError = 'Erreur: ' + (status.error_message || 'Echec de la recuperation');
-          }
-        },
-        error: (error) => {
-          this.configPollSubscription?.unsubscribe();
-          this.loadingConfig = false;
-          this.configError = 'Erreur: ' + (error.error?.error || error.message);
-        }
-      });
-    });
-  }
-
-  formatConfig(): void {
-    this.configError = '';
-    this.configSuccess = '';
-    try {
-      const parsed = JSON.parse(this.configJson);
-      this.configJson = JSON.stringify(parsed, null, 2);
-      this.isConfigValid = true;
-      this.configSuccess = 'JSON formaté avec succès';
-    } catch (e: any) {
-      this.configError = `Erreur de syntaxe JSON: ${e.message}`;
-      this.isConfigValid = false;
-    }
-  }
-
-  validateConfig(): void {
-    this.configError = '';
-    this.configSuccess = '';
-    try {
-      const parsed = JSON.parse(this.configJson);
-
-      // Validation basique de la structure
-      if (!parsed.auth) {
-        throw new Error('La section "auth" est requise');
-      }
-      if (!parsed.auth.clubName) {
-        throw new Error('Le champ "auth.clubName" est requis');
-      }
-
-      this.isConfigValid = true;
-      this.configSuccess = 'Configuration valide !';
-    } catch (e: any) {
-      this.configError = e.message;
-      this.isConfigValid = false;
-    }
-  }
-
-  deployConfig(): void {
-    if (!this.isConfigValid) {
-      this.validateConfig();
-      if (!this.isConfigValid) return;
-    }
-
-    this.configError = '';
-    this.configSuccess = '';
-
-    try {
-      const configuration = JSON.parse(this.configJson);
-
-      if (!confirm('Déployer cette configuration sur le site ? Les changements seront appliqués immédiatement.')) {
-        return;
-      }
-
-      this.sendingCommand = true;
-      this.sitesService.sendCommand(this.siteId, 'update_config', { configuration }).subscribe({
-        next: (response) => {
-          this.sendingCommand = false;
-          this.configSuccess = `Configuration déployée avec succès !`;
-        },
-        error: (error) => {
-          this.sendingCommand = false;
-          this.configError = 'Erreur: ' + (error.error?.error || error.message);
-        }
-      });
-    } catch (e: any) {
-      this.configError = `Erreur JSON: ${e.message}`;
-    }
+  onConfigDeployed(): void {
+    this.notificationService.success('Configuration déployée avec succès !');
   }
 }

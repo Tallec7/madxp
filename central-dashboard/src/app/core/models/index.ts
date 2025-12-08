@@ -132,3 +132,6 @@ export interface SiteStats {
   maintenance: number;
   error: number;
 }
+
+// Re-export site config models
+export * from './site-config.model';

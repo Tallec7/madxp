@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as sitesController from '../controllers/sites.controller';
+import * as configHistoryController from '../controllers/config-history.controller';
 import { authenticate, requireRole } from '../middleware/auth';
 import { validate, schemas } from '../middleware/validation';
 
@@ -54,6 +55,39 @@ router.get(
   '/:id/command/:commandId',
   authenticate,
   sitesController.getCommandStatus
+);
+
+// Routes pour l'historique des configurations
+router.get(
+  '/:id/config-history',
+  authenticate,
+  configHistoryController.getConfigHistory
+);
+
+router.get(
+  '/:id/config-history/:versionId',
+  authenticate,
+  configHistoryController.getConfigVersion
+);
+
+router.post(
+  '/:id/config-history',
+  authenticate,
+  requireRole('admin', 'operator'),
+  configHistoryController.saveConfigVersion
+);
+
+router.get(
+  '/:id/config-history-compare',
+  authenticate,
+  configHistoryController.compareConfigVersions
+);
+
+router.post(
+  '/:id/config-preview-diff',
+  authenticate,
+  requireRole('admin', 'operator'),
+  configHistoryController.previewConfigDiff
 );
 
 export default router;
