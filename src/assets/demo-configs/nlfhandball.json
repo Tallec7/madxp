@@ -31,6 +31,32 @@
             "type": "video/mp4"
         }
     ],
+    "timeCategories": [
+        {
+            "id": "before",
+            "name": "Avant-match",
+            "icon": "🏁",
+            "color": "from-blue-500 to-blue-600",
+            "description": "Échauffement & présentation",
+            "categoryIds": ["Focus-partenaires", "Info-club"]
+        },
+        {
+            "id": "during",
+            "name": "Match",
+            "icon": "▶️",
+            "color": "from-green-500 to-green-600",
+            "description": "Live & animations",
+            "categoryIds": ["Match_SM1"]
+        },
+        {
+            "id": "after",
+            "name": "Après-match",
+            "icon": "🏆",
+            "color": "from-purple-500 to-purple-600",
+            "description": "Résultats & remerciements",
+            "categoryIds": ["Info-club"]
+        }
+    ],
     "categories": [
         {
             "id": "Focus-partenaires",
