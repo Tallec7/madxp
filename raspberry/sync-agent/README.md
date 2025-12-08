@@ -38,6 +38,7 @@ Vous devrez fournir :
 - URL du serveur central (ex: https://neopro-central-server.onrender.com)
 - Email et mot de passe admin NEOPRO
 - Informations du site (nom, club, localisation, sports)
+- Modèle du boîtier (détecté automatiquement sur Raspberry Pi)
 
 Le script créera automatiquement la configuration dans `/etc/neopro/site.conf`.
 
@@ -71,6 +72,7 @@ LOCATION_CITY=Rennes
 LOCATION_REGION=Bretagne
 LOCATION_COUNTRY=France
 SPORTS=football,futsal
+HARDWARE_MODEL=Raspberry Pi 4 Model B Rev 1.4
 
 # Chemins
 NEOPRO_ROOT=/home/pi/neopro

@@ -114,7 +114,7 @@ export const createSite = async (req: AuthRequest, res: Response) => {
         club_name,
         location ? JSON.stringify(location) : null,
         sports ? JSON.stringify(sports) : null,
-        hardware_model || 'Raspberry Pi 4',
+        hardware_model || 'Unknown',
         api_key,
       ]
     );

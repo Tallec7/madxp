@@ -137,6 +137,10 @@ import { Site } from '../../core/models';
               <label>Sports (séparés par des virgules)</label>
               <input type="text" [(ngModel)]="sportsInput" placeholder="Ex: football, rugby">
             </div>
+            <div class="form-group">
+              <label>Modèle du boîtier</label>
+              <input type="text" [(ngModel)]="newSite.hardware_model" placeholder="Ex: Raspberry Pi 4 Model B">
+            </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="showCreateModal = false">Annuler</button>
@@ -475,7 +479,8 @@ export class SitesListComponent implements OnInit {
       city: '',
       region: '',
       country: 'France'
-    }
+    },
+    hardware_model: ''
   };
 
   sportsInput = '';
@@ -582,7 +587,8 @@ export class SitesListComponent implements OnInit {
         city: '',
         region: '',
         country: 'France'
-      }
+      },
+      hardware_model: ''
     };
     this.sportsInput = '';
   }

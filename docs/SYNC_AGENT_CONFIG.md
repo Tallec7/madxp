@@ -45,8 +45,7 @@ City: NANTES
 Region: PDL
 Country: France
 Sports (comma-separated): handball
-Contact Email: gwenvael.letallec@nantes-loire-feminin-handball.fr
-Contact Phone (optional): 0673565696
+Hardware Model: Raspberry Pi 4 Model B Rev 1.4  # (détecté automatiquement)
 ```
 
 ### Résultat attendu

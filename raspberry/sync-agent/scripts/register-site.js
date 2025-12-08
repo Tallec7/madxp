@@ -3,6 +3,36 @@
 const axios = require('axios');
 const fs = require('fs-extra');
 const readline = require('readline');
+const { execSync } = require('child_process');
+
+/**
+ * Detect hardware model from the system
+ * @returns {string} Hardware model name
+ */
+function detectHardwareModel() {
+  try {
+    // Try to read Raspberry Pi model from device tree
+    const modelPath = '/proc/device-tree/model';
+    if (fs.existsSync(modelPath)) {
+      const model = fs.readFileSync(modelPath, 'utf8').replace(/\0/g, '').trim();
+      return model;
+    }
+
+    // Fallback: try dmidecode for x86 systems
+    try {
+      const dmidecode = execSync('dmidecode -s system-product-name 2>/dev/null', { encoding: 'utf8' }).trim();
+      if (dmidecode) return dmidecode;
+    } catch {
+      // dmidecode not available
+    }
+
+    // Fallback: try uname
+    const uname = execSync('uname -m', { encoding: 'utf8' }).trim();
+    return `Unknown (${uname})`;
+  } catch {
+    return 'Unknown';
+  }
+}
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -85,6 +115,11 @@ async function registerSite() {
     const country = await getValueOrPrompt('LOCATION_COUNTRY', 'Country (default: France): ', 'France');
     const sports = await getValueOrPrompt('SPORTS', 'Sports (comma-separated, e.g., football,rugby): ', 'handball');
 
+    // Detect hardware model
+    const detectedModel = detectHardwareModel();
+    console.log(`\n🔧 Detected hardware: ${detectedModel}`);
+    const hardwareModel = await getValueOrPrompt('HARDWARE_MODEL', `Hardware Model (detected: ${detectedModel}): `, detectedModel);
+
     console.log('\n📝 Creating site...');
 
     const createResponse = await axios.post(
@@ -98,6 +133,7 @@ async function registerSite() {
           country,
         },
         sports: sports.split(',').map(s => s.trim()),
+        hardware_model: hardwareModel,
       },
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -123,6 +159,7 @@ LOCATION_CITY=${city}
 LOCATION_REGION=${region}
 LOCATION_COUNTRY=${country}
 SPORTS=${sports}
+HARDWARE_MODEL=${hardwareModel}
 
 NEOPRO_ROOT=/home/pi/neopro
 VIDEOS_PATH=/home/pi/neopro/videos
