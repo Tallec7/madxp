@@ -1,0 +1,119 @@
+{
+    "remote": {
+        "title": "Télécommande Néopro"
+    },
+    "auth": {
+        "clubName": "NARH"
+    },
+    "version": "1.0",
+    "sponsors": [
+        { "name": "Neopro", "path": "videos/PARTENAIRES/NEOPRO.mp4", "type": "video/mp4" },
+        { "name": "Boucle partenaires", "path": "videos/PARTENAIRES/BOUCLE_PARTENAIRES.mp4", "type": "video/mp4" }
+    ],
+    "timeCategories": [
+        {
+            "id": "before",
+            "name": "Avant-match",
+            "icon": "🏁",
+            "color": "from-blue-500 to-blue-600",
+            "description": "Échauffement & présentation",
+            "categoryIds": ["Focus-partenaires", "Info-club", "ENTREE"]
+        },
+        {
+            "id": "during",
+            "name": "Match",
+            "icon": "▶️",
+            "color": "from-green-500 to-green-600",
+            "description": "Live & animations",
+            "categoryIds": ["Match", "Focus-partenaires"]
+        },
+        {
+            "id": "after",
+            "name": "Après-match",
+            "icon": "🏆",
+            "color": "from-purple-500 to-purple-600",
+            "description": "Résultats & remerciements",
+            "categoryIds": ["Info-club", "Focus-partenaires"]
+        }
+    ],
+    "categories": [{
+        "id": "Focus-partenaires",
+        "name": "Focus partenaire",
+        "videos": [
+            { "name": "Couleur Carrelage", "path": "videos/FOCUS_PARTENAIRE/COULEUR_CARRELAGE.mp4", "type": "video/mp4" },
+            { "name": "La Genova", "path": "videos/FOCUS_PARTENAIRE/LA_GENOVA.mp4", "type": "video/mp4" },
+            { "name": "Little Barrel - Match extérieur", "path": "videos/FOCUS_PARTENAIRE/LITTLE_BARREL_MATCH_EXTERIEUR.mp4", "type": "video/mp4" },
+            { "name": "Little Barrel - Matchs FC Nantes", "path": "videos/FOCUS_PARTENAIRE/LITTLE_BARREL_MATCH_FC NANTES.mp4", "type": "video/mp4" },
+            { "name": "La Genova", "path": "videos/FOCUS_PARTENAIRE/LA_GENOVA.mp4", "type": "video/mp4" },
+            { "name": "Pachet", "path": "videos/FOCUS_PARTENAIRE/PACHET.mp4", "type": "video/mp4" },
+            { "name": "Pain Prenelle", "path": "videos/FOCUS_PARTENAIRE/PAIN_PRENELLE.mp4", "type": "video/mp4" },
+            { "name": "Tabarnak", "path": "videos/FOCUS_PARTENAIRE/TABARNAK.mp4", "type": "video/mp4" },
+            { "name": "Tabarnak - Match extérieur", "path": "videos/FOCUS_PARTENAIRE/TABARNAK_MATCH_EXTERIEUR.mp4", "type": "video/mp4" },
+            { "name": "Want aide", "path": "videos/FOCUS_PARTENAIRE/WANT_AIDE.mp4", "type": "video/mp4" }
+        ]
+    },
+    {
+        "id": "Info-club",
+        "name": "Infos club",
+        "videos": [
+            { "name": "Movember", "path": "videos/INFOS_CLUB/MOVEMBER.mp4", "type": "video/mp4" },
+            { "name": "Noël", "path": "videos/INFOS_CLUB/NOEL.mp4", "type": "video/mp4" },
+            { "name": "Réseaux sociaux", "path": "videos/INFOS_CLUB/RS.mp4", "type": "video/mp4" }
+        ]
+    },
+    {
+        "id": "ENTREE",
+        "name": "Entrée",
+        "videos": [
+            { "name": "5", "path": "videos/ENTRÉE/JOUEUR_5.mp4", "type": "video/mp4" },
+            { "name": "6", "path": "videos/ENTRÉE/JOUEUR_6.mp4", "type": "video/mp4" },
+            { "name": "9", "path": "videos/ENTRÉE/JOUEUR_9.mp4", "type": "video/mp4" },
+            { "name": "10", "path": "videos/ENTRÉE/JOUEUR_10.mp4", "type": "video/mp4" },
+            { "name": "11", "path": "videos/ENTRÉE/JOUEUR_11.mp4", "type": "video/mp4" },
+            { "name": "12", "path": "videos/ENTRÉE/JOUEUR_12.mp4", "type": "video/mp4" },
+            { "name": "17", "path": "videos/ENTRÉE/JOUEUR_17.mp4", "type": "video/mp4" },
+            { "name": "44", "path": "videos/ENTRÉE/JOUEUR_44.mp4", "type": "video/mp4" },
+            { "name": "57", "path": "videos/ENTRÉE/JOUEUR_57.mp4", "type": "video/mp4" },
+            { "name": "79", "path": "videos/ENTRÉE/JOUEUR_79.mp4", "type": "video/mp4" },
+            { "name": "89", "path": "videos/ENTRÉE/JOUEUR_89.mp4", "type": "video/mp4" },
+            { "name": "94", "path": "videos/ENTRÉE/JOUEUR_94.mp4", "type": "video/mp4" }
+        ]
+    },
+    {
+        "id": "Match",
+        "name": "Match",
+        "subCategories": [
+            {
+                "id": "But",
+                "name": "But",
+                "videos": [
+                    { "name": "5", "path": "videos/MATCH/BUT/JOUEUR_5.mp4", "type": "video/mp4" },
+                    { "name": "6", "path": "videos/MATCH/BUT/JOUEUR_6.mp4", "type": "video/mp4" },
+                    { "name": "9", "path": "videos/MATCH/BUT/JOUEUR_9.mp4", "type": "video/mp4" },
+                    { "name": "10", "path": "videos/MATCH/BUT/JOUEUR_10.mp4", "type": "video/mp4" },
+                    { "name": "11", "path": "videos/MATCH/BUT/JOUEUR_11.mp4", "type": "video/mp4" },
+                    { "name": "12", "path": "videos/MATCH/BUT/JOUEUR_12.mp4", "type": "video/mp4" },
+                    { "name": "17", "path": "videos/MATCH/BUT/JOUEUR_17.mp4", "type": "video/mp4" },
+                    { "name": "44", "path": "videos/MATCH/BUT/JOUEUR_44.mp4", "type": "video/mp4" },
+                    { "name": "57", "path": "videos/MATCH/BUT/JOUEUR_57.mp4", "type": "video/mp4" },
+                    { "name": "79", "path": "videos/MATCH/BUT/JOUEUR_79.mp4", "type": "video/mp4" },
+                    { "name": "89", "path": "videos/MATCH/BUT/JOUEUR_89.mp4", "type": "video/mp4" },
+                    { "name": "94", "path": "videos/MATCH/BUT/JOUEUR_94.mp4", "type": "video/mp4" }
+                ]
+            },
+            {
+                "id": "Jingle",
+                "name": "Jingle",
+                "videos": [
+                    { "name": "Carton Bleu", "path": "videos/MATCH/JINGLE/CARTON_BLEU.mp4", "type": "video/mp4" },
+                    { "name": "Carton Jaune", "path": "videos/MATCH/JINGLE/CARTON_JAUNE.mp4", "type": "video/mp4" },
+                    { "name": "Carton Rouge", "path": "videos/MATCH/JINGLE/CARTON_ROUGE.mp4", "type": "video/mp4" },
+                    { "name": "Temps-mort", "path": "videos/MATCH/JINGLE/TEMPS_MORT.mp4", "type": "video/mp4" },
+                    { "name": "Mi-temps", "path": "videos/MATCH/JINGLE/MI_TEMPS.mp4", "type": "video/mp4" },
+                    { "name": "Victoire", "path": "videos/MATCH/JINGLE/VICTOIRE.mp4", "type": "video/mp4" }
+                ]
+            }
+        ]
+    }
+    ]
+}

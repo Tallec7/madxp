@@ -20,6 +20,7 @@ export class DemoConfigService {
   // Liste statique des clubs disponibles en mode démo
   // À mettre à jour quand on ajoute de nouvelles configs
   private readonly availableClubs: ClubInfo[] = [
+    { id: 'narh', name: 'NARH', city: 'Nantes', sport: 'Handball' },
     { id: 'nlfhandball', name: 'NLF Handball', city: 'Nantes', sport: 'Handball' },
     { id: 'demo-club', name: 'Demo Club', city: 'Paris', sport: 'Football' }
   ];
