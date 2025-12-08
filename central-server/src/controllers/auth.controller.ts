@@ -1,9 +1,21 @@
-import { Request, Response } from 'express';
+import { Request, Response, CookieOptions } from 'express';
 import bcrypt from 'bcryptjs';
 import { query } from '../config/database';
 import { generateToken } from '../middleware/auth';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
+
+// Configuration des cookies sécurisés
+const COOKIE_NAME = 'neopro_token';
+const COOKIE_OPTIONS: CookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+  maxAge: 8 * 60 * 60 * 1000, // 8 heures
+  path: '/',
+};
+
+export { COOKIE_NAME };
 
 type UserRow = {
   id: string;
@@ -50,8 +62,11 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
 
     logger.info('User logged in', { email: user.email, role: user.role });
 
+    // Définir le cookie HttpOnly sécurisé
+    res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
+
     return res.json({
-      token,
+      token, // Toujours retourné pour compatibilité API (mobile, etc.)
       user: {
         id: user.id,
         email: user.email,
@@ -67,6 +82,8 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
 
 export const logout = async (req: AuthRequest, res: Response) => {
   logger.info('User logged out', { email: req.user?.email });
+  // Supprimer le cookie
+  res.clearCookie(COOKIE_NAME, { path: '/' });
   return res.json({ message: 'Déconnexion réussie' });
 };
 

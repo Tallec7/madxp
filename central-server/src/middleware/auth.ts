@@ -11,6 +11,9 @@ const JWT_SECRET: Secret = (() => {
   return secret;
 })();
 
+// Nom du cookie (doit correspondre à auth.controller.ts)
+const COOKIE_NAME = 'neopro_token';
+
 export interface JwtPayload {
   id: string;
   email: string;
@@ -23,13 +26,24 @@ export const authenticate = (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
+    let token: string | undefined;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Token manquant' });
+    // 1. Essayer de lire le token depuis le cookie HttpOnly (prioritaire pour le web)
+    if (req.cookies && req.cookies[COOKIE_NAME]) {
+      token = req.cookies[COOKIE_NAME];
     }
 
-    const token = authHeader.substring(7);
+    // 2. Fallback sur le header Authorization (pour API clients, mobile, agents Raspberry)
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
+
+    if (!token) {
+      return res.status(401).json({ error: 'Token manquant' });
+    }
 
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     req.user = decoded;

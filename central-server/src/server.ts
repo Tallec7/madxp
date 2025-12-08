@@ -4,6 +4,7 @@ import dns from 'node:dns';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 
 import logger from './config/logger';
@@ -86,6 +87,7 @@ app.use((req, res, next) => {
 });
 
 app.use(compression());
+app.use(cookieParser());
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

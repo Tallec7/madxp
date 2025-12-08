@@ -130,4 +130,4 @@ Configuration : `render.yaml` à la racine
 
 ---
 
-**Dernière mise à jour :** 7 décembre 2025
+**Dernière mise à jour :** 8 décembre 2025

@@ -708,4 +708,4 @@ Voir **[docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ---
 
-**Dernière mise à jour :** 5 décembre 2025
+**Dernière mise à jour :** 8 décembre 2025

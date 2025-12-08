@@ -209,6 +209,45 @@ npm run dev          # Développement avec hot-reload
 npm run build        # Build TypeScript -> JavaScript
 npm start            # Production
 npm run lint         # ESLint
+npm test             # Lancer les tests Jest
+npm test -- --watch  # Mode watch
+npm test -- --coverage  # Avec rapport de couverture
+```
+
+---
+
+## 🧪 Tests
+
+Le serveur dispose de **230 tests unitaires** avec une couverture de **~67%**.
+
+### Exécution
+
+```bash
+npm test
+```
+
+### Couverture par fichier
+
+| Fichier | Tests | Couverture |
+|---------|-------|------------|
+| auth.controller.ts | 16 | 100% |
+| sites.controller.ts | 35 | 91% |
+| groups.controller.ts | 21 | 90% |
+| content.controller.ts | 25 | 93% |
+| updates.controller.ts | 28 | 100% |
+| analytics.controller.ts | 40 | 93% |
+| config-history.controller.ts | 24 | 100% |
+| auth.ts (middleware) | 17 | 97% |
+| validation.ts | 25 | 100% |
+
+### Structure
+
+```
+src/
+├── controllers/*.test.ts     # Tests controllers
+├── middleware/*.test.ts      # Tests middleware
+├── config/__mocks__/         # Mocks (database, logger, supabase)
+└── __tests__/setup.ts        # Configuration Jest
 ```
 
 ---
@@ -245,4 +284,4 @@ Les vidéos sont stockées temporairement dans Supabase Storage :
 
 ---
 
-**Dernière mise à jour :** 7 décembre 2025
+**Dernière mise à jour :** 8 décembre 2025
