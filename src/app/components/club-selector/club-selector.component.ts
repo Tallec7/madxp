@@ -1,4 +1,4 @@
-import { Component, inject, Output, EventEmitter } from '@angular/core';
+import { Component, inject, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DemoConfigService, ClubInfo } from '../../services/demo-config.service';
 import { Configuration } from '../../interfaces/configuration.interface';
@@ -10,14 +10,30 @@ import { Configuration } from '../../interfaces/configuration.interface';
   templateUrl: './club-selector.component.html',
   styleUrl: './club-selector.component.scss'
 })
-export class ClubSelectorComponent {
+export class ClubSelectorComponent implements OnInit {
   private readonly demoConfigService = inject(DemoConfigService);
 
   @Output() clubSelected = new EventEmitter<Configuration>();
 
-  public clubs: ClubInfo[] = this.demoConfigService.getAvailableClubs();
+  public clubs: ClubInfo[] = [];
+  public isLoadingClubs = true;
   public isLoading = false;
   public loadingClubId: string | null = null;
+  public error: string | null = null;
+
+  public ngOnInit(): void {
+    this.demoConfigService.getAvailableClubs().subscribe({
+      next: (clubs) => {
+        this.clubs = clubs;
+        this.isLoadingClubs = false;
+      },
+      error: (err) => {
+        console.error('Erreur chargement liste clubs:', err);
+        this.error = 'Impossible de charger la liste des clubs';
+        this.isLoadingClubs = false;
+      }
+    });
+  }
 
   public selectClub(club: ClubInfo): void {
     this.isLoading = true;

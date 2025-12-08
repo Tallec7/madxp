@@ -30,8 +30,8 @@
               },
               {
                 "glob": "**/*",
-                "input": "src/assets",
-                "output": "assets"
+                "input": "src/assets/demo-configs",
+                "output": "demo-configs"
               }
             ],
             "styles": [

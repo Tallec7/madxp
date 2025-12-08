@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, map, catchError } from 'rxjs';
+import { Observable, of, shareReplay } from 'rxjs';
 import { Configuration } from '../interfaces/configuration.interface';
 import { environment } from '../../environments/environment';
 
@@ -17,23 +17,27 @@ export interface ClubInfo {
 export class DemoConfigService {
   private readonly http = inject(HttpClient);
 
-  // Liste statique des clubs disponibles en mode démo
-  // À mettre à jour quand on ajoute de nouvelles configs
-  private readonly availableClubs: ClubInfo[] = [
-    { id: 'narh', name: 'NARH', city: 'Nantes', sport: 'Handball' },
-    { id: 'nlfhandball', name: 'NLF Handball', city: 'Nantes', sport: 'Handball' },
-    { id: 'demo-club', name: 'Demo Club', city: 'Paris', sport: 'Football' }
-  ];
+  // Cache pour la liste des clubs
+  private clubsCache$: Observable<ClubInfo[]> | null = null;
 
   public isDemoMode(): boolean {
     return environment.demoMode;
   }
 
-  public getAvailableClubs(): ClubInfo[] {
-    return this.availableClubs;
+  /**
+   * Charge la liste des clubs depuis un fichier JSON externe.
+   * Permet d'ajouter des clubs sans rebuild.
+   */
+  public getAvailableClubs(): Observable<ClubInfo[]> {
+    if (!this.clubsCache$) {
+      this.clubsCache$ = this.http.get<ClubInfo[]>('/demo-configs/clubs.json').pipe(
+        shareReplay(1)
+      );
+    }
+    return this.clubsCache$;
   }
 
   public loadClubConfiguration(clubId: string): Observable<Configuration> {
-    return this.http.get<Configuration>(`/assets/demo-configs/${clubId}.json`);
+    return this.http.get<Configuration>(`/demo-configs/${clubId}.json`);
   }
 }

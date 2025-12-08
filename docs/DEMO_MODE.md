@@ -38,7 +38,7 @@ Comportement standard : la configuration est chargée depuis `/configuration.jso
 
 ## Déploiement sur serveur de démo
 
-### Structure des fichiers à déployer
+### Structure des fichiers
 
 ```
 dist/neopro/browser/              # Racine du serveur web
@@ -47,20 +47,18 @@ dist/neopro/browser/              # Racine du serveur web
 ├── styles-*.css
 ├── polyfills-*.js
 ├── configuration.json            # Config par défaut (ignorée en mode démo)
-├── assets/
-│   └── demo-configs/             # Configs des clubs (inclus dans le build)
-│       ├── nlfhandball.json
-│       └── demo-club.json
+├── demo-configs/                 # Configs des clubs (MODIFIABLE SANS REBUILD)
+│   ├── clubs.json                # Liste des clubs disponibles
+│   ├── narh.json
+│   ├── nlfhandball.json
+│   └── demo-club.json
 └── videos/                       # À AJOUTER MANUELLEMENT
     ├── BOUCLE_PARTENAIRES/
-    │   └── BOUCLE_PARTENAIRES_H264.mp4
     ├── FOCUS_PARTENAIRE/
-    │   └── ...
-    └── INFOS_CLUB/
-        └── ...
+    └── ...
 ```
 
-### Étapes de déploiement
+### Étapes de déploiement initial
 
 1. **Build** :
    ```bash
@@ -69,11 +67,92 @@ dist/neopro/browser/              # Racine du serveur web
 
 2. **Copier le build** : Tout le contenu de `dist/neopro/browser/`
 
-3. **Ajouter les vidéos** : Créer le dossier `videos/` et y placer les vidéos référencées dans les configurations des clubs
+3. **Ajouter les vidéos** : Créer le dossier `videos/` et y placer les vidéos référencées dans les configurations
 
 4. **Configurer le socket** : Modifier `environment.demo.ts` si nécessaire pour pointer vers le bon serveur Socket.IO
 
-### Socket.IO
+## Ajouter/Modifier des clubs SANS REBUILD
+
+La liste des clubs et leurs configurations sont chargées dynamiquement depuis le dossier `demo-configs/` sur le serveur. **Vous pouvez les modifier directement sur le serveur sans rebuild !**
+
+### Ajouter un nouveau club sur le serveur
+
+1. **Créer la config du club** : Ajouter `demo-configs/monclub.json` sur le serveur
+
+2. **Mettre à jour la liste** : Modifier `demo-configs/clubs.json` sur le serveur :
+   ```json
+   [
+     { "id": "narh", "name": "NARH", "city": "Nantes", "sport": "Handball" },
+     { "id": "monclub", "name": "Mon Club", "city": "Ville", "sport": "Sport" }
+   ]
+   ```
+
+3. **Ajouter les vidéos** : Placer les vidéos référencées dans `videos/`
+
+4. **Rafraîchir** : La page `/remote` affichera automatiquement le nouveau club
+
+### Structure d'une config de club
+
+```json
+{
+  "remote": { "title": "Télécommande Néopro - MON CLUB" },
+  "auth": { "clubName": "MON CLUB" },
+  "version": "1.0",
+  "sponsors": [
+    { "name": "Boucle", "path": "videos/BOUCLE.mp4", "type": "video/mp4" }
+  ],
+  "timeCategories": [
+    {
+      "id": "before",
+      "name": "Avant-match",
+      "icon": "🏁",
+      "color": "from-blue-500 to-blue-600",
+      "description": "Échauffement & présentation",
+      "categoryIds": ["Focus-partenaires", "Info-club"]
+    },
+    {
+      "id": "during",
+      "name": "Match",
+      "icon": "▶️",
+      "color": "from-green-500 to-green-600",
+      "description": "Live & animations",
+      "categoryIds": ["Match"]
+    },
+    {
+      "id": "after",
+      "name": "Après-match",
+      "icon": "🏆",
+      "color": "from-purple-500 to-purple-600",
+      "description": "Résultats & remerciements",
+      "categoryIds": ["Info-club"]
+    }
+  ],
+  "categories": [
+    {
+      "id": "Focus-partenaires",
+      "name": "Focus partenaire",
+      "videos": [
+        { "name": "Partenaire 1", "path": "videos/FOCUS/P1.mp4", "type": "video/mp4" }
+      ]
+    },
+    {
+      "id": "Match",
+      "name": "Match",
+      "subCategories": [
+        {
+          "id": "But",
+          "name": "But",
+          "videos": [...]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**IMPORTANT** : Les `categoryIds` dans `timeCategories` doivent correspondre aux `id` des catégories. Sans `timeCategories`, aucune catégorie ne s'affichera !
+
+## Socket.IO
 
 Le serveur de démo doit avoir un serveur Socket.IO accessible. Par défaut, `environment.demo.ts` pointe vers `http://localhost:3000`.
 
@@ -87,55 +166,21 @@ export const environment = {
 };
 ```
 
-## Configurations de clubs
-
-Les configurations sont stockées dans `src/assets/demo-configs/`.
-
-### Ajouter un nouveau club
-
-1. Créer le fichier de configuration :
-   ```
-   src/assets/demo-configs/monclub.json
-   ```
-
-2. Utiliser la même structure que `configuration.json` :
-   ```json
-   {
-     "remote": { "title": "Télécommande Néopro - MON CLUB" },
-     "auth": { "clubName": "MON CLUB", ... },
-     "sync": { "clubName": "MON CLUB", ... },
-     "version": "1.0",
-     "sponsors": [...],
-     "categories": [...]
-   }
-   ```
-
-3. Ajouter l'entrée dans le service `src/app/services/demo-config.service.ts` :
-   ```typescript
-   private readonly availableClubs: ClubInfo[] = [
-     // ... clubs existants
-     { id: 'monclub', name: 'Mon Club', city: 'Ville', sport: 'Sport' }
-   ];
-   ```
-
-4. Rebuild et redéployer
-
 ## Architecture
 
 ```
 src/
 ├── assets/
 │   └── demo-configs/           # Configurations JSON des clubs
+│       ├── clubs.json          # Liste des clubs disponibles
+│       ├── narh.json
 │       ├── nlfhandball.json
 │       └── demo-club.json
 ├── app/
 │   ├── components/
 │   │   └── club-selector/      # Composant de sélection de club
-│   │       ├── club-selector.component.ts
-│   │       ├── club-selector.component.html
-│   │       └── club-selector.component.scss
 │   └── services/
-│       └── demo-config.service.ts  # Service de gestion des configs
+│       └── demo-config.service.ts  # Charge clubs.json et les configs
 └── environments/
     ├── environment.ts          # demoMode: true (dev)
     ├── environment.prod.ts     # demoMode: false
@@ -162,4 +207,4 @@ src/
 - Ce mode est exclusivement destiné aux démonstrations
 - En production (Raspberry Pi), le mode démo est désactivé
 - Les vidéos ne sont pas incluses dans le build (trop volumineuses)
-- Les vidéos doivent être ajoutées manuellement sur le serveur
+- **Les configs de clubs peuvent être modifiées sur le serveur sans rebuild**
