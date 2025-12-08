@@ -133,7 +133,6 @@ class SoftwareUpdateHandler {
         'webapp',
         'server',
         'admin',
-        'public/configuration.json',
       ];
 
       for (const item of itemsToBackup) {
@@ -214,11 +213,11 @@ class SoftwareUpdateHandler {
       // - videos/: user video content (managed by deploy-video.js)
       // - logs/: runtime logs
       // - backups/: backup archives
-      // - public/configuration.json: club-specific configuration
+      // - webapp/configuration.json: club-specific configuration
       await execAsync(
         `tar -xzf ${packagePath} -C ${config.paths.root}/ ` +
         `--exclude='videos' --exclude='logs' --exclude='backups' ` +
-        `--exclude='public/configuration.json'`
+        `--exclude='webapp/configuration.json'`
       );
 
       if (await fs.pathExists(path.join(config.paths.root, 'webapp/package.json'))) {
@@ -304,7 +303,7 @@ class SoftwareUpdateHandler {
 
       await this.stopServices();
 
-      const itemsToRestore = ['webapp', 'server', 'admin', 'public/configuration.json'];
+      const itemsToRestore = ['webapp', 'server', 'admin'];
 
       for (const item of itemsToRestore) {
         const sourcePath = path.join(backupPath, item);

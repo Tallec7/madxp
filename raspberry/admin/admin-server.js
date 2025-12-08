@@ -28,34 +28,14 @@ const execAsync = promisify(exec);
 const app = express();
 const PORT = process.env.ADMIN_PORT || 8080;
 const DEFAULT_NEOPRO_DIR = path.resolve(__dirname, '..');
-const PUBLIC_NEOPRO_DIR = path.join(DEFAULT_NEOPRO_DIR, 'public');
-const hasRootVideos = fsCore.existsSync(path.join(DEFAULT_NEOPRO_DIR, 'videos'));
-const hasPublicVideos = fsCore.existsSync(path.join(PUBLIC_NEOPRO_DIR, 'videos'));
-// Use repo root on Raspberry Pi, fall back to /public during local dev where only public/videos exists
-const RESOLVED_NEOPRO_DIR =
-  process.env.NEOPRO_DIR ||
-  (hasRootVideos
-    ? DEFAULT_NEOPRO_DIR
-    : hasPublicVideos
-      ? PUBLIC_NEOPRO_DIR
-      : DEFAULT_NEOPRO_DIR);
-const NEOPRO_DIR = RESOLVED_NEOPRO_DIR;
-const neoproSource = process.env.NEOPRO_DIR
-  ? 'env NEOPRO_DIR'
-  : hasRootVideos
-    ? 'repo root'
-    : hasPublicVideos
-      ? 'public/'
-      : 'default repo root';
+const NEOPRO_DIR = process.env.NEOPRO_DIR || DEFAULT_NEOPRO_DIR;
 const VIDEOS_DIR = path.join(NEOPRO_DIR, 'videos');
 const TEMP_UPLOAD_DIR = path.join(NEOPRO_DIR, 'uploads-temp');
 const LOGS_DIR = path.join(NEOPRO_DIR, 'logs');
+// Single source of truth: webapp/configuration.json
 const CONFIG_FILE_CANDIDATES = [
   process.env.CONFIG_PATH,
-  path.join(NEOPRO_DIR, 'configuration.json'),
   path.join(NEOPRO_DIR, 'webapp', 'configuration.json'),
-  path.join(DEFAULT_NEOPRO_DIR, 'public', 'configuration.json'),
-  path.join(PUBLIC_NEOPRO_DIR, 'configuration.json')
 ].filter((value, index, self) => value && self.indexOf(value) === index);
 const VIDEO_MAPPING_CACHE_DURATION = 60 * 1000; // 1 minute cache pour limiter les lectures disque
 let videoMappingCache = null;
@@ -65,7 +45,7 @@ let videoMetadataCache = null;
 let videoMetadataCacheTime = 0;
 const CONFIG_JSON_INDENT = 4;
 
-console.log(`[admin] NEOPRO_DIR resolved to ${NEOPRO_DIR} (${neoproSource})`);
+console.log(`[admin] NEOPRO_DIR resolved to ${NEOPRO_DIR}`);
 console.log(`[admin] Videos directory: ${VIDEOS_DIR}`);
 
 // Middleware

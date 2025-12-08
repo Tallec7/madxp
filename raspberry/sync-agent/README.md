@@ -73,10 +73,10 @@ LOCATION_COUNTRY=France
 SPORTS=football,futsal
 
 # Chemins
-NEOPRO_ROOT=/home/neopro
-VIDEOS_PATH=/home/neopro/videos
-CONFIG_PATH=/home/neopro/public/configuration.json
-BACKUP_PATH=/home/neopro/backups
+NEOPRO_ROOT=/home/pi/neopro
+VIDEOS_PATH=/home/pi/neopro/videos
+CONFIG_PATH=/home/pi/neopro/webapp/configuration.json
+BACKUP_PATH=/home/pi/neopro/backups
 
 # Monitoring
 HEARTBEAT_INTERVAL=30000
@@ -84,7 +84,7 @@ METRICS_INTERVAL=300000
 
 # Logs
 LOG_LEVEL=info
-LOG_PATH=/home/neopro/logs/sync-agent.log
+LOG_PATH=/home/pi/neopro/logs/sync-agent.log
 
 # Mises à jour
 AUTO_UPDATE_ENABLED=true

@@ -32,7 +32,7 @@ const config = {
   paths: {
     root: process.env.NEOPRO_ROOT || '/home/pi/neopro',
     videos: process.env.VIDEOS_PATH || '/home/pi/neopro/videos',
-    config: process.env.CONFIG_PATH || '/home/pi/neopro/public/configuration.json',
+    config: process.env.CONFIG_PATH || '/home/pi/neopro/webapp/configuration.json',
     backup: process.env.BACKUP_PATH || '/home/pi/neopro/backups',
   },
 

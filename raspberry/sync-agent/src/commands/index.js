@@ -22,9 +22,12 @@ const commands = {
         throw new Error('Missing configuration data in update_config command');
       }
 
-      const configPath = config.paths.config;
+      // Single source of truth: webapp/configuration.json (served by app :8080)
+      const configPath = config.paths.root + '/webapp/configuration.json';
+      const configJson = JSON.stringify(data.configuration, null, 2);
 
-      await fs.writeFile(configPath, JSON.stringify(data.configuration, null, 2));
+      await fs.writeFile(configPath, configJson);
+      logger.info('Configuration written to', { path: configPath });
 
       const io = require('socket.io-client');
       const socket = io('http://localhost:3000', { timeout: 5000 });
@@ -129,7 +132,8 @@ const commands = {
     logger.info('Retrieving site configuration');
 
     try {
-      const configPath = config.paths.config;
+      // Single source of truth: webapp/configuration.json (served by app :8080)
+      const configPath = config.paths.root + '/webapp/configuration.json';
 
       if (!await fs.pathExists(configPath)) {
         logger.warn('Configuration file not found', { configPath });
@@ -143,7 +147,7 @@ const commands = {
       const configContent = await fs.readFile(configPath, 'utf8');
       const configuration = JSON.parse(configContent);
 
-      logger.info('Configuration retrieved successfully');
+      logger.info('Configuration retrieved successfully', { path: configPath });
 
       return {
         success: true,

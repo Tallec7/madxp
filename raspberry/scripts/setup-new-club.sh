@@ -283,9 +283,10 @@ get_pi_address() {
 build_and_deploy() {
     print_step "Build et déploiement de l'application"
 
-    # Copier la configuration dans public/
-    cp "$CONFIG_FILE" public/configuration.json
-    print_success "Configuration copiée dans public/"
+    # Copier la configuration dans webapp/ (sera déployé sur le Pi)
+    mkdir -p webapp
+    cp "$CONFIG_FILE" webapp/configuration.json
+    print_success "Configuration copiée dans webapp/"
 
     # Utiliser le script build-and-deploy.sh existant
     print_info "Lancement du build et déploiement (cela peut prendre quelques minutes)..."

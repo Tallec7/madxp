@@ -126,7 +126,7 @@ SPORTS=${sports}
 
 NEOPRO_ROOT=/home/pi/neopro
 VIDEOS_PATH=/home/pi/neopro/videos
-CONFIG_PATH=/home/pi/neopro/public/configuration.json
+CONFIG_PATH=/home/pi/neopro/webapp/configuration.json
 BACKUP_PATH=/home/pi/neopro/backups
 
 HEARTBEAT_INTERVAL=30000
