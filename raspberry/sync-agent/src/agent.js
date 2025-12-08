@@ -150,9 +150,17 @@ class NeoproSyncAgent {
       if (type === 'deploy_video') {
         result = await handler.execute(data, (progress) => {
           this.socket.emit('deploy_progress', {
+            deploymentId: data.deploymentId,
             videoId: data.videoId,
             progress,
           });
+        });
+        // Signaler la fin du déploiement
+        this.socket.emit('deploy_progress', {
+          deploymentId: data.deploymentId,
+          videoId: data.videoId,
+          progress: 100,
+          completed: true,
         });
       } else if (type === 'update_software') {
         result = await handler.execute(data, (progress) => {

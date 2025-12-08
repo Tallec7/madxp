@@ -195,6 +195,9 @@ class DeploymentService {
       return false;
     }
 
+    // Utiliser le titre depuis metadata, sinon le nom original du fichier
+    const videoTitle = deployment.metadata?.title || deployment.original_name;
+
     const command = {
       id: uuidv4(),
       type: 'deploy_video',
@@ -203,7 +206,7 @@ class DeploymentService {
         videoId,
         videoUrl,
         filename: deployment.filename,
-        originalName: deployment.original_name,
+        originalName: videoTitle,
         category: deployment.category || 'default',
         subcategory: deployment.subcategory || null,
         duration: deployment.duration || 0,

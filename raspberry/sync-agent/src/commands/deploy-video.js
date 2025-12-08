@@ -80,6 +80,9 @@ class VideoDeployHandler {
     try {
       const configPath = config.paths.config;
 
+      // S'assurer que le répertoire parent existe
+      await fs.ensureDir(path.dirname(configPath));
+
       let configuration = {};
       if (await fs.pathExists(configPath)) {
         const content = await fs.readFile(configPath, 'utf-8');
