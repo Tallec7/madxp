@@ -216,28 +216,84 @@ import {
           <div class="form-section">
             <h4 class="section-title">
               <span class="section-icon">📁</span>
-              Catégories
-              <button class="btn-add" (click)="addCategory()">+ Ajouter</button>
+              Catégories et Vidéos
+              <button class="btn-add" (click)="addCategory()">+ Nouvelle catégorie</button>
             </h4>
-            <div class="items-list" *ngIf="config.categories.length > 0">
-              <div class="item-card" *ngFor="let category of config.categories; let i = index">
-                <div class="item-header">
-                  <span class="item-name">{{ category.name || 'Nouvelle catégorie' }}</span>
-                  <button class="btn-remove" (click)="removeCategory(i)">×</button>
-                </div>
-                <div class="item-form">
+            <div class="categories-list" *ngIf="config.categories.length > 0">
+              <div class="category-card" *ngFor="let category of config.categories; let catIndex = index"
+                   [class.expanded]="expandedCategory === catIndex">
+                <div class="category-header" (click)="toggleCategory(catIndex)">
+                  <span class="expand-icon">{{ expandedCategory === catIndex ? '▼' : '▶' }}</span>
                   <input
                     type="text"
                     [(ngModel)]="category.name"
                     (ngModelChange)="onConfigChange()"
+                    (click)="$event.stopPropagation()"
                     placeholder="Nom de la catégorie"
+                    class="category-name-input"
                   />
-                  <input
-                    type="text"
-                    [(ngModel)]="category.icon"
-                    (ngModelChange)="onConfigChange()"
-                    placeholder="Icône (emoji)"
-                  />
+                  <span class="category-stats">
+                    {{ category.videos.length }} vidéo(s)
+                    <span *ngIf="category.subCategories?.length"> · {{ category.subCategories.length }} sous-cat.</span>
+                  </span>
+                  <button class="btn-remove" (click)="removeCategory(catIndex); $event.stopPropagation()">×</button>
+                </div>
+
+                <div class="category-content" *ngIf="expandedCategory === catIndex">
+                  <!-- Vidéos de la catégorie -->
+                  <div class="videos-section">
+                    <div class="section-subheader">
+                      <span>Vidéos directes</span>
+                    </div>
+                    <div class="videos-list" *ngIf="category.videos && category.videos.length > 0">
+                      <div class="video-item" *ngFor="let video of category.videos; let vidIndex = index">
+                        <span class="video-icon">🎬</span>
+                        <span class="video-title">{{ video.title }}</span>
+                        <span class="video-filename">{{ video.filename }}</span>
+                        <button class="btn-remove-small" (click)="removeVideo(catIndex, null, vidIndex)">×</button>
+                      </div>
+                    </div>
+                    <p class="empty-message-small" *ngIf="!category.videos?.length">
+                      Aucune vidéo dans cette catégorie
+                    </p>
+                  </div>
+
+                  <!-- Sous-catégories -->
+                  <div class="subcategories-section">
+                    <div class="section-subheader">
+                      <span>Sous-catégories</span>
+                      <button class="btn-add-small" (click)="addSubcategory(catIndex)">+ Ajouter</button>
+                    </div>
+                    <div class="subcategories-list" *ngIf="category.subCategories && category.subCategories.length > 0">
+                      <div class="subcategory-card" *ngFor="let subcat of category.subCategories; let subIndex = index">
+                        <div class="subcategory-header">
+                          <input
+                            type="text"
+                            [(ngModel)]="subcat.name"
+                            (ngModelChange)="onConfigChange()"
+                            placeholder="Nom de la sous-catégorie"
+                            class="subcategory-name-input"
+                          />
+                          <span class="subcategory-stats">{{ subcat.videos.length }} vidéo(s)</span>
+                          <button class="btn-remove-small" (click)="removeSubcategory(catIndex, subIndex)">×</button>
+                        </div>
+                        <div class="videos-list" *ngIf="subcat.videos && subcat.videos.length > 0">
+                          <div class="video-item" *ngFor="let video of subcat.videos; let vidIndex = index">
+                            <span class="video-icon">🎬</span>
+                            <span class="video-title">{{ video.title }}</span>
+                            <span class="video-filename">{{ video.filename }}</span>
+                            <button class="btn-remove-small" (click)="removeVideo(catIndex, subIndex, vidIndex)">×</button>
+                          </div>
+                        </div>
+                        <p class="empty-message-small" *ngIf="!subcat.videos?.length">
+                          Aucune vidéo
+                        </p>
+                      </div>
+                    </div>
+                    <p class="empty-message-small" *ngIf="!category.subCategories?.length">
+                      Aucune sous-catégorie
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -628,6 +684,198 @@ import {
       text-align: center;
       padding: 1rem;
       font-style: italic;
+    }
+
+    /* Categories */
+    .categories-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .category-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .category-card.expanded {
+      border-color: #2563eb;
+    }
+
+    .category-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .category-header:hover {
+      background: #f1f5f9;
+    }
+
+    .expand-icon {
+      font-size: 0.75rem;
+      color: #64748b;
+      width: 16px;
+    }
+
+    .category-name-input {
+      flex: 1;
+      padding: 0.375rem 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .category-name-input:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+
+    .category-stats {
+      font-size: 0.75rem;
+      color: #64748b;
+      white-space: nowrap;
+    }
+
+    .category-content {
+      padding: 1rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .videos-section, .subcategories-section {
+      margin-bottom: 1rem;
+    }
+
+    .videos-section:last-child, .subcategories-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-subheader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .btn-add-small {
+      padding: 0.25rem 0.5rem;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .btn-add-small:hover {
+      background: #1d4ed8;
+    }
+
+    .videos-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+
+    .video-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: #f8fafc;
+      border-radius: 4px;
+      font-size: 0.8125rem;
+    }
+
+    .video-icon {
+      font-size: 1rem;
+    }
+
+    .video-title {
+      font-weight: 500;
+      color: #0f172a;
+    }
+
+    .video-filename {
+      color: #64748b;
+      font-size: 0.75rem;
+      margin-left: auto;
+      font-family: monospace;
+    }
+
+    .btn-remove-small {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fee2e2;
+      color: #ef4444;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .btn-remove-small:hover {
+      background: #fecaca;
+    }
+
+    .subcategories-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .subcategory-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 0.75rem;
+    }
+
+    .subcategory-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .subcategory-name-input {
+      flex: 1;
+      padding: 0.375rem 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      font-size: 0.8125rem;
+    }
+
+    .subcategory-name-input:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+
+    .subcategory-stats {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .empty-message-small {
+      color: #94a3b8;
+      font-size: 0.75rem;
+      font-style: italic;
+      padding: 0.5rem;
+      text-align: center;
     }
 
     /* JSON Editor */
@@ -1036,6 +1284,9 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   diffLoading = false;
   diffItems: ConfigDiff[] = [];
 
+  // Categories UI
+  expandedCategory: number | null = null;
+
   // Polling
   private configCommandId: string | null = null;
   private configPollSubscription?: Subscription;
@@ -1241,12 +1492,63 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   // Categories
   addCategory(): void {
-    this.config.categories.push({ name: '', icon: '' });
+    this.config.categories.push({
+      id: `category-${Date.now()}`,
+      name: '',
+      videos: [],
+      subCategories: [],
+    });
     this.onConfigChange();
   }
 
   removeCategory(index: number): void {
     this.config.categories.splice(index, 1);
+    if (this.expandedCategory === index) {
+      this.expandedCategory = null;
+    } else if (this.expandedCategory !== null && this.expandedCategory > index) {
+      this.expandedCategory--;
+    }
+    this.onConfigChange();
+  }
+
+  toggleCategory(index: number): void {
+    this.expandedCategory = this.expandedCategory === index ? null : index;
+  }
+
+  addSubcategory(catIndex: number): void {
+    const category = this.config.categories[catIndex];
+    if (!category.subCategories) {
+      category.subCategories = [];
+    }
+    category.subCategories.push({
+      id: `subcategory-${Date.now()}`,
+      name: '',
+      videos: [],
+    });
+    this.onConfigChange();
+  }
+
+  removeSubcategory(catIndex: number, subIndex: number): void {
+    const category = this.config.categories[catIndex];
+    if (category.subCategories) {
+      category.subCategories.splice(subIndex, 1);
+      this.onConfigChange();
+    }
+  }
+
+  removeVideo(catIndex: number, subIndex: number | null, vidIndex: number): void {
+    const category = this.config.categories[catIndex];
+    if (subIndex === null) {
+      // Remove from category's direct videos
+      if (category.videos) {
+        category.videos.splice(vidIndex, 1);
+      }
+    } else {
+      // Remove from subcategory
+      if (category.subCategories && category.subCategories[subIndex]?.videos) {
+        category.subCategories[subIndex].videos.splice(vidIndex, 1);
+      }
+    }
     this.onConfigChange();
   }
 

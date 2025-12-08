@@ -32,19 +32,29 @@ export interface SponsorConfig {
   active?: boolean;
 }
 
-// Catégorie de vidéos
-export interface CategoryConfig {
-  id?: string;
-  name: string;
-  icon?: string;
-  order?: number;
-  subcategories?: SubcategoryConfig[];
+// Vidéo dans une catégorie
+export interface VideoConfig {
+  id: string;
+  title: string;
+  filename: string;
+  category: string;
+  subcategory?: string | null;
+  duration?: number;
 }
 
+// Sous-catégorie de vidéos
 export interface SubcategoryConfig {
-  id?: string;
+  id: string;
   name: string;
-  order?: number;
+  videos: VideoConfig[];
+}
+
+// Catégorie de vidéos
+export interface CategoryConfig {
+  id: string;
+  name: string;
+  videos: VideoConfig[];
+  subCategories: SubcategoryConfig[];
 }
 
 // Configuration complète du site
