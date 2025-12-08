@@ -23,23 +23,20 @@ export interface SyncConfig {
   clubName: string;
 }
 
-// Sponsor
+// Sponsor (vidéo de boucle partenaires)
+// Format compatible avec l'app :8080
 export interface SponsorConfig {
-  id?: string;
   name: string;
-  logoUrl?: string;
-  websiteUrl?: string;
-  active?: boolean;
+  type: string;  // ex: "video/mp4"
+  path: string;  // ex: "videos/BOUCLE_PARTENAIRES/video.mp4"
 }
 
 // Vidéo dans une catégorie
+// Format compatible avec l'app :8080
 export interface VideoConfig {
-  id: string;
-  title: string;
-  filename: string;
-  category: string;
-  subcategory?: string | null;
-  duration?: number;
+  name: string;
+  type: string;  // ex: "video/mp4"
+  path: string;  // ex: "videos/CATEGORY/video.mp4"
 }
 
 // Sous-catégorie de vidéos

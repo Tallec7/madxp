@@ -193,16 +193,16 @@ import {
                     placeholder="Nom du sponsor"
                   />
                   <input
-                    type="url"
-                    [(ngModel)]="sponsor.logoUrl"
+                    type="text"
+                    [(ngModel)]="sponsor.path"
                     (ngModelChange)="onConfigChange()"
-                    placeholder="URL du logo"
+                    placeholder="Chemin vidéo (ex: videos/SPONSORS/video.mp4)"
                   />
                   <input
-                    type="url"
-                    [(ngModel)]="sponsor.websiteUrl"
+                    type="text"
+                    [(ngModel)]="sponsor.type"
                     (ngModelChange)="onConfigChange()"
-                    placeholder="Site web"
+                    placeholder="Type (ex: video/mp4)"
                   />
                 </div>
               </div>
@@ -248,8 +248,8 @@ import {
                     <div class="videos-list" *ngIf="category.videos && category.videos.length > 0">
                       <div class="video-item" *ngFor="let video of category.videos; let vidIndex = index">
                         <span class="video-icon">🎬</span>
-                        <span class="video-title">{{ video.title }}</span>
-                        <span class="video-filename">{{ video.filename }}</span>
+                        <span class="video-title">{{ video.name }}</span>
+                        <span class="video-filename">{{ video.path }}</span>
                         <button class="btn-remove-small" (click)="removeVideo(catIndex, null, vidIndex)">×</button>
                       </div>
                     </div>
@@ -280,8 +280,8 @@ import {
                         <div class="videos-list" *ngIf="subcat.videos && subcat.videos.length > 0">
                           <div class="video-item" *ngFor="let video of subcat.videos; let vidIndex = index">
                             <span class="video-icon">🎬</span>
-                            <span class="video-title">{{ video.title }}</span>
-                            <span class="video-filename">{{ video.filename }}</span>
+                            <span class="video-title">{{ video.name }}</span>
+                            <span class="video-filename">{{ video.path }}</span>
                             <button class="btn-remove-small" (click)="removeVideo(catIndex, subIndex, vidIndex)">×</button>
                           </div>
                         </div>
@@ -1501,7 +1501,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   // Sponsors
   addSponsor(): void {
-    this.config.sponsors.push({ name: '', logoUrl: '', websiteUrl: '' });
+    this.config.sponsors.push({ name: '', path: '', type: 'video/mp4' });
     this.onConfigChange();
   }
 
