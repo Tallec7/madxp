@@ -1,0 +1,46 @@
+{
+    "remote": {
+        "title": "Télécommande Néopro - DEMO CLUB"
+    },
+    "auth": {
+        "password": "demo123",
+        "clubName": "DEMO CLUB",
+        "sessionDuration": 28800000
+    },
+    "sync": {
+        "enabled": false,
+        "siteName": "Salle Demo",
+        "clubName": "DEMO CLUB",
+        "location": {
+            "city": "Paris",
+            "region": "Île-de-France",
+            "country": "France"
+        },
+        "sports": ["football"],
+        "contact": {
+            "email": "",
+            "phone": ""
+        }
+    },
+    "version": "1.0",
+    "sponsors": [
+        {
+            "name": "Boucle partenaires Demo",
+            "path": "videos/BOUCLE_PARTENAIRES/BOUCLE_PARTENAIRES_H264.mp4",
+            "type": "video/mp4"
+        }
+    ],
+    "categories": [
+        {
+            "id": "animations",
+            "name": "Animations",
+            "videos": [
+                {
+                    "name": "Animation 1",
+                    "path": "videos/demo/animation1.mp4",
+                    "type": "video/mp4"
+                }
+            ]
+        }
+    ]
+}

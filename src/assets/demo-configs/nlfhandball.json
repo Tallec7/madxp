@@ -1,0 +1,74 @@
+{
+    "remote": {
+        "title": "Télécommande Néopro - NLFHANDBALL"
+    },
+    "auth": {
+        "password": "NantesLoireFeminin25!",
+        "clubName": "NLFHANDBALL",
+        "sessionDuration": 28800000
+    },
+    "sync": {
+        "enabled": true,
+        "serverUrl": "https://neopro-central-server.onrender.com",
+        "siteName": "MANGIN BEAULIEU",
+        "clubName": "NLFHANDBALL",
+        "location": {
+            "city": "Nantes",
+            "region": "Pays De La Loire",
+            "country": "France"
+        },
+        "sports": ["handball"],
+        "contact": {
+            "email": "",
+            "phone": ""
+        }
+    },
+    "version": "1.0",
+    "sponsors": [
+        {
+            "name": "Boucle partenaires",
+            "path": "videos/BOUCLE_PARTENAIRES/BOUCLE_PARTENAIRES_H264.mp4",
+            "type": "video/mp4"
+        }
+    ],
+    "categories": [
+        {
+            "id": "Focus-partenaires",
+            "name": "Focus partenaires",
+            "videos": [
+                {
+                    "name": "Boucle partenaire H265",
+                    "path": "videos/FOCUS_PARTENAIRE/BOUCLE_PARTENAIRES_H265.mp4",
+                    "type": "video/mp4"
+                }
+            ]
+        },
+        {
+            "id": "Info-club",
+            "name": "Info club",
+            "videos": [
+                {
+                    "name": "Octobre rose",
+                    "path": "videos/INFOS_CLUB/OCTOBRE_ROSE.mp4",
+                    "type": "video/mp4"
+                }
+            ]
+        },
+        {
+            "id": "Match_SM1",
+            "name": "Match SM1",
+            "subCategories": [
+                {
+                    "id": "But",
+                    "name": "But",
+                    "videos": []
+                },
+                {
+                    "id": "Jingle",
+                    "name": "Jingle",
+                    "videos": []
+                }
+            ]
+        }
+    ]
+}

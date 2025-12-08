@@ -6,13 +6,15 @@ import { Category } from '../../interfaces/category.interface';
 import { Video } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
+import { DemoConfigService } from '../../services/demo-config.service';
+import { ClubSelectorComponent } from '../club-selector/club-selector.component';
 
-type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos';
+type ViewType = 'club-selector' | 'home' | 'time-categories' | 'subcategories' | 'videos';
 
 @Component({
   selector: 'app-remote',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ClubSelectorComponent],
   templateUrl: './remote.component.html',
   styleUrl: './remote.component.scss'
 })
@@ -21,10 +23,12 @@ export class RemoteComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly socketService = inject(SocketService);
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly demoConfigService = inject(DemoConfigService);
 
   public configuration!: Configuration;
   public currentView: ViewType = 'home';
   public breadcrumb: string[] = ['Télécommande'];
+  public isDemoMode = false;
 
   public selectedTimeCategory: TimeCategory | null = null;
   public selectedCategory: Category | null = null;
@@ -61,9 +65,27 @@ export class RemoteComponent implements OnInit {
   public timeCategories: TimeCategory[] = [];
 
   public ngOnInit(): void {
-    const data = this.route.snapshot.data['configuration'] as Configuration;
-    this.configuration = data;
+    this.isDemoMode = this.demoConfigService.isDemoMode();
 
+    if (this.isDemoMode) {
+      // En mode démo, on commence par la sélection du club
+      this.currentView = 'club-selector';
+    } else {
+      // Mode normal : charger la config depuis le resolver
+      const data = this.route.snapshot.data['configuration'] as Configuration;
+      this.initializeWithConfiguration(data);
+    }
+  }
+
+  public onClubSelected(config: Configuration): void {
+    this.initializeWithConfiguration(config);
+    this.currentView = 'home';
+    // Lancer automatiquement la boucle partenaires sur /tv
+    this.launchSponsors();
+  }
+
+  private initializeWithConfiguration(config: Configuration): void {
+    this.configuration = config;
     // Utiliser les timeCategories de la config, ou les valeurs par défaut
     this.timeCategories = this.configuration.timeCategories?.length
       ? this.configuration.timeCategories
@@ -87,6 +109,14 @@ export class RemoteComponent implements OnInit {
       this.currentView = 'subcategories';
       this.selectedSubCategory = null;
     }
+  }
+
+  public backToClubSelector(): void {
+    this.currentView = 'club-selector';
+    this.breadcrumb = ['Télécommande'];
+    this.selectedTimeCategory = null;
+    this.selectedCategory = null;
+    this.selectedSubCategory = null;
   }
 
   public selectTimeCategory(timeCategory: TimeCategory): void {

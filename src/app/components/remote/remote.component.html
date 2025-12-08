@@ -1,3 +1,7 @@
+<!-- Vue sélection de club (mode démo) -->
+@if (currentView === 'club-selector') {
+  <app-club-selector (clubSelected)="onClubSelected($event)"></app-club-selector>
+} @else {
 <div class="remote-container">
   <!-- Header avec breadcrumb -->
   <div class="remote-header">
@@ -8,8 +12,18 @@
             <span class="back-icon">←</span>
           </button>
         }
+        @if (isDemoMode && breadcrumb.length === 1) {
+          <button class="back-button" (click)="backToClubSelector()">
+            <span class="back-icon">←</span>
+          </button>
+        }
         <div class="header-title-section">
           <h1 class="header-title">{{ breadcrumb[breadcrumb.length - 1] }}</h1>
+          @if (isDemoMode && breadcrumb.length === 1 && configuration) {
+            <div class="breadcrumb-path">
+              <span>{{ configuration.auth?.clubName || 'Club' }}</span>
+            </div>
+          }
           @if (breadcrumb.length > 1) {
             <div class="breadcrumb-path">
               @for (item of breadcrumb.slice(0, -1); track item; let i = $index) {
@@ -162,3 +176,4 @@
     }
   </div>
 </div>
+}
