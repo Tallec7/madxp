@@ -97,9 +97,9 @@ print_step "Build de l'application Angular pour Raspberry Pi..."
 # Build avec configuration raspberry (utilise environment.raspberry.ts)
 # Utiliser npx si ng n'est pas disponible globalement
 if command -v ng &> /dev/null; then
-    ng build --configuration=raspberry
+    ng build raspberry --configuration=raspberry
 else
-    npx ng build --configuration=raspberry
+    npx ng build raspberry --configuration=raspberry
 fi
 print_success "Build Angular terminé"
 
@@ -111,7 +111,7 @@ rm -rf ${DEPLOY_DIR}
 mkdir -p ${DEPLOY_DIR}/{webapp,server,sync-agent}
 
 # Copier le build Angular
-cp -r dist/neopro/browser/* ${DEPLOY_DIR}/webapp/
+cp -r dist/raspberry/browser/* ${DEPLOY_DIR}/webapp/
 
 # Modifier l'environnement dans le build pour pointer vers la config raspberry
 # (L'application utilisera automatiquement environment.raspberry.ts)

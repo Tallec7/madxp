@@ -19,7 +19,18 @@
 
 ```
 raspberry/
-├── scripts/                  # Scripts Mac (déploiement)
+├── frontend/                # Application Angular (webapp TV/Remote/Login)
+│   ├── app/                 # Composants Angular
+│   │   ├── components/      # TV, Remote, Login
+│   │   ├── services/        # Services
+│   │   ├── guards/          # Auth guard
+│   │   └── interfaces/      # Types TypeScript
+│   ├── environments/        # Configs environnement
+│   └── styles/              # SCSS
+│
+├── public/                  # Assets statiques
+│
+├── scripts/                 # Scripts Mac (déploiement)
 │   ├── copy-to-pi.sh        # ⭐ Copie intelligente vers Pi
 │   ├── setup-new-club.sh    # ⭐ Configuration nouveau club
 │   ├── build-and-deploy.sh  # Build + déploiement
@@ -74,6 +85,11 @@ raspberry/
 │   └── server/
 │
 ├── deploy/                  # Fichiers de déploiement (généré)
+│
+├── tsconfig.json            # Config TypeScript
+├── tsconfig.app.json        # Config build
+├── tsconfig.spec.json       # Config tests
+├── karma.conf.js            # Config Karma
 │
 └── install.sh               # Installation système initiale
 ```

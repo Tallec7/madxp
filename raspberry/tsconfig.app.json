@@ -4,7 +4,10 @@
     "outDir": "./out-tsc/app",
     "types": []
   },
-  "files": ["src/main.ts"],
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.spec.ts", "src/test.ts"]
+  "include": [
+    "frontend/**/*.ts"
+  ],
+  "exclude": [
+    "frontend/**/*.spec.ts"
+  ]
 }

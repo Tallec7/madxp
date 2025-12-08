@@ -154,9 +154,9 @@ Vous y verrez :
 
 ```
 neopro/
-├── src/                          # Application Angular (webapp TV/Remote)
-├── public/                       # Assets statiques et configuration
-├── raspberry/
+├── raspberry/                    # Tout ce qui tourne sur le Raspberry Pi
+│   ├── frontend/                 # Application Angular (webapp TV/Remote/Login)
+│   ├── public/                   # Assets statiques
 │   ├── scripts/                  # Scripts de déploiement
 │   │   ├── setup-new-club.sh    # ⭐ Configuration nouveau club
 │   │   ├── build-raspberry.sh   # Build pour Pi
@@ -167,13 +167,18 @@ neopro/
 │   ├── server/                   # Serveur Socket.IO local
 │   ├── admin/                    # Interface admin (port 8080)
 │   └── sync-agent/              # Agent de synchronisation central
+├── central-dashboard/            # Dashboard admin Angular (Render.com)
+│   └── src/                      # Code source Angular
 ├── central-server/               # API Backend (Render.com + Supabase)
-├── central-dashboard/            # Dashboard admin Angular
 ├── server-render/                # Serveur Socket.IO (Render.com)
 ├── render.yaml                   # Configuration déploiement Render.com
 ├── .env.example                  # Template variables d'environnement
 └── docs/                         # Documentation
 ```
+
+**Projets Angular :**
+- `raspberry` : Interface TV/Remote/Login pour le boîtier Raspberry Pi
+- `central-dashboard` : Dashboard d'administration centralisé
 
 ---
 
@@ -225,20 +230,26 @@ nano .env
 
 # Ou manuel
 npm install
-ng serve                          # http://localhost:4200
+npm start                         # Raspberry frontend http://localhost:4200
+npm run start:central             # Central dashboard http://localhost:4300
 cd server-render && node server.js  # Socket.IO port 3000
 cd raspberry/admin && node admin-server-demo.js  # Admin port 8080
 ```
 
-### Build et déploiement
+### Commandes disponibles
 
-```bash
-# Build pour Raspberry Pi
-npm run build:raspberry
-
-# Déployer
-npm run deploy:raspberry neopro.local
-```
+| Commande | Description |
+|----------|-------------|
+| `npm start` | Démarre le frontend Raspberry (dev) |
+| `npm run start:central` | Démarre le dashboard central (dev) |
+| `npm run build` | Build les 2 projets Angular |
+| `npm run build:raspberry` | Build + package pour déploiement Pi |
+| `npm run build:central` | Build du dashboard central |
+| `npm run deploy:raspberry` | Build + déploiement sur le Pi |
+| `npm test` | Lance les tests des 2 projets |
+| `npm run test:raspberry` | Tests du frontend Raspberry |
+| `npm run test:central` | Tests du dashboard central |
+| `npm run lint` | Lint des 2 projets |
 
 ---
 

@@ -3,47 +3,44 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "neopro": {
+    "raspberry": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
           "style": "scss"
         }
       },
-      "root": "",
-      "sourceRoot": "src",
+      "root": "raspberry",
+      "sourceRoot": "raspberry/frontend",
       "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "browser": "src/main.ts",
-            "polyfills": [
-              "zone.js"
-            ],
-            "tsConfig": "tsconfig.app.json",
+            "outputPath": "dist/raspberry",
+            "browser": "raspberry/frontend/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "raspberry/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
               {
                 "glob": "**/*",
-                "input": "public"
+                "input": "raspberry/public"
               },
               {
                 "glob": "**/*",
-                "input": "src/assets/demo-configs",
+                "input": "raspberry/frontend/assets/demo-configs",
                 "output": "demo-configs"
               }
             ],
-            "styles": [
-              "src/styles.scss"
-            ]
+            "styles": ["raspberry/frontend/styles.scss"]
           },
           "configurations": {
             "production": {
               "fileReplacements": [
                 {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.prod.ts"
+                  "replace": "raspberry/frontend/environments/environment.ts",
+                  "with": "raspberry/frontend/environments/environment.prod.ts"
                 }
               ],
               "budgets": [
@@ -63,8 +60,8 @@
             "raspberry": {
               "fileReplacements": [
                 {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.raspberry.ts"
+                  "replace": "raspberry/frontend/environments/environment.ts",
+                  "with": "raspberry/frontend/environments/environment.raspberry.ts"
                 }
               ],
               "budgets": [
@@ -84,8 +81,8 @@
             "demo": {
               "fileReplacements": [
                 {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.demo.ts"
+                  "replace": "raspberry/frontend/environments/environment.ts",
+                  "with": "raspberry/frontend/environments/environment.demo.ts"
                 }
               ],
               "budgets": [
@@ -114,10 +111,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "neopro:build:production"
+              "buildTarget": "raspberry:build:production"
             },
             "development": {
-              "buildTarget": "neopro:build:development"
+              "buildTarget": "raspberry:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -128,29 +125,120 @@
         "test": {
           "builder": "@angular/build:karma",
           "options": {
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ],
-            "tsConfig": "tsconfig.spec.json",
+            "polyfills": ["zone.js", "zone.js/testing"],
+            "tsConfig": "raspberry/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
               {
                 "glob": "**/*",
-                "input": "public"
+                "input": "raspberry/public"
               }
             ],
-            "styles": [
-              "src/styles.scss"
-            ]
+            "styles": ["raspberry/frontend/styles.scss"],
+            "karmaConfig": "raspberry/karma.conf.js"
           }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
             "lintFilePatterns": [
-              "src/**/*.ts",
-              "src/**/*.html"
+              "raspberry/frontend/**/*.ts",
+              "raspberry/frontend/**/*.html"
+            ]
+          }
+        }
+      }
+    },
+    "central-dashboard": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "central-dashboard",
+      "sourceRoot": "central-dashboard/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": "dist/central-dashboard",
+            "browser": "central-dashboard/src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "central-dashboard/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "central-dashboard/src/favicon.ico",
+              "central-dashboard/src/assets"
+            ],
+            "styles": ["central-dashboard/src/styles.scss"]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "2mb",
+                  "maximumError": "5mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "12kb",
+                  "maximumError": "16kb"
+                }
+              ],
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "central-dashboard/src/environments/environment.ts",
+                  "with": "central-dashboard/src/environments/environment.prod.ts"
+                }
+              ]
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "options": {
+            "port": 4300
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "central-dashboard:build:production"
+            },
+            "development": {
+              "buildTarget": "central-dashboard:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular/build:karma",
+          "options": {
+            "polyfills": ["zone.js", "zone.js/testing"],
+            "tsConfig": "central-dashboard/tsconfig.spec.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "central-dashboard/src/favicon.ico",
+              "central-dashboard/src/assets"
+            ],
+            "styles": ["central-dashboard/src/styles.scss"],
+            "karmaConfig": "central-dashboard/karma.conf.js"
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "central-dashboard/src/**/*.ts",
+              "central-dashboard/src/**/*.html"
             ]
           }
         }
@@ -159,8 +247,6 @@
   },
   "cli": {
     "analytics": false,
-    "schematicCollections": [
-      "angular-eslint"
-    ]
+    "schematicCollections": ["angular-eslint"]
   }
 }
