@@ -7,14 +7,18 @@ let currentTab = 'dashboard';
 let currentLogService = 'app';
 let refreshInterval = null;
 let cachedVideos = [];
+let cachedConfig = null;
 
 // Initialisation
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initNavigation();
     initForms();
     initLogButtons();
     updateTime();
     loadDashboard();
+
+    // Charger la configuration pour peupler les selects
+    await loadConfiguration();
 
     // Rafraîchissement automatique toutes les 5 secondes
     refreshInterval = setInterval(() => {
@@ -23,6 +27,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 5000);
 });
+
+/**
+ * Charge la configuration et peuple les selects de catégories
+ */
+async function loadConfiguration() {
+    try {
+        const response = await fetch('/api/configuration');
+        if (!response.ok) {
+            console.error('Erreur lors du chargement de la configuration');
+            return;
+        }
+        cachedConfig = await response.json();
+        populateCategorySelects();
+    } catch (error) {
+        console.error('Erreur lors du chargement de la configuration:', error);
+    }
+}
+
+/**
+ * Peuple les selects de catégories avec les données de la configuration
+ */
+function populateCategorySelects() {
+    const categorySelect = document.getElementById('video-category');
+    if (!categorySelect || !cachedConfig) {
+        return;
+    }
+
+    const categories = cachedConfig.categories || [];
+
+    // Vider et repeupler le select
+    categorySelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+
+    categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.name || cat.id;
+        categorySelect.appendChild(option);
+    });
+}
 
 /**
  * Navigation
@@ -792,19 +835,25 @@ function initForms() {
     const subcategorySelect = document.getElementById('video-subcategory');
 
     categorySelect.addEventListener('change', (e) => {
-        const category = e.target.value;
+        const categoryId = e.target.value;
 
-        // Show subcategories only for Match_SM1 and Match_SF
-        if (category === 'Match_SM1' || category === 'Match_SF') {
+        // Trouver la catégorie dans la configuration
+        const category = cachedConfig?.categories?.find(c => c.id === categoryId);
+        const subCategories = category?.subCategories || [];
+
+        // Afficher les sous-catégories si la catégorie en possède
+        if (subCategories.length > 0) {
             subcategoryGroup.style.display = 'block';
             subcategorySelect.required = true;
 
-            // Populate subcategories
-            subcategorySelect.innerHTML = `
-                <option value="">-- Sélectionner --</option>
-                <option value="But">But</option>
-                <option value="Jingle">Jingle</option>
-            `;
+            // Peupler les sous-catégories depuis la config
+            subcategorySelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+            subCategories.forEach(sub => {
+                const option = document.createElement('option');
+                option.value = sub.id;
+                option.textContent = sub.name || sub.id;
+                subcategorySelect.appendChild(option);
+            });
         } else {
             subcategoryGroup.style.display = 'none';
             subcategorySelect.required = false;
