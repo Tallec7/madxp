@@ -140,6 +140,25 @@
             <div id="tab-videos" class="tab-content">
                 <h2>Gestion des vidéos</h2>
 
+                <!-- Time Categories Editor -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>⏱️ Organisation par temps (Télécommande)</h3>
+                        <button class="btn btn-secondary" onclick="refreshTimeCategories()">🔄 Actualiser</button>
+                    </div>
+                    <div class="card-body">
+                        <p class="info-text">
+                            Associez vos catégories de vidéos aux différents moments du match pour la télécommande.
+                        </p>
+                        <div id="time-categories-list" class="time-categories-list">
+                            <!-- Populated by JS -->
+                        </div>
+                        <button class="btn btn-primary" onclick="addTimeCategory()" style="margin-top: 16px;">
+                            ➕ Ajouter un bloc temps
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Upload Form -->
                 <div class="card">
                     <div class="card-header">

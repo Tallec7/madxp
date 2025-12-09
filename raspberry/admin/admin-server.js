@@ -991,6 +991,71 @@ app.post('/api/videos/add-to-config', async (req, res) => {
   }
 });
 
+// API: Récupérer les timeCategories
+app.get('/api/configuration/time-categories', async (req, res) => {
+  try {
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(404).json({ error: 'Configuration non trouvée' });
+    }
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+    res.json({
+      timeCategories: config.timeCategories || [],
+      categories: (config.categories || []).map(cat => ({
+        id: cat.id,
+        name: cat.name
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Mettre à jour les timeCategories
+app.put('/api/configuration/time-categories', async (req, res) => {
+  try {
+    const { timeCategories } = req.body;
+
+    if (!Array.isArray(timeCategories)) {
+      return res.status(400).json({ error: 'timeCategories doit être un tableau' });
+    }
+
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(500).json({ error: 'Impossible de localiser configuration.json' });
+    }
+
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+
+    // Valider chaque timeCategory
+    for (const tc of timeCategories) {
+      if (!tc.id || !tc.name) {
+        return res.status(400).json({ error: 'Chaque timeCategory doit avoir un id et un name' });
+      }
+      if (!Array.isArray(tc.categoryIds)) {
+        tc.categoryIds = [];
+      }
+    }
+
+    config.timeCategories = timeCategories;
+    await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
+    invalidateVideoCaches();
+
+    console.log('[admin] timeCategories updated:', timeCategories.length, 'entries');
+
+    res.json({
+      success: true,
+      message: 'TimeCategories mis à jour',
+      timeCategories: config.timeCategories
+    });
+  } catch (error) {
+    console.error('[admin] Error updating timeCategories:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: Logs
 app.get('/api/logs/:service', async (req, res) => {
   const { service } = req.params;
