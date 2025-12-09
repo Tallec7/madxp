@@ -1426,3 +1426,139 @@ body {
         max-width: none;
     }
 }
+
+/* Drag & Drop Styles */
+.video-row-drag-handle {
+    flex-shrink: 0;
+    width: 24px;
+    color: var(--text-secondary);
+    cursor: grab;
+    font-size: 14px;
+    letter-spacing: -2px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    user-select: none;
+}
+
+.video-row:hover .video-row-drag-handle {
+    opacity: 1;
+}
+
+.video-row-drag-handle:active {
+    cursor: grabbing;
+}
+
+.video-row.dragging {
+    opacity: 0.5;
+    background: var(--bg-tertiary);
+    border: 2px dashed var(--primary);
+}
+
+.video-rows.drag-over {
+    background: rgba(32, 34, 233, 0.05);
+    border-radius: 8px;
+}
+
+.video-row.drag-over-above {
+    position: relative;
+}
+
+.video-row.drag-over-above::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--primary);
+    border-radius: 2px;
+}
+
+.video-row.drag-over-below {
+    position: relative;
+}
+
+.video-row.drag-over-below::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--primary);
+    border-radius: 2px;
+}
+
+/* Video Row Checkbox */
+.video-row-checkbox {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding-right: 4px;
+}
+
+.video-select-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+/* Bulk Actions Toolbar */
+.bulk-actions-toolbar {
+    position: fixed;
+    bottom: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 20px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    transition: bottom 0.3s ease;
+}
+
+.bulk-actions-toolbar.visible {
+    bottom: 20px;
+}
+
+.bulk-toolbar-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.bulk-count {
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.bulk-actions-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+@media (max-width: 768px) {
+    .bulk-actions-toolbar {
+        left: 10px;
+        right: 10px;
+        transform: none;
+        border-radius: 10px;
+    }
+
+    .bulk-toolbar-content {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .bulk-actions-buttons {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .video-row-drag-handle {
+        display: none;
+    }
+}

@@ -1303,6 +1303,172 @@ app.post('/api/configuration/categories/:categoryId/subcategories', async (req, 
   }
 });
 
+// API: Réorganiser une vidéo dans la même liste
+app.put('/api/videos/reorder', async (req, res) => {
+  try {
+    const { videoPath, categoryId, subcategoryId, newIndex } = req.body;
+
+    if (!videoPath || !categoryId || newIndex === undefined) {
+      return res.status(400).json({ error: 'videoPath, categoryId et newIndex sont requis' });
+    }
+
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(500).json({ error: 'Impossible de localiser configuration.json' });
+    }
+
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+
+    // Find the category
+    const category = (config.categories || []).find(
+      c => (c.id || '').toLowerCase() === categoryId.toLowerCase()
+    );
+
+    if (!category) {
+      return res.status(404).json({ error: 'Catégorie non trouvée' });
+    }
+
+    // Get the target video list
+    let videoList;
+    if (subcategoryId) {
+      const subCategory = (category.subCategories || []).find(
+        s => (s.id || '').toLowerCase() === subcategoryId.toLowerCase()
+      );
+      if (!subCategory) {
+        return res.status(404).json({ error: 'Sous-catégorie non trouvée' });
+      }
+      videoList = subCategory.videos || [];
+      subCategory.videos = videoList;
+    } else {
+      videoList = category.videos || [];
+      category.videos = videoList;
+    }
+
+    // Find video index
+    const currentIndex = videoList.findIndex(v => v.path === videoPath);
+    if (currentIndex === -1) {
+      return res.status(404).json({ error: 'Vidéo non trouvée dans la liste' });
+    }
+
+    // Remove from current position and insert at new position
+    const [video] = videoList.splice(currentIndex, 1);
+    const adjustedIndex = newIndex > currentIndex ? newIndex - 1 : newIndex;
+    videoList.splice(Math.min(adjustedIndex, videoList.length), 0, video);
+
+    await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
+    invalidateVideoCaches();
+
+    console.log('[admin] Video reordered:', videoPath, 'to index', newIndex);
+
+    res.json({
+      success: true,
+      message: 'Vidéo réorganisée',
+      newIndex: adjustedIndex
+    });
+  } catch (error) {
+    console.error('[admin] Error reordering video:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Déplacer une vidéo vers une autre catégorie/sous-catégorie
+app.put('/api/videos/move', async (req, res) => {
+  try {
+    const {
+      videoPath,
+      fromCategoryId,
+      fromSubcategoryId,
+      toCategoryId,
+      toSubcategoryId,
+      newIndex
+    } = req.body;
+
+    if (!videoPath || !fromCategoryId || !toCategoryId) {
+      return res.status(400).json({ error: 'videoPath, fromCategoryId et toCategoryId sont requis' });
+    }
+
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(500).json({ error: 'Impossible de localiser configuration.json' });
+    }
+
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+
+    // Find source category
+    const fromCategory = (config.categories || []).find(
+      c => (c.id || '').toLowerCase() === fromCategoryId.toLowerCase()
+    );
+    if (!fromCategory) {
+      return res.status(404).json({ error: 'Catégorie source non trouvée' });
+    }
+
+    // Get source video list
+    let sourceList;
+    if (fromSubcategoryId) {
+      const fromSubCategory = (fromCategory.subCategories || []).find(
+        s => (s.id || '').toLowerCase() === fromSubcategoryId.toLowerCase()
+      );
+      if (!fromSubCategory) {
+        return res.status(404).json({ error: 'Sous-catégorie source non trouvée' });
+      }
+      sourceList = fromSubCategory.videos || [];
+    } else {
+      sourceList = fromCategory.videos || [];
+    }
+
+    // Find and remove video from source
+    const videoIndex = sourceList.findIndex(v => v.path === videoPath);
+    if (videoIndex === -1) {
+      return res.status(404).json({ error: 'Vidéo non trouvée dans la source' });
+    }
+    const [video] = sourceList.splice(videoIndex, 1);
+
+    // Find target category
+    const toCategory = (config.categories || []).find(
+      c => (c.id || '').toLowerCase() === toCategoryId.toLowerCase()
+    );
+    if (!toCategory) {
+      return res.status(404).json({ error: 'Catégorie cible non trouvée' });
+    }
+
+    // Get target video list
+    let targetList;
+    if (toSubcategoryId) {
+      const toSubCategory = (toCategory.subCategories || []).find(
+        s => (s.id || '').toLowerCase() === toSubcategoryId.toLowerCase()
+      );
+      if (!toSubCategory) {
+        return res.status(404).json({ error: 'Sous-catégorie cible non trouvée' });
+      }
+      targetList = toSubCategory.videos || [];
+      toSubCategory.videos = targetList;
+    } else {
+      targetList = toCategory.videos || [];
+      toCategory.videos = targetList;
+    }
+
+    // Insert at new position
+    const insertIndex = newIndex !== undefined ? Math.min(newIndex, targetList.length) : targetList.length;
+    targetList.splice(insertIndex, 0, video);
+
+    await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
+    invalidateVideoCaches();
+
+    console.log('[admin] Video moved:', videoPath, 'from', fromCategoryId, '/', fromSubcategoryId, 'to', toCategoryId, '/', toSubcategoryId);
+
+    res.json({
+      success: true,
+      message: 'Vidéo déplacée',
+      newIndex: insertIndex
+    });
+  } catch (error) {
+    console.error('[admin] Error moving video:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: Supprimer une sous-catégorie
 app.delete('/api/configuration/categories/:categoryId/subcategories/:subCategoryId', async (req, res) => {
   try {

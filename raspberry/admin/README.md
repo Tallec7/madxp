@@ -27,6 +27,8 @@ Interface organisée en 4 sous-onglets :
 - **Prévisualisation vidéo** : cliquez sur la miniature ou l'icône œil pour lire la vidéo
 - **Modifier une vidéo** : changer le nom, la catégorie ou la sous-catégorie
 - **Supprimer une vidéo** : suppression du fichier et de la configuration
+- **Drag & Drop** : réorganiser les vidéos par glisser-déposer
+- **Sélection multiple** : cocher plusieurs vidéos pour suppression en masse
 - **Vidéos orphelines** : détection et intégration des vidéos non référencées
 
 #### 📤 Ajouter
@@ -107,6 +109,14 @@ sudo systemctl start neopro-admin
 - `PUT /api/videos/edit` - Modifier une vidéo (déplacer, renommer)
   ```json
   { "originalPath": "MATCH_SF/BUT/video.mp4", "categoryId": "Match_SF", "subcategoryId": "But", "displayName": "But n°1", "newFilename": "but_1.mp4" }
+  ```
+- `PUT /api/videos/reorder` - Réorganiser une vidéo dans la même liste
+  ```json
+  { "videoPath": "videos/MATCH_SF/BUT/video.mp4", "categoryId": "Match_SF", "subcategoryId": "But", "newIndex": 2 }
+  ```
+- `PUT /api/videos/move` - Déplacer une vidéo vers une autre catégorie
+  ```json
+  { "videoPath": "videos/MATCH_SF/BUT/video.mp4", "fromCategoryId": "Match_SF", "fromSubcategoryId": "But", "toCategoryId": "Match_H", "toSubcategoryId": "But", "newIndex": 0 }
   ```
 
 #### Configuration
