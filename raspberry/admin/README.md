@@ -27,8 +27,8 @@ Interface organisée en 4 sous-onglets :
 - **Prévisualisation vidéo** : cliquez sur la miniature ou l'icône œil pour lire la vidéo
 - **Modifier une vidéo** : changer le nom, la catégorie ou la sous-catégorie
 - **Supprimer une vidéo** : suppression du fichier et de la configuration
-- **Drag & Drop** : réorganiser les vidéos par glisser-déposer
-- **Sélection multiple** : cocher plusieurs vidéos pour suppression en masse
+- **Drag & Drop** : réorganiser les vidéos par glisser-déposer (même catégorie ou vers une autre)
+- **Sélection multiple** : cocher plusieurs vidéos pour actions groupées (déplacer, supprimer)
 - **Vidéos orphelines** : détection et intégration des vidéos non référencées
 
 #### 📤 Ajouter

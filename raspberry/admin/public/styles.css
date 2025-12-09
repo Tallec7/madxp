@@ -1562,3 +1562,63 @@ body {
         display: none;
     }
 }
+
+/* Empty Drop Zone */
+.video-empty-drop-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px 16px;
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    text-align: center;
+    min-height: 80px;
+    transition: all 0.2s;
+}
+
+.video-empty-drop-zone .empty-icon {
+    font-size: 24px;
+    opacity: 0.6;
+}
+
+.video-empty-drop-zone .empty-text {
+    font-size: 13px;
+}
+
+.video-rows.drag-over .video-empty-drop-zone {
+    border-color: var(--primary);
+    background: rgba(32, 34, 233, 0.1);
+    color: var(--primary);
+}
+
+.video-rows.drag-over .video-empty-drop-zone .empty-icon {
+    opacity: 1;
+}
+
+/* Drag ghost effect */
+.video-row.dragging {
+    opacity: 0.4;
+    background: var(--bg-tertiary);
+    border: 2px dashed var(--primary);
+    transform: scale(0.98);
+}
+
+/* Enhanced drag indicator */
+.video-row.drag-over-above::before,
+.video-row.drag-over-below::after {
+    box-shadow: 0 0 8px var(--primary);
+}
+
+/* Highlight selected rows */
+.video-row:has(.video-select-checkbox:checked) {
+    background: rgba(32, 34, 233, 0.08);
+    border-left: 3px solid var(--primary);
+}
+
+/* Video row hover with selection */
+.video-row:has(.video-select-checkbox:checked):hover {
+    background: rgba(32, 34, 233, 0.12);
+}
