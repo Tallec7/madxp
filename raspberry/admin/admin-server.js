@@ -52,6 +52,7 @@ console.log(`[admin] Videos directory: ${VIDEOS_DIR}`);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/videos', express.static(VIDEOS_DIR));
 
 async function resolveConfigurationPath() {
   for (const candidate of CONFIG_FILE_CANDIDATES) {
