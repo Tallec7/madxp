@@ -125,6 +125,13 @@ if [ -d "raspberry/sync-agent" ]; then
     print_success "Sync-agent copié"
 fi
 
+# Copier l'admin panel
+if [ -d "raspberry/admin" ]; then
+    mkdir -p ${DEPLOY_DIR}/admin
+    cp -r raspberry/admin/* ${DEPLOY_DIR}/admin/
+    print_success "Admin panel copié"
+fi
+
 # NOTE: Les vidéos ne sont PAS incluses dans le déploiement
 # Elles sont gérées par le sync-agent depuis Google Drive
 # Cela permet de garder l'archive de déploiement légère

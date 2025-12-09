@@ -157,6 +157,15 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
         echo 'Sync-agent installé'
     fi
 
+    # Installation admin panel
+    if [ -d ~/deploy/admin ]; then
+        sudo mkdir -p ${RASPBERRY_DIR}/admin
+        sudo cp -r ~/deploy/admin/* ${RASPBERRY_DIR}/admin/
+        cd ${RASPBERRY_DIR}/admin
+        sudo npm install --production 2>/dev/null || true
+        echo 'Admin panel installé'
+    fi
+
     # Permissions correctes pour nginx
     echo 'Configuration des permissions...'
     sudo chmod 755 /home/pi
@@ -189,6 +198,12 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     sudo systemctl restart nginx
     sleep 1
 
+    # Redémarrer admin panel si installé
+    if systemctl list-unit-files neopro-admin.service >/dev/null 2>&1; then
+        sudo systemctl restart neopro-admin
+        sleep 1
+    fi
+
     # Redémarrer sync-agent si installé
     if systemctl list-unit-files neopro-sync-agent.service >/dev/null 2>&1; then
         sudo systemctl restart neopro-sync-agent
@@ -208,6 +223,15 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     else
         echo '✗ Service nginx: ERREUR'
         exit 1
+    fi
+
+    # Vérifier admin panel si installé
+    if systemctl list-unit-files neopro-admin.service >/dev/null 2>&1; then
+        if systemctl is-active --quiet neopro-admin; then
+            echo '✓ Service neopro-admin: OK'
+        else
+            echo '⚠ Service neopro-admin: NON ACTIF'
+        fi
     fi
 
     # Vérifier sync-agent si installé
