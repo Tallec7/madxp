@@ -44,14 +44,29 @@
    - Déploiement rapide de nouveaux boîtiers
    - Workflow optimal
 
+### Architecture et Business
+
+7. **[BUSINESS_PLAN_COMPLET.md](BUSINESS_PLAN_COMPLET.md)** - Business Plan technique
+   - Executive Summary
+   - Architecture technique
+   - Roadmap et phases
+   - Modèle économique
+
+8. **[SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md)** - Architecture de synchronisation *(nouveau)*
+   - Modèle Central vs Local
+   - Types de contenu (NEOPRO verrouillé vs Club éditable)
+   - Règles de merge intelligent
+   - Scénarios d'usage (annonceurs nationaux, contenu local)
+   - Personas (NEOPRO, Opérateur Club, Partenaires)
+
 ### Pour les développeurs
 
-7. **[dev/README.md](dev/README.md)** - Documentation développement
+9. **[dev/README.md](dev/README.md)** - Documentation développement
    - Configuration environnement
    - Conventions de code
    - Tests
 
-8. **[changelog/README.md](changelog/README.md)** - Historique des modifications
+10. **[changelog/README.md](changelog/README.md)** - Historique des modifications
    - Suivi des changements
    - Notes de version
 

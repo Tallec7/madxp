@@ -31,18 +31,25 @@ export interface SponsorConfig {
   path: string;  // ex: "videos/BOUCLE_PARTENAIRES/video.mp4"
 }
 
+// Type de propriétaire du contenu
+export type ContentOwner = 'neopro' | 'club';
+
 // Vidéo dans une catégorie
 // Format compatible avec l'app :8080
 export interface VideoConfig {
   name: string;
   type: string;  // ex: "video/mp4"
   path: string;  // ex: "videos/CATEGORY/video.mp4"
+  locked?: boolean;  // true = non modifiable par le club
+  deployed_at?: string;  // ISO date - quand la vidéo a été déployée par NEOPRO
+  expires_at?: string;  // ISO date - expiration automatique (annonces temporaires)
 }
 
 // Sous-catégorie de vidéos
 export interface SubcategoryConfig {
   id: string;
   name: string;
+  locked?: boolean;  // true = non modifiable par le club
   videos: VideoConfig[];
 }
 
@@ -50,6 +57,8 @@ export interface SubcategoryConfig {
 export interface CategoryConfig {
   id: string;
   name: string;
+  locked?: boolean;  // true = catégorie gérée par NEOPRO, non modifiable
+  owner?: ContentOwner;  // 'neopro' = contenu central, 'club' = contenu local
   videos: VideoConfig[];
   subCategories: SubcategoryConfig[];
 }
@@ -120,7 +129,7 @@ export interface ConfigDiff {
 
 // Valeurs par défaut
 export const DEFAULT_CONFIG: Partial<SiteConfiguration> = {
-  version: '1.0',
+  version: '2.0',
   remote: {
     title: 'Telecommande Neopro',
   },

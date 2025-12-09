@@ -195,6 +195,99 @@ function invalidateVideoCaches() {
   videoMetadataCacheTime = 0;
 }
 
+/**
+ * Vérifie si un élément est verrouillé (contenu NEOPRO)
+ * @param {Object} item - Catégorie, sous-catégorie ou vidéo
+ * @returns {boolean} true si verrouillé
+ */
+function isLocked(item) {
+  return item && (item.locked === true || item.owner === 'neopro');
+}
+
+/**
+ * Vérifie si une catégorie peut être modifiée
+ * @param {Object} category - Catégorie à vérifier
+ * @returns {Object} { allowed: boolean, reason?: string }
+ */
+function canModifyCategory(category) {
+  if (isLocked(category)) {
+    return {
+      allowed: false,
+      reason: 'Cette catégorie est gérée par NEOPRO et ne peut pas être modifiée.',
+    };
+  }
+  return { allowed: true };
+}
+
+/**
+ * Vérifie si une vidéo peut être modifiée/supprimée
+ * @param {Object} video - Vidéo à vérifier
+ * @param {Object} category - Catégorie parente
+ * @param {Object} subcategory - Sous-catégorie parente (optionnelle)
+ * @returns {Object} { allowed: boolean, reason?: string }
+ */
+function canModifyVideo(video, category, subcategory = null) {
+  if (isLocked(video)) {
+    return {
+      allowed: false,
+      reason: 'Cette vidéo est gérée par NEOPRO et ne peut pas être modifiée.',
+    };
+  }
+  if (isLocked(category)) {
+    return {
+      allowed: false,
+      reason: 'Cette vidéo appartient à une catégorie NEOPRO et ne peut pas être modifiée.',
+    };
+  }
+  if (subcategory && isLocked(subcategory)) {
+    return {
+      allowed: false,
+      reason: 'Cette vidéo appartient à une sous-catégorie NEOPRO et ne peut pas être modifiée.',
+    };
+  }
+  return { allowed: true };
+}
+
+/**
+ * Trouve une catégorie et optionnellement une vidéo/sous-catégorie dans la config
+ * @param {Object} config - Configuration complète
+ * @param {string} categoryId - ID de la catégorie
+ * @param {string} subcategoryId - ID de la sous-catégorie (optionnel)
+ * @param {string} videoPath - Chemin de la vidéo (optionnel)
+ * @returns {Object} { category, subcategory?, video? }
+ */
+function findInConfig(config, categoryId, subcategoryId = null, videoPath = null) {
+  const category = (config.categories || []).find(
+    (c) => c.id === categoryId || c.name === categoryId
+  );
+  if (!category) {
+    return { category: null };
+  }
+
+  let subcategory = null;
+  if (subcategoryId) {
+    subcategory = (category.subCategories || []).find(
+      (s) => s.id === subcategoryId || s.name === subcategoryId
+    );
+  }
+
+  let video = null;
+  if (videoPath) {
+    const normalizedPath = videoPath.replace(/\\/g, '/');
+    if (subcategory) {
+      video = (subcategory.videos || []).find(
+        (v) => v.path && v.path.replace(/\\/g, '/') === normalizedPath
+      );
+    } else {
+      video = (category.videos || []).find(
+        (v) => v.path && v.path.replace(/\\/g, '/') === normalizedPath
+      );
+    }
+  }
+
+  return { category, subcategory, video };
+}
+
 async function getVideoMetadataFromConfig() {
   if (videoMetadataCache && Date.now() - videoMetadataCacheTime < VIDEO_METADATA_CACHE_DURATION) {
     return videoMetadataCache;
@@ -766,6 +859,35 @@ app.delete('/api/videos/:category/:filename', async (req, res) => {
       .join('/')
       .replace(/\\/g, '/');
 
+    // Vérifier si la vidéo est verrouillée (NEOPRO)
+    const configPath = await resolveConfigurationPath();
+    if (configPath) {
+      const configRaw = await fs.readFile(configPath, 'utf8');
+      const config = JSON.parse(configRaw);
+      for (const cat of config.categories || []) {
+        // Chercher la vidéo dans les vidéos directes
+        const video = (cat.videos || []).find(v => v.path === relativePath);
+        if (video) {
+          const canModify = canModifyVideo(video, cat);
+          if (!canModify.allowed) {
+            return res.status(403).json({ error: canModify.reason, locked: true });
+          }
+          break;
+        }
+        // Chercher dans les sous-catégories
+        for (const sub of cat.subCategories || []) {
+          const subVideo = (sub.videos || []).find(v => v.path === relativePath);
+          if (subVideo) {
+            const canModify = canModifyVideo(subVideo, cat, sub);
+            if (!canModify.allowed) {
+              return res.status(403).json({ error: canModify.reason, locked: true });
+            }
+            break;
+          }
+        }
+      }
+    }
+
     await fs.access(filePath);
     await fs.unlink(filePath);
     await cleanupEmptyDirs(path.dirname(filePath), VIDEOS_DIR);
@@ -1185,6 +1307,12 @@ app.put('/api/configuration/categories/:categoryId', async (req, res) => {
       return res.status(404).json({ error: 'Catégorie non trouvée' });
     }
 
+    // Vérifier si la catégorie est verrouillée (NEOPRO)
+    const canModify = canModifyCategory(config.categories[categoryIndex]);
+    if (!canModify.allowed) {
+      return res.status(403).json({ error: canModify.reason, locked: true });
+    }
+
     // Mettre à jour les champs autorisés
     if (updates.name) config.categories[categoryIndex].name = updates.name;
 
@@ -1222,6 +1350,13 @@ app.delete('/api/configuration/categories/:categoryId', async (req, res) => {
 
     if (categoryIndex === -1) {
       return res.status(404).json({ error: 'Catégorie non trouvée' });
+    }
+
+    // Vérifier si la catégorie est verrouillée (NEOPRO)
+    const category = config.categories[categoryIndex];
+    const canModify = canModifyCategory(category);
+    if (!canModify.allowed) {
+      return res.status(403).json({ error: canModify.reason, locked: true });
     }
 
     // Supprimer la catégorie
@@ -1490,11 +1625,26 @@ app.delete('/api/configuration/categories/:categoryId/subcategories/:subCategory
       return res.status(404).json({ error: 'Catégorie non trouvée' });
     }
 
+    // Vérifier si la catégorie parente est verrouillée
+    const canModifyCat = canModifyCategory(category);
+    if (!canModifyCat.allowed) {
+      return res.status(403).json({ error: canModifyCat.reason, locked: true });
+    }
+
     category.subCategories = category.subCategories || [];
     const subIndex = category.subCategories.findIndex(s => s.id === subCategoryId);
 
     if (subIndex === -1) {
       return res.status(404).json({ error: 'Sous-catégorie non trouvée' });
+    }
+
+    // Vérifier si la sous-catégorie est verrouillée
+    const subcategory = category.subCategories[subIndex];
+    if (isLocked(subcategory)) {
+      return res.status(403).json({
+        error: 'Cette sous-catégorie est gérée par NEOPRO et ne peut pas être supprimée.',
+        locked: true
+      });
     }
 
     category.subCategories.splice(subIndex, 1);

@@ -1622,3 +1622,166 @@ body {
 .video-row:has(.video-select-checkbox:checked):hover {
     background: rgba(32, 34, 233, 0.12);
 }
+
+/* ===== NEOPRO Lock Indicators ===== */
+
+/* Lock badge for categories */
+.lock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: rgba(253, 190, 0, 0.15);
+    border: 1px solid var(--warning);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--warning);
+    margin-left: 8px;
+}
+
+.lock-badge .lock-icon {
+    font-size: 10px;
+}
+
+/* Locked category header styling */
+.video-group.locked-category {
+    border-left: 3px solid var(--warning);
+}
+
+.video-group.locked-category .video-group-header {
+    background: linear-gradient(90deg, rgba(253, 190, 0, 0.1), var(--bg-tertiary));
+}
+
+/* Locked video row */
+.video-row.locked-video {
+    border-left: 3px solid var(--warning);
+    background: rgba(253, 190, 0, 0.03);
+}
+
+.video-row.locked-video:hover {
+    background: rgba(253, 190, 0, 0.08);
+}
+
+/* Lock icon in video row */
+.video-row-lock {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+}
+
+.video-lock-icon {
+    font-size: 14px;
+    color: var(--warning);
+    opacity: 0.9;
+}
+
+/* Tooltip for locked items */
+.lock-tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.lock-tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 10px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.lock-tooltip:hover::after {
+    opacity: 1;
+    visibility: visible;
+    bottom: calc(100% + 6px);
+}
+
+/* Disabled action buttons for locked items */
+.video-row-actions .btn.locked-btn {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.video-row-actions .btn.locked-btn:hover {
+    background: var(--bg-tertiary);
+    opacity: 0.4;
+}
+
+/* Category locked in manager */
+.category-item.locked-category {
+    border-left: 3px solid var(--warning);
+    background: linear-gradient(90deg, rgba(253, 190, 0, 0.05), var(--bg-tertiary));
+}
+
+.category-item.locked-category .category-actions .btn {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Subcategory locked tag */
+.subcategory-tag.locked-subcategory {
+    border-color: var(--warning);
+    background: rgba(253, 190, 0, 0.1);
+}
+
+.subcategory-tag.locked-subcategory .delete-sub {
+    display: none;
+}
+
+/* Info message for locked content */
+.locked-info-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(253, 190, 0, 0.1);
+    border: 1px solid var(--warning);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--warning);
+    margin-bottom: 16px;
+}
+
+.locked-info-message .info-icon {
+    font-size: 16px;
+}
+
+/* Owner badge */
+.owner-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.owner-badge.neopro {
+    background: rgba(253, 190, 0, 0.15);
+    color: var(--warning);
+    border: 1px solid var(--warning);
+}
+
+.owner-badge.club {
+    background: rgba(81, 178, 139, 0.15);
+    color: var(--success);
+    border: 1px solid var(--success);
+}

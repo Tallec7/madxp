@@ -1,7 +1,7 @@
 # NEOPRO - Business Plan & Roadmap Technique Complète
 
 > **Document de référence pour investisseurs, CTO et COO**
-> Version 1.4 - 8 Décembre 2025
+> Version 1.5 - 9 Décembre 2025
 > Classification : Confidentiel
 
 ---
@@ -11,6 +11,7 @@
 1. [Executive Summary](#1-executive-summary)
 2. [Le Produit](#2-le-produit)
 3. [Architecture Technique](#3-architecture-technique)
+   - 3.5 [Architecture de Synchronisation](#35-architecture-de-synchronisation) *(nouveau)*
 4. [Analyse Technique Actuelle](#4-analyse-technique-actuelle)
 5. [Roadmap Phase 1 (0-3 mois)](#5-roadmap-phase-1-0-3-mois)
 6. [Roadmap Phase 2 (3-12 mois)](#6-roadmap-phase-2-3-12-mois)
@@ -477,6 +478,45 @@ Les solutions existantes sont soit trop chères (€500-2000+), soit trop comple
         ├───────────────────────────────────►│
         │                                    │
 ```
+
+## 3.5 Architecture de Synchronisation
+
+> **Documentation complète** : Voir [SYNC_ARCHITECTURE.md](./SYNC_ARCHITECTURE.md)
+
+### Modèle de Contenu
+
+Le système distingue deux types de contenu avec des règles de synchronisation différentes :
+
+| Type | Propriétaire | Modifiable par Club | Direction Sync |
+|------|--------------|---------------------|----------------|
+| **Contenu NEOPRO** | NEOPRO Central | Non (verrouillé) | Central → Local |
+| **Contenu Club** | Club local | Oui | Local → Central (miroir) |
+
+### Cas d'Usage
+
+**Annonceurs Nationaux** : NEOPRO déploie des vidéos partenaires (ex: Décathlon) vers tous les clubs. Ces vidéos apparaissent dans une catégorie verrouillée "ANNONCES NEOPRO" que l'opérateur club ne peut pas modifier ou supprimer.
+
+**Contenu Local** : L'opérateur club (Jean) peut ajouter ses propres vidéos (hommages, annonces speaker) via l'Admin UI locale. Ces modifications sont préservées lors des synchronisations avec le central.
+
+### Règles de Merge
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    SERVEUR CENTRAL                          │
+│  • Contenu NEOPRO (verrouillé) → PUSH vers les clubs       │
+│  • Miroir config clubs (lecture seule) ← PULL des clubs    │
+└─────────────────────────────────────────────────────────────┘
+                           │
+            ┌──────────────┴──────────────┐
+            ▼                             ▼
+┌───────────────────────┐    ┌───────────────────────┐
+│ ANNONCES NEOPRO       │    │ CONTENU CLUB          │
+│ 🔒 Lecture seule      │    │ ✏️ Modifiable         │
+│ Catégorie verrouillée │    │ Préservé au merge     │
+└───────────────────────┘    └───────────────────────┘
+```
+
+**Principe clé** : Les modifications locales du club sont TOUJOURS préservées lors d'une synchronisation. Le contenu NEOPRO est ajouté/mis à jour sans écraser le contenu club.
 
 ---
 

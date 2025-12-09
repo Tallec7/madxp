@@ -23,7 +23,7 @@
             "phone": "[TELEPHONE]"
         }
     },
-    "version": "1.0",
+    "version": "2.0",
     "sponsors": [
         {
             "name": "Boucle partenaires",
@@ -33,39 +33,57 @@
     ],
     "categories": [
         {
+            "id": "annonces_neopro",
+            "name": "ANNONCES NEOPRO",
+            "locked": true,
+            "owner": "neopro",
+            "videos": [],
+            "subCategories": []
+        },
+        {
             "id": "Focus-partenaires",
             "name": "Focus partenaires",
+            "locked": false,
+            "owner": "club",
             "videos": [
                 {
                     "name": "Boucle partenaire H265",
                     "path": "videos/FOCUS_PARTENAIRE/BOUCLE_PARTENAIRES_H265.mp4",
-                    "type": "video/mp4"
+                    "type": "video/mp4",
+                    "locked": false
                 }
             ]
         },
         {
             "id": "Info-club",
             "name": "Info club",
+            "locked": false,
+            "owner": "club",
             "videos": [
                 {
                     "name": "Octobre rose",
                     "path": "videos/INFOS_CLUB/OCTOBRE_ROSE.mp4",
-                    "type": "video/mp4"
+                    "type": "video/mp4",
+                    "locked": false
                 }
             ]
         },
         {
             "id": "Match_SM1",
             "name": "Match SM1",
+            "locked": false,
+            "owner": "club",
             "subCategories": [
                 {
                     "id": "But",
                     "name": "But",
+                    "locked": false,
                     "videos": []
                 },
                 {
                     "id": "Jingle",
                     "name": "Jingle",
+                    "locked": false,
                     "videos": []
                 }
             ]

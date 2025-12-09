@@ -118,6 +118,10 @@ class SocketService {
       this.handleDeployProgress(siteId, progress);
     });
 
+    socket.on('sync_local_state', (state: any) => {
+      this.handleSyncLocalState(siteId, state);
+    });
+
     logger.info('Agent authenticated', { siteId, siteName: site.site_name });
 
     // Traiter les déploiements en attente pour ce site
@@ -255,6 +259,48 @@ class SocketService {
       }
     } catch (error) {
       logger.error('Error handling command result:', error);
+    }
+  }
+
+  /**
+   * Gère la synchronisation de l'état local depuis un Pi
+   * Stocke le miroir de la configuration pour que NEOPRO puisse voir
+   * ce qu'il y a sur chaque boîtier.
+   */
+  private async handleSyncLocalState(siteId: string, state: any) {
+    try {
+      const { configHash, config, timestamp } = state;
+
+      logger.info('Received local state sync', {
+        siteId,
+        configHash,
+        categoriesCount: config?.categories?.length || 0,
+        timestamp,
+      });
+
+      // Stocker le miroir de la configuration locale
+      await query(
+        `UPDATE sites
+         SET local_config_mirror = $1,
+             local_config_hash = $2,
+             last_config_sync = NOW()
+         WHERE id = $3`,
+        [JSON.stringify(config), configHash, siteId]
+      );
+
+      // Émettre au dashboard pour mise à jour en temps réel
+      if (this.io) {
+        this.io.emit('site_config_updated', {
+          siteId,
+          configHash,
+          categoriesCount: config?.categories?.length || 0,
+          timestamp,
+        });
+      }
+
+      logger.info('Local state stored', { siteId, configHash });
+    } catch (error) {
+      logger.error('Error handling sync_local_state:', error);
     }
   }
 

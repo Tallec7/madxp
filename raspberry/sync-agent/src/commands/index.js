@@ -6,6 +6,7 @@ const util = require('util');
 const fs = require('fs-extra');
 const logger = require('../logger');
 const { config } = require('../config');
+const { mergeConfigurations, createBackup, calculateConfigHash } = require('../utils/config-merge');
 
 const execAsync = util.promisify(exec);
 
@@ -14,21 +15,64 @@ const commands = {
   delete_video: deleteVideo,
   update_software: updateSoftware,
 
+  /**
+   * Met à jour la configuration avec merge intelligent
+   *
+   * Modes supportés :
+   * - mode: 'merge' (défaut) - Fusionne le contenu NEOPRO avec la config locale
+   * - mode: 'replace' - Remplace entièrement (ancien comportement, pour migration)
+   *
+   * @param {Object} data - { neoProContent, mode?, configuration? }
+   */
   async update_config(data) {
-    logger.info('Updating configuration', data);
+    logger.info('Updating configuration', { mode: data.mode || 'merge' });
 
     try {
-      if (!data || !data.configuration) {
-        throw new Error('Missing configuration data in update_config command');
+      const configPath = config.paths.root + '/webapp/configuration.json';
+      const backupPath = config.paths.root + '/webapp/configuration.backup.json';
+
+      // Lire la configuration locale actuelle
+      let localConfig = {};
+      if (await fs.pathExists(configPath)) {
+        const localContent = await fs.readFile(configPath, 'utf8');
+        localConfig = JSON.parse(localContent);
       }
 
-      // Single source of truth: webapp/configuration.json (served by app :8080)
-      const configPath = config.paths.root + '/webapp/configuration.json';
-      const configJson = JSON.stringify(data.configuration, null, 2);
+      // Créer un backup avant modification
+      await fs.writeFile(backupPath, JSON.stringify(localConfig, null, 2));
+      logger.info('Backup created', { path: backupPath });
 
+      let finalConfig;
+
+      if (data.mode === 'replace' && data.configuration) {
+        // Mode legacy : remplacement complet (pour rétrocompatibilité)
+        logger.warn('Using legacy replace mode - local changes may be lost');
+        finalConfig = data.configuration;
+      } else if (data.neoProContent) {
+        // Mode merge : fusionner le contenu NEOPRO avec la config locale
+        const hashBefore = calculateConfigHash(localConfig);
+        finalConfig = mergeConfigurations(localConfig, data.neoProContent);
+        const hashAfter = calculateConfigHash(finalConfig);
+
+        logger.info('Configuration merged', {
+          hashBefore,
+          hashAfter,
+          changed: hashBefore !== hashAfter,
+        });
+      } else if (data.configuration) {
+        // Fallback : ancien format (remplacement)
+        logger.warn('Legacy configuration format detected, using merge');
+        finalConfig = mergeConfigurations(localConfig, data.configuration);
+      } else {
+        throw new Error('Missing neoProContent or configuration in update_config command');
+      }
+
+      // Écrire la configuration fusionnée
+      const configJson = JSON.stringify(finalConfig, null, 2);
       await fs.writeFile(configPath, configJson);
       logger.info('Configuration written to', { path: configPath });
 
+      // Notifier l'application locale du changement
       const io = require('socket.io-client');
       const socket = io('http://localhost:3000', { timeout: 5000 });
       socket.emit('config_updated');
@@ -36,7 +80,11 @@ const commands = {
 
       logger.info('Configuration updated successfully');
 
-      return { success: true };
+      return {
+        success: true,
+        hash: calculateConfigHash(finalConfig),
+        mode: data.mode || 'merge',
+      };
     } catch (error) {
       logger.error('Configuration update failed:', error);
       throw error;

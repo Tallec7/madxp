@@ -3,12 +3,22 @@ const path = require('path');
 const axios = require('axios');
 const logger = require('../logger');
 const { config } = require('../config');
+const { isLocked } = require('../utils/config-merge');
 
 class VideoDeployHandler {
   async execute(data, progressCallback) {
-    const { videoUrl, filename, originalName, category, subcategory } = data;
+    const { videoUrl, filename, originalName, category, subcategory, locked, expires_at } = data;
 
-    logger.info('Starting video deployment', { filename, category, subcategory });
+    // Déploiement depuis le central = contenu NEOPRO (verrouillé par défaut)
+    const isNeoProContent = locked !== false;
+
+    logger.info('Starting video deployment', {
+      filename,
+      category,
+      subcategory,
+      isNeoProContent,
+      expires_at,
+    });
 
     try {
       const targetDir = path.join(
@@ -93,26 +103,45 @@ class VideoDeployHandler {
         configuration.categories = [];
       }
 
+      // Déploiement depuis le central = contenu NEOPRO (verrouillé par défaut)
+      const isNeoProContent = videoData.locked !== false;
+
       let category = configuration.categories.find(c => c.name === videoData.category);
 
       if (!category) {
         category = {
           id: `category-${Date.now()}`,
           name: videoData.category,
+          locked: isNeoProContent,
+          owner: isNeoProContent ? 'neopro' : 'club',
           videos: [],
           subCategories: [],
         };
         configuration.categories.push(category);
+        logger.info('Created new category', {
+          name: videoData.category,
+          locked: isNeoProContent,
+          owner: isNeoProContent ? 'neopro' : 'club',
+        });
       }
 
+      // Construire le chemin relatif de la vidéo
+      const relativePath = videoData.subcategory
+        ? `videos/${videoData.category}/${videoData.subcategory}/${videoData.filename}`
+        : `videos/${videoData.category}/${videoData.filename}`;
+
       const videoEntry = {
-        id: `video-${Date.now()}`,
-        title: videoData.originalName.replace(/\.[^/.]+$/, ''),
-        filename: videoData.filename,
-        duration: videoData.duration || 0,
-        category: videoData.category,
-        subcategory: videoData.subcategory,
+        name: videoData.originalName.replace(/\.[^/.]+$/, ''),
+        path: relativePath,
+        type: 'video/mp4',
+        locked: isNeoProContent,
+        deployed_at: new Date().toISOString(),
       };
+
+      // Ajouter la date d'expiration si présente
+      if (videoData.expires_at) {
+        videoEntry.expires_at = videoData.expires_at;
+      }
 
       if (videoData.subcategory) {
         let subcategory = category.subCategories.find(s => s.name === videoData.subcategory);
@@ -121,19 +150,20 @@ class VideoDeployHandler {
           subcategory = {
             id: `subcategory-${Date.now()}`,
             name: videoData.subcategory,
+            locked: isNeoProContent,
             videos: [],
           };
           category.subCategories.push(subcategory);
         }
 
-        const existingIndex = subcategory.videos.findIndex(v => v.filename === videoData.filename);
+        const existingIndex = subcategory.videos.findIndex(v => v.path === relativePath);
         if (existingIndex >= 0) {
           subcategory.videos[existingIndex] = videoEntry;
         } else {
           subcategory.videos.push(videoEntry);
         }
       } else {
-        const existingIndex = category.videos.findIndex(v => v.filename === videoData.filename);
+        const existingIndex = category.videos.findIndex(v => v.path === relativePath);
         if (existingIndex >= 0) {
           category.videos[existingIndex] = videoEntry;
         } else {

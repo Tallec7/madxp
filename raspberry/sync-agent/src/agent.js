@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
 const io = require('socket.io-client');
+const fs = require('fs-extra');
 const logger = require('./logger');
 const { config, validateConfig } = require('./config');
 const metricsCollector = require('./metrics');
 const commands = require('./commands');
 const analyticsCollector = require('./analytics');
+const { calculateConfigHash } = require('./utils/config-merge');
+const ConfigWatcher = require('./watchers/config-watcher');
 
 class NeoproSyncAgent {
   constructor() {
@@ -15,6 +18,7 @@ class NeoproSyncAgent {
     this.heartbeatInterval = null;
     this.analyticsInterval = null;
     this.connected = false;
+    this.configWatcher = null;
   }
 
   async start() {
@@ -72,8 +76,68 @@ class NeoproSyncAgent {
 
     this.connected = true;
 
+    // Envoyer l'état local au central (miroir)
+    this.syncLocalState();
+
+    // Démarrer la surveillance des changements de configuration
+    this.startConfigWatcher();
+
     this.startHeartbeat();
     this.startAnalyticsSync();
+  }
+
+  /**
+   * Démarre la surveillance du fichier de configuration
+   * pour synchroniser automatiquement les changements locaux vers le central
+   */
+  startConfigWatcher() {
+    const configPath = config.paths.config;
+
+    this.configWatcher = new ConfigWatcher(configPath, async () => {
+      logger.info('📝 Local configuration changed, syncing to central...');
+      await this.syncLocalState();
+    });
+
+    this.configWatcher.start();
+  }
+
+  /**
+   * Synchronise l'état local vers le serveur central (miroir)
+   * Envoie la configuration actuelle pour que NEOPRO puisse voir
+   * ce qu'il y a sur ce boîtier.
+   */
+  async syncLocalState() {
+    if (!this.connected) {
+      return;
+    }
+
+    try {
+      const configPath = config.paths.config;
+
+      if (!await fs.pathExists(configPath)) {
+        logger.warn('No local configuration found to sync', { configPath });
+        return;
+      }
+
+      const configContent = await fs.readFile(configPath, 'utf8');
+      const localConfig = JSON.parse(configContent);
+      const configHash = calculateConfigHash(localConfig);
+
+      // Envoyer l'état local au central
+      this.socket.emit('sync_local_state', {
+        siteId: config.site.id,
+        configHash,
+        config: localConfig,
+        timestamp: new Date().toISOString(),
+      });
+
+      logger.info('📤 Local state synced to central', {
+        configHash,
+        categoriesCount: localConfig.categories?.length || 0,
+      });
+    } catch (error) {
+      logger.error('Failed to sync local state:', error);
+    }
   }
 
   handleAuthError(data) {
@@ -276,6 +340,11 @@ class NeoproSyncAgent {
 
     if (this.analyticsInterval) {
       clearInterval(this.analyticsInterval);
+    }
+
+    // Arrêter la surveillance de la configuration
+    if (this.configWatcher) {
+      this.configWatcher.stop();
     }
 
     // Envoyer les analytics restants avant de fermer

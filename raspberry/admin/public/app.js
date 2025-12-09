@@ -77,6 +77,7 @@ async function loadConfiguration() {
 
 /**
  * Peuple les selects de catégories avec les données de la configuration
+ * Les catégories verrouillées ne sont pas proposées pour l'upload
  */
 function populateCategorySelects() {
     const categorySelect = document.getElementById('video-category');
@@ -86,10 +87,14 @@ function populateCategorySelects() {
 
     const categories = cachedConfig.categories || [];
 
-    // Vider et repeupler le select
+    // Vider et repeupler le select (exclure les catégories verrouillées)
     categorySelect.innerHTML = '<option value="">-- Sélectionner --</option>';
 
     categories.forEach(cat => {
+        // Ne pas proposer les catégories verrouillées pour l'upload
+        if (isLocked(cat)) {
+            return;
+        }
         const option = document.createElement('option');
         option.value = cat.id;
         option.textContent = cat.name || cat.id;
@@ -269,6 +274,33 @@ async function loadVideos() {
     }
 }
 
+/**
+ * Vérifie si un élément est verrouillé (géré par NEOPRO)
+ */
+function isLocked(item) {
+    return item && (item.locked === true || item.owner === 'neopro');
+}
+
+/**
+ * Génère le badge de verrouillage HTML
+ */
+function getLockBadgeHtml(item) {
+    if (!isLocked(item)) return '';
+    return `<span class="lock-badge lock-tooltip" data-tooltip="Géré par NEOPRO - Non modifiable"><span class="lock-icon">🔒</span> NEOPRO</span>`;
+}
+
+/**
+ * Génère le badge de propriétaire HTML
+ */
+function getOwnerBadgeHtml(item) {
+    if (!item) return '';
+    const owner = item.owner || (isLocked(item) ? 'neopro' : 'club');
+    if (owner === 'neopro') {
+        return `<span class="owner-badge neopro">NEOPRO</span>`;
+    }
+    return `<span class="owner-badge club">Club</span>`;
+}
+
 function renderConfigurationStructure(container, config) {
     const categories = config.categories || [];
 
@@ -276,6 +308,18 @@ function renderConfigurationStructure(container, config) {
     header.className = 'section-header';
     header.innerHTML = '<h3>📁 Configuration télécommande</h3>';
     container.appendChild(header);
+
+    // Message d'info sur le contenu verrouillé si présent
+    const hasLockedContent = categories.some(cat => isLocked(cat));
+    if (hasLockedContent) {
+        const infoMsg = document.createElement('div');
+        infoMsg.className = 'locked-info-message';
+        infoMsg.innerHTML = `
+            <span class="info-icon">🔒</span>
+            <span>Les éléments avec un cadenas sont gérés par NEOPRO et ne peuvent pas être modifiés.</span>
+        `;
+        container.appendChild(infoMsg);
+    }
 
     if (categories.length === 0) {
         const empty = document.createElement('div');
@@ -286,8 +330,9 @@ function renderConfigurationStructure(container, config) {
     }
 
     categories.forEach(category => {
+        const categoryLocked = isLocked(category);
         const groupEl = document.createElement('div');
-        groupEl.className = 'video-group config-group';
+        groupEl.className = `video-group config-group${categoryLocked ? ' locked-category' : ''}`;
 
         const categoryHeader = document.createElement('div');
         categoryHeader.className = 'video-group-header';
@@ -297,7 +342,7 @@ function renderConfigurationStructure(container, config) {
 
         categoryHeader.innerHTML = `
             <div>
-                <h4>${category.name || category.id || 'Sans nom'}</h4>
+                <h4>${category.name || category.id || 'Sans nom'}${getLockBadgeHtml(category)}</h4>
                 <span class="video-count">${videoCount} vidéo(s)${subCount > 0 ? ` · ${subCount} sous-cat.` : ''}</span>
             </div>
         `;
@@ -308,13 +353,14 @@ function renderConfigurationStructure(container, config) {
 
         // Vidéos directes de la catégorie
         if (category.videos && category.videos.length > 0) {
-            body.appendChild(createConfigVideoList('Vidéos directes', category.videos, category.id, null));
+            body.appendChild(createConfigVideoList('Vidéos directes', category.videos, category.id, null, categoryLocked, null));
         }
 
         // Sous-catégories
         (category.subCategories || []).forEach(subcat => {
+            const subcatLocked = categoryLocked || isLocked(subcat);
             if (subcat.videos && subcat.videos.length > 0) {
-                body.appendChild(createConfigVideoList(subcat.name || subcat.id, subcat.videos, category.id, subcat.id));
+                body.appendChild(createConfigVideoList(subcat.name || subcat.id, subcat.videos, category.id, subcat.id, categoryLocked, subcat));
             } else {
                 const emptySubcat = document.createElement('div');
                 emptySubcat.className = 'video-subgroup';
@@ -341,14 +387,17 @@ function renderConfigurationStructure(container, config) {
     });
 }
 
-function createConfigVideoList(title, videos, categoryId, subcategoryId = null) {
+function createConfigVideoList(title, videos, categoryId, subcategoryId = null, parentLocked = false, subcategoryObj = null) {
     const wrapper = document.createElement('div');
     wrapper.className = 'video-subgroup';
+
+    const subcatLocked = parentLocked || isLocked(subcategoryObj);
+    const lockBadge = subcatLocked ? `<span class="lock-badge lock-tooltip" data-tooltip="Sous-catégorie NEOPRO"><span class="lock-icon">🔒</span></span>` : '';
 
     const header = document.createElement('div');
     header.className = 'video-subgroup-header';
     header.innerHTML = `
-        <h5>${title}</h5>
+        <h5>${title}${lockBadge}</h5>
         <span class="video-count">${videos.length} vidéo(s)</span>
     `;
     wrapper.appendChild(header);
@@ -358,26 +407,30 @@ function createConfigVideoList(title, videos, categoryId, subcategoryId = null) 
     list.dataset.categoryId = categoryId;
     list.dataset.subcategoryId = subcategoryId || '';
 
-    // Add drop zone listeners for drag & drop
-    list.addEventListener('dragover', handleDragOver);
-    list.addEventListener('drop', handleDrop);
-    list.addEventListener('dragleave', handleDragLeave);
+    // Add drop zone listeners for drag & drop (sauf si verrouillé)
+    if (!subcatLocked) {
+        list.addEventListener('dragover', handleDragOver);
+        list.addEventListener('drop', handleDrop);
+        list.addEventListener('dragleave', handleDragLeave);
+    }
 
     // Empty state placeholder for drop zone
     if (videos.length === 0) {
         const emptyState = document.createElement('div');
         emptyState.className = 'video-empty-drop-zone';
-        emptyState.innerHTML = `
-            <span class="empty-icon">📁</span>
-            <span class="empty-text">Aucune vidéo - Glissez une vidéo ici</span>
-        `;
+        emptyState.innerHTML = subcatLocked
+            ? `<span class="empty-icon">🔒</span><span class="empty-text">Aucune vidéo (catégorie NEOPRO)</span>`
+            : `<span class="empty-icon">📁</span><span class="empty-text">Aucune vidéo - Glissez une vidéo ici</span>`;
         list.appendChild(emptyState);
     }
 
     videos.forEach((video, index) => {
+        // Vérifier si la vidéo elle-même est verrouillée
+        const videoLocked = subcatLocked || isLocked(video);
+
         const row = document.createElement('div');
-        row.className = 'video-row';
-        row.draggable = true;
+        row.className = `video-row${videoLocked ? ' locked-video' : ''}`;
+        row.draggable = !videoLocked;
         row.dataset.videoPath = video.path;
         row.dataset.videoIndex = index;
         row.dataset.categoryId = categoryId;
@@ -389,7 +442,8 @@ function createConfigVideoList(title, videos, categoryId, subcategoryId = null) 
             name: video.path ? video.path.split('/').pop() : video.name,
             displayName: video.name,
             configCategory: categoryId,
-            configSubcategory: subcategoryId
+            configSubcategory: subcategoryId,
+            locked: videoLocked
         };
 
         // Ajouter au cache global pour l'édition
@@ -400,11 +454,14 @@ function createConfigVideoList(title, videos, categoryId, subcategoryId = null) 
         // URL de la vidéo pour prévisualisation
         const videoUrl = video.path ? `/${video.path}` : '';
 
+        // Classes pour les boutons verrouillés
+        const lockedBtnClass = videoLocked ? ' locked-btn' : '';
+
         row.innerHTML = `
             <div class="video-row-checkbox">
-                <input type="checkbox" class="video-select-checkbox" data-path="${video.path}" ${selectedVideos.has(video.path) ? 'checked' : ''}>
+                <input type="checkbox" class="video-select-checkbox" data-path="${video.path}" ${selectedVideos.has(video.path) ? 'checked' : ''}${videoLocked ? ' disabled' : ''}>
             </div>
-            <div class="video-row-drag-handle" title="Glisser pour réorganiser">⋮⋮</div>
+            ${videoLocked ? '<div class="video-row-lock"><span class="video-lock-icon lock-tooltip" data-tooltip="Géré par NEOPRO">🔒</span></div>' : '<div class="video-row-drag-handle" title="Glisser pour réorganiser">⋮⋮</div>'}
             <div class="video-row-preview">
                 <div class="video-thumbnail" data-video-url="${videoUrl}">
                     <span class="play-icon">▶</span>
@@ -416,14 +473,16 @@ function createConfigVideoList(title, videos, categoryId, subcategoryId = null) 
             </div>
             <div class="video-row-actions">
                 <button class="btn btn-secondary btn-sm preview-video-btn" data-video-url="${videoUrl}" title="Prévisualiser">👁️</button>
-                <button class="btn btn-secondary btn-sm edit-video-btn" data-path="${video.path}">✏️</button>
-                <button class="btn btn-danger btn-sm delete-video-btn" data-path="${video.path}" data-category="${categoryId}" data-subcategory="${subcategoryId || ''}">🗑️</button>
+                <button class="btn btn-secondary btn-sm edit-video-btn${lockedBtnClass}" data-path="${video.path}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non modifiable"' : ''}>✏️</button>
+                <button class="btn btn-danger btn-sm delete-video-btn${lockedBtnClass}" data-path="${video.path}" data-category="${categoryId}" data-subcategory="${subcategoryId || ''}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non supprimable"' : ''}>🗑️</button>
             </div>
         `;
 
-        // Drag & drop event listeners
-        row.addEventListener('dragstart', handleDragStart);
-        row.addEventListener('dragend', handleDragEnd);
+        // Drag & drop event listeners (sauf si verrouillé)
+        if (!videoLocked) {
+            row.addEventListener('dragstart', handleDragStart);
+            row.addEventListener('dragend', handleDragEnd);
+        }
 
         // Ajouter les event listeners
         const checkbox = row.querySelector('.video-select-checkbox');
@@ -432,11 +491,18 @@ function createConfigVideoList(title, videos, categoryId, subcategoryId = null) 
         const editBtn = row.querySelector('.edit-video-btn');
         const deleteBtn = row.querySelector('.delete-video-btn');
 
-        checkbox.addEventListener('change', (e) => handleVideoSelection(e, video.path));
+        // La sélection et prévisualisation sont toujours permises
+        if (!videoLocked) {
+            checkbox.addEventListener('change', (e) => handleVideoSelection(e, video.path));
+        }
         thumbnail.addEventListener('click', () => openVideoPreview(videoUrl, video.name));
         previewBtn.addEventListener('click', () => openVideoPreview(videoUrl, video.name));
-        editBtn.addEventListener('click', () => openEditModal(video.path));
-        deleteBtn.addEventListener('click', () => deleteConfigVideo(video.path, categoryId, subcategoryId));
+
+        // Édition et suppression uniquement si non verrouillé
+        if (!videoLocked) {
+            editBtn.addEventListener('click', () => openEditModal(video.path));
+            deleteBtn.addEventListener('click', () => deleteConfigVideo(video.path, categoryId, subcategoryId));
+        }
 
         list.appendChild(row);
     });
@@ -1389,6 +1455,7 @@ function openEditModal(videoPath) {
 
 /**
  * Peuple le select des catégories dans le modal d'édition
+ * Les catégories verrouillées ne sont pas proposées (sauf si c'est la catégorie actuelle)
  */
 function populateEditCategorySelect(selectedCategoryId) {
     const categorySelect = document.getElementById('edit-category');
@@ -1398,12 +1465,16 @@ function populateEditCategorySelect(selectedCategoryId) {
         return;
     }
 
-    // Peupler les catégories
+    // Peupler les catégories (exclure les verrouillées sauf si sélectionnée)
     categorySelect.innerHTML = '<option value="">-- Sélectionner --</option>';
     cachedConfig.categories.forEach(cat => {
+        // Ne pas proposer les catégories verrouillées (sauf si c'est la catégorie actuelle)
+        if (isLocked(cat) && cat.id !== selectedCategoryId) {
+            return;
+        }
         const option = document.createElement('option');
         option.value = cat.id;
-        option.textContent = cat.name;
+        option.textContent = cat.name + (isLocked(cat) ? ' 🔒' : '');
         if (cat.id === selectedCategoryId) {
             option.selected = true;
         }
@@ -1792,37 +1863,57 @@ function renderCategoriesManager() {
 
     container.innerHTML = '';
 
+    // Message d'info sur le contenu verrouillé si présent
+    const hasLockedCategories = cachedCategoriesForManager.some(cat => isLocked(cat));
+    if (hasLockedCategories) {
+        const infoMsg = document.createElement('div');
+        infoMsg.className = 'locked-info-message';
+        infoMsg.innerHTML = `
+            <span class="info-icon">🔒</span>
+            <span>Les catégories avec un cadenas sont gérées par NEOPRO et ne peuvent pas être modifiées ou supprimées.</span>
+        `;
+        container.appendChild(infoMsg);
+    }
+
     if (cachedCategoriesForManager.length === 0) {
         container.innerHTML = '<div class="no-categories">Aucune catégorie. Cliquez sur "Nouvelle catégorie" pour commencer.</div>';
         return;
     }
 
     cachedCategoriesForManager.forEach((cat, index) => {
+        const categoryLocked = isLocked(cat);
         const item = document.createElement('div');
-        item.className = 'category-item';
+        item.className = `category-item${categoryLocked ? ' locked-category' : ''}`;
         item.dataset.index = index;
 
         const subCategories = cat.subCategories || [];
         const videoCount = (cat.videos?.length || 0) + subCategories.reduce((sum, sub) => sum + (sub.videos?.length || 0), 0);
 
-        const subCategoriesHtml = subCategories.map((sub, subIndex) => `
-            <span class="subcategory-tag">
-                ${sub.name}
-                <span class="video-count">(${sub.videos?.length || 0})</span>
-                <button class="delete-sub" onclick="deleteSubCategory('${cat.id}', ${subIndex})" title="Supprimer">×</button>
-            </span>
-        `).join('');
+        const subCategoriesHtml = subCategories.map((sub, subIndex) => {
+            const subLocked = categoryLocked || isLocked(sub);
+            return `
+                <span class="subcategory-tag${subLocked ? ' locked-subcategory' : ''}">
+                    ${subLocked ? '🔒 ' : ''}${sub.name}
+                    <span class="video-count">(${sub.videos?.length || 0})</span>
+                    ${!subLocked ? `<button class="delete-sub" onclick="deleteSubCategory('${cat.id}', ${subIndex})" title="Supprimer">×</button>` : ''}
+                </span>
+            `;
+        }).join('');
+
+        const lockBadge = categoryLocked ? `<span class="lock-badge"><span class="lock-icon">🔒</span> NEOPRO</span>` : '';
+        const ownerBadge = getOwnerBadgeHtml(cat);
 
         item.innerHTML = `
             <div class="category-header">
                 <div class="category-info">
-                    <strong>${cat.name}</strong>
+                    <strong>${cat.name}</strong>${lockBadge}
                     <span class="category-id">${cat.id}</span>
+                    ${ownerBadge}
                     <span class="video-count">${videoCount} vidéo${videoCount > 1 ? 's' : ''}</span>
                 </div>
                 <div class="category-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="editCategory(${index})">✏️ Modifier</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteCategory('${cat.id}')">🗑️</button>
+                    <button class="btn btn-secondary btn-sm${categoryLocked ? ' locked-btn' : ''}" onclick="${categoryLocked ? '' : `editCategory(${index})`}" ${categoryLocked ? 'disabled title="Catégorie NEOPRO - Non modifiable"' : ''}>✏️ Modifier</button>
+                    <button class="btn btn-danger btn-sm${categoryLocked ? ' locked-btn' : ''}" onclick="${categoryLocked ? '' : `deleteCategory('${cat.id}')`}" ${categoryLocked ? 'disabled title="Catégorie NEOPRO - Non supprimable"' : ''}>🗑️</button>
                 </div>
             </div>
             <div class="subcategories-section">
@@ -1831,7 +1922,7 @@ function renderCategoriesManager() {
                 </div>
                 <div class="subcategories-list">
                     ${subCategoriesHtml}
-                    <button class="add-subcategory-btn" onclick="addSubCategory('${cat.id}')">+ Ajouter</button>
+                    ${!categoryLocked ? `<button class="add-subcategory-btn" onclick="addSubCategory('${cat.id}')">+ Ajouter</button>` : ''}
                 </div>
             </div>
         `;
