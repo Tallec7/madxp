@@ -53,9 +53,14 @@ dist/neopro/browser/              # Racine du serveur web
 │   ├── nlfhandball.json
 │   └── demo-club.json
 └── videos/                       # À AJOUTER MANUELLEMENT
-    ├── BOUCLE_PARTENAIRES/
-    ├── FOCUS_PARTENAIRE/
-    └── ...
+    └── {club}/                   # Un dossier par club (ex: narh/)
+        ├── PARTENAIRES/          # Vidéos sponsors/boucle
+        ├── FOCUS_PARTENAIRE/     # Vidéos focus partenaires
+        ├── INFOS_CLUB/           # Vidéos infos club
+        ├── ENTREE/               # Vidéos entrée joueurs
+        └── MATCH/                # Vidéos match (BUT/, JINGLE/)
+            ├── BUT/
+            └── JINGLE/
 ```
 
 ### Étapes de déploiement initial
@@ -67,7 +72,7 @@ dist/neopro/browser/              # Racine du serveur web
 
 2. **Copier le build** : Tout le contenu de `dist/neopro/browser/`
 
-3. **Ajouter les vidéos** : Créer le dossier `videos/` et y placer les vidéos référencées dans les configurations
+3. **Ajouter les vidéos** : Créer le dossier `videos/{club}/` pour chaque club et y placer les vidéos référencées dans les configurations (ex: `videos/narh/FOCUS_PARTENAIRE/...`)
 
 4. **Configurer le socket** : Modifier `environment.demo.ts` si nécessaire pour pointer vers le bon serveur Socket.IO
 
@@ -87,7 +92,7 @@ La liste des clubs et leurs configurations sont chargées dynamiquement depuis l
    ]
    ```
 
-3. **Ajouter les vidéos** : Placer les vidéos référencées dans `videos/`
+3. **Ajouter les vidéos** : Placer les vidéos dans `videos/monclub/` (structure par club)
 
 4. **Rafraîchir** : La page `/remote` affichera automatiquement le nouveau club
 
@@ -99,7 +104,7 @@ La liste des clubs et leurs configurations sont chargées dynamiquement depuis l
   "auth": { "clubName": "MON CLUB" },
   "version": "1.0",
   "sponsors": [
-    { "name": "Boucle", "path": "videos/BOUCLE.mp4", "type": "video/mp4" }
+    { "name": "Boucle", "path": "videos/monclub/PARTENAIRES/BOUCLE.mp4", "type": "video/mp4" }
   ],
   "timeCategories": [
     {
@@ -132,7 +137,7 @@ La liste des clubs et leurs configurations sont chargées dynamiquement depuis l
       "id": "Focus-partenaires",
       "name": "Focus partenaire",
       "videos": [
-        { "name": "Partenaire 1", "path": "videos/FOCUS/P1.mp4", "type": "video/mp4" }
+        { "name": "Partenaire 1", "path": "videos/monclub/FOCUS_PARTENAIRE/P1.mp4", "type": "video/mp4" }
       ]
     },
     {
@@ -154,17 +159,19 @@ La liste des clubs et leurs configurations sont chargées dynamiquement depuis l
 
 ## Socket.IO
 
-Le serveur de démo doit avoir un serveur Socket.IO accessible. Par défaut, `environment.demo.ts` pointe vers `http://localhost:3000`.
+Le serveur de démo doit avoir un serveur Socket.IO accessible. Par défaut, `environment.demo.ts` pointe vers `http://localhost:3001` (port du central-server).
 
 Pour un serveur distant, modifier avant le build :
 ```typescript
-// src/environments/environment.demo.ts
+// raspberry/frontend/environments/environment.demo.ts
 export const environment = {
   production: true,
   socketUrl: 'https://votre-serveur-socket.com',
   demoMode: true
 };
 ```
+
+**Note** : Le central-server utilise le port 3001 par défaut (`process.env.PORT || 3001`).
 
 ## Architecture
 

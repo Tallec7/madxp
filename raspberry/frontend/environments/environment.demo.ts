@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  socketUrl: 'http://localhost:3001',
+  socketUrl: 'https://neopro.onrender.com',
   demoMode: true
 };
