@@ -41,18 +41,19 @@ Comportement standard : la configuration est chargée depuis `/configuration.jso
 ### Structure des fichiers
 
 ```
-dist/neopro/browser/              # Racine du serveur web
+dist/raspberry/browser/           # Racine du serveur web
 ├── index.html
 ├── main-*.js
 ├── styles-*.css
 ├── polyfills-*.js
-├── configuration.json            # Config par défaut (ignorée en mode démo)
 ├── demo-configs/                 # Configs des clubs (MODIFIABLE SANS REBUILD)
 │   ├── clubs.json                # Liste des clubs disponibles
+│   ├── default.json              # Config par défaut (mdp: DEMO)
 │   ├── narh.json
-│   ├── nlfhandball.json
-│   └── demo-club.json
+│   └── {club}.json               # Config par club
 └── videos/                       # À AJOUTER MANUELLEMENT
+    ├── DEMO/                     # Vidéo par défaut
+    │   └── NEOPRO.mp4
     └── {club}/                   # Un dossier par club (ex: narh/)
         ├── PARTENAIRES/          # Vidéos sponsors/boucle
         ├── FOCUS_PARTENAIRE/     # Vidéos focus partenaires
@@ -63,18 +64,22 @@ dist/neopro/browser/              # Racine du serveur web
             └── JINGLE/
 ```
 
+**Note** : Le fichier `configuration.json` à la racine n'est PAS utilisé en mode démo. Il peut être supprimé du déploiement.
+
 ### Étapes de déploiement initial
 
 1. **Build** :
    ```bash
-   npx ng build --configuration=demo
+   npx ng build raspberry --configuration=demo
    ```
 
-2. **Copier le build** : Tout le contenu de `dist/neopro/browser/`
+2. **Copier le build** : Tout le contenu de `dist/raspberry/browser/`
 
-3. **Ajouter les vidéos** : Créer le dossier `videos/{club}/` pour chaque club et y placer les vidéos référencées dans les configurations (ex: `videos/narh/FOCUS_PARTENAIRE/...`)
+3. **Ajouter les vidéos** :
+   - Créer `videos/DEMO/NEOPRO.mp4` (vidéo par défaut)
+   - Créer `videos/{club}/` pour chaque club avec les vidéos référencées dans les configurations
 
-4. **Configurer le socket** : Modifier `environment.demo.ts` si nécessaire pour pointer vers le bon serveur Socket.IO
+4. **Configurer le socket** : Modifier `environment.demo.ts` si nécessaire pour pointer vers le bon serveur Socket.IO (actuellement `https://neopro.onrender.com`)
 
 ## Ajouter/Modifier des clubs SANS REBUILD
 
@@ -101,7 +106,11 @@ La liste des clubs et leurs configurations sont chargées dynamiquement depuis l
 ```json
 {
   "remote": { "title": "Télécommande Néopro - MON CLUB" },
-  "auth": { "clubName": "MON CLUB" },
+  "auth": {
+    "password": "MotDePasseClub",
+    "clubName": "MON CLUB",
+    "sessionDuration": 28800000
+  },
   "version": "1.0",
   "sponsors": [
     { "name": "Boucle", "path": "videos/monclub/PARTENAIRES/BOUCLE.mp4", "type": "video/mp4" }
@@ -159,9 +168,9 @@ La liste des clubs et leurs configurations sont chargées dynamiquement depuis l
 
 ## Socket.IO
 
-Le serveur de démo doit avoir un serveur Socket.IO accessible. Par défaut, `environment.demo.ts` pointe vers `http://localhost:3001` (port du central-server).
+Le serveur de démo doit avoir un serveur Socket.IO accessible. Actuellement, `environment.demo.ts` pointe vers `https://neopro.onrender.com`.
 
-Pour un serveur distant, modifier avant le build :
+Pour changer le serveur, modifier avant le build :
 ```typescript
 // raspberry/frontend/environments/environment.demo.ts
 export const environment = {
@@ -171,7 +180,18 @@ export const environment = {
 };
 ```
 
-**Note** : Le central-server utilise le port 3001 par défaut (`process.env.PORT || 3001`).
+## Comportement de la config par défaut
+
+Quand l'utilisateur accède à `/login` ou `/tv` sans avoir sélectionné de club :
+
+1. **Config chargée** : `demo-configs/default.json`
+2. **Mot de passe** : `DEMO`
+3. **Vidéo affichée** : `videos/DEMO/NEOPRO.mp4`
+
+Une fois qu'un club est sélectionné sur `/remote` :
+- La config du club est stockée en localStorage
+- `/tv` reçoit la nouvelle config via Socket.IO et lance automatiquement la boucle sponsors du club
+- Le mot de passe devient celui du club sélectionné
 
 ## Architecture
 
