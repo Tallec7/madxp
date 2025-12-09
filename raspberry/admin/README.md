@@ -18,6 +18,8 @@ Accessible depuis n'importe quel appareil connecté au WiFi `NEOPRO-[CLUB]`.
 - Rafraîchissement automatique toutes les 5s
 
 ### 🎬 Vidéos
+- **Organisation par temps (Télécommande)** : configuration des blocs temps (Avant-match, Match, Après-match) et association des catégories à chaque bloc
+- **Gestion des catégories** : création, modification et suppression de catégories et sous-catégories
 - **Affichage de la configuration télécommande** : catégories, sous-catégories et vidéos tels que définis dans `configuration.json`
 - **Détection des vidéos orphelines** : vidéos présentes sur le disque mais non référencées dans la configuration
 - **Ajout de vidéos orphelines** : possibilité d'ajouter une vidéo orpheline à une catégorie existante ou nouvelle
@@ -87,6 +89,25 @@ sudo systemctl start neopro-admin
 
 #### Configuration
 - `GET /api/configuration` - Configuration complète (`configuration.json`)
+- `GET /api/configuration/time-categories` - Récupérer les blocs temps et catégories disponibles
+- `PUT /api/configuration/time-categories` - Mettre à jour les blocs temps
+  ```json
+  { "timeCategories": [{ "id": "before", "name": "Avant-match", "icon": "🏁", "categoryIds": ["cat1"] }] }
+  ```
+
+#### Catégories
+- `GET /api/configuration/categories` - Liste toutes les catégories
+- `POST /api/configuration/categories` - Créer une catégorie
+  ```json
+  { "id": "match-sf", "name": "Match SF", "videos": [], "subCategories": [] }
+  ```
+- `PUT /api/configuration/categories/:categoryId` - Modifier une catégorie
+- `DELETE /api/configuration/categories/:categoryId` - Supprimer une catégorie
+- `POST /api/configuration/categories/:categoryId/subcategories` - Ajouter une sous-catégorie
+  ```json
+  { "id": "but", "name": "But", "videos": [] }
+  ```
+- `DELETE /api/configuration/categories/:categoryId/subcategories/:subCategoryId` - Supprimer une sous-catégorie
 
 #### Logs
 - `GET /api/logs/:service?lines=100` - Récupérer logs

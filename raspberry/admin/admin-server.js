@@ -1056,6 +1056,254 @@ app.put('/api/configuration/time-categories', async (req, res) => {
   }
 });
 
+// API: Récupérer toutes les catégories
+app.get('/api/configuration/categories', async (req, res) => {
+  try {
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(404).json({ error: 'Configuration non trouvée' });
+    }
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+    res.json({
+      categories: config.categories || []
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Créer une nouvelle catégorie
+app.post('/api/configuration/categories', async (req, res) => {
+  try {
+    const { id, name, videos, subCategories } = req.body;
+
+    if (!id || !name) {
+      return res.status(400).json({ error: 'id et name sont requis' });
+    }
+
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(500).json({ error: 'Impossible de localiser configuration.json' });
+    }
+
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+
+    config.categories = config.categories || [];
+
+    // Vérifier si l'ID existe déjà
+    if (config.categories.some(c => c.id === id)) {
+      return res.status(400).json({ error: 'Une catégorie avec cet ID existe déjà' });
+    }
+
+    const newCategory = {
+      id,
+      name,
+      videos: videos || [],
+      subCategories: subCategories || []
+    };
+
+    config.categories.push(newCategory);
+    await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
+    invalidateVideoCaches();
+
+    console.log('[admin] Category created:', id);
+
+    res.json({
+      success: true,
+      message: 'Catégorie créée',
+      category: newCategory
+    });
+  } catch (error) {
+    console.error('[admin] Error creating category:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Mettre à jour une catégorie
+app.put('/api/configuration/categories/:categoryId', async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const updates = req.body;
+
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(500).json({ error: 'Impossible de localiser configuration.json' });
+    }
+
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+
+    config.categories = config.categories || [];
+    const categoryIndex = config.categories.findIndex(c => c.id === categoryId);
+
+    if (categoryIndex === -1) {
+      return res.status(404).json({ error: 'Catégorie non trouvée' });
+    }
+
+    // Mettre à jour les champs autorisés
+    if (updates.name) config.categories[categoryIndex].name = updates.name;
+
+    await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
+    invalidateVideoCaches();
+
+    console.log('[admin] Category updated:', categoryId);
+
+    res.json({
+      success: true,
+      message: 'Catégorie mise à jour',
+      category: config.categories[categoryIndex]
+    });
+  } catch (error) {
+    console.error('[admin] Error updating category:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Supprimer une catégorie
+app.delete('/api/configuration/categories/:categoryId', async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(500).json({ error: 'Impossible de localiser configuration.json' });
+    }
+
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+
+    config.categories = config.categories || [];
+    const categoryIndex = config.categories.findIndex(c => c.id === categoryId);
+
+    if (categoryIndex === -1) {
+      return res.status(404).json({ error: 'Catégorie non trouvée' });
+    }
+
+    // Supprimer la catégorie
+    config.categories.splice(categoryIndex, 1);
+
+    // Supprimer également des timeCategories
+    if (config.timeCategories) {
+      config.timeCategories.forEach(tc => {
+        tc.categoryIds = (tc.categoryIds || []).filter(id => id !== categoryId);
+      });
+    }
+
+    await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
+    invalidateVideoCaches();
+
+    console.log('[admin] Category deleted:', categoryId);
+
+    res.json({
+      success: true,
+      message: 'Catégorie supprimée'
+    });
+  } catch (error) {
+    console.error('[admin] Error deleting category:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Ajouter une sous-catégorie
+app.post('/api/configuration/categories/:categoryId/subcategories', async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const { id, name, videos } = req.body;
+
+    if (!id || !name) {
+      return res.status(400).json({ error: 'id et name sont requis' });
+    }
+
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(500).json({ error: 'Impossible de localiser configuration.json' });
+    }
+
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+
+    config.categories = config.categories || [];
+    const category = config.categories.find(c => c.id === categoryId);
+
+    if (!category) {
+      return res.status(404).json({ error: 'Catégorie non trouvée' });
+    }
+
+    category.subCategories = category.subCategories || [];
+
+    // Vérifier si l'ID existe déjà
+    if (category.subCategories.some(s => s.id === id)) {
+      return res.status(400).json({ error: 'Une sous-catégorie avec cet ID existe déjà' });
+    }
+
+    const newSubCategory = {
+      id,
+      name,
+      videos: videos || []
+    };
+
+    category.subCategories.push(newSubCategory);
+    await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
+    invalidateVideoCaches();
+
+    console.log('[admin] SubCategory created:', categoryId, '/', id);
+
+    res.json({
+      success: true,
+      message: 'Sous-catégorie créée',
+      subCategory: newSubCategory
+    });
+  } catch (error) {
+    console.error('[admin] Error creating subcategory:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Supprimer une sous-catégorie
+app.delete('/api/configuration/categories/:categoryId/subcategories/:subCategoryId', async (req, res) => {
+  try {
+    const { categoryId, subCategoryId } = req.params;
+
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(500).json({ error: 'Impossible de localiser configuration.json' });
+    }
+
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+
+    config.categories = config.categories || [];
+    const category = config.categories.find(c => c.id === categoryId);
+
+    if (!category) {
+      return res.status(404).json({ error: 'Catégorie non trouvée' });
+    }
+
+    category.subCategories = category.subCategories || [];
+    const subIndex = category.subCategories.findIndex(s => s.id === subCategoryId);
+
+    if (subIndex === -1) {
+      return res.status(404).json({ error: 'Sous-catégorie non trouvée' });
+    }
+
+    category.subCategories.splice(subIndex, 1);
+    await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
+    invalidateVideoCaches();
+
+    console.log('[admin] SubCategory deleted:', categoryId, '/', subCategoryId);
+
+    res.json({
+      success: true,
+      message: 'Sous-catégorie supprimée'
+    });
+  } catch (error) {
+    console.error('[admin] Error deleting subcategory:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: Logs
 app.get('/api/logs/:service', async (req, res) => {
   const { service } = req.params;

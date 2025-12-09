@@ -159,6 +159,25 @@
                     </div>
                 </div>
 
+                <!-- Categories Manager -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📂 Gestion des catégories</h3>
+                        <button class="btn btn-secondary" onclick="refreshCategories()">🔄 Actualiser</button>
+                    </div>
+                    <div class="card-body">
+                        <p class="info-text">
+                            Créez et organisez vos catégories et sous-catégories de vidéos.
+                        </p>
+                        <div id="categories-manager" class="categories-manager">
+                            <!-- Populated by JS -->
+                        </div>
+                        <button class="btn btn-primary" onclick="addCategory()" style="margin-top: 16px;">
+                            ➕ Nouvelle catégorie
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Upload Form -->
                 <div class="card">
                     <div class="card-header">
