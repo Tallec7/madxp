@@ -31,7 +31,7 @@ export interface Site {
   software_version: string | null;
   hardware_model: string;
   api_key: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   created_at: Date;
   updated_at: Date;
 }
@@ -40,7 +40,7 @@ export interface GroupMetadata {
   sport?: string;
   region?: string;
   target_version?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface Group {
@@ -48,7 +48,7 @@ export interface Group {
   name: string;
   description: string | null;
   type: 'sport' | 'geography' | 'version' | 'custom';
-  filters: Record<string, any> | null;
+  filters: Record<string, unknown> | null;
   metadata?: GroupMetadata | null;
   created_at: Date;
   updated_at: Date;
@@ -67,7 +67,7 @@ export interface Video {
   mime_type: string | null;
   storage_path: string;
   thumbnail_url: string | null;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   uploaded_by: string | null;
   created_at: Date;
   updated_at: Date;
@@ -81,7 +81,7 @@ export interface Metrics {
   temperature: number | null;
   disk_usage: number | null;
   uptime: number | null;
-  network_status: Record<string, any> | null;
+  network_status: Record<string, unknown> | null;
   recorded_at: Date;
 }
 
@@ -91,7 +91,7 @@ export interface Alert {
   alert_type: string;
   severity: 'info' | 'warning' | 'critical';
   message: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   status: 'active' | 'acknowledged' | 'resolved';
   created_at: Date;
   resolved_at: Date | null;

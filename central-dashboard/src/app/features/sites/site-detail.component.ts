@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -827,13 +827,10 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   } | null = null;
   systemInfoLoading = false;
 
+  private readonly route = inject(ActivatedRoute);
+  private readonly sitesService = inject(SitesService);
+  private readonly notificationService = inject(NotificationService);
   private refreshSubscription?: Subscription;
-
-  constructor(
-    private route: ActivatedRoute,
-    private sitesService: SitesService,
-    private notificationService: NotificationService
-  ) {}
 
   ngOnInit(): void {
     this.siteId = this.route.snapshot.paramMap.get('id')!;

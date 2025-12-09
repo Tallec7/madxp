@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { SitesService } from '../../core/services/sites.service';
@@ -424,10 +424,10 @@ import { SiteStats, Site } from '../../core/models';
   `]
 })
 export class DashboardComponent implements OnInit {
+  private readonly sitesService = inject(SitesService);
+
   stats: SiteStats | null = null;
   recentSites: Site[] = [];
-
-  constructor(private sitesService: SitesService) {}
 
   ngOnInit(): void {
     this.loadStats();

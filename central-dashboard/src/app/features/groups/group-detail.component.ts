@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -834,14 +834,11 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
     } as GroupMetadataForm
   };
 
+  private readonly route = inject(ActivatedRoute);
+  private readonly groupsService = inject(GroupsService);
+  private readonly sitesService = inject(SitesService);
+  private readonly notificationService = inject(NotificationService);
   private subscriptions = new Subscription();
-
-  constructor(
-    private route: ActivatedRoute,
-    private groupsService: GroupsService,
-    private sitesService: SitesService,
-    private notificationService: NotificationService
-  ) {}
 
   ngOnInit(): void {
     const groupId = this.route.snapshot.paramMap.get('id');

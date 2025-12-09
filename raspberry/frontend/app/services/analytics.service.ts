@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Video } from '../interfaces/video.interface';
 import { environment } from '../../environments/environment';
@@ -23,6 +23,8 @@ export interface VideoPlayEvent {
  */
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
+  private readonly http = inject(HttpClient);
+
   private buffer: VideoPlayEvent[] = [];
   private currentSession: string | null = null;
   private currentVideoStart: Date | null = null;
@@ -37,7 +39,7 @@ export class AnalyticsService {
   // URL de l'API analytics sur le serveur local (même serveur que Socket.IO)
   private readonly ANALYTICS_API_URL = environment.socketUrl + '/api/analytics';
 
-  constructor(private http: HttpClient) {
+  constructor() {
     // Charger le buffer depuis le localStorage au démarrage
     this.loadFromStorage();
 

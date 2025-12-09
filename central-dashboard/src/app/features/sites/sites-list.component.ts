@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -465,6 +465,9 @@ import { Site } from '../../core/models';
   `]
 })
 export class SitesListComponent implements OnInit {
+  private readonly sitesService = inject(SitesService);
+  private readonly notificationService = inject(NotificationService);
+
   sites$ = this.sitesService.sites$;
   searchTerm = '';
   statusFilter = '';
@@ -497,11 +500,6 @@ export class SitesListComponent implements OnInit {
   };
   editSportsInput = '';
 
-  constructor(
-    private sitesService: SitesService,
-    private notificationService: NotificationService
-  ) {}
-
   ngOnInit(): void {
     this.loadSites();
   }
@@ -511,10 +509,10 @@ export class SitesListComponent implements OnInit {
   }
 
   applyFilters(): void {
-    const filters: any = {};
-    if (this.searchTerm) filters.search = this.searchTerm;
-    if (this.statusFilter) filters.status = this.statusFilter;
-    if (this.regionFilter) filters.region = this.regionFilter;
+    const filters: Record<string, string> = {};
+    if (this.searchTerm) filters['search'] = this.searchTerm;
+    if (this.statusFilter) filters['status'] = this.statusFilter;
+    if (this.regionFilter) filters['region'] = this.regionFilter;
 
     this.sitesService.loadSites(filters).subscribe();
   }
@@ -562,7 +560,7 @@ export class SitesListComponent implements OnInit {
   createSite(): void {
     if (!this.isValid()) return;
 
-    const siteData: any = {
+    const siteData: Partial<Site> = {
       ...this.newSite,
       sports: this.sportsInput ? this.sportsInput.split(',').map(s => s.trim()) : []
     };
@@ -621,7 +619,7 @@ export class SitesListComponent implements OnInit {
   saveEditSite(): void {
     if (!this.editingSite || !this.isEditValid()) return;
 
-    const siteData: any = {
+    const siteData: Partial<Site> = {
       ...this.editSiteData,
       sports: this.editSportsInput ? this.editSportsInput.split(',').map(s => s.trim()) : []
     };

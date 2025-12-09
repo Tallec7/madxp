@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
@@ -85,9 +85,9 @@ export interface DashboardData {
   providedIn: 'root'
 })
 export class AnalyticsService {
+  private readonly api = inject(ApiService);
+  private readonly http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
-
-  constructor(private api: ApiService, private http: HttpClient) {}
 
   // MVP - Health Analytics
   getClubHealth(siteId: string): Observable<ClubHealthData> {

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, BehaviorSubject, tap } from 'rxjs';
 import { ApiService } from './api.service';
 import { Group, Site } from '../models';
@@ -7,12 +7,12 @@ import { Group, Site } from '../models';
   providedIn: 'root'
 })
 export class GroupsService {
+  private readonly api = inject(ApiService);
+
   private groupsSubject = new BehaviorSubject<Group[]>([]);
   public groups$ = this.groupsSubject.asObservable();
 
-  constructor(private api: ApiService) {}
-
-  loadGroups(filters?: Record<string, any>): Observable<{ total: number; groups: Group[] }> {
+  loadGroups(filters?: Record<string, string | number | boolean>): Observable<{ total: number; groups: Group[] }> {
     return this.api.get<{ total: number; groups: Group[] }>('/groups', filters).pipe(
       tap(response => this.groupsSubject.next(response.groups))
     );
@@ -48,7 +48,7 @@ export class GroupsService {
     );
   }
 
-  addSitesToGroup(groupId: string, siteIds: string[]): Observable<any> {
+  addSitesToGroup(groupId: string, siteIds: string[]): Observable<{ success: boolean }> {
     return this.api.post(`/groups/${groupId}/sites`, { site_ids: siteIds });
   }
 
@@ -57,7 +57,7 @@ export class GroupsService {
   }
 
   // Commandes de groupe
-  sendGroupCommand(groupId: string, command: string, params?: Record<string, any>): Observable<{
+  sendGroupCommand(groupId: string, command: string, params?: Record<string, unknown>): Observable<{
     success: boolean;
     message: string;
     results: { site_id: string; success: boolean; message: string }[];

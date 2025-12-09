@@ -5,6 +5,7 @@ import { environment } from '@env/environment';
 
 export interface SocketEvent {
   type: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
 }
 
@@ -40,23 +41,23 @@ export class SocketService {
       this.eventsSubject.next({ type: 'disconnected', data: null });
     });
 
-    this.socket.on('command_completed', (data: any) => {
+    this.socket.on('command_completed', (data: unknown) => {
       this.eventsSubject.next({ type: 'command_completed', data });
     });
 
-    this.socket.on('deploy_progress', (data: any) => {
+    this.socket.on('deploy_progress', (data: unknown) => {
       this.eventsSubject.next({ type: 'deploy_progress', data });
     });
 
-    this.socket.on('update_progress', (data: any) => {
+    this.socket.on('update_progress', (data: unknown) => {
       this.eventsSubject.next({ type: 'update_progress', data });
     });
 
-    this.socket.on('site_status_changed', (data: any) => {
+    this.socket.on('site_status_changed', (data: unknown) => {
       this.eventsSubject.next({ type: 'site_status_changed', data });
     });
 
-    this.socket.on('alert_created', (data: any) => {
+    this.socket.on('alert_created', (data: unknown) => {
       this.eventsSubject.next({ type: 'alert_created', data });
     });
   }
@@ -73,14 +74,14 @@ export class SocketService {
     return this.connected;
   }
 
-  on(event: string): Observable<any> {
+  on(event: string): Observable<unknown> {
     return new Observable(observer => {
       if (!this.socket) {
         observer.error('Socket not connected');
         return;
       }
 
-      this.socket.on(event, (data: any) => {
+      this.socket.on(event, (data: unknown) => {
         observer.next(data);
       });
 
@@ -92,7 +93,7 @@ export class SocketService {
     });
   }
 
-  emit(event: string, data: any): void {
+  emit(event: string, data: unknown): void {
     if (this.socket && this.connected) {
       this.socket.emit(event, data);
     } else {

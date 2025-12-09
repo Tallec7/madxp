@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
@@ -375,9 +375,8 @@ export class AnalyticsOverviewComponent implements OnInit, OnDestroy {
   loading = false;
   lastUpdate: Date | null = null;
 
+  private readonly analyticsService = inject(AnalyticsService);
   private refreshSubscription?: Subscription;
-
-  constructor(private analyticsService: AnalyticsService) {}
 
   ngOnInit(): void {
     this.loadData();

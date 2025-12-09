@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
@@ -860,15 +860,12 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     targetId: ''
   };
 
+  private readonly apiService = inject(ApiService);
+  private readonly sitesService = inject(SitesService);
+  private readonly groupsService = inject(GroupsService);
+  private readonly socketService = inject(SocketService);
+  private readonly notificationService = inject(NotificationService);
   private subscriptions = new Subscription();
-
-  constructor(
-    private apiService: ApiService,
-    private sitesService: SitesService,
-    private groupsService: GroupsService,
-    private socketService: SocketService,
-    private notificationService: NotificationService
-  ) {}
 
   ngOnInit(): void {
     this.loadVideos();

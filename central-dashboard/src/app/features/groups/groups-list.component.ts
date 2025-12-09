@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -588,6 +588,10 @@ type GroupMetadataForm = {
   `]
 })
 export class GroupsListComponent implements OnInit {
+  private readonly groupsService = inject(GroupsService);
+  private readonly sitesService = inject(SitesService);
+  private readonly notificationService = inject(NotificationService);
+
   groups$ = this.groupsService.groups$;
   availableSites: Site[] = [];
   searchTerm = '';
@@ -609,12 +613,6 @@ export class GroupsListComponent implements OnInit {
 
   selectedSiteIds: string[] = [];
 
-  constructor(
-    private groupsService: GroupsService,
-    private sitesService: SitesService,
-    private notificationService: NotificationService
-  ) {}
-
   ngOnInit(): void {
     this.loadGroups();
     this.loadAvailableSites();
@@ -631,9 +629,9 @@ export class GroupsListComponent implements OnInit {
   }
 
   applyFilters(): void {
-    const filters: any = {};
-    if (this.searchTerm) filters.search = this.searchTerm;
-    if (this.typeFilter) filters.type = this.typeFilter;
+    const filters: Record<string, string> = {};
+    if (this.searchTerm) filters['search'] = this.searchTerm;
+    if (this.typeFilter) filters['type'] = this.typeFilter;
 
     this.groupsService.loadGroups(filters).subscribe();
   }
@@ -745,7 +743,7 @@ export class GroupsListComponent implements OnInit {
         this.selectedSiteIds = groupSites.sites?.map((site: Site) => site.id) || [];
         this.showEditModal = true;
       },
-      error: (error: any) => {
+      error: (error: { error?: { error?: string }; message?: string }) => {
         this.notificationService.error('Erreur lors du chargement du groupe: ' + (error.error?.error || error.message));
       }
     });

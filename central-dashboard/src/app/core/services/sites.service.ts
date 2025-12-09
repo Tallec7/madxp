@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, BehaviorSubject, tap } from 'rxjs';
 import { ApiService } from './api.service';
 import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff } from '../models';
@@ -7,15 +7,15 @@ import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff 
   providedIn: 'root'
 })
 export class SitesService {
+  private readonly api = inject(ApiService);
+
   private sitesSubject = new BehaviorSubject<Site[]>([]);
   public sites$ = this.sitesSubject.asObservable();
 
   private statsSubject = new BehaviorSubject<SiteStats | null>(null);
   public stats$ = this.statsSubject.asObservable();
 
-  constructor(private api: ApiService) {}
-
-  loadSites(filters?: any): Observable<{ total: number; sites: Site[] }> {
+  loadSites(filters?: Record<string, string | number | boolean>): Observable<{ total: number; sites: Site[] }> {
     return this.api.get<{ total: number; sites: Site[] }>('/sites', filters).pipe(
       tap(response => this.sitesSubject.next(response.sites))
     );
@@ -52,7 +52,7 @@ export class SitesService {
   }
 
   // Commandes à distance
-  sendCommand(id: string, command: string, params?: Record<string, any>): Observable<{ success: boolean; commandId?: string; message: string }> {
+  sendCommand(id: string, command: string, params?: Record<string, unknown>): Observable<{ success: boolean; commandId?: string; message: string }> {
     return this.api.post(`/sites/${id}/command`, { command, params });
   }
 
@@ -86,12 +86,12 @@ export class SitesService {
     const sites = this.sitesSubject.value;
     const index = sites.findIndex(s => s.id === id);
     if (index >= 0) {
-      sites[index] = { ...sites[index], status: status as any, last_seen_at: new Date() };
+      sites[index] = { ...sites[index], status: status as Site['status'], last_seen_at: new Date() };
       this.sitesSubject.next([...sites]);
     }
   }
 
-  getCommandStatus(siteId: string, commandId: string): Observable<any> {
+  getCommandStatus(siteId: string, commandId: string): Observable<{ status: string; result?: { configuration?: SiteConfiguration; message?: string }; error_message?: string }> {
     return this.api.get(`/sites/${siteId}/command/${commandId}`);
   }
 

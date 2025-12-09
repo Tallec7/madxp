@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { AuthService } from './core/services/auth.service';
@@ -14,10 +14,8 @@ import { SocketService } from './core/services/socket.service';
   styles: []
 })
 export class AppComponent implements OnInit {
-  constructor(
-    private authService: AuthService,
-    private socketService: SocketService
-  ) {}
+  private readonly authService = inject(AuthService);
+  private readonly socketService = inject(SocketService);
 
   ngOnInit(): void {
     const token = this.authService.getToken();

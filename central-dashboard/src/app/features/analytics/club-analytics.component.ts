@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -1038,13 +1038,10 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   availability: AvailabilityData[] = [];
   recentAlerts: AlertData[] = [];
 
+  private readonly route = inject(ActivatedRoute);
+  private readonly analyticsService = inject(AnalyticsService);
+  private readonly sitesService = inject(SitesService);
   private refreshSubscription?: Subscription;
-
-  constructor(
-    private route: ActivatedRoute,
-    private analyticsService: AnalyticsService,
-    private sitesService: SitesService
-  ) {}
 
   ngOnInit(): void {
     this.siteId = this.route.snapshot.paramMap.get('id')!;

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -312,18 +312,16 @@ import { User } from '../../core/models';
   `]
 })
 export class LayoutComponent implements OnInit, OnDestroy {
+  private readonly authService = inject(AuthService);
+  private readonly socketService = inject(SocketService);
+  private readonly notificationService = inject(NotificationService);
+  private readonly router = inject(Router);
+
   currentUser: User | null = null;
   isConnected = false;
   notifications: Array<{id: number; type: string; message: string}> = [];
   private notificationId = 0;
   private subscriptions = new Subscription();
-
-  constructor(
-    private authService: AuthService,
-    private socketService: SocketService,
-    private notificationService: NotificationService,
-    private router: Router
-  ) {}
 
   ngOnInit(): void {
     this.subscriptions.add(
@@ -396,7 +394,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     }, 5000);
   }
 
-  dismissNotification(notification: any): void {
+  dismissNotification(notification: {id: number; type: string; message: string}): void {
     this.notifications = this.notifications.filter(n => n.id !== notification.id);
   }
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { ApiService } from './api.service';
@@ -8,15 +8,15 @@ import { AuthResponse, User } from '../models';
   providedIn: 'root'
 })
 export class AuthService {
+  private readonly api = inject(ApiService);
+  private readonly router = inject(Router);
+
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
   private tokenKey = 'neopro_token';
 
-  constructor(
-    private api: ApiService,
-    private router: Router
-  ) {
+  constructor() {
     this.loadCurrentUser();
   }
 

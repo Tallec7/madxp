@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@env/environment';
@@ -7,9 +7,8 @@ import { environment } from '@env/environment';
   providedIn: 'root'
 })
 export class ApiService {
+  private readonly http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
-
-  constructor(private http: HttpClient) {}
 
   private getHeaders(): HttpHeaders {
     const token = localStorage.getItem('neopro_token');
@@ -19,7 +18,7 @@ export class ApiService {
     });
   }
 
-  get<T>(endpoint: string, params?: any): Observable<T> {
+  get<T>(endpoint: string, params?: Record<string, string | number | boolean>): Observable<T> {
     const httpParams = params ? new HttpParams({ fromObject: params }) : undefined;
     return this.http.get<T>(`${this.apiUrl}${endpoint}`, {
       headers: this.getHeaders(),
@@ -27,13 +26,13 @@ export class ApiService {
     });
   }
 
-  post<T>(endpoint: string, body: any): Observable<T> {
+  post<T>(endpoint: string, body: unknown): Observable<T> {
     return this.http.post<T>(`${this.apiUrl}${endpoint}`, body, {
       headers: this.getHeaders()
     });
   }
 
-  put<T>(endpoint: string, body: any): Observable<T> {
+  put<T>(endpoint: string, body: unknown): Observable<T> {
     return this.http.put<T>(`${this.apiUrl}${endpoint}`, body, {
       headers: this.getHeaders()
     });
