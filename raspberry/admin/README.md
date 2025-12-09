@@ -18,16 +18,30 @@ Accessible depuis n'importe quel appareil connecté au WiFi `NEOPRO-[CLUB]`.
 - Rafraîchissement automatique toutes les 5s
 
 ### 🎬 Vidéos
-- **Organisation par temps (Télécommande)** : configuration des blocs temps (Avant-match, Match, Après-match) et association des catégories à chaque bloc
-- **Gestion des catégories** : création, modification et suppression de catégories et sous-catégories
-- **Affichage de la configuration télécommande** : catégories, sous-catégories et vidéos tels que définis dans `configuration.json`
-- **Détection des vidéos orphelines** : vidéos présentes sur le disque mais non référencées dans la configuration
-- **Ajout de vidéos orphelines** : possibilité d'ajouter une vidéo orpheline à une catégorie existante ou nouvelle
+
+Interface organisée en 4 sous-onglets :
+
+#### 📁 Bibliothèque
+- **Affichage de toutes les vidéos** par catégories et sous-catégories
+- **Recherche/filtre en temps réel** : filtrer les vidéos par nom ou chemin
+- **Prévisualisation vidéo** : cliquez sur la miniature ou l'icône œil pour lire la vidéo
+- **Modifier une vidéo** : changer le nom, la catégorie ou la sous-catégorie
+- **Supprimer une vidéo** : suppression du fichier et de la configuration
+- **Vidéos orphelines** : détection et intégration des vidéos non référencées
+
+#### 📤 Ajouter
 - Upload de vidéos (MP4, MKV, MOV) - Limite: 500MB par fichier
-- Organisation par catégories
-- Suppression de vidéos
-- Les catégories/sous-catégories sont résolues automatiquement d'après `configuration.json`
-- Chaque upload ou suppression met à jour automatiquement `configuration.json` pour garder la télécommande synchronisée
+- Sélection de catégorie et sous-catégorie
+
+#### 📂 Organiser
+- **Gestion des catégories** : création, modification et suppression
+- **Gestion des sous-catégories** : ajout et suppression
+
+#### ⏱️ Télécommande
+- **Configuration des blocs temps** : Avant-match, Match, Après-match
+- **Association des catégories** à chaque bloc temps
+
+Chaque modification met automatiquement à jour `configuration.json`.
 
 ### 📡 Réseau
 - Configuration WiFi client pour SSH distant
@@ -85,7 +99,15 @@ sudo systemctl start neopro-admin
   ```json
   { "videoPath": "MATCH_SF/BUT/video.mp4", "categoryId": "Match_SF", "subcategoryId": "But" }
   ```
-- `DELETE /api/videos/:category/:filename` - Supprimer
+- `DELETE /api/videos/:category/:filename` - Supprimer une vidéo orpheline
+- `DELETE /api/videos/delete-from-config` - Supprimer une vidéo de la config et du disque
+  ```json
+  { "videoPath": "videos/MATCH_SF/BUT/video.mp4", "categoryId": "Match_SF", "subcategoryId": "But" }
+  ```
+- `PUT /api/videos/edit` - Modifier une vidéo (déplacer, renommer)
+  ```json
+  { "originalPath": "MATCH_SF/BUT/video.mp4", "categoryId": "Match_SF", "subcategoryId": "But", "displayName": "But n°1", "newFilename": "but_1.mp4" }
+  ```
 
 #### Configuration
 - `GET /api/configuration` - Configuration complète (`configuration.json`)

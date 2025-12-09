@@ -991,6 +991,48 @@ app.post('/api/videos/add-to-config', async (req, res) => {
   }
 });
 
+// API: Supprimer une vidéo de la configuration et du disque
+app.delete('/api/videos/delete-from-config', async (req, res) => {
+  try {
+    const { videoPath, categoryId, subcategoryId } = req.body;
+
+    if (!videoPath) {
+      return res.status(400).json({ error: 'videoPath requis' });
+    }
+
+    // Normaliser le chemin
+    const normalizedPath = videoPath.replace(/\\/g, '/').replace(/^videos\//, '');
+    const fullPath = path.join(VIDEOS_DIR, normalizedPath);
+
+    // Supprimer le fichier du disque
+    try {
+      await fs.access(fullPath);
+      await fs.unlink(fullPath);
+      console.log('[admin] File deleted:', fullPath);
+
+      // Nettoyer les dossiers vides
+      await cleanupEmptyDirs(path.dirname(fullPath), VIDEOS_DIR);
+    } catch (err) {
+      console.warn('[admin] File not found or already deleted:', fullPath);
+    }
+
+    // Supprimer de la configuration
+    const configVideoPath = videoPath.startsWith('videos/')
+      ? videoPath
+      : `videos/${normalizedPath}`;
+    await removeVideoFromConfig(configVideoPath);
+
+    res.json({
+      success: true,
+      message: 'Vidéo supprimée',
+      path: videoPath
+    });
+  } catch (error) {
+    console.error('[admin] Error deleting video from config:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: Récupérer les timeCategories
 app.get('/api/configuration/time-categories', async (req, res) => {
   try {

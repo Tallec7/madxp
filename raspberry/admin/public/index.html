@@ -140,89 +140,110 @@
             <div id="tab-videos" class="tab-content">
                 <h2>Gestion des vidéos</h2>
 
-                <!-- Time Categories Editor -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3>⏱️ Organisation par temps (Télécommande)</h3>
-                        <button class="btn btn-secondary" onclick="refreshTimeCategories()">🔄 Actualiser</button>
-                    </div>
-                    <div class="card-body">
-                        <p class="info-text">
-                            Associez vos catégories de vidéos aux différents moments du match pour la télécommande.
-                        </p>
-                        <div id="time-categories-list" class="time-categories-list">
-                            <!-- Populated by JS -->
+                <!-- Sub-navigation for videos tab -->
+                <div class="videos-subnav">
+                    <button class="subnav-btn active" data-subtab="library">📁 Bibliothèque</button>
+                    <button class="subnav-btn" data-subtab="upload">📤 Ajouter</button>
+                    <button class="subnav-btn" data-subtab="organize">📂 Organiser</button>
+                    <button class="subnav-btn" data-subtab="remote">⏱️ Télécommande</button>
+                </div>
+
+                <!-- Subtab: Library (default) -->
+                <div id="subtab-library" class="subtab-content active">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📁 Bibliothèque vidéos</h3>
+                            <button class="btn btn-secondary" onclick="refreshVideos()">🔄 Actualiser</button>
                         </div>
-                        <button class="btn btn-primary" onclick="addTimeCategory()" style="margin-top: 16px;">
-                            ➕ Ajouter un bloc temps
-                        </button>
+                        <div class="card-body">
+                            <div class="search-bar">
+                                <input type="text" id="video-search" class="search-input" placeholder="🔍 Rechercher une vidéo..." oninput="filterVideos()">
+                            </div>
+                            <div class="videos-list" id="videos-list">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Categories Manager -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3>📂 Gestion des catégories</h3>
-                        <button class="btn btn-secondary" onclick="refreshCategories()">🔄 Actualiser</button>
-                    </div>
-                    <div class="card-body">
-                        <p class="info-text">
-                            Créez et organisez vos catégories et sous-catégories de vidéos.
-                        </p>
-                        <div id="categories-manager" class="categories-manager">
-                            <!-- Populated by JS -->
+                <!-- Subtab: Upload -->
+                <div id="subtab-upload" class="subtab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📤 Ajouter une vidéo</h3>
                         </div>
-                        <button class="btn btn-primary" onclick="addCategory()" style="margin-top: 16px;">
-                            ➕ Nouvelle catégorie
-                        </button>
+                        <div class="card-body">
+                            <form id="upload-form" enctype="multipart/form-data">
+                                <div class="form-group">
+                                    <label for="video-file">Fichier vidéo (MP4, MKV, MOV - max 500MB)</label>
+                                    <input type="file" id="video-file" name="video" accept="video/*" required>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="video-category">Catégorie</label>
+                                        <select id="video-category" name="category" required>
+                                            <option value="">-- Chargement... --</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" id="subcategory-group" style="display: none;">
+                                        <label for="video-subcategory">Sous-catégorie</label>
+                                        <select id="video-subcategory" name="subcategory">
+                                            <option value="">-- Aucune --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    📤 Upload
+                                </button>
+                            </form>
+                            <div id="upload-progress" class="upload-progress" style="display: none;">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="upload-progress-bar"></div>
+                                </div>
+                                <span id="upload-status">Uploading...</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Upload Form -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3>📤 Upload une vidéo</h3>
-                    </div>
-                    <div class="card-body">
-                        <form id="upload-form" enctype="multipart/form-data">
-                            <div class="form-group">
-                                <label for="video-file">Fichier vidéo (MP4, MKV, MOV - max 500MB)</label>
-                                <input type="file" id="video-file" name="video" accept="video/*" required>
+                <!-- Subtab: Organize (Categories) -->
+                <div id="subtab-organize" class="subtab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📂 Catégories et sous-catégories</h3>
+                            <button class="btn btn-secondary" onclick="refreshCategories()">🔄 Actualiser</button>
+                        </div>
+                        <div class="card-body">
+                            <p class="info-text">
+                                Créez et organisez vos catégories et sous-catégories de vidéos.
+                            </p>
+                            <div id="categories-manager" class="categories-manager">
+                                <!-- Populated by JS -->
                             </div>
-                            <div class="form-group">
-                                <label for="video-category">Catégorie</label>
-                                <select id="video-category" name="category" required>
-                                    <option value="">-- Chargement... --</option>
-                                </select>
-                            </div>
-                            <div class="form-group" id="subcategory-group" style="display: none;">
-                                <label for="video-subcategory">Sous-catégorie</label>
-                                <select id="video-subcategory" name="subcategory">
-                                    <option value="">-- Sélectionner --</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary">
-                                📤 Upload
+                            <button class="btn btn-primary" onclick="addCategory()" style="margin-top: 16px;">
+                                ➕ Nouvelle catégorie
                             </button>
-                        </form>
-                        <div id="upload-progress" class="upload-progress" style="display: none;">
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="upload-progress-bar"></div>
-                            </div>
-                            <span id="upload-status">Uploading...</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Videos List -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3>📁 Bibliothèque vidéos</h3>
-                        <button class="btn btn-secondary" onclick="refreshVideos()">🔄 Actualiser</button>
-                    </div>
-                    <div class="card-body">
-                        <div class="videos-list" id="videos-list">
-                            <!-- Populated by JS -->
+                <!-- Subtab: Remote (Time Categories) -->
+                <div id="subtab-remote" class="subtab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>⏱️ Organisation par temps</h3>
+                            <button class="btn btn-secondary" onclick="refreshTimeCategories()">🔄 Actualiser</button>
+                        </div>
+                        <div class="card-body">
+                            <p class="info-text">
+                                Configurez les blocs temps de la télécommande (Avant-match, Match, Après-match) et associez-y vos catégories.
+                            </p>
+                            <div id="time-categories-list" class="time-categories-list">
+                                <!-- Populated by JS -->
+                            </div>
+                            <button class="btn btn-primary" onclick="addTimeCategory()" style="margin-top: 16px;">
+                                ➕ Ajouter un bloc temps
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -386,20 +407,27 @@
                 <div class="form-group">
                     <label for="edit-display-name">Nom affiché</label>
                     <input type="text" id="edit-display-name" placeholder="Nom visible sur la télécommande">
+                    <small class="form-hint">Laissez vide pour utiliser le nom du fichier.</small>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-category">Catégorie</label>
+                        <select id="edit-category" required>
+                            <option value="">-- Sélectionner --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="edit-subcategory-group">
+                        <label for="edit-subcategory">Sous-catégorie</label>
+                        <select id="edit-subcategory">
+                            <option value="">-- Aucune --</option>
+                        </select>
+                        <small class="form-hint">Optionnel</small>
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label for="edit-category">Catégorie</label>
-                    <input type="text" id="edit-category" list="edit-category-options" placeholder="Ex: Match_SM1" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit-subcategory">Sous-catégorie</label>
-                    <input type="text" id="edit-subcategory" list="edit-subcategory-options" placeholder="Ex: But">
-                    <small class="form-hint">Laissez vide pour enregistrer la vidéo directement dans la catégorie.</small>
-                </div>
-                <div class="form-group">
-                    <label for="edit-filename">Nom du fichier (avec extension)</label>
+                    <label for="edit-filename">Nom du fichier</label>
                     <input type="text" id="edit-filename" required>
-                    <small class="form-hint">Le nom de fichier doit conserver l'extension (.mp4, .mkv, ...).</small>
+                    <small class="form-hint">L'extension sera conservée automatiquement.</small>
                 </div>
                 <div class="modal-buttons">
                     <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Annuler</button>
@@ -408,8 +436,6 @@
             </form>
         </div>
     </div>
-    <datalist id="edit-category-options"></datalist>
-    <datalist id="edit-subcategory-options"></datalist>
 
     <!-- Modal -->
     <div id="modal" class="modal">
@@ -419,6 +445,21 @@
             <div class="modal-buttons">
                 <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
                 <button class="btn btn-danger" id="modal-confirm">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Video Preview Modal -->
+    <div id="video-preview-modal" class="modal">
+        <div class="modal-content modal-content-video">
+            <div class="modal-header">
+                <h3 id="preview-video-title">Prévisualisation</h3>
+                <button class="modal-close-btn" onclick="closeVideoPreview()">✕</button>
+            </div>
+            <div class="video-preview-container">
+                <video id="preview-video" controls>
+                    Votre navigateur ne supporte pas la lecture vidéo.
+                </video>
             </div>
         </div>
     </div>

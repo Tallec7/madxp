@@ -6,7 +6,8 @@
 let currentTab = 'dashboard';
 let currentLogService = 'app';
 let refreshInterval = null;
-let cachedVideos = [];
+let cachedVideos = []; // Toutes les vidéos (config + orphelines)
+let cachedOrphanVideos = []; // Vidéos orphelines uniquement
 let cachedConfig = null;
 let cachedTimeCategories = [];
 let availableCategories = [];
@@ -14,6 +15,7 @@ let availableCategories = [];
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
     initNavigation();
+    initSubNavigation();
     initForms();
     initLogButtons();
     updateTime();
@@ -29,6 +31,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }, 5000);
 });
+
+/**
+ * Initialisation de la sous-navigation vidéos
+ */
+function initSubNavigation() {
+    const subnavButtons = document.querySelectorAll('.subnav-btn');
+    subnavButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const subtab = btn.dataset.subtab;
+
+            // Update active button
+            subnavButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Update active content
+            document.querySelectorAll('.subtab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`subtab-${subtab}`).classList.add('active');
+        });
+    });
+}
 
 /**
  * Charge la configuration et peuple les selects de catégories
@@ -204,6 +228,10 @@ function updateServicesGrid(services) {
  */
 async function loadVideos() {
     try {
+        // Vider le cache des vidéos
+        cachedVideos = [];
+        cachedOrphanVideos = [];
+
         // Charger la configuration ET les vidéos orphelines en parallèle
         const [configResponse, orphansResponse] = await Promise.all([
             fetch('/api/configuration'),
@@ -219,16 +247,18 @@ async function loadVideos() {
         }
         list.innerHTML = '';
 
-        // Afficher la structure de la configuration
+        // Mettre à jour le cache de config pour l'édition
+        cachedConfig = config;
+
+        // Afficher la structure de la configuration (ajoute aussi les vidéos au cache)
         renderConfigurationStructure(list, config);
 
         // Afficher les vidéos orphelines
         if (orphansData.orphans && orphansData.orphans.length > 0) {
+            cachedOrphanVideos = orphansData.orphans;
             renderOrphanVideos(list, orphansData.orphans, config.categories || []);
         }
 
-        // Mettre à jour les suggestions et le cache
-        cachedVideos = orphansData.orphans || [];
         updateVideoSuggestions(cachedVideos);
     } catch (error) {
         console.error('Error loading videos:', error);
@@ -274,13 +304,13 @@ function renderConfigurationStructure(container, config) {
 
         // Vidéos directes de la catégorie
         if (category.videos && category.videos.length > 0) {
-            body.appendChild(createConfigVideoList('Vidéos directes', category.videos));
+            body.appendChild(createConfigVideoList('Vidéos directes', category.videos, category.id, null));
         }
 
         // Sous-catégories
         (category.subCategories || []).forEach(subcat => {
             if (subcat.videos && subcat.videos.length > 0) {
-                body.appendChild(createConfigVideoList(subcat.name || subcat.id, subcat.videos));
+                body.appendChild(createConfigVideoList(subcat.name || subcat.id, subcat.videos, category.id, subcat.id));
             } else {
                 const emptySubcat = document.createElement('div');
                 emptySubcat.className = 'video-subgroup';
@@ -307,7 +337,7 @@ function renderConfigurationStructure(container, config) {
     });
 }
 
-function createConfigVideoList(title, videos) {
+function createConfigVideoList(title, videos, categoryId, subcategoryId = null) {
     const wrapper = document.createElement('div');
     wrapper.className = 'video-subgroup';
 
@@ -325,12 +355,52 @@ function createConfigVideoList(title, videos) {
     videos.forEach(video => {
         const row = document.createElement('div');
         row.className = 'video-row';
+
+        // Créer un objet vidéo enrichi pour l'édition/suppression
+        const videoData = {
+            path: video.path,
+            name: video.path ? video.path.split('/').pop() : video.name,
+            displayName: video.name,
+            configCategory: categoryId,
+            configSubcategory: subcategoryId
+        };
+
+        // Ajouter au cache global pour l'édition
+        if (!cachedVideos.find(v => v.path === videoData.path)) {
+            cachedVideos.push(videoData);
+        }
+
+        // URL de la vidéo pour prévisualisation
+        const videoUrl = video.path ? `/${video.path}` : '';
+
         row.innerHTML = `
+            <div class="video-row-preview">
+                <div class="video-thumbnail" data-video-url="${videoUrl}">
+                    <span class="play-icon">▶</span>
+                </div>
+            </div>
             <div class="video-row-info">
-                <div class="video-row-title">🎬 ${video.name || 'Sans nom'}</div>
+                <div class="video-row-title">${video.name || 'Sans nom'}</div>
                 <div class="video-row-path">${video.path || ''}</div>
             </div>
+            <div class="video-row-actions">
+                <button class="btn btn-secondary btn-sm preview-video-btn" data-video-url="${videoUrl}" title="Prévisualiser">👁️</button>
+                <button class="btn btn-secondary btn-sm edit-video-btn" data-path="${video.path}">✏️</button>
+                <button class="btn btn-danger btn-sm delete-video-btn" data-path="${video.path}" data-category="${categoryId}" data-subcategory="${subcategoryId || ''}">🗑️</button>
+            </div>
         `;
+
+        // Ajouter les event listeners
+        const thumbnail = row.querySelector('.video-thumbnail');
+        const previewBtn = row.querySelector('.preview-video-btn');
+        const editBtn = row.querySelector('.edit-video-btn');
+        const deleteBtn = row.querySelector('.delete-video-btn');
+
+        thumbnail.addEventListener('click', () => openVideoPreview(videoUrl, video.name));
+        previewBtn.addEventListener('click', () => openVideoPreview(videoUrl, video.name));
+        editBtn.addEventListener('click', () => openEditModal(video.path));
+        deleteBtn.addEventListener('click', () => deleteConfigVideo(video.path, categoryId, subcategoryId));
+
         list.appendChild(row);
     });
 
@@ -742,6 +812,43 @@ async function deleteVideo(category, filename) {
 }
 
 /**
+ * Supprimer une vidéo de la configuration
+ */
+async function deleteConfigVideo(videoPath, categoryId, subcategoryId) {
+    const video = cachedVideos.find(v => v.path === videoPath);
+    const videoName = video?.displayName || videoPath.split('/').pop();
+
+    if (!confirm(`Supprimer la vidéo "${videoName}" ?\n\nCette action supprimera le fichier du disque.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/videos/delete-from-config', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                videoPath,
+                categoryId,
+                subcategoryId: subcategoryId || null
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Vidéo supprimée avec succès', 'success');
+            await loadConfiguration();
+            loadVideos();
+        } else {
+            showNotification('Erreur: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting video:', error);
+        showNotification('Erreur lors de la suppression', 'error');
+    }
+}
+
+/**
  * Network
  */
 async function loadNetwork() {
@@ -1087,14 +1194,120 @@ function updateTime() {
 }
 
 function showNotification(message, type = 'info') {
-    // Simple alert for now - could be enhanced with toast notifications
+    // Toast notification system
     const icons = {
         success: '✓',
         error: '✗',
         info: 'ℹ'
     };
 
-    alert(`${icons[type]} ${message}`);
+    // Créer le container si nécessaire
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    // Créer le toast
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${icons[type]}</span>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+    `;
+
+    container.appendChild(toast);
+
+    // Animation d'entrée
+    setTimeout(() => toast.classList.add('show'), 10);
+
+    // Auto-suppression après 4 secondes
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+/**
+ * Prévisualisation vidéo
+ */
+function openVideoPreview(videoUrl, videoName) {
+    if (!videoUrl) {
+        showNotification('URL de vidéo manquante', 'error');
+        return;
+    }
+
+    const modal = document.getElementById('video-preview-modal');
+    const video = document.getElementById('preview-video');
+    const title = document.getElementById('preview-video-title');
+
+    if (!modal || !video) {
+        showNotification('Modal de prévisualisation non disponible', 'error');
+        return;
+    }
+
+    title.textContent = videoName || 'Prévisualisation';
+    video.src = videoUrl;
+    modal.classList.add('active');
+
+    // Lancer la lecture automatiquement
+    video.play().catch(() => {
+        // Ignorer l'erreur si autoplay est bloqué
+    });
+}
+
+function closeVideoPreview() {
+    const modal = document.getElementById('video-preview-modal');
+    const video = document.getElementById('preview-video');
+
+    if (video) {
+        video.pause();
+        video.src = '';
+    }
+
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+/**
+ * Recherche/filtre dans la bibliothèque
+ */
+function filterVideos() {
+    const searchTerm = document.getElementById('video-search')?.value.toLowerCase().trim() || '';
+    const videoRows = document.querySelectorAll('#videos-list .video-row');
+    const videoGroups = document.querySelectorAll('#videos-list .video-group');
+    const videoSubgroups = document.querySelectorAll('#videos-list .video-subgroup');
+
+    // Si pas de terme de recherche, tout afficher
+    if (!searchTerm) {
+        videoRows.forEach(row => row.style.display = '');
+        videoSubgroups.forEach(sg => sg.style.display = '');
+        videoGroups.forEach(g => g.style.display = '');
+        return;
+    }
+
+    // Filtrer les lignes de vidéos
+    videoRows.forEach(row => {
+        const title = row.querySelector('.video-row-title')?.textContent.toLowerCase() || '';
+        const path = row.querySelector('.video-row-path')?.textContent.toLowerCase() || '';
+        const matches = title.includes(searchTerm) || path.includes(searchTerm);
+        row.style.display = matches ? '' : 'none';
+    });
+
+    // Cacher les sous-groupes vides
+    videoSubgroups.forEach(sg => {
+        const visibleRows = sg.querySelectorAll('.video-row:not([style*="display: none"])');
+        sg.style.display = visibleRows.length > 0 ? '' : 'none';
+    });
+
+    // Cacher les groupes vides
+    videoGroups.forEach(g => {
+        const visibleSubgroups = g.querySelectorAll('.video-subgroup:not([style*="display: none"])');
+        g.style.display = visibleSubgroups.length > 0 ? '' : 'none';
+    });
 }
 
 function openEditModal(videoPath) {
@@ -1111,12 +1324,23 @@ function openEditModal(videoPath) {
     }
 
     document.getElementById('edit-original-path').value = video.path;
-    document.getElementById('edit-display-name').value = video.displayName || formatVideoName(video.name);
-    document.getElementById('edit-filename').value = video.name;
+    document.getElementById('edit-display-name').value = video.displayName || '';
 
-    const { categoryLabel, subcategoryLabel } = parseVideoCategory(video);
-    document.getElementById('edit-category').value = categoryLabel || '';
-    document.getElementById('edit-subcategory').value = subcategoryLabel || '';
+    // Extraire le nom de fichier depuis le path (plus fiable)
+    const filename = video.path ? video.path.split('/').pop() : video.name;
+    const extIndex = filename.lastIndexOf('.');
+    const nameWithoutExt = extIndex > 0 ? filename.substring(0, extIndex) : filename;
+    document.getElementById('edit-filename').value = nameWithoutExt;
+
+    // Peupler le select des catégories
+    populateEditCategorySelect(video.configCategory || '');
+
+    // Pré-sélectionner la sous-catégorie si elle existe
+    if (video.configSubcategory) {
+        setTimeout(() => {
+            updateEditSubcategorySelect(video.configCategory, video.configSubcategory);
+        }, 50);
+    }
 
     const pathLabel = document.getElementById('edit-current-path');
     if (pathLabel) {
@@ -1124,6 +1348,73 @@ function openEditModal(videoPath) {
     }
 
     modal.classList.add('active');
+}
+
+/**
+ * Peuple le select des catégories dans le modal d'édition
+ */
+function populateEditCategorySelect(selectedCategoryId) {
+    const categorySelect = document.getElementById('edit-category');
+    const subcategorySelect = document.getElementById('edit-subcategory');
+
+    if (!categorySelect || !cachedConfig?.categories) {
+        return;
+    }
+
+    // Peupler les catégories
+    categorySelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+    cachedConfig.categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.name;
+        if (cat.id === selectedCategoryId) {
+            option.selected = true;
+        }
+        categorySelect.appendChild(option);
+    });
+
+    // Ajouter l'écouteur pour les sous-catégories
+    categorySelect.onchange = function() {
+        updateEditSubcategorySelect(this.value);
+    };
+
+    // Peupler les sous-catégories si une catégorie est sélectionnée
+    if (selectedCategoryId) {
+        // Trouver la sous-catégorie actuelle de la vidéo
+        const video = cachedVideos.find(v => v.path === document.getElementById('edit-original-path').value);
+        updateEditSubcategorySelect(selectedCategoryId, video?.configSubcategory || '');
+    } else {
+        subcategorySelect.innerHTML = '<option value="">-- Aucune --</option>';
+    }
+}
+
+/**
+ * Met à jour le select des sous-catégories en fonction de la catégorie sélectionnée
+ */
+function updateEditSubcategorySelect(categoryId, selectedSubcategoryId = '') {
+    const subcategorySelect = document.getElementById('edit-subcategory');
+    if (!subcategorySelect) return;
+
+    subcategorySelect.innerHTML = '<option value="">-- Aucune --</option>';
+
+    if (!categoryId || !cachedConfig?.categories) {
+        return;
+    }
+
+    const category = cachedConfig.categories.find(c => c.id === categoryId);
+    if (!category || !category.subCategories || category.subCategories.length === 0) {
+        return;
+    }
+
+    category.subCategories.forEach(sub => {
+        const option = document.createElement('option');
+        option.value = sub.id;
+        option.textContent = sub.name;
+        if (sub.id === selectedSubcategoryId) {
+            option.selected = true;
+        }
+        subcategorySelect.appendChild(option);
+    });
 }
 
 function closeEditModal() {
@@ -1153,15 +1444,23 @@ function resetEditForm() {
 
 async function submitVideoEdition() {
     const originalPath = document.getElementById('edit-original-path').value;
-    const category = document.getElementById('edit-category').value.trim();
-    const subcategory = document.getElementById('edit-subcategory').value.trim();
+    const categoryId = document.getElementById('edit-category').value;
+    const subcategoryId = document.getElementById('edit-subcategory').value;
     const displayName = document.getElementById('edit-display-name').value.trim();
-    const filename = document.getElementById('edit-filename').value.trim();
+    const filenameWithoutExt = document.getElementById('edit-filename').value.trim();
 
-    if (!originalPath || !category || !filename) {
+    if (!originalPath || !categoryId || !filenameWithoutExt) {
         showNotification('Catégorie et nom de fichier requis', 'error');
         return;
     }
+
+    // Récupérer l'extension originale du fichier depuis le path
+    const originalFilename = originalPath.split('/').pop();
+    const extIndex = originalFilename.lastIndexOf('.');
+    const ext = extIndex > 0 ? originalFilename.substring(extIndex) : '';
+
+    // Reconstruire le nom complet avec l'extension
+    const newFilename = filenameWithoutExt + ext;
 
     try {
         const response = await fetch('/api/videos/edit', {
@@ -1169,10 +1468,10 @@ async function submitVideoEdition() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 originalPath,
-                categoryId: category,
-                subcategoryId: subcategory,
-                displayName,
-                newFilename: filename
+                categoryId,
+                subcategoryId: subcategoryId || null,
+                displayName: displayName || null,
+                newFilename
             })
         });
 
@@ -1181,6 +1480,8 @@ async function submitVideoEdition() {
         if (data.success) {
             showNotification('Vidéo mise à jour', 'success');
             closeEditModal();
+            // Recharger la configuration pour avoir les données à jour
+            await loadConfiguration();
             loadVideos();
         } else {
             showNotification('Erreur: ' + (data.error || 'Impossible de modifier la vidéo'), 'error');
