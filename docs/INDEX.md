@@ -12,7 +12,13 @@
 
 ### Pour les détails techniques
 
-2. **[REFERENCE.md](REFERENCE.md)** - Documentation technique complète
+2. **[CONFIGURATION.md](CONFIGURATION.md)** - Guide des fichiers de configuration
+   - `configuration.json` vs `.env` / `site.conf`
+   - Ce qui est préservé lors d'une MAJ
+   - Workflow de personnalisation d'un club
+   - FAQ configuration
+
+3. **[REFERENCE.md](REFERENCE.md)** - Documentation technique complète
    - Architecture détaillée
    - Configuration manuelle
    - Authentification
@@ -20,7 +26,7 @@
    - Scripts disponibles
    - API et WebSocket
 
-3. **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Guide de dépannage
+4. **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Guide de dépannage
    - Problèmes de connexion
    - Erreurs 500
    - Authentification
@@ -28,24 +34,24 @@
    - Synchronisation
    - Diagnostic complet
 
-4. **[INSTALLATION_COMPLETE.md](INSTALLATION_COMPLETE.md)** - Installation Raspberry Pi
+5. **[INSTALLATION_COMPLETE.md](INSTALLATION_COMPLETE.md)** - Installation Raspberry Pi
    - Méthode Image Golden (10 min)
    - Installation complète (45 min)
    - Configuration système
 
-5. **[GOLDEN_IMAGE.md](GOLDEN_IMAGE.md)** - Guide Image Golden (NOUVEAU)
+6. **[GOLDEN_IMAGE.md](GOLDEN_IMAGE.md)** - Guide Image Golden
    - Création d'une image pré-configurée
    - Déploiement rapide de nouveaux boîtiers
    - Workflow optimal
 
 ### Pour les développeurs
 
-6. **[dev/README.md](dev/README.md)** - Documentation développement
+7. **[dev/README.md](dev/README.md)** - Documentation développement
    - Configuration environnement
    - Conventions de code
    - Tests
 
-7. **[changelog/README.md](changelog/README.md)** - Historique des modifications
+8. **[changelog/README.md](changelog/README.md)** - Historique des modifications
    - Suivi des changements
    - Notes de version
 
@@ -130,4 +136,4 @@ Configuration : `render.yaml` à la racine
 
 ---
 
-**Dernière mise à jour :** 8 décembre 2025
+**Dernière mise à jour :** 9 décembre 2025
