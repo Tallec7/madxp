@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { Configuration, TimeCategory } from '../../interfaces/configuration.interface';
 import { Category } from '../../interfaces/category.interface';
 import { Video } from '../../interfaces/video.interface';
@@ -21,6 +22,7 @@ type ViewType = 'club-selector' | 'home' | 'time-categories' | 'subcategories' |
 export class RemoteComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly http = inject(HttpClient);
   private readonly socketService = inject(SocketService);
   private readonly analyticsService = inject(AnalyticsService);
   private readonly demoConfigService = inject(DemoConfigService);
@@ -29,6 +31,7 @@ export class RemoteComponent implements OnInit {
   public currentView: ViewType = 'home';
   public breadcrumb: string[] = ['Télécommande'];
   public isDemoMode = false;
+  public isReloading = false;
 
   public selectedTimeCategory: TimeCategory | null = null;
   public selectedCategory: Category | null = null;
@@ -201,5 +204,33 @@ export class RemoteComponent implements OnInit {
       }
       return sum + 1;
     }, 0);
+  }
+
+  /**
+   * Recharge la configuration depuis le serveur (bypass cache)
+   */
+  public reloadConfiguration(): void {
+    if (this.isReloading || this.isDemoMode) return;
+
+    this.isReloading = true;
+    const timestamp = Date.now();
+
+    this.http.get<Configuration>(`/configuration.json?t=${timestamp}`).subscribe({
+      next: (config) => {
+        console.log('Configuration rechargée', config);
+        this.initializeWithConfiguration(config);
+        // Revenir à la vue home pour refléter les changements
+        this.currentView = 'home';
+        this.breadcrumb = ['Télécommande'];
+        this.selectedTimeCategory = null;
+        this.selectedCategory = null;
+        this.selectedSubCategory = null;
+        this.isReloading = false;
+      },
+      error: (err) => {
+        console.error('Erreur lors du rechargement de la configuration', err);
+        this.isReloading = false;
+      }
+    });
   }
 }

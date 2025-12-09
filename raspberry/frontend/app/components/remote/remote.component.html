@@ -36,6 +36,12 @@
           }
         </div>
       </div>
+      <!-- Bouton actualiser (visible seulement en mode normal, pas démo) -->
+      @if (!isDemoMode && breadcrumb.length === 1) {
+        <button class="reload-button" (click)="reloadConfiguration()" [disabled]="isReloading">
+          <span class="reload-icon" [class.spinning]="isReloading">🔄</span>
+        </button>
+      }
     </div>
   </div>
 
