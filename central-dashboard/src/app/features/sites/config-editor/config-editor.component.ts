@@ -235,7 +235,7 @@ import {
                     class="category-name-input"
                   />
                   <span class="category-stats">
-                    {{ category.videos?.length || 0 }} vidéo(s)
+                    {{ category.videos.length || 0 }} vidéo(s)
                     <span *ngIf="category.subCategories?.length"> · {{ category.subCategories.length }} sous-cat.</span>
                   </span>
                   <button class="btn-remove" (click)="removeCategory(catIndex); $event.stopPropagation()">×</button>
@@ -289,7 +289,7 @@ import {
                             placeholder="Nom de la sous-catégorie"
                             class="subcategory-name-input"
                           />
-                          <span class="subcategory-stats">{{ subcat.videos?.length || 0 }} vidéo(s)</span>
+                          <span class="subcategory-stats">{{ subcat.videos.length || 0 }} vidéo(s)</span>
                           <button class="btn-add-small" (click)="addVideo(catIndex, subIndex)">+ Vidéo</button>
                           <button class="btn-remove-small" (click)="removeSubcategory(catIndex, subIndex)">×</button>
                         </div>
