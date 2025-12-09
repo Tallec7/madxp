@@ -106,7 +106,7 @@ export class TvComponent implements OnInit, OnDestroy {
       console.log('tv action received', command);
       if (command.type === 'video' && command.data) {
         this.lastTriggerType = 'manual';
-        this.play(command.data);
+        this.play(command.data as Video);
       } else if (command.type === 'sponsors') {
         this.lastTriggerType = 'auto';
         this.sponsors();
