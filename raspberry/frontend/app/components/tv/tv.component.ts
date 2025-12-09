@@ -8,8 +8,13 @@ import { Video } from '../../interfaces/video.interface';
 import { Configuration } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
 
+interface PlaylistItem {
+  sources: { src: string; type: string }[];
+}
+
 interface PlayerWithPlaylist extends Player {
   playlist: {
+    (items: PlaylistItem[]): void;
     first(): void;
     repeat(value: boolean): void;
     autoadvance(delay: number): void;
@@ -105,6 +110,10 @@ export class TvComponent implements OnInit, OnDestroy {
       } else if (command.type === 'sponsors') {
         this.lastTriggerType = 'auto';
         this.sponsors();
+      } else if (command.type === 'reload-config' && command.data) {
+        // Recharger la config d'un nouveau club (mode démo)
+        console.log('tv: reloading config for club', command.data);
+        this.reloadConfiguration(command.data as Configuration);
       }
     });
   }
@@ -140,6 +149,22 @@ export class TvComponent implements OnInit, OnDestroy {
     (this.player as PlayerWithPlaylist).playlist.first();
     (this.player as PlayerWithPlaylist).playlist.repeat(true);
     (this.player as PlayerWithPlaylist).playlist.autoadvance(0);
+  }
+
+  private reloadConfiguration(config: Configuration) {
+    console.log('tv: updating configuration and playlist');
+    this.configuration = config;
+
+    // Mettre à jour la playlist avec les nouveaux sponsors
+    const newPlaylist = config.sponsors.map((sponsor) => ({
+      sources: [{ src: sponsor.path, type: sponsor.type }]
+    }));
+
+    (this.player as PlayerWithPlaylist).playlist(newPlaylist);
+
+    // Lancer la nouvelle boucle
+    this.lastTriggerType = 'auto';
+    this.sponsors();
   }
 
 }

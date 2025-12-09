@@ -44,7 +44,6 @@
             { "name": "La Genova", "path": "videos/narh/FOCUS_PARTENAIRE/LA_GENOVA.mp4", "type": "video/mp4" },
             { "name": "Little Barrel - Match extérieur", "path": "videos/narh/FOCUS_PARTENAIRE/LITTLE_BARREL_MATCH_EXTERIEUR.mp4", "type": "video/mp4" },
             { "name": "Little Barrel - Matchs FC Nantes", "path": "videos/narh/FOCUS_PARTENAIRE/LITTLE_BARREL_MATCH_FC NANTES.mp4", "type": "video/mp4" },
-            { "name": "La Genova", "path": "videos/narh/FOCUS_PARTENAIRE/LA_GENOVA.mp4", "type": "video/mp4" },
             { "name": "Pachet", "path": "videos/narh/FOCUS_PARTENAIRE/PACHET.mp4", "type": "video/mp4" },
             { "name": "Pain Prenelle", "path": "videos/narh/FOCUS_PARTENAIRE/PAIN_PRENELLE.mp4", "type": "video/mp4" },
             { "name": "Tabarnak", "path": "videos/narh/FOCUS_PARTENAIRE/TABARNAK.mp4", "type": "video/mp4" },
@@ -65,18 +64,18 @@
         "id": "ENTREE",
         "name": "Entrée",
         "videos": [
-            { "name": "5", "path": "videos/narh/ENTREE/JOUEUR_5.mp4", "type": "video/mp4" },
-            { "name": "6", "path": "videos/narh/ENTREE/JOUEUR_6.mp4", "type": "video/mp4" },
-            { "name": "9", "path": "videos/narh/ENTREE/JOUEUR_9.mp4", "type": "video/mp4" },
-            { "name": "10", "path": "videos/narh/ENTREE/JOUEUR_10.mp4", "type": "video/mp4" },
-            { "name": "11", "path": "videos/narh/ENTREE/JOUEUR_11.mp4", "type": "video/mp4" },
-            { "name": "12", "path": "videos/narh/ENTREE/JOUEUR_12.mp4", "type": "video/mp4" },
-            { "name": "17", "path": "videos/narh/ENTREE/JOUEUR_17.mp4", "type": "video/mp4" },
-            { "name": "44", "path": "videos/narh/ENTREE/JOUEUR_44.mp4", "type": "video/mp4" },
-            { "name": "57", "path": "videos/narh/ENTREE/JOUEUR_57.mp4", "type": "video/mp4" },
-            { "name": "79", "path": "videos/narh/ENTREE/JOUEUR_79.mp4", "type": "video/mp4" },
-            { "name": "89", "path": "videos/narh/ENTREE/JOUEUR_89.mp4", "type": "video/mp4" },
-            { "name": "94", "path": "videos/narh/ENTREE/JOUEUR_94.mp4", "type": "video/mp4" }
+            { "name": "5", "path": "videos/narh/ENTREEE/JOUEUR_5.mp4", "type": "video/mp4" },
+            { "name": "6", "path": "videos/narh/ENTREEE/JOUEUR_6.mp4", "type": "video/mp4" },
+            { "name": "9", "path": "videos/narh/ENTREEE/JOUEUR_9.mp4", "type": "video/mp4" },
+            { "name": "10", "path": "videos/narh/ENTREEE/JOUEUR_10.mp4", "type": "video/mp4" },
+            { "name": "11", "path": "videos/narh/ENTREEE/JOUEUR_11.mp4", "type": "video/mp4" },
+            { "name": "12", "path": "videos/narh/ENTREEE/JOUEUR_12.mp4", "type": "video/mp4" },
+            { "name": "17", "path": "videos/narh/ENTREEE/JOUEUR_17.mp4", "type": "video/mp4" },
+            { "name": "44", "path": "videos/narh/ENTREEE/JOUEUR_44.mp4", "type": "video/mp4" },
+            { "name": "57", "path": "videos/narh/ENTREEE/JOUEUR_57.mp4", "type": "video/mp4" },
+            { "name": "79", "path": "videos/narh/ENTREEE/JOUEUR_79.mp4", "type": "video/mp4" },
+            { "name": "89", "path": "videos/narh/ENTREEE/JOUEUR_89.mp4", "type": "video/mp4" },
+            { "name": "94", "path": "videos/narh/ENTREEE/JOUEUR_94.mp4", "type": "video/mp4" }
         ]
     },
     {

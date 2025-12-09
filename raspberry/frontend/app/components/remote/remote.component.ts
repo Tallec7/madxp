@@ -80,8 +80,8 @@ export class RemoteComponent implements OnInit {
   public onClubSelected(config: Configuration): void {
     this.initializeWithConfiguration(config);
     this.currentView = 'home';
-    // Lancer automatiquement la boucle partenaires sur /tv
-    this.launchSponsors();
+    // Envoyer la nouvelle config à /tv et lancer la boucle partenaires
+    this.socketService.emit('command', { type: 'reload-config', data: config });
   }
 
   private initializeWithConfiguration(config: Configuration): void {

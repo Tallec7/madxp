@@ -1,0 +1,20 @@
+{
+    "remote": {
+        "title": "Télécommande Néopro - DEMO"
+    },
+    "auth": {
+        "password": "DEMO",
+        "clubName": "DEMO",
+        "sessionDuration": 28800000
+    },
+    "version": "1.0",
+    "sponsors": [
+        {
+            "name": "Neopro",
+            "path": "videos/DEMO/NEOPRO.mp4",
+            "type": "video/mp4"
+        }
+    ],
+    "timeCategories": [],
+    "categories": []
+}
