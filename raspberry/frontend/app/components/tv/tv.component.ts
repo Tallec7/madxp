@@ -51,13 +51,21 @@ export class TvComponent implements OnInit, OnDestroy {
     this.player = videojs(this.target.nativeElement, options, () => {
       console.log('tv player is ready');
       this.player.poster('/neopro.png');
+      this.sponsors();
+    });
+
+    // Activer le plein écran au premier clic utilisateur (requis par les navigateurs)
+    const activateFullscreen = () => {
       this.player.requestFullscreen().then(() => {
         console.log('fullscreen activated');
       }).catch((error) => {
         console.error('fullscreen issue', error);
-      })
-      this.sponsors();
-    });
+      });
+      document.removeEventListener('click', activateFullscreen);
+      document.removeEventListener('keydown', activateFullscreen);
+    };
+    document.addEventListener('click', activateFullscreen, { once: true });
+    document.addEventListener('keydown', activateFullscreen, { once: true });
 
     // Tracker les erreurs de lecture
     this.player.on('error', (error: Event) => {
