@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS sites (
   sports JSONB,
   status VARCHAR(50) DEFAULT 'offline',
   last_seen_at TIMESTAMP,
+  last_ip VARCHAR(45),
+  local_ip VARCHAR(45),
   software_version VARCHAR(50),
   hardware_model VARCHAR(100) DEFAULT 'Raspberry Pi 4',
   api_key VARCHAR(255) UNIQUE NOT NULL,

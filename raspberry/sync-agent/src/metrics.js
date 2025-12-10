@@ -5,11 +5,12 @@ const logger = require('./logger');
 class MetricsCollector {
   async collectAll() {
     try {
-      const [cpu, memory, temperature, disk] = await Promise.all([
+      const [cpu, memory, temperature, disk, localIp] = await Promise.all([
         this.getCpuUsage(),
         this.getMemoryUsage(),
         this.getTemperature(),
         this.getDiskUsage(),
+        this.getLocalIp(),
       ]);
 
       return {
@@ -18,10 +19,43 @@ class MetricsCollector {
         temperature,
         disk,
         uptime: os.uptime(),
+        localIp,
         timestamp: Date.now(),
       };
     } catch (error) {
       logger.error('Error collecting metrics:', error);
+      return null;
+    }
+  }
+
+  async getLocalIp() {
+    try {
+      const interfaces = await si.networkInterfaces();
+      // Chercher une interface avec une IP locale (pas loopback)
+      // Priorité: eth0/enp* (ethernet) > wlan0 (wifi)
+      const ethernetIface = interfaces.find(
+        iface => (iface.iface.startsWith('eth') || iface.iface.startsWith('enp'))
+          && iface.ip4 && !iface.ip4.startsWith('127.')
+      );
+      if (ethernetIface) {
+        return ethernetIface.ip4;
+      }
+
+      const wifiIface = interfaces.find(
+        iface => iface.iface.startsWith('wlan')
+          && iface.ip4 && !iface.ip4.startsWith('127.')
+      );
+      if (wifiIface) {
+        return wifiIface.ip4;
+      }
+
+      // Fallback: première interface avec une IP non-loopback
+      const anyIface = interfaces.find(
+        iface => iface.ip4 && !iface.ip4.startsWith('127.')
+      );
+      return anyIface?.ip4 || null;
+    } catch (error) {
+      logger.error('Error getting local IP:', error);
       return null;
     }
   }

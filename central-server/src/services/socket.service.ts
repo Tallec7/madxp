@@ -97,9 +97,14 @@ class SocketService {
 
     this.connectedSites.set(siteId, socket);
 
+    // Extract client IP address
+    const clientIp = socket.handshake.headers['x-forwarded-for']?.toString().split(',')[0].trim()
+      || socket.handshake.address
+      || null;
+
     await query(
-      'UPDATE sites SET status = $1, last_seen_at = NOW() WHERE id = $2',
-      ['online', siteId]
+      'UPDATE sites SET status = $1, last_seen_at = NOW(), last_ip = $3 WHERE id = $2',
+      ['online', siteId, clientIp]
     );
 
     socket.emit('authenticated', {
@@ -123,7 +128,7 @@ class SocketService {
       this.handleSyncLocalState(siteId, state);
     });
 
-    logger.info('Agent authenticated', { siteId, siteName: site.site_name });
+    logger.info('Agent authenticated', { siteId, siteName: site.site_name, clientIp });
 
     // Traiter les déploiements en attente pour ce site
     this.processPendingDeployments(siteId);
@@ -178,10 +183,19 @@ class SocketService {
         ]
       );
 
-      await query(
-        'UPDATE sites SET last_seen_at = NOW(), status = $1 WHERE id = $2',
-        ['online', siteId]
-      );
+      // Update site status and local IP if provided
+      const localIp = message.metrics.localIp || null;
+      if (localIp) {
+        await query(
+          'UPDATE sites SET last_seen_at = NOW(), status = $1, local_ip = $3 WHERE id = $2',
+          ['online', siteId, localIp]
+        );
+      } else {
+        await query(
+          'UPDATE sites SET last_seen_at = NOW(), status = $1 WHERE id = $2',
+          ['online', siteId]
+        );
+      }
 
       this.checkAlerts(siteId, message.metrics);
     } catch (error) {
