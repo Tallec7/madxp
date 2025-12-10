@@ -7,11 +7,12 @@ import { NotificationService } from '../../core/services/notification.service';
 import { Site, Metrics } from '../../core/models';
 import { Subscription, interval } from 'rxjs';
 import { ConfigEditorComponent } from './config-editor/config-editor.component';
+import { SiteContentViewerComponent } from './site-content-viewer/site-content-viewer.component';
 
 @Component({
   selector: 'app-site-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ConfigEditorComponent],
+  imports: [CommonModule, RouterModule, FormsModule, ConfigEditorComponent, SiteContentViewerComponent],
   template: `
     <div class="page-container" *ngIf="site; else loading">
       <div class="page-header">
@@ -205,6 +206,19 @@ import { ConfigEditorComponent } from './config-editor/config-editor.component';
             [siteName]="site.site_name"
             (configDeployed)="onConfigDeployed()"
           ></app-config-editor>
+        </div>
+      </div>
+
+      <!-- Contenu local du site -->
+      <div class="card">
+        <div class="card-header-row">
+          <h3>Contenu local</h3>
+          <button class="btn btn-secondary" (click)="showContentViewer = !showContentViewer">
+            {{ showContentViewer ? 'Masquer' : 'Voir le contenu' }}
+          </button>
+        </div>
+        <div *ngIf="showContentViewer" class="content-viewer-wrapper">
+          <app-site-content-viewer [siteId]="siteId"></app-site-content-viewer>
         </div>
       </div>
 
@@ -804,6 +818,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   // Configuration editor
   showConfigEditor = false;
   sendingCommand = false;
+
+  // Content viewer
+  showContentViewer = false;
 
   // Modals
   showLogsModal = false;

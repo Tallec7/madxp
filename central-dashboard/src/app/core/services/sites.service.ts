@@ -129,4 +129,16 @@ export class SitesService {
   }> {
     return this.api.post(`/sites/${id}/config-preview-diff`, { newConfiguration });
   }
+
+  getLocalContent(id: string): Observable<{
+    siteId: string;
+    siteName: string;
+    clubName: string;
+    hasContent: boolean;
+    lastSync: Date | null;
+    configHash: string | null;
+    configuration: SiteConfiguration | null;
+  }> {
+    return this.api.get(`/sites/${id}/local-content`);
+  }
 }

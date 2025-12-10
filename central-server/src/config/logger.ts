@@ -1,6 +1,14 @@
 import winston from 'winston';
+import { Logtail } from '@logtail/node';
+import { LogtailTransport } from '@logtail/winston';
 
 const logLevel = process.env.LOG_LEVEL || 'info';
+
+// Initialize Logtail if token is provided
+let logtail: Logtail | null = null;
+if (process.env.LOGTAIL_TOKEN) {
+  logtail = new Logtail(process.env.LOGTAIL_TOKEN);
+}
 
 const logger = winston.createLogger({
   level: logLevel,
@@ -24,7 +32,9 @@ const logger = winston.createLogger({
   ],
 });
 
+// Add Logtail transport in production if configured
 if (process.env.NODE_ENV === 'production') {
+  // File transports for local backup
   logger.add(
     new winston.transports.File({
       filename: 'logs/error.log',
@@ -40,6 +50,13 @@ if (process.env.NODE_ENV === 'production') {
       maxFiles: 5,
     })
   );
+
+  // Logtail transport for centralized logging
+  if (logtail) {
+    logger.add(new LogtailTransport(logtail));
+    logger.info('Logtail transport initialized');
+  }
 }
 
 export default logger;
+export { logtail };

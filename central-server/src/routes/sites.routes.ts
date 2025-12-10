@@ -57,6 +57,13 @@ router.get(
   sitesController.getCommandStatus
 );
 
+// Route pour le contenu local (miroir de la configuration)
+router.get(
+  '/:id/local-content',
+  authenticate,
+  sitesController.getSiteLocalContent
+);
+
 // Routes pour l'historique des configurations
 router.get(
   '/:id/config-history',

@@ -4,6 +4,7 @@ import { timingSafeEqual } from 'crypto';
 import { query } from '../config/database';
 import { SocketData, CommandMessage, CommandResult, HeartbeatMessage } from '../types';
 import logger from '../config/logger';
+import { alertService } from './alert.service';
 
 // Import différé pour éviter les dépendances circulaires
 let deploymentService: { processPendingDeploymentsForSite: (siteId: string) => Promise<void> } | null = null;
@@ -141,6 +142,7 @@ class SocketService {
     const siteId = (socket as any).siteId;
 
     if (siteId) {
+      const siteName = (socket as any).siteName || siteId;
       this.connectedSites.delete(siteId);
 
       query(
@@ -148,6 +150,11 @@ class SocketService {
         ['offline', siteId]
       ).catch((error) => {
         logger.error('Error updating site status on disconnect:', error);
+      });
+
+      // Send Slack alert for site going offline
+      alertService.siteOffline(siteId, siteName).catch((error) => {
+        logger.error('Error sending offline alert:', error);
       });
 
       logger.info('Agent disconnected', { siteId });
@@ -223,6 +230,16 @@ class SocketService {
            VALUES ($1, $2, $3, $4, 'active')`,
           [siteId, alert.type, alert.severity, alert.message]
         );
+
+        // Send Slack alert for critical metrics
+        const siteResult = await query('SELECT club_name FROM sites WHERE id = $1', [siteId]);
+        const clubName: string = (siteResult.rows[0]?.club_name as string) || siteId;
+
+        if (alert.type === 'high_temperature') {
+          alertService.highTemperature(siteId, clubName, metrics.temperature).catch((_e) => {/* ignore */});
+        } else if (alert.type === 'high_disk_usage') {
+          alertService.lowDiskSpace(siteId, clubName, metrics.disk).catch((_e) => {/* ignore */});
+        }
 
         logger.warn('Alert created', { siteId, ...alert });
       }
