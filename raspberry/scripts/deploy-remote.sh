@@ -190,18 +190,16 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
         echo 'Admin panel installé'
     fi
 
-    # Permissions correctes pour nginx
+    # Permissions correctes pour nginx et sync-agent
     echo 'Configuration des permissions...'
     sudo chmod 755 /home/pi
     sudo chmod 755 ${RASPBERRY_DIR}
-    sudo chown -R www-data:www-data ${RASPBERRY_DIR}/webapp/
+    # webapp appartient à pi (pour sync-agent) mais accessible par www-data (nginx)
+    sudo chown -R pi:pi ${RASPBERRY_DIR}/webapp/
     sudo find ${RASPBERRY_DIR}/webapp -type f -exec chmod 644 {} \;
     sudo find ${RASPBERRY_DIR}/webapp -type d -exec chmod 755 {} \;
-    # configuration.json doit être éditable par pi (pour admin server)
-    if [ -f ${RASPBERRY_DIR}/webapp/configuration.json ]; then
-        sudo chown pi:pi ${RASPBERRY_DIR}/webapp/configuration.json
-        sudo chmod 664 ${RASPBERRY_DIR}/webapp/configuration.json
-    fi
+    # Ajouter www-data au groupe pi pour lecture (nginx)
+    sudo usermod -a -G pi www-data 2>/dev/null || true
     sudo chown -R pi:pi ${RASPBERRY_DIR}/server
     sudo chown -R pi:pi ${RASPBERRY_DIR}/admin
     sudo chown -R pi:pi ${RASPBERRY_DIR}/sync-agent

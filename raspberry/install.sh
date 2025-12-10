@@ -596,9 +596,15 @@ finalize() {
 }
 EOF
 
-    chown pi:pi ${INSTALL_DIR}/club-config.json
+    # Permissions finales : tout appartient à pi pour que sync-agent puisse écrire
+    # www-data (nginx) peut lire via le groupe pi
+    chown -R pi:pi ${INSTALL_DIR}
+    chmod 755 ${INSTALL_DIR}
+    find ${INSTALL_DIR}/webapp -type d -exec chmod 755 {} \; 2>/dev/null || true
+    find ${INSTALL_DIR}/webapp -type f -exec chmod 644 {} \; 2>/dev/null || true
+    usermod -a -G pi www-data
 
-    print_success "Configuration sauvegardée"
+    print_success "Configuration et permissions sauvegardées"
 }
 
 ################################################################################
