@@ -215,7 +215,18 @@ print_success "Installation terminée"
 # Redémarrage des services
 print_step "Redémarrage des services..."
 ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
-    sudo systemctl restart neopro-app
+    # Arrêter proprement neopro-app
+    sudo systemctl stop neopro-app 2>/dev/null || true
+    sleep 1
+
+    # Libérer le port 3000 si un processus zombie l'occupe encore
+    if sudo fuser 3000/tcp >/dev/null 2>&1; then
+        echo 'Port 3000 occupé, libération en cours...'
+        sudo fuser -k 3000/tcp 2>/dev/null || true
+        sleep 2
+    fi
+
+    sudo systemctl start neopro-app
     sleep 2
     sudo systemctl restart nginx
     sleep 1
