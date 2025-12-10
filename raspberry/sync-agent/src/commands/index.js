@@ -206,6 +206,146 @@ const commands = {
       throw error;
     }
   },
+
+  /**
+   * Met à jour la configuration du hotspot WiFi (SSID et mot de passe)
+   * Modifie /etc/hostapd/hostapd.conf et redémarre le service hostapd
+   *
+   * @param {Object} data - { ssid?, password? }
+   */
+  async update_hotspot(data) {
+    const { ssid, password } = data;
+
+    logger.info('Updating hotspot configuration', { ssid: ssid || '(unchanged)' });
+
+    if (!ssid && !password) {
+      throw new Error('At least one of ssid or password must be provided');
+    }
+
+    // Validation du mot de passe WiFi (WPA2 requiert 8-63 caractères)
+    if (password && (password.length < 8 || password.length > 63)) {
+      throw new Error('WiFi password must be between 8 and 63 characters');
+    }
+
+    // Validation du SSID (max 32 caractères)
+    if (ssid && ssid.length > 32) {
+      throw new Error('SSID must be 32 characters or less');
+    }
+
+    const hostapdPath = '/etc/hostapd/hostapd.conf';
+    const backupPath = '/etc/hostapd/hostapd.conf.backup';
+
+    try {
+      // Vérifier que hostapd.conf existe
+      if (!await fs.pathExists(hostapdPath)) {
+        throw new Error('hostapd.conf not found - hotspot not configured on this device');
+      }
+
+      // Lire la configuration actuelle
+      let hostapdContent = await fs.readFile(hostapdPath, 'utf8');
+
+      // Créer un backup
+      await execAsync(`sudo cp ${hostapdPath} ${backupPath}`);
+      logger.info('Backup created', { path: backupPath });
+
+      // Modifier le SSID si fourni
+      if (ssid) {
+        hostapdContent = hostapdContent.replace(/^ssid=.*/m, `ssid=${ssid}`);
+        logger.info('SSID updated', { ssid });
+      }
+
+      // Modifier le mot de passe si fourni
+      if (password) {
+        hostapdContent = hostapdContent.replace(/^wpa_passphrase=.*/m, `wpa_passphrase=${password}`);
+        logger.info('WiFi password updated');
+      }
+
+      // Écrire la nouvelle configuration (via sudo car fichier root)
+      const tempPath = '/tmp/hostapd.conf.tmp';
+      await fs.writeFile(tempPath, hostapdContent);
+      await execAsync(`sudo mv ${tempPath} ${hostapdPath}`);
+      await execAsync(`sudo chmod 600 ${hostapdPath}`);
+
+      // Redémarrer hostapd pour appliquer les changements
+      logger.info('Restarting hostapd service...');
+      await execAsync('sudo systemctl restart hostapd');
+
+      // Attendre que le service soit actif
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      const { stdout } = await execAsync('sudo systemctl is-active hostapd');
+      const isActive = stdout.trim() === 'active';
+
+      if (!isActive) {
+        // Restaurer le backup si le service ne démarre pas
+        logger.error('hostapd failed to start, restoring backup');
+        await execAsync(`sudo cp ${backupPath} ${hostapdPath}`);
+        await execAsync('sudo systemctl restart hostapd');
+        throw new Error('Failed to restart hostapd with new configuration - backup restored');
+      }
+
+      logger.info('Hotspot configuration updated successfully');
+
+      return {
+        success: true,
+        message: 'Hotspot configuration updated',
+        ssidUpdated: !!ssid,
+        passwordUpdated: !!password,
+      };
+    } catch (error) {
+      logger.error('Hotspot update failed:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Récupère la configuration actuelle du hotspot (SSID uniquement, pas le mot de passe)
+   */
+  async get_hotspot_config() {
+    logger.info('Retrieving hotspot configuration');
+
+    const hostapdPath = '/etc/hostapd/hostapd.conf';
+
+    try {
+      if (!await fs.pathExists(hostapdPath)) {
+        return {
+          success: true,
+          configured: false,
+          message: 'Hotspot not configured on this device',
+        };
+      }
+
+      const hostapdContent = await fs.readFile(hostapdPath, 'utf8');
+
+      // Extraire le SSID
+      const ssidMatch = hostapdContent.match(/^ssid=(.*)$/m);
+      const ssid = ssidMatch ? ssidMatch[1] : null;
+
+      // Extraire le channel
+      const channelMatch = hostapdContent.match(/^channel=(.*)$/m);
+      const channel = channelMatch ? parseInt(channelMatch[1]) : null;
+
+      // Vérifier si hostapd est actif
+      let isActive = false;
+      try {
+        const { stdout } = await execAsync('sudo systemctl is-active hostapd');
+        isActive = stdout.trim() === 'active';
+      } catch {
+        isActive = false;
+      }
+
+      return {
+        success: true,
+        configured: true,
+        ssid,
+        channel,
+        isActive,
+      };
+    } catch (error) {
+      logger.error('Failed to retrieve hotspot config:', error);
+      throw error;
+    }
+  },
 };
 
 module.exports = commands;

@@ -141,4 +141,16 @@ export class SitesService {
   }> {
     return this.api.get(`/sites/${id}/local-content`);
   }
+
+  // Hotspot WiFi management
+  getHotspotConfig(id: string): Observable<{ success: boolean; commandId?: string; message: string }> {
+    return this.sendCommand(id, 'get_hotspot_config', {});
+  }
+
+  updateHotspot(id: string, ssid?: string, password?: string): Observable<{ success: boolean; commandId?: string; message: string }> {
+    const params: Record<string, string> = {};
+    if (ssid) params['ssid'] = ssid;
+    if (password) params['password'] = password;
+    return this.sendCommand(id, 'update_hotspot', params);
+  }
 }

@@ -204,6 +204,55 @@ import { SiteContentViewerComponent } from './site-content-viewer/site-content-v
         </div>
       </div>
 
+      <!-- Configuration Hotspot WiFi -->
+      <div class="card">
+        <div class="card-header-row">
+          <h3>Configuration Hotspot WiFi</h3>
+          <button class="btn btn-secondary" (click)="toggleHotspotConfig()" [disabled]="site.status !== 'online'">
+            {{ showHotspotConfig ? 'Masquer' : 'Modifier' }}
+          </button>
+        </div>
+        <div *ngIf="showHotspotConfig" class="hotspot-config-form">
+          <div class="form-group">
+            <label for="hotspotSsid">SSID (nom du réseau WiFi)</label>
+            <input
+              type="text"
+              id="hotspotSsid"
+              [(ngModel)]="hotspotSsid"
+              placeholder="NEOPRO-MonClub"
+              maxlength="32"
+              class="form-input"
+            />
+            <small class="form-hint">Max 32 caractères</small>
+          </div>
+          <div class="form-group">
+            <label for="hotspotPassword">Mot de passe WiFi</label>
+            <input
+              type="text"
+              id="hotspotPassword"
+              [(ngModel)]="hotspotPassword"
+              placeholder="Nouveau mot de passe"
+              minlength="8"
+              maxlength="63"
+              class="form-input"
+            />
+            <small class="form-hint">Entre 8 et 63 caractères (WPA2)</small>
+          </div>
+          <div class="form-actions">
+            <button
+              class="btn btn-primary"
+              (click)="updateHotspot()"
+              [disabled]="updatingHotspot || (!hotspotSsid && !hotspotPassword)"
+            >
+              {{ updatingHotspot ? 'Mise à jour...' : 'Appliquer les modifications' }}
+            </button>
+          </div>
+          <div class="hotspot-warning">
+            <strong>Attention :</strong> Après modification, vous devrez vous reconnecter au nouveau réseau WiFi pour accéder au boîtier.
+          </div>
+        </div>
+      </div>
+
       <!-- Configuration du site -->
       <div class="card">
         <div class="card-header-row">
@@ -804,6 +853,61 @@ import { SiteContentViewerComponent } from './site-content-viewer/site-content-v
       to { transform: rotate(360deg); }
     }
 
+    /* Hotspot config form */
+    .hotspot-config-form {
+      margin-top: 1rem;
+      padding: 1.5rem;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .form-hint {
+      display: block;
+      margin-top: 0.375rem;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .form-actions {
+      margin-top: 1.5rem;
+    }
+
+    .hotspot-warning {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      color: #92400e;
+    }
+
     @media (max-width: 768px) {
       .info-grid {
         grid-template-columns: 1fr;
@@ -833,6 +937,12 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   // Content viewer
   showContentViewer = false;
+
+  // Hotspot config
+  showHotspotConfig = false;
+  hotspotSsid = '';
+  hotspotPassword = '';
+  updatingHotspot = false;
 
   // Modals
   showLogsModal = false;
@@ -1048,5 +1158,53 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   onConfigDeployed(): void {
     this.notificationService.success('Configuration déployée avec succès !');
+  }
+
+  // Hotspot config methods
+  toggleHotspotConfig(): void {
+    this.showHotspotConfig = !this.showHotspotConfig;
+    if (!this.showHotspotConfig) {
+      this.hotspotSsid = '';
+      this.hotspotPassword = '';
+    }
+  }
+
+  updateHotspot(): void {
+    if (!this.hotspotSsid && !this.hotspotPassword) {
+      this.notificationService.error('Veuillez renseigner au moins un champ');
+      return;
+    }
+
+    if (this.hotspotPassword && (this.hotspotPassword.length < 8 || this.hotspotPassword.length > 63)) {
+      this.notificationService.error('Le mot de passe doit contenir entre 8 et 63 caractères');
+      return;
+    }
+
+    const changes = [];
+    if (this.hotspotSsid) changes.push(`SSID: ${this.hotspotSsid}`);
+    if (this.hotspotPassword) changes.push('Mot de passe');
+
+    if (!confirm(`Modifier la configuration du hotspot WiFi ?\n\nChangements : ${changes.join(', ')}\n\nAttention : vous devrez vous reconnecter au nouveau réseau WiFi.`)) {
+      return;
+    }
+
+    this.updatingHotspot = true;
+    this.sitesService.updateHotspot(
+      this.siteId,
+      this.hotspotSsid || undefined,
+      this.hotspotPassword || undefined
+    ).subscribe({
+      next: (response) => {
+        this.updatingHotspot = false;
+        this.notificationService.success('Configuration du hotspot mise à jour avec succès !');
+        this.hotspotSsid = '';
+        this.hotspotPassword = '';
+        this.showHotspotConfig = false;
+      },
+      error: (error) => {
+        this.updatingHotspot = false;
+        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+      }
+    });
   }
 }
