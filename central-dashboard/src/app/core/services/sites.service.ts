@@ -153,4 +153,12 @@ export class SitesService {
     if (password) params['password'] = password;
     return this.sendCommand(id, 'update_hotspot', params);
   }
+
+  // Remote sync-agent update via update_config command
+  updateSyncAgent(id: string, agentFiles: Record<string, string>): Observable<{ success: boolean; commandId?: string; message: string }> {
+    return this.sendCommand(id, 'update_config', {
+      mode: 'update_agent',
+      agentFiles
+    });
+  }
 }

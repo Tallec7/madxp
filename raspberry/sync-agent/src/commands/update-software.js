@@ -186,6 +186,8 @@ class SoftwareUpdateHandler {
     try {
       logger.info('Stopping services');
 
+      // Note: neopro-sync-agent is NOT stopped here because it's running this code
+      // It will be restarted at the end via startServices()
       const services = ['neopro-app', 'neopro-admin'];
 
       for (const service of services) {
@@ -265,6 +267,17 @@ class SoftwareUpdateHandler {
       }
 
       logger.info('All services started and healthy');
+
+      // Schedule sync-agent restart to apply any updates to itself
+      // Use spawn with detached to allow the current process to exit
+      logger.info('Scheduling sync-agent restart in 5 seconds...');
+      const { spawn } = require('child_process');
+      setTimeout(() => {
+        spawn('sudo', ['systemctl', 'restart', 'neopro-sync-agent'], {
+          detached: true,
+          stdio: 'ignore'
+        }).unref();
+      }, 5000);
     } catch (error) {
       logger.error('Failed to start services:', error);
       throw error;

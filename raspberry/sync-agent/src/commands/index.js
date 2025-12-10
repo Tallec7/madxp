@@ -21,10 +21,45 @@ const commands = {
    * Modes supportés :
    * - mode: 'merge' (défaut) - Fusionne le contenu NEOPRO avec la config locale
    * - mode: 'replace' - Remplace entièrement (ancien comportement, pour migration)
+   * - mode: 'update_agent' - Met à jour les fichiers du sync-agent (pour remote update)
    *
-   * @param {Object} data - { neoProContent, mode?, configuration? }
+   * @param {Object} data - { neoProContent, mode?, configuration?, agentFiles? }
    */
   async update_config(data) {
+    // Mode spécial : mise à jour des fichiers du sync-agent
+    if (data.mode === 'update_agent' && data.agentFiles) {
+      logger.info('Updating sync-agent files remotely');
+      try {
+        const syncAgentPath = config.paths.root + '/sync-agent';
+
+        for (const [filePath, content] of Object.entries(data.agentFiles)) {
+          const fullPath = syncAgentPath + '/' + filePath;
+          const dir = require('path').dirname(fullPath);
+          await fs.ensureDir(dir);
+          await fs.writeFile(fullPath, content);
+          logger.info('Updated sync-agent file', { path: filePath });
+        }
+
+        // Redémarrer le sync-agent pour appliquer les changements
+        logger.info('Restarting sync-agent to apply updates...');
+        // Utiliser spawn pour ne pas attendre (car le processus va se terminer)
+        const { spawn } = require('child_process');
+        spawn('sudo', ['systemctl', 'restart', 'neopro-sync-agent'], {
+          detached: true,
+          stdio: 'ignore'
+        }).unref();
+
+        return {
+          success: true,
+          message: 'Sync-agent files updated, restarting...',
+          filesUpdated: Object.keys(data.agentFiles),
+        };
+      } catch (error) {
+        logger.error('Failed to update sync-agent files:', error);
+        throw error;
+      }
+    }
+
     logger.info('Updating configuration', { mode: data.mode || 'merge' });
 
     try {
@@ -106,11 +141,23 @@ const commands = {
   },
 
   async restart_service(data) {
-    const { service } = data;
+    const { service, update } = data;
 
-    logger.info('Restarting service', { service });
+    logger.info('Restarting service', { service, update: !!update });
 
     try {
+      // Si update=true ou si c'est le sync-agent, faire un git pull avant de redémarrer
+      if (update || service === 'neopro-sync-agent') {
+        const syncAgentPath = config.paths.root + '/sync-agent';
+        try {
+          logger.info('Updating sync-agent before restart...');
+          await execAsync(`cd ${syncAgentPath} && git pull`);
+          logger.info('Sync-agent updated successfully');
+        } catch (gitError) {
+          logger.warn('Git pull failed, continuing with restart:', gitError.message);
+        }
+      }
+
       await execAsync(`sudo systemctl restart ${service}`);
 
       await new Promise(resolve => setTimeout(resolve, 3000));
