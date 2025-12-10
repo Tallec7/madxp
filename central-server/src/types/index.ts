@@ -186,5 +186,6 @@ export interface HeartbeatMessage {
     temperature: number;
     disk: number;
     uptime: number;
+    localIp?: string | null;
   };
 }
