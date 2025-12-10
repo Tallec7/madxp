@@ -561,6 +561,68 @@ socket.emit('video-status', {
 socketUrl: 'http://neopro.local:3000'
 ```
 
+### Analytics API (Raspberry Pi)
+
+Le serveur Socket.IO sur le Raspberry Pi expose également une API REST pour les analytics.
+
+**Endpoints :**
+
+```
+POST   /api/analytics           - Recevoir les événements de lecture vidéo
+GET    /api/analytics/stats     - Statistiques du buffer local
+```
+
+**POST /api/analytics**
+
+Reçoit les événements de lecture vidéo depuis l'application Angular et les stocke dans un fichier buffer pour le sync-agent.
+
+```json
+// Request body
+{
+  "events": [
+    {
+      "video_filename": "sponsor1.mp4",
+      "category": "sponsor",
+      "played_at": "2025-12-10T10:30:00Z",
+      "duration_played": 30,
+      "video_duration": 30,
+      "completed": true,
+      "trigger_type": "auto",
+      "session_id": "session_123456789"
+    }
+  ]
+}
+
+// Response
+{
+  "success": true,
+  "received": 1,
+  "total": 15
+}
+```
+
+**GET /api/analytics/stats**
+
+Retourne les statistiques du buffer d'analytics local.
+
+```json
+{
+  "count": 15,
+  "oldestEvent": "2025-12-10T08:00:00Z",
+  "newestEvent": "2025-12-10T10:30:00Z"
+}
+```
+
+**Fichier buffer :** `/home/pi/neopro/data/analytics_buffer.json`
+
+**Flux de données :**
+
+1. L'application Angular (TV component) track les lectures vidéo via `AnalyticsService`
+2. Les événements sont bufferisés localement (localStorage + mémoire)
+3. Toutes les 5 minutes, le buffer est envoyé au serveur local (`POST /api/analytics`)
+4. Le sync-agent récupère ces données et les envoie au serveur central
+5. Le dashboard central affiche les statistiques agrégées
+
 ### API Serveur Central
 
 **Base URL :** `https://neopro-central-server.onrender.com/api`
@@ -708,4 +770,4 @@ Voir **[docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ---
 
-**Dernière mise à jour :** 8 décembre 2025
+**Dernière mise à jour :** 10 décembre 2025

@@ -6,6 +6,31 @@ const path = require('path');
 
 const app = express();
 app.use(express.json());
+
+// CORS middleware for all Express routes (analytics API)
+const corsOrigins = [
+	"https://neopro.kalonpartners.bzh",
+	"http://localhost:4200",
+	"http://neopro.local",
+	"http://neopro.local:4200",
+	"http://192.168.4.1",
+	"http://192.168.4.1:4200"
+];
+
+app.use((req, res, next) => {
+	const origin = req.headers.origin;
+	if (corsOrigins.includes(origin)) {
+		res.header('Access-Control-Allow-Origin', origin);
+	}
+	res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+	res.header('Access-Control-Allow-Headers', 'Content-Type');
+	res.header('Access-Control-Allow-Credentials', 'true');
+	if (req.method === 'OPTIONS') {
+		return res.sendStatus(200);
+	}
+	next();
+});
+
 const server = http.createServer(app);
 
 // Configuration CORS pour permettre les connexions depuis votre site Apache

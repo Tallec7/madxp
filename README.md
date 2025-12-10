@@ -267,4 +267,4 @@ Configuration : voir `render.yaml`
 
 **Version :** 1.0
 **Licence :** MIT
-**Dernière mise à jour :** 7 décembre 2025
+**Dernière mise à jour :** 10 décembre 2025
