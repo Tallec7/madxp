@@ -1962,6 +1962,12 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   }
 
   confirmDeploy(): void {
+    // Validation : vérifier que la config n'est pas vide
+    if (!this.config || Object.keys(this.config).length === 0) {
+      this.notificationService.error('Configuration vide - impossible de déployer');
+      return;
+    }
+
     this.deploying = true;
 
     // D'abord sauvegarder dans l'historique

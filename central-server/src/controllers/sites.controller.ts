@@ -287,6 +287,26 @@ export const sendCommand = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Commande requise' });
     }
 
+    // Validation spécifique pour update_config : vérifier que le payload contient les données requises
+    if (command === 'update_config') {
+      const hasValidPayload = data && (
+        data.configuration ||
+        data.neoProContent ||
+        (data.mode === 'update_agent' && data.agentFiles)
+      );
+      if (!hasValidPayload) {
+        logger.warn('update_config command rejected: missing required payload', {
+          siteId: id,
+          hasData: !!data,
+          dataKeys: data ? Object.keys(data) : [],
+          sentBy: req.user?.email
+        });
+        return res.status(400).json({
+          error: 'Commande update_config invalide: configuration, neoProContent ou agentFiles requis'
+        });
+      }
+    }
+
     // Vérifier que le site existe
     const siteResult = await query('SELECT id, site_name, status FROM sites WHERE id = $1', [id]);
     if (siteResult.rows.length === 0) {
@@ -340,7 +360,9 @@ export const sendCommand = async (req: AuthRequest, res: Response) => {
       siteName: site.site_name,
       command,
       commandId,
-      sentBy: req.user?.email
+      sentBy: req.user?.email,
+      hasPayload: !!data,
+      payloadKeys: data ? Object.keys(data) : []
     });
 
     res.json({
