@@ -159,8 +159,9 @@ neopro/
 │   ├── public/                   # Assets statiques
 │   ├── scripts/                  # Scripts de déploiement
 │   │   ├── setup-new-club.sh    # ⭐ Configuration nouveau club
-│   │   ├── build-raspberry.sh   # Build pour Pi
-│   │   └── deploy-remote.sh     # Déploiement SSH
+│   │   ├── build-and-deploy.sh  # Build + déploiement combinés
+│   │   ├── build-raspberry.sh   # Build seul pour Pi
+│   │   └── deploy-remote.sh     # Déploiement SSH seul
 │   ├── config/
 │   │   ├── systemd/             # Services systemd (*.service)
 │   │   └── templates/           # Templates de configuration JSON

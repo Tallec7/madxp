@@ -364,28 +364,39 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-sync -n 50'
 
 ### Scripts d'automatisation
 
-| Script | Usage | Description |
-|--------|-------|-------------|
-| `setup-new-club.sh` | Configuration complète | Nouveau club de A à Z (5-10 min) |
-| `build-raspberry.sh` | Build Angular | Build optimisé pour Pi |
-| `deploy-remote.sh` | Déploiement SSH | Transfert + permissions |
-| `test-config-creation.sh` | Test | Valide la création de config |
-| `diagnose-pi.sh` | Diagnostic | Vérification complète du Pi |
+| Script | Emplacement | Description |
+|--------|-------------|-------------|
+| `setup-new-club.sh` | `raspberry/scripts/` | Configuration complète nouveau club (5-10 min) |
+| `build-raspberry.sh` | `raspberry/scripts/` | Build Angular optimisé pour Pi |
+| `build-and-deploy.sh` | `raspberry/scripts/` | Build + déploiement combinés |
+| `deploy-remote.sh` | `raspberry/scripts/` | Déploiement SSH seul (transfert + permissions) |
+| `copy-to-pi.sh` | `raspberry/scripts/` | Copie des fichiers d'installation vers Pi |
+| `diagnose-pi.sh` | `raspberry/scripts/` | Diagnostic complet du Pi |
+| `backup-club.sh` | `raspberry/scripts/` | Sauvegarde configuration club |
+| `restore-club.sh` | `raspberry/scripts/` | Restauration configuration club |
+| `cleanup-pi.sh` | `raspberry/scripts/` | Nettoyage ~/raspberry après install |
+| `setup-wifi-client.sh` | `raspberry/scripts/` | Configuration WiFi client (accès internet) |
+| `fix-hostname.sh` | `raspberry/scripts/` | Correction hostname après reboot |
 
-### Scripts npm
+### Scripts npm (à la racine du projet)
 
 ```json
 {
-  "build:raspberry": "scripts/build-raspberry.sh",
-  "deploy:raspberry": "scripts/deploy-remote.sh"
+  "build:raspberry": "./raspberry/scripts/build-raspberry.sh",
+  "deploy:raspberry": "./raspberry/scripts/build-and-deploy.sh"
 }
 ```
 
 **Usage :**
 
 ```bash
+# Build seul (crée l'archive de déploiement)
 npm run build:raspberry
+
+# Build + déploiement vers le Pi
+npm run deploy:raspberry
 npm run deploy:raspberry neopro.local
+npm run deploy:raspberry 192.168.4.1
 ```
 
 ---
