@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initSubNavigation();
     initForms();
     initLogButtons();
+    initDropZone();
     updateTime();
     loadDashboard();
 
@@ -1098,56 +1099,234 @@ function initForms() {
     }
 }
 
+// Variables pour l'upload multiple
+let selectedFilesForUpload = [];
+
+function initDropZone() {
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('video-file');
+
+    if (!dropZone || !fileInput) return;
+
+    // Click to select files
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    // Drag & drop events
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('video/'));
+        if (files.length > 0) {
+            addFilesToSelection(files);
+        }
+    });
+
+    // File input change
+    fileInput.addEventListener('change', () => {
+        const files = Array.from(fileInput.files);
+        if (files.length > 0) {
+            addFilesToSelection(files);
+        }
+    });
+}
+
+function addFilesToSelection(files) {
+    selectedFilesForUpload = [...selectedFilesForUpload, ...files];
+    updateSelectedFilesUI();
+}
+
+function updateSelectedFilesUI() {
+    const container = document.getElementById('selected-files');
+    const countSpan = document.getElementById('files-count');
+    const listUl = document.getElementById('files-list');
+
+    if (selectedFilesForUpload.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+    countSpan.textContent = `${selectedFilesForUpload.length} fichier(s) sélectionné(s)`;
+
+    listUl.innerHTML = selectedFilesForUpload.map((file, index) => `
+        <li class="file-item">
+            <span class="file-name">🎬 ${file.name}</span>
+            <span class="file-size">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+            <button type="button" class="btn btn-small btn-danger" onclick="removeFileFromSelection(${index})">✕</button>
+        </li>
+    `).join('');
+}
+
+function removeFileFromSelection(index) {
+    selectedFilesForUpload.splice(index, 1);
+    updateSelectedFilesUI();
+}
+
+function clearSelectedFiles() {
+    selectedFilesForUpload = [];
+    document.getElementById('video-file').value = '';
+    updateSelectedFilesUI();
+}
+
 async function uploadVideo() {
     const form = document.getElementById('upload-form');
     const fileInput = document.getElementById('video-file');
     const progressDiv = document.getElementById('upload-progress');
     const progressBar = document.getElementById('upload-progress-bar');
     const statusText = document.getElementById('upload-status');
+    const currentFileSpan = document.getElementById('upload-current-file');
+    const fileCountSpan = document.getElementById('upload-file-count');
+    const resultsDiv = document.getElementById('upload-results');
+    const resultsList = document.getElementById('upload-results-list');
+    const uploadBtn = document.getElementById('upload-btn');
 
-    if (!fileInput.files[0]) {
-        showNotification('Sélectionnez un fichier', 'error');
+    // Use selectedFilesForUpload if available, otherwise fallback to fileInput
+    const filesToUpload = selectedFilesForUpload.length > 0
+        ? selectedFilesForUpload
+        : Array.from(fileInput.files);
+
+    if (filesToUpload.length === 0) {
+        showNotification('Sélectionnez au moins un fichier', 'error');
         return;
     }
 
-    const formData = new FormData(form);
-    console.log('[admin-ui] Upload video request', {
-        category: formData.get('category'),
-        subcategory: formData.get('subcategory'),
-        file: fileInput.files[0]?.name
+    const category = document.getElementById('video-category').value;
+    const subcategory = document.getElementById('video-subcategory').value;
+
+    if (!category) {
+        showNotification('Sélectionnez une catégorie', 'error');
+        return;
+    }
+
+    // Disable upload button
+    uploadBtn.disabled = true;
+    progressDiv.style.display = 'block';
+    resultsDiv.style.display = 'none';
+    resultsList.innerHTML = '';
+
+    console.log('[admin-ui] Upload multiple videos request', {
+        category,
+        subcategory,
+        filesCount: filesToUpload.length
     });
 
-    progressDiv.style.display = 'block';
-    progressBar.style.width = '0%';
-    statusText.textContent = 'Upload en cours...';
+    // Upload multiple files
+    if (filesToUpload.length > 1) {
+        const formData = new FormData();
+        formData.append('category', category);
+        if (subcategory) formData.append('subcategory', subcategory);
 
-    try {
-        const response = await fetch('/api/videos/upload', {
-            method: 'POST',
-            body: formData
+        filesToUpload.forEach(file => {
+            formData.append('videos', file);
         });
 
-        console.log('[admin-ui] POST /api/videos/upload -> status', response.status);
-        const data = await response.json();
-        console.log('[admin-ui] /api/videos/upload payload', data);
+        currentFileSpan.textContent = 'Upload en cours...';
+        fileCountSpan.textContent = `${filesToUpload.length} fichiers`;
+        progressBar.style.width = '0%';
+        statusText.textContent = 'Envoi des fichiers...';
 
-        if (data.success) {
+        try {
+            const response = await fetch('/api/videos/upload-multiple', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            console.log('[admin-ui] /api/videos/upload-multiple response', data);
+
             progressBar.style.width = '100%';
-            statusText.textContent = 'Upload terminé !';
-            showNotification('Vidéo uploadée avec succès', 'success');
+
+            if (data.success) {
+                statusText.textContent = data.message;
+                showNotification(data.message, 'success');
+            } else {
+                statusText.textContent = data.message || 'Upload terminé avec des erreurs';
+                showNotification(data.message || 'Certains fichiers ont échoué', 'warning');
+            }
+
+            // Show results
+            if (data.files || data.errors) {
+                resultsDiv.style.display = 'block';
+                resultsList.innerHTML = '';
+
+                if (data.files) {
+                    data.files.forEach(file => {
+                        resultsList.innerHTML += `<li class="result-success">✅ ${file.name} (${file.size})</li>`;
+                    });
+                }
+                if (data.errors) {
+                    data.errors.forEach(err => {
+                        resultsList.innerHTML += `<li class="result-error">❌ ${err.name}: ${err.error}</li>`;
+                    });
+                }
+            }
+
+            // Reset form after success
+            clearSelectedFiles();
             form.reset();
+            populateCategorySelects();
             setTimeout(() => {
-                progressDiv.style.display = 'none';
                 loadVideos();
             }, 2000);
-        } else {
-            showNotification('Erreur: ' + data.error, 'error');
+
+        } catch (error) {
+            console.error('[admin-ui] Upload error:', error);
+            showNotification('Erreur lors de l\'upload', 'error');
+            statusText.textContent = 'Erreur';
+        }
+    } else {
+        // Single file upload (original behavior)
+        const formData = new FormData();
+        formData.append('category', category);
+        if (subcategory) formData.append('subcategory', subcategory);
+        formData.append('video', filesToUpload[0]);
+
+        currentFileSpan.textContent = filesToUpload[0].name;
+        fileCountSpan.textContent = '1 fichier';
+        progressBar.style.width = '0%';
+        statusText.textContent = 'Upload en cours...';
+
+        try {
+            const response = await fetch('/api/videos/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            console.log('[admin-ui] /api/videos/upload response', data);
+
+            if (data.success) {
+                progressBar.style.width = '100%';
+                statusText.textContent = 'Upload terminé !';
+                showNotification('Vidéo uploadée avec succès', 'success');
+                clearSelectedFiles();
+                form.reset();
+                populateCategorySelects();
+                setTimeout(() => {
+                    progressDiv.style.display = 'none';
+                    loadVideos();
+                }, 2000);
+            } else {
+                showNotification('Erreur: ' + data.error, 'error');
+                progressDiv.style.display = 'none';
+            }
+        } catch (error) {
+            showNotification('Erreur lors de l\'upload', 'error');
             progressDiv.style.display = 'none';
         }
-    } catch (error) {
-        showNotification('Erreur lors de l\'upload', 'error');
-        progressDiv.style.display = 'none';
     }
+
+    // Re-enable upload button
+    uploadBtn.disabled = false;
 }
 
 async function configureWifi() {

@@ -170,13 +170,27 @@
                 <div id="subtab-upload" class="subtab-content">
                     <div class="card">
                         <div class="card-header">
-                            <h3>📤 Ajouter une vidéo</h3>
+                            <h3>📤 Ajouter des vidéos</h3>
                         </div>
                         <div class="card-body">
                             <form id="upload-form" enctype="multipart/form-data">
                                 <div class="form-group">
-                                    <label for="video-file">Fichier vidéo (MP4, MKV, MOV - max 500MB)</label>
-                                    <input type="file" id="video-file" name="video" accept="video/*" required>
+                                    <label for="video-file">Fichiers vidéo (MP4, MKV, MOV - max 500MB par fichier)</label>
+                                    <div id="drop-zone" class="drop-zone">
+                                        <div class="drop-zone-content">
+                                            <span class="drop-zone-icon">📁</span>
+                                            <p>Glissez-déposez vos vidéos ici</p>
+                                            <p class="drop-zone-hint">ou cliquez pour sélectionner</p>
+                                        </div>
+                                        <input type="file" id="video-file" name="videos" accept="video/*" multiple>
+                                    </div>
+                                    <div id="selected-files" class="selected-files" style="display: none;">
+                                        <div class="selected-files-header">
+                                            <span id="files-count">0 fichier(s) sélectionné(s)</span>
+                                            <button type="button" class="btn btn-small btn-secondary" onclick="clearSelectedFiles()">Effacer</button>
+                                        </div>
+                                        <ul id="files-list" class="files-list"></ul>
+                                    </div>
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group">
@@ -192,15 +206,22 @@
                                         </select>
                                     </div>
                                 </div>
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-primary" id="upload-btn">
                                     📤 Upload
                                 </button>
                             </form>
                             <div id="upload-progress" class="upload-progress" style="display: none;">
+                                <div class="progress-info">
+                                    <span id="upload-current-file"></span>
+                                    <span id="upload-file-count"></span>
+                                </div>
                                 <div class="progress-bar">
                                     <div class="progress-fill" id="upload-progress-bar"></div>
                                 </div>
                                 <span id="upload-status">Uploading...</span>
+                                <div id="upload-results" class="upload-results" style="display: none;">
+                                    <ul id="upload-results-list"></ul>
+                                </div>
                             </div>
                         </div>
                     </div>

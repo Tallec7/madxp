@@ -790,7 +790,7 @@ async function listVideosRecursive(dir, baseDir = dir, metadata = {}) {
   return videos;
 }
 
-// API: Upload de vidéo
+// API: Upload de vidéo (single)
 app.post('/api/videos/upload', upload.single('video'), async (req, res) => {
   try {
     if (!req.file) {
@@ -844,6 +844,79 @@ app.post('/api/videos/upload', upload.single('video'), async (req, res) => {
       }
     });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Upload multiple de vidéos
+app.post('/api/videos/upload-multiple', upload.array('videos', 20), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'Aucun fichier fourni' });
+    }
+
+    const { category, subcategory } = await resolveUploadDirectories(
+      req.body.category,
+      req.body.subcategory
+    );
+    const targetDir = subcategory
+      ? path.join(VIDEOS_DIR, category, subcategory)
+      : path.join(VIDEOS_DIR, category);
+    await fs.mkdir(targetDir, { recursive: true });
+
+    const results = [];
+    const errors = [];
+
+    for (const file of req.files) {
+      try {
+        const targetPath = path.join(targetDir, file.filename);
+        await fs.rename(file.path, targetPath);
+        await updateConfigurationWithVideo(
+          req.body.category,
+          req.body.subcategory,
+          category,
+          subcategory,
+          file.filename,
+          file.mimetype,
+          null // pas de displayName pour upload multiple
+        );
+
+        results.push({
+          name: file.filename,
+          size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+          path: targetPath,
+          success: true
+        });
+
+        console.log('[admin] POST /api/videos/upload-multiple - file uploaded', {
+          filename: file.filename,
+          size: file.size,
+          category,
+          subcategory
+        });
+      } catch (fileError) {
+        errors.push({
+          name: file.filename,
+          error: fileError.message
+        });
+        console.error('[admin] Error uploading file:', file.filename, fileError);
+      }
+    }
+
+    console.log('[admin] POST /api/videos/upload-multiple complete', {
+      total: req.files.length,
+      success: results.length,
+      failed: errors.length
+    });
+
+    res.json({
+      success: errors.length === 0,
+      message: `${results.length}/${req.files.length} vidéo(s) uploadée(s) avec succès`,
+      files: results,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error('[admin] Error in upload-multiple:', error);
     res.status(500).json({ error: error.message });
   }
 });

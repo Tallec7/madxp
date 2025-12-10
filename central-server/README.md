@@ -126,6 +126,42 @@ Response:
 | DELETE | /api/groups/:id | Supprimer |
 | POST | /api/groups/:id/command | Commande groupée |
 
+### Content (Videos & Deployments)
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | /api/videos | Liste des vidéos |
+| GET | /api/videos/:id | Détail d'une vidéo |
+| POST | /api/videos | Upload simple (1 fichier) |
+| POST | /api/videos/bulk | **Upload multiple (jusqu'à 20 fichiers)** |
+| PUT | /api/videos/:id | Modifier une vidéo |
+| DELETE | /api/videos/:id | Supprimer (admin) |
+| GET | /api/deployments | Liste des déploiements |
+| POST | /api/deployments | Créer un déploiement |
+| PUT | /api/deployments/:id | Modifier un déploiement |
+| DELETE | /api/deployments/:id | Annuler (admin) |
+
+**Exemple upload multiple :**
+```bash
+curl -X POST https://api.neopro.fr/api/videos/bulk \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "videos=@video1.mp4" \
+  -F "videos=@video2.mp4" \
+  -F "videos=@video3.mp4"
+```
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "message": "3/3 vidéo(s) uploadée(s) avec succès",
+  "files": [
+    { "id": "uuid", "name": "uuid.mp4", "title": "video1.mp4", "size": 12345678 }
+  ],
+  "errors": []
+}
+```
+
 ---
 
 ## 🔌 WebSocket Protocol
@@ -284,4 +320,4 @@ Les vidéos sont stockées temporairement dans Supabase Storage :
 
 ---
 
-**Dernière mise à jour :** 8 décembre 2025
+**Dernière mise à jour :** 10 décembre 2025

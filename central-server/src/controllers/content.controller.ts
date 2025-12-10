@@ -105,6 +105,80 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const createVideos = async (req: AuthRequest, res: Response) => {
+  try {
+    const files = req.files as Express.Multer.File[];
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'Aucun fichier vidéo fourni' });
+    }
+
+    const { category, subcategory } = req.body;
+    const results: Array<{ id: string; name: string; title: string; size: number; success: true }> = [];
+    const errors: Array<{ name: string; error: string }> = [];
+
+    for (const file of files) {
+      try {
+        // Générer un nom de fichier unique
+        const uniqueId = uuidv4();
+        const ext = path.extname(file.originalname);
+        const filename = `${uniqueId}${ext}`;
+
+        // Upload vers Supabase Storage
+        const uploadResult = await uploadFile(file.buffer, filename, file.mimetype);
+
+        if (!uploadResult) {
+          errors.push({ name: file.originalname, error: 'Erreur lors de l\'upload vers le stockage' });
+          continue;
+        }
+
+        // Utiliser le nom original comme titre
+        const videoTitle = file.originalname;
+        const original_name = file.originalname;
+        const file_size = file.size;
+        const mime_type = file.mimetype;
+
+        const result = await pool.query(
+          `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, metadata, uploaded_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           RETURNING id, filename as name, original_name, file_size as size`,
+          [filename, original_name, category || null, subcategory || null, file_size, mime_type, uploadResult.path, { title: videoTitle }, req.user?.id || null]
+        );
+
+        const video = result.rows[0] as { id: string; name: string; original_name: string; size: number };
+        results.push({
+          id: video.id,
+          name: video.name,
+          title: videoTitle,
+          size: video.size,
+          success: true
+        });
+
+        logger.info('Video created (bulk):', { id: video.id, filename, title: videoTitle });
+      } catch (fileError) {
+        const errorMessage = fileError instanceof Error ? fileError.message : 'Erreur inconnue';
+        errors.push({ name: file.originalname, error: errorMessage });
+        logger.error('Error creating video in bulk:', { filename: file.originalname, error: fileError });
+      }
+    }
+
+    const allSuccess = errors.length === 0;
+    const message = `${results.length}/${files.length} vidéo(s) uploadée(s) avec succès`;
+
+    logger.info('Bulk video upload completed:', { total: files.length, success: results.length, failed: errors.length });
+
+    res.status(allSuccess ? 201 : 207).json({
+      success: allSuccess,
+      message,
+      files: results,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    logger.error('Error in bulk video upload:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'upload des vidéos' });
+  }
+};
+
 export const updateVideo = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

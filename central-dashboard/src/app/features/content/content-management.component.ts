@@ -261,25 +261,60 @@ interface Deployment {
       </div>
 
       <!-- Upload Video Modal -->
-      <div class="modal" *ngIf="showUploadModal" (click)="showUploadModal = false">
-        <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal" *ngIf="showUploadModal" (click)="closeUploadModal()">
+        <div class="modal-content modal-large" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h2>Ajouter une vidéo</h2>
-            <button class="modal-close" (click)="showUploadModal = false">×</button>
+            <h2>Ajouter des vidéos</h2>
+            <button class="modal-close" (click)="closeUploadModal()">×</button>
           </div>
           <div class="modal-body">
-            <div class="form-group">
-              <label>Titre de la vidéo *</label>
+            <div class="form-group" *ngIf="uploadForm.files.length === 0">
+              <label>Titre de la vidéo (optionnel pour upload unique)</label>
               <input type="text" [(ngModel)]="uploadForm.title" placeholder="Ex: Présentation club">
             </div>
             <div class="form-group">
-              <label>Fichier vidéo *</label>
-              <input type="file" accept="video/*" (change)="onFileSelected($event)">
-              <div class="file-info" *ngIf="uploadForm.file">
-                {{ uploadForm.file.name }} ({{ formatFileSize(uploadForm.file.size) }})
+              <label>Fichiers vidéo *</label>
+              <div
+                class="drop-zone"
+                [class.drag-over]="isDragOver"
+                (dragover)="onDragOver($event)"
+                (dragleave)="onDragLeave($event)"
+                (drop)="onDrop($event)"
+                (click)="fileInput.click()"
+              >
+                <div class="drop-zone-content">
+                  <span class="drop-zone-icon">📁</span>
+                  <p>Glissez-déposez vos vidéos ici</p>
+                  <p class="drop-zone-hint">ou cliquez pour sélectionner (max 20 fichiers)</p>
+                </div>
+                <input
+                  #fileInput
+                  type="file"
+                  accept="video/*"
+                  multiple
+                  (change)="onFilesSelected($event)"
+                  style="display: none"
+                >
               </div>
             </div>
-            <div class="upload-progress" *ngIf="uploadProgress > 0">
+
+            <!-- Selected Files List -->
+            <div class="selected-files" *ngIf="uploadForm.files.length > 0">
+              <div class="selected-files-header">
+                <span>{{ uploadForm.files.length }} fichier(s) sélectionné(s)</span>
+                <button class="btn btn-sm btn-secondary" (click)="clearSelectedFiles()">Effacer</button>
+              </div>
+              <ul class="files-list">
+                <li class="file-item" *ngFor="let file of uploadForm.files; let i = index">
+                  <span class="file-name">🎬 {{ file.name }}</span>
+                  <span class="file-size">{{ formatFileSize(file.size) }}</span>
+                  <button class="btn-icon btn-danger" (click)="removeFile(i)">✕</button>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Upload Progress -->
+            <div class="upload-progress" *ngIf="isUploading">
               <div class="progress-bar">
                 <div class="progress-fill progress-in_progress" [style.width.%]="uploadProgress"></div>
               </div>
@@ -288,15 +323,26 @@ interface Deployment {
                 <span>{{ uploadProgress }}%</span>
               </div>
             </div>
+
+            <!-- Upload Results -->
+            <div class="upload-results" *ngIf="uploadResults.length > 0">
+              <ul>
+                <li *ngFor="let result of uploadResults" [class.result-success]="result.success" [class.result-error]="!result.success">
+                  {{ result.success ? '✅' : '❌' }} {{ result.name }}
+                  <span *ngIf="result.error">: {{ result.error }}</span>
+                </li>
+              </ul>
+            </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="showUploadModal = false">Annuler</button>
+            <button class="btn btn-secondary" (click)="closeUploadModal()">{{ uploadResults.length > 0 ? 'Fermer' : 'Annuler' }}</button>
             <button
               class="btn btn-primary"
-              (click)="uploadVideo()"
-              [disabled]="!canUpload() || uploadProgress > 0"
+              (click)="uploadVideos()"
+              [disabled]="!canUpload() || isUploading"
+              *ngIf="uploadResults.length === 0"
             >
-              Uploader
+              Uploader {{ uploadForm.files.length > 1 ? '(' + uploadForm.files.length + ' fichiers)' : '' }}
             </button>
           </div>
         </div>
@@ -798,6 +844,157 @@ interface Deployment {
       border-radius: 8px;
     }
 
+    .modal-large {
+      max-width: 600px;
+    }
+
+    .drop-zone {
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: #f8fafc;
+    }
+
+    .drop-zone:hover {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+
+    .drop-zone.drag-over {
+      border-color: #2563eb;
+      background: #dbeafe;
+      transform: scale(1.01);
+    }
+
+    .drop-zone-icon {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: 0.75rem;
+    }
+
+    .drop-zone-content p {
+      margin: 0.25rem 0;
+      color: #334155;
+    }
+
+    .drop-zone-hint {
+      font-size: 0.875rem;
+      color: #64748b !important;
+    }
+
+    .selected-files {
+      margin-top: 1rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 1rem;
+    }
+
+    .selected-files-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .selected-files-header span {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .files-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.625rem 0.75rem;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+
+    .file-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .file-name {
+      flex: 1;
+      color: #0f172a;
+      font-size: 0.875rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-size {
+      color: #64748b;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .btn-icon {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.25rem;
+      font-size: 0.875rem;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .btn-icon:hover {
+      background: #fee2e2;
+    }
+
+    .upload-results {
+      margin-top: 1rem;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 0.75rem;
+    }
+
+    .upload-results ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .upload-results li {
+      padding: 0.5rem 0.625rem;
+      font-size: 0.8125rem;
+      border-radius: 4px;
+      margin-bottom: 0.25rem;
+    }
+
+    .upload-results li:last-child {
+      margin-bottom: 0;
+    }
+
+    .result-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .result-error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
     .modal-footer {
       display: flex;
       justify-content: flex-end;
@@ -848,10 +1045,14 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   videoSearch = '';
   showUploadModal = false;
   uploadProgress = 0;
+  isUploading = false;
+  isDragOver = false;
+  uploadResults: Array<{ name: string; success: boolean; error?: string }> = [];
 
   uploadForm = {
     title: '',
-    file: null as File | null
+    file: null as File | null,
+    files: [] as File[]
   };
 
   deployForm = {
@@ -963,42 +1164,141 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
-  onFileSelected(event: any): void {
-    const file = event.target.files[0];
-    if (file) {
-      this.uploadForm.file = file;
+  onFilesSelected(event: any): void {
+    const files = Array.from(event.target.files) as File[];
+    this.addFilesToSelection(files);
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver = false;
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver = false;
+
+    const files = Array.from(event.dataTransfer?.files || []).filter(f => f.type.startsWith('video/'));
+    this.addFilesToSelection(files);
+  }
+
+  addFilesToSelection(files: File[]): void {
+    const maxFiles = 20;
+    const remaining = maxFiles - this.uploadForm.files.length;
+    const filesToAdd = files.slice(0, remaining);
+    this.uploadForm.files = [...this.uploadForm.files, ...filesToAdd];
+
+    if (files.length > remaining) {
+      this.notificationService.warning(`Seulement ${remaining} fichier(s) ajouté(s). Maximum ${maxFiles} fichiers.`);
     }
   }
 
-  canUpload(): boolean {
-    return !!(this.uploadForm.title && this.uploadForm.file);
+  removeFile(index: number): void {
+    this.uploadForm.files.splice(index, 1);
   }
 
-  uploadVideo(): void {
+  clearSelectedFiles(): void {
+    this.uploadForm.files = [];
+  }
+
+  closeUploadModal(): void {
+    if (this.isUploading) return;
+    this.showUploadModal = false;
+    this.uploadForm = { title: '', file: null, files: [] };
+    this.uploadProgress = 0;
+    this.uploadResults = [];
+  }
+
+  canUpload(): boolean {
+    return this.uploadForm.files.length > 0;
+  }
+
+  uploadVideos(): void {
     if (!this.canUpload()) return;
 
-    const formData = new FormData();
-    formData.append('title', this.uploadForm.title);
-    formData.append('video', this.uploadForm.file!);
-
+    this.isUploading = true;
     this.uploadProgress = 10;
+    this.uploadResults = [];
 
-    this.apiService.upload<Video>('/videos', formData).subscribe({
-      next: (video) => {
-        this.uploadProgress = 100;
-        this.videos.unshift(video);
-        this.showUploadModal = false;
-        setTimeout(() => {
-          this.uploadProgress = 0;
-          this.uploadForm = { title: '', file: null };
-        }, 500);
-        this.notificationService.success('Vidéo uploadée avec succès !');
-      },
-      error: (error) => {
-        this.notificationService.error('Erreur lors de l\'upload: ' + (error.error?.error || error.message));
-        this.uploadProgress = 0;
+    const files = this.uploadForm.files;
+
+    if (files.length === 1) {
+      // Single file upload
+      const formData = new FormData();
+      if (this.uploadForm.title) {
+        formData.append('title', this.uploadForm.title);
       }
-    });
+      formData.append('video', files[0]);
+
+      this.apiService.upload<Video>('/videos', formData).subscribe({
+        next: (video) => {
+          this.uploadProgress = 100;
+          this.videos.unshift(video);
+          this.uploadResults = [{ name: files[0].name, success: true }];
+          this.isUploading = false;
+          this.notificationService.success('Vidéo uploadée avec succès !');
+          this.loadVideos();
+        },
+        error: (error) => {
+          this.uploadResults = [{ name: files[0].name, success: false, error: error.error?.error || error.message }];
+          this.notificationService.error('Erreur lors de l\'upload');
+          this.uploadProgress = 0;
+          this.isUploading = false;
+        }
+      });
+    } else {
+      // Multiple files upload
+      const formData = new FormData();
+      files.forEach(file => {
+        formData.append('videos', file);
+      });
+
+      this.apiService.upload<{
+        success: boolean;
+        message: string;
+        files?: Array<{ id: string; name: string; title: string; size: number; success: true }>;
+        errors?: Array<{ name: string; error: string }>;
+      }>('/videos/bulk', formData).subscribe({
+        next: (response) => {
+          this.uploadProgress = 100;
+          this.isUploading = false;
+
+          // Build results
+          this.uploadResults = [];
+          if (response.files) {
+            response.files.forEach(f => {
+              this.uploadResults.push({ name: f.title, success: true });
+            });
+          }
+          if (response.errors) {
+            response.errors.forEach(e => {
+              this.uploadResults.push({ name: e.name, success: false, error: e.error });
+            });
+          }
+
+          if (response.success) {
+            this.notificationService.success(response.message);
+          } else {
+            this.notificationService.warning(response.message);
+          }
+
+          this.loadVideos();
+        },
+        error: (error) => {
+          this.notificationService.error('Erreur lors de l\'upload: ' + (error.error?.error || error.message));
+          this.uploadProgress = 0;
+          this.isUploading = false;
+        }
+      });
+    }
   }
 
   deleteVideo(video: Video): void {

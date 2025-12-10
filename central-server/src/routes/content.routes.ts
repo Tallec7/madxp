@@ -9,6 +9,7 @@ const router = Router();
 router.get('/videos', authenticate, contentController.getVideos);
 router.get('/videos/:id', authenticate, contentController.getVideo);
 router.post('/videos', authenticate, requireRole('admin', 'operator'), uploadVideo.single('video'), contentController.createVideo);
+router.post('/videos/bulk', authenticate, requireRole('admin', 'operator'), uploadVideo.array('videos', 20), contentController.createVideos);
 router.put('/videos/:id', authenticate, requireRole('admin', 'operator'), contentController.updateVideo);
 router.delete('/videos/:id', authenticate, requireRole('admin'), contentController.deleteVideo);
 

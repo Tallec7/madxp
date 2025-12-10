@@ -75,8 +75,16 @@ central-dashboard/
 | Site Detail | Métriques, commandes, logs |
 | Groups List | Gestion des groupes |
 | Group Detail | Actions groupées |
-| Content | Gestion et déploiement vidéos |
+| Content | Gestion et déploiement vidéos (upload multiple, drag & drop) |
 | Updates | Mises à jour logicielles |
+
+### Gestion du Contenu (Content)
+
+- **Upload multiple** : jusqu'à 20 fichiers vidéo à la fois
+- **Drag & Drop** : glisser-déposer des fichiers dans la zone d'upload
+- Liste des fichiers sélectionnés avec possibilité de retirer individuellement
+- Affichage des résultats détaillés (succès/erreurs)
+- Déploiement vers sites individuels ou groupes
 
 ---
 
@@ -164,6 +172,6 @@ npm run lint           # Linter
 
 ---
 
-**Version :** 1.0.0
+**Version :** 1.1.0
 **Framework :** Angular 17 Standalone Components
-**Dernière mise à jour :** 7 décembre 2025
+**Dernière mise à jour :** 10 décembre 2025

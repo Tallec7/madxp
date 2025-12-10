@@ -32,8 +32,11 @@ Interface organisée en 4 sous-onglets :
 - **Vidéos orphelines** : détection et intégration des vidéos non référencées
 
 #### 📤 Ajouter
-- Upload de vidéos (MP4, MKV, MOV) - Limite: 500MB par fichier
+- **Upload multiple de vidéos** (jusqu'à 20 fichiers à la fois)
+- **Drag & Drop** : glisser-déposer des fichiers directement dans la zone d'upload
+- Formats supportés : MP4, MKV, MOV - Limite : 500MB par fichier
 - Sélection de catégorie et sous-catégorie
+- Affichage des résultats d'upload avec succès/erreurs détaillés
 
 #### 📂 Organiser
 - **Gestion des catégories** : création, modification et suppression
@@ -96,7 +99,12 @@ sudo systemctl start neopro-admin
 #### Vidéos
 - `GET /api/videos` - Liste toutes les vidéos (disque)
 - `GET /api/videos/orphans` - Liste les vidéos non référencées dans la config
-- `POST /api/videos/upload` - Upload (multipart)
+- `POST /api/videos/upload` - Upload simple (multipart, 1 fichier)
+- `POST /api/videos/upload-multiple` - Upload multiple (multipart, jusqu'à 20 fichiers)
+  ```json
+  // Response
+  { "success": true, "message": "5/5 vidéo(s) uploadée(s) avec succès", "files": [...], "errors": [] }
+  ```
 - `POST /api/videos/add-to-config` - Ajoute une vidéo orpheline à la configuration
   ```json
   { "videoPath": "MATCH_SF/BUT/video.mp4", "categoryId": "Match_SF", "subcategoryId": "But" }
@@ -234,6 +242,7 @@ Pour toute question : support@neopro.fr
 
 ---
 
-**Version :** 1.0.0
+**Version :** 1.1.0
 **Licence :** MIT
 **Auteur :** Neopro / Kalon Partners
+**Dernière mise à jour :** 10 décembre 2025
