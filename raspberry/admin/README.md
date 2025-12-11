@@ -161,6 +161,10 @@ sudo systemctl start neopro-admin
 #### Services
 - `POST /api/services/:service/restart` - Redémarrer service
 
+> ℹ️ En développement (conteneur Docker sans `sudo` ou avec l'option *no new privileges*),
+> le serveur retente automatiquement la commande **sans `sudo`** lorsqu'il tourne en root.
+> Le redémarrage peut néanmoins échouer si `systemd` n'est pas disponible dans l'environnement.
+
 #### Mise à jour
 - `POST /api/update` - Upload package (multipart .tar.gz)
 

@@ -582,12 +582,42 @@ const upload = multer({
 
 // Exécuter une commande shell de manière sécurisée
 async function execCommand(command) {
-  try {
-    const { stdout, stderr } = await execAsync(command);
-    return { success: true, output: stdout, error: stderr };
-  } catch (error) {
-    return { success: false, error: error.message };
+  const run = async cmd => {
+    try {
+      const { stdout, stderr } = await execAsync(cmd);
+      return { success: true, output: stdout, error: stderr };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const result = await run(command);
+  const isRoot = typeof process.getuid === 'function' && process.getuid() === 0;
+  const hasSudo = command.trim().startsWith('sudo ');
+
+  const sudoLikelyBlocked =
+    result.success === false &&
+    hasSudo &&
+    isRoot &&
+    result.error &&
+    (
+      result.error.includes('no new privileges') ||
+      result.error.toLowerCase().includes('sudo: command not found') ||
+      result.error.toLowerCase().includes('sudo: permission denied')
+    );
+
+  if (sudoLikelyBlocked) {
+    const commandWithoutSudo = command.replace(/^sudo\s+/, '');
+    const fallbackResult = await run(commandWithoutSudo);
+
+    if (!fallbackResult.success && fallbackResult.error) {
+      fallbackResult.error = `${result.error} | fallback without sudo: ${fallbackResult.error}`;
+    }
+
+    return fallbackResult;
   }
+
+  return result;
 }
 
 // S'assurer qu'un dossier existe (utile en dev local)
