@@ -94,7 +94,7 @@ AUTO_UPDATE_HOUR=3
 
 # Sécurité
 MAX_DOWNLOAD_SIZE=1073741824
-ALLOWED_COMMANDS=deploy_video,delete_video,update_software,update_config,reboot,restart_service,get_logs,get_config,update_hotspot,get_hotspot_config
+ALLOWED_COMMANDS=deploy_video,delete_video,update_software,update_config,reboot,restart_service,get_logs,get_system_info,get_config,update_hotspot,get_hotspot_config
 ```
 
 ## 🚀 Utilisation

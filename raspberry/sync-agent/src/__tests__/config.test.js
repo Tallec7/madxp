@@ -20,8 +20,21 @@ describe('config defaults', () => {
       const { config } = require('../config');
 
       expect(config.security.allowedCommands).toEqual(
-        expect.arrayContaining(['update_hotspot', 'get_hotspot_config'])
+        expect.arrayContaining(['update_hotspot', 'get_hotspot_config', 'get_system_info'])
       );
+    });
+  });
+
+  it('adds missing default commands when ALLOWED_COMMANDS is outdated', () => {
+    process.env.ALLOWED_COMMANDS = 'deploy_video, delete_video ,get_logs';
+
+    jest.isolateModules(() => {
+      const { config } = require('../config');
+
+      expect(config.security.allowedCommands).toEqual(
+        expect.arrayContaining(['update_hotspot', 'get_hotspot_config', 'get_system_info'])
+      );
+      expect(config.security.allowedCommands).not.toContain(' delete_video ');
     });
   });
 });

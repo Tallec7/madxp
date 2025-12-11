@@ -10,6 +10,38 @@ if (fs.existsSync(configPath)) {
 
 dotenv.config({ path: path.join(__dirname, '../config/.env') });
 
+const DEFAULT_ALLOWED_COMMANDS = [
+  'deploy_video',
+  'delete_video',
+  'update_software',
+  'update_config',
+  'reboot',
+  'restart_service',
+  'get_logs',
+  'get_system_info',
+  'get_config',
+  'update_hotspot',
+  'get_hotspot_config',
+];
+
+const buildAllowedCommands = () => {
+  const commands = process.env.ALLOWED_COMMANDS
+    ? process.env.ALLOWED_COMMANDS.split(',').map((cmd) => cmd.trim()).filter(Boolean)
+    : [...DEFAULT_ALLOWED_COMMANDS];
+
+  const commandsSet = new Set(commands);
+  const missingCommands = DEFAULT_ALLOWED_COMMANDS.filter((cmd) => !commandsSet.has(cmd));
+
+  if (missingCommands.length > 0) {
+    missingCommands.forEach((cmd) => commandsSet.add(cmd));
+    console.warn(
+      `Adding missing default commands to ALLOWED_COMMANDS: ${missingCommands.join(', ')}`
+    );
+  }
+
+  return Array.from(commandsSet);
+};
+
 const config = {
   central: {
     url: process.env.CENTRAL_SERVER_URL || 'http://localhost:3001',
@@ -53,9 +85,7 @@ const config = {
 
   security: {
     maxDownloadSize: parseInt(process.env.MAX_DOWNLOAD_SIZE || '1073741824'),
-    allowedCommands: process.env.ALLOWED_COMMANDS
-      ? process.env.ALLOWED_COMMANDS.split(',')
-      : ['deploy_video', 'delete_video', 'update_software', 'update_config', 'reboot', 'restart_service', 'get_logs', 'get_config', 'update_hotspot', 'get_hotspot_config'],
+    allowedCommands: buildAllowedCommands(),
   },
 };
 
