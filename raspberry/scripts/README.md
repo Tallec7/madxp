@@ -133,6 +133,7 @@ ssh pi@neopro.local './diagnose-pi.sh'
 | `restore-club.sh` | `raspberry/scripts/` | Sur Mac | Restauration d'un backup |
 | `build-raspberry.sh` | `raspberry/scripts/` | Sur Mac | Build Angular uniquement |
 | `deploy-remote.sh` | `raspberry/scripts/` | Sur Mac | Déploiement SSH uniquement |
+| `generate-config-from-videos.sh` | `raspberry/scripts/` | Sur Mac | **Génère config JSON depuis dossier vidéos** |
 
 ### Scripts de maintenance
 
@@ -268,6 +269,64 @@ Archive dans `raspberry/backups/CLUB-backup-DATE.tar.gz`
 4. Supprime la clé SSH connue (optionnel)
 
 **Note :** La réinitialisation complète nécessite de taper "SUPPRIMER" pour confirmer.
+
+---
+
+### generate-config-from-videos.sh (Sur Mac)
+
+**Usage :**
+```bash
+./raspberry/scripts/generate-config-from-videos.sh <dossier_videos> [nom_club] [fichier_sortie]
+```
+
+**Exemples :**
+```bash
+# Génération basique
+./raspberry/scripts/generate-config-from-videos.sh ~/Downloads/videos_club MONCLUB config.json
+
+# Avec structure 2 niveaux (catégorie/sous-catégorie)
+./raspberry/scripts/generate-config-from-videos.sh ~/Videos/handball HANDBALL handball-config.json
+
+# Avec structure 3 niveaux (ex: MATCH/SF/BUT)
+./raspberry/scripts/generate-config-from-videos.sh ~/Videos/racc RACC racc-config.json
+```
+
+**Structure de dossiers supportée :**
+
+```
+videos/
+├── PARTENAIRES/              → Boucle sponsors (automatique)
+│   ├── BOUCLE_PARTENAIRES.mp4
+│   └── NEOPRO.mp4
+├── ENTREE/                   → Catégorie simple (1 niveau)
+│   ├── JOUEUR_01.mp4
+│   └── JOUEUR_02.mp4
+├── MATCH/                    → Catégorie avec sous-catégories (2 niveaux)
+│   ├── BUT/
+│   │   └── JOUEUR_01.mp4
+│   └── JINGLE/
+│       └── MI_TEMPS.mp4
+└── MATCH/                    → Catégorie avec 3 niveaux (automatique)
+    ├── SF/                   → Génère "SF - BUT", "SF - JINGLE"
+    │   ├── BUT/
+    │   └── JINGLE/
+    └── SM1/                  → Génère "SM1 - BUT", "SM1 - JINGLE"
+        ├── BUT/
+        └── JINGLE/
+```
+
+**Ce qu'il fait :**
+1. Scanne récursivement le dossier (supporte 1, 2 ou 3 niveaux)
+2. Détecte automatiquement les fichiers vidéo (.mp4, .mkv, .mov, .avi, .webm)
+3. Crée des noms lisibles (JOUEUR_01.mp4 → "JOUEUR 01")
+4. Demande interactivement les infos du club
+5. Génère un fichier JSON prêt pour le déploiement
+
+**Fonctionnalités :**
+- Supporte les noms de dossiers avec accents et espaces
+- Compatible macOS (Bash 3.2) et Linux
+- Détecte automatiquement le dossier PARTENAIRES pour les sponsors
+- Fusionne automatiquement les structures à 3 niveaux (SF/BUT → "SF - BUT")
 
 ---
 

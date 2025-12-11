@@ -106,26 +106,35 @@ scan_videos() {
     local dir="$1"
     local base_path="$2"
     local first=true
+    local output=""
 
     if [ ! -d "$dir" ]; then
         return
     fi
 
-    # Trouver tous les fichiers vidéo
-    while IFS= read -r -d '' file; do
-        local filename=$(basename "$file")
+    # Récupérer la liste des fichiers vidéo via ls
+    local files=$(ls -1 "$dir" 2>/dev/null | grep -iE '\.(mp4|mkv|mov|avi|webm)$' | sort)
+
+    # Parcourir les fichiers
+    while IFS= read -r filename; do
+        [ -z "$filename" ] && continue
+        [ -f "$dir/$filename" ] || continue
+
         local readable_name=$(make_readable_name "$filename")
         local video_type=$(get_video_type "$filename")
-        local rel_path="${base_path}/$(basename "$file")"
+        local rel_path="${base_path}/${filename}"
 
         if [ "$first" = true ]; then
             first=false
         else
-            echo ","
+            output="${output},"$'\n'
         fi
 
-        echo -n "                    { \"name\": \"$(escape_json "$readable_name")\", \"path\": \"$(escape_json "$rel_path")\", \"type\": \"$video_type\" }"
-    done < <(find "$dir" -maxdepth 1 -type f \( -iname "*.mp4" -o -iname "*.mkv" -o -iname "*.mov" -o -iname "*.avi" -o -iname "*.webm" \) -print0 | sort -z)
+        output="${output}                    { \"name\": \"$(escape_json "$readable_name")\", \"path\": \"$(escape_json "$rel_path")\", \"type\": \"$video_type\" }"
+    done <<< "$files"
+
+    # Afficher le résultat
+    echo -n "$output"
 }
 
 # Fonction pour compter les vidéos
@@ -138,7 +147,27 @@ count_videos() {
     fi
 }
 
-# Fonction pour générer une catégorie avec sous-catégories
+# Fonction pour vérifier si un dossier a des sous-sous-dossiers avec des vidéos (3 niveaux)
+has_deep_video_subdirs() {
+    local dir="$1"
+    local sub
+    for sub in "$dir"/*/; do
+        if [ -d "$sub" ]; then
+            local subsub
+            for subsub in "$sub"/*/; do
+                if [ -d "$subsub" ]; then
+                    local count=$(count_videos "$subsub")
+                    if [ "$count" -gt 0 ]; then
+                        return 0
+                    fi
+                fi
+            done
+        fi
+    done
+    return 1
+}
+
+# Fonction pour générer une catégorie avec sous-catégories (2 niveaux)
 generate_category_with_subcategories() {
     local dir="$1"
     local base_path="$2"
@@ -154,6 +183,7 @@ generate_category_with_subcategories() {
     echo "            \"subCategories\": ["
 
     # Scanner les sous-dossiers
+    local subdir
     for subdir in "$dir"/*/; do
         if [ -d "$subdir" ]; then
             local subdir_name=$(basename "$subdir")
@@ -186,6 +216,68 @@ generate_category_with_subcategories() {
     echo -n "        }"
 }
 
+# Fonction pour générer une catégorie avec 3 niveaux (ex: MATCH/SF/BUT)
+# Fusionne les niveaux 2 et 3 en sous-catégories: "SF - BUT", "SF - JINGLE", "SM1 - BUT", etc.
+generate_category_with_deep_subcategories() {
+    local dir="$1"
+    local base_path="$2"
+    local cat_name="$3"
+    local cat_id="$4"
+    local first_sub=true
+
+    echo "        {"
+    echo "            \"id\": \"$cat_id\","
+    echo "            \"name\": \"$cat_name\","
+    echo "            \"locked\": false,"
+    echo "            \"owner\": \"club\","
+    echo "            \"subCategories\": ["
+
+    # Scanner les sous-dossiers (niveau 2: SF, SM1)
+    local subdir
+    for subdir in "$dir"/*/; do
+        if [ -d "$subdir" ]; then
+            local subdir_name=$(basename "$subdir")
+            local sub_readable=$(make_readable_name "$subdir_name")
+
+            # Scanner les sous-sous-dossiers (niveau 3: BUT, JINGLE)
+            local subsubdir
+            for subsubdir in "$subdir"/*/; do
+                if [ -d "$subsubdir" ]; then
+                    local subsubdir_name=$(basename "$subsubdir")
+                    local subsub_readable=$(make_readable_name "$subsubdir_name")
+                    local video_count=$(count_videos "$subsubdir")
+
+                    if [ "$video_count" -gt 0 ]; then
+                        # Créer un ID et nom combiné: "sf-but", "SF - BUT"
+                        local combined_id=$(make_id "${subdir_name}-${subsubdir_name}")
+                        local combined_name="${sub_readable} - ${subsub_readable}"
+
+                        if [ "$first_sub" = true ]; then
+                            first_sub=false
+                        else
+                            echo ","
+                        fi
+
+                        echo "                {"
+                        echo "                    \"id\": \"$combined_id\","
+                        echo "                    \"name\": \"$combined_name\","
+                        echo "                    \"locked\": false,"
+                        echo "                    \"videos\": ["
+                        scan_videos "$subsubdir" "$base_path/$subdir_name/$subsubdir_name"
+                        echo ""
+                        echo "                    ]"
+                        echo -n "                }"
+                    fi
+                fi
+            done
+        fi
+    done
+
+    echo ""
+    echo "            ]"
+    echo -n "        }"
+}
+
 # Fonction pour générer une catégorie simple (sans sous-catégories)
 generate_simple_category() {
     local dir="$1"
@@ -208,9 +300,10 @@ generate_simple_category() {
 # Fonction pour vérifier si un dossier a des sous-dossiers avec des vidéos
 has_video_subdirs() {
     local dir="$1"
-    for subdir in "$dir"/*/; do
-        if [ -d "$subdir" ]; then
-            local count=$(count_videos "$subdir")
+    local sub
+    for sub in "$dir"/*/; do
+        if [ -d "$sub" ]; then
+            local count=$(count_videos "$sub")
             if [ "$count" -gt 0 ]; then
                 return 0
             fi
@@ -308,7 +401,6 @@ print_step "Analyse du répertoire vidéos..."
 
 # Compter les vidéos par catégorie
 total_videos=0
-declare -A category_counts
 
 for subdir in "$VIDEO_DIR"/*/; do
     if [ -d "$subdir" ]; then
@@ -317,16 +409,21 @@ for subdir in "$VIDEO_DIR"/*/; do
         # Compter les vidéos directes
         direct_count=$(count_videos "$subdir")
 
-        # Compter les vidéos dans les sous-dossiers
+        # Compter les vidéos dans les sous-dossiers (niveau 2) et sous-sous-dossiers (niveau 3)
         sub_count=0
         for sub_subdir in "$subdir"/*/; do
             if [ -d "$sub_subdir" ]; then
                 sub_count=$((sub_count + $(count_videos "$sub_subdir")))
+                # Vérifier aussi les sous-sous-dossiers (niveau 3)
+                for sub_sub_subdir in "$sub_subdir"/*/; do
+                    if [ -d "$sub_sub_subdir" ]; then
+                        sub_count=$((sub_count + $(count_videos "$sub_sub_subdir")))
+                    fi
+                done
             fi
         done
 
         total=$((direct_count + sub_count))
-        category_counts["$dir_name"]=$total
         total_videos=$((total_videos + total))
 
         if [ $total -gt 0 ]; then
@@ -462,14 +559,18 @@ for subdir in "$VIDEO_DIR"/*/; do
                 ;;
         esac
 
-        # Vérifier s'il y a des vidéos (directes ou dans sous-dossiers)
+        # Vérifier s'il y a des vidéos (directes, dans sous-dossiers, ou dans sous-sous-dossiers)
         direct_count=$(count_videos "$subdir")
         has_subdirs=false
-        if has_video_subdirs "$subdir"; then
+        has_deep_subdirs=false
+
+        if has_deep_video_subdirs "$subdir"; then
+            has_deep_subdirs=true
+        elif has_video_subdirs "$subdir"; then
             has_subdirs=true
         fi
 
-        if [ "$direct_count" -eq 0 ] && [ "$has_subdirs" = false ]; then
+        if [ "$direct_count" -eq 0 ] && [ "$has_subdirs" = false ] && [ "$has_deep_subdirs" = false ]; then
             continue
         fi
 
@@ -483,10 +584,15 @@ for subdir in "$VIDEO_DIR"/*/; do
             echo "," >> "$OUTPUT_FILE"
         fi
 
-        # Si le dossier a des sous-dossiers avec des vidéos, générer avec subCategories
-        if [ "$has_subdirs" = true ]; then
+        # Choisir le bon générateur selon la profondeur
+        if [ "$has_deep_subdirs" = true ]; then
+            # 3 niveaux: MATCH/SF/BUT -> sous-catégories "SF - BUT"
+            generate_category_with_deep_subcategories "$subdir" "$VIDEO_BASE_PATH/$dir_name" "$cat_name" "$cat_id" >> "$OUTPUT_FILE"
+        elif [ "$has_subdirs" = true ]; then
+            # 2 niveaux: MATCH/BUT -> sous-catégories normales
             generate_category_with_subcategories "$subdir" "$VIDEO_BASE_PATH/$dir_name" "$cat_name" "$cat_id" >> "$OUTPUT_FILE"
         else
+            # 1 niveau: vidéos directes
             generate_simple_category "$subdir" "$VIDEO_BASE_PATH/$dir_name" "$cat_name" "$cat_id" >> "$OUTPUT_FILE"
         fi
     fi
