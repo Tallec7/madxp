@@ -1,13 +1,20 @@
 import { Router } from 'express';
 import * as updatesController from '../controllers/updates.controller';
 import { authenticate, requireRole } from '../middleware/auth';
+import { uploadUpdatePackage } from '../middleware/upload';
 
 const router = Router();
 
 // Update routes
 router.get('/updates', authenticate, updatesController.getUpdates);
 router.get('/updates/:id', authenticate, updatesController.getUpdate);
-router.post('/updates', authenticate, requireRole('admin'), updatesController.createUpdate);
+router.post(
+  '/updates',
+  authenticate,
+  requireRole('admin'),
+  uploadUpdatePackage.single('package'),
+  updatesController.createUpdate
+);
 router.put('/updates/:id', authenticate, requireRole('admin'), updatesController.updateUpdate);
 router.delete('/updates/:id', authenticate, requireRole('admin'), updatesController.deleteUpdate);
 

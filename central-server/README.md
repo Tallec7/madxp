@@ -126,6 +126,14 @@ Response:
 | DELETE | /api/groups/:id | Supprimer |
 | POST | /api/groups/:id/command | Commande groupée |
 
+### Updates
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | /api/updates | Liste des versions logicielles |
+| POST | /api/updates | Créer une version (multipart/form-data avec le fichier `package`) |
+| POST | /api/update-deployments | Déployer une version sur un site ou un groupe |
+
 ### Content (Videos & Deployments)
 
 | Méthode | Endpoint | Description |

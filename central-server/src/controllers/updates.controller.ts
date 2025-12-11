@@ -1,12 +1,15 @@
 import { Response } from 'express';
+import crypto from 'crypto';
 import logger from '../config/logger';
 import pool from '../config/database';
 import { AuthRequest } from '../types';
+import { UPDATE_BUCKET, uploadFile } from '../config/supabase';
 
 export const getUpdates = async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
-      `SELECT id, version, changelog as release_notes, package_url as file_url,
+      `SELECT id, version, description, is_critical,
+              changelog as release_notes, package_url as file_url,
               package_size as file_size, checksum, created_at
        FROM software_updates
        ORDER BY created_at DESC`
@@ -24,7 +27,8 @@ export const getUpdate = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     const result = await pool.query(
-      `SELECT id, version, changelog as release_notes, package_url as file_url,
+      `SELECT id, version, description, is_critical,
+              changelog as release_notes, package_url as file_url,
               package_size as file_size, checksum, created_at
        FROM software_updates
        WHERE id = $1`,
@@ -44,13 +48,36 @@ export const getUpdate = async (req: AuthRequest, res: Response) => {
 
 export const createUpdate = async (req: AuthRequest, res: Response) => {
   try {
-    const { version, changelog, package_url, package_size, checksum } = req.body;
+    const { version, release_notes, description, is_critical } = req.body;
+
+    if (!version || !req.file) {
+      return res.status(400).json({ error: 'Version et package requis' });
+    }
+
+    const file = req.file;
+    const filename = `update-${version}-${Date.now()}-${file.originalname}`;
+    const checksum = crypto.createHash('sha256').update(file.buffer).digest('hex');
+
+    const uploadResult = await uploadFile(file.buffer, filename, file.mimetype, UPDATE_BUCKET);
+
+    if (!uploadResult) {
+      return res.status(500).json({ error: "Impossible d'uploader le package" });
+    }
 
     const result = await pool.query(
-      `INSERT INTO software_updates (version, changelog, package_url, package_size, checksum, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [version, changelog, package_url, package_size, checksum, req.user?.id || null]
+      `INSERT INTO software_updates (version, description, is_critical, changelog, package_url, package_size, checksum, uploaded_by)
+       VALUES ($1, $2, COALESCE($3, false), $4, $5, $6, $7, $8)
+       RETURNING id, version, description, is_critical, changelog as release_notes, package_url as file_url, package_size as file_size, checksum, created_at`,
+      [
+        version,
+        description,
+        typeof is_critical === 'string' ? is_critical === 'true' : Boolean(is_critical),
+        release_notes,
+        uploadResult.url,
+        file.size,
+        checksum,
+        req.user?.id || null
+      ]
     );
 
     logger.info('Update created:', { id: result.rows[0].id, version });
@@ -64,18 +91,20 @@ export const createUpdate = async (req: AuthRequest, res: Response) => {
 export const updateUpdate = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { version, changelog, package_url, package_size, checksum } = req.body;
+    const { version, changelog, description, is_critical, package_url, package_size, checksum } = req.body;
 
     const result = await pool.query(
       `UPDATE software_updates
        SET version = COALESCE($1, version),
-           changelog = COALESCE($2, changelog),
-           package_url = COALESCE($3, package_url),
-           package_size = COALESCE($4, package_size),
-           checksum = COALESCE($5, checksum)
-       WHERE id = $6
+           description = COALESCE($2, description),
+           is_critical = COALESCE($3, is_critical),
+           changelog = COALESCE($4, changelog),
+           package_url = COALESCE($5, package_url),
+           package_size = COALESCE($6, package_size),
+           checksum = COALESCE($7, checksum)
+       WHERE id = $8
        RETURNING *`,
-      [version, changelog, package_url, package_size, checksum, id]
+      [version, description, is_critical, changelog, package_url, package_size, checksum, id]
     );
 
     if (result.rows.length === 0) {

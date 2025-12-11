@@ -97,6 +97,8 @@ CREATE TABLE IF NOT EXISTS content_deployments (
 CREATE TABLE IF NOT EXISTS software_updates (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   version VARCHAR(50) NOT NULL UNIQUE,
+  description TEXT,
+  is_critical BOOLEAN DEFAULT FALSE,
   changelog TEXT,
   package_url VARCHAR(500),
   package_size BIGINT,

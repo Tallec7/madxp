@@ -18,20 +18,22 @@ export const supabase = supabaseUrl && supabaseServiceKey
   : null;
 
 export const STORAGE_BUCKET = 'videos';
+export const UPDATE_BUCKET = 'software-updates';
 
-export const getPublicUrl = (path: string): string => {
+export const getPublicUrl = (path: string, bucket: string = STORAGE_BUCKET): string => {
   if (!supabase || !supabaseUrl) {
     return '';
   }
   // Nettoyer le path : supprimer le slash initial s'il existe
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-  return `${supabaseUrl}/storage/v1/object/public/${STORAGE_BUCKET}/${cleanPath}`;
+  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
 };
 
 export const uploadFile = async (
   file: Buffer,
   filename: string,
-  contentType: string
+  contentType: string,
+  bucket: string = STORAGE_BUCKET
 ): Promise<{ path: string; url: string } | null> => {
   if (!supabase) {
     logger.error('Supabase client not initialized');
@@ -41,7 +43,7 @@ export const uploadFile = async (
   const filePath = `uploads/${filename}`;
 
   const { data, error } = await supabase.storage
-    .from(STORAGE_BUCKET)
+    .from(bucket)
     .upload(filePath, file, {
       contentType,
       upsert: false,
@@ -52,20 +54,20 @@ export const uploadFile = async (
     return null;
   }
 
-  const url = getPublicUrl(data.path);
+  const url = getPublicUrl(data.path, bucket);
   logger.info('File uploaded to Supabase:', { path: data.path, url });
 
   return { path: data.path, url };
 };
 
-export const deleteFile = async (path: string): Promise<boolean> => {
+export const deleteFile = async (path: string, bucket: string = STORAGE_BUCKET): Promise<boolean> => {
   if (!supabase) {
     logger.error('Supabase client not initialized');
     return false;
   }
 
   const { error } = await supabase.storage
-    .from(STORAGE_BUCKET)
+    .from(bucket)
     .remove([path]);
 
   if (error) {

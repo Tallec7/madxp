@@ -1121,7 +1121,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
     formData.append('is_critical', String(this.createForm.is_critical));
     formData.append('package', this.createForm.file!);
 
-    this.apiService.post<SoftwareUpdate>('/updates', formData).subscribe({
+    this.apiService.upload<SoftwareUpdate>('/updates', formData).subscribe({
       next: (update) => {
         this.updates.unshift(update);
         this.showCreateModal = false;

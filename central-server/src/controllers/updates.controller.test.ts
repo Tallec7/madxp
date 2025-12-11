@@ -13,6 +13,11 @@ import {
 } from './updates.controller';
 import pool from '../config/database';
 import { AuthRequest } from '../types';
+import { uploadFile } from '../config/supabase';
+
+jest.mock('../config/supabase', () => ({
+  uploadFile: jest.fn(),
+}));
 
 // Helper to create mock response
 const createMockResponse = (): Response => {
@@ -111,19 +116,29 @@ describe('Updates Controller', () => {
         const req = createAuthRequest({
           body: {
             version: '2.0.0',
-            changelog: 'Major release',
-            package_url: 'https://example.com/update.zip',
-            package_size: 1024000,
-            checksum: 'abc123',
+            description: 'Major release',
+            release_notes: 'Notes détaillées',
+            is_critical: 'true',
           },
+          file: {
+            originalname: 'update.tar.gz',
+            mimetype: 'application/gzip',
+            size: 1024,
+            buffer: Buffer.from('file-content'),
+          } as unknown as Express.Multer.File,
         });
         const res = createMockResponse();
 
         const mockUpdate = {
           id: 'new-update-id',
           version: '2.0.0',
-          changelog: 'Major release',
+          description: 'Major release',
         };
+
+        (uploadFile as jest.Mock).mockResolvedValueOnce({
+          path: 'uploads/update.tar.gz',
+          url: 'https://storage/update.tar.gz',
+        });
 
         (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [mockUpdate] });
 
