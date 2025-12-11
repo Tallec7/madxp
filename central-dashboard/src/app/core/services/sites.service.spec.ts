@@ -16,6 +16,8 @@ describe('SitesService', () => {
     sports: ['football'],
     status: 'online',
     last_seen_at: new Date(),
+    last_ip: '203.0.113.1',
+    local_ip: '192.168.1.100',
     software_version: '1.0.0',
     hardware_model: 'RPi4',
     api_key: 'key-123',

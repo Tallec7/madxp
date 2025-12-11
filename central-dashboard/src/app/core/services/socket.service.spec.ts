@@ -1,37 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import { SocketService, SocketEvent } from './socket.service';
 
-// Mock socket.io-client
-const mockSocket = {
-  on: jasmine.createSpy('on'),
-  off: jasmine.createSpy('off'),
-  emit: jasmine.createSpy('emit'),
-  disconnect: jasmine.createSpy('disconnect')
-};
-
-// Store event handlers for testing
-const eventHandlers: Map<string, Function> = new Map();
-
-// Mock io function
-const mockIo = jasmine.createSpy('io').and.callFake(() => {
-  // Reset event handlers
-  eventHandlers.clear();
-
-  // Mock the on method to store handlers
-  mockSocket.on.and.callFake((event: string, handler: Function) => {
-    eventHandlers.set(event, handler);
-  });
-
-  return mockSocket;
-});
-
-// Replace the io import
-jest.mock('socket.io-client', () => ({
-  io: mockIo
-}));
-
 describe('SocketService', () => {
   let service: SocketService;
+
+  // Mock socket object
+  const mockSocket = {
+    on: jasmine.createSpy('on'),
+    off: jasmine.createSpy('off'),
+    emit: jasmine.createSpy('emit'),
+    disconnect: jasmine.createSpy('disconnect')
+  };
 
   beforeEach(() => {
     // Reset mocks
@@ -39,8 +18,6 @@ describe('SocketService', () => {
     mockSocket.off.calls.reset();
     mockSocket.emit.calls.reset();
     mockSocket.disconnect.calls.reset();
-    mockIo.calls.reset();
-    eventHandlers.clear();
 
     TestBed.configureTestingModule({
       providers: [SocketService]
@@ -65,13 +42,14 @@ describe('SocketService', () => {
 
   describe('connect', () => {
     it('should not create multiple socket connections', () => {
-      // Simulate first connection
+      // Simulate first connection by setting internal socket
       (service as any).socket = mockSocket;
 
+      // Calling connect again should not create new connection
       service.connect('test-token');
 
-      // Should not create a new connection if one exists
-      expect(mockIo).not.toHaveBeenCalled();
+      // Since socket already exists, it should return early
+      expect((service as any).socket).toBe(mockSocket);
     });
   });
 

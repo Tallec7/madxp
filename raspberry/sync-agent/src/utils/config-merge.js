@@ -157,7 +157,8 @@ function cleanExpiredVideos(categories) {
  * @returns {boolean} true si verrouillé
  */
 function isLocked(item) {
-  return item && (item.locked === true || item.owner === 'neopro');
+  if (!item) return false;
+  return item.locked === true || item.owner === 'neopro';
 }
 
 /**

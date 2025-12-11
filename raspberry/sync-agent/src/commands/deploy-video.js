@@ -1,13 +1,30 @@
 const fs = require('fs-extra');
 const path = require('path');
 const axios = require('axios');
+const crypto = require('crypto');
 const logger = require('../logger');
 const { config } = require('../config');
 const { isLocked } = require('../utils/config-merge');
 
+/**
+ * Calcule le checksum SHA256 d'un fichier
+ * @param {string} filePath Chemin vers le fichier
+ * @returns {Promise<string>} Checksum hexadécimal
+ */
+async function calculateFileChecksum(filePath) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha256');
+    const stream = fs.createReadStream(filePath);
+
+    stream.on('error', reject);
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+  });
+}
+
 class VideoDeployHandler {
   async execute(data, progressCallback) {
-    const { videoUrl, filename, originalName, category, subcategory, locked, expires_at } = data;
+    const { videoUrl, filename, originalName, category, subcategory, locked, expires_at, checksum } = data;
 
     // Déploiement depuis le central = contenu NEOPRO (verrouillé par défaut)
     const isNeoProContent = locked !== false;
@@ -18,6 +35,7 @@ class VideoDeployHandler {
       subcategory,
       isNeoProContent,
       expires_at,
+      checksumProvided: !!checksum,
     });
 
     try {
@@ -37,16 +55,33 @@ class VideoDeployHandler {
 
       await this.downloadFile(videoUrl, targetPath, progressCallback);
 
+      // Vérifier le checksum si fourni
+      if (checksum) {
+        const downloadedChecksum = await calculateFileChecksum(targetPath);
+        if (downloadedChecksum !== checksum) {
+          // Supprimer le fichier corrompu
+          await fs.remove(targetPath);
+          const error = new Error(`Checksum mismatch: expected ${checksum}, got ${downloadedChecksum}`);
+          error.code = 'CHECKSUM_MISMATCH';
+          throw error;
+        }
+        logger.info('Checksum verified successfully', { checksum: downloadedChecksum });
+      } else {
+        logger.warn('No checksum provided, skipping verification');
+      }
+
       await this.updateConfiguration(data);
 
       await this.notifyLocalApp();
 
       logger.info('Video deployed successfully', { targetPath });
 
+      const stat = await fs.stat(targetPath);
       return {
         success: true,
         path: targetPath,
-        size: (await fs.stat(targetPath)).size,
+        size: stat.size,
+        checksum: checksum || (await calculateFileChecksum(targetPath)),
       };
     } catch (error) {
       logger.error('Video deployment failed:', error);
@@ -197,3 +232,4 @@ class VideoDeployHandler {
 }
 
 module.exports = new VideoDeployHandler();
+module.exports.calculateFileChecksum = calculateFileChecksum;

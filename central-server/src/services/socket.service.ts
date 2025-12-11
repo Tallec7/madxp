@@ -21,9 +21,34 @@ const secureCompare = (a: string, b: string): boolean => {
   return timingSafeEqual(Buffer.from(a), Buffer.from(b));
 };
 
+// Configuration des timeouts par type de commande (en ms)
+const COMMAND_TIMEOUTS: Record<string, number> = {
+  deploy_video: 10 * 60 * 1000,      // 10 minutes pour les gros fichiers
+  update_config: 30 * 1000,           // 30 secondes
+  update_software: 15 * 60 * 1000,    // 15 minutes pour les mises à jour
+  reboot: 60 * 1000,                  // 1 minute
+  restart_service: 60 * 1000,         // 1 minute
+  get_logs: 30 * 1000,                // 30 secondes
+  get_system_info: 15 * 1000,         // 15 secondes
+  get_config: 15 * 1000,              // 15 secondes
+  update_hotspot: 60 * 1000,          // 1 minute
+  get_hotspot_config: 15 * 1000,      // 15 secondes
+  default: 2 * 60 * 1000,             // 2 minutes par défaut
+};
+
+interface PendingCommand {
+  commandId: string;
+  siteId: string;
+  type: string;
+  sentAt: number;
+  timeoutMs: number;
+}
+
 class SocketService {
   private io: SocketIOServer | null = null;
   private connectedSites: Map<string, Socket> = new Map();
+  private pendingCommands: Map<string, PendingCommand> = new Map();
+  private timeoutCheckInterval: NodeJS.Timeout | null = null;
 
   initialize(httpServer: HTTPServer) {
     this.io = new SocketIOServer(httpServer, {
@@ -37,7 +62,65 @@ class SocketService {
 
     this.io.on('connection', this.handleConnection.bind(this));
 
+    // Démarrer la vérification périodique des timeouts de commandes
+    this.startCommandTimeoutChecker();
+
     logger.info('Socket.IO service initialized');
+  }
+
+  /**
+   * Démarre la vérification périodique des commandes en timeout
+   */
+  private startCommandTimeoutChecker() {
+    // Vérifier toutes les 10 secondes
+    this.timeoutCheckInterval = setInterval(() => {
+      this.checkCommandTimeouts();
+    }, 10000);
+  }
+
+  /**
+   * Vérifie les commandes en attente qui ont dépassé leur timeout
+   */
+  private async checkCommandTimeouts() {
+    const now = Date.now();
+
+    for (const [commandId, pending] of this.pendingCommands.entries()) {
+      const elapsed = now - pending.sentAt;
+
+      if (elapsed >= pending.timeoutMs) {
+        logger.warn('Command timeout reached', {
+          commandId,
+          siteId: pending.siteId,
+          type: pending.type,
+          timeoutMs: pending.timeoutMs,
+          elapsedMs: elapsed,
+        });
+
+        // Marquer comme failed dans la base de données
+        try {
+          await query(
+            `UPDATE remote_commands
+             SET status = 'failed', error_message = $1, completed_at = NOW()
+             WHERE id = $2 AND status = 'pending'`,
+            [`Command timeout after ${Math.round(elapsed / 1000)}s`, commandId]
+          );
+
+          // Émettre un événement de timeout au dashboard
+          if (this.io) {
+            this.io.emit('command_timeout', {
+              siteId: pending.siteId,
+              commandId,
+              type: pending.type,
+            });
+          }
+        } catch (error) {
+          logger.error('Error marking command as timed out:', { commandId, error });
+        }
+
+        // Retirer de la liste des commandes en attente
+        this.pendingCommands.delete(commandId);
+      }
+    }
   }
 
   private async handleConnection(socket: Socket) {
@@ -262,6 +345,9 @@ class SocketService {
 
   private async handleCommandResult(siteId: string, result: CommandResult) {
     try {
+      // Retirer de la liste des commandes en attente (timeout annulé car on a reçu une réponse)
+      this.pendingCommands.delete(result.commandId);
+
       await query(
         `UPDATE remote_commands
          SET status = $1, result = $2, error_message = $3, completed_at = NOW()
@@ -399,8 +485,25 @@ class SocketService {
       return false;
     }
 
+    // Déterminer le timeout pour ce type de commande
+    const timeoutMs = COMMAND_TIMEOUTS[command.type] || COMMAND_TIMEOUTS.default;
+
+    // Enregistrer la commande comme en attente
+    this.pendingCommands.set(command.id, {
+      commandId: command.id,
+      siteId,
+      type: command.type,
+      sentAt: Date.now(),
+      timeoutMs,
+    });
+
     socket.emit('command', command);
-    logger.info('Command sent to agent', { siteId, commandId: command.id, type: command.type });
+    logger.info('Command sent to agent', {
+      siteId,
+      commandId: command.id,
+      type: command.type,
+      timeoutMs,
+    });
 
     return true;
   }
@@ -437,6 +540,18 @@ class SocketService {
 
   getConnectionCount(): number {
     return this.connectedSites.size;
+  }
+
+  /**
+   * Arrête le service proprement (pour les tests et le shutdown)
+   */
+  cleanup() {
+    if (this.timeoutCheckInterval) {
+      clearInterval(this.timeoutCheckInterval);
+      this.timeoutCheckInterval = null;
+    }
+    this.pendingCommands.clear();
+    this.connectedSites.clear();
   }
 }
 

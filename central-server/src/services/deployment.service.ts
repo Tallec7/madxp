@@ -4,6 +4,20 @@ import socketService from './socket.service';
 import logger from '../config/logger';
 import { deleteFile, getPublicUrl } from '../config/supabase';
 
+// Configuration du retry
+const RETRY_CONFIG = {
+  maxRetries: 3,                    // Nombre max de tentatives
+  retryDelayMs: 5 * 60 * 1000,      // Délai minimum entre retries (5 minutes)
+  retryableErrors: [                 // Erreurs qui peuvent être retryées
+    'timeout',
+    'connection',
+    'network',
+    'ECONNREFUSED',
+    'ETIMEDOUT',
+    'Command timeout',
+  ],
+};
+
 interface DeploymentTarget {
   siteId: string;
   siteName: string;
@@ -347,6 +361,196 @@ class DeploymentService {
     );
 
     logger.info('Deployment cancelled', { deploymentId });
+  }
+
+  /**
+   * Vérifie si une erreur peut être retryée
+   */
+  private isRetryableError(errorMessage: string | null): boolean {
+    if (!errorMessage) return false;
+    const lowerError = errorMessage.toLowerCase();
+    return RETRY_CONFIG.retryableErrors.some(e => lowerError.includes(e.toLowerCase()));
+  }
+
+  /**
+   * Extrait le compteur de retry depuis le message d'erreur
+   * Format: "[retry X/Y] message d'erreur"
+   */
+  private getRetryCount(errorMessage: string | null): number {
+    if (!errorMessage) return 0;
+    const match = errorMessage.match(/\[retry (\d+)\/\d+\]/);
+    return match ? parseInt(match[1], 10) : 0;
+  }
+
+  /**
+   * Marque un déploiement comme échoué avec possibilité de retry
+   * @param deploymentId ID du déploiement
+   * @param errorMessage Message d'erreur
+   * @param allowRetry Si true et que l'erreur est retryable, le déploiement sera retenté
+   */
+  async markDeploymentFailed(deploymentId: string, errorMessage: string, allowRetry = true): Promise<void> {
+    try {
+      // Récupérer l'info du déploiement actuel
+      const result = await query(
+        `SELECT error_message, status FROM content_deployments WHERE id = $1`,
+        [deploymentId]
+      );
+
+      if (result.rows.length === 0) return;
+
+      const currentError = result.rows[0].error_message as string | null;
+      const retryCount = this.getRetryCount(currentError);
+      const canRetry = allowRetry && this.isRetryableError(errorMessage) && retryCount < RETRY_CONFIG.maxRetries;
+
+      if (canRetry) {
+        // Incrémenter le compteur et garder en pending pour retry
+        const newRetryCount = retryCount + 1;
+        const newErrorMessage = `[retry ${newRetryCount}/${RETRY_CONFIG.maxRetries}] ${errorMessage}`;
+
+        await query(
+          `UPDATE content_deployments
+           SET status = 'pending', error_message = $1, progress = 0
+           WHERE id = $2`,
+          [newErrorMessage, deploymentId]
+        );
+
+        logger.warn('Deployment failed, will retry', {
+          deploymentId,
+          retryCount: newRetryCount,
+          maxRetries: RETRY_CONFIG.maxRetries,
+          errorMessage,
+        });
+      } else {
+        // Échec définitif
+        const finalError = retryCount > 0
+          ? `[exhausted ${retryCount}/${RETRY_CONFIG.maxRetries} retries] ${errorMessage}`
+          : errorMessage;
+
+        await query(
+          `UPDATE content_deployments
+           SET status = 'failed', error_message = $1, completed_at = NOW()
+           WHERE id = $2`,
+          [finalError, deploymentId]
+        );
+
+        logger.error('Deployment failed permanently', {
+          deploymentId,
+          retriesExhausted: retryCount >= RETRY_CONFIG.maxRetries,
+          errorMessage,
+        });
+      }
+    } catch (error) {
+      logger.error('Error marking deployment as failed:', { deploymentId, error });
+      // Fallback: marquer comme failed directement
+      await this.failDeployment(deploymentId, errorMessage);
+    }
+  }
+
+  /**
+   * Retente les déploiements en échec qui peuvent être retryés
+   * À appeler périodiquement ou quand un site se reconnecte
+   */
+  async retryFailedDeployments(): Promise<{ retried: number; skipped: number }> {
+    try {
+      // Récupérer les déploiements en pending qui ont des erreurs (en attente de retry)
+      const result = await query(
+        `SELECT cd.id, cd.video_id, cd.error_message, cd.target_type, cd.target_id,
+                v.filename, v.original_name, v.category, v.subcategory, v.duration, v.storage_path, v.metadata
+         FROM content_deployments cd
+         JOIN videos v ON cd.video_id = v.id
+         WHERE cd.status = 'pending'
+           AND cd.error_message IS NOT NULL
+           AND cd.error_message LIKE '[retry%'`,
+        []
+      );
+
+      let retried = 0;
+      let skipped = 0;
+
+      for (const row of result.rows) {
+        const deployment = row as unknown as DeploymentRow & { error_message: string };
+        const retryCount = this.getRetryCount(deployment.error_message);
+
+        if (retryCount >= RETRY_CONFIG.maxRetries) {
+          skipped++;
+          continue;
+        }
+
+        // Obtenir les sites cibles
+        const targets = await this.getTargetSites(deployment.target_type, deployment.target_id);
+        const videoUrl = getPublicUrl(deployment.storage_path);
+
+        for (const target of targets) {
+          if (socketService.isConnected(target.siteId)) {
+            const success = await this.deployToSite(
+              deployment.id,
+              target.siteId,
+              deployment.video_id,
+              videoUrl,
+              deployment
+            );
+
+            if (success) {
+              // Passer en in_progress et nettoyer le message d'erreur de retry
+              await query(
+                `UPDATE content_deployments
+                 SET status = 'in_progress', started_at = COALESCE(started_at, NOW())
+                 WHERE id = $1`,
+                [deployment.id]
+              );
+              retried++;
+              break;
+            }
+          }
+        }
+      }
+
+      if (retried > 0 || skipped > 0) {
+        logger.info('Retry failed deployments completed', { retried, skipped });
+      }
+
+      return { retried, skipped };
+    } catch (error) {
+      logger.error('Error retrying failed deployments:', error);
+      return { retried: 0, skipped: 0 };
+    }
+  }
+
+  /**
+   * Retente un déploiement spécifique manuellement
+   */
+  async retryDeployment(deploymentId: string): Promise<boolean> {
+    try {
+      const result = await query(
+        `SELECT cd.*, v.filename, v.original_name, v.category, v.subcategory, v.duration, v.storage_path, v.metadata
+         FROM content_deployments cd
+         JOIN videos v ON cd.video_id = v.id
+         WHERE cd.id = $1 AND cd.status = 'failed'`,
+        [deploymentId]
+      );
+
+      if (result.rows.length === 0) {
+        logger.warn('Deployment not found or not in failed state', { deploymentId });
+        return false;
+      }
+
+      // Remettre en pending pour retry
+      await query(
+        `UPDATE content_deployments
+         SET status = 'pending', error_message = NULL, progress = 0, completed_at = NULL
+         WHERE id = $1`,
+        [deploymentId]
+      );
+
+      // Démarrer le déploiement
+      await this.startDeployment(deploymentId);
+
+      logger.info('Deployment manually retried', { deploymentId });
+      return true;
+    } catch (error) {
+      logger.error('Error manually retrying deployment:', { deploymentId, error });
+      return false;
+    }
   }
 }
 

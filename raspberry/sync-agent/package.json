@@ -10,7 +10,9 @@
     "register": "node scripts/register-site.js",
     "diagnose": "node scripts/diagnose.js",
     "resync": "node scripts/resync-apikey.js",
-    "test": "node src/test-connection.js"
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
+    "test:connection": "node src/test-connection.js"
   },
   "keywords": ["neopro", "raspberry-pi", "sync-agent"],
   "author": "NEOPRO Team",
@@ -24,9 +26,24 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
     "nodemon": "^3.0.2"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/test-connection.js",
+      "!src/agent.js"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"],
+    "testMatch": ["**/__tests__/**/*.test.js"],
+    "verbose": true,
+    "clearMocks": true,
+    "resetMocks": true
   }
 }
