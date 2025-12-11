@@ -5,6 +5,14 @@ import { query } from '../config/database';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 
+class HttpError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const generateApiKey = (): string => {
   return randomBytes(32).toString('hex');
 };
@@ -278,100 +286,127 @@ export const getSiteStats = async (req: AuthRequest, res: Response) => {
   }
 };
 
+const validateCommandPayload = (command: string, data?: any) => {
+  if (command === 'update_config') {
+    const hasValidPayload = data && (
+      data.configuration ||
+      data.neoProContent ||
+      (data.mode === 'update_agent' && data.agentFiles)
+    );
+    if (!hasValidPayload) {
+      throw new HttpError(400, 'Commande update_config invalide: configuration, neoProContent ou agentFiles requis');
+    }
+  }
+};
+
+const ensureSiteConnected = async (siteId: string) => {
+  const siteResult = await query('SELECT id, site_name, status FROM sites WHERE id = $1', [siteId]);
+  if (siteResult.rows.length === 0) {
+    throw new HttpError(404, 'Site non trouvé');
+  }
+
+  const socketService = (await import('../services/socket.service')).default;
+  if (!socketService.isConnected(siteId)) {
+    throw new HttpError(503, 'Site non connecté');
+  }
+
+  return { site: siteResult.rows[0], socketService };
+};
+
+const dispatchCommand = async (
+  siteId: string,
+  command: string,
+  data: any,
+  executedBy?: string
+): Promise<{ commandId: string; siteName: string }> => {
+  if (!command) {
+    throw new HttpError(400, 'Commande requise');
+  }
+
+  validateCommandPayload(command, data);
+
+  const { site, socketService } = await ensureSiteConnected(siteId);
+
+  const commandId = uuidv4();
+  await query(
+    `INSERT INTO remote_commands (id, site_id, command_type, command_data, status, executed_by)
+     VALUES ($1, $2, $3, $4, 'pending', $5)`,
+    [commandId, siteId, command, data ? JSON.stringify(data) : null, executedBy]
+  );
+
+  const sent = socketService.sendCommand(siteId, {
+    id: commandId,
+    type: command,
+    data: data || {},
+  });
+
+  if (!sent) {
+    await query(
+      `UPDATE remote_commands SET status = 'failed', error_message = 'Échec envoi' WHERE id = $1`,
+      [commandId]
+    );
+    throw new HttpError(503, 'Échec de l\'envoi de la commande');
+  }
+
+  await query(
+    `UPDATE remote_commands SET status = 'executing', executed_at = NOW() WHERE id = $1`,
+    [commandId]
+  );
+
+  logger.info('Command sent to site', {
+    siteId,
+    siteName: site.site_name,
+    command,
+    commandId,
+    sentBy: executedBy,
+    hasPayload: !!data,
+    payloadKeys: data ? Object.keys(data) : [],
+  });
+
+  return { commandId, siteName: site.site_name as string };
+};
+
+const waitForCommandResult = async (commandId: string, timeoutMs = 30000) => {
+  const start = Date.now();
+
+  while (Date.now() - start < timeoutMs) {
+    const result = await query(
+      `SELECT status, result, error_message FROM remote_commands WHERE id = $1`,
+      [commandId]
+    );
+
+    if (result.rows.length > 0) {
+      const row = result.rows[0] as { status: string; result?: any; error_message?: string };
+
+      if (row.status === 'completed') {
+        const parsedResult = typeof row.result === 'string' ? JSON.parse(row.result) : row.result;
+        return parsedResult || {};
+      }
+
+      if (row.status === 'failed') {
+        throw new HttpError(500, row.error_message || 'Commande échouée');
+      }
+    }
+
+    await wait(1000);
+  }
+
+  throw new HttpError(504, 'Timeout en attendant la réponse du boîtier');
+};
+
 export const sendCommand = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { command, params: data } = req.body;
 
-    if (!command) {
-      return res.status(400).json({ error: 'Commande requise' });
-    }
+    const { commandId } = await dispatchCommand(id, command, data, req.user?.id);
 
-    // Validation spécifique pour update_config : vérifier que le payload contient les données requises
-    if (command === 'update_config') {
-      const hasValidPayload = data && (
-        data.configuration ||
-        data.neoProContent ||
-        (data.mode === 'update_agent' && data.agentFiles)
-      );
-      if (!hasValidPayload) {
-        logger.warn('update_config command rejected: missing required payload', {
-          siteId: id,
-          hasData: !!data,
-          dataKeys: data ? Object.keys(data) : [],
-          sentBy: req.user?.email
-        });
-        return res.status(400).json({
-          error: 'Commande update_config invalide: configuration, neoProContent ou agentFiles requis'
-        });
-      }
-    }
-
-    // Vérifier que le site existe
-    const siteResult = await query('SELECT id, site_name, status FROM sites WHERE id = $1', [id]);
-    if (siteResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Site non trouvé' });
-    }
-
-    const site = siteResult.rows[0];
-
-    // Importer le service socket
-    const socketService = (await import('../services/socket.service')).default;
-
-    // Vérifier que le site est connecté
-    if (!socketService.isConnected(id)) {
-      return res.status(503).json({
-        error: 'Site non connecté',
-        status: site.status
-      });
-    }
-
-    // Créer un enregistrement de commande
-    const commandId = uuidv4();
-    await query(
-      `INSERT INTO remote_commands (id, site_id, command_type, command_data, status, executed_by)
-       VALUES ($1, $2, $3, $4, 'pending', $5)`,
-      [commandId, id, command, data ? JSON.stringify(data) : null, req.user?.id]
-    );
-
-    // Envoyer la commande via socket
-    const sent = socketService.sendCommand(id, {
-      id: commandId,
-      type: command,
-      data: data || {},
-    });
-
-    if (!sent) {
-      await query(
-        `UPDATE remote_commands SET status = 'failed', error_message = 'Échec envoi' WHERE id = $1`,
-        [commandId]
-      );
-      return res.status(503).json({ error: 'Échec de l\'envoi de la commande' });
-    }
-
-    // Mettre à jour le statut
-    await query(
-      `UPDATE remote_commands SET status = 'executing', executed_at = NOW() WHERE id = $1`,
-      [commandId]
-    );
-
-    logger.info('Command sent to site', {
-      siteId: id,
-      siteName: site.site_name,
-      command,
-      commandId,
-      sentBy: req.user?.email,
-      hasPayload: !!data,
-      payloadKeys: data ? Object.keys(data) : []
-    });
-
-    res.json({
-      success: true,
-      commandId,
-      message: 'Commande envoyée',
-    });
+    res.json({ success: true, commandId, message: 'Commande envoyée' });
   } catch (error) {
     logger.error('Send command error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
     res.status(500).json({ error: 'Erreur lors de l\'envoi de la commande' });
   }
 };
@@ -393,6 +428,51 @@ export const getCommandStatus = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error('Get command status error:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération du statut' });
+  }
+};
+
+export const getSiteLogs = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const lines = parseInt(req.query.lines as string, 10) || 100;
+    const service = (req.query.service as string) || 'neopro-app';
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'get_logs', { lines, service }, req.user?.id)).commandId,
+      30000
+    );
+
+    const logsText = (result?.logs as string) || '';
+    res.json({ logs: logsText.split('\n') });
+  } catch (error) {
+    logger.error('Get site logs error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors de la récupération des logs' });
+  }
+};
+
+export const getSystemInfo = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'get_system_info', {}, req.user?.id)).commandId,
+      20000
+    );
+
+    if (!result?.systemInfo) {
+      throw new HttpError(500, 'Réponse système invalide');
+    }
+
+    res.json(result.systemInfo);
+  } catch (error) {
+    logger.error('Get system info error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors de la récupération des informations système' });
   }
 };
 

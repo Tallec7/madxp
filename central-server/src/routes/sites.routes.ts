@@ -14,6 +14,20 @@ router.get('/:id', authenticate, sitesController.getSite);
 
 router.get('/:id/metrics', authenticate, sitesController.getSiteMetrics);
 
+router.get(
+  '/:id/logs',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sitesController.getSiteLogs
+);
+
+router.get(
+  '/:id/system-info',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sitesController.getSystemInfo
+);
+
 router.post(
   '/',
   authenticate,
