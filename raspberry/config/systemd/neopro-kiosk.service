@@ -16,7 +16,7 @@ Environment=XAUTHORITY=/home/pi/.Xauthority
 ExecStartPre=/bin/sleep 10
 
 # Lancement de Chromium en mode kiosque
-ExecStart=/usr/bin/chromium-browser \
+ExecStart=/usr/bin/chromium \
   --kiosk \
   --noerrdialogs \
   --disable-infobars \
