@@ -345,7 +345,8 @@ const getSslConfig = () => {
 **Impact :**
 - En production : TLS activé avec validation des certificats
 - Support du CA personnalisé via `DATABASE_SSL_CA`
-- `rejectUnauthorized: false` uniquement en développement
+- Chargement du certificat possible via fichier (`DATABASE_SSL_CA_FILE`) ou variable inline
+- Fallback `rejectUnauthorized: false` / `NODE_TLS_REJECT_UNAUTHORIZED=0` uniquement sans CA disponible
 
 ---
 

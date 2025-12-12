@@ -1,27 +1,54 @@
+import fs from 'fs';
+import path from 'path';
 import { Pool, PoolConfig, QueryResultRow } from 'pg';
 import dotenv from 'dotenv';
 import logger from './logger';
 
 dotenv.config();
 
-// For cloud providers with self-signed certificates, disable Node.js TLS verification
-// This is a fallback in case pg's ssl.rejectUnauthorized doesn't work
-if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_SSL_CA) {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-  logger.warn('NODE_TLS_REJECT_UNAUTHORIZED set to 0 for cloud provider compatibility');
-}
+const loadSslCertificate = () => {
+  const inlineCertificate = process.env.DATABASE_SSL_CA?.trim();
+  if (inlineCertificate) {
+    return inlineCertificate;
+  }
+
+  const certificatePath = process.env.DATABASE_SSL_CA_FILE || process.env.DATABASE_SSL_CA_PATH;
+  if (!certificatePath) return undefined;
+
+  const resolvedPath = path.resolve(certificatePath);
+  try {
+    const certificate = fs.readFileSync(resolvedPath, 'utf8');
+    logger.debug('Loaded DATABASE_SSL_CA from file', { path: resolvedPath });
+    return certificate;
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    logger.error('Failed to read DATABASE_SSL_CA file', {
+      path: resolvedPath,
+      error: err.message,
+    });
+    throw err;
+  }
+};
 
 const shouldUseSSL =
   process.env.NODE_ENV === 'production' ||
   (process.env.DATABASE_SSL || '').toLowerCase() === 'true';
 
+const sslCertificate = shouldUseSSL ? loadSslCertificate() : undefined;
+
+// For cloud providers with self-signed certificates, disable Node.js TLS verification
+// This is a fallback in case pg's ssl.rejectUnauthorized doesn't work
+if (process.env.NODE_ENV === 'production' && shouldUseSSL && !sslCertificate) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+  logger.warn('NODE_TLS_REJECT_UNAUTHORIZED set to 0 for cloud provider compatibility');
+}
+
 // Build SSL configuration
 const getSslConfig = () => {
   if (!shouldUseSSL) return false;
 
-  const ca = process.env.DATABASE_SSL_CA;
-  if (ca) {
-    return { ca, rejectUnauthorized: true };
+  if (sslCertificate) {
+    return { ca: sslCertificate, rejectUnauthorized: true };
   }
 
   // For cloud providers (Render, Supabase, Neon, etc.) without explicit CA,
@@ -44,7 +71,8 @@ logger.info('Database SSL configuration', {
   NODE_ENV: process.env.NODE_ENV,
   DATABASE_SSL: process.env.DATABASE_SSL,
   shouldUseSSL,
-  sslConfig: typeof sslConfig === 'object' ? JSON.stringify(sslConfig) : sslConfig,
+  hasCertificate: Boolean(sslCertificate),
+  rejectUnauthorized: typeof sslConfig === 'object' ? sslConfig.rejectUnauthorized : false,
 });
 
 const pool = new Pool(poolConfig);
