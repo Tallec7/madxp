@@ -187,11 +187,23 @@ import {
                   <span class="item-name">{{ sponsor.name || 'Nouveau sponsor' }}</span>
                   <div class="ownership-controls inline">
                     <label class="ownership-option">
-                      <input type="radio" [(ngModel)]="sponsor.owner" [value]="'club'" (ngModelChange)="onConfigChange(); sponsor.locked = false" />
+                      <input
+                        type="radio"
+                        [name]="'owner-sponsor-' + i"
+                        [(ngModel)]="sponsor.owner"
+                        [value]="'club'"
+                        (ngModelChange)="onConfigChange(); sponsor.locked = false"
+                      />
                       <span class="ownership-label club small">Club</span>
                     </label>
                     <label class="ownership-option">
-                      <input type="radio" [(ngModel)]="sponsor.owner" [value]="'neopro'" (ngModelChange)="onConfigChange(); sponsor.locked = true" />
+                      <input
+                        type="radio"
+                        [name]="'owner-sponsor-' + i"
+                        [(ngModel)]="sponsor.owner"
+                        [value]="'neopro'"
+                        (ngModelChange)="onConfigChange(); sponsor.locked = true"
+                      />
                       <span class="ownership-label neopro small">NEOPRO</span>
                     </label>
                   </div>
@@ -246,11 +258,23 @@ import {
                   />
                   <div class="ownership-controls" (click)="$event.stopPropagation()">
                     <label class="ownership-option">
-                      <input type="radio" [(ngModel)]="category.owner" [value]="'club'" (ngModelChange)="onConfigChange(); category.locked = false" />
+                      <input
+                        type="radio"
+                        [name]="'owner-category-' + catIndex"
+                        [(ngModel)]="category.owner"
+                        [value]="'club'"
+                        (ngModelChange)="onConfigChange(); category.locked = false"
+                      />
                       <span class="ownership-label club">Club</span>
                     </label>
                     <label class="ownership-option">
-                      <input type="radio" [(ngModel)]="category.owner" [value]="'neopro'" (ngModelChange)="onConfigChange(); category.locked = true" />
+                      <input
+                        type="radio"
+                        [name]="'owner-category-' + catIndex"
+                        [(ngModel)]="category.owner"
+                        [value]="'neopro'"
+                        (ngModelChange)="onConfigChange(); category.locked = true"
+                      />
                       <span class="ownership-label neopro">NEOPRO</span>
                     </label>
                   </div>
@@ -273,11 +297,23 @@ import {
                         <span class="video-icon">🎬</span>
                         <div class="ownership-controls inline">
                           <label class="ownership-option">
-                            <input type="radio" [(ngModel)]="video.owner" [value]="'club'" (ngModelChange)="onConfigChange(); video.locked = false" />
+                            <input
+                              type="radio"
+                              [name]="'owner-video-' + catIndex + '-' + vidIndex"
+                              [(ngModel)]="video.owner"
+                              [value]="'club'"
+                              (ngModelChange)="onConfigChange(); video.locked = false"
+                            />
                             <span class="ownership-label club small">Club</span>
                           </label>
                           <label class="ownership-option">
-                            <input type="radio" [(ngModel)]="video.owner" [value]="'neopro'" (ngModelChange)="onConfigChange(); video.locked = true" />
+                            <input
+                              type="radio"
+                              [name]="'owner-video-' + catIndex + '-' + vidIndex"
+                              [(ngModel)]="video.owner"
+                              [value]="'neopro'"
+                              (ngModelChange)="onConfigChange(); video.locked = true"
+                            />
                             <span class="ownership-label neopro small">NEOPRO</span>
                           </label>
                         </div>
@@ -321,11 +357,23 @@ import {
                           />
                           <div class="ownership-controls inline">
                             <label class="ownership-option">
-                              <input type="radio" [(ngModel)]="subcat.owner" [value]="'club'" (ngModelChange)="onConfigChange(); subcat.locked = false" />
+                              <input
+                                type="radio"
+                                [name]="'owner-subcat-' + catIndex + '-' + subIndex"
+                                [(ngModel)]="subcat.owner"
+                                [value]="'club'"
+                                (ngModelChange)="onConfigChange(); subcat.locked = false"
+                              />
                               <span class="ownership-label club small">Club</span>
                             </label>
                             <label class="ownership-option">
-                              <input type="radio" [(ngModel)]="subcat.owner" [value]="'neopro'" (ngModelChange)="onConfigChange(); subcat.locked = true" />
+                              <input
+                                type="radio"
+                                [name]="'owner-subcat-' + catIndex + '-' + subIndex"
+                                [(ngModel)]="subcat.owner"
+                                [value]="'neopro'"
+                                (ngModelChange)="onConfigChange(); subcat.locked = true"
+                              />
                               <span class="ownership-label neopro small">NEOPRO</span>
                             </label>
                           </div>
