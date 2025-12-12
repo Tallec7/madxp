@@ -138,7 +138,7 @@
     @if (currentView === 'subcategories' && selectedCategory) {
       <div class="view-subcategories">
         <div class="subcategories-grid">
-          @for (subCategory of selectedCategory.subCategories; track subCategory.name) {
+          @for (subCategory of getSubCategoriesForDisplay(selectedCategory); track subCategory.name) {
             <button
               class="subcategory-card"
               (click)="selectSubCategory(subCategory)"

@@ -160,9 +160,10 @@ export class RemoteComponent implements OnInit {
 
   // Helpers
   public getCategoriesForTimeCategory(timeCategory: TimeCategory): Category[] {
-    return this.configuration.categories.filter(cat =>
+    const filteredCategories = this.configuration.categories.filter(cat =>
       timeCategory.categoryIds.includes(cat.id)
     );
+    return this.sortByName(filteredCategories);
   }
 
   public getVideosCount(category: Category): number {
@@ -181,14 +182,13 @@ export class RemoteComponent implements OnInit {
     return category.subCategories?.length || 0;
   }
 
+  public getSubCategoriesForDisplay(category: Category): Category[] {
+    return this.sortByName(category.subCategories ?? []);
+  }
+
   public getCurrentVideos(): Video[] {
-    if (this.selectedSubCategory?.videos) {
-      return this.selectedSubCategory.videos;
-    }
-    if (this.selectedCategory?.videos) {
-      return this.selectedCategory.videos;
-    }
-    return [];
+    const videos = this.selectedSubCategory?.videos ?? this.selectedCategory?.videos ?? [];
+    return this.sortByName(videos);
   }
 
   public getTotalVideosForTimeCategory(timeCategory: TimeCategory): number {
@@ -204,6 +204,15 @@ export class RemoteComponent implements OnInit {
       }
       return sum + 1;
     }, 0);
+  }
+
+  /**
+   * Charge une copie triée des éléments selon leur nom
+   */
+  private sortByName<T extends { name: string }>(items: T[] = []): T[] {
+    return [...items].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+    );
   }
 
   /**
