@@ -234,6 +234,8 @@ import {
                     placeholder="Nom de la catégorie"
                     class="category-name-input"
                   />
+                  <span *ngIf="ownershipLabel(category) === 'neopro'" class="ownership-badge neopro">NEOPRO</span>
+                  <span *ngIf="ownershipLabel(category) === 'club'" class="ownership-badge club">Club</span>
                   <span class="category-stats">
                     {{ category.videos.length || 0 }} vidéo(s)
                     <span *ngIf="category.subCategories?.length"> · {{ category.subCategories.length }} sous-cat.</span>
@@ -251,6 +253,7 @@ import {
                     <div class="videos-list" *ngIf="category.videos && category.videos.length > 0">
                       <div class="video-item-editable" *ngFor="let video of category.videos; let vidIndex = index">
                         <span class="video-icon">🎬</span>
+                        <span *ngIf="ownershipLabel(video) === 'neopro'" class="ownership-badge neopro small">NEOPRO</span>
                         <input
                           type="text"
                           [value]="video.name"
@@ -1556,6 +1559,8 @@ import {
       white-space: pre-wrap;
       word-break: break-word;
       margin: 0.35rem 0 0;
+      max-height: 260px;
+      overflow: auto;
     }
 
     .ownership-badge {
