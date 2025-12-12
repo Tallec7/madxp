@@ -158,6 +158,17 @@ Quand vous exécutez `npm run deploy:raspberry` :
 | `/home/pi/neopro/admin/` | Interface admin |
 | `/home/pi/neopro/sync-agent/` | Agent de synchronisation |
 
+---
+
+## 4. Pousser une configuration depuis le central
+
+Il y a deux usages distincts :
+
+- **Contenu club** : modifié localement sur le Pi. On le préserve en mode `merge`.
+- **Contenu imposé NEOPRO** : doit s'imposer même si le club avait des données différentes. On utilise le mode `replace`.
+
+Lorsqu'on clique sur **Déployer** dans le dashboard central, la commande `update_config` est envoyée avec `mode: 'replace'` pour écraser le `configuration.json` du boîtier par la version centrale (comportement nécessaire pour synchroniser une config “référence” NEOPRO). Si vous souhaitez au contraire fusionner en préservant le contenu club, envoyez `update_config` avec `mode: 'merge'` (ou sans `mode`, le merge intelligent côté sync-agent reste actif).
+
 ### Backup automatique
 
 Avant chaque déploiement, un backup est créé :
