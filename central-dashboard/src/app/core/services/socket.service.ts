@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, filter, map } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 import { environment } from '@env/environment';
 
@@ -74,23 +74,11 @@ export class SocketService {
     return this.connected;
   }
 
-  on(event: string): Observable<unknown> {
-    return new Observable(observer => {
-      if (!this.socket) {
-        observer.error('Socket not connected');
-        return;
-      }
-
-      this.socket.on(event, (data: unknown) => {
-        observer.next(data);
-      });
-
-      return () => {
-        if (this.socket) {
-          this.socket.off(event);
-        }
-      };
-    });
+  on<T = unknown>(event: string): Observable<T> {
+    return this.events$.pipe(
+      filter((socketEvent): socketEvent is SocketEvent => socketEvent.type === event),
+      map(socketEvent => socketEvent.data as T)
+    );
   }
 
   emit(event: string, data: unknown): void {

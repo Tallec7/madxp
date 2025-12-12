@@ -117,32 +117,25 @@ describe('SocketService', () => {
   });
 
   describe('on', () => {
-    it('should return error observable when socket not connected', (done) => {
-      (service as any).socket = null;
+    it('should emit data for matching events', (done) => {
+      const payload = { value: 42 };
 
-      service.on('test_event').subscribe({
-        error: (err) => {
-          expect(err).toBe('Socket not connected');
-          done();
-        }
+      service.on<typeof payload>('deploy_progress').subscribe(data => {
+        expect(data).toEqual(payload);
+        done();
       });
+
+      (service as any).eventsSubject.next({ type: 'deploy_progress', data: payload });
     });
 
-    it('should register event handler when socket is connected', () => {
-      (service as any).socket = mockSocket;
+    it('should ignore other event types', () => {
+      const listener = jasmine.createSpy('listener');
 
-      service.on('custom_event').subscribe();
+      service.on('deploy_progress').subscribe(listener);
 
-      expect(mockSocket.on).toHaveBeenCalledWith('custom_event', jasmine.any(Function));
-    });
+      (service as any).eventsSubject.next({ type: 'other_event', data: { value: 1 } });
 
-    it('should unregister event handler on unsubscribe', () => {
-      (service as any).socket = mockSocket;
-
-      const subscription = service.on('custom_event').subscribe();
-      subscription.unsubscribe();
-
-      expect(mockSocket.off).toHaveBeenCalledWith('custom_event');
+      expect(listener).not.toHaveBeenCalled();
     });
   });
 

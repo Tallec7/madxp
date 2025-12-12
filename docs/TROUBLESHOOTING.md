@@ -429,6 +429,28 @@ ssh pi@neopro.local 'sudo systemctl status neopro-sync'
 ssh pi@neopro.local 'curl -I https://neopro-central-server.onrender.com'
 ```
 
+### La progression des déploiements reste bloquée à 0 %
+
+**Symptômes**
+
+- Dans **Contenu → Historique** ou **Gestion des mises à jour**, les cartes restent sur `0 %` avec le badge « En attente ».
+- Les Raspberry confirment pourtant la réception d'une commande `deploy_video`.
+
+**Cause**
+
+Les composants Angular s'abonnaient au socket avant que la connexion Socket.IO ne soit établie. Comme `SocketService.on()` branchait les handlers directement sur `this.socket`, les événements `deploy_progress`/`update_progress` envoyés juste après la connexion étaient ignorés si l'abonnement avait été créé trop tôt.
+
+**Vérifications**
+
+1. Dans DevTools → Network → WS, vérifier que la frame socket.io contient des messages `deploy_progress`.
+2. Dans la console, inspecter `ng.getComponent($0).deployments` : le champ `progress` reste à 0 malgré les messages WebSocket.
+
+**Résolution**
+
+1. Mettre à jour le dashboard vers la version incluant le nouveau `SocketService.on()` basé sur `events$` (`central-dashboard/src/app/core/services/socket.service.ts`).
+2. Les événements sont désormais tamponnés dans `eventsSubject`, ce qui garantit la réception par les écrans même si l'abonnement est antérieur à la connexion réseau.
+3. Rafraîchir la page pour réinitialiser les abonnements et vérifier que la progression augmente en direct.
+
 ---
 
 ## Diagnostic complet
