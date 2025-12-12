@@ -185,6 +185,16 @@ import {
               <div class="item-card" *ngFor="let sponsor of config.sponsors; let i = index">
                 <div class="item-header">
                   <span class="item-name">{{ sponsor.name || 'Nouveau sponsor' }}</span>
+                  <div class="ownership-controls inline">
+                    <label class="ownership-option">
+                      <input type="radio" [(ngModel)]="sponsor.owner" [value]="'club'" (ngModelChange)="onConfigChange(); sponsor.locked = false" />
+                      <span class="ownership-label club small">Club</span>
+                    </label>
+                    <label class="ownership-option">
+                      <input type="radio" [(ngModel)]="sponsor.owner" [value]="'neopro'" (ngModelChange)="onConfigChange(); sponsor.locked = true" />
+                      <span class="ownership-label neopro small">NEOPRO</span>
+                    </label>
+                  </div>
                   <button class="btn-remove" (click)="removeSponsor(i)">×</button>
                 </div>
                 <div class="item-form">

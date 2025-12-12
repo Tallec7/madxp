@@ -29,6 +29,8 @@ export interface SponsorConfig {
   name: string;
   type: string;  // ex: "video/mp4"
   path: string;  // ex: "videos/BOUCLE_PARTENAIRES/video.mp4"
+  owner?: ContentOwner; // 'neopro' ou 'club'
+  locked?: boolean;
 }
 
 // Type de propriétaire du contenu
