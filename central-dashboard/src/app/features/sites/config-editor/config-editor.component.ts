@@ -1666,10 +1666,12 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   get diffCounts() {
     return this.diffItems.reduce(
       (acc, item) => {
-        acc[item.type] = (acc[item.type] || 0) + 1;
+        if (item.type === 'added') acc.added += 1;
+        if (item.type === 'removed') acc.removed += 1;
+        if (item.type === 'changed') acc.changed += 1;
         return acc;
       },
-      { added: 0, removed: 0, changed: 0 } as { [key: string]: number }
+      { added: 0, removed: 0, changed: 0 } as { added: number; removed: number; changed: number }
     );
   }
 
