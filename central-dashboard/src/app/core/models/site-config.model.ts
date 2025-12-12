@@ -40,6 +40,7 @@ export interface VideoConfig {
   name: string;
   type: string;  // ex: "video/mp4"
   path: string;  // ex: "videos/CATEGORY/video.mp4"
+  owner?: ContentOwner; // 'neopro' = contenu central, 'club' = contenu local
   locked?: boolean;  // true = non modifiable par le club
   deployed_at?: string;  // ISO date - quand la vidéo a été déployée par NEOPRO
   expires_at?: string;  // ISO date - expiration automatique (annonces temporaires)
@@ -49,6 +50,7 @@ export interface VideoConfig {
 export interface SubcategoryConfig {
   id: string;
   name: string;
+  owner?: ContentOwner;  // 'neopro' = contenu central, 'club' = contenu local
   locked?: boolean;  // true = non modifiable par le club
   videos: VideoConfig[];
 }
