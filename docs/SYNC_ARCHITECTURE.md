@@ -426,6 +426,20 @@ Depuis décembre 2025, les vidéos poussées depuis le central conservent leur n
 7. Si oui : merge intelligent (préserve les modifs de Jean)
 8. L'équipe NEOPRO peut voir sur le dashboard ce qu'il y a sur le Pi
 
+### 6.4 Scénario : Déploiement multi-vidéos depuis le central
+
+**Contexte** : L'équipe marketing publie un pack de 5 vidéos sponsor qu'elle veut pousser sur un groupe de sites en une seule opération.
+
+**Étapes :**
+
+1. **Opérateur** sélectionne plusieurs vidéos dans l'onglet *Déployer* (liste multisélection ou bouton 🚀 sur chaque carte).
+2. **Dashboard central** affiche le récapitulatif des vidéos retenues et permet de retirer une entrée individuellement.
+3. **Opérateur** choisit la cible (site ou groupe) et clique sur **Lancer le déploiement**.
+4. **Front Angular** envoie une requête par vidéo (séquentiellement) et affiche une synthèse : succès partiels, erreurs par vidéo.
+5. **Historique** se peuple immédiatement avec les déploiements créés, ce qui facilite le suivi temps réel.
+
+👉 Cette fonctionnalité réduit les clics répétitifs lorsqu'on doit pousser plusieurs vidéos sur une même cible et offre un feedback clair en cas d'échec partiel.
+
 ---
 
 ## 7. Implémentation Technique

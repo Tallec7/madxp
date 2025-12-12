@@ -7,7 +7,7 @@ import { GroupsService } from '../../core/services/groups.service';
 import { SocketService } from '../../core/services/socket.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Site, Group } from '../../core/models';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 
 interface Video {
   id: string;
@@ -130,12 +130,35 @@ interface Deployment {
               <span class="step-number">1</span>
               <h3>Sélectionner une vidéo</h3>
             </div>
-            <select [(ngModel)]="deployForm.videoId" class="form-select">
-              <option value="">-- Choisir une vidéo --</option>
-              <option *ngFor="let video of videos" [value]="video.id">
+            <select
+              multiple
+              size="6"
+              [(ngModel)]="deployForm.videoIds"
+              class="form-select"
+            >
+              <option *ngFor="let video of videos" [ngValue]="video.id">
                 {{ video.title }} ({{ formatFileSize(video.file_size) }})
               </option>
             </select>
+            <div class="selection-hint">
+              Astuce : maintenez Cmd (Mac) ou Ctrl (Windows) pour sélectionner plusieurs vidéos.
+            </div>
+            <div class="selected-videos" *ngIf="deployForm.videoIds.length > 0">
+              <div class="selected-videos-header">
+                <span>{{ deployForm.videoIds.length }} vidéo(s) sélectionnée(s)</span>
+                <button type="button" class="btn btn-sm btn-secondary" (click)="clearSelectedVideos()">
+                  Tout effacer
+                </button>
+              </div>
+              <ul>
+                <li *ngFor="let videoId of deployForm.videoIds">
+                  <span>{{ getVideoTitleById(videoId) }}</span>
+                  <button type="button" class="btn-icon" (click)="removeSelectedVideo(videoId)" aria-label="Retirer">
+                    ✕
+                  </button>
+                </li>
+              </ul>
+            </div>
           </div>
 
           <div class="wizard-step">
@@ -203,9 +226,9 @@ interface Deployment {
             <button
               class="btn btn-primary btn-lg"
               (click)="startDeployment()"
-              [disabled]="!canDeploy()"
+              [disabled]="!canDeploy() || isDeploying"
             >
-              🚀 Lancer le déploiement
+              🚀 {{ isDeploying ? 'Déploiement en cours...' : 'Lancer le déploiement' }}
             </button>
           </div>
         </div>
@@ -547,6 +570,55 @@ interface Deployment {
       align-items: center;
       gap: 1rem;
       margin-bottom: 1rem;
+    }
+
+    .selection-hint {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .selected-videos {
+      margin-top: 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.75rem;
+      background: #f8fafc;
+    }
+
+    .selected-videos-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      color: #0f172a;
+    }
+
+    .selected-videos ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .selected-videos li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.85rem;
+      color: #334155;
+    }
+
+    .selected-videos li button {
+      color: #ef4444;
+      font-size: 1rem;
     }
 
     .step-number {
@@ -1046,6 +1118,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   showUploadModal = false;
   uploadProgress = 0;
   isUploading = false;
+  isDeploying = false;
   isDragOver = false;
   uploadResults: Array<{ name: string; success: boolean; error?: string }> = [];
 
@@ -1056,7 +1129,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   };
 
   deployForm = {
-    videoId: '',
+    videoIds: [] as string[],
     targetType: 'site' as 'site' | 'group',
     targetId: ''
   };
@@ -1315,34 +1388,72 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   }
 
   deployVideo(video: Video): void {
-    this.deployForm.videoId = video.id;
+    if (!this.deployForm.videoIds.includes(video.id)) {
+      this.deployForm.videoIds = [...this.deployForm.videoIds, video.id];
+    }
     this.activeTab = 'deploy';
   }
 
-  canDeploy(): boolean {
-    return !!(this.deployForm.videoId && this.deployForm.targetType && this.deployForm.targetId);
+  getVideoTitleById(videoId: string): string {
+    return this.videos.find(v => v.id === videoId)?.title || 'Vidéo inconnue';
   }
 
-  startDeployment(): void {
-    if (!this.canDeploy()) return;
+  removeSelectedVideo(videoId: string): void {
+    this.deployForm.videoIds = this.deployForm.videoIds.filter(id => id !== videoId);
+  }
 
-    const data = {
-      video_id: this.deployForm.videoId,
-      target_type: this.deployForm.targetType,
-      target_id: this.deployForm.targetId
-    };
+  clearSelectedVideos(): void {
+    this.deployForm.videoIds = [];
+  }
 
-    this.apiService.post<Deployment>('/deployments', data).subscribe({
-      next: (deployment) => {
-        this.deployments.unshift(deployment);
-        this.activeTab = 'history';
-        this.deployForm = { videoId: '', targetType: 'site', targetId: '' };
-        this.notificationService.success('Déploiement lancé avec succès !');
-      },
-      error: (error) => {
-        this.notificationService.error('Erreur lors du déploiement: ' + (error.error?.error || error.message));
+  canDeploy(): boolean {
+    return this.deployForm.videoIds.length > 0 && !!(this.deployForm.targetType && this.deployForm.targetId);
+  }
+
+  async startDeployment(): Promise<void> {
+    if (!this.canDeploy() || this.isDeploying) return;
+
+    this.isDeploying = true;
+    const { videoIds, targetId, targetType } = this.deployForm;
+    const successes: string[] = [];
+    const failures: Array<{ title: string; error: string }> = [];
+
+    for (const videoId of videoIds) {
+      const videoTitle = this.getVideoTitleById(videoId);
+      const payload = {
+        video_id: videoId,
+        target_type: targetType,
+        target_id: targetId
+      };
+
+      try {
+        const deployment = await firstValueFrom(this.apiService.post<Deployment>('/deployments', payload));
+        this.deployments.unshift({
+          ...deployment,
+          video_title: videoTitle
+        });
+        successes.push(videoTitle);
+      } catch (error: any) {
+        failures.push({
+          title: videoTitle,
+          error: error?.error?.error || error?.message || 'Erreur inconnue'
+        });
       }
-    });
+    }
+
+    this.isDeploying = false;
+    this.deployForm = { videoIds: [], targetType: 'site', targetId: '' };
+
+    if (successes.length > 0) {
+      const label = successes.length === 1 ? successes[0] : `${successes.length} vidéos`;
+      this.notificationService.success(`Déploiement lancé pour ${label}`);
+      this.activeTab = 'history';
+    }
+
+    if (failures.length > 0) {
+      const names = failures.map(f => f.title).join(', ');
+      this.notificationService.error(`Erreur lors du déploiement pour ${names}`);
+    }
   }
 
   getDeploymentStatusBadge(status: string): string {
