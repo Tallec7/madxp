@@ -82,6 +82,14 @@ describe('ApiService', () => {
 
       expect(result).toEqual({ id: 1, name: 'Test' });
     });
+
+    it('should send requests with credentials for cookies', () => {
+      service.get('/test').subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/test`);
+      expect(req.request.withCredentials).toBeTrue();
+      req.flush({});
+    });
   });
 
   describe('POST requests', () => {
@@ -111,6 +119,14 @@ describe('ApiService', () => {
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush({});
     });
+
+    it('should send POST requests with credentials', () => {
+      service.post('/test', {}).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/test`);
+      expect(req.request.withCredentials).toBeTrue();
+      req.flush({});
+    });
   });
 
   describe('PUT requests', () => {
@@ -128,6 +144,14 @@ describe('ApiService', () => {
 
       const req = httpMock.expectOne(`${environment.apiUrl}/sites/123`);
       expect(req.request.body).toEqual(body);
+      req.flush({});
+    });
+
+    it('should send PUT requests with credentials', () => {
+      service.put('/test/1', {}).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/test/1`);
+      expect(req.request.withCredentials).toBeTrue();
       req.flush({});
     });
   });
@@ -148,6 +172,14 @@ describe('ApiService', () => {
 
       const req = httpMock.expectOne(`${environment.apiUrl}/sites/123`);
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
+      req.flush({});
+    });
+
+    it('should send DELETE requests with credentials', () => {
+      service.delete('/sites/123').subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/sites/123`);
+      expect(req.request.withCredentials).toBeTrue();
       req.flush({});
     });
   });
@@ -183,6 +215,15 @@ describe('ApiService', () => {
 
       const req = httpMock.expectOne(`${environment.apiUrl}/upload`);
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
+      req.flush({});
+    });
+
+    it('should send upload requests with credentials', () => {
+      const formData = new FormData();
+      service.upload('/upload', formData).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/upload`);
+      expect(req.request.withCredentials).toBeTrue();
       req.flush({});
     });
   });

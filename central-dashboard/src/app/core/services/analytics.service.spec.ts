@@ -197,6 +197,7 @@ describe('AnalyticsService', () => {
                req.params.get('days') === '30'
       );
       expect(req.request.responseType).toBe('blob');
+      expect(req.request.withCredentials).toBeTrue();
       req.flush(mockBlob);
     });
 
@@ -210,6 +211,7 @@ describe('AnalyticsService', () => {
         req => req.url.includes(`/analytics/clubs/${siteId}/export`) &&
                req.params.get('format') === 'json'
       );
+      expect(req.request.withCredentials).toBeTrue();
       req.flush(mockBlob);
     });
   });

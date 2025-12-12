@@ -6,6 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 const logger = require('./logger');
 const { config } = require('./config');
 
@@ -122,24 +123,25 @@ class AnalyticsCollector {
     }
 
     try {
-      const url = `${serverUrl}/api/analytics/video-plays`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          site_id: siteId,
-          plays: events,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error: ${response.status}`);
+      const baseUrl = serverUrl?.replace(/\/$/, '');
+      if (!baseUrl) {
+        throw new Error('Central server URL is not configured');
       }
 
-      const result = await response.json();
+      const url = `${baseUrl}/api/analytics/video-plays`;
+      const response = await axios.post(
+        url,
+        {
+          site_id: siteId,
+          plays: events,
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 10000,
+        }
+      );
+
+      const result = response.data;
 
       // Vider le buffer local après envoi réussi
       this.buffer = [];
@@ -153,10 +155,13 @@ class AnalyticsCollector {
 
       return { sent: events.length, recorded: result.recorded };
     } catch (error) {
-      logger.error('Failed to send analytics to server:', error.message);
+      const message = error.response
+        ? `HTTP ${error.response.status}: ${error.response.statusText || 'Unknown error'}`
+        : error.message;
+      logger.error('Failed to send analytics to server:', message);
 
       // Garder les événements dans le buffer pour réessayer plus tard
-      return { sent: 0, error: error.message };
+      return { sent: 0, error: message };
     }
   }
 }

@@ -125,7 +125,8 @@ export class AnalyticsService {
     return this.http.get(`${this.apiUrl}/analytics/clubs/${siteId}/export`, {
       headers,
       params,
-      responseType: 'blob'
+      responseType: 'blob',
+      withCredentials: true
     });
   }
 

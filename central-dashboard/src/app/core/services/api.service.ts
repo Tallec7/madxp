@@ -22,25 +22,29 @@ export class ApiService {
     const httpParams = params ? new HttpParams({ fromObject: params }) : undefined;
     return this.http.get<T>(`${this.apiUrl}${endpoint}`, {
       headers: this.getHeaders(),
-      params: httpParams
+      params: httpParams,
+      withCredentials: true
     });
   }
 
   post<T>(endpoint: string, body: unknown): Observable<T> {
     return this.http.post<T>(`${this.apiUrl}${endpoint}`, body, {
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
+      withCredentials: true
     });
   }
 
   put<T>(endpoint: string, body: unknown): Observable<T> {
     return this.http.put<T>(`${this.apiUrl}${endpoint}`, body, {
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
+      withCredentials: true
     });
   }
 
   delete<T>(endpoint: string): Observable<T> {
     return this.http.delete<T>(`${this.apiUrl}${endpoint}`, {
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
+      withCredentials: true
     });
   }
 
@@ -50,6 +54,9 @@ export class ApiService {
       ...(token && { 'Authorization': `Bearer ${token}` })
     });
 
-    return this.http.post<T>(`${this.apiUrl}${endpoint}`, formData, { headers });
+    return this.http.post<T>(`${this.apiUrl}${endpoint}`, formData, {
+      headers,
+      withCredentials: true
+    });
   }
 }

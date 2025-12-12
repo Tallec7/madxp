@@ -198,6 +198,22 @@ cd /path/to/neopro
 
 ### Première installation (nouveau Pi)
 
+### 3. Analytics dashboard inaccessible (12 déc. 2025)
+
+**Symptôme :**
+Impossible de charger les analytics (`GET /api/analytics/.../usage` ⇒ `401 Unauthorized`) alors qu'on est connecté à l'interface centrale.
+
+**Cause :**
+Les requêtes Angular n'envoyaient pas le cookie `neopro_token` (HttpOnly) attendu par le serveur lorsqu'on accède à `https://neopro-central.onrender.com`. Seul le header `Authorization` était présent, mais le cookie restait côté navigateur.
+
+**Correctifs :**
+- Ajout de `withCredentials: true` sur tous les appels `ApiService` (`get/post/put/delete/upload`) pour que le navigateur joigne automatiquement les cookies.
+- Ajout de `withCredentials: true` sur l'export CSV/JSON des analytics.
+- Tests unitaires mis à jour (`api.service.spec.ts` et `analytics.service.spec.ts`) pour garantir que ce flag reste activé.
+
+**Résultat :**
+✅ Les analytics (health, usage, content, dashboard, export) se chargent de nouveau en production.
+
 ```
 1. Flash carte SD (Raspberry Pi Imager)
    ↓
