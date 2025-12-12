@@ -35,6 +35,10 @@ class NeoproSyncAgent {
       process.exit(1);
     }
 
+    // Démarrer l'envoi des analytics immédiatement (indépendant du WebSocket)
+    // Les analytics sont envoyées via HTTP, pas besoin d'attendre la connexion WS
+    this.startAnalyticsSync();
+
     this.connect();
 
     process.on('SIGTERM', () => this.shutdown());
@@ -83,7 +87,8 @@ class NeoproSyncAgent {
     this.startConfigWatcher();
 
     this.startHeartbeat();
-    this.startAnalyticsSync();
+    // Note: startAnalyticsSync() est appelé dans start() car les analytics
+    // sont envoyées via HTTP, indépendamment de la connexion WebSocket
   }
 
   /**
@@ -313,7 +318,10 @@ class NeoproSyncAgent {
   }
 
   async sendAnalytics() {
-    if (!this.connected) {
+    // Les analytics sont envoyées via HTTP, indépendamment de la connexion WebSocket
+    // On vérifie seulement que la configuration est valide
+    if (!config.central?.url || !config.site?.id) {
+      logger.warn('Cannot send analytics: missing central URL or site ID');
       return;
     }
 
@@ -325,6 +333,8 @@ class NeoproSyncAgent {
 
       if (result.sent > 0) {
         logger.info('Analytics sent', { sent: result.sent, recorded: result.recorded });
+      } else if (result.error) {
+        logger.warn('Analytics send failed', { error: result.error });
       }
     } catch (error) {
       logger.error('Failed to send analytics:', error);
