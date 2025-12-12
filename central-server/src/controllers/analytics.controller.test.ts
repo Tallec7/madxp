@@ -46,6 +46,10 @@ const createMockResponse = (): Response => {
   return res as Response;
 };
 
+const mockQueryResponses = (responses: Array<{ rows?: any[] }>) => {
+  responses.forEach((response) => (query as jest.Mock).mockResolvedValueOnce(response));
+};
+
 // Helper to create authenticated request
 const createAuthRequest = (overrides: Partial<AuthRequest> = {}): AuthRequest =>
   ({
@@ -61,26 +65,68 @@ describe('Analytics Controller', () => {
     jest.clearAllMocks();
   });
 
-  // TODO: Fix these tests - controller has evolved and makes more DB queries than mocked
-  describe.skip('getClubHealth', () => {
+  describe('getClubHealth', () => {
     it('should return health data for a site', async () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [{ id: 'site-123', site_name: 'Test Site', club_name: 'Test Club', status: 'online', last_seen_at: new Date() }] })
-        .mockResolvedValueOnce({ rows: [{ cpu_usage: 45, memory_usage: 60, temperature: 55, disk_usage: 30, uptime: 86400, recorded_at: new Date() }] })
-        .mockResolvedValueOnce({ rows: [{ heartbeat_count: '1000', first_heartbeat: new Date(), last_heartbeat: new Date() }] })
-        .mockResolvedValueOnce({ rows: [{ active_alerts: '2', alerts_last_30d: '10' }] })
-        .mockResolvedValueOnce({ rows: [{ avg_cpu: 42, avg_memory: 58, avg_temperature: 52, max_temperature: 65 }] })
-        .mockResolvedValueOnce({ rows: [] }); // daily_heartbeats query
+      mockQueryResponses([
+        {
+          rows: [
+            {
+              id: 'site-123',
+              site_name: 'Site 123',
+              club_name: 'Club 123',
+              status: 'online',
+              last_seen_at: '2025-12-01T00:00:00Z',
+            },
+          ],
+        },
+        {
+          rows: [
+            {
+              cpu_usage: 25,
+              memory_usage: 35,
+              temperature: 65,
+              disk_usage: 45,
+              uptime: 1234,
+              recorded_at: '2025-12-01T00:00:00Z',
+            },
+          ],
+        },
+        {
+          rows: [
+            {
+              heartbeat_count: '2000',
+              first_heartbeat: '2025-11-01T00:00:00Z',
+              last_heartbeat: '2025-12-01T00:00:00Z',
+            },
+          ],
+        },
+        { rows: [{ active_alerts: '1', alerts_last_30d: '5' }] },
+        {
+          rows: [
+            {
+              avg_cpu: 22,
+              avg_memory: 33,
+              avg_temperature: 45,
+              max_temperature: 70,
+            },
+          ],
+        },
+        { rows: [{ heartbeat_count: '1000' }] },
+        { rows: [{ alerts_24h: '3' }] },
+      ]);
 
       await getClubHealth(req, res);
 
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           site_id: 'site-123',
-          site_name: 'Test Site',
+          availability_24h: expect.any(Number),
+          alerts_24h: 3,
+          status: 'healthy',
+          current_metrics: expect.objectContaining({ cpu_usage: 25 }),
         })
       );
     });
@@ -89,7 +135,7 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ params: { siteId: 'nonexistent' } });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      mockQueryResponses([{ rows: [] }]);
 
       await getClubHealth(req, res);
 
@@ -109,7 +155,7 @@ describe('Analytics Controller', () => {
     });
   });
 
-  describe.skip('getClubAvailability', () => {
+  describe('getClubAvailability', () => {
     it('should return availability data', async () => {
       const req = createAuthRequest({
         params: { siteId: 'site-123' },
@@ -117,18 +163,25 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({
-        rows: [
-          { date: '2025-12-01', heartbeat_count: '2800', avg_cpu: 45.5, avg_temp: 52.3 },
-        ],
-      });
+      mockQueryResponses([
+        {
+          rows: [
+            { date: '2025-12-01', heartbeat_count: '2880', avg_cpu: 45.5, avg_temp: 52.3 },
+          ],
+        },
+      ]);
 
       await getClubAvailability(req, res);
 
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          site_id: 'site-123',
-          period_days: 7,
+          availability: [
+            expect.objectContaining({
+              date: '2025-12-01',
+              online_minutes: 1440,
+              availability_percent: 100,
+            }),
+          ],
         })
       );
     });
@@ -140,14 +193,13 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      mockQueryResponses([{ rows: [] }]);
 
       await getClubAvailability(req, res);
 
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          period_days: 90,
-        })
+      expect(query).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.arrayContaining(['site-123', 90])
       );
     });
 
@@ -163,42 +215,52 @@ describe('Analytics Controller', () => {
     });
   });
 
-  describe.skip('getClubAlerts', () => {
-    it('should return alerts with stats', async () => {
+  describe('getClubAlerts', () => {
+    it('should return alerts data', async () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [{ id: '1', alert_type: 'temperature', severity: 'warning' }] })
-        .mockResolvedValueOnce({ rows: [{ active: '1', acknowledged: '0', resolved: '1', critical: '1', warning: '1', info: '0' }] });
+      mockQueryResponses([
+        {
+          rows: [
+            {
+              id: 'alert-1',
+              alert_type: 'temperature',
+              severity: 'warning',
+              message: 'Trop chaud',
+              status: 'active',
+              created_at: '2025-12-01T00:00:00Z',
+              resolved_at: null,
+            },
+          ],
+        },
+      ]);
 
       await getClubAlerts(req, res);
 
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          site_id: 'site-123',
-          stats: expect.any(Object),
-          alerts: expect.any(Array),
+          alerts: expect.arrayContaining([
+            expect.objectContaining({ id: 'alert-1', severity: 'warning' }),
+          ]),
         })
       );
     });
 
-    it('should filter by status', async () => {
+    it('should filter by status and severity', async () => {
       const req = createAuthRequest({
         params: { siteId: 'site-123' },
-        query: { status: 'active' },
+        query: { status: 'active', severity: 'critical' },
       });
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [{ active: '0', acknowledged: '0', resolved: '0', critical: '0', warning: '0', info: '0' }] });
+      mockQueryResponses([{ rows: [] }]);
 
       await getClubAlerts(req, res);
 
       expect(query).toHaveBeenCalledWith(
-        expect.stringContaining('AND status = $2'),
-        expect.arrayContaining(['site-123', 'active'])
+        expect.any(String),
+        expect.arrayContaining(['site-123', 30, 'active', 'critical'])
       );
     });
 
@@ -472,68 +534,81 @@ describe('Analytics Controller', () => {
     });
   });
 
-  describe.skip('getClubUsage', () => {
+  describe('getClubUsage', () => {
     it('should return usage statistics', async () => {
       const req = createAuthRequest({
         params: { siteId: 'site-123' },
-        query: {},
       });
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({
-          rows: [{
-            screen_time_seconds: '3600',
-            videos_played: '50',
-            sessions_count: '5',
-            active_days: '10',
-            manual_triggers: '20',
-            auto_plays: '30',
-          }],
-        })
-        .mockResolvedValueOnce({
-          rows: [{
-            screen_time_seconds: '3000',
-            videos_played: '40',
-            sessions_count: '4',
-          }],
-        })
-        .mockResolvedValueOnce({
-          rows: [{ date: '2025-12-01', screen_time: '1800', videos: '25' }],
-        });
+      mockQueryResponses([
+        {
+          rows: [
+            {
+              screen_time_seconds: '3600',
+              videos_played: '50',
+              unique_videos: '10',
+              sessions_count: '5',
+              active_days: '4',
+              manual_triggers: '2',
+              auto_plays: '3',
+              avg_completion: '85.2',
+            },
+          ],
+        },
+        {
+          rows: [
+            { date: '2025-12-01', screen_time: '1800', videos: '25' },
+          ],
+        },
+      ]);
 
       await getClubUsage(req, res);
 
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          site_id: 'site-123',
-          summary: expect.objectContaining({
-            videos_played: 50,
-            screen_time_seconds: 3600,
-          }),
+          period: expect.stringContaining('days'),
+          total_plays: 50,
+          daily_breakdown: expect.arrayContaining([
+            expect.objectContaining({ plays: 25 }),
+          ]),
         })
       );
     });
 
-    it('should use custom date range', async () => {
+    it('should respect days query parameter', async () => {
       const req = createAuthRequest({
         params: { siteId: 'site-123' },
-        query: { from: '2025-01-01', to: '2025-01-31' },
+        query: { days: '7' },
       });
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [{ screen_time_seconds: '0', videos_played: '0', sessions_count: '0', active_days: '0', manual_triggers: '0', auto_plays: '0' }] })
-        .mockResolvedValueOnce({ rows: [{ screen_time_seconds: '0', videos_played: '0', sessions_count: '0' }] })
-        .mockResolvedValueOnce({ rows: [] });
+      mockQueryResponses([
+        {
+          rows: [
+            {
+              screen_time_seconds: '0',
+              videos_played: '0',
+              unique_videos: '0',
+              sessions_count: '0',
+              active_days: '0',
+              manual_triggers: '0',
+              auto_plays: '0',
+              avg_completion: null,
+            },
+          ],
+        },
+        {
+          rows: [],
+        },
+      ]);
 
       await getClubUsage(req, res);
 
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          period: expect.stringContaining('2025-01-01'),
-        })
-      );
+      const usageCallArgs = (query as jest.Mock).mock.calls[0][1];
+      const fromDate = usageCallArgs[1];
+      const diffDays = Math.round((Date.now() - fromDate.valueOf()) / (1000 * 60 * 60 * 24));
+      expect(Math.abs(diffDays - 7)).toBeLessThanOrEqual(1);
     });
 
     it('should return 500 on database error', async () => {
@@ -548,58 +623,40 @@ describe('Analytics Controller', () => {
     });
   });
 
-  describe.skip('getClubContent', () => {
+  describe('getClubContent', () => {
     it('should return content analytics', async () => {
-      const req = createAuthRequest({
-        params: { siteId: 'site-123' },
-        query: {},
-      });
+      const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({
+      mockQueryResponses([
+        {
           rows: [
             { category: 'sponsors', plays: '30', total_duration: '1800' },
-            { category: 'jingles', plays: '20', total_duration: '600' },
           ],
-        })
-        .mockResolvedValueOnce({
+        },
+        {
           rows: [
-            { video_filename: 'video1.mp4', category: 'sponsors', plays: '15', total_duration: '900', completed_count: '10' },
+            {
+              video_filename: 'video1.mp4',
+              category: 'sponsors',
+              plays: '15',
+              total_duration: '900',
+              avg_completion: '90',
+            },
           ],
-        })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [{ avg_completion: '85.5' }] });
+        },
+      ]);
 
       await getClubContent(req, res);
 
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          site_id: 'site-123',
-          by_category: expect.objectContaining({
-            sponsors: expect.objectContaining({ plays: 30 }),
-          }),
-          top_videos: expect.any(Array),
-          completion_rate: 85.5,
-        })
-      );
-    });
-
-    it('should handle null completion rate', async () => {
-      const req = createAuthRequest({ params: { siteId: 'site-123' } });
-      const res = createMockResponse();
-
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [{ avg_completion: null }] });
-
-      await getClubContent(req, res);
-
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          completion_rate: null,
+          categories_breakdown: expect.arrayContaining([
+            expect.objectContaining({ category: 'sponsors', play_count: 30 }),
+          ]),
+          top_videos: expect.arrayContaining([
+            expect.objectContaining({ filename: 'video1.mp4', play_count: 15 }),
+          ]),
         })
       );
     });
@@ -616,33 +673,56 @@ describe('Analytics Controller', () => {
     });
   });
 
-  describe.skip('getClubDashboard', () => {
+  describe('getClubDashboard', () => {
     it('should return complete dashboard data', async () => {
-      const req = createAuthRequest({
-        params: { siteId: 'site-123' },
-        query: {},
-      });
+      const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({
-          rows: [{ status: 'online', last_seen_at: new Date(), cpu_usage: 45, memory_usage: 60, temperature: 55, disk_usage: 30 }],
-        })
-        .mockResolvedValueOnce({
-          rows: [{ screen_time_seconds: '3600', videos_played: '50', active_days: '10', manual_triggers: '20', auto_plays: '30' }],
-        })
-        .mockResolvedValueOnce({
+      mockQueryResponses([
+        {
+          rows: [
+            {
+              status: 'online',
+              last_seen_at: '2025-12-01T00:00:00Z',
+              cpu_usage: 45,
+              memory_usage: 60,
+              temperature: 55,
+              disk_usage: 30,
+            },
+          ],
+        },
+        {
+          rows: [
+            {
+              screen_time_seconds: '3600',
+              videos_played: '50',
+              active_days: '10',
+              manual_triggers: '20',
+              auto_plays: '30',
+            },
+          ],
+        },
+        {
           rows: [{ category: 'sponsors', plays: '30' }],
-        })
-        .mockResolvedValueOnce({
+        },
+        {
           rows: [{ video_filename: 'video1.mp4', plays: '15' }],
-        })
-        .mockResolvedValueOnce({
-          rows: [{ alert_type: 'temperature', severity: 'warning' }],
-        })
-        .mockResolvedValueOnce({
+        },
+        {
+          rows: [
+            {
+              alert_type: 'temperature',
+              severity: 'warning',
+              message: 'Alerte',
+              created_at: '2025-12-01T00:00:00Z',
+              resolved_at: null,
+            },
+          ],
+        },
+        {
           rows: [{ date: '2025-12-01', screen_time: '1800', videos: '25' }],
-        });
+        },
+      ]);
 
       await getClubDashboard(req, res);
 
@@ -651,7 +731,9 @@ describe('Analytics Controller', () => {
           site_id: 'site-123',
           health: expect.objectContaining({ status: 'online' }),
           usage: expect.objectContaining({ videos_played: 50 }),
-          content: expect.objectContaining({ by_category: expect.any(Object) }),
+          content: expect.objectContaining({ top_videos: expect.any(Array) }),
+          alerts: expect.any(Array),
+          daily_activity: expect.any(Array),
         })
       );
     });
@@ -660,13 +742,27 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [{ status: 'offline', last_seen_at: null, cpu_usage: null }] })
-        .mockResolvedValueOnce({ rows: [{ screen_time_seconds: '0', videos_played: '0', active_days: '0', manual_triggers: '0', auto_plays: '0' }] })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] });
+      mockQueryResponses([
+        {
+          rows: [
+            {
+              status: 'offline',
+              last_seen_at: null,
+              cpu_usage: null,
+              memory_usage: null,
+              temperature: null,
+              disk_usage: null,
+            },
+          ],
+        },
+        {
+          rows: [{ screen_time_seconds: '0', videos_played: '0', active_days: '0', manual_triggers: '0', auto_plays: '0' }],
+        },
+        { rows: [] },
+        { rows: [] },
+        { rows: [] },
+        { rows: [] },
+      ]);
 
       await getClubDashboard(req, res);
 
@@ -689,16 +785,14 @@ describe('Analytics Controller', () => {
     });
   });
 
-  describe.skip('calculateDailyStats', () => {
+  describe('calculateDailyStats', () => {
     it('should calculate daily stats for all sites', async () => {
       const req = createAuthRequest({
         body: { date: '2025-12-01' },
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{ count: '10' }],
-      });
+      mockQueryResponses([{ rows: [{ count: '10' }] }]);
 
       await calculateDailyStats(req, res);
 
@@ -715,7 +809,7 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ body: {} });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [{ count: '5' }] });
+      mockQueryResponses([{ rows: [{ count: '5' }] }]);
 
       await calculateDailyStats(req, res);
 
@@ -739,34 +833,39 @@ describe('Analytics Controller', () => {
     });
   });
 
-  describe.skip('getAnalyticsOverview', () => {
+  describe('getAnalyticsOverview', () => {
     it('should return global analytics overview', async () => {
       const req = createAuthRequest();
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({
-          rows: [{ active_sites: '15', total_videos_this_month: '1000', total_screen_time_this_month: '36000' }],
-        })
-        .mockResolvedValueOnce({
+      mockQueryResponses([
+        { rows: [{ total_sites: '20', online_sites: '10' }] },
+        { rows: [{ plays_today: '5', plays_week: '35' }] },
+        { rows: [{ avg_availability: '90' }] },
+        {
           rows: [
-            { id: 'site-1', site_name: 'Site A', club_name: 'Club A', videos_this_month: '100', screen_time_this_month: '3600' },
+            {
+              site_id: 'site-1',
+              club_name: 'Club A',
+              status: 'online',
+              plays_today: '5',
+              heartbeat_count: '2880',
+            },
           ],
-        })
-        .mockResolvedValueOnce({
-          rows: [{ id: 'site-2', site_name: 'Site B', club_name: 'Club B', last_seen_at: null }],
-        });
+        },
+      ]);
 
       await getAnalyticsOverview(req, res);
 
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          global: expect.objectContaining({
-            active_sites: 15,
-            total_videos_this_month: 1000,
-          }),
-          top_sites: expect.any(Array),
-          inactive_sites: expect.any(Array),
+          total_sites: 20,
+          online_sites: 10,
+          total_plays_today: 5,
+          avg_availability: 90,
+          sites_summary: expect.arrayContaining([
+            expect.objectContaining({ site_id: 'site-1' }),
+          ]),
         })
       );
     });
@@ -775,19 +874,20 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest();
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [{}] })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] });
+      mockQueryResponses([
+        { rows: [{ total_sites: '0', online_sites: '0' }] },
+        { rows: [{ plays_today: '0', plays_week: '0' }] },
+        { rows: [{ avg_availability: null }] },
+        { rows: [] },
+      ]);
 
       await getAnalyticsOverview(req, res);
 
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          global: expect.objectContaining({
-            active_sites: 0,
-            total_videos_this_month: 0,
-          }),
+          total_sites: 0,
+          total_plays_today: 0,
+          avg_availability: 0,
         })
       );
     });

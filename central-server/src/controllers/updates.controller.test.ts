@@ -1,4 +1,24 @@
 import { Response } from 'express';
+import { AuthRequest } from '../types';
+
+// Explicitly mock the database module for deterministic tests
+jest.mock('../config/database', () => {
+  const pool = {
+    query: jest.fn(),
+    connect: jest.fn(),
+    end: jest.fn(),
+  };
+  return {
+    __esModule: true,
+    default: pool,
+    pool,
+  };
+});
+
+jest.mock('../config/supabase', () => ({
+  uploadFile: jest.fn(),
+}));
+
 import {
   getUpdates,
   getUpdate,
@@ -12,12 +32,7 @@ import {
   deleteUpdateDeployment,
 } from './updates.controller';
 import pool from '../config/database';
-import { AuthRequest } from '../types';
 import { uploadFile } from '../config/supabase';
-
-jest.mock('../config/supabase', () => ({
-  uploadFile: jest.fn(),
-}));
 
 // Helper to create mock response
 const createMockResponse = (): Response => {
@@ -150,10 +165,20 @@ describe('Updates Controller', () => {
 
       it('should return 500 on database error', async () => {
         const req = createAuthRequest({
-          body: { version: '1.0.0' },
+          body: { version: '1.0.0', description: 'Bug fixes' },
+          file: {
+            originalname: 'update.tar.gz',
+            mimetype: 'application/gzip',
+            size: 2048,
+            buffer: Buffer.from('file-content'),
+          } as unknown as Express.Multer.File,
         });
         const res = createMockResponse();
 
+        (uploadFile as jest.Mock).mockResolvedValueOnce({
+          path: 'uploads/update.tar.gz',
+          url: 'https://storage/update.tar.gz',
+        });
         (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
 
         await createUpdate(req, res);

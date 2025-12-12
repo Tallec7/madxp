@@ -13,3 +13,6 @@ BEGIN
       FOREIGN KEY (pending_config_version_id) REFERENCES config_history(id);
   END IF;
 END $$;
+
+
+
