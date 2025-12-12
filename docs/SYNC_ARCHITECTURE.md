@@ -352,6 +352,17 @@ function mergeConfigurations(localConfig, remoteNeoProContent) {
 1. L'action est bloquée côté Admin UI
 2. Message d'erreur : "Ce contenu est géré par NEOPRO et ne peut pas être supprimé"
 
+### 5.4 Nommage des vidéos déployées
+
+Depuis décembre 2025, les vidéos poussées depuis le central conservent leur nom d'origine (ex. `Golden Cup.mp4`) au lieu d'un UUID Supabase illisible :
+
+- **Sanitisation automatique** : caractères interdits (`<>:"/\|?*`), accents et espaces multiples sont nettoyés, l'extension reste en `.mp4`.
+- **Conflits évités** : si un fichier existe déjà dans la catégorie ciblée, le sync-agent ajoute un suffixe (`Golden Cup (1).mp4`) avant l'écriture.
+- **Traçabilité** : `configuration.json` stocke désormais le `filename` final *et* le `name` (sans extension) pour que la télécommande et l'analytics puissent afficher un intitulé utilisateur.
+- **Suppression sûre** : la commande `delete_video` s'appuie sur ce `filename` final tout en restant rétro-compatible avec les anciennes entrées basées sur `path`.
+
+👉 Résultat : les opérateurs voient les mêmes intitulés sur le dashboard central, la télécommande et dans les exports analytics, ce qui simplifie le support.
+
 ---
 
 ## 6. Scénarios d'Usage

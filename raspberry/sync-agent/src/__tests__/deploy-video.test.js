@@ -93,7 +93,7 @@ describe('Deploy Video Handler', () => {
   describe('execute', () => {
     const baseVideoData = {
       videoUrl: 'https://storage.supabase.co/videos/test.mp4',
-      filename: 'test-video.mp4',
+      filename: 'Test Video.mp4',
       originalName: 'Test Video.mp4',
       category: 'annonces_neopro',
       subcategory: null,
@@ -123,7 +123,7 @@ describe('Deploy Video Handler', () => {
       const result = await deployVideo.execute(baseVideoData, jest.fn());
 
       expect(result.success).toBe(true);
-      expect(result.path).toContain('test-video.mp4');
+      expect(result.path).toContain('Test Video.mp4');
       expect(fs.ensureDir).toHaveBeenCalled();
     });
 
@@ -169,29 +169,6 @@ describe('Deploy Video Handler', () => {
 
       expect(fs.ensureDir).toHaveBeenCalledWith(
         expect.stringContaining('promotions')
-      );
-    });
-
-    it('should warn when overwriting existing video', async () => {
-      fs.pathExists.mockResolvedValue(true);
-
-      const mockStream = { pipe: jest.fn() };
-      axios.mockResolvedValue({ data: mockStream });
-
-      const mockWriter = {
-        on: jest.fn((event, callback) => {
-          if (event === 'finish') setTimeout(callback, 10);
-          return mockWriter;
-        }),
-      };
-      fs.createWriteStream.mockReturnValue(mockWriter);
-      mockStream.pipe.mockReturnValue(mockWriter);
-
-      await deployVideo.execute(baseVideoData, jest.fn());
-
-      expect(logger.warn).toHaveBeenCalledWith(
-        'Video already exists, will be overwritten',
-        expect.any(Object)
       );
     });
 
@@ -284,7 +261,7 @@ describe('Deploy Video Handler', () => {
   describe('updateConfiguration', () => {
     const baseVideoData = {
       videoUrl: 'https://storage.supabase.co/videos/test.mp4',
-      filename: 'test-video.mp4',
+      filename: 'Test Video.mp4',
       originalName: 'Test Video.mp4',
       category: 'annonces_neopro',
       subcategory: null,
@@ -344,7 +321,7 @@ describe('Deploy Video Handler', () => {
           owner: 'neopro',
           videos: [{
             name: 'Old Name',
-            path: 'videos/annonces_neopro/test-video.mp4',
+            path: 'videos/annonces_neopro/Test Video.mp4',
           }],
           subCategories: [],
         }],
@@ -560,7 +537,7 @@ describe('Deploy Video Handler', () => {
   describe('Edge Cases', () => {
     const baseVideoData = {
       videoUrl: 'https://storage.supabase.co/videos/test.mp4',
-      filename: 'test-video.mp4',
+      filename: '4057ba2e-3b75-4db3-bd03-98caf48eb70d.mp4',
       originalName: 'Test Video.mp4',
       category: 'annonces_neopro',
       subcategory: null,
@@ -616,6 +593,40 @@ describe('Deploy Video Handler', () => {
       expect(result.success).toBe(true);
     });
 
+    it('should generate a unique filename when the target already exists', async () => {
+      const mockStream = { pipe: jest.fn() };
+      axios.mockResolvedValue({ data: mockStream });
+
+      const mockWriter = {
+        on: jest.fn((event, callback) => {
+          if (event === 'finish') setTimeout(callback, 10);
+          return mockWriter;
+        }),
+      };
+      fs.createWriteStream.mockReturnValue(mockWriter);
+      mockStream.pipe.mockReturnValue(mockWriter);
+
+      const existingPath = path.join(
+        '/home/pi/neopro/videos',
+        baseVideoData.category,
+        baseVideoData.originalName
+      );
+
+      fs.pathExists.mockImplementation((p) => {
+        if (p.includes('configuration.json')) {
+          return Promise.resolve(true);
+        }
+        if (p === existingPath) {
+          return Promise.resolve(true);
+        }
+        return Promise.resolve(false);
+      });
+
+      const result = await deployVideo.execute(baseVideoData, jest.fn());
+
+      expect(result.path).toContain('Test Video (1).mp4');
+    });
+
     it('should handle empty category name gracefully', async () => {
       const videoData = {
         ...baseVideoData,
@@ -667,7 +678,7 @@ describe('Deploy Video Handler', () => {
   describe('Checksum Verification', () => {
     const baseVideoData = {
       videoUrl: 'https://storage.example.com/videos/test.mp4',
-      filename: 'test.mp4',
+      filename: '4057ba2e-3b75-4db3-bd03-98caf48eb70d.mp4',
       originalName: 'Test Video.mp4',
       category: 'annonces',
       subcategory: null,

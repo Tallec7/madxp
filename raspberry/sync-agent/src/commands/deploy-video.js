@@ -6,6 +6,55 @@ const logger = require('../logger');
 const { config } = require('../config');
 const { isLocked } = require('../utils/config-merge');
 
+const DEFAULT_EXTENSION = '.mp4';
+const ILLEGAL_FILENAME_CHARS = /[<>:"/\\|?*\x00-\x1F]/g;
+
+function sanitizeFilename(name) {
+  const fallbackBase = 'video';
+  const fallbackExt = DEFAULT_EXTENSION;
+
+  if (!name || typeof name !== 'string') {
+    return `${fallbackBase}${fallbackExt}`;
+  }
+
+  const trimmed = name.trim();
+  const ext = path.extname(trimmed) || fallbackExt;
+  const base = path.basename(trimmed, ext) || fallbackBase;
+
+  const safeBase = base
+    .replace(ILLEGAL_FILENAME_CHARS, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/-+/g, '-')
+    .trim();
+
+  const sanitizedBase = safeBase || fallbackBase;
+  const safeExt = (ext || fallbackExt).replace(/[^a-zA-Z0-9.]/g, '').toLowerCase() || fallbackExt;
+
+  return `${sanitizedBase}${safeExt.startsWith('.') ? safeExt : `.${safeExt}`}`;
+}
+
+async function ensureUniqueFilename(filename, directory) {
+  const parsed = path.parse(filename);
+  let candidate = filename;
+  let counter = 1;
+
+  while (await fs.pathExists(path.join(directory, candidate))) {
+    candidate = `${parsed.name} (${counter})${parsed.ext || DEFAULT_EXTENSION}`;
+    counter += 1;
+  }
+
+  return candidate;
+}
+
+function buildRelativePath(videoData) {
+  const segments = ['videos', videoData.category];
+  if (videoData.subcategory) {
+    segments.push(videoData.subcategory);
+  }
+  segments.push(videoData.filename);
+  return segments.join('/');
+}
+
 /**
  * Calcule le checksum SHA256 d'un fichier
  * @param {string} filePath Chemin vers le fichier
@@ -29,8 +78,10 @@ class VideoDeployHandler {
     // Déploiement depuis le central = contenu NEOPRO (verrouillé par défaut)
     const isNeoProContent = locked !== false;
 
+    const preferredName = originalName || filename;
+
     logger.info('Starting video deployment', {
-      filename,
+      filename: preferredName,
       category,
       subcategory,
       isNeoProContent,
@@ -47,7 +98,9 @@ class VideoDeployHandler {
 
       await fs.ensureDir(targetDir);
 
-      const targetPath = path.join(targetDir, filename);
+      const sanitizedFilename = sanitizeFilename(preferredName || filename);
+      const finalFilename = await ensureUniqueFilename(sanitizedFilename, targetDir);
+      const targetPath = path.join(targetDir, finalFilename);
 
       if (await fs.pathExists(targetPath)) {
         logger.warn('Video already exists, will be overwritten', { targetPath });
@@ -70,7 +123,13 @@ class VideoDeployHandler {
         logger.warn('No checksum provided, skipping verification');
       }
 
-      await this.updateConfiguration(data);
+      const finalVideoData = {
+        ...data,
+        filename: finalFilename,
+        originalName: preferredName || finalFilename,
+      };
+
+      await this.updateConfiguration(finalVideoData);
 
       await this.notifyLocalApp();
 
@@ -82,6 +141,7 @@ class VideoDeployHandler {
         path: targetPath,
         size: stat.size,
         checksum: checksum || (await calculateFileChecksum(targetPath)),
+        filename: finalFilename,
       };
     } catch (error) {
       logger.error('Video deployment failed:', error);
@@ -161,12 +221,11 @@ class VideoDeployHandler {
       }
 
       // Construire le chemin relatif de la vidéo
-      const relativePath = videoData.subcategory
-        ? `videos/${videoData.category}/${videoData.subcategory}/${videoData.filename}`
-        : `videos/${videoData.category}/${videoData.filename}`;
+      const relativePath = buildRelativePath(videoData);
 
       const videoEntry = {
         name: videoData.originalName.replace(/\.[^/.]+$/, ''),
+        filename: videoData.filename,
         path: relativePath,
         type: 'video/mp4',
         locked: isNeoProContent,

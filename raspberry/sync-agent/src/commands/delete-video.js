@@ -3,6 +3,22 @@ const path = require('path');
 const logger = require('../logger');
 const { config } = require('../config');
 
+function buildRelativePath(videoData) {
+  const segments = ['videos', videoData.category];
+  if (videoData.subcategory) {
+    segments.push(videoData.subcategory);
+  }
+  segments.push(videoData.filename);
+  return segments.join('/');
+}
+
+function isSameVideo(video, relativePath, filename) {
+  if (video.filename) {
+    return video.filename === filename;
+  }
+  return video.path === relativePath;
+}
+
 class VideoDeleteHandler {
   async execute(data) {
     const { filename, category, subcategory } = data;
@@ -53,6 +69,8 @@ class VideoDeleteHandler {
       const content = await fs.readFile(configPath, 'utf-8');
       const configuration = JSON.parse(content);
 
+      const relativePath = buildRelativePath(videoData);
+
       if (!configuration.categories) {
         return;
       }
@@ -63,13 +81,15 @@ class VideoDeleteHandler {
         return;
       }
 
+      const filterFn = (video) => !isSameVideo(video, relativePath, videoData.filename);
+
       if (videoData.subcategory) {
         const subcategory = category.subCategories?.find(s => s.name === videoData.subcategory);
         if (subcategory) {
-          subcategory.videos = subcategory.videos.filter(v => v.filename !== videoData.filename);
+          subcategory.videos = (subcategory.videos || []).filter(filterFn);
         }
       } else {
-        category.videos = category.videos.filter(v => v.filename !== videoData.filename);
+        category.videos = (category.videos || []).filter(filterFn);
       }
 
       await fs.writeFile(configPath, JSON.stringify(configuration, null, 2));
