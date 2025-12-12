@@ -377,7 +377,7 @@ import {
       <div *ngIf="!loading && activeTab === 'json'" class="tab-content">
         <div class="json-editor">
           <div class="json-toolbar">
-            <button class="btn btn-secondary btn-sm" (click)="formatJson()">Formater</button>
+            <button class="btn btn-secondary btn-sm" (click)="formatJsonInput()">Formater</button>
             <button class="btn btn-secondary btn-sm" (click)="validateJson()">Valider</button>
           </div>
           <textarea
@@ -1871,7 +1871,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  formatJson(): void {
+  formatJsonInput(): void {
     try {
       const parsed = JSON.parse(this.jsonString);
       this.jsonString = JSON.stringify(parsed, null, 2);
