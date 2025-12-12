@@ -439,6 +439,29 @@ import {
             <button class="modal-close" (click)="showDiffModal = false">×</button>
           </div>
           <div class="modal-body">
+            <div class="mode-section">
+              <div class="mode-header">
+                <span class="mode-title">Mode de déploiement</span>
+                <span class="mode-subtitle">Fusionner pour préserver le contenu club, ou remplacer pour imposer la config centrale.</span>
+              </div>
+              <div class="mode-options">
+                <label class="mode-card" [class.active]="deployMode === 'replace'">
+                  <input type="radio" name="deployMode" value="replace" [(ngModel)]="deployMode" />
+                  <div class="mode-card-content">
+                    <div class="mode-card-title">Remplacer</div>
+                    <div class="mode-card-desc">Écrase totalement la configuration du boîtier par celle du central.</div>
+                  </div>
+                </label>
+                <label class="mode-card" [class.active]="deployMode === 'merge'">
+                  <input type="radio" name="deployMode" value="merge" [(ngModel)]="deployMode" />
+                  <div class="mode-card-content">
+                    <div class="mode-card-title">Fusionner</div>
+                    <div class="mode-card-desc">Préserve le contenu club existant et applique uniquement les éléments NEOPRO.</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             <div *ngIf="diffLoading" class="loading-inline">
               <div class="spinner-small"></div>
               <span>Calcul des différences...</span>
@@ -448,7 +471,10 @@ import {
             </div>
             <div *ngIf="!diffLoading && diffItems.length > 0" class="diff-list">
               <div class="diff-summary">
-                {{ diffItems.length }} changement(s) détecté(s)
+                <div class="diff-total">{{ diffItems.length }} changement(s) détecté(s)</div>
+                <div class="diff-pill added">+ {{ diffCounts.added }}</div>
+                <div class="diff-pill changed">~ {{ diffCounts.changed }}</div>
+                <div class="diff-pill removed">- {{ diffCounts.removed }}</div>
               </div>
               <div class="diff-item" *ngFor="let diff of diffItems" [class]="'diff-' + diff.type">
                 <div class="diff-field">{{ diff.path }}</div>
@@ -1297,6 +1323,69 @@ import {
       padding: 1.5rem;
     }
 
+    .mode-section {
+      margin-bottom: 1.25rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1rem;
+      background: #f8fafc;
+    }
+
+    .mode-header {
+      margin-bottom: 0.75rem;
+    }
+
+    .mode-title {
+      display: block;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .mode-subtitle {
+      display: block;
+      color: #475569;
+      font-size: 0.9rem;
+      margin-top: 0.1rem;
+    }
+
+    .mode-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .mode-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 0.85rem;
+      display: flex;
+      gap: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: #fff;
+      align-items: flex-start;
+    }
+
+    .mode-card input {
+      margin-top: 4px;
+    }
+
+    .mode-card.active {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .mode-card-title {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .mode-card-desc {
+      color: #475569;
+      font-size: 0.9rem;
+      line-height: 1.3;
+    }
+
     .modal-footer {
       display: flex;
       justify-content: flex-end;
@@ -1318,9 +1407,47 @@ import {
     }
 
     .diff-summary {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.9rem 1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .diff-total {
       font-weight: 600;
       color: #0f172a;
-      margin-bottom: 0.5rem;
+    }
+
+    .diff-pill {
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #0f172a;
+      border: 1px solid transparent;
+    }
+
+    .diff-pill.added {
+      background: #ecfdf3;
+      color: #166534;
+      border-color: #bbf7d0;
+    }
+
+    .diff-pill.changed {
+      background: #fff7ed;
+      color: #9a3412;
+      border-color: #fed7aa;
+    }
+
+    .diff-pill.removed {
+      background: #fef2f2;
+      color: #b91c1c;
+      border-color: #fecdd3;
     }
 
     .diff-item {
@@ -1513,6 +1640,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   showDiffModal = false;
   diffLoading = false;
   diffItems: ConfigDiff[] = [];
+  deployMode: 'replace' | 'merge' = 'replace';
 
   // Categories UI
   expandedCategory: number | null = null;
@@ -1533,6 +1661,16 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.configPollSubscription?.unsubscribe();
+  }
+
+  get diffCounts() {
+    return this.diffItems.reduce(
+      (acc, item) => {
+        acc[item.type] = (acc[item.type] || 0) + 1;
+        return acc;
+      },
+      { added: 0, removed: 0, changed: 0 } as { [key: string]: number }
+    );
   }
 
   private getEmptyConfig(): SiteConfiguration {
@@ -1976,7 +2114,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
         // Puis déployer sur le site
         this.sitesService.sendCommand(this.siteId, 'update_config', {
           configuration: this.config,
-          mode: 'replace'
+          mode: this.deployMode
         }).subscribe({
           next: () => {
             this.deploying = false;
