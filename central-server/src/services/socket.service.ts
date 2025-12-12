@@ -37,6 +37,10 @@ const COMMAND_TIMEOUTS: Record<string, number> = {
   default: 2 * 60 * 1000,             // 2 minutes par défaut
 };
 
+type ConfigCommandData = {
+  configVersionId?: string;
+} & Record<string, unknown>;
+
 interface PendingCommand {
   commandId: string;
   siteId: string;
@@ -361,15 +365,15 @@ class SocketService {
         ]
       );
 
-      const commandRow = await query(
+      const commandRow = await query<{ command_type: string; command_data: Record<string, unknown> | null }>(
         `SELECT command_type, command_data
          FROM remote_commands
          WHERE id = $1`,
         [result.commandId]
       );
 
-      const commandRecord = commandRow.rows[0] as { command_type: string; command_data?: Record<string, unknown> } | undefined;
-      const commandData = commandRecord?.command_data || null;
+      const commandRecord = commandRow.rows[0];
+      const commandData = (commandRecord?.command_data as ConfigCommandData | null) || null;
       const configVersionId = typeof commandData?.configVersionId === 'string' ? commandData.configVersionId : null;
 
       if (
@@ -470,19 +474,19 @@ class SocketService {
   }
 
   private async getPendingConfigVersion(siteId: string): Promise<string | null> {
-    const result = await query(
+    const result = await query<{ pending_config_version_id: string | null }>(
       'SELECT pending_config_version_id FROM sites WHERE id = $1',
       [siteId]
     );
-    return result.rows[0]?.pending_config_version_id || null;
+    return (result.rows[0]?.pending_config_version_id as string | null) ?? null;
   }
 
   private async fetchConfigVersion(versionId: string): Promise<Record<string, unknown> | null> {
-    const result = await query(
+    const result = await query<{ configuration: Record<string, unknown> | null }>(
       'SELECT configuration FROM config_history WHERE id = $1',
       [versionId]
     );
-    return result.rows[0]?.configuration || null;
+    return (result.rows[0]?.configuration as Record<string, unknown> | null) ?? null;
   }
 
   private async hasActiveConfigCommand(siteId: string, versionId: string): Promise<boolean> {
