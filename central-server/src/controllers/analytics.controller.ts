@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { query } from '../config/database';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
+import { validate as validateUuid } from 'uuid';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -429,15 +430,25 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
     }
 
     let insertedCount = 0;
+    let invalidSessions = 0;
 
     for (const play of plays) {
       try {
+        const sessionId =
+          typeof play.session_id === 'string' && validateUuid(play.session_id)
+            ? play.session_id
+            : null;
+
+        if (play.session_id && !sessionId) {
+          invalidSessions++;
+        }
+
         await query(
           `INSERT INTO video_plays (site_id, session_id, video_filename, category, played_at, duration_played, video_duration, completed, trigger_type)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
           [
             site_id,
-            play.session_id || null,
+            sessionId,
             play.video_filename,
             play.category || 'other',
             play.played_at || new Date(),
@@ -451,6 +462,13 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
       } catch (err) {
         logger.warn('Failed to insert video play:', { play, error: err });
       }
+    }
+
+    if (invalidSessions > 0) {
+      logger.warn('Received video plays with invalid session_id, falling back to null', {
+        siteId: site_id,
+        invalidSessions,
+      });
     }
 
     logger.info('Video plays recorded', { siteId: site_id, count: insertedCount });

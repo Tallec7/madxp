@@ -235,6 +235,32 @@ describe('Analytics Controller', () => {
       );
     });
 
+    it('should ignore invalid session ids when recording plays', async () => {
+      const req = createAuthRequest({
+        body: {
+          site_id: 'site-123',
+          plays: [{
+            video_filename: 'video1.mp4',
+            category: 'sponsors',
+            session_id: 'session_123', // not a UUID
+          }],
+        },
+      });
+      const res = createMockResponse();
+
+      (query as jest.Mock)
+        .mockResolvedValueOnce({ rows: [{ id: 'site-123' }] })
+        .mockResolvedValue({ rows: [] });
+
+      await recordVideoPlays(req, res);
+
+      // First call checks site, second call inserts play
+      expect((query as jest.Mock).mock.calls[1][1][1]).toBeNull();
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true })
+      );
+    });
+
     it('should return 400 if site_id or plays missing', async () => {
       const req = createAuthRequest({ body: {} });
       const res = createMockResponse();
