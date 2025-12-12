@@ -337,6 +337,19 @@ async function getVideoMetadataFromConfig() {
         });
       }
     }
+
+    // Sponsors (boucle partenaires) - considérer leurs vidéos comme référencées
+    for (const sponsor of config.sponsors || []) {
+      if (!sponsor?.path) {
+        continue;
+      }
+      const normalizedPath = sponsor.path.replace(/\\/g, '/');
+      metadata[normalizedPath] = {
+        displayName: sponsor.name || buildDisplayNameFromFilename(path.basename(normalizedPath)),
+        categoryId: 'sponsor',
+        subcategoryId: null
+      };
+    }
   } catch (error) {
     console.warn('[admin] Unable to build configuration video metadata map:', error.message);
   }
