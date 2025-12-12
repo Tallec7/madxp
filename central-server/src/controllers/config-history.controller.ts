@@ -8,6 +8,42 @@ import socketService from '../services/socket.service';
 /**
  * Calcule les différences entre deux configurations
  */
+function isArrayOfObjectsWithId(value: unknown): value is Array<{ id: string }> {
+  return Array.isArray(value) && value.every((item) => item && typeof item === 'object' && 'id' in item);
+}
+
+function diffArrays(
+  oldArr: unknown[],
+  newArr: unknown[],
+  path: string
+): Array<{ field: string; path: string; type: 'added' | 'removed' | 'changed'; oldValue?: unknown; newValue?: unknown }> {
+  const diffs: Array<{ field: string; path: string; type: 'added' | 'removed' | 'changed'; oldValue?: unknown; newValue?: unknown }> = [];
+
+  if (isArrayOfObjectsWithId(oldArr) && isArrayOfObjectsWithId(newArr)) {
+    const oldMap = new Map(oldArr.map((item) => [item.id, item]));
+    const newMap = new Map(newArr.map((item) => [item.id, item]));
+    const ids = new Set([...oldMap.keys(), ...newMap.keys()]);
+
+    ids.forEach((id) => {
+      const oldItem = oldMap.get(id);
+      const newItem = newMap.get(id);
+      const itemPath = `${path}[${id}]`;
+
+      if (!oldItem && newItem) {
+        diffs.push({ field: `${path}[${id}]`, path: itemPath, type: 'added', newValue: newItem });
+      } else if (oldItem && !newItem) {
+        diffs.push({ field: `${path}[${id}]`, path: itemPath, type: 'removed', oldValue: oldItem });
+      } else if (oldItem && newItem) {
+        diffs.push(...computeConfigDiff(oldItem as Record<string, unknown>, newItem as Record<string, unknown>, itemPath));
+      }
+    });
+  } else if (JSON.stringify(oldArr) !== JSON.stringify(newArr)) {
+    diffs.push({ field: path, path, type: 'changed', oldValue: oldArr, newValue: newArr });
+  }
+
+  return diffs;
+}
+
 function computeConfigDiff(
   oldConfig: Record<string, unknown> | null,
   newConfig: Record<string, unknown>,
@@ -40,6 +76,8 @@ function computeConfigDiff(
       diffs.push({ field: key, path: newPath, type: 'added', newValue });
     } else if (!(key in newConfig)) {
       diffs.push({ field: key, path: newPath, type: 'removed', oldValue });
+    } else if (Array.isArray(oldValue) && Array.isArray(newValue)) {
+      diffs.push(...diffArrays(oldValue, newValue, newPath));
     } else if (typeof oldValue === 'object' && typeof newValue === 'object' && oldValue !== null && newValue !== null && !Array.isArray(oldValue) && !Array.isArray(newValue)) {
       // Récursion pour les objets imbriqués
       diffs.push(...computeConfigDiff(oldValue as Record<string, unknown>, newValue as Record<string, unknown>, newPath));
