@@ -26,8 +26,5 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=neopro-admin
 
-# Limites de sécurité
-NoNewPrivileges=true
-
 [Install]
 WantedBy=multi-user.target

@@ -247,6 +247,16 @@ npm install
 sudo systemctl restart neopro-admin
 ```
 
+**Redémarrage depuis l'interface :8080**
+
+- Les boutons "Redémarrer service" de l'interface admin exécutent `sudo systemctl restart ...` via `raspberry/admin/admin-server.js`.
+- Il faut que l'unité systemd `neopro-admin.service` autorise cette élévation (pas de `NoNewPrivileges=true`). Sinon `sudo` affiche _"no new privileges"_ et les actions échouent.
+- Après modification du fichier `raspberry/config/systemd/neopro-admin.service`, déployer-le sur le Raspberry Pi puis :
+  ```bash
+  sudo systemctl daemon-reload
+  sudo systemctl restart neopro-admin
+  ```
+
 ### Service nginx
 
 **Problème : nginx ne démarre pas**
