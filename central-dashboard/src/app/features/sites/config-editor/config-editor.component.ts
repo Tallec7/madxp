@@ -234,8 +234,16 @@ import {
                     placeholder="Nom de la catégorie"
                     class="category-name-input"
                   />
-                  <span *ngIf="ownershipLabel(category) === 'neopro'" class="ownership-badge neopro">NEOPRO</span>
-                  <span *ngIf="ownershipLabel(category) === 'club'" class="ownership-badge club">Club</span>
+                  <div class="ownership-controls" (click)="$event.stopPropagation()">
+                    <label class="ownership-option">
+                      <input type="radio" [(ngModel)]="category.owner" [value]="'club'" (ngModelChange)="onConfigChange(); category.locked = false" />
+                      <span class="ownership-label club">Club</span>
+                    </label>
+                    <label class="ownership-option">
+                      <input type="radio" [(ngModel)]="category.owner" [value]="'neopro'" (ngModelChange)="onConfigChange(); category.locked = true" />
+                      <span class="ownership-label neopro">NEOPRO</span>
+                    </label>
+                  </div>
                   <span class="category-stats">
                     {{ category.videos.length || 0 }} vidéo(s)
                     <span *ngIf="category.subCategories?.length"> · {{ category.subCategories.length }} sous-cat.</span>
@@ -253,7 +261,16 @@ import {
                     <div class="videos-list" *ngIf="category.videos && category.videos.length > 0">
                       <div class="video-item-editable" *ngFor="let video of category.videos; let vidIndex = index">
                         <span class="video-icon">🎬</span>
-                        <span *ngIf="ownershipLabel(video) === 'neopro'" class="ownership-badge neopro small">NEOPRO</span>
+                        <div class="ownership-controls inline">
+                          <label class="ownership-option">
+                            <input type="radio" [(ngModel)]="video.owner" [value]="'club'" (ngModelChange)="onConfigChange(); video.locked = false" />
+                            <span class="ownership-label club small">Club</span>
+                          </label>
+                          <label class="ownership-option">
+                            <input type="radio" [(ngModel)]="video.owner" [value]="'neopro'" (ngModelChange)="onConfigChange(); video.locked = true" />
+                            <span class="ownership-label neopro small">NEOPRO</span>
+                          </label>
+                        </div>
                         <input
                           type="text"
                           [value]="video.name"
@@ -292,6 +309,16 @@ import {
                             placeholder="Nom de la sous-catégorie"
                             class="subcategory-name-input"
                           />
+                          <div class="ownership-controls inline">
+                            <label class="ownership-option">
+                              <input type="radio" [(ngModel)]="subcat.owner" [value]="'club'" (ngModelChange)="onConfigChange(); subcat.locked = false" />
+                              <span class="ownership-label club small">Club</span>
+                            </label>
+                            <label class="ownership-option">
+                              <input type="radio" [(ngModel)]="subcat.owner" [value]="'neopro'" (ngModelChange)="onConfigChange(); subcat.locked = true" />
+                              <span class="ownership-label neopro small">NEOPRO</span>
+                            </label>
+                          </div>
                           <span class="subcategory-stats">{{ subcat.videos.length || 0 }} vidéo(s)</span>
                           <button class="btn-add-small" (click)="addVideo(catIndex, subIndex)">+ Vidéo</button>
                           <button class="btn-remove-small" (click)="removeSubcategory(catIndex, subIndex)">×</button>
@@ -1581,6 +1608,50 @@ import {
       background: #ecfdf3;
       color: #166534;
       border-color: #bbf7d0;
+    }
+
+    .ownership-controls {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-left: 0.5rem;
+    }
+
+    .ownership-controls.inline {
+      margin-left: 0;
+    }
+
+    .ownership-option {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.85rem;
+      color: #475569;
+    }
+
+    .ownership-label {
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-weight: 700;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .ownership-label.neopro {
+      background: #e0f2fe;
+      color: #075985;
+      border-color: #7dd3fc;
+    }
+
+    .ownership-label.club {
+      background: #ecfdf3;
+      color: #166534;
+      border-color: #bbf7d0;
+    }
+
+    .ownership-label.small {
+      font-size: 0.75rem;
     }
 
     /* Footer */
