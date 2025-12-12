@@ -197,15 +197,22 @@ export const saveConfigVersion = async (req: AuthRequest, res: Response) => {
       changesCount: changesSummary.length,
     });
 
-    await query(
-      `UPDATE sites SET pending_config_version_id = $1 WHERE id = $2`,
-      [versionId, id]
-    );
-
     try {
+      await query(
+        `UPDATE sites SET pending_config_version_id = $1 WHERE id = $2`,
+        [versionId, id]
+      );
+
       await socketService.triggerPendingConfigSync(id);
-    } catch (error) {
-      logger.error('Error triggering pending config deployment:', error);
+    } catch (error: any) {
+      if (error?.code === '42703') {
+        logger.warn('pending_config_version_id column missing - pending sync will be skipped (run migration add-pending-config-column.sql)', {
+          siteId: id,
+          versionId,
+        });
+      } else {
+        logger.error('Error triggering pending config deployment:', error);
+      }
     }
 
     res.status(201).json({

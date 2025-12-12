@@ -469,7 +469,13 @@ class SocketService {
 
       await this.sendPendingConfigCommand(siteId, configuration, pendingVersion);
     } catch (error) {
-      logger.error('Error triggering pending config sync:', { siteId, error });
+      if ((error as any)?.code === '42703') {
+        logger.warn('pending_config_version_id column missing - skipping pending config sync (run migration add-pending-config-column.sql)', {
+          siteId,
+        });
+      } else {
+        logger.error('Error triggering pending config sync:', { siteId, error });
+      }
     }
   }
 
