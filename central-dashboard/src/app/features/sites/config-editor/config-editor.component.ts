@@ -477,32 +477,40 @@ import {
                 <div class="diff-pill removed">- {{ diffCounts.removed }}</div>
               </div>
               <div class="diff-item" *ngFor="let diff of diffItems" [class]="'diff-' + diff.type">
-                <div class="diff-field">{{ diff.path }}</div>
-                <div class="diff-type">
-                  <span *ngIf="diff.type === 'added'" class="badge badge-success">Ajouté</span>
-                  <span *ngIf="diff.type === 'removed'" class="badge badge-danger">Supprimé</span>
-                  <span *ngIf="diff.type === 'changed'" class="badge badge-warning">Modifié</span>
+                <div class="diff-head">
+                  <div class="diff-field">{{ diff.path }}</div>
+                  <div class="diff-type">
+                    <span *ngIf="diff.type === 'added'" class="badge badge-success">Ajouté</span>
+                    <span *ngIf="diff.type === 'removed'" class="badge badge-danger">Supprimé</span>
+                    <span *ngIf="diff.type === 'changed'" class="badge badge-warning">Modifié</span>
+                  </div>
+                  <span *ngIf="ownershipLabel(diff.newValue || diff.oldValue)" class="ownership-badge"
+                        [class.neopro]="ownershipLabel(diff.newValue || diff.oldValue) === 'neopro'"
+                        [class.club]="ownershipLabel(diff.newValue || diff.oldValue) === 'club'">
+                    {{ ownershipLabel(diff.newValue || diff.oldValue) === 'neopro' ? 'NEOPRO' : 'Club' }}
+                  </span>
                 </div>
+
                 <div class="diff-values" *ngIf="diff.type === 'changed'">
                   <div class="diff-old">
                     <span class="diff-label">Avant:</span>
-                    <code>{{ formatDiffValue(diff.oldValue) }}</code>
+                    <pre class="diff-json">{{ formatJson(diff.oldValue) }}</pre>
                   </div>
                   <div class="diff-new">
                     <span class="diff-label">Après:</span>
-                    <code>{{ formatDiffValue(diff.newValue) }}</code>
+                    <pre class="diff-json">{{ formatJson(diff.newValue) }}</pre>
                   </div>
                 </div>
                 <div class="diff-values" *ngIf="diff.type === 'added'">
                   <div class="diff-new">
                     <span class="diff-label">Valeur:</span>
-                    <code>{{ formatDiffValue(diff.newValue) }}</code>
+                    <pre class="diff-json">{{ formatJson(diff.newValue) }}</pre>
                   </div>
                 </div>
                 <div class="diff-values" *ngIf="diff.type === 'removed'">
                   <div class="diff-old">
                     <span class="diff-label">Valeur:</span>
-                    <code>{{ formatDiffValue(diff.oldValue) }}</code>
+                    <pre class="diff-json">{{ formatJson(diff.oldValue) }}</pre>
                   </div>
                 </div>
               </div>
@@ -1454,6 +1462,9 @@ import {
       padding: 1rem;
       border-radius: 8px;
       border: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
     }
 
     .diff-added {
@@ -1475,11 +1486,18 @@ import {
       font-family: monospace;
       font-weight: 600;
       color: #0f172a;
-      margin-bottom: 0.5rem;
+    }
+
+    .diff-head {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
     .diff-type {
-      margin-bottom: 0.5rem;
+      display: flex;
+      gap: 0.25rem;
     }
 
     .badge {
@@ -1506,9 +1524,9 @@ import {
     }
 
     .diff-values {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     }
 
     .diff-old, .diff-new {
@@ -1524,11 +1542,40 @@ import {
     }
 
     .diff-values code {
-      padding: 0.25rem 0.5rem;
-      background: rgba(0, 0, 0, 0.05);
-      border-radius: 4px;
-      font-size: 0.875rem;
-      word-break: break-all;
+      padding: 0;
+      background: none;
+    }
+
+    .diff-json {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0.35rem 0 0;
+    }
+
+    .ownership-badge {
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+
+    .ownership-badge.neopro {
+      background: #e0f2fe;
+      color: #075985;
+      border-color: #7dd3fc;
+    }
+
+    .ownership-badge.club {
+      background: #ecfdf3;
+      color: #166534;
+      border-color: #bbf7d0;
     }
 
     /* Footer */
@@ -2138,6 +2185,30 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
         this.notificationService.error('Erreur lors de la sauvegarde: ' + (error.error?.error || error.message));
       }
     });
+  }
+
+  formatJson(value: unknown): string {
+    try {
+      if (typeof value === 'string') {
+        // Essayer de parser pour pretty-print s'il s'agit d'un JSON
+        const parsed = JSON.parse(value);
+        return JSON.stringify(parsed, null, 2);
+      }
+      if (typeof value === 'object') {
+        return JSON.stringify(value, null, 2);
+      }
+      return String(value);
+    } catch (_e) {
+      return String(value);
+    }
+  }
+
+  ownershipLabel(value: unknown): 'neopro' | 'club' | null {
+    if (!value || typeof value !== 'object') return null;
+    const v: any = value;
+    if (v.owner === 'neopro' || v.locked === true) return 'neopro';
+    if (v.owner === 'club') return 'club';
+    return null;
   }
 
   formatDiffValue(value: unknown): string {
