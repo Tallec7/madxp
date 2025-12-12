@@ -129,14 +129,45 @@ class MetricsCollector {
 
   async getSystemInfo() {
     try {
-      const [system, cpu, os, raspberry] = await Promise.all([
+      const [system, cpu, osInfo, memory, interfaces, raspberry] = await Promise.all([
         si.system(),
         si.cpu(),
         si.osInfo(),
+        si.mem(),
+        si.networkInterfaces(),
         si.get({ raspberry: 'revision,serial' }).catch(() => null),
       ]);
 
+      const networkInterfaces = interfaces || [];
+
+      const primaryInterface =
+        networkInterfaces.find(iface =>
+          (iface.iface.startsWith('eth') || iface.iface.startsWith('enp')) &&
+          iface.ip4 && !iface.ip4.startsWith('127.')
+        ) ||
+        networkInterfaces.find(iface =>
+          iface.iface.startsWith('wlan') &&
+          iface.ip4 && !iface.ip4.startsWith('127.')
+        ) ||
+        networkInterfaces.find(iface => iface.ip4 && !iface.ip4.startsWith('127.')) ||
+        networkInterfaces.find(iface => iface.ip6 && !iface.ip6.startsWith('::1')) ||
+        networkInterfaces[0];
+
+      const osName = [osInfo?.distro, osInfo?.release].filter(Boolean).join(' ')
+        || osInfo?.platform
+        || null;
+
       return {
+        hostname: os.hostname(),
+        os: osName,
+        kernel: osInfo?.kernel || null,
+        architecture: osInfo?.arch || os.arch(),
+        cpu_model: cpu?.brand || cpu?.manufacturer || null,
+        cpu_cores: cpu?.cores || null,
+        total_memory: memory?.total || null,
+        ip_address: primaryInterface?.ip4 || primaryInterface?.ip6 || null,
+        mac_address: primaryInterface?.mac || null,
+        // Champs détaillés conservés pour la compatibilité/diagnostics
         manufacturer: system.manufacturer,
         model: system.model,
         version: system.version,
@@ -146,13 +177,8 @@ class MetricsCollector {
           speed: cpu.speed,
           cores: cpu.cores,
         },
-        os: {
-          platform: os.platform,
-          distro: os.distro,
-          release: os.release,
-          kernel: os.kernel,
-          arch: os.arch,
-        },
+        os_details: osInfo,
+        network_interfaces: networkInterfaces,
         raspberry: raspberry,
       };
     } catch (error) {
