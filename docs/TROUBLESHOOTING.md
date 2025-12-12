@@ -256,6 +256,7 @@ sudo systemctl restart neopro-admin
   sudo systemctl daemon-reload
   sudo systemctl restart neopro-admin
   ```
+- `./raspberry/scripts/build-and-deploy.sh` (ou `deploy-remote.sh`) copie automatiquement l'unité depuis `raspberry/config/systemd/neopro-admin.service` avant de relancer systemd.
 
 ### Service nginx
 

@@ -39,6 +39,7 @@ RASPBERRY_IP="${1:-neopro.local}"
 RASPBERRY_USER="pi"
 RASPBERRY_DIR="/home/pi/neopro"
 DEPLOY_ARCHIVE="raspberry/neopro-raspberry-deploy.tar.gz"
+ADMIN_SERVICE_FILE="raspberry/config/systemd/neopro-admin.service"
 
 echo -e "${GREEN}"
 echo "╔════════════════════════════════════════════════════════════════╗"
@@ -125,6 +126,13 @@ print_step "Upload de la nouvelle version..."
 scp ${DEPLOY_ARCHIVE} ${RASPBERRY_USER}@${RASPBERRY_IP}:~/neopro-deploy.tar.gz
 print_success "Upload terminé"
 
+# Upload du fichier de service admin si disponible
+if [ -f "${ADMIN_SERVICE_FILE}" ]; then
+    print_step "Mise à jour de l'unité systemd neopro-admin..."
+    scp ${ADMIN_SERVICE_FILE} ${RASPBERRY_USER}@${RASPBERRY_IP}:/tmp/neopro-admin.service
+    print_success "Fichier de service uploadé"
+fi
+
 # Extraction et installation
 print_step "Installation de la nouvelle version..."
 ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
@@ -209,6 +217,16 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
 
     # Nettoyage
     rm -rf ~/deploy ~/neopro-deploy.tar.gz
+
+    # Mise à jour de l'unité systemd neopro-admin si fournie
+    if [ -f /tmp/neopro-admin.service ]; then
+        echo 'Mise à jour de /etc/systemd/system/neopro-admin.service'
+        sudo cp /tmp/neopro-admin.service /etc/systemd/system/neopro-admin.service
+        sudo chown root:root /etc/systemd/system/neopro-admin.service
+        sudo chmod 644 /etc/systemd/system/neopro-admin.service
+        sudo rm /tmp/neopro-admin.service
+        sudo systemctl daemon-reload
+    fi
 "
 print_success "Installation terminée"
 
