@@ -1,6 +1,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { timingSafeEqual } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/database';
 import { SocketData, CommandMessage, CommandResult, HeartbeatMessage } from '../types';
 import logger from '../config/logger';
@@ -360,6 +361,25 @@ class SocketService {
         ]
       );
 
+      const commandRow = await query(
+        `SELECT command_type, command_data
+         FROM remote_commands
+         WHERE id = $1`,
+        [result.commandId]
+      );
+
+      const commandRecord = commandRow.rows[0] as { command_type: string; command_data?: Record<string, unknown> } | undefined;
+      const commandData = commandRecord?.command_data || null;
+      const configVersionId = typeof commandData?.configVersionId === 'string' ? commandData.configVersionId : null;
+
+      if (
+        result.status === 'success' &&
+        commandRecord?.command_type === 'update_config' &&
+        configVersionId
+      ) {
+        await this.clearPendingConfig(siteId, configVersionId);
+      }
+
       logger.info('Command result received', {
         siteId,
         commandId: result.commandId,
@@ -416,9 +436,120 @@ class SocketService {
       }
 
       logger.info('Local state stored', { siteId, configHash });
+      await this.triggerPendingConfigSync(siteId);
     } catch (error) {
       logger.error('Error handling sync_local_state:', error);
     }
+  }
+
+  async triggerPendingConfigSync(siteId: string) {
+    if (!this.isConnected(siteId)) {
+      return;
+    }
+
+    try {
+      const pendingVersion = await this.getPendingConfigVersion(siteId);
+      if (!pendingVersion) {
+        return;
+      }
+
+      if (await this.hasActiveConfigCommand(siteId, pendingVersion)) {
+        return;
+      }
+
+      const configuration = await this.fetchConfigVersion(pendingVersion);
+      if (!configuration) {
+        await this.clearPendingConfig(siteId, pendingVersion);
+        return;
+      }
+
+      await this.sendPendingConfigCommand(siteId, configuration, pendingVersion);
+    } catch (error) {
+      logger.error('Error triggering pending config sync:', { siteId, error });
+    }
+  }
+
+  private async getPendingConfigVersion(siteId: string): Promise<string | null> {
+    const result = await query(
+      'SELECT pending_config_version_id FROM sites WHERE id = $1',
+      [siteId]
+    );
+    return result.rows[0]?.pending_config_version_id || null;
+  }
+
+  private async fetchConfigVersion(versionId: string): Promise<Record<string, unknown> | null> {
+    const result = await query(
+      'SELECT configuration FROM config_history WHERE id = $1',
+      [versionId]
+    );
+    return result.rows[0]?.configuration || null;
+  }
+
+  private async hasActiveConfigCommand(siteId: string, versionId: string): Promise<boolean> {
+    const result = await query(
+      `SELECT 1 FROM remote_commands
+       WHERE site_id = $1
+         AND command_type = 'update_config'
+         AND status IN ('pending', 'executing')
+         AND command_data ->> 'configVersionId' = $2
+       LIMIT 1`,
+      [siteId, versionId]
+    );
+    return result.rows.length > 0;
+  }
+
+  private async sendPendingConfigCommand(
+    siteId: string,
+    configuration: Record<string, unknown>,
+    versionId: string
+  ) {
+    if (!this.isConnected(siteId)) {
+      return;
+    }
+
+    const commandId = uuidv4();
+    const commandPayload = {
+      configuration,
+      configVersionId: versionId,
+    };
+
+    await query(
+      `INSERT INTO remote_commands (id, site_id, command_type, command_data, status)
+       VALUES ($1, $2, 'update_config', $3, 'pending')`,
+      [commandId, siteId, JSON.stringify(commandPayload)]
+    );
+
+    const sent = this.sendCommand(siteId, {
+      id: commandId,
+      type: 'update_config',
+      data: commandPayload,
+    });
+
+    if (!sent) {
+      await query(
+        `UPDATE remote_commands
+         SET status = 'failed', error_message = 'Site disconnected'
+         WHERE id = $1`,
+        [commandId]
+      );
+      return;
+    }
+
+    await query(
+      `UPDATE remote_commands
+       SET status = 'executing', executed_at = NOW()
+       WHERE id = $1`,
+      [commandId]
+    );
+  }
+
+  private async clearPendingConfig(siteId: string, versionId: string) {
+    await query(
+      `UPDATE sites
+       SET pending_config_version_id = NULL
+       WHERE id = $1 AND pending_config_version_id = $2`,
+      [siteId, versionId]
+    );
   }
 
   private async handleDeployProgress(siteId: string, progress: any) {

@@ -8,6 +8,7 @@ import {
 } from './config-history.controller';
 import { query } from '../config/database';
 import { AuthRequest } from '../types';
+import socketService from '../services/socket.service';
 
 // Helper to create mock response
 const createMockResponse = (): Response => {
@@ -27,6 +28,10 @@ const createAuthRequest = (overrides: Partial<AuthRequest> = {}): AuthRequest =>
     body: {},
     ...overrides,
   } as AuthRequest);
+
+const triggerPendingConfigSyncSpy = jest
+  .spyOn(socketService, 'triggerPendingConfigSync')
+  .mockResolvedValue(undefined);
 
 describe('Config History Controller', () => {
   beforeEach(() => {
@@ -183,34 +188,36 @@ describe('Config History Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [{ id: 'site-123', site_name: 'Test Site' }] })
-        .mockResolvedValueOnce({ rows: [] }) // No previous version
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              id: expect.any(String),
-              site_id: 'site-123',
-              configuration: { newSetting: 'newValue' },
-              deployed_at: new Date(),
-            },
-          ],
-        });
+    (query as jest.Mock)
+      .mockResolvedValueOnce({ rows: [{ id: 'site-123', site_name: 'Test Site' }] })
+      .mockResolvedValueOnce({ rows: [] }) // No previous version
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: expect.any(String),
+            site_id: 'site-123',
+            configuration: { newSetting: 'newValue' },
+            deployed_at: new Date(),
+          },
+        ],
+      });
+      (query as jest.Mock).mockResolvedValueOnce({ rows: [] }); // pending flag update
 
-      await saveConfigVersion(req, res);
+    await saveConfigVersion(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          changes_summary: expect.arrayContaining([
-            expect.objectContaining({
-              field: 'newSetting',
-              type: 'added',
-            }),
-          ]),
-        })
-      );
-    });
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        changes_summary: expect.arrayContaining([
+          expect.objectContaining({
+            field: 'newSetting',
+            type: 'added',
+          }),
+        ]),
+      })
+    );
+    expect(triggerPendingConfigSyncSpy).toHaveBeenCalledWith('site-123');
+  });
 
     it('should compute diff with previous version', async () => {
       const req = createAuthRequest({
@@ -229,6 +236,7 @@ describe('Config History Controller', () => {
         .mockResolvedValueOnce({
           rows: [{ id: 'new-version', site_id: 'site-123' }],
         });
+      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
 
       await saveConfigVersion(req, res);
 
@@ -242,6 +250,7 @@ describe('Config History Controller', () => {
           ]),
         })
       );
+      expect(triggerPendingConfigSyncSpy).toHaveBeenCalledWith('site-123');
     });
 
     it('should return 400 if configuration is missing', async () => {

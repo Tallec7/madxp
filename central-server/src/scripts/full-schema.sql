@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS sites (
   local_config_mirror JSONB,
   local_config_hash VARCHAR(64),
   last_config_sync TIMESTAMPTZ,
+  pending_config_version_id UUID,
   CONSTRAINT check_status CHECK (status IN ('online', 'offline', 'maintenance', 'error'))
 );
 
@@ -202,6 +203,17 @@ CREATE TABLE IF NOT EXISTS config_history (
   previous_version_id UUID REFERENCES config_history(id),
   changes_summary JSONB
 );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_sites_pending_config_version'
+  ) THEN
+    ALTER TABLE sites
+      ADD CONSTRAINT fk_sites_pending_config_version
+      FOREIGN KEY (pending_config_version_id) REFERENCES config_history(id);
+  END IF;
+END $$;
 
 -- =============================================================================
 -- TABLES ANALYTICS CLUB

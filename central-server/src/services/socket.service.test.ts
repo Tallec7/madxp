@@ -430,7 +430,15 @@ describe('SocketService', () => {
     };
 
     it('should update command status to completed on success', async () => {
-      mockQuery.mockResolvedValueOnce({ rows: [] });
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({
+          rows: [{
+            command_type: 'update_config',
+            command_data: { configVersionId: 'cfg-42' },
+          }],
+        })
+        .mockResolvedValueOnce({ rows: [] });
 
       await (socketService as any).handleCommandResult('site-uuid-123', successResult);
 
@@ -443,10 +451,22 @@ describe('SocketService', () => {
           'cmd-uuid-123',
         ])
       );
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE sites'),
+        expect.arrayContaining(['site-uuid-123', 'cfg-42'])
+      );
     });
 
     it('should update command status to failed on error', async () => {
-      mockQuery.mockResolvedValueOnce({ rows: [] });
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({
+          rows: [{
+            command_type: 'update_config',
+            command_data: { configVersionId: 'cfg-42' },
+          }],
+        });
 
       await (socketService as any).handleCommandResult('site-uuid-123', errorResult);
 
@@ -465,7 +485,15 @@ describe('SocketService', () => {
       const mockIo = { emit: jest.fn() };
       (socketService as any).io = mockIo;
 
-      mockQuery.mockResolvedValueOnce({ rows: [] });
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({
+          rows: [{
+            command_type: 'update_config',
+            command_data: { configVersionId: 'cfg-42' },
+          }],
+        })
+        .mockResolvedValueOnce({ rows: [] });
 
       await (socketService as any).handleCommandResult('site-uuid-123', successResult);
 
@@ -487,6 +515,21 @@ describe('SocketService', () => {
       },
       timestamp: '2025-12-11T10:00:00Z',
     };
+    let triggerPendingConfigSyncSpy: jest.SpyInstance;
+
+    beforeAll(() => {
+      triggerPendingConfigSyncSpy = jest
+        .spyOn(socketService as any, 'triggerPendingConfigSync')
+        .mockResolvedValue(undefined);
+    });
+
+    beforeEach(() => {
+      triggerPendingConfigSyncSpy.mockClear();
+    });
+
+    afterAll(() => {
+      triggerPendingConfigSyncSpy.mockRestore();
+    });
 
     it('should store local config mirror in database', async () => {
       mockQuery.mockResolvedValueOnce({ rows: [] });
@@ -517,6 +560,32 @@ describe('SocketService', () => {
         categoriesCount: 1,
         timestamp: '2025-12-11T10:00:00Z',
       });
+    });
+  });
+
+  describe('triggerPendingConfigSync', () => {
+    it('should send pending configuration when a version is queued', async () => {
+      const mockSocket = { id: 'socket-123', emit: jest.fn() } as unknown as Socket;
+      (socketService as any).connectedSites.set('site-uuid-123', mockSocket);
+
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ pending_config_version_id: 'cfg-1' }] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ configuration: { foo: 'bar' } }] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] });
+
+      await (socketService as any).triggerPendingConfigSync('site-uuid-123');
+
+      const insertCall = mockQuery.mock.calls.find(([sql]) => (sql as string).includes('INSERT INTO remote_commands'));
+      expect(insertCall).toBeDefined();
+      const commandPayload = JSON.parse(insertCall![1][2] as string);
+      expect(commandPayload.configVersionId).toBe('cfg-1');
+
+      const updateCall = mockQuery.mock.calls.find(([sql]) => (sql as string).includes('UPDATE remote_commands'));
+      expect(updateCall).toBeDefined();
+
+      (socketService as any).connectedSites.delete('site-uuid-123');
     });
   });
 

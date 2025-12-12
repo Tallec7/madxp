@@ -39,6 +39,7 @@ export interface Site {
   metadata: Record<string, any>;
   created_at: Date;
   updated_at: Date;
+  pending_config_version_id: string | null;
 }
 
 // Group types

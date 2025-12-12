@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/database';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
+import socketService from '../services/socket.service';
 
 /**
  * Calcule les différences entre deux configurations
@@ -195,6 +196,17 @@ export const saveConfigVersion = async (req: AuthRequest, res: Response) => {
       savedBy: req.user?.email,
       changesCount: changesSummary.length,
     });
+
+    await query(
+      `UPDATE sites SET pending_config_version_id = $1 WHERE id = $2`,
+      [versionId, id]
+    );
+
+    try {
+      await socketService.triggerPendingConfigSync(id);
+    } catch (error) {
+      logger.error('Error triggering pending config deployment:', error);
+    }
 
     res.status(201).json({
       ...result.rows[0],
