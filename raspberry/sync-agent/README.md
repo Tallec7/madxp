@@ -559,6 +559,46 @@ sudo systemctl status neopro-sync-agent
 node -e "require('./src/metrics').collectAll().then(console.log)"
 ```
 
+### Les analytics vidéo ne remontent pas
+
+Les analytics sont collectées par le frontend Angular, stockées localement, puis envoyées au serveur central par le sync-agent.
+
+**Flux des analytics :**
+```
+Frontend Angular → POST /api/analytics → serveur local → analytics_buffer.json
+                                                              ↓
+Sync-agent (5 min) → POST /api/analytics/video-plays → serveur central
+```
+
+**Diagnostic :**
+
+```bash
+# 1. Vérifier le buffer local
+cat ~/neopro/data/analytics_buffer.json
+
+# 2. Vérifier que le serveur local accepte les analytics
+curl -X POST http://localhost:3000/api/analytics \
+  -H "Content-Type: application/json" \
+  -d '{"events":[]}'
+# Doit retourner {"success":true,...}
+
+# 3. Vérifier les logs du sync-agent
+journalctl -u neopro-sync-agent -n 50 | grep -i analytic
+# Rechercher "Analytics sent" ou "Starting analytics sync"
+
+# 4. Forcer l'envoi immédiat
+sudo systemctl restart neopro-sync-agent
+```
+
+**Causes courantes :**
+
+| Symptôme | Cause | Solution |
+|----------|-------|----------|
+| Buffer vide `[]` | Frontend n'envoie pas ou serveur local manque l'endpoint | Vérifier `server.js` contient `/api/analytics` |
+| "Cannot POST /api/analytics" | Ancienne version du serveur | Mettre à jour `/home/pi/neopro/server/server.js` |
+| Buffer plein mais pas envoyé | Sync-agent ne démarre pas le sync | Vérifier les logs, redémarrer le service |
+| Erreur HTTP 404 sur le central | Endpoint central non déployé | Vérifier que le serveur central est à jour |
+
 ### Mise à jour échouée
 
 L'agent devrait avoir effectué un rollback automatique.

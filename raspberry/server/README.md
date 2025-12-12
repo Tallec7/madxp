@@ -44,8 +44,56 @@ Le dossier `raspberry/` doit être autonome pour pouvoir être copié seul sur u
 ## Fichiers
 
 - `package.json` - Dépendances du serveur (express, socket.io)
-- `server.js` - Serveur Socket.IO pour la communication temps réel
+- `server.js` - Serveur Socket.IO pour la communication temps réel + endpoint analytics
 - `.gitignore` - Fichiers à ignorer (node_modules, logs)
+
+## Endpoints
+
+### GET /
+Route de santé. Retourne le statut du serveur et le nombre de connexions WebSocket.
+
+### POST /api/analytics
+Reçoit les événements analytics du frontend Angular et les stocke localement.
+
+**Body:**
+```json
+{
+  "events": [
+    {
+      "video_filename": "sponsor1.mp4",
+      "category": "sponsor",
+      "played_at": "2025-01-01T12:00:00Z",
+      "duration_played": 30,
+      "video_duration": 30,
+      "completed": true,
+      "trigger_type": "auto"
+    }
+  ]
+}
+```
+
+**Réponse:**
+```json
+{
+  "success": true,
+  "received": 1,
+  "total": 5
+}
+```
+
+Les événements sont stockés dans `~/neopro/data/analytics_buffer.json` et envoyés au serveur central par le sync-agent toutes les 5 minutes.
+
+### GET /api/analytics/stats
+Retourne les statistiques du buffer analytics local.
+
+**Réponse:**
+```json
+{
+  "count": 5,
+  "oldestEvent": "2025-01-01T10:00:00Z",
+  "newestEvent": "2025-01-01T12:00:00Z"
+}
+```
 
 ## Installation sur Raspberry Pi
 

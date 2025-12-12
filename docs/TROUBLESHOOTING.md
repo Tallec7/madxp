@@ -327,6 +327,93 @@ sudo systemctl restart neopro-kiosk
 
 ---
 
+## Problèmes d'analytics
+
+### Les analytics vidéo ne remontent pas au dashboard central
+
+#### Symptômes
+- Le dashboard central n'affiche pas les lectures vidéo
+- Les statistiques d'utilisation sont vides ou à zéro
+- Le buffer analytics reste vide sur le Pi
+
+#### Architecture du flux analytics
+
+```
+Frontend Angular → POST /api/analytics → serveur local (port 3000)
+                                              ↓
+                                    analytics_buffer.json
+                                              ↓
+                        Sync-agent (toutes les 5 min) → POST /api/analytics/video-plays
+                                              ↓
+                                    Serveur central (PostgreSQL)
+                                              ↓
+                                    Dashboard admin
+```
+
+#### Diagnostic
+
+```bash
+ssh pi@neopro.local
+
+# 1. Vérifier que le serveur local a l'endpoint analytics
+curl -X POST http://localhost:3000/api/analytics \
+  -H "Content-Type: application/json" \
+  -d '{"events":[{"video_filename":"test.mp4","category":"sponsor","played_at":"2025-01-01T12:00:00Z","duration_played":10,"video_duration":10,"completed":true,"trigger_type":"auto"}]}'
+
+# Si "Cannot POST /api/analytics" → Le serveur n'a pas l'endpoint (voir solution 1)
+# Si {"success":true} → OK, passer à l'étape 2
+
+# 2. Vérifier le buffer local
+cat ~/neopro/data/analytics_buffer.json
+# Doit contenir les événements
+
+# 3. Vérifier les logs du sync-agent
+journalctl -u neopro-sync-agent -n 50 --no-pager | grep -i analytic
+
+# 4. Tester l'envoi vers le serveur central
+curl -X POST https://neopro-central.onrender.com/api/analytics/video-plays \
+  -H "Content-Type: application/json" \
+  -d '{"site_id":"VOTRE_SITE_ID","plays":[]}'
+# Doit retourner {"success":true,"recorded":0}
+```
+
+#### Solution 1 : Mettre à jour le serveur local
+
+Si `curl` retourne "Cannot POST /api/analytics", le serveur local est une ancienne version sans l'endpoint analytics.
+
+```bash
+# Voir le contenu actuel
+cat /home/pi/neopro/server/server.js | head -20
+
+# Si le fichier ne contient pas "ANALYTICS ENDPOINT", mettre à jour :
+# Depuis votre machine de dev, redéployer le serveur :
+cd raspberry/
+./scripts/deploy-remote.sh pi@neopro.local
+
+# Ou manuellement sur le Pi, copier la nouvelle version depuis le repo
+```
+
+#### Solution 2 : Redémarrer le sync-agent
+
+```bash
+sudo systemctl restart neopro-sync-agent
+
+# Attendre 5 secondes puis vérifier
+sleep 5
+journalctl -u neopro-sync-agent -n 10 --no-pager
+
+# Rechercher "Analytics sent" dans les logs
+```
+
+#### Solution 3 : Vérifier que des vidéos sont jouées
+
+Les analytics ne sont générées que lorsque des vidéos sont effectivement lues sur le Pi.
+- Vérifier que le mode TV (`/tv`) est actif
+- Vérifier que des vidéos sont configurées dans `configuration.json`
+- Déclencher manuellement une lecture depuis la télécommande (`/remote`)
+
+---
+
 ## Problèmes de synchronisation
 
 ### Le site n'apparaît pas sur le serveur central

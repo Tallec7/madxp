@@ -3,6 +3,12 @@ const http = require('http');
 const socketIO = require('socket.io');
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
+
+// Configuration pour l'envoi des analytics au serveur central
+const CENTRAL_SERVER_URL = process.env.CENTRAL_SERVER_URL || 'https://neopro-central.onrender.com';
+const SITE_ID = process.env.SITE_ID; // ID du site pour la démo
+const IS_CLOUD_ENV = process.env.RENDER || process.env.NODE_ENV === 'production';
 
 const app = express();
 app.use(express.json());
@@ -69,7 +75,7 @@ const ANALYTICS_FILE_PATH = path.join(
 	'analytics_buffer.json'
 );
 
-app.post('/api/analytics', (req, res) => {
+app.post('/api/analytics', async (req, res) => {
 	try {
 		const { events } = req.body;
 
@@ -77,13 +83,34 @@ app.post('/api/analytics', (req, res) => {
 			return res.status(400).json({ error: 'events array required' });
 		}
 
-		// Créer le dossier si nécessaire
+		// En environnement cloud (Render), envoyer directement au serveur central
+		if (IS_CLOUD_ENV && SITE_ID) {
+			try {
+				const response = await axios.post(
+					`${CENTRAL_SERVER_URL}/api/analytics/video-plays`,
+					{
+						site_id: SITE_ID,
+						plays: events
+					},
+					{
+						headers: { 'Content-Type': 'application/json' },
+						timeout: 10000
+					}
+				);
+				console.log(`[Analytics] Sent ${events.length} events to central server:`, response.data);
+				return res.json({ success: true, received: events.length, forwarded: true, recorded: response.data.recorded });
+			} catch (forwardError) {
+				console.error('[Analytics] Failed to forward to central:', forwardError.message);
+				// En cas d'échec, on continue avec le stockage local comme fallback
+			}
+		}
+
+		// Stockage local (Raspberry Pi ou fallback)
 		const dir = path.dirname(ANALYTICS_FILE_PATH);
 		if (!fs.existsSync(dir)) {
 			fs.mkdirSync(dir, { recursive: true });
 		}
 
-		// Charger le buffer existant
 		let buffer = [];
 		if (fs.existsSync(ANALYTICS_FILE_PATH)) {
 			try {
@@ -95,14 +122,10 @@ app.post('/api/analytics', (req, res) => {
 			}
 		}
 
-		// Ajouter les nouveaux événements
 		buffer.push(...events);
-
-		// Sauvegarder
 		fs.writeFileSync(ANALYTICS_FILE_PATH, JSON.stringify(buffer, null, 2));
 
 		console.log(`[Analytics] Received ${events.length} events, total buffer: ${buffer.length}`);
-
 		res.json({ success: true, received: events.length, total: buffer.length });
 	} catch (error) {
 		console.error('[Analytics] Error:', error);
