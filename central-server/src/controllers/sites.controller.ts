@@ -399,7 +399,13 @@ export const sendCommand = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { command, params: data } = req.body;
 
-    const { commandId } = await dispatchCommand(id, command, data, req.user?.id);
+    // Si la commande update_config arrive sans mode, forcer "replace" pour déployer la config centrale
+    let normalizedData = data;
+    if (command === 'update_config' && data && !data.mode && data.configuration) {
+      normalizedData = { ...data, mode: 'replace' };
+    }
+
+    const { commandId } = await dispatchCommand(id, command, normalizedData, req.user?.id);
 
     res.json({ success: true, commandId, message: 'Commande envoyée' });
   } catch (error) {
