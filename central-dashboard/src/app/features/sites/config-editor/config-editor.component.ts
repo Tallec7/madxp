@@ -1974,7 +1974,10 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     this.sitesService.saveConfigVersion(this.siteId, this.config, 'Déploiement depuis le dashboard').subscribe({
       next: () => {
         // Puis déployer sur le site
-        this.sitesService.sendCommand(this.siteId, 'update_config', { configuration: this.config }).subscribe({
+        this.sitesService.sendCommand(this.siteId, 'update_config', {
+          configuration: this.config,
+          mode: 'replace'
+        }).subscribe({
           next: () => {
             this.deploying = false;
             this.showDiffModal = false;
