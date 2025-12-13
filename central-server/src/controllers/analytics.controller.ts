@@ -1108,7 +1108,18 @@ export const getAnalyticsCategories = async (req: AuthRequest, res: Response) =>
     );
 
     res.json(result.rows);
-  } catch (error) {
+  } catch (error: any) {
+    // Si la table n'existe pas encore, retourner les catégories par défaut
+    if (error.code === '42P01') {
+      logger.warn('analytics_categories table does not exist, returning defaults');
+      res.json([
+        { id: 'sponsor', name: 'Sponsor', description: 'Vidéos partenaires et sponsors', color: '#3B82F6', is_default: true },
+        { id: 'jingle', name: 'Jingle', description: 'Buts, temps morts, animations de match', color: '#10B981', is_default: true },
+        { id: 'ambiance', name: 'Ambiance', description: 'Entrées joueurs, intros, outros', color: '#8B5CF6', is_default: true },
+        { id: 'other', name: 'Autre', description: 'Vidéos non catégorisées', color: '#6B7280', is_default: true },
+      ]);
+      return;
+    }
     logger.error('Get analytics categories error:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des catégories analytics' });
   }

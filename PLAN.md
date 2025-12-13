@@ -68,8 +68,8 @@ Permettre à l'admin central d'associer chaque catégorie de vidéos d'un site (
 - Page `/admin/analytics-categories` accessible aux admins
 - Liste des catégories avec couleur et description
 - Création de nouvelles catégories personnalisées
-- Modification des catégories (sauf catégories par défaut)
-- Suppression des catégories personnalisées
+- Modification de toutes les catégories (y compris les catégories par défaut)
+- Suppression des catégories personnalisées uniquement (les catégories par défaut ne peuvent pas être supprimées)
 
 ### 2. Mapping par site (Config Editor)
 
@@ -120,3 +120,20 @@ Si un site n'a pas de mapping configuré (ou pour les anciennes vidéos), le sys
 - `other` : tout le reste
 
 Les données historiques dans `video_plays` conservent leur catégorie détectée par l'ancien algorithme.
+
+---
+
+## Robustesse et gestion d'erreurs
+
+### Fallback si table non créée
+
+Si la table `analytics_categories` n'existe pas encore en base de données (code PostgreSQL `42P01`), l'API retourne automatiquement les 4 catégories par défaut en mémoire. Cela permet au dashboard de fonctionner même avant l'exécution du script de migration SQL.
+
+### Timeout du Config Editor
+
+Le polling de configuration dans le Config Editor dispose d'un timeout de 30 secondes. Si le site Raspberry ne répond pas dans ce délai :
+- Le polling s'arrête automatiquement
+- Un message d'avertissement s'affiche
+- L'utilisateur peut créer une nouvelle configuration manuellement
+
+Cela évite le blocage infini de l'interface si le site est hors ligne.

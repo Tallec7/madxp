@@ -1987,7 +1987,23 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   private pollConfigResult(): void {
     if (!this.configCommandId) return;
 
+    const POLL_TIMEOUT_SECONDS = 30;
+    let pollCount = 0;
+
     this.configPollSubscription = interval(1000).subscribe(() => {
+      pollCount++;
+
+      // Timeout après 30 secondes
+      if (pollCount > POLL_TIMEOUT_SECONDS) {
+        this.configPollSubscription?.unsubscribe();
+        this.loading = false;
+        this.config = this.getEmptyConfig();
+        this.originalConfig = null;
+        this.syncJsonFromConfig();
+        this.notificationService.warning('Le site ne répond pas. Vous pouvez créer une nouvelle configuration.');
+        return;
+      }
+
       this.sitesService.getCommandStatus(this.siteId, this.configCommandId!).subscribe({
         next: (status) => {
           if (status.status === 'completed') {
