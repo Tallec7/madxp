@@ -106,7 +106,7 @@ class SocketService {
           await query(
             `UPDATE remote_commands
              SET status = 'failed', error_message = $1, completed_at = NOW()
-             WHERE id = $2 AND status = 'pending'`,
+             WHERE id = $2 AND status IN ('pending', 'executing')`,
             [`Command timeout after ${Math.round(elapsed / 1000)}s`, commandId]
           );
 
