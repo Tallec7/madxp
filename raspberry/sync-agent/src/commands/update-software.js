@@ -9,12 +9,24 @@ const { config } = require('../config');
 const execAsync = util.promisify(exec);
 
 class SoftwareUpdateHandler {
+  constructor() {
+    this.previousVersion = null;
+  }
+
   async execute(data, progressCallback) {
-    const { updateUrl, version, checksum } = data;
+    const { updateUrl, version, checksum, packageSize } = data;
 
     logger.info('Starting software update', { version });
 
     try {
+      progressCallback(2);
+
+      // Sauvegarder la version actuelle pour le rapport
+      this.previousVersion = await this.getCurrentVersion();
+
+      // Vérifications pré-mise à jour
+      await this.preUpdateChecks(packageSize || 100 * 1024 * 1024); // Default 100MB
+
       progressCallback(5);
 
       const packagePath = `/tmp/neopro-update-${version}.tar.gz`;
@@ -33,6 +45,12 @@ class SoftwareUpdateHandler {
 
       await this.createBackup();
 
+      progressCallback(45);
+
+      // Notifier l'utilisateur avant l'arrêt des services
+      await this.notifyUpcomingRestart('Mise à jour en cours. Les services vont redémarrer dans 10 secondes...');
+      await new Promise(resolve => setTimeout(resolve, 10000)); // Attendre 10 secondes
+
       progressCallback(50);
 
       await this.stopServices();
@@ -49,14 +67,20 @@ class SoftwareUpdateHandler {
 
       const newVersion = await this.getCurrentVersion();
 
+      progressCallback(95);
+
+      // Générer le rapport post-mise à jour
+      const report = await this.generatePostUpdateReport(newVersion);
+
       progressCallback(100);
 
-      logger.info('Software update completed successfully', { newVersion });
+      logger.info('Software update completed successfully', { newVersion, report });
 
       return {
         success: true,
         version: newVersion,
-        previousVersion: version,
+        previousVersion: this.previousVersion,
+        report,
       };
     } catch (error) {
       logger.error('Software update failed:', error);
@@ -334,6 +358,198 @@ class SoftwareUpdateHandler {
     } catch (error) {
       logger.error('Rollback failed:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Vérifications pré-mise à jour
+   * @param {number} packageSize Taille estimée du package en bytes
+   * @returns {Promise<object>} Résultat des vérifications
+   */
+  async preUpdateChecks(packageSize) {
+    logger.info('Running pre-update checks');
+
+    const checks = {
+      diskSpace: { passed: false, available: 0, required: 0 },
+      servicesHealthy: { passed: false, services: {} },
+      noActiveSession: { passed: false },
+    };
+
+    // 1. Vérifier l'espace disque (besoin 3x la taille du package)
+    try {
+      const { stdout } = await execAsync("df -B1 /home/pi 2>/dev/null || df -B1 / | tail -1 | awk '{print $4}'");
+      const availableBytes = parseInt(stdout.trim().split('\n').pop()) || 0;
+      const requiredBytes = packageSize * 3;
+
+      checks.diskSpace = {
+        passed: availableBytes > requiredBytes,
+        available: availableBytes,
+        required: requiredBytes,
+        availableMB: Math.round(availableBytes / (1024 * 1024)),
+        requiredMB: Math.round(requiredBytes / (1024 * 1024)),
+      };
+
+      logger.info('Disk space check', checks.diskSpace);
+    } catch (error) {
+      logger.warn('Disk space check failed:', error.message);
+      checks.diskSpace.passed = true; // Ne pas bloquer si on ne peut pas vérifier
+    }
+
+    // 2. Vérifier la santé des services
+    const services = ['neopro-app', 'neopro-admin', 'nginx'];
+    let allHealthy = true;
+
+    for (const service of services) {
+      try {
+        const { stdout } = await execAsync(`systemctl is-active ${service} 2>/dev/null || echo 'unknown'`);
+        const status = stdout.trim();
+        checks.servicesHealthy.services[service] = status;
+
+        if (status !== 'active' && status !== 'unknown') {
+          allHealthy = false;
+        }
+      } catch {
+        checks.servicesHealthy.services[service] = 'unknown';
+      }
+    }
+
+    checks.servicesHealthy.passed = allHealthy;
+    logger.info('Services health check', checks.servicesHealthy);
+
+    // 3. Vérifier qu'il n'y a pas de session TV active
+    try {
+      const response = await axios.get('http://localhost:3000/api/status', { timeout: 2000 });
+      checks.noActiveSession.passed = !response.data?.isPlaying;
+      checks.noActiveSession.currentState = response.data?.isPlaying ? 'playing' : 'idle';
+    } catch {
+      // Si on ne peut pas vérifier, on considère que c'est OK
+      checks.noActiveSession.passed = true;
+      checks.noActiveSession.currentState = 'unknown';
+    }
+
+    logger.info('Active session check', checks.noActiveSession);
+
+    // Valider les résultats critiques
+    if (!checks.diskSpace.passed) {
+      throw new Error(`Espace disque insuffisant: ${checks.diskSpace.availableMB}MB disponibles, ${checks.diskSpace.requiredMB}MB requis`);
+    }
+
+    return checks;
+  }
+
+  /**
+   * Génère un rapport post-mise à jour
+   * @param {string} newVersion Nouvelle version installée
+   * @returns {Promise<object>} Rapport détaillé
+   */
+  async generatePostUpdateReport(newVersion) {
+    const report = {
+      timestamp: new Date().toISOString(),
+      previousVersion: this.previousVersion,
+      newVersion,
+      servicesStatus: {},
+      diskUsage: null,
+      errors: [],
+      healthy: true,
+    };
+
+    // Vérifier chaque service
+    const services = ['neopro-app', 'neopro-admin', 'neopro-sync-agent', 'nginx'];
+
+    for (const service of services) {
+      try {
+        const { stdout } = await execAsync(`systemctl is-active ${service} 2>/dev/null || echo 'unknown'`);
+        report.servicesStatus[service] = stdout.trim();
+
+        if (stdout.trim() === 'failed') {
+          report.errors.push(`Service ${service} failed to start`);
+          report.healthy = false;
+        }
+      } catch (error) {
+        report.servicesStatus[service] = 'error';
+        report.errors.push(`Could not check ${service}: ${error.message}`);
+      }
+    }
+
+    // Récupérer l'utilisation disque
+    try {
+      const { stdout } = await execAsync("df -h /home/pi 2>/dev/null || df -h / | tail -1");
+      const parts = stdout.trim().split(/\s+/);
+      report.diskUsage = {
+        total: parts[1],
+        used: parts[2],
+        available: parts[3],
+        percent: parts[4],
+      };
+    } catch {
+      report.diskUsage = { error: 'Could not get disk usage' };
+    }
+
+    // Vérifier que l'application répond
+    try {
+      await axios.get('http://localhost:3000/api/health', { timeout: 5000 });
+      report.appResponding = true;
+    } catch {
+      report.appResponding = false;
+      report.errors.push('Application not responding on port 3000');
+      report.healthy = false;
+    }
+
+    logger.info('Post-update report generated', report);
+
+    return report;
+  }
+
+  /**
+   * Notifie l'interface utilisateur d'un redémarrage imminent
+   * @param {string} message Message à afficher
+   * @param {number} durationMs Durée d'affichage en ms (optionnel)
+   */
+  async notifyUpcomingRestart(message, durationMs = 10000) {
+    try {
+      const io = require('socket.io-client');
+      const socket = io('http://localhost:3000', {
+        timeout: 5000,
+        reconnection: false,
+      });
+
+      return new Promise((resolve) => {
+        socket.on('connect', () => {
+          socket.emit('system_notification', {
+            type: 'warning',
+            title: 'Mise à jour système',
+            message,
+            duration: durationMs,
+            dismissible: false,
+          });
+
+          logger.info('User notified of upcoming restart', { message });
+
+          // Donner le temps au message d'être reçu
+          setTimeout(() => {
+            socket.close();
+            resolve();
+          }, 1000);
+        });
+
+        socket.on('connect_error', (error) => {
+          logger.warn('Could not notify user of restart (app may be down):', error.message);
+          socket.close();
+          resolve(); // Ne pas bloquer la mise à jour
+        });
+
+        // Timeout si pas de connexion après 3 secondes
+        setTimeout(() => {
+          if (!socket.connected) {
+            logger.warn('Timeout connecting to local socket for notification');
+            socket.close();
+            resolve();
+          }
+        }, 3000);
+      });
+    } catch (error) {
+      logger.warn('Failed to notify user of restart:', error.message);
+      // Ne pas bloquer la mise à jour en cas d'erreur
     }
   }
 }

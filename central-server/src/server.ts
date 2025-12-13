@@ -1,22 +1,31 @@
 import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import dns from 'node:dns';
+import path from 'path';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
 import dotenv from 'dotenv';
 
 import logger from './config/logger';
 import pool from './config/database';
 import socketService from './services/socket.service';
+import metricsService from './services/metrics.service';
+import healthService from './services/health.service';
 
 import authRoutes from './routes/auth.routes';
+import mfaRoutes from './routes/mfa.routes';
 import sitesRoutes from './routes/sites.routes';
 import groupsRoutes from './routes/groups.routes';
 import contentRoutes from './routes/content.routes';
 import updatesRoutes from './routes/updates.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import auditRoutes from './routes/audit.routes';
+import canaryRoutes from './routes/canary.routes';
+import { authRateLimit, apiRateLimit, sensitiveRateLimit } from './middleware/user-rate-limit';
 
 dotenv.config();
 
@@ -108,42 +117,84 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
+// Métriques Prometheus (avant les autres routes pour capturer toutes les requêtes)
+app.use(metricsService.httpMetricsMiddleware());
+
+// Endpoint métriques Prometheus (non rate-limited pour le scraping)
+app.get('/metrics', async (_req: Request, res: Response) => {
+  try {
+    // Mettre à jour les métriques snapshot
+    metricsService.recordConnectedSites(socketService.getConnectionCount());
+
+    res.set('Content-Type', metricsService.getContentType());
+    res.send(await metricsService.getMetrics());
+  } catch (error) {
+    logger.error('Error generating metrics:', error);
+    res.status(500).send('Error generating metrics');
+  }
+});
+
 app.get('/', (_req: Request, res: Response) => {
   res.json({
     service: 'NEOPRO Central Server',
     version: '1.0.0',
     status: 'online',
     timestamp: new Date().toISOString(),
+    documentation: '/api-docs',
   });
 });
 
+// Documentation API Swagger/OpenAPI
+try {
+  const swaggerDocument = YAML.load(path.join(__dirname, 'docs', 'openapi.yaml'));
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'NEOPRO API Documentation',
+  }));
+  logger.info('Swagger documentation available at /api-docs');
+} catch (error) {
+  logger.warn('Could not load OpenAPI documentation:', error);
+}
+
+// Health check complet avec toutes les dépendances
 app.get('/health', async (_req: Request, res: Response) => {
   try {
-    await pool.query('SELECT 1');
-
-    res.json({
-      status: 'healthy',
-      database: 'connected',
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      connectedSites: socketService.getConnectionCount(),
-    });
+    const health = await healthService.getHealth();
+    const httpStatus = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
+    res.status(httpStatus).json(health);
   } catch (error) {
     logger.error('Health check failed:', error);
     res.status(503).json({
       status: 'unhealthy',
-      database: 'disconnected',
-      error: 'Database connection failed',
+      timestamp: new Date().toISOString(),
+      error: 'Health check failed',
     });
   }
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/sites', sitesRoutes);
-app.use('/api/groups', groupsRoutes);
-app.use('/api', contentRoutes);
-app.use('/api', updatesRoutes);
-app.use('/api/analytics', analyticsRoutes);
+// Liveness probe (Kubernetes) - simple check que le process est vivant
+app.get('/live', (_req: Request, res: Response) => {
+  res.json(healthService.getLiveness());
+});
+
+// Readiness probe (Kubernetes) - vérifie que l'app est prête pour le trafic
+app.get('/ready', async (_req: Request, res: Response) => {
+  const readiness = await healthService.getReadiness();
+  const httpStatus = readiness.status === 'ready' ? 200 : 503;
+  res.status(httpStatus).json(readiness);
+});
+
+// Rate limiters spécifiques par type d'endpoint
+app.use('/api/auth', authRateLimit, authRoutes); // Restrictif pour auth
+app.use('/api/mfa', authRateLimit, mfaRoutes);   // MFA - même restrictions que auth
+app.use('/api/sites', apiRateLimit, sitesRoutes);
+app.use('/api/groups', apiRateLimit, groupsRoutes);
+app.use('/api/videos', sensitiveRateLimit); // Upload de vidéos - plus restrictif
+app.use('/api', apiRateLimit, contentRoutes);
+app.use('/api', sensitiveRateLimit, updatesRoutes); // Mises à jour - sensible
+app.use('/api/analytics', apiRateLimit, analyticsRoutes);
+app.use('/api/audit', apiRateLimit, auditRoutes);
+app.use('/api/canary', sensitiveRateLimit, canaryRoutes); // Déploiements canary - sensible
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({
@@ -166,18 +217,21 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-socketService.initialize(httpServer);
-
 const startServer = async () => {
   try {
+    // Tester la connexion à la base de données
     await pool.query('SELECT NOW()');
     logger.info('Database connection established');
+
+    // Initialiser Socket.IO (avec Redis si configuré)
+    await socketService.initialize(httpServer);
 
     httpServer.listen(PORT, () => {
       logger.info(`🚀 NEOPRO Central Server démarré`, {
         port: PORT,
         environment: NODE_ENV,
         processId: process.pid,
+        redisEnabled: socketService.isRedisConnected(),
       });
       logger.info(`API disponible sur http://localhost:${PORT}`);
       logger.info(`WebSocket disponible sur ws://localhost:${PORT}`);
@@ -192,6 +246,7 @@ process.on('SIGTERM', async () => {
   logger.info('SIGTERM signal received: closing HTTP server');
   httpServer.close(async () => {
     logger.info('HTTP server closed');
+    await socketService.cleanup();
     await pool.end();
     logger.info('Database pool closed');
     process.exit(0);

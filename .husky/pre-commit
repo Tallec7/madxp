@@ -1,0 +1,5 @@
+#!/bin/sh
+# Pre-commit hook for NEOPRO
+# Runs lint-staged to check and fix code before committing
+
+npx lint-staged

@@ -4,6 +4,7 @@ import { query } from '../config/database';
 import { generateToken } from '../middleware/auth';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
+import { mfaService } from '../services/mfa.service';
 
 // Configuration des cookies sécurisés
 const COOKIE_NAME = 'neopro_token';
@@ -23,6 +24,7 @@ type UserRow = {
   password_hash: string;
   full_name: string;
   role: 'admin' | 'operator' | 'viewer';
+  mfa_enabled: boolean;
   created_at?: Date;
   last_login_at?: Date;
 };
@@ -33,10 +35,14 @@ type PasswordRow = {
 
 export const login = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { email, password } = req.body as { email: string; password: string };
+    const { email, password, mfaCode } = req.body as {
+      email: string;
+      password: string;
+      mfaCode?: string;
+    };
 
     const result = await query<UserRow>(
-      'SELECT id, email, password_hash, full_name, role FROM users WHERE email = $1',
+      'SELECT id, email, password_hash, full_name, role, mfa_enabled FROM users WHERE email = $1',
       [email]
     );
 
@@ -52,6 +58,25 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
+    // Si MFA est activé, vérifier le code
+    if (user.mfa_enabled) {
+      // Si pas de code MFA fourni, demander le code
+      if (!mfaCode) {
+        return res.status(200).json({
+          requireMfa: true,
+          userId: user.id,
+          message: 'Code MFA requis',
+        });
+      }
+
+      // Vérifier le code MFA
+      const mfaResult = await mfaService.verifyMfaLogin(user.id, mfaCode);
+      if (!mfaResult.valid) {
+        logger.warn('MFA verification failed during login', { email: user.email });
+        return res.status(401).json({ error: 'Code MFA invalide' });
+      }
+    }
+
     await query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
 
     const token = generateToken({
@@ -60,7 +85,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
       role: user.role,
     });
 
-    logger.info('User logged in', { email: user.email, role: user.role });
+    logger.info('User logged in', { email: user.email, role: user.role, mfaUsed: user.mfa_enabled });
 
     // Définir le cookie HttpOnly sécurisé
     res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
@@ -72,6 +97,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
         email: user.email,
         full_name: user.full_name,
         role: user.role,
+        mfa_enabled: user.mfa_enabled,
       },
     });
   } catch (error) {

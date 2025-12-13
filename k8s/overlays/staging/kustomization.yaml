@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: neopro-staging
+
+namePrefix: staging-
+
+resources:
+  - ../../base
+
+patches:
+  - path: deployment-patch.yaml
+  - path: ingress-patch.yaml
+
+configMapGenerator:
+  - name: central-server-config
+    behavior: merge
+    literals:
+      - NODE_ENV=staging
+      - LOG_LEVEL=debug
+      - ALLOWED_ORIGINS=https://staging.dashboard.neopro.fr
+
+images:
+  - name: ghcr.io/neopro/central-server
+    newTag: develop

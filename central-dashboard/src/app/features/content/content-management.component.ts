@@ -25,12 +25,28 @@ interface Deployment {
   target_type: 'site' | 'group';
   target_id: string;
   target_name?: string;
+  club_name?: string;
+  deployed_by_name?: string;
   status: 'pending' | 'in_progress' | 'completed' | 'failed';
   progress: number;
   deployed_count: number;
   total_count: number;
   created_at: Date;
+  started_at?: Date;
   completed_at?: Date;
+  error?: string;
+}
+
+interface VideoDeploymentHistory {
+  video_id: string;
+  stats: {
+    total: number;
+    completed: number;
+    failed: number;
+    pending: number;
+    in_progress: number;
+  };
+  deployments: Deployment[];
 }
 
 @Component({
@@ -98,6 +114,9 @@ interface Deployment {
               <div class="video-filename">{{ video.filename }}</div>
             </div>
             <div class="video-actions">
+              <button class="btn btn-sm btn-secondary" (click)="showVideoHistory(video)" title="Historique des déploiements">
+                📋
+              </button>
               <button class="btn btn-sm btn-primary" (click)="deployVideo(video)">
                 🚀 Déployer
               </button>
@@ -366,6 +385,79 @@ interface Deployment {
               *ngIf="uploadResults.length === 0"
             >
               Uploader {{ uploadForm.files.length > 1 ? '(' + uploadForm.files.length + ' fichiers)' : '' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Video Deployment History Modal -->
+      <div class="modal" *ngIf="showHistoryModal" (click)="closeHistoryModal()">
+        <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>Historique des déploiements</h2>
+            <button class="modal-close" (click)="closeHistoryModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="history-video-info" *ngIf="selectedVideoForHistory">
+              <h3>{{ selectedVideoForHistory.title }}</h3>
+              <span class="video-meta">{{ formatFileSize(selectedVideoForHistory.file_size) }}</span>
+            </div>
+
+            <div class="history-loading" *ngIf="isLoadingHistory">
+              <span>Chargement de l'historique...</span>
+            </div>
+
+            <div class="history-stats" *ngIf="videoHistory && !isLoadingHistory">
+              <div class="stat-card stat-total">
+                <span class="stat-value">{{ videoHistory.stats.total }}</span>
+                <span class="stat-label">Total</span>
+              </div>
+              <div class="stat-card stat-completed">
+                <span class="stat-value">{{ videoHistory.stats.completed }}</span>
+                <span class="stat-label">Terminés</span>
+              </div>
+              <div class="stat-card stat-failed">
+                <span class="stat-value">{{ videoHistory.stats.failed }}</span>
+                <span class="stat-label">Echoués</span>
+              </div>
+              <div class="stat-card stat-pending">
+                <span class="stat-value">{{ videoHistory.stats.pending + videoHistory.stats.in_progress }}</span>
+                <span class="stat-label">En cours</span>
+              </div>
+            </div>
+
+            <div class="history-list" *ngIf="videoHistory && videoHistory.deployments.length > 0">
+              <div class="history-item" *ngFor="let dep of videoHistory.deployments">
+                <div class="history-item-header">
+                  <span class="history-target">
+                    {{ dep.target_type === 'site' ? '🖥️' : '👥' }}
+                    {{ dep.target_name }}
+                    <span class="club-name" *ngIf="dep.club_name">({{ dep.club_name }})</span>
+                  </span>
+                  <span class="badge" [class]="'badge-' + getDeploymentStatusBadge(dep.status)">
+                    {{ getDeploymentStatusLabel(dep.status) }}
+                  </span>
+                </div>
+                <div class="history-item-details">
+                  <span class="history-date">{{ formatDate(dep.created_at) }}</span>
+                  <span class="history-by" *ngIf="dep.deployed_by_name">par {{ dep.deployed_by_name }}</span>
+                </div>
+                <div class="history-item-error" *ngIf="dep.error">
+                  {{ dep.error }}
+                </div>
+              </div>
+            </div>
+
+            <div class="empty-state" *ngIf="videoHistory && videoHistory.deployments.length === 0 && !isLoadingHistory">
+              <div class="empty-icon">📭</div>
+              <h4>Aucun déploiement</h4>
+              <p>Cette vidéo n'a pas encore été déployée.</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeHistoryModal()">Fermer</button>
+            <button class="btn btn-primary" (click)="deployVideoFromHistory()" *ngIf="selectedVideoForHistory">
+              🚀 Déployer cette vidéo
             </button>
           </div>
         </div>
@@ -1075,6 +1167,115 @@ interface Deployment {
       border-top: 1px solid #e2e8f0;
     }
 
+    /* History Modal Styles */
+    .history-video-info {
+      background: #f8fafc;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-video-info h3 {
+      margin: 0;
+      font-size: 1.125rem;
+      color: #0f172a;
+    }
+
+    .history-loading {
+      text-align: center;
+      padding: 2rem;
+      color: #64748b;
+    }
+
+    .history-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: 1rem;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .stat-card.stat-total { background: #e0f2fe; }
+    .stat-card.stat-completed { background: #dcfce7; }
+    .stat-card.stat-failed { background: #fee2e2; }
+    .stat-card.stat-pending { background: #fef3c7; }
+
+    .stat-value {
+      display: block;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+
+    .history-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .history-item {
+      padding: 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      transition: background 0.2s;
+    }
+
+    .history-item:hover {
+      background: #f8fafc;
+    }
+
+    .history-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .history-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .history-target {
+      font-weight: 500;
+      color: #0f172a;
+    }
+
+    .club-name {
+      color: #64748b;
+      font-weight: 400;
+    }
+
+    .history-item-details {
+      font-size: 0.875rem;
+      color: #64748b;
+      display: flex;
+      gap: 1rem;
+    }
+
+    .history-item-error {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #fee2e2;
+      border-radius: 4px;
+      color: #991b1b;
+      font-size: 0.8125rem;
+    }
+
     @media (max-width: 768px) {
       .content-header {
         flex-direction: column;
@@ -1103,6 +1304,10 @@ interface Deployment {
       .target-type-selector {
         grid-template-columns: 1fr;
       }
+
+      .history-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
   `]
 })
@@ -1116,11 +1321,15 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   videoSearch = '';
   showUploadModal = false;
+  showHistoryModal = false;
   uploadProgress = 0;
   isUploading = false;
   isDeploying = false;
+  isLoadingHistory = false;
   isDragOver = false;
   uploadResults: Array<{ name: string; success: boolean; error?: string }> = [];
+  selectedVideoForHistory: Video | null = null;
+  videoHistory: VideoDeploymentHistory | null = null;
 
   uploadForm = {
     title: '',
@@ -1384,6 +1593,38 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
           this.notificationService.error('Erreur lors de la suppression: ' + (error.error?.error || error.message));
         }
       });
+    }
+  }
+
+  showVideoHistory(video: Video): void {
+    this.selectedVideoForHistory = video;
+    this.showHistoryModal = true;
+    this.isLoadingHistory = true;
+    this.videoHistory = null;
+
+    this.apiService.get<VideoDeploymentHistory>(`/videos/${video.id}/deployments`).subscribe({
+      next: (history) => {
+        this.videoHistory = history;
+        this.isLoadingHistory = false;
+      },
+      error: (error) => {
+        console.error('Error loading video history:', error);
+        this.notificationService.error('Erreur lors du chargement de l\'historique');
+        this.isLoadingHistory = false;
+      }
+    });
+  }
+
+  closeHistoryModal(): void {
+    this.showHistoryModal = false;
+    this.selectedVideoForHistory = null;
+    this.videoHistory = null;
+  }
+
+  deployVideoFromHistory(): void {
+    if (this.selectedVideoForHistory) {
+      this.closeHistoryModal();
+      this.deployVideo(this.selectedVideoForHistory);
     }
   }
 

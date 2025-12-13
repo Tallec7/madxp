@@ -135,6 +135,53 @@ export interface SiteStats {
   error: number;
 }
 
+export type ConnectionDisplayStatus = 'online' | 'offline' | 'warning' | 'unknown';
+
+export interface SiteConnectionStatus {
+  siteId: string;
+  siteName: string;
+  clubName: string;
+  connection: {
+    isConnected: boolean;
+    displayStatus: ConnectionDisplayStatus;
+    lastSeenAt: Date | null;
+    secondsSinceLastSeen: number | null;
+    localIp: string | null;
+  };
+  sync: {
+    lastConfigSync: Date | null;
+  };
+  statistics: {
+    heartbeats24h: number;
+    uptime24h: number;
+    firstHeartbeat24h: Date | null;
+    lastHeartbeat24h: Date | null;
+  };
+}
+
+export interface SiteConnectionSummary {
+  siteId: string;
+  siteName: string;
+  clubName: string;
+  isConnected: boolean;
+  displayStatus: ConnectionDisplayStatus;
+  lastSeenAt: Date | null;
+  secondsSinceLastSeen: number | null;
+  localIp: string | null;
+}
+
+export interface AllSitesConnectionStatus {
+  sites: SiteConnectionSummary[];
+  stats: {
+    total: number;
+    online: number;
+    warning: number;
+    offline: number;
+    unknown: number;
+  };
+  timestamp: string;
+}
+
 /**
  * Catégorie analytics pour le tracking des vidéos
  */

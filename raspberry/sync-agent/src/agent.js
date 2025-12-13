@@ -9,6 +9,11 @@ const commands = require('./commands');
 const analyticsCollector = require('./analytics');
 const { calculateConfigHash } = require('./utils/config-merge');
 const ConfigWatcher = require('./watchers/config-watcher');
+const expirationChecker = require('./tasks/expiration-checker');
+const syncHistory = require('./services/sync-history');
+const offlineQueue = require('./services/offline-queue');
+const connectionStatus = require('./services/connection-status');
+const localBackup = require('./tasks/local-backup');
 
 class NeoproSyncAgent {
   constructor() {
@@ -39,6 +44,12 @@ class NeoproSyncAgent {
     // Les analytics sont envoyées via HTTP, pas besoin d'attendre la connexion WS
     this.startAnalyticsSync();
 
+    // Démarrer le vérificateur d'expiration des vidéos
+    expirationChecker.start();
+
+    // Démarrer le backup automatique quotidien
+    localBackup.start();
+
     this.connect();
 
     process.on('SIGTERM', () => this.shutdown());
@@ -68,6 +79,7 @@ class NeoproSyncAgent {
     logger.info('✅ Connected to central server');
 
     this.reconnectAttempts = 0;
+    connectionStatus.setConnected(true, 'socket_connected');
 
     this.socket.emit('authenticate', {
       siteId: config.site.id,
@@ -76,9 +88,13 @@ class NeoproSyncAgent {
   }
 
   handleAuthenticated(data) {
-    logger.info('✅ Authenticated successfully', data);
+    logger.info('Authenticated successfully', data);
 
     this.connected = true;
+    connectionStatus.recordSync(true);
+
+    // Enregistrer la connexion dans l'historique
+    syncHistory.recordConnection(true, { siteId: config.site.id });
 
     // Envoyer l'état local au central (miroir)
     this.syncLocalState();
@@ -89,6 +105,45 @@ class NeoproSyncAgent {
     this.startHeartbeat();
     // Note: startAnalyticsSync() est appelé dans start() car les analytics
     // sont envoyées via HTTP, indépendamment de la connexion WebSocket
+
+    // Traiter les commandes en attente dans la queue offline
+    this.processOfflineQueue();
+  }
+
+  /**
+   * Traite les commandes en attente dans la queue offline
+   */
+  async processOfflineQueue() {
+    try {
+      const queueSize = await offlineQueue.getQueueSize();
+
+      if (queueSize === 0) {
+        return;
+      }
+
+      logger.info('Processing offline queue', { queueSize });
+
+      const stats = await offlineQueue.processQueue(async (type, data) => {
+        // Exécuter la commande comme si elle venait du serveur
+        const handler = commands[type];
+
+        if (!handler) {
+          throw new Error(`Unknown command type: ${type}`);
+        }
+
+        if (typeof handler === 'function') {
+          return handler(data);
+        }
+        return handler.execute(data);
+      });
+
+      // Enregistrer dans l'historique
+      syncHistory.recordSync('offline_queue', stats, stats.failed === 0);
+
+      logger.info('Offline queue processed', stats);
+    } catch (error) {
+      logger.error('Failed to process offline queue:', error);
+    }
   }
 
   /**
@@ -140,9 +195,26 @@ class NeoproSyncAgent {
         configHash,
         categoriesCount: localConfig.categories?.length || 0,
       });
+
+      // Enregistrer la synchronisation réussie
+      connectionStatus.recordSync(true);
     } catch (error) {
       logger.error('Failed to sync local state:', error);
+      connectionStatus.recordSync(false);
     }
+  }
+
+  /**
+   * Retourne le statut de connexion actuel
+   * @returns {Object} Statut de connexion
+   */
+  getConnectionStatus() {
+    return {
+      ...connectionStatus.getStatus(),
+      socketConnected: this.socket?.connected || false,
+      reconnectAttempts: this.reconnectAttempts,
+      maxReconnectAttempts: this.maxReconnectAttempts,
+    };
   }
 
   handleAuthError(data) {
@@ -158,6 +230,10 @@ class NeoproSyncAgent {
     logger.warn('Disconnected from central server', { reason });
 
     this.connected = false;
+    connectionStatus.setConnected(false, reason);
+
+    // Enregistrer la déconnexion dans l'historique
+    syncHistory.recordConnection(false, { reason });
 
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
@@ -177,6 +253,7 @@ class NeoproSyncAgent {
 
   handleConnectError(error) {
     this.reconnectAttempts++;
+    connectionStatus.recordReconnectAttempt();
 
     logger.error('Connection error', {
       attempt: this.reconnectAttempts,
@@ -341,6 +418,51 @@ class NeoproSyncAgent {
     }
   }
 
+  /**
+   * Met en queue une commande pour exécution ultérieure
+   * Utile quand l'agent est hors ligne ou pour les commandes non critiques
+   * @param {string} commandType Type de commande
+   * @param {object} commandData Données de la commande
+   * @param {object} options Options (priority, etc.)
+   * @returns {Promise<string|null>} ID de la commande en queue
+   */
+  async queueCommand(commandType, commandData, options = {}) {
+    // Si connecté et pas de force_queue, exécuter immédiatement
+    if (this.connected && !options.forceQueue) {
+      try {
+        const handler = commands[commandType];
+        if (handler) {
+          logger.info('Executing command immediately (connected)', { type: commandType });
+          if (typeof handler === 'function') {
+            await handler(commandData);
+          } else {
+            await handler.execute(commandData);
+          }
+          return null; // Pas de queue ID car exécuté immédiatement
+        }
+      } catch (error) {
+        logger.warn('Immediate execution failed, queueing command', {
+          type: commandType,
+          error: error.message,
+        });
+      }
+    }
+
+    // Mettre en queue
+    return offlineQueue.enqueue(commandType, commandData, options);
+  }
+
+  /**
+   * Retourne l'état de la queue offline
+   * @returns {Promise<object>}
+   */
+  async getQueueStatus() {
+    return {
+      connected: this.connected,
+      queueStats: await offlineQueue.getStats(),
+    };
+  }
+
   async shutdown() {
     logger.info('Shutting down gracefully...');
 
@@ -375,7 +497,13 @@ class NeoproSyncAgent {
   }
 }
 
+// Exposer l'instance de l'agent et la queue offline pour utilisation externe
 const agent = new NeoproSyncAgent();
 agent.start();
 
-module.exports = NeoproSyncAgent;
+module.exports = {
+  NeoproSyncAgent,
+  agent,
+  offlineQueue,
+  connectionStatus,
+};

@@ -15,12 +15,12 @@ module.exports = {
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
-    // Global threshold - to be increased as more tests are added
+    // Target: 80% coverage
     global: {
-      branches: 5,
-      functions: 10,
-      lines: 10,
-      statements: 10,
+      branches: 50,
+      functions: 60,
+      lines: 60,
+      statements: 60,
     },
   },
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],

@@ -15,10 +15,22 @@
     "test": "ng test raspberry && ng test central-dashboard",
     "test:raspberry": "ng test raspberry",
     "test:central": "ng test central-dashboard",
+    "test:server": "cd central-server && npm test",
+    "test:sync-agent": "cd raspberry/sync-agent && npm test",
     "lint": "ng lint raspberry && ng lint central-dashboard",
     "lint:raspberry": "ng lint raspberry",
     "lint:central": "ng lint central-dashboard",
-    "server": "node server-render/server.js"
+    "lint:server": "cd central-server && npm run lint",
+    "server": "node server-render/server.js",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,js}": [
+      "eslint --fix"
+    ],
+    "*.{json,md,html,scss,css}": [
+      "prettier --write"
+    ]
   },
   "prettier": {
     "printWidth": 100,
@@ -62,12 +74,15 @@
     "@angular/compiler-cli": "^20.3.0",
     "@types/jasmine": "~5.1.0",
     "angular-eslint": "^20.0.0",
+    "husky": "^9.1.6",
     "jasmine-core": "~5.9.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.48.1"
   }

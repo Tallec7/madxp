@@ -32,6 +32,11 @@ export const schemas = {
   login: Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().min(6).required(),
+    mfaCode: Joi.string().length(6).pattern(/^\d+$/).optional(), // 6 digits TOTP code
+  }),
+
+  mfaCode: Joi.object({
+    code: Joi.string().min(6).max(10).required(), // TOTP (6 digits) or backup code (XXXX-XXXX)
   }),
 
   createSite: Joi.object({

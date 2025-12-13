@@ -2,6 +2,7 @@ import { Response } from 'express';
 import {
   getVideos,
   getVideo,
+  getVideoDeployments,
   createVideo,
   updateVideo,
   deleteVideo,
@@ -303,6 +304,84 @@ describe('Content Controller', () => {
 
         expect(deleteFile).not.toHaveBeenCalled();
         expect(res.json).toHaveBeenCalledWith({ message: 'Vidéo supprimée avec succès' });
+      });
+    });
+
+    describe('getVideoDeployments', () => {
+      it('should return deployment history for a video', async () => {
+        const req = createAuthRequest({ params: { id: 'video-123' } });
+        const res = createMockResponse();
+
+        const mockDeployments = [
+          { id: 'd1', video_id: 'video-123', status: 'completed', target_name: 'Site A', target_type: 'site' },
+          { id: 'd2', video_id: 'video-123', status: 'failed', target_name: 'Site B', target_type: 'site' },
+          { id: 'd3', video_id: 'video-123', status: 'pending', target_name: 'Group C', target_type: 'group' },
+        ];
+
+        (pool.query as jest.Mock)
+          .mockResolvedValueOnce({ rows: [{ id: 'video-123' }] }) // video exists
+          .mockResolvedValueOnce({ rows: mockDeployments });
+
+        await getVideoDeployments(req, res);
+
+        expect(res.json).toHaveBeenCalledWith({
+          video_id: 'video-123',
+          stats: {
+            total: 3,
+            completed: 1,
+            failed: 1,
+            pending: 1,
+            in_progress: 0,
+          },
+          deployments: mockDeployments,
+        });
+      });
+
+      it('should return 404 if video not found', async () => {
+        const req = createAuthRequest({ params: { id: 'nonexistent' } });
+        const res = createMockResponse();
+
+        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+
+        await getVideoDeployments(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(404);
+        expect(res.json).toHaveBeenCalledWith({ error: 'Vidéo non trouvée' });
+      });
+
+      it('should return empty deployments if video has no deployments', async () => {
+        const req = createAuthRequest({ params: { id: 'video-new' } });
+        const res = createMockResponse();
+
+        (pool.query as jest.Mock)
+          .mockResolvedValueOnce({ rows: [{ id: 'video-new' }] }) // video exists
+          .mockResolvedValueOnce({ rows: [] }); // no deployments
+
+        await getVideoDeployments(req, res);
+
+        expect(res.json).toHaveBeenCalledWith({
+          video_id: 'video-new',
+          stats: {
+            total: 0,
+            completed: 0,
+            failed: 0,
+            pending: 0,
+            in_progress: 0,
+          },
+          deployments: [],
+        });
+      });
+
+      it('should return 500 on database error', async () => {
+        const req = createAuthRequest({ params: { id: 'video-123' } });
+        const res = createMockResponse();
+
+        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+
+        await getVideoDeployments(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({ error: "Erreur lors de la récupération de l'historique des déploiements" });
       });
     });
   });

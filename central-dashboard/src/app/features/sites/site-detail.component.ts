@@ -8,19 +8,23 @@ import { Site, Metrics } from '../../core/models';
 import { Subscription, interval } from 'rxjs';
 import { ConfigEditorComponent } from './config-editor/config-editor.component';
 import { SiteContentViewerComponent } from './site-content-viewer/site-content-viewer.component';
+import { ConnectionIndicatorComponent } from '../../shared/components/connection-indicator.component';
 
 @Component({
   selector: 'app-site-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ConfigEditorComponent, SiteContentViewerComponent],
+  imports: [CommonModule, RouterModule, FormsModule, ConfigEditorComponent, SiteContentViewerComponent, ConnectionIndicatorComponent],
   template: `
     <div class="page-container" *ngIf="site; else loading">
       <div class="page-header">
         <button class="btn btn-secondary" routerLink="/sites">← Retour</button>
         <h1>{{ site.club_name }}</h1>
-        <span class="badge" [class]="'badge-' + getStatusBadge(site.status)">
-          {{ site.status }}
-        </span>
+        <app-connection-indicator
+          [siteId]="siteId"
+          [showText]="true"
+          [showDetails]="true"
+          [refreshInterval]="15000"
+        ></app-connection-indicator>
         <button class="btn btn-primary" [routerLink]="['/sites', siteId, 'analytics']">
           📊 Analytics
         </button>

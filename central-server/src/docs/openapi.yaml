@@ -1,0 +1,987 @@
+openapi: 3.0.3
+info:
+  title: NEOPRO Central Server API
+  description: |
+    API RESTful pour la gestion centralisée des écrans publicitaires NEOPRO.
+
+    ## Authentification
+
+    L'API utilise l'authentification JWT. Obtenez un token via `/api/auth/login` et incluez-le dans le header `Authorization: Bearer <token>`.
+
+    Les cookies HttpOnly sécurisés sont également supportés pour les applications web.
+
+    ## MFA (Multi-Factor Authentication)
+
+    Les comptes administrateurs peuvent activer l'authentification à deux facteurs (TOTP).
+    Si MFA est activé, le login retournera `requireMfa: true` et nécessitera un code TOTP.
+
+    ## Rate Limiting
+
+    - Auth endpoints: 10 req/15 min
+    - API générale: 100 req/min
+    - Endpoints sensibles: 30 req/min
+    - Uploads vidéo: 10/heure
+
+    ## Codes d'erreur
+
+    - `400` - Requête invalide
+    - `401` - Non authentifié
+    - `403` - Accès refusé (permissions insuffisantes)
+    - `404` - Ressource non trouvée
+    - `429` - Trop de requêtes (rate limit)
+    - `500` - Erreur serveur
+  version: 1.0.0
+  contact:
+    name: Support NEOPRO
+    email: support@neopro.fr
+
+servers:
+  - url: https://api.neopro.fr
+    description: Production
+  - url: http://localhost:3001
+    description: Développement
+
+tags:
+  - name: Authentication
+    description: Authentification et gestion de session
+  - name: MFA
+    description: Authentification multi-facteurs
+  - name: Sites
+    description: Gestion des sites (écrans)
+  - name: Groups
+    description: Gestion des groupes de sites
+  - name: Videos
+    description: Gestion du contenu vidéo
+  - name: Deployments
+    description: Déploiements de contenu
+  - name: Canary
+    description: Déploiements progressifs (canary)
+  - name: Updates
+    description: Mises à jour logicielles
+  - name: Analytics
+    description: Statistiques et métriques
+  - name: Audit
+    description: Logs d'audit
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: neopro_token
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        role:
+          type: string
+          enum: [admin, operator, viewer]
+        mfa_enabled:
+          type: boolean
+
+    Site:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        site_name:
+          type: string
+        club_name:
+          type: string
+        location:
+          type: object
+          properties:
+            city:
+              type: string
+            region:
+              type: string
+            country:
+              type: string
+            coordinates:
+              type: object
+              properties:
+                lat:
+                  type: number
+                lng:
+                  type: number
+        sports:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [online, offline, maintenance, error]
+        last_seen_at:
+          type: string
+          format: date-time
+        software_version:
+          type: string
+        hardware_model:
+          type: string
+
+    Video:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        original_name:
+          type: string
+        category:
+          type: string
+        subcategory:
+          type: string
+        file_size:
+          type: integer
+        duration:
+          type: number
+        thumbnail_url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Deployment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        video_id:
+          type: string
+          format: uuid
+        target_type:
+          type: string
+          enum: [site, group]
+        target_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, in_progress, completed, failed, cancelled]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        error_message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    CanaryDeployment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        deploymentType:
+          type: string
+          enum: [content, update]
+        resourceId:
+          type: string
+          format: uuid
+        targetType:
+          type: string
+          enum: [site, group]
+        targetId:
+          type: string
+          format: uuid
+        config:
+          $ref: '#/components/schemas/CanaryConfig'
+        currentPhase:
+          type: string
+          enum: [canary, gradual, full, completed, failed, rolled_back]
+        currentStep:
+          type: integer
+        metrics:
+          $ref: '#/components/schemas/CanaryMetrics'
+
+    CanaryConfig:
+      type: object
+      properties:
+        canaryPercentage:
+          type: integer
+          default: 10
+          description: Pourcentage de sites pour le canary initial
+        gradualSteps:
+          type: array
+          items:
+            type: integer
+          default: [25, 50, 75, 100]
+          description: Étapes de progression (%)
+        stabilityPeriodMs:
+          type: integer
+          default: 1800000
+          description: Temps d'observation entre phases (ms)
+        successThreshold:
+          type: integer
+          default: 95
+          description: Seuil de succès requis (%)
+        autoAdvance:
+          type: boolean
+          default: true
+          description: Avancement automatique
+
+    CanaryMetrics:
+      type: object
+      properties:
+        totalSites:
+          type: integer
+        deployedSites:
+          type: integer
+        successfulSites:
+          type: integer
+        failedSites:
+          type: integer
+        pendingSites:
+          type: integer
+        successRate:
+          type: number
+
+    Group:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [sport, geography, version, custom]
+        filters:
+          type: object
+        site_count:
+          type: integer
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        action:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        user_email:
+          type: string
+        target_type:
+          type: string
+        target_id:
+          type: string
+        details:
+          type: object
+        ip_address:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {}
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+
+security:
+  - bearerAuth: []
+  - cookieAuth: []
+
+paths:
+  /api/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Connexion utilisateur
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 6
+                mfaCode:
+                  type: string
+                  description: Code TOTP si MFA activé
+      responses:
+        '200':
+          description: Connexion réussie ou MFA requis
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      token:
+                        type: string
+                      user:
+                        $ref: '#/components/schemas/User'
+                  - type: object
+                    properties:
+                      requireMfa:
+                        type: boolean
+                      userId:
+                        type: string
+                      message:
+                        type: string
+        '401':
+          description: Identifiants invalides
+
+  /api/auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Déconnexion
+      responses:
+        '200':
+          description: Déconnexion réussie
+
+  /api/auth/me:
+    get:
+      tags: [Authentication]
+      summary: Informations utilisateur courant
+      responses:
+        '200':
+          description: Informations utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /api/mfa/setup:
+    post:
+      tags: [MFA]
+      summary: Initialiser le MFA (génère QR code)
+      description: Réservé aux admins et operators
+      responses:
+        '200':
+          description: Setup MFA initialisé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  qrCodeDataUrl:
+                    type: string
+                    description: QR code en base64
+                  manualEntryKey:
+                    type: string
+                    description: Clé pour entrée manuelle
+                  backupCodes:
+                    type: array
+                    items:
+                      type: string
+                    description: Codes de récupération
+
+  /api/mfa/enable:
+    post:
+      tags: [MFA]
+      summary: Activer le MFA après vérification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  description: Code TOTP à 6 chiffres
+      responses:
+        '200':
+          description: MFA activé
+        '400':
+          description: Code invalide
+
+  /api/mfa/disable:
+    post:
+      tags: [MFA]
+      summary: Désactiver le MFA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+      responses:
+        '200':
+          description: MFA désactivé
+
+  /api/sites:
+    get:
+      tags: [Sites]
+      summary: Liste des sites
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [online, offline, maintenance, error]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste paginée des sites
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Site'
+    post:
+      tags: [Sites]
+      summary: Créer un site
+      description: Réservé aux admins et operators
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [site_name, club_name]
+              properties:
+                site_name:
+                  type: string
+                club_name:
+                  type: string
+                location:
+                  type: object
+                sports:
+                  type: array
+                  items:
+                    type: string
+                hardware_model:
+                  type: string
+      responses:
+        '201':
+          description: Site créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  site:
+                    $ref: '#/components/schemas/Site'
+                  apiKey:
+                    type: string
+                    description: Clé API (affichée une seule fois)
+
+  /api/sites/{id}:
+    get:
+      tags: [Sites]
+      summary: Détails d'un site
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Détails du site
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+        '404':
+          description: Site non trouvé
+    put:
+      tags: [Sites]
+      summary: Modifier un site
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                site_name:
+                  type: string
+                club_name:
+                  type: string
+                location:
+                  type: object
+                sports:
+                  type: array
+                  items:
+                    type: string
+                status:
+                  type: string
+                  enum: [online, offline, maintenance, error]
+      responses:
+        '200':
+          description: Site modifié
+    delete:
+      tags: [Sites]
+      summary: Supprimer un site
+      description: Réservé aux admins
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Site supprimé
+        '404':
+          description: Site non trouvé
+
+  /api/sites/{id}/command:
+    post:
+      tags: [Sites]
+      summary: Envoyer une commande à un site
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [command_type]
+              properties:
+                command_type:
+                  type: string
+                  enum: [reboot, restart_service, get_logs, get_system_info, update_config]
+                command_data:
+                  type: object
+      responses:
+        '200':
+          description: Commande envoyée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  commandId:
+                    type: string
+                    format: uuid
+
+  /api/videos:
+    get:
+      tags: [Videos]
+      summary: Liste des vidéos
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste des vidéos
+    post:
+      tags: [Videos]
+      summary: Uploader une vidéo
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [video]
+              properties:
+                video:
+                  type: string
+                  format: binary
+                category:
+                  type: string
+                subcategory:
+                  type: string
+                title:
+                  type: string
+      responses:
+        '201':
+          description: Vidéo uploadée
+
+  /api/deployments:
+    get:
+      tags: [Deployments]
+      summary: Liste des déploiements
+      responses:
+        '200':
+          description: Liste des déploiements
+    post:
+      tags: [Deployments]
+      summary: Créer un déploiement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [video_id, target_type, target_ids]
+              properties:
+                video_id:
+                  type: string
+                  format: uuid
+                target_type:
+                  type: string
+                  enum: [site, group]
+                target_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '201':
+          description: Déploiement créé
+
+  /api/canary/deployments:
+    get:
+      tags: [Canary]
+      summary: Liste des déploiements canary actifs
+      responses:
+        '200':
+          description: Liste des déploiements canary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deployments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CanaryDeployment'
+    post:
+      tags: [Canary]
+      summary: Créer un déploiement canary
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deploymentType, resourceId, targetType, targetId]
+              properties:
+                deploymentType:
+                  type: string
+                  enum: [content, update]
+                resourceId:
+                  type: string
+                  format: uuid
+                targetType:
+                  type: string
+                  enum: [site, group]
+                targetId:
+                  type: string
+                  format: uuid
+                config:
+                  $ref: '#/components/schemas/CanaryConfig'
+      responses:
+        '201':
+          description: Déploiement canary créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  canarySites:
+                    type: array
+                    items:
+                      type: string
+
+  /api/canary/deployments/{id}/start:
+    post:
+      tags: [Canary]
+      summary: Démarrer la phase canary
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Phase canary démarrée
+
+  /api/canary/deployments/{id}/advance:
+    post:
+      tags: [Canary]
+      summary: Forcer l'avancement vers la phase suivante
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Avancé vers la phase suivante
+        '400':
+          description: Impossible d'avancer (seuil non atteint)
+
+  /api/canary/deployments/{id}/rollback:
+    post:
+      tags: [Canary]
+      summary: Rollback du déploiement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Rollback effectué
+
+  /api/canary/deployments/{id}/metrics:
+    get:
+      tags: [Canary]
+      summary: Métriques du déploiement canary
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Métriques
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metrics:
+                    $ref: '#/components/schemas/CanaryMetrics'
+
+  /api/groups:
+    get:
+      tags: [Groups]
+      summary: Liste des groupes
+      responses:
+        '200':
+          description: Liste des groupes
+    post:
+      tags: [Groups]
+      summary: Créer un groupe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                  enum: [sport, geography, version, custom]
+                filters:
+                  type: object
+      responses:
+        '201':
+          description: Groupe créé
+
+  /api/audit:
+    get:
+      tags: [Audit]
+      summary: Logs d'audit
+      description: Réservé aux admins
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Logs d'audit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLog'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  totalPages:
+                    type: integer
+
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Système healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                  uptime:
+                    type: number
+                  checks:
+                    type: object
+                    properties:
+                      database:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                          latencyMs:
+                            type: number
+                      sockets:
+                        type: object
+                        properties:
+                          connected:
+                            type: integer
+                          status:
+                            type: string

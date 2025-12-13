@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, BehaviorSubject, tap } from 'rxjs';
 import { ApiService } from './api.service';
-import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff } from '../models';
+import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -140,6 +140,15 @@ export class SitesService {
     configuration: SiteConfiguration | null;
   }> {
     return this.api.get(`/sites/${id}/local-content`);
+  }
+
+  // Connection status
+  getConnectionStatus(id: string): Observable<SiteConnectionStatus> {
+    return this.api.get(`/sites/${id}/connection-status`);
+  }
+
+  getAllConnectionStatus(): Observable<AllSitesConnectionStatus> {
+    return this.api.get('/sites/connection-status');
   }
 
   // Hotspot WiFi management

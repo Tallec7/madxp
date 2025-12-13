@@ -1,29 +1,68 @@
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import crypto from 'crypto';
 import logger from '../config/logger';
 import pool from '../config/database';
 import { AuthRequest } from '../types';
 import deploymentService from '../services/deployment.service';
 import { uploadFile, deleteFile } from '../config/supabase';
+import { formatPaginatedResponse } from '../middleware/pagination';
+
+/**
+ * Calcule le checksum SHA256 d'un buffer
+ */
+function calculateChecksum(buffer: Buffer): string {
+  return crypto.createHash('sha256').update(buffer).digest('hex');
+}
 
 export const getVideos = async (req: AuthRequest, res: Response) => {
   try {
-    const result = await pool.query(
-      `SELECT id, filename, original_name, category, subcategory,
-              file_size, duration, storage_path as url,
-              thumbnail_url, metadata, created_at, updated_at
-       FROM videos
-       ORDER BY created_at DESC`
-    );
+    const { category, search } = req.query;
+    const pagination = req.pagination || { page: 1, limit: 20, offset: 0 };
+
+    let whereClause = 'WHERE 1=1';
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (category) {
+      whereClause += ` AND category = $${paramIndex}`;
+      params.push(category);
+      paramIndex++;
+    }
+
+    if (search) {
+      whereClause += ` AND (original_name ILIKE $${paramIndex} OR filename ILIKE $${paramIndex})`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    // Requêtes paginée et count en parallèle
+    const dataQuery = `
+      SELECT id, filename, original_name, category, subcategory,
+             file_size, duration, storage_path as url,
+             thumbnail_url, metadata, created_at, updated_at
+      FROM videos
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+    const countQuery = `SELECT COUNT(*) as count FROM videos ${whereClause}`;
+
+    const [dataResult, countResult] = await Promise.all([
+      pool.query(dataQuery, [...params, pagination.limit, pagination.offset]),
+      pool.query(countQuery, params),
+    ]);
 
     // Ajouter le titre depuis les metadata ou utiliser original_name
-    const videos = result.rows.map(video => ({
+    const videos = dataResult.rows.map(video => ({
       ...video,
       title: (video.metadata as { title?: string })?.title || video.original_name || video.filename
     }));
 
-    res.json(videos);
+    const total = parseInt((countResult.rows[0] as any)?.count || '0', 10);
+
+    res.json(formatPaginatedResponse(videos, total, pagination));
   } catch (error) {
     logger.error('Error fetching videos:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des vidéos' });
@@ -57,6 +96,61 @@ export const getVideo = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/**
+ * Récupère l'historique des déploiements pour une vidéo spécifique
+ */
+export const getVideoDeployments = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Vérifier que la vidéo existe
+    const videoResult = await pool.query('SELECT id FROM videos WHERE id = $1', [id]);
+    if (videoResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Vidéo non trouvée' });
+    }
+
+    // Récupérer tous les déploiements pour cette vidéo
+    const result = await pool.query(
+      `SELECT cd.id, cd.video_id, cd.target_type, cd.target_id, cd.status, cd.progress,
+              cd.error_message as error, cd.completed_at, cd.created_at, cd.started_at,
+              CASE
+                WHEN cd.target_type = 'site' THEN s.site_name
+                WHEN cd.target_type = 'group' THEN g.name
+              END as target_name,
+              CASE
+                WHEN cd.target_type = 'site' THEN s.club_name
+                ELSE NULL
+              END as club_name,
+              u.first_name || ' ' || u.last_name as deployed_by_name
+       FROM content_deployments cd
+       LEFT JOIN sites s ON cd.target_type = 'site' AND cd.target_id = s.id
+       LEFT JOIN groups g ON cd.target_type = 'group' AND cd.target_id = g.id
+       LEFT JOIN users u ON cd.deployed_by = u.id
+       WHERE cd.video_id = $1
+       ORDER BY cd.created_at DESC`,
+      [id]
+    );
+
+    // Statistiques résumées
+    const stats = {
+      total: result.rows.length,
+      completed: result.rows.filter(d => d.status === 'completed').length,
+      failed: result.rows.filter(d => d.status === 'failed').length,
+      pending: result.rows.filter(d => d.status === 'pending').length,
+      in_progress: result.rows.filter(d => d.status === 'in_progress').length,
+    };
+
+    res.json({
+      video_id: id,
+      stats,
+      deployments: result.rows
+    });
+  } catch (error) {
+    logger.error('Error fetching video deployments:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération de l\'historique des déploiements' });
+  }
+};
+
 export const createVideo = async (req: AuthRequest, res: Response) => {
   try {
     const file = req.file;
@@ -72,6 +166,9 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     const ext = path.extname(file.originalname);
     const filename = `${uniqueId}${ext}`;
 
+    // Calculer le checksum SHA256 pour vérification d'intégrité
+    const checksum = calculateChecksum(file.buffer);
+
     // Upload vers Supabase Storage
     const uploadResult = await uploadFile(file.buffer, filename, file.mimetype);
 
@@ -86,10 +183,10 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     const mime_type = file.mimetype;
 
     const result = await pool.query(
-      `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, metadata, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING id, filename as name, original_name, category, subcategory, file_size as size, duration, storage_path as url, thumbnail_url, metadata, created_at, updated_at`,
-      [filename, original_name, category || null, subcategory || null, file_size, mime_type, uploadResult.path, { title: videoTitle }, req.user?.id || null]
+      `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, checksum, metadata, uploaded_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id, filename as name, original_name, category, subcategory, file_size as size, duration, storage_path as url, thumbnail_url, checksum, metadata, created_at, updated_at`,
+      [filename, original_name, category || null, subcategory || null, file_size, mime_type, uploadResult.path, checksum, { title: videoTitle }, req.user?.id || null]
     );
 
     // Ajouter le titre et l'URL à la réponse pour l'affichage client
@@ -97,7 +194,7 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     video.title = videoTitle;
     video.url = uploadResult.url;
 
-    logger.info('Video created:', { id: video.id, filename, title: videoTitle, storagePath: uploadResult.path });
+    logger.info('Video created:', { id: video.id, filename, title: videoTitle, storagePath: uploadResult.path, checksum });
     res.status(201).json(video);
   } catch (error) {
     logger.error('Error creating video:', error);
