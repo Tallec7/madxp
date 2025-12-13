@@ -1967,19 +1967,39 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.configPollSubscription?.unsubscribe();
 
+    // Timeout global de 10 secondes pour la requête initiale
+    const timeoutId = setTimeout(() => {
+      if (this.loading && !this.configCommandId) {
+        this.loading = false;
+        this.config = this.getEmptyConfig();
+        this.originalConfig = null;
+        this.syncJsonFromConfig();
+        this.notificationService.warning('Le serveur ne répond pas. Vous pouvez créer une nouvelle configuration.');
+      }
+    }, 10000);
+
     this.sitesService.getConfiguration(this.siteId).subscribe({
       next: (response) => {
+        clearTimeout(timeoutId);
         if (response.commandId) {
           this.configCommandId = response.commandId;
           this.pollConfigResult();
         } else {
           this.loading = false;
-          this.notificationService.error('Erreur: pas de commandId reçu');
+          this.config = this.getEmptyConfig();
+          this.originalConfig = null;
+          this.syncJsonFromConfig();
+          this.notificationService.info('Aucun commandId reçu. Vous pouvez créer une nouvelle configuration.');
         }
       },
       error: (error) => {
+        clearTimeout(timeoutId);
         this.loading = false;
-        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+        this.config = this.getEmptyConfig();
+        this.originalConfig = null;
+        this.syncJsonFromConfig();
+        this.notificationService.warning('Erreur de connexion. Vous pouvez créer une nouvelle configuration.');
+        console.error('getConfiguration error:', error);
       }
     });
   }
@@ -1989,6 +2009,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
     const POLL_TIMEOUT_SECONDS = 30;
     let pollCount = 0;
+    let isPolling = false; // Éviter les appels parallèles
 
     this.configPollSubscription = interval(1000).subscribe(() => {
       pollCount++;
@@ -2004,8 +2025,13 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
         return;
       }
 
+      // Éviter les appels parallèles si le précédent n'est pas terminé
+      if (isPolling) return;
+      isPolling = true;
+
       this.sitesService.getCommandStatus(this.siteId, this.configCommandId!).subscribe({
         next: (status) => {
+          isPolling = false;
           if (status.status === 'completed') {
             this.configPollSubscription?.unsubscribe();
             this.loading = false;
@@ -2018,17 +2044,28 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
               this.originalConfig = null;
               this.syncJsonFromConfig();
               this.notificationService.info('Aucune configuration sur le site. Créez-en une nouvelle.');
+            } else {
+              // Réponse inattendue, permettre de créer une config
+              this.config = this.getEmptyConfig();
+              this.originalConfig = null;
+              this.syncJsonFromConfig();
+              this.notificationService.info('Configuration vide. Vous pouvez en créer une nouvelle.');
             }
           } else if (status.status === 'failed') {
             this.configPollSubscription?.unsubscribe();
             this.loading = false;
-            this.notificationService.error('Erreur: ' + (status.error_message || 'Échec de la récupération'));
+            this.config = this.getEmptyConfig();
+            this.originalConfig = null;
+            this.syncJsonFromConfig();
+            this.notificationService.warning('Échec de récupération. Vous pouvez créer une nouvelle configuration.');
           }
+          // Si status === 'pending', on continue le polling
         },
         error: (error) => {
-          this.configPollSubscription?.unsubscribe();
-          this.loading = false;
-          this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+          isPolling = false;
+          // Ne pas arrêter le polling sur une erreur réseau ponctuelle
+          // Le timeout global s'en chargera
+          console.error('getCommandStatus error:', error);
         }
       });
     });
