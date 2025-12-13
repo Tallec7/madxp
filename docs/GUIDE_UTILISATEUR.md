@@ -8,19 +8,352 @@ Ce guide vous accompagne dans l'utilisation quotidienne de la plateforme NEOPRO 
 
 ## Table des matières
 
-1. [Connexion](#1-connexion)
-2. [Tableau de bord](#2-tableau-de-bord)
-3. [Gestion des sites](#3-gestion-des-sites)
-4. [Gestion des vidéos](#4-gestion-des-vidéos)
-5. [Déploiement de contenu](#5-déploiement-de-contenu)
-6. [Groupes de sites](#6-groupes-de-sites)
-7. [Alertes et notifications](#7-alertes-et-notifications)
-8. [Sécurité du compte](#8-sécurité-du-compte)
-9. [FAQ](#9-faq)
+### Partie 1 : Guide Club (Utilisation locale)
+1. [Premier démarrage](#1-premier-démarrage)
+2. [Connexion locale](#2-connexion-locale)
+3. [Guide jour de match](#3-guide-jour-de-match)
+4. [Télécommande web](#4-télécommande-web)
+5. [Interface admin locale](#5-interface-admin-locale)
+6. [Dépannage rapide](#6-dépannage-rapide)
+
+### Partie 2 : Guide Dashboard (Gestionnaires)
+7. [Connexion au dashboard](#7-connexion-au-dashboard)
+8. [Tableau de bord](#8-tableau-de-bord)
+9. [Gestion des sites](#9-gestion-des-sites)
+10. [Gestion des vidéos](#10-gestion-des-vidéos)
+11. [Déploiement de contenu](#11-déploiement-de-contenu)
+12. [Groupes de sites](#12-groupes-de-sites)
+13. [Alertes et notifications](#13-alertes-et-notifications)
+14. [Sécurité du compte](#14-sécurité-du-compte)
+15. [FAQ](#15-faq)
 
 ---
 
-## 1. Connexion
+# PARTIE 1 : GUIDE CLUB (Utilisation locale)
+
+Cette partie s'adresse aux responsables de clubs qui utilisent le système NEOPRO sur place.
+
+---
+
+## 1. Premier démarrage
+
+### Installation physique
+
+Votre système NEOPRO se compose d'un boîtier (Raspberry Pi) connecté à votre écran TV.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    VOTRE INSTALLATION                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│   📱 Votre smartphone          📺 Votre écran TV             │
+│        │                              │                      │
+│        │ WiFi NEOPRO                  │ HDMI                 │
+│        │                              │                      │
+│        └──────────► 📦 Boîtier NEOPRO ◄────┘                │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Étapes de mise en route
+
+1. **Connectez le boîtier** à votre écran TV via le câble HDMI fourni
+2. **Branchez l'alimentation** du boîtier sur une prise électrique
+3. **Allumez votre TV** et sélectionnez la source HDMI correspondante
+
+### Démarrage automatique
+
+Le boîtier démarre automatiquement :
+1. Logo NEOPRO pendant le chargement (~30 secondes)
+2. Page d'accueil avec le nom de votre club
+3. Vos vidéos commencent à défiler automatiquement
+
+> 💡 Le boîtier démarre automatiquement dès qu'il est alimenté. Pas besoin de bouton ON/OFF !
+
+### Vérification de bon fonctionnement
+
+Vous devriez voir :
+- ✅ Le logo ou nom de votre club
+- ✅ Les vidéos de vos sponsors en boucle
+- ✅ Une qualité d'image nette
+
+---
+
+## 2. Connexion locale
+
+### Se connecter au WiFi NEOPRO
+
+Pour contrôler votre système, connectez-vous au réseau WiFi créé par le boîtier :
+
+1. **Ouvrez les paramètres WiFi** de votre smartphone ou tablette
+2. **Recherchez le réseau** `NEOPRO-[NOM-DE-VOTRE-CLUB]`
+   - Exemple : `NEOPRO-FCNANTES` ou `NEOPRO-STADE-RENNAIS`
+3. **Connectez-vous** (mot de passe fourni lors de l'installation)
+4. **Attendez** que la connexion soit établie
+
+> ⚠️ **Note** : Une fois connecté au WiFi NEOPRO, vous n'aurez plus accès à Internet. C'est normal ! Le réseau NEOPRO est dédié au contrôle de votre système.
+
+### Accéder à la télécommande
+
+Une fois connecté au WiFi NEOPRO :
+
+1. **Ouvrez votre navigateur** (Safari, Chrome, Firefox...)
+2. **Tapez l'adresse** : `http://192.168.4.1`
+3. **La télécommande s'affiche** automatiquement
+
+### Créer un raccourci rapide
+
+#### Sur iPhone (Safari) :
+1. Ouvrez la page dans Safari
+2. Appuyez sur l'icône de partage (carré avec flèche)
+3. Sélectionnez "Sur l'écran d'accueil"
+4. Nommez le raccourci "NEOPRO"
+
+#### Sur Android (Chrome) :
+1. Ouvrez la page dans Chrome
+2. Appuyez sur les 3 points en haut à droite
+3. Sélectionnez "Ajouter à l'écran d'accueil"
+4. Nommez le raccourci "NEOPRO"
+
+---
+
+## 3. Guide jour de match
+
+Le jour de match est le moment idéal pour profiter pleinement de votre système NEOPRO !
+
+### Checklist avant le match (30 min avant)
+
+```
+□ Boîtier alimenté (LED verte allumée)
+□ TV allumée sur la bonne source HDMI
+□ Vidéos qui défilent correctement
+□ Smartphone connecté au WiFi NEOPRO-[CLUB]
+□ Télécommande accessible sur http://192.168.4.1
+```
+
+### Préparation
+
+1. **Vérifiez le système**
+   - Le boîtier est alimenté (LED verte)
+   - L'écran TV affiche les vidéos
+
+2. **Connectez-vous à la télécommande**
+   - WiFi : `NEOPRO-[VOTRE-CLUB]`
+   - Adresse : `http://192.168.4.1`
+
+3. **Sélectionnez la playlist**
+   - Choisissez "Sponsors" pour les vidéos partenaires
+   - Ou "Animations" pour le contenu événementiel
+
+### Pendant le match
+
+| Moment | Action recommandée |
+|--------|-------------------|
+| **Avant l'entrée des équipes** | Animations d'ambiance |
+| **Pendant le match** | Logo du club ou sponsors |
+| **Mi-temps** | Vidéos sponsors (audience maximale!) |
+| **Après le match** | Sponsors pendant la sortie du public |
+
+### Actions rapides télécommande
+
+| Action | Bouton |
+|--------|--------|
+| Pause vidéo | ⏸️ Pause |
+| Reprendre | ▶️ Play |
+| Vidéo suivante | ⏭️ Suivant |
+| Vidéo précédente | ⏮️ Précédent |
+| Afficher le logo | 🏠 Accueil |
+
+### Après le match
+
+- Laissez défiler les vidéos sponsors pendant que le public quitte
+- Vous pouvez éteindre la TV quand le stade est vide
+- Le boîtier peut rester allumé (faible consommation ~5W)
+
+---
+
+## 4. Télécommande web
+
+La télécommande web est votre interface principale pour contrôler le système NEOPRO.
+
+### Écran principal
+
+```
+┌────────────────────────────────────────┐
+│         NEOPRO - [Votre Club]          │
+├────────────────────────────────────────┤
+│                                        │
+│   ┌────────────────────────────────┐   │
+│   │                                │   │
+│   │      Aperçu vidéo en cours     │   │
+│   │                                │   │
+│   └────────────────────────────────┘   │
+│                                        │
+│      ⏮️    ⏸️/▶️    ⏭️               │
+│                                        │
+│   Volume: ████████░░ 80%              │
+│                                        │
+├────────────────────────────────────────┤
+│   📋 Playlist: Sponsors                │
+│   📺 Vidéos: 12                        │
+│   🔄 Mode: Boucle automatique         │
+└────────────────────────────────────────┘
+```
+
+### Contrôles de lecture
+
+| Icône | Action | Description |
+|-------|--------|-------------|
+| ▶️ | Play | Lance la lecture |
+| ⏸️ | Pause | Met en pause |
+| ⏭️ | Suivant | Passe à la vidéo suivante |
+| ⏮️ | Précédent | Revient à la vidéo précédente |
+| 🔄 | Boucle | Active/désactive la lecture en boucle |
+| 🔀 | Aléatoire | Lecture aléatoire |
+
+### Sélection de playlist
+
+1. Appuyez sur **📋 Playlists** dans le menu
+2. Choisissez parmi :
+   - **Sponsors** : Vidéos de vos partenaires
+   - **Animations** : Contenus événementiels
+   - **Tout** : Toutes les vidéos disponibles
+3. La playlist se charge automatiquement
+
+### Réglages
+
+- **Volume** : Glissez le curseur ou utilisez +/-
+- **Mode veille** : Éteint l'affichage temporairement
+- **Plein écran** : Force l'affichage plein écran
+
+---
+
+## 5. Interface admin locale
+
+L'interface d'administration permet de gérer les paramètres avancés.
+
+### Accès
+
+1. Connectez-vous au WiFi NEOPRO
+2. Accédez à `http://192.168.4.1/admin`
+3. Entrez vos identifiants (fournis lors de l'installation)
+
+> 🔐 **Identifiants** : Fournis par votre installateur NEOPRO
+
+### Tableau de bord admin
+
+```
+┌────────────────────────────────────────────────────────────┐
+│  ADMINISTRATION - [Votre Club]                    [Déco]   │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│  📊 Statut système                                         │
+│  ├─ État: ● En ligne                                      │
+│  ├─ Dernière sync: il y a 2 heures                        │
+│  ├─ Vidéos: 15 fichiers (2.3 GB)                          │
+│  └─ Espace disque: 45% utilisé                            │
+│                                                            │
+│  ⚙️ Actions                                                │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐       │
+│  │ 🔄 Sync      │ │ 🔃 Redémarrer │ │ 📋 Logs      │       │
+│  └──────────────┘ └──────────────┘ └──────────────┘       │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Actions disponibles
+
+| Action | Description |
+|--------|-------------|
+| **🔄 Sync** | Force une synchronisation avec le serveur central |
+| **🔃 Redémarrer** | Redémarre le système (~60 secondes) |
+| **📋 Logs** | Consulte l'historique d'activité |
+
+### Informations système
+
+- **État connexion** : En ligne / Hors ligne
+- **Dernière synchronisation** : Date de la dernière mise à jour
+- **Espace disque** : Stockage utilisé/disponible
+- **Version** : Version du logiciel installé
+
+---
+
+## 6. Dépannage rapide
+
+### L'écran reste noir
+
+**Vérifications :**
+1. ✅ Le boîtier est-il alimenté ? (LED verte allumée)
+2. ✅ Le câble HDMI est-il bien branché ?
+3. ✅ La TV est-elle sur la bonne source HDMI ?
+
+**Solution :**
+- Débranchez et rebranchez l'alimentation du boîtier
+- Attendez 60 secondes le redémarrage
+
+### Impossible de se connecter au WiFi NEOPRO
+
+**Vérifications :**
+1. ✅ Êtes-vous à moins de 20 mètres du boîtier ?
+2. ✅ Le réseau `NEOPRO-[CLUB]` apparaît-il ?
+3. ✅ Moins de 5 appareils déjà connectés ?
+
+**Solution :**
+- Rapprochez-vous du boîtier
+- Déconnectez d'autres appareils si nécessaire
+- Redémarrez le WiFi de votre smartphone
+
+### La télécommande ne charge pas
+
+**Vérifications :**
+1. ✅ Êtes-vous connecté au WiFi NEOPRO ?
+2. ✅ L'adresse est-elle `http://192.168.4.1` (pas https) ?
+
+**Solution :**
+- Vérifiez que vous n'êtes plus sur votre WiFi habituel
+- Tapez l'adresse complète avec `http://`
+
+### Les vidéos ne défilent pas
+
+**Cause possible :** Synchronisation en cours
+
+**Solution :**
+1. Accédez à l'admin (`http://192.168.4.1/admin`)
+2. Vérifiez l'espace disque
+3. Lancez une synchronisation manuelle
+
+### Pas de son
+
+**Vérifications :**
+1. ✅ Volume TV monté ?
+2. ✅ TV pas en mode muet ?
+3. ✅ Volume télécommande NEOPRO activé ?
+
+**Solution :**
+- Augmentez le volume sur la télécommande NEOPRO
+- Vérifiez les paramètres audio TV (sortie HDMI)
+
+### Contacter le support
+
+Si le problème persiste :
+
+📧 **Email** : support@neopro.fr
+📞 **Téléphone** : 01 XX XX XX XX
+
+**Informations à fournir :**
+- Nom de votre club
+- Description du problème
+- Actions déjà tentées
+
+---
+
+# PARTIE 2 : GUIDE DASHBOARD (Gestionnaires)
+
+Cette partie s'adresse aux gestionnaires NEOPRO utilisant le dashboard central.
+
+---
+
+## 7. Connexion au dashboard
 
 ### Première connexion
 
@@ -41,7 +374,7 @@ Si votre compte a l'authentification à deux facteurs activée :
 
 ---
 
-## 2. Tableau de bord
+## 8. Tableau de bord
 
 Le tableau de bord vous offre une vue d'ensemble de votre parc d'écrans.
 
@@ -63,7 +396,7 @@ Cliquez sur un point pour voir les détails du site.
 
 ---
 
-## 3. Gestion des sites
+## 9. Gestion des sites
 
 ### Liste des sites
 
@@ -107,7 +440,7 @@ Cliquez sur un site pour voir :
 
 ---
 
-## 4. Gestion des vidéos
+## 10. Gestion des vidéos
 
 ### Bibliothèque vidéo
 
@@ -137,7 +470,7 @@ La section **Vidéos** contient tout votre contenu publicitaire.
 
 ---
 
-## 5. Déploiement de contenu
+## 11. Déploiement de contenu
 
 ### Déployer une vidéo
 
@@ -169,7 +502,7 @@ Pour les déploiements importants, utilisez le mode **Canary** :
 
 ---
 
-## 6. Groupes de sites
+## 12. Groupes de sites
 
 ### Créer un groupe
 
@@ -192,7 +525,7 @@ Les groupes permettent de cibler plusieurs sites facilement :
 
 ---
 
-## 7. Alertes et notifications
+## 13. Alertes et notifications
 
 ### Types d'alertes
 
@@ -226,7 +559,7 @@ Dans **Paramètres > Notifications** :
 
 ---
 
-## 8. Sécurité du compte
+## 14. Sécurité du compte
 
 ### Changer de mot de passe
 
@@ -255,7 +588,7 @@ Pour renforcer la sécurité de votre compte :
 
 ---
 
-## 9. FAQ
+## 15. FAQ
 
 ### Questions fréquentes
 
