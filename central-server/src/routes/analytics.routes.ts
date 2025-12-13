@@ -54,4 +54,20 @@ router.post(
 // GET /api/analytics/overview - Vue d'ensemble tous sites (admin)
 router.get('/overview', authenticate, requireRole('admin', 'operator'), analyticsController.getAnalyticsOverview);
 
+// ============================================================================
+// Analytics Categories Management
+// ============================================================================
+
+// GET /api/analytics/categories - Liste des catégories analytics
+router.get('/categories', authenticate, analyticsController.getAnalyticsCategories);
+
+// POST /api/analytics/categories - Créer une catégorie (admin only)
+router.post('/categories', authenticate, requireRole('admin'), analyticsController.createAnalyticsCategory);
+
+// PUT /api/analytics/categories/:id - Mettre à jour une catégorie (admin only)
+router.put('/categories/:id', authenticate, requireRole('admin'), analyticsController.updateAnalyticsCategory);
+
+// DELETE /api/analytics/categories/:id - Supprimer une catégorie (admin only)
+router.delete('/categories/:id', authenticate, requireRole('admin'), analyticsController.deleteAnalyticsCategory);
+
 export default router;

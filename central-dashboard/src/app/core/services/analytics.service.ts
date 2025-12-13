@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { environment } from '@env/environment';
+import { AnalyticsCategory } from '../models';
 
 export interface ClubHealthData {
   site_id: string;
@@ -146,5 +147,37 @@ export class AnalyticsService {
     }[];
   }> {
     return this.api.get('/analytics/overview');
+  }
+
+  // ============================================================================
+  // Analytics Categories Management
+  // ============================================================================
+
+  /**
+   * Récupérer la liste des catégories analytics disponibles
+   */
+  getAnalyticsCategories(): Observable<AnalyticsCategory[]> {
+    return this.api.get<AnalyticsCategory[]>('/analytics/categories');
+  }
+
+  /**
+   * Créer une nouvelle catégorie analytics (admin only)
+   */
+  createAnalyticsCategory(category: Omit<AnalyticsCategory, 'is_default' | 'created_at'>): Observable<AnalyticsCategory> {
+    return this.api.post<AnalyticsCategory>('/analytics/categories', category);
+  }
+
+  /**
+   * Mettre à jour une catégorie analytics (admin only)
+   */
+  updateAnalyticsCategory(id: string, category: Partial<AnalyticsCategory>): Observable<AnalyticsCategory> {
+    return this.api.put<AnalyticsCategory>(`/analytics/categories/${id}`, category);
+  }
+
+  /**
+   * Supprimer une catégorie analytics (admin only, si non-default)
+   */
+  deleteAnalyticsCategory(id: string): Observable<{ success: boolean }> {
+    return this.api.delete<{ success: boolean }>(`/analytics/categories/${id}`);
   }
 }

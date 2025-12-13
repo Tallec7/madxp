@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription, interval } from 'rxjs';
 import { SitesService } from '../../../core/services/sites.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 import {
   SiteConfiguration,
   ConfigHistory,
@@ -15,6 +16,7 @@ import {
   TimeCategoryConfig,
   VideoConfig,
   DEFAULT_CONFIG,
+  AnalyticsCategory,
 } from '../../../core/models';
 
 @Component({
@@ -457,6 +459,42 @@ import {
               <span class="warning-icon">⚠️</span>
               <span>Catégories non assignées : {{ getUnassignedCategoriesNames() }}</span>
             </div>
+          </div>
+
+          <!-- Section Mapping Analytics -->
+          <div class="form-section">
+            <h4 class="section-title">
+              <span class="section-icon">📊</span>
+              Catégories Analytics
+              <span class="section-hint">(Associer les catégories de vidéos aux types analytics pour les statistiques)</span>
+            </h4>
+            <div *ngIf="loadingAnalyticsCategories" class="loading-inline">
+              <div class="spinner-small"></div>
+              <span>Chargement des catégories...</span>
+            </div>
+            <div class="analytics-mappings-grid" *ngIf="!loadingAnalyticsCategories && config.categories.length > 0">
+              <div class="mapping-row" *ngFor="let category of getAllVideoCategories()">
+                <span class="mapping-category-name">{{ category.name || '(Sans nom)' }}</span>
+                <select
+                  [ngModel]="getCategoryMapping(category.id)"
+                  (ngModelChange)="setCategoryMapping(category.id, $event)"
+                  class="mapping-select"
+                >
+                  <option value="">-- Non défini (other) --</option>
+                  <option *ngFor="let ac of analyticsCategories" [value]="ac.id">
+                    {{ ac.name }}
+                  </option>
+                </select>
+                <span
+                  class="mapping-color-dot"
+                  *ngIf="getCategoryMapping(category.id)"
+                  [style.background]="getAnalyticsCategoryColor(getCategoryMapping(category.id))"
+                ></span>
+              </div>
+            </div>
+            <p class="empty-message" *ngIf="!loadingAnalyticsCategories && config.categories.length === 0">
+              Créez d'abord des catégories de vidéos
+            </p>
           </div>
         </div>
       </div>
@@ -1788,6 +1826,53 @@ import {
     .btn-secondary:hover:not(:disabled) {
       background: #cbd5e1;
     }
+
+    /* Analytics Mappings */
+    .analytics-mappings-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .mapping-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+    }
+
+    .mapping-category-name {
+      flex: 1;
+      font-weight: 500;
+      color: #0f172a;
+      min-width: 150px;
+    }
+
+    .mapping-select {
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      background: white;
+      cursor: pointer;
+    }
+
+    .mapping-select:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .mapping-color-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
   `]
 })
 export class ConfigEditorComponent implements OnInit, OnDestroy {
@@ -1826,18 +1911,24 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   // Categories UI
   expandedCategory: number | null = null;
 
+  // Analytics Categories
+  analyticsCategories: AnalyticsCategory[] = [];
+  loadingAnalyticsCategories = false;
+
   // Polling
   private configCommandId: string | null = null;
   private configPollSubscription?: Subscription;
 
   constructor(
     private sitesService: SitesService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private analyticsService: AnalyticsService
   ) {}
 
   ngOnInit(): void {
     this.reloadConfig();
     this.loadHistoryCount();
+    this.loadAnalyticsCategories();
   }
 
   ngOnDestroy(): void {
@@ -2349,5 +2440,78 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     if (value === null || value === undefined) return 'null';
     if (typeof value === 'object') return JSON.stringify(value);
     return String(value);
+  }
+
+  // ============================================================================
+  // Analytics Categories Mapping
+  // ============================================================================
+
+  loadAnalyticsCategories(): void {
+    this.loadingAnalyticsCategories = true;
+    this.analyticsService.getAnalyticsCategories().subscribe({
+      next: (categories) => {
+        this.analyticsCategories = categories;
+        this.loadingAnalyticsCategories = false;
+      },
+      error: (error) => {
+        this.loadingAnalyticsCategories = false;
+        console.error('Failed to load analytics categories:', error);
+      }
+    });
+  }
+
+  /**
+   * Récupère toutes les catégories de vidéos (catégories + sous-catégories)
+   */
+  getAllVideoCategories(): { id: string; name: string }[] {
+    const result: { id: string; name: string }[] = [];
+
+    for (const category of this.config.categories) {
+      result.push({ id: category.id, name: category.name });
+
+      // Ajouter les sous-catégories
+      if (category.subCategories) {
+        for (const subcat of category.subCategories) {
+          result.push({
+            id: subcat.id,
+            name: `${category.name} > ${subcat.name}`
+          });
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Récupère le mapping analytics pour une catégorie donnée
+   */
+  getCategoryMapping(categoryId: string): string {
+    return this.config.categoryMappings?.[categoryId] || '';
+  }
+
+  /**
+   * Définit le mapping analytics pour une catégorie
+   */
+  setCategoryMapping(categoryId: string, analyticsCategoryId: string): void {
+    if (!this.config.categoryMappings) {
+      this.config.categoryMappings = {};
+    }
+
+    if (analyticsCategoryId) {
+      this.config.categoryMappings[categoryId] = analyticsCategoryId;
+    } else {
+      delete this.config.categoryMappings[categoryId];
+    }
+
+    this.onConfigChange();
+  }
+
+  /**
+   * Récupère la couleur d'une catégorie analytics
+   */
+  getAnalyticsCategoryColor(analyticsCategoryId: string): string {
+    const category = this.analyticsCategories.find(c => c.id === analyticsCategoryId);
+    return category?.color || '#6B7280';
   }
 }

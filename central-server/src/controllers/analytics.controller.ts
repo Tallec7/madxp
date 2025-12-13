@@ -1081,3 +1081,151 @@ export const getAnalyticsOverview = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Erreur lors de la récupération de la vue d\'ensemble' });
   }
 };
+
+// ============================================================================
+// ANALYTICS CATEGORIES MANAGEMENT
+// ============================================================================
+
+interface AnalyticsCategoryRow extends QueryRow {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  is_default: boolean;
+  created_at: string;
+}
+
+/**
+ * GET /api/analytics/categories
+ * Liste des catégories analytics disponibles
+ */
+export const getAnalyticsCategories = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await query<AnalyticsCategoryRow>(
+      `SELECT id, name, description, color, is_default, created_at
+       FROM analytics_categories
+       ORDER BY is_default DESC, name ASC`
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    logger.error('Get analytics categories error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des catégories analytics' });
+  }
+};
+
+/**
+ * POST /api/analytics/categories
+ * Créer une nouvelle catégorie analytics (admin only)
+ */
+export const createAnalyticsCategory = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, name, description, color } = req.body;
+
+    if (!id || !name) {
+      return res.status(400).json({ error: 'id et name sont requis' });
+    }
+
+    // Validation: id doit être en snake_case (lettres minuscules, chiffres, underscores)
+    if (!/^[a-z][a-z0-9_]*$/.test(id)) {
+      return res.status(400).json({
+        error: 'id doit commencer par une lettre minuscule et ne contenir que des lettres minuscules, chiffres et underscores',
+      });
+    }
+
+    // Validation: couleur hex si fournie
+    if (color && !/^#[0-9A-Fa-f]{6}$/.test(color)) {
+      return res.status(400).json({ error: 'color doit être au format hex (#RRGGBB)' });
+    }
+
+    const result = await query<AnalyticsCategoryRow>(
+      `INSERT INTO analytics_categories (id, name, description, color, is_default)
+       VALUES ($1, $2, $3, $4, false)
+       RETURNING id, name, description, color, is_default, created_at`,
+      [id, name, description || null, color || null]
+    );
+
+    logger.info('Analytics category created', { id, name, createdBy: req.user?.email });
+
+    res.status(201).json(result.rows[0]);
+  } catch (error: any) {
+    if (error.code === '23505') {
+      // Unique violation
+      return res.status(409).json({ error: 'Une catégorie avec cet id existe déjà' });
+    }
+    logger.error('Create analytics category error:', error);
+    res.status(500).json({ error: 'Erreur lors de la création de la catégorie' });
+  }
+};
+
+/**
+ * PUT /api/analytics/categories/:id
+ * Mettre à jour une catégorie analytics (admin only)
+ */
+export const updateAnalyticsCategory = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description, color } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'name est requis' });
+    }
+
+    // Validation: couleur hex si fournie
+    if (color && !/^#[0-9A-Fa-f]{6}$/.test(color)) {
+      return res.status(400).json({ error: 'color doit être au format hex (#RRGGBB)' });
+    }
+
+    const result = await query<AnalyticsCategoryRow>(
+      `UPDATE analytics_categories
+       SET name = $2, description = $3, color = $4
+       WHERE id = $1
+       RETURNING id, name, description, color, is_default, created_at`,
+      [id, name, description || null, color || null]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Catégorie non trouvée' });
+    }
+
+    logger.info('Analytics category updated', { id, updatedBy: req.user?.email });
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    logger.error('Update analytics category error:', error);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour de la catégorie' });
+  }
+};
+
+/**
+ * DELETE /api/analytics/categories/:id
+ * Supprimer une catégorie analytics (admin only, si non-default)
+ */
+export const deleteAnalyticsCategory = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Vérifier si c'est une catégorie par défaut
+    const checkResult = await query<AnalyticsCategoryRow>(
+      'SELECT is_default FROM analytics_categories WHERE id = $1',
+      [id]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Catégorie non trouvée' });
+    }
+
+    if (checkResult.rows[0].is_default) {
+      return res.status(400).json({ error: 'Impossible de supprimer une catégorie par défaut' });
+    }
+
+    await query('DELETE FROM analytics_categories WHERE id = $1', [id]);
+
+    logger.info('Analytics category deleted', { id, deletedBy: req.user?.email });
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Delete analytics category error:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression de la catégorie' });
+  }
+};

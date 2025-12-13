@@ -135,5 +135,17 @@ export interface SiteStats {
   error: number;
 }
 
+/**
+ * Catégorie analytics pour le tracking des vidéos
+ */
+export interface AnalyticsCategory {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  is_default: boolean;
+  created_at?: string;
+}
+
 // Re-export site config models
 export * from './site-config.model';

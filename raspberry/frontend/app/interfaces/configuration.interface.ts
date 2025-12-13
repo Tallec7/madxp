@@ -40,4 +40,10 @@ export interface Configuration {
     categories: Category[];
     sponsors: Sponsor[];
     timeCategories?: TimeCategory[]; // Organisation des catégories pour /remote
+    /**
+     * Mapping des catégories de vidéos vers les catégories analytics
+     * Clé: ID de la catégorie vidéo (ex: "But", "Entrée")
+     * Valeur: ID de la catégorie analytics (ex: "jingle", "ambiance")
+     */
+    categoryMappings?: Record<string, string>;
 }

@@ -227,7 +227,8 @@ export class RemoteComponent implements OnInit {
     this.http.get<Configuration>(`/configuration.json?t=${timestamp}`).subscribe({
       next: (config) => {
         console.log('Configuration rechargée', config);
-        this.initializeWithConfiguration(config);
+        const enrichedConfig = this.enrichVideosWithCategoryId(config);
+        this.initializeWithConfiguration(enrichedConfig);
         // Revenir à la vue home pour refléter les changements
         this.currentView = 'home';
         this.breadcrumb = ['Télécommande'];
@@ -241,5 +242,24 @@ export class RemoteComponent implements OnInit {
         this.isReloading = false;
       }
     });
+  }
+
+  /**
+   * Enrichit les vidéos avec le categoryId de leur catégorie parente
+   */
+  private enrichVideosWithCategoryId(config: Configuration): Configuration {
+    const enrichCategory = (category: Category): Category => ({
+      ...category,
+      videos: category.videos?.map(video => ({
+        ...video,
+        categoryId: category.id
+      })),
+      subCategories: category.subCategories?.map(sub => enrichCategory(sub))
+    });
+
+    return {
+      ...config,
+      categories: config.categories?.map(cat => enrichCategory(cat)) || []
+    };
   }
 }

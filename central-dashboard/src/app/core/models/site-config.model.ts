@@ -86,6 +86,12 @@ export interface SiteConfiguration {
   sponsors: SponsorConfig[];
   categories: CategoryConfig[];
   timeCategories?: TimeCategoryConfig[]; // Organisation des catégories pour /remote
+  /**
+   * Mapping des catégories de vidéos vers les catégories analytics
+   * Clé: ID de la catégorie vidéo (ex: "But", "Entrée")
+   * Valeur: ID de la catégorie analytics (ex: "jingle", "ambiance")
+   */
+  categoryMappings?: Record<string, string>;
   // Champs optionnels pour extensions futures
   [key: string]: unknown;
 }

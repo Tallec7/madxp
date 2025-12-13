@@ -1,256 +1,122 @@
-# Plan d'Implémentation - Synchronisation Intelligente NEOPRO
+# Plan : Catégories Analytics Configurables par Site
+
+**Status : ✅ IMPLÉMENTÉ**
 
 ## Objectif
 
-Implémenter le modèle de synchronisation documenté dans `docs/SYNC_ARCHITECTURE.md` :
-- Contenu NEOPRO verrouillé (non modifiable par les clubs)
-- Contenu Club préservé lors des syncs
-- Merge intelligent au lieu d'écrasement complet
-- Synchronisation bidirectionnelle (Central ↔ Local)
+Permettre à l'admin central d'associer chaque catégorie de vidéos d'un site (ex: "But", "Temps mort") à une catégorie analytics prédéfinie (sponsor, jingle, ambiance, other, ou custom).
 
----
+## Architecture
 
-## Phase 1 : Modèle de Données
-
-### 1.1 Étendre configuration.json
-
-**Fichier :** `raspberry/config/templates/TEMPLATE-configuration.json`
-
-Ajouter les champs `locked` et `owner` :
-
-```json
-{
-  "version": "2.0",
-  "categories": [
-    {
-      "id": "annonces_neopro",
-      "name": "ANNONCES NEOPRO",
-      "locked": true,
-      "owner": "neopro",
-      "subcategories": [...]
-    },
-    {
-      "id": "infos_club",
-      "name": "INFOS CLUB",
-      "locked": false,
-      "owner": "club",
-      "subcategories": [...]
-    }
-  ]
-}
 ```
-
-### 1.2 Mettre à jour les interfaces TypeScript
-
-**Fichier :** `central-dashboard/src/app/core/models/site-config.model.ts`
-
-```typescript
-export interface VideoConfig {
-  name: string;
-  type: string;
-  path: string;
-  locked?: boolean;
-  deployed_at?: string;
-  expires_at?: string;
-}
-
-export interface CategoryConfig {
-  id: string;
-  name: string;
-  locked?: boolean;
-  owner?: 'neopro' | 'club';
-  videos: VideoConfig[];
-  subCategories?: SubcategoryConfig[];
-}
+┌─────────────────────────────────────────────────────────────────┐
+│  Table: analytics_categories (gérée par admin central)          │
+│  - id, name, description, color, is_default, created_at        │
+│  - Valeurs initiales: sponsor, jingle, ambiance, other         │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Intégré dans SiteConfiguration (JSONB)                         │
+│  categoryMappings: { [categoryId: string]: analyticsCategoryId }│
+│  Exemple: { "But": "jingle", "Entrée": "ambiance" }            │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Raspberry: detectCategory() utilise le mapping                 │
+│  au lieu de deviner par nom de fichier                          │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Phase 2 : Merge Intelligent (Sync-Agent)
+## Récapitulatif de l'implémentation
 
-### 2.1 Créer le module de merge
+### Fichiers créés
 
-**Nouveau fichier :** `raspberry/sync-agent/src/utils/config-merge.js`
+| Fichier | Description |
+|---------|-------------|
+| `central-dashboard/src/app/features/admin/analytics-categories/analytics-categories.component.ts` | Composant admin pour gérer les catégories analytics |
 
-```javascript
-/**
- * Fusionne la config locale avec le contenu NEOPRO
- * - Préserve les catégories club (locked: false)
- * - Applique les changements NEOPRO (locked: true)
- */
-function mergeConfigurations(localConfig, neoProContent) {
-  // 1. Conserver toutes les catégories club
-  // 2. Ajouter/mettre à jour les catégories NEOPRO
-  // 3. Supprimer les vidéos NEOPRO expirées
-}
-```
+### Fichiers modifiés
 
-### 2.2 Modifier la commande update_config
-
-**Fichier :** `raspberry/sync-agent/src/commands/index.js`
-
-Remplacer l'écrasement complet par un merge :
-
-```javascript
-async update_config(data) {
-  const localConfig = await readLocalConfig();
-  const mergedConfig = mergeConfigurations(localConfig, data.neoProContent);
-  await writeConfig(mergedConfig);
-  await notifyLocalApp();
-}
-```
-
-### 2.3 Modifier deploy_video pour marquer comme NEOPRO
-
-**Fichier :** `raspberry/sync-agent/src/commands/deploy-video.js`
-
-Ajouter `locked: true` et `owner: 'neopro'` aux vidéos déployées depuis le central.
+| Fichier | Modification |
+|---------|--------------|
+| `central-server/src/scripts/analytics-tables.sql` | ✅ Ajout table `analytics_categories` avec valeurs par défaut |
+| `central-server/src/controllers/analytics.controller.ts` | ✅ Endpoints CRUD (GET/POST/PUT/DELETE) |
+| `central-server/src/routes/analytics.routes.ts` | ✅ Routes API avec protection admin |
+| `central-dashboard/src/app/core/models/index.ts` | ✅ Interface `AnalyticsCategory` |
+| `central-dashboard/src/app/core/models/site-config.model.ts` | ✅ Ajout `categoryMappings` à SiteConfiguration |
+| `central-dashboard/src/app/core/services/analytics.service.ts` | ✅ Méthodes API pour les catégories analytics |
+| `central-dashboard/src/app/features/sites/config-editor/config-editor.component.ts` | ✅ Section mapping analytics dans l'éditeur |
+| `central-dashboard/src/app/features/layout/layout.component.ts` | ✅ Lien sidebar vers admin analytics |
+| `central-dashboard/src/app/app.routes.ts` | ✅ Route `/admin/analytics-categories` |
+| `raspberry/frontend/app/interfaces/configuration.interface.ts` | ✅ Ajout `categoryMappings` |
+| `raspberry/frontend/app/interfaces/video.interface.ts` | ✅ Ajout `categoryId` |
+| `raspberry/frontend/app/app.routes.ts` | ✅ Fonction `enrichVideosWithCategoryId()` |
+| `raspberry/frontend/app/services/analytics.service.ts` | ✅ `setConfiguration()` et détection via mapping |
+| `raspberry/frontend/app/components/tv/tv.component.ts` | ✅ Appel `analyticsService.setConfiguration()` |
+| `raspberry/frontend/app/components/remote/remote.component.ts` | ✅ Enrichissement vidéos + setConfiguration |
 
 ---
 
-## Phase 3 : Admin UI - Gestion des Verrous
+## Fonctionnalités implémentées
 
-### 3.1 Bloquer la modification du contenu verrouillé
+### 1. Gestion des catégories analytics (Admin)
 
-**Fichier :** `raspberry/admin/admin-server.js`
+- Page `/admin/analytics-categories` accessible aux admins
+- Liste des catégories avec couleur et description
+- Création de nouvelles catégories personnalisées
+- Modification des catégories (sauf catégories par défaut)
+- Suppression des catégories personnalisées
 
-Ajouter des vérifications avant chaque modification :
+### 2. Mapping par site (Config Editor)
 
-```javascript
-function canModify(item) {
-  if (item.locked && item.owner === 'neopro') {
-    throw new Error('Ce contenu est géré par NEOPRO');
-  }
-}
-```
+- Section "Catégories Analytics" dans l'éditeur de configuration
+- Association de chaque catégorie vidéo à une catégorie analytics
+- Indicateur visuel de couleur pour chaque mapping
+- Sauvegarde dans `config.categoryMappings`
 
-### 3.2 Afficher les cadenas dans l'UI
+### 3. Utilisation côté Raspberry
 
-**Fichiers :** `raspberry/admin/public/` (HTML/CSS/JS)
-
-- Icône cadenas sur les catégories/vidéos verrouillées
-- Boutons d'édition/suppression désactivés
-- Message explicatif au survol
+- Enrichissement automatique des vidéos avec `categoryId` au chargement
+- Service analytics utilise le mapping pour catégoriser les lectures
+- Fallback sur détection par path/filename si pas de mapping configuré
 
 ---
 
-## Phase 4 : Sync Local → Central (Miroir)
+## Utilisation
 
-### 4.1 Envoyer l'état local au central
+### Pour l'administrateur
 
-**Fichier :** `raspberry/sync-agent/src/agent.js`
+1. Aller sur `/admin/analytics-categories` pour gérer les catégories globales
+2. Créer des catégories personnalisées si nécessaire (ex: "mi-temps", "timeout")
 
-À la connexion et après chaque modification locale :
+### Pour configurer un site
 
-```javascript
-socket.emit('sync_local_state', {
-  siteId: config.central.siteId,
-  configHash: calculateHash(localConfig),
-  config: localConfig,
-  timestamp: new Date().toISOString()
-});
-```
+1. Aller sur la page de détail d'un site
+2. Ouvrir l'éditeur de configuration
+3. Dans la section "Catégories Analytics", associer chaque catégorie vidéo
+4. Déployer la configuration
 
-### 4.2 Détecter les changements locaux
+### Migration BDD
 
-**Nouveau fichier :** `raspberry/sync-agent/src/watchers/config-watcher.js`
+Exécuter le script SQL pour créer la table :
 
-Surveiller `configuration.json` avec `fs.watch()` :
-
-```javascript
-fs.watch(configPath, (eventType) => {
-  if (eventType === 'change') {
-    debouncedSyncToServer();
-  }
-});
-```
-
-### 4.3 Recevoir l'état local sur le central
-
-**Fichier :** `central-server/src/services/socket.service.ts`
-
-Nouveau handler :
-
-```typescript
-socket.on('sync_local_state', async (data) => {
-  await this.updateSiteMirror(data.siteId, data.config);
-  // Vérifier s'il y a du contenu NEOPRO à pousser
-  const pendingNeoProContent = await this.getPendingNeoProContent(data.siteId);
-  if (pendingNeoProContent) {
-    socket.emit('neopro_sync', pendingNeoProContent);
-  }
-});
-```
-
-### 4.4 Stocker le miroir en base
-
-**Fichier :** `central-server/src/services/site.service.ts`
-
-Nouvelle table ou colonne pour stocker le miroir :
-
-```sql
-ALTER TABLE sites ADD COLUMN local_config_mirror JSONB;
-ALTER TABLE sites ADD COLUMN last_config_sync TIMESTAMPTZ;
+```bash
+psql -d neopro -f central-server/src/scripts/analytics-tables.sql
 ```
 
 ---
 
-## Phase 5 : Dashboard Central - Visualisation
+## Comportement de fallback
 
-### 5.1 Afficher le contenu de chaque site
+Si un site n'a pas de mapping configuré (ou pour les anciennes vidéos), le système utilise la détection par path/filename :
 
-**Fichier :** `central-dashboard/src/app/features/sites/`
+- `sponsor` : path contient "sponsor" ou "partenaire"
+- `jingle` : path contient "jingle", "but", "goal", "timeout"
+- `ambiance` : path contient "ambiance", "intro", "outro"
+- `other` : tout le reste
 
-Ajouter un onglet "Contenu" dans le détail d'un site :
-- Liste des catégories/vidéos présentes sur le Pi
-- Distinction visuelle NEOPRO vs Club
-- Date de dernière sync
-
----
-
-## Ordre d'Implémentation Recommandé
-
-| Étape | Description | Fichiers | Priorité |
-|-------|-------------|----------|----------|
-| 1 | Ajouter champs `locked`/`owner` au template | `TEMPLATE-configuration.json` | Haute |
-| 2 | Créer module de merge | `sync-agent/src/utils/config-merge.js` | Haute |
-| 3 | Modifier `update_config` pour merge | `sync-agent/src/commands/index.js` | Haute |
-| 4 | Bloquer modif contenu verrouillé (admin) | `admin/admin-server.js` | Haute |
-| 5 | Afficher cadenas dans UI admin | `admin/public/` | Moyenne |
-| 6 | Sync local → central (emit) | `sync-agent/src/agent.js` | Moyenne |
-| 7 | File watcher pour détecter changements | `sync-agent/src/watchers/` | Moyenne |
-| 8 | Handler `sync_local_state` sur central | `socket.service.ts` | Moyenne |
-| 9 | Stocker miroir en base | Migration SQL | Moyenne |
-| 10 | Dashboard affichage contenu site | `central-dashboard/` | Basse |
-
----
-
-## Tests à Prévoir
-
-1. **Test merge** : Config locale avec vidéos club + push NEOPRO = les deux préservés
-2. **Test verrou** : Tentative suppression vidéo verrouillée = erreur 403
-3. **Test sync bidirectionnelle** : Ajout vidéo locale → visible sur dashboard central
-4. **Test offline** : Modifications locales offline → merge correct à la reconnexion
-5. **Test expiration** : Vidéo NEOPRO expirée → supprimée automatiquement
-
----
-
-## Risques et Mitigations
-
-| Risque | Mitigation |
-|--------|------------|
-| Conflits de merge complexes | Règle simple : NEOPRO toujours prioritaire sur catégories verrouillées |
-| Perte de données au merge | Backup automatique avant chaque merge |
-| File watcher instable | Debounce + fallback polling |
-| Désync central/local | Hash de config pour détecter les divergences |
-
----
-
-## Estimation
-
-- **Phase 1-2** (Modèle + Merge) : Priorité immédiate
-- **Phase 3** (Admin UI verrous) : Suite logique
-- **Phase 4** (Sync bidirectionnelle) : Compléter le système
-- **Phase 5** (Dashboard) : Polish
-
-Total : ~8-10 fichiers à créer/modifier
+Les données historiques dans `video_plays` conservent leur catégorie détectée par l'ancien algorithme.

@@ -2,6 +2,28 @@
 -- À exécuter sur PostgreSQL après init-db.sql
 
 -- ============================================================================
+-- CATÉGORIES ANALYTICS
+-- ============================================================================
+
+-- Table des catégories analytics disponibles (gérées par admin central)
+CREATE TABLE IF NOT EXISTS analytics_categories (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    color VARCHAR(7),  -- Couleur hex pour l'UI (ex: #3B82F6)
+    is_default BOOLEAN DEFAULT false,  -- Catégories système non supprimables
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Catégories par défaut
+INSERT INTO analytics_categories (id, name, description, color, is_default) VALUES
+    ('sponsor', 'Sponsor', 'Vidéos partenaires et sponsors', '#3B82F6', true),
+    ('jingle', 'Jingle', 'Buts, temps morts, animations de match', '#10B981', true),
+    ('ambiance', 'Ambiance', 'Entrées joueurs, intros, outros', '#8B5CF6', true),
+    ('other', 'Autre', 'Vidéos non catégorisées', '#6B7280', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
 -- TABLES ANALYTICS CLUB
 -- ============================================================================
 
@@ -272,7 +294,7 @@ $$ LANGUAGE plpgsql;
 DO $$
 BEGIN
     RAISE NOTICE 'Tables Analytics Club créées avec succès!';
-    RAISE NOTICE 'Tables: club_sessions, video_plays, club_daily_stats';
+    RAISE NOTICE 'Tables: analytics_categories, club_sessions, video_plays, club_daily_stats';
     RAISE NOTICE 'Vues: club_analytics_summary, top_videos_by_site';
     RAISE NOTICE 'Fonctions: calculate_daily_stats(), calculate_all_daily_stats()';
 END $$;

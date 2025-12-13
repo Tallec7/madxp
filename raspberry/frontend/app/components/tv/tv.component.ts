@@ -40,6 +40,9 @@ export class TvComponent implements OnInit, OnDestroy {
   public player: Player;
 
   public ngOnInit() {
+    // Configurer l'analytics service avec la configuration (pour le mapping des catégories)
+    this.analyticsService.setConfiguration(this.configuration);
+
     // Démarrer une session analytics
     this.analyticsService.startSession();
 
@@ -154,6 +157,9 @@ export class TvComponent implements OnInit, OnDestroy {
   private reloadConfiguration(config: Configuration) {
     console.log('tv: updating configuration and playlist');
     this.configuration = config;
+
+    // Mettre à jour la configuration dans l'analytics service
+    this.analyticsService.setConfiguration(config);
 
     // Mettre à jour la playlist avec les nouveaux sponsors
     const newPlaylist = config.sponsors.map((sponsor) => ({

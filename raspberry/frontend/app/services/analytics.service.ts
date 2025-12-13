@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Video } from '../interfaces/video.interface';
+import { Configuration } from '../interfaces/configuration.interface';
 import { environment } from '../../environments/environment';
 
 /**
@@ -31,6 +32,9 @@ export class AnalyticsService {
   private currentVideo: Video | null = null;
   private currentTriggerType: 'auto' | 'manual' = 'auto';
   private isSending = false;
+
+  // Configuration courante avec le mapping des catégories
+  private configuration: Configuration | null = null;
 
   private readonly STORAGE_KEY = 'neopro_analytics_buffer';
   private readonly FLUSH_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -66,6 +70,14 @@ export class AnalyticsService {
       console.log('[Analytics] Session ended:', this.currentSession);
       this.currentSession = null;
     }
+  }
+
+  /**
+   * Définir la configuration pour utiliser le mapping des catégories analytics
+   */
+  public setConfiguration(config: Configuration): void {
+    this.configuration = config;
+    console.log('[Analytics] Configuration set with categoryMappings:', config.categoryMappings);
   }
 
   /**
@@ -193,6 +205,16 @@ export class AnalyticsService {
   }
 
   private detectCategory(video: Video): string {
+    // 1. Utiliser le mapping de la configuration si disponible
+    if (video.categoryId && this.configuration?.categoryMappings) {
+      const mappedCategory = this.configuration.categoryMappings[video.categoryId];
+      if (mappedCategory) {
+        console.log('[Analytics] Using mapped category for', video.categoryId, '->', mappedCategory);
+        return mappedCategory;
+      }
+    }
+
+    // 2. Fallback: détection par path/filename
     const filename = this.getFilename(video.path).toLowerCase();
     const path = video.path.toLowerCase();
 
@@ -200,7 +222,7 @@ export class AnalyticsService {
     if (path.includes('sponsor') || path.includes('partenaire')) {
       return 'sponsor';
     }
-    if (path.includes('jingle') || filename.includes('but') || filename.includes('goal') || filename.includes('timeout')) {
+    if (path.includes('jingle') || path.includes('but') || filename.includes('but') || filename.includes('goal') || filename.includes('timeout')) {
       return 'jingle';
     }
     if (path.includes('ambiance') || path.includes('intro') || path.includes('outro')) {

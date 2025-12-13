@@ -47,6 +47,14 @@ import { User } from '../../core/models';
             <span class="icon">📈</span>
             <span>Analytics</span>
           </a>
+
+          <div class="nav-section" *ngIf="isAdmin()">
+            <div class="nav-section-title">Administration</div>
+            <a routerLink="/admin/analytics-categories" routerLinkActive="active" class="nav-item">
+              <span class="icon">🏷️</span>
+              <span>Catégories Analytics</span>
+            </a>
+          </div>
         </nav>
 
         <div class="sidebar-footer">
@@ -133,6 +141,21 @@ import { User } from '../../core/models';
     .sidebar-nav {
       flex: 1;
       padding: 1rem 0;
+    }
+
+    .nav-section {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-section-title {
+      padding: 0.5rem 1.5rem;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      font-weight: 600;
     }
 
     .nav-item {
@@ -368,6 +391,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   canManageContent(): boolean {
     return this.authService.hasRole('admin', 'operator');
+  }
+
+  isAdmin(): boolean {
+    return this.authService.hasRole('admin');
   }
 
   getUserInitials(): string {
