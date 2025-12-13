@@ -1,4 +1,25 @@
 import { Response } from 'express';
+
+// Explicitly mock the database module for deterministic tests
+jest.mock('../config/database', () => {
+  const pool = {
+    query: jest.fn(),
+    connect: jest.fn(),
+    end: jest.fn(),
+  };
+  return {
+    __esModule: true,
+    default: pool,
+    pool,
+  };
+});
+
+// Mock supabase
+jest.mock('../config/supabase');
+
+// Mock deployment service
+jest.mock('../services/deployment.service');
+
 import {
   getVideos,
   getVideo,
@@ -16,12 +37,6 @@ import pool from '../config/database';
 import { uploadFile, deleteFile } from '../config/supabase';
 import deploymentService from '../services/deployment.service';
 import { AuthRequest } from '../types';
-
-// Mock supabase
-jest.mock('../config/supabase');
-
-// Mock deployment service
-jest.mock('../services/deployment.service');
 
 // Helper to create mock response
 const createMockResponse = (): Response => {

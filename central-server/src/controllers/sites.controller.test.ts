@@ -58,14 +58,17 @@ describe('Sites Controller', () => {
         { id: '2', site_name: 'Site B', status: 'offline' },
       ];
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: mockSites });
+      // getSites makes 2 parallel queries: data + count
+      (query as jest.Mock)
+        .mockResolvedValueOnce({ rows: mockSites })  // data query
+        .mockResolvedValueOnce({ rows: [{ count: '2' }] });  // count query
 
       await getSites(req, res);
 
-      expect(res.json).toHaveBeenCalledWith({
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         total: 2,
-        sites: mockSites,
-      });
+        data: mockSites,
+      }));
     });
 
     it('should filter sites by status', async () => {

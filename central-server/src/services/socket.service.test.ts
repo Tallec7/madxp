@@ -20,6 +20,12 @@ jest.mock('../config/database', () => ({
   query: mockQuery,
 }));
 
+// Mock bcrypt for API key verification
+const mockBcryptCompare = jest.fn();
+jest.mock('bcryptjs', () => ({
+  compare: (...args: any[]) => mockBcryptCompare(...args),
+}));
+
 const mockLogger = {
   info: jest.fn(),
   warn: jest.fn(),
@@ -89,6 +95,8 @@ describe('SocketService', () => {
     (socketService as any).connectedSites = new Map();
     (socketService as any).pendingCommands = new Map();
     (socketService as any).io = null;
+    // Default bcrypt mock: return true for matching keys
+    mockBcryptCompare.mockResolvedValue(true);
   });
 
   afterAll(() => {
@@ -176,8 +184,11 @@ describe('SocketService', () => {
       };
 
       mockQuery.mockResolvedValueOnce({
-        rows: [{ ...mockSiteRow, api_key: 'correct-key-32chars-hex-string' }],
+        rows: [{ ...mockSiteRow, api_key: '$2a$12$hashedapikey' }],
       });
+
+      // bcrypt.compare returns false for invalid key
+      mockBcryptCompare.mockResolvedValueOnce(false);
 
       await expect(
         (socketService as any).authenticateAgent(mockSocket, wrongKeyData)
@@ -783,8 +794,7 @@ describe('SocketService', () => {
   describe('Security', () => {
     it('should use timing-safe comparison for API keys', async () => {
       // This is tested implicitly by the authentication tests
-      // The secureCompare function uses crypto.timingSafeEqual
-      // to prevent timing attacks
+      // bcrypt.compare is timing-safe by design to prevent timing attacks
 
       const mockSocket = createMockSocket();
       const validData = {
@@ -796,11 +806,14 @@ describe('SocketService', () => {
         rows: [{
           id: 'site-uuid-123',
           site_name: 'Test',
-          api_key: 'different-key-32-chars-here!!',
+          api_key: '$2a$12$hashedapikey',
         }],
       });
 
-      // Different length keys should fail fast but still securely
+      // bcrypt.compare returns false for invalid key (timing-safe)
+      mockBcryptCompare.mockResolvedValueOnce(false);
+
+      // Different keys should fail securely
       await expect(
         (socketService as any).authenticateAgent(mockSocket, validData)
       ).rejects.toThrow('Clé API invalide');

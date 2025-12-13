@@ -74,6 +74,7 @@ describe('DeploymentService', () => {
       subcategory: null,
       duration: 120,
       storage_path: 'videos/test-video.mp4',
+      checksum: 'abc123def456789checksum',
       metadata: { title: 'Custom Title' },
     };
 
@@ -215,6 +216,7 @@ describe('DeploymentService', () => {
       subcategory: null,
       duration: 60,
       storage_path: 'videos/pending-video.mp4',
+      checksum: 'pending123checksum',
       metadata: null,
     };
 
@@ -466,6 +468,7 @@ describe('DeploymentService', () => {
         subcategory: null,
         duration: null,
         storage_path: 'videos/test.mp4',
+        checksum: 'socket-fail-checksum',
         metadata: null,
       };
 
@@ -499,6 +502,7 @@ describe('DeploymentService', () => {
         subcategory: null,
         duration: 90,
         storage_path: 'videos/group-video.mp4',
+        checksum: 'group-deploy-checksum',
         metadata: null,
       };
 
@@ -548,6 +552,7 @@ describe('DeploymentService', () => {
           subcategory: null,
           duration: 60,
           storage_path: 'videos/video1.mp4',
+          checksum: 'checksum-video-1',
           metadata: null,
         },
         {
@@ -559,6 +564,7 @@ describe('DeploymentService', () => {
           subcategory: 'subcat',
           duration: 120,
           storage_path: 'videos/video2.mp4',
+          checksum: 'checksum-video-2',
           metadata: { title: 'Custom Title 2' },
         },
       ];
@@ -705,6 +711,7 @@ describe('DeploymentService', () => {
           subcategory: null,
           duration: 60,
           storage_path: 'videos/video.mp4',
+          checksum: 'retry-checksum-123',
           metadata: null,
         };
 
@@ -750,6 +757,7 @@ describe('DeploymentService', () => {
           subcategory: null,
           duration: 60,
           storage_path: 'videos/video.mp4',
+          checksum: 'retry-pending-checksum',
           metadata: null,
         };
 
@@ -780,6 +788,7 @@ describe('DeploymentService', () => {
           subcategory: null,
           duration: 60,
           storage_path: 'videos/video.mp4',
+          checksum: 'maxed-retry-checksum',
           metadata: null,
         };
 
