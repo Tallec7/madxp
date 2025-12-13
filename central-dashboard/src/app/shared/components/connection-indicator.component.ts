@@ -2,7 +2,7 @@ import { Component, Input, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SitesService } from '../../core/services/sites.service';
 import { ConnectionDisplayStatus, SiteConnectionStatus } from '../../core/models';
-import { Subscription, interval, startWith, switchMap, catchError, of } from 'rxjs';
+import { Subscription, interval, startWith, switchMap, catchError, of, tap } from 'rxjs';
 
 @Component({
   selector: 'app-connection-indicator',
@@ -108,6 +108,7 @@ export class ConnectionIndicatorComponent implements OnInit, OnDestroy {
   connectionStatus: SiteConnectionStatus | null = null;
   displayStatus: ConnectionDisplayStatus = 'unknown';
   private subscription: Subscription | null = null;
+  private errorCount = 0;
 
   ngOnInit(): void {
     if (this.siteId) {
@@ -123,12 +124,27 @@ export class ConnectionIndicatorComponent implements OnInit, OnDestroy {
     this.subscription = interval(this.refreshInterval).pipe(
       startWith(0),
       switchMap(() => this.sitesService.getConnectionStatus(this.siteId).pipe(
-        catchError(() => of(null))
+        tap(() => {
+          // Reset error count on success
+          this.errorCount = 0;
+        }),
+        catchError((error) => {
+          this.errorCount++;
+          // Only log first few errors to avoid spam
+          if (this.errorCount <= 3) {
+            console.warn(`[ConnectionIndicator] Failed to get status for site ${this.siteId}:`, error?.message || error);
+          }
+          return of(null);
+        })
       ))
     ).subscribe(status => {
       if (status) {
         this.connectionStatus = status;
         this.displayStatus = status.connection.displayStatus;
+      } else if (this.errorCount > 0 && !this.connectionStatus) {
+        // If we never got a successful response, show a more helpful status
+        // The actual status will be determined once the API responds successfully
+        this.displayStatus = 'unknown';
       }
     });
   }
