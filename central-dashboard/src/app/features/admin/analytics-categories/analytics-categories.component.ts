@@ -42,16 +42,18 @@ import { AnalyticsCategory } from '../../../core/models';
           <p class="category-description" *ngIf="category.description">
             {{ category.description }}
           </p>
-          <div class="category-actions" *ngIf="!category.is_default">
+          <div class="category-actions">
             <button class="btn btn-sm btn-secondary" (click)="openEditModal(category)">
               Modifier
             </button>
-            <button class="btn btn-sm btn-danger" (click)="deleteCategory(category)">
+            <button
+              class="btn btn-sm btn-danger"
+              (click)="deleteCategory(category)"
+              [disabled]="category.is_default"
+              [title]="category.is_default ? 'Les catégories par défaut ne peuvent pas être supprimées' : 'Supprimer'"
+            >
               Supprimer
             </button>
-          </div>
-          <div class="category-actions" *ngIf="category.is_default">
-            <span class="default-hint">Les catégories par défaut ne peuvent pas être modifiées</span>
           </div>
         </div>
       </div>
