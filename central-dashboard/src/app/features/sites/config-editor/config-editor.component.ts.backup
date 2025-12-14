@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, interval } from 'rxjs';
@@ -51,13 +51,13 @@ import {
       </div>
 
       <!-- Loading state -->
-      <div *ngIf="isLoading()" class="loading-container">
+      <div *ngIf="loading" class="loading-container">
         <div class="spinner"></div>
         <span>Chargement de la configuration...</span>
       </div>
 
       <!-- Form Tab -->
-      <div *ngIf="!isLoading() && activeTab === 'form'" class="tab-content">
+      <div *ngIf="!loading && activeTab === 'form'" class="tab-content">
         <div class="form-sections">
           <!-- Section Authentification -->
           <div class="form-section">
@@ -500,7 +500,7 @@ import {
       </div>
 
       <!-- JSON Tab -->
-      <div *ngIf="!isLoading() && activeTab === 'json'" class="tab-content">
+      <div *ngIf="!loading && activeTab === 'json'" class="tab-content">
         <div class="json-editor">
           <div class="json-toolbar">
             <button class="btn btn-secondary btn-sm" (click)="formatJsonInput()">Formater</button>
@@ -518,7 +518,7 @@ import {
       </div>
 
       <!-- History Tab -->
-      <div *ngIf="!isLoading() && activeTab === 'history'" class="tab-content">
+      <div *ngIf="!loading && activeTab === 'history'" class="tab-content">
         <div class="history-container">
           <div *ngIf="loadingHistory" class="loading-inline">
             <div class="spinner-small"></div>
@@ -656,7 +656,7 @@ import {
       </div>
 
       <!-- Footer Actions -->
-      <div class="editor-footer" *ngIf="!isLoading()">
+      <div class="editor-footer" *ngIf="!loading">
         <div class="footer-left">
           <button class="btn btn-secondary" (click)="reloadConfig()" [disabled]="loading">
             Recharger depuis le site
@@ -1881,15 +1881,19 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   @Output() configDeployed = new EventEmitter<void>();
 
   activeTab: 'form' | 'json' | 'history' = 'form';
-  // Use signal for loading state to ensure Angular detects changes
-  readonly isLoading = signal(false);
-  // Keep loading as getter/setter for compatibility
+  private _loading = false;
   get loading(): boolean {
-    return this.isLoading();
+    return this._loading;
   }
   set loading(value: boolean) {
     console.log('[ConfigEditor] loading setter called:', value);
-    this.isLoading.set(value);
+    this._loading = value;
+    // Force Angular change detection when loading changes
+    if (this.cdr) {
+      console.log('[ConfigEditor] Triggering detectChanges');
+      this.cdr.detectChanges();
+      console.log('[ConfigEditor] detectChanges completed');
+    }
   }
   deploying = false;
   hasChanges = false;
@@ -1931,7 +1935,8 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   constructor(
     private sitesService: SitesService,
     private notificationService: NotificationService,
-    private analyticsService: AnalyticsService
+    private analyticsService: AnalyticsService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
