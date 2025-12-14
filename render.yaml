@@ -6,7 +6,7 @@ services:
   # CENTRAL SERVER (API Backend)
   # ============================================
   - type: web
-    name: neopro-central-server
+    name: neopro-central
     env: node
     region: frankfurt
     plan: starter

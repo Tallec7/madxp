@@ -32,10 +32,19 @@ dotenv.config();
 // Render ne supporte pas encore IPv6 en sortie, on force la résolution IPv4 des hôtes (Supabase)
 dns.setDefaultResultOrder('ipv4first');
 
+// Normalize origins by removing trailing slashes for consistent matching
+const normalizeOrigin = (origin: string): string => origin.replace(/\/+$/, '');
+
 const allowedOrigins =
   process.env.ALLOWED_ORIGINS?.split(',')
-    .map((origin) => origin.trim())
+    .map((origin) => normalizeOrigin(origin.trim()))
     .filter(Boolean) || [];
+
+// Log configured origins at startup for debugging
+logger.info('CORS configuration', {
+  allowedOrigins,
+  allowAllOrigins: allowedOrigins.length === 0,
+});
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -51,12 +60,24 @@ if (NODE_ENV === 'production') {
 
 app.use(helmet());
 
-const resolveOrigin = (origin?: string | undefined) => {
+const resolveOrigin = (origin?: string | undefined): string | null => {
   if (!origin) return null;
+
+  const normalizedOrigin = normalizeOrigin(origin);
+
+  // If no allowed origins configured, allow all
   if (allowedOrigins.length === 0) {
-    return origin;
+    return normalizedOrigin;
   }
-  return allowedOrigins.includes(origin) ? origin : null;
+
+  // Check if origin matches any allowed origin
+  if (allowedOrigins.includes(normalizedOrigin)) {
+    return normalizedOrigin;
+  }
+
+  // Log rejected origins for debugging (only in development or first few times)
+  logger.debug('CORS origin rejected', { origin: normalizedOrigin, allowedOrigins });
+  return null;
 };
 
 app.use((req, res, next) => {
@@ -71,6 +92,7 @@ app.use((req, res, next) => {
       allowedOrigin = matchedOrigin;
     }
   } else if (allowedOrigins.length === 0) {
+    // No origin header and no restrictions → allow all
     allowedOrigin = '*';
   }
 
