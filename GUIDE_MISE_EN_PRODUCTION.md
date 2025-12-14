@@ -879,10 +879,10 @@ Angular est une "Single Page Application" (SPA). Toutes les routes sont gérées
 
 ### Étape 7.6 : Noter l'URL du dashboard
 
-1. **Copier l'URL** affichée en haut (ex: `https://neopro-dashboard.onrender.com`)
+1. **Copier l'URL** affichée en haut (ex: `https://neopro-admin.kalonpartners.bzh`)
 2. **Noter dans votre fichier**
    ```
-   - URL du dashboard : https://neopro-dashboard.onrender.com
+   - URL du dashboard : https://neopro-admin.kalonpartners.bzh
    ```
 
 ### Étape 7.7 : Configurer CORS sur le serveur
@@ -900,7 +900,7 @@ Le serveur doit autoriser les requêtes venant du dashboard. C'est le "CORS" (Cr
 
    | Key | Value |
    |-----|-------|
-   | `ALLOWED_ORIGINS` | `https://neopro-dashboard.onrender.com` |
+   | `ALLOWED_ORIGINS` | `https://neopro-admin.kalonpartners.bzh` |
 
 4. **Sauvegarder**
    - Cliquer sur **Save Changes**
@@ -1126,7 +1126,7 @@ Vous devez voir votre utilisateur.
 
 ### Test 3 : Connexion au dashboard
 
-1. Ouvrir : `https://neopro-dashboard.onrender.com`
+1. Ouvrir : `https://neopro-admin.kalonpartners.bzh`
 2. **Attendu :** Page de login
 3. Entrer vos identifiants admin
 4. Cliquer sur **Se connecter**
@@ -1286,7 +1286,7 @@ postgresql://postgres.xxxxx:VOTRE_MOT_DE_PASSE@aws-0-eu-west-1.pooler.supabase.c
 **Solutions :**
 1. Sur Render, service API
 2. Vérifier `ALLOWED_ORIGINS`
-3. Format correct : `https://neopro-dashboard.onrender.com` (pas de `/` à la fin)
+3. Format correct : `https://neopro-admin.kalonpartners.bzh` (pas de `/` à la fin)
 4. Plusieurs origines : `https://site1.com,https://site2.com`
 
 ### Redis ne se connecte pas
@@ -1352,7 +1352,7 @@ postgresql://postgres.xxxxx:VOTRE_MOT_DE_PASSE@aws-0-eu-west-1.pooler.supabase.c
 | Upstash Dashboard | https://console.upstash.com |
 | Render Dashboard | https://dashboard.render.com |
 | Votre API | https://neopro-central.onrender.com |
-| Votre Dashboard | https://neopro-dashboard.onrender.com |
+| Votre Dashboard | https://neopro-admin.kalonpartners.bzh |
 | Health Check | https://neopro-central.onrender.com/health |
 | Documentation API | https://neopro-central.onrender.com/api-docs |
 

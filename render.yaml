@@ -32,7 +32,7 @@ services:
       - key: JWT_EXPIRES_IN
         value: 8h
       - key: ALLOWED_ORIGINS
-        value: https://neopro-dashboard.onrender.com,https://control.neopro.fr
+        value: https://neopro-admin.kalonpartners.bzh,https://control.neopro.fr
       - key: LOG_LEVEL
         value: info
       - key: STORAGE_TYPE
