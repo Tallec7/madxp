@@ -41,6 +41,11 @@ export const authenticate = (
       }
     }
 
+    // 3. Fallback sur un paramètre de requête (SSE/EventSource ne permet pas d'envoyer des headers custom)
+    if (!token && typeof req.query.token === 'string') {
+      token = req.query.token;
+    }
+
     if (!token) {
       return res.status(401).json({ error: 'Token manquant' });
     }

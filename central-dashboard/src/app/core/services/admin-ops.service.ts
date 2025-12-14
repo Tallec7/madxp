@@ -1,29 +1,18 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of, timer } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Injectable, inject } from '@angular/core';
+import { BehaviorSubject, Observable, forkJoin, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { AdminActionRequest, AdminJob, AdminActionType, LocalClient, LocalClientInput } from '../models/admin';
 import { NotificationService } from './notification.service';
-
-const DEFAULT_CLIENTS: LocalClient[] = [
-  {
-    id: 'cli-001',
-    name: 'Demo Club',
-    code: 'demo-club',
-    contactEmail: 'demo@neopro.io',
-    timezone: 'Europe/Paris',
-    siteCount: 3,
-    status: 'active',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
-    lastSyncAt: new Date(Date.now() - 1000 * 60 * 20).toISOString()
-  }
-];
+import { ApiService } from './api.service';
+import { environment } from '@env/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AdminOpsService {
+  private readonly api = inject(ApiService);
+  private readonly notifications = inject(NotificationService);
   private jobs$ = new BehaviorSubject<AdminJob[]>([]);
-  private clients$ = new BehaviorSubject<LocalClient[]>(DEFAULT_CLIENTS);
-
-  constructor(private readonly notifications: NotificationService) {}
+  private clients$ = new BehaviorSubject<LocalClient[]>([]);
+  private jobEventSource?: EventSource;
 
   getJobs(): Observable<AdminJob[]> {
     return this.jobs$.asObservable();
@@ -33,74 +22,95 @@ export class AdminOpsService {
     return this.clients$.asObservable();
   }
 
-  triggerAction(request: AdminActionRequest, requestedBy = 'local-admin'): Observable<AdminJob> {
-    const now = new Date();
-    const job: AdminJob = {
-      id: `job-${now.getTime()}`,
-      action: request.action,
-      status: 'queued',
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-      requestedBy,
-      parameters: request.parameters,
-      summary: request.note,
-      logs: [`${now.toLocaleTimeString()} • Demande reçue pour ${request.action}`]
+  refreshState(): Observable<void> {
+    return forkJoin({
+      jobs: this.api.get<{ jobs: AdminJob[] }>('/admin/jobs'),
+      clients: this.api.get<{ clients: LocalClient[] }>('/admin/clients')
+    }).pipe(
+      tap(({ jobs, clients }) => {
+        this.jobs$.next(jobs.jobs);
+        this.clients$.next(clients.clients);
+      }),
+      catchError(error => {
+        this.notifications.error('Impossible de charger les données admin');
+        return throwError(() => error);
+      }),
+      tap(() => this.notifications.info('Données admin locales synchronisées')),
+      map(() => undefined)
+    );
+  }
+
+  initJobStream(): void {
+    if (typeof EventSource === 'undefined' || this.jobEventSource) {
+      return;
+    }
+
+    const token = localStorage.getItem('neopro_token');
+    const url = token
+      ? `${environment.apiUrl}/admin/jobs/stream?token=${encodeURIComponent(token)}`
+      : `${environment.apiUrl}/admin/jobs/stream`;
+
+    const source = new EventSource(url, { withCredentials: true });
+    source.addEventListener('seed', event => {
+      const payload = JSON.parse((event as MessageEvent).data) as AdminJob[];
+      this.jobs$.next(payload);
+    });
+
+    source.addEventListener('job-update', event => {
+      const payload = JSON.parse((event as MessageEvent).data) as AdminJob;
+      this.jobs$.next(this.upsertJob(payload));
+    });
+
+    source.onerror = () => {
+      this.notifications.error('Flux de jobs interrompu');
+      this.teardownStreams();
     };
 
-    this.jobs$.next([job, ...this.jobs$.value]);
+    this.jobEventSource = source;
+  }
 
-    // Simuler un passage en running puis success
-    timer(250)
-      .pipe(
-        tap(() => this.updateJob(job.id, { status: 'running', logs: [...(job.logs || []), `${new Date().toLocaleTimeString()} • Exécution en cours`] })),
-        tap(() =>
-          setTimeout(() => {
-            this.updateJob(job.id, {
-              status: 'succeeded',
-              updatedAt: new Date().toISOString(),
-              logs: [...(this.findJob(job.id)?.logs || []), `${new Date().toLocaleTimeString()} • Terminé avec succès`]
-            });
-            this.notifications.success(`Action ${request.action} terminée`);
-          }, 600)
-        )
-      )
-      .subscribe();
-
-    return of(job);
+  triggerAction(request: AdminActionRequest): Observable<AdminJob> {
+    return this.api.post<{ job: AdminJob }>('/admin/jobs', request).pipe(
+      tap(response => {
+        this.jobs$.next([response.job, ...this.jobs$.value]);
+        this.notifications.success(`Action ${request.action} déclenchée`);
+      }),
+      catchError(error => {
+        this.notifications.error('Action refusée ou invalide');
+        return throwError(() => error);
+      }),
+      map(res => res.job)
+    );
   }
 
   createClient(input: LocalClientInput): Observable<LocalClient> {
-    const now = new Date();
-    const client: LocalClient = {
-      ...input,
-      id: `client-${now.getTime()}`,
-      createdAt: now.toISOString(),
-      status: 'active',
-      lastSyncAt: now.toISOString()
-    };
-
-    this.clients$.next([client, ...this.clients$.value]);
-    this.notifications.success(`Client ${client.name} créé`);
-    return of(client);
+    return this.api.post<{ client: LocalClient }>('/admin/clients', input).pipe(
+      tap(response => {
+        this.clients$.next([response.client, ...this.clients$.value]);
+        this.notifications.success(`Client ${response.client.name} créé`);
+      }),
+      catchError(error => {
+        this.notifications.error('Création client impossible');
+        return throwError(() => error);
+      }),
+      map(res => res.client)
+    );
   }
 
-  syncClient(clientId: string): Observable<LocalClient | undefined> {
-    const client = this.findClient(clientId);
-    if (!client) {
-      return of(undefined);
-    }
-
-    const updatedClient: LocalClient = {
-      ...client,
-      lastSyncAt: new Date().toISOString(),
-      status: 'active'
-    };
-
-    this.clients$.next(
-      this.clients$.value.map(existing => (existing.id === clientId ? updatedClient : existing))
+  syncClient(clientId: string): Observable<LocalClient> {
+    return this.api.post<{ client: LocalClient }>(`/admin/clients/${clientId}/sync`, {}).pipe(
+      tap(response => {
+        this.clients$.next(
+          this.clients$.value.map(existing => (existing.id === clientId ? response.client : existing))
+        );
+        this.notifications.success(`Client ${response.client.name} resynchronisé`);
+      }),
+      catchError(error => {
+        this.notifications.error('Synchronisation client impossible');
+        return throwError(() => error);
+      }),
+      map(res => res.client)
     );
-    this.notifications.success(`Client ${updatedClient.name} resynchronisé`);
-    return of(updatedClient);
   }
 
   getActionLabel(action: AdminActionType): string {
@@ -122,26 +132,19 @@ export class AdminOpsService {
     }
   }
 
-  private updateJob(jobId: string, patch: Partial<AdminJob>): void {
-    this.jobs$.next(
-      this.jobs$.value.map(job =>
-        job.id === jobId
-          ? {
-              ...job,
-              ...patch,
-              logs: patch.logs || job.logs,
-              updatedAt: patch.updatedAt || new Date().toISOString()
-            }
-          : job
-      )
-    );
+  teardownStreams(): void {
+    if (this.jobEventSource) {
+      this.jobEventSource.close();
+      this.jobEventSource = undefined;
+    }
   }
 
-  private findJob(jobId: string): AdminJob | undefined {
-    return this.jobs$.value.find(job => job.id === jobId);
-  }
+  private upsertJob(job: AdminJob): AdminJob[] {
+    const existing = this.jobs$.value.find(current => current.id === job.id);
+    if (!existing) {
+      return [job, ...this.jobs$.value];
+    }
 
-  private findClient(clientId: string): LocalClient | undefined {
-    return this.clients$.value.find(client => client.id === clientId);
+    return this.jobs$.value.map(current => (current.id === job.id ? job : current));
   }
 }

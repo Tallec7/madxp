@@ -22,6 +22,7 @@ import { AdminActionType, AdminJob, LocalClient } from '../../../core/models/adm
         <div class="header-actions">
           <div class="badge">Mode stub</div>
           <span class="hint">Les actions sont simulées en local.</span>
+          <span class="hint" *ngIf="loading()">Synchronisation avec l'API...</span>
         </div>
       </header>
 
@@ -126,7 +127,9 @@ import { AdminActionType, AdminJob, LocalClient } from '../../../core/models/adm
             <h2>Jobs récents</h2>
             <p class="subtitle">Historique local (simulation) avec statut et logs.</p>
           </div>
-          <button class="btn btn-ghost" type="button" (click)="refreshJobStatuses()">Actualiser</button>
+          <button class="btn btn-ghost" type="button" (click)="refreshJobStatuses()" [disabled]="loading()">
+            Actualiser
+          </button>
         </div>
 
         <div class="jobs" *ngIf="jobs().length; else emptyJobs">
@@ -151,7 +154,7 @@ import { AdminActionType, AdminJob, LocalClient } from '../../../core/models/adm
           <div>
             <p class="eyebrow">Clients</p>
             <h2>Liste locale</h2>
-            <p class="subtitle">Entrées mémorisées côté front en attendant l'API.</p>
+            <p class="subtitle">Données servies par l'API locale avec persistance disque.</p>
           </div>
         </div>
         <div class="clients" *ngIf="clients().length; else emptyClients">
@@ -391,6 +394,7 @@ export class LocalAdminComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly adminOps = inject(AdminOpsService);
   private subscriptions: Subscription[] = [];
+  readonly loading = signal(false);
 
   readonly actionOptions: AdminActionType[] = [
     'build:central',
@@ -417,17 +421,24 @@ export class LocalAdminComponent implements OnInit, OnDestroy {
   });
 
   readonly clientForm = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.minLength(3)]],
-    code: ['', [Validators.required, Validators.pattern(/^[a-z0-9-]+$/)]],
-    contactEmail: ['', Validators.email],
-    timezone: ['Europe/Paris'],
-    siteCount: [0, Validators.min(0)]
+    name: this.fb.control('', [Validators.required, Validators.minLength(3)]),
+    code: this.fb.control('', [Validators.required, Validators.pattern(/^[a-z0-9-]+$/)]),
+    contactEmail: this.fb.control('', Validators.email),
+    timezone: this.fb.control('Europe/Paris'),
+    siteCount: this.fb.control(0, Validators.min(0))
   });
 
   readonly jobs = signal<AdminJob[]>([]);
   readonly clients = signal<LocalClient[]>([]);
 
   ngOnInit(): void {
+    this.loading.set(true);
+    this.subscriptions.push(
+      this.adminOps
+        .refreshState()
+        .subscribe({ next: () => this.loading.set(false), error: () => this.loading.set(false) })
+    );
+    this.adminOps.initJobStream();
     this.subscriptions.push(
       this.adminOps.getJobs().subscribe(jobs => this.jobs.set(jobs)),
       this.adminOps.getClients().subscribe(clients => this.clients.set(clients))
@@ -436,6 +447,7 @@ export class LocalAdminComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.adminOps.teardownStreams();
   }
 
   submitAction(): void {
@@ -469,7 +481,10 @@ export class LocalAdminComponent implements OnInit, OnDestroy {
   }
 
   refreshJobStatuses(): void {
-    this.jobs.update(list => [...list]);
+    this.loading.set(true);
+    this.adminOps
+      .refreshState()
+      .subscribe({ next: () => this.loading.set(false), error: () => this.loading.set(false) });
   }
 
   resetActionForm(): void {
