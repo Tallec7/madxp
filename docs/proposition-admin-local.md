@@ -82,3 +82,11 @@
 
 - Ajout de ce document pour cadrer le besoin et les options.
 - Prochaines actions : choisir l'option A ou B, puis détailler le découpage des tâches (front/back/tests) et les responsabilités de sécurité.
+
+## État d'avancement par rapport à la proposition
+
+- **Implémenté (itération actuelle)** : option A engagée côté front avec une page `/admin/local` dans `central-dashboard` et un service Angular `AdminOpsService` connecté à l'API `/api/admin`. Les jobs/clients sont validés côté serveur, persistés sur disque (`data/admin-state.json`) et diffusés en live via SSE pour le suivi des jobs. Les formulaires front restent en mode stub (pas d'exécution réelle des scripts).
+- **Restant à faire** :
+  - Activer les actions sensibles (install/purge) avec ACL et confirmations renforcées.
+  - Ajouter un endpoint de purge/rotation pour l'historique et brancher l'exécution réelle des scripts whitelistes.
+  - Ajouter des tests front/back pour couvrir les validations, les échecs API, et les scénarios de long-running jobs, ainsi que la résilience du flux SSE.
