@@ -418,7 +418,7 @@ import {
                 </div>
               </div>
             </div>
-            <p class="empty-message" *ngIf="config.categories.length === 0">
+            <p class="empty-message" *ngIf="configCategories.length === 0">
               Aucune catégorie configurée
             </p>
           </div>
@@ -1916,7 +1916,19 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
   hasChanges = false;
   isValid = true;
 
-  config: SiteConfiguration = this.getEmptyConfig();
+  // Simple config object - use configCategories for template binding
+  config: SiteConfiguration = {
+    version: '1.0',
+    remote: { title: '' },
+    auth: { password: '', clubName: '', sessionDuration: 28800000 },
+    sync: { enabled: true, serverUrl: 'https://neopro-central.onrender.com', siteName: '', clubName: '' },
+    sponsors: [],
+    categories: [],
+    timeCategories: [],
+  };
+
+  // Separate array for template binding (workaround for Angular change detection issue)
+  configCategories: CategoryConfig[] = [];
   originalConfig: SiteConfiguration | null = null;
   jsonString = '';
   jsonError = '';
@@ -2340,17 +2352,20 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
 
   // Categories
   addCategory(): void {
-    this.config.categories.push({
+    const newCategory = {
       id: `category-${Date.now()}`,
       name: '',
       videos: [],
       subCategories: [],
-    });
+    };
+    this.config.categories.push(newCategory);
+    this.configCategories = [...this.config.categories];
     this.onConfigChange();
   }
 
   removeCategory(index: number): void {
     this.config.categories.splice(index, 1);
+    this.configCategories = [...this.config.categories];
     if (this.expandedCategory === index) {
       this.expandedCategory = null;
     } else if (this.expandedCategory !== null && this.expandedCategory > index) {
@@ -2685,4 +2700,5 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
     const category = this.analyticsCategories.find(c => c.id === analyticsCategoryId);
     return category?.color || '#6B7280';
   }
+
 }

@@ -113,11 +113,18 @@ fi
 if [ ! -d "central-dashboard/node_modules" ]; then
     echo "Installation des dépendances central dashboard..."
     cd central-dashboard
-    npm install
+    npm install --legacy-peer-deps
     cd ..
 else
     echo -e "${GREEN}✓${NC} Dépendances central dashboard OK"
 fi
+
+echo ""
+echo -e "${BLUE}🧹 Nettoyage des ports...${NC}"
+# Tuer les processus qui pourraient bloquer les ports
+lsof -ti:3003,4200,4300,3001,8081 2>/dev/null | xargs kill -9 2>/dev/null || true
+sleep 1
+echo -e "${GREEN}✓${NC} Ports nettoyés"
 
 echo ""
 echo -e "${BLUE}🚀 Démarrage des services...${NC}"
@@ -134,9 +141,9 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 # 1. Démarrer le serveur Socket.IO
-echo -e "${GREEN}[1/5]${NC} Démarrage Socket.IO server (port 3000)..."
+echo -e "${GREEN}[1/5]${NC} Démarrage Socket.IO server (port 3003)..."
 cd server-render
-node server.js > ../logs/socket.log 2>&1 &
+PORT=3003 node server.js > ../logs/socket.log 2>&1 &
 PID_SOCKET=$!
 cd ..
 sleep 2
@@ -145,18 +152,19 @@ if ps -p $PID_SOCKET > /dev/null; then
     echo -e "${GREEN}✓${NC} Socket.IO started (PID: $PID_SOCKET)"
 else
     echo -e "${RED}❌ Échec démarrage Socket.IO${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠${NC}  Vérifiez logs/socket.log pour plus de détails"
+    cleanup
 fi
 
 # 2. Démarrer l'interface admin (mode démo)
-echo -e "${GREEN}[2/5]${NC} Démarrage Admin Interface (port 8080)..."
+echo -e "${GREEN}[2/5]${NC} Démarrage Admin Interface (port 8081)..."
 cd raspberry/admin
 if [ "$ADMIN_MODE" = "demo" ]; then
     echo "→ Mode DEMO (données mockées, pas d'écriture disque)"
-    node admin-server-demo.js > ../../logs/admin.log 2>&1 &
+    ADMIN_PORT=8081 node admin-server-demo.js > ../../logs/admin.log 2>&1 &
 else
     echo "→ Mode RÉEL (uploads stockés dans ${ROOT_DIR}/public/videos)"
-    NEOPRO_DIR="${ROOT_DIR}/public" node admin-server.js > ../../logs/admin.log 2>&1 &
+    ADMIN_PORT=8081 NEOPRO_DIR="${ROOT_DIR}/public" node admin-server.js > ../../logs/admin.log 2>&1 &
 fi
 PID_ADMIN=$!
 cd ../..
@@ -166,7 +174,8 @@ if ps -p $PID_ADMIN > /dev/null; then
     echo -e "${GREEN}✓${NC} Admin Interface started (PID: $PID_ADMIN, mode: ${ADMIN_MODE})"
 else
     echo -e "${RED}❌ Échec démarrage Admin${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠${NC}  Vérifiez logs/admin.log pour plus de détails"
+    cleanup
 fi
 
 # 3. Démarrer Angular Dev Server
@@ -190,8 +199,8 @@ if ps -p $PID_CENTRAL_SERVER > /dev/null; then
     echo -e "${GREEN}✓${NC} Central Server started (PID: $PID_CENTRAL_SERVER)"
 else
     echo -e "${RED}❌ Échec démarrage Central Server${NC}"
-    echo "Vérifiez central-server/.env et votre base PostgreSQL locale."
-    exit 1
+    echo -e "${YELLOW}⚠${NC}  Vérifiez central-server/.env et logs/central-server.log"
+    cleanup
 fi
 
 # 5. Démarrer le central dashboard
@@ -206,7 +215,8 @@ if ps -p $PID_CENTRAL_DASHBOARD > /dev/null; then
     echo -e "${GREEN}✓${NC} Central Dashboard started (PID: $PID_CENTRAL_DASHBOARD)"
 else
     echo -e "${RED}❌ Échec démarrage Central Dashboard${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠${NC}  Vérifiez logs/central-dashboard.log pour plus de détails"
+    cleanup
 fi
 
 echo ""
@@ -220,7 +230,7 @@ echo "   • TV:     http://localhost:4200/tv"
 echo "   • Remote: http://localhost:4200/remote"
 echo ""
 echo -e "${BLUE}🎛️  Admin Interface (MODE DEMO):${NC}"
-echo "   • Dashboard: http://localhost:8080"
+echo "   • Dashboard: http://localhost:8081"
 if [ "$ADMIN_MODE" = "demo" ]; then
     echo "   • Données mockées, aucun fichier écrit (lancer ./dev-local.sh real pour tester les uploads)"
 else
@@ -229,7 +239,7 @@ else
 fi
 echo ""
 echo -e "${BLUE}🔌 Socket.IO Server:${NC}"
-echo "   • Port: 3000"
+echo "   • Port: 3003"
 echo ""
 echo -e "${BLUE}🛠️  Central Server:${NC}"
 echo "   • API:    http://localhost:3001/api"
@@ -248,5 +258,7 @@ echo ""
 echo -e "${YELLOW}Appuyez sur Ctrl+C pour arrêter tous les services${NC}"
 echo ""
 
-# Garder le script actif
-wait $PID_ANGULAR
+# Garder le script actif indéfiniment
+while true; do
+    sleep 1
+done
