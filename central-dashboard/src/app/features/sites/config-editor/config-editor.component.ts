@@ -1974,11 +1974,14 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     const timeoutId = setTimeout(() => {
       console.log('[ConfigEditor] 10s timeout triggered, loading:', this.loading, 'commandId:', this.configCommandId);
       if (this.loading && !this.configCommandId) {
-        this.loading = false;
-        this.config = this.getEmptyConfig();
-        this.originalConfig = null;
-        this.syncJsonFromConfig();
-        this.notificationService.warning('Le serveur ne répond pas. Vous pouvez créer une nouvelle configuration.');
+        this.ngZone.run(() => {
+          this.loading = false;
+          this.config = this.getEmptyConfig();
+          this.originalConfig = null;
+          this.syncJsonFromConfig();
+          this.notificationService.warning('Le serveur ne répond pas. Vous pouvez créer une nouvelle configuration.');
+          this.cdr.detectChanges();
+        });
       }
     }, 10000);
 
@@ -2031,11 +2034,14 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       if (pollCount > POLL_TIMEOUT_SECONDS) {
         console.log('[ConfigEditor] Poll timeout after 30s');
         this.configPollSubscription?.unsubscribe();
-        this.loading = false;
-        this.config = this.getEmptyConfig();
-        this.originalConfig = null;
-        this.syncJsonFromConfig();
-        this.notificationService.warning('Le site ne répond pas. Vous pouvez créer une nouvelle configuration.');
+        this.ngZone.run(() => {
+          this.loading = false;
+          this.config = this.getEmptyConfig();
+          this.originalConfig = null;
+          this.syncJsonFromConfig();
+          this.notificationService.warning('Le site ne répond pas. Vous pouvez créer une nouvelle configuration.');
+          this.cdr.detectChanges();
+        });
         return;
       }
 
@@ -2055,43 +2061,45 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
             console.log('[ConfigEditor] Status is completed, result:', status.result ? 'present' : 'missing');
             console.log('[ConfigEditor] result.configuration:', status.result?.configuration ? 'present' : 'missing');
             this.configPollSubscription?.unsubscribe();
-            this.loading = false;
 
-            if (status.result?.configuration) {
-              console.log('[ConfigEditor] Calling setConfig with configuration');
-              this.setConfig(status.result.configuration);
-              this.notificationService.success('Configuration chargée');
-            } else if (status.result?.message === 'No configuration file found') {
-              console.log('[ConfigEditor] No configuration file found message');
-              this.config = this.getEmptyConfig();
-              this.originalConfig = null;
-              this.syncJsonFromConfig();
-              this.notificationService.info('Aucune configuration sur le site. Créez-en une nouvelle.');
-            } else {
-              console.log('[ConfigEditor] Unexpected response, result:', status.result);
-              // Réponse inattendue, permettre de créer une config
-              this.config = this.getEmptyConfig();
-              this.originalConfig = null;
-              this.syncJsonFromConfig();
-              this.notificationService.info('Configuration vide. Vous pouvez en créer une nouvelle.');
-            }
-            // Force Angular change detection with setTimeout to ensure next tick
-            console.log('[ConfigEditor] Scheduling detectChanges...');
-            setTimeout(() => {
-              console.log('[ConfigEditor] Running detectChanges now, loading=', this.loading);
-              this.cdr.markForCheck();
+            // Use ngZone.run to ensure Angular detects all changes
+            this.ngZone.run(() => {
+              this.loading = false;
+              console.log('[ConfigEditor] Inside ngZone.run, loading set to:', this.loading);
+
+              if (status.result?.configuration) {
+                console.log('[ConfigEditor] Calling setConfig with configuration');
+                this.setConfig(status.result.configuration);
+                this.notificationService.success('Configuration chargée');
+              } else if (status.result?.message === 'No configuration file found') {
+                console.log('[ConfigEditor] No configuration file found message');
+                this.config = this.getEmptyConfig();
+                this.originalConfig = null;
+                this.syncJsonFromConfig();
+                this.notificationService.info('Aucune configuration sur le site. Créez-en une nouvelle.');
+              } else {
+                console.log('[ConfigEditor] Unexpected response, result:', status.result);
+                this.config = this.getEmptyConfig();
+                this.originalConfig = null;
+                this.syncJsonFromConfig();
+                this.notificationService.info('Configuration vide. Vous pouvez en créer une nouvelle.');
+              }
+
+              // Force change detection after all state updates
               this.cdr.detectChanges();
-              console.log('[ConfigEditor] detectChanges completed');
-            }, 0);
+              console.log('[ConfigEditor] detectChanges completed, loading=', this.loading);
+            });
           } else if (status.status === 'failed') {
             console.log('[ConfigEditor] Status is failed');
             this.configPollSubscription?.unsubscribe();
-            this.loading = false;
-            this.config = this.getEmptyConfig();
-            this.originalConfig = null;
-            this.syncJsonFromConfig();
-            this.notificationService.warning('Échec de récupération. Vous pouvez créer une nouvelle configuration.');
-            this.ngZone.run(() => this.cdr.detectChanges());
+            this.ngZone.run(() => {
+              this.loading = false;
+              this.config = this.getEmptyConfig();
+              this.originalConfig = null;
+              this.syncJsonFromConfig();
+              this.notificationService.warning('Échec de récupération. Vous pouvez créer une nouvelle configuration.');
+              this.cdr.detectChanges();
+            });
           } else {
             console.log('[ConfigEditor] Status is:', status.status, '- continuing poll');
           }
