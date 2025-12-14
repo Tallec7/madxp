@@ -34,6 +34,13 @@ describe('SitesService', () => {
     error: 0
   };
 
+  // API returns paginated format
+  const mockApiResponse = {
+    data: [mockSite, { ...mockSite, id: 'site-2', site_name: 'Site 2' }],
+    pagination: { total: 2, page: 1, limit: 20, totalPages: 1, hasNext: false, hasPrev: false }
+  };
+
+  // Service transforms to this format
   const mockSitesResponse = {
     total: 2,
     sites: [mockSite, { ...mockSite, id: 'site-2', site_name: 'Site 2' }]
@@ -53,8 +60,8 @@ describe('SitesService', () => {
   });
 
   describe('loadSites', () => {
-    it('should load sites from API', fakeAsync(() => {
-      apiServiceSpy.get.and.returnValue(of(mockSitesResponse));
+    it('should load sites from API and transform response', fakeAsync(() => {
+      apiServiceSpy.get.and.returnValue(of(mockApiResponse));
 
       let result: { total: number; sites: Site[] } | undefined;
       service.loadSites().subscribe(r => result = r);
@@ -65,7 +72,7 @@ describe('SitesService', () => {
     }));
 
     it('should pass filters to API', fakeAsync(() => {
-      apiServiceSpy.get.and.returnValue(of(mockSitesResponse));
+      apiServiceSpy.get.and.returnValue(of(mockApiResponse));
 
       const filters = { status: 'online', limit: 10 };
       service.loadSites(filters).subscribe();
@@ -75,7 +82,7 @@ describe('SitesService', () => {
     }));
 
     it('should update sites$ observable', fakeAsync(() => {
-      apiServiceSpy.get.and.returnValue(of(mockSitesResponse));
+      apiServiceSpy.get.and.returnValue(of(mockApiResponse));
 
       let emittedSites: Site[] = [];
       service.sites$.subscribe(s => emittedSites = s);
@@ -83,7 +90,7 @@ describe('SitesService', () => {
       service.loadSites().subscribe();
       tick();
 
-      expect(emittedSites).toEqual(mockSitesResponse.sites);
+      expect(emittedSites).toEqual(mockApiResponse.data);
     }));
   });
 
@@ -296,7 +303,7 @@ describe('SitesService', () => {
   describe('updateSiteStatus', () => {
     it('should update site status in local state', fakeAsync(() => {
       // First load sites
-      apiServiceSpy.get.and.returnValue(of(mockSitesResponse));
+      apiServiceSpy.get.and.returnValue(of(mockApiResponse));
       service.loadSites().subscribe();
       tick();
 
