@@ -2075,12 +2075,14 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
               this.syncJsonFromConfig();
               this.notificationService.info('Configuration vide. Vous pouvez en créer une nouvelle.');
             }
-            // Force Angular change detection inside zone
-            console.log('[ConfigEditor] Running detectChanges in NgZone');
-            this.ngZone.run(() => {
+            // Force Angular change detection with setTimeout to ensure next tick
+            console.log('[ConfigEditor] Scheduling detectChanges...');
+            setTimeout(() => {
+              console.log('[ConfigEditor] Running detectChanges now, loading=', this.loading);
+              this.cdr.markForCheck();
               this.cdr.detectChanges();
               console.log('[ConfigEditor] detectChanges completed');
-            });
+            }, 0);
           } else if (status.status === 'failed') {
             console.log('[ConfigEditor] Status is failed');
             this.configPollSubscription?.unsubscribe();
