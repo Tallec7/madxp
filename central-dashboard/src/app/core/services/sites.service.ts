@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, BehaviorSubject, tap } from 'rxjs';
+import { Observable, BehaviorSubject, tap, map } from 'rxjs';
 import { ApiService } from './api.service';
 import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus } from '../models';
 
@@ -16,8 +16,10 @@ export class SitesService {
   public stats$ = this.statsSubject.asObservable();
 
   loadSites(filters?: Record<string, string | number | boolean>): Observable<{ total: number; sites: Site[] }> {
-    return this.api.get<{ total: number; sites: Site[] }>('/sites', filters).pipe(
-      tap(response => this.sitesSubject.next(response.sites))
+    return this.api.get<{ data: Site[]; pagination: { total: number } }>('/sites', filters).pipe(
+      tap(response => this.sitesSubject.next(response.data)),
+      // Transform paginated response to expected format
+      map(response => ({ sites: response.data, total: response.pagination.total }))
     );
   }
 
