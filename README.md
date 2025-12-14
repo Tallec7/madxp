@@ -81,7 +81,7 @@ Une fois configuré, le boîtier est accessible via :
 
 **WiFi :** NEOPRO-[NOM_DU_CLUB]
 
-**Dashboard central :** https://neopro-dashboard.onrender.com
+**Dashboard central :** https://neopro-admin.kalonpartners.bzh
 
 ---
 
@@ -220,14 +220,12 @@ Services : PostgreSQL (5432), Redis (6379), API (3001), Prometheus (9090), Grafa
 
 ## Déploiement
 
-### Cloud (Render.com)
+### Cloud
 
-| Service | Type | Description |
-|---------|------|-------------|
-| neopro-central-server | Web Service | API REST + WebSocket |
-| neopro-dashboard | Static Site | Dashboard admin Angular |
-
-Configuration : voir `render.yaml`
+| Service | Hébergeur | URL |
+|---------|-----------|-----|
+| API (central-server) | Render | https://neopro-central.onrender.com |
+| Dashboard admin | Hostinger | https://neopro-admin.kalonpartners.bzh |
 
 **Guide complet :** [GUIDE_MISE_EN_PRODUCTION.md](GUIDE_MISE_EN_PRODUCTION.md)
 

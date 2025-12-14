@@ -62,7 +62,7 @@ Guide complet pour déployer NeoPro en production. Conçu pour les débutants av
 | **Supabase** | Stocke les données (utilisateurs, clubs, configs) et les vidéos | Le serveur API | https://supabase.com/dashboard |
 | **Upstash** | Cache rapide pour les sessions et données temporaires | Le serveur API | https://console.upstash.com |
 | **Render** | Fait tourner le serveur API (le "cerveau") | Les Raspberry Pi + le Dashboard | https://neopro-central.onrender.com |
-| **Hostinger** | Héberge le dashboard d'administration | Vous (l'admin) | Votre URL Hostinger |
+| **Hostinger** | Héberge le dashboard d'administration | Vous (l'admin) | https://neopro-admin.kalonpartners.bzh |
 
 ---
 
@@ -436,12 +436,12 @@ Le serveur doit autoriser les requêtes venant de Hostinger :
 1. Retourner sur Render → votre service `neopro-central`
 2. **Environment** → Ajouter une variable :
    - Key : `ALLOWED_ORIGINS`
-   - Value : `https://votre-dashboard.hostinger.com` (votre vraie URL)
+   - Value : `https://neopro-admin.kalonpartners.bzh`
 3. **Save Changes** (le serveur redémarre)
 
 ### Étape 6.6 : Tester
 
-1. Ouvrir votre URL Hostinger
+1. Ouvrir https://neopro-admin.kalonpartners.bzh
 2. Vous devez voir la page de login
 3. Si page blanche : voir section Dépannage
 
@@ -545,7 +545,7 @@ VALUES (
 |------|-----|------------------|
 | Health check | https://neopro-central.onrender.com/health | `{"status":"healthy"...}` |
 | API docs | https://neopro-central.onrender.com/api-docs | Page Swagger |
-| Dashboard | Votre URL Hostinger | Page de login |
+| Dashboard | https://neopro-admin.kalonpartners.bzh | Page de login |
 | Login | Dashboard → se connecter | Accès au dashboard |
 
 ---
@@ -788,7 +788,7 @@ Better Stack surveille que votre serveur fonctionne.
 | Votre API | https://neopro-central.onrender.com |
 | Health Check | https://neopro-central.onrender.com/health |
 | API Docs | https://neopro-central.onrender.com/api-docs |
-| Votre Dashboard | (votre URL Hostinger) |
+| Votre Dashboard | https://neopro-admin.kalonpartners.bzh |
 
 ---
 
