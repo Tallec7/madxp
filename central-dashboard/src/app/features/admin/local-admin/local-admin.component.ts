@@ -417,11 +417,11 @@ export class LocalAdminComponent implements OnInit, OnDestroy {
   });
 
   readonly clientForm = this.fb.nonNullable.group({
-    name: this.fb.control('', [Validators.required, Validators.minLength(3)]),
-    code: this.fb.control('', [Validators.required, Validators.pattern(/^[a-z0-9-]+$/)]),
-    contactEmail: this.fb.control('', Validators.email),
-    timezone: this.fb.control('Europe/Paris'),
-    siteCount: this.fb.control(0, Validators.min(0))
+    name: ['', [Validators.required, Validators.minLength(3)]],
+    code: ['', [Validators.required, Validators.pattern(/^[a-z0-9-]+$/)]],
+    contactEmail: ['', Validators.email],
+    timezone: ['Europe/Paris'],
+    siteCount: [0, Validators.min(0)]
   });
 
   readonly jobs = signal<AdminJob[]>([]);

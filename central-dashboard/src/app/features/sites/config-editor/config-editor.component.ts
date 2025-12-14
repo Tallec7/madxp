@@ -1964,11 +1964,13 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   }
 
   reloadConfig(): void {
+    console.log('[ConfigEditor] reloadConfig() called, siteId:', this.siteId);
     this.loading = true;
     this.configPollSubscription?.unsubscribe();
 
     // Timeout global de 10 secondes pour la requête initiale
     const timeoutId = setTimeout(() => {
+      console.log('[ConfigEditor] 10s timeout triggered, loading:', this.loading, 'commandId:', this.configCommandId);
       if (this.loading && !this.configCommandId) {
         this.loading = false;
         this.config = this.getEmptyConfig();
@@ -1978,13 +1980,17 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       }
     }, 10000);
 
+    console.log('[ConfigEditor] Calling getConfiguration...');
     this.sitesService.getConfiguration(this.siteId).subscribe({
       next: (response) => {
+        console.log('[ConfigEditor] getConfiguration response:', response);
         clearTimeout(timeoutId);
         if (response.commandId) {
           this.configCommandId = response.commandId;
+          console.log('[ConfigEditor] Starting poll with commandId:', response.commandId);
           this.pollConfigResult();
         } else {
+          console.log('[ConfigEditor] No commandId in response');
           this.loading = false;
           this.config = this.getEmptyConfig();
           this.originalConfig = null;
@@ -1993,29 +1999,35 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
+        console.error('[ConfigEditor] getConfiguration error:', error);
         clearTimeout(timeoutId);
         this.loading = false;
         this.config = this.getEmptyConfig();
         this.originalConfig = null;
         this.syncJsonFromConfig();
         this.notificationService.warning('Erreur de connexion. Vous pouvez créer une nouvelle configuration.');
-        console.error('getConfiguration error:', error);
       }
     });
   }
 
   private pollConfigResult(): void {
-    if (!this.configCommandId) return;
+    if (!this.configCommandId) {
+      console.log('[ConfigEditor] pollConfigResult: no commandId, aborting');
+      return;
+    }
 
     const POLL_TIMEOUT_SECONDS = 30;
     let pollCount = 0;
     let isPolling = false; // Éviter les appels parallèles
 
+    console.log('[ConfigEditor] Starting polling interval...');
     this.configPollSubscription = interval(1000).subscribe(() => {
       pollCount++;
+      console.log('[ConfigEditor] Poll tick #', pollCount, 'isPolling:', isPolling);
 
       // Timeout après 30 secondes
       if (pollCount > POLL_TIMEOUT_SECONDS) {
+        console.log('[ConfigEditor] Poll timeout after 30s');
         this.configPollSubscription?.unsubscribe();
         this.loading = false;
         this.config = this.getEmptyConfig();
@@ -2026,25 +2038,35 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       }
 
       // Éviter les appels parallèles si le précédent n'est pas terminé
-      if (isPolling) return;
+      if (isPolling) {
+        console.log('[ConfigEditor] Skipping poll - previous request still pending');
+        return;
+      }
       isPolling = true;
 
+      console.log('[ConfigEditor] Calling getCommandStatus for:', this.configCommandId);
       this.sitesService.getCommandStatus(this.siteId, this.configCommandId!).subscribe({
         next: (status) => {
+          console.log('[ConfigEditor] getCommandStatus response:', JSON.stringify(status).substring(0, 500));
           isPolling = false;
           if (status.status === 'completed') {
+            console.log('[ConfigEditor] Status is completed, result:', status.result ? 'present' : 'missing');
+            console.log('[ConfigEditor] result.configuration:', status.result?.configuration ? 'present' : 'missing');
             this.configPollSubscription?.unsubscribe();
             this.loading = false;
 
             if (status.result?.configuration) {
+              console.log('[ConfigEditor] Calling setConfig with configuration');
               this.setConfig(status.result.configuration);
               this.notificationService.success('Configuration chargée');
             } else if (status.result?.message === 'No configuration file found') {
+              console.log('[ConfigEditor] No configuration file found message');
               this.config = this.getEmptyConfig();
               this.originalConfig = null;
               this.syncJsonFromConfig();
               this.notificationService.info('Aucune configuration sur le site. Créez-en une nouvelle.');
             } else {
+              console.log('[ConfigEditor] Unexpected response, result:', status.result);
               // Réponse inattendue, permettre de créer une config
               this.config = this.getEmptyConfig();
               this.originalConfig = null;
@@ -2052,20 +2074,23 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
               this.notificationService.info('Configuration vide. Vous pouvez en créer une nouvelle.');
             }
           } else if (status.status === 'failed') {
+            console.log('[ConfigEditor] Status is failed');
             this.configPollSubscription?.unsubscribe();
             this.loading = false;
             this.config = this.getEmptyConfig();
             this.originalConfig = null;
             this.syncJsonFromConfig();
             this.notificationService.warning('Échec de récupération. Vous pouvez créer une nouvelle configuration.');
+          } else {
+            console.log('[ConfigEditor] Status is:', status.status, '- continuing poll');
           }
           // Si status === 'pending', on continue le polling
         },
         error: (error) => {
+          console.error('[ConfigEditor] getCommandStatus error:', error);
           isPolling = false;
           // Ne pas arrêter le polling sur une erreur réseau ponctuelle
           // Le timeout global s'en chargera
-          console.error('getCommandStatus error:', error);
         }
       });
     });
