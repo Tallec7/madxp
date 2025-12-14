@@ -472,7 +472,14 @@ export class LocalAdminComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.adminOps.createClient(this.clientForm.getRawValue()).subscribe();
+    const formValue = this.clientForm.getRawValue();
+    this.adminOps.createClient({
+      name: formValue.name || '',
+      code: formValue.code || '',
+      contactEmail: formValue.contactEmail || '',
+      timezone: formValue.timezone || 'Europe/Paris',
+      siteCount: formValue.siteCount || 0
+    }).subscribe();
     this.clientForm.reset(this.defaultClientValue);
   }
 
