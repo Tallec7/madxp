@@ -5,17 +5,26 @@ const socketIO = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
-// Configuration CORS pour permettre les connexions depuis votre site Apache
+const defaultAllowedOrigins = [
+	"https://neopro.kalonpartners.bzh", // Site démo historique
+	"https://neopro-admin.kalonpartners.bzh", // Nouveau portail admin
+	"http://localhost:4200", // Dev local
+	"http://neopro.local", // Raspberry Pi (mDNS)
+	"http://neopro.local:4200", // Raspberry Pi avec port
+	"http://192.168.4.1", // Raspberry Pi Hotspot (IP fixe)
+	"http://192.168.4.1:4200" // Raspberry Pi Hotspot avec port
+];
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+	? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
+	: defaultAllowedOrigins;
+
+console.log('Socket.IO CORS - allowed origins:', allowedOrigins);
+
+// Configuration CORS pour permettre les connexions depuis le portail admin
 const io = socketIO(server, {
 	cors: {
-		origin: [
-			"https://neopro.kalonpartners.bzh", // Site démo production
-			"http://localhost:4200", // Dev local
-			"http://neopro.local", // Raspberry Pi (mDNS)
-			"http://neopro.local:4200", // Raspberry Pi avec port
-			"http://192.168.4.1", // Raspberry Pi Hotspot (IP fixe)
-			"http://192.168.4.1:4200" // Raspberry Pi Hotspot avec port
-		],
+		origin: allowedOrigins,
 		methods: ["GET", "POST"],
 		credentials: true
 	}
