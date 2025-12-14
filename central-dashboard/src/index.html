@@ -1,12 +1,14 @@
 <!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <title>NEOPRO - Dashboard Central</title>
-  <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self';
+  <head>
+    <meta charset="utf-8" />
+    <title>NEOPRO - Dashboard Central</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- frame-ancestors must be provided via HTTP headers (see render.yaml) -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self';
                  script-src 'self' 'unsafe-inline' 'unsafe-eval';
                  style-src 'self' 'unsafe-inline';
                  img-src 'self' data:;
@@ -17,11 +19,11 @@
                               https://neopro-central.onrender.com wss://neopro-central.onrender.com
                               https://neopro.onrender.com wss://neopro.onrender.com
                               https://neopro-admin.kalonpartners.bzh wss://neopro-admin.kalonpartners.bzh;
-                 frame-ancestors 'self';
-                 base-uri 'self';">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-</head>
-<body>
-  <app-root></app-root>
-</body>
+                 base-uri 'self';"
+    />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
 </html>

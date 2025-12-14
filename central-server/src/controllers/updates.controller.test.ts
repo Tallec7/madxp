@@ -87,6 +87,21 @@ describe('Updates Controller', () => {
         expect(res.status).toHaveBeenCalledWith(500);
         expect(res.json).toHaveBeenCalledWith({ error: 'Erreur lors de la récupération des mises à jour' });
       });
+
+      it('should return empty array when software_updates table is missing', async () => {
+        const req = createAuthRequest();
+        const res = createMockResponse();
+
+        (pool.query as jest.Mock).mockRejectedValueOnce({
+          code: '42P01',
+          message: 'relation "software_updates" does not exist',
+        });
+
+        await getUpdates(req, res);
+
+        expect(res.status).not.toHaveBeenCalled();
+        expect(res.json).toHaveBeenCalledWith([]);
+      });
     });
 
     describe('getUpdate', () => {

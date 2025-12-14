@@ -5,6 +5,22 @@ import pool from '../config/database';
 import { AuthRequest } from '../types';
 import { UPDATE_BUCKET, uploadFile } from '../config/supabase';
 
+type DatabaseError = Error & { code?: string; message?: string };
+
+const isTableMissingError = (error: unknown, tableName: string): boolean => {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const dbError = error as DatabaseError;
+  return dbError.code === '42P01' && (!dbError.message || dbError.message.includes(tableName));
+};
+
+const updatesFeatureUnavailable = (tableName: string) => ({
+  error: 'Module de mises à jour indisponible',
+  message: `La table ${tableName} n'existe pas encore. Exécutez le script SQL (central-server/src/scripts/init-db.sql) pour l'initialiser.`,
+});
+
 export const getUpdates = async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
@@ -17,6 +33,10 @@ export const getUpdates = async (req: AuthRequest, res: Response) => {
 
     res.json(result.rows);
   } catch (error) {
+    if (isTableMissingError(error, 'software_updates')) {
+      logger.warn('software_updates table missing, returning empty updates list');
+      return res.json([]);
+    }
     logger.error('Error fetching updates:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des mises à jour' });
   }
@@ -41,6 +61,10 @@ export const getUpdate = async (req: AuthRequest, res: Response) => {
 
     res.json(result.rows[0]);
   } catch (error) {
+    if (isTableMissingError(error, 'software_updates')) {
+      logger.warn('software_updates table missing while fetching single update');
+      return res.status(503).json(updatesFeatureUnavailable('software_updates'));
+    }
     logger.error('Error fetching update:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération de la mise à jour' });
   }
@@ -83,6 +107,10 @@ export const createUpdate = async (req: AuthRequest, res: Response) => {
     logger.info('Update created:', { id: result.rows[0].id, version });
     res.status(201).json(result.rows[0]);
   } catch (error) {
+    if (isTableMissingError(error, 'software_updates')) {
+      logger.warn('software_updates table missing while creating update');
+      return res.status(503).json(updatesFeatureUnavailable('software_updates'));
+    }
     logger.error('Error creating update:', error);
     res.status(500).json({ error: 'Erreur lors de la création de la mise à jour' });
   }
@@ -114,6 +142,10 @@ export const updateUpdate = async (req: AuthRequest, res: Response) => {
     logger.info('Update updated:', { id, version });
     res.json(result.rows[0]);
   } catch (error) {
+    if (isTableMissingError(error, 'software_updates')) {
+      logger.warn('software_updates table missing while updating update');
+      return res.status(503).json(updatesFeatureUnavailable('software_updates'));
+    }
     logger.error('Error updating update:', error);
     res.status(500).json({ error: 'Erreur lors de la mise à jour' });
   }
@@ -135,6 +167,10 @@ export const deleteUpdate = async (req: AuthRequest, res: Response) => {
     logger.info('Update deleted:', { id });
     res.json({ message: 'Mise à jour supprimée avec succès' });
   } catch (error) {
+    if (isTableMissingError(error, 'software_updates')) {
+      logger.warn('software_updates table missing while deleting update');
+      return res.status(503).json(updatesFeatureUnavailable('software_updates'));
+    }
     logger.error('Error deleting update:', error);
     res.status(500).json({ error: 'Erreur lors de la suppression de la mise à jour' });
   }
@@ -160,6 +196,10 @@ export const getUpdateDeployments = async (req: AuthRequest, res: Response) => {
 
     res.json(result.rows);
   } catch (error) {
+    if (isTableMissingError(error, 'update_deployments')) {
+      logger.warn('update_deployments table missing, returning empty deployment list');
+      return res.json([]);
+    }
     logger.error('Error fetching update deployments:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des déploiements de mises à jour' });
   }
@@ -192,6 +232,10 @@ export const getUpdateDeployment = async (req: AuthRequest, res: Response) => {
 
     res.json(result.rows[0]);
   } catch (error) {
+    if (isTableMissingError(error, 'update_deployments')) {
+      logger.warn('update_deployments table missing while fetching single deployment');
+      return res.status(503).json(updatesFeatureUnavailable('update_deployments'));
+    }
     logger.error('Error fetching update deployment:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération du déploiement de mise à jour' });
   }
@@ -211,6 +255,10 @@ export const createUpdateDeployment = async (req: AuthRequest, res: Response) =>
     logger.info('Update deployment created:', { id: result.rows[0].id, update_id, target_type, target_id });
     res.status(201).json(result.rows[0]);
   } catch (error) {
+    if (isTableMissingError(error, 'update_deployments')) {
+      logger.warn('update_deployments table missing while creating deployment');
+      return res.status(503).json(updatesFeatureUnavailable('update_deployments'));
+    }
     logger.error('Error creating update deployment:', error);
     res.status(500).json({ error: 'Erreur lors de la création du déploiement de mise à jour' });
   }
@@ -241,6 +289,10 @@ export const updateUpdateDeployment = async (req: AuthRequest, res: Response) =>
     logger.info('Update deployment updated:', { id, status, progress });
     res.json(result.rows[0]);
   } catch (error) {
+    if (isTableMissingError(error, 'update_deployments')) {
+      logger.warn('update_deployments table missing while updating deployment');
+      return res.status(503).json(updatesFeatureUnavailable('update_deployments'));
+    }
     logger.error('Error updating update deployment:', error);
     res.status(500).json({ error: 'Erreur lors de la mise à jour du déploiement de mise à jour' });
   }
@@ -262,6 +314,10 @@ export const deleteUpdateDeployment = async (req: AuthRequest, res: Response) =>
     logger.info('Update deployment deleted:', { id });
     res.json({ message: 'Déploiement de mise à jour supprimé avec succès' });
   } catch (error) {
+    if (isTableMissingError(error, 'update_deployments')) {
+      logger.warn('update_deployments table missing while deleting deployment');
+      return res.status(503).json(updatesFeatureUnavailable('update_deployments'));
+    }
     logger.error('Error deleting update deployment:', error);
     res.status(500).json({ error: 'Erreur lors de la suppression du déploiement de mise à jour' });
   }
