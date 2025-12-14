@@ -146,11 +146,38 @@ print_step "Création de l'archive de déploiement..."
 
 # Supprimer les attributs étendus macOS (xattr) pour éviter les warnings
 # "Ignoring unknown extended header keyword" lors de l'extraction sur Linux
+# Note: COPYFILE_DISABLE=1 gère déjà les fichiers AppleDouble dans tar
 if command -v xattr &> /dev/null; then
-    print_step "Suppression des attributs étendus macOS..."
-    xattr -cr ${DEPLOY_DIR} 2>/dev/null || true
+    print_step "Suppression des attributs étendus macOS (timeout 30s)..."
+    # Utiliser timeout si disponible, sinon skip après 30s
+    if command -v gtimeout &> /dev/null; then
+        gtimeout 30 xattr -cr ${DEPLOY_DIR} 2>/dev/null || print_warning "xattr ignoré (timeout ou erreur)"
+    elif command -v timeout &> /dev/null; then
+        timeout 30 xattr -cr ${DEPLOY_DIR} 2>/dev/null || print_warning "xattr ignoré (timeout ou erreur)"
+    else
+        # Pas de timeout disponible, exécuter en arrière-plan avec kill après 30s
+        xattr -cr ${DEPLOY_DIR} 2>/dev/null &
+        XATTR_PID=$!
+        sleep 1
+        if ps -p $XATTR_PID > /dev/null 2>&1; then
+            # Toujours en cours après 1s, attendre max 29s de plus
+            for i in {1..29}; do
+                sleep 1
+                if ! ps -p $XATTR_PID > /dev/null 2>&1; then
+                    break
+                fi
+                if [ $i -eq 29 ]; then
+                    kill $XATTR_PID 2>/dev/null || true
+                    print_warning "xattr interrompu (timeout 30s)"
+                fi
+            done
+        fi
+        wait $XATTR_PID 2>/dev/null || true
+    fi
+    print_success "Attributs étendus traités"
 fi
 
+print_step "Compression de l'archive..."
 cd raspberry
 # COPYFILE_DISABLE=1 empêche tar d'inclure les fichiers ._ (AppleDouble)
 COPYFILE_DISABLE=1 tar -czf neopro-raspberry-deploy.tar.gz deploy/
