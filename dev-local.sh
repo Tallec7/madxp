@@ -120,6 +120,13 @@ else
 fi
 
 echo ""
+echo -e "${BLUE}🧹 Nettoyage des ports...${NC}"
+# Tuer les processus qui pourraient bloquer les ports
+lsof -ti:3003,4200,4300,3001,8081 2>/dev/null | xargs kill -9 2>/dev/null || true
+sleep 1
+echo -e "${GREEN}✓${NC} Ports nettoyés"
+
+echo ""
 echo -e "${BLUE}🚀 Démarrage des services...${NC}"
 echo ""
 
@@ -145,7 +152,8 @@ if ps -p $PID_SOCKET > /dev/null; then
     echo -e "${GREEN}✓${NC} Socket.IO started (PID: $PID_SOCKET)"
 else
     echo -e "${RED}❌ Échec démarrage Socket.IO${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠${NC}  Vérifiez logs/socket.log pour plus de détails"
+    cleanup
 fi
 
 # 2. Démarrer l'interface admin (mode démo)
@@ -166,7 +174,8 @@ if ps -p $PID_ADMIN > /dev/null; then
     echo -e "${GREEN}✓${NC} Admin Interface started (PID: $PID_ADMIN, mode: ${ADMIN_MODE})"
 else
     echo -e "${RED}❌ Échec démarrage Admin${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠${NC}  Vérifiez logs/admin.log pour plus de détails"
+    cleanup
 fi
 
 # 3. Démarrer Angular Dev Server
@@ -190,8 +199,8 @@ if ps -p $PID_CENTRAL_SERVER > /dev/null; then
     echo -e "${GREEN}✓${NC} Central Server started (PID: $PID_CENTRAL_SERVER)"
 else
     echo -e "${RED}❌ Échec démarrage Central Server${NC}"
-    echo "Vérifiez central-server/.env et votre base PostgreSQL locale."
-    exit 1
+    echo -e "${YELLOW}⚠${NC}  Vérifiez central-server/.env et logs/central-server.log"
+    cleanup
 fi
 
 # 5. Démarrer le central dashboard
@@ -206,7 +215,8 @@ if ps -p $PID_CENTRAL_DASHBOARD > /dev/null; then
     echo -e "${GREEN}✓${NC} Central Dashboard started (PID: $PID_CENTRAL_DASHBOARD)"
 else
     echo -e "${RED}❌ Échec démarrage Central Dashboard${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠${NC}  Vérifiez logs/central-dashboard.log pour plus de détails"
+    cleanup
 fi
 
 echo ""
@@ -248,5 +258,7 @@ echo ""
 echo -e "${YELLOW}Appuyez sur Ctrl+C pour arrêter tous les services${NC}"
 echo ""
 
-# Garder le script actif
-wait $PID_ANGULAR
+# Garder le script actif indéfiniment
+while true; do
+    sleep 1
+done
