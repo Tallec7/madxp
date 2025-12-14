@@ -1881,7 +1881,14 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   @Output() configDeployed = new EventEmitter<void>();
 
   activeTab: 'form' | 'json' | 'history' = 'form';
-  loading = false;
+  private _loading = false;
+  get loading(): boolean {
+    return this._loading;
+  }
+  set loading(value: boolean) {
+    console.log('[ConfigEditor] loading setter called:', value, 'stack:', new Error().stack?.split('\n').slice(1, 4).join(' <- '));
+    this._loading = value;
+  }
   deploying = false;
   hasChanges = false;
   isValid = true;
