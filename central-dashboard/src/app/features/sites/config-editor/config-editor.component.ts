@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, interval } from 'rxjs';
@@ -1923,7 +1923,8 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     private sitesService: SitesService,
     private notificationService: NotificationService,
     private analyticsService: AnalyticsService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -2074,8 +2075,12 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
               this.syncJsonFromConfig();
               this.notificationService.info('Configuration vide. Vous pouvez en créer une nouvelle.');
             }
-            // Force Angular change detection
-            this.cdr.detectChanges();
+            // Force Angular change detection inside zone
+            console.log('[ConfigEditor] Running detectChanges in NgZone');
+            this.ngZone.run(() => {
+              this.cdr.detectChanges();
+              console.log('[ConfigEditor] detectChanges completed');
+            });
           } else if (status.status === 'failed') {
             console.log('[ConfigEditor] Status is failed');
             this.configPollSubscription?.unsubscribe();
@@ -2084,7 +2089,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
             this.originalConfig = null;
             this.syncJsonFromConfig();
             this.notificationService.warning('Échec de récupération. Vous pouvez créer une nouvelle configuration.');
-            this.cdr.detectChanges();
+            this.ngZone.run(() => this.cdr.detectChanges());
           } else {
             console.log('[ConfigEditor] Status is:', status.status, '- continuing poll');
           }
