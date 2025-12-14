@@ -196,3 +196,4 @@ export interface AnalyticsCategory {
 
 // Re-export site config models
 export * from './site-config.model';
+export * from './admin';

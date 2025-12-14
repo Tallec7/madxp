@@ -54,6 +54,10 @@ import { User } from '../../core/models';
               <span class="icon">🏷️</span>
               <span>Catégories Analytics</span>
             </a>
+            <a routerLink="/admin/local" routerLinkActive="active" class="nav-item">
+              <span class="icon">🛠️</span>
+              <span>Console locale</span>
+            </a>
           </div>
         </nav>
 

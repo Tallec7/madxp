@@ -63,6 +63,12 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['admin'] },
         loadComponent: () => import('./features/admin/analytics-categories/analytics-categories.component').then(m => m.AnalyticsCategoriesComponent)
+      },
+      {
+        path: 'admin/local',
+        canActivate: [roleGuard],
+        data: { roles: ['admin'] },
+        loadComponent: () => import('./features/admin/local-admin/local-admin.component').then(m => m.LocalAdminComponent)
       }
     ]
   },
