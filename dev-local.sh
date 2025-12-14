@@ -113,7 +113,7 @@ fi
 if [ ! -d "central-dashboard/node_modules" ]; then
     echo "Installation des dépendances central dashboard..."
     cd central-dashboard
-    npm install
+    npm install --legacy-peer-deps
     cd ..
 else
     echo -e "${GREEN}✓${NC} Dépendances central dashboard OK"
