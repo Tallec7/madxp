@@ -2097,39 +2097,50 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   }
 
   private setConfig(configuration: SiteConfiguration): void {
-    // Normalize categories to ensure videos and subCategories arrays exist
-    const normalizedCategories = (configuration.categories || []).map(cat => ({
-      ...cat,
-      videos: cat.videos || [],
-      subCategories: (cat.subCategories || []).map(subcat => ({
-        ...subcat,
-        videos: subcat.videos || [],
-      })),
-    }));
+    try {
+      console.log('[ConfigEditor] setConfig() START');
+      // Normalize categories to ensure videos and subCategories arrays exist
+      const normalizedCategories = (configuration.categories || []).map(cat => ({
+        ...cat,
+        videos: cat.videos || [],
+        subCategories: (cat.subCategories || []).map(subcat => ({
+          ...subcat,
+          videos: subcat.videos || [],
+        })),
+      }));
+      console.log('[ConfigEditor] normalizedCategories:', normalizedCategories.length);
 
-    // Normalize timeCategories - use config values or defaults
-    const defaultTimeCategories = this.getEmptyConfig().timeCategories!;
-    const normalizedTimeCategories = configuration.timeCategories?.length
-      ? configuration.timeCategories.map(tc => ({
-          ...tc,
-          categoryIds: tc.categoryIds || [],
-        }))
-      : defaultTimeCategories;
+      // Normalize timeCategories - use config values or defaults
+      const defaultTimeCategories = this.getEmptyConfig().timeCategories!;
+      const normalizedTimeCategories = configuration.timeCategories?.length
+        ? configuration.timeCategories.map(tc => ({
+            ...tc,
+            categoryIds: tc.categoryIds || [],
+          }))
+        : defaultTimeCategories;
+      console.log('[ConfigEditor] normalizedTimeCategories:', normalizedTimeCategories.length);
 
-    this.config = {
-      ...this.getEmptyConfig(),
-      ...configuration,
-      remote: { ...this.getEmptyConfig().remote, ...configuration.remote },
-      auth: { ...this.getEmptyConfig().auth, ...configuration.auth },
-      sync: { ...this.getEmptyConfig().sync, ...configuration.sync },
-      sponsors: configuration.sponsors || [],
-      categories: normalizedCategories,
-      timeCategories: normalizedTimeCategories,
-    };
-    this.originalConfig = JSON.parse(JSON.stringify(this.config));
-    this.syncJsonFromConfig();
-    this.hasChanges = false;
-    this.validate();
+      this.config = {
+        ...this.getEmptyConfig(),
+        ...configuration,
+        remote: { ...this.getEmptyConfig().remote, ...configuration.remote },
+        auth: { ...this.getEmptyConfig().auth, ...configuration.auth },
+        sync: { ...this.getEmptyConfig().sync, ...configuration.sync },
+        sponsors: configuration.sponsors || [],
+        categories: normalizedCategories,
+        timeCategories: normalizedTimeCategories,
+      };
+      console.log('[ConfigEditor] this.config set');
+      this.originalConfig = JSON.parse(JSON.stringify(this.config));
+      console.log('[ConfigEditor] originalConfig set');
+      this.syncJsonFromConfig();
+      console.log('[ConfigEditor] syncJsonFromConfig done');
+      this.hasChanges = false;
+      this.validate();
+      console.log('[ConfigEditor] setConfig() COMPLETE - loading should be false now:', this.loading);
+    } catch (error) {
+      console.error('[ConfigEditor] setConfig() ERROR:', error);
+    }
   }
 
   private syncJsonFromConfig(): void {
