@@ -102,11 +102,11 @@ Ou directement dans le Shell Render :
 
 ```bash
 # Tester la santé du serveur
-curl https://neopro-central-server.onrender.com/health
+curl https://neopro-central.onrender.com/health
 # Devrait retourner: {"status":"ok","timestamp":"..."}
 
 # Tester l'API
-curl https://neopro-central-server.onrender.com/api/sites
+curl https://neopro-central.onrender.com/api/sites
 # Devrait retourner: {"sites":[]}
 ```
 
@@ -129,7 +129,7 @@ sudo node scripts/register-site.js
 
 **Répondre aux questions :**
 ```
-Central Server URL: https://neopro-central-server.onrender.com
+Central Server URL: https://neopro-central.onrender.com
 Admin email: admin@neopro.fr
 Admin password: VotreMotDePasseSecuriseIci123!
 ```
@@ -189,14 +189,14 @@ npm run build
 ### 1. Serveur central actif
 
 ```bash
-curl https://neopro-central-server.onrender.com/health
+curl https://neopro-central.onrender.com/health
 # ✅ {"status":"ok"}
 ```
 
 ### 2. Boîtier enregistré
 
 ```bash
-curl https://neopro-central-server.onrender.com/api/sites
+curl https://neopro-central.onrender.com/api/sites
 # ✅ Devrait lister votre site
 ```
 
@@ -224,7 +224,7 @@ Aller sur le dashboard → Sites → Liste des sites
 **Solution :**
 ```bash
 # Tester l'URL
-curl https://neopro-central-server.onrender.com/health
+curl https://neopro-central.onrender.com/health
 
 # Si 404 → Vérifier le déploiement Render
 ```

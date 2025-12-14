@@ -2389,7 +2389,7 @@ launchVideo(video: Video) {
 | Ressource | URL |
 |-----------|-----|
 | Dashboard Central | https://neopro-central.onrender.com |
-| API Central | https://neopro-central-server.onrender.com |
+| API Central | https://neopro-central.onrender.com |
 | Documentation | docs/REFERENCE.md |
 | Troubleshooting | docs/TROUBLESHOOTING.md |
 

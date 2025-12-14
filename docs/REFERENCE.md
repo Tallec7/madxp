@@ -145,7 +145,7 @@ nano raspberry/config/templates/CESSON-configuration.json
   },
   "sync": {
     "enabled": true,
-    "serverUrl": "https://neopro-central-server.onrender.com",
+    "serverUrl": "https://neopro-central.onrender.com",
     "siteName": "Complexe Sportif CESSON",
     "clubName": "CESSON Handball",
     "location": {
@@ -302,7 +302,7 @@ Si aucun mot de passe n'est configuré : `GG_NEO_25k!`
 
 ### URLs
 
-- **API :** `https://neopro-central-server.onrender.com`
+- **API :** `https://neopro-central.onrender.com`
 - **Dashboard :** `https://neopro-central.onrender.com`
 
 ### Fonctionnalités
@@ -636,7 +636,7 @@ Retourne les statistiques du buffer d'analytics local.
 
 ### API Serveur Central
 
-**Base URL :** `https://neopro-central-server.onrender.com/api`
+**Base URL :** `https://neopro-central.onrender.com/api`
 
 **Endpoints :**
 

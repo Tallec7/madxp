@@ -1,290 +1,619 @@
 # Guide de mise en production - NeoPro
 
-Guide complet pour déployer NeoPro en production. Conçu pour les débutants avec des explications détaillées.
+Guide complet et détaillé pour déployer NeoPro en production. Ce guide est conçu pour les débutants : chaque étape est expliquée en détail.
 
 ---
 
 ## Sommaire
 
-1. [Vue d'ensemble : Comprendre l'architecture](#1-vue-densemble--comprendre-larchitecture)
-2. [Ce que vous allez configurer](#2-ce-que-vous-allez-configurer)
-3. [Partie 1 : Supabase (Base de données)](#3-partie-1--supabase-base-de-données)
-4. [Partie 2 : Redis Upstash (Cache)](#4-partie-2--redis-upstash-cache)
-5. [Partie 3 : Render (Serveur API)](#5-partie-3--render-serveur-api)
-6. [Partie 4 : Hostinger (Dashboard)](#6-partie-4--hostinger-dashboard)
-7. [Partie 5 : Initialiser la base de données](#7-partie-5--initialiser-la-base-de-données)
-8. [Partie 6 : Créer l'administrateur](#8-partie-6--créer-ladministrateur)
-9. [Partie 7 : Vérifier le déploiement](#9-partie-7--vérifier-le-déploiement)
-10. [Comment utiliser les outils au quotidien](#10-comment-utiliser-les-outils-au-quotidien)
+1. [Introduction : Comprendre ce qu'on va faire](#1-introduction--comprendre-ce-quon-va-faire)
+2. [Prérequis avant de commencer](#2-prérequis-avant-de-commencer)
+3. [Partie 1 : Configurer Supabase (Base de données)](#3-partie-1--configurer-supabase-base-de-données)
+4. [Partie 2 : Configurer Redis (Cache)](#4-partie-2--configurer-redis-cache)
+5. [Partie 3 : Configurer Render (Hébergement)](#5-partie-3--configurer-render-hébergement)
+6. [Partie 4 : Déployer le serveur API](#6-partie-4--déployer-le-serveur-api)
+7. [Partie 5 : Déployer le dashboard](#7-partie-5--déployer-le-dashboard)
+8. [Partie 6 : Initialiser la base de données](#8-partie-6--initialiser-la-base-de-données)
+9. [Partie 7 : Créer le compte administrateur](#9-partie-7--créer-le-compte-administrateur)
+10. [Partie 8 : Vérifier que tout fonctionne](#10-partie-8--vérifier-que-tout-fonctionne)
 11. [Configurations optionnelles](#11-configurations-optionnelles)
 12. [Dépannage](#12-dépannage)
 13. [Glossaire](#13-glossaire)
 
 ---
 
-## 1. Vue d'ensemble : Comprendre l'architecture
+## 1. Introduction : Comprendre ce qu'on va faire
 
-### Le schéma de NeoPro
+### Qu'est-ce qu'on déploie ?
+
+NeoPro est composé de plusieurs parties qui doivent fonctionner ensemble :
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                              CLOUD (Internet)                             │
-│                                                                          │
-│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────┐ │
-│  │  SUPABASE    │   │   RENDER     │   │   UPSTASH    │   │ HOSTINGER│ │
-│  │              │   │              │   │              │   │          │ │
-│  │ Base de      │◄─►│ Serveur API  │◄─►│ Cache Redis  │   │Dashboard │ │
-│  │ données      │   │ central      │   │              │   │ Admin    │ │
-│  │ PostgreSQL   │   │              │   │              │   │          │ │
-│  │              │   │              │   │              │   │          │ │
-│  │ + Stockage   │   │              │   │              │   │          │ │
-│  │ vidéos       │   │              │   │              │   │          │ │
-│  └──────────────┘   └──────┬───────┘   └──────────────┘   └─────┬────┘ │
-│                            │                                     │      │
-│                            │              ┌──────────────────────┘      │
-│                            │              │                             │
-└────────────────────────────┼──────────────┼─────────────────────────────┘
-                             │              │
-                             ▼              ▼
-              ┌────────────────────────────────────────┐
-              │         Raspberry Pi (clubs)           │
-              │                                        │
-              │  • Récupère les configs du serveur API │
-              │  • Affiche les vidéos                  │
-              │  • Envoie les statistiques             │
-              └────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                        INTERNET (Cloud)                              │
+│                                                                      │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐ │
+│  │   SUPABASE      │    │     RENDER      │    │    UPSTASH      │ │
+│  │                 │    │                 │    │                 │ │
+│  │  Base de données│◄──►│  Serveur API    │◄──►│  Cache Redis    │ │
+│  │  PostgreSQL     │    │  (central-server)│    │                 │ │
+│  │                 │    │                 │    │                 │ │
+│  │  + Stockage     │    │  Dashboard      │    │                 │ │
+│  │  (vidéos)       │    │  (interface web)│    │                 │ │
+│  └─────────────────┘    └────────┬────────┘    └─────────────────┘ │
+│                                  │                                  │
+└──────────────────────────────────┼──────────────────────────────────┘
+                                   │
+                                   ▼
+                    ┌─────────────────────────┐
+                    │    Raspberry Pi         │
+                    │    (dans les clubs)     │
+                    │                         │
+                    │  Se synchronise avec    │
+                    │  le serveur central     │
+                    └─────────────────────────┘
 ```
 
-### Quel service fait quoi ?
+### Explication de chaque service
 
-| Service | Rôle | Qui l'utilise | URL finale |
-|---------|------|---------------|------------|
-| **Supabase** | Stocke les données (utilisateurs, clubs, configs) et les vidéos | Le serveur API | https://supabase.com/dashboard |
-| **Upstash** | Cache rapide pour les sessions et données temporaires | Le serveur API | https://console.upstash.com |
-| **Render** | Fait tourner le serveur API (le "cerveau") | Les Raspberry Pi + le Dashboard | https://neopro-central.onrender.com |
-| **Hostinger** | Héberge le dashboard d'administration | Vous (l'admin) | https://neopro-admin.kalonpartners.bzh |
+| Service | C'est quoi ? | Pourquoi on en a besoin ? | Coût |
+|---------|--------------|---------------------------|------|
+| **Supabase** | Une base de données PostgreSQL hébergée + stockage de fichiers | Stocker les utilisateurs, les clubs, les configurations, et les vidéos | Gratuit (500 MB de données, 1 GB de fichiers) |
+| **Upstash** | Un cache Redis hébergé | Accélérer l'application et gérer les sessions en temps réel | Gratuit (10 000 requêtes/jour) |
+| **Render** | Un hébergeur d'applications web | Faire tourner notre serveur API et notre interface web | Gratuit (avec mise en veille) ou 7$/mois (toujours actif) |
+
+### Combien de temps ça prend ?
+
+- **Première fois** : 1h30 à 2h (en suivant ce guide pas à pas)
+- **Avec de l'expérience** : 30-45 minutes
+
+### Ce dont vous aurez besoin
+
+- Un ordinateur avec un navigateur web
+- Une adresse email
+- Un compte GitHub (gratuit)
+- Le code source de NeoPro sur GitHub
 
 ---
 
-## 2. Ce que vous allez configurer
+## 2. Prérequis avant de commencer
 
-### Où vont les informations que vous notez ?
+### 2.1. Avoir un compte GitHub
 
-Pendant ce guide, vous allez récupérer des "clés" et "URLs". Voici **exactement** où chacune sera utilisée :
+GitHub est une plateforme qui héberge le code source. Tous les services qu'on va utiliser peuvent se connecter à GitHub.
+
+**Si vous n'avez pas de compte GitHub :**
+
+1. Aller sur https://github.com
+2. Cliquer sur **Sign up** (en haut à droite)
+3. Suivre les étapes :
+   - Entrer votre email
+   - Créer un mot de passe
+   - Choisir un nom d'utilisateur
+   - Résoudre le puzzle de vérification
+   - Cliquer sur **Create account**
+4. Vérifier votre email (GitHub envoie un code de confirmation)
+5. Choisir le plan gratuit (**Free**) quand on vous le demande
+
+### 2.2. Avoir accès au code NeoPro
+
+Le code doit être dans votre compte GitHub. Deux options :
+
+**Option A : Vous avez déjà accès au repo (recommandé)**
+- Le propriétaire du repo vous a ajouté comme collaborateur
+- Vous pouvez voir le code sur https://github.com/[organisation]/neopro
+
+**Option B : Vous devez "forker" le repo**
+1. Aller sur la page du repo NeoPro
+2. Cliquer sur le bouton **Fork** (en haut à droite)
+3. Cliquer sur **Create fork**
+4. Le code est maintenant copié dans votre compte
+
+### 2.3. Préparer un fichier pour noter vos informations
+
+Pendant ce guide, vous allez collecter plusieurs informations importantes. Créez un fichier texte sur votre ordinateur (ou utilisez un gestionnaire de mots de passe) pour noter :
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    OÙ METTRE CHAQUE INFORMATION                         │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  SUPABASE vous donne :                                                  │
-│  ├── DATABASE_URL ────────────► Variables Render (central-server)       │
-│  ├── SUPABASE_URL ────────────► Variables Render (central-server)       │
-│  └── SUPABASE_SERVICE_KEY ───► Variables Render (central-server)        │
-│                                                                         │
-│  UPSTASH vous donne :                                                   │
-│  └── REDIS_URL ──────────────► Variables Render (central-server)        │
-│                                                                         │
-│  VOUS générez :                                                         │
-│  ├── JWT_SECRET ─────────────► Variables Render (central-server)        │
-│  └── MFA_ENCRYPTION_KEY ────► Variables Render (central-server)         │
-│                                                                         │
-│  RENDER vous donne :                                                    │
-│  └── URL du serveur ─────────► Config Hostinger (API_URL)               │
-│                                 + ALLOWED_ORIGINS sur Render            │
-│                                                                         │
-│  HOSTINGER vous donne :                                                 │
-│  └── URL du dashboard ───────► ALLOWED_ORIGINS sur Render               │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+=== INFORMATIONS NEOPRO - À GARDER SECRET ===
+
+Date de configuration : _______________
+
+SUPABASE
+--------
+- Project URL :
+- Database Password :
+- DATABASE_URL (avec pooler) :
+- SUPABASE_URL :
+- SUPABASE_SERVICE_KEY :
+
+UPSTASH (Redis)
+---------------
+- REDIS_URL :
+
+RENDER
+------
+- URL du serveur API :
+- URL du dashboard :
+
+SECRETS GÉNÉRÉS
+---------------
+- JWT_SECRET :
+- MFA_ENCRYPTION_KEY :
+
+ADMIN
+-----
+- Email admin :
+- Mot de passe admin :
 ```
 
-### Fiche à remplir au fur et à mesure
-
-Créez un fichier texte et copiez ce template. Vous le remplirez au fur et à mesure :
-
-```
-=== CONFIGURATION NEOPRO ===
-Date : _______________
-
-1. SUPABASE (Base de données)
-   - Database Password :
-   - DATABASE_URL (avec pooler, port 6543) :
-   - SUPABASE_URL :
-   - SUPABASE_SERVICE_KEY :
-
-2. UPSTASH (Redis)
-   - REDIS_URL :
-
-3. SECRETS À GÉNÉRER
-   - JWT_SECRET :
-   - MFA_ENCRYPTION_KEY :
-
-4. RENDER (Serveur API)
-   - URL : https://neopro-central.onrender.com
-
-5. HOSTINGER (Dashboard)
-   - URL :
-
-6. ADMIN
-   - Email :
-   - Mot de passe :
-```
+**IMPORTANT : Ne partagez JAMAIS ce fichier. Ces informations permettent d'accéder à toute votre infrastructure.**
 
 ---
 
-## 3. Partie 1 : Supabase (Base de données)
+## 3. Partie 1 : Configurer Supabase (Base de données)
 
-### Pourquoi Supabase ?
+### C'est quoi Supabase ?
 
-Supabase stocke :
-- Les **utilisateurs** et leurs mots de passe
-- Les **clubs/sites** et leurs configurations
-- Les **vidéos** (dans le Storage)
-- Les **statistiques** d'utilisation
+Supabase est un service qui fournit :
+- **Une base de données PostgreSQL** : C'est là où seront stockées toutes les informations (utilisateurs, clubs, configurations...)
+- **Un espace de stockage** : Pour stocker les vidéos et les fichiers
+- **Une interface d'administration** : Pour voir et modifier les données facilement
 
-### Étape 3.1 : Créer un compte
+**Pourquoi PostgreSQL ?** C'est une base de données très fiable, utilisée par des millions d'applications. Elle est gratuite et open-source.
 
-1. Aller sur https://supabase.com
-2. Cliquer **Start your project**
-3. Se connecter avec **GitHub** (cliquer "Continue with GitHub")
-4. Autoriser Supabase
+### Étape 3.1 : Créer un compte Supabase
 
-### Étape 3.2 : Créer le projet
+1. **Ouvrir Supabase**
+   - Dans votre navigateur, aller sur : https://supabase.com
+   - La page d'accueil de Supabase s'affiche
 
-1. Cliquer **New Project**
-2. Remplir :
-   - **Name** : `neopro-production`
-   - **Database Password** : Cliquer **Generate a password**
-   - **Region** : `West EU (Paris)`
-3. **COPIER LE MOT DE PASSE** dans votre fiche (vous ne le reverrez plus !)
-4. Cliquer **Create new project**
-5. Attendre 2-3 minutes
+2. **Cliquer sur "Start your project"**
+   - C'est un bouton vert en haut à droite de la page
+   - Vous êtes redirigé vers la page de connexion
 
-### Étape 3.3 : Récupérer DATABASE_URL
+3. **Se connecter avec GitHub**
+   - Cliquer sur le bouton **Continue with GitHub**
+   - Une fenêtre s'ouvre demandant d'autoriser Supabase
+   - Cliquer sur **Authorize supabase**
+   - Vous êtes maintenant connecté à Supabase
 
-1. Menu gauche → **Settings** (engrenage) → **Database**
-2. Descendre jusqu'à **Connection Pooling**
-3. Vérifier que c'est **activé** (toggle vert)
-4. Juste en dessous, section **Connection string** → onglet **URI**
-5. Copier l'URL. Elle ressemble à :
+4. **Vérifier que vous êtes connecté**
+   - Vous devez voir le "Dashboard" de Supabase
+   - Il affiche "Welcome to Supabase" ou la liste de vos projets (vide si c'est nouveau)
+
+### Étape 3.2 : Créer un nouveau projet
+
+Un "projet" Supabase = une base de données complète avec son stockage.
+
+1. **Cliquer sur "New Project"**
+   - Si c'est votre premier projet, le bouton est au centre de la page
+   - Sinon, il est en haut à droite
+
+2. **Sélectionner une organisation**
+   - Si on vous demande de choisir une organisation, sélectionnez votre nom (Personal)
+   - Ou cliquez sur "Create a new organization" si demandé :
+     - Name : `MonEntreprise` (ou votre nom)
+     - Type : `Personal`
+     - Cliquer sur **Create organization**
+
+3. **Remplir les informations du projet**
+
+   | Champ | Que mettre | Explication |
+   |-------|------------|-------------|
+   | **Name** | `neopro-production` | Le nom de votre projet. Choisissez quelque chose de reconnaissable. |
+   | **Database Password** | Cliquer sur **Generate a password** | Un mot de passe sera généré automatiquement. **TRÈS IMPORTANT : copiez ce mot de passe maintenant et collez-le dans votre fichier de notes.** Vous ne pourrez plus le voir après ! |
+   | **Region** | `West EU (Paris)` | Choisissez la région la plus proche de vos utilisateurs. Pour la France, choisir Paris ou Frankfurt. |
+   | **Pricing Plan** | `Free` | Le plan gratuit suffit pour commencer. |
+
+4. **Créer le projet**
+   - Vérifier que vous avez bien copié le mot de passe
+   - Cliquer sur le bouton **Create new project**
+   - Une barre de progression s'affiche
+   - **Attendre 2-3 minutes** que le projet soit créé
+   - Quand c'est prêt, vous voyez le dashboard du projet
+
+### Étape 3.3 : Récupérer les informations de connexion à la base de données
+
+Maintenant, on va récupérer les informations qui permettront à notre application de se connecter à la base de données.
+
+1. **Aller dans les paramètres**
+   - Dans le menu de gauche, cliquer sur l'icône **engrenage** ⚙️ (tout en bas)
+   - Puis cliquer sur **Database** dans le sous-menu qui apparaît
+
+2. **Trouver la section "Connection string"**
+   - Faire défiler la page vers le bas
+   - Vous verrez une section intitulée **Connection string**
+   - Il y a plusieurs onglets : URI, JDBC, etc.
+
+3. **Copier l'URI de connexion**
+   - Cliquer sur l'onglet **URI**
+   - Vous voyez une URL qui ressemble à :
+     ```
+     postgresql://postgres:[YOUR-PASSWORD]@db.abcdefghij.supabase.co:5432/postgres
+     ```
+   - Cliquer sur le bouton **Copy** à droite
+   - **Cette URL n'est PAS celle qu'on va utiliser**, mais notez-la quand même
+
+4. **Comprendre cette URL**
    ```
-   postgresql://postgres.xxxxx:[YOUR-PASSWORD]@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+   postgresql://postgres:[YOUR-PASSWORD]@db.abcdefghij.supabase.co:5432/postgres
+   │            │         │               │                        │    │
+   │            │         │               │                        │    └─ Nom de la base
+   │            │         │               │                        └─ Port (5432 = standard)
+   │            │         │               └─ Adresse du serveur
+   │            │         └─ Votre mot de passe (à remplacer !)
+   │            └─ Nom d'utilisateur
+   └─ Type de base de données
    ```
-6. **Remplacer** `[YOUR-PASSWORD]` par votre vrai mot de passe
-7. Noter dans votre fiche comme **DATABASE_URL**
 
-**Vérification :** L'URL doit avoir :
-- Le port `6543` (pas 5432)
-- `?pgbouncer=true` à la fin
-- Votre vrai mot de passe
+### Étape 3.4 : Activer et récupérer l'URL du Connection Pooler
 
-### Étape 3.4 : Récupérer SUPABASE_URL et SUPABASE_SERVICE_KEY
+**C'est quoi le Connection Pooler ?**
 
-1. Menu gauche → **Settings** → **API**
-2. Copier :
-   - **Project URL** → C'est votre `SUPABASE_URL`
-   - **service_role** (cliquer Reveal) → C'est votre `SUPABASE_SERVICE_KEY`
-3. Noter les deux dans votre fiche
+Quand une application se connecte à une base de données, elle ouvre une "connexion". Ouvrir et fermer des connexions prend du temps et des ressources. Le "Connection Pooler" (PgBouncer) maintient un groupe de connexions ouvertes et les partage entre les demandes. C'est beaucoup plus efficace.
 
-### Étape 3.5 : Créer les buckets de stockage
+**Pour les hébergeurs comme Render, le pooler est OBLIGATOIRE** car ils limitent le nombre de connexions.
 
-1. Menu gauche → **Storage**
-2. Cliquer **New bucket**
-   - Name : `videos`
-   - Cocher **Public bucket**
-   - Cliquer **Create bucket**
-3. Répéter pour créer un bucket `software-updates` (aussi public)
+1. **Trouver la section Connection Pooling**
+   - Toujours sur la page Database (Settings > Database)
+   - Faire défiler vers le bas jusqu'à voir **Connection Pooling**
 
-### Étape 3.6 : Configurer les permissions des buckets
+2. **Vérifier que c'est activé**
+   - Il y a un toggle (interrupteur)
+   - Il doit être vert/activé (ON)
+   - S'il est gris/désactivé, cliquer dessus pour l'activer
 
-Pour chaque bucket (`videos` et `software-updates`) :
+3. **Copier l'URL du pooler**
+   - En dessous du toggle, il y a une autre section **Connection string**
+   - Cliquer sur l'onglet **URI**
+   - Copier cette URL. Elle ressemble à :
+     ```
+     postgresql://postgres.abcdefghij:[YOUR-PASSWORD]@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+     ```
+   - **C'est cette URL qu'on va utiliser comme DATABASE_URL**
 
-1. Cliquer sur le bucket
-2. Onglet **Policies**
-3. Cliquer **New policy** → **For full customization**
-4. Créer policy 1 (lecture) :
-   - Name : `Lecture publique`
-   - Operation : **SELECT**
-   - Definition : `true`
-   - Sauvegarder
-5. Créer policy 2 (upload) :
-   - Name : `Upload serveur`
-   - Operation : **INSERT**
-   - Definition : `auth.role() = 'service_role'`
-   - Sauvegarder
+4. **Remplacer le mot de passe dans l'URL**
+   - L'URL contient `[YOUR-PASSWORD]`
+   - Remplacez cette partie par le vrai mot de passe que vous avez noté à l'étape 3.2
+   - Exemple : si votre mot de passe est `MonSuperMotDePasse123!`, l'URL devient :
+     ```
+     postgresql://postgres.abcdefghij:MonSuperMotDePasse123!@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+     ```
 
-### Ce que vous avez maintenant
+5. **Noter dans votre fichier**
+   ```
+   DATABASE_URL = postgresql://postgres.abcdefghij:MonSuperMotDePasse123!@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+   ```
 
-Dans votre fiche, vous devez avoir rempli :
-- ✅ DATABASE_URL
-- ✅ SUPABASE_URL
-- ✅ SUPABASE_SERVICE_KEY
+**IMPORTANT : Vérifiez ces points dans votre URL :**
+- Le port est `6543` (PAS `5432`)
+- L'URL se termine par `?pgbouncer=true`
+- Le mot de passe est celui que vous avez noté (pas `[YOUR-PASSWORD]`)
+
+### Étape 3.5 : Récupérer les clés API Supabase
+
+L'application a besoin de clés spéciales pour communiquer avec Supabase.
+
+1. **Aller dans les paramètres API**
+   - Dans le menu de gauche, cliquer sur **Settings** (engrenage ⚙️)
+   - Puis cliquer sur **API**
+
+2. **Copier le Project URL**
+   - En haut de la page, vous voyez **Project URL**
+   - C'est une URL comme : `https://abcdefghij.supabase.co`
+   - Cliquer sur **Copy**
+   - **Noter dans votre fichier :**
+     ```
+     SUPABASE_URL = https://abcdefghij.supabase.co
+     ```
+
+3. **Copier la clé service_role**
+   - Plus bas sur la page, vous voyez **Project API keys**
+   - Il y a deux clés :
+     - `anon` `public` : Pour les accès publics (on n'en a pas besoin)
+     - `service_role` `secret` : Pour les accès administrateur (celle qu'on veut)
+   - À côté de `service_role`, cliquer sur **Reveal** pour voir la clé
+   - C'est une longue chaîne qui commence par `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+   - Cliquer sur **Copy**
+   - **Noter dans votre fichier :**
+     ```
+     SUPABASE_SERVICE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....(très long)
+     ```
+
+**⚠️ ATTENTION SÉCURITÉ :**
+- La clé `service_role` donne un accès TOTAL à votre base de données
+- Ne la mettez JAMAIS dans du code côté client (navigateur)
+- Ne la partagez JAMAIS publiquement
+- Si elle est compromise, vous pouvez la régénérer dans les paramètres
+
+### Étape 3.6 : Créer les buckets de stockage
+
+Les "buckets" sont des dossiers dans le cloud pour stocker des fichiers (comme les vidéos).
+
+1. **Aller dans Storage**
+   - Dans le menu de gauche, cliquer sur **Storage** (icône de dossier)
+
+2. **Créer le bucket "videos"**
+   - Cliquer sur **New bucket**
+   - Une fenêtre popup s'ouvre
+   - Remplir :
+     - **Name** : `videos`
+     - **Public bucket** : **Cocher la case** ✅
+       - Cela permet aux Raspberry Pi de télécharger les vidéos sans authentification
+   - Cliquer sur **Create bucket**
+
+3. **Créer le bucket "software-updates"**
+   - Cliquer à nouveau sur **New bucket**
+   - Remplir :
+     - **Name** : `software-updates`
+     - **Public bucket** : **Cocher la case** ✅
+   - Cliquer sur **Create bucket**
+
+4. **Vérifier**
+   - Vous devez maintenant voir deux buckets dans la liste :
+     - `videos`
+     - `software-updates`
+
+### Étape 3.7 : Configurer les permissions des buckets
+
+Par défaut, même les buckets "publics" ont des restrictions. On doit créer des "policies" (règles) pour autoriser les accès.
+
+**Configurer le bucket "videos" :**
+
+1. **Ouvrir le bucket**
+   - Cliquer sur `videos` dans la liste
+
+2. **Aller dans Policies**
+   - Cliquer sur l'onglet **Policies** (en haut)
+
+3. **Créer une policy de lecture publique**
+   - Cliquer sur **New policy**
+   - Choisir **For full customization** (en bas)
+   - Remplir le formulaire :
+
+     | Champ | Valeur |
+     |-------|--------|
+     | Policy name | `Lecture publique` |
+     | Allowed operation | Sélectionner **SELECT** |
+     | Target roles | Laisser vide (tous les rôles) |
+
+   - Dans le champ **Policy definition** (en bas), écrire simplement :
+     ```sql
+     true
+     ```
+     Cela signifie "autoriser tout le monde"
+
+   - Cliquer sur **Review**
+   - Vérifier que c'est correct, puis cliquer sur **Save policy**
+
+4. **Créer une policy d'upload pour le serveur**
+   - Cliquer à nouveau sur **New policy**
+   - Choisir **For full customization**
+   - Remplir :
+
+     | Champ | Valeur |
+     |-------|--------|
+     | Policy name | `Upload serveur` |
+     | Allowed operation | Sélectionner **INSERT** |
+     | Target roles | Laisser vide |
+
+   - Dans **Policy definition**, écrire :
+     ```sql
+     auth.role() = 'service_role'
+     ```
+     Cela signifie "seul le serveur (avec la clé service_role) peut uploader"
+
+   - Cliquer sur **Review** puis **Save policy**
+
+5. **Répéter pour le bucket "software-updates"**
+   - Retourner à la liste des buckets
+   - Cliquer sur `software-updates`
+   - Créer les mêmes deux policies (lecture publique + upload serveur)
+
+### Résumé de la Partie 1
+
+À ce stade, vous devez avoir dans votre fichier de notes :
+
+```
+SUPABASE
+--------
+- Database Password : (votre mot de passe)
+- DATABASE_URL : postgresql://postgres.xxxxx:MOTDEPASSE@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+- SUPABASE_URL : https://xxxxx.supabase.co
+- SUPABASE_SERVICE_KEY : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Et dans Supabase :
+- Un projet créé
+- Connection pooling activé
+- Deux buckets créés (videos, software-updates) avec leurs policies
 
 ---
 
-## 4. Partie 2 : Redis Upstash (Cache)
+## 4. Partie 2 : Configurer Redis (Cache)
 
-### Pourquoi Redis ?
+### C'est quoi Redis ?
 
-Redis accélère l'application en gardant en mémoire :
-- Les sessions utilisateurs
-- Les données fréquemment demandées
-- Les communications temps réel
+Redis est une base de données ultra-rapide qui stocke les données en mémoire (RAM). On l'utilise pour :
 
-### Étape 4.1 : Créer un compte
+- **Mettre en cache** : Stocker temporairement des données fréquemment demandées pour ne pas interroger la base de données à chaque fois
+- **Gérer les sessions** : Quand un utilisateur se connecte, sa session est stockée dans Redis
+- **Communication en temps réel** : Pour synchroniser les données entre plusieurs serveurs
 
-1. Aller sur https://upstash.com
-2. Cliquer **Sign Up**
-3. Se connecter avec **GitHub**
+**Pourquoi Upstash ?**
+- Service Redis gratuit et facile à utiliser
+- Fonctionne en mode "serverless" (pas besoin de gérer un serveur)
+- Connexion sécurisée par défaut
 
-### Étape 4.2 : Créer la base Redis
+### Étape 4.1 : Créer un compte Upstash
 
-1. Cliquer **Create Database**
-2. Choisir **Redis** (pas Kafka)
-3. Remplir :
-   - Name : `neopro-redis`
-   - Type : **Regional**
-   - Region : `eu-west-1` (Ireland)
-   - Cocher **TLS (SSL)**
-4. Cliquer **Create**
+1. **Ouvrir Upstash**
+   - Aller sur https://upstash.com
+   - La page d'accueil s'affiche
 
-### Étape 4.3 : Récupérer REDIS_URL
+2. **S'inscrire**
+   - Cliquer sur **Sign Up** (en haut à droite)
+   - Choisir **Continue with GitHub**
+   - Autoriser Upstash à accéder à votre compte GitHub
+   - Vous êtes maintenant sur le dashboard Upstash
 
-1. Sur la page de votre base
-2. Section **Connect to your database**
-3. Copier l'URL Redis (commence par `rediss://`)
-4. Noter dans votre fiche comme **REDIS_URL**
+### Étape 4.2 : Créer une base de données Redis
 
-### Ce que vous avez maintenant
+1. **Créer une nouvelle base**
+   - Sur le dashboard, cliquer sur **Create Database**
+   - (Si vous voyez "Redis" et "Kafka", choisir **Redis**)
 
-- ✅ REDIS_URL
+2. **Configurer la base**
+   - Une fenêtre de configuration s'ouvre
+   - Remplir :
+
+     | Champ | Valeur | Explication |
+     |-------|--------|-------------|
+     | **Name** | `neopro-redis` | Un nom pour reconnaître votre base |
+     | **Type** | `Regional` | Une seule région (gratuit) vs Global (payant) |
+     | **Region** | `eu-west-1` (Ireland) | La région la plus proche. Ireland est proche de la France. |
+     | **TLS (SSL)** | **Cocher** ✅ | Connexion sécurisée (chiffrée). Toujours activer ! |
+
+   - Cliquer sur **Create**
+
+3. **Attendre la création**
+   - La base est créée en quelques secondes
+   - Vous êtes redirigé vers la page de détails de la base
+
+### Étape 4.3 : Récupérer l'URL de connexion
+
+1. **Trouver l'URL**
+   - Sur la page de détails de votre base Redis
+   - Chercher la section **Connect to your database**
+   - Vous voyez plusieurs formats de connexion
+
+2. **Copier l'URL Redis**
+   - Chercher la ligne qui ressemble à :
+     ```
+     rediss://default:AbCdEf123456@eu1-caring-owl-12345.upstash.io:6379
+     ```
+   - Le `rediss://` (avec **deux s**) signifie connexion sécurisée TLS
+   - Cliquer sur le bouton **Copy** à côté
+
+3. **Noter dans votre fichier**
+   ```
+   REDIS_URL = rediss://default:AbCdEf123456@eu1-caring-owl-12345.upstash.io:6379
+   ```
+
+### Étape 4.4 : Comprendre le dashboard Upstash
+
+Upstash fournit un dashboard utile pour surveiller votre Redis :
+
+- **Data Browser** : Voir les données stockées
+- **CLI** : Exécuter des commandes Redis directement
+- **Metrics** : Voir l'utilisation (requêtes, mémoire...)
+
+Pour l'instant, la base est vide. Elle se remplira quand l'application sera en route.
+
+### Résumé de la Partie 2
+
+Vous devez maintenant avoir :
+
+```
+UPSTASH (Redis)
+---------------
+- REDIS_URL : rediss://default:xxxxx@eu1-xxxxx.upstash.io:6379
+```
 
 ---
 
-## 5. Partie 3 : Render (Serveur API)
+## 5. Partie 3 : Configurer Render (Hébergement)
 
-### Pourquoi Render ?
+### C'est quoi Render ?
 
-Render fait tourner le serveur API, le "cerveau" qui :
-- Reçoit les requêtes des Raspberry Pi
-- Gère l'authentification
-- Communique avec la base de données
+Render est un hébergeur web qui permet de déployer des applications. Il offre :
 
-### Étape 5.1 : Générer les secrets
+- **Web Services** : Pour faire tourner des serveurs (notre API)
+- **Static Sites** : Pour héberger des sites web statiques (notre dashboard Angular)
+- **Déploiement automatique** : À chaque fois que vous mettez à jour le code sur GitHub, Render redéploie automatiquement
 
-Avant de configurer Render, générez deux clés secrètes.
+**Pourquoi Render ?**
+- Facile à utiliser
+- Plan gratuit disponible
+- Intégration GitHub native
+- SSL gratuit (HTTPS)
 
-**Sur Mac/Linux** (Terminal) :
+### Étape 5.1 : Créer un compte Render
+
+1. **Ouvrir Render**
+   - Aller sur https://render.com
+
+2. **S'inscrire**
+   - Cliquer sur **Get Started** ou **Sign Up**
+   - Choisir **GitHub**
+   - Autoriser Render à accéder à votre compte GitHub
+   - Vous êtes sur le dashboard Render
+
+### Étape 5.2 : Connecter le repository GitHub
+
+Render doit avoir accès au code source de NeoPro.
+
+1. **Accéder aux paramètres Git**
+   - Cliquer sur votre avatar (en haut à droite)
+   - Cliquer sur **Account Settings**
+   - Dans le menu de gauche, cliquer sur **Git Providers**
+
+2. **Connecter GitHub (si pas déjà fait)**
+   - Vous devez voir "GitHub" avec un statut
+   - Si c'est "Connected" : c'est bon
+   - Si c'est "Connect" : cliquer dessus
+
+3. **Configurer les permissions**
+   - GitHub va vous demander quels repositories Render peut voir
+   - Deux options :
+     - **All repositories** : Render voit tous vos repos (simple mais moins sécurisé)
+     - **Only select repositories** : Choisir spécifiquement (recommandé)
+   - Si vous choisissez "Only select repositories" :
+     - Cliquer sur **Select repositories**
+     - Chercher et sélectionner `neopro`
+   - Cliquer sur **Install & Authorize**
+
+4. **Vérifier**
+   - Retourner sur le dashboard Render
+   - Vous devez pouvoir voir le repository `neopro` quand vous créez un nouveau service
+
+### Étape 5.3 : Générer les secrets de sécurité
+
+Avant de créer les services, on doit générer des clés secrètes pour la sécurité.
+
+**C'est quoi ces secrets ?**
+- **JWT_SECRET** : Clé pour signer les "tokens" d'authentification. Quand un utilisateur se connecte, on lui donne un token signé avec cette clé. Ça permet de vérifier que le token est authentique.
+- **MFA_ENCRYPTION_KEY** : Clé pour chiffrer les secrets MFA (authentification à deux facteurs).
+
+**Comment les générer ?**
+
+**Option A : Avec un terminal (Mac/Linux)**
+
+Ouvrir le Terminal et taper :
+
 ```bash
-# JWT_SECRET
+# Générer JWT_SECRET (64 caractères)
 openssl rand -base64 48
+```
 
-# MFA_ENCRYPTION_KEY
+Résultat exemple : `K7mN9pR2sT6vX0yB4dG7hJ1lO3qU5wE8zC2fA6iL9nM4oP7rS0tV3xY6bK8mN2`
+
+```bash
+# Générer MFA_ENCRYPTION_KEY (32 caractères)
 openssl rand -base64 24
 ```
 
-**Sur Windows** (PowerShell) :
+Résultat exemple : `X7kL9mN2pQ4rS6tU8vW0xY3zA5bC7dE9`
+
+**Option B : Avec un site web**
+
+1. Aller sur https://randomkeygen.com/
+2. Faire défiler jusqu'à **CodeIgniter Encryption Keys**
+3. Copier une clé pour JWT_SECRET
+4. Copier une autre clé pour MFA_ENCRYPTION_KEY
+
+**Option C : Avec PowerShell (Windows)**
+
 ```powershell
 # JWT_SECRET
 [Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }) -as [byte[]])
@@ -293,488 +622,725 @@ openssl rand -base64 24
 [Convert]::ToBase64String((1..24 | ForEach-Object { Get-Random -Maximum 256 }) -as [byte[]])
 ```
 
-**Ou via un site web** : https://randomkeygen.com/ → Section "CodeIgniter Encryption Keys"
-
-Noter les deux clés dans votre fiche.
-
-### Étape 5.2 : Créer un compte Render
-
-1. Aller sur https://render.com
-2. Cliquer **Get Started**
-3. Se connecter avec **GitHub**
-4. Autoriser l'accès au repo `neopro`
-
-### Étape 5.3 : Créer le Web Service
-
-1. Cliquer **New +** → **Web Service**
-2. Choisir **Build and deploy from a Git repository**
-3. Sélectionner le repo `neopro`
-4. Configurer :
-
-| Champ | Valeur |
-|-------|--------|
-| Name | `neopro-central` |
-| Region | `Frankfurt (EU Central)` |
-| Branch | `main` |
-| Root Directory | `central-server` |
-| Runtime | `Node` |
-| Build Command | `npm install && npm run build` |
-| Start Command | `npm start` |
-
-5. Instance Type : **Free** (pour tester) ou **Starter** (7$/mois, toujours actif)
-
-### Étape 5.4 : Ajouter les variables d'environnement
-
-Section **Environment Variables**, ajouter **chaque variable** :
-
-| Variable | Valeur | D'où ça vient |
-|----------|--------|---------------|
-| `NODE_ENV` | `production` | Fixe |
-| `PORT` | `3001` | Fixe |
-| `DATABASE_URL` | Votre URL | Fiche (Supabase) |
-| `SUPABASE_URL` | Votre URL | Fiche (Supabase) |
-| `SUPABASE_SERVICE_KEY` | Votre clé | Fiche (Supabase) |
-| `REDIS_URL` | Votre URL | Fiche (Upstash) |
-| `JWT_SECRET` | Votre clé | Fiche (généré) |
-| `JWT_EXPIRES_IN` | `7d` | Fixe |
-| `MFA_ISSUER` | `NeoPro` | Fixe |
-| `MFA_ENCRYPTION_KEY` | Votre clé | Fiche (généré) |
-
-### Étape 5.5 : Configurer le Health Check
-
-1. Section **Advanced** (cliquer pour développer)
-2. **Health Check Path** : `/health`
-
-### Étape 5.6 : Créer et déployer
-
-1. Cliquer **Create Web Service**
-2. Attendre le déploiement (3-5 minutes)
-3. Quand c'est **Live** (vert), noter l'URL :
-   ```
-   https://neopro-central.onrender.com
-   ```
-
-### Étape 5.7 : Tester
-
-Ouvrir dans le navigateur :
+**Noter dans votre fichier :**
 ```
-https://neopro-central.onrender.com/health
-```
-
-Vous devez voir :
-```json
-{"status":"healthy","timestamp":"...","version":"1.0.0"}
+SECRETS GÉNÉRÉS
+---------------
+- JWT_SECRET : K7mN9pR2sT6vX0yB4dG7hJ1lO3qU5wE8zC2fA6iL9nM4oP7rS0tV3xY6bK8mN2
+- MFA_ENCRYPTION_KEY : X7kL9mN2pQ4rS6tU8vW0xY3zA5bC7dE9
 ```
 
 ---
 
-## 6. Partie 4 : Hostinger (Dashboard)
+## 6. Partie 4 : Déployer le serveur API
 
-### Pourquoi Hostinger ?
+Le serveur API est le "cerveau" de NeoPro. Il :
+- Reçoit les requêtes des clients (dashboard, Raspberry Pi)
+- Communique avec la base de données
+- Gère l'authentification
+- Envoie des notifications en temps réel
 
-Hostinger héberge le dashboard d'administration (l'interface Angular).
+### Étape 6.1 : Créer un nouveau Web Service
 
-### Étape 6.1 : Préparer le build
+1. **Aller sur le dashboard Render**
+   - https://dashboard.render.com
 
-Sur votre ordinateur, dans le dossier du projet :
+2. **Créer un nouveau service**
+   - Cliquer sur le bouton **New +** (en haut à droite)
+   - Sélectionner **Web Service**
 
-```bash
-cd central-dashboard
-npm install
-npm run build:prod
-```
+3. **Choisir la source**
+   - Sélectionner **Build and deploy from a Git repository**
+   - Cliquer sur **Next**
 
-Cela génère un dossier `dist/central-dashboard/` avec les fichiers à uploader.
+4. **Sélectionner le repository**
+   - Vous voyez la liste de vos repositories GitHub
+   - Trouver `neopro`
+   - Cliquer sur **Connect** à côté
 
-### Étape 6.2 : Configurer l'URL de l'API
+### Étape 6.2 : Configurer le service
 
-Avant le build, vérifier que le fichier `central-dashboard/src/environments/environment.prod.ts` contient :
+Un formulaire de configuration s'affiche. Remplissez **exactement** comme suit :
 
-```typescript
-export const environment = {
-  production: true,
-  apiUrl: 'https://neopro-central.onrender.com'
-};
-```
+| Champ | Valeur | Explication |
+|-------|--------|-------------|
+| **Name** | `neopro-central-server` | Nom du service. Sera dans l'URL. |
+| **Region** | `Frankfurt (EU Central)` | Serveur en Europe, proche de la France |
+| **Branch** | `main` | La branche Git à déployer |
+| **Root Directory** | `central-server` | Le dossier contenant le code du serveur |
+| **Runtime** | `Node` | Le langage de programmation utilisé |
+| **Build Command** | `npm install && npm run build` | Commandes pour construire l'application |
+| **Start Command** | `npm start` | Commande pour démarrer l'application |
 
-### Étape 6.3 : Uploader sur Hostinger
+**Détails importants :**
 
-1. Se connecter à Hostinger
-2. Aller dans le **File Manager** de votre hébergement
-3. Aller dans `public_html` (ou le dossier de votre sous-domaine)
-4. Supprimer les anciens fichiers si présents
-5. Uploader tout le contenu de `dist/central-dashboard/`
-   - Les fichiers doivent être **à la racine**, pas dans un sous-dossier
-   - Structure attendue :
-     ```
-     public_html/
-     ├── index.html
-     ├── main.xxxxx.js
-     ├── styles.xxxxx.css
-     └── ...
-     ```
+- **Root Directory** : C'est crucial ! Le code du serveur est dans le sous-dossier `central-server`, pas à la racine du repo.
+- **Build Command** : `npm install` télécharge les dépendances, `npm run build` compile le code TypeScript en JavaScript.
 
-### Étape 6.4 : Configurer la redirection SPA
+### Étape 6.3 : Choisir le plan
 
-Pour que les routes Angular fonctionnent, créer un fichier `.htaccess` dans `public_html/` :
+Faire défiler jusqu'à **Instance Type** :
 
-```apache
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteBase /
-  RewriteRule ^index\.html$ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule . /index.html [L]
-</IfModule>
-```
+| Plan | Prix | Caractéristiques | Recommandation |
+|------|------|------------------|----------------|
+| **Free** | 0$ | Mise en veille après 15 min d'inactivité. Redémarre lentement (30-60 sec). | Pour tester |
+| **Starter** | 7$/mois | Toujours actif. Réponse rapide. | Pour production |
 
-### Étape 6.5 : Configurer CORS sur Render
+**Note sur le plan Free :**
+- Si personne n'utilise l'application pendant 15 minutes, Render "endort" le serveur
+- La prochaine requête prendra 30-60 secondes le temps que le serveur se réveille
+- C'est acceptable pour tester, mais pas idéal pour une utilisation réelle
 
-Le serveur doit autoriser les requêtes venant de Hostinger :
+Sélectionner le plan souhaité.
 
-1. Retourner sur Render → votre service `neopro-central`
-2. **Environment** → Ajouter une variable :
-   - Key : `ALLOWED_ORIGINS`
-   - Value : `https://neopro-admin.kalonpartners.bzh`
-3. **Save Changes** (le serveur redémarre)
+### Étape 6.4 : Ajouter les variables d'environnement
 
-### Étape 6.6 : Tester
+C'est la partie la plus importante ! Les variables d'environnement sont les paramètres de configuration de l'application.
 
-1. Ouvrir https://neopro-admin.kalonpartners.bzh
-2. Vous devez voir la page de login
-3. Si page blanche : voir section Dépannage
+1. **Faire défiler jusqu'à "Environment Variables"**
+
+2. **Cliquer sur "Add Environment Variable" pour chaque variable**
+
+3. **Ajouter les variables suivantes :**
+
+**Variables obligatoires (TOUTES requises) :**
+
+| Key (Nom) | Value (Valeur) | Explication |
+|-----------|----------------|-------------|
+| `NODE_ENV` | `production` | Indique que c'est un environnement de production |
+| `PORT` | `3001` | Port sur lequel le serveur écoute |
+| `DATABASE_URL` | `postgresql://postgres.xxxxx:...` | URL de connexion Supabase (avec pooler) - copier depuis vos notes |
+| `SUPABASE_URL` | `https://xxxxx.supabase.co` | URL du projet Supabase - copier depuis vos notes |
+| `SUPABASE_SERVICE_KEY` | `eyJhbGci...` | Clé service_role Supabase - copier depuis vos notes |
+| `REDIS_URL` | `rediss://default:...` | URL de connexion Redis - copier depuis vos notes |
+| `JWT_SECRET` | `K7mN9pR2...` | Clé secrète pour les tokens - votre clé générée |
+| `JWT_EXPIRES_IN` | `7d` | Durée de validité des tokens (7 jours) |
+| `MFA_ISSUER` | `NeoPro` | Nom affiché dans les apps d'authentification |
+| `MFA_ENCRYPTION_KEY` | `X7kL9mN2...` | Clé de chiffrement MFA - votre clé générée |
+
+**Pour ajouter chaque variable :**
+- Cliquer sur **Add Environment Variable**
+- Dans "Key", taper le nom (ex: `NODE_ENV`)
+- Dans "Value", taper la valeur (ex: `production`)
+- Répéter pour chaque variable
+
+**Vérification :**
+- Vous devez avoir **10 variables** au total
+- Vérifiez qu'il n'y a pas d'espaces en début ou fin de valeur
+- Vérifiez que DATABASE_URL contient bien votre mot de passe (pas `[YOUR-PASSWORD]`)
+
+### Étape 6.5 : Configurer le Health Check
+
+Le "Health Check" permet à Render de vérifier que votre application fonctionne.
+
+1. **Faire défiler jusqu'à "Advanced"**
+2. **Cliquer pour développer la section**
+3. **Trouver "Health Check Path"**
+4. **Entrer :** `/health`
+
+Cela signifie que Render va régulièrement appeler `https://votre-app/health` pour vérifier que le serveur répond.
+
+### Étape 6.6 : Créer le service
+
+1. **Vérifier une dernière fois**
+   - Toutes les variables sont remplies ?
+   - Le Root Directory est bien `central-server` ?
+   - Le Health Check est `/health` ?
+
+2. **Cliquer sur "Create Web Service"**
+
+3. **Attendre le déploiement**
+   - Render va :
+     1. Cloner le code depuis GitHub
+     2. Installer les dépendances (`npm install`)
+     3. Compiler le code (`npm run build`)
+     4. Démarrer le serveur (`npm start`)
+   - Vous voyez les logs en temps réel
+   - Ça prend environ **3-5 minutes**
+
+4. **Vérifier le statut**
+   - En haut de la page, vous voyez le statut
+   - Il passe par : `Building` → `Deploying` → `Live`
+   - Quand c'est **Live** (avec un point vert), c'est bon !
+
+### Étape 6.7 : Noter l'URL du serveur
+
+Une fois déployé :
+
+1. **Trouver l'URL**
+   - En haut de la page, sous le nom du service
+   - URL comme : `https://neopro-central.onrender.com`
+
+2. **Noter dans votre fichier**
+   ```
+   RENDER
+   ------
+   - URL du serveur API : https://neopro-central.onrender.com
+   ```
+
+### Étape 6.8 : Tester le serveur
+
+1. **Ouvrir l'URL de health check**
+   - Dans votre navigateur, aller sur :
+   ```
+   https://neopro-central.onrender.com/health
+   ```
+
+2. **Vérifier la réponse**
+   - Vous devez voir quelque chose comme :
+   ```json
+   {
+     "status": "healthy",
+     "timestamp": "2024-12-14T10:30:00.000Z",
+     "version": "1.0.0"
+   }
+   ```
+   - Si vous voyez ça, **le serveur fonctionne !** 🎉
+
+3. **Si ça ne fonctionne pas**
+   - Retourner sur Render
+   - Cliquer sur **Logs** dans le menu de gauche
+   - Chercher les erreurs (en rouge)
+   - Voir la section [Dépannage](#12-dépannage)
 
 ---
 
-## 7. Partie 5 : Initialiser la base de données
+## 7. Partie 5 : Déployer le dashboard
 
-La base est vide, il faut créer les tables.
+Le dashboard est l'interface web d'administration. C'est une application Angular qui tourne dans le navigateur.
 
-### Étape 7.1 : Ouvrir l'éditeur SQL
+### Différence avec le serveur
 
-1. Sur Supabase → votre projet
-2. Menu gauche → **SQL Editor**
-3. Cliquer **New query**
+- **Serveur (Web Service)** : Code qui s'exécute sur le serveur Render
+- **Dashboard (Static Site)** : Fichiers HTML/CSS/JS envoyés au navigateur du visiteur
 
-### Étape 7.2 : Créer les tables
+Pour un "Static Site", Render :
+1. Compile l'application Angular
+2. Génère des fichiers statiques (HTML, CSS, JS)
+3. Les sert via un CDN rapide
 
-1. Sur GitHub, ouvrir le fichier `central-server/src/scripts/init-db.sql`
-2. Copier tout le contenu
-3. Coller dans l'éditeur SQL Supabase
-4. Cliquer **Run**
-5. Vérifier "Success"
+### Étape 7.1 : Créer un nouveau Static Site
 
-### Étape 7.3 : Créer les tables analytics
+1. **Sur le dashboard Render**
+   - Cliquer sur **New +**
+   - Sélectionner **Static Site**
 
-1. Nouvelle query
-2. Copier `central-server/src/scripts/analytics-tables.sql`
-3. Coller et **Run**
+2. **Sélectionner le repository**
+   - Choisir `neopro`
+   - Cliquer sur **Connect**
 
-### Étape 7.4 : Migration MFA
+### Étape 7.2 : Configurer le site
 
-Nouvelle query avec ce code :
+| Champ | Valeur | Explication |
+|-------|--------|-------------|
+| **Name** | `neopro-dashboard` | Nom du site |
+| **Branch** | `main` | Branche à déployer |
+| **Root Directory** | `central-dashboard` | Dossier contenant le code du dashboard |
+| **Build Command** | `npm install && npm run build:prod` | Compiler l'application Angular |
+| **Publish Directory** | `dist/central-dashboard` | Dossier où Angular génère les fichiers |
+
+**Important :**
+- Le **Publish Directory** doit correspondre au dossier de sortie d'Angular
+- C'est généralement `dist/nom-du-projet`
+
+### Étape 7.3 : Ajouter la variable d'environnement
+
+Le dashboard doit savoir où se trouve le serveur API.
+
+1. **Faire défiler jusqu'à "Environment Variables"**
+2. **Ajouter une variable :**
+
+| Key | Value |
+|-----|-------|
+| `NG_APP_API_URL` | `https://neopro-central.onrender.com` |
+
+(Remplacer par l'URL de votre serveur, notée à l'étape 6.7)
+
+### Étape 7.4 : Configurer la redirection SPA
+
+Angular est une "Single Page Application" (SPA). Toutes les routes sont gérées côté client. On doit configurer Render pour rediriger toutes les requêtes vers `index.html`.
+
+1. **Faire défiler jusqu'à "Redirects/Rewrites"**
+2. **Cliquer sur "Add Rule"**
+3. **Configurer :**
+   - **Source** : `/*`
+   - **Destination** : `/index.html`
+   - **Action** : Sélectionner `Rewrite`
+
+**Pourquoi c'est nécessaire ?**
+- Sans ça, si quelqu'un va directement sur `/sites` ou `/dashboard`, Render cherche un fichier `sites.html` qui n'existe pas
+- Avec la règle, Render renvoie `index.html` et Angular gère la route
+
+### Étape 7.5 : Créer le site
+
+1. **Cliquer sur "Create Static Site"**
+2. **Attendre le déploiement** (2-3 minutes)
+3. **Vérifier que le statut est "Live"**
+
+### Étape 7.6 : Noter l'URL du dashboard
+
+1. **Copier l'URL** affichée en haut (ex: `https://neopro-dashboard.onrender.com`)
+2. **Noter dans votre fichier**
+   ```
+   - URL du dashboard : https://neopro-dashboard.onrender.com
+   ```
+
+### Étape 7.7 : Configurer CORS sur le serveur
+
+Le serveur doit autoriser les requêtes venant du dashboard. C'est le "CORS" (Cross-Origin Resource Sharing).
+
+1. **Retourner sur le service `neopro-central-server`**
+   - Dashboard Render → cliquer sur `neopro-central-server`
+
+2. **Aller dans Environment**
+   - Menu de gauche → **Environment**
+
+3. **Ajouter une variable**
+   - Cliquer sur **Add Environment Variable**
+
+   | Key | Value |
+   |-----|-------|
+   | `ALLOWED_ORIGINS` | `https://neopro-dashboard.onrender.com` |
+
+4. **Sauvegarder**
+   - Cliquer sur **Save Changes**
+   - Le serveur va redémarrer automatiquement (30 secondes environ)
+
+### Étape 7.8 : Tester le dashboard
+
+1. **Ouvrir l'URL du dashboard** dans votre navigateur
+2. **Vous devez voir la page de login**
+   - Si vous voyez une page de connexion, c'est bon !
+   - Si vous voyez une page blanche ou une erreur, voir [Dépannage](#12-dépannage)
+
+**Note :** Vous ne pouvez pas encore vous connecter car il n'y a pas d'utilisateur dans la base de données.
+
+---
+
+## 8. Partie 6 : Initialiser la base de données
+
+La base de données est vide. On doit créer les tables (structure) pour stocker les données.
+
+### Étape 8.1 : Accéder à l'éditeur SQL Supabase
+
+1. **Aller sur Supabase**
+   - https://supabase.com
+   - Cliquer sur votre projet `neopro-production`
+
+2. **Ouvrir l'éditeur SQL**
+   - Dans le menu de gauche, cliquer sur **SQL Editor** (icône de terminal)
+
+3. **Créer une nouvelle requête**
+   - Cliquer sur **New query**
+   - Un éditeur de texte s'ouvre
+
+### Étape 8.2 : Exécuter le script d'initialisation
+
+Le script de création des tables est dans le code source.
+
+1. **Trouver le fichier**
+   - Sur GitHub, aller dans : `central-server/src/scripts/init-db.sql`
+   - Ou sur votre ordinateur si vous avez le code
+
+2. **Copier tout le contenu du fichier**
+
+3. **Coller dans l'éditeur SQL Supabase**
+
+4. **Exécuter**
+   - Cliquer sur le bouton **Run** (ou appuyer sur Ctrl+Enter / Cmd+Enter)
+   - Attendre que l'exécution se termine
+   - Vous devez voir "Success" en bas
+
+### Étape 8.3 : Exécuter le script des tables analytics
+
+1. **Créer une nouvelle requête**
+   - Cliquer sur **New query** ou sur le **+**
+
+2. **Copier le contenu de** `central-server/src/scripts/analytics-tables.sql`
+
+3. **Coller et exécuter**
+   - Cliquer sur **Run**
+   - Vérifier "Success"
+
+### Étape 8.4 : Exécuter la migration MFA
+
+1. **Nouvelle requête**
+
+2. **Coller ce code :**
 
 ```sql
+-- =============================================
+-- Migration: Support MFA (Multi-Factor Authentication)
+-- =============================================
+
+-- Ajouter les colonnes MFA à la table users
 ALTER TABLE users
 ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS mfa_secret TEXT,
 ADD COLUMN IF NOT EXISTS mfa_backup_codes TEXT[],
 ADD COLUMN IF NOT EXISTS mfa_verified_at TIMESTAMP WITH TIME ZONE;
 
+-- Créer un index pour les requêtes sur mfa_enabled
 CREATE INDEX IF NOT EXISTS idx_users_mfa_enabled
-ON users(mfa_enabled) WHERE mfa_enabled = TRUE;
+ON users(mfa_enabled)
+WHERE mfa_enabled = TRUE;
+
+-- Ajouter des commentaires explicatifs
+COMMENT ON COLUMN users.mfa_enabled IS 'Indique si MFA est activé pour cet utilisateur';
+COMMENT ON COLUMN users.mfa_secret IS 'Secret TOTP chiffré pour générer les codes';
+COMMENT ON COLUMN users.mfa_backup_codes IS 'Codes de secours hachés';
+COMMENT ON COLUMN users.mfa_verified_at IS 'Date de dernière vérification MFA réussie';
 ```
 
-Cliquer **Run**.
+3. **Exécuter**
 
-### Étape 7.5 : Vérifier
+### Étape 8.5 : Vérifier que les tables existent
 
-Nouvelle query :
+1. **Nouvelle requête**
+
+2. **Coller :**
 ```sql
-SELECT table_name FROM information_schema.tables
-WHERE table_schema = 'public' ORDER BY table_name;
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY table_name;
 ```
 
-Vous devez voir : `analytics`, `groups`, `sites`, `users`, etc.
+3. **Exécuter**
+
+4. **Vérifier le résultat**
+   - Vous devez voir une liste de tables, dont :
+     - `users`
+     - `sites`
+     - `groups`
+     - `analytics`
+     - etc.
+
+### Alternative : Utiliser l'interface Table Editor
+
+Supabase a aussi une interface visuelle :
+
+1. **Cliquer sur "Table Editor"** dans le menu de gauche
+2. **Vous voyez toutes les tables** créées
+3. **Cliquer sur une table** pour voir sa structure et son contenu
 
 ---
 
-## 8. Partie 6 : Créer l'administrateur
+## 9. Partie 7 : Créer le compte administrateur
 
-### Option A : Via Render Shell
+Il faut créer un premier utilisateur administrateur pour pouvoir se connecter au dashboard.
 
-1. Sur Render → votre service
-2. Menu gauche → **Shell**
-3. Taper : `npm run create-admin`
-4. Répondre aux questions (email, mot de passe, nom)
+### Option A : Via le Shell Render (Recommandé)
 
-### Option B : Via SQL
+Render permet d'accéder à un terminal sur votre serveur.
 
-Si le shell ne fonctionne pas :
+1. **Aller sur le service `neopro-central-server`**
+   - Dashboard Render → cliquer sur le service
 
-1. Générer un hash de mot de passe sur https://bcrypt-generator.com/
-   - Entrer votre mot de passe
-   - 12 rounds
-   - Copier le hash
+2. **Ouvrir le Shell**
+   - Dans le menu de gauche, cliquer sur **Shell**
+   - Attendre que la connexion s'établisse (10-20 secondes)
+   - Vous voyez un terminal
 
-2. Dans Supabase SQL Editor :
+3. **Exécuter le script de création**
+   ```bash
+   npm run create-admin
+   ```
+
+4. **Répondre aux questions**
+   - **Email** : Entrer votre adresse email
+   - **Password** : Entrer un mot de passe (minimum 8 caractères)
+   - **Full name** : Entrer votre nom complet
+
+5. **Noter les identifiants**
+   ```
+   ADMIN
+   -----
+   - Email admin : votre@email.com
+   - Mot de passe admin : **********
+   ```
+
+### Option B : Via SQL (si le Shell ne fonctionne pas)
+
+Si le plan Free met le serveur en veille ou si le Shell ne répond pas :
+
+1. **Générer un hash du mot de passe**
+   - Aller sur https://bcrypt-generator.com/
+   - Dans "Plain Text", entrer votre mot de passe souhaité
+   - Sélectionner **12 rounds**
+   - Cliquer sur **Generate**
+   - Copier le résultat (commence par `$2a$12$` ou `$2b$12$`)
+
+2. **Dans Supabase SQL Editor, nouvelle requête**
+
+3. **Coller ce code** (en remplaçant les valeurs) :
 
 ```sql
-INSERT INTO users (email, password_hash, full_name, role, is_active, created_at, updated_at)
+INSERT INTO users (
+  email,
+  password_hash,
+  full_name,
+  role,
+  is_active,
+  created_at,
+  updated_at
+)
 VALUES (
-  'votre@email.com',
-  '$2a$12$VOTRE_HASH_ICI',
-  'Votre Nom',
-  'admin',
-  true,
+  'votre@email.com',                    -- Remplacer par votre email
+  '$2a$12$xxxxxxxxxxxxxxxxxxxxx',       -- Remplacer par le hash généré
+  'Votre Nom Complet',                  -- Remplacer par votre nom
+  'admin',                              -- Rôle admin
+  true,                                 -- Compte actif
   NOW(),
   NOW()
 );
 ```
 
-3. **Run**
+4. **Exécuter**
+
+5. **Vérifier**
+```sql
+SELECT id, email, full_name, role, is_active FROM users;
+```
+
+Vous devez voir votre utilisateur.
 
 ---
 
-## 9. Partie 7 : Vérifier le déploiement
+## 10. Partie 8 : Vérifier que tout fonctionne
 
-### Checklist
+### Test 1 : Health Check du serveur
 
-| Test | URL | Résultat attendu |
-|------|-----|------------------|
-| Health check | https://neopro-central.onrender.com/health | `{"status":"healthy"...}` |
-| API docs | https://neopro-central.onrender.com/api-docs | Page Swagger |
-| Dashboard | https://neopro-admin.kalonpartners.bzh | Page de login |
-| Login | Dashboard → se connecter | Accès au dashboard |
+1. Ouvrir : `https://neopro-central.onrender.com/health`
+2. **Attendu :**
+   ```json
+   {"status":"healthy","timestamp":"...","version":"1.0.0"}
+   ```
+3. **Si erreur :** Voir les logs Render du serveur
 
----
+### Test 2 : Documentation API
 
-## 10. Comment utiliser les outils au quotidien
+1. Ouvrir : `https://neopro-central.onrender.com/api-docs`
+2. **Attendu :** Page Swagger avec la liste des endpoints
+3. **Si page blanche :** Le serveur n'a peut-être pas démarré correctement
 
-### Supabase : Voir et modifier les données
+### Test 3 : Connexion au dashboard
 
-**Accès** : https://supabase.com/dashboard → Votre projet
+1. Ouvrir : `https://neopro-dashboard.onrender.com`
+2. **Attendu :** Page de login
+3. Entrer vos identifiants admin
+4. Cliquer sur **Se connecter**
+5. **Attendu :** Vous êtes redirigé vers le dashboard
 
-**Ce que vous pouvez faire :**
+### Test 4 : Vérifier la base de données
 
-1. **Voir les utilisateurs** :
-   - Menu → **Table Editor** → Table `users`
-   - Vous voyez tous les utilisateurs, leurs rôles, etc.
+1. Dans Supabase, aller dans **Table Editor**
+2. Cliquer sur la table `users`
+3. **Attendu :** Vous voyez votre utilisateur admin
 
-2. **Voir les sites/clubs** :
-   - Table Editor → Table `sites`
-   - Liste de tous les Raspberry Pi enregistrés
+### Checklist finale
 
-3. **Modifier une donnée** :
-   - Double-cliquer sur une cellule pour éditer
-   - Attention : les modifications sont immédiates !
+- [ ] Health check retourne "healthy"
+- [ ] Documentation API accessible (/api-docs)
+- [ ] Dashboard affiche la page de login
+- [ ] Connexion avec l'admin fonctionne
+- [ ] Dashboard affiche les données (même vides)
+- [ ] Pas d'erreurs dans les logs Render
 
-4. **Exécuter des requêtes SQL** :
-   - Menu → **SQL Editor**
-   - Exemples utiles :
-     ```sql
-     -- Voir tous les sites actifs
-     SELECT name, status, last_seen FROM sites WHERE is_active = true;
-
-     -- Réinitialiser un mot de passe (remplacer le hash)
-     UPDATE users SET password_hash = '$2a$12$nouveauhash' WHERE email = 'user@email.com';
-     ```
-
-5. **Voir les vidéos stockées** :
-   - Menu → **Storage** → Bucket `videos`
-   - Vous pouvez uploader/supprimer des fichiers
-
-### Upstash : Surveiller le cache
-
-**Accès** : https://console.upstash.com → Votre base
-
-**Ce que vous pouvez faire :**
-
-1. **Voir les statistiques** :
-   - Dashboard principal : requêtes/jour, mémoire utilisée
-
-2. **Voir les données en cache** :
-   - Onglet **Data Browser**
-   - Liste des clés stockées (sessions, etc.)
-
-3. **Vider le cache** (si problème) :
-   - Onglet **CLI**
-   - Taper : `FLUSHALL`
-   - ⚠️ Déconnecte tous les utilisateurs !
-
-### Render : Gérer le serveur
-
-**Accès** : https://dashboard.render.com → Votre service
-
-**Ce que vous pouvez faire :**
-
-1. **Voir les logs en direct** :
-   - Menu → **Logs**
-   - Utile pour débugger
-
-2. **Redémarrer le serveur** :
-   - Menu → **Manual Deploy** → **Deploy latest commit**
-   - Ou : **Settings** → **Restart**
-
-3. **Modifier une variable d'environnement** :
-   - Menu → **Environment**
-   - Modifier → **Save Changes**
-   - Le serveur redémarre automatiquement
-
-4. **Voir si le serveur est "endormi"** (plan Free) :
-   - Si dernière activité > 15 min, il dort
-   - La prochaine requête prend ~30 sec pour le réveiller
-
-### Hostinger : Mettre à jour le dashboard
-
-**Quand mettre à jour ?**
-- Après une modification du code `central-dashboard`
-- Après un `git pull` avec des changements frontend
-
-**Comment :**
-1. Sur votre PC : `cd central-dashboard && npm run build:prod`
-2. Sur Hostinger : supprimer les anciens fichiers de `public_html`
-3. Uploader le nouveau contenu de `dist/central-dashboard/`
+**Si tout est coché : Félicitations ! NeoPro est en production ! 🎉**
 
 ---
 
 ## 11. Configurations optionnelles
 
-### Monitoring avec Better Stack (ex-Logtail)
+Ces configurations ne sont pas obligatoires mais améliorent l'expérience.
 
-Better Stack surveille que votre serveur fonctionne.
+### 11.1. Alertes par email avec SendGrid
 
-**Configuration :**
+SendGrid permet d'envoyer des emails (alertes, notifications...).
 
-1. Aller sur https://betterstack.com
-2. Créer un compte (gratuit)
-3. Section **Uptime** → **Create monitor**
-   - URL : `https://neopro-central.onrender.com/health`
-   - Check interval : 3 minutes
-4. Configurer les alertes (email, SMS...)
+**Créer un compte :**
+1. Aller sur https://sendgrid.com
+2. Cliquer sur **Start For Free**
+3. Créer un compte
 
-**Ce que ça fait :**
-- Vérifie toutes les 3 min que le serveur répond
-- Vous alerte si le site est down
-- Historique de disponibilité
+**Vérifier un expéditeur :**
+1. Settings → Sender Authentication
+2. Verify a Single Sender
+3. Entrer votre email professionnel
+4. Confirmer via l'email reçu
 
-### Alertes Slack
+**Créer une clé API :**
+1. Settings → API Keys
+2. Create API Key
+3. Nom : `neopro-production`
+4. Permissions : Restricted Access → activer **Mail Send**
+5. Copier la clé (commence par `SG.`)
 
-**Configuration :**
+**Ajouter sur Render :**
+- `SENDGRID_API_KEY` = `SG.xxxx...`
+- `EMAIL_FROM` = `noreply@votredomaine.com`
 
-1. https://api.slack.com/apps → **Create New App**
-2. Incoming Webhooks → Activer
-3. Add New Webhook → Choisir un channel
+### 11.2. Notifications Slack
+
+**Créer une App Slack :**
+1. https://api.slack.com/apps
+2. Create New App → From scratch
+3. Nom : `NeoPro Alerts`
+4. Workspace : votre workspace
+
+**Configurer le Webhook :**
+1. Incoming Webhooks → activer
+2. Add New Webhook to Workspace
+3. Choisir un channel (ex: `#alerts-neopro`)
 4. Copier l'URL du webhook
-5. Sur Render, ajouter :
-   - `SLACK_WEBHOOK_URL` = l'URL copiée
 
-**Ce que ça fait :**
-- Envoie des messages Slack quand il y a des erreurs critiques
+**Tester :**
+```bash
+curl -X POST -H 'Content-type: application/json' \
+  --data '{"text":"Test NeoPro!"}' \
+  https://hooks.slack.com/services/xxx/yyy/zzz
+```
 
-### Emails avec SendGrid
+**Ajouter sur Render :**
+- `SLACK_WEBHOOK_URL` = `https://hooks.slack.com/services/...`
 
-**Configuration :**
+### 11.3. Logs centralisés avec Logtail
 
-1. https://sendgrid.com → Créer un compte
-2. Settings → Sender Authentication → Vérifier un email
-3. Settings → API Keys → Créer une clé (Mail Send only)
-4. Sur Render, ajouter :
-   - `SENDGRID_API_KEY` = votre clé
-   - `EMAIL_FROM` = l'email vérifié
+Logtail permet de voir tous vos logs dans une interface web.
 
-**Ce que ça fait :**
-- Permet d'envoyer des emails (réinitialisation mot de passe, alertes)
+1. https://betterstack.com/logtail
+2. Start for free (connexion GitHub)
+3. Connect source → Node.js
+4. Copier le token
+
+**Ajouter sur Render :**
+- `LOGTAIL_TOKEN` = `votre_token`
+
+### 11.4. Monitoring avec UptimeRobot
+
+UptimeRobot vérifie que votre site est en ligne et vous alerte en cas de problème.
+
+1. https://uptimerobot.com
+2. Créer un compte gratuit
+3. Add New Monitor :
+   - Type : HTTP(s)
+   - URL : `https://neopro-central.onrender.com/health`
+   - Interval : 5 minutes
+4. Configurer les alertes (email, Slack...)
 
 ---
 
 ## 12. Dépannage
 
-### Le serveur ne démarre pas (Render)
+### Le serveur ne démarre pas
 
-**Symptômes** : Statut "Deploy failed" ou "Crashed"
+**Symptômes :** Statut "Deploy failed" ou "Crashed"
 
-**Solutions** :
-1. Render → Logs → Chercher l'erreur en rouge
-2. Vérifier les variables d'environnement :
-   - Toutes les 10 présentes ?
-   - DATABASE_URL a le bon mot de passe ?
+**Solutions :**
+1. **Vérifier les logs :**
+   - Render → votre service → Logs
+   - Chercher les lignes en rouge
+
+2. **Erreurs courantes :**
+   - `DATABASE_URL is required` : Variable manquante
+   - `Connection refused` : URL de base de données incorrecte
+   - `Invalid JWT secret` : JWT_SECRET trop court ou manquant
+
+3. **Vérifier les variables :**
+   - Toutes les 10 variables sont présentes ?
    - Pas d'espace en début/fin de valeur ?
+   - DATABASE_URL a le bon mot de passe ?
+
+### Erreur de connexion à la base de données
+
+**Symptômes :** `Connection refused`, `Connection timeout`, `ECONNREFUSED`
+
+**Solutions :**
+1. Vérifier que DATABASE_URL utilise le port `6543` (pas `5432`)
+2. Vérifier que `?pgbouncer=true` est à la fin de l'URL
+3. Vérifier que le mot de passe est correct
+
+**Test de l'URL :**
+- L'URL doit ressembler à :
+```
+postgresql://postgres.xxxxx:VOTRE_MOT_DE_PASSE@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+```
 
 ### Le dashboard affiche une page blanche
 
-**Symptômes** : Page blanche ou erreur console
+**Symptômes :** Page blanche, erreur dans la console
 
-**Solutions** :
-1. F12 → Console → Chercher les erreurs
-2. Vérifier que `environment.prod.ts` a la bonne URL API
-3. Vérifier le `.htaccess` (redirection SPA)
-4. Vérifier `ALLOWED_ORIGINS` sur Render
+**Solutions :**
+1. Ouvrir les DevTools (F12) → Console
+2. Chercher les erreurs
+3. Vérifications :
+   - `NG_APP_API_URL` est correct ?
+   - La règle de rewrite `/* → /index.html` existe ?
+   - Le serveur API est accessible ?
 
 ### Erreur CORS
 
-**Symptômes** : Erreur "Access-Control-Allow-Origin" dans la console
+**Symptômes :** Message `Access-Control-Allow-Origin` dans la console
 
-**Solution** :
-1. Render → Environment
+**Solutions :**
+1. Sur Render, service API
 2. Vérifier `ALLOWED_ORIGINS`
-3. Format : `https://votresite.com` (pas de `/` à la fin)
-4. Plusieurs sites : `https://site1.com,https://site2.com`
+3. Format correct : `https://neopro-dashboard.onrender.com` (pas de `/` à la fin)
+4. Plusieurs origines : `https://site1.com,https://site2.com`
 
-### Erreur de connexion base de données
+### Redis ne se connecte pas
 
-**Symptômes** : "Connection refused", "timeout"
+**Symptômes :** `Redis connection error`
 
-**Solutions** :
-1. Vérifier DATABASE_URL :
-   - Port `6543` (pas 5432)
-   - `?pgbouncer=true` à la fin
-   - Mot de passe correct
+**Solutions :**
+1. Vérifier que REDIS_URL commence par `redis://` ou `rediss://`
+2. Vérifier le token dans l'URL
 
 ### Le login ne fonctionne pas
 
-**Symptômes** : "Invalid credentials"
+**Symptômes :** "Invalid credentials" malgré les bons identifiants
 
-**Solutions** :
-1. Supabase → Table Editor → Table `users`
-2. Vérifier que l'utilisateur existe
-3. Vérifier `is_active = true`
-4. Vérifier `role = 'admin'`
-
-### Le serveur dort (plan Free Render)
-
-**Symptômes** : Première requête très lente (~30 sec)
-
-**C'est normal** : Le plan Free met en veille après 15 min d'inactivité.
-
-**Solutions** :
-- Passer au plan Starter (7$/mois)
-- Ou utiliser UptimeRobot pour "réveiller" le serveur régulièrement
+**Solutions :**
+1. Vérifier que l'utilisateur existe :
+   ```sql
+   SELECT * FROM users WHERE email = 'votre@email.com';
+   ```
+2. Vérifier que le compte est actif (`is_active = true`)
+3. Vérifier que le rôle est `admin`
 
 ---
 
 ## 13. Glossaire
 
-| Terme | Explication |
-|-------|-------------|
-| **API** | Interface permettant aux applications de communiquer entre elles |
-| **Backend** | La partie serveur (invisible pour l'utilisateur) |
-| **Bucket** | Un dossier de stockage dans le cloud |
-| **Cache** | Stockage temporaire pour accélérer les accès |
-| **CORS** | Sécurité navigateur qui bloque les requêtes entre sites différents |
-| **Dashboard** | Interface d'administration visuelle |
-| **Deploy** | Mettre en ligne une application |
-| **Frontend** | La partie visible (interface utilisateur) |
-| **Health Check** | Test automatique pour vérifier qu'un serveur fonctionne |
-| **JWT** | Token d'authentification (preuve de connexion) |
-| **MFA** | Authentification à deux facteurs (mot de passe + code) |
-| **Pooler** | Système qui partage les connexions à la base de données |
-| **PostgreSQL** | Type de base de données |
-| **Redis** | Base de données ultra-rapide en mémoire |
-| **SPA** | Application web mono-page (comme Angular) |
-| **SSL/TLS** | Chiffrement des communications (https) |
-| **Token** | Code temporaire prouvant l'identité d'un utilisateur |
+| Terme | Définition |
+|-------|------------|
+| **API** | Interface de programmation. C'est comment les applications communiquent entre elles. |
+| **Backend** | La partie serveur d'une application. Gère la logique métier et la base de données. |
+| **Base de données** | Système pour stocker des données de manière organisée. |
+| **Bucket** | Un "dossier" dans le cloud pour stocker des fichiers. |
+| **Cache** | Stockage temporaire pour accélérer les accès aux données fréquentes. |
+| **CDN** | Content Delivery Network. Réseau de serveurs qui distribuent le contenu rapidement. |
+| **CORS** | Cross-Origin Resource Sharing. Mécanisme de sécurité des navigateurs. |
+| **Dashboard** | Interface d'administration visuelle. |
+| **Déploiement** | Mettre une application en ligne pour qu'elle soit accessible. |
+| **Frontend** | La partie visible d'une application (interface utilisateur). |
+| **Health Check** | Vérification automatique que l'application fonctionne. |
+| **JWT** | JSON Web Token. Méthode d'authentification sécurisée. |
+| **MFA** | Multi-Factor Authentication. Double authentification (mot de passe + code). |
+| **Policy** | Règle de sécurité qui définit qui peut accéder à quoi. |
+| **Pooler** | Gestionnaire de connexions à la base de données. |
+| **PostgreSQL** | Système de base de données relationnelle, gratuit et open-source. |
+| **Redis** | Base de données ultra-rapide stockant les données en mémoire. |
+| **Repository (Repo)** | Projet contenant du code source sur GitHub. |
+| **Serverless** | Architecture où le serveur est géré automatiquement. |
+| **SPA** | Single Page Application. Application web qui ne recharge pas la page. |
+| **SSL/TLS** | Protocole de sécurité pour chiffrer les communications. |
+| **Static Site** | Site web composé de fichiers fixes (HTML, CSS, JS). |
+| **Token** | Jeton d'authentification. Preuve que l'utilisateur est connecté. |
+| **Variable d'environnement** | Paramètre de configuration externe au code. |
+| **Web Service** | Application serveur qui tourne en permanence. |
+| **Webhook** | URL qui reçoit des notifications automatiques. |
 
 ---
 
@@ -783,14 +1349,25 @@ Better Stack surveille que votre serveur fonctionne.
 | Service | URL |
 |---------|-----|
 | Supabase Dashboard | https://supabase.com/dashboard |
-| Upstash Console | https://console.upstash.com |
+| Upstash Dashboard | https://console.upstash.com |
 | Render Dashboard | https://dashboard.render.com |
 | Votre API | https://neopro-central.onrender.com |
+| Votre Dashboard | https://neopro-dashboard.onrender.com |
 | Health Check | https://neopro-central.onrender.com/health |
-| API Docs | https://neopro-central.onrender.com/api-docs |
-| Votre Dashboard | https://neopro-admin.kalonpartners.bzh |
+| Documentation API | https://neopro-central.onrender.com/api-docs |
 
 ---
 
-**Version :** 5.0
+## Besoin d'aide ?
+
+1. **Relire ce guide** : La solution est souvent dans les détails
+2. **Vérifier les logs** : Render et Supabase affichent des messages d'erreur
+3. **Consulter la documentation** :
+   - Supabase : https://supabase.com/docs
+   - Render : https://render.com/docs
+   - Upstash : https://docs.upstash.com
+
+---
+
+**Version :** 4.0
 **Dernière mise à jour :** 14 décembre 2025

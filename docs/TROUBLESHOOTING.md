@@ -513,7 +513,7 @@ ssh pi@neopro.local 'ping -c 3 8.8.8.8'
 ssh pi@neopro.local 'sudo systemctl status neopro-sync'
 
 # 4. Connexion serveur central ?
-ssh pi@neopro.local 'curl -I https://neopro-central-server.onrender.com'
+ssh pi@neopro.local 'curl -I https://neopro-central.onrender.com'
 ```
 
 ### La progression des déploiements reste bloquée à 0 %

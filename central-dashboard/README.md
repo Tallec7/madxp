@@ -103,8 +103,8 @@ export const environment = {
 ```typescript
 export const environment = {
   production: true,
-  apiUrl: 'https://neopro-central-server.onrender.com/api',
-  socketUrl: 'https://neopro-central-server.onrender.com'
+  apiUrl: 'https://neopro-central.onrender.com/api',
+  socketUrl: 'https://neopro-central.onrender.com'
 };
 ```
 

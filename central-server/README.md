@@ -42,7 +42,7 @@ Le déploiement est configuré via `render.yaml` à la racine du projet.
 3. Configurer manuellement `DATABASE_URL` avec l'URL Supabase dans Environment
 4. Déployer
 
-**URL déployée :** `https://neopro-central-server.onrender.com`
+**URL déployée :** `https://neopro-central.onrender.com`
 
 ---
 
@@ -177,7 +177,7 @@ curl -X POST https://api.neopro.fr/api/videos/bulk \
 ### Agent Connection (Raspberry Pi)
 
 ```javascript
-const socket = io('wss://neopro-central-server.onrender.com', {
+const socket = io('wss://neopro-central.onrender.com', {
   transports: ['websocket', 'polling']
 });
 
