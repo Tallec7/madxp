@@ -2388,7 +2388,7 @@ launchVideo(video: Video) {
 
 | Ressource | URL |
 |-----------|-----|
-| Dashboard Central | https://neopro-central.onrender.com |
+| Dashboard Central | https://neopro-admin.kalonpartners.bzh |
 | API Central | https://neopro-central.onrender.com |
 | Documentation | docs/REFERENCE.md |
 | Troubleshooting | docs/TROUBLESHOOTING.md |
