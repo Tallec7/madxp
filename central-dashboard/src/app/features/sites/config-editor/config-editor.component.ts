@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, DoCheck, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, interval } from 'rxjs';
@@ -246,11 +246,10 @@ import {
               <button class="btn-add" (click)="addCategory()">+ Nouvelle catégorie</button>
             </h4>
             <div class="debug-info">
-              <code>instance={{ getInstanceId() }} | categories.length = {{ config.categories.length }} | getCategoriesCount() = {{ getCategoriesCount() }}</code>
-              <button (click)="debugCategories()">Debug dans console</button>
+              <code>configCategories.length = {{ configCategories.length }}</code>
             </div>
-            <div class="categories-list" *ngIf="config.categories.length > 0">
-              <div class="category-card" *ngFor="let category of config.categories; let catIndex = index"
+            <div class="categories-list" *ngIf="configCategories.length > 0">
+              <div class="category-card" *ngFor="let category of configCategories; let catIndex = index"
                    [class.expanded]="expandedCategory === catIndex">
                 <div class="category-header" (click)="toggleCategory(catIndex)">
                   <span class="expand-icon">{{ expandedCategory === catIndex ? '▼' : '▶' }}</span>
@@ -419,7 +418,7 @@ import {
                 </div>
               </div>
             </div>
-            <p class="empty-message" *ngIf="config.categories.length === 0">
+            <p class="empty-message" *ngIf="configCategories.length === 0">
               Aucune catégorie configurée
             </p>
           </div>
@@ -1897,7 +1896,7 @@ import {
     }
   `]
 })
-export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
+export class ConfigEditorComponent implements OnInit, OnDestroy {
   @Input() siteId!: string;
   @Input() siteName!: string;
   @Output() configDeployed = new EventEmitter<void>();
@@ -1917,8 +1916,19 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
   hasChanges = false;
   isValid = true;
 
-  // Using public field directly - Angular change detection should work better
-  config: SiteConfiguration = this.getEmptyConfig();
+  // Simple config object - use configCategories for template binding
+  config: SiteConfiguration = {
+    version: '1.0',
+    remote: { title: '' },
+    auth: { password: '', clubName: '', sessionDuration: 28800000 },
+    sync: { enabled: true, serverUrl: 'https://neopro-central.onrender.com', siteName: '', clubName: '' },
+    sponsors: [],
+    categories: [],
+    timeCategories: [],
+  };
+
+  // Separate array for template binding (workaround for Angular change detection issue)
+  configCategories: CategoryConfig[] = [];
   originalConfig: SiteConfiguration | null = null;
   jsonString = '';
   jsonError = '';
@@ -1950,8 +1960,6 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
   // Polling
   private configCommandId: string | null = null;
   private configPollSubscription?: Subscription;
-  private lastCategoriesLength = 0;
-  private instanceId = Math.random().toString(36).substring(7);
 
   constructor(
     private sitesService: SitesService,
@@ -1968,17 +1976,6 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
 
   ngOnDestroy(): void {
     this.configPollSubscription?.unsubscribe();
-  }
-
-  ngDoCheck(): void {
-    const currentLength = this.config.categories?.length ?? 0;
-    if (currentLength !== this.lastCategoriesLength) {
-      console.warn(`[ConfigEditor:${this.instanceId}] categories length changed`, {
-        previous: this.lastCategoriesLength,
-        current: currentLength
-      });
-      this.lastCategoriesLength = currentLength;
-    }
   }
 
   get diffCounts() {
@@ -2010,10 +2007,10 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   private resetToEmptyConfig(reason: string): void {
-    const stack = new Error().stack?.split('\n').slice(0, 5).join(' | ');
-    console.warn('[ConfigEditor] resetToEmptyConfig() called', { reason, stack });
+    console.warn('[ConfigEditor] resetToEmptyConfig() called', { reason });
     this.loading = false;
     this.config = this.getEmptyConfig();
+    this.configCategories = [];
     this.originalConfig = null;
     this.configCommandId = null;
     this.syncJsonFromConfig();
@@ -2184,18 +2181,13 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
         categories: normalizedCategories,
         timeCategories: normalizedTimeCategories,
       };
-      console.log('[ConfigEditor] this.config set');
-      console.log(
-        '[ConfigEditor] Final config categories:',
-        this.config.categories.map(cat => ({
-          name: cat.name,
-          videos: cat.videos.length,
-          subCategories: cat.subCategories.map(sub => ({
-            name: sub.name,
-            videos: sub.videos.length,
-          })),
-        }))
-      );
+
+      // CRITICAL: Update separate array for template binding with setTimeout to force change detection
+      setTimeout(() => {
+        this.configCategories = [...normalizedCategories];
+        console.log('[ConfigEditor] configCategories set to (in setTimeout):', this.configCategories.length);
+      }, 0);
+
       this.originalConfig = JSON.parse(JSON.stringify(this.config));
       console.log('[ConfigEditor] originalConfig set');
       this.syncJsonFromConfig();
@@ -2342,17 +2334,20 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
 
   // Categories
   addCategory(): void {
-    this.config.categories.push({
+    const newCategory = {
       id: `category-${Date.now()}`,
       name: '',
       videos: [],
       subCategories: [],
-    });
+    };
+    this.config.categories.push(newCategory);
+    this.configCategories = [...this.config.categories];
     this.onConfigChange();
   }
 
   removeCategory(index: number): void {
     this.config.categories.splice(index, 1);
+    this.configCategories = [...this.config.categories];
     if (this.expandedCategory === index) {
       this.expandedCategory = null;
     } else if (this.expandedCategory !== null && this.expandedCategory > index) {
@@ -2688,19 +2683,4 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
     return category?.color || '#6B7280';
   }
 
-  // Debug methods
-  getCategoriesCount(): number {
-    return this.config.categories?.length ?? 0;
-  }
-
-  getInstanceId(): string {
-    return this.instanceId;
-  }
-
-  debugCategories(): void {
-    console.log(`[ConfigEditor:${this.instanceId}] DEBUG BUTTON CLICKED`);
-    console.log('config:', this.config);
-    console.log('config.categories:', this.config.categories);
-    console.log('config.categories.length:', this.config.categories?.length);
-  }
 }
