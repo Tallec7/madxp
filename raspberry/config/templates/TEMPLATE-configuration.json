@@ -9,7 +9,7 @@
     },
     "sync": {
         "enabled": true,
-        "serverUrl": "https://neopro-central-server.onrender.com",
+        "serverUrl": "https://neopro-central.onrender.com",
         "siteName": "[NOM_DU_SITE]",
         "clubName": "[NOM_DU_CLUB]",
         "location": {

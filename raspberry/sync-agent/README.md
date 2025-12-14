@@ -35,7 +35,7 @@ sudo node scripts/register-site.js
 ```
 
 Vous devrez fournir :
-- URL du serveur central (ex: https://neopro-central-server.onrender.com)
+- URL du serveur central (ex: https://neopro-central.onrender.com)
 - Email et mot de passe admin NEOPRO
 - Informations du site (nom, club, localisation, sports)
 - Modèle du boîtier (détecté automatiquement sur Raspberry Pi)
@@ -58,7 +58,7 @@ L'agent démarrera automatiquement et se lancera au boot du Raspberry Pi.
 
 ```ini
 # Serveur central
-CENTRAL_SERVER_URL=https://neopro-central-server.onrender.com
+CENTRAL_SERVER_URL=https://neopro-central.onrender.com
 CENTRAL_SERVER_ENABLED=true
 
 # Identifiants (générés automatiquement lors de l'enregistrement)
@@ -512,7 +512,7 @@ npm run diagnose
 cat /etc/neopro/site.conf
 
 # Vérifier la connectivité
-ping neopro-central-server.onrender.com
+ping neopro-central.onrender.com
 
 # Vérifier les logs
 sudo journalctl -u neopro-sync-agent -n 50

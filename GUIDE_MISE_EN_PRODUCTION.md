@@ -769,13 +769,13 @@ Une fois déployé :
 
 1. **Trouver l'URL**
    - En haut de la page, sous le nom du service
-   - URL comme : `https://neopro-central-server.onrender.com`
+   - URL comme : `https://neopro-central.onrender.com`
 
 2. **Noter dans votre fichier**
    ```
    RENDER
    ------
-   - URL du serveur API : https://neopro-central-server.onrender.com
+   - URL du serveur API : https://neopro-central.onrender.com
    ```
 
 ### Étape 6.8 : Tester le serveur
@@ -783,7 +783,7 @@ Une fois déployé :
 1. **Ouvrir l'URL de health check**
    - Dans votre navigateur, aller sur :
    ```
-   https://neopro-central-server.onrender.com/health
+   https://neopro-central.onrender.com/health
    ```
 
 2. **Vérifier la réponse**
@@ -852,7 +852,7 @@ Le dashboard doit savoir où se trouve le serveur API.
 
 | Key | Value |
 |-----|-------|
-| `NG_APP_API_URL` | `https://neopro-central-server.onrender.com` |
+| `NG_APP_API_URL` | `https://neopro-central.onrender.com` |
 
 (Remplacer par l'URL de votre serveur, notée à l'étape 6.7)
 
@@ -1111,7 +1111,7 @@ Vous devez voir votre utilisateur.
 
 ### Test 1 : Health Check du serveur
 
-1. Ouvrir : `https://neopro-central-server.onrender.com/health`
+1. Ouvrir : `https://neopro-central.onrender.com/health`
 2. **Attendu :**
    ```json
    {"status":"healthy","timestamp":"...","version":"1.0.0"}
@@ -1120,7 +1120,7 @@ Vous devez voir votre utilisateur.
 
 ### Test 2 : Documentation API
 
-1. Ouvrir : `https://neopro-central-server.onrender.com/api-docs`
+1. Ouvrir : `https://neopro-central.onrender.com/api-docs`
 2. **Attendu :** Page Swagger avec la liste des endpoints
 3. **Si page blanche :** Le serveur n'a peut-être pas démarré correctement
 
@@ -1225,7 +1225,7 @@ UptimeRobot vérifie que votre site est en ligne et vous alerte en cas de probl�
 2. Créer un compte gratuit
 3. Add New Monitor :
    - Type : HTTP(s)
-   - URL : `https://neopro-central-server.onrender.com/health`
+   - URL : `https://neopro-central.onrender.com/health`
    - Interval : 5 minutes
 4. Configurer les alertes (email, Slack...)
 
@@ -1351,10 +1351,10 @@ postgresql://postgres.xxxxx:VOTRE_MOT_DE_PASSE@aws-0-eu-west-1.pooler.supabase.c
 | Supabase Dashboard | https://supabase.com/dashboard |
 | Upstash Dashboard | https://console.upstash.com |
 | Render Dashboard | https://dashboard.render.com |
-| Votre API | https://neopro-central-server.onrender.com |
+| Votre API | https://neopro-central.onrender.com |
 | Votre Dashboard | https://neopro-dashboard.onrender.com |
-| Health Check | https://neopro-central-server.onrender.com/health |
-| Documentation API | https://neopro-central-server.onrender.com/api-docs |
+| Health Check | https://neopro-central.onrender.com/health |
+| Documentation API | https://neopro-central.onrender.com/api-docs |
 
 ---
 

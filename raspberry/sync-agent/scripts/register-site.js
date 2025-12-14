@@ -71,8 +71,8 @@ async function registerSite() {
     // Server URL - default to production
     const serverUrl = await getValueOrPrompt(
       'CENTRAL_SERVER_URL',
-      'Central Server URL (e.g., https://neopro-central-server.onrender.com): ',
-      'https://neopro-central-server.onrender.com'
+      'Central Server URL (e.g., https://neopro-central.onrender.com): ',
+      'https://neopro-central.onrender.com'
     );
 
     // Admin credentials - from env vars or prompt
