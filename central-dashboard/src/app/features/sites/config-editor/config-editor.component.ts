@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, interval } from 'rxjs';
@@ -1886,8 +1886,14 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     return this._loading;
   }
   set loading(value: boolean) {
-    console.log('[ConfigEditor] loading setter called:', value, 'stack:', new Error().stack?.split('\n').slice(1, 4).join(' <- '));
+    console.log('[ConfigEditor] loading setter called:', value);
     this._loading = value;
+    // Force Angular change detection when loading changes
+    if (this.cdr) {
+      console.log('[ConfigEditor] Triggering detectChanges');
+      this.cdr.detectChanges();
+      console.log('[ConfigEditor] detectChanges completed');
+    }
   }
   deploying = false;
   hasChanges = false;
@@ -1929,7 +1935,8 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   constructor(
     private sitesService: SitesService,
     private notificationService: NotificationService,
-    private analyticsService: AnalyticsService
+    private analyticsService: AnalyticsService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
