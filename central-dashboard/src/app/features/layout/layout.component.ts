@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
+import { trigger, transition, style, animate } from '@angular/animations';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { SocketService } from '../../core/services/socket.service';
@@ -11,6 +12,17 @@ import { User } from '../../core/models';
   selector: 'app-layout',
   standalone: true,
   imports: [CommonModule, RouterModule],
+  animations: [
+    trigger('slideIn', [
+      transition(':enter', [
+        style({ transform: 'translateX(100%)', opacity: 0 }),
+        animate('300ms ease-out', style({ transform: 'translateX(0)', opacity: 1 }))
+      ]),
+      transition(':leave', [
+        animate('200ms ease-in', style({ transform: 'translateX(100%)', opacity: 0 }))
+      ])
+    ])
+  ],
   template: `
     <div class="layout">
       <aside class="sidebar">
