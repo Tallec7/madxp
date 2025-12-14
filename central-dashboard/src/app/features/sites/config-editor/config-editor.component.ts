@@ -1928,7 +1928,8 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.reloadConfig();
     this.loadHistoryCount();
-    this.loadAnalyticsCategories();
+    // Temporarily disabled to debug spinner issue
+    // this.loadAnalyticsCategories();
   }
 
   ngOnDestroy(): void {
