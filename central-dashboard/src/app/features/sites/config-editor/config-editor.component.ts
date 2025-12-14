@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, DoCheck, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ChangeDetectorRef, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, interval } from 'rxjs';
@@ -245,9 +245,6 @@ import {
               Catégories et Vidéos
               <button class="btn-add" (click)="addCategory()">+ Nouvelle catégorie</button>
             </h4>
-            <div class="debug-info">
-              <code>categories.length = {{ config.categories.length }}</code>
-            </div>
             <div class="categories-list" *ngIf="config.categories.length > 0">
               <div class="category-card" *ngFor="let category of config.categories; let catIndex = index"
                    [class.expanded]="expandedCategory === catIndex">
@@ -475,7 +472,7 @@ import {
               <div class="spinner-small"></div>
               <span>Chargement des catégories...</span>
             </div>
-            <div class="analytics-mappings-grid" *ngIf="!loadingAnalyticsCategories && config.categories.length > 0">
+            <div class="analytics-mappings-grid" *ngIf="!loadingAnalyticsCategories && configCategories.length > 0">
               <div class="mapping-row" *ngFor="let category of getAllVideoCategories()">
                 <span class="mapping-category-name">{{ category.name || '(Sans nom)' }}</span>
                 <select
@@ -495,7 +492,7 @@ import {
                 ></span>
               </div>
             </div>
-            <p class="empty-message" *ngIf="!loadingAnalyticsCategories && config.categories.length === 0">
+            <p class="empty-message" *ngIf="!loadingAnalyticsCategories && configCategories.length === 0">
               Créez d'abord des catégories de vidéos
             </p>
           </div>
@@ -733,12 +730,6 @@ import {
 
     .tab-content {
       padding: 1rem 0;
-    }
-    
-    .debug-info {
-      font-size: 0.8rem;
-      color: #94a3b8;
-      margin-bottom: 0.5rem;
     }
 
     .loading-container {
@@ -1896,7 +1887,7 @@ import {
     }
   `]
 })
-export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
+export class ConfigEditorComponent implements OnInit, OnDestroy {
   @Input() siteId!: string;
   @Input() siteName!: string;
   @Output() configDeployed = new EventEmitter<void>();
@@ -1909,7 +1900,6 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
     return this.isLoading();
   }
   set loading(value: boolean) {
-    console.log('[ConfigEditor] loading setter called:', value);
     this.isLoading.set(value);
   }
   deploying = false;
@@ -1929,6 +1919,8 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
 
   // Separate array for template binding (workaround for Angular change detection issue)
   configCategories: CategoryConfig[] = [];
+  // Cached array for analytics mapping (avoid creating new array on each change detection)
+  private _allVideoCategories: { id: string; name: string }[] = [];
   originalConfig: SiteConfiguration | null = null;
   jsonString = '';
   jsonError = '';
@@ -1960,35 +1952,22 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
   // Polling
   private configCommandId: string | null = null;
   private configPollSubscription?: Subscription;
-  private lastCategoriesLength = 0;
 
   constructor(
     private sitesService: SitesService,
     private notificationService: NotificationService,
-    private analyticsService: AnalyticsService
+    private analyticsService: AnalyticsService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.reloadConfig();
     this.loadHistoryCount();
-    // Temporarily disabled to debug spinner issue
-    // this.loadAnalyticsCategories();
+    this.loadAnalyticsCategories();
   }
 
   ngOnDestroy(): void {
     this.configPollSubscription?.unsubscribe();
-  }
-
-  ngDoCheck(): void {
-    const currentLength = this.config.categories?.length ?? 0;
-    if (currentLength !== this.lastCategoriesLength) {
-      console.warn('[ConfigEditor] categories length changed', {
-        previous: this.lastCategoriesLength,
-        current: currentLength,
-        stack: new Error().stack?.split('\n').slice(0, 4).join(' | ')
-      });
-      this.lastCategoriesLength = currentLength;
-    }
   }
 
   get diffCounts() {
@@ -2016,12 +1995,11 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
         { id: 'during', name: 'Match', icon: '▶️', color: 'from-green-500 to-green-600', description: 'Live & animations', categoryIds: [] },
         { id: 'after', name: 'Après-match', icon: '🏆', color: 'from-purple-500 to-purple-600', description: 'Résultats & remerciements', categoryIds: [] },
       ],
+      categoryMappings: {},
     };
   }
 
   private resetToEmptyConfig(reason: string): void {
-    const stack = new Error().stack?.split('\n').slice(0, 5).join(' | ');
-    console.warn('[ConfigEditor] resetToEmptyConfig() called', { reason, stack });
     this.loading = false;
     this.config = this.getEmptyConfig();
     this.originalConfig = null;
@@ -2031,7 +2009,6 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   reloadConfig(): void {
-    console.log('[ConfigEditor] reloadConfig() called, siteId:', this.siteId);
     this.loading = true;
     this.configPollSubscription?.unsubscribe();
 
@@ -2043,17 +2020,13 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
       }
     }, 10000);
 
-    console.log('[ConfigEditor] Calling getConfiguration...');
     this.sitesService.getConfiguration(this.siteId).subscribe({
       next: (response) => {
-        console.log('[ConfigEditor] getConfiguration response:', response);
         clearTimeout(timeoutId);
         if (response.commandId) {
           this.configCommandId = response.commandId;
-          console.log('[ConfigEditor] Starting poll with commandId:', response.commandId);
           this.pollConfigResult();
         } else {
-          console.log('[ConfigEditor] No commandId in response');
           this.resetToEmptyConfig('getConfiguration returned no commandId');
           this.notificationService.info('Aucun commandId reçu. Vous pouvez créer une nouvelle configuration.');
         }
@@ -2069,153 +2042,102 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
 
   private pollConfigResult(): void {
     if (!this.configCommandId) {
-      console.log('[ConfigEditor] pollConfigResult: no commandId, aborting');
       return;
     }
 
     const POLL_TIMEOUT_SECONDS = 30;
     let pollCount = 0;
-    let isPolling = false; // Éviter les appels parallèles
+    let isPolling = false;
 
-    console.log('[ConfigEditor] Starting polling interval...');
     this.configPollSubscription = interval(1000).subscribe(() => {
       pollCount++;
-      console.log('[ConfigEditor] Poll tick #', pollCount, 'isPolling:', isPolling);
 
-      // Timeout après 30 secondes
       if (pollCount > POLL_TIMEOUT_SECONDS) {
         this.configPollSubscription?.unsubscribe();
-        this.resetToEmptyConfig('Poll timeout reached (no completed status)');
+        this.resetToEmptyConfig('Poll timeout reached');
         this.notificationService.warning('Le site ne répond pas. Vous pouvez créer une nouvelle configuration.');
         return;
       }
 
-      // Éviter les appels parallèles si le précédent n'est pas terminé
       if (isPolling) {
-        console.log('[ConfigEditor] Skipping poll - previous request still pending');
         return;
       }
       isPolling = true;
 
-      console.log('[ConfigEditor] Calling getCommandStatus for:', this.configCommandId);
       this.sitesService.getCommandStatus(this.siteId, this.configCommandId!).subscribe({
         next: (status) => {
-          console.log('[ConfigEditor] getCommandStatus response:', JSON.stringify(status).substring(0, 500));
           isPolling = false;
           if (status.status === 'completed') {
-            console.log('[ConfigEditor] Status is completed, result:', status.result ? 'present' : 'missing');
-            console.log('[ConfigEditor] result.configuration:', status.result?.configuration ? 'present' : 'missing');
             this.configPollSubscription?.unsubscribe();
-
             this.loading = false;
 
             if (status.result?.configuration) {
               this.setConfig(status.result.configuration);
               this.notificationService.success('Configuration chargée');
             } else if (status.result?.message === 'No configuration file found') {
-              this.resetToEmptyConfig('Command completed but configuration missing (No configuration file found)');
+              this.resetToEmptyConfig('No configuration file found');
               this.notificationService.info('Aucune configuration sur le site. Créez-en une nouvelle.');
             } else {
-              this.resetToEmptyConfig('Command completed but configuration empty');
+              this.resetToEmptyConfig('Configuration empty');
               this.notificationService.info('Configuration vide. Vous pouvez en créer une nouvelle.');
             }
           } else if (status.status === 'failed') {
             this.configPollSubscription?.unsubscribe();
-            this.resetToEmptyConfig('Command status failed');
+            this.resetToEmptyConfig('Command failed');
             this.notificationService.warning('Échec de récupération. Vous pouvez créer une nouvelle configuration.');
-          } else {
-            console.log('[ConfigEditor] Status is:', status.status, '- continuing poll');
           }
-          // Si status === 'pending', on continue le polling
         },
-        error: (error) => {
-          console.error('[ConfigEditor] getCommandStatus error:', error);
+        error: () => {
           isPolling = false;
-          // Ne pas arrêter le polling sur une erreur réseau ponctuelle
-          // Le timeout global s'en chargera
         }
       });
     });
   }
 
   private setConfig(configuration: SiteConfiguration): void {
-    try {
-      console.log('[ConfigEditor] setConfig() START');
-      console.log(
-        '[ConfigEditor] Raw categories:',
-        (configuration.categories || []).map(cat => ({
-          name: cat.name,
-          videos: cat.videos?.length || 0,
-          subCategories: (cat.subCategories || []).map(sub => ({
-            name: sub.name,
-            videos: sub.videos?.length || 0,
-          })),
-        }))
-      );
-      // Normalize categories to ensure videos and subCategories arrays exist
-      const normalizedCategories = (configuration.categories || []).map(cat => ({
-        ...cat,
-        videos: cat.videos || [],
-        subCategories: (cat.subCategories || []).map(subcat => ({
-          ...subcat,
-          videos: subcat.videos || [],
-        })),
-      }));
-      console.log('[ConfigEditor] normalizedCategories:', normalizedCategories.length);
-      console.log(
-        '[ConfigEditor] normalized categories detail:',
-        normalizedCategories.map(cat => ({
-          name: cat.name,
-          videos: cat.videos.length,
-          subCategories: cat.subCategories.map(sub => ({
-            name: sub.name,
-            videos: sub.videos.length,
-          })),
-        }))
-      );
+    // Normalize categories to ensure videos and subCategories arrays exist
+    const normalizedCategories = (configuration.categories || []).map(cat => ({
+      ...cat,
+      videos: cat.videos || [],
+      subCategories: (cat.subCategories || []).map(subcat => ({
+        ...subcat,
+        videos: subcat.videos || [],
+      })),
+    }));
 
-      // Normalize timeCategories - use config values or defaults
-      const defaultTimeCategories = this.getEmptyConfig().timeCategories!;
-      const normalizedTimeCategories = configuration.timeCategories?.length
-        ? configuration.timeCategories.map(tc => ({
-            ...tc,
-            categoryIds: tc.categoryIds || [],
-          }))
-        : defaultTimeCategories;
-      console.log('[ConfigEditor] normalizedTimeCategories:', normalizedTimeCategories.length);
-
-      this.config = {
-        ...this.getEmptyConfig(),
-        ...configuration,
-        remote: { ...this.getEmptyConfig().remote, ...configuration.remote },
-        auth: { ...this.getEmptyConfig().auth, ...configuration.auth },
-        sync: { ...this.getEmptyConfig().sync, ...configuration.sync },
-        sponsors: configuration.sponsors || [],
-        categories: normalizedCategories,
-        timeCategories: normalizedTimeCategories,
-      };
-      console.log('[ConfigEditor] this.config set');
-      console.log(
-        '[ConfigEditor] Final config categories:',
-        this.config.categories.map(cat => ({
-          name: cat.name,
-          videos: cat.videos.length,
-          subCategories: cat.subCategories.map(sub => ({
-            name: sub.name,
-            videos: sub.videos.length,
-          })),
+    // Normalize timeCategories - use config values or defaults
+    const defaultTimeCategories = this.getEmptyConfig().timeCategories!;
+    const normalizedTimeCategories = configuration.timeCategories?.length
+      ? configuration.timeCategories.map(tc => ({
+          ...tc,
+          categoryIds: tc.categoryIds || [],
         }))
-      );
-      this.originalConfig = JSON.parse(JSON.stringify(this.config));
-      console.log('[ConfigEditor] originalConfig set');
-      this.syncJsonFromConfig();
-      console.log('[ConfigEditor] syncJsonFromConfig done');
-      this.hasChanges = false;
-      this.validate();
-      console.log('[ConfigEditor] setConfig() COMPLETE - loading should be false now:', this.loading);
-    } catch (error) {
-      console.error('[ConfigEditor] setConfig() ERROR:', error);
-    }
+      : defaultTimeCategories;
+
+    this.config = {
+      ...this.getEmptyConfig(),
+      ...configuration,
+      remote: { ...this.getEmptyConfig().remote, ...configuration.remote },
+      auth: { ...this.getEmptyConfig().auth, ...configuration.auth },
+      sync: { ...this.getEmptyConfig().sync, ...configuration.sync },
+      sponsors: configuration.sponsors || [],
+      categories: normalizedCategories,
+      timeCategories: normalizedTimeCategories,
+    };
+
+    // Update configCategories for template binding
+    this.configCategories = [...normalizedCategories];
+
+    // Update the cached array for analytics mapping
+    this.updateAllVideoCategoriesCache();
+
+    this.originalConfig = JSON.parse(JSON.stringify(this.config));
+    this.syncJsonFromConfig();
+    this.hasChanges = false;
+    this.validate();
+
+    // Force Angular to detect changes
+    this.cdr.detectChanges();
   }
 
   private syncJsonFromConfig(): void {
@@ -2224,27 +2146,8 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   onConfigChange(): void {
-    console.trace('[ConfigEditor] onConfigChange() trace');
-    console.log(
-      '[ConfigEditor] onConfigChange()',
-      {
-        categories: this.config.categories.map(cat => ({
-          name: cat.name,
-          videos: cat.videos?.length || 0,
-          subCategories: cat.subCategories?.map(sub => ({
-            name: sub.name,
-            videos: sub.videos?.length || 0,
-          })) || [],
-        })),
-        hasChangesBeforeUpdate: this.hasChanges,
-      }
-    );
     this.syncJsonFromConfig();
     this.hasChanges = JSON.stringify(this.config) !== JSON.stringify(this.originalConfig);
-    console.log('[ConfigEditor] onConfigChange() after sync', {
-      hasChanges: this.hasChanges,
-      categoriesCount: this.config.categories.length,
-    });
     this.validate();
   }
 
@@ -2360,12 +2263,14 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
     };
     this.config.categories.push(newCategory);
     this.configCategories = [...this.config.categories];
+    this.updateAllVideoCategoriesCache();
     this.onConfigChange();
   }
 
   removeCategory(index: number): void {
     this.config.categories.splice(index, 1);
     this.configCategories = [...this.config.categories];
+    this.updateAllVideoCategoriesCache();
     if (this.expandedCategory === index) {
       this.expandedCategory = null;
     } else if (this.expandedCategory !== null && this.expandedCategory > index) {
@@ -2388,6 +2293,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
       name: '',
       videos: [],
     });
+    this.updateAllVideoCategoriesCache();
     this.onConfigChange();
   }
 
@@ -2395,6 +2301,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
     const category = this.config.categories[catIndex];
     if (category.subCategories) {
       category.subCategories.splice(subIndex, 1);
+      this.updateAllVideoCategoriesCache();
       this.onConfigChange();
     }
   }
@@ -2648,11 +2555,19 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
 
   /**
    * Récupère toutes les catégories de vidéos (catégories + sous-catégories)
+   * Retourne un tableau caché pour éviter de créer un nouveau tableau à chaque change detection
    */
   getAllVideoCategories(): { id: string; name: string }[] {
+    return this._allVideoCategories;
+  }
+
+  /**
+   * Met à jour le cache des catégories pour le mapping analytics
+   */
+  private updateAllVideoCategoriesCache(): void {
     const result: { id: string; name: string }[] = [];
 
-    for (const category of this.config.categories) {
+    for (const category of this.configCategories) {
       result.push({ id: category.id, name: category.name });
 
       // Ajouter les sous-catégories
@@ -2666,7 +2581,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
       }
     }
 
-    return result;
+    this._allVideoCategories = result;
   }
 
   /**
