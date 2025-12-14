@@ -75,6 +75,13 @@ const ANALYTICS_FILE_PATH = path.join(
 	'analytics_buffer.json'
 );
 
+const SPONSOR_IMPRESSIONS_FILE_PATH = path.join(
+	process.env.HOME || '/home/pi',
+	'neopro',
+	'data',
+	'sponsor_impressions.json'
+);
+
 app.post('/api/analytics', async (req, res) => {
 	try {
 		const { events } = req.body;
@@ -145,6 +152,95 @@ app.get('/api/analytics/stats', (req, res) => {
 			count: buffer.length,
 			oldestEvent: buffer.length > 0 ? buffer[0].played_at : null,
 			newestEvent: buffer.length > 0 ? buffer[buffer.length - 1].played_at : null
+		});
+	} catch (error) {
+		res.status(500).json({ error: error.message });
+	}
+});
+
+// ============================================================================
+// SPONSOR IMPRESSIONS ENDPOINT
+// Reçoit les impressions sponsors de l'app Angular et les sauvegarde pour le sync-agent
+// ============================================================================
+app.post('/api/sync/sponsor-impressions', async (req, res) => {
+	try {
+		const { impressions } = req.body;
+
+		if (!impressions || !Array.isArray(impressions)) {
+			return res.status(400).json({ error: 'impressions array required' });
+		}
+
+		// En environnement cloud (Render), envoyer directement au serveur central
+		if (IS_CLOUD_ENV && SITE_ID) {
+			try {
+				const impressionsWithSiteId = impressions.map(imp => ({
+					...imp,
+					site_id: imp.site_id || SITE_ID
+				}));
+
+				const response = await axios.post(
+					`${CENTRAL_SERVER_URL}/api/analytics/impressions`,
+					{ impressions: impressionsWithSiteId },
+					{
+						headers: { 'Content-Type': 'application/json' },
+						timeout: 10000
+					}
+				);
+
+				console.log(`[SponsorImpressions] Sent ${impressions.length} impressions to central server:`, response.data);
+				return res.json({
+					success: true,
+					received: impressions.length,
+					queued: 0,
+					forwarded: true,
+					recorded: response.data.data?.recorded || response.data.recorded || 0
+				});
+			} catch (forwardError) {
+				console.error('[SponsorImpressions] Failed to forward to central:', forwardError.message);
+				// En cas d'échec, on continue avec le stockage local comme fallback
+			}
+		}
+
+		// Stockage local (Raspberry Pi ou fallback)
+		const dir = path.dirname(SPONSOR_IMPRESSIONS_FILE_PATH);
+		if (!fs.existsSync(dir)) {
+			fs.mkdirSync(dir, { recursive: true });
+		}
+
+		let buffer = [];
+		if (fs.existsSync(SPONSOR_IMPRESSIONS_FILE_PATH)) {
+			try {
+				const data = fs.readFileSync(SPONSOR_IMPRESSIONS_FILE_PATH, 'utf8');
+				buffer = JSON.parse(data);
+			} catch (e) {
+				console.warn('[SponsorImpressions] Failed to parse existing buffer:', e.message);
+				buffer = [];
+			}
+		}
+
+		buffer.push(...impressions);
+		fs.writeFileSync(SPONSOR_IMPRESSIONS_FILE_PATH, JSON.stringify(buffer, null, 2));
+
+		console.log(`[SponsorImpressions] Received ${impressions.length} impressions, total buffer: ${buffer.length}`);
+		res.json({ success: true, received: impressions.length, queued: buffer.length });
+	} catch (error) {
+		console.error('[SponsorImpressions] Error:', error);
+		res.status(500).json({ error: error.message });
+	}
+});
+
+app.get('/api/sync/sponsor-impressions/stats', (req, res) => {
+	try {
+		let buffer = [];
+		if (fs.existsSync(SPONSOR_IMPRESSIONS_FILE_PATH)) {
+			const data = fs.readFileSync(SPONSOR_IMPRESSIONS_FILE_PATH, 'utf8');
+			buffer = JSON.parse(data);
+		}
+
+		res.json({
+			count: buffer.length,
+			oldestImpression: buffer.length > 0 ? buffer[0].played_at : null,
+			newestImpression: buffer.length > 0 ? buffer[buffer.length - 1].played_at : null
 		});
 	} catch (error) {
 		res.status(500).json({ error: error.message });

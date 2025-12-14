@@ -69,6 +69,22 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['admin'] },
         loadComponent: () => import('./features/admin/local-admin/local-admin.component').then(m => m.LocalAdminComponent)
+      },
+      {
+        path: 'sponsors',
+        loadComponent: () => import('./features/sponsors/sponsors-list.component').then(m => m.SponsorsListComponent)
+      },
+      {
+        path: 'sponsors/:id',
+        loadComponent: () => import('./features/sponsors/sponsor-detail.component').then(m => m.SponsorDetailComponent)
+      },
+      {
+        path: 'sponsors/:id/analytics',
+        loadComponent: () => import('./features/sponsors/sponsor-analytics.component').then(m => m.SponsorAnalyticsComponent)
+      },
+      {
+        path: 'sponsors/:id/videos',
+        loadComponent: () => import('./features/sponsors/sponsor-videos.component').then(m => m.SponsorVideosComponent)
       }
     ]
   },

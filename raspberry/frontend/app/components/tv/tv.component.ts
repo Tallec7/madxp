@@ -4,6 +4,7 @@ import "videojs-playlist";
 import Player from 'video.js/dist/types/player';
 import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
+import { SponsorAnalyticsService } from '../../services/sponsor-analytics.service';
 import { Video } from '../../interfaces/video.interface';
 import { Configuration } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
@@ -29,11 +30,14 @@ interface PlayerWithPlaylist extends Player {
 export class TvComponent implements OnInit, OnDestroy {
   private readonly socketService = inject(SocketService);
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly sponsorAnalytics = inject(SponsorAnalyticsService);
 
   @Input() public configuration: Configuration;
 
   private lastTriggerType: 'auto' | 'manual' = 'auto';
   private currentSponsorIndex = 0;
+  private currentEventType: 'match' | 'training' | 'tournament' | 'other' = 'other';
+  private currentPeriod: 'pre_match' | 'halftime' | 'post_match' | 'loop' = 'loop';
 
   @ViewChild('target', { static: true }) target: ElementRef;
 
@@ -45,6 +49,11 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Démarrer une session analytics
     this.analyticsService.startSession();
+
+    // Configurer le service sponsor analytics
+    this.sponsorAnalytics.setConfiguration(this.configuration);
+    // TODO: Récupérer le site_id depuis la configuration ou l'auth service
+    // this.sponsorAnalytics.setSiteId(this.configuration.siteId);
 
     const options = {
       fullscreen: true,
@@ -94,6 +103,13 @@ export class TvComponent implements OnInit, OnDestroy {
         const sponsor = this.configuration.sponsors.find(s => currentSrc.includes(s.path));
         if (sponsor) {
           this.analyticsService.trackVideoStart(sponsor, 'auto');
+
+          // Tracker l'impression sponsor
+          this.sponsorAnalytics.trackSponsorStart(
+            sponsor,
+            'auto',
+            this.player.duration() || 0
+          );
         }
       }
     });
@@ -102,6 +118,7 @@ export class TvComponent implements OnInit, OnDestroy {
       // Pour les vidéos de la boucle, tracker la fin
       if (this.lastTriggerType === 'auto') {
         this.analyticsService.trackVideoEnd(true);
+        this.sponsorAnalytics.trackSponsorEnd(true);
       }
     });
 
@@ -136,11 +153,23 @@ export class TvComponent implements OnInit, OnDestroy {
     // Tracker le début de la vidéo manuelle
     this.analyticsService.trackVideoStart(video, 'manual');
 
+    // Si c'est une vidéo sponsor déclenchée manuellement, tracker l'impression
+    const isSponsor = this.configuration.sponsors.some(s => s.path === video.path);
+    if (isSponsor) {
+      this.sponsorAnalytics.trackSponsorStart(video, 'manual', this.player.duration() || 0);
+    }
+
     this.player.src({ src: video.path, type: video.type });
     this.player.one('ended', () => {
       console.log('tv player : video ended', video.path);
       // Tracker la fin de la vidéo manuelle
       this.analyticsService.trackVideoEnd(true);
+
+      // Tracker fin de l'impression sponsor si applicable
+      if (isSponsor) {
+        this.sponsorAnalytics.trackSponsorEnd(true);
+      }
+
       this.lastTriggerType = 'auto';
       this.sponsors();
     });
@@ -160,6 +189,7 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Mettre à jour la configuration dans l'analytics service
     this.analyticsService.setConfiguration(config);
+    this.sponsorAnalytics.setConfiguration(config);
 
     // Mettre à jour la playlist avec les nouveaux sponsors
     const newPlaylist = config.sponsors.map((sponsor) => ({
@@ -171,6 +201,41 @@ export class TvComponent implements OnInit, OnDestroy {
     // Lancer la nouvelle boucle
     this.lastTriggerType = 'auto';
     this.sponsors();
+  }
+
+  /**
+   * Méthodes publiques pour contrôler le contexte analytics sponsors
+   * (appelées depuis la télécommande ou des événements externes)
+   */
+  public setEventContext(
+    eventType: 'match' | 'training' | 'tournament' | 'other',
+    period?: 'pre_match' | 'halftime' | 'post_match' | 'loop',
+    audienceEstimate?: number
+  ): void {
+    this.currentEventType = eventType;
+    this.sponsorAnalytics.setEventType(eventType);
+
+    if (period) {
+      this.currentPeriod = period;
+      this.sponsorAnalytics.setPeriod(period);
+    }
+
+    if (audienceEstimate !== undefined) {
+      this.sponsorAnalytics.setAudienceEstimate(audienceEstimate);
+    }
+
+    console.log('[TV] Event context updated:', { eventType, period, audienceEstimate });
+  }
+
+  public updatePeriod(period: 'pre_match' | 'halftime' | 'post_match' | 'loop'): void {
+    this.currentPeriod = period;
+    this.sponsorAnalytics.setPeriod(period);
+    console.log('[TV] Period updated:', period);
+  }
+
+  public updateAudienceEstimate(estimate: number): void {
+    this.sponsorAnalytics.setAudienceEstimate(estimate);
+    console.log('[TV] Audience estimate updated:', estimate);
   }
 
 }

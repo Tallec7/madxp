@@ -52,21 +52,51 @@
    - Roadmap et phases
    - Modèle économique
 
-8. **[SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md)** - Architecture de synchronisation *(nouveau)*
+8. **[SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md)** - Architecture de synchronisation
    - Modèle Central vs Local
    - Types de contenu (NEOPRO verrouillé vs Club éditable)
    - Règles de merge intelligent
    - Scénarios d'usage (annonceurs nationaux, contenu local)
    - Personas (NEOPRO, Opérateur Club, Partenaires)
 
+### Analytics Sponsors (Module complet)
+
+9. **[ANALYTICS_SPONSORS_README.md](ANALYTICS_SPONSORS_README.md)** - **README Module Analytics Sponsors**
+   - Vue d'ensemble et fonctionnalités
+   - Architecture complète
+   - Guides démarrage rapide
+   - État du projet (95% conformité BP §13)
+
+10. **[IMPLEMENTATION_ANALYTICS_SPONSORS.md](IMPLEMENTATION_ANALYTICS_SPONSORS.md)** - Guide implémentation
+   - Schéma base de données
+   - API endpoints détaillés
+   - Intégration frontend/backend
+
+11. **[TRACKING_IMPRESSIONS_SPONSORS.md](TRACKING_IMPRESSIONS_SPONSORS.md)** - Tracking boîtiers TV
+   - Architecture tracking temps réel
+   - Service frontend Angular
+   - Sync agent et serveur local
+   - Flux de données end-to-end
+
+12. **[PDF_REPORTS_GUIDE.md](PDF_REPORTS_GUIDE.md)** - Rapports PDF professionnels
+   - Structure 4 pages (garde, KPIs, graphiques, certificat)
+   - Génération graphiques Chart.js
+   - Signature numérique SHA-256
+   - API et intégration
+
+13. **[AVANCEMENT_ANALYTICS_SPONSORS.md](AVANCEMENT_ANALYTICS_SPONSORS.md)** - Suivi progression
+   - Planning semaines 1-3 (terminé)
+   - Métriques conformité (95%)
+   - Roadmap phases 4-5 (optionnel)
+
 ### Pour les développeurs
 
-9. **[dev/README.md](dev/README.md)** - Documentation développement
+14. **[dev/README.md](dev/README.md)** - Documentation développement
    - Configuration environnement
    - Conventions de code
    - Tests
 
-10. **[changelog/README.md](changelog/README.md)** - Historique des modifications
+15. **[changelog/README.md](changelog/README.md)** - Historique des modifications
    - Suivi des changements
    - Notes de version
 
@@ -151,4 +181,4 @@ Configuration : `render.yaml` à la racine
 
 ---
 
-**Dernière mise à jour :** 10 décembre 2025
+**Dernière mise à jour :** 14 décembre 2025 - Ajout module Analytics Sponsors complet
