@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, DoCheck, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, interval } from 'rxjs';
@@ -246,10 +246,10 @@ import {
               <button class="btn-add" (click)="addCategory()">+ Nouvelle catégorie</button>
             </h4>
             <div class="debug-info">
-              <code>configCategories.length = {{ configCategories.length }}</code>
+              <code>categories.length = {{ config.categories.length }}</code>
             </div>
-            <div class="categories-list" *ngIf="configCategories.length > 0">
-              <div class="category-card" *ngFor="let category of configCategories; let catIndex = index"
+            <div class="categories-list" *ngIf="config.categories.length > 0">
+              <div class="category-card" *ngFor="let category of config.categories; let catIndex = index"
                    [class.expanded]="expandedCategory === catIndex">
                 <div class="category-header" (click)="toggleCategory(catIndex)">
                   <span class="expand-icon">{{ expandedCategory === catIndex ? '▼' : '▶' }}</span>
@@ -1896,7 +1896,7 @@ import {
     }
   `]
 })
-export class ConfigEditorComponent implements OnInit, OnDestroy {
+export class ConfigEditorComponent implements OnInit, OnDestroy, DoCheck {
   @Input() siteId!: string;
   @Input() siteName!: string;
   @Output() configDeployed = new EventEmitter<void>();
@@ -1960,6 +1960,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   // Polling
   private configCommandId: string | null = null;
   private configPollSubscription?: Subscription;
+  private lastCategoriesLength = 0;
 
   constructor(
     private sitesService: SitesService,
@@ -1976,6 +1977,18 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.configPollSubscription?.unsubscribe();
+  }
+
+  ngDoCheck(): void {
+    const currentLength = this.config.categories?.length ?? 0;
+    if (currentLength !== this.lastCategoriesLength) {
+      console.warn('[ConfigEditor] categories length changed', {
+        previous: this.lastCategoriesLength,
+        current: currentLength,
+        stack: new Error().stack?.split('\n').slice(0, 4).join(' | ')
+      });
+      this.lastCategoriesLength = currentLength;
+    }
   }
 
   get diffCounts() {
@@ -2007,10 +2020,10 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   }
 
   private resetToEmptyConfig(reason: string): void {
-    console.warn('[ConfigEditor] resetToEmptyConfig() called', { reason });
+    const stack = new Error().stack?.split('\n').slice(0, 5).join(' | ');
+    console.warn('[ConfigEditor] resetToEmptyConfig() called', { reason, stack });
     this.loading = false;
     this.config = this.getEmptyConfig();
-    this.configCategories = [];
     this.originalConfig = null;
     this.configCommandId = null;
     this.syncJsonFromConfig();
@@ -2181,13 +2194,18 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
         categories: normalizedCategories,
         timeCategories: normalizedTimeCategories,
       };
-
-      // CRITICAL: Update separate array for template binding with setTimeout to force change detection
-      setTimeout(() => {
-        this.configCategories = [...normalizedCategories];
-        console.log('[ConfigEditor] configCategories set to (in setTimeout):', this.configCategories.length);
-      }, 0);
-
+      console.log('[ConfigEditor] this.config set');
+      console.log(
+        '[ConfigEditor] Final config categories:',
+        this.config.categories.map(cat => ({
+          name: cat.name,
+          videos: cat.videos.length,
+          subCategories: cat.subCategories.map(sub => ({
+            name: sub.name,
+            videos: sub.videos.length,
+          })),
+        }))
+      );
       this.originalConfig = JSON.parse(JSON.stringify(this.config));
       console.log('[ConfigEditor] originalConfig set');
       this.syncJsonFromConfig();
