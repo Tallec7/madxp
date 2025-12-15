@@ -314,8 +314,8 @@ export async function generateClubReport(
       [siteId, from, to]
     );
 
-    const availability = availabilityResult.rows[0];
-    const uptimePercent = availability.total_checks > 0
+    const availability = availabilityResult.rows[0] as { total_checks: string; online_checks: string };
+    const uptimePercent = parseInt(availability.total_checks) > 0
       ? (parseFloat(availability.online_checks as string) / parseFloat(availability.total_checks as string)) * 100
       : 0;
 
@@ -1478,7 +1478,7 @@ async function generateClubPdf(data: any, options: PdfReportOptions): Promise<Bu
  * Dessine une box KPI stylisée
  */
 function drawKPIBox(
-  doc: PDFDocument,
+  doc: typeof PDFDocument.prototype,
   x: number,
   y: number,
   width: number,
