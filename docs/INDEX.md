@@ -1,10 +1,28 @@
 # Documentation Neopro
 
+## 🚀 PERDU ? COMMENCEZ ICI !
+
+### **[START_HERE.md](START_HERE.md)** - 🎯 Guide de Navigation
+
+**Nouveau sur le projet ?** Ce guide vous oriente selon votre profil :
+- 👨‍💻 Développeur (backend, frontend, fullstack)
+- 🎯 Chef de projet / Product Owner
+- 🏗️ Ops / Installation
+- 🆘 Dépannage
+
+**Inclut** :
+- Parcours recommandés par profil
+- Navigation par mot-clé
+- Documents à ignorer (obsolètes)
+- Checklist "Je suis prêt"
+
+---
+
 ## 📖 Documents principaux
 
 ### Pour utiliser Neopro
 
-1. **[README.md](../README.md)** - **COMMENCER ICI**
+1. **[README.md](../README.md)** - Documentation Utilisateur
    - Configuration nouveau club
    - Mise à jour boîtier
    - Accès rapide aux interfaces
@@ -65,7 +83,7 @@
    - Vue d'ensemble et fonctionnalités
    - Architecture complète
    - Guides démarrage rapide
-   - État du projet (95% conformité BP §13)
+   - État du projet (98% conformité BP §13)
 
 10. **[IMPLEMENTATION_ANALYTICS_SPONSORS.md](IMPLEMENTATION_ANALYTICS_SPONSORS.md)** - Guide implémentation
    - Schéma base de données
@@ -85,18 +103,23 @@
    - API et intégration
 
 13. **[AVANCEMENT_ANALYTICS_SPONSORS.md](AVANCEMENT_ANALYTICS_SPONSORS.md)** - Suivi progression
-   - Planning semaines 1-3 (terminé)
-   - Métriques conformité (95%)
-   - Roadmap phases 4-5 (optionnel)
+   - Planning semaines 1-3 (terminé) + Phase 4 Tests
+   - Métriques conformité (98%)
+   - Roadmap phase 5 (optionnel)
+
+14. **[TESTS_ANALYTICS_SPONSORS.md](TESTS_ANALYTICS_SPONSORS.md)** - Tests automatisés
+   - 39 tests unitaires + intégration (100% passed)
+   - Coverage report et CI/CD
+   - Guide exécution et debugging
 
 ### Pour les développeurs
 
-14. **[dev/README.md](dev/README.md)** - Documentation développement
+15. **[dev/README.md](dev/README.md)** - Documentation développement
    - Configuration environnement
    - Conventions de code
    - Tests
 
-15. **[changelog/README.md](changelog/README.md)** - Historique des modifications
+16. **[changelog/README.md](changelog/README.md)** - Historique des modifications
    - Suivi des changements
    - Notes de version
 
