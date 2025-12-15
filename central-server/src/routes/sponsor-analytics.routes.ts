@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
 import {
   listSponsors,
+  getSponsor,
   createSponsor,
   updateSponsor,
   deleteSponsor,
@@ -27,6 +28,13 @@ router.get(
   '/sponsors',
   authenticate,
   listSponsors
+);
+
+// Récupérer un sponsor par ID
+router.get(
+  '/sponsors/:id',
+  authenticate,
+  getSponsor
 );
 
 // Créer un nouveau sponsor (admin/operator only)

@@ -9,9 +9,7 @@ import { generateSponsorReport, generateClubReport } from '../services/pdf-repor
 // TYPE DEFINITIONS
 // ============================================================================
 
-interface QueryRow {
-  [column: string]: unknown;
-}
+type QueryRow = Record<string, unknown>;
 
 interface SponsorRow extends QueryRow {
   id: string;
@@ -82,6 +80,50 @@ export const listSponsors = async (req: AuthRequest, res: Response): Promise<voi
     res.status(500).json({
       success: false,
       error: 'Failed to list sponsors',
+    });
+  }
+};
+
+/**
+ * GET /api/analytics/sponsors/:id
+ * Récupérer les détails d'un sponsor
+ */
+export const getSponsor = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    if (!validateUuid(id)) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid sponsor ID',
+      });
+      return;
+    }
+
+    const result = await query<SponsorRow>(
+      `SELECT id, name, logo_url, contact_email, contact_name, contact_phone, status, metadata, created_at, updated_at
+       FROM sponsors
+       WHERE id = $1`,
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'Sponsor not found',
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+    });
+  } catch (error) {
+    logger.error('Error getting sponsor:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get sponsor',
     });
   }
 };
