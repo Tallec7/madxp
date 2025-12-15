@@ -2,184 +2,409 @@
 @if (currentView === 'club-selector') {
   <app-club-selector (clubSelected)="onClubSelected($event)"></app-club-selector>
 } @else {
-<div class="remote-container">
-  <!-- Header avec breadcrumb -->
-  <div class="remote-header">
-    <div class="header-content">
-      <div class="header-left">
-        @if (breadcrumb.length > 1) {
-          <button class="back-button" (click)="handleBack()">
-            <span class="back-icon">←</span>
-          </button>
-        }
-        @if (isDemoMode && breadcrumb.length === 1) {
-          <button class="back-button" (click)="backToClubSelector()">
-            <span class="back-icon">←</span>
-          </button>
-        }
-        <div class="header-title-section">
-          <h1 class="header-title">{{ breadcrumb[breadcrumb.length - 1] }}</h1>
-          @if (isDemoMode && breadcrumb.length === 1 && configuration) {
-            <div class="breadcrumb-path">
-              <span>{{ configuration.auth?.clubName || 'Club' }}</span>
-            </div>
+  <div class="remote-container">
+    <!-- Header avec breadcrumb -->
+    <div class="remote-header">
+      <div class="header-content">
+        <div class="header-left">
+          @if (breadcrumb.length > 1 || isSearching) {
+            <button class="back-button" (click)="handleBack()">
+              <span class="back-icon">←</span>
+            </button>
           }
-          @if (breadcrumb.length > 1) {
-            <div class="breadcrumb-path">
-              @for (item of breadcrumb.slice(0, -1); track item; let i = $index) {
-                <span>{{ item }}</span>
-                @if (i < breadcrumb.length - 2) {
-                  <span>/</span>
-                }
+          @if (isDemoMode && breadcrumb.length === 1 && !isSearching) {
+            <button class="back-button" (click)="backToClubSelector()">
+              <span class="back-icon">←</span>
+            </button>
+          }
+          <div class="header-title-section">
+            @if (isSearching) {
+              <h1 class="header-title">Recherche</h1>
+              <div class="breadcrumb-path">
+                <span
+                  >{{ searchResults.length }} résultat{{
+                    searchResults.length !== 1 ? 's' : ''
+                  }}</span
+                >
+              </div>
+            } @else {
+              <h1 class="header-title">{{ breadcrumb[breadcrumb.length - 1] }}</h1>
+              @if (isDemoMode && breadcrumb.length === 1 && configuration) {
+                <div class="breadcrumb-path">
+                  <span>{{ configuration.auth?.clubName || 'Club' }}</span>
+                </div>
+              }
+              @if (breadcrumb.length > 1) {
+                <div class="breadcrumb-path">
+                  @for (item of breadcrumb.slice(0, -1); track item; let i = $index) {
+                    <span>{{ item }}</span>
+                    @if (i < breadcrumb.length - 2) {
+                      <span>/</span>
+                    }
+                  }
+                </div>
+              }
+            }
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Badge estimation audience -->
+          <button class="audience-badge" (click)="openMatchModal()" title="Configuration match">
+            <span class="badge-icon">👥</span>
+            <span class="badge-value">{{ matchInfo.audienceEstimate }}</span>
+            <span class="badge-edit">✏️</span>
+          </button>
+
+          <!-- Bouton actualiser (visible seulement en mode normal, pas démo) -->
+          @if (!isDemoMode && breadcrumb.length === 1 && !isSearching) {
+            <button class="reload-button" (click)="reloadConfiguration()" [disabled]="isReloading">
+              <span class="reload-icon" [class.spinning]="isReloading">🔄</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Barre de recherche (visible sur la page d'accueil) -->
+      @if (currentView === 'home' || isSearching) {
+        <div class="search-bar">
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Rechercher une vidéo..."
+            [(ngModel)]="searchQuery"
+            (input)="onSearch()"
+            (keyup.escape)="clearSearch()"
+          />
+          @if (searchQuery) {
+            <button class="search-clear" (click)="clearSearch()">✕</button>
+          } @else {
+            <span class="search-icon">🔍</span>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="remote-content">
+      <!-- Résultats de recherche -->
+      @if (isSearching) {
+        <div class="view-search-results">
+          @if (searchResults.length === 0) {
+            <div class="empty-state">
+              <span class="empty-icon">🔍</span>
+              <h3>Aucun résultat</h3>
+              <p>Aucune vidéo ne correspond à "{{ searchQuery }}"</p>
+            </div>
+          } @else {
+            <div class="videos-list">
+              @for (video of searchResults; track video.path) {
+                <button class="video-card" (click)="launchVideo(video)">
+                  <div class="video-icon-wrapper">
+                    <span class="video-icon">🎬</span>
+                  </div>
+                  <div class="video-info">
+                    <h3 class="video-title">{{ video.name }}</h3>
+                    <span class="video-path">{{ video.path }}</span>
+                  </div>
+                  <span class="video-play">▶</span>
+                </button>
               }
             </div>
           }
         </div>
-      </div>
-      <!-- Bouton actualiser (visible seulement en mode normal, pas démo) -->
-      @if (!isDemoMode && breadcrumb.length === 1) {
-        <button class="reload-button" (click)="reloadConfiguration()" [disabled]="isReloading">
-          <span class="reload-icon" [class.spinning]="isReloading">🔄</span>
-        </button>
+      }
+
+      <!-- Vue principale - Accueil -->
+      @if (currentView === 'home' && !isSearching) {
+        <div class="view-home">
+          <!-- Widget Score en Live (si activé) -->
+          @if (liveScoreEnabled) {
+            <div class="score-widget">
+              <div class="score-widget-header">
+                <h3>🏀 Score du Match</h3>
+                <button class="score-reset" (click)="resetScore()" title="Réinitialiser">↺</button>
+              </div>
+
+              <div class="score-display">
+                <!-- Équipe Domicile -->
+                <div class="team-section">
+                  <input
+                    type="text"
+                    [(ngModel)]="currentScore.homeTeam"
+                    (blur)="broadcastScore()"
+                    class="team-name-input"
+                    placeholder="DOMICILE"
+                  />
+                  <div class="score-controls">
+                    <button class="score-btn minus" (click)="decrementHomeScore()">-</button>
+                    <div class="score-value">{{ currentScore.homeScore }}</div>
+                    <button class="score-btn plus" (click)="incrementHomeScore()">+</button>
+                  </div>
+                </div>
+
+                <!-- Séparateur -->
+                <div class="score-separator">-</div>
+
+                <!-- Équipe Extérieure -->
+                <div class="team-section">
+                  <input
+                    type="text"
+                    [(ngModel)]="currentScore.awayTeam"
+                    (blur)="broadcastScore()"
+                    class="team-name-input"
+                    placeholder="EXTÉRIEUR"
+                  />
+                  <div class="score-controls">
+                    <button class="score-btn minus" (click)="decrementAwayScore()">-</button>
+                    <div class="score-value">{{ currentScore.awayScore }}</div>
+                    <button class="score-btn plus" (click)="incrementAwayScore()">+</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Actions rapides -->
+          <div class="quick-actions">
+            <button class="quick-action sponsors-action" (click)="launchSponsors()">
+              <span class="action-icon">👥</span>
+              <div class="action-content">
+                <div class="action-title">Boucle partenaires</div>
+                <div class="action-subtitle">Lancer la rotation automatique</div>
+              </div>
+            </button>
+
+            <button class="quick-action all-videos-action" (click)="showAllVideos()">
+              <span class="action-icon">🎬</span>
+              <div class="action-content">
+                <div class="action-title">Toutes les vidéos</div>
+                <div class="action-subtitle">{{ getTotalVideosCount() }} vidéos disponibles</div>
+              </div>
+            </button>
+          </div>
+
+          <!-- Catégories par temps -->
+          <div class="time-categories-section">
+            <h2 class="section-title">Organisation par temps</h2>
+            <div class="time-categories-grid">
+              @for (timeCategory of timeCategories; track timeCategory.name) {
+                <button
+                  class="time-category-card"
+                  [ngClass]="timeCategory.color"
+                  (click)="selectTimeCategory(timeCategory)"
+                >
+                  <div class="card-header">
+                    <span class="card-icon">{{ timeCategory.icon }}</span>
+                    <span class="card-arrow">→</span>
+                  </div>
+                  <h3 class="card-title">{{ timeCategory.name }}</h3>
+                  <p class="card-description">{{ timeCategory.description }}</p>
+                  <div class="card-footer">
+                    <span class="card-stats">
+                      {{ getTotalCategoriesForTimeCategory(timeCategory) }} catégories •
+                      {{ getTotalVideosForTimeCategory(timeCategory) }} vidéos
+                    </span>
+                  </div>
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Vue toutes les vidéos -->
+      @if (currentView === 'all-videos') {
+        <div class="view-all-videos">
+          @if (getAllVideos().length === 0) {
+            <div class="empty-state">
+              <span class="empty-icon">📭</span>
+              <h3>Aucune vidéo</h3>
+              <p>Il n'y a pas encore de vidéos dans cette configuration</p>
+            </div>
+          } @else {
+            <div class="videos-list">
+              @for (video of getAllVideos(); track video.path) {
+                <button class="video-card" (click)="launchVideo(video)">
+                  <div class="video-icon-wrapper">
+                    <span class="video-icon">🎬</span>
+                  </div>
+                  <div class="video-info">
+                    <h3 class="video-title">{{ video.name }}</h3>
+                    <span class="video-path">{{ video.path }}</span>
+                  </div>
+                  <span class="video-play">▶</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Vue catégories d'un temps -->
+      @if (currentView === 'time-categories' && selectedTimeCategory) {
+        <div class="view-categories">
+          @if (getCategoriesForTimeCategory(selectedTimeCategory).length === 0) {
+            <div class="empty-state">
+              <span class="empty-icon">📭</span>
+              <h3>Aucune catégorie</h3>
+              <p>Aucune catégorie n'est assignée à "{{ selectedTimeCategory.name }}"</p>
+            </div>
+          } @else {
+            <div class="categories-grid">
+              @for (
+                category of getCategoriesForTimeCategory(selectedTimeCategory);
+                track category.name
+              ) {
+                <button class="category-card" (click)="selectCategory(category)">
+                  <div class="category-icon-wrapper">
+                    <span class="category-icon">📁</span>
+                  </div>
+                  <div class="category-info">
+                    <h3 class="category-title">{{ category.name }}</h3>
+                    <div class="category-meta">
+                      @if (getSubCategoriesCount(category) > 0) {
+                        <span>
+                          {{ getSubCategoriesCount(category) }} sous-catégorie{{
+                            getSubCategoriesCount(category) > 1 ? 's' : ''
+                          }}
+                        </span>
+                      }
+                      @if (getSubCategoriesCount(category) > 0 && getVideosCount(category) > 0) {
+                        <span> • </span>
+                      }
+                      @if (getVideosCount(category) > 0) {
+                        <span>
+                          {{ getVideosCount(category) }} vidéo{{
+                            getVideosCount(category) > 1 ? 's' : ''
+                          }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+                  <span class="category-arrow">→</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Vue sous-catégories -->
+      @if (currentView === 'subcategories' && selectedCategory) {
+        <div class="view-subcategories">
+          @if (getSubCategoriesForDisplay(selectedCategory).length === 0) {
+            <div class="empty-state">
+              <span class="empty-icon">📭</span>
+              <h3>Aucune sous-catégorie</h3>
+              <p>Cette catégorie ne contient pas de sous-catégories</p>
+            </div>
+          } @else {
+            <div class="subcategories-grid">
+              @for (
+                subCategory of getSubCategoriesForDisplay(selectedCategory);
+                track subCategory.name
+              ) {
+                <button class="subcategory-card" (click)="selectSubCategory(subCategory)">
+                  <div class="subcategory-icon-wrapper">
+                    <span class="subcategory-icon">📁</span>
+                  </div>
+                  <div class="subcategory-info">
+                    <h3 class="subcategory-title">{{ subCategory.name }}</h3>
+                    <div class="subcategory-meta">
+                      {{ subCategory.videos?.length || 0 }} vidéo{{
+                        (subCategory.videos?.length || 0) > 1 ? 's' : ''
+                      }}
+                    </div>
+                  </div>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Vue vidéos -->
+      @if (currentView === 'videos') {
+        <div class="view-videos">
+          @if (getCurrentVideos().length === 0) {
+            <div class="empty-state">
+              <span class="empty-icon">🎬</span>
+              <h3>Aucune vidéo</h3>
+              <p>Cette catégorie ne contient pas de vidéos</p>
+            </div>
+          } @else {
+            <div class="videos-list">
+              @for (video of getCurrentVideos(); track video.path) {
+                <button class="video-card" (click)="launchVideo(video)">
+                  <div class="video-icon-wrapper">
+                    <span class="video-icon">🎬</span>
+                  </div>
+                  <div class="video-info">
+                    <h3 class="video-title">{{ video.name }}</h3>
+                    <span class="video-path">{{ video.path }}</span>
+                  </div>
+                  <span class="video-play">▶</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
       }
     </div>
-  </div>
 
-  <div class="remote-content">
-    <!-- Vue principale - Accueil -->
-    @if (currentView === 'home') {
-      <div class="view-home">
-        <!-- Actions rapides -->
-        <div class="quick-actions">
-          <button class="quick-action sponsors-action" (click)="launchSponsors()">
-            <span class="action-icon">👥</span>
-            <div class="action-content">
-              <div class="action-title">Boucle partenaires</div>
-              <div class="action-subtitle">Lancer la rotation automatique</div>
+    <!-- Modal configuration match -->
+    @if (showMatchModal) {
+      <div class="modal-overlay" (click)="closeMatchModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>📅 Configuration Match</h2>
+            <button class="modal-close" (click)="closeMatchModal()">×</button>
+          </div>
+
+          <div class="modal-body">
+            <!-- Date du match -->
+            <div class="form-group">
+              <label for="matchDate">Date du match</label>
+              <input type="date" id="matchDate" [(ngModel)]="matchInfo.date" class="form-input" />
             </div>
-          </button>
 
-          <button class="quick-action program-action">
-            <span class="action-icon">▶️</span>
-            <div class="action-content">
-              <div class="action-title">Mode Programmation</div>
-              <div class="action-subtitle">Playlist automatique</div>
+            <!-- Nom du match -->
+            <div class="form-group">
+              <label for="matchName">Match</label>
+              <input
+                type="text"
+                id="matchName"
+                [(ngModel)]="matchInfo.matchName"
+                placeholder="CESSON vs NANTES"
+                class="form-input"
+              />
+              <span class="form-hint">Utilisez "vs" pour séparer les équipes</span>
             </div>
-          </button>
-        </div>
 
-        <!-- Catégories par temps -->
-        <div class="time-categories-section">
-          <h2 class="section-title">Organisation par temps</h2>
-          <div class="time-categories-grid">
-            @for (timeCategory of timeCategories; track timeCategory.name) {
-              <button
-                class="time-category-card"
-                [ngClass]="timeCategory.color"
-                (click)="selectTimeCategory(timeCategory)"
-              >
-                <div class="card-header">
-                  <span class="card-icon">{{ timeCategory.icon }}</span>
-                  <span class="card-arrow">→</span>
-                </div>
-                <h3 class="card-title">{{ timeCategory.name }}</h3>
-                <p class="card-description">{{ timeCategory.description }}</p>
-                <div class="card-footer">
-                  <span class="card-stats">
-                    {{ getTotalCategoriesForTimeCategory(timeCategory) }} catégories •
-                    {{ getTotalVideosForTimeCategory(timeCategory) }} vidéos
-                  </span>
-                </div>
-              </button>
-            }
+            <!-- Estimation spectateurs -->
+            <div class="form-group">
+              <label for="audienceEstimate">Spectateurs estimés</label>
+              <div class="audience-input-group">
+                <button class="audience-btn minus" (click)="decrementAudience()">-</button>
+                <input
+                  type="number"
+                  id="audienceEstimate"
+                  [(ngModel)]="matchInfo.audienceEstimate"
+                  min="0"
+                  step="10"
+                  class="form-input audience-number"
+                />
+                <button class="audience-btn plus" (click)="incrementAudience()">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeMatchModal()">Annuler</button>
+            <button class="btn btn-primary" (click)="saveMatchInfo()">Enregistrer</button>
           </div>
         </div>
       </div>
     }
-
-    <!-- Vue catégories d'un temps -->
-    @if (currentView === 'time-categories' && selectedTimeCategory) {
-      <div class="view-categories">
-        <div class="categories-grid">
-          @for (category of getCategoriesForTimeCategory(selectedTimeCategory); track category.name) {
-            <button
-              class="category-card"
-              (click)="selectCategory(category)"
-            >
-              <div class="category-icon-wrapper">
-                <span class="category-icon">📁</span>
-              </div>
-              <div class="category-info">
-                <h3 class="category-title">{{ category.name }}</h3>
-                <div class="category-meta">
-                  @if (getSubCategoriesCount(category) > 0) {
-                    <span>
-                      {{ getSubCategoriesCount(category) }} sous-catégorie{{ getSubCategoriesCount(category) > 1 ? 's' : '' }}
-                    </span>
-                  }
-                  @if (getSubCategoriesCount(category) > 0 && getVideosCount(category) > 0) {
-                    <span> • </span>
-                  }
-                  @if (getVideosCount(category) > 0) {
-                    <span>
-                      {{ getVideosCount(category) }} vidéo{{ getVideosCount(category) > 1 ? 's' : '' }}
-                    </span>
-                  }
-                </div>
-              </div>
-              <span class="category-arrow">→</span>
-            </button>
-          }
-        </div>
-      </div>
-    }
-
-    <!-- Vue sous-catégories -->
-    @if (currentView === 'subcategories' && selectedCategory) {
-      <div class="view-subcategories">
-        <div class="subcategories-grid">
-          @for (subCategory of getSubCategoriesForDisplay(selectedCategory); track subCategory.name) {
-            <button
-              class="subcategory-card"
-              (click)="selectSubCategory(subCategory)"
-            >
-              <div class="subcategory-icon-wrapper">
-                <span class="subcategory-icon">📁</span>
-              </div>
-              <div class="subcategory-info">
-                <h3 class="subcategory-title">{{ subCategory.name }}</h3>
-                <div class="subcategory-meta">
-                  {{ subCategory.videos?.length || 0 }} vidéo{{ (subCategory.videos?.length || 0) > 1 ? 's' : '' }}
-                </div>
-              </div>
-            </button>
-          }
-        </div>
-      </div>
-    }
-
-    <!-- Vue vidéos -->
-    @if (currentView === 'videos') {
-      <div class="view-videos">
-        <div class="videos-list">
-          @for (video of getCurrentVideos(); track video.path) {
-            <button
-              class="video-card"
-              (click)="launchVideo(video)"
-            >
-              <div class="video-icon-wrapper">
-                <span class="video-icon">🎬</span>
-              </div>
-              <div class="video-info">
-                <h3 class="video-title">{{ video.name }}</h3>
-                <span class="video-path">{{ video.path }}</span>
-              </div>
-              <span class="video-arrow">→</span>
-            </button>
-          }
-        </div>
-      </div>
-    }
   </div>
-</div>
 }

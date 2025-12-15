@@ -1,5 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Configuration, TimeCategory } from '../../interfaces/configuration.interface';
@@ -10,12 +11,12 @@ import { AnalyticsService } from '../../services/analytics.service';
 import { DemoConfigService } from '../../services/demo-config.service';
 import { ClubSelectorComponent } from '../club-selector/club-selector.component';
 
-type ViewType = 'club-selector' | 'home' | 'time-categories' | 'subcategories' | 'videos';
+type ViewType = 'club-selector' | 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos';
 
 @Component({
   selector: 'app-remote',
   standalone: true,
-  imports: [CommonModule, ClubSelectorComponent],
+  imports: [CommonModule, FormsModule, ClubSelectorComponent],
   templateUrl: './remote.component.html',
   styleUrl: './remote.component.scss'
 })
@@ -36,6 +37,32 @@ export class RemoteComponent implements OnInit {
   public selectedTimeCategory: TimeCategory | null = null;
   public selectedCategory: Category | null = null;
   public selectedSubCategory: Category | null = null;
+
+  // Recherche
+  public searchQuery = '';
+  public searchResults: Video[] = [];
+  public isSearching = false;
+
+  // Affluence et match info
+  public showMatchModal = false;
+  public matchInfo = {
+    date: new Date().toISOString().split('T')[0],
+    matchName: '',
+    audienceEstimate: 150
+  };
+  public currentSessionId: string | null = null;
+
+  // Score en live
+  public liveScoreEnabled = false;
+  public currentScore = {
+    homeTeam: 'DOMICILE',
+    awayTeam: 'EXTÉRIEUR',
+    homeScore: 0,
+    awayScore: 0
+  };
+
+  // Exposer Math pour le template
+  public Math = Math;
 
   // Organisation par temps de match - valeurs par défaut si non définies dans la config
   private readonly defaultTimeCategories: TimeCategory[] = [
@@ -93,10 +120,25 @@ export class RemoteComponent implements OnInit {
     this.timeCategories = this.configuration.timeCategories?.length
       ? this.configuration.timeCategories
       : this.defaultTimeCategories;
+    // Charger l'état du live score depuis la config
+    this.liveScoreEnabled = config.liveScoreEnabled ?? false;
   }
 
   // Navigation
   public handleBack(): void {
+    // Si on est dans la recherche, on revient à home
+    if (this.isSearching) {
+      this.clearSearch();
+      return;
+    }
+
+    // Si on est dans "toutes les vidéos", on revient à home
+    if (this.currentView === 'all-videos') {
+      this.currentView = 'home';
+      this.breadcrumb = ['Télécommande'];
+      return;
+    }
+
     this.breadcrumb.pop();
 
     if (this.breadcrumb.length === 1) {
@@ -261,5 +303,209 @@ export class RemoteComponent implements OnInit {
       ...config,
       categories: config.categories?.map(cat => enrichCategory(cat)) || []
     };
+  }
+
+  // ============================================================================
+  // RECHERCHE
+  // ============================================================================
+
+  /**
+   * Effectue une recherche dans toutes les vidéos
+   */
+  public onSearch(): void {
+    if (!this.searchQuery.trim()) {
+      this.clearSearch();
+      return;
+    }
+
+    this.isSearching = true;
+    const query = this.searchQuery.toLowerCase().trim();
+    this.searchResults = this.getAllVideos().filter(video =>
+      video.name.toLowerCase().includes(query)
+    );
+  }
+
+  /**
+   * Efface la recherche et revient à la vue précédente
+   */
+  public clearSearch(): void {
+    this.searchQuery = '';
+    this.searchResults = [];
+    this.isSearching = false;
+  }
+
+  /**
+   * Retourne toutes les vidéos de la configuration (flat)
+   */
+  public getAllVideos(): Video[] {
+    const videos: Video[] = [];
+
+    const extractVideos = (category: Category) => {
+      if (category.videos) {
+        videos.push(...category.videos);
+      }
+      if (category.subCategories) {
+        category.subCategories.forEach(sub => extractVideos(sub));
+      }
+    };
+
+    this.configuration?.categories?.forEach(cat => extractVideos(cat));
+    return this.sortByName(videos);
+  }
+
+  /**
+   * Affiche toutes les vidéos
+   */
+  public showAllVideos(): void {
+    this.currentView = 'all-videos';
+    this.breadcrumb = ['Télécommande', 'Toutes les vidéos'];
+  }
+
+  /**
+   * Retourne le nombre total de vidéos dans la configuration
+   */
+  public getTotalVideosCount(): number {
+    return this.getAllVideos().length;
+  }
+
+  // ============================================================================
+  // AFFLUENCE / MATCH INFO
+  // ============================================================================
+
+  /**
+   * Ouvre le modal de configuration du match
+   */
+  public openMatchModal(): void {
+    this.showMatchModal = true;
+  }
+
+  /**
+   * Ferme le modal sans sauvegarder
+   */
+  public closeMatchModal(): void {
+    this.showMatchModal = false;
+  }
+
+  /**
+   * Sauvegarde les informations du match
+   */
+  public saveMatchInfo(): void {
+    console.log('Match info saved:', this.matchInfo);
+
+    // Créer une nouvelle session avec les infos du match
+    this.currentSessionId = this.generateUUID();
+
+    // Envoyer au serveur via socket
+    this.socketService.emit('match-config', {
+      sessionId: this.currentSessionId,
+      matchDate: this.matchInfo.date,
+      matchName: this.matchInfo.matchName,
+      audienceEstimate: this.matchInfo.audienceEstimate
+    });
+
+    // Extraire les noms d'équipes pour le score
+    this.updateTeamNamesFromMatch();
+
+    this.showMatchModal = false;
+  }
+
+  /**
+   * Incrémente l'estimation d'audience
+   */
+  public incrementAudience(): void {
+    this.matchInfo.audienceEstimate += 10;
+  }
+
+  /**
+   * Décrémente l'estimation d'audience
+   */
+  public decrementAudience(): void {
+    if (this.matchInfo.audienceEstimate >= 10) {
+      this.matchInfo.audienceEstimate -= 10;
+    }
+  }
+
+  /**
+   * Génère un UUID v4
+   */
+  private generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  // ============================================================================
+  // SCORE EN LIVE
+  // ============================================================================
+
+  /**
+   * Incrémente le score de l'équipe domicile
+   */
+  public incrementHomeScore(): void {
+    this.currentScore.homeScore++;
+    this.broadcastScore();
+  }
+
+  /**
+   * Décrémente le score de l'équipe domicile
+   */
+  public decrementHomeScore(): void {
+    if (this.currentScore.homeScore > 0) {
+      this.currentScore.homeScore--;
+      this.broadcastScore();
+    }
+  }
+
+  /**
+   * Incrémente le score de l'équipe extérieure
+   */
+  public incrementAwayScore(): void {
+    this.currentScore.awayScore++;
+    this.broadcastScore();
+  }
+
+  /**
+   * Décrémente le score de l'équipe extérieure
+   */
+  public decrementAwayScore(): void {
+    if (this.currentScore.awayScore > 0) {
+      this.currentScore.awayScore--;
+      this.broadcastScore();
+    }
+  }
+
+  /**
+   * Extrait les noms des équipes depuis le nom du match
+   */
+  public updateTeamNamesFromMatch(): void {
+    if (this.matchInfo.matchName && this.matchInfo.matchName.toLowerCase().includes('vs')) {
+      const teams = this.matchInfo.matchName.split(/vs/i).map(t => t.trim());
+      this.currentScore.homeTeam = teams[0] || 'DOMICILE';
+      this.currentScore.awayTeam = teams[1] || 'EXTÉRIEUR';
+      this.broadcastScore();
+    }
+  }
+
+  /**
+   * Envoie le score à la TV via socket
+   */
+  public broadcastScore(): void {
+    this.socketService.emit('score-update', {
+      homeTeam: this.currentScore.homeTeam,
+      awayTeam: this.currentScore.awayTeam,
+      homeScore: this.currentScore.homeScore,
+      awayScore: this.currentScore.awayScore
+    });
+  }
+
+  /**
+   * Réinitialise le score
+   */
+  public resetScore(): void {
+    this.currentScore.homeScore = 0;
+    this.currentScore.awayScore = 0;
+    this.broadcastScore();
   }
 }

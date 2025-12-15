@@ -46,4 +46,9 @@ export interface Configuration {
      * Valeur: ID de la catégorie analytics (ex: "jingle", "ambiance")
      */
     categoryMappings?: Record<string, string>;
+    /**
+     * Active l'affichage du score en live sur la télécommande et la TV
+     * Cette option est activée manuellement par NEOPRO (option payante)
+     */
+    liveScoreEnabled?: boolean;
 }

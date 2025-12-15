@@ -1,40 +1,61 @@
 # Guide d'Implémentation - Estimation Audience & Score en Live
 
-> Date : 15 Décembre 2025
+> Date : 15 Décembre 2025 (Mise à jour 14h30)
 > Référence : BACKLOG.md - Sprint Décembre 2025
+> **Statut** : ✅ UI Télécommande TERMINÉE
+
+---
+
+## 🎯 ÉTAT D'AVANCEMENT
+
+| Composant                       | Statut        | Notes                          |
+| ------------------------------- | ------------- | ------------------------------ |
+| **UI Télécommande - Affluence** | ✅ FAIT       | Badge + Modal                  |
+| **UI Télécommande - Score**     | ✅ FAIT       | Widget complet                 |
+| **Interface Configuration**     | ✅ FAIT       | `liveScoreEnabled` dans config |
+| **Socket Events**               | ✅ FAIT       | `match-config`, `score-update` |
+| **Migration DB**                | ⏳ À exécuter | SQL prêt                       |
+| **Backend Handler**             | ⏳ À faire    | Handler socket `match-config`  |
+| **UI TV - Overlay Score**       | ⏳ À faire    | tv.component                   |
+| **Admin Toggle**                | ⏳ À faire    | site-edit.component            |
 
 ---
 
 ## 📋 TABLE DES MATIÈRES
 
-1. [Estimation d'Audience](#1-estimation-daudience)
-2. [Score en Live - Phase 1](#2-score-en-live---phase-1)
+1. [Estimation d'Audience](#1-estimation-daudience) ✅
+2. [Score en Live - Phase 1](#2-score-en-live---phase-1) ✅ (UI)
 3. [Scripts de Migration](#3-scripts-de-migration)
 4. [Tests à Effectuer](#4-tests-à-effectuer)
 
 ---
 
-## 1. ESTIMATION D'AUDIENCE
+## 1. ESTIMATION D'AUDIENCE ✅ UI TERMINÉE
 
-### 1.1 Base de Données ✅ FAIT
+### 1.1 Base de Données ✅ FAIT (Migration prête)
 
 **Fichier** : `central-server/src/scripts/migrations/add-audience-and-score-fields.sql`
 
 Champs ajoutés à `club_sessions` :
+
 - `match_date DATE` - Date du match
 - `match_name VARCHAR(255)` - Nom du match (ex: "CESSON vs NANTES")
 - `audience_estimate INTEGER` - Estimation spectateurs
 
 **Exécuter la migration** :
+
 ```bash
 psql -U neopro_user -d neopro_db -f central-server/src/scripts/migrations/add-audience-and-score-fields.sql
 ```
 
 ---
 
-### 1.2 Frontend Télécommande - Badge & Modal
+### 1.2 Frontend Télécommande - Badge & Modal ✅ IMPLÉMENTÉ
 
-#### 1.2.1 Modifier `remote.component.ts`
+> **Note** : Cette section a été implémentée le 15 Décembre 2025.
+> Voir `remote.component.ts`, `remote.component.html`, `remote.component.scss`
+
+#### 1.2.1 Modifier `remote.component.ts` ✅ FAIT
 
 **Ajouter les propriétés** (après ligne 38) :
 
@@ -135,71 +156,66 @@ public launchSponsors(): void {
 ```html
 <!-- Modal configuration match -->
 @if (showMatchModal) {
-  <div class="modal-overlay" (click)="closeMatchModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>📅 Configuration Match</h2>
-        <button class="modal-close" (click)="closeMatchModal()">×</button>
+<div class="modal-overlay" (click)="closeMatchModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>📅 Configuration Match</h2>
+      <button class="modal-close" (click)="closeMatchModal()">×</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Date du match -->
+      <div class="form-group">
+        <label for="matchDate">Date du match</label>
+        <input type="date" id="matchDate" [(ngModel)]="matchInfo.date" class="form-input" />
       </div>
 
-      <div class="modal-body">
-        <!-- Date du match -->
-        <div class="form-group">
-          <label for="matchDate">Date du match</label>
-          <input
-            type="date"
-            id="matchDate"
-            [(ngModel)]="matchInfo.date"
-            class="form-input"
-          />
-        </div>
-
-        <!-- Nom du match -->
-        <div class="form-group">
-          <label for="matchName">Match</label>
-          <input
-            type="text"
-            id="matchName"
-            [(ngModel)]="matchInfo.matchName"
-            placeholder="CESSON vs NANTES"
-            class="form-input"
-          />
-        </div>
-
-        <!-- Estimation spectateurs -->
-        <div class="form-group">
-          <label for="audienceEstimate">Spectateurs estimés</label>
-          <div class="audience-input-group">
-            <button
-              class="audience-btn minus"
-              (click)="matchInfo.audienceEstimate = Math.max(0, matchInfo.audienceEstimate - 10)"
-            >-</button>
-            <input
-              type="number"
-              id="audienceEstimate"
-              [(ngModel)]="matchInfo.audienceEstimate"
-              min="0"
-              step="10"
-              class="form-input audience-number"
-            />
-            <button
-              class="audience-btn plus"
-              (click)="matchInfo.audienceEstimate = matchInfo.audienceEstimate + 10"
-            >+</button>
-          </div>
-        </div>
+      <!-- Nom du match -->
+      <div class="form-group">
+        <label for="matchName">Match</label>
+        <input
+          type="text"
+          id="matchName"
+          [(ngModel)]="matchInfo.matchName"
+          placeholder="CESSON vs NANTES"
+          class="form-input"
+        />
       </div>
 
-      <div class="modal-footer">
-        <button class="btn btn-secondary" (click)="closeMatchModal()">
-          Annuler
-        </button>
-        <button class="btn btn-primary" (click)="saveMatchInfo()">
-          Enregistrer
-        </button>
+      <!-- Estimation spectateurs -->
+      <div class="form-group">
+        <label for="audienceEstimate">Spectateurs estimés</label>
+        <div class="audience-input-group">
+          <button
+            class="audience-btn minus"
+            (click)="matchInfo.audienceEstimate = Math.max(0, matchInfo.audienceEstimate - 10)"
+          >
+            -
+          </button>
+          <input
+            type="number"
+            id="audienceEstimate"
+            [(ngModel)]="matchInfo.audienceEstimate"
+            min="0"
+            step="10"
+            class="form-input audience-number"
+          />
+          <button
+            class="audience-btn plus"
+            (click)="matchInfo.audienceEstimate = matchInfo.audienceEstimate + 10"
+          >
+            +
+          </button>
+        </div>
       </div>
     </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeMatchModal()">Annuler</button>
+      <button class="btn btn-primary" (click)="saveMatchInfo()">Enregistrer</button>
+    </div>
   </div>
+</div>
 }
 ```
 
@@ -457,7 +473,7 @@ let sessionResult = await query(
   `SELECT id FROM club_sessions
    WHERE site_id = $1 AND ended_at IS NULL
    ORDER BY started_at DESC LIMIT 1`,
-  [siteId]
+  [siteId],
 );
 
 let sessionId: string;
@@ -468,7 +484,7 @@ if (sessionResult.rowCount === 0) {
     `INSERT INTO club_sessions (site_id, started_at, match_date, match_name, audience_estimate)
      VALUES ($1, NOW(), $2, $3, $4)
      RETURNING id`,
-    [siteId, null, null, null] // Sera mis à jour par match-config
+    [siteId, null, null, null], // Sera mis à jour par match-config
   );
   sessionId = newSession.rows[0].id;
 } else {
@@ -497,18 +513,17 @@ export async function handleMatchConfig(socket: Socket, data: any) {
            match_name = $2,
            audience_estimate = $3
        WHERE id = $4 AND site_id = $5`,
-      [matchDate, matchName, audienceEstimate, sessionId, siteId]
+      [matchDate, matchName, audienceEstimate, sessionId, siteId],
     );
 
     logger.info('Match config updated', {
       siteId,
       sessionId,
       matchName,
-      audienceEstimate
+      audienceEstimate,
     });
 
     socket.emit('match-config-saved', { success: true });
-
   } catch (error) {
     logger.error('Error handling match config:', error);
     socket.emit('match-config-saved', { success: false, error: String(error) });
@@ -531,15 +546,16 @@ io.on('connection', (socket) => {
 
 ---
 
-## 2. SCORE EN LIVE - PHASE 1
+## 2. SCORE EN LIVE - PHASE 1 ✅ UI TERMINÉE
 
-### 2.1 Base de Données ✅ FAIT
+### 2.1 Base de Données ✅ FAIT (Migration prête)
 
 **Fichier** : `central-server/src/scripts/migrations/add-audience-and-score-fields.sql`
 
 Déjà exécuté dans la section 1.1.
 
 Champs ajoutés :
+
 - `sites.live_score_enabled BOOLEAN` - Active/désactive le score (option payante)
 - `sponsor_impressions.home_score INTEGER` - Score domicile
 - `sponsor_impressions.away_score INTEGER` - Score extérieur
@@ -568,19 +584,15 @@ export interface Site {
 
   <div class="form-group checkbox-group premium">
     <label>
-      <input
-        type="checkbox"
-        [(ngModel)]="site.live_score_enabled"
-        name="liveScoreEnabled"
-      />
+      <input type="checkbox" [(ngModel)]="site.live_score_enabled" name="liveScoreEnabled" />
       <span class="checkbox-label">
         <span class="checkbox-text">Activer Score en Live</span>
         <span class="premium-badge">💰 Premium</span>
       </span>
     </label>
     <p class="form-help">
-      Permet d'afficher le score du match en surimpression pendant les vidéos.
-      Cette fonctionnalité est une option payante.
+      Permet d'afficher le score du match en surimpression pendant les vidéos. Cette fonctionnalité
+      est une option payante.
     </p>
   </div>
 </div>
@@ -610,9 +622,12 @@ export interface Site {
 
 ---
 
-### 2.3 Frontend Télécommande - Saisie Score
+### 2.3 Frontend Télécommande - Saisie Score ✅ IMPLÉMENTÉ
 
-#### 2.3.1 Modifier `remote.component.ts`
+> **Note** : Cette section a été implémentée le 15 Décembre 2025.
+> Le widget score est affiché si `liveScoreEnabled: true` dans configuration.json
+
+#### 2.3.1 Modifier `remote.component.ts` ✅ FAIT
 
 **Ajouter les propriétés** (après matchInfo) :
 
@@ -727,48 +742,48 @@ saveMatchInfo(): void {
 ```html
 <!-- Widget Score (si activé) -->
 @if (liveScoreEnabled && currentView === 'home') {
-  <div class="score-widget">
-    <div class="score-widget-header">
-      <h3>🏀 Score du Match</h3>
+<div class="score-widget">
+  <div class="score-widget-header">
+    <h3>🏀 Score du Match</h3>
+  </div>
+
+  <div class="score-display">
+    <!-- Équipe Domicile -->
+    <div class="team-section">
+      <input
+        type="text"
+        [(ngModel)]="currentScore.homeTeam"
+        (blur)="broadcastScore()"
+        class="team-name-input"
+        placeholder="DOMICILE"
+      />
+      <div class="score-controls">
+        <button class="score-btn minus" (click)="decrementHomeScore()">-</button>
+        <div class="score-value">{{ currentScore.homeScore }}</div>
+        <button class="score-btn plus" (click)="incrementHomeScore()">+</button>
+      </div>
     </div>
 
-    <div class="score-display">
-      <!-- Équipe Domicile -->
-      <div class="team-section">
-        <input
-          type="text"
-          [(ngModel)]="currentScore.homeTeam"
-          (blur)="broadcastScore()"
-          class="team-name-input"
-          placeholder="DOMICILE"
-        />
-        <div class="score-controls">
-          <button class="score-btn minus" (click)="decrementHomeScore()">-</button>
-          <div class="score-value">{{ currentScore.homeScore }}</div>
-          <button class="score-btn plus" (click)="incrementHomeScore()">+</button>
-        </div>
-      </div>
+    <!-- Séparateur -->
+    <div class="score-separator">-</div>
 
-      <!-- Séparateur -->
-      <div class="score-separator">-</div>
-
-      <!-- Équipe Extérieure -->
-      <div class="team-section">
-        <input
-          type="text"
-          [(ngModel)]="currentScore.awayTeam"
-          (blur)="broadcastScore()"
-          class="team-name-input"
-          placeholder="EXTÉRIEUR"
-        />
-        <div class="score-controls">
-          <button class="score-btn minus" (click)="decrementAwayScore()">-</button>
-          <div class="score-value">{{ currentScore.awayScore }}</div>
-          <button class="score-btn plus" (click)="incrementAwayScore()">+</button>
-        </div>
+    <!-- Équipe Extérieure -->
+    <div class="team-section">
+      <input
+        type="text"
+        [(ngModel)]="currentScore.awayTeam"
+        (blur)="broadcastScore()"
+        class="team-name-input"
+        placeholder="EXTÉRIEUR"
+      />
+      <div class="score-controls">
+        <button class="score-btn minus" (click)="decrementAwayScore()">-</button>
+        <div class="score-value">{{ currentScore.awayScore }}</div>
+        <button class="score-btn plus" (click)="incrementAwayScore()">+</button>
       </div>
     </div>
   </div>
+</div>
 }
 ```
 
@@ -889,7 +904,9 @@ saveMatchInfo(): void {
 
 ---
 
-### 2.4 Frontend TV - Overlay Score
+### 2.4 Frontend TV - Overlay Score ⏳ À IMPLÉMENTER
+
+> **Note** : Cette section reste à implémenter.
 
 #### 2.4.1 Modifier `tv.component.ts`
 
@@ -969,29 +986,28 @@ private showScoreChangePopup(): void {
 
   <!-- Overlay score permanent (coin supérieur droit) -->
   @if (liveScoreEnabled && currentScore) {
-    <div class="score-overlay">
-      <div class="score-line">
-        <span class="team-home">{{ currentScore.homeTeam }}</span>
-        <span class="score-home">{{ currentScore.homeScore }}</span>
-        <span class="separator">-</span>
-        <span class="score-away">{{ currentScore.awayScore }}</span>
-        <span class="team-away">{{ currentScore.awayTeam }}</span>
-      </div>
+  <div class="score-overlay">
+    <div class="score-line">
+      <span class="team-home">{{ currentScore.homeTeam }}</span>
+      <span class="score-home">{{ currentScore.homeScore }}</span>
+      <span class="separator">-</span>
+      <span class="score-away">{{ currentScore.awayScore }}</span>
+      <span class="team-away">{{ currentScore.awayTeam }}</span>
     </div>
+  </div>
   }
 
   <!-- Popup changement de score (centre écran) -->
   @if (liveScoreEnabled && showScorePopup && currentScore) {
-    <div class="score-popup">
-      <div class="popup-content">
-        <div class="popup-icon">⚽</div>
-        <div class="popup-score">
-          {{ currentScore.homeTeam }} {{ currentScore.homeScore }}
-          -
-          {{ currentScore.awayScore }} {{ currentScore.awayTeam }}
-        </div>
+  <div class="score-popup">
+    <div class="popup-content">
+      <div class="popup-icon">⚽</div>
+      <div class="popup-score">
+        {{ currentScore.homeTeam }} {{ currentScore.homeScore }} - {{ currentScore.awayScore }} {{
+        currentScore.awayTeam }}
       </div>
     </div>
+  </div>
   }
 </div>
 ```
@@ -1093,7 +1109,8 @@ private showScoreChangePopup(): void {
 }
 
 @keyframes bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -1145,6 +1162,7 @@ DROP COLUMN IF EXISTS away_score;
 ### 4.1 Tests Estimation d'Audience
 
 **Scénario 1 : Première utilisation**
+
 1. Ouvrir la télécommande
 2. Vérifier que le badge audience s'affiche avec valeur par défaut (150)
 3. Cliquer sur le badge
@@ -1164,6 +1182,7 @@ LIMIT 1;
 ```
 
 **Scénario 2 : Session active**
+
 1. Avec une session déjà configurée
 2. Lancer directement les sponsors
 3. Vérifier qu'aucun modal ne s'affiche
@@ -1171,6 +1190,7 @@ LIMIT 1;
 5. Vérifier la mise à jour en DB
 
 **Scénario 3 : Plusieurs matchs le même jour**
+
 1. Configurer un match du matin
 2. Terminer la session
 3. Configurer un nouveau match l'après-midi
@@ -1181,6 +1201,7 @@ LIMIT 1;
 ### 4.2 Tests Score en Live
 
 **Scénario 1 : Activation Admin**
+
 1. Se connecter au dashboard central en tant qu'admin
 2. Éditer un site
 3. Activer "Score en Live"
@@ -1194,6 +1215,7 @@ WHERE id = 'your-site-id';
 ```
 
 **Scénario 2 : Widget Score Télécommande**
+
 1. Sur un site avec score activé
 2. Ouvrir la télécommande
 3. Vérifier que le widget score s'affiche
@@ -1202,6 +1224,7 @@ WHERE id = 'your-site-id';
 6. Vérifier que l'overlay TV se met à jour en temps réel
 
 **Scénario 3 : Overlay TV**
+
 1. Lancer une vidéo sur la TV
 2. Modifier le score depuis la télécommande
 3. Vérifier que l'overlay permanent se met à jour
@@ -1209,6 +1232,7 @@ WHERE id = 'your-site-id';
 5. Vérifier que le popup apparaît pendant 5 secondes
 
 **Scénario 4 : Désactivation**
+
 1. Désactiver le score en live dans l'admin
 2. Recharger la télécommande
 3. Vérifier que le widget score n'apparaît plus
@@ -1219,6 +1243,7 @@ WHERE id = 'your-site-id';
 ## 5. CHECKLIST FINALE
 
 ### Estimation d'Audience
+
 - [ ] Migration DB exécutée
 - [ ] Badge audience visible sur télécommande
 - [ ] Modal de configuration fonctionnel
@@ -1228,6 +1253,7 @@ WHERE id = 'your-site-id';
 - [ ] Rapport PDF Club inclut les infos de match
 
 ### Score en Live
+
 - [ ] Migration DB exécutée
 - [ ] Toggle admin fonctionnel
 - [ ] Widget score sur télécommande (si activé)
@@ -1242,6 +1268,7 @@ WHERE id = 'your-site-id';
 ## 6. AMÉLIORATIONS FUTURES (BACKLOG)
 
 ### Phase 2 - Score en Live
+
 - [ ] Intégration API fédérations (FFHB, FFVB, FFBB)
 - [ ] Intégration tableaux d'affichage (Bodet, Stramatel)
 - [ ] OCR sur tableau existant (fallback)
@@ -1249,6 +1276,7 @@ WHERE id = 'your-site-id';
 - [ ] Popup personnalisables (célébrations)
 
 ### Analytics Avancées
+
 - [ ] Corrélation score/taux complétion des pubs
 - [ ] Heatmap des moments forts du match
 - [ ] Recommendations pour diffuser pubs aux meilleurs moments

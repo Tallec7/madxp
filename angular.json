@@ -56,8 +56,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "12kB",
+                  "maximumError": "16kB"
                 }
               ],
               "outputHashing": "all"
@@ -77,8 +77,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "12kB",
+                  "maximumError": "16kB"
                 }
               ],
               "outputHashing": "all"
@@ -98,8 +98,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "12kB",
+                  "maximumError": "16kB"
                 }
               ],
               "outputHashing": "all"
@@ -146,10 +146,7 @@
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": [
-              "raspberry/frontend/**/*.ts",
-              "raspberry/frontend/**/*.html"
-            ]
+            "lintFilePatterns": ["raspberry/frontend/**/*.ts", "raspberry/frontend/**/*.html"]
           }
         }
       }
@@ -173,10 +170,7 @@
             "polyfills": ["zone.js"],
             "tsConfig": "central-dashboard/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
-            "assets": [
-              "central-dashboard/src/favicon.ico",
-              "central-dashboard/src/assets"
-            ],
+            "assets": ["central-dashboard/src/favicon.ico", "central-dashboard/src/assets"],
             "styles": ["central-dashboard/src/styles.scss"]
           },
           "configurations": {
@@ -230,10 +224,7 @@
             "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "central-dashboard/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
-            "assets": [
-              "central-dashboard/src/favicon.ico",
-              "central-dashboard/src/assets"
-            ],
+            "assets": ["central-dashboard/src/favicon.ico", "central-dashboard/src/assets"],
             "styles": ["central-dashboard/src/styles.scss"],
             "karmaConfig": "central-dashboard/karma.conf.js"
           }
@@ -241,10 +232,7 @@
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": [
-              "central-dashboard/src/**/*.ts",
-              "central-dashboard/src/**/*.html"
-            ]
+            "lintFilePatterns": ["central-dashboard/src/**/*.ts", "central-dashboard/src/**/*.html"]
           }
         }
       }

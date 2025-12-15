@@ -2,6 +2,21 @@ import { Injectable } from "@angular/core";
 import { Command } from "../interfaces/command.interface";
 import { environment } from "../../environments/environment";
 
+// Interfaces pour les nouveaux événements socket
+export interface MatchConfig {
+  sessionId: string | null;
+  matchDate: string;
+  matchName: string;
+  audienceEstimate: number;
+}
+
+export interface ScoreUpdate {
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number;
+  awayScore: number;
+}
+
 interface Socket {
   on<T>(event: string, callback: (data: T) => void): void;
   emit(event: string, data: unknown): void;
@@ -24,7 +39,7 @@ export class SocketService {
     }
   }
 
-  public on(action: string, callback: (data: Command) => void) {
+  public on<T = Command>(action: string, callback: (data: T) => void) {
     if (this.socket) {
       console.log('socket service : on', action);
       this.socket.on(action, callback);
@@ -33,7 +48,7 @@ export class SocketService {
     }
   }
 
-  public emit(action: string, data: Command) {
+  public emit(action: string, data: Command | MatchConfig | ScoreUpdate) {
     if (this.socket) {
       console.log('socket service : emit', action, data);
       this.socket.emit(action, data);
