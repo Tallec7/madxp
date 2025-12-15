@@ -364,6 +364,51 @@ export const removeVideoFromSponsor = async (req: AuthRequest, res: Response): P
   }
 };
 
+/**
+ * GET /api/analytics/sponsors/:id/videos
+ * Récupérer les vidéos associées à un sponsor
+ */
+export const getSponsorVideos = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    if (!validateUuid(id)) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid sponsor ID',
+      });
+      return;
+    }
+
+    const result = await query(
+      `SELECT
+        sv.video_id,
+        sv.is_primary,
+        sv.added_at,
+        v.filename,
+        v.duration,
+        v.thumbnail_url,
+        v.status
+       FROM sponsor_videos sv
+       JOIN videos v ON v.id = sv.video_id
+       WHERE sv.sponsor_id = $1
+       ORDER BY sv.added_at DESC`,
+      [id]
+    );
+
+    res.json({
+      success: true,
+      data: { videos: result.rows },
+    });
+  } catch (error) {
+    logger.error('Error getting sponsor videos:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get sponsor videos',
+    });
+  }
+};
+
 // ============================================================================
 // ANALYTICS ENDPOINTS
 // ============================================================================

@@ -9,6 +9,7 @@ import {
   deleteSponsor,
   addVideosToSponsor,
   removeVideoFromSponsor,
+  getSponsorVideos,
   getSponsorStats,
   recordImpressions,
   exportSponsorData,
@@ -64,6 +65,13 @@ router.delete(
 // ============================================================================
 // SPONSOR-VIDEO ASSOCIATION
 // ============================================================================
+
+// Récupérer les vidéos d'un sponsor
+router.get(
+  '/sponsors/:id/videos',
+  authenticate,
+  getSponsorVideos
+);
 
 // Associer des vidéos à un sponsor (admin/operator only)
 router.post(
