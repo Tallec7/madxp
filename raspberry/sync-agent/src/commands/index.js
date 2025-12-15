@@ -393,6 +393,165 @@ const commands = {
       throw error;
     }
   },
+
+  /**
+   * Effectue un diagnostic réseau complet
+   * Teste la connectivité internet, la latence, le DNS et liste les interfaces
+   */
+  async network_diagnostics(data) {
+    logger.info('Running network diagnostics');
+
+    const results = {
+      success: true,
+      timestamp: new Date().toISOString(),
+      internet: {
+        reachable: false,
+        latency_ms: null,
+      },
+      central_server: {
+        reachable: false,
+        latency_ms: null,
+        url: config.central.url,
+      },
+      dns: {
+        working: false,
+        resolution_time_ms: null,
+        tested_domain: null,
+      },
+      gateway: {
+        ip: null,
+        reachable: false,
+        latency_ms: null,
+      },
+      interfaces: [],
+      wifi: null,
+    };
+
+    // 1. Récupérer les interfaces réseau
+    try {
+      const si = require('systeminformation');
+      const interfaces = await si.networkInterfaces();
+      results.interfaces = interfaces
+        .filter(iface => !iface.iface.startsWith('lo'))
+        .map(iface => ({
+          name: iface.iface,
+          ip4: iface.ip4 || null,
+          ip6: iface.ip6 || null,
+          mac: iface.mac || null,
+          type: iface.type || 'unknown',
+          operstate: iface.operstate || 'unknown',
+          speed: iface.speed || null,
+        }));
+    } catch (error) {
+      logger.warn('Failed to get network interfaces:', error.message);
+    }
+
+    // 2. Récupérer la passerelle par défaut
+    try {
+      const { stdout } = await execAsync("ip route | grep default | awk '{print $3}' | head -n1");
+      const gatewayIp = stdout.trim();
+      if (gatewayIp) {
+        results.gateway.ip = gatewayIp;
+
+        // Ping la passerelle
+        try {
+          const pingStart = Date.now();
+          await execAsync(`ping -c 1 -W 2 ${gatewayIp}`);
+          results.gateway.reachable = true;
+          results.gateway.latency_ms = Date.now() - pingStart;
+        } catch {
+          results.gateway.reachable = false;
+        }
+      }
+    } catch (error) {
+      logger.warn('Failed to get default gateway:', error.message);
+    }
+
+    // 3. Tester la connectivité internet (ping 8.8.8.8)
+    try {
+      const pingStart = Date.now();
+      await execAsync('ping -c 1 -W 3 8.8.8.8');
+      results.internet.reachable = true;
+      results.internet.latency_ms = Date.now() - pingStart;
+    } catch {
+      results.internet.reachable = false;
+    }
+
+    // 4. Tester la résolution DNS
+    try {
+      const testDomain = 'google.com';
+      results.dns.tested_domain = testDomain;
+      const dnsStart = Date.now();
+      await execAsync(`nslookup ${testDomain} 2>/dev/null || host ${testDomain} 2>/dev/null || getent hosts ${testDomain}`);
+      results.dns.working = true;
+      results.dns.resolution_time_ms = Date.now() - dnsStart;
+    } catch {
+      results.dns.working = false;
+    }
+
+    // 5. Tester la connectivité vers le serveur central
+    try {
+      const centralUrl = config.central.url;
+      if (centralUrl) {
+        // Extraire le hostname du URL
+        const url = new URL(centralUrl);
+        const hostname = url.hostname;
+
+        const pingStart = Date.now();
+        // Essayer d'abord avec ping, sinon avec curl
+        try {
+          await execAsync(`ping -c 1 -W 3 ${hostname}`);
+          results.central_server.reachable = true;
+          results.central_server.latency_ms = Date.now() - pingStart;
+        } catch {
+          // Fallback: essayer avec curl si ping échoue (le serveur peut bloquer ICMP)
+          try {
+            const curlStart = Date.now();
+            await execAsync(`curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 ${centralUrl}/health`);
+            results.central_server.reachable = true;
+            results.central_server.latency_ms = Date.now() - curlStart;
+          } catch {
+            results.central_server.reachable = false;
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn('Failed to test central server connectivity:', error.message);
+    }
+
+    // 6. Récupérer les infos WiFi si disponible
+    try {
+      // Vérifier si on est connecté en WiFi
+      const { stdout: iwconfig } = await execAsync('iwconfig 2>/dev/null || true');
+      if (iwconfig && !iwconfig.includes('no wireless extensions')) {
+        const ssidMatch = iwconfig.match(/ESSID:"([^"]+)"/);
+        const qualityMatch = iwconfig.match(/Link Quality=(\d+)\/(\d+)/);
+        const signalMatch = iwconfig.match(/Signal level=(-?\d+)/);
+        const bitrateMatch = iwconfig.match(/Bit Rate[=:](\d+(?:\.\d+)?)\s*Mb\/s/);
+
+        if (ssidMatch || qualityMatch || signalMatch) {
+          results.wifi = {
+            connected: !!ssidMatch,
+            ssid: ssidMatch ? ssidMatch[1] : null,
+            quality_percent: qualityMatch ? Math.round((parseInt(qualityMatch[1]) / parseInt(qualityMatch[2])) * 100) : null,
+            signal_dbm: signalMatch ? parseInt(signalMatch[1]) : null,
+            bitrate_mbps: bitrateMatch ? parseFloat(bitrateMatch[1]) : null,
+          };
+        }
+      }
+    } catch (error) {
+      logger.debug('WiFi info not available:', error.message);
+    }
+
+    logger.info('Network diagnostics completed', {
+      internet: results.internet.reachable,
+      central: results.central_server.reachable,
+      dns: results.dns.working,
+      gateway: results.gateway.reachable,
+    });
+
+    return results;
+  },
 };
 
 module.exports = commands;

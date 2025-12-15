@@ -176,6 +176,14 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
             </div>
           </button>
 
+          <button class="action-card" (click)="runNetworkDiagnostics()" [disabled]="site.status !== 'online'">
+            <span class="action-icon">🌐</span>
+            <div class="action-content">
+              <div class="action-title">Diagnostic réseau</div>
+              <div class="action-desc">Tester la connectivité</div>
+            </div>
+          </button>
+
           <button class="action-card warning" (click)="rebootSite()" [disabled]="site.status !== 'online' || sendingCommand">
             <span class="action-icon">⚡</span>
             <div class="action-content">
@@ -437,6 +445,134 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" (click)="showSystemInfoModal = false">Fermer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Network Diagnostics -->
+    <div class="modal" *ngIf="showNetworkDiagModal" (click)="showNetworkDiagModal = false">
+      <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Diagnostic réseau - {{ site?.club_name }}</h2>
+          <button class="modal-close" (click)="showNetworkDiagModal = false">×</button>
+        </div>
+        <div class="modal-body">
+          <div *ngIf="!networkDiagLoading; else networkDiagLoadingTpl">
+            <div *ngIf="networkDiagnostics; else noNetworkDiag" class="network-diagnostics">
+              <!-- Résumé des tests -->
+              <div class="diag-summary">
+                <div class="diag-status-item" [class.success]="networkDiagnostics.internet?.reachable" [class.error]="!networkDiagnostics.internet?.reachable">
+                  <span class="diag-icon">{{ networkDiagnostics.internet?.reachable ? '✅' : '❌' }}</span>
+                  <span class="diag-label">Internet</span>
+                  <span class="diag-value" *ngIf="networkDiagnostics.internet?.latency_ms">{{ networkDiagnostics.internet.latency_ms }}ms</span>
+                </div>
+                <div class="diag-status-item" [class.success]="networkDiagnostics.central_server?.reachable" [class.error]="!networkDiagnostics.central_server?.reachable">
+                  <span class="diag-icon">{{ networkDiagnostics.central_server?.reachable ? '✅' : '❌' }}</span>
+                  <span class="diag-label">Serveur central</span>
+                  <span class="diag-value" *ngIf="networkDiagnostics.central_server?.latency_ms">{{ networkDiagnostics.central_server.latency_ms }}ms</span>
+                </div>
+                <div class="diag-status-item" [class.success]="networkDiagnostics.dns?.working" [class.error]="!networkDiagnostics.dns?.working">
+                  <span class="diag-icon">{{ networkDiagnostics.dns?.working ? '✅' : '❌' }}</span>
+                  <span class="diag-label">DNS</span>
+                  <span class="diag-value" *ngIf="networkDiagnostics.dns?.resolution_time_ms">{{ networkDiagnostics.dns.resolution_time_ms }}ms</span>
+                </div>
+                <div class="diag-status-item" [class.success]="networkDiagnostics.gateway?.reachable" [class.error]="!networkDiagnostics.gateway?.reachable">
+                  <span class="diag-icon">{{ networkDiagnostics.gateway?.reachable ? '✅' : '❌' }}</span>
+                  <span class="diag-label">Passerelle</span>
+                  <span class="diag-value" *ngIf="networkDiagnostics.gateway?.ip">{{ networkDiagnostics.gateway.ip }}</span>
+                </div>
+              </div>
+
+              <!-- Détails passerelle -->
+              <div class="diag-section" *ngIf="networkDiagnostics.gateway?.ip">
+                <h4>Passerelle</h4>
+                <div class="info-list">
+                  <div class="info-row">
+                    <span class="label">Adresse IP:</span>
+                    <span class="value monospace">{{ networkDiagnostics.gateway.ip }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="label">Accessible:</span>
+                    <span class="value">{{ networkDiagnostics.gateway.reachable ? 'Oui' : 'Non' }}</span>
+                  </div>
+                  <div class="info-row" *ngIf="networkDiagnostics.gateway.latency_ms">
+                    <span class="label">Latence:</span>
+                    <span class="value">{{ networkDiagnostics.gateway.latency_ms }}ms</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interfaces réseau -->
+              <div class="diag-section" *ngIf="networkDiagnostics.interfaces?.length">
+                <h4>Interfaces réseau</h4>
+                <div class="interfaces-grid">
+                  <div class="interface-card" *ngFor="let iface of networkDiagnostics.interfaces" [class.active]="iface.operstate === 'up'">
+                    <div class="interface-header">
+                      <span class="interface-name">{{ iface.name }}</span>
+                      <span class="interface-status" [class.up]="iface.operstate === 'up'" [class.down]="iface.operstate !== 'up'">
+                        {{ iface.operstate === 'up' ? 'Actif' : 'Inactif' }}
+                      </span>
+                    </div>
+                    <div class="interface-details">
+                      <div *ngIf="iface.ip4"><strong>IPv4:</strong> {{ iface.ip4 }}</div>
+                      <div *ngIf="iface.mac"><strong>MAC:</strong> {{ iface.mac }}</div>
+                      <div *ngIf="iface.type"><strong>Type:</strong> {{ iface.type }}</div>
+                      <div *ngIf="iface.speed"><strong>Vitesse:</strong> {{ iface.speed }} Mbps</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Infos WiFi -->
+              <div class="diag-section" *ngIf="networkDiagnostics.wifi">
+                <h4>WiFi</h4>
+                <div class="info-list">
+                  <div class="info-row" *ngIf="networkDiagnostics.wifi.ssid">
+                    <span class="label">SSID:</span>
+                    <span class="value">{{ networkDiagnostics.wifi.ssid }}</span>
+                  </div>
+                  <div class="info-row" *ngIf="networkDiagnostics.wifi.quality_percent !== null">
+                    <span class="label">Qualité signal:</span>
+                    <span class="value">
+                      {{ networkDiagnostics.wifi.quality_percent }}%
+                      <span class="wifi-quality-bar">
+                        <span class="wifi-quality-fill" [style.width.%]="networkDiagnostics.wifi.quality_percent"
+                          [class.good]="networkDiagnostics.wifi.quality_percent >= 70"
+                          [class.medium]="networkDiagnostics.wifi.quality_percent >= 40 && networkDiagnostics.wifi.quality_percent < 70"
+                          [class.poor]="networkDiagnostics.wifi.quality_percent < 40"></span>
+                      </span>
+                    </span>
+                  </div>
+                  <div class="info-row" *ngIf="networkDiagnostics.wifi.signal_dbm !== null">
+                    <span class="label">Signal:</span>
+                    <span class="value">{{ networkDiagnostics.wifi.signal_dbm }} dBm</span>
+                  </div>
+                  <div class="info-row" *ngIf="networkDiagnostics.wifi.bitrate_mbps">
+                    <span class="label">Débit:</span>
+                    <span class="value">{{ networkDiagnostics.wifi.bitrate_mbps }} Mb/s</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Timestamp -->
+              <div class="diag-timestamp" *ngIf="networkDiagnostics.timestamp">
+                Test effectué le {{ networkDiagnostics.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}
+              </div>
+            </div>
+            <ng-template #noNetworkDiag>
+              <p class="no-data">Impossible de récupérer les diagnostics réseau</p>
+            </ng-template>
+          </div>
+          <ng-template #networkDiagLoadingTpl>
+            <div class="loading-inline">
+              <div class="spinner-small"></div>
+              <span>Exécution des tests réseau...</span>
+            </div>
+          </ng-template>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="showNetworkDiagModal = false">Fermer</button>
+          <button class="btn btn-primary" (click)="refreshNetworkDiagnostics()">Relancer le test</button>
         </div>
       </div>
     </div>
@@ -1050,6 +1186,162 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
       line-height: 1.5;
     }
 
+    /* Network Diagnostics Modal */
+    .network-diagnostics {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .diag-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+
+    .diag-status-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 2px solid #e2e8f0;
+      transition: all 0.2s;
+    }
+
+    .diag-status-item.success {
+      background: #f0fdf4;
+      border-color: #10b981;
+    }
+
+    .diag-status-item.error {
+      background: #fef2f2;
+      border-color: #ef4444;
+    }
+
+    .diag-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .diag-label {
+      font-weight: 600;
+      color: #374151;
+      text-align: center;
+    }
+
+    .diag-value {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+    }
+
+    .diag-section {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+
+    .diag-section h4 {
+      margin: 0 0 1rem 0;
+      font-size: 1rem;
+      color: #374151;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+    }
+
+    .interfaces-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .interface-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 0.75rem;
+    }
+
+    .interface-card.active {
+      border-color: #10b981;
+    }
+
+    .interface-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .interface-name {
+      font-weight: 600;
+      font-family: 'Monaco', 'Courier New', monospace;
+    }
+
+    .interface-status {
+      font-size: 0.75rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .interface-status.up {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .interface-status.down {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .interface-details {
+      font-size: 0.8125rem;
+      color: #6b7280;
+    }
+
+    .interface-details div {
+      margin-bottom: 0.25rem;
+    }
+
+    .wifi-quality-bar {
+      display: inline-block;
+      width: 60px;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 3px;
+      overflow: hidden;
+      vertical-align: middle;
+      margin-left: 0.5rem;
+    }
+
+    .wifi-quality-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    .wifi-quality-fill.good {
+      background: linear-gradient(90deg, #10b981, #34d399);
+    }
+
+    .wifi-quality-fill.medium {
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+
+    .wifi-quality-fill.poor {
+      background: linear-gradient(90deg, #ef4444, #f87171);
+    }
+
+    .diag-timestamp {
+      text-align: center;
+      font-size: 0.8125rem;
+      color: #9ca3af;
+      padding-top: 0.5rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
     @media (max-width: 768px) {
       .info-grid {
         grid-template-columns: 1fr;
@@ -1061,6 +1353,10 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
 
       .config-actions {
         flex-direction: column;
+      }
+
+      .diag-summary {
+        grid-template-columns: repeat(2, 1fr);
       }
     }
   `]
@@ -1114,6 +1410,36 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   } | null = null;
   systemInfoLoading = false;
 
+  // Network Diagnostics
+  showNetworkDiagModal = false;
+  networkDiagLoading = false;
+  networkDiagnostics: {
+    success: boolean;
+    timestamp: string;
+    internet: { reachable: boolean; latency_ms: number | null };
+    central_server: { reachable: boolean; latency_ms: number | null; url: string };
+    dns: { working: boolean; resolution_time_ms: number | null; tested_domain: string | null };
+    gateway: { ip: string | null; reachable: boolean; latency_ms: number | null };
+    interfaces: Array<{
+      name: string;
+      ip4: string | null;
+      ip6: string | null;
+      mac: string | null;
+      type: string;
+      operstate: string;
+      speed: number | null;
+    }>;
+    wifi: {
+      connected: boolean;
+      ssid: string | null;
+      quality_percent: number | null;
+      signal_dbm: number | null;
+      bitrate_mbps: number | null;
+    } | null;
+  } | null = null;
+  private networkDiagCommandId: string | null = null;
+  private networkDiagPollInterval: ReturnType<typeof setInterval> | null = null;
+
   private readonly route = inject(ActivatedRoute);
   private readonly sitesService = inject(SitesService);
   private readonly notificationService = inject(NotificationService);
@@ -1134,6 +1460,10 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.refreshSubscription?.unsubscribe();
+    if (this.networkDiagPollInterval) {
+      clearInterval(this.networkDiagPollInterval);
+      this.networkDiagPollInterval = null;
+    }
   }
 
   loadSite(): void {
@@ -1260,6 +1590,85 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     if (!bytes) return 'N/A';
     const gb = bytes / (1024 * 1024 * 1024);
     return `${gb.toFixed(1)} GB`;
+  }
+
+  // Network Diagnostics
+  runNetworkDiagnostics(): void {
+    this.showNetworkDiagModal = true;
+    this.refreshNetworkDiagnostics();
+  }
+
+  refreshNetworkDiagnostics(): void {
+    this.networkDiagLoading = true;
+    this.networkDiagnostics = null;
+
+    // Clear any existing poll interval
+    if (this.networkDiagPollInterval) {
+      clearInterval(this.networkDiagPollInterval);
+      this.networkDiagPollInterval = null;
+    }
+
+    this.sitesService.runNetworkDiagnostics(this.siteId).subscribe({
+      next: (response) => {
+        if (response.commandId) {
+          this.networkDiagCommandId = response.commandId;
+          // Poll for command result
+          this.pollNetworkDiagResult();
+        } else {
+          this.networkDiagLoading = false;
+          this.notificationService.error('Erreur: pas de commandId reçu');
+        }
+      },
+      error: (error) => {
+        this.networkDiagLoading = false;
+        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+      }
+    });
+  }
+
+  private pollNetworkDiagResult(): void {
+    if (!this.networkDiagCommandId) return;
+
+    let attempts = 0;
+    const maxAttempts = 30; // 30 seconds max
+
+    this.networkDiagPollInterval = setInterval(() => {
+      attempts++;
+
+      if (attempts > maxAttempts) {
+        if (this.networkDiagPollInterval) {
+          clearInterval(this.networkDiagPollInterval);
+          this.networkDiagPollInterval = null;
+        }
+        this.networkDiagLoading = false;
+        this.notificationService.error('Timeout: le diagnostic n\'a pas répondu à temps');
+        return;
+      }
+
+      this.sitesService.getCommandStatus(this.siteId, this.networkDiagCommandId!).subscribe({
+        next: (result) => {
+          if (result.status === 'completed' && result.result) {
+            if (this.networkDiagPollInterval) {
+              clearInterval(this.networkDiagPollInterval);
+              this.networkDiagPollInterval = null;
+            }
+            this.networkDiagLoading = false;
+            this.networkDiagnostics = result.result as typeof this.networkDiagnostics;
+          } else if (result.status === 'failed') {
+            if (this.networkDiagPollInterval) {
+              clearInterval(this.networkDiagPollInterval);
+              this.networkDiagPollInterval = null;
+            }
+            this.networkDiagLoading = false;
+            this.notificationService.error('Erreur: ' + (result.error_message || 'Échec du diagnostic'));
+          }
+          // Si pending ou executing, on continue de poller
+        },
+        error: (error) => {
+          console.error('Error polling network diag result:', error);
+        }
+      });
+    }, 1000);
   }
 
   rebootSite(): void {

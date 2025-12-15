@@ -7,7 +7,8 @@
 3. [Problèmes d'authentification](#problèmes-dauthentification)
 4. [Services qui ne démarrent pas](#services-qui-ne-démarrent-pas)
 5. [Problèmes de synchronisation](#problèmes-de-synchronisation)
-6. [Diagnostic complet](#diagnostic-complet)
+6. [Diagnostic réseau à distance](#diagnostic-réseau-à-distance)
+7. [Diagnostic complet](#diagnostic-complet)
 
 ---
 
@@ -540,6 +541,71 @@ Les composants Angular s'abonnaient au socket avant que la connexion Socket.IO n
 
 ---
 
+## Diagnostic réseau à distance
+
+### Utiliser le diagnostic réseau depuis le dashboard
+
+Depuis le **dashboard central**, vous pouvez diagnostiquer la connectivité d'un boîtier à distance, même sans être sur le même réseau.
+
+#### Comment utiliser
+
+1. Allez sur la page détail d'un site connecté (statut "En ligne")
+2. Dans la section **Actions rapides**, cliquez sur **Diagnostic réseau** (icône 🌐)
+3. Attendez quelques secondes que les tests s'exécutent sur le boîtier
+4. Les résultats s'affichent dans un modal
+
+#### Tests effectués
+
+| Test | Description | Indicateur |
+|------|-------------|------------|
+| **Internet** | Ping vers 8.8.8.8 (Google DNS) | Connectivité générale |
+| **Serveur central** | Ping/HTTP vers le serveur NEOPRO | Communication avec le dashboard |
+| **DNS** | Résolution de google.com | Fonctionnement du DNS |
+| **Passerelle** | Ping vers la gateway locale | Connexion au routeur |
+
+#### Informations affichées
+
+- **Interfaces réseau** : eth0, wlan0, etc. avec IP, MAC et état (actif/inactif)
+- **WiFi** (si applicable) : SSID, qualité du signal (%), puissance (dBm), débit (Mb/s)
+- **Latences** : temps de réponse de chaque test en millisecondes
+
+#### Interprétation des résultats
+
+| Situation | Diagnostic probable |
+|-----------|---------------------|
+| ❌ Passerelle | Câble débranché ou problème DHCP |
+| ✅ Passerelle, ❌ Internet | Routeur sans accès internet |
+| ✅ Internet, ❌ DNS | Problème de configuration DNS |
+| ✅ Internet, ❌ Serveur central | Pare-feu bloquant ou serveur indisponible |
+| Tous ✅ mais "Connexion instable" | Latence élevée ou déconnexions fréquentes |
+
+#### WiFi : qualité du signal
+
+| Qualité | Signal (dBm) | Interprétation |
+|---------|--------------|----------------|
+| 🟢 > 70% | > -60 dBm | Excellent |
+| 🟡 40-70% | -60 à -70 dBm | Correct |
+| 🔴 < 40% | < -70 dBm | Faible, risque de déconnexions |
+
+#### Exemple de résultat
+
+```
+┌─────────────────────────────────────────┐
+│  ✅ Internet (45ms)                     │
+│  ✅ Serveur central (120ms)             │
+│  ✅ DNS (15ms)                          │
+│  ✅ Passerelle 192.168.1.1 (5ms)        │
+├─────────────────────────────────────────┤
+│  Interfaces réseau:                     │
+│  - eth0: 192.168.1.50 (Actif)           │
+│  - wlan0: - (Inactif)                   │
+├─────────────────────────────────────────┤
+│  WiFi: Non connecté                     │
+└─────────────────────────────────────────┘
+```
+
+---
+
 ## Diagnostic complet
 
 ### Script de diagnostic automatique
@@ -786,4 +852,4 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 5 décembre 2025
+**Dernière mise à jour :** 15 décembre 2025

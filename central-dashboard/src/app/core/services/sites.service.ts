@@ -172,4 +172,9 @@ export class SitesService {
       agentFiles
     });
   }
+
+  // Network diagnostics
+  runNetworkDiagnostics(id: string): Observable<{ success: boolean; commandId?: string; message: string }> {
+    return this.sendCommand(id, 'network_diagnostics', {});
+  }
 }

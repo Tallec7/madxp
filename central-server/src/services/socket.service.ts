@@ -43,6 +43,7 @@ const COMMAND_TIMEOUTS: Record<string, number> = {
   get_config: 15 * 1000,              // 15 secondes
   update_hotspot: 60 * 1000,          // 1 minute
   get_hotspot_config: 15 * 1000,      // 15 secondes
+  network_diagnostics: 30 * 1000,     // 30 secondes pour les tests réseau
   default: 2 * 60 * 1000,             // 2 minutes par défaut
 };
 

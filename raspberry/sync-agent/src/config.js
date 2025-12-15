@@ -22,6 +22,7 @@ const DEFAULT_ALLOWED_COMMANDS = [
   'get_config',
   'update_hotspot',
   'get_hotspot_config',
+  'network_diagnostics',
 ];
 
 const buildAllowedCommands = () => {
