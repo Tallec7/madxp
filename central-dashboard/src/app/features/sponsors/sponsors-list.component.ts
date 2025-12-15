@@ -540,7 +540,7 @@ export class SponsorsListComponent implements OnInit {
 
   loadSponsors() {
     this.loading = true;
-    this.api.get<{ success: boolean; data: { sponsors: Sponsor[] } }>('/api/analytics/sponsors')
+    this.api.get<{ success: boolean; data: { sponsors: Sponsor[] } }>('/analytics/sponsors')
       .subscribe({
         next: (response) => {
           this.sponsors = response.data.sponsors || [];
@@ -615,8 +615,8 @@ export class SponsorsListComponent implements OnInit {
     this.saving = true;
 
     const endpoint = this.isEditing && this.formData.id
-      ? `/api/analytics/sponsors/${this.formData.id}`
-      : '/api/analytics/sponsors';
+      ? `/analytics/sponsors/${this.formData.id}`
+      : '/analytics/sponsors';
 
     const request$ = this.isEditing && this.formData.id
       ? this.api.put<{ success: boolean; data: Sponsor }>(endpoint, this.formData)
