@@ -64,13 +64,26 @@
 
 ### Architecture et Business
 
-7. **[BUSINESS_PLAN_COMPLET.md](BUSINESS_PLAN_COMPLET.md)** - Business Plan technique
+7. **[STATUS.md](STATUS.md)** - **État du projet (mise à jour quotidienne)**
+   - Note globale : 9.2/10
+   - Analytics Club (10/10)
+   - Analytics Sponsors (9.5/10)
+   - Features bonus et roadmap
+   - Schéma base de données
+
+8. **[BUSINESS_PLAN_COMPLET.md](BUSINESS_PLAN_COMPLET.md)** - Business Plan technique
    - Executive Summary
    - Architecture technique
    - Roadmap et phases
    - Modèle économique
 
-8. **[SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md)** - Architecture de synchronisation
+9. **[BACKLOG.md](BACKLOG.md)** - Roadmap et Sprint Tracking
+   - Features terminées récemment
+   - Features en cours (Estimation audience, Score live)
+   - Backlog priorisé
+   - Planning sprints
+
+10. **[SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md)** - Architecture de synchronisation
    - Modèle Central vs Local
    - Types de contenu (NEOPRO verrouillé vs Club éditable)
    - Règles de merge intelligent
@@ -79,47 +92,51 @@
 
 ### Analytics Sponsors (Module complet)
 
-9. **[ANALYTICS_SPONSORS_README.md](ANALYTICS_SPONSORS_README.md)** - **README Module Analytics Sponsors**
+11. **[ANALYTICS_SPONSORS_README.md](ANALYTICS_SPONSORS_README.md)** - **README Module Analytics Sponsors**
    - Vue d'ensemble et fonctionnalités
    - Architecture complète
    - Guides démarrage rapide
    - État du projet (98% conformité BP §13)
 
-10. **[IMPLEMENTATION_ANALYTICS_SPONSORS.md](IMPLEMENTATION_ANALYTICS_SPONSORS.md)** - Guide implémentation
+12. **[IMPLEMENTATION_ANALYTICS_SPONSORS.md](IMPLEMENTATION_ANALYTICS_SPONSORS.md)** - Guide implémentation
    - Schéma base de données
    - API endpoints détaillés
    - Intégration frontend/backend
 
-11. **[TRACKING_IMPRESSIONS_SPONSORS.md](TRACKING_IMPRESSIONS_SPONSORS.md)** - Tracking boîtiers TV
+13. **[TRACKING_IMPRESSIONS_SPONSORS.md](TRACKING_IMPRESSIONS_SPONSORS.md)** - Tracking boîtiers TV
    - Architecture tracking temps réel
    - Service frontend Angular
    - Sync agent et serveur local
    - Flux de données end-to-end
 
-12. **[PDF_REPORTS_GUIDE.md](PDF_REPORTS_GUIDE.md)** - Rapports PDF professionnels
+14. **[PDF_REPORTS_GUIDE.md](PDF_REPORTS_GUIDE.md)** - Rapports PDF professionnels
    - Structure 4 pages (garde, KPIs, graphiques, certificat)
    - Génération graphiques Chart.js
    - Signature numérique SHA-256
    - API et intégration
 
-13. **[AVANCEMENT_ANALYTICS_SPONSORS.md](AVANCEMENT_ANALYTICS_SPONSORS.md)** - Suivi progression
-   - Planning semaines 1-3 (terminé) + Phase 4 Tests
-   - Métriques conformité (98%)
-   - Roadmap phase 5 (optionnel)
+15. **[AVANCEMENT_ANALYTICS_SPONSORS.md](AVANCEMENT_ANALYTICS_SPONSORS.md)** - Suivi progression
+   - Planning semaines 1-3 (terminé)
+   - Métriques conformité (95%)
+   - Roadmap phases 4-5 (optionnel)
 
-14. **[TESTS_ANALYTICS_SPONSORS.md](TESTS_ANALYTICS_SPONSORS.md)** - Tests automatisés
-   - 39 tests unitaires + intégration (100% passed)
-   - Coverage report et CI/CD
-   - Guide exécution et debugging
+### Guides d'implémentation
+
+16. **[IMPLEMENTATION_GUIDE_AUDIENCE_SCORE.md](IMPLEMENTATION_GUIDE_AUDIENCE_SCORE.md)** - **Guide Estimation Audience + Score Live**
+   - Migration base de données (copy-paste ready)
+   - Frontend Remote Control (badge audience + saisie score)
+   - Frontend TV Player (overlay score en live)
+   - Backend handlers WebSocket
+   - CSS styles et test scenarios
 
 ### Pour les développeurs
 
-15. **[dev/README.md](dev/README.md)** - Documentation développement
+17. **[dev/README.md](dev/README.md)** - Documentation développement
    - Configuration environnement
    - Conventions de code
    - Tests
 
-16. **[changelog/README.md](changelog/README.md)** - Historique des modifications
+18. **[changelog/README.md](changelog/README.md)** - Historique des modifications
    - Suivi des changements
    - Notes de version
 
@@ -204,4 +221,4 @@ Configuration : `render.yaml` à la racine
 
 ---
 
-**Dernière mise à jour :** 14 décembre 2025 - Ajout module Analytics Sponsors complet
+**Dernière mise à jour :** 15 décembre 2025 - Ajout STATUS.md, BACKLOG.md, IMPLEMENTATION_GUIDE_AUDIENCE_SCORE.md

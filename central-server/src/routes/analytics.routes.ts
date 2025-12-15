@@ -43,6 +43,9 @@ router.get('/clubs/:siteId/dashboard', authenticate, analyticsController.getClub
 // GET /api/analytics/clubs/:siteId/export - Export CSV
 router.get('/clubs/:siteId/export', authenticate, analyticsController.exportClubData);
 
+// GET /api/analytics/clubs/:siteId/report/pdf - Générer rapport PDF
+router.get('/clubs/:siteId/report/pdf', authenticate, analyticsController.generateClubPdfReport);
+
 // POST /api/analytics/calculate-daily-stats - Calcul stats quotidiennes (cron/admin)
 router.post(
   '/calculate-daily-stats',

@@ -1240,3 +1240,61 @@ export const deleteAnalyticsCategory = async (req: AuthRequest, res: Response) =
     res.status(500).json({ error: 'Erreur lors de la suppression de la catégorie' });
   }
 };
+
+/**
+ * Génère un rapport PDF pour un club
+ * GET /api/analytics/clubs/:siteId/report/pdf?from=YYYY-MM-DD&to=YYYY-MM-DD
+ */
+export const generateClubPdfReport = async (req: AuthRequest, res: Response) => {
+  try {
+    const { siteId } = req.params;
+    const { from, to } = req.query;
+
+    // Validation des paramètres
+    if (!from || !to) {
+      return res.status(400).json({ error: 'Paramètres from et to requis (format YYYY-MM-DD)' });
+    }
+
+    // Vérifier que l'utilisateur a accès à ce site
+    if (req.user?.role !== 'admin' && req.user?.role !== 'operator') {
+      // Pour les utilisateurs non-admin, vérifier qu'ils ont accès à ce site
+      const siteAccess = await query(
+        'SELECT id FROM sites WHERE id = $1',
+        [siteId]
+      );
+
+      if (siteAccess.rowCount === 0) {
+        return res.status(404).json({ error: 'Site non trouvé' });
+      }
+    }
+
+    // Import dynamique du service PDF
+    const pdfService = await import('../services/pdf-report.service');
+
+    logger.info('Generating club PDF report', { siteId, from, to, requestedBy: req.user?.email });
+
+    // Générer le PDF
+    const pdfBuffer = await pdfService.generateClubReport(
+      siteId,
+      String(from),
+      String(to),
+      { type: 'club', language: 'fr' }
+    );
+
+    // Nom du fichier
+    const filename = `rapport-club-${siteId}-${from}-${to}.pdf`;
+
+    // Envoyer le PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    res.send(pdfBuffer);
+
+    logger.info('Club PDF report generated successfully', { siteId, from, to, size: pdfBuffer.length });
+
+  } catch (error) {
+    logger.error('Generate club PDF report error:', error);
+    res.status(500).json({ error: 'Erreur lors de la génération du rapport PDF' });
+  }
+};

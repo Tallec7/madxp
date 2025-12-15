@@ -2496,12 +2496,18 @@ SEMAINE 2: AUTONOMIE
 ---
 
 **Document préparé par :** Analyse Claude Code
-**Version :** 1.3
-**Date :** 8 Décembre 2025
+**Version :** 1.4
+**Date :** 15 Décembre 2025
 **Mise à jour :**
+- v1.4 (15 déc) : Rapport PDF Club terminé, migration DB audience/score prête, doc STATUS.md + IMPLEMENTATION_GUIDE créées
 - v1.3 (8 déc) : Ajout fonctionnalités réalisées (analytics, éditeur config, CRUD vidéos, timeCategories), réévaluation note globale
 - v1.2 (6 déc) : Ajout sections Analytics Sponsors (13) et Analytics Club (14)
 **Classification :** Confidentiel
+
+**Voir aussi :**
+- `STATUS.md` - État complet et détaillé du projet (mise à jour quotidienne)
+- `BACKLOG.md` - Roadmap features futures et sprint tracking
+- `IMPLEMENTATION_GUIDE_AUDIENCE_SCORE.md` - Guide technique estimation audience + score live
 
 ---
 

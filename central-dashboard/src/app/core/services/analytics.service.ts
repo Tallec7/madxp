@@ -131,6 +131,22 @@ export class AnalyticsService {
     });
   }
 
+  getClubPdfReport(siteId: string, from: string, to: string): Observable<Blob> {
+    const token = localStorage.getItem('neopro_token');
+    const headers = new HttpHeaders({
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    });
+    const params = new HttpParams()
+      .set('from', from)
+      .set('to', to);
+    return this.http.get(`${this.apiUrl}/analytics/clubs/${siteId}/report/pdf`, {
+      headers,
+      params,
+      responseType: 'blob',
+      withCredentials: true
+    });
+  }
+
   // Admin - Vue d'ensemble
   getAnalyticsOverview(): Observable<{
     total_sites: number;

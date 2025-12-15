@@ -38,6 +38,9 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
           <button class="btn btn-primary" (click)="exportData()" [disabled]="exporting">
             {{ exporting ? 'Export...' : 'Exporter CSV' }}
           </button>
+          <button class="btn btn-success" (click)="downloadPdf()" [disabled]="exportingPdf">
+            {{ exportingPdf ? 'Génération...' : '📥 Télécharger PDF' }}
+          </button>
         </div>
       </div>
 
@@ -1029,6 +1032,7 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   activeTab: TabType = 'overview';
   selectedPeriod = '30';
   exporting = false;
+  exportingPdf = false;
   Math = Math;
 
   // Data
@@ -1107,6 +1111,36 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
         console.error('Export error:', err);
         alert('Erreur lors de l\'export');
         this.exporting = false;
+      }
+    });
+  }
+
+  downloadPdf(): void {
+    this.exportingPdf = true;
+    const days = parseInt(this.selectedPeriod, 10);
+
+    // Calculer les dates from et to
+    const to = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - days);
+
+    const fromStr = from.toISOString().split('T')[0];
+    const toStr = to.toISOString().split('T')[0];
+
+    this.analyticsService.getClubPdfReport(this.siteId, fromStr, toStr).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rapport-club-${this.site?.club_name || this.siteId}-${fromStr}-${toStr}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.exportingPdf = false;
+      },
+      error: (err) => {
+        console.error('PDF generation error:', err);
+        alert('Erreur lors de la génération du PDF');
+        this.exportingPdf = false;
       }
     });
   }
