@@ -117,7 +117,7 @@ export const getSponsor = async (req: AuthRequest, res: Response): Promise<void>
 
     res.json({
       success: true,
-      data: result.rows[0],
+      data: { sponsor: result.rows[0] },
     });
   } catch (error) {
     logger.error('Error getting sponsor:', error);
