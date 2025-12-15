@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -525,10 +525,8 @@ export class SponsorsListComponent implements OnInit {
     status: 'active'
   };
 
-  constructor(
-    private api: ApiService,
-    private notification: NotificationService
-  ) {}
+  private api = inject(ApiService);
+  private notification = inject(NotificationService);
 
   ngOnInit() {
     this.checkPermissions();
@@ -540,26 +538,22 @@ export class SponsorsListComponent implements OnInit {
     this.canManage = true; // Placeholder
   }
 
-  async loadSponsors() {
+  loadSponsors() {
     this.loading = true;
-    try {
-      const response = await fetch('/api/analytics/sponsors', {
-        credentials: 'include'
+    this.api.get<{ success: boolean; data: { sponsors: Sponsor[] } }>('/api/analytics/sponsors')
+      .subscribe({
+        next: (response) => {
+          this.sponsors = response.data.sponsors || [];
+          this.filteredSponsors = this.sponsors;
+        },
+        error: (error) => {
+          this.notification.error('Erreur lors du chargement des sponsors');
+          console.error('Error loading sponsors:', error);
+        },
+        complete: () => {
+          this.loading = false;
+        }
       });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors du chargement');
-      }
-
-      const data = await response.json();
-      this.sponsors = data.data.sponsors || [];
-      this.filteredSponsors = this.sponsors;
-    } catch (error) {
-      this.notification.error('Erreur lors du chargement des sponsors');
-      console.error('Error loading sponsors:', error);
-    } finally {
-      this.loading = false;
-    }
   }
 
   filterSponsors() {
@@ -616,40 +610,35 @@ export class SponsorsListComponent implements OnInit {
     this.showModal = false;
   }
 
-  async saveSponsor(event: Event) {
+  saveSponsor(event: Event) {
     event.preventDefault();
     this.saving = true;
 
-    try {
-      const url = this.isEditing && this.formData.id
-        ? `/api/analytics/sponsors/${this.formData.id}`
-        : '/api/analytics/sponsors';
+    const endpoint = this.isEditing && this.formData.id
+      ? `/api/analytics/sponsors/${this.formData.id}`
+      : '/api/analytics/sponsors';
 
-      const method = this.isEditing ? 'PUT' : 'POST';
+    const request$ = this.isEditing && this.formData.id
+      ? this.api.put<{ success: boolean; data: Sponsor }>(endpoint, this.formData)
+      : this.api.post<{ success: boolean; data: Sponsor }>(endpoint, this.formData);
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(this.formData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de l\'enregistrement');
+    request$.subscribe({
+      next: () => {
+        this.notification.success(
+          this.isEditing ? 'Sponsor modifié avec succès' : 'Sponsor créé avec succès'
+        );
+        this.closeModal();
+        this.loadSponsors();
+      },
+      error: (error) => {
+        this.notification.error('Erreur lors de l\'enregistrement');
+        console.error('Error saving sponsor:', error);
+        this.saving = false;
+      },
+      complete: () => {
+        this.saving = false;
       }
-
-      this.notification.success(
-        this.isEditing ? 'Sponsor modifié avec succès' : 'Sponsor créé avec succès'
-      );
-
-      this.closeModal();
-      await this.loadSponsors();
-    } catch (error) {
-      this.notification.error('Erreur lors de l\'enregistrement');
-      console.error('Error saving sponsor:', error);
-    } finally {
-      this.saving = false;
-    }
+    });
   }
 
   viewAnalytics(event: Event, sponsorId: string) {
