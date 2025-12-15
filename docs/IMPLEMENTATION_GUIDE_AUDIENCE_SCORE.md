@@ -17,7 +17,7 @@
 | **Migration DB**                | ⏳ À exécuter | SQL prêt                       |
 | **Backend Handler**             | ⏳ À faire    | Handler socket `match-config`  |
 | **UI TV - Overlay Score**       | ⏳ À faire    | tv.component                   |
-| **Admin Toggle**                | ⏳ À faire    | site-edit.component            |
+| **Admin Toggle**                | ✅ FAIT       | site-detail.component          |
 
 ---
 
@@ -562,61 +562,86 @@ Champs ajoutés :
 
 ---
 
-### 2.2 Admin Central - Toggle Activation
+### 2.2 Admin Central - Toggle Activation ✅ IMPLÉMENTÉ
 
-#### 2.2.1 Modifier `site-edit.component.ts` (central-dashboard)
+> **Note** : Cette section a été implémentée le 15 Décembre 2025.
+> Voir `site-detail.component.ts` - Section "Options Premium"
 
-**Ajouter dans l'interface Site** (si pas déjà présent) :
+#### 2.2.1 Interface Site mise à jour
+
+**Fichier** : `central-dashboard/src/app/core/models/index.ts`
 
 ```typescript
 export interface Site {
   // ... champs existants
+  /**
+   * Active l'affichage du score en live sur la télécommande et la TV
+   * Option premium activable par NEOPRO
+   */
   live_score_enabled?: boolean;
 }
 ```
 
-**Dans le template HTML du formulaire d'édition** :
+#### 2.2.2 Toggle dans `site-detail.component.ts`
+
+**Section "Options Premium" ajoutée dans le template** :
 
 ```html
-<!-- Section Options Avancées -->
-<div class="form-section">
-  <h3>Options Avancées</h3>
-
-  <div class="form-group checkbox-group premium">
-    <label>
-      <input type="checkbox" [(ngModel)]="site.live_score_enabled" name="liveScoreEnabled" />
-      <span class="checkbox-label">
-        <span class="checkbox-text">Activer Score en Live</span>
-        <span class="premium-badge">💰 Premium</span>
-      </span>
-    </label>
-    <p class="form-help">
-      Permet d'afficher le score du match en surimpression pendant les vidéos. Cette fonctionnalité
-      est une option payante.
-    </p>
+<!-- Options Premium -->
+<div class="card">
+  <div class="card-header-row">
+    <h3>Options Premium</h3>
+  </div>
+  <div class="premium-options">
+    <div class="premium-option">
+      <div class="premium-option-header">
+        <label class="toggle-label">
+          <input
+            type="checkbox"
+            [checked]="site.live_score_enabled"
+            (change)="toggleLiveScore($event)"
+            [disabled]="savingLiveScore"
+          />
+          <span class="toggle-switch"></span>
+          <span class="toggle-text">Score en Live</span>
+          <span class="premium-badge">Premium</span>
+        </label>
+      </div>
+      <p class="premium-option-desc">
+        Permet d'afficher le score du match en surimpression sur la TV pendant les vidéos. Le score
+        est saisi depuis la télécommande.
+      </p>
+    </div>
   </div>
 </div>
 ```
 
-**Styles à ajouter** :
+**Méthode ajoutée** :
 
-```scss
-.premium {
-  border: 2px solid #f59e0b;
-  background: #fffbeb;
-  padding: 1rem;
-  border-radius: 0.5rem;
-}
+```typescript
+toggleLiveScore(event: Event): void {
+  const checkbox = event.target as HTMLInputElement;
+  const newValue = checkbox.checked;
 
-.premium-badge {
-  display: inline-block;
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-left: 0.5rem;
+  this.savingLiveScore = true;
+  this.sitesService.updateSite(this.siteId, { live_score_enabled: newValue }).subscribe({
+    next: (updatedSite) => {
+      this.savingLiveScore = false;
+      if (this.site) {
+        this.site.live_score_enabled = newValue;
+      }
+      this.notificationService.success(
+        newValue
+          ? 'Score en Live activé ! Le boîtier doit être resynchronisé.'
+          : 'Score en Live désactivé.'
+      );
+    },
+    error: (error) => {
+      this.savingLiveScore = false;
+      checkbox.checked = !newValue; // Revert on error
+      this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+    }
+  });
 }
 ```
 
@@ -1255,11 +1280,11 @@ WHERE id = 'your-site-id';
 ### Score en Live
 
 - [ ] Migration DB exécutée
-- [ ] Toggle admin fonctionnel
-- [ ] Widget score sur télécommande (si activé)
+- [x] Toggle admin fonctionnel (site-detail.component.ts)
+- [x] Widget score sur télécommande (si activé)
 - [ ] Overlay permanent sur TV
 - [ ] Popup changement de score
-- [ ] Socket event `score-update` fonctionnel
+- [ ] Socket event `score-update` fonctionnel (côté backend)
 - [ ] Scores stockés dans `sponsor_impressions`
 - [ ] Analytics montrent le contexte de score
 

@@ -275,6 +275,34 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
         </div>
       </div>
 
+      <!-- Options Premium -->
+      <div class="card">
+        <div class="card-header-row">
+          <h3>Options Premium</h3>
+        </div>
+        <div class="premium-options">
+          <div class="premium-option">
+            <div class="premium-option-header">
+              <label class="toggle-label">
+                <input
+                  type="checkbox"
+                  [checked]="site.live_score_enabled"
+                  (change)="toggleLiveScore($event)"
+                  [disabled]="savingLiveScore"
+                />
+                <span class="toggle-switch"></span>
+                <span class="toggle-text">Score en Live</span>
+                <span class="premium-badge">Premium</span>
+              </label>
+            </div>
+            <p class="premium-option-desc">
+              Permet d'afficher le score du match en surimpression sur la TV pendant les vidéos.
+              Le score est saisi depuis la télécommande.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- Configuration du site -->
       <div class="card">
         <div class="card-header-row">
@@ -936,6 +964,92 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
       color: #92400e;
     }
 
+    /* Premium Options */
+    .premium-options {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .premium-option {
+      padding: 1rem;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .premium-option-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      cursor: pointer;
+    }
+
+    .toggle-label input[type="checkbox"] {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      appearance: none;
+      background: #cbd5e1;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle-label input[type="checkbox"]:checked {
+      background: #10b981;
+    }
+
+    .toggle-label input[type="checkbox"]::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle-label input[type="checkbox"]:checked::after {
+      transform: translateX(20px);
+    }
+
+    .toggle-label input[type="checkbox"]:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .toggle-text {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .premium-badge {
+      padding: 0.25rem 0.5rem;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .premium-option-desc {
+      margin: 0.75rem 0 0 0;
+      font-size: 0.875rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
     @media (max-width: 768px) {
       .info-grid {
         grid-template-columns: 1fr;
@@ -974,6 +1088,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   // Sync-agent update
   updatingSyncAgent = false;
+
+  // Premium options
+  savingLiveScore = false;
 
   // Modals
   showLogsModal = false;
@@ -1189,6 +1306,33 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   onConfigDeployed(): void {
     this.notificationService.success('Configuration déployée avec succès !');
+  }
+
+  // Premium options methods
+  toggleLiveScore(event: Event): void {
+    const checkbox = event.target as HTMLInputElement;
+    const newValue = checkbox.checked;
+
+    this.savingLiveScore = true;
+    this.sitesService.updateSite(this.siteId, { live_score_enabled: newValue }).subscribe({
+      next: (updatedSite) => {
+        this.savingLiveScore = false;
+        if (this.site) {
+          this.site.live_score_enabled = newValue;
+        }
+        this.notificationService.success(
+          newValue
+            ? 'Score en Live activé ! Le boîtier doit être resynchronisé pour appliquer le changement.'
+            : 'Score en Live désactivé.'
+        );
+      },
+      error: (error) => {
+        this.savingLiveScore = false;
+        // Revert checkbox state
+        checkbox.checked = !newValue;
+        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+      }
+    });
   }
 
   // Hotspot config methods

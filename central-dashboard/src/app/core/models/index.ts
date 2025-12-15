@@ -36,6 +36,11 @@ export interface Site {
   metadata: Record<string, unknown>;
   created_at: Date;
   updated_at: Date;
+  /**
+   * Active l'affichage du score en live sur la télécommande et la TV
+   * Option premium activable par NEOPRO
+   */
+  live_score_enabled?: boolean;
 }
 
 export interface GroupMetadata {
