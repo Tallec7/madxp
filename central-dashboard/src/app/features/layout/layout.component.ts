@@ -47,6 +47,10 @@ import { User } from '../../core/models';
             <span class="icon">👥</span>
             <span>Groupes</span>
           </a>
+          <a routerLink="/sponsors" routerLinkActive="active" class="nav-item">
+            <span class="icon">💼</span>
+            <span>Sponsors</span>
+          </a>
           <a routerLink="/content" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()">
             <span class="icon">📹</span>
             <span>Contenu</span>
