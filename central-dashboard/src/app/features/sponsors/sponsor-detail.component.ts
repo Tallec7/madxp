@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { ApiService } from '../../core/services/api.service';
+import { NotificationService } from '../../core/services/notification.service';
 
 interface Sponsor {
   id: string;
@@ -914,60 +916,58 @@ export class SponsorDetailComponent implements OnInit {
 
   editForm: Partial<Sponsor> = {};
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router
-  ) {}
+  private api = inject(ApiService);
+  private notification = inject(NotificationService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   ngOnInit() {
     this.sponsorId = this.route.snapshot.params['id'];
     this.loadSponsorData();
   }
 
-  async loadSponsorData() {
+  loadSponsorData() {
     this.loading = true;
     this.error = '';
 
-    try {
-      // Load sponsor details
-      const sponsorResponse = await fetch(`/api/analytics/sponsors/${this.sponsorId}`, {
-        credentials: 'include'
+    // Load sponsor details
+    this.api.get<{ success: boolean; data: { sponsor: Sponsor } }>(`/analytics/sponsors/${this.sponsorId}`)
+      .subscribe({
+        next: (response) => {
+          this.sponsor = response.data.sponsor;
+
+          // Load associated videos
+          this.api.get<{ success: boolean; data: { videos: SponsorVideo[] } }>(`/analytics/sponsors/${this.sponsorId}/videos`)
+            .subscribe({
+              next: (videoResponse) => {
+                this.sponsorVideos = videoResponse.data.videos || [];
+              },
+              error: (err) => {
+                console.error('Error loading videos:', err);
+              }
+            });
+
+          // Load quick stats (last 30 days)
+          this.api.get<{ success: boolean; data: { summary: any } }>(`/analytics/sponsors/${this.sponsorId}/stats`, { days: '30' })
+            .subscribe({
+              next: (statsResponse) => {
+                this.quickStats = statsResponse.data.summary;
+              },
+              error: (err) => {
+                console.error('Error loading stats:', err);
+              },
+              complete: () => {
+                this.loading = false;
+              }
+            });
+        },
+        error: (err) => {
+          this.error = 'Sponsor non trouvé';
+          this.notification.error('Erreur lors du chargement des données');
+          console.error('Error loading sponsor data:', err);
+          this.loading = false;
+        }
       });
-
-      if (!sponsorResponse.ok) {
-        throw new Error('Sponsor non trouvé');
-      }
-
-      const sponsorData = await sponsorResponse.json();
-      this.sponsor = sponsorData.data.sponsor;
-
-      // Load associated videos
-      const videosResponse = await fetch(`/api/analytics/sponsors/${this.sponsorId}/videos`, {
-        credentials: 'include'
-      });
-
-      if (videosResponse.ok) {
-        const videosData = await videosResponse.json();
-        this.sponsorVideos = videosData.data.videos || [];
-      }
-
-      // Load quick stats (last 30 days)
-      const statsResponse = await fetch(
-        `/api/analytics/sponsors/${this.sponsorId}/stats?days=30`,
-        { credentials: 'include' }
-      );
-
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        this.quickStats = statsData.data.summary;
-      }
-
-    } catch (err: any) {
-      this.error = err.message || 'Erreur lors du chargement des données';
-      console.error('Error loading sponsor data:', err);
-    } finally {
-      this.loading = false;
-    }
   }
 
   goBack() {
@@ -989,32 +989,26 @@ export class SponsorDetailComponent implements OnInit {
     this.editForm = {};
   }
 
-  async saveEdit(event: Event) {
+  saveEdit(event: Event) {
     event.preventDefault();
     this.saving = true;
 
-    try {
-      const response = await fetch(`/api/analytics/sponsors/${this.sponsorId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(this.editForm)
+    this.api.put<{ success: boolean; data: { sponsor: Sponsor } }>(`/analytics/sponsors/${this.sponsorId}`, this.editForm)
+      .subscribe({
+        next: (response) => {
+          this.sponsor = response.data.sponsor;
+          this.notification.success('Sponsor modifié avec succès');
+          this.closeEditModal();
+        },
+        error: (err) => {
+          this.notification.error('Erreur lors de la sauvegarde');
+          console.error('Error saving sponsor:', err);
+          this.saving = false;
+        },
+        complete: () => {
+          this.saving = false;
+        }
       });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la mise à jour');
-      }
-
-      const data = await response.json();
-      this.sponsor = data.data.sponsor;
-      this.closeEditModal();
-
-    } catch (err: any) {
-      alert(err.message || 'Erreur lors de la sauvegarde');
-      console.error('Error saving sponsor:', err);
-    } finally {
-      this.saving = false;
-    }
   }
 
   // Delete Functions
@@ -1026,28 +1020,23 @@ export class SponsorDetailComponent implements OnInit {
     this.showDeleteModal = false;
   }
 
-  async deleteSponsor() {
+  deleteSponsor() {
     this.deleting = true;
 
-    try {
-      const response = await fetch(`/api/analytics/sponsors/${this.sponsorId}`, {
-        method: 'DELETE',
-        credentials: 'include'
+    this.api.delete<{ success: boolean }>(`/analytics/sponsors/${this.sponsorId}`)
+      .subscribe({
+        next: () => {
+          this.notification.success('Sponsor supprimé avec succès');
+          this.router.navigate(['/sponsors']);
+        },
+        error: (err) => {
+          this.notification.error('Erreur lors de la suppression');
+          console.error('Error deleting sponsor:', err);
+        },
+        complete: () => {
+          this.deleting = false;
+        }
       });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la suppression');
-      }
-
-      // Redirect to list
-      this.router.navigate(['/sponsors']);
-
-    } catch (err: any) {
-      alert(err.message || 'Erreur lors de la suppression');
-      console.error('Error deleting sponsor:', err);
-    } finally {
-      this.deleting = false;
-    }
   }
 
   // Video Management

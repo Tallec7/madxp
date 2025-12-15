@@ -1,8 +1,9 @@
-import { Component, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { ApiService } from '../../core/services/api.service';
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -630,7 +631,7 @@ interface Distribution {
     }
   `]
 })
-export class SponsorAnalyticsComponent implements OnInit, AfterViewInit {
+export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('trendsChart') trendsChart!: ElementRef<HTMLCanvasElement>;
   @ViewChild('periodChart') periodChart!: ElementRef<HTMLCanvasElement>;
   @ViewChild('eventChart') eventChart!: ElementRef<HTMLCanvasElement>;
@@ -660,10 +661,9 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit {
   private periodChartInstance: Chart | null = null;
   private eventChartInstance: Chart | null = null;
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router
-  ) {}
+  private api = inject(ApiService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   ngOnInit() {
     this.sponsorId = this.route.snapshot.params['id'];
@@ -675,52 +675,43 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit {
     // Charts will be rendered after data is loaded
   }
 
-  async loadAnalytics() {
+  loadAnalytics() {
     this.loading = true;
     this.error = '';
 
-    try {
-      const { from, to } = this.getDateRange();
-      this.updatePeriodLabel(from, to);
+    const { from, to } = this.getDateRange();
+    this.updatePeriodLabel(from, to);
 
-      const params = new URLSearchParams({
-        from: from.toISOString().split('T')[0],
-        to: to.toISOString().split('T')[0]
-      });
+    this.api.get<any>(`/analytics/sponsors/${this.sponsorId}/stats`, {
+      from: from.toISOString().split('T')[0],
+      to: to.toISOString().split('T')[0]
+    }).subscribe({
+      next: (data) => {
+        // Store sponsor name
+        this.sponsorName = data.data.sponsor_name || 'Sponsor';
 
-      const response = await fetch(
-        `/api/analytics/sponsors/${this.sponsorId}/stats?${params}`,
-        { credentials: 'include' }
-      );
+        // Store analytics data
+        this.summary = data.data.summary;
+        this.topVideos = data.data.by_video?.slice(0, 10) || [];
+        this.topSites = data.data.by_site?.slice(0, 20) || [];
+        this.dailyTrends = data.data.trends || [];
+        this.periodDistribution = this.formatDistribution(data.data.by_period);
+        this.eventDistribution = this.formatDistribution(data.data.by_event);
 
-      if (!response.ok) {
-        throw new Error('Erreur lors du chargement des analytics');
+        // Render charts after data is loaded (wait for view to be ready)
+        if (this.chartsReady) {
+          setTimeout(() => this.renderCharts(), 100);
+        }
+      },
+      error: (err) => {
+        this.error = 'Erreur lors du chargement des analytics';
+        console.error('Error loading sponsor data:', err);
+        this.loading = false;
+      },
+      complete: () => {
+        this.loading = false;
       }
-
-      const data = await response.json();
-
-      // Store sponsor name
-      this.sponsorName = data.data.sponsor_name || 'Sponsor';
-
-      // Store analytics data
-      this.summary = data.data.summary;
-      this.topVideos = data.data.by_video?.slice(0, 10) || [];
-      this.topSites = data.data.by_site?.slice(0, 20) || [];
-      this.dailyTrends = data.data.trends || [];
-      this.periodDistribution = this.formatDistribution(data.data.by_period);
-      this.eventDistribution = this.formatDistribution(data.data.by_event);
-
-      // Render charts after data is loaded (wait for view to be ready)
-      if (this.chartsReady) {
-        setTimeout(() => this.renderCharts(), 100);
-      }
-
-    } catch (err: any) {
-      this.error = err.message || 'Erreur lors du chargement des analytics';
-      console.error('Error loading analytics:', err);
-    } finally {
-      this.loading = false;
-    }
+    });
   }
 
   getDateRange(): { from: Date; to: Date } {
@@ -972,79 +963,61 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit {
     }
   }
 
-  async exportCSV() {
+  exportCSV() {
     this.exporting = true;
+    const { from, to } = this.getDateRange();
 
-    try {
-      const { from, to } = this.getDateRange();
-      const params = new URLSearchParams({
-        from: from.toISOString().split('T')[0],
-        to: to.toISOString().split('T')[0],
-        format: 'csv'
-      });
-
-      const response = await fetch(
-        `/api/analytics/sponsors/${this.sponsorId}/export?${params}`,
-        { credentials: 'include' }
-      );
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de l\'export CSV');
+    this.api.get<any>(`/analytics/sponsors/${this.sponsorId}/export`, {
+      from: from.toISOString().split('T')[0],
+      to: to.toISOString().split('T')[0],
+      format: 'csv'
+    }).subscribe({
+      next: (blob: any) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sponsor-${this.sponsorId}-${from.toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        alert('Erreur lors de l\'export');
+        console.error('Export error:', err);
+      },
+      complete: () => {
+        this.exporting = false;
       }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `sponsor-${this.sponsorId}-${from.toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-
-    } catch (err: any) {
-      alert(err.message || 'Erreur lors de l\'export');
-      console.error('Export error:', err);
-    } finally {
-      this.exporting = false;
-    }
+    });
   }
 
-  async downloadPDF() {
+  downloadPDF() {
     this.generatingPDF = true;
+    const { from, to } = this.getDateRange();
 
-    try {
-      const { from, to } = this.getDateRange();
-      const params = new URLSearchParams({
-        from: from.toISOString().split('T')[0],
-        to: to.toISOString().split('T')[0]
-      });
-
-      const response = await fetch(
-        `/api/analytics/sponsors/${this.sponsorId}/report/pdf?${params}`,
-        { credentials: 'include' }
-      );
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la génération du PDF');
+    this.api.get<any>(`/analytics/sponsors/${this.sponsorId}/report/pdf`, {
+      from: from.toISOString().split('T')[0],
+      to: to.toISOString().split('T')[0]
+    }).subscribe({
+      next: (blob: any) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rapport-sponsor-${this.sponsorId}-${from.toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        alert('Erreur lors de la génération du PDF');
+        console.error('PDF error:', err);
+      },
+      complete: () => {
+        this.generatingPDF = false;
       }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `rapport-sponsor-${this.sponsorId}-${from.toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-
-    } catch (err: any) {
-      alert(err.message || 'Erreur lors de la génération du PDF');
-      console.error('PDF error:', err);
-    } finally {
-      this.generatingPDF = false;
-    }
+    });
   }
 
   goBack() {
