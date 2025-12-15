@@ -49,6 +49,18 @@
         </div>
 
         <div class="header-right">
+          <!-- Widget Score en Live minimaliste (si activé) -->
+          @if (liveScoreEnabled) {
+            <div class="score-mini">
+              <button class="score-mini-btn" (click)="decrementHomeScore()">−</button>
+              <span class="score-mini-value">{{ currentScore.homeScore }}</span>
+              <span class="score-mini-sep">-</span>
+              <span class="score-mini-value">{{ currentScore.awayScore }}</span>
+              <button class="score-mini-btn" (click)="incrementAwayScore()">+</button>
+              <button class="score-mini-reset" (click)="resetScore()" title="Reset">↺</button>
+            </div>
+          }
+
           <!-- Badge estimation audience -->
           <button class="audience-badge" (click)="openMatchModal()" title="Configuration match">
             <span class="badge-icon">👥</span>
@@ -117,53 +129,6 @@
       <!-- Vue principale - Accueil -->
       @if (currentView === 'home' && !isSearching) {
         <div class="view-home">
-          <!-- Widget Score en Live (si activé) -->
-          @if (liveScoreEnabled) {
-            <div class="score-widget">
-              <div class="score-widget-header">
-                <h3>🏀 Score du Match</h3>
-                <button class="score-reset" (click)="resetScore()" title="Réinitialiser">↺</button>
-              </div>
-
-              <div class="score-display">
-                <!-- Équipe Domicile -->
-                <div class="team-section">
-                  <input
-                    type="text"
-                    [(ngModel)]="currentScore.homeTeam"
-                    (blur)="broadcastScore()"
-                    class="team-name-input"
-                    placeholder="DOMICILE"
-                  />
-                  <div class="score-controls">
-                    <button class="score-btn minus" (click)="decrementHomeScore()">-</button>
-                    <div class="score-value">{{ currentScore.homeScore }}</div>
-                    <button class="score-btn plus" (click)="incrementHomeScore()">+</button>
-                  </div>
-                </div>
-
-                <!-- Séparateur -->
-                <div class="score-separator">-</div>
-
-                <!-- Équipe Extérieure -->
-                <div class="team-section">
-                  <input
-                    type="text"
-                    [(ngModel)]="currentScore.awayTeam"
-                    (blur)="broadcastScore()"
-                    class="team-name-input"
-                    placeholder="EXTÉRIEUR"
-                  />
-                  <div class="score-controls">
-                    <button class="score-btn minus" (click)="decrementAwayScore()">-</button>
-                    <div class="score-value">{{ currentScore.awayScore }}</div>
-                    <button class="score-btn plus" (click)="incrementAwayScore()">+</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          }
-
           <!-- Actions rapides -->
           <div class="quick-actions">
             <button class="quick-action sponsors-action" (click)="launchSponsors()">
