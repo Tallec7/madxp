@@ -69,6 +69,7 @@ export const schemas = {
     }).optional(),
     sports: Joi.array().items(Joi.string()).optional(),
     status: Joi.string().valid('online', 'offline', 'maintenance', 'error').optional(),
+    live_score_enabled: Joi.boolean().optional(),
   }),
 
   createGroup: Joi.object({

@@ -174,7 +174,7 @@ export const createSite = async (req: AuthRequest, res: Response) => {
 export const updateSite = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { site_name, club_name, location, sports, status } = req.body;
+    const { site_name, club_name, location, sports, status, live_score_enabled } = req.body;
 
     const updates: string[] = [];
     const params: any[] = [];
@@ -207,6 +207,12 @@ export const updateSite = async (req: AuthRequest, res: Response) => {
     if (status !== undefined) {
       updates.push(`status = $${paramIndex}`);
       params.push(status);
+      paramIndex++;
+    }
+
+    if (live_score_enabled !== undefined) {
+      updates.push(`live_score_enabled = $${paramIndex}`);
+      params.push(live_score_enabled);
       paramIndex++;
     }
 
