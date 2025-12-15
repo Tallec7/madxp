@@ -170,6 +170,82 @@ CREATE TABLE IF NOT EXISTS alerts (
   CONSTRAINT check_status_alert CHECK (status IN ('active', 'acknowledged', 'resolved'))
 );
 
+-- =============================================================================
+-- TABLES DES SPONSORS ET ANALYTICS
+-- =============================================================================
+
+-- Table pour gérer les sponsors (partenaires)
+CREATE TABLE IF NOT EXISTS sponsors (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL,
+  logo_url VARCHAR(500),
+  contact_email VARCHAR(255),
+  contact_name VARCHAR(255),
+  contact_phone VARCHAR(50),
+  status VARCHAR(50) DEFAULT 'active',
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT check_sponsor_status CHECK (status IN ('active', 'inactive', 'paused'))
+);
+
+-- Association sponsors <-> vidéos (many-to-many)
+CREATE TABLE IF NOT EXISTS sponsor_videos (
+  sponsor_id UUID REFERENCES sponsors(id) ON DELETE CASCADE,
+  video_id UUID REFERENCES videos(id) ON DELETE CASCADE,
+  is_primary BOOLEAN DEFAULT true,
+  added_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (sponsor_id, video_id)
+);
+
+-- Table des impressions sponsors (chaque diffusion vidéo)
+CREATE TABLE IF NOT EXISTS sponsor_impressions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
+  video_id UUID REFERENCES videos(id) ON DELETE CASCADE,
+  played_at TIMESTAMP NOT NULL,
+  duration_played INTEGER NOT NULL,
+  video_duration INTEGER NOT NULL,
+  completed BOOLEAN DEFAULT false,
+  interrupted_at INTEGER,
+  event_type VARCHAR(50),
+  period VARCHAR(50),
+  trigger_type VARCHAR(20) DEFAULT 'auto',
+  position_in_loop INTEGER,
+  audience_estimate INTEGER,
+  created_at TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT check_event_type CHECK (event_type IN ('match', 'training', 'tournament', 'other', NULL)),
+  CONSTRAINT check_period CHECK (period IN ('pre_match', 'halftime', 'post_match', 'loop', NULL)),
+  CONSTRAINT check_trigger_type CHECK (trigger_type IN ('auto', 'manual'))
+);
+
+-- Table agrégée (calculée quotidiennement via cron job)
+CREATE TABLE IF NOT EXISTS sponsor_daily_stats (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  video_id UUID REFERENCES videos(id) ON DELETE CASCADE,
+  site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  total_impressions INTEGER DEFAULT 0,
+  total_duration_seconds INTEGER DEFAULT 0,
+  completed_plays INTEGER DEFAULT 0,
+  completion_rate DECIMAL(5,2),
+  unique_events INTEGER DEFAULT 0,
+  pre_match_plays INTEGER DEFAULT 0,
+  match_plays INTEGER DEFAULT 0,
+  post_match_plays INTEGER DEFAULT 0,
+  loop_plays INTEGER DEFAULT 0,
+  match_events INTEGER DEFAULT 0,
+  training_events INTEGER DEFAULT 0,
+  tournament_events INTEGER DEFAULT 0,
+  other_events INTEGER DEFAULT 0,
+  auto_plays INTEGER DEFAULT 0,
+  manual_plays INTEGER DEFAULT 0,
+  total_audience_estimate INTEGER DEFAULT 0,
+  avg_audience_per_play DECIMAL(10,2),
+  calculated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(video_id, site_id, date)
+);
+
 -- Index pour optimiser les requêtes
 CREATE INDEX IF NOT EXISTS idx_sites_status ON sites(status);
 CREATE INDEX IF NOT EXISTS idx_sites_last_seen ON sites(last_seen_at DESC);
@@ -181,6 +257,24 @@ CREATE INDEX IF NOT EXISTS idx_commands_site ON remote_commands(site_id, created
 CREATE INDEX IF NOT EXISTS idx_commands_status ON remote_commands(status);
 CREATE INDEX IF NOT EXISTS idx_alerts_site ON alerts(site_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status, severity);
+
+-- Index pour sponsor impressions
+CREATE INDEX IF NOT EXISTS idx_impressions_video_date
+  ON sponsor_impressions(video_id, played_at DESC);
+CREATE INDEX IF NOT EXISTS idx_impressions_site_date
+  ON sponsor_impressions(site_id, played_at DESC);
+CREATE INDEX IF NOT EXISTS idx_impressions_played_at
+  ON sponsor_impressions(played_at DESC);
+CREATE INDEX IF NOT EXISTS idx_impressions_video_site
+  ON sponsor_impressions(video_id, site_id);
+
+-- Index pour sponsor daily stats
+CREATE INDEX IF NOT EXISTS idx_daily_stats_date
+  ON sponsor_daily_stats(date DESC);
+CREATE INDEX IF NOT EXISTS idx_daily_stats_video_date
+  ON sponsor_daily_stats(video_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_daily_stats_site_date
+  ON sponsor_daily_stats(site_id, date DESC);
 
 -- Fonction pour mettre à jour updated_at automatiquement
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -202,6 +296,9 @@ CREATE TRIGGER update_groups_updated_at BEFORE UPDATE ON groups
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_videos_updated_at BEFORE UPDATE ON videos
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_sponsors_updated_at BEFORE UPDATE ON sponsors
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Note: L'utilisateur admin doit être créé via le script de setup avec un mot de passe sécurisé
