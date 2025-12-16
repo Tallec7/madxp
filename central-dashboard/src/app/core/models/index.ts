@@ -41,6 +41,14 @@ export interface Site {
    * Option premium activable par NEOPRO
    */
   live_score_enabled?: boolean;
+  /**
+   * Configuration NEOPRO déployée sur le site
+   * Contient les paramètres gérés centralement (catégories, vidéos, etc.)
+   */
+  neoProContent?: {
+    liveScoreEnabled?: boolean;
+    [key: string]: unknown;
+  };
 }
 
 export interface GroupMetadata {
