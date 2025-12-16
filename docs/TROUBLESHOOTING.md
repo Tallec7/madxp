@@ -565,9 +565,10 @@ Depuis le **dashboard central**, vous pouvez diagnostiquer la connectivité d'un
 
 #### Informations affichées
 
-- **Interfaces réseau** : eth0, wlan0, etc. avec IP, MAC et état (actif/inactif)
 - **WiFi** (si applicable) : SSID, qualité du signal (%), puissance (dBm), débit (Mb/s)
 - **Latences** : temps de réponse de chaque test en millisecondes
+
+> **Note** : Les adresses IP locales (192.168.x.x) ne sont pas affichées car elles ne sont pas accessibles depuis un poste distant. Seule l'IP publique du site est visible dans les informations générales.
 
 #### Interprétation des résultats
 
@@ -594,13 +595,10 @@ Depuis le **dashboard central**, vous pouvez diagnostiquer la connectivité d'un
 │  ✅ Internet (45ms)                     │
 │  ✅ Serveur central (120ms)             │
 │  ✅ DNS (15ms)                          │
-│  ✅ Passerelle 192.168.1.1 (5ms)        │
+│  ✅ Passerelle (5ms)                    │
 ├─────────────────────────────────────────┤
-│  Interfaces réseau:                     │
-│  - eth0: 192.168.1.50 (Actif)           │
-│  - wlan0: - (Inactif)                   │
-├─────────────────────────────────────────┤
-│  WiFi: Non connecté                     │
+│  WiFi: Connecté à "BOX-CLUB"            │
+│  Qualité: 75% | Signal: -55 dBm         │
 └─────────────────────────────────────────┘
 ```
 

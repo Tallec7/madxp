@@ -170,10 +170,8 @@ export class ConnectionIndicatorComponent implements OnInit, OnDestroy {
     if (!this.connectionStatus) {
       return 'Chargement...';
     }
-    const c = this.connectionStatus.connection;
     const s = this.connectionStatus.statistics;
     return `Statut: ${this.statusText}
-IP: ${c.localIp || 'N/A'}
 Uptime 24h: ${s.uptime24h.toFixed(1)}%
 Heartbeats 24h: ${s.heartbeats24h}`;
   }

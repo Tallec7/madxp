@@ -67,17 +67,13 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
               <span class="label">Dernière vue:</span>
               <span class="value">{{ formatLastSeen(site.last_seen_at) }}</span>
             </div>
-            <div class="info-row" *ngIf="site.local_ip">
-              <span class="label">IP locale:</span>
-              <span class="value monospace">
-                <a [href]="'http://' + site.local_ip + ':8080'" target="_blank" title="Ouvrir l'interface admin">
-                  {{ site.local_ip }}
-                </a>
-              </span>
-            </div>
             <div class="info-row" *ngIf="site.last_ip">
               <span class="label">IP publique:</span>
               <span class="value monospace">{{ site.last_ip }}</span>
+            </div>
+            <div class="info-row" *ngIf="site.local_ip">
+              <span class="label">IP locale:</span>
+              <span class="value monospace hint">{{ site.local_ip }}</span>
             </div>
             <div class="info-row">
               <span class="label">Créé le:</span>
@@ -483,47 +479,7 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
                 </div>
               </div>
 
-              <!-- Détails passerelle -->
-              <div class="diag-section" *ngIf="networkDiagnostics.gateway?.ip">
-                <h4>Passerelle</h4>
-                <div class="info-list">
-                  <div class="info-row">
-                    <span class="label">Adresse IP:</span>
-                    <span class="value monospace">{{ networkDiagnostics.gateway.ip }}</span>
-                  </div>
-                  <div class="info-row">
-                    <span class="label">Accessible:</span>
-                    <span class="value">{{ networkDiagnostics.gateway.reachable ? 'Oui' : 'Non' }}</span>
-                  </div>
-                  <div class="info-row" *ngIf="networkDiagnostics.gateway.latency_ms">
-                    <span class="label">Latence:</span>
-                    <span class="value">{{ networkDiagnostics.gateway.latency_ms }}ms</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Interfaces réseau -->
-              <div class="diag-section" *ngIf="networkDiagnostics.interfaces?.length">
-                <h4>Interfaces réseau</h4>
-                <div class="interfaces-grid">
-                  <div class="interface-card" *ngFor="let iface of networkDiagnostics.interfaces" [class.active]="iface.operstate === 'up'">
-                    <div class="interface-header">
-                      <span class="interface-name">{{ iface.name }}</span>
-                      <span class="interface-status" [class.up]="iface.operstate === 'up'" [class.down]="iface.operstate !== 'up'">
-                        {{ iface.operstate === 'up' ? 'Actif' : 'Inactif' }}
-                      </span>
-                    </div>
-                    <div class="interface-details">
-                      <div *ngIf="iface.ip4"><strong>IPv4:</strong> {{ iface.ip4 }}</div>
-                      <div *ngIf="iface.mac"><strong>MAC:</strong> {{ iface.mac }}</div>
-                      <div *ngIf="iface.type"><strong>Type:</strong> {{ iface.type }}</div>
-                      <div *ngIf="iface.speed"><strong>Vitesse:</strong> {{ iface.speed }} Mbps</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Infos WiFi -->
+              <!-- Infos WiFi (utile pour comprendre l'instabilité) -->
               <div class="diag-section" *ngIf="networkDiagnostics.wifi">
                 <h4>WiFi</h4>
                 <div class="info-list">
@@ -1251,58 +1207,9 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
       padding-bottom: 0.5rem;
     }
 
-    .interfaces-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-    }
-
-    .interface-card {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      padding: 0.75rem;
-    }
-
-    .interface-card.active {
-      border-color: #10b981;
-    }
-
-    .interface-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.5rem;
-    }
-
-    .interface-name {
-      font-weight: 600;
-      font-family: 'Monaco', 'Courier New', monospace;
-    }
-
-    .interface-status {
-      font-size: 0.75rem;
-      padding: 0.125rem 0.5rem;
-      border-radius: 4px;
-    }
-
-    .interface-status.up {
-      background: #d1fae5;
-      color: #065f46;
-    }
-
-    .interface-status.down {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .interface-details {
-      font-size: 0.8125rem;
-      color: #6b7280;
-    }
-
-    .interface-details div {
-      margin-bottom: 0.25rem;
+    .hint {
+      color: #9ca3af;
+      font-size: 0.875rem;
     }
 
     .wifi-quality-bar {
