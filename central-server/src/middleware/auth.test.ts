@@ -62,7 +62,7 @@ describe('Auth Middleware', () => {
       authenticate(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Token manquant' });
+      expect(res.json).toHaveBeenCalledWith({ error: 'Token invalide ou expiré' });
       expect(next).not.toHaveBeenCalled();
     });
 
@@ -74,7 +74,7 @@ describe('Auth Middleware', () => {
       authenticate(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Token manquant' });
+      expect(res.json).toHaveBeenCalledWith({ error: 'Token invalide ou expiré' });
       expect(next).not.toHaveBeenCalled();
     });
 

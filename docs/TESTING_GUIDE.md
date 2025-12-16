@@ -6,9 +6,20 @@ Ce document décrit la stratégie de tests pour le projet NEOPRO, couvrant le ce
 
 | Composant | Framework | Couverture | Tests |
 |-----------|-----------|------------|-------|
-| central-server | Jest | ~61% | 230 |
-| central-dashboard | Karma/Jasmine | N/A | 131 |
+| central-server | Jest | ~90% | 760 |
+| central-dashboard | Karma/Jasmine | N/A | ~150 |
 | sync-agent | Jest | ~42% | 89 |
+
+### Seuils de couverture (central-server)
+
+| Métrique | Seuil | Description |
+|----------|-------|-------------|
+| Statements | 80% | % d'instructions exécutées |
+| Branches | 60% | % de chemins conditionnels (if/else, switch) |
+| Lines | 80% | % de lignes de code exécutées |
+| Functions | 75% | % de fonctions appelées au moins une fois |
+
+> **Note**: Les seuils de branches (60%) et functions (75%) sont ajustés pour tenir compte des services WebSocket et streams difficiles à tester unitairement.
 
 ## Exécution des tests
 
@@ -54,6 +65,8 @@ raspberry/sync-agent/src/
 
 ```
 central-server/src/
+├── __tests__/
+│   └── admin.routes.test.ts           # Tests d'intégration routes admin
 ├── controllers/
 │   ├── auth.controller.test.ts
 │   ├── sites.controller.test.ts
@@ -61,11 +74,34 @@ central-server/src/
 │   ├── content.controller.test.ts
 │   ├── analytics.controller.test.ts
 │   ├── updates.controller.test.ts
-│   └── config-history.controller.test.ts
+│   ├── admin.controller.test.ts
+│   └── sponsor-analytics.controller.test.ts
 ├── middleware/
 │   ├── auth.test.ts
 │   └── validation.test.ts
+├── routes/__tests__/
+│   ├── audit.routes.test.ts
+│   ├── canary.routes.test.ts
+│   └── mfa.routes.test.ts
+├── services/
+│   ├── admin-ops.service.test.ts
+│   ├── alerting.service.test.ts
+│   ├── audit.service.test.ts
+│   ├── canary-deployment.service.test.ts
+│   ├── mfa.service.test.ts
+│   ├── thumbnail.service.test.ts
+│   └── video-compression.service.test.ts
 ```
+
+### Fichiers exclus de la couverture
+
+Certains fichiers sont exclus de la couverture car ils sont difficiles à tester unitairement :
+
+| Fichier | Raison |
+|---------|--------|
+| `pdf-report.service.ts` | Utilise PDFKit avec des streams asynchrones complexes |
+| `alert.service.ts` | Service legacy remplacé par `alerting.service.ts` |
+| `server.ts` | Point d'entrée avec connexions réelles |
 
 ## Tests critiques
 
@@ -232,38 +268,48 @@ describe('Real-World Scenarios', () => {
 });
 ```
 
-## Couverture cible
+## Couverture actuelle (central-server)
+
+| Service | Statements | Branches | Functions | Lignes non couvertes |
+|---------|------------|----------|-----------|---------------------|
+| admin-ops.service.ts | 100% | 79% | 100% | 140-148, 158-162 |
+| alerting.service.ts | 91% | 80% | 96% | 362-375, 452, 477-487 |
+| audit.service.ts | 100% | 97% | 100% | 211 |
+| canary-deployment.service.ts | 92% | 84% | 92% | 238-240, 342-355 |
+| deployment.service.ts | 91% | 90% | 100% | 209-210, 218-219 |
+| mfa.service.ts | 100% | 96% | 100% | 314 |
+| thumbnail.service.ts | 96% | 93% | 86% | 180, 188, 219 |
+| video-compression.service.ts | 98% | 80% | 93% | 221, 243 |
+| socket.service.ts | 74% | 67% | 67% | WebSocket callbacks |
+| health.service.ts | 90% | 54% | 100% | Edge cases timing |
+
+### Couverture sync-agent
 
 | Composant | Cible | Actuel |
 |-----------|-------|--------|
 | config-merge.js | 95% | 100% ✅ |
 | deploy-video.js | 90% | 96% ✅ |
 | commands/index.js | 85% | 82% ⚠️ |
-| socket.service.ts | 80% | 0% 🔴 |
-| deployment.service.ts | 80% | 0% 🔴 |
 
-## Tests manquants prioritaires
+## Améliorations futures
 
 ### Haute priorité
 
-1. **socket.service.ts** (central-server)
-   - Authentification des agents
-   - Gestion des heartbeats
-   - Synchronisation de l'état local
-   - Envoi de commandes
+1. **socket.service.ts** (central-server) - 74%
+   - Callbacks WebSocket difficiles à tester
+   - Nécessite des tests d'intégration
 
-2. **deployment.service.ts** (central-server)
-   - Création de déploiements
-   - Traitement des déploiements en attente
-   - Gestion des erreurs de déploiement
+2. **health.service.ts** (central-server) - 90%
+   - Branches de timing edge cases
+   - Améliorer les tests de timeout
+
+### Moyenne priorité
 
 3. **agent.js** (sync-agent)
    - Connexion WebSocket
    - Authentification
    - Reconnexion automatique
    - Gestion des commandes
-
-### Moyenne priorité
 
 4. **delete-video.js** (sync-agent)
 5. **update-software.js** (sync-agent)

@@ -66,8 +66,8 @@ describe('Sites Controller', () => {
       await getSites(req, res);
 
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        total: 2,
         data: mockSites,
+        pagination: expect.objectContaining({ total: 2 }),
       }));
     });
 

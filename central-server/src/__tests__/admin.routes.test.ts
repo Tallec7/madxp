@@ -17,6 +17,8 @@ describe('Admin routes', () => {
     fs.mkdirSync(path.dirname(stateFile), { recursive: true });
     fs.rmSync(stateFile, { force: true });
     process.env.ADMIN_STATE_FILE = stateFile;
+    // Use a different port for integration tests to avoid conflicts
+    process.env.PORT = '3099';
 
     const server = await import('../server');
     app = server.app;

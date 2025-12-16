@@ -74,14 +74,24 @@ describe('Content Controller', () => {
           { id: '2', filename: 'video2.mp4', original_name: 'Another Video', metadata: null },
         ];
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: mockVideos });
+        // Mock both data query and count query
+        (pool.query as jest.Mock)
+          .mockResolvedValueOnce({ rows: mockVideos })
+          .mockResolvedValueOnce({ rows: [{ count: '2' }] });
 
         await getVideos(req, res);
 
-        expect(res.json).toHaveBeenCalledWith([
-          { ...mockVideos[0], title: 'Custom Title' },
-          { ...mockVideos[1], title: 'Another Video' },
-        ]);
+        expect(res.json).toHaveBeenCalledWith({
+          data: [
+            { ...mockVideos[0], title: 'Custom Title' },
+            { ...mockVideos[1], title: 'Another Video' },
+          ],
+          pagination: expect.objectContaining({
+            total: 2,
+            page: 1,
+            totalPages: 1,
+          }),
+        });
       });
 
       it('should return 500 on database error', async () => {
