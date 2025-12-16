@@ -69,7 +69,32 @@ Utiliser la version corrigée de `enable-row-level-security.sql` qui gère corre
 
 ---
 
-### Erreur #3: `policy already exists`
+### Erreur #3: `relation "group_sites" does not exist`
+
+**Message complet:**
+```
+ERROR: 42P01: relation "group_sites" does not exist
+```
+
+**Cause:**
+Les policies RLS font référence à la table `group_sites` qui n'existe pas. Le nom correct de la table est `site_groups`.
+
+**Solution:**
+Utiliser la version corrigée de `enable-row-level-security.sql` qui utilise le bon nom de table.
+
+**Vérification:**
+```sql
+-- Vérifier que la table site_groups existe
+SELECT tablename FROM pg_tables WHERE tablename = 'site_groups';
+
+-- Doit retourner 1 ligne
+```
+
+**Note:** Ce problème est déjà corrigé dans la version actuelle de la migration (commit `74aba17`).
+
+---
+
+### Erreur #4: `policy already exists`
 
 **Message complet:**
 ```
@@ -107,7 +132,7 @@ Modifier manuellement la migration pour utiliser `CREATE OR REPLACE POLICY` au l
 
 ---
 
-### Erreur #4: `permission denied for table`
+### Erreur #5: `permission denied for table`
 
 **Message complet:**
 ```
@@ -130,7 +155,7 @@ psql -U postgres $DATABASE_URL -f central-server/src/scripts/migrations/enable-r
 
 ---
 
-### Erreur #5: `current transaction is aborted`
+### Erreur #6: `current transaction is aborted`
 
 **Message complet:**
 ```

@@ -233,7 +233,7 @@ CREATE POLICY site_read_group_content_deployments ON content_deployments
     target_type = 'group'
     AND target_id IN (
       SELECT group_id
-      FROM group_sites
+      FROM site_groups
       WHERE site_id = current_site_id()
     )
   );
@@ -257,7 +257,7 @@ CREATE POLICY site_update_group_content_deployments ON content_deployments
     target_type = 'group'
     AND target_id IN (
       SELECT group_id
-      FROM group_sites
+      FROM site_groups
       WHERE site_id = current_site_id()
     )
   )
@@ -265,7 +265,7 @@ CREATE POLICY site_update_group_content_deployments ON content_deployments
     target_type = 'group'
     AND target_id IN (
       SELECT group_id
-      FROM group_sites
+      FROM site_groups
       WHERE site_id = current_site_id()
     )
   );
@@ -290,7 +290,7 @@ CREATE POLICY site_read_group_update_deployments ON update_deployments
     target_type = 'group'
     AND target_id IN (
       SELECT group_id
-      FROM group_sites
+      FROM site_groups
       WHERE site_id = current_site_id()
     )
   );
@@ -314,7 +314,7 @@ CREATE POLICY site_update_group_update_deployments ON update_deployments
     target_type = 'group'
     AND target_id IN (
       SELECT group_id
-      FROM group_sites
+      FROM site_groups
       WHERE site_id = current_site_id()
     )
   )
@@ -322,7 +322,7 @@ CREATE POLICY site_update_group_update_deployments ON update_deployments
     target_type = 'group'
     AND target_id IN (
       SELECT group_id
-      FROM group_sites
+      FROM site_groups
       WHERE site_id = current_site_id()
     )
   );
