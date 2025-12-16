@@ -41,6 +41,7 @@ const QUEUEABLE_COMMANDS = [
   'update_software',
   'restart_service',  // Redémarrage de service à la reconnexion
   'reboot',           // Redémarrage du Pi à la reconnexion
+  'update_hotspot',   // Mise à jour WiFi hotspot à la reconnexion
 ];
 
 // Commandes qui nécessitent une connexion temps réel

@@ -1890,6 +1890,7 @@ import {
 export class ConfigEditorComponent implements OnInit, OnDestroy {
   @Input() siteId!: string;
   @Input() siteName!: string;
+  @Input() isConnected: boolean = false;
   @Output() configDeployed = new EventEmitter<void>();
 
   activeTab: 'form' | 'json' | 'history' = 'form';
@@ -2012,11 +2013,18 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.configPollSubscription?.unsubscribe();
 
+    // Si le site est offline, charger la dernière config connue depuis local_content
+    if (!this.isConnected) {
+      this.loadFromLocalContent();
+      return;
+    }
+
+    // Site connecté : essayer de récupérer la config en temps réel
     // Timeout global de 10 secondes pour la requête initiale
     const timeoutId = setTimeout(() => {
       if (this.loading && !this.configCommandId) {
-        this.resetToEmptyConfig('Initial timeout reached without commandId');
-        this.notificationService.warning('Le serveur ne répond pas. Vous pouvez créer une nouvelle configuration.');
+        // Fallback sur local_content si le site ne répond pas
+        this.loadFromLocalContent();
       }
     }, 10000);
 
@@ -2027,15 +2035,41 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
           this.configCommandId = response.commandId;
           this.pollConfigResult();
         } else {
-          this.resetToEmptyConfig('getConfiguration returned no commandId');
-          this.notificationService.info('Aucun commandId reçu. Vous pouvez créer une nouvelle configuration.');
+          // Pas de commandId, fallback sur local_content
+          this.loadFromLocalContent();
         }
       },
       error: (error) => {
         console.error('[ConfigEditor] getConfiguration error:', error);
         clearTimeout(timeoutId);
-        this.resetToEmptyConfig('getConfiguration error');
-        this.notificationService.warning('Erreur de connexion. Vous pouvez créer une nouvelle configuration.');
+        // Fallback sur local_content en cas d'erreur
+        this.loadFromLocalContent();
+      }
+    });
+  }
+
+  /**
+   * Charge la configuration depuis le miroir local (dernière config connue du site)
+   */
+  private loadFromLocalContent(): void {
+    this.sitesService.getLocalContent(this.siteId).subscribe({
+      next: (response) => {
+        this.loading = false;
+        if (response.configuration) {
+          this.setConfig(response.configuration);
+          const lastSyncInfo = response.lastSync
+            ? ` (dernière sync: ${new Date(response.lastSync).toLocaleString()})`
+            : '';
+          this.notificationService.info(`Configuration chargée depuis le miroir local${lastSyncInfo}`);
+        } else {
+          this.resetToEmptyConfig('No local content found');
+          this.notificationService.info('Aucune configuration connue. Vous pouvez en créer une nouvelle.');
+        }
+      },
+      error: (error) => {
+        console.error('[ConfigEditor] getLocalContent error:', error);
+        this.resetToEmptyConfig('getLocalContent error');
+        this.notificationService.warning('Impossible de charger la configuration. Vous pouvez en créer une nouvelle.');
       }
     });
   }
