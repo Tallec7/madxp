@@ -1,0 +1,202 @@
+# Configuration Systemd pour Raspberry Pi
+
+## 📺 Mode Kiosque TV (neopro-kiosk.service)
+
+Ce service lance automatiquement Chromium en mode kiosque sur `/tv` au démarrage du Raspberry Pi.
+
+### Caractéristiques
+
+- ✅ **Lancement automatique** au boot
+- ✅ **Plein écran** sans bordures ni barres d'outils
+- ✅ **Autoplay avec son** (flag `--autoplay-policy=no-user-gesture-required`)
+- ✅ **Pas d'interaction requise** - parfait pour écran HDMI seul
+- ✅ **Redémarrage automatique** en cas de crash
+- ✅ **Mode incognito** - pas de cache ni cookies persistants
+
+### Installation
+
+```bash
+# 1. Copier le fichier service
+sudo cp neopro-kiosk.service /etc/systemd/system/
+
+# 2. Recharger systemd
+sudo systemctl daemon-reload
+
+# 3. Activer le service au démarrage
+sudo systemctl enable neopro-kiosk.service
+
+# 4. Démarrer le service
+sudo systemctl start neopro-kiosk.service
+```
+
+### Vérification
+
+```bash
+# Vérifier le statut
+sudo systemctl status neopro-kiosk.service
+
+# Voir les logs
+journalctl -u neopro-kiosk.service -f
+
+# Redémarrer le service
+sudo systemctl restart neopro-kiosk.service
+
+# Arrêter le service
+sudo systemctl stop neopro-kiosk.service
+```
+
+### Configuration
+
+Le service se lance **10 secondes** après le boot pour laisser le temps:
+- Au serveur web local de démarrer
+- À l'interface graphique (X11) de s'initialiser
+- Au réseau de se connecter
+
+**URL cible:** `http://neopro.local/tv`
+
+### Flags Chromium Importants
+
+| Flag | Rôle |
+|------|------|
+| `--kiosk` | Mode plein écran sans chrome browser |
+| `--autoplay-policy=no-user-gesture-required` | **Autorise l'autoplay avec son** 🔊 |
+| `--noerrdialogs` | Masque les popups d'erreur |
+| `--disable-infobars` | Masque les bannières d'info |
+| `--incognito` | Pas de cache persistant |
+
+### Dépendances
+
+**Prérequis:**
+- Service `neopro-app.service` doit être actif (serveur web local)
+- X11 doit être configuré (`DISPLAY=:0`)
+- User `pi` doit avoir accès au display
+
+### Troubleshooting
+
+#### Écran noir au démarrage
+
+```bash
+# Vérifier que X11 est lancé
+echo $DISPLAY
+# Doit afficher: :0
+
+# Vérifier les permissions
+xhost +local:
+```
+
+#### Pas de son
+
+**Vérifiez le flag autoplay:**
+```bash
+sudo systemctl cat neopro-kiosk.service | grep autoplay-policy
+# Doit afficher: --autoplay-policy=no-user-gesture-required
+```
+
+**Vérifier le volume système:**
+```bash
+amixer get PCM
+# Augmenter si nécessaire:
+amixer set PCM 100%
+```
+
+#### Service qui redémarre en boucle
+
+```bash
+# Voir les erreurs
+journalctl -u neopro-kiosk.service -n 50
+
+# Causes courantes:
+# - Serveur web pas encore démarré → Augmenter ExecStartPre sleep
+# - URL incorrecte → Vérifier http://neopro.local/tv
+# - Permissions X11 → Vérifier XAUTHORITY
+```
+
+### Désactivation Temporaire
+
+Si vous voulez accéder au bureau Raspberry Pi:
+
+```bash
+# Arrêter le kiosk
+sudo systemctl stop neopro-kiosk.service
+
+# Désactiver au démarrage
+sudo systemctl disable neopro-kiosk.service
+
+# Pour réactiver
+sudo systemctl enable neopro-kiosk.service
+sudo systemctl start neopro-kiosk.service
+```
+
+### Mode Debug
+
+Pour voir Chromium en mode fenêtré (pas kiosk):
+
+```bash
+# Lancer manuellement sans kiosk
+DISPLAY=:0 chromium \
+  --autoplay-policy=no-user-gesture-required \
+  http://neopro.local/tv
+```
+
+### Alternatives
+
+#### Utiliser lightdm pour auto-login
+
+```bash
+# /etc/lightdm/lightdm.conf
+[Seat:*]
+autologin-user=pi
+autologin-user-timeout=0
+```
+
+#### Utiliser .xinitrc pour lancement X
+
+```bash
+# /home/pi/.xinitrc
+#!/bin/bash
+chromium \
+  --kiosk \
+  --autoplay-policy=no-user-gesture-required \
+  http://neopro.local/tv
+```
+
+---
+
+## 🔧 Configuration Matérielle Recommandée
+
+### Raspberry Pi
+
+- **Modèle:** Raspberry Pi 4 (4GB RAM minimum)
+- **Carte SD:** 32GB+ (classe 10)
+- **Alimentation:** Officielle 5V 3A USB-C
+- **Sortie:** HDMI vers écran TV
+
+### Réseau
+
+- **Connexion:** Ethernet recommandé (WiFi possible)
+- **Hostname:** `neopro.local` (mDNS)
+
+### Audio
+
+- **Sortie:** HDMI (son inclus)
+- **Alternative:** Jack 3.5mm si nécessaire
+
+---
+
+## 📋 Checklist Installation Complète
+
+- [ ] Raspberry Pi OS installé et à jour
+- [ ] Serveur web `neopro-app.service` installé et actif
+- [ ] Hostname configuré: `neopro.local`
+- [ ] Service kiosk copié: `/etc/systemd/system/neopro-kiosk.service`
+- [ ] Service activé: `systemctl enable neopro-kiosk.service`
+- [ ] Service démarré: `systemctl start neopro-kiosk.service`
+- [ ] Test: Page `/tv` s'affiche en plein écran
+- [ ] Test: Vidéos jouent **avec son** automatiquement
+- [ ] Test: Redémarrage du Pi → Kiosk se lance automatiquement
+
+---
+
+**Dernière mise à jour:** 16 décembre 2025
+**Version:** 1.0
+**Auteur:** Claude Code

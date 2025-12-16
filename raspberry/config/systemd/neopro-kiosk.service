@@ -18,6 +18,7 @@ ExecStartPre=/bin/sleep 10
 # Lancement de Chromium en mode kiosque
 ExecStart=/usr/bin/chromium \
   --kiosk \
+  --autoplay-policy=no-user-gesture-required \
   --noerrdialogs \
   --disable-infobars \
   --disable-session-crashed-bubble \

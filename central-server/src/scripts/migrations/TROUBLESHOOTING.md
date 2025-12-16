@@ -209,6 +209,48 @@ ROLLBACK;
 
 ---
 
+### Erreur #8: `play() failed because the user didn't interact with the document first`
+
+**Message complet:**
+```
+NotAllowedError: play() failed because the user didn't interact with the document first.
+https://goo.gl/xX8pDD
+```
+
+**Cause:**
+Les navigateurs modernes (Chrome 66+, Safari 11+) bloquent l'autoplay des vidéos avec son sans interaction utilisateur préalable. C'est une politique de sécurité, PAS un problème RLS.
+
+**Solution:**
+Démarrer le lecteur vidéo en mode muet, puis réactiver le son après la première interaction:
+
+```typescript
+const options = {
+  autoplay: true,
+  muted: true, // Autorise l'autoplay
+  // ... autres options
+};
+
+// Réactiver le son après interaction
+document.addEventListener('click', () => {
+  player.muted(false);
+}, { once: true });
+```
+
+**Note:** Ce problème est déjà corrigé dans la version actuelle (commit `0926ac3`).
+
+**Flux utilisateur:**
+1. Page charge → Vidéo démarre (MUET)
+2. Utilisateur clique → Son activé + Plein écran
+3. Lecture normale continue avec son
+
+**Alternative pour environnement kiosque:**
+```bash
+# Lancer Chrome avec flag pour désactiver la restriction
+chromium-browser --autoplay-policy=no-user-gesture-required --kiosk http://neopro.local
+```
+
+---
+
 ## 🔍 Commandes de Diagnostic
 
 ### Vérifier l'état RLS des tables

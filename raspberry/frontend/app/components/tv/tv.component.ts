@@ -78,6 +78,7 @@ export class TvComponent implements OnInit, OnDestroy {
     const options = {
       fullscreen: true,
       autoplay: true,
+      muted: true, // Requis pour autoplay dans les navigateurs modernes (Chrome 66+, Safari 11+)
       controls: false,
       preload: "auto",
       plugins: {
@@ -91,18 +92,22 @@ export class TvComponent implements OnInit, OnDestroy {
       this.sponsors();
     });
 
-    // Activer le plein écran au premier clic utilisateur (requis par les navigateurs)
-    const activateFullscreen = () => {
+    // Activer le plein écran ET le son au premier clic/touche utilisateur
+    const activateFullscreenAndUnmute = () => {
+      // Activer le son (désactiver mute)
+      this.player.muted(false);
+      console.log('Sound unmuted after user interaction');
+
+      // Activer le plein écran
       this.player.requestFullscreen().then(() => {
         console.log('fullscreen activated');
       }).catch((error) => {
         console.error('fullscreen issue', error);
       });
-      document.removeEventListener('click', activateFullscreen);
-      document.removeEventListener('keydown', activateFullscreen);
     };
-    document.addEventListener('click', activateFullscreen, { once: true });
-    document.addEventListener('keydown', activateFullscreen, { once: true });
+    document.addEventListener('click', activateFullscreenAndUnmute, { once: true });
+    document.addEventListener('keydown', activateFullscreenAndUnmute, { once: true });
+    document.addEventListener('touchstart', activateFullscreenAndUnmute, { once: true });
 
     // Tracker les erreurs de lecture
     this.player.on('error', (error: Event) => {
