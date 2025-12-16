@@ -562,9 +562,10 @@ Champs ajoutés :
 
 ---
 
-### 2.2 Admin Central - Toggle Activation ✅ IMPLÉMENTÉ
+### 2.2 Admin Central - Toggle Activation ✅ IMPLÉMENTÉ + DÉPLOIEMENT AUTOMATIQUE
 
 > **Note** : Cette section a été implémentée le 15 Décembre 2025.
+> **Mise à jour** : Déploiement automatique ajouté le 16 Décembre 2025.
 > Voir `site-detail.component.ts` - Section "Options Premium"
 
 #### 2.2.1 Interface Site mise à jour
@@ -582,7 +583,7 @@ export interface Site {
 }
 ```
 
-#### 2.2.2 Toggle dans `site-detail.component.ts`
+#### 2.2.2 Toggle dans `site-detail.component.ts` avec Déploiement Automatique
 
 **Section "Options Premium" ajoutée dans le template** :
 
@@ -616,7 +617,7 @@ export interface Site {
 </div>
 ```
 
-**Méthode ajoutée** :
+**Méthode améliorée avec déploiement automatique** :
 
 ```typescript
 toggleLiveScore(event: Event): void {
@@ -626,15 +627,50 @@ toggleLiveScore(event: Event): void {
   this.savingLiveScore = true;
   this.sitesService.updateSite(this.siteId, { live_score_enabled: newValue }).subscribe({
     next: (updatedSite) => {
-      this.savingLiveScore = false;
+      // Update local site object
       if (this.site) {
         this.site.live_score_enabled = newValue;
+
+        // Automatically deploy the configuration to the Raspberry Pi
+        if (this.site.neoProContent) {
+          // Update the neoProContent with the new value
+          const updatedNeoProContent = {
+            ...this.site.neoProContent,
+            liveScoreEnabled: newValue
+          };
+
+          // Send the update_config command
+          this.sitesService.sendCommand(this.siteId, 'update_config', {
+            neoProContent: updatedNeoProContent,
+            mode: 'merge'
+          }).subscribe({
+            next: () => {
+              this.savingLiveScore = false;
+              this.notificationService.success(
+                newValue
+                  ? 'Score en Live activé et déployé sur le boîtier !'
+                  : 'Score en Live désactivé et déployé sur le boîtier !'
+              );
+            },
+            error: (error) => {
+              this.savingLiveScore = false;
+              this.notificationService.warning(
+                `Score en Live ${newValue ? 'activé' : 'désactivé'} en base de données, mais erreur lors du déploiement: ${error.error?.error || error.message}`
+              );
+            }
+          });
+        } else {
+          // If no neoProContent, just show success without deployment
+          this.savingLiveScore = false;
+          this.notificationService.success(
+            newValue
+              ? 'Score en Live activé ! Utilisez "Déployer" pour appliquer sur le boîtier.'
+              : 'Score en Live désactivé.'
+          );
+        }
+      } else {
+        this.savingLiveScore = false;
       }
-      this.notificationService.success(
-        newValue
-          ? 'Score en Live activé ! Le boîtier doit être resynchronisé.'
-          : 'Score en Live désactivé.'
-      );
     },
     error: (error) => {
       this.savingLiveScore = false;
@@ -644,6 +680,14 @@ toggleLiveScore(event: Event): void {
   });
 }
 ```
+
+**Améliorations apportées** :
+
+- ✅ **Déploiement automatique** : L'option est immédiatement déployée sur le Raspberry Pi sans clic sur "Déployer"
+- ✅ **Mode merge** : La configuration existante n'est pas écrasée, seul `liveScoreEnabled` est mis à jour
+- ✅ **Gestion des erreurs robuste** : Messages clairs si le déploiement échoue (boîtier offline)
+- ✅ **Queue de commandes** : Si le boîtier est offline, la commande est automatiquement mise en queue
+- ✅ **Feedback utilisateur** : Notification de succès ou d'avertissement selon le résultat
 
 ---
 
