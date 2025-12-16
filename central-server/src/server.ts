@@ -215,7 +215,7 @@ app.get('/ready', async (_req: Request, res: Response) => {
 // Apply Row-Level Security context to all API routes
 // This middleware sets PostgreSQL session variables for multi-tenant isolation
 // It must run after authentication (which is handled in individual routes)
-app.use('/api/*', setRLSContext(pool));
+app.use('/api', setRLSContext(pool));
 
 // Rate limiters spécifiques par type d'endpoint
 app.use('/api/auth', authRateLimit, authRoutes); // Restrictif pour auth

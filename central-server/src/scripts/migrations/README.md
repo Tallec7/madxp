@@ -140,6 +140,46 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/fix-rls-content-depl
 
 ---
 
+### 4. fix-analytics-rls.sql 🚨 **URGENT - Fix Analytics**
+**Date:** 2025-12-16
+**Statut:** ✅ **REQUIS SI ANALYTICS NE REMONTENT PLUS**
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Corrige le problème des analytics qui ne remontent plus depuis le 12 décembre. Les Raspberry Pi envoient des analytics sans authentification, mais les policies RLS bloquaient ces insertions car `current_site_id()` retourne NULL pour les requêtes non-authentifiées.
+
+**Ce que fait cette migration:**
+- Modifie les policies RLS pour `video_plays`, `club_sessions`, et `sponsor_impressions`
+- Permet l'insertion pour les requêtes authentifiées ET non-authentifiées
+- Maintient la sécurité en vérifiant que le `site_id` existe dans la table `sites`
+
+**Symptômes du problème:**
+- Aucune donnée analytics depuis le 12/12 à 23h45
+- Dashboard analytics vide ou données gelées
+- Raspberry Pi envoient des données mais elles ne sont pas enregistrées
+
+**Commande:**
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/fix-analytics-rls.sql
+```
+
+**Vérification après migration:**
+```sql
+-- Vérifier que des données récentes sont insérées
+SELECT COUNT(*), MAX(played_at) as dernier_envoi
+FROM video_plays
+WHERE played_at >= NOW() - INTERVAL '1 hour';
+```
+
+**Sécurité maintenue:**
+- ✅ Requêtes authentifiées limitées à leur site
+- ✅ Requêtes non-authentifiées vérifient l'existence du site
+- ✅ Impossible d'insérer pour un site inexistant
+
+**Documentation complète:** Voir `central-server/src/docs/troubleshooting/2025-12-16_analytics-rls-fix.md`
+
+---
+
 ## 🚀 Ordre d'Exécution Recommandé
 
 ### Production (première fois)
