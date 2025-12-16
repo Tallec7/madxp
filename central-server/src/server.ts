@@ -28,6 +28,7 @@ import auditRoutes from './routes/audit.routes';
 import canaryRoutes from './routes/canary.routes';
 import adminRoutes from './routes/admin.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit } from './middleware/user-rate-limit';
+import { setRLSContext } from './middleware/rls-context';
 
 dotenv.config();
 
@@ -210,6 +211,11 @@ app.get('/ready', async (_req: Request, res: Response) => {
   const httpStatus = readiness.status === 'ready' ? 200 : 503;
   res.status(httpStatus).json(readiness);
 });
+
+// Apply Row-Level Security context to all API routes
+// This middleware sets PostgreSQL session variables for multi-tenant isolation
+// It must run after authentication (which is handled in individual routes)
+app.use('/api/*', setRLSContext(pool));
 
 // Rate limiters spécifiques par type d'endpoint
 app.use('/api/auth', authRateLimit, authRoutes); // Restrictif pour auth

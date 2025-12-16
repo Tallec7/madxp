@@ -1,4 +1,5 @@
 import { Component, ElementRef, inject, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { trigger, state, style, transition, animate } from '@angular/animations';
 import videojs from 'video.js';
 import "videojs-playlist";
 import Player from 'video.js/dist/types/player';
@@ -25,7 +26,18 @@ interface PlayerWithPlaylist extends Player {
 @Component({
   selector: 'app-tv',
   templateUrl: './tv.component.html',
-  styleUrl: './tv.component.scss'
+  styleUrl: './tv.component.scss',
+  animations: [
+    trigger('fadeInOut', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'scale(0.7)' }),
+        animate('400ms ease-out', style({ opacity: 1, transform: 'scale(1)' }))
+      ]),
+      transition(':leave', [
+        animate('300ms ease-in', style({ opacity: 0, transform: 'scale(0.9)' }))
+      ])
+    ])
+  ]
 })
 export class TvComponent implements OnInit, OnDestroy {
   private readonly socketService = inject(SocketService);
@@ -38,6 +50,12 @@ export class TvComponent implements OnInit, OnDestroy {
   private currentSponsorIndex = 0;
   private currentEventType: 'match' | 'training' | 'tournament' | 'other' = 'other';
   private currentPeriod: 'pre_match' | 'halftime' | 'post_match' | 'loop' = 'loop';
+
+  // Live Score
+  public currentScore: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; period?: string; matchTime?: string } | null = null;
+  public showScoreOverlay = false;
+  public showScorePopup = false;
+  private scorePopupTimeout: any = null;
 
   @ViewChild('target', { static: true }) target: ElementRef;
 
@@ -134,6 +152,29 @@ export class TvComponent implements OnInit, OnDestroy {
         // Recharger la config d'un nouveau club (mode démo)
         console.log('tv: reloading config for club', command.data);
         this.reloadConfiguration(command.data as Configuration);
+      }
+    });
+
+    // Live Score - Écouter les mises à jour de score
+    this.socketService.on('score-update', (scoreData: any) => {
+      console.log('[TV] Score update received:', scoreData);
+      this.handleScoreUpdate(scoreData);
+    });
+
+    // Live Score - Écouter le reset du score
+    this.socketService.on('score-reset', () => {
+      console.log('[TV] Score reset received');
+      this.currentScore = null;
+      this.showScoreOverlay = false;
+      this.showScorePopup = false;
+    });
+
+    // Live Score - Écouter les infos de match mises à jour
+    this.socketService.on('match-info-updated', (matchInfo: any) => {
+      console.log('[TV] Match info updated:', matchInfo);
+      // Mettre à jour le contexte analytics si nécessaire
+      if (matchInfo.audienceEstimate) {
+        this.updateAudienceEstimate(matchInfo.audienceEstimate);
       }
     });
   }
@@ -236,6 +277,59 @@ export class TvComponent implements OnInit, OnDestroy {
   public updateAudienceEstimate(estimate: number): void {
     this.sponsorAnalytics.setAudienceEstimate(estimate);
     console.log('[TV] Audience estimate updated:', estimate);
+  }
+
+  /**
+   * Gère la mise à jour du score en direct
+   */
+  private handleScoreUpdate(scoreData: {
+    homeTeam: string;
+    awayTeam: string;
+    homeScore: number;
+    awayScore: number;
+    period?: string;
+    matchTime?: string;
+  }): void {
+    const previousScore = this.currentScore;
+    this.currentScore = scoreData;
+    this.showScoreOverlay = true;
+
+    // Détecter un changement de score pour afficher le popup
+    if (previousScore) {
+      const scoreChanged =
+        previousScore.homeScore !== scoreData.homeScore ||
+        previousScore.awayScore !== scoreData.awayScore;
+
+      if (scoreChanged) {
+        this.triggerScorePopup();
+      }
+    }
+  }
+
+  /**
+   * Affiche temporairement le popup de score (5 secondes)
+   */
+  private triggerScorePopup(): void {
+    // Annuler le timeout précédent s'il existe
+    if (this.scorePopupTimeout) {
+      clearTimeout(this.scorePopupTimeout);
+    }
+
+    // Afficher le popup
+    this.showScorePopup = true;
+
+    // Masquer après 5 secondes
+    this.scorePopupTimeout = setTimeout(() => {
+      this.showScorePopup = false;
+      this.scorePopupTimeout = null;
+    }, 5000);
+  }
+
+  /**
+   * Toggle manuel de l'overlay score (appelé par commande remote)
+   */
+  public toggleScoreOverlay(): void {
+    this.showScoreOverlay = !this.showScoreOverlay;
   }
 
 }

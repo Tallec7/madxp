@@ -8,6 +8,8 @@ import { query } from '../config/database';
 import { SocketData, CommandMessage, CommandResult, HeartbeatMessage } from '../types';
 import logger from '../config/logger';
 import { alertService } from './alert.service';
+import { handleMatchConfig } from '../handlers/match-config.handler';
+import { handleScoreUpdate, handleScoreReset } from '../handlers/score-update.handler';
 
 // Import différé pour éviter les dépendances circulaires
 let deploymentService: { processPendingDeploymentsForSite: (siteId: string) => Promise<void> } | null = null;
@@ -262,8 +264,12 @@ class SocketService {
 
     (socket as any).siteId = siteId;
     (socket as any).siteName = site.site_name;
+    (socket as any).io = this.io; // Pour les handlers live-score qui font du broadcast
 
     this.connectedSites.set(siteId, socket);
+
+    // Joindre la room du site pour le broadcast (live-score, etc.)
+    socket.join(siteId);
 
     // Extract client IP address
     const clientIp = socket.handshake.headers['x-forwarded-for']?.toString().split(',')[0].trim()
@@ -294,6 +300,21 @@ class SocketService {
 
     socket.on('sync_local_state', (state: any) => {
       this.handleSyncLocalState(siteId, state);
+    });
+
+    // Live Score - Match Configuration
+    socket.on('match-config', (payload: any) => {
+      handleMatchConfig(socket, payload);
+    });
+
+    // Live Score - Score Update
+    socket.on('score-update', (payload: any) => {
+      handleScoreUpdate(socket, payload);
+    });
+
+    // Live Score - Score Reset
+    socket.on('score-reset', () => {
+      handleScoreReset(socket);
     });
 
     logger.info('Agent authenticated', { siteId, siteName: site.site_name, clientIp });

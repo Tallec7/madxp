@@ -1,3 +1,38 @@
-<div class="player">
-    <video #target class="video-js" controls muted playsinline preload="none"></video>
+<!-- Lecteur vidéo Video.js -->
+<video #target class="video-js vjs-default-skin vjs-big-play-centered vjs-16-9" playsinline></video>
+
+<!-- Overlay Score (coin supérieur droit) -->
+<div class="score-overlay" *ngIf="showScoreOverlay && currentScore">
+  <div class="score-container">
+    <div class="team home-team">
+      <span class="team-name">{{ currentScore.homeTeam }}</span>
+      <span class="team-score">{{ currentScore.homeScore }}</span>
+    </div>
+    <div class="score-separator">-</div>
+    <div class="team away-team">
+      <span class="team-score">{{ currentScore.awayScore }}</span>
+      <span class="team-name">{{ currentScore.awayTeam }}</span>
+    </div>
+  </div>
+  <div class="score-meta" *ngIf="currentScore.period || currentScore.matchTime">
+    <span class="period" *ngIf="currentScore.period">{{ currentScore.period }}</span>
+    <span class="match-time" *ngIf="currentScore.matchTime">{{ currentScore.matchTime }}</span>
+  </div>
+</div>
+
+<!-- Popup Score (centre écran, affiché 5 secondes lors changement) -->
+<div class="score-popup" *ngIf="showScorePopup && currentScore" [@fadeInOut]>
+  <div class="popup-content">
+    <div class="popup-teams">
+      <div class="popup-team home">
+        <div class="popup-team-name">{{ currentScore.homeTeam }}</div>
+        <div class="popup-team-score">{{ currentScore.homeScore }}</div>
+      </div>
+      <div class="popup-separator">:</div>
+      <div class="popup-team away">
+        <div class="popup-team-score">{{ currentScore.awayScore }}</div>
+        <div class="popup-team-name">{{ currentScore.awayTeam }}</div>
+      </div>
+    </div>
+  </div>
 </div>

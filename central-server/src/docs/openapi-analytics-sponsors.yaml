@@ -1,0 +1,1144 @@
+openapi: 3.0.3
+info:
+  title: NEOPRO Central Server API - Analytics & Sponsors
+  description: |
+    Extension de documentation OpenAPI pour les modules Analytics Club et Analytics Sponsors.
+
+    Ce fichier complète openapi.yaml avec les endpoints spécifiques aux analytics.
+
+    ## Features
+
+    ### Analytics Club
+    - Métriques de santé système
+    - Disponibilité et uptime
+    - Statistiques d'utilisation
+    - Performance contenu vidéo
+    - Export CSV et PDF
+
+    ### Analytics Sponsors
+    - Gestion sponsors et annonceurs
+    - Association sponsors-vidéos
+    - Tracking impressions (vues sponsors)
+    - Statistiques détaillées par sponsor
+    - Rapports PDF professionnels
+
+    ## Authentification
+
+    Voir openapi.yaml pour les détails d'authentification (JWT + Cookie HttpOnly).
+
+  version: 1.0.0
+  contact:
+    name: Support NEOPRO
+    email: support@neopro.fr
+
+servers:
+  - url: https://api.neopro.fr
+    description: Production
+  - url: http://localhost:3001
+    description: Développement
+
+tags:
+  - name: Analytics Club
+    description: Statistiques et métriques des clubs
+  - name: Analytics Sponsors
+    description: Statistiques sponsors et annonceurs
+  - name: Sponsors
+    description: Gestion des sponsors
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # =========================================================================
+    # SCHEMAS ANALYTICS CLUB
+    # =========================================================================
+
+    ClubHealthMetrics:
+      type: object
+      properties:
+        site_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [healthy, warning, critical]
+        uptime_percentage:
+          type: number
+          format: float
+          example: 99.8
+        avg_cpu_usage:
+          type: number
+          format: float
+          example: 42.5
+        avg_memory_usage:
+          type: number
+          format: float
+          example: 68.3
+        avg_temperature:
+          type: number
+          format: float
+          example: 52.1
+        disk_usage_percentage:
+          type: number
+          format: float
+          example: 45.2
+        last_metric_at:
+          type: string
+          format: date-time
+        issues:
+          type: array
+          items:
+            type: object
+            properties:
+              severity:
+                type: string
+                enum: [low, medium, high, critical]
+              message:
+                type: string
+              detected_at:
+                type: string
+                format: date-time
+
+    ClubAvailability:
+      type: object
+      properties:
+        site_id:
+          type: string
+          format: uuid
+        period_days:
+          type: integer
+        uptime_percentage:
+          type: number
+          format: float
+        total_downtime_minutes:
+          type: integer
+        availability_by_day:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              uptime_percentage:
+                type: number
+              downtime_minutes:
+                type: integer
+
+    ClubUsageStats:
+      type: object
+      properties:
+        site_id:
+          type: string
+          format: uuid
+        period:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+        total_sessions:
+          type: integer
+        total_duration_hours:
+          type: number
+        avg_session_duration_minutes:
+          type: number
+        total_videos_played:
+          type: integer
+        unique_videos_played:
+          type: integer
+        sessions_by_event_type:
+          type: object
+          additionalProperties:
+            type: integer
+        usage_by_period:
+          type: object
+          properties:
+            pre_match:
+              type: integer
+            match:
+              type: integer
+            post_match:
+              type: integer
+            loop:
+              type: integer
+
+    ClubContentStats:
+      type: object
+      properties:
+        site_id:
+          type: string
+          format: uuid
+        period:
+          type: object
+        top_videos:
+          type: array
+          items:
+            type: object
+            properties:
+              video_id:
+                type: string
+                format: uuid
+              video_name:
+                type: string
+              plays:
+                type: integer
+              total_duration_seconds:
+                type: integer
+              avg_completion_rate:
+                type: number
+        category_breakdown:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              plays:
+                type: integer
+              percentage:
+                type: number
+
+    # =========================================================================
+    # SCHEMAS SPONSORS
+    # =========================================================================
+
+    Sponsor:
+      type: object
+      required:
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          example: "Sponsor National"
+        logo_url:
+          type: string
+          format: uri
+          example: "https://cdn.example.com/logos/sponsor.png"
+        contact_email:
+          type: string
+          format: email
+        contact_name:
+          type: string
+        contact_phone:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, paused]
+          default: active
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+
+    SponsorWithStats:
+      allOf:
+        - $ref: '#/components/schemas/Sponsor'
+        - type: object
+          properties:
+            total_videos:
+              type: integer
+            total_impressions:
+              type: integer
+            total_screen_time_seconds:
+              type: integer
+
+    SponsorVideo:
+      type: object
+      properties:
+        video_id:
+          type: string
+          format: uuid
+        video_name:
+          type: string
+        is_primary:
+          type: boolean
+        added_at:
+          type: string
+          format: date-time
+
+    SponsorStats:
+      type: object
+      properties:
+        sponsor_id:
+          type: string
+          format: uuid
+        sponsor_name:
+          type: string
+        period:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+        summary:
+          type: object
+          properties:
+            total_impressions:
+              type: integer
+              description: Nombre total de diffusions
+            total_screen_time_seconds:
+              type: integer
+              description: Temps d'écran total (secondes)
+            avg_completion_rate:
+              type: number
+              format: float
+              description: Taux de complétion moyen (%)
+            completed_views:
+              type: integer
+              description: Vues complètes
+            unique_sites:
+              type: integer
+              description: Nombre de sites uniques
+            estimated_total_reach:
+              type: integer
+              description: Audience totale estimée
+        videos:
+          type: array
+          items:
+            type: object
+            properties:
+              video_id:
+                type: string
+                format: uuid
+              video_name:
+                type: string
+              impressions:
+                type: integer
+              screen_time_seconds:
+                type: integer
+              completion_rate:
+                type: number
+              percentage_of_total:
+                type: number
+        sites:
+          type: array
+          items:
+            type: object
+            properties:
+              site_id:
+                type: string
+                format: uuid
+              site_name:
+                type: string
+              club_name:
+                type: string
+              impressions:
+                type: integer
+              screen_time_seconds:
+                type: integer
+        daily_trends:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              impressions:
+                type: integer
+              screen_time_seconds:
+                type: integer
+              completion_rate:
+                type: number
+
+    SponsorImpression:
+      type: object
+      required:
+        - site_id
+        - video_id
+        - played_at
+        - duration_played
+        - video_duration
+      properties:
+        site_id:
+          type: string
+          format: uuid
+        video_id:
+          type: string
+          format: uuid
+        played_at:
+          type: string
+          format: date-time
+        duration_played:
+          type: integer
+          description: Durée réellement jouée (secondes)
+        video_duration:
+          type: integer
+          description: Durée totale de la vidéo (secondes)
+        completed:
+          type: boolean
+          description: Vidéo vue entièrement (>95%)
+        interrupted_at:
+          type: integer
+          description: Seconde d'interruption si pas complété
+        event_type:
+          type: string
+          enum: [match, training, tournament, other]
+        period:
+          type: string
+          enum: [pre_match, halftime, post_match, loop]
+        trigger_type:
+          type: string
+          enum: [auto, manual]
+          default: auto
+        position_in_loop:
+          type: integer
+          description: Position dans la boucle
+        audience_estimate:
+          type: integer
+          description: Estimation de l'audience présente
+        home_score:
+          type: integer
+          description: Score équipe domicile
+        away_score:
+          type: integer
+          description: Score équipe extérieure
+
+    PdfReportMetadata:
+      type: object
+      properties:
+        filename:
+          type: string
+        size_bytes:
+          type: integer
+        pages:
+          type: integer
+        generated_at:
+          type: string
+          format: date-time
+        signature:
+          type: string
+          description: Signature SHA-256 du rapport
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ===========================================================================
+  # ANALYTICS CLUB
+  # ===========================================================================
+
+  /api/analytics/clubs/{siteId}/health:
+    get:
+      tags: [Analytics Club]
+      summary: Santé système d'un club
+      description: Métriques de santé système (CPU, RAM, température, disque)
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 7
+            minimum: 1
+            maximum: 90
+      responses:
+        '200':
+          description: Métriques de santé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClubHealthMetrics'
+        '404':
+          description: Site non trouvé
+
+  /api/analytics/clubs/{siteId}/availability:
+    get:
+      tags: [Analytics Club]
+      summary: Disponibilité et uptime d'un club
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        '200':
+          description: Statistiques de disponibilité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClubAvailability'
+
+  /api/analytics/clubs/{siteId}/usage:
+    get:
+      tags: [Analytics Club]
+      summary: Statistiques d'utilisation
+      description: Sessions, durées, types d'événements
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Statistiques d'utilisation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClubUsageStats'
+
+  /api/analytics/clubs/{siteId}/content:
+    get:
+      tags: [Analytics Club]
+      summary: Performance du contenu vidéo
+      description: Top vidéos, répartition par catégorie
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 50
+      responses:
+        '200':
+          description: Statistiques de contenu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClubContentStats'
+
+  /api/analytics/clubs/{siteId}/dashboard:
+    get:
+      tags: [Analytics Club]
+      summary: Dashboard complet
+      description: Vue d'ensemble combinée (health + usage + content)
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dashboard complet
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  health:
+                    $ref: '#/components/schemas/ClubHealthMetrics'
+                  availability:
+                    $ref: '#/components/schemas/ClubAvailability'
+                  usage:
+                    $ref: '#/components/schemas/ClubUsageStats'
+                  content:
+                    $ref: '#/components/schemas/ClubContentStats'
+
+  /api/analytics/clubs/{siteId}/export:
+    get:
+      tags: [Analytics Club]
+      summary: Export CSV des données
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+      responses:
+        '200':
+          description: Données exportées
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: object
+
+  /api/analytics/clubs/{siteId}/report/pdf:
+    get:
+      tags: [Analytics Club]
+      summary: Générer rapport PDF
+      description: Rapport professionnel 4-6 pages avec graphiques
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Rapport PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Paramètres invalides
+
+  /api/analytics/video-plays:
+    post:
+      tags: [Analytics Club]
+      summary: Enregistrer lectures vidéos (batch)
+      description: Endpoint appelé par les Raspberry Pi
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [site_id, plays]
+              properties:
+                site_id:
+                  type: string
+                  format: uuid
+                plays:
+                  type: array
+                  items:
+                    type: object
+                    required: [video_id, started_at, duration_played]
+                    properties:
+                      video_id:
+                        type: string
+                        format: uuid
+                      started_at:
+                        type: string
+                        format: date-time
+                      ended_at:
+                        type: string
+                        format: date-time
+                      duration_played:
+                        type: integer
+                      completed:
+                        type: boolean
+                      interrupted_at:
+                        type: integer
+                      event_type:
+                        type: string
+                      period:
+                        type: string
+      responses:
+        '201':
+          description: Lectures enregistrées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  recorded:
+                    type: integer
+
+  /api/analytics/sessions:
+    post:
+      tags: [Analytics Club]
+      summary: Gérer sessions (start/end)
+      description: Endpoint appelé par les Raspberry Pi
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [site_id, action]
+              properties:
+                site_id:
+                  type: string
+                  format: uuid
+                action:
+                  type: string
+                  enum: [start, end]
+                session_id:
+                  type: string
+                  format: uuid
+                event_type:
+                  type: string
+                started_at:
+                  type: string
+                  format: date-time
+                ended_at:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Session mise à jour
+
+  # ===========================================================================
+  # SPONSORS CRUD
+  # ===========================================================================
+
+  /api/sponsors:
+    get:
+      tags: [Sponsors]
+      summary: Liste des sponsors
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, paused]
+        - name: includeStats
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Liste des sponsors
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sponsors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SponsorWithStats'
+
+    post:
+      tags: [Sponsors]
+      summary: Créer un sponsor
+      description: Réservé aux admins et operators
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Sponsor'
+      responses:
+        '201':
+          description: Sponsor créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sponsor:
+                    $ref: '#/components/schemas/Sponsor'
+
+  /api/sponsors/{id}:
+    get:
+      tags: [Sponsors]
+      summary: Détails d'un sponsor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Détails du sponsor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sponsor:
+                    $ref: '#/components/schemas/SponsorWithStats'
+
+    put:
+      tags: [Sponsors]
+      summary: Modifier un sponsor
+      description: Réservé aux admins et operators
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Sponsor'
+      responses:
+        '200':
+          description: Sponsor modifié
+
+    delete:
+      tags: [Sponsors]
+      summary: Supprimer un sponsor
+      description: Réservé aux admins
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Sponsor supprimé
+
+  # ===========================================================================
+  # SPONSOR-VIDEO ASSOCIATION
+  # ===========================================================================
+
+  /api/sponsors/{id}/videos:
+    get:
+      tags: [Sponsors]
+      summary: Vidéos d'un sponsor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Liste des vidéos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  videos:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SponsorVideo'
+
+    post:
+      tags: [Sponsors]
+      summary: Associer vidéos à un sponsor
+      description: Réservé aux admins et operators
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [video_ids]
+              properties:
+                video_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                is_primary:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Vidéos associées
+
+  /api/sponsors/{sponsorId}/videos/{videoId}:
+    delete:
+      tags: [Sponsors]
+      summary: Dissocier une vidéo d'un sponsor
+      description: Réservé aux admins et operators
+      parameters:
+        - name: sponsorId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Vidéo dissociée
+
+  # ===========================================================================
+  # ANALYTICS SPONSORS
+  # ===========================================================================
+
+  /api/sponsors/{id}/stats:
+    get:
+      tags: [Analytics Sponsors]
+      summary: Statistiques détaillées d'un sponsor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: groupBy
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: day
+      responses:
+        '200':
+          description: Statistiques du sponsor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SponsorStats'
+
+  /api/sponsors/{id}/export:
+    get:
+      tags: [Analytics Sponsors]
+      summary: Export CSV des données sponsor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+      responses:
+        '200':
+          description: Données exportées
+
+  /api/sponsors/{id}/report/pdf:
+    get:
+      tags: [Analytics Sponsors]
+      summary: Générer rapport PDF sponsor
+      description: Rapport professionnel 4 pages avec graphiques Chart.js
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Rapport PDF
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: 'attachment; filename="sponsor-report-{id}.pdf"'
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /api/clubs/{siteId}/report/pdf:
+    get:
+      tags: [Analytics Sponsors]
+      summary: Générer rapport PDF club (tous sponsors)
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Rapport PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /api/analytics/impressions:
+    post:
+      tags: [Analytics Sponsors]
+      summary: Enregistrer impressions sponsors (batch)
+      description: Endpoint appelé par les Raspberry Pi
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [impressions]
+              properties:
+                impressions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/SponsorImpression'
+      responses:
+        '201':
+          description: Impressions enregistrées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  recorded:
+                    type: integer
+
+  /api/sponsors/calculate-daily-stats:
+    post:
+      tags: [Analytics Sponsors]
+      summary: Calculer stats quotidiennes (job cron)
+      description: Endpoint appelé par les jobs système
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  format: date
+                  description: Date à calculer (défaut: hier)
+      responses:
+        '200':
+          description: Stats calculées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  records_processed:
+                    type: integer
