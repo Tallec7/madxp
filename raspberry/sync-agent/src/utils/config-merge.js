@@ -24,6 +24,12 @@ function mergeConfigurations(localConfig, neoProContent) {
     result.version = neoProContent.version;
   }
 
+  // Mettre à jour liveScoreEnabled (option premium contrôlée par NEOPRO)
+  if (neoProContent.liveScoreEnabled !== undefined) {
+    result.liveScoreEnabled = neoProContent.liveScoreEnabled;
+    logger.info(`[config-merge] liveScoreEnabled mis à jour: ${neoProContent.liveScoreEnabled}`);
+  }
+
   // Fusionner les catégories
   result.categories = mergeCategories(
     localConfig.categories || [],

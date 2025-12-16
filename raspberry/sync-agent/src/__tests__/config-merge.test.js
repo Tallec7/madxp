@@ -503,6 +503,67 @@ describe('Config Merge Module', () => {
       expect(localConfig.version).toBe('1.0');
       expect(merged.version).toBe('2.0');
     });
+
+    it('should update liveScoreEnabled to true when provided', () => {
+      const localConfig = {
+        version: '1.0',
+        liveScoreEnabled: false,
+        categories: []
+      };
+      const neoProContent = {
+        liveScoreEnabled: true
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.liveScoreEnabled).toBe(true);
+    });
+
+    it('should update liveScoreEnabled to false when provided', () => {
+      const localConfig = {
+        version: '1.0',
+        liveScoreEnabled: true,
+        categories: []
+      };
+      const neoProContent = {
+        liveScoreEnabled: false
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.liveScoreEnabled).toBe(false);
+    });
+
+    it('should preserve liveScoreEnabled when not in neoProContent', () => {
+      const localConfig = {
+        version: '1.0',
+        liveScoreEnabled: true,
+        categories: []
+      };
+      const neoProContent = {
+        version: '2.0',
+        categories: []
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.liveScoreEnabled).toBe(true);
+      expect(merged.version).toBe('2.0');
+    });
+
+    it('should add liveScoreEnabled when not in local config', () => {
+      const localConfig = {
+        version: '1.0',
+        categories: []
+      };
+      const neoProContent = {
+        liveScoreEnabled: true
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.liveScoreEnabled).toBe(true);
+    });
   });
 
   describe('Edge Cases & Security', () => {
