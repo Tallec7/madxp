@@ -485,6 +485,81 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
                 </div>
               </div>
 
+              <!-- Détails Internet (packet loss) -->
+              <div class="diag-section" *ngIf="networkDiagnostics.internet">
+                <h4>Internet</h4>
+                <div class="info-list">
+                  <div class="info-row">
+                    <span class="label">Latence ping:</span>
+                    <span class="value">{{ networkDiagnostics.internet.latency_ms ?? 'N/A' }} ms</span>
+                  </div>
+                  <div class="info-row" *ngIf="networkDiagnostics.internet.packet_loss_percent !== null">
+                    <span class="label">Perte de paquets:</span>
+                    <span class="value" [class.warning-text]="networkDiagnostics.internet.packet_loss_percent > 0" [class.error-text]="networkDiagnostics.internet.packet_loss_percent > 10">
+                      {{ networkDiagnostics.internet.packet_loss_percent }}%
+                      <span class="hint" *ngIf="networkDiagnostics.internet.packets_sent">({{ networkDiagnostics.internet.packets_received }}/{{ networkDiagnostics.internet.packets_sent }})</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Détails Serveur central -->
+              <div class="diag-section" *ngIf="networkDiagnostics.central_server">
+                <h4>Serveur central</h4>
+                <div class="info-list">
+                  <div class="info-row">
+                    <span class="label">Latence ping:</span>
+                    <span class="value">{{ networkDiagnostics.central_server.latency_ms ?? 'N/A' }} ms</span>
+                  </div>
+                  <div class="info-row" *ngIf="networkDiagnostics.central_server.http_latency_ms !== null">
+                    <span class="label">Latence HTTP:</span>
+                    <span class="value">{{ networkDiagnostics.central_server.http_latency_ms }} ms</span>
+                  </div>
+                  <div class="info-row" *ngIf="networkDiagnostics.central_server.http_status !== null">
+                    <span class="label">Status HTTP:</span>
+                    <span class="value" [class.success-text]="networkDiagnostics.central_server.http_status >= 200 && networkDiagnostics.central_server.http_status < 300"
+                      [class.error-text]="networkDiagnostics.central_server.http_status >= 400">
+                      {{ networkDiagnostics.central_server.http_status }}
+                    </span>
+                  </div>
+                  <div class="info-row" *ngIf="networkDiagnostics.central_server.port_443_open !== null">
+                    <span class="label">Port 443 (HTTPS):</span>
+                    <span class="value">
+                      <span [class.success-text]="networkDiagnostics.central_server.port_443_open" [class.error-text]="!networkDiagnostics.central_server.port_443_open">
+                        {{ networkDiagnostics.central_server.port_443_open ? 'Ouvert' : 'Fermé' }}
+                      </span>
+                    </span>
+                  </div>
+                  <div class="info-row" *ngIf="networkDiagnostics.central_server.ssl_valid !== null">
+                    <span class="label">Certificat SSL:</span>
+                    <span class="value">
+                      <span [class.success-text]="networkDiagnostics.central_server.ssl_valid" [class.error-text]="!networkDiagnostics.central_server.ssl_valid">
+                        {{ networkDiagnostics.central_server.ssl_valid ? 'Valide' : 'Invalide' }}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Détails DNS -->
+              <div class="diag-section" *ngIf="networkDiagnostics.dns">
+                <h4>DNS</h4>
+                <div class="info-list">
+                  <div class="info-row" *ngIf="networkDiagnostics.dns.tested_domain">
+                    <span class="label">Domaine testé:</span>
+                    <span class="value monospace">{{ networkDiagnostics.dns.tested_domain }}</span>
+                  </div>
+                  <div class="info-row" *ngIf="networkDiagnostics.dns.resolved_ip">
+                    <span class="label">IP résolue:</span>
+                    <span class="value monospace">{{ networkDiagnostics.dns.resolved_ip }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="label">Temps résolution:</span>
+                    <span class="value">{{ networkDiagnostics.dns.resolution_time_ms ?? 'N/A' }} ms</span>
+                  </div>
+                </div>
+              </div>
+
               <!-- Infos WiFi (utile pour comprendre l'instabilité) -->
               <div class="diag-section" *ngIf="networkDiagnostics.wifi">
                 <h4>WiFi</h4>
@@ -512,6 +587,23 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
                   <div class="info-row" *ngIf="networkDiagnostics.wifi.bitrate_mbps">
                     <span class="label">Débit:</span>
                     <span class="value">{{ networkDiagnostics.wifi.bitrate_mbps }} Mb/s</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Stabilité réseau -->
+              <div class="diag-section" *ngIf="networkDiagnostics.stability">
+                <h4>Stabilité</h4>
+                <div class="info-list">
+                  <div class="info-row" *ngIf="networkDiagnostics.stability.interface_uptime_seconds !== null">
+                    <span class="label">Uptime interface:</span>
+                    <span class="value">{{ formatInterfaceUptime(networkDiagnostics.stability.interface_uptime_seconds) }}</span>
+                  </div>
+                  <div class="info-row" *ngIf="networkDiagnostics.stability.reconnections_24h !== null">
+                    <span class="label">Reconnexions (24h):</span>
+                    <span class="value" [class.warning-text]="networkDiagnostics.stability.reconnections_24h > 5" [class.error-text]="networkDiagnostics.stability.reconnections_24h > 20">
+                      {{ networkDiagnostics.stability.reconnections_24h }}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1272,6 +1364,21 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
       border-top: 1px solid #e2e8f0;
     }
 
+    .success-text {
+      color: #10b981;
+      font-weight: 500;
+    }
+
+    .warning-text {
+      color: #f59e0b;
+      font-weight: 500;
+    }
+
+    .error-text {
+      color: #ef4444;
+      font-weight: 500;
+    }
+
     @media (max-width: 768px) {
       .info-grid {
         grid-template-columns: 1fr;
@@ -1351,9 +1458,28 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   networkDiagnostics: {
     success: boolean;
     timestamp: string;
-    internet: { reachable: boolean; latency_ms: number | null };
-    central_server: { reachable: boolean; latency_ms: number | null; url: string };
-    dns: { working: boolean; resolution_time_ms: number | null; tested_domain: string | null };
+    internet: {
+      reachable: boolean;
+      latency_ms: number | null;
+      packet_loss_percent: number | null;
+      packets_sent: number;
+      packets_received: number;
+    };
+    central_server: {
+      reachable: boolean;
+      latency_ms: number | null;
+      http_latency_ms: number | null;
+      http_status: number | null;
+      url: string;
+      port_443_open: boolean | null;
+      ssl_valid: boolean | null;
+    };
+    dns: {
+      working: boolean;
+      resolution_time_ms: number | null;
+      tested_domain: string | null;
+      resolved_ip: string | null;
+    };
     gateway: { ip: string | null; reachable: boolean; latency_ms: number | null };
     interfaces: Array<{
       name: string;
@@ -1371,6 +1497,10 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       signal_dbm: number | null;
       bitrate_mbps: number | null;
     } | null;
+    stability: {
+      interface_uptime_seconds: number | null;
+      reconnections_24h: number | null;
+    };
   } | null = null;
   private networkDiagCommandId: string | null = null;
   private networkDiagPollInterval: ReturnType<typeof setInterval> | null = null;
@@ -1545,6 +1675,17 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     if (!bytes) return 'N/A';
     const gb = bytes / (1024 * 1024 * 1024);
     return `${gb.toFixed(1)} GB`;
+  }
+
+  formatInterfaceUptime(seconds: number | null): string {
+    if (seconds === null) return 'N/A';
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    if (days > 0) return `${days}j ${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
   }
 
   // Network Diagnostics
