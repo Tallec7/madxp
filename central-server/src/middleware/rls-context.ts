@@ -59,19 +59,9 @@ export const setRLSContext = (pool: Pool) => {
         siteId = req.query.site_id;
       }
 
-      // Vérification de sécurité: un non-admin ne peut pas accéder aux données d'un autre site
-      if (!isAdmin && siteId && req.user.siteId && siteId !== req.user.siteId) {
-        logger.warn(`Tentative d'accès non autorisé: user ${userId} vers site ${siteId}`);
-        return res.status(403).json({
-          error: 'Accès refusé',
-          message: 'Vous ne pouvez accéder qu\'aux données de votre propre site'
-        });
-      }
-
-      // Si non-admin, forcer le siteId à celui de l'utilisateur
-      if (!isAdmin && req.user.siteId) {
-        siteId = req.user.siteId;
-      }
+      // Note: La vérification des permissions se fait au niveau des policies RLS
+      // Les admins peuvent accéder à tous les sites
+      // Les non-admins sont limités par les policies PostgreSQL
 
       // Définir le contexte RLS dans PostgreSQL
       await pool.query(

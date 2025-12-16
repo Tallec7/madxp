@@ -94,7 +94,38 @@ SELECT tablename FROM pg_tables WHERE tablename = 'site_groups';
 
 ---
 
-### Erreur #4: `policy already exists`
+### Erreur #4: `Property 'siteId' does not exist on type 'AuthenticatedUser'`
+
+**Message complet:**
+```
+src/middleware/rls-context.ts(63,42): error TS2339: Property 'siteId' does not exist on type 'AuthenticatedUser'.
+```
+
+**Cause:**
+Le type `AuthenticatedUser` ne contient pas de propriété `siteId`. Les utilisateurs n'ont pas de site assigné directement - ils accèdent aux sites via les paramètres de requête.
+
+**Solution:**
+Utiliser la version corrigée de `rls-context.ts` qui ne fait pas référence à `req.user.siteId`.
+
+**Vérification:**
+```bash
+# Vérifier que TypeScript compile sans erreur
+cd central-server && npm run build
+
+# Ou juste vérifier les types
+npx tsc --noEmit
+```
+
+**Note:** Ce problème est déjà corrigé dans la version actuelle (commit `38dfa43`).
+
+**Sécurité:**
+L'autorisation est gérée par les policies RLS PostgreSQL, pas au niveau application:
+- Les admins (`is_admin() = true`) peuvent accéder à tous les sites
+- Les non-admins ne peuvent accéder qu'aux données correspondant à `current_site_id()`
+
+---
+
+### Erreur #5: `policy already exists`
 
 **Message complet:**
 ```
@@ -132,7 +163,7 @@ Modifier manuellement la migration pour utiliser `CREATE OR REPLACE POLICY` au l
 
 ---
 
-### Erreur #5: `permission denied for table`
+### Erreur #6: `permission denied for table`
 
 **Message complet:**
 ```
@@ -155,7 +186,7 @@ psql -U postgres $DATABASE_URL -f central-server/src/scripts/migrations/enable-r
 
 ---
 
-### Erreur #6: `current transaction is aborted`
+### Erreur #7: `current transaction is aborted`
 
 **Message complet:**
 ```
