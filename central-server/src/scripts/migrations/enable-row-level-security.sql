@@ -70,6 +70,34 @@ RETURNS UUID AS $$
   SELECT NULLIF(current_setting('app.current_user_id', true), '')::UUID;
 $$ LANGUAGE SQL STABLE;
 
+-- Fonction pour définir le contexte de session
+-- Appelée par le middleware Express avant chaque requête
+CREATE OR REPLACE FUNCTION set_session_context(
+  p_site_id UUID DEFAULT NULL,
+  p_user_id UUID DEFAULT NULL,
+  p_is_admin BOOLEAN DEFAULT false
+)
+RETURNS VOID AS $$
+BEGIN
+  -- Définir le site_id
+  IF p_site_id IS NOT NULL THEN
+    PERFORM set_config('app.current_site_id', p_site_id::text, false);
+  ELSE
+    PERFORM set_config('app.current_site_id', '', false);
+  END IF;
+
+  -- Définir le user_id
+  IF p_user_id IS NOT NULL THEN
+    PERFORM set_config('app.current_user_id', p_user_id::text, false);
+  ELSE
+    PERFORM set_config('app.current_user_id', '', false);
+  END IF;
+
+  -- Définir le flag admin
+  PERFORM set_config('app.is_admin', p_is_admin::text, false);
+END;
+$$ LANGUAGE plpgsql;
+
 -- =============================================================================
 -- POLICIES - SITES
 -- =============================================================================

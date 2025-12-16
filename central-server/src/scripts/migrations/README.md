@@ -2,6 +2,34 @@
 
 ## 📋 Liste des Migrations
 
+### 0. 00-create-rls-functions.sql ⚠️ (Optionnel - Troubleshooting)
+**Date:** 2025-12-16
+**Statut:** Optionnel - fonctions incluses dans enable-row-level-security.sql
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Crée uniquement les fonctions utilitaires RLS sans activer les policies. Utile pour le troubleshooting.
+
+**Quand l'utiliser:**
+- ⚠️ Si vous rencontrez l'erreur: `ERROR: function is_admin() does not exist`
+- 🔧 Pour tester les fonctions RLS avant d'activer les policies
+- 🐛 En cas de problème lors de l'exécution de `enable-row-level-security.sql`
+
+**Fonctions créées:**
+- `current_site_id()` - Retourne le site_id du contexte
+- `is_admin()` - Vérifie si l'utilisateur est admin
+- `current_user_id()` - Retourne l'user_id du contexte
+- `set_session_context(site_id, user_id, is_admin)` - Définit le contexte
+
+**Commande:**
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/00-create-rls-functions.sql
+```
+
+**Note:** Cette migration n'est PAS obligatoire car les fonctions sont aussi créées dans `enable-row-level-security.sql`. Ne l'exécutez que si vous rencontrez l'erreur mentionnée ci-dessus.
+
+---
+
 ### 1. enable-row-level-security.sql ✅
 **Date:** 2025-12-16
 **Statut:** Prêt pour exécution
@@ -12,10 +40,11 @@ Active Row-Level Security (RLS) sur toutes les tables principales pour garantir 
 
 **Ce que fait cette migration:**
 - Active RLS sur 20+ tables
-- Crée 3 fonctions helper:
-  - `set_session_context(site_id, user_id, is_admin)` - Définit le contexte de session
+- Crée 4 fonctions helper:
   - `current_site_id()` - Retourne le site_id du contexte
   - `is_admin()` - Vérifie si l'utilisateur est admin
+  - `current_user_id()` - Retourne l'user_id du contexte
+  - `set_session_context(site_id, user_id, is_admin)` - Définit le contexte de session
 - Crée 60+ policies de sécurité pour:
   - Isolation des données par site
   - Accès complet pour les admins
