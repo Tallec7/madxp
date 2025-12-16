@@ -414,17 +414,27 @@ Depuis décembre 2025, les vidéos poussées depuis le central conservent leur n
 3. Tout fonctionne en local
 4. Le central ne voit pas ces modifications
 
+**Pendant ce temps (côté NEOPRO)** :
+1. NEOPRO veut pousser une nouvelle vidéo sponsor
+2. Le site étant offline, la commande est mise en **file d'attente** (Command Queue)
+3. La commande reste stockée en base PostgreSQL avec priorité et expiration optionnelle
+
 **Reconnexion (Semaine 5)** :
 1. Pi se connecte au central
-2. Pi envoie son état complet (config + liste vidéos)
-3. Central compare avec son dernier miroir
-4. Central identifie les changements :
-   - 5 nouvelles vidéos ajoutées
+2. **Traitement automatique de la queue** :
+   - Le serveur détecte des commandes en attente
+   - Exécution séquentielle par priorité
+   - La vidéo sponsor est déployée automatiquement
+3. Pi envoie son état complet (config + liste vidéos)
+4. Central compare avec son dernier miroir
+5. Central identifie les changements :
+   - 5 nouvelles vidéos ajoutées par Jean
+   - 1 vidéo sponsor ajoutée par la queue
    - Réorganisation catégories
-5. Central met à jour le miroir
-6. Central vérifie s'il y a du contenu NEOPRO à pousser
-7. Si oui : merge intelligent (préserve les modifs de Jean)
-8. L'équipe NEOPRO peut voir sur le dashboard ce qu'il y a sur le Pi
+6. Central met à jour le miroir
+7. L'équipe NEOPRO peut voir sur le dashboard ce qu'il y a sur le Pi
+
+> **Note** : Les commandes "temps réel" (logs, diagnostic réseau) ne peuvent pas être mises en queue et nécessitent une connexion active. Voir [COMMAND_QUEUE.md](COMMAND_QUEUE.md) pour la liste complète.
 
 ### 6.4 Scénario : Déploiement multi-vidéos depuis le central
 
@@ -666,6 +676,7 @@ function canDeleteVideo(video, category) {
 | Version | Date | Auteur | Modifications |
 |---------|------|--------|---------------|
 | 1.0 | 2024-12-09 | Claude/NEOPRO | Création initiale |
+| 1.1 | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline |
 
 ---
 

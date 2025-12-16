@@ -7,6 +7,7 @@ import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { auditService } from '../services/audit.service';
 import { formatPaginatedResponse, PaginationParams } from '../middleware/pagination';
+import { commandQueueService } from '../services/command-queue.service';
 
 class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -528,7 +529,11 @@ const waitForCommandResult = async (commandId: string, timeoutMs = 30000) => {
 export const sendCommand = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { command, params: data } = req.body;
+    const { command, params: data, queueIfOffline = true, priority, expiresIn } = req.body;
+
+    if (!command) {
+      return res.status(400).json({ error: 'Commande requise' });
+    }
 
     // Si la commande update_config arrive sans mode, forcer "replace" pour déployer la config centrale
     let normalizedData = data;
@@ -536,9 +541,50 @@ export const sendCommand = async (req: AuthRequest, res: Response) => {
       normalizedData = { ...data, mode: 'replace' };
     }
 
+    validateCommandPayload(command, normalizedData);
+
+    // Vérifier que le site existe
+    const siteResult = await query('SELECT id, site_name FROM sites WHERE id = $1', [id]);
+    if (siteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    // Utiliser sendOrQueue si queueIfOffline est activé (défaut)
+    if (queueIfOffline) {
+      const result = await commandQueueService.sendOrQueue(
+        id,
+        command,
+        normalizedData || {},
+        {
+          userId: req.user?.id,
+          priority: priority || 5,
+          expiresIn: expiresIn,
+          description: `${command} via dashboard`,
+        }
+      );
+
+      logger.info('Command sent or queued', {
+        siteId: id,
+        command,
+        sent: result.sent,
+        queued: result.queued,
+        commandId: result.commandId,
+        sentBy: req.user?.email,
+      });
+
+      return res.json({
+        success: result.sent || result.queued,
+        sent: result.sent,
+        queued: result.queued,
+        commandId: result.commandId,
+        message: result.message,
+      });
+    }
+
+    // Mode legacy: requiert une connexion temps réel
     const { commandId } = await dispatchCommand(id, command, normalizedData, req.user?.id);
 
-    res.json({ success: true, commandId, message: 'Commande envoyée' });
+    res.json({ success: true, sent: true, queued: false, commandId, message: 'Commande envoyée' });
   } catch (error) {
     logger.error('Send command error:', error);
     if (error instanceof HttpError) {
@@ -750,5 +796,116 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error('Get site local content error:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération du contenu local' });
+  }
+};
+
+// ============================================================================
+// Command Queue Endpoints
+// ============================================================================
+
+/**
+ * Récupère les commandes en attente pour un site
+ */
+export const getPendingCommands = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Vérifier que le site existe
+    const siteResult = await query('SELECT id, site_name, club_name FROM sites WHERE id = $1', [id]);
+    if (siteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    const commands = await commandQueueService.getPendingCommands(id);
+
+    res.json({
+      siteId: id,
+      siteName: siteResult.rows[0].site_name,
+      clubName: siteResult.rows[0].club_name,
+      pendingCount: commands.length,
+      commands,
+    });
+  } catch (error) {
+    logger.error('Get pending commands error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des commandes en attente' });
+  }
+};
+
+/**
+ * Annule une commande en attente
+ */
+export const cancelPendingCommand = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, commandId } = req.params;
+
+    // Vérifier que la commande appartient bien à ce site
+    const cmdResult = await query(
+      'SELECT id FROM pending_commands WHERE id = $1 AND site_id = $2',
+      [commandId, id]
+    );
+
+    if (cmdResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Commande non trouvée' });
+    }
+
+    const deleted = await commandQueueService.cancelPendingCommand(commandId);
+
+    if (deleted) {
+      logger.info('Pending command cancelled', { commandId, siteId: id, cancelledBy: req.user?.email });
+      res.json({ success: true, message: 'Commande annulée' });
+    } else {
+      res.status(404).json({ error: 'Commande non trouvée' });
+    }
+  } catch (error) {
+    logger.error('Cancel pending command error:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'annulation de la commande' });
+  }
+};
+
+/**
+ * Annule toutes les commandes en attente pour un site
+ */
+export const clearPendingCommands = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Vérifier que le site existe
+    const siteResult = await query('SELECT id, site_name FROM sites WHERE id = $1', [id]);
+    if (siteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    const count = await commandQueueService.clearPendingCommands(id);
+
+    logger.info('All pending commands cleared', { siteId: id, count, clearedBy: req.user?.email });
+
+    res.json({
+      success: true,
+      message: `${count} commande(s) annulée(s)`,
+      count,
+    });
+  } catch (error) {
+    logger.error('Clear pending commands error:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'annulation des commandes' });
+  }
+};
+
+/**
+ * Récupère le résumé global de la queue de commandes
+ */
+export const getQueueSummary = async (req: AuthRequest, res: Response) => {
+  try {
+    const summary = await commandQueueService.getQueueSummary();
+
+    const totalPending = summary.reduce((acc, s) => acc + s.pending_count, 0);
+
+    res.json({
+      totalPending,
+      sitesWithPendingCommands: summary.length,
+      sites: summary,
+    });
+  } catch (error) {
+    logger.error('Get queue summary error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération du résumé de la queue' });
   }
 };

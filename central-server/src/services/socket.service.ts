@@ -19,6 +19,15 @@ const getDeploymentService = async () => {
   return deploymentService;
 };
 
+let commandQueueService: { processPendingCommands: (siteId: string) => Promise<{ processed: number; failed: number; remaining: number }> } | null = null;
+const getCommandQueueService = async () => {
+  if (!commandQueueService) {
+    const module = await import('./command-queue.service');
+    commandQueueService = module.commandQueueService;
+  }
+  return commandQueueService;
+};
+
 /**
  * Vérifie une API key contre son hash bcrypt
  * bcrypt.compare est déjà timing-safe par conception
@@ -289,11 +298,31 @@ class SocketService {
 
     logger.info('Agent authenticated', { siteId, siteName: site.site_name, clientIp });
 
-    // Traiter les déploiements en attente pour ce site
-    this.processPendingDeployments(siteId);
+    // Traiter les commandes et déploiements en attente pour ce site
+    this.processPendingOnReconnect(siteId);
   }
 
-  private async processPendingDeployments(siteId: string) {
+  /**
+   * Traite les commandes et déploiements en attente lors de la reconnexion d'un site
+   */
+  private async processPendingOnReconnect(siteId: string) {
+    // Traiter les commandes en file d'attente
+    try {
+      const queueService = await getCommandQueueService();
+      const result = await queueService.processPendingCommands(siteId);
+      if (result.processed > 0) {
+        logger.info('Pending commands processed on reconnect', {
+          siteId,
+          processed: result.processed,
+          failed: result.failed,
+          remaining: result.remaining,
+        });
+      }
+    } catch (error) {
+      logger.error('Error processing pending commands on connect:', { siteId, error });
+    }
+
+    // Traiter les déploiements en attente
     try {
       const service = await getDeploymentService();
       await service.processPendingDeploymentsForSite(siteId);

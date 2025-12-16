@@ -13,6 +13,9 @@ router.get('/stats', authenticate, sitesController.getSiteStats);
 
 router.get('/connection-status', authenticate, sitesController.getAllSitesConnectionStatus);
 
+// Route globale pour le résumé de la queue (doit être avant /:id)
+router.get('/queue/summary', authenticate, sitesController.getQueueSummary);
+
 router.get('/:id', authenticate, sitesController.getSite);
 
 router.get('/:id/metrics', authenticate, sitesController.getSiteMetrics);
@@ -114,6 +117,27 @@ router.post(
   authenticate,
   requireRole('admin', 'operator'),
   configHistoryController.previewConfigDiff
+);
+
+// Routes pour la file d'attente de commandes (Command Queue)
+router.get(
+  '/:id/pending-commands',
+  authenticate,
+  sitesController.getPendingCommands
+);
+
+router.delete(
+  '/:id/pending-commands/:commandId',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sitesController.cancelPendingCommand
+);
+
+router.delete(
+  '/:id/pending-commands',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sitesController.clearPendingCommands
 );
 
 export default router;

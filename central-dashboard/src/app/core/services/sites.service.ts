@@ -177,4 +177,50 @@ export class SitesService {
   runNetworkDiagnostics(id: string): Observable<{ success: boolean; commandId?: string; message: string }> {
     return this.sendCommand(id, 'network_diagnostics', {});
   }
+
+  // Command Queue - Commandes en attente pour sites offline
+  getPendingCommands(id: string): Observable<{
+    siteId: string;
+    siteName: string;
+    clubName: string;
+    pendingCount: number;
+    commands: Array<{
+      id: string;
+      site_id: string;
+      command_type: string;
+      command_data: Record<string, unknown>;
+      priority: number;
+      created_at: Date;
+      expires_at: Date | null;
+      attempts: number;
+      description: string | null;
+    }>;
+  }> {
+    return this.api.get(`/sites/${id}/pending-commands`);
+  }
+
+  cancelPendingCommand(siteId: string, commandId: string): Observable<{ success: boolean; message: string }> {
+    return this.api.delete(`/sites/${siteId}/pending-commands/${commandId}`);
+  }
+
+  clearPendingCommands(siteId: string): Observable<{ success: boolean; message: string; count: number }> {
+    return this.api.delete(`/sites/${siteId}/pending-commands`);
+  }
+
+  getQueueSummary(): Observable<{
+    totalPending: number;
+    sitesWithPendingCommands: number;
+    sites: Array<{
+      site_id: string;
+      club_name: string;
+      site_status: string;
+      pending_count: number;
+      highest_priority: number;
+      oldest_command: Date | null;
+      newest_command: Date | null;
+      command_types: string[];
+    }>;
+  }> {
+    return this.api.get('/sites/queue/summary');
+  }
 }

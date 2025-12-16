@@ -90,39 +90,45 @@
    - Scénarios d'usage (annonceurs nationaux, contenu local)
    - Personas (NEOPRO, Opérateur Club, Partenaires)
 
+11. **[COMMAND_QUEUE.md](COMMAND_QUEUE.md)** - File d'attente des commandes (sites offline)
+   - Gestion des commandes pour sites non connectés
+   - Exécution automatique à la reconnexion
+   - Types de commandes queueables vs temps réel
+   - API endpoints et utilisation dashboard
+
 ### Analytics Sponsors (Module complet)
 
-11. **[ANALYTICS_SPONSORS_README.md](ANALYTICS_SPONSORS_README.md)** - **README Module Analytics Sponsors**
+12. **[ANALYTICS_SPONSORS_README.md](ANALYTICS_SPONSORS_README.md)** - **README Module Analytics Sponsors**
    - Vue d'ensemble et fonctionnalités
    - Architecture complète
    - Guides démarrage rapide
    - État du projet (98% conformité BP §13)
 
-12. **[IMPLEMENTATION_ANALYTICS_SPONSORS.md](IMPLEMENTATION_ANALYTICS_SPONSORS.md)** - Guide implémentation
+13. **[IMPLEMENTATION_ANALYTICS_SPONSORS.md](IMPLEMENTATION_ANALYTICS_SPONSORS.md)** - Guide implémentation
    - Schéma base de données
    - API endpoints détaillés
    - Intégration frontend/backend
 
-13. **[TRACKING_IMPRESSIONS_SPONSORS.md](TRACKING_IMPRESSIONS_SPONSORS.md)** - Tracking boîtiers TV
+14. **[TRACKING_IMPRESSIONS_SPONSORS.md](TRACKING_IMPRESSIONS_SPONSORS.md)** - Tracking boîtiers TV
    - Architecture tracking temps réel
    - Service frontend Angular
    - Sync agent et serveur local
    - Flux de données end-to-end
 
-14. **[PDF_REPORTS_GUIDE.md](PDF_REPORTS_GUIDE.md)** - Rapports PDF professionnels
+15. **[PDF_REPORTS_GUIDE.md](PDF_REPORTS_GUIDE.md)** - Rapports PDF professionnels
    - Structure 4 pages (garde, KPIs, graphiques, certificat)
    - Génération graphiques Chart.js
    - Signature numérique SHA-256
    - API et intégration
 
-15. **[AVANCEMENT_ANALYTICS_SPONSORS.md](AVANCEMENT_ANALYTICS_SPONSORS.md)** - Suivi progression
+16. **[AVANCEMENT_ANALYTICS_SPONSORS.md](AVANCEMENT_ANALYTICS_SPONSORS.md)** - Suivi progression
    - Planning semaines 1-3 (terminé)
    - Métriques conformité (95%)
    - Roadmap phases 4-5 (optionnel)
 
 ### Guides d'implémentation
 
-16. **[IMPLEMENTATION_GUIDE_AUDIENCE_SCORE.md](IMPLEMENTATION_GUIDE_AUDIENCE_SCORE.md)** - **Guide Estimation Audience + Score Live**
+17. **[IMPLEMENTATION_GUIDE_AUDIENCE_SCORE.md](IMPLEMENTATION_GUIDE_AUDIENCE_SCORE.md)** - **Guide Estimation Audience + Score Live**
    - Migration base de données (copy-paste ready)
    - Frontend Remote Control (badge audience + saisie score)
    - Frontend TV Player (overlay score en live)
@@ -131,12 +137,12 @@
 
 ### Pour les développeurs
 
-17. **[dev/README.md](dev/README.md)** - Documentation développement
+18. **[dev/README.md](dev/README.md)** - Documentation développement
    - Configuration environnement
    - Conventions de code
    - Tests
 
-18. **[changelog/README.md](changelog/README.md)** - Historique des modifications
+19. **[changelog/README.md](changelog/README.md)** - Historique des modifications
    - Suivi des changements
    - Notes de version
 
@@ -221,4 +227,4 @@ Configuration : `render.yaml` à la racine
 
 ---
 
-**Dernière mise à jour :** 15 décembre 2025 - Ajout STATUS.md, BACKLOG.md, IMPLEMENTATION_GUIDE_AUDIENCE_SCORE.md
+**Dernière mise à jour :** 16 décembre 2025 - Ajout COMMAND_QUEUE.md (gestion sites offline)

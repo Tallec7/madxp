@@ -834,6 +834,102 @@ curl -I http://neopro.local/login
 
 ---
 
+## Commandes en file d'attente (Command Queue)
+
+### Les commandes ne sont pas exécutées après reconnexion du site
+
+**Symptômes :**
+- Des commandes sont visibles dans "Commandes en attente" sur le dashboard
+- Le site se reconnecte mais les commandes restent en attente
+- Aucune action n'est effectuée sur le Raspberry Pi
+
+**Vérifications :**
+
+```bash
+# 1. Vérifier les logs du serveur central (Render)
+# Rechercher "Processing pending commands" ou "Pending commands processed"
+
+# 2. Vérifier les commandes en base
+psql -h $DB_HOST -U $DB_USER -d $DB_NAME
+SELECT id, command_type, attempts, max_attempts, expires_at
+FROM pending_commands WHERE site_id = 'UUID_DU_SITE';
+```
+
+**Causes et solutions :**
+
+| Cause | Solution |
+|-------|----------|
+| `attempts >= max_attempts` | Réinitialiser : `UPDATE pending_commands SET attempts = 0 WHERE site_id = 'UUID';` |
+| `expires_at < NOW()` | La commande a expiré, en créer une nouvelle |
+| Site déconnecté pendant le traitement | Attendre la prochaine reconnexion |
+
+### Une commande "temps réel" ne fonctionne pas sur un site offline
+
+**Symptôme :** Message d'erreur "La commande X ne peut pas être mise en file d'attente"
+
+**Explication :** Certaines commandes nécessitent une connexion temps réel et ne peuvent pas être différées :
+- `get_logs` - Lecture des logs
+- `get_system_info` - Informations système
+- `get_config` - Configuration actuelle
+- `network_diagnostics` - Diagnostic réseau
+- `get_hotspot_config` - Configuration WiFi
+
+**Solution :** Attendre que le site soit en ligne (statut "Connecté") pour exécuter ces commandes.
+
+### Voir toutes les commandes en attente pour tous les sites
+
+```bash
+# Via l'API
+curl -H "Authorization: Bearer $TOKEN" \
+  https://neopro-central.onrender.com/api/sites/queue/summary
+
+# Via SQL
+SELECT
+  s.club_name,
+  COUNT(*) as pending,
+  MIN(pc.created_at) as oldest
+FROM pending_commands pc
+JOIN sites s ON s.id = pc.site_id
+WHERE (pc.expires_at IS NULL OR pc.expires_at > NOW())
+  AND pc.attempts < pc.max_attempts
+GROUP BY s.club_name;
+```
+
+### Forcer l'exécution des commandes en attente
+
+Si un site est connecté mais les commandes ne s'exécutent pas :
+
+1. **Méthode 1 : Reconnecter le site**
+   ```bash
+   # Sur le Raspberry Pi
+   sudo systemctl restart neopro-sync
+   ```
+
+2. **Méthode 2 : Réinitialiser les tentatives**
+   ```sql
+   UPDATE pending_commands
+   SET attempts = 0, last_attempt_at = NULL
+   WHERE site_id = 'UUID_DU_SITE';
+   ```
+
+### Nettoyer la queue manuellement
+
+```sql
+-- Supprimer les commandes expirées
+DELETE FROM pending_commands
+WHERE expires_at IS NOT NULL AND expires_at < NOW();
+
+-- Supprimer les commandes ayant échoué trop de fois
+DELETE FROM pending_commands WHERE attempts >= max_attempts;
+
+-- Vider la queue d'un site
+DELETE FROM pending_commands WHERE site_id = 'UUID_DU_SITE';
+```
+
+> **Documentation complète :** Voir [COMMAND_QUEUE.md](COMMAND_QUEUE.md)
+
+---
+
 ## Problèmes connus
 
 ### 1. Build échoue avec erreur TypeScript
