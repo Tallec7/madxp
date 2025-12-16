@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { Site, Metrics } from '../../core/models';
+import { Site, Metrics, SiteConnectionStatus } from '../../core/models';
 import { Subscription, interval } from 'rxjs';
 import { ConfigEditorComponent } from './config-editor/config-editor.component';
 import { SiteContentViewerComponent } from './site-content-viewer/site-content-viewer.component';
@@ -147,8 +147,14 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
       <!-- Actions rapides -->
       <div class="card">
         <h3>Actions rapides</h3>
+        <p class="connection-hint" *ngIf="!isConnected && connectionStatus">
+          Le site n'est pas connecté en temps réel. Les actions à distance sont désactivées.
+          <span *ngIf="connectionStatus.connection.lastSeenAt">
+            Dernière connexion : {{ formatLastSeen(connectionStatus.connection.lastSeenAt) }}
+          </span>
+        </p>
         <div class="actions-grid">
-          <button class="action-card" (click)="restartService('neopro-app')" [disabled]="site.status !== 'online' || sendingCommand">
+          <button class="action-card" (click)="restartService('neopro-app')" [disabled]="!isConnected || sendingCommand">
             <span class="action-icon">🔄</span>
             <div class="action-content">
               <div class="action-title">Redémarrer l'app</div>
@@ -156,7 +162,7 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
             </div>
           </button>
 
-          <button class="action-card" (click)="getLogs()" [disabled]="site.status !== 'online'">
+          <button class="action-card" (click)="getLogs()" [disabled]="!isConnected">
             <span class="action-icon">📄</span>
             <div class="action-content">
               <div class="action-title">Voir les logs</div>
@@ -164,7 +170,7 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
             </div>
           </button>
 
-          <button class="action-card" (click)="getSystemInfo()" [disabled]="site.status !== 'online'">
+          <button class="action-card" (click)="getSystemInfo()" [disabled]="!isConnected">
             <span class="action-icon">ℹ️</span>
             <div class="action-content">
               <div class="action-title">Infos système</div>
@@ -172,7 +178,7 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
             </div>
           </button>
 
-          <button class="action-card" (click)="runNetworkDiagnostics()" [disabled]="site.status !== 'online'">
+          <button class="action-card" (click)="runNetworkDiagnostics()" [disabled]="!isConnected">
             <span class="action-icon">🌐</span>
             <div class="action-content">
               <div class="action-title">Diagnostic réseau</div>
@@ -180,7 +186,7 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
             </div>
           </button>
 
-          <button class="action-card warning" (click)="rebootSite()" [disabled]="site.status !== 'online' || sendingCommand">
+          <button class="action-card warning" (click)="rebootSite()" [disabled]="!isConnected || sendingCommand">
             <span class="action-icon">⚡</span>
             <div class="action-content">
               <div class="action-title">Redémarrer</div>
@@ -213,7 +219,7 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
       </div>
 
       <!-- Mise à jour du sync-agent -->
-      <div class="card" *ngIf="site.status === 'online'">
+      <div class="card" *ngIf="isConnected">
         <div class="card-header-row">
           <h3>Mise à jour Sync-Agent</h3>
           <button
@@ -234,7 +240,7 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
       <div class="card">
         <div class="card-header-row">
           <h3>Configuration Hotspot WiFi</h3>
-          <button class="btn btn-secondary" (click)="toggleHotspotConfig()" [disabled]="site.status !== 'online'">
+          <button class="btn btn-secondary" (click)="toggleHotspotConfig()" [disabled]="!isConnected">
             {{ showHotspotConfig ? 'Masquer' : 'Modifier' }}
           </button>
         </div>
@@ -1212,6 +1218,23 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
       font-size: 0.875rem;
     }
 
+    .connection-hint {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      color: #92400e;
+      font-size: 0.875rem;
+    }
+
+    .connection-hint span {
+      display: block;
+      margin-top: 0.25rem;
+      font-size: 0.8125rem;
+      color: #b45309;
+    }
+
     .wifi-quality-bar {
       display: inline-block;
       width: 60px;
@@ -1275,6 +1298,11 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   showApiKey = false;
   siteId!: string;
   Math = Math;
+
+  // Connexion temps réel (WebSocket)
+  connectionStatus: SiteConnectionStatus | null = null;
+  isConnected = false;
+  private connectionCheckSubscription?: Subscription;
 
   // Configuration editor
   showConfigEditor = false;
@@ -1356,17 +1384,24 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     this.siteId = this.route.snapshot.paramMap.get('id')!;
     this.loadSite();
     this.loadMetrics();
+    this.loadConnectionStatus();
 
     // Auto-refresh toutes les 30 secondes
     this.refreshSubscription = interval(30000).subscribe(() => {
-      if (this.site?.status === 'online') {
+      if (this.isConnected) {
         this.loadMetrics();
       }
+    });
+
+    // Vérification de la connexion temps réel toutes les 15 secondes
+    this.connectionCheckSubscription = interval(15000).subscribe(() => {
+      this.loadConnectionStatus();
     });
   }
 
   ngOnDestroy(): void {
     this.refreshSubscription?.unsubscribe();
+    this.connectionCheckSubscription?.unsubscribe();
     if (this.networkDiagPollInterval) {
       clearInterval(this.networkDiagPollInterval);
       this.networkDiagPollInterval = null;
@@ -1380,6 +1415,19 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+      }
+    });
+  }
+
+  loadConnectionStatus(): void {
+    this.sitesService.getConnectionStatus(this.siteId).subscribe({
+      next: (status) => {
+        this.connectionStatus = status;
+        this.isConnected = status.connection.isConnected;
+      },
+      error: (error) => {
+        console.error('Erreur chargement statut connexion:', error);
+        this.isConnected = false;
       }
     });
   }
