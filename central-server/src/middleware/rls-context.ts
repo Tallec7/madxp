@@ -86,6 +86,15 @@ export const setRLSContext = (pool: Pool) => {
         isAdmin
       };
 
+      // Nettoyer le contexte RLS après la réponse (important pour le pool de connexions)
+      res.on('finish', async () => {
+        try {
+          await pool.query('SELECT set_session_context(NULL, NULL, false)');
+        } catch (cleanupError) {
+          logger.error('Erreur lors du nettoyage du contexte RLS:', cleanupError);
+        }
+      });
+
       next();
     } catch (error) {
       logger.error('Erreur lors de la définition du contexte RLS:', error);
