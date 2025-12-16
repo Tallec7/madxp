@@ -1,4 +1,5 @@
 import { Component, ElementRef, inject, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 import videojs from 'video.js';
 import "videojs-playlist";
@@ -27,6 +28,7 @@ interface PlayerWithPlaylist extends Player {
   selector: 'app-tv',
   templateUrl: './tv.component.html',
   styleUrl: './tv.component.scss',
+  imports: [CommonModule],
   animations: [
     trigger('fadeInOut', [
       transition(':enter', [
