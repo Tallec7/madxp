@@ -533,8 +533,24 @@ configure_services() {
     # Service kiosque (mode TV)
     if [ -f "${SERVICE_DIR}/neopro-kiosk.service" ]; then
         cp "${SERVICE_DIR}/neopro-kiosk.service" /etc/systemd/system/
+
+        # Détecter le bon chemin de Chromium (varie selon la version de Raspberry Pi OS)
+        local CHROMIUM_PATH=""
+        if [ -x "/usr/bin/chromium-browser" ]; then
+            CHROMIUM_PATH="/usr/bin/chromium-browser"
+        elif [ -x "/usr/bin/chromium" ]; then
+            CHROMIUM_PATH="/usr/bin/chromium"
+        else
+            print_warning "Chromium non trouvé, le mode kiosque ne fonctionnera pas"
+        fi
+
+        if [ -n "$CHROMIUM_PATH" ]; then
+            sed -i "s|ExecStart=/usr/bin/chromium-browser|ExecStart=${CHROMIUM_PATH}|" /etc/systemd/system/neopro-kiosk.service
+            sed -i "s|ExecStart=/usr/bin/chromium |ExecStart=${CHROMIUM_PATH} |" /etc/systemd/system/neopro-kiosk.service
+            print_success "Service neopro-kiosk configuré (Chromium: ${CHROMIUM_PATH})"
+        fi
+
         systemctl enable neopro-kiosk.service
-        print_success "Service neopro-kiosk configuré"
     fi
 
     # Service sync-agent

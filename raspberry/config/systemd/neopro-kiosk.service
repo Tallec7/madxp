@@ -16,7 +16,8 @@ Environment=XAUTHORITY=/home/pi/.Xauthority
 ExecStartPre=/bin/sleep 10
 
 # Lancement de Chromium en mode kiosque
-ExecStart=/usr/bin/chromium \
+# Note: Le chemin est déterminé par le script configure_services()
+ExecStart=/usr/bin/chromium-browser \
   --kiosk \
   --autoplay-policy=no-user-gesture-required \
   --noerrdialogs \
