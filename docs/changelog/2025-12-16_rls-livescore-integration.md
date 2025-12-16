@@ -874,9 +874,28 @@ test('Live score end-to-end flow', async ({ page }) => {
 
 ---
 
-## 🐛 Issues Connues
+## 🐛 Issues Résolues
 
-### Aucune issue majeure détectée
+### Issue #1: Colonne site_id manquante dans content_deployments ✅ CORRIGÉ
+
+**Problème:**
+```
+ERROR: column "site_id" does not exist in table "content_deployments"
+```
+
+**Cause:**
+Les tables `content_deployments` et `update_deployments` utilisent une structure polymorphe (`target_type` + `target_id`) au lieu d'une colonne `site_id` directe.
+
+**Solution:**
+- Créé `fix-rls-content-deployments.sql` - migration corrective standalone
+- Mis à jour `enable-row-level-security.sql` - policies corrigées
+- Ajouté support pour déploiements de type 'site' et 'group'
+- Policies utilisent maintenant `target_type` et `target_id` avec JOIN sur `group_sites`
+
+**Commits:**
+- `7514226` - feat: major features implementation
+- `bdfede6` - fix: correct RLS policies for polymorphic deployment tables
+- `63eb3cc` - docs: add comprehensive migrations README
 
 **Remarques:**
 - Le middleware RLS est appliqué globalement mais certaines routes n'ont pas besoin de RLS (ex: `/api/auth/login`). Le middleware skip automatiquement si `req.user` n'existe pas, donc pas d'impact.

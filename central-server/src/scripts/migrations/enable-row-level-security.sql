@@ -182,7 +182,7 @@ CREATE POLICY site_insert_own_config_history ON config_history
   WITH CHECK (site_id = current_site_id());
 
 -- =============================================================================
--- POLICIES - DEPLOYMENTS
+-- POLICIES - DEPLOYMENTS (structure polymorphe: target_type + target_id)
 -- =============================================================================
 
 -- Admin: accès complet aux déploiements de contenu
@@ -190,32 +190,114 @@ CREATE POLICY admin_content_deployments_all ON content_deployments
   FOR ALL
   USING (is_admin());
 
--- Site: lecture de ses propres déploiements
+-- Site: voir les déploiements qui le ciblent directement
 CREATE POLICY site_read_own_content_deployments ON content_deployments
   FOR SELECT
-  USING (site_id = current_site_id());
+  USING (
+    target_type = 'site'
+    AND target_id = current_site_id()
+  );
 
--- Site: mise à jour du statut de ses propres déploiements
+-- Site: voir les déploiements qui ciblent un groupe dont il fait partie
+CREATE POLICY site_read_group_content_deployments ON content_deployments
+  FOR SELECT
+  USING (
+    target_type = 'group'
+    AND target_id IN (
+      SELECT group_id
+      FROM group_sites
+      WHERE site_id = current_site_id()
+    )
+  );
+
+-- Site: mettre à jour le statut de ses propres déploiements
 CREATE POLICY site_update_own_content_deployments ON content_deployments
   FOR UPDATE
-  USING (site_id = current_site_id())
-  WITH CHECK (site_id = current_site_id());
+  USING (
+    target_type = 'site'
+    AND target_id = current_site_id()
+  )
+  WITH CHECK (
+    target_type = 'site'
+    AND target_id = current_site_id()
+  );
+
+-- Site: mettre à jour le statut des déploiements de groupe
+CREATE POLICY site_update_group_content_deployments ON content_deployments
+  FOR UPDATE
+  USING (
+    target_type = 'group'
+    AND target_id IN (
+      SELECT group_id
+      FROM group_sites
+      WHERE site_id = current_site_id()
+    )
+  )
+  WITH CHECK (
+    target_type = 'group'
+    AND target_id IN (
+      SELECT group_id
+      FROM group_sites
+      WHERE site_id = current_site_id()
+    )
+  );
 
 -- Admin: accès complet aux déploiements de mises à jour
 CREATE POLICY admin_update_deployments_all ON update_deployments
   FOR ALL
   USING (is_admin());
 
--- Site: lecture de ses propres mises à jour
+-- Site: voir les déploiements de mises à jour qui le ciblent directement
 CREATE POLICY site_read_own_update_deployments ON update_deployments
   FOR SELECT
-  USING (site_id = current_site_id());
+  USING (
+    target_type = 'site'
+    AND target_id = current_site_id()
+  );
 
--- Site: mise à jour du statut de ses propres mises à jour
+-- Site: voir les déploiements qui ciblent un groupe dont il fait partie
+CREATE POLICY site_read_group_update_deployments ON update_deployments
+  FOR SELECT
+  USING (
+    target_type = 'group'
+    AND target_id IN (
+      SELECT group_id
+      FROM group_sites
+      WHERE site_id = current_site_id()
+    )
+  );
+
+-- Site: mettre à jour le statut de ses propres déploiements
 CREATE POLICY site_update_own_update_deployments ON update_deployments
   FOR UPDATE
-  USING (site_id = current_site_id())
-  WITH CHECK (site_id = current_site_id());
+  USING (
+    target_type = 'site'
+    AND target_id = current_site_id()
+  )
+  WITH CHECK (
+    target_type = 'site'
+    AND target_id = current_site_id()
+  );
+
+-- Site: mettre à jour le statut des déploiements de groupe
+CREATE POLICY site_update_group_update_deployments ON update_deployments
+  FOR UPDATE
+  USING (
+    target_type = 'group'
+    AND target_id IN (
+      SELECT group_id
+      FROM group_sites
+      WHERE site_id = current_site_id()
+    )
+  )
+  WITH CHECK (
+    target_type = 'group'
+    AND target_id IN (
+      SELECT group_id
+      FROM group_sites
+      WHERE site_id = current_site_id()
+    )
+  );
 
 -- =============================================================================
 -- POLICIES - ANALYTICS CLUB
