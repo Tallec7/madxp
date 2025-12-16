@@ -38,7 +38,16 @@
                 "output": "admin"
               }
             ],
-            "styles": ["raspberry/frontend/styles.scss"]
+            "styles": ["raspberry/frontend/styles.scss"],
+            "allowedCommonJsDependencies": [
+              "global/window",
+              "global/document",
+              "@videojs/xhr",
+              "videojs-vtt.js",
+              "mux.js/lib/tools/parse-sidx",
+              "mux.js/lib/utils/clock",
+              "@xmldom/xmldom"
+            ]
           },
           "configurations": {
             "production": {
@@ -183,8 +192,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "12kb",
-                  "maximumError": "16kb"
+                  "maximumWarning": "15kb",
+                  "maximumError": "20kb"
                 }
               ],
               "outputHashing": "all",

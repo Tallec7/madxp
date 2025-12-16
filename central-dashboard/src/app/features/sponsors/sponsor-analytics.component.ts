@@ -118,7 +118,7 @@ interface Distribution {
           <div class="kpi-card">
             <div class="kpi-icon">👁️</div>
             <div class="kpi-content">
-              <span class="kpi-value">{{ summary.total_impressions?.toLocaleString() || 0 }}</span>
+              <span class="kpi-value">{{ summary.total_impressions.toLocaleString() || 0 }}</span>
               <span class="kpi-label">Impressions totales</span>
             </div>
           </div>
@@ -134,7 +134,7 @@ interface Distribution {
           <div class="kpi-card">
             <div class="kpi-icon">✅</div>
             <div class="kpi-content">
-              <span class="kpi-value">{{ summary.completion_rate?.toFixed(1) || 0 }}%</span>
+              <span class="kpi-value">{{ summary.completion_rate.toFixed(1) || 0 }}%</span>
               <span class="kpi-label">Taux de complétion</span>
             </div>
           </div>
@@ -201,11 +201,11 @@ interface Distribution {
                   <tr *ngFor="let video of topVideos; let i = index">
                     <td>{{ i + 1 }}</td>
                     <td class="video-name">{{ video.video_title }}</td>
-                    <td>{{ video.impressions?.toLocaleString() }}</td>
+                    <td>{{ video.impressions.toLocaleString() }}</td>
                     <td>{{ formatDuration(video.total_screen_time) }}</td>
                     <td>
                       <span class="completion-badge" [class.high]="video.completion_rate >= 80">
-                        {{ video.completion_rate?.toFixed(0) }}%
+                        {{ video.completion_rate.toFixed(0) }}%
                       </span>
                     </td>
                   </tr>
@@ -238,7 +238,7 @@ interface Distribution {
                   <tr *ngFor="let site of topSites; let i = index">
                     <td>{{ i + 1 }}</td>
                     <td class="site-name">{{ site.site_name }}</td>
-                    <td>{{ site.impressions?.toLocaleString() }}</td>
+                    <td>{{ site.impressions.toLocaleString() }}</td>
                     <td>{{ formatDuration(site.total_screen_time) }}</td>
                     <td>{{ site.unique_videos }}</td>
                     <td>

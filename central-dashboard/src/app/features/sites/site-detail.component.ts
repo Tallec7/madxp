@@ -463,25 +463,25 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
             <div *ngIf="networkDiagnostics; else noNetworkDiag" class="network-diagnostics">
               <!-- Résumé des tests -->
               <div class="diag-summary">
-                <div class="diag-status-item" [class.success]="networkDiagnostics.internet?.reachable" [class.error]="!networkDiagnostics.internet?.reachable">
-                  <span class="diag-icon">{{ networkDiagnostics.internet?.reachable ? '✅' : '❌' }}</span>
+                <div class="diag-status-item" [class.success]="networkDiagnostics.internet.reachable" [class.error]="!networkDiagnostics.internet.reachable">
+                  <span class="diag-icon">{{ networkDiagnostics.internet.reachable ? '✅' : '❌' }}</span>
                   <span class="diag-label">Internet</span>
-                  <span class="diag-value" *ngIf="networkDiagnostics.internet?.latency_ms">{{ networkDiagnostics.internet.latency_ms }}ms</span>
+                  <span class="diag-value" *ngIf="networkDiagnostics.internet.latency_ms">{{ networkDiagnostics.internet.latency_ms }}ms</span>
                 </div>
-                <div class="diag-status-item" [class.success]="networkDiagnostics.central_server?.reachable" [class.error]="!networkDiagnostics.central_server?.reachable">
-                  <span class="diag-icon">{{ networkDiagnostics.central_server?.reachable ? '✅' : '❌' }}</span>
+                <div class="diag-status-item" [class.success]="networkDiagnostics.central_server.reachable" [class.error]="!networkDiagnostics.central_server.reachable">
+                  <span class="diag-icon">{{ networkDiagnostics.central_server.reachable ? '✅' : '❌' }}</span>
                   <span class="diag-label">Serveur central</span>
-                  <span class="diag-value" *ngIf="networkDiagnostics.central_server?.latency_ms">{{ networkDiagnostics.central_server.latency_ms }}ms</span>
+                  <span class="diag-value" *ngIf="networkDiagnostics.central_server.latency_ms">{{ networkDiagnostics.central_server.latency_ms }}ms</span>
                 </div>
-                <div class="diag-status-item" [class.success]="networkDiagnostics.dns?.working" [class.error]="!networkDiagnostics.dns?.working">
-                  <span class="diag-icon">{{ networkDiagnostics.dns?.working ? '✅' : '❌' }}</span>
+                <div class="diag-status-item" [class.success]="networkDiagnostics.dns.working" [class.error]="!networkDiagnostics.dns.working">
+                  <span class="diag-icon">{{ networkDiagnostics.dns.working ? '✅' : '❌' }}</span>
                   <span class="diag-label">DNS</span>
-                  <span class="diag-value" *ngIf="networkDiagnostics.dns?.resolution_time_ms">{{ networkDiagnostics.dns.resolution_time_ms }}ms</span>
+                  <span class="diag-value" *ngIf="networkDiagnostics.dns.resolution_time_ms">{{ networkDiagnostics.dns.resolution_time_ms }}ms</span>
                 </div>
-                <div class="diag-status-item" [class.success]="networkDiagnostics.gateway?.reachable" [class.error]="!networkDiagnostics.gateway?.reachable">
-                  <span class="diag-icon">{{ networkDiagnostics.gateway?.reachable ? '✅' : '❌' }}</span>
+                <div class="diag-status-item" [class.success]="networkDiagnostics.gateway.reachable" [class.error]="!networkDiagnostics.gateway.reachable">
+                  <span class="diag-icon">{{ networkDiagnostics.gateway.reachable ? '✅' : '❌' }}</span>
                   <span class="diag-label">Passerelle</span>
-                  <span class="diag-value" *ngIf="networkDiagnostics.gateway?.ip">{{ networkDiagnostics.gateway.ip }}</span>
+                  <span class="diag-value" *ngIf="networkDiagnostics.gateway.ip">{{ networkDiagnostics.gateway.ip }}</span>
                 </div>
               </div>
 
