@@ -33,12 +33,14 @@ export interface QueueCommandOptions {
   createdBy?: string;
 }
 
-// Commandes qui ont du sens en mode offline (config, vidéos...)
+// Commandes qui ont du sens en mode offline (config, vidéos, actions différées)
 const QUEUEABLE_COMMANDS = [
   'update_config',
   'deploy_video',
   'delete_video',
   'update_software',
+  'restart_service',  // Redémarrage de service à la reconnexion
+  'reboot',           // Redémarrage du Pi à la reconnexion
 ];
 
 // Commandes qui nécessitent une connexion temps réel

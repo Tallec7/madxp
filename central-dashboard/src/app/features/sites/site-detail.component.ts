@@ -148,17 +148,20 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
       <div class="card">
         <h3>Actions rapides</h3>
         <p class="connection-hint" *ngIf="!isConnected && connectionStatus">
-          Le site n'est pas connecté en temps réel. Les actions à distance sont désactivées.
+          <strong>Site hors ligne.</strong> Les commandes temps réel (logs, diagnostic) sont désactivées.
+          Les autres actions seront mises en file d'attente et exécutées à la reconnexion.
           <span *ngIf="connectionStatus.connection.lastSeenAt">
             Dernière connexion : {{ formatLastSeen(connectionStatus.connection.lastSeenAt) }}
           </span>
         </p>
         <div class="actions-grid">
-          <button class="action-card" (click)="restartService('neopro-app')" [disabled]="!isConnected || sendingCommand">
+          <button class="action-card" (click)="restartService('neopro-app')" [disabled]="sendingCommand"
+            [class.queued]="!isConnected" [title]="!isConnected ? 'Sera exécuté à la reconnexion' : ''">
             <span class="action-icon">🔄</span>
             <div class="action-content">
               <div class="action-title">Redémarrer l'app</div>
               <div class="action-desc">Redémarre le service NEOPRO</div>
+              <div class="action-queue-hint" *ngIf="!isConnected">📥 File d'attente</div>
             </div>
           </button>
 
@@ -167,6 +170,7 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
             <div class="action-content">
               <div class="action-title">Voir les logs</div>
               <div class="action-desc">Récupère les logs récents</div>
+              <div class="action-realtime-hint" *ngIf="!isConnected">⚡ Temps réel requis</div>
             </div>
           </button>
 
@@ -175,6 +179,7 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
             <div class="action-content">
               <div class="action-title">Infos système</div>
               <div class="action-desc">Détails matériel et réseau</div>
+              <div class="action-realtime-hint" *ngIf="!isConnected">⚡ Temps réel requis</div>
             </div>
           </button>
 
@@ -183,14 +188,17 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
             <div class="action-content">
               <div class="action-title">Diagnostic réseau</div>
               <div class="action-desc">Tester la connectivité</div>
+              <div class="action-realtime-hint" *ngIf="!isConnected">⚡ Temps réel requis</div>
             </div>
           </button>
 
-          <button class="action-card warning" (click)="rebootSite()" [disabled]="!isConnected || sendingCommand">
+          <button class="action-card warning" (click)="rebootSite()" [disabled]="sendingCommand"
+            [class.queued]="!isConnected" [title]="!isConnected ? 'Sera exécuté à la reconnexion' : ''">
             <span class="action-icon">⚡</span>
             <div class="action-content">
               <div class="action-title">Redémarrer</div>
               <div class="action-desc">Redémarre le Raspberry Pi</div>
+              <div class="action-queue-hint" *ngIf="!isConnected">📥 File d'attente</div>
             </div>
           </button>
 
@@ -219,20 +227,22 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
       </div>
 
       <!-- Mise à jour du sync-agent -->
-      <div class="card" *ngIf="isConnected">
+      <div class="card">
         <div class="card-header-row">
           <h3>Mise à jour Sync-Agent</h3>
           <button
             class="btn btn-primary"
             (click)="updateSyncAgentRemotely()"
             [disabled]="updatingSyncAgent"
+            [class.btn-queued]="!isConnected"
           >
-            {{ updatingSyncAgent ? 'Mise à jour en cours...' : 'Mettre à jour le sync-agent' }}
+            {{ updatingSyncAgent ? 'Mise à jour en cours...' : (isConnected ? 'Mettre à jour le sync-agent' : '📥 Mettre à jour (file d\'attente)') }}
           </button>
         </div>
         <p class="card-description">
           Met à jour le sync-agent à distance pour activer les nouvelles fonctionnalités
           (configuration hotspot WiFi, etc.).
+          <span *ngIf="!isConnected" class="queue-note">La mise à jour sera effectuée à la reconnexion du site.</span>
         </p>
       </div>
 
@@ -317,10 +327,13 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
       <div class="card">
         <div class="card-header-row">
           <h3>Configuration du site</h3>
-          <button class="btn btn-primary" (click)="toggleConfigEditor()" [disabled]="site.status !== 'online'">
-            {{ showConfigEditor ? 'Fermer' : 'Modifier la configuration' }}
+          <button class="btn btn-primary" (click)="toggleConfigEditor()" [class.btn-queued]="!isConnected">
+            {{ showConfigEditor ? 'Fermer' : (isConnected ? 'Modifier la configuration' : '📥 Modifier (file d\'attente)') }}
           </button>
         </div>
+        <p class="card-description" *ngIf="!isConnected && !showConfigEditor">
+          <span class="queue-note">Le site est hors ligne. Les modifications seront mises en file d'attente et appliquées à la reconnexion.</span>
+        </p>
         <div *ngIf="showConfigEditor" class="config-editor-wrapper">
           <app-config-editor
             [siteId]="siteId"
@@ -1379,6 +1392,47 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
       font-weight: 500;
     }
 
+    /* Queue hints for offline actions */
+    .action-queue-hint {
+      font-size: 0.75rem;
+      color: #2563eb;
+      margin-top: 0.25rem;
+      font-weight: 500;
+    }
+
+    .action-realtime-hint {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 0.25rem;
+      font-style: italic;
+    }
+
+    .action-card.queued {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+
+    .action-card.queued:hover:not(:disabled) {
+      background: #dbeafe;
+      border-color: #1d4ed8;
+    }
+
+    .btn-queued {
+      background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+      position: relative;
+    }
+
+    .queue-note {
+      display: block;
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #eff6ff;
+      border-radius: 4px;
+      font-size: 0.8125rem;
+      color: #1d4ed8;
+      border-left: 3px solid #2563eb;
+    }
+
     @media (max-width: 768px) {
       .info-grid {
         grid-template-columns: 1fr;
@@ -1621,12 +1675,20 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   }
 
   restartService(service: string): void {
-    if (confirm(`Redémarrer le service ${service} ?`)) {
+    const confirmMsg = this.isConnected
+      ? `Redémarrer le service ${service} ?`
+      : `Redémarrer le service ${service} ?\n\nLe site est hors ligne. La commande sera mise en file d'attente et exécutée à la reconnexion.`;
+
+    if (confirm(confirmMsg)) {
       this.sendingCommand = true;
       this.sitesService.restartService(this.siteId, service).subscribe({
-        next: (response) => {
+        next: (response: { success?: boolean; message?: string; queued?: boolean }) => {
           this.sendingCommand = false;
-          this.notificationService.success(response.message || 'Commande envoyée avec succès');
+          if (response.queued) {
+            this.notificationService.success('📥 Commande mise en file d\'attente. Elle sera exécutée à la reconnexion du site.');
+          } else {
+            this.notificationService.success(response.message || 'Commande envoyée avec succès');
+          }
         },
         error: (error) => {
           this.sendingCommand = false;
@@ -1768,12 +1830,20 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   }
 
   rebootSite(): void {
-    if (confirm('⚠️ Êtes-vous sûr de vouloir redémarrer le Raspberry Pi ?')) {
+    const confirmMsg = this.isConnected
+      ? '⚠️ Êtes-vous sûr de vouloir redémarrer le Raspberry Pi ?'
+      : '⚠️ Êtes-vous sûr de vouloir redémarrer le Raspberry Pi ?\n\nLe site est hors ligne. La commande sera mise en file d\'attente et exécutée à la reconnexion.';
+
+    if (confirm(confirmMsg)) {
       this.sendingCommand = true;
       this.sitesService.rebootSite(this.siteId).subscribe({
-        next: (response) => {
+        next: (response: { success?: boolean; message?: string; queued?: boolean }) => {
           this.sendingCommand = false;
-          this.notificationService.success(response.message || 'Commande de redémarrage envoyée');
+          if (response.queued) {
+            this.notificationService.success('📥 Commande de redémarrage mise en file d\'attente. Elle sera exécutée à la reconnexion du site.');
+          } else {
+            this.notificationService.success(response.message || 'Commande de redémarrage envoyée');
+          }
         },
         error: (error) => {
           this.sendingCommand = false;
@@ -1890,7 +1960,11 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   // Remote sync-agent update
   updateSyncAgentRemotely(): void {
-    if (!confirm('Mettre à jour le sync-agent à distance ?\n\nCette opération va envoyer les fichiers mis à jour et redémarrer le service sync-agent sur le boîtier.')) {
+    const confirmMsg = this.isConnected
+      ? 'Mettre à jour le sync-agent à distance ?\n\nCette opération va envoyer les fichiers mis à jour et redémarrer le service sync-agent sur le boîtier.'
+      : 'Mettre à jour le sync-agent à distance ?\n\nLe site est hors ligne. La mise à jour sera mise en file d\'attente et appliquée à la reconnexion.';
+
+    if (!confirm(confirmMsg)) {
       return;
     }
 
@@ -1903,9 +1977,13 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     };
 
     this.sitesService.updateSyncAgent(this.siteId, agentFiles).subscribe({
-      next: (response) => {
+      next: (response: { success?: boolean; message?: string; queued?: boolean }) => {
         this.updatingSyncAgent = false;
-        this.notificationService.success('Mise à jour du sync-agent envoyée ! Le service va redémarrer.');
+        if (response.queued) {
+          this.notificationService.success('📥 Mise à jour mise en file d\'attente. Elle sera appliquée à la reconnexion du site.');
+        } else {
+          this.notificationService.success('Mise à jour du sync-agent envoyée ! Le service va redémarrer.');
+        }
       },
       error: (error) => {
         this.updatingSyncAgent = false;
