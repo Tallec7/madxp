@@ -398,7 +398,7 @@ install_app() {
     print_step "Installation de l'application Neopro..."
 
     # Création du répertoire
-    mkdir -p ${INSTALL_DIR}/{server,webapp,admin,sync-agent,videos,logs,backups}
+    mkdir -p ${INSTALL_DIR}/{server,webapp,admin,sync-agent,videos,logs,backups,scripts}
 
     # Copie du serveur Node.js
     cp -r ./server/* ${INSTALL_DIR}/server/
@@ -425,6 +425,15 @@ install_app() {
         print_success "Sync-agent installé"
     else
         print_warning "Dossier sync-agent non trouvé - sync-agent non installé"
+    fi
+
+    # Copie des scripts de gestion
+    if [ -d "./scripts" ]; then
+        cp -r ./scripts/* ${INSTALL_DIR}/scripts/
+        chmod +x ${INSTALL_DIR}/scripts/*.sh 2>/dev/null || true
+        print_success "Scripts de gestion installés"
+    else
+        print_warning "Dossier scripts non trouvé - scripts de gestion non installés"
     fi
 
     # Note: Le build Angular doit être copié séparément

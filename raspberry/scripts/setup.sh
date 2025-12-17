@@ -139,6 +139,14 @@ download_installation_files() {
     # Utils du sync-agent
     curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/utils/config-merge.js" -o sync-agent/src/utils/config-merge.js 2>/dev/null || true
 
+    print_step "Téléchargement des scripts de gestion..."
+    mkdir -p scripts
+    curl -sSL "$GITHUB_RAW/raspberry/scripts/setup-new-club.sh" -o scripts/setup-new-club.sh
+    curl -sSL "$GITHUB_RAW/raspberry/scripts/backup-club.sh" -o scripts/backup-club.sh 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/scripts/restore-club.sh" -o scripts/restore-club.sh 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/scripts/delete-club.sh" -o scripts/delete-club.sh 2>/dev/null || true
+    chmod +x scripts/*.sh 2>/dev/null || true
+
     print_success "Fichiers téléchargés dans $TEMP_DIR"
 }
 
