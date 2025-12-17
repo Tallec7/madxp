@@ -620,7 +620,7 @@ const uploadPackage = multer({
 async function execCommand(command) {
   const run = async cmd => {
     try {
-      const { stdout, stderr } = await execAsync(cmd);
+      const { stdout, stderr } = await execAsync(cmd, { maxBuffer: 50 * 1024 * 1024 }); // 50MB buffer
       return { success: true, output: stdout, error: stderr };
     } catch (error) {
       return { success: false, error: error.message };
