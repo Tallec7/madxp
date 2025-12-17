@@ -53,8 +53,8 @@
             "production": {
               "fileReplacements": [
                 {
-                  "replace": "raspberry/frontend/environments/environment.ts",
-                  "with": "raspberry/frontend/environments/environment.prod.ts"
+                  "replace": "raspberry/src/environments/environment.ts",
+                  "with": "raspberry/src/environments/environment.prod.ts"
                 }
               ],
               "budgets": [
@@ -74,8 +74,8 @@
             "raspberry": {
               "fileReplacements": [
                 {
-                  "replace": "raspberry/frontend/environments/environment.ts",
-                  "with": "raspberry/frontend/environments/environment.raspberry.ts"
+                  "replace": "raspberry/src/environments/environment.ts",
+                  "with": "raspberry/src/environments/environment.raspberry.ts"
                 }
               ],
               "budgets": [
@@ -95,8 +95,8 @@
             "demo": {
               "fileReplacements": [
                 {
-                  "replace": "raspberry/frontend/environments/environment.ts",
-                  "with": "raspberry/frontend/environments/environment.demo.ts"
+                  "replace": "raspberry/src/environments/environment.ts",
+                  "with": "raspberry/src/environments/environment.demo.ts"
                 }
               ],
               "budgets": [
@@ -148,14 +148,14 @@
                 "input": "raspberry/public"
               }
             ],
-            "styles": ["raspberry/frontend/styles.scss"],
+            "styles": ["raspberry/src/styles.scss"],
             "karmaConfig": "raspberry/karma.conf.js"
           }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": ["raspberry/frontend/**/*.ts", "raspberry/frontend/**/*.html"]
+            "lintFilePatterns": ["raspberry/src/**/*.ts", "raspberry/src/**/*.html"]
           }
         }
       }
