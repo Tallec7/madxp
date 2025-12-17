@@ -90,43 +90,54 @@ download_installation_files() {
 
     # URL de base du repository
     GITHUB_RAW="https://raw.githubusercontent.com/Tallec7/neopro/main"
+    GITHUB_API="https://api.github.com/repos/Tallec7/neopro/contents"
 
     # Créer le répertoire temporaire
     TEMP_DIR="/tmp/neopro-install-$$"
     mkdir -p "$TEMP_DIR"
     cd "$TEMP_DIR"
 
-    # Télécharger la structure nécessaire
+    # Télécharger install.sh
     print_step "Téléchargement de install.sh..."
     curl -sSL "$GITHUB_RAW/raspberry/install.sh" -o install.sh
     chmod +x install.sh
 
-    print_step "Téléchargement des configurations..."
-    mkdir -p config/templates
-    curl -sSL "$GITHUB_RAW/raspberry/config/templates/configuration-template.json" -o config/templates/configuration-template.json
+    # Télécharger la structure complète pour install.sh
+    print_step "Téléchargement des configurations systemd..."
+    mkdir -p config/systemd
+    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/hostapd.conf" -o config/systemd/hostapd.conf
+    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/dnsmasq.conf" -o config/systemd/dnsmasq.conf
+    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro.service" -o config/systemd/neopro.service
+    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-app.service" -o config/systemd/neopro-app.service
+    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-admin.service" -o config/systemd/neopro-admin.service
+    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-kiosk.service" -o config/systemd/neopro-kiosk.service 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-sync-agent.service" -o config/systemd/neopro-sync-agent.service 2>/dev/null || true
 
-    print_step "Téléchargement des services systemd..."
-    mkdir -p services
-    curl -sSL "$GITHUB_RAW/raspberry/services/neopro-app.service" -o services/neopro-app.service
-    curl -sSL "$GITHUB_RAW/raspberry/services/neopro-admin.service" -o services/neopro-admin.service
-    curl -sSL "$GITHUB_RAW/raspberry/services/neopro-sync-agent.service" -o services/neopro-sync-agent.service 2>/dev/null || true
+    print_step "Téléchargement du serveur Node.js..."
+    mkdir -p server
+    curl -sSL "$GITHUB_RAW/raspberry/server/package.json" -o server/package.json
+    curl -sSL "$GITHUB_RAW/raspberry/server/server.js" -o server/server.js
 
-    print_step "Téléchargement des configurations nginx..."
-    mkdir -p nginx
-    curl -sSL "$GITHUB_RAW/raspberry/nginx/neopro.conf" -o nginx/neopro.conf
+    print_step "Téléchargement du serveur admin..."
+    mkdir -p admin/public
+    curl -sSL "$GITHUB_RAW/raspberry/admin/package.json" -o admin/package.json
+    curl -sSL "$GITHUB_RAW/raspberry/admin/admin-server.js" -o admin/admin-server.js
+    # Télécharger les fichiers public de l'admin
+    curl -sSL "$GITHUB_RAW/raspberry/admin/public/index.html" -o admin/public/index.html 2>/dev/null || echo "<!DOCTYPE html><html><body><h1>Admin Neopro</h1></body></html>" > admin/public/index.html
 
-    print_step "Téléchargement des configurations réseau..."
-    mkdir -p network
-    curl -sSL "$GITHUB_RAW/raspberry/network/hostapd.conf" -o network/hostapd.conf
-    curl -sSL "$GITHUB_RAW/raspberry/network/dnsmasq.conf" -o network/dnsmasq.conf
-    curl -sSL "$GITHUB_RAW/raspberry/network/interfaces" -o network/interfaces 2>/dev/null || true
-
-    print_step "Téléchargement des outils..."
-    mkdir -p tools
-    curl -sSL "$GITHUB_RAW/raspberry/tools/healthcheck.sh" -o tools/healthcheck.sh
-    curl -sSL "$GITHUB_RAW/raspberry/tools/recovery.sh" -o tools/recovery.sh
-    curl -sSL "$GITHUB_RAW/raspberry/tools/prepare-golden-image.sh" -o tools/prepare-golden-image.sh
-    chmod +x tools/*.sh
+    print_step "Téléchargement du sync-agent..."
+    mkdir -p sync-agent/src/tasks sync-agent/src/utils
+    curl -sSL "$GITHUB_RAW/raspberry/sync-agent/package.json" -o sync-agent/package.json 2>/dev/null || true
+    # Fichiers principaux du sync-agent
+    for file in logger.js metrics.js index.js; do
+        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/$file" -o "sync-agent/src/$file" 2>/dev/null || true
+    done
+    # Tasks du sync-agent
+    for file in expiration-checker.js local-backup.js; do
+        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/tasks/$file" -o "sync-agent/src/tasks/$file" 2>/dev/null || true
+    done
+    # Utils du sync-agent
+    curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/utils/config-merge.js" -o sync-agent/src/utils/config-merge.js 2>/dev/null || true
 
     print_success "Fichiers téléchargés dans $TEMP_DIR"
 }
