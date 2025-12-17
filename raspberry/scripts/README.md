@@ -13,6 +13,7 @@
 
 | Situation | Script | Où l'exécuter |
 |-----------|--------|---------------|
+| **🆕 Installation en ligne** | `curl ... setup.sh` | Sur le Pi (via Internet) |
 | **Copier fichiers vers Pi** | `raspberry/scripts/copy-to-pi.sh` | Sur Mac |
 | **Nouveau Raspberry Pi** | `raspberry/install.sh` | Sur le Pi |
 | **Nouveau club** | `raspberry/scripts/setup-new-club.sh` | Sur Mac |
@@ -27,7 +28,33 @@
 
 ## 🚀 Guide pas à pas
 
-### 1. Installation d'un NOUVEAU Raspberry Pi (première fois)
+### 0. 🆕 Installation en ligne (NOUVEAU - Méthode la plus simple)
+
+**Installation automatique depuis Internet en une seule commande !**
+
+```bash
+# 1. Flasher Raspberry Pi OS Lite avec WiFi/SSH activé
+# 2. Se connecter au Pi
+ssh pi@raspberrypi.local
+
+# 3. Lancer l'installation en une ligne
+curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
+
+# Alternative (URL longue) :
+curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup.sh | sudo bash -s CLUB_NAME PASSWORD
+```
+
+**Avantages :**
+- ✅ Aucun fichier à copier manuellement
+- ✅ Toujours la dernière version depuis GitHub
+- ✅ 100% gratuit (hébergé sur GitHub Pages)
+- ✅ Fonctionne avec n'importe quelle carte SD ≥16GB
+
+**Documentation complète :** [../../docs/ONLINE_INSTALLATION.md](../../docs/ONLINE_INSTALLATION.md)
+
+---
+
+### 1. Installation d'un NOUVEAU Raspberry Pi (méthode manuelle)
 
 #### Étape 0 : Copier les fichiers vers le Pi (depuis Mac)
 

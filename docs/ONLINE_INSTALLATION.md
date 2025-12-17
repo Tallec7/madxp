@@ -21,45 +21,52 @@ Au lieu de créer une image golden de 58GB, on héberge un script d'installation
 
 ---
 
-## 📋 Configuration requise (une seule fois)
+## 📋 Deux options d'hébergement (100% gratuites)
 
-### 1. Activer GitHub Pages sur votre repository
+### Option 1 : GitHub Pages (URL courte) ✅ **CONFIGURÉ**
 
-**Via l'interface GitHub :**
+**Avantages :**
+- ✅ URL plus courte et professionnelle
+- ✅ Page web d'instructions incluse
+- ✅ **100% gratuit** (même pour repos publics)
+
+**Configuration (déjà fait) :**
 
 1. Allez sur votre repository : https://github.com/Tallec7/neopro
-2. Cliquez sur **Settings** (⚙️)
-3. Dans le menu latéral, cliquez sur **Pages**
-4. Sous "Build and deployment" :
-   - **Source** : GitHub Actions
-   - Cliquez sur **Save**
+2. Settings → Pages → Source : **GitHub Actions**
+3. C'est tout ! Quand vous sélectionnez "GitHub Actions", c'est automatiquement activé
 
-C'est tout ! GitHub Actions va automatiquement déployer vos scripts.
+**Vérifier que ça fonctionne :**
+- Onglet "Actions" → Workflow "Publish Installation Scripts to GitHub Pages" doit être ✓
+- Visitez : https://tallec7.github.io/neopro/install/
 
-### 2. Vérifier que le workflow fonctionne
-
-Après avoir activé GitHub Pages :
-
-1. Pushez les nouveaux fichiers (setup.sh et workflow) sur la branche `main`
-2. Allez dans l'onglet **Actions** de votre repository
-3. Vous devriez voir le workflow "Publish Installation Scripts to GitHub Pages"
-4. Attendez qu'il se termine (status vert ✓)
-
-### 3. Tester l'URL
-
-Une fois le workflow terminé, visitez :
-
-```
-https://tallec7.github.io/neopro/install/
+**URL d'installation :**
+```bash
+curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
 ```
 
-Vous devriez voir une page web avec les instructions d'installation.
+---
 
-Le script est accessible à :
+### Option 2 : Raw GitHub (aucune configuration)
 
+**Avantages :**
+- ✅ Aucune configuration nécessaire
+- ✅ Fonctionne immédiatement dès que c'est sur `main`
+- ✅ **100% gratuit** aussi
+
+**Inconvénient :**
+- URL plus longue
+
+**URL d'installation :**
+```bash
+curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup.sh | sudo bash -s CLUB_NAME PASSWORD
 ```
-https://tallec7.github.io/neopro/install/setup.sh
-```
+
+---
+
+### 💡 Laquelle choisir ?
+
+Les deux fonctionnent parfaitement et sont gratuites. Utilisez **Option 1** (GitHub Pages) car l'URL est plus courte et vous l'avez déjà configurée.
 
 ---
 
@@ -79,6 +86,8 @@ https://tallec7.github.io/neopro/install/setup.sh
    ```
 
 3. **Lancer l'installation en une commande :**
+
+   **Option recommandée (GitHub Pages - URL courte) :**
    ```bash
    curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
    ```
@@ -90,6 +99,11 @@ https://tallec7.github.io/neopro/install/setup.sh
 
    # Pour une installation master
    curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s MASTER MasterPass
+   ```
+
+   **Alternative (Raw GitHub - URL longue) :**
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup.sh | sudo bash -s CLUB_NAME PASSWORD
    ```
 
 4. **Attendre 15-20 minutes**
@@ -169,14 +183,16 @@ Quand vous modifiez les scripts d'installation :
 
 3. **Les prochaines installations utiliseront automatiquement la nouvelle version**
 
-### Tester localement avant de pusher
+### Tester une branche avant de merger sur main
 
 ```bash
-# Sur le Pi
+# Sur le Pi - tester depuis votre branche de développement
 curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/VOTRE_BRANCHE/raspberry/scripts/setup.sh | sudo bash -s TEST TestPass123
 ```
 
-Remplacez `VOTRE_BRANCHE` par votre branche de test.
+Remplacez `VOTRE_BRANCHE` par votre branche de test (ex: `claude/feature-xyz`).
+
+**Note :** GitHub Pages déploie uniquement depuis `main`, donc pour tester une branche, utilisez toujours l'URL `raw.githubusercontent.com`.
 
 ---
 
@@ -195,6 +211,20 @@ Oui, car :
 - Ne modifiez jamais l'URL du script après distribution
 - Gardez votre repository GitHub à jour
 - Vérifiez les logs GitHub Actions après chaque déploiement
+
+---
+
+## 💰 Coût : 0€ (Gratuit)
+
+**GitHub Pages est 100% gratuit pour les repositories publics.**
+
+Limites (largement suffisantes pour votre usage) :
+- ✅ Taille du site : 1GB max (votre script fait ~5KB)
+- ✅ Fichiers : pas de fichiers >100MB (votre script fait 5KB)
+- ✅ Bande passante : 100GB/mois (largement suffisant)
+- ✅ Builds : 10 par heure (vous pushez rarement)
+
+**Aucune carte bancaire requise, aucun abonnement, aucun frais cachés.**
 
 ---
 

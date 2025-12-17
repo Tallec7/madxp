@@ -6,12 +6,19 @@
 # Ce script télécharge et installe automatiquement Neopro sur un Raspberry Pi
 # depuis une installation Raspberry Pi OS Lite fraîche.
 #
-# Usage:
+# Usage (deux options - les deux sont gratuites) :
+#
+#   Option 1 - GitHub Pages (URL courte, recommandé) :
 #   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
+#
+#   Option 2 - Raw GitHub (aucune configuration) :
+#   curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup.sh | sudo bash -s CLUB_NAME PASSWORD
 #
 # Exemples:
 #   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123
 #   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s MASTER MasterPass
+#
+# Documentation complète : docs/ONLINE_INSTALLATION.md
 ################################################################################
 
 set -e
@@ -56,11 +63,15 @@ check_root() {
 
 check_parameters() {
     if [ -z "$CLUB_NAME" ] || [ -z "$WIFI_PASSWORD" ]; then
-        print_error "Usage: curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD"
+        print_error "Usage:"
+        echo "  curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD"
         echo ""
         echo "Exemples:"
         echo "  curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123"
         echo "  curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s MASTER MasterPass"
+        echo ""
+        echo "Alternative (URL longue):"
+        echo "  curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup.sh | sudo bash -s CLUB_NAME PASSWORD"
         exit 1
     fi
 

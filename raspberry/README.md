@@ -4,6 +4,7 @@
 
 | Action | Commande | Où |
 |--------|----------|-----|
+| **Nouveau boîtier (en ligne)** 🆕 | `curl -sSL https://tallec7.github.io/neopro/install/setup.sh \| sudo bash -s CLUB PASS` | Pi |
 | **Nouveau boîtier (avec image golden)** | Flash + `./first-boot-setup.sh` | Pi |
 | **Nouveau boîtier (sans image)** | `./raspberry/scripts/copy-to-pi.sh` + `install.sh` | Mac → Pi |
 | **Nouveau club** | `./raspberry/scripts/setup-new-club.sh` | Mac |
@@ -98,7 +99,35 @@ raspberry/
 
 ## 🚀 Guide rapide
 
-### Nouveau boîtier avec Image Golden (RECOMMANDÉ - 10 min)
+### Installation en ligne (NOUVEAU - 20 min, 0 configuration)
+
+**Installation automatique depuis Internet en une seule commande !**
+
+```bash
+# 1. Flasher Raspberry Pi OS Lite avec WiFi/SSH activé
+# 2. Se connecter au Pi et lancer l'installation
+ssh pi@raspberrypi.local
+curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
+
+# Alternative (URL longue) :
+curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup.sh | sudo bash -s CLUB_NAME PASSWORD
+
+# 3. Attendre 15-20 minutes
+# 4. Se connecter au WiFi NEOPRO-CLUB_NAME et copier les fichiers
+```
+
+**Avantages :**
+- ✅ Une seule commande à lancer
+- ✅ Toujours la dernière version
+- ✅ Pas besoin de copier des fichiers manuellement
+- ✅ Fonctionne avec n'importe quelle carte SD ≥16GB
+- ✅ 100% gratuit (hébergé sur GitHub Pages)
+
+**Guide complet : [../docs/ONLINE_INSTALLATION.md](../docs/ONLINE_INSTALLATION.md)**
+
+---
+
+### Nouveau boîtier avec Image Golden (10 min)
 
 ```bash
 # 1. Flasher l'image golden avec Raspberry Pi Imager
@@ -147,6 +176,7 @@ sudo ./tools/clone-sd-card.sh neopro-golden-v1.0
 
 | Document | Description |
 |----------|-------------|
+| [../docs/ONLINE_INSTALLATION.md](../docs/ONLINE_INSTALLATION.md) | **🆕 Installation en ligne** (curl depuis Internet) |
 | [../docs/GOLDEN_IMAGE.md](../docs/GOLDEN_IMAGE.md) | **Guide Image Golden** (création + utilisation) |
 | [../docs/INSTALLATION_COMPLETE.md](../docs/INSTALLATION_COMPLETE.md) | Installation complète depuis zéro |
 | [scripts/README.md](scripts/README.md) | Guide des scripts de déploiement |
