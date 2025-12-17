@@ -589,6 +589,29 @@ const upload = multer({
   }
 });
 
+// Uploader pour les packages de mise à jour (.tar.gz)
+const uploadPackage = multer({
+  storage: multer.diskStorage({
+    destination: '/tmp',
+    filename: (req, file, cb) => {
+      cb(null, `neopro-update-${Date.now()}.tar.gz`);
+    }
+  }),
+  limits: {
+    fileSize: 500 * 1024 * 1024 // 500MB max
+  },
+  fileFilter: (req, file, cb) => {
+    // Accepter les archives tar.gz
+    const allowedMimes = ['application/gzip', 'application/x-gzip', 'application/x-tar', 'application/x-compressed-tar'];
+    const isTarGz = file.originalname.endsWith('.tar.gz') || file.originalname.endsWith('.tgz');
+    if (allowedMimes.includes(file.mimetype) || isTarGz) {
+      cb(null, true);
+    } else {
+      cb(new Error('Format non supporté. Utilisez un fichier .tar.gz'));
+    }
+  }
+});
+
 /**
  * Utilitaires
  */
@@ -1869,7 +1892,7 @@ app.post('/api/system/shutdown', async (req, res) => {
 });
 
 // API: Mise à jour de l'application
-app.post('/api/update', upload.single('package'), async (req, res) => {
+app.post('/api/update', uploadPackage.single('package'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Aucun fichier fourni' });
