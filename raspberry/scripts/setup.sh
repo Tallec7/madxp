@@ -147,6 +147,21 @@ download_installation_files() {
     curl -sSL "$GITHUB_RAW/raspberry/scripts/delete-club.sh" -o scripts/delete-club.sh 2>/dev/null || true
     chmod +x scripts/*.sh 2>/dev/null || true
 
+    print_step "Téléchargement de l'application web (build Angular)..."
+    mkdir -p webapp
+    # Télécharger le build depuis la dernière release GitHub
+    LATEST_RELEASE=$(curl -sL https://api.github.com/repos/Tallec7/neopro/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' || echo "")
+    if [ -n "$LATEST_RELEASE" ]; then
+        print_step "Téléchargement de la version $LATEST_RELEASE..."
+        curl -sSL "https://github.com/Tallec7/neopro/releases/download/$LATEST_RELEASE/neopro-webapp.tar.gz" -o webapp.tar.gz 2>/dev/null && \
+        tar -xzf webapp.tar.gz -C webapp && \
+        rm webapp.tar.gz && \
+        print_success "Application web téléchargée" || \
+        print_warning "Impossible de télécharger l'application web - elle devra être copiée manuellement"
+    else
+        print_warning "Aucune release trouvée - l'application web devra être copiée manuellement"
+    fi
+
     print_success "Fichiers téléchargés dans $TEMP_DIR"
 }
 

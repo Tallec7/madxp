@@ -1,0 +1,50 @@
+name: Build and Release Webapp
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          cd raspberry
+          npm ci
+
+      - name: Build Angular app
+        run: |
+          cd raspberry
+          npm run build
+
+      - name: Create webapp archive
+        run: |
+          cd raspberry/dist
+          tar -czf ../../neopro-webapp.tar.gz .
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: neopro-webapp.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload as artifact (for manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: neopro-webapp
+          path: neopro-webapp.tar.gz
