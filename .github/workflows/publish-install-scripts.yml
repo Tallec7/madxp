@@ -1,0 +1,164 @@
+name: Publish Installation Scripts to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'raspberry/scripts/setup.sh'
+      - 'raspberry/install.sh'
+      - 'raspberry/config/**'
+      - 'raspberry/services/**'
+      - 'raspberry/nginx/**'
+      - 'raspberry/network/**'
+      - 'raspberry/tools/**'
+      - '.github/workflows/publish-install-scripts.yml'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Create install directory
+        run: |
+          mkdir -p _site/install
+          cp raspberry/scripts/setup.sh _site/install/setup.sh
+          chmod +x _site/install/setup.sh
+
+      - name: Create index page
+        run: |
+          cat > _site/install/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="fr">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Installation Neopro</title>
+              <style>
+                  body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                      max-width: 800px;
+                      margin: 40px auto;
+                      padding: 20px;
+                      line-height: 1.6;
+                      color: #333;
+                  }
+                  h1 { color: #0066cc; }
+                  pre {
+                      background: #f4f4f4;
+                      padding: 15px;
+                      border-radius: 5px;
+                      overflow-x: auto;
+                  }
+                  code {
+                      background: #f4f4f4;
+                      padding: 2px 6px;
+                      border-radius: 3px;
+                  }
+                  .warning {
+                      background: #fff3cd;
+                      border-left: 4px solid #ffc107;
+                      padding: 10px;
+                      margin: 20px 0;
+                  }
+                  .success {
+                      background: #d4edda;
+                      border-left: 4px solid #28a745;
+                      padding: 10px;
+                      margin: 20px 0;
+                  }
+              </style>
+          </head>
+          <body>
+              <h1>🎯 Installation Neopro</h1>
+
+              <p>Script d'installation automatique pour Raspberry Pi</p>
+
+              <h2>📋 Prérequis</h2>
+              <ul>
+                  <li>Raspberry Pi avec Raspberry Pi OS Lite installé</li>
+                  <li>Connexion Internet sur le Pi</li>
+                  <li>Accès SSH au Pi</li>
+              </ul>
+
+              <h2>🚀 Installation en une commande</h2>
+
+              <p>Connectez-vous au Pi via SSH et exécutez :</p>
+
+              <pre>curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD</pre>
+
+              <h3>Exemples :</h3>
+
+              <pre>curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123</pre>
+
+              <pre>curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s MASTER MasterPass</pre>
+
+              <div class="warning">
+                  <strong>⚠️ Important :</strong>
+                  <ul>
+                      <li>Le mot de passe WiFi doit faire au moins 8 caractères</li>
+                      <li>Le nom du club sera en majuscules (ex: NANTES, RENNES)</li>
+                      <li>Le WiFi sera : NEOPRO-[CLUB_NAME]</li>
+                  </ul>
+              </div>
+
+              <h2>📦 Que fait le script ?</h2>
+              <ol>
+                  <li>Télécharge tous les fichiers d'installation depuis GitHub</li>
+                  <li>Installe les dépendances (Node.js, nginx, hostapd, etc.)</li>
+                  <li>Configure le WiFi hotspot</li>
+                  <li>Configure les services systemd</li>
+                  <li>Configure nginx comme reverse proxy</li>
+                  <li>Configure le hostname (neopro.local)</li>
+              </ol>
+
+              <h2>⏱️ Durée</h2>
+              <p>L'installation complète prend environ <strong>15-20 minutes</strong></p>
+
+              <div class="success">
+                  <strong>✓ Après installation :</strong>
+                  <ul>
+                      <li>WiFi : NEOPRO-[VOTRE_CLUB]</li>
+                      <li>Application : <a href="http://neopro.local">http://neopro.local</a></li>
+                      <li>Admin : <a href="http://neopro.local:8080">http://neopro.local:8080</a></li>
+                  </ul>
+              </div>
+
+              <h2>🔗 Ressources</h2>
+              <ul>
+                  <li><a href="https://github.com/Tallec7/neopro">Repository GitHub</a></li>
+                  <li><a href="https://github.com/Tallec7/neopro/blob/main/raspberry/README.md">Documentation complète</a></li>
+              </ul>
+
+              <hr>
+              <p><small>Version 1.0.0 - Décembre 2024</small></p>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
