@@ -165,9 +165,11 @@ sudo ./tools/clone-sd-card.sh neopro-golden-v1.0
 | neopro-app | 3000 | Serveur Socket.IO |
 | neopro-admin | 8080 | Interface admin |
 | neopro-sync-agent | - | Agent synchronisation central |
-| neopro-kiosk | - | Mode kiosk Chromium |
+| neopro-kiosk | - | Mode kiosk Chromium (détection automatique du binaire) |
 | nginx | 80 | Serveur web (reverse proxy) |
 | hostapd | - | Point d'accès WiFi |
+
+> **Note :** Le service `neopro-kiosk` détecte automatiquement le chemin de Chromium (`/usr/bin/chromium` ou `/usr/bin/chromium-browser`) lors de l'installation via `install.sh`.
 
 ### Commandes utiles
 ```bash
@@ -191,4 +193,4 @@ sudo systemctl restart neopro-app
 
 ---
 
-**Dernière mise à jour :** 7 décembre 2025
+**Dernière mise à jour :** 16 décembre 2025

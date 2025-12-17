@@ -284,11 +284,15 @@ sudo systemctl restart nginx
 
 ### Service neopro-kiosk (mode TV)
 
-Le mode kiosque utilise Chromium pour afficher automatiquement `/tv`. Sur Raspberry Pi OS Trixie et les images Golden récentes, l’exécutable est `chromium` (et non `chromium-browser`).
+Le mode kiosque utilise Chromium pour afficher automatiquement `/tv`. Le chemin de l'exécutable varie selon la version de Raspberry Pi OS :
+- **Raspberry Pi OS Bookworm et récent** : `/usr/bin/chromium`
+- **Raspberry Pi OS Bullseye et ancien** : `/usr/bin/chromium-browser`
+
+> **Note :** Depuis décembre 2025, le script `install.sh` détecte automatiquement le bon chemin lors de l'installation.
 
 #### Symptômes
-- L’écran reste noir ou n’affiche pas `/tv` après le boot.
-- `journalctl -u neopro-kiosk` affiche `No such file or directory` pour `/usr/bin/chromium-browser`.
+- L'écran reste noir ou n'affiche pas `/tv` après le boot
+- `journalctl -u neopro-kiosk` affiche `No such file or directory` pour le binaire Chromium
 
 #### Diagnostic
 
@@ -296,35 +300,52 @@ Le mode kiosque utilise Chromium pour afficher automatiquement `/tv`. Sur Raspbe
 # Statut du service
 sudo systemctl status neopro-kiosk
 
-# Chercher le binaire Chromium disponible
-command -v chromium
-command -v chromium-browser
+# Voir les logs d'erreur
+journalctl -u neopro-kiosk -n 20
+
+# Chercher quel binaire Chromium est disponible
+which chromium chromium-browser 2>/dev/null
+
+# Voir quel chemin est configuré dans le service
+grep ExecStart /etc/systemd/system/neopro-kiosk.service
 ```
 
 #### Solutions
 
-1. Si `command -v chromium` renvoie un chemin, vérifie que `neopro-kiosk.service` pointe vers `/usr/bin/chromium` :
+**Solution rapide (correction manuelle) :**
 
 ```bash
-sudo grep ExecStart /etc/systemd/system/neopro-kiosk.service
-# ou
-cat /etc/systemd/system/neopro-kiosk.service | head -n 25
-```
+# Si seul /usr/bin/chromium existe
+sudo sed -i 's|/usr/bin/chromium-browser|/usr/bin/chromium|' /etc/systemd/system/neopro-kiosk.service
 
-2. Si la ligne pointe encore vers `chromium-browser` :  
-   - Modifie `/etc/systemd/system/neopro-kiosk.service` (ou `raspberry/config/systemd/neopro-kiosk.service` si tu rebuild l’image golden) en remplaçant `/usr/bin/chromium-browser` par `/usr/bin/chromium`.
-   - Recharge systemd et redémarre :
+# Si seul /usr/bin/chromium-browser existe
+sudo sed -i 's|/usr/bin/chromium |/usr/bin/chromium-browser |' /etc/systemd/system/neopro-kiosk.service
 
-```bash
+# Recharger et redémarrer
 sudo systemctl daemon-reload
 sudo systemctl restart neopro-kiosk
 ```
 
-3. Si `command -v chromium` ne renvoie rien :
-   - Installe Chromium `sudo apt install chromium`
-   - Vérifie à nouveau que le chemin existe
+**Solution permanente (réinstallation) :**
 
-4. Pour que la Golden Image et les futures mises à jour utilisent le bon binaire, assure-toi que ton dépôt synchronise `raspberry/config/systemd/neopro-kiosk.service` et que les scripts de déploiement copient cette version avant `systemctl daemon-reload` sur le Pi.
+Le script `install.sh` détecte maintenant automatiquement le bon chemin. Pour en bénéficier :
+
+```bash
+# Depuis votre Mac, redéployer les fichiers système
+./raspberry/scripts/deploy-remote.sh pi@neopro.local
+
+# Ou sur le Pi, relancer la configuration des services
+cd ~/raspberry
+sudo ./install.sh CLUB_NAME WIFI_PASSWORD
+```
+
+**Si Chromium n'est pas installé :**
+
+```bash
+sudo apt update
+sudo apt install chromium
+# Puis relancer l'installation ou corriger manuellement
+```
 
 ---
 

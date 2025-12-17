@@ -71,6 +71,27 @@ Le service se lance **10 secondes** après le boot pour laisser le temps:
 - X11 doit être configuré (`DISPLAY=:0`)
 - User `pi` doit avoir accès au display
 
+### Détection automatique du chemin Chromium
+
+Le chemin de Chromium varie selon la version de Raspberry Pi OS :
+- **Bookworm et récent** : `/usr/bin/chromium`
+- **Bullseye et ancien** : `/usr/bin/chromium-browser`
+
+Le script `install.sh` détecte automatiquement le bon chemin lors de l'installation et met à jour le fichier de service en conséquence.
+
+**Vérifier le chemin configuré :**
+```bash
+grep ExecStart /etc/systemd/system/neopro-kiosk.service
+```
+
+**Corriger manuellement si nécessaire :**
+```bash
+# Si erreur "chromium-browser not found" et que seul chromium existe
+sudo sed -i 's|/usr/bin/chromium-browser|/usr/bin/chromium|' /etc/systemd/system/neopro-kiosk.service
+sudo systemctl daemon-reload
+sudo systemctl restart neopro-kiosk
+```
+
 ### Troubleshooting
 
 #### Écran noir au démarrage
@@ -82,6 +103,18 @@ echo $DISPLAY
 
 # Vérifier les permissions
 xhost +local:
+```
+
+#### Chromium introuvable (No such file or directory)
+
+```bash
+# Voir quel binaire est disponible
+which chromium chromium-browser
+
+# Vérifier les logs
+journalctl -u neopro-kiosk -n 20
+
+# Corriger le chemin (voir section "Détection automatique" ci-dessus)
 ```
 
 #### Pas de son
@@ -198,5 +231,5 @@ chromium \
 ---
 
 **Dernière mise à jour:** 16 décembre 2025
-**Version:** 1.0
+**Version:** 1.1 - Ajout détection automatique Chromium
 **Auteur:** Claude Code
