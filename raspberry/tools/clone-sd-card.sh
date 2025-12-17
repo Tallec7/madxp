@@ -114,7 +114,8 @@ select_device() {
         DEVICE_SIZE=$(lsblk -b -d -o SIZE "$DEVICE" | tail -1)
         DEVICE_SIZE_GB=$((DEVICE_SIZE / 1024 / 1024 / 1024))
     elif [ "$OS" == "mac" ]; then
-        DEVICE_SIZE=$(diskutil info "$DEVICE" | grep "Total Size" | awk '{print $3}')
+        # Extraire la taille en bytes (5ème champ entre parenthèses)
+        DEVICE_SIZE=$(diskutil info "$DEVICE" | grep "Total Size" | sed 's/.*(\([0-9]*\) Bytes).*/\1/')
         DEVICE_SIZE_GB=$((DEVICE_SIZE / 1024 / 1024 / 1024))
     fi
 

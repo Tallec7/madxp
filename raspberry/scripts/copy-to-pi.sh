@@ -76,7 +76,6 @@ print_step "Copie des fichiers d'installation..."
 if command -v rsync &> /dev/null; then
     rsync -avz --progress \
         --exclude='scripts/' \
-        --exclude='tools/' \
         --exclude='monitoring/' \
         --exclude='deploy/' \
         --exclude='backups/' \
@@ -99,7 +98,6 @@ else
     # Créer l'archive en excluant les fichiers inutiles
     tar -czf "$TEMP_TAR" \
         --exclude='scripts' \
-        --exclude='tools' \
         --exclude='monitoring' \
         --exclude='deploy' \
         --exclude='backups' \
@@ -151,7 +149,9 @@ echo "  sudo ./install.sh NOM_CLUB MotDePasseWiFi"
 echo ""
 echo -e "${BLUE}Fichiers exclus (non nécessaires sur le Pi) :${NC}"
 echo "  - scripts/     (scripts Mac uniquement)"
-echo "  - tools/       (outils SD card Mac)"
 echo "  - monitoring/  (non utilisé actuellement)"
 echo "  - .DS_Store    (fichiers macOS)"
+echo ""
+echo -e "${BLUE}Fichiers copiés nécessaires :${NC}"
+echo "  - tools/       (prepare-golden-image.sh, healthcheck.sh, recovery.sh)"
 echo ""
