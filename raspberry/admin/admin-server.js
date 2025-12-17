@@ -1908,7 +1908,7 @@ app.post('/api/update', uploadPackage.single('package'), async (req, res) => {
     };
 
     // S'assurer que le dossier backups existe
-    await ensureDir(`${NEOPRO_DIR}/backups`);
+    await ensureDirectory(`${NEOPRO_DIR}/backups`);
 
     // Créer un backup
     const backupName = `backup-${Date.now()}.tar.gz`;
@@ -1930,8 +1930,8 @@ app.post('/api/update', uploadPackage.single('package'), async (req, res) => {
     }
 
     // S'assurer que les dossiers cibles existent
-    await ensureDir(`${NEOPRO_DIR}/webapp`);
-    await ensureDir(`${NEOPRO_DIR}/server`);
+    await ensureDirectory(`${NEOPRO_DIR}/webapp`);
+    await ensureDirectory(`${NEOPRO_DIR}/server`);
 
     // Copier les nouveaux fichiers
     await runCommand(`cp -r ${extractDir}/deploy/webapp/* ${NEOPRO_DIR}/webapp/`, 'Échec de la copie des fichiers webapp');
