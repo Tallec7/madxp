@@ -1,0 +1,9 @@
+# Force LF line endings for shell scripts (no CRLF on Windows)
+*.sh text eol=lf
+
+# Force LF for other script files
+*.bash text eol=lf
+*.zsh text eol=lf
+
+# Default behavior for all text files
+* text=auto
