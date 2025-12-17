@@ -20,19 +20,15 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: |
-          cd raspberry
-          npm install
+        run: npm install
 
       - name: Build Angular app
-        run: |
-          cd raspberry
-          npm run build
+        run: npm run build
 
       - name: Create webapp archive
         run: |
-          cd raspberry/dist
-          tar -czf ../../neopro-webapp.tar.gz .
+          cd dist/raspberry/browser
+          tar -czf ../../../neopro-webapp.tar.gz .
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
