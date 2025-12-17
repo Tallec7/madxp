@@ -26,7 +26,60 @@ TOTAL: ~45 min                 TOTAL: ~10 min
 - Un lecteur de carte SD pour Mac
 - Connexion Internet (pour l'installation initiale)
 
-### Étape 1 : Préparer le Pi de référence
+### 🚀 Méthode AUTOMATISÉE (Recommandée)
+
+Cette méthode utilise un script qui automatise tout le processus depuis votre Mac.
+
+#### Étape 1 : Préparer le Pi de référence
+
+```bash
+# 1. Flasher Raspberry Pi OS Lite avec Raspberry Pi Imager
+#    - Activer SSH
+#    - Configurer WiFi temporaire
+#    - User: pi
+
+# 2. Copier les fichiers d'installation (depuis Mac)
+./raspberry/scripts/copy-to-pi.sh raspberrypi.local
+
+# 3. Se connecter et installer
+ssh pi@raspberrypi.local
+cd raspberry
+sudo ./install.sh MASTER MasterPass123
+# Durée: 20-30 minutes
+
+# 4. Vérifier l'installation
+./tools/healthcheck.sh
+```
+
+#### Étape 2 : Lancer le script automatisé
+
+```bash
+# Depuis votre Mac (à la racine du projet)
+./raspberry/tools/create-golden-from-mac.sh raspberrypi.local neopro-golden-v1.0
+```
+
+**Le script va automatiquement :**
+1. ✅ Se connecter au Pi via SSH
+2. ✅ Exécuter `prepare-golden-image.sh` sur le Pi
+3. ✅ Éteindre le Pi
+4. ⏸️ Attendre que vous retiriez la carte SD et l'insériez dans le Mac
+5. ✅ Lancer `clone-sd-card.sh` pour créer l'image
+
+**Résultat :**
+```
+~/neopro-images/
+├── neopro-golden-v1.0.img.gz     # Image compressée (~2-4 GB)
+├── neopro-golden-v1.0.sha256     # Checksum
+└── neopro-golden-v1.0-README.txt # Instructions
+```
+
+---
+
+### 🔧 Méthode MANUELLE (Alternative)
+
+Si vous préférez contrôler chaque étape, vous pouvez suivre le processus manuel.
+
+#### Étape 1 : Préparer le Pi de référence
 
 ```bash
 # 1. Flasher Raspberry Pi OS Lite avec Raspberry Pi Imager

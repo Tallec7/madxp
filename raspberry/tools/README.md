@@ -6,14 +6,45 @@ Suite d'outils pour le déploiement, la maintenance et le diagnostic des systèm
 
 ## 📦 Outils disponibles
 
-### `prepare-golden-image.sh` (RECOMMANDÉ)
+### `create-golden-from-mac.sh` (🚀 RECOMMANDÉ - AUTOMATISÉ)
+**Nouveau !** Script automatisé qui crée une image golden depuis votre Mac.
+
+```bash
+./create-golden-from-mac.sh <pi-host> [nom-image]
+```
+
+**Utilise pour :** Automatiser tout le processus de création d'image golden
+
+**Actions automatiques :**
+1. Se connecte au Pi via SSH
+2. Exécute `prepare-golden-image.sh` sur le Pi
+3. Éteint le Pi
+4. Attend que vous insériez la carte SD dans le Mac
+5. Lance `clone-sd-card.sh` pour créer l'image
+
+**Exemples :**
+```bash
+./create-golden-from-mac.sh raspberrypi.local
+./create-golden-from-mac.sh raspberrypi.local neopro-golden-v1.0
+./create-golden-from-mac.sh 192.168.1.50 neopro-golden-v2.0
+```
+
+**Avantages :**
+- ✅ Process complet en une seule commande
+- ✅ Pas besoin de se connecter manuellement au Pi
+- ✅ Guidage étape par étape
+- ✅ Gestion automatique des erreurs
+
+---
+
+### `prepare-golden-image.sh` (pour utilisation manuelle)
 Prépare un Raspberry Pi installé pour être cloné en "Image Golden".
 
 ```bash
 sudo ./prepare-golden-image.sh
 ```
 
-**Utilise pour :** Créer une image master réutilisable pour tous les clubs
+**Utilise pour :** Créer une image master réutilisable pour tous les clubs (méthode manuelle)
 
 **Actions :**
 - Supprime la configuration club (config, vidéos, logs)
@@ -23,6 +54,8 @@ sudo ./prepare-golden-image.sh
 - Crée `~/first-boot-setup.sh` pour le premier démarrage
 
 ⚠️ **IMPORTANT :** Après exécution, éteindre le Pi (ne PAS redémarrer)
+
+💡 **Astuce :** Utilisez plutôt `create-golden-from-mac.sh` pour automatiser ce processus
 
 ---
 
