@@ -1875,25 +1875,51 @@ app.post('/api/update', upload.single('package'), async (req, res) => {
       return res.status(400).json({ error: 'Aucun fichier fourni' });
     }
 
+    // Helper pour exécuter une commande et vérifier le résultat
+    const runCommand = async (cmd, description) => {
+      const result = await execCommand(cmd);
+      if (!result.success) {
+        throw new Error(`${description}: ${result.error}`);
+      }
+      return result;
+    };
+
+    // S'assurer que le dossier backups existe
+    await ensureDir(`${NEOPRO_DIR}/backups`);
+
     // Créer un backup
     const backupName = `backup-${Date.now()}.tar.gz`;
-    await execCommand(`tar -czf ${NEOPRO_DIR}/backups/${backupName} -C ${NEOPRO_DIR} webapp server`);
+    await runCommand(
+      `tar -czf ${NEOPRO_DIR}/backups/${backupName} -C ${NEOPRO_DIR} webapp server`,
+      'Échec de la création du backup'
+    );
 
     // Extraire le nouveau package
     const extractDir = '/tmp/neopro-update';
-    await execCommand(`rm -rf ${extractDir} && mkdir -p ${extractDir}`);
-    await execCommand(`tar -xzf ${req.file.path} -C ${extractDir}`);
+    await runCommand(`rm -rf ${extractDir} && mkdir -p ${extractDir}`, 'Échec de la préparation du dossier temporaire');
+    await runCommand(`tar -xzf ${req.file.path} -C ${extractDir}`, 'Échec de l\'extraction du package');
+
+    // Vérifier que la structure du package est correcte
+    const checkWebapp = await execCommand(`test -d ${extractDir}/deploy/webapp`);
+    const checkServer = await execCommand(`test -d ${extractDir}/deploy/server`);
+    if (!checkWebapp.success || !checkServer.success) {
+      throw new Error('Structure du package invalide: les dossiers deploy/webapp et deploy/server sont requis');
+    }
+
+    // S'assurer que les dossiers cibles existent
+    await ensureDir(`${NEOPRO_DIR}/webapp`);
+    await ensureDir(`${NEOPRO_DIR}/server`);
 
     // Copier les nouveaux fichiers
-    await execCommand(`cp -r ${extractDir}/deploy/webapp/* ${NEOPRO_DIR}/webapp/`);
-    await execCommand(`cp -r ${extractDir}/deploy/server/* ${NEOPRO_DIR}/server/`);
+    await runCommand(`cp -r ${extractDir}/deploy/webapp/* ${NEOPRO_DIR}/webapp/`, 'Échec de la copie des fichiers webapp');
+    await runCommand(`cp -r ${extractDir}/deploy/server/* ${NEOPRO_DIR}/server/`, 'Échec de la copie des fichiers server');
 
     // Installer les dépendances
-    await execCommand(`cd ${NEOPRO_DIR}/server && npm install --production`);
+    await runCommand(`cd ${NEOPRO_DIR}/server && npm install --production`, 'Échec de l\'installation des dépendances');
 
     // Redémarrer les services
-    await execCommand('sudo systemctl restart neopro-app');
-    await execCommand('sudo systemctl restart nginx');
+    await runCommand('sudo systemctl restart neopro-app', 'Échec du redémarrage de neopro-app');
+    await runCommand('sudo systemctl restart nginx', 'Échec du redémarrage de nginx');
 
     // Nettoyage
     await fs.unlink(req.file.path);
@@ -1905,6 +1931,7 @@ app.post('/api/update', upload.single('package'), async (req, res) => {
       backup: backupName
     });
   } catch (error) {
+    console.error('[UPDATE] Erreur:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
