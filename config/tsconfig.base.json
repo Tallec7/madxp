@@ -1,0 +1,40 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "experimentalDecorators": true,
+    "strictNullChecks": false,
+    "strictPropertyInitialization": false,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "preserve"
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "typeCheckHostBindings": true,
+    "strictTemplates": true
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./raspberry/tsconfig.app.json"
+    },
+    {
+      "path": "./raspberry/tsconfig.spec.json"
+    },
+    {
+      "path": "./central-dashboard/tsconfig.app.json"
+    },
+    {
+      "path": "./central-dashboard/tsconfig.spec.json"
+    }
+  ]
+}

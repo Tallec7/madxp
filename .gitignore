@@ -10,10 +10,18 @@ dist/
 .DS_Store
 package-lock.json
 
+# Environment variables
+.env
+.env.local
+
 # Local development logs
 logs/*.log
 data/
 central-server/tmp/
+
+# Test coverage
+coverage/
+*.lcov
 
 # Configurations avec mots de passe
 raspberry/config/templates/*-configuration.json

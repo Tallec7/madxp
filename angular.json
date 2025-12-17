@@ -11,14 +11,14 @@
         }
       },
       "root": "raspberry",
-      "sourceRoot": "raspberry/frontend",
+      "sourceRoot": "raspberry/src",
       "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular/build:application",
           "options": {
             "outputPath": "dist/raspberry",
-            "browser": "raspberry/frontend/main.ts",
+            "browser": "raspberry/src/main.ts",
             "polyfills": ["zone.js"],
             "tsConfig": "raspberry/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
@@ -29,7 +29,7 @@
               },
               {
                 "glob": "**/*",
-                "input": "raspberry/frontend/assets/demo-configs",
+                "input": "raspberry/src/assets/demo-configs",
                 "output": "demo-configs"
               },
               {
@@ -38,7 +38,7 @@
                 "output": "admin"
               }
             ],
-            "styles": ["raspberry/frontend/styles.scss"],
+            "styles": ["raspberry/src/styles.scss"],
             "allowedCommonJsDependencies": [
               "global/window",
               "global/document",
