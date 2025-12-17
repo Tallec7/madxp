@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd raspberry
-          npm ci
+          npm install
 
       - name: Build Angular app
         run: |
