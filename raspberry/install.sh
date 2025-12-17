@@ -675,6 +675,9 @@ print_summary() {
 ################################################################################
 
 main() {
+    # Détection du mode non-interactif (via variable d'environnement)
+    local NON_INTERACTIVE="${NEOPRO_NON_INTERACTIVE:-false}"
+
     print_header
     check_root
 
@@ -684,11 +687,18 @@ main() {
     echo -e "${YELLOW}Cette installation va configurer ce Raspberry Pi comme système Neopro.${NC}"
     echo -e "${YELLOW}Durée estimée: 15-20 minutes${NC}"
     echo ""
-    read -p "Continuer? (o/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Oo]$ ]]; then
-        print_error "Installation annulée"
-        exit 1
+
+    # Confirmation uniquement en mode interactif
+    if [ "$NON_INTERACTIVE" != "true" ]; then
+        read -p "Continuer? (o/N) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Oo]$ ]]; then
+            print_error "Installation annulée"
+            exit 1
+        fi
+    else
+        echo -e "${GREEN}Mode automatique - démarrage de l'installation...${NC}"
+        echo ""
     fi
 
     check_prerequisites

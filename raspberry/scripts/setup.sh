@@ -139,8 +139,8 @@ run_installation() {
     print_step "Lancement de l'installation Neopro..."
     echo ""
 
-    # Exécuter install.sh avec les paramètres
-    ./install.sh "$CLUB_NAME" "$WIFI_PASSWORD"
+    # Exécuter install.sh en mode non-interactif avec les paramètres
+    NEOPRO_NON_INTERACTIVE=true ./install.sh "$CLUB_NAME" "$WIFI_PASSWORD"
 
     print_success "Installation terminée"
 }
