@@ -1363,9 +1363,9 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   }
 
   loadVideos(): void {
-    this.apiService.get<Video[]>('/videos').subscribe({
-      next: (videos) => {
-        this.videos = videos;
+    this.apiService.get<{ data: Video[] }>('/videos').subscribe({
+      next: (response) => {
+        this.videos = response.data || [];
       },
       error: (error) => {
         console.error('Error loading videos:', error);
@@ -1376,6 +1376,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   loadDeployments(): void {
     this.apiService.get<Deployment[]>('/deployments').subscribe({
       next: (deployments) => {
+        // Deployments endpoint returns array directly (not paginated)
         this.deployments = deployments;
       },
       error: (error) => {

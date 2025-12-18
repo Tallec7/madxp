@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS videos (
   mime_type VARCHAR(100),
   storage_path VARCHAR(500),
   thumbnail_url VARCHAR(500),
+  checksum VARCHAR(64),
   metadata JSONB DEFAULT '{}',
   uploaded_by UUID REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW(),
