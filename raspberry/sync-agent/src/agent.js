@@ -280,6 +280,12 @@ class NeoproSyncAgent {
       attempt: this.reconnectAttempts,
       maxAttempts: this.maxReconnectAttempts,
       error: error.message,
+      errorType: error.type,
+      errorDescription: error.description,
+      errorCode: error.code,
+      url: config.central.url,
+      siteId: config.site.id,
+      apiKeyConfigured: !!config.site.apiKey,
     });
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {

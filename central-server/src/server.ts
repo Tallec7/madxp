@@ -231,7 +231,14 @@ app.use('/api/audit', apiRateLimit, auditRoutes);
 app.use('/api/canary', sensitiveRateLimit, canaryRoutes); // Déploiements canary - sensible
 app.use('/api/admin', sensitiveRateLimit, adminRoutes);
 
-app.use((req: Request, res: Response) => {
+// 404 handler - Skip Socket.IO paths as they are handled by Socket.IO server directly
+app.use((req: Request, res: Response, next: NextFunction) => {
+  // Socket.IO handles its own routes under /socket.io/*
+  // These requests should not reach this middleware
+  if (req.path.startsWith('/socket.io')) {
+    return next();
+  }
+
   res.status(404).json({
     error: 'Route non trouvée',
     path: req.path,
