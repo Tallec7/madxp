@@ -1524,7 +1524,6 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
       this.apiService.upload<Video>('/videos', formData).subscribe({
         next: (video) => {
           this.uploadProgress = 100;
-          this.videos.unshift(video);
           this.uploadResults = [{ name: files[0].name, success: true }];
           this.isUploading = false;
           this.notificationService.success('Vidéo uploadée avec succès !');
