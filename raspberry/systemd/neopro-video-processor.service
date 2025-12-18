@@ -1,0 +1,28 @@
+[Unit]
+Description=Neopro Video Processing Service
+Documentation=https://github.com/kalon-partners/neopro
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/neopro/admin
+Environment="NODE_ENV=production"
+Environment="NEOPRO_DIR=/home/pi/neopro"
+Environment="VIDEO_COMPRESSION=true"
+Environment="VIDEO_THUMBNAILS=true"
+Environment="VIDEO_QUALITY=medium"
+ExecStart=/usr/bin/node /home/pi/neopro/admin/video-processor.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=neopro-video-processor
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

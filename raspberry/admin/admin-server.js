@@ -24,6 +24,16 @@ const os = require('os');
 
 const execAsync = promisify(exec);
 
+// Email notifications
+const emailNotifier = require('./email-notifier');
+
+// Cache manager
+const { getInstance: getCacheManager, NAMESPACES } = require('./cache-manager');
+const cache = getCacheManager({
+  maxSize: 200,
+  defaultTTL: 60000 // 60 secondes
+});
+
 // Configuration
 const app = express();
 const PORT = process.env.ADMIN_PORT || 8080;
@@ -31,18 +41,16 @@ const DEFAULT_NEOPRO_DIR = path.resolve(__dirname, '..');
 const NEOPRO_DIR = process.env.NEOPRO_DIR || DEFAULT_NEOPRO_DIR;
 const VIDEOS_DIR = path.join(NEOPRO_DIR, 'videos');
 const TEMP_UPLOAD_DIR = path.join(NEOPRO_DIR, 'uploads-temp');
+const PROCESSING_DIR = path.join(NEOPRO_DIR, 'videos-processing');
+const THUMBNAILS_DIR = path.join(NEOPRO_DIR, 'thumbnails');
 const LOGS_DIR = path.join(NEOPRO_DIR, 'logs');
+const VIDEO_COMPRESSION_ENABLED = process.env.VIDEO_COMPRESSION !== 'false';
+const VIDEO_THUMBNAILS_ENABLED = process.env.VIDEO_THUMBNAILS !== 'false';
 // Single source of truth: webapp/configuration.json
 const CONFIG_FILE_CANDIDATES = [
   process.env.CONFIG_PATH,
   path.join(NEOPRO_DIR, 'webapp', 'configuration.json'),
 ].filter((value, index, self) => value && self.indexOf(value) === index);
-const VIDEO_MAPPING_CACHE_DURATION = 60 * 1000; // 1 minute cache pour limiter les lectures disque
-let videoMappingCache = null;
-let videoMappingCacheTime = 0;
-const VIDEO_METADATA_CACHE_DURATION = 60 * 1000;
-let videoMetadataCache = null;
-let videoMetadataCacheTime = 0;
 const CONFIG_JSON_INDENT = 4;
 
 console.log(`[admin] NEOPRO_DIR resolved to ${NEOPRO_DIR}`);
@@ -118,19 +126,21 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/videos', express.static(VIDEOS_DIR));
 
 async function resolveConfigurationPath() {
-  for (const candidate of CONFIG_FILE_CANDIDATES) {
-    try {
-      const stats = await fs.stat(candidate);
-      if (stats.isFile()) {
-        console.log('[admin] configuration.json detected at', candidate);
-        return candidate;
+  return cache.getOrSet(NAMESPACES.CONFIG, 'path', async () => {
+    for (const candidate of CONFIG_FILE_CANDIDATES) {
+      try {
+        const stats = await fs.stat(candidate);
+        if (stats.isFile()) {
+          console.log('[admin] configuration.json detected at', candidate);
+          return candidate;
+        }
+      } catch (error) {
+        // Ignorer et tester la suivante
       }
-    } catch (error) {
-      // Ignorer et tester la suivante
     }
-  }
-  console.warn('[admin] Aucun configuration.json trouvé parmi', CONFIG_FILE_CANDIDATES);
-  return null;
+    console.warn('[admin] Aucun configuration.json trouvé parmi', CONFIG_FILE_CANDIDATES);
+    return null;
+  }, 300000); // 5 minutes TTL
 }
 
 function sanitizeSegment(value, fallback) {
@@ -183,79 +193,74 @@ function extractPathSegments(videoPath) {
 }
 
 async function loadVideoPathMapping() {
-  if (videoMappingCache && Date.now() - videoMappingCacheTime < VIDEO_MAPPING_CACHE_DURATION) {
-    return videoMappingCache;
-  }
+  return cache.getOrSet(NAMESPACES.CONFIG, 'videoMapping', async () => {
+    const mapping = { categories: {}, subcategories: {} };
 
-  const mapping = { categories: {}, subcategories: {} };
+    try {
+      const configPath = await resolveConfigurationPath();
+      if (!configPath) {
+        console.warn('[admin] Impossible de localiser configuration.json pour déterminer les dossiers vidéo');
+      } else {
+        const configRaw = await fs.readFile(configPath, 'utf8');
+        const config = JSON.parse(configRaw);
+        const categories = config.categories || [];
 
-  try {
-    const configPath = await resolveConfigurationPath();
-    if (!configPath) {
-      console.warn('[admin] Impossible de localiser configuration.json pour déterminer les dossiers vidéo');
-    } else {
-      const configRaw = await fs.readFile(configPath, 'utf8');
-      const config = JSON.parse(configRaw);
-      const categories = config.categories || [];
+        for (const category of categories) {
+          if (!category || !category.id) continue;
+          const categoryKey = category.id.trim().toLowerCase();
+          let categoryDir = null;
 
-      for (const category of categories) {
-        if (!category || !category.id) continue;
-        const categoryKey = category.id.trim().toLowerCase();
-        let categoryDir = null;
-
-        const directVideos = category.videos || [];
-        for (const video of directVideos) {
-          const parsed = extractPathSegments(video.path);
-          if (parsed?.category) {
-            categoryDir = parsed.category;
-            break;
-          }
-        }
-
-        const subcategories = category.subCategories || [];
-        for (const sub of subcategories) {
-          if (!sub || !sub.id) continue;
-          const subKey = `${categoryKey}::${sub.id.trim().toLowerCase()}`;
-          let subDir = null;
-
-          const subVideos = sub.videos || [];
-          for (const video of subVideos) {
+          const directVideos = category.videos || [];
+          for (const video of directVideos) {
             const parsed = extractPathSegments(video.path);
-            if (parsed?.subcategory) {
-              subDir = parsed.subcategory;
-            }
-            if (parsed?.category && !categoryDir) {
+            if (parsed?.category) {
               categoryDir = parsed.category;
-            }
-            if (subDir && categoryDir) {
               break;
             }
           }
 
-          if (subDir) {
-            mapping.subcategories[subKey] = subDir;
+          const subcategories = category.subCategories || [];
+          for (const sub of subcategories) {
+            if (!sub || !sub.id) continue;
+            const subKey = `${categoryKey}::${sub.id.trim().toLowerCase()}`;
+            let subDir = null;
+
+            const subVideos = sub.videos || [];
+            for (const video of subVideos) {
+              const parsed = extractPathSegments(video.path);
+              if (parsed?.subcategory) {
+                subDir = parsed.subcategory;
+              }
+              if (parsed?.category && !categoryDir) {
+                categoryDir = parsed.category;
+              }
+              if (subDir && categoryDir) {
+                break;
+              }
+            }
+
+            if (subDir) {
+              mapping.subcategories[subKey] = subDir;
+            }
+          }
+
+          if (categoryDir) {
+            mapping.categories[categoryKey] = categoryDir;
           }
         }
-
-        if (categoryDir) {
-          mapping.categories[categoryKey] = categoryDir;
-        }
       }
+    } catch (error) {
+      console.warn('[admin] Erreur lors du chargement de configuration.json:', error.message);
     }
-  } catch (error) {
-    console.warn('[admin] Erreur lors du chargement de configuration.json:', error.message);
-  }
 
-  videoMappingCache = mapping;
-  videoMappingCacheTime = Date.now();
-  return mapping;
+    return mapping;
+  }, 60000); // 60 seconds TTL
 }
 
 function invalidateVideoCaches() {
-  videoMappingCache = null;
-  videoMappingCacheTime = 0;
-  videoMetadataCache = null;
-  videoMetadataCacheTime = 0;
+  cache.clearNamespace(NAMESPACES.CONFIG);
+  cache.clearNamespace(NAMESPACES.VIDEOS);
+  console.log('[admin] Video and config caches invalidated');
 }
 
 /**
@@ -352,74 +357,68 @@ function findInConfig(config, categoryId, subcategoryId = null, videoPath = null
 }
 
 async function getVideoMetadataFromConfig() {
-  if (videoMetadataCache && Date.now() - videoMetadataCacheTime < VIDEO_METADATA_CACHE_DURATION) {
-    return videoMetadataCache;
-  }
+  return cache.getOrSet(NAMESPACES.CONFIG, 'videoMetadata', async () => {
+    const metadata = {};
+    try {
+      const configPath = await resolveConfigurationPath();
+      if (!configPath) {
+        return metadata;
+      }
 
-  const metadata = {};
-  try {
-    const configPath = await resolveConfigurationPath();
-    if (!configPath) {
-      videoMetadataCache = metadata;
-      videoMetadataCacheTime = Date.now();
-      return metadata;
-    }
+      const configRaw = await fs.readFile(configPath, 'utf8');
+      const config = JSON.parse(configRaw);
 
-    const configRaw = await fs.readFile(configPath, 'utf8');
-    const config = JSON.parse(configRaw);
+      for (const category of config.categories || []) {
+        if (!category) continue;
+        const categoryId = (category.id || category.name || '').trim();
 
-    for (const category of config.categories || []) {
-      if (!category) continue;
-      const categoryId = (category.id || category.name || '').trim();
-
-      (category.videos || []).forEach(video => {
-        if (!video?.path) {
-          return;
-        }
-        metadata[video.path.replace(/\\/g, '/')] = {
-          displayName: video.name,
-          categoryId: categoryId,
-          subcategoryId: null
-        };
-      });
-
-      for (const sub of category.subCategories || []) {
-        if (!sub) {
-          continue;
-        }
-        const subId = (sub.id || sub.name || '').trim();
-        (sub.videos || []).forEach(video => {
+        (category.videos || []).forEach(video => {
           if (!video?.path) {
             return;
           }
           metadata[video.path.replace(/\\/g, '/')] = {
             displayName: video.name,
             categoryId: categoryId,
-            subcategoryId: subId || null
+            subcategoryId: null
           };
         });
+
+        for (const sub of category.subCategories || []) {
+          if (!sub) {
+            continue;
+          }
+          const subId = (sub.id || sub.name || '').trim();
+          (sub.videos || []).forEach(video => {
+            if (!video?.path) {
+              return;
+            }
+            metadata[video.path.replace(/\\/g, '/')] = {
+              displayName: video.name,
+              categoryId: categoryId,
+              subcategoryId: subId || null
+            };
+          });
+        }
       }
+
+      // Sponsors (boucle partenaires) - considérer leurs vidéos comme référencées
+      for (const sponsor of config.sponsors || []) {
+        if (!sponsor?.path) {
+          continue;
+        }
+        const normalizedPath = sponsor.path.replace(/\\/g, '/');
+        metadata[normalizedPath] = {
+          displayName: sponsor.name || buildDisplayNameFromFilename(path.basename(normalizedPath)),
+          categoryId: 'sponsor',
+          subcategoryId: null
+        };
+      }
+    } catch (error) {
+      console.warn('[admin] Unable to build configuration video metadata map:', error.message);
     }
 
-    // Sponsors (boucle partenaires) - considérer leurs vidéos comme référencées
-    for (const sponsor of config.sponsors || []) {
-      if (!sponsor?.path) {
-        continue;
-      }
-      const normalizedPath = sponsor.path.replace(/\\/g, '/');
-      metadata[normalizedPath] = {
-        displayName: sponsor.name || buildDisplayNameFromFilename(path.basename(normalizedPath)),
-        categoryId: 'sponsor',
-        subcategoryId: null
-      };
-    }
-  } catch (error) {
-    console.warn('[admin] Unable to build configuration video metadata map:', error.message);
-  }
-
-  videoMetadataCache = metadata;
-  videoMetadataCacheTime = Date.now();
-  return metadata;
+    return metadata;
+  }, 60000); // 60 seconds TTL
 }
 
 async function resolveUploadDirectories(categoryId, subcategoryId) {
@@ -676,6 +675,69 @@ const uploadPackage = multer({
 });
 
 /**
+ * Gestion de la file de traitement vidéo
+ */
+
+async function addToProcessingQueue(jobData) {
+  try {
+    // Créer le dossier de traitement
+    await fs.mkdir(PROCESSING_DIR, { recursive: true });
+
+    // Générer un ID unique pour le job
+    const jobId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const job = {
+      id: jobId,
+      ...jobData,
+      createdAt: new Date().toISOString(),
+      status: 'pending'
+    };
+
+    // Lire la file actuelle
+    let queue = [];
+    const queueFile = path.join(PROCESSING_DIR, 'queue.json');
+    try {
+      const data = await fs.readFile(queueFile, 'utf8');
+      queue = JSON.parse(data).jobs || [];
+    } catch {
+      // File vide ou inexistante
+    }
+
+    // Ajouter le job
+    queue.push(job);
+
+    // Sauvegarder
+    await fs.writeFile(queueFile, JSON.stringify({ jobs: queue, updated: new Date().toISOString() }, null, 2));
+
+    console.log('[admin] Job ajouté à la file de traitement', { jobId, inputPath: jobData.inputPath });
+
+    return jobId;
+  } catch (error) {
+    console.error('[admin] Échec de l\'ajout à la file', error);
+    throw error;
+  }
+}
+
+async function getJobStatus(jobId) {
+  try {
+    const statusFile = path.join(PROCESSING_DIR, `job-${jobId}.json`);
+    const data = await fs.readFile(statusFile, 'utf8');
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
+
+async function getProcessingQueue() {
+  try {
+    const queueFile = path.join(PROCESSING_DIR, 'queue.json');
+    const data = await fs.readFile(queueFile, 'utf8');
+    return JSON.parse(data).jobs || [];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Utilitaires
  */
 
@@ -926,6 +988,9 @@ app.post('/api/videos/upload', upload.single('video'), async (req, res) => {
       return res.status(400).json({ error: 'Aucun fichier fourni' });
     }
 
+    const compress = req.body.compress !== 'false' && VIDEO_COMPRESSION_ENABLED;
+    const generateThumbnail = req.body.thumbnail !== 'false' && VIDEO_THUMBNAILS_ENABLED;
+
     const { category, subcategory } = await resolveUploadDirectories(
       req.body.category,
       req.body.subcategory
@@ -934,44 +999,86 @@ app.post('/api/videos/upload', upload.single('video'), async (req, res) => {
       ? path.join(VIDEOS_DIR, category, subcategory)
       : path.join(VIDEOS_DIR, category);
     await fs.mkdir(targetDir, { recursive: true });
+
     const targetPath = path.join(targetDir, req.file.filename);
-    await fs.rename(req.file.path, targetPath);
-    await updateConfigurationWithVideo(
-      req.body.category,
-      req.body.subcategory,
-      category,
-      subcategory,
-      req.file.filename,
-      req.file.mimetype,
-      req.body.displayName
-    );
 
-    console.log('[admin] Upload directory resolved', {
-      requestedCategory: req.body.category,
-      requestedSubcategory: req.body.subcategory,
-      resolvedCategory: category,
-      resolvedSubcategory: subcategory,
-      targetPath
-    });
+    // Si compression ou miniature demandée, ajouter à la file de traitement
+    if (compress || generateThumbnail) {
+      // Déplacer vers le dossier de traitement
+      const processingPath = path.join(PROCESSING_DIR, req.file.filename);
+      await fs.mkdir(PROCESSING_DIR, { recursive: true });
+      await fs.rename(req.file.path, processingPath);
 
-    console.log('[admin] POST /api/videos/upload', {
-      filename: req.file.filename,
-      tempPath: req.file.path,
-      finalPath: targetPath,
-      size: req.file.size,
-      category: req.body.category,
-      subcategory: req.body.subcategory
-    });
+      // Ajouter le job à la file
+      const jobId = await addToProcessingQueue({
+        inputPath: processingPath,
+        outputPath: targetPath,
+        category: category,
+        subcategory: subcategory,
+        compress: compress,
+        thumbnail: generateThumbnail,
+        displayName: req.body.displayName,
+        categoryId: req.body.category,
+        subcategoryId: req.body.subcategory,
+        mimetype: req.file.mimetype
+      });
 
-    res.json({
-      success: true,
-      message: 'Vidéo uploadée avec succès',
-      file: {
-        name: req.file.filename,
-        size: (req.file.size / 1024 / 1024).toFixed(2) + ' MB',
-        path: targetPath
-      }
-    });
+      console.log('[admin] POST /api/videos/upload - ajouté à la file de traitement', {
+        filename: req.file.filename,
+        jobId: jobId,
+        compress: compress,
+        thumbnail: generateThumbnail,
+        size: req.file.size,
+        category: req.body.category,
+        subcategory: req.body.subcategory
+      });
+
+      res.json({
+        success: true,
+        message: 'Vidéo uploadée avec succès - traitement en cours',
+        file: {
+          name: req.file.filename,
+          size: (req.file.size / 1024 / 1024).toFixed(2) + ' MB',
+          path: targetPath
+        },
+        processing: {
+          jobId: jobId,
+          compress: compress,
+          thumbnail: generateThumbnail,
+          status: 'pending'
+        }
+      });
+    } else {
+      // Pas de traitement, déplacer directement
+      await fs.rename(req.file.path, targetPath);
+      await updateConfigurationWithVideo(
+        req.body.category,
+        req.body.subcategory,
+        category,
+        subcategory,
+        req.file.filename,
+        req.file.mimetype,
+        req.body.displayName
+      );
+
+      console.log('[admin] POST /api/videos/upload - upload direct', {
+        filename: req.file.filename,
+        finalPath: targetPath,
+        size: req.file.size,
+        category: req.body.category,
+        subcategory: req.body.subcategory
+      });
+
+      res.json({
+        success: true,
+        message: 'Vidéo uploadée avec succès',
+        file: {
+          name: req.file.filename,
+          size: (req.file.size / 1024 / 1024).toFixed(2) + ' MB',
+          path: targetPath
+        }
+      });
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -2054,16 +2161,418 @@ app.get('/api/network', async (req, res) => {
   }
 });
 
+// API: Liste des backups disponibles
+app.get('/api/backups', async (req, res) => {
+  try {
+    const backupDir = '/home/pi/neopro-backups';
+
+    // Vérifier si le dossier existe
+    try {
+      await fs.access(backupDir);
+    } catch {
+      return res.json({ backups: [], status: null });
+    }
+
+    // Lire les fichiers de backup
+    const files = await fs.readdir(backupDir);
+    const backupFiles = files.filter(f => f.match(/^backup-\d{8}-\d{6}\.tar\.gz$/));
+
+    const backups = await Promise.all(
+      backupFiles.map(async (filename) => {
+        const filePath = path.join(backupDir, filename);
+        const stats = await fs.stat(filePath);
+        const timestampMatch = filename.match(/backup-(\d{8})-(\d{6})\.tar\.gz/);
+
+        let date = null;
+        if (timestampMatch) {
+          const dateStr = timestampMatch[1];
+          const timeStr = timestampMatch[2];
+          date = `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)} ${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}:${timeStr.slice(4, 6)}`;
+        }
+
+        return {
+          name: filename,
+          size: (stats.size / 1024 / 1024).toFixed(2) + ' MB',
+          sizeBytes: stats.size,
+          date: date,
+          created: stats.mtime,
+          age: Math.floor((Date.now() - stats.mtime.getTime()) / (1000 * 60 * 60 * 24)) + ' jours'
+        };
+      })
+    );
+
+    // Trier par date (plus récent en premier)
+    backups.sort((a, b) => b.created.getTime() - a.created.getTime());
+
+    // Lire le statut du dernier backup
+    let lastBackupStatus = null;
+    try {
+      const statusFile = path.join(backupDir, 'last-backup-status.json');
+      const statusData = await fs.readFile(statusFile, 'utf8');
+      lastBackupStatus = JSON.parse(statusData);
+    } catch {
+      // Pas de statut disponible
+    }
+
+    res.json({
+      backups,
+      status: lastBackupStatus,
+      total: backups.length,
+      totalSize: backups.reduce((sum, b) => sum + b.sizeBytes, 0)
+    });
+  } catch (error) {
+    console.error('[admin] Error listing backups:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Créer un backup manuel
+app.post('/api/backups/create', async (req, res) => {
+  try {
+    const scriptPath = path.join(NEOPRO_DIR, 'scripts', 'auto-backup.sh');
+
+    // Vérifier que le script existe
+    try {
+      await fs.access(scriptPath);
+    } catch {
+      return res.status(500).json({ error: 'Script de backup non trouvé' });
+    }
+
+    // Exécuter le script de backup
+    const result = await execCommand(`sudo bash ${scriptPath}`);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Backup créé avec succès',
+        output: result.output
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Échec de la création du backup',
+        details: result.error
+      });
+    }
+  } catch (error) {
+    console.error('[admin] Error creating backup:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Télécharger un backup
+app.get('/api/backups/download/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+
+    // Valider le nom du fichier (sécurité)
+    if (!filename.match(/^backup-\d{8}-\d{6}\.tar\.gz$/)) {
+      return res.status(400).json({ error: 'Nom de fichier invalide' });
+    }
+
+    const backupPath = path.join('/home/pi/neopro-backups', filename);
+
+    // Vérifier que le fichier existe
+    try {
+      await fs.access(backupPath);
+    } catch {
+      return res.status(404).json({ error: 'Backup non trouvé' });
+    }
+
+    res.download(backupPath, filename);
+  } catch (error) {
+    console.error('[admin] Error downloading backup:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Supprimer un backup
+app.delete('/api/backups/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+
+    // Valider le nom du fichier (sécurité)
+    if (!filename.match(/^backup-\d{8}-\d{6}\.tar\.gz$/)) {
+      return res.status(400).json({ error: 'Nom de fichier invalide' });
+    }
+
+    const backupPath = path.join('/home/pi/neopro-backups', filename);
+
+    // Vérifier que le fichier existe
+    try {
+      await fs.access(backupPath);
+    } catch {
+      return res.status(404).json({ error: 'Backup non trouvé' });
+    }
+
+    // Supprimer le fichier
+    await fs.unlink(backupPath);
+
+    res.json({
+      success: true,
+      message: 'Backup supprimé'
+    });
+  } catch (error) {
+    console.error('[admin] Error deleting backup:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Statut du service de backup automatique
+app.get('/api/backups/auto-status', async (req, res) => {
+  try {
+    // Vérifier si le timer est actif
+    const timerResult = await execCommand('systemctl is-enabled neopro-backup.timer 2>/dev/null');
+    const isEnabled = timerResult.success && timerResult.output.trim() === 'enabled';
+
+    // Vérifier si le timer est en cours d'exécution
+    const activeResult = await execCommand('systemctl is-active neopro-backup.timer 2>/dev/null');
+    const isActive = activeResult.success && activeResult.output.trim() === 'active';
+
+    // Obtenir la prochaine exécution
+    let nextRun = null;
+    if (isActive) {
+      const nextRunResult = await execCommand('systemctl status neopro-backup.timer 2>/dev/null | grep "Trigger:"');
+      if (nextRunResult.success) {
+        const match = nextRunResult.output.match(/Trigger:\s*(.+)/);
+        if (match) {
+          nextRun = match[1].trim();
+        }
+      }
+    }
+
+    // Obtenir les logs récents
+    const logsResult = await execCommand('journalctl -u neopro-backup.service -n 20 --no-pager 2>/dev/null');
+    const logs = logsResult.success ? logsResult.output : null;
+
+    res.json({
+      enabled: isEnabled,
+      active: isActive,
+      nextRun: nextRun,
+      logs: logs
+    });
+  } catch (error) {
+    console.error('[admin] Error getting backup status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Activer/Désactiver le backup automatique
+app.post('/api/backups/auto-toggle', async (req, res) => {
+  try {
+    const { enable } = req.body;
+
+    if (enable === undefined) {
+      return res.status(400).json({ error: 'Paramètre "enable" requis' });
+    }
+
+    const command = enable
+      ? 'sudo systemctl enable --now neopro-backup.timer'
+      : 'sudo systemctl disable --now neopro-backup.timer';
+
+    const result = await execCommand(command);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: enable ? 'Backup automatique activé' : 'Backup automatique désactivé',
+        enabled: enable
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('[admin] Error toggling auto-backup:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Statut d'un job de traitement vidéo
+app.get('/api/videos/processing/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const status = await getJobStatus(jobId);
+
+    if (!status) {
+      return res.status(404).json({ error: 'Job non trouvé' });
+    }
+
+    res.json(status);
+  } catch (error) {
+    console.error('[admin] Error getting job status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: File d'attente de traitement
+app.get('/api/videos/processing', async (req, res) => {
+  try {
+    const queue = await getProcessingQueue();
+    res.json({ queue, total: queue.length });
+  } catch (error) {
+    console.error('[admin] Error getting processing queue:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Configuration du traitement vidéo
+app.get('/api/videos/processing-config', async (req, res) => {
+  try {
+    res.json({
+      compressionEnabled: VIDEO_COMPRESSION_ENABLED,
+      thumbnailsEnabled: VIDEO_THUMBNAILS_ENABLED,
+      quality: process.env.VIDEO_QUALITY || 'medium'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Configuration des notifications email
+app.get('/api/email/config', async (req, res) => {
+  try {
+    const config = emailNotifier.getConfig();
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Envoyer un email de test
+app.post('/api/email/test', async (req, res) => {
+  try {
+    const success = await emailNotifier.sendTestEmail();
+    if (success) {
+      res.json({
+        success: true,
+        message: 'Email de test envoyé avec succès'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Échec de l\'envoi de l\'email de test'
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Envoyer une notification personnalisée
+app.post('/api/email/send', async (req, res) => {
+  try {
+    const { subject, text, html, priority } = req.body;
+
+    if (!subject || !text) {
+      return res.status(400).json({ error: 'subject et text sont requis' });
+    }
+
+    const success = await emailNotifier.sendEmail({ subject, text, html, priority });
+
+    if (success) {
+      res.json({
+        success: true,
+        message: 'Email envoyé avec succès'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Échec de l\'envoi de l\'email'
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================
+// Cache Management API
+// =====================================================
+
+/**
+ * GET /api/cache/stats
+ * Obtenir les statistiques du cache
+ */
+app.get('/api/cache/stats', (req, res) => {
+  try {
+    const stats = cache.getStats();
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/cache/clear
+ * Vider tout le cache ou un namespace spécifique
+ * Query params: ?namespace=config (optionnel)
+ */
+app.delete('/api/cache/clear', (req, res) => {
+  try {
+    const namespace = req.query.namespace;
+
+    if (namespace) {
+      if (!Object.values(NAMESPACES).includes(namespace)) {
+        return res.status(400).json({
+          error: 'Namespace invalide',
+          validNamespaces: Object.values(NAMESPACES)
+        });
+      }
+      cache.clearNamespace(namespace);
+      res.json({
+        success: true,
+        message: `Cache du namespace '${namespace}' vidé avec succès`
+      });
+    } else {
+      cache.clear();
+      res.json({
+        success: true,
+        message: 'Tous les caches vidés avec succès'
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/cache/info
+ * Obtenir des informations détaillées sur le cache
+ */
+app.get('/api/cache/info', (req, res) => {
+  try {
+    const stats = cache.getStats();
+    const info = {
+      stats,
+      namespaces: NAMESPACES,
+      maxSize: 200,
+      defaultTTL: 60000,
+      hitRate: stats.total > 0
+        ? ((stats.hits / stats.total) * 100).toFixed(2) + '%'
+        : '0%'
+    };
+    res.json(info);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 /**
  * Lancement du serveur
  */
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`✓ Serveur Web Admin Neopro lancé sur le port ${PORT}`);
   console.log(`  Accessible sur:`);
   console.log(`  - http://neopro.local:${PORT}`);
   console.log(`  - http://192.168.4.1:${PORT}`);
   console.log(`  - http://localhost:${PORT}`);
+
+  // Initialiser les notifications email
+  await emailNotifier.init();
 });
 
 // Gestion des erreurs

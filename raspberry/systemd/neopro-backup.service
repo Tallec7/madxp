@@ -1,0 +1,26 @@
+[Unit]
+Description=Neopro Automatic Backup
+Documentation=https://github.com/kalon-partners/neopro
+After=network.target neopro-app.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/home/pi/neopro
+Environment="NEOPRO_DIR=/home/pi/neopro"
+Environment="BACKUP_DIR=/home/pi/neopro-backups"
+ExecStart=/bin/bash /home/pi/neopro/scripts/auto-backup.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=neopro-backup
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/pi/neopro-backups
+ReadOnlyPaths=/home/pi/neopro /etc/neopro
+
+[Install]
+WantedBy=multi-user.target

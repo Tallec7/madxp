@@ -52,6 +52,35 @@ body {
     line-height: 1.6;
 }
 
+/* Skip link for accessibility */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.sr-only.focus\:not-sr-only:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0.5rem 1rem;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+    background: var(--primary);
+    color: white;
+    z-index: 9999;
+    display: inline-block;
+    border-radius: 4px;
+}
+
 .container {
     max-width: 1400px;
     margin: 0 auto;
@@ -79,6 +108,81 @@ body {
     gap: 20px;
     font-size: 14px;
     color: var(--text-secondary);
+    align-items: center;
+}
+
+/* Connection Status Badge */
+.connection-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.connection-badge.online {
+    background: rgba(81, 178, 139, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(81, 178, 139, 0.3);
+}
+
+.connection-badge.offline {
+    background: rgba(254, 89, 73, 0.15);
+    color: var(--danger);
+    border: 1px solid rgba(254, 89, 73, 0.3);
+}
+
+.connection-badge.reconnecting {
+    background: rgba(253, 190, 0, 0.15);
+    color: var(--warning);
+    border: 1px solid rgba(253, 190, 0, 0.3);
+}
+
+.connection-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    position: relative;
+}
+
+.connection-badge.online .connection-dot {
+    background: var(--success);
+    box-shadow: 0 0 0 rgba(81, 178, 139, 0.4);
+    animation: pulse-online 2s infinite;
+}
+
+.connection-badge.offline .connection-dot {
+    background: var(--danger);
+}
+
+.connection-badge.reconnecting .connection-dot {
+    background: var(--warning);
+    animation: pulse-reconnecting 1s infinite;
+}
+
+@keyframes pulse-online {
+    0% {
+        box-shadow: 0 0 0 0 rgba(81, 178, 139, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(81, 178, 139, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(81, 178, 139, 0);
+    }
+}
+
+@keyframes pulse-reconnecting {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.3;
+    }
 }
 
 /* Navigation */

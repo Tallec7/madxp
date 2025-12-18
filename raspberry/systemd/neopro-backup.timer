@@ -1,0 +1,18 @@
+[Unit]
+Description=Neopro Automatic Backup Timer
+Documentation=https://github.com/kalon-partners/neopro
+Requires=neopro-backup.service
+
+[Timer]
+# Exécuter tous les jours à 3h00 du matin
+OnCalendar=daily
+OnCalendar=*-*-* 03:00:00
+
+# Exécuter au démarrage si le backup quotidien a été manqué
+Persistent=true
+
+# Randomiser légèrement l'heure pour éviter la charge simultanée
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
