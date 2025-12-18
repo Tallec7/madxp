@@ -419,6 +419,16 @@ REMOTE_SCRIPT
     echo "$CONFIG_JSON" | ssh pi@"$PI_ADDRESS" "sudo tee /home/pi/neopro/webapp/configuration.json > /dev/null"
     print_success "Configuration installée"
 
+    # Fix permissions pour nginx (www-data doit pouvoir accéder à /home/pi)
+    print_info "Configuration des permissions pour nginx..."
+    ssh pi@"$PI_ADDRESS" "
+        sudo chmod 755 /home/pi
+        sudo chmod 755 /home/pi/neopro
+        sudo chmod -R 755 /home/pi/neopro/webapp
+        sudo chown -R pi:www-data /home/pi/neopro/webapp
+    "
+    print_success "Permissions configurées"
+
     # Redémarrer les services
     print_info "Redémarrage des services..."
     ssh pi@"$PI_ADDRESS" "

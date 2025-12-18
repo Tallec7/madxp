@@ -502,12 +502,19 @@ EOF
     ln -sf /etc/nginx/sites-available/neopro /etc/nginx/sites-enabled/neopro
     rm -f /etc/nginx/sites-enabled/default
 
+    # Fix permissions pour nginx (www-data doit pouvoir accéder à /home/pi)
+    print_step "Configuration des permissions pour nginx..."
+    chmod 755 /home/pi
+    chmod 755 "${INSTALL_DIR}"
+    chmod -R 755 "${INSTALL_DIR}/webapp"
+    chown -R pi:www-data "${INSTALL_DIR}/webapp"
+
     # Test et redémarrage
     nginx -t
     systemctl restart nginx
     systemctl enable nginx
 
-    print_success "Nginx configuré"
+    print_success "Nginx configuré avec les bonnes permissions"
 }
 
 ################################################################################
