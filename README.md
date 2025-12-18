@@ -28,18 +28,49 @@ Ce guide couvre :
 
 ### Configurer un nouveau club (Pi déjà installé)
 
-**Prérequis :** Le Raspberry Pi doit avoir été configuré avec `install.sh`
+**Prérequis :** Le Raspberry Pi doit avoir été configuré avec `install.sh` ou `setup.sh`
+
+**Il existe 2 méthodes :**
+
+#### ✅ Méthode Remote (RECOMMANDÉE - Production)
+
+**Sans dépendance au dossier Neopro local** - Fonctionne depuis n'importe quel ordinateur :
+
+```bash
+# Télécharger le script
+curl -O https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup-remote-club.sh
+chmod +x setup-remote-club.sh
+
+# Lancer la configuration
+./setup-remote-club.sh
+```
+
+**Avantages :**
+- ✅ Aucune dépendance locale (pas besoin du projet Neopro)
+- ✅ Télécharge depuis GitHub Releases (toujours à jour)
+- ✅ Rapide : 2-5 minutes
+- ✅ Installation terrain facilitée
+
+#### 🔧 Méthode Local (Développement)
+
+**Nécessite le dossier Neopro complet** - Pour développement et tests :
 
 ```bash
 ./raspberry/scripts/setup-new-club.sh
 ```
 
-Le script interactif va :
+**Avantages :**
+- ✅ Build local (modifications custom possibles)
+- ✅ Tests de développement
+
+---
+
+Les deux scripts vont :
 - Collecter les infos du club (nom, localisation, contact)
 - Créer le mot de passe d'accès
-- Builder l'application Angular
 - Déployer sur le Raspberry Pi
-- Connecter au serveur central
+- Configurer le WiFi hotspot
+- Connecter au serveur central (optionnel)
 
 **Informations à préparer :**
 - Nom du club (ex: CESSON, RENNES)
@@ -47,6 +78,8 @@ Le script interactif va :
 - Email de contact
 - Mot de passe (12+ caractères)
 - Adresse du Pi (neopro.local par défaut)
+
+📖 **[Guide complet des deux méthodes](raspberry/scripts/CLUB-SETUP-README.md)**
 
 ### Mettre à jour un boîtier existant
 

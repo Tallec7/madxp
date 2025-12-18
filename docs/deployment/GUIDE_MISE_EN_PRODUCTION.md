@@ -1,6 +1,13 @@
 # Guide de mise en production - NeoPro
 
-Guide complet et détaillé pour déployer NeoPro en production. Ce guide est conçu pour les débutants : chaque étape est expliquée en détail.
+Guide complet et détaillé pour déployer **le serveur central** NeoPro en production. Ce guide est conçu pour les débutants : chaque étape est expliquée en détail.
+
+> 📖 **Note :** Ce guide couvre uniquement le déploiement du **serveur central** (Supabase, Render, Redis).
+>
+> Pour l'installation des **boîtiers Raspberry Pi** dans les clubs, consultez :
+> - **[Installation en ligne (RECOMMANDÉE)](../ONLINE_INSTALLATION.md)** - Setup remote complet (~22 min)
+> - **[Configuration d'un nouveau club](../../raspberry/scripts/CLUB-SETUP-README.md)** - Remote vs Local
+> - **[Installation complète Raspberry Pi](../guides/INSTALLATION_COMPLETE.md)** - 3 méthodes comparées
 
 ---
 

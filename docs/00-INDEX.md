@@ -16,7 +16,9 @@
 
 ### 📖 [Guides Utilisateur](guides/)
 Installation, configuration et utilisation de Neopro.
-- [Installation complète Raspberry Pi](guides/INSTALLATION_COMPLETE.md) (45 min)
+- [Installation en ligne (RECOMMANDÉE)](ONLINE_INSTALLATION.md) - Setup remote (~22 min)
+- [Configuration d'un nouveau club](../raspberry/scripts/CLUB-SETUP-README.md) - Remote vs Local
+- [Installation complète Raspberry Pi](guides/INSTALLATION_COMPLETE.md) - 3 méthodes comparées
 - [Déploiement rapide via Golden Image](guides/GOLDEN_IMAGE.md) (10 min)
 - [Guide utilisateur complet](guides/GUIDE_UTILISATEUR.md) (21K)
 - [Troubleshooting et diagnostic](guides/TROUBLESHOOTING.md) (30K)

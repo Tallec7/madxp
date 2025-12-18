@@ -108,14 +108,35 @@ Les deux fonctionnent parfaitement et sont gratuites. Utilisez **Option 1** (Git
 
 4. **Attendre 15-20 minutes**
 
-5. **Connectez-vous au WiFi et copiez les fichiers :**
-   ```bash
-   # Application Angular
-   scp -r webapp/dist/* pi@neopro.local:~/neopro/webapp/
+   À la fin, le Pi est installé avec :
+   - ✅ Serveur Neopro actif
+   - ✅ WiFi hotspot : `NEOPRO-[CLUB_NAME]`
+   - ✅ Application accessible sur `http://neopro.local`
 
-   # Vidéos
-   scp videos/* pi@neopro.local:~/neopro/videos/
+5. **Configurer le club (depuis votre PC) :**
+
+   **⚠️ Important :** Le Pi est installé mais pas encore configuré pour le club spécifique.
+
+   **Méthode recommandée (sans dépendance locale) :**
+   ```bash
+   # Télécharger le script de configuration
+   curl -O https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup-remote-club.sh
+   chmod +x setup-remote-club.sh
+
+   # Lancer la configuration interactive
+   ./setup-remote-club.sh
    ```
+
+   Le script va :
+   - Collecter les infos du club (nom complet, localisation, contact, etc.)
+   - Télécharger l'application depuis GitHub Releases
+   - Déployer sur le Pi
+   - Configurer le hotspot WiFi avec le nom du club
+   - Connecter au serveur central (optionnel)
+
+   **Durée :** 2-5 minutes ⚡
+
+   📖 **[Guide complet setup-remote-club.sh](../raspberry/scripts/CLUB-SETUP-README.md)**
 
 ---
 
@@ -125,21 +146,30 @@ Les deux fonctionnent parfaitement et sont gratuites. Utilisez **Option 1** (Git
 ┌─────────────────────────────────────────────────────────────────┐
 │  DÉVELOPPEMENT (votre Mac)                                      │
 ├─────────────────────────────────────────────────────────────────┤
-│  1. Modifier raspberry/install.sh ou les configs                │
-│  2. git commit && git push                                      │
-│  3. GitHub Actions déploie automatiquement                      │
+│  1. Modifier code et créer une release                          │
+│  2. git tag v1.x.x && git push origin v1.x.x                    │
+│  3. GitHub Actions build et publie automatiquement :            │
 │     → https://tallec7.github.io/neopro/install/setup.sh         │
+│     → https://github.com/.../releases/v1.x.x/                   │
+│        neopro-raspberry-deploy.tar.gz                           │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  INSTALLATION CHEZ UN CLUB (5 min de travail actif)            │
+│  INSTALLATION CHEZ UN CLUB (Temps total : ~22 min)             │
 ├─────────────────────────────────────────────────────────────────┤
-│  1. Flash Pi OS Lite sur carte SD              (5 min)         │
-│  2. Boot + SSH + curl setup.sh                 (1 min)         │
-│  3. Attendre installation automatique          (15-20 min)     │
-│  4. Se connecter au WiFi et copier fichiers    (5 min)         │
+│  ÉTAPE 1 : Installation du Pi (15-20 min)                      │
+│  - Flash Pi OS Lite sur carte SD               (5 min)         │
+│  - Boot + SSH + curl setup.sh                  (1 min)         │
+│  - Attendre installation automatique           (15-20 min)     │
 │                                                                 │
-│  TOTAL TRAVAIL ACTIF : ~10 min (vs 45 min méthode manuelle)    │
+│  ÉTAPE 2 : Configuration du club (2-5 min)                     │
+│  - Télécharger setup-remote-club.sh            (10 sec)        │
+│  - Lancer le script interactif                 (2-5 min)       │
+│    * Saisie infos club                                          │
+│    * Téléchargement depuis GitHub Releases                      │
+│    * Déploiement automatique                                    │
+│                                                                 │
+│  ✅ TOTAL : ~22 min (vs 45+ min méthode manuelle)              │
 └─────────────────────────────────────────────────────────────────┘
 ```
 

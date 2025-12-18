@@ -16,13 +16,16 @@
 | **🆕 Installation en ligne** | `curl ... setup.sh` | Sur le Pi (via Internet) |
 | **Copier fichiers vers Pi** | `raspberry/scripts/copy-to-pi.sh` | Sur Mac |
 | **Nouveau Raspberry Pi** | `raspberry/install.sh` | Sur le Pi |
-| **Nouveau club** | `raspberry/scripts/setup-new-club.sh` | Sur Mac |
+| **Nouveau club (remote)** ✅ | `raspberry/scripts/setup-remote-club.sh` | N'importe où |
+| **Nouveau club (local - dev)** 🔧 | `raspberry/scripts/setup-new-club.sh` | Sur Mac |
 | **Mise à jour** | `npm run deploy:raspberry` | Sur Mac |
 | **Supprimer un club** | `raspberry/scripts/delete-club.sh` | Sur Mac |
 | **Backup un club** | `raspberry/scripts/backup-club.sh` | Sur Mac |
 | **Restaurer un club** | `raspberry/scripts/restore-club.sh` | Sur Mac |
 | **Nettoyage post-install** | `raspberry/scripts/cleanup-pi.sh` | Sur Mac |
 | **Diagnostic** | `raspberry/scripts/diagnose-pi.sh` | Sur le Pi |
+
+**📖 Pour plus de détails sur les deux méthodes de configuration club (remote vs local), consultez [CLUB-SETUP-README.md](CLUB-SETUP-README.md)**
 
 ---
 
@@ -196,20 +199,78 @@ sudo ./install.sh CESSON MyWiFiPass123
 
 ---
 
-### setup-new-club.sh (Sur Mac)
+### setup-remote-club.sh (N'importe où) ✅ **RECOMMANDÉ**
+
+**Usage :**
+```bash
+# Télécharger le script
+curl -O https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup-remote-club.sh
+chmod +x setup-remote-club.sh
+
+# Lancer la configuration
+./setup-remote-club.sh
+```
+
+**Prérequis :**
+- Le Pi doit déjà être installé avec `setup.sh` ou `install.sh`
+- Connexion SSH au Pi
+- Accès Internet pour télécharger depuis GitHub Releases
+
+**Ce qu'il fait (interactif) :**
+1. Collecte les informations du club (nom, localisation, sports, contact)
+2. Crée la configuration JSON en mémoire
+3. **Télécharge l'archive de déploiement depuis GitHub Releases** (pas de build local)
+4. Upload et déploie sur le Pi via SSH
+5. Configure le hotspot WiFi (SSID `NEOPRO-CLUB`)
+6. Configure le sync-agent (connexion au serveur central)
+
+**Avantages :**
+- ✅ Aucune dépendance au dossier Neopro local
+- ✅ Fonctionne depuis n'importe quel ordinateur
+- ✅ Télécharge depuis GitHub Releases (toujours à jour)
+- ✅ Rapide : 2-5 minutes (pas de build local)
+- ✅ Idéal pour installation terrain
+
+**Options :**
+```bash
+# Utiliser une version spécifique
+./setup-remote-club.sh --release v1.0.0
+
+# Utiliser la dernière version (défaut)
+./setup-remote-club.sh
+```
+
+**📖 Guide complet :** [CLUB-SETUP-README.md](CLUB-SETUP-README.md)
+
+---
+
+### setup-new-club.sh (Sur Mac) 🔧 Développement
 
 **Usage :**
 ```bash
 ./raspberry/scripts/setup-new-club.sh
 ```
 
+**Prérequis :**
+- **Dossier Neopro complet** sur votre machine
+- Node.js, npm, Angular CLI installés
+- Toutes les dépendances du projet
+
 **Ce qu'il fait (interactif) :**
 1. Demande les informations du club
 2. Crée `raspberry/config/templates/CLUB-configuration.json`
-3. Build l'application Angular
+3. **Build l'application Angular localement** (5-10 minutes)
 4. Déploie sur le Pi
 5. Configure le hotspot WiFi (SSID `NEOPRO-CLUB`)
 6. Configure le sync-agent (connexion au serveur central)
+
+**Avantages :**
+- ✅ Build local (modifications custom possibles)
+- ✅ Tests de développement
+
+**Quand l'utiliser :**
+- 🔧 Développement et tests
+- 🔧 Modifications custom du code
 
 ---
 

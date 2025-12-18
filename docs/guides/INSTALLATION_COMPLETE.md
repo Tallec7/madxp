@@ -2,37 +2,65 @@
 
 ## 🎯 Vue d'ensemble
 
-Il y a **2 méthodes** pour installer un nouveau boîtier :
+Il y a **3 méthodes** pour installer un nouveau boîtier :
 
-### Méthode 1 : Image Golden (RECOMMANDÉE) - 10 min
+### Méthode 1 : Setup Remote (RECOMMANDÉE) ✅ - 22 min
+
+**Installation complète sans dépendance locale** - Idéal pour la production :
+
+```
+1. Flash Raspberry Pi OS Lite                        → 5 min
+2. Installation système (curl setup.sh)              → 15-20 min
+3. Configuration club (setup-remote-club.sh)         → 2-5 min
+                                             TOTAL : ~22 min
+```
+
+**Avantages :**
+- ✅ Aucune dépendance au dossier Neopro
+- ✅ Fonctionne depuis n'importe quel ordinateur
+- ✅ Toujours la dernière version depuis GitHub
+- ✅ Installation terrain simplifiée
+
+**Guide complet : [ONLINE_INSTALLATION.md](../ONLINE_INSTALLATION.md)**
+**Script club : [../../raspberry/scripts/CLUB-SETUP-README.md](../../raspberry/scripts/CLUB-SETUP-README.md)**
+
+### Méthode 2 : Image Golden - 10 min
 
 Si vous avez une **Image Golden** pré-configurée :
 
 ```
-1. Flash image golden (Raspberry Pi Imager)     → 5 min
-2. Premier boot + first-boot-setup.sh           → 1 min
-3. setup-new-club.sh                            → 5 min
-                                        TOTAL : ~10 min
+1. Flash image golden (Raspberry Pi Imager)          → 5 min
+2. Premier boot + first-boot-setup.sh                → 1 min
+3. setup-new-club.sh ou setup-remote-club.sh         → 5 min
+                                             TOTAL : ~10 min
 ```
+
+**Avantages :**
+- ✅ Le plus rapide
+- ✅ Pas besoin de connexion Internet
 
 **Guide complet : [GOLDEN_IMAGE.md](GOLDEN_IMAGE.md)**
 
-### Méthode 2 : Installation complète - 45 min
+### Méthode 3 : Installation manuelle - 45 min
 
-Sans image golden, installation depuis zéro :
+Sans image golden, installation manuelle complète :
 
 ```
-1. Flash Raspberry Pi OS Lite                   → 5 min
-2. copy-to-pi.sh + install.sh                   → 30 min
-3. setup-new-club.sh                            → 10 min
-                                        TOTAL : ~45 min
+1. Flash Raspberry Pi OS Lite                        → 5 min
+2. copy-to-pi.sh + install.sh                        → 30 min
+3. setup-new-club.sh (nécessite dossier Neopro)      → 10 min
+                                             TOTAL : ~45 min
 ```
 
-**Cette page décrit la méthode 2.**
+**Quand l'utiliser :**
+- 🔧 Développement et tests
+- 🔧 Modifications custom nécessaires
+
+**Cette page décrit la méthode 3.**
 
 ---
 
-## Méthode 2 : Installation complète (sans Image Golden)
+## Méthode 3 : Installation manuelle complète (sans Image Golden)
 
 ### Étape 1 : Installation système (sur le Raspberry Pi)
 

@@ -10,9 +10,13 @@
 
 #### Démarrer sur le projet général NEOPRO
 → **[README.md](../README.md)** (racine du projet)
-- Configuration nouveau club
+- Configuration nouveau club (remote vs local)
 - Mise à jour boîtier
 - Commandes rapides
+
+→ **[CLUB-SETUP-README.md](../raspberry/scripts/CLUB-SETUP-README.md)** (Setup club complet)
+- Méthode remote (sans dépendance locale) ✅
+- Méthode local (développement) 🔧
 
 #### Comprendre l'architecture globale
 → **[REFERENCE.md](REFERENCE.md)**
@@ -53,11 +57,19 @@ Puis selon vos besoins :
 ### 🏗️ Je veux installer/déployer
 
 #### Nouveau boîtier Raspberry Pi
-→ **[GOLDEN_IMAGE.md](GOLDEN_IMAGE.md)** si vous avez une image (10 min)
-→ **[INSTALLATION_COMPLETE.md](INSTALLATION_COMPLETE.md)** sinon (45 min)
+
+**RECOMMANDÉ - Setup remote (22 min) :**
+→ **[ONLINE_INSTALLATION.md](ONLINE_INSTALLATION.md)** - Installation complète sans dépendance locale
+
+**Autres méthodes :**
+→ **[GOLDEN_IMAGE.md](guides/GOLDEN_IMAGE.md)** si vous avez une image (10 min)
+→ **[INSTALLATION_COMPLETE.md](guides/INSTALLATION_COMPLETE.md)** installation manuelle (45 min)
+
+**Configuration du club :**
+→ **[CLUB-SETUP-README.md](../raspberry/scripts/CLUB-SETUP-README.md)** - Remote vs Local
 
 #### Serveur central
-→ **[DEPLOY_CENTRAL_SERVER.md](DEPLOY_CENTRAL_SERVER.md)**
+→ **[DEPLOY_CENTRAL_SERVER.md](deployment/DEPLOY_CENTRAL_SERVER.md)**
 - Déploiement Render.com
 - Configuration Supabase
 - Variables d'environnement

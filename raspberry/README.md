@@ -7,12 +7,15 @@
 | **Nouveau boîtier (en ligne)** 🆕 | `curl -sSL https://tallec7.github.io/neopro/install/setup.sh \| sudo bash -s CLUB PASS` | Pi |
 | **Nouveau boîtier (avec image golden)** | Flash + `./first-boot-setup.sh` | Pi |
 | **Nouveau boîtier (sans image)** | `./raspberry/scripts/copy-to-pi.sh` + `install.sh` | Mac → Pi |
-| **Nouveau club** | `./raspberry/scripts/setup-new-club.sh` | Mac |
+| **Nouveau club (remote)** ✅ | `./raspberry/scripts/setup-remote-club.sh` | N'importe où |
+| **Nouveau club (local - dev)** 🔧 | `./raspberry/scripts/setup-new-club.sh` | Mac |
 | **Mise à jour** | `npm run deploy:raspberry` | Mac |
 | **Créer image golden** | `./raspberry/tools/prepare-golden-image.sh` | Pi |
 | **Supprimer un club** | `./raspberry/scripts/delete-club.sh` | Mac |
 | **Backup un club** | `./raspberry/scripts/backup-club.sh` | Mac |
 | **Restaurer un club** | `./raspberry/scripts/restore-club.sh` | Mac |
+
+**Note :** Pour configurer un nouveau club, préférez la méthode **remote** (✅) pour la production (sans dépendance locale) et la méthode **local** (🔧) pour le développement. Voir [CLUB-SETUP-README.md](scripts/CLUB-SETUP-README.md) pour plus de détails.
 
 ---
 
