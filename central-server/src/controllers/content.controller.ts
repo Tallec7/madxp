@@ -170,10 +170,14 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     const checksum = calculateChecksum(file.buffer);
 
     // Upload vers Supabase Storage
+    logger.info('Uploading video to storage:', { filename, size: file.size, mimetype: file.mimetype });
     const uploadResult = await uploadFile(file.buffer, filename, file.mimetype);
 
     if (!uploadResult) {
-      return res.status(500).json({ error: 'Erreur lors de l\'upload vers le stockage' });
+      logger.error('Failed to upload video to storage - uploadResult is null');
+      return res.status(500).json({
+        error: 'Erreur lors de l\'upload vers le stockage. Vérifiez la configuration Supabase (SUPABASE_URL et SUPABASE_SERVICE_KEY).'
+      });
     }
 
     // Utiliser le titre fourni ou le nom original du fichier
@@ -182,6 +186,7 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     const file_size = file.size;
     const mime_type = file.mimetype;
 
+    logger.info('Inserting video metadata into database:', { filename, title: videoTitle });
     const result = await pool.query(
       `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, checksum, metadata, uploaded_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -194,11 +199,15 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     video.title = videoTitle;
     video.url = uploadResult.url;
 
-    logger.info('Video created:', { id: video.id, filename, title: videoTitle, storagePath: uploadResult.path, checksum });
+    logger.info('Video created successfully:', { id: video.id, filename, title: videoTitle, storagePath: uploadResult.path, checksum });
     res.status(201).json(video);
   } catch (error) {
     logger.error('Error creating video:', error);
-    res.status(500).json({ error: 'Erreur lors de la création de la vidéo' });
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    res.status(500).json({
+      error: 'Erreur lors de la création de la vidéo',
+      details: errorMessage
+    });
   }
 };
 
@@ -214,6 +223,8 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
     const results: Array<{ id: string; name: string; title: string; size: number; success: true }> = [];
     const errors: Array<{ name: string; error: string }> = [];
 
+    logger.info('Starting bulk video upload:', { count: files.length, category, subcategory });
+
     for (const file of files) {
       try {
         // Générer un nom de fichier unique
@@ -222,10 +233,14 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
         const filename = `${uniqueId}${ext}`;
 
         // Upload vers Supabase Storage
+        logger.info('Uploading video to storage (bulk):', { filename, size: file.size });
         const uploadResult = await uploadFile(file.buffer, filename, file.mimetype);
 
         if (!uploadResult) {
-          errors.push({ name: file.originalname, error: 'Erreur lors de l\'upload vers le stockage' });
+          errors.push({
+            name: file.originalname,
+            error: 'Erreur lors de l\'upload vers le stockage. Vérifiez la configuration Supabase.'
+          });
           continue;
         }
 
@@ -272,7 +287,11 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     logger.error('Error in bulk video upload:', error);
-    res.status(500).json({ error: 'Erreur lors de l\'upload des vidéos' });
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    res.status(500).json({
+      error: 'Erreur lors de l\'upload des vidéos',
+      details: errorMessage
+    });
   }
 };
 
