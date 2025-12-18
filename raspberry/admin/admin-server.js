@@ -48,6 +48,69 @@ const CONFIG_JSON_INDENT = 4;
 console.log(`[admin] NEOPRO_DIR resolved to ${NEOPRO_DIR}`);
 console.log(`[admin] Videos directory: ${VIDEOS_DIR}`);
 
+// Security Headers Middleware
+app.use((req, res, next) => {
+  // Content Security Policy
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: blob:; " +
+    "font-src 'self' data:; " +
+    "connect-src 'self'; " +
+    "media-src 'self' blob:; " +
+    "object-src 'none'; " +
+    "frame-ancestors 'none'; " +
+    "base-uri 'self'; " +
+    "form-action 'self';"
+  );
+
+  // X-Frame-Options
+  res.setHeader('X-Frame-Options', 'DENY');
+
+  // X-Content-Type-Options
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+
+  // X-XSS-Protection
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+
+  // Referrer-Policy
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Permissions-Policy
+  res.setHeader(
+    'Permissions-Policy',
+    'geolocation=(), microphone=(), camera=(), payment=()'
+  );
+
+  // HSTS (only in production with HTTPS)
+  if (process.env.NODE_ENV === 'production' && req.protocol === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+
+  // Cache Control (production vs development)
+  if (process.env.NODE_ENV === 'production') {
+    // Cache static assets for 1 year
+    if (req.url.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (req.url.match(/\.(mp4|mkv|mov|avi)$/)) {
+      // Cache videos for 1 week
+      res.setHeader('Cache-Control', 'public, max-age=604800');
+    } else {
+      // No cache for HTML/API responses
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  } else {
+    // Development: no cache
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  }
+
+  next();
+});
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

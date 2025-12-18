@@ -3,47 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="Neopro Admin - Interface d'administration pour Raspberry Pi">
+    <meta name="robots" content="noindex, nofollow">
+
     <title>Neopro Admin - Dashboard</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest">
+
+    <!-- Resource Hints -->
+    <link rel="dns-prefetch" href="//neopro.local">
+    <link rel="preconnect" href="//neopro.local">
+
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/styles.css" as="style">
+    <link rel="preload" href="/app.js" as="script">
+
+    <!-- Styles -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
+    <a href="#main-content" class="sr-only focus:not-sr-only">Aller au contenu principal</a>
+
+    <div class="container" role="application" aria-label="Interface d'administration Neopro">
         <!-- Header -->
-        <header class="header">
+        <header class="header" role="banner">
             <div class="logo">
-                <img src="neopro-logo-white.png" alt="Neopro" height="40">
-                <span style="margin-left: 12px; font-family: var(--neo-font-body); font-size: 20px; font-weight: 600;">Admin</span>
+                <img src="neopro-logo-white.png" alt="Logo Neopro" height="40">
+                <span style="margin-left: 12px; font-family: var(--neo-font-body); font-size: 20px; font-weight: 600;" aria-label="Administration">Admin</span>
             </div>
-            <div class="header-info">
-                <span id="hostname">Loading...</span>
-                <span id="current-time">--:--:--</span>
+            <div class="header-info" role="status" aria-live="polite">
+                <span id="hostname" aria-label="Nom d'hôte">Loading...</span>
+                <span id="current-time" aria-label="Heure actuelle">--:--:--</span>
             </div>
         </header>
 
         <!-- Navigation -->
-        <nav class="nav">
-            <button class="nav-btn active" data-tab="dashboard">
-                📊 Dashboard
+        <nav class="nav" role="navigation" aria-label="Navigation principale">
+            <button class="nav-btn active" data-tab="dashboard" aria-pressed="true" aria-controls="tab-dashboard">
+                <span aria-hidden="true">📊</span> Dashboard
             </button>
-            <button class="nav-btn" data-tab="videos">
-                🎬 Vidéos
+            <button class="nav-btn" data-tab="videos" aria-pressed="false" aria-controls="tab-videos">
+                <span aria-hidden="true">🎬</span> Vidéos
             </button>
-            <button class="nav-btn" data-tab="network">
-                📡 Réseau
+            <button class="nav-btn" data-tab="network" aria-pressed="false" aria-controls="tab-network">
+                <span aria-hidden="true">📡</span> Réseau
             </button>
-            <button class="nav-btn" data-tab="logs">
-                📜 Logs
+            <button class="nav-btn" data-tab="logs" aria-pressed="false" aria-controls="tab-logs">
+                <span aria-hidden="true">📜</span> Logs
             </button>
-            <button class="nav-btn" data-tab="system">
-                ⚙️ Système
+            <button class="nav-btn" data-tab="system" aria-pressed="false" aria-controls="tab-system">
+                <span aria-hidden="true">⚙️</span> Système
             </button>
         </nav>
 
         <!-- Content -->
-        <main class="content">
+        <main id="main-content" class="content" role="main">
 
             <!-- Tab: Dashboard -->
-            <div id="tab-dashboard" class="tab-content active">
+            <div id="tab-dashboard" class="tab-content active" role="tabpanel" aria-labelledby="nav-dashboard">
                 <h2>État du système</h2>
 
                 <div class="cards-grid">
@@ -68,20 +90,20 @@
                     </div>
 
                     <!-- Memory Card -->
-                    <div class="card">
+                    <div class="card" role="region" aria-labelledby="memory-heading">
                         <div class="card-header">
-                            <h3>🧠 Mémoire</h3>
+                            <h3 id="memory-heading"><span aria-hidden="true">🧠</span> Mémoire</h3>
                         </div>
                         <div class="card-body">
                             <div class="metric">
                                 <span class="metric-label">Utilisée</span>
-                                <span class="metric-value" id="mem-used">--</span>
+                                <span class="metric-value" id="mem-used" aria-live="polite">--</span>
                             </div>
                             <div class="metric">
                                 <span class="metric-label">Total</span>
                                 <span class="metric-value" id="mem-total">--</span>
                             </div>
-                            <div class="progress-bar">
+                            <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Utilisation mémoire">
                                 <div class="progress-fill" id="mem-progress"></div>
                             </div>
                         </div>
@@ -137,7 +159,7 @@
             </div>
 
             <!-- Tab: Videos -->
-            <div id="tab-videos" class="tab-content">
+            <div id="tab-videos" class="tab-content" role="tabpanel" aria-labelledby="nav-videos" aria-hidden="true">
                 <h2>Gestion des vidéos</h2>
 
                 <!-- Sub-navigation for videos tab -->
@@ -271,7 +293,7 @@
             </div>
 
             <!-- Tab: Network -->
-            <div id="tab-network" class="tab-content">
+            <div id="tab-network" class="tab-content" role="tabpanel" aria-labelledby="nav-network" aria-hidden="true">
                 <h2>Configuration réseau</h2>
 
                 <!-- WiFi Client Config -->
@@ -315,7 +337,7 @@
             </div>
 
             <!-- Tab: Logs -->
-            <div id="tab-logs" class="tab-content">
+            <div id="tab-logs" class="tab-content" role="tabpanel" aria-labelledby="nav-logs" aria-hidden="true">
                 <h2>Logs système</h2>
 
                 <div class="card">
@@ -337,7 +359,7 @@
             </div>
 
             <!-- Tab: System -->
-            <div id="tab-system" class="tab-content">
+            <div id="tab-system" class="tab-content" role="tabpanel" aria-labelledby="nav-system" aria-hidden="true">
                 <h2>Administration système</h2>
 
                 <!-- Services Control -->
@@ -412,16 +434,16 @@
         </main>
 
         <!-- Footer -->
-        <footer class="footer">
+        <footer class="footer" role="contentinfo">
             <span>Neopro v1.0.0 | Raspberry Pi Admin Panel</span>
-            <span id="last-update">Dernière mise à jour: --</span>
+            <span id="last-update" role="status" aria-live="polite">Dernière mise à jour: --</span>
         </footer>
     </div>
 
     <!-- Edit Video Modal -->
-    <div id="edit-modal" class="modal">
+    <div id="edit-modal" class="modal" role="dialog" aria-labelledby="edit-modal-title" aria-hidden="true">
         <div class="modal-content modal-content-wide">
-            <h3>Modifier la vidéo</h3>
+            <h3 id="edit-modal-title">Modifier la vidéo</h3>
             <p id="edit-current-path" class="modal-subtitle"></p>
             <form id="edit-video-form">
                 <input type="hidden" id="edit-original-path">
@@ -459,7 +481,7 @@
     </div>
 
     <!-- Modal -->
-    <div id="modal" class="modal">
+    <div id="modal" class="modal" role="alertdialog" aria-labelledby="modal-title" aria-describedby="modal-message" aria-hidden="true">
         <div class="modal-content">
             <h3 id="modal-title">Confirmation</h3>
             <p id="modal-message"></p>
@@ -471,14 +493,14 @@
     </div>
 
     <!-- Video Preview Modal -->
-    <div id="video-preview-modal" class="modal">
+    <div id="video-preview-modal" class="modal" role="dialog" aria-labelledby="preview-video-title" aria-hidden="true">
         <div class="modal-content modal-content-video">
             <div class="modal-header">
                 <h3 id="preview-video-title">Prévisualisation</h3>
-                <button class="modal-close-btn" onclick="closeVideoPreview()">✕</button>
+                <button class="modal-close-btn" onclick="closeVideoPreview()" aria-label="Fermer la prévisualisation">✕</button>
             </div>
             <div class="video-preview-container">
-                <video id="preview-video" controls>
+                <video id="preview-video" controls aria-label="Lecteur vidéo de prévisualisation">
                     Votre navigateur ne supporte pas la lecture vidéo.
                 </video>
             </div>
