@@ -103,9 +103,12 @@ export const getVideoDeployments = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
+    logger.info('Fetching video deployments:', { videoId: id });
+
     // Vérifier que la vidéo existe
     const videoResult = await pool.query('SELECT id FROM videos WHERE id = $1', [id]);
     if (videoResult.rows.length === 0) {
+      logger.warn('Video not found for deployments:', { videoId: id });
       return res.status(404).json({ error: 'Vidéo non trouvée' });
     }
 
@@ -140,14 +143,20 @@ export const getVideoDeployments = async (req: AuthRequest, res: Response) => {
       in_progress: result.rows.filter(d => d.status === 'in_progress').length,
     };
 
+    logger.info('Video deployments fetched successfully:', { videoId: id, count: result.rows.length });
+
     res.json({
       video_id: id,
       stats,
       deployments: result.rows
     });
   } catch (error) {
-    logger.error('Error fetching video deployments:', error);
-    res.status(500).json({ error: 'Erreur lors de la récupération de l\'historique des déploiements' });
+    logger.error('Error fetching video deployments:', { videoId: req.params.id, error });
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    res.status(500).json({
+      error: 'Erreur lors de la récupération de l\'historique des déploiements',
+      details: errorMessage
+    });
   }
 };
 
