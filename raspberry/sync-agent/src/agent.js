@@ -119,7 +119,8 @@ class NeoproSyncAgent {
    */
   async processOfflineQueue() {
     try {
-      const queueSize = await offlineQueue.getQueueSize();
+      const queueStats = await offlineQueue.getStats();
+      const queueSize = queueStats.queueSize;
 
       if (queueSize === 0) {
         return;
@@ -127,7 +128,7 @@ class NeoproSyncAgent {
 
       logger.info('Processing offline queue', { queueSize });
 
-      const stats = await offlineQueue.processQueue(async (type, data) => {
+      const processStats = await offlineQueue.processQueue(async (type, data) => {
         // Exécuter la commande comme si elle venait du serveur
         const handler = commands[type];
 
@@ -142,9 +143,9 @@ class NeoproSyncAgent {
       });
 
       // Enregistrer dans l'historique
-      syncHistory.recordSync('offline_queue', stats, stats.failed === 0);
+      syncHistory.recordSync('offline_queue', processStats, processStats.failed === 0);
 
-      logger.info('Offline queue processed', stats);
+      logger.info('Offline queue processed', processStats);
     } catch (error) {
       logger.error('Failed to process offline queue:', error);
     }
