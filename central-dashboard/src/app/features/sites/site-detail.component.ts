@@ -1482,6 +1482,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   showApiKey = false;
   siteId!: string;
   Math = Math;
+  readonly formatVersion = formatVersion;
 
   // Connexion temps réel (WebSocket)
   connectionStatus: SiteConnectionStatus | null = null;

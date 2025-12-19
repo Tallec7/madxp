@@ -470,6 +470,7 @@ import { formatVersion } from './utils/version';
 export class SitesListComponent implements OnInit {
   private readonly sitesService = inject(SitesService);
   private readonly notificationService = inject(NotificationService);
+  readonly formatVersion = formatVersion;
 
   sites$ = this.sitesService.sites$;
   searchTerm = '';
