@@ -5,6 +5,7 @@ import { RouterModule } from '@angular/router';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Site } from '../../core/models';
+import { formatVersion } from './utils/version';
 
 @Component({
   selector: 'app-sites-list',
@@ -71,7 +72,9 @@ import { Site } from '../../core/models';
           </div>
 
           <div class="site-footer">
-            <span class="site-version">v{{ site.software_version || 'N/A' }}</span>
+            <span class="site-version">
+              {{ formatVersion(site.software_version) }}
+            </span>
             <div class="site-actions">
               <button
                 class="btn-icon"

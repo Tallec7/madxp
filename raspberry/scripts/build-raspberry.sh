@@ -127,12 +127,17 @@ check_prerequisites() {
 
 RELEASE_VERSION="${RELEASE_VERSION:-}"
 BUILD_SOURCE="${BUILD_SOURCE:-local-build}"
+SKIP_XATTR_CLEANUP="${SKIP_XATTR_CLEANUP:-false}"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --version)
             RELEASE_VERSION="$2"
             shift 2
+            ;;
+        --skip-xattr)
+            SKIP_XATTR_CLEANUP="true"
+            shift
             ;;
         *)
             print_warning "Argument inconnu ignoré: $1"
@@ -255,7 +260,9 @@ print_step "Création de l'archive de déploiement..."
 # Supprimer les attributs étendus macOS (xattr) pour éviter les warnings
 # "Ignoring unknown extended header keyword" lors de l'extraction sur Linux
 # Note: COPYFILE_DISABLE=1 gère déjà les fichiers AppleDouble dans tar
-if command -v xattr &> /dev/null; then
+if [ "$SKIP_XATTR_CLEANUP" = "true" ]; then
+    print_warning "Suppression des attributs étendus ignorée (SKIP_XATTR_CLEANUP=true)"
+elif command -v xattr &> /dev/null; then
     print_step "Suppression des attributs étendus macOS (timeout 30s)..."
     # Utiliser timeout si disponible, sinon skip après 30s
     if command -v gtimeout &> /dev/null; then
@@ -283,6 +290,8 @@ if command -v xattr &> /dev/null; then
         wait $XATTR_PID 2>/dev/null || true
     fi
     print_success "Attributs étendus traités"
+else
+    print_warning "xattr non disponible - étape ignorée"
 fi
 
 print_step "Compression de l'archive..."

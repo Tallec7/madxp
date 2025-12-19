@@ -422,9 +422,17 @@ function updateVersionLabel() {
         return;
     }
 
-    const versionText = currentVersionInfo?.version
-        ? `Neopro v${currentVersionInfo.version}`
-        : 'Neopro';
+    const rawVersion = currentVersionInfo?.version || null;
+    let versionLabel = null;
+
+    if (rawVersion) {
+        versionLabel = rawVersion.trim();
+        if (versionLabel && !/^v/i.test(versionLabel)) {
+            versionLabel = `v${versionLabel}`;
+        }
+    }
+
+    const versionText = versionLabel ? `Neopro ${versionLabel}` : 'Neopro';
     label.textContent = `${versionText} | Raspberry Pi Admin Panel`;
 
     const tooltip = [];

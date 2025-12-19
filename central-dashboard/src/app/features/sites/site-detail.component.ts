@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Site, Metrics, SiteConnectionStatus } from '../../core/models';
+import { formatVersion } from './utils/version';
 import { Subscription, interval } from 'rxjs';
 import { ConfigEditorComponent } from './config-editor/config-editor.component';
 import { SiteContentViewerComponent } from './site-content-viewer/site-content-viewer.component';
@@ -57,7 +58,7 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
             </div>
             <div class="info-row">
               <span class="label">Version:</span>
-              <span class="value">{{ site.software_version || 'N/A' }}</span>
+              <span class="value">{{ formatVersion(site.software_version) }}</span>
             </div>
             <div class="info-row">
               <span class="label">Modèle:</span>

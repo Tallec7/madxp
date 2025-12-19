@@ -24,6 +24,7 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PI_ADDRESS="neopro.local"
 RELEASE_VERSION="${RELEASE_VERSION:-}"
+SKIP_XATTR_CLEANUP="${SKIP_XATTR_CLEANUP:-false}"
 START_TIME=$(date +%s)
 
 print_header() {
@@ -54,6 +55,7 @@ Par défaut, le déploiement cible neopro.local et la version est déduite depui
 
 Options:
   --version vX.Y.Z   Force la version de release injectée dans le build
+  --skip-xattr       Ignore le nettoyage xattr (plus rapide mais peut générer des warnings)
   -h, --help         Affiche cette aide
 
 Exemples:
@@ -74,6 +76,10 @@ while [[ $# -gt 0 ]]; do
             fi
             RELEASE_VERSION="$2"
             shift 2
+            ;;
+        --skip-xattr)
+            SKIP_XATTR_CLEANUP="true"
+            shift
             ;;
         -h|--help)
             print_usage
@@ -125,6 +131,10 @@ BUILD_ENV=("BUILD_SOURCE=build-and-deploy.sh")
 if [ -n "$RELEASE_VERSION" ]; then
     BUILD_ENV=("RELEASE_VERSION=${RELEASE_VERSION}" "${BUILD_ENV[@]}")
     echo "  • Version forcée : ${RELEASE_VERSION}"
+fi
+if [ "$SKIP_XATTR_CLEANUP" = "true" ]; then
+    BUILD_ENV=("SKIP_XATTR_CLEANUP=true" "${BUILD_ENV[@]}")
+    echo "  • Nettoyage xattr ignoré"
 fi
 if ! env "${BUILD_ENV[@]}" "${SCRIPT_DIR}/build-raspberry.sh"; then
     print_error "Échec du build"

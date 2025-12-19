@@ -310,6 +310,10 @@ npm run build:raspberry
 RELEASE_VERSION=v2.4.0 npm run build:raspberry
 # ou
 ./raspberry/scripts/build-raspberry.sh --version v2.4.0
+
+# Sauter le nettoyage xattr (plus rapide si tar n'affiche pas d'avertissements)
+SKIP_XATTR_CLEANUP=true ./raspberry/scripts/build-raspberry.sh
+./raspberry/scripts/build-raspberry.sh --skip-xattr
 ```
 
 **Ce qu'il fait :**
@@ -329,6 +333,7 @@ RELEASE_VERSION=v2.4.0 npm run build:raspberry
 ./raspberry/scripts/build-and-deploy.sh neopro.home         # Cible personnalisée
 ./raspberry/scripts/build-and-deploy.sh --version v2.4.0    # Force la version injectée dans le build
 ./raspberry/scripts/build-and-deploy.sh --version v2.4.0 192.168.4.1
+./raspberry/scripts/build-and-deploy.sh --skip-xattr        # Saute le nettoyage xattr (plus rapide)
 ```
 
 **Ce qu'il fait :**
