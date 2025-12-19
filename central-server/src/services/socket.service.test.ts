@@ -54,9 +54,11 @@ jest.mock('./deployment.service', () => ({
 import socketService from './socket.service';
 import { SocketData, HeartbeatMessage, CommandResult } from '../types';
 
+type SocketEventHandler = (...args: unknown[]) => void;
+
 // Helper to create mock socket
 const createMockSocket = (overrides: Partial<Socket> = {}): Partial<Socket> => {
-  const eventHandlers: Map<string, Function> = new Map();
+  const eventHandlers: Map<string, SocketEventHandler> = new Map();
 
   return {
     id: 'socket-123',
@@ -64,15 +66,15 @@ const createMockSocket = (overrides: Partial<Socket> = {}): Partial<Socket> => {
       headers: { 'x-forwarded-for': '203.0.113.1' },
       address: '127.0.0.1',
     } as any,
-    on: jest.fn((event: string, handler: Function) => {
+    on: jest.fn((event: string, handler: SocketEventHandler) => {
       eventHandlers.set(event, handler);
     }),
     emit: jest.fn(),
     disconnect: jest.fn(),
     // Helper to trigger event handlers
-    triggerEvent: (event: string, data?: any) => {
+    triggerEvent: (event: string, ...args: unknown[]) => {
       const handler = eventHandlers.get(event);
-      if (handler) handler(data);
+      if (handler) handler(...args);
     },
     ...overrides,
   } as any;
@@ -406,6 +408,22 @@ describe('SocketService', () => {
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO alerts'),
         expect.arrayContaining(['site-uuid-123', 'high_disk_usage', 'warning'])
+      );
+    });
+
+    it('should update software version when provided', async () => {
+      mockQuery.mockResolvedValue({ rows: [] });
+
+      const messageWithVersion = {
+        ...heartbeatMessage,
+        softwareVersion: 'v2.4.0',
+      };
+
+      await (socketService as any).handleHeartbeat('site-uuid-123', messageWithVersion);
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE sites SET software_version'),
+        expect.arrayContaining(['site-uuid-123', 'v2.4.0'])
       );
     });
 

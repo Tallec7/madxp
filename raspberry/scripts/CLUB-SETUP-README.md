@@ -6,22 +6,25 @@ Ce document explique les deux méthodes pour configurer un nouveau club Neopro.
 
 Il existe **deux méthodes** pour configurer un nouveau club :
 
-| Méthode | Script | Dépendance locale | Cas d'usage |
-|---------|--------|-------------------|-------------|
-| **Remote** ✅ | `setup-remote-club.sh` | ❌ Aucune | **Recommandé** - Installation depuis n'importe où |
-| **Local** | `setup-new-club.sh` | ✅ Dossier Neopro requis | Développement local |
+| Méthode       | Script                 | Dépendance locale        | Cas d'usage                                       |
+| ------------- | ---------------------- | ------------------------ | ------------------------------------------------- |
+| **Remote** ✅ | `setup-remote-club.sh` | ❌ Aucune                | **Recommandé** - Installation depuis n'importe où |
+| **Local**     | `setup-new-club.sh`    | ✅ Dossier Neopro requis | Développement local                               |
 
 ---
 
 ## ✨ Méthode 1 : Setup Remote (RECOMMANDÉ)
 
 ### Avantages
+
 - ✅ **Aucune dépendance locale** - Pas besoin du dossier Neopro sur votre machine
 - ✅ **Installation depuis n'importe où** - Fonctionne sur n'importe quel ordinateur
 - ✅ **Toujours à jour** - Télécharge la dernière version depuis GitHub Releases
 - ✅ **Rapide** - Pas de build local nécessaire
+- ✅ **Traçabilité** - Copie la version GitHub dans `/home/pi/neopro/VERSION` et `configuration.json`
 
 ### Prérequis
+
 - Le Raspberry Pi doit déjà être installé avec `setup.sh`
 - Connexion SSH au Pi (généralement `pi@neopro.local`)
 - Connexion Internet pour télécharger depuis GitHub
@@ -36,6 +39,7 @@ curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_
 ```
 
 **Exemple :**
+
 ```bash
 curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123
 ```
@@ -54,6 +58,7 @@ chmod +x setup-remote-club.sh
 ```
 
 Le script va :
+
 1. ✅ Collecter les informations du club (nom, localisation, sports, etc.)
 2. ✅ Créer la configuration JSON
 3. ✅ Télécharger l'archive de déploiement depuis GitHub Releases
@@ -71,15 +76,25 @@ Le script va :
 ./setup-remote-club.sh
 ```
 
+### Vérifier la version installée
+
+Chaque archive GitHub contient un fichier `VERSION`. Le script le dépose sur le Pi avec les métadonnées (`/home/pi/neopro/VERSION` et `/home/pi/neopro/release.json`) et aligne `configuration.json.version`. Pour contrôler la version d'un boîtier :
+
+```bash
+ssh pi@neopro.local 'cat /home/pi/neopro/VERSION'
+```
+
 ---
 
 ## 🔧 Méthode 2 : Setup Local (Développement)
 
 ### Avantages
+
 - ✅ **Personnalisation** - Permet de tester des modifications locales
 - ✅ **Développement** - Idéal pour le développement et les tests
 
 ### Prérequis
+
 - **Dossier Neopro complet** sur votre machine
 - Node.js et npm installés
 - Angular CLI (`npm install -g @angular/cli`)
@@ -93,6 +108,7 @@ Le script va :
 ```
 
 Le script va :
+
 1. ✅ Collecter les informations du club
 2. ✅ Créer la configuration depuis le template local
 3. ✅ **Builder l'application localement** (peut prendre 5-10 minutes)
@@ -103,14 +119,14 @@ Le script va :
 
 ## 📊 Comparaison détaillée
 
-| Critère | Remote (`setup-remote-club.sh`) | Local (`setup-new-club.sh`) |
-|---------|----------------------------------|------------------------------|
-| **Dépendances** | Aucune | Dossier Neopro complet |
-| **Temps d'exécution** | 2-5 minutes | 10-15 minutes (à cause du build) |
-| **Connexion Internet** | ✅ Requise | ⚠️ Optionnelle (mais recommandée) |
-| **Version installée** | Dernière release GitHub | Version locale (peut être modifiée) |
-| **Cas d'usage** | Production, déploiement terrain | Développement, tests |
-| **Portabilité** | ✅ Fonctionne partout | ❌ Nécessite le projet |
+| Critère                | Remote (`setup-remote-club.sh`) | Local (`setup-new-club.sh`)         |
+| ---------------------- | ------------------------------- | ----------------------------------- |
+| **Dépendances**        | Aucune                          | Dossier Neopro complet              |
+| **Temps d'exécution**  | 2-5 minutes                     | 10-15 minutes (à cause du build)    |
+| **Connexion Internet** | ✅ Requise                      | ⚠️ Optionnelle (mais recommandée)   |
+| **Version installée**  | Dernière release GitHub         | Version locale (peut être modifiée) |
+| **Cas d'usage**        | Production, déploiement terrain | Développement, tests                |
+| **Portabilité**        | ✅ Fonctionne partout           | ❌ Nécessite le projet              |
 
 ---
 
@@ -208,6 +224,7 @@ Les deux méthodes créent la même structure sur le Pi :
 **Cause :** Aucune release n'existe encore sur GitHub
 
 **Solution :**
+
 1. Créer une release avec le workflow GitHub Actions :
    ```bash
    git tag v1.0.0
@@ -218,6 +235,7 @@ Les deux méthodes créent la même structure sur le Pi :
 ### Problème : Connexion SSH refusée
 
 **Solution :**
+
 ```bash
 # Réinitialiser la clé SSH
 ssh-keygen -R neopro.local
@@ -229,11 +247,13 @@ ssh-keygen -R 192.168.4.1
 ### Problème : Service neopro-app ne démarre pas
 
 **Diagnostic :**
+
 ```bash
 ssh pi@neopro.local 'sudo journalctl -u neopro-app -n 50'
 ```
 
 **Solutions courantes :**
+
 - Vérifier les permissions : `sudo chown -R pi:pi /home/pi/neopro`
 - Vérifier les dépendances npm : `cd /home/pi/neopro/server && npm install`
 - Redémarrer : `sudo systemctl restart neopro-app`
@@ -251,11 +271,11 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-app -n 50'
 
 ## 🎯 Résumé rapide
 
-| Vous êtes... | Utilisez... |
-|-------------|-------------|
-| 🏟️ Sur le terrain pour installer un nouveau club | `setup-remote-club.sh` |
-| 👨‍💻 En développement pour tester des modifications | `setup-new-club.sh` |
-| 🚀 En train de déployer une mise à jour | `deploy-remote.sh` |
-| 🆕 En train d'installer le Pi pour la première fois | `setup.sh` (via curl) |
+| Vous êtes...                                        | Utilisez...            |
+| --------------------------------------------------- | ---------------------- |
+| 🏟️ Sur le terrain pour installer un nouveau club    | `setup-remote-club.sh` |
+| 👨‍💻 En développement pour tester des modifications   | `setup-new-club.sh`    |
+| 🚀 En train de déployer une mise à jour             | `deploy-remote.sh`     |
+| 🆕 En train d'installer le Pi pour la première fois | `setup.sh` (via curl)  |
 
 **Recommandation :** Utilisez toujours `setup-remote-club.sh` pour les installations terrain ! 🎉

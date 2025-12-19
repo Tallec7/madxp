@@ -104,6 +104,7 @@ check_ssh_connection() {
 # Variables globales
 WIFI_CONFIGURED=false
 RELEASE_VERSION=""
+RESOLVED_RELEASE_VERSION=""
 CONFIG_JSON=""
 
 ################################################################################
@@ -214,6 +215,11 @@ create_configuration_json() {
     CONTACT_EMAIL_ESC=$(echo "$CONTACT_EMAIL" | sed 's/\\/\\\\/g; s/"/\\"/g')
     CONTACT_PHONE_ESC=$(echo "$CONTACT_PHONE" | sed 's/\\/\\\\/g; s/"/\\"/g')
     PASSWORD_ESC=$(echo "$PASSWORD" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    CONFIG_VERSION_VALUE=${RESOLVED_RELEASE_VERSION:-$RELEASE_VERSION}
+    if [ -z "$CONFIG_VERSION_VALUE" ]; then
+        CONFIG_VERSION_VALUE="unknown"
+    fi
+    CONFIG_VERSION_ESC=$(echo "$CONFIG_VERSION_VALUE" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
     # Convertir les sports en tableau JSON
     SPORTS_JSON=$(echo "$SPORTS" | sed 's/,/","/g' | sed 's/^/["/' | sed 's/$/"]/')
@@ -245,6 +251,7 @@ create_configuration_json() {
     "serverUrl": "https://neopro-central.onrender.com",
     "apiKey": ""
   },
+  "version": "${CONFIG_VERSION_ESC}",
   "features": {
     "displayMode": "auto",
     "autoStart": true,
@@ -257,6 +264,7 @@ EOF
     )
 
     print_success "Configuration JSON créée en mémoire"
+    print_info "Version logicielle référencée : ${CONFIG_VERSION_VALUE}"
 }
 
 ################################################################################
@@ -299,6 +307,20 @@ download_deployment_archive() {
     # Vérifier la taille de l'archive
     ARCHIVE_SIZE=$(du -h "$ARCHIVE_PATH" | cut -f1)
     print_info "Taille de l'archive : $ARCHIVE_SIZE"
+
+    # Détecter la version réelle depuis l'archive
+    local archive_version
+    archive_version=$(tar -xOf "$ARCHIVE_PATH" deploy/VERSION 2>/dev/null | tr -d '\r' || true)
+    if [ -n "$archive_version" ]; then
+        RESOLVED_RELEASE_VERSION=$(printf '%s' "$archive_version" | head -n1 | tr -d '[:space:]')
+        if [ -z "$RESOLVED_RELEASE_VERSION" ]; then
+            RESOLVED_RELEASE_VERSION="${RELEASE_VERSION:-unknown}"
+        fi
+        print_success "Version détectée dans l'archive : $RESOLVED_RELEASE_VERSION"
+    else
+        RESOLVED_RELEASE_VERSION="${RELEASE_VERSION:-unknown}"
+        print_warning "Impossible de détecter la version depuis l'archive (valeur utilisée : ${RESOLVED_RELEASE_VERSION})"
+    fi
 }
 
 ################################################################################
@@ -347,6 +369,11 @@ get_pi_address() {
 
 deploy_to_pi() {
     print_step "Déploiement sur le Raspberry Pi"
+    local version_label="${RESOLVED_RELEASE_VERSION:-$RELEASE_VERSION}"
+    if [ -z "$version_label" ]; then
+        version_label="unknown"
+    fi
+    print_info "Version déployée : $version_label"
 
     print_info "Upload de l'archive (peut prendre quelques minutes)..."
     if scp -o StrictHostKeyChecking=accept-new "$ARCHIVE_PATH" pi@"$PI_ADDRESS":~/neopro-raspberry-deploy.tar.gz; then
@@ -380,6 +407,26 @@ sudo cp -r deploy/server/* ${RASPBERRY_DIR}/server/
 sudo cp -r deploy/sync-agent/* ${RASPBERRY_DIR}/sync-agent/
 if [ -d deploy/admin ]; then
     sudo cp -r deploy/admin/* ${RASPBERRY_DIR}/admin/
+fi
+
+# Enregistrer la version et les métadonnées de build
+if [ -f deploy/VERSION ]; then
+    sudo cp deploy/VERSION ${RASPBERRY_DIR}/VERSION
+    sudo chown pi:pi ${RASPBERRY_DIR}/VERSION
+    sudo chmod 644 ${RASPBERRY_DIR}/VERSION
+fi
+if [ -f deploy/release.json ]; then
+    sudo cp deploy/release.json ${RASPBERRY_DIR}/release.json
+    sudo chown pi:pi ${RASPBERRY_DIR}/release.json
+    sudo chmod 644 ${RASPBERRY_DIR}/release.json
+fi
+
+# S'assurer que le WiFi client (wlan1) conserve sa configuration
+if ip link show wlan1 >/dev/null 2>&1 && [ -f /etc/wpa_supplicant/wpa_supplicant.conf ]; then
+    sudo ln -sf /etc/wpa_supplicant/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant-wlan1.conf
+    sudo systemctl enable wpa_supplicant@wlan1.service >/dev/null 2>&1 || true
+    sudo systemctl restart wpa_supplicant@wlan1.service >/dev/null 2>&1 || true
+    sudo dhcpcd wlan1 >/dev/null 2>&1 || true
 fi
 
 # Restaurer la configuration et les vidéos si elles existaient
@@ -585,6 +632,11 @@ print_summary() {
     echo ""
     echo -e "${BLUE}Configuration :${NC}"
     echo "  • Mot de passe : ${PASSWORD:0:3}***********"
+    if [ -n "$RESOLVED_RELEASE_VERSION" ]; then
+        echo "  • Version logicielle : ${RESOLVED_RELEASE_VERSION}"
+    elif [ -n "$RELEASE_VERSION" ]; then
+        echo "  • Version logicielle : ${RELEASE_VERSION}"
+    fi
     echo ""
     echo -e "${BLUE}Accès au boîtier :${NC}"
     if [ "$WIFI_CONFIGURED" = true ]; then
@@ -641,11 +693,11 @@ main() {
     # Collecter les informations
     collect_club_info
 
-    # Créer la configuration JSON (en mémoire)
-    create_configuration_json
-
     # Télécharger l'archive depuis GitHub
     download_deployment_archive
+
+    # Créer la configuration JSON (en mémoire)
+    create_configuration_json
 
     # Demander l'adresse du Pi
     get_pi_address

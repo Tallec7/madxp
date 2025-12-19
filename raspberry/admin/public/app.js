@@ -116,6 +116,15 @@ if (DEMO_MODE) {
             return new Response(JSON.stringify(data), { status: 200 });
         }
 
+        if (url.includes('/api/version')) {
+            return new Response(JSON.stringify({
+                version: DEMO_DATA.configuration.version,
+                commit: 'demo',
+                buildDate: new Date().toISOString(),
+                source: 'demo-mode'
+            }), { status: 200 });
+        }
+
         if (url.includes('/api/configuration/time-categories')) {
             if (options.method === 'POST') {
                 return new Response(JSON.stringify({ success: true, message: 'Configuration sauvegardée (mode démo)' }), { status: 200 });
@@ -195,6 +204,7 @@ let cachedOrphanVideos = []; // Vidéos orphelines uniquement
 let cachedConfig = null;
 let cachedTimeCategories = [];
 let availableCategories = [];
+let currentVersionInfo = null;
 
 // Connection status management
 let connectionStatus = 'checking'; // 'online', 'offline', 'reconnecting', 'checking'
@@ -334,6 +344,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateTime();
     startConnectionMonitoring(); // Start connection monitoring
     loadDashboard();
+    loadVersionLabel();
 
     // Charger la configuration pour peupler les selects
     await loadConfiguration();
@@ -382,6 +393,61 @@ async function loadConfiguration() {
         populateCategorySelects();
     } catch (error) {
         console.error('Erreur lors du chargement de la configuration:', error);
+    }
+}
+
+async function loadVersionLabel() {
+    const label = document.getElementById('version-label');
+    if (!label) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/version');
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+        }
+        currentVersionInfo = await response.json();
+    } catch (error) {
+        console.warn('[admin-ui] Impossible de charger la version:', error);
+        currentVersionInfo = null;
+    }
+
+    updateVersionLabel();
+}
+
+function updateVersionLabel() {
+    const label = document.getElementById('version-label');
+    if (!label) {
+        return;
+    }
+
+    const versionText = currentVersionInfo?.version
+        ? `Neopro v${currentVersionInfo.version}`
+        : 'Neopro';
+    label.textContent = `${versionText} | Raspberry Pi Admin Panel`;
+
+    const tooltip = [];
+    if (currentVersionInfo?.commit) {
+        tooltip.push(`commit ${currentVersionInfo.commit}`);
+    }
+    if (currentVersionInfo?.buildDate) {
+        try {
+            tooltip.push(
+                `build ${new Date(currentVersionInfo.buildDate).toLocaleString('fr-FR')}`
+            );
+        } catch (error) {
+            tooltip.push(`build ${currentVersionInfo.buildDate}`);
+        }
+    }
+    if (currentVersionInfo?.source) {
+        tooltip.push(`source ${currentVersionInfo.source}`);
+    }
+
+    if (tooltip.length) {
+        label.title = tooltip.join(' • ');
+    } else {
+        label.removeAttribute('title');
     }
 }
 

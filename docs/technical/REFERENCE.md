@@ -287,6 +287,7 @@ npm run deploy:raspberry neopro.local
 ```
 
 **Exigences :**
+
 - Minimum 12 caractères
 - Mélange majuscules, minuscules, chiffres, symboles recommandé
 
@@ -333,6 +334,7 @@ sudo node scripts/register-site.js
 ```
 
 **Le script demande :**
+
 - Site name (ex: Complexe Sportif CESSON)
 - Club name (ex: CESSON Handball)
 - City, region, country
@@ -341,6 +343,7 @@ sudo node scripts/register-site.js
 - Contact phone (optionnel)
 
 **Résultat :**
+
 - Enregistrement sur le serveur central
 - Génération d'un site ID
 - Création de `/etc/neopro/site.conf`
@@ -364,19 +367,21 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-sync -n 50'
 
 ### Scripts d'automatisation
 
-| Script | Emplacement | Description |
-|--------|-------------|-------------|
-| `setup-new-club.sh` | `raspberry/scripts/` | Configuration complète nouveau club (5-10 min) |
-| `build-raspberry.sh` | `raspberry/scripts/` | Build Angular optimisé pour Pi |
-| `build-and-deploy.sh` | `raspberry/scripts/` | Build + déploiement combinés |
-| `deploy-remote.sh` | `raspberry/scripts/` | Déploiement SSH seul (transfert + permissions) |
-| `copy-to-pi.sh` | `raspberry/scripts/` | Copie des fichiers d'installation vers Pi |
-| `diagnose-pi.sh` | `raspberry/scripts/` | Diagnostic complet du Pi |
-| `backup-club.sh` | `raspberry/scripts/` | Sauvegarde configuration club |
-| `restore-club.sh` | `raspberry/scripts/` | Restauration configuration club |
-| `cleanup-pi.sh` | `raspberry/scripts/` | Nettoyage ~/raspberry après install |
-| `setup-wifi-client.sh` | `raspberry/scripts/` | Configuration WiFi client (accès internet) |
-| `fix-hostname.sh` | `raspberry/scripts/` | Correction hostname après reboot |
+| Script                 | Emplacement          | Description                                    |
+| ---------------------- | -------------------- | ---------------------------------------------- |
+| `setup-new-club.sh`    | `raspberry/scripts/` | Configuration complète nouveau club (5-10 min) |
+| `build-raspberry.sh`   | `raspberry/scripts/` | Build Angular optimisé pour Pi                 |
+| `build-and-deploy.sh`  | `raspberry/scripts/` | Build + déploiement combinés                   |
+| `deploy-remote.sh`     | `raspberry/scripts/` | Déploiement SSH seul (transfert + permissions) |
+| `copy-to-pi.sh`        | `raspberry/scripts/` | Copie des fichiers d'installation vers Pi      |
+| `diagnose-pi.sh`       | `raspberry/scripts/` | Diagnostic complet du Pi                       |
+| `backup-club.sh`       | `raspberry/scripts/` | Sauvegarde configuration club                  |
+| `restore-club.sh`      | `raspberry/scripts/` | Restauration configuration club                |
+| `cleanup-pi.sh`        | `raspberry/scripts/` | Nettoyage ~/raspberry après install            |
+| `setup-wifi-client.sh` | `raspberry/scripts/` | Configuration WiFi client (accès internet)     |
+| `fix-hostname.sh`      | `raspberry/scripts/` | Correction hostname après reboot               |
+
+> `setup-wifi-client.sh` met à jour `/etc/wpa_supplicant/wpa_supplicant.conf`, crée le lien `wpa_supplicant-wlan1.conf`, active `wpa_supplicant@wlan1.service` et relance `dhcpcd` afin que la connexion WiFi du club survive aux redémarrages.
 
 ### Scripts npm (à la racine du projet)
 
@@ -467,6 +472,7 @@ neopro/
 **Mot de passe :** Défini lors de l'installation
 
 **Fichiers :**
+
 - `/etc/hostapd/hostapd.conf` - Configuration hotspot
 - `/etc/dnsmasq.conf` - DHCP
 
@@ -480,12 +486,12 @@ Permet l'accès sans connaître l'IP.
 
 ### Ports utilisés
 
-| Port | Service | Description |
-|------|---------|-------------|
-| 80 | nginx | Application web |
-| 3000 | Node.js | Socket.IO |
-| 8080 | Node.js | Interface admin |
-| 22 | SSH | Accès distant (optionnel) |
+| Port | Service | Description               |
+| ---- | ------- | ------------------------- |
+| 80   | nginx   | Application web           |
+| 3000 | Node.js | Socket.IO                 |
+| 8080 | Node.js | Interface admin           |
+| 22   | SSH     | Accès distant (optionnel) |
 
 ---
 
@@ -551,25 +557,25 @@ sudo tail -f /home/pi/neopro/logs/nginx-error.log
 
 ```javascript
 // Remote → TV
-socket.emit('play-video', { videoId: 'video-123' })
-socket.emit('pause')
-socket.emit('resume')
-socket.emit('stop')
+socket.emit('play-video', { videoId: 'video-123' });
+socket.emit('pause');
+socket.emit('resume');
+socket.emit('stop');
 
 // TV → Remote
 socket.emit('video-status', {
   playing: true,
   currentVideo: 'video-123',
   duration: 45.2,
-  currentTime: 12.5
-})
+  currentTime: 12.5,
+});
 ```
 
 **Connexion :**
 
 ```typescript
 // Angular environment
-socketUrl: 'http://neopro.local:3000'
+socketUrl: 'http://neopro.local:3000';
 ```
 
 ### Analytics API (Raspberry Pi)

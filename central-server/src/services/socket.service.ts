@@ -392,8 +392,13 @@ class SocketService {
         ]
       );
 
-      // Update site status and local IP if provided
+      // Update site status, local IP and version if provided
       const localIp = message.metrics.localIp || null;
+      const softwareVersion =
+        message.softwareVersion ||
+        message.versionInfo?.version ||
+        null;
+
       if (localIp) {
         await query(
           'UPDATE sites SET last_seen_at = NOW(), status = $1, local_ip = $3 WHERE id = $2',
@@ -403,6 +408,13 @@ class SocketService {
         await query(
           'UPDATE sites SET last_seen_at = NOW(), status = $1 WHERE id = $2',
           ['online', siteId]
+        );
+      }
+
+      if (softwareVersion) {
+        await query(
+          'UPDATE sites SET software_version = $2 WHERE id = $1',
+          [siteId, softwareVersion]
         );
       }
 

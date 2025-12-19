@@ -40,6 +40,17 @@ RASPBERRY_USER="pi"
 RASPBERRY_DIR="/home/pi/neopro"
 DEPLOY_ARCHIVE="raspberry/neopro-raspberry-deploy.tar.gz"
 ADMIN_SERVICE_FILE="raspberry/config/systemd/neopro-admin.service"
+PACKAGE_VERSION="unknown"
+
+if [ -f "raspberry/deploy/VERSION" ]; then
+    PACKAGE_VERSION=$(tr -d '\r' < raspberry/deploy/VERSION | head -n1 | tr -d '[:space:]')
+elif [ -f "${DEPLOY_ARCHIVE}" ]; then
+    PACKAGE_VERSION=$(tar -xOf "${DEPLOY_ARCHIVE}" deploy/VERSION 2>/dev/null | tr -d '\r' | head -n1 | tr -d '[:space:]')
+fi
+
+if [ -z "$PACKAGE_VERSION" ]; then
+    PACKAGE_VERSION="unknown"
+fi
 
 echo -e "${GREEN}"
 echo "╔════════════════════════════════════════════════════════════════╗"
@@ -47,6 +58,7 @@ echo "║         DÉPLOIEMENT DISTANT NEOPRO                             ║"
 echo "║         Cible: ${RASPBERRY_USER}@${RASPBERRY_IP}              ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
+echo -e "${BLUE}Version du package : ${PACKAGE_VERSION}${NC}"
 
 # Vérifications préalables
 if [ ! -f "${DEPLOY_ARCHIVE}" ]; then
@@ -198,6 +210,36 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
         echo 'Admin panel installé'
     fi
 
+    # Enregistrer les métadonnées de version
+    if [ -f ~/deploy/VERSION ]; then
+        sudo cp ~/deploy/VERSION ${RASPBERRY_DIR}/VERSION
+        sudo chown pi:pi ${RASPBERRY_DIR}/VERSION
+        sudo chmod 644 ${RASPBERRY_DIR}/VERSION
+    fi
+    if [ -f ~/deploy/release.json ]; then
+        sudo cp ~/deploy/release.json ${RASPBERRY_DIR}/release.json
+        sudo chown pi:pi ${RASPBERRY_DIR}/release.json
+        sudo chmod 644 ${RASPBERRY_DIR}/release.json
+    fi
+
+    # S'assurer que le WiFi client (wlan1) conserve sa configuration et redémarre
+    if ip link show wlan1 >/dev/null 2>&1 && [ -f /etc/wpa_supplicant/wpa_supplicant.conf ]; then
+        sudo ln -sf /etc/wpa_supplicant/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant-wlan1.conf
+        sudo systemctl enable wpa_supplicant@wlan1.service >/dev/null 2>&1 || true
+        sudo systemctl restart wpa_supplicant@wlan1.service >/dev/null 2>&1 || true
+        sudo dhcpcd wlan1 >/dev/null 2>&1 || true
+        echo 'Service WiFi client (wlan1) vérifié'
+    fi
+
+    # Installation des scripts runtime (compress/video, wifi, backup, etc.)
+    if [ -d ~/deploy/scripts ]; then
+        sudo mkdir -p ${RASPBERRY_DIR}/scripts
+        sudo cp -r ~/deploy/scripts/* ${RASPBERRY_DIR}/scripts/
+        sudo chown -R pi:pi ${RASPBERRY_DIR}/scripts
+        sudo chmod +x ${RASPBERRY_DIR}/scripts/*.sh 2>/dev/null || true
+        echo 'Scripts runtime installés'
+    fi
+
     # Permissions correctes pour nginx et sync-agent
     echo 'Configuration des permissions...'
     sudo chmod 755 /home/pi
@@ -211,6 +253,7 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     sudo chown -R pi:pi ${RASPBERRY_DIR}/server
     sudo chown -R pi:pi ${RASPBERRY_DIR}/admin
     sudo chown -R pi:pi ${RASPBERRY_DIR}/sync-agent
+    sudo chown -R pi:pi ${RASPBERRY_DIR}/scripts 2>/dev/null || true
     sudo chown -R pi:pi ${RASPBERRY_DIR}/videos
     sudo chown -R pi:pi ${RASPBERRY_DIR}/logs
     echo 'Permissions configurées'
@@ -312,6 +355,7 @@ echo -e "${NC}"
 echo ""
 echo -e "${BLUE}Application mise à jour sur:${NC}"
 echo "  • URL: http://${RASPBERRY_IP}"
+echo "  • Version: ${PACKAGE_VERSION}"
 echo "  • Mode TV: http://${RASPBERRY_IP}/tv"
 echo "  • Remote: http://${RASPBERRY_IP}/remote"
 echo ""

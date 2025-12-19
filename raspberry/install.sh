@@ -4,8 +4,10 @@
 # Script d'installation Neopro pour Raspberry Pi
 # Ce script configure automatiquement un Raspberry Pi comme système Neopro
 #
-# Usage: sudo ./install.sh [NOM_CLUB] [MOT_PASSE_WIFI]
-# Exemple: sudo ./install.sh CESSON MyWiFiPass123
+# Usage: sudo ./install.sh [NOM_CLUB] [MOT_PASSE_WIFI] [SSID_WIFI_CLIENT] [PASS_WIFI_CLIENT]
+# Exemple: sudo ./install.sh CESSON MyWiFiPass123 Livebox Maison12345
+# Les paramètres WiFi client sont optionnels. Si une clé WiFi USB est branchée,
+# le script peut aussi poser la question en mode interactif.
 ################################################################################
 
 set -euo pipefail  # Arrêt en cas d'erreur et variables non définies détectées
@@ -27,8 +29,12 @@ NODE_VERSION="18"
 WIFI_INTERFACE=""
 WIFI_CHANNEL="6"
 STATIC_IP="192.168.4.1/24"
+CLIENT_WIFI_SSID="${3:-${NEOPRO_WIFI_CLIENT_SSID:-}}"
+CLIENT_WIFI_PASSWORD="${4:-${NEOPRO_WIFI_CLIENT_PASSWORD:-}}"
+WIFI_CLIENT_INTERFACE=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 START_TIME=$(date +%s)
+NON_INTERACTIVE="${NEOPRO_NON_INTERACTIVE:-false}"
 
 ################################################################################
 # Fonctions utilitaires
@@ -130,6 +136,33 @@ detect_wifi_interface() {
         fi
     fi
     print_step "Interface WiFi détectée: ${WIFI_INTERFACE}"
+}
+
+detect_wifi_client_interface() {
+    rfkill unblock wifi || true
+    local INTERFACES=()
+    while IFS= read -r iface; do
+        INTERFACES+=("$iface")
+    done < <(ls /sys/class/net 2>/dev/null | grep -E '^wlan' | sort || true)
+
+    if [ "${#INTERFACES[@]}" -lt 2 ]; then
+        WIFI_CLIENT_INTERFACE=""
+        print_warning "Aucune seconde interface WiFi détectée (branchez une clé USB pour l'accès Internet)."
+        return
+    fi
+
+    for iface in "${INTERFACES[@]}"; do
+        if [ "$iface" != "${WIFI_INTERFACE}" ]; then
+            WIFI_CLIENT_INTERFACE="$iface"
+            break
+        fi
+    done
+
+    if [ -n "${WIFI_CLIENT_INTERFACE}" ]; then
+        print_step "Interface WiFi client détectée: ${WIFI_CLIENT_INTERFACE}"
+    else
+        print_warning "Impossible d'identifier l'interface client. Vérifiez vos interfaces WiFi."
+    fi
 }
 
 disable_conflicting_wifi_services() {
@@ -354,6 +387,60 @@ EOF
         print_success "Hotspot WiFi démarré: SSID NEOPRO-${CLUB_NAME}"
     else
         print_warning "Le hotspot ne signale pas encore le mode AP. Vérifiez manuellement avec 'iw dev ${WIFI_INTERFACE} info'."
+    fi
+}
+
+configure_wifi_client_support() {
+    if [ -z "${WIFI_CLIENT_INTERFACE}" ]; then
+        print_warning "Mode WiFi client ignoré : aucune seconde interface détectée."
+        return
+    fi
+
+    print_step "Préparation de l'interface client (${WIFI_CLIENT_INTERFACE})..."
+    rfkill unblock wifi || true
+    ip link set "${WIFI_CLIENT_INTERFACE}" down || true
+    ip addr flush dev "${WIFI_CLIENT_INTERFACE}" || true
+    ip link set "${WIFI_CLIENT_INTERFACE}" up || true
+
+    local SHOULD_CONFIGURE="no"
+    local SSID_INPUT="${CLIENT_WIFI_SSID}"
+    local PASS_INPUT="${CLIENT_WIFI_PASSWORD}"
+
+    if [ -n "${SSID_INPUT}" ] && [ -n "${PASS_INPUT}" ]; then
+        SHOULD_CONFIGURE="yes"
+    elif [ "${NON_INTERACTIVE}" != "true" ]; then
+        read -p "Configurer maintenant le WiFi client (Internet) sur ${WIFI_CLIENT_INTERFACE}? (O/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Oo]$ ]]; then
+            SHOULD_CONFIGURE="yes"
+            if [ -z "${SSID_INPUT}" ]; then
+                read -p "SSID du WiFi Internet: " SSID_INPUT
+            fi
+            if [ -z "${PASS_INPUT}" ]; then
+                read -sp "Mot de passe WiFi Internet: " PASS_INPUT
+                echo ""
+            fi
+        fi
+    fi
+
+    if [ "${SHOULD_CONFIGURE}" != "yes" ] || [ -z "${SSID_INPUT}" ] || [ -z "${PASS_INPUT}" ]; then
+        print_warning "WiFi client non configuré. Vous pourrez le faire plus tard via l'interface admin (onglet Réseau)."
+        return
+    fi
+
+    CLIENT_WIFI_SSID="${SSID_INPUT}"
+    CLIENT_WIFI_PASSWORD="${PASS_INPUT}"
+
+    local WIFI_SCRIPT="${INSTALL_DIR}/scripts/setup-wifi-client.sh"
+    if [ ! -x "${WIFI_SCRIPT}" ]; then
+        print_warning "Script ${WIFI_SCRIPT} introuvable ou non exécutable. Impossible de configurer le WiFi client."
+        return
+    fi
+
+    if "${WIFI_SCRIPT}" "${CLIENT_WIFI_SSID}" "${CLIENT_WIFI_PASSWORD}"; then
+        print_success "WiFi client configuré sur ${WIFI_CLIENT_INTERFACE}"
+    else
+        print_warning "La configuration du WiFi client a échoué. Vous pourrez relancer ${WIFI_SCRIPT} manuellement."
     fi
 }
 
@@ -667,6 +754,13 @@ print_summary() {
     echo "  • IP du Raspberry: 192.168.4.1"
     echo "  • URL locale: http://neopro.local"
     echo "  • Répertoire: ${INSTALL_DIR}"
+    if [ -n "${WIFI_CLIENT_INTERFACE}" ]; then
+        if [ -n "${CLIENT_WIFI_SSID}" ]; then
+            echo "  • WiFi client (${WIFI_CLIENT_INTERFACE}): ${CLIENT_WIFI_SSID}"
+        else
+            echo "  • WiFi client (${WIFI_CLIENT_INTERFACE}): à configurer (admin /scripts/setup-wifi-client.sh)"
+        fi
+    fi
     echo ""
     echo -e "${YELLOW}Prochaines étapes:${NC}"
     echo "  1. Copier le build Angular dans: ${INSTALL_DIR}/webapp/"
@@ -691,8 +785,6 @@ print_summary() {
 ################################################################################
 
 main() {
-    # Détection du mode non-interactif (via variable d'environnement)
-    local NON_INTERACTIVE="${NEOPRO_NON_INTERACTIVE:-false}"
 
     print_header
     check_root
@@ -722,11 +814,13 @@ main() {
     update_system
     install_dependencies
     detect_wifi_interface
+    detect_wifi_client_interface
     disable_conflicting_wifi_services
     install_nodejs
     configure_hotspot
     configure_mdns
     install_app
+    configure_wifi_client_support
     configure_nginx
     configure_services
     configure_gui

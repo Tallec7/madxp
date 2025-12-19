@@ -46,12 +46,17 @@ const THUMBNAILS_DIR = path.join(NEOPRO_DIR, 'thumbnails');
 const LOGS_DIR = path.join(NEOPRO_DIR, 'logs');
 const VIDEO_COMPRESSION_ENABLED = process.env.VIDEO_COMPRESSION !== 'false';
 const VIDEO_THUMBNAILS_ENABLED = process.env.VIDEO_THUMBNAILS !== 'false';
+const VERSION_FILE = path.join(NEOPRO_DIR, 'VERSION');
+const RELEASE_METADATA_FILE = path.join(NEOPRO_DIR, 'release.json');
 // Single source of truth: webapp/configuration.json
 const CONFIG_FILE_CANDIDATES = [
   process.env.CONFIG_PATH,
   path.join(NEOPRO_DIR, 'webapp', 'configuration.json'),
 ].filter((value, index, self) => value && self.indexOf(value) === index);
 const CONFIG_JSON_INDENT = 4;
+let versionCache = null;
+let versionCacheTimestamp = 0;
+const VERSION_CACHE_TTL = 60000;
 
 console.log(`[admin] NEOPRO_DIR resolved to ${NEOPRO_DIR}`);
 console.log(`[admin] Videos directory: ${VIDEOS_DIR}`);
@@ -125,6 +130,16 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/videos', express.static(VIDEOS_DIR));
 
+app.get('/api/version', async (req, res) => {
+  try {
+    const info = await loadVersionInfo();
+    res.json(info);
+  } catch (error) {
+    console.error('[admin] Failed to load version info:', error);
+    res.status(500).json({ error: 'Impossible de charger la version' });
+  }
+});
+
 async function resolveConfigurationPath() {
   return cache.getOrSet(NAMESPACES.CONFIG, 'path', async () => {
     for (const candidate of CONFIG_FILE_CANDIDATES) {
@@ -141,6 +156,77 @@ async function resolveConfigurationPath() {
     console.warn('[admin] Aucun configuration.json trouvé parmi', CONFIG_FILE_CANDIDATES);
     return null;
   }, 300000); // 5 minutes TTL
+}
+
+async function loadVersionInfo() {
+  const now = Date.now();
+  if (versionCache && now - versionCacheTimestamp < VERSION_CACHE_TTL) {
+    return versionCache;
+  }
+
+  const info = {
+    version: 'unknown',
+    commit: null,
+    buildDate: null,
+    source: 'local',
+  };
+
+  try {
+  const releaseRaw = await fs.readFile(RELEASE_METADATA_FILE, 'utf8');
+    const releaseData = JSON.parse(releaseRaw);
+    if (releaseData.version) {
+      info.version = releaseData.version;
+    }
+    info.commit = releaseData.commit || null;
+    info.buildDate = releaseData.buildDate || null;
+    info.source = releaseData.source || info.source;
+  } catch (error) {
+    // release.json absent -> fallback
+  }
+
+  if (!info.version || info.version === 'unknown') {
+    try {
+      const webappVersion = await fs.readJson(path.join(NEOPRO_DIR, 'webapp', 'version.json'));
+      if (webappVersion?.version) {
+        info.version = webappVersion.version;
+        info.source = 'webapp/version.json';
+        info.commit = info.commit || webappVersion.commit || null;
+        info.buildDate = info.buildDate || webappVersion.buildDate || null;
+      }
+    } catch (error) {
+      // ignore
+    }
+  }
+
+  if (!info.version || info.version === 'unknown') {
+    try {
+      const versionRaw = await fs.readFile(VERSION_FILE, 'utf8');
+      const trimmed = versionRaw.trim();
+      if (trimmed) {
+        info.version = trimmed;
+        info.source = 'version-file';
+      }
+    } catch (error) {
+      // ignored
+    }
+  }
+
+  if (!info.version || info.version === 'unknown') {
+    try {
+      const pkgRaw = await fs.readFile(path.join(__dirname, 'package.json'), 'utf8');
+      const pkgJson = JSON.parse(pkgRaw);
+      if (pkgJson.version) {
+        info.version = pkgJson.version;
+        info.source = 'package.json';
+      }
+    } catch (error) {
+      // ignored
+    }
+  }
+
+  versionCache = info;
+  versionCacheTimestamp = now;
+  return info;
 }
 
 function sanitizeSegment(value, fallback) {
@@ -2011,7 +2097,17 @@ app.post('/api/wifi/client', async (req, res) => {
 
   try {
     // Exécuter le script de configuration WiFi
-    const scriptPath = path.join(__dirname, '..', 'scripts', 'setup-wifi-client.sh');
+    const scriptPath = path.join(NEOPRO_DIR, 'scripts', 'setup-wifi-client.sh');
+
+    try {
+      await fs.access(scriptPath, fsCore.constants.X_OK);
+    } catch (accessError) {
+      console.error('[admin] WiFi client script missing or not executable:', accessError);
+      return res.status(500).json({
+        error: 'Script WiFi introuvable. Re-déployez les scripts (npm run deploy:raspberry) ou vérifiez /home/pi/neopro/scripts.'
+      });
+    }
+
     const result = await execCommand(`sudo ${scriptPath} "${ssid}" "${password}"`);
 
     if (result.success) {

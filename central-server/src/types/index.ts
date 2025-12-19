@@ -189,4 +189,11 @@ export interface HeartbeatMessage {
     uptime: number;
     localIp?: string | null;
   };
+  softwareVersion?: string | null;
+  versionInfo?: {
+    version: string | null;
+    commit?: string | null;
+    buildDate?: string | null;
+    source?: string | null;
+  };
 }

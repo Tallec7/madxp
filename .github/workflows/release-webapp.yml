@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Version (ex: v2.4.0)'
+        required: true
 
 permissions:
   contents: write
@@ -25,35 +29,26 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build Angular app for Raspberry Pi
-        run: npx ng build raspberry --configuration=raspberry
-
-      - name: Create deployment package
+      - name: Determine release version
+        id: release
         run: |
-          # Create deploy directory structure
-          mkdir -p raspberry/deploy/{webapp,server,sync-agent,admin}
-
-          # Copy Angular build
-          cp -r dist/raspberry/browser/* raspberry/deploy/webapp/
-
-          # Copy Node.js server
-          cp -r server-render/* raspberry/deploy/server/
-
-          # Copy sync-agent
-          if [ -d "raspberry/sync-agent" ]; then
-            cp -r raspberry/sync-agent/* raspberry/deploy/sync-agent/
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.release_version }}"
+          else
+            VERSION="${GITHUB_REF_NAME}"
           fi
 
-          # Copy admin panel
-          if [ -d "raspberry/admin" ]; then
-            cp -r raspberry/admin/* raspberry/deploy/admin/
+          if [ -z "$VERSION" ]; then
+            echo "Impossible de déterminer la version" >&2
+            exit 1
           fi
 
-      - name: Create full deployment archive
-        run: |
-          cd raspberry
-          tar -czf neopro-raspberry-deploy.tar.gz deploy/
-          cd ..
+          echo "release_version=$VERSION" >> $GITHUB_OUTPUT
+          echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "BUILD_SOURCE=github-actions" >> $GITHUB_ENV
+
+      - name: Build Raspberry package
+        run: npm run build:raspberry
 
       - name: Create webapp-only archive
         run: |

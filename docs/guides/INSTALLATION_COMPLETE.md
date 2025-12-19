@@ -16,6 +16,7 @@ Il y a **3 méthodes** pour installer un nouveau boîtier :
 ```
 
 **Avantages :**
+
 - ✅ Aucune dépendance au dossier Neopro
 - ✅ Fonctionne depuis n'importe quel ordinateur
 - ✅ Toujours la dernière version depuis GitHub
@@ -36,6 +37,7 @@ Si vous avez une **Image Golden** pré-configurée :
 ```
 
 **Avantages :**
+
 - ✅ Le plus rapide
 - ✅ Pas besoin de connexion Internet
 
@@ -53,6 +55,7 @@ Sans image golden, installation manuelle complète :
 ```
 
 **Quand l'utiliser :**
+
 - 🔧 Développement et tests
 - 🔧 Modifications custom nécessaires
 
@@ -122,16 +125,20 @@ cd raspberry
 
 # Lancer l'installation (REMPLACER PAR VOS VALEURS)
 sudo ./install.sh NANTES VotreMotDePasseWiFi123
+# Optionnel : ajouter le WiFi Internet (clé USB branchée)
+# sudo ./install.sh NANTES VotreMotDePasseWiFi123 Livebox-F730 MonPassInternet456
 
 # Durée : 20-30 minutes
 ```
 
 **Ce que fait install.sh :**
+
 - ✅ Vérifie les prérequis (connexion Internet, espace disque, fichiers requis)
 - ✅ Met à jour le système
 - ✅ Installe Node.js, nginx, hostapd, dnsmasq
 - ✅ Configure le hostname → `neopro.local`
 - ✅ Configure le WiFi hotspot → `NEOPRO-NANTES`
+- ✅ Détecte une clé WiFi USB (`wlan1`) et propose/configure le WiFi client (Internet)
 - ✅ Installe l'application (server, admin, **sync-agent**)
 - ✅ Configure les services systemd (neopro-app, neopro-admin, neopro-sync-agent)
 - ✅ Configure nginx
@@ -151,6 +158,11 @@ ping neopro.local
 # 3. Tester l'interface admin
 # Dans un navigateur :
 http://neopro.local:8080
+
+# 4. (Si WiFi client configuré) vérifier wlan1
+ssh pi@neopro.local 'ip addr show wlan1'
+# (install.sh + setup-wifi-client activent automatiquement wpa_supplicant@wlan1 et dhcpcd : la connexion survit aux redémarrages)
+# ou configurez-le plus tard via http://neopro.local:8080 -> Réseau
 
 # Si ça fonctionne → Installation système réussie ! ✅
 ```
@@ -201,6 +213,7 @@ cd /path/to/neopro
 ```
 
 **Le script va demander :**
+
 - Nom du club (NANTES)
 - Nom complet (NANTES LOIRE FÉMININ HANDBALL)
 - Nom du site (MANGIN BEAULIEU)
@@ -213,6 +226,7 @@ cd /path/to/neopro
 - Adresse du Pi (neopro.local)
 
 **Ce que fait le script :**
+
 - ✅ Crée la configuration dans `raspberry/config/templates/NANTES-configuration.json`
 - ✅ Teste la connexion SSH au Pi (avec réinitialisation de clé si nécessaire)
 - ✅ Build l'application Angular (réutilise `build-and-deploy.sh`)
@@ -295,6 +309,7 @@ Pour mettre à jour l'application sans reconfigurer le club :
 ```
 
 **Ce que fait build-and-deploy.sh :**
+
 - ✅ Vérifie les prérequis (Node.js, npm, Angular CLI)
 - ✅ Build l'application Angular (optimisé : skip npm install si pas nécessaire)
 - ✅ Crée un backup de la version actuelle sur le Pi
@@ -449,16 +464,16 @@ sudo systemctl restart neopro-sync-agent
 
 ## Temps estimés
 
-| Étape | Durée |
-|-------|-------|
-| Flash carte SD | 5-10 min |
-| Premier boot | 2-3 min |
-| Copie fichiers | 1 min |
-| install.sh | 20-30 min |
-| Redémarrage | 2 min |
-| Config SSH (optionnel) | 1 min |
-| setup-new-club.sh | 5-10 min |
-| **TOTAL** | **35-50 min** |
+| Étape                  | Durée         |
+| ---------------------- | ------------- |
+| Flash carte SD         | 5-10 min      |
+| Premier boot           | 2-3 min       |
+| Copie fichiers         | 1 min         |
+| install.sh             | 20-30 min     |
+| Redémarrage            | 2 min         |
+| Config SSH (optionnel) | 1 min         |
+| setup-new-club.sh      | 5-10 min      |
+| **TOTAL**              | **35-50 min** |
 
 ---
 
@@ -476,19 +491,20 @@ La partie longue (install.sh) n'est à faire qu'une fois par Pi physique.
 
 ## Scripts disponibles
 
-| Script | Emplacement | Description |
-|--------|-------------|-------------|
-| `copy-to-pi.sh` | `raspberry/scripts/` | Copie intelligente vers Pi |
-| `install.sh` | `raspberry/` | Installation système sur Pi |
-| `setup-new-club.sh` | `raspberry/scripts/` | Configuration club complète |
-| `build-and-deploy.sh` | `raspberry/scripts/` | Mise à jour application |
-| `prepare-golden-image.sh` | `raspberry/tools/` | Prépare Pi pour clonage |
-| `clone-sd-card.sh` | `raspberry/tools/` | Clone carte SD en image |
-| `cleanup-pi.sh` | `raspberry/scripts/` | Nettoie ~/raspberry après install |
+| Script                    | Emplacement          | Description                       |
+| ------------------------- | -------------------- | --------------------------------- |
+| `copy-to-pi.sh`           | `raspberry/scripts/` | Copie intelligente vers Pi        |
+| `install.sh`              | `raspberry/`         | Installation système sur Pi       |
+| `setup-new-club.sh`       | `raspberry/scripts/` | Configuration club complète       |
+| `build-and-deploy.sh`     | `raspberry/scripts/` | Mise à jour application           |
+| `prepare-golden-image.sh` | `raspberry/tools/`   | Prépare Pi pour clonage           |
+| `clone-sd-card.sh`        | `raspberry/tools/`   | Clone carte SD en image           |
+| `cleanup-pi.sh`           | `raspberry/scripts/` | Nettoie ~/raspberry après install |
 
 ---
 
 **Prochaines étapes :**
+
 - [GOLDEN_IMAGE.md](GOLDEN_IMAGE.md) - Créer une Image Golden
 - [README.md](../README.md) - Utilisation quotidienne
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Dépannage

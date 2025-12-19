@@ -33,11 +33,45 @@ print_error() {
     echo -e "${RED}✗ $1${NC}"
 }
 
+ensure_wpa_service_for_interface() {
+    local interface="$1"
+    local main_conf="/etc/wpa_supplicant/wpa_supplicant.conf"
+    local interface_conf="/etc/wpa_supplicant/wpa_supplicant-${interface}.conf"
+
+    if [ ! -f "${main_conf}" ]; then
+        print_warning "Fichier ${main_conf} introuvable - impossible de configurer wpa_supplicant pour ${interface}"
+        return 1
+    fi
+
+    ln -sf "${main_conf}" "${interface_conf}"
+
+    if systemctl enable "wpa_supplicant@${interface}.service" >/dev/null 2>&1; then
+        print_success "Service wpa_supplicant@${interface} activé"
+    else
+        print_warning "Impossible d'activer wpa_supplicant@${interface} (vérifiez les logs)"
+        return 1
+    fi
+
+    if systemctl restart "wpa_supplicant@${interface}.service" >/dev/null 2>&1; then
+        print_success "Service wpa_supplicant@${interface} redémarré"
+    else
+        print_warning "Impossible de redémarrer wpa_supplicant@${interface}"
+    fi
+
+    if command -v dhcpcd >/dev/null 2>&1; then
+        dhcpcd "${interface}" >/dev/null 2>&1 || true
+    fi
+}
+
 # Vérification root
 if [ "$EUID" -ne 0 ]; then
     print_error "Ce script doit être exécuté avec sudo"
     exit 1
 fi
+
+# S'assurer que les interfaces WiFi ne sont pas bloquées
+rfkill unblock wifi 2>/dev/null || true
+rfkill unblock all 2>/dev/null || true
 
 # Paramètres
 WIFI_SSID="$1"
@@ -160,8 +194,8 @@ if [ "$MIXED_MODE" = true ]; then
     wpa_cli -i wlan0 reconfigure
 else
     # En mode dual, on démarre wlan1
-    ifconfig $WIFI_CLIENT_INTERFACE up
-    wpa_supplicant -B -i $WIFI_CLIENT_INTERFACE -c /etc/wpa_supplicant/wpa_supplicant.conf
+    ip link set $WIFI_CLIENT_INTERFACE up || true
+    ensure_wpa_service_for_interface "$WIFI_CLIENT_INTERFACE"
 fi
 
 sleep 5

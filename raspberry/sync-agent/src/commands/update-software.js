@@ -5,6 +5,7 @@ const util = require('util');
 const axios = require('axios');
 const logger = require('../logger');
 const { config } = require('../config');
+const { getVersionInfo } = require('../utils/version-info');
 
 const execAsync = util.promisify(exec);
 
@@ -65,7 +66,7 @@ class SoftwareUpdateHandler {
 
       progressCallback(90);
 
-      const newVersion = await this.getCurrentVersion();
+      const newVersion = await this.getCurrentVersion(true);
 
       progressCallback(95);
 
@@ -308,16 +309,10 @@ class SoftwareUpdateHandler {
     }
   }
 
-  async getCurrentVersion() {
+  async getCurrentVersion(forceRefresh = false) {
     try {
-      const packageJsonPath = path.join(config.paths.root, 'webapp/package.json');
-
-      if (await fs.pathExists(packageJsonPath)) {
-        const packageJson = await fs.readJson(packageJsonPath);
-        return packageJson.version;
-      }
-
-      return 'unknown';
+      const info = await getVersionInfo(forceRefresh);
+      return info.version || 'unknown';
     } catch (error) {
       logger.warn('Failed to get current version:', error);
       return 'unknown';

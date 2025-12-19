@@ -4,26 +4,26 @@
 
 ### Commandes npm (depuis le Mac)
 
-| Commande | Description |
-|----------|-------------|
-| `npm run build:raspberry` | Compile l'application Angular (crée l'archive) |
-| `npm run deploy:raspberry` | **Build + Deploy** (tout en un) |
+| Commande                   | Description                                    |
+| -------------------------- | ---------------------------------------------- |
+| `npm run build:raspberry`  | Compile l'application Angular (crée l'archive) |
+| `npm run deploy:raspberry` | **Build + Deploy** (tout en un)                |
 
 ### Scripts par cas d'usage
 
-| Situation | Script | Où l'exécuter |
-|-----------|--------|---------------|
-| **🆕 Installation en ligne** | `curl ... setup.sh` | Sur le Pi (via Internet) |
-| **Copier fichiers vers Pi** | `raspberry/scripts/copy-to-pi.sh` | Sur Mac |
-| **Nouveau Raspberry Pi** | `raspberry/install.sh` | Sur le Pi |
-| **Nouveau club (remote)** ✅ | `raspberry/scripts/setup-remote-club.sh` | N'importe où |
-| **Nouveau club (local - dev)** 🔧 | `raspberry/scripts/setup-new-club.sh` | Sur Mac |
-| **Mise à jour** | `npm run deploy:raspberry` | Sur Mac |
-| **Supprimer un club** | `raspberry/scripts/delete-club.sh` | Sur Mac |
-| **Backup un club** | `raspberry/scripts/backup-club.sh` | Sur Mac |
-| **Restaurer un club** | `raspberry/scripts/restore-club.sh` | Sur Mac |
-| **Nettoyage post-install** | `raspberry/scripts/cleanup-pi.sh` | Sur Mac |
-| **Diagnostic** | `raspberry/scripts/diagnose-pi.sh` | Sur le Pi |
+| Situation                         | Script                                   | Où l'exécuter            |
+| --------------------------------- | ---------------------------------------- | ------------------------ |
+| **🆕 Installation en ligne**      | `curl ... setup.sh`                      | Sur le Pi (via Internet) |
+| **Copier fichiers vers Pi**       | `raspberry/scripts/copy-to-pi.sh`        | Sur Mac                  |
+| **Nouveau Raspberry Pi**          | `raspberry/install.sh`                   | Sur le Pi                |
+| **Nouveau club (remote)** ✅      | `raspberry/scripts/setup-remote-club.sh` | N'importe où             |
+| **Nouveau club (local - dev)** 🔧 | `raspberry/scripts/setup-new-club.sh`    | Sur Mac                  |
+| **Mise à jour**                   | `npm run deploy:raspberry`               | Sur Mac                  |
+| **Supprimer un club**             | `raspberry/scripts/delete-club.sh`       | Sur Mac                  |
+| **Backup un club**                | `raspberry/scripts/backup-club.sh`       | Sur Mac                  |
+| **Restaurer un club**             | `raspberry/scripts/restore-club.sh`      | Sur Mac                  |
+| **Nettoyage post-install**        | `raspberry/scripts/cleanup-pi.sh`        | Sur Mac                  |
+| **Diagnostic**                    | `raspberry/scripts/diagnose-pi.sh`       | Sur le Pi                |
 
 **📖 Pour plus de détails sur les deux méthodes de configuration club (remote vs local), consultez [CLUB-SETUP-README.md](CLUB-SETUP-README.md)**
 
@@ -48,6 +48,7 @@ curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/script
 ```
 
 **Avantages :**
+
 - ✅ Aucun fichier à copier manuellement
 - ✅ Toujours la dernière version depuis GitHub
 - ✅ 100% gratuit (hébergé sur GitHub Pages)
@@ -67,11 +68,13 @@ curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/script
 ```
 
 Ce script copie **uniquement** les fichiers nécessaires :
+
 - `install.sh` - Script d'installation
 - `server/`, `admin/`, `sync-agent/` - Code de l'application
 - `config/systemd/` - Fichiers de configuration
 
 **Fichiers exclus** (restent sur Mac) :
+
 - `scripts/` - Scripts Mac uniquement
 - `tools/` - Outils SD card
 - `.DS_Store` - Fichiers macOS
@@ -88,6 +91,7 @@ sudo ./install.sh MONCLUB MotDePasseWiFi123
 ```
 
 Ce script :
+
 - Vérifie les prérequis (connexion Internet, espace disque)
 - Installe Node.js, nginx, hostapd, dnsmasq
 - Configure les services systemd (neopro-app, neopro-admin, **neopro-sync-agent**)
@@ -101,6 +105,7 @@ Ce script :
 ```
 
 Ce script :
+
 - Collecte les infos du club (nom, ville, mot de passe...)
 - Crée la configuration dans `raspberry/config/templates/`
 - Teste la connexion SSH au Pi
@@ -119,6 +124,7 @@ npm run deploy:raspberry
 ```
 
 Cette commande :
+
 1. Vérifie les prérequis (Node.js, npm, Angular CLI)
 2. Compile l'application Angular (skip npm install si pas nécessaire)
 3. Crée l'archive de déploiement
@@ -129,6 +135,7 @@ Cette commande :
 8. Affiche la durée totale
 
 **Options :**
+
 ```bash
 # Déployer vers une adresse spécifique
 ./raspberry/scripts/deploy-remote.sh neopro.home
@@ -153,26 +160,28 @@ ssh pi@neopro.local './diagnose-pi.sh'
 
 ### Scripts principaux
 
-| Script | Emplacement | Exécution | Description |
-|--------|-------------|-----------|-------------|
-| `install.sh` | `raspberry/` | Sur Pi | Installation système complète |
-| `copy-to-pi.sh` | `raspberry/scripts/` | Sur Mac | **Copie intelligente vers Pi** (exclut scripts Mac) |
-| `setup-new-club.sh` | `raspberry/scripts/` | Sur Mac | Configuration nouveau club |
-| `delete-club.sh` | `raspberry/scripts/` | Sur Mac | Suppression d'un club |
-| `backup-club.sh` | `raspberry/scripts/` | Sur Mac | Sauvegarde config + vidéos |
-| `restore-club.sh` | `raspberry/scripts/` | Sur Mac | Restauration d'un backup |
-| `build-raspberry.sh` | `raspberry/scripts/` | Sur Mac | Build Angular uniquement |
-| `deploy-remote.sh` | `raspberry/scripts/` | Sur Mac | Déploiement SSH uniquement |
-| `generate-config-from-videos.sh` | `raspberry/scripts/` | Sur Mac | **Génère config JSON depuis dossier vidéos** |
+| Script                           | Emplacement          | Exécution | Description                                         |
+| -------------------------------- | -------------------- | --------- | --------------------------------------------------- |
+| `install.sh`                     | `raspberry/`         | Sur Pi    | Installation système complète                       |
+| `copy-to-pi.sh`                  | `raspberry/scripts/` | Sur Mac   | **Copie intelligente vers Pi** (exclut scripts Mac) |
+| `setup-new-club.sh`              | `raspberry/scripts/` | Sur Mac   | Configuration nouveau club                          |
+| `delete-club.sh`                 | `raspberry/scripts/` | Sur Mac   | Suppression d'un club                               |
+| `backup-club.sh`                 | `raspberry/scripts/` | Sur Mac   | Sauvegarde config + vidéos                          |
+| `restore-club.sh`                | `raspberry/scripts/` | Sur Mac   | Restauration d'un backup                            |
+| `build-raspberry.sh`             | `raspberry/scripts/` | Sur Mac   | Build Angular uniquement                            |
+| `deploy-remote.sh`               | `raspberry/scripts/` | Sur Mac   | Déploiement SSH uniquement                          |
+| `generate-config-from-videos.sh` | `raspberry/scripts/` | Sur Mac   | **Génère config JSON depuis dossier vidéos**        |
 
 ### Scripts de maintenance
 
-| Script | Emplacement | Exécution | Description |
-|--------|-------------|-----------|-------------|
-| `diagnose-pi.sh` | `raspberry/scripts/` | Sur Pi | Diagnostic complet |
-| `fix-hostname.sh` | `raspberry/scripts/` | Sur Pi | Corriger le hostname |
-| `setup-wifi-client.sh` | `raspberry/scripts/` | Sur Pi | Configurer WiFi client (accès internet) |
-| `cleanup-pi.sh` | `raspberry/scripts/` | Sur Mac | **Supprime ~/raspberry après installation**|
+| Script                 | Emplacement          | Exécution | Description                                 |
+| ---------------------- | -------------------- | --------- | ------------------------------------------- |
+| `diagnose-pi.sh`       | `raspberry/scripts/` | Sur Pi    | Diagnostic complet                          |
+| `fix-hostname.sh`      | `raspberry/scripts/` | Sur Pi    | Corriger le hostname                        |
+| `setup-wifi-client.sh` | `raspberry/scripts/` | Sur Pi    | Configurer WiFi client (accès internet)     |
+| `cleanup-pi.sh`        | `raspberry/scripts/` | Sur Mac   | **Supprime ~/raspberry après installation** |
+
+> ℹ️ `setup-wifi-client.sh` crée désormais automatiquement le lien `/etc/wpa_supplicant/wpa_supplicant-wlan1.conf`, active `wpa_supplicant@wlan1.service` et relance `dhcpcd`. Une fois lancé, le WiFi client reste actif après chaque redémarrage.
 
 ---
 
@@ -181,16 +190,19 @@ ssh pi@neopro.local './diagnose-pi.sh'
 ### install.sh (Sur le Pi)
 
 **Usage :**
+
 ```bash
 sudo ./install.sh [NOM_CLUB] [MOT_PASSE_WIFI]
 ```
 
 **Exemple :**
+
 ```bash
 sudo ./install.sh CESSON MyWiFiPass123
 ```
 
 **Ce qu'il fait :**
+
 - Installe Node.js 18
 - Installe et configure nginx
 - Installe hostapd et dnsmasq (WiFi AP)
@@ -202,6 +214,7 @@ sudo ./install.sh CESSON MyWiFiPass123
 ### setup-remote-club.sh (N'importe où) ✅ **RECOMMANDÉ**
 
 **Usage :**
+
 ```bash
 # Télécharger le script
 curl -O https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup-remote-club.sh
@@ -212,19 +225,23 @@ chmod +x setup-remote-club.sh
 ```
 
 **Prérequis :**
+
 - Le Pi doit déjà être installé avec `setup.sh` ou `install.sh`
 - Connexion SSH au Pi
 - Accès Internet pour télécharger depuis GitHub Releases
 
 **Ce qu'il fait (interactif) :**
+
 1. Collecte les informations du club (nom, localisation, sports, contact)
 2. Crée la configuration JSON en mémoire
 3. **Télécharge l'archive de déploiement depuis GitHub Releases** (pas de build local)
 4. Upload et déploie sur le Pi via SSH
 5. Configure le hotspot WiFi (SSID `NEOPRO-CLUB`)
 6. Configure le sync-agent (connexion au serveur central)
+7. Trace la version GitHub (`/home/pi/neopro/VERSION` + `configuration.json.version`)
 
 **Avantages :**
+
 - ✅ Aucune dépendance au dossier Neopro local
 - ✅ Fonctionne depuis n'importe quel ordinateur
 - ✅ Télécharge depuis GitHub Releases (toujours à jour)
@@ -232,6 +249,7 @@ chmod +x setup-remote-club.sh
 - ✅ Idéal pour installation terrain
 
 **Options :**
+
 ```bash
 # Utiliser une version spécifique
 ./setup-remote-club.sh --release v1.0.0
@@ -247,16 +265,19 @@ chmod +x setup-remote-club.sh
 ### setup-new-club.sh (Sur Mac) 🔧 Développement
 
 **Usage :**
+
 ```bash
 ./raspberry/scripts/setup-new-club.sh
 ```
 
 **Prérequis :**
+
 - **Dossier Neopro complet** sur votre machine
 - Node.js, npm, Angular CLI installés
 - Toutes les dépendances du projet
 
 **Ce qu'il fait (interactif) :**
+
 1. Demande les informations du club
 2. Crée `raspberry/config/templates/CLUB-configuration.json`
 3. **Build l'application Angular localement** (5-10 minutes)
@@ -265,10 +286,12 @@ chmod +x setup-remote-club.sh
 6. Configure le sync-agent (connexion au serveur central)
 
 **Avantages :**
+
 - ✅ Build local (modifications custom possibles)
 - ✅ Tests de développement
 
 **Quand l'utiliser :**
+
 - 🔧 Développement et tests
 - 🔧 Modifications custom du code
 
@@ -277,27 +300,55 @@ chmod +x setup-remote-club.sh
 ### build-raspberry.sh (Sur Mac)
 
 **Usage :**
+
 ```bash
 npm run build:raspberry
 # OU
 ./raspberry/scripts/build-raspberry.sh
+
+# Injecter explicitement un tag de release
+RELEASE_VERSION=v2.4.0 npm run build:raspberry
+# ou
+./raspberry/scripts/build-raspberry.sh --version v2.4.0
 ```
 
 **Ce qu'il fait :**
+
 - Compile l'application Angular en mode production
 - Crée l'archive `raspberry/neopro-raspberry-deploy.tar.gz`
+- Ajoute `deploy/VERSION` + `deploy/release.json` (version, commit, date) dans l'archive
+
+---
+
+### build-and-deploy.sh (Sur Mac)
+
+**Usage :**
+
+```bash
+./raspberry/scripts/build-and-deploy.sh                     # Build + deploy vers neopro.local
+./raspberry/scripts/build-and-deploy.sh neopro.home         # Cible personnalisée
+./raspberry/scripts/build-and-deploy.sh --version v2.4.0    # Force la version injectée dans le build
+./raspberry/scripts/build-and-deploy.sh --version v2.4.0 192.168.4.1
+```
+
+**Ce qu'il fait :**
+
+1. Lance `build-raspberry.sh` (en passant `RELEASE_VERSION` si fourni)
+2. Exécute `deploy-remote.sh` vers l'adresse cible
 
 ---
 
 ### deploy-remote.sh (Sur Mac)
 
 **Usage :**
+
 ```bash
 npm run deploy:raspberry              # Build + Deploy (par défaut vers neopro.local)
 ./raspberry/scripts/deploy-remote.sh neopro.home    # Deploy vers adresse spécifique
 ```
 
 **Ce qu'il fait :**
+
 1. (Si appelé via npm) Build l'application
 2. Crée un backup sur le Pi
 3. Upload l'archive via SCP
@@ -311,12 +362,14 @@ npm run deploy:raspberry              # Build + Deploy (par défaut vers neopro.
 ### backup-club.sh (Sur Mac)
 
 **Usage :**
+
 ```bash
 ./raspberry/scripts/backup-club.sh neopro.local
 ./raspberry/scripts/backup-club.sh neopro.home mon-backup
 ```
 
 **Ce qu'il sauvegarde :**
+
 - `configuration.json` (config du club)
 - `site.conf` et `.env` (config sync-agent)
 - Vidéos (optionnel, peut être volumineux)
@@ -329,11 +382,13 @@ Archive dans `raspberry/backups/CLUB-backup-DATE.tar.gz`
 ### restore-club.sh (Sur Mac)
 
 **Usage :**
+
 ```bash
 ./raspberry/scripts/restore-club.sh raspberry/backups/CESSON-backup-20241207.tar.gz neopro.local
 ```
 
 **Ce qu'il restaure :**
+
 - Configuration du club
 - Configuration du sync-agent
 - Vidéos (si présentes et confirmées)
@@ -343,12 +398,14 @@ Archive dans `raspberry/backups/CLUB-backup-DATE.tar.gz`
 ### delete-club.sh (Sur Mac)
 
 **Usage :**
+
 ```bash
 ./raspberry/scripts/delete-club.sh
 ./raspberry/scripts/delete-club.sh CESSON
 ```
 
 **Ce qu'il fait :**
+
 1. Supprime l'enregistrement sur le serveur central (optionnel)
 2. Réinitialise le Raspberry Pi avec 2 options :
    - **Réinitialisation légère** : supprime config uniquement, garde l'app et les vidéos
@@ -363,11 +420,13 @@ Archive dans `raspberry/backups/CLUB-backup-DATE.tar.gz`
 ### generate-config-from-videos.sh (Sur Mac)
 
 **Usage :**
+
 ```bash
 ./raspberry/scripts/generate-config-from-videos.sh <dossier_videos> [nom_club] [fichier_sortie]
 ```
 
 **Exemples :**
+
 ```bash
 # Génération basique
 ./raspberry/scripts/generate-config-from-videos.sh ~/Downloads/videos_club MONCLUB config.json
@@ -404,6 +463,7 @@ videos/
 ```
 
 **Ce qu'il fait :**
+
 1. Scanne récursivement le dossier (supporte 1, 2 ou 3 niveaux)
 2. Détecte automatiquement les fichiers vidéo (.mp4, .mkv, .mov, .avi, .webm)
 3. Crée des noms lisibles (JOUEUR_01.mp4 → "JOUEUR 01")
@@ -411,6 +471,7 @@ videos/
 5. Génère un fichier JSON prêt pour le déploiement
 
 **Fonctionnalités :**
+
 - Supporte les noms de dossiers avec accents et espaces
 - Compatible macOS (Bash 3.2) et Linux
 - Détecte automatiquement le dossier PARTENAIRES pour les sponsors

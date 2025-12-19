@@ -5,6 +5,7 @@ const fs = require('fs-extra');
 const logger = require('./logger');
 const { config, validateConfig } = require('./config');
 const metricsCollector = require('./metrics');
+const { getVersionInfo } = require('./utils/version-info');
 const commands = require('./commands');
 const analyticsCollector = require('./analytics');
 const sponsorImpressionsCollector = require('./sponsor-impressions');
@@ -391,10 +392,23 @@ class NeoproSyncAgent {
       const metrics = await metricsCollector.collectAll();
 
       if (metrics) {
+        let versionInfo = null;
+        let softwareVersion = null;
+        try {
+          versionInfo = await getVersionInfo();
+          if (versionInfo?.version && versionInfo.version !== 'unknown') {
+            softwareVersion = versionInfo.version;
+          }
+        } catch (error) {
+          logger.warn('Failed to load version info for heartbeat:', error.message);
+        }
+
         this.socket.emit('heartbeat', {
           siteId: config.site.id,
           timestamp: Date.now(),
           metrics,
+          softwareVersion,
+          versionInfo,
         });
 
         logger.debug('Heartbeat sent', {

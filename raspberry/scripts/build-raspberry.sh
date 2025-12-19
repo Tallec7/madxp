@@ -32,6 +32,67 @@ print_error() {
     echo -e "${RED}✗ $1${NC}"
 }
 
+detect_release_version() {
+    if [ -n "$RELEASE_VERSION" ]; then
+        return
+    fi
+
+    if command -v git >/dev/null 2>&1; then
+        local exact_tag
+        exact_tag=$(git describe --tags --exact-match 2>/dev/null || true)
+        if [ -n "$exact_tag" ]; then
+            RELEASE_VERSION="$exact_tag"
+            return
+        fi
+
+        local latest_tag
+        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || true)
+        local short_sha
+        short_sha=$(git rev-parse --short HEAD 2>/dev/null || date +%Y%m%d)
+
+        if [ -n "$latest_tag" ]; then
+            RELEASE_VERSION="${latest_tag}+${short_sha}"
+        else
+            RELEASE_VERSION="dev-${short_sha}"
+        fi
+    else
+        RELEASE_VERSION="dev-$(date +%Y%m%d)"
+    fi
+}
+
+create_version_metadata() {
+    local build_date
+    build_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local metadata_file="${DEPLOY_DIR}/release.json"
+    cat <<EOF > "${metadata_file}"
+{
+  "version": "${RELEASE_VERSION}",
+  "commit": "${BUILD_COMMIT}",
+  "buildDate": "${build_date}",
+  "source": "${BUILD_SOURCE}"
+}
+EOF
+
+    echo "${RELEASE_VERSION}" > "${DEPLOY_DIR}/VERSION"
+
+    cat <<EOF > "${DEPLOY_DIR}/webapp/version.json"
+{
+  "version": "${RELEASE_VERSION}",
+  "commit": "${BUILD_COMMIT}",
+  "buildDate": "${build_date}"
+}
+EOF
+
+    cat <<EOF > "${DEPLOY_DIR}/webapp/package.json"
+{
+  "name": "neopro-webapp",
+  "version": "${RELEASE_VERSION}"
+}
+EOF
+
+    print_success "Métadonnées de version générées (${RELEASE_VERSION})"
+}
+
 check_prerequisites() {
     local ERRORS=0
 
@@ -64,6 +125,28 @@ check_prerequisites() {
     fi
 }
 
+RELEASE_VERSION="${RELEASE_VERSION:-}"
+BUILD_SOURCE="${BUILD_SOURCE:-local-build}"
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --version)
+            RELEASE_VERSION="$2"
+            shift 2
+            ;;
+        *)
+            print_warning "Argument inconnu ignoré: $1"
+            shift
+            ;;
+    esac
+done
+
+detect_release_version
+BUILD_COMMIT="unknown"
+if command -v git >/dev/null 2>&1; then
+    BUILD_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+fi
+
 echo -e "${GREEN}"
 echo "╔════════════════════════════════════════════════════════════════╗"
 echo "║         BUILD NEOPRO POUR RASPBERRY PI                         ║"
@@ -82,6 +165,11 @@ fi
 print_step "Vérification des prérequis..."
 check_prerequisites
 print_success "Prérequis validés"
+
+print_step "Paramètres de build"
+echo "  • Version : ${RELEASE_VERSION}"
+echo "  • Commit  : ${BUILD_COMMIT}"
+echo "  • Source  : ${BUILD_SOURCE}"
 
 # Vérifier si node_modules existe et est récent
 print_step "Vérification des dépendances..."
@@ -131,6 +219,26 @@ if [ -d "raspberry/admin" ]; then
     cp -r raspberry/admin/* ${DEPLOY_DIR}/admin/
     print_success "Admin panel copié"
 fi
+
+# Copier les scripts nécessaires sur le Pi (utilisés par l'admin et systemd)
+RUNTIME_SCRIPTS=(
+    "raspberry/scripts/auto-backup.sh"
+    "raspberry/scripts/compress-video.sh"
+    "raspberry/scripts/generate-thumbnail.sh"
+    "raspberry/scripts/setup-wifi-client.sh"
+)
+mkdir -p ${DEPLOY_DIR}/scripts
+for script_path in "${RUNTIME_SCRIPTS[@]}"; do
+    if [ -f "${script_path}" ]; then
+        cp "${script_path}" ${DEPLOY_DIR}/scripts/
+        chmod +x ${DEPLOY_DIR}/scripts/$(basename "${script_path}")
+    else
+        print_warning "Script manquant pour le déploiement: ${script_path}"
+    fi
+done
+print_success "Scripts runtime copiés"
+
+create_version_metadata
 
 # NOTE: Les vidéos ne sont PAS incluses dans le déploiement
 # Elles sont gérées par le sync-agent depuis Google Drive

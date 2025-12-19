@@ -9,13 +9,14 @@
 # Usage (deux options - les deux sont gratuites) :
 #
 #   Option 1 - GitHub Pages (URL courte, recommandé) :
-#   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
+#   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB PASS [SSID_WIFI_CLIENT] [PASS_WIFI_CLIENT]
 #
 #   Option 2 - Raw GitHub (aucune configuration) :
-#   curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup.sh | sudo bash -s CLUB_NAME PASSWORD
+#   curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup.sh | sudo bash -s CLUB PASS [SSID_WIFI_CLIENT] [PASS_WIFI_CLIENT]
 #
 # Exemples:
 #   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123
+#   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123 Livebox-F730 MonPassInternet456
 #   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s MASTER MasterPass
 #
 # Documentation complète : docs/ONLINE_INSTALLATION.md
@@ -64,14 +65,14 @@ check_root() {
 check_parameters() {
     if [ -z "$CLUB_NAME" ] || [ -z "$WIFI_PASSWORD" ]; then
         print_error "Usage:"
-        echo "  curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD"
+        echo "  curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD [SSID_WIFI_CLIENT] [PASS_WIFI_CLIENT]"
         echo ""
         echo "Exemples:"
         echo "  curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123"
         echo "  curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s MASTER MasterPass"
         echo ""
         echo "Alternative (URL longue):"
-        echo "  curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup.sh | sudo bash -s CLUB_NAME PASSWORD"
+        echo "  curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup.sh | sudo bash -s CLUB_NAME PASSWORD [SSID_WIFI_CLIENT] [PASS_WIFI_CLIENT]"
         exit 1
     fi
 
@@ -142,6 +143,7 @@ download_installation_files() {
     print_step "Téléchargement des scripts de gestion..."
     mkdir -p scripts
     curl -sSL "$GITHUB_RAW/raspberry/scripts/setup-new-club.sh" -o scripts/setup-new-club.sh
+    curl -sSL "$GITHUB_RAW/raspberry/scripts/setup-wifi-client.sh" -o scripts/setup-wifi-client.sh
     curl -sSL "$GITHUB_RAW/raspberry/scripts/backup-club.sh" -o scripts/backup-club.sh 2>/dev/null || true
     curl -sSL "$GITHUB_RAW/raspberry/scripts/restore-club.sh" -o scripts/restore-club.sh 2>/dev/null || true
     curl -sSL "$GITHUB_RAW/raspberry/scripts/delete-club.sh" -o scripts/delete-club.sh 2>/dev/null || true
@@ -174,7 +176,7 @@ run_installation() {
     echo ""
 
     # Exécuter install.sh en mode non-interactif avec les paramètres
-    NEOPRO_NON_INTERACTIVE=true ./install.sh "$CLUB_NAME" "$WIFI_PASSWORD"
+    NEOPRO_NON_INTERACTIVE=true ./install.sh "$CLUB_NAME" "$WIFI_PASSWORD" "$CLIENT_WIFI_SSID" "$CLIENT_WIFI_PASSWORD"
 
     print_success "Installation terminée"
 }
@@ -209,6 +211,9 @@ print_final_summary() {
     echo "  • Club : $CLUB_NAME"
     echo "  • WiFi SSID : NEOPRO-$CLUB_NAME"
     echo "  • WiFi Password : $WIFI_PASSWORD"
+    if [ -n "$CLIENT_WIFI_SSID" ]; then
+        echo "  • WiFi client : $CLIENT_WIFI_SSID (wlan1)"
+    fi
     echo "  • Hostname : neopro.local"
     echo ""
     echo -e "${YELLOW}Prochaines étapes :${NC}"
@@ -232,9 +237,14 @@ print_final_summary() {
 # Fonction principale
 ################################################################################
 
+CLIENT_WIFI_SSID=""
+CLIENT_WIFI_PASSWORD=""
+
 main() {
     CLUB_NAME="$1"
     WIFI_PASSWORD="$2"
+    CLIENT_WIFI_SSID="$3"
+    CLIENT_WIFI_PASSWORD="$4"
 
     print_header
     check_root

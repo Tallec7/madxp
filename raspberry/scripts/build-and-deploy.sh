@@ -4,11 +4,12 @@
 # Script de build et déploiement Neopro
 # Combine build-raspberry.sh et deploy-remote.sh
 #
-# Usage: ./build-and-deploy.sh [ADRESSE_PI]
+# Usage: ./build-and-deploy.sh [--version vX.Y.Z] [ADRESSE_PI]
 # Exemples:
 #   ./build-and-deploy.sh              # Déploie vers neopro.local (défaut)
 #   ./build-and-deploy.sh neopro.home  # Déploie vers neopro.home
 #   ./build-and-deploy.sh 192.168.4.1  # Déploie vers IP spécifique
+#   ./build-and-deploy.sh --version v2.4.0 neopro.local  # Force la version de release
 ################################################################################
 
 set -e
@@ -21,7 +22,8 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PI_ADDRESS="${1:-neopro.local}"
+PI_ADDRESS="neopro.local"
+RELEASE_VERSION="${RELEASE_VERSION:-}"
 START_TIME=$(date +%s)
 
 print_header() {
@@ -44,6 +46,53 @@ print_success() {
 print_error() {
     echo -e "${RED}✗ $1${NC}"
 }
+
+print_usage() {
+    cat <<EOF
+Usage: $(basename "$0") [--version vX.Y.Z] [ADRESSE_PI]
+Par défaut, le déploiement cible neopro.local et la version est déduite depuis git.
+
+Options:
+  --version vX.Y.Z   Force la version de release injectée dans le build
+  -h, --help         Affiche cette aide
+
+Exemples:
+  ./build-and-deploy.sh
+  ./build-and-deploy.sh neopro.home
+  ./build-and-deploy.sh --version v2.4.0 neopro.local
+EOF
+}
+
+# Parse arguments
+POSITIONAL_ADDRESS=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --version)
+            if [ -z "${2:-}" ]; then
+                print_error "Option --version requiert une valeur"
+                exit 1
+            fi
+            RELEASE_VERSION="$2"
+            shift 2
+            ;;
+        -h|--help)
+            print_usage
+            exit 0
+            ;;
+        *)
+            if [ -n "$POSITIONAL_ADDRESS" ]; then
+                print_warning "Adresse supplémentaire ignorée: $1"
+            else
+                POSITIONAL_ADDRESS="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+if [ -n "$POSITIONAL_ADDRESS" ]; then
+    PI_ADDRESS="$POSITIONAL_ADDRESS"
+fi
 
 # Vérification des prérequis
 check_prerequisites() {
@@ -72,7 +121,12 @@ check_prerequisites
 
 # Build
 print_step "Étape 1/2 : Build de l'application..."
-if ! "${SCRIPT_DIR}/build-raspberry.sh"; then
+BUILD_ENV=("BUILD_SOURCE=build-and-deploy.sh")
+if [ -n "$RELEASE_VERSION" ]; then
+    BUILD_ENV=("RELEASE_VERSION=${RELEASE_VERSION}" "${BUILD_ENV[@]}")
+    echo "  • Version forcée : ${RELEASE_VERSION}"
+fi
+if ! env "${BUILD_ENV[@]}" "${SCRIPT_DIR}/build-raspberry.sh"; then
     print_error "Échec du build"
     exit 1
 fi

@@ -45,6 +45,7 @@ Cette méthode utilise un script qui automatise tout le processus depuis votre M
 ssh pi@raspberrypi.local
 cd raspberry
 sudo ./install.sh MASTER MasterPass123
+# Optionnel : sudo ./install.sh MASTER MasterPass123 Livebox-F730 MonPassInternet456
 # Durée: 20-30 minutes
 
 # 4. Vérifier l'installation
@@ -59,6 +60,7 @@ sudo ./install.sh MASTER MasterPass123
 ```
 
 **Le script va automatiquement :**
+
 1. ✅ Se connecter au Pi via SSH
 2. ✅ Exécuter `prepare-golden-image.sh` sur le Pi
 3. ✅ Éteindre le Pi
@@ -66,6 +68,7 @@ sudo ./install.sh MASTER MasterPass123
 5. ✅ Lancer `clone-sd-card.sh` pour créer l'image
 
 **Résultat :**
+
 ```
 ~/neopro-images/
 ├── neopro-golden-v1.0.img.gz     # Image compressée (~2-4 GB)
@@ -94,6 +97,7 @@ Si vous préférez contrôler chaque étape, vous pouvez suivre le processus man
 ssh pi@raspberrypi.local
 cd raspberry
 sudo ./install.sh MASTER MasterPass123
+# Optionnel : sudo ./install.sh MASTER MasterPass123 Livebox-F730 MonPassInternet456
 # Durée: 20-30 minutes
 ```
 
@@ -118,6 +122,7 @@ sudo ./tools/prepare-golden-image.sh
 ```
 
 Ce script :
+
 - Supprime la configuration club (config, vidéos, logs)
 - Réinitialise le WiFi (SSID: `NEOPRO-NOUVEAU`, Pass: `NeoProWiFi2025`)
 - Nettoie le sync-agent
@@ -144,6 +149,7 @@ sudo ./raspberry/tools/clone-sd-card.sh neopro-golden-v1.0
 ```
 
 **Résultat :**
+
 ```
 ~/neopro-images/
 ├── neopro-golden-v1.0.img.gz     # Image compressée (~2-4 GB)
@@ -162,7 +168,7 @@ sudo ./raspberry/tools/clone-sd-card.sh neopro-golden-v1.0
 1. Ouvrir **Raspberry Pi Imager** sur Mac
 2. **Choose OS** → **Use custom** → Sélectionner `neopro-golden-v1.0.img.gz`
 3. **Choose Storage** → Sélectionner la nouvelle carte SD
-4. *(Optionnel)* **Settings** (roue dentée) :
+4. _(Optionnel)_ **Settings** (roue dentée) :
    - SSH : Activer
    - Username: pi
    - Password: votre choix
@@ -186,10 +192,12 @@ ssh pi@neopro.local
 ```
 
 L'assistant demande :
+
 - **Nom du club** (ex: NANTES, CESSON, RENNES)
 - **Mot de passe WiFi** (min 8 caractères)
 
 Après validation :
+
 - Le SSID WiFi devient `NEOPRO-NANTES`
 - Le mot de passe WiFi est mis à jour
 
@@ -203,6 +211,7 @@ Après validation :
 ```
 
 Le script :
+
 - Collecte les informations du club
 - Build l'application Angular
 - Déploie sur le Pi
@@ -283,6 +292,7 @@ Le script :
 ## Mise à jour de l'Image Golden
 
 Quand mettre à jour l'image golden :
+
 - Nouvelle version majeure de l'application
 - Nouveaux paquets système requis
 - Corrections de bugs critiques dans `install.sh`
@@ -298,6 +308,7 @@ ssh pi@neopro.local
 cd raspberry
 git pull  # ou copier les nouveaux fichiers
 sudo ./install.sh MASTER MasterPass123  # réinstaller
+# Optionnel : sudo ./install.sh MASTER MasterPass123 Livebox-F730 MonPassInternet456
 
 # Puis préparer et cloner comme avant
 sudo ./tools/prepare-golden-image.sh
@@ -380,13 +391,13 @@ ssh pi@192.168.4.1
 
 ## Scripts associés
 
-| Script | Emplacement | Description |
-|--------|-------------|-------------|
-| `copy-to-pi.sh` | `raspberry/scripts/` | Copie fichiers vers Pi |
-| `prepare-golden-image.sh` | `raspberry/tools/` | Prépare Pi pour clonage |
-| `clone-sd-card.sh` | `raspberry/tools/` | Clone carte SD en image |
-| `first-boot-setup.sh` | `~/` (sur Pi) | Assistant premier démarrage |
-| `setup-new-club.sh` | `raspberry/scripts/` | Configuration club complète |
+| Script                    | Emplacement          | Description                 |
+| ------------------------- | -------------------- | --------------------------- |
+| `copy-to-pi.sh`           | `raspberry/scripts/` | Copie fichiers vers Pi      |
+| `prepare-golden-image.sh` | `raspberry/tools/`   | Prépare Pi pour clonage     |
+| `clone-sd-card.sh`        | `raspberry/tools/`   | Clone carte SD en image     |
+| `first-boot-setup.sh`     | `~/` (sur Pi)        | Assistant premier démarrage |
+| `setup-new-club.sh`       | `raspberry/scripts/` | Configuration club complète |
 
 ---
 
