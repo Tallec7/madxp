@@ -52,6 +52,9 @@ services:
     staticPublishPath: dist/neopro-dashboard
     routes:
       - type: rewrite
+        source: /health
+        destination: /health.json
+      - type: rewrite
         source: /*
         destination: /index.html
     headers:

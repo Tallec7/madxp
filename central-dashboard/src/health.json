@@ -1,0 +1,6 @@
+{
+  "status": "ok",
+  "service": "neopro-admin",
+  "description": "Statically served health endpoint for monitoring.",
+  "timestamp": "build-time"
+}
