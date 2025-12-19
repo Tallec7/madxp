@@ -12,7 +12,7 @@ import { AuthService } from '../../core/services/auth.service';
     <div class="login-container">
       <div class="login-card">
         <div class="login-header">
-          <img src="neopro-logo.png" alt="Neopro" class="login-logo" />
+          <img src="assets/neopro-logo.png" alt="Neopro" class="login-logo" />
           <p>Dashboard Central</p>
         </div>
 

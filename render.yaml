@@ -49,7 +49,7 @@ services:
     region: frankfurt
     rootDirectory: central-dashboard
     buildCommand: npm install && npm run build:prod
-    staticPublishPath: dist/neopro-dashboard
+    staticPublishPath: dist/neopro-central-dashboard
     routes:
       - type: rewrite
         source: /health
