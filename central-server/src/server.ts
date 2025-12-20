@@ -222,8 +222,7 @@ app.use('/api/auth', authRateLimit, authRoutes); // Restrictif pour auth
 app.use('/api/mfa', authRateLimit, mfaRoutes);   // MFA - même restrictions que auth
 app.use('/api/sites', apiRateLimit, sitesRoutes);
 app.use('/api/groups', apiRateLimit, groupsRoutes);
-app.use('/api/videos', sensitiveRateLimit); // Upload de vidéos - plus restrictif
-app.use('/api', apiRateLimit, contentRoutes);
+app.use('/api', sensitiveRateLimit, contentRoutes); // Upload de vidéos - plus restrictif
 app.use('/api', sensitiveRateLimit, updatesRoutes); // Mises à jour - sensible
 app.use('/api/analytics', apiRateLimit, analyticsRoutes);
 app.use('/api/analytics', apiRateLimit, sponsorAnalyticsRoutes); // Analytics sponsors
