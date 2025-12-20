@@ -73,7 +73,20 @@ async function calculateFileChecksum(filePath) {
 
 class VideoDeployHandler {
   async execute(data, progressCallback) {
-    const { videoUrl, filename, originalName, category, subcategory, locked, expires_at, checksum } = data;
+    const {
+      videoUrl,
+      filename,
+      originalName,
+      category,
+      subcategory,
+      locked,
+      expires_at,
+      checksum,
+      // Nouveaux champs pour le tracking analytics
+      videoId,
+      sponsorId,
+      analyticsCategory,
+    } = data;
 
     // CHECKSUM OBLIGATOIRE - Garantit l'intégrité des vidéos déployées
     if (!checksum) {
@@ -95,6 +108,9 @@ class VideoDeployHandler {
       isNeoProContent,
       expires_at,
       checksumProvided: !!checksum,
+      videoId,
+      sponsorId,
+      analyticsCategory,
     });
 
     try {
@@ -281,6 +297,10 @@ class VideoDeployHandler {
         type: 'video/mp4',
         locked: isNeoProContent,
         deployed_at: new Date().toISOString(),
+        // Métadonnées pour le tracking analytics (depuis le central)
+        video_id: videoData.videoId || null,
+        sponsor_id: videoData.sponsorId || null,
+        analytics_category: videoData.analyticsCategory || null,
       };
 
       // Ajouter la date d'expiration si présente

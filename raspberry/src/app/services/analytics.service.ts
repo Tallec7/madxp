@@ -16,6 +16,10 @@ export interface VideoPlayEvent {
   completed: boolean;
   trigger_type: 'auto' | 'manual';
   session_id?: string;
+  /** UUID de la vidéo sur le central server (pour jointure avec la table videos) */
+  video_id?: string;
+  /** UUID du sponsor associé (si applicable) */
+  sponsor_id?: string;
 }
 
 /**
@@ -120,12 +124,18 @@ export class AnalyticsService {
       completed,
       trigger_type: this.currentTriggerType,
       session_id: this.currentSession || undefined,
+      // Métadonnées pour le tracking (depuis la configuration déployée)
+      video_id: this.currentVideo.video_id,
+      sponsor_id: this.currentVideo.sponsor_id,
     };
 
     this.buffer.push(event);
 
     console.log('[Analytics] Video ended:', {
       filename: event.video_filename,
+      category: event.category,
+      video_id: event.video_id,
+      sponsor_id: event.sponsor_id,
       duration: durationPlayed,
       completed,
       bufferSize: this.buffer.length,
@@ -205,7 +215,13 @@ export class AnalyticsService {
   }
 
   private detectCategory(video: Video): string {
-    // 1. Utiliser le mapping de la configuration si disponible
+    // 1. Priorité : analytics_category définie lors du déploiement
+    if (video.analytics_category) {
+      console.log('[Analytics] Using deployed analytics_category:', video.analytics_category);
+      return video.analytics_category;
+    }
+
+    // 2. Utiliser le mapping de la configuration si disponible
     if (video.categoryId && this.configuration?.categoryMappings) {
       const mappedCategory = this.configuration.categoryMappings[video.categoryId];
       if (mappedCategory) {
@@ -214,7 +230,7 @@ export class AnalyticsService {
       }
     }
 
-    // 2. Fallback: détection par path/filename
+    // 3. Fallback: détection par path/filename
     const filename = this.getFilename(video.path).toLowerCase();
     const path = video.path.toLowerCase();
 

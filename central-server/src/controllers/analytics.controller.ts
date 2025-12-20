@@ -443,9 +443,20 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
           invalidSessions++;
         }
 
+        // Valider video_id et sponsor_id s'ils sont fournis
+        const videoId =
+          typeof play.video_id === 'string' && validateUuid(play.video_id)
+            ? play.video_id
+            : null;
+
+        const sponsorId =
+          typeof play.sponsor_id === 'string' && validateUuid(play.sponsor_id)
+            ? play.sponsor_id
+            : null;
+
         await query(
-          `INSERT INTO video_plays (site_id, session_id, video_filename, category, played_at, duration_played, video_duration, completed, trigger_type)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          `INSERT INTO video_plays (site_id, session_id, video_filename, category, played_at, duration_played, video_duration, completed, trigger_type, video_id, sponsor_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
           [
             site_id,
             sessionId,
@@ -456,6 +467,8 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
             play.video_duration || 0,
             play.completed || false,
             play.trigger_type || 'auto',
+            videoId,
+            sponsorId,
           ]
         );
         insertedCount++;

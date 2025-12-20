@@ -374,6 +374,49 @@ ALTER TABLE club_sessions DROP COLUMN IF EXISTS audience_estimate;
 
 ---
 
-**Dernière mise à jour:** 16 décembre 2025
+---
+
+### 5. add-video-id-to-video-plays.sql ✅ **NOUVEAU**
+**Date:** 2025-12-20
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Ajoute les colonnes `video_id` et `sponsor_id` à la table `video_plays` pour permettre le tracking complet des analytics avec jointure vers les tables `videos` et `sponsors`.
+
+**Ce que fait cette migration:**
+- Ajoute `video_id UUID REFERENCES videos(id)` à `video_plays`
+- Ajoute `sponsor_id UUID REFERENCES sponsors(id)` à `video_plays`
+- Crée des index pour optimiser les jointures
+
+**Pourquoi cette migration:**
+Avant cette migration, les analytics vidéo n'étaient liées qu'au `video_filename` (string), ce qui empêchait :
+- La jointure avec la table `videos` pour récupérer les métadonnées
+- L'identification du sponsor associé à une vidéo
+- Les statistiques par sponsor/vidéo source
+
+**Commande:**
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/add-video-id-to-video-plays.sql
+```
+
+**Vérification:**
+```sql
+-- Vérifier les nouvelles colonnes
+\d video_plays
+
+-- Les nouvelles colonnes doivent apparaître:
+-- video_id   | uuid | REFERENCES videos(id)
+-- sponsor_id | uuid | REFERENCES sponsors(id)
+```
+
+**Impact:**
+- ✅ Compatible avec les anciennes données (colonnes NULL par défaut)
+- ✅ Les nouveaux déploiements de vidéos incluront automatiquement `video_id`
+- ✅ Permet des requêtes comme : `SELECT * FROM video_plays JOIN videos ON video_plays.video_id = videos.id`
+
+---
+
+**Dernière mise à jour:** 20 décembre 2025
 **Auteur:** Claude Code
-**Version migrations:** 1.0
+**Version migrations:** 1.1

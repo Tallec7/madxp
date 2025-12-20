@@ -123,9 +123,11 @@ export class TvComponent implements OnInit, OnDestroy {
     // Tracker le changement de vidéo dans la playlist (sponsors)
     this.player.on('play', () => {
       const currentSrc = this.player.currentSrc();
+      console.log('[TV] Video play event:', { currentSrc, triggerType: this.lastTriggerType, sponsorsCount: this.configuration.sponsors.length });
       if (currentSrc && this.lastTriggerType === 'auto') {
         // C'est une vidéo de la boucle sponsors
         const sponsor = this.configuration.sponsors.find(s => currentSrc.includes(s.path));
+        console.log('[TV] Sponsor lookup:', { found: !!sponsor, sponsorPaths: this.configuration.sponsors.map(s => s.path) });
         if (sponsor) {
           this.analyticsService.trackVideoStart(sponsor, 'auto');
 
@@ -134,6 +136,15 @@ export class TvComponent implements OnInit, OnDestroy {
             sponsor,
             'auto',
             this.player.duration() || 0
+          );
+        } else {
+          // Fallback: tracker quand même la vidéo même si pas trouvée dans sponsors
+          // (peut arriver si le path ne matche pas exactement)
+          const filename = currentSrc.split('/').pop() || 'unknown';
+          console.warn('[TV] Sponsor not found for', currentSrc, '- tracking as fallback');
+          this.analyticsService.trackVideoStart(
+            { name: filename, path: currentSrc, type: 'video/mp4' },
+            'auto'
           );
         }
       }

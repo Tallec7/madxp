@@ -436,6 +436,7 @@ npm test
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 1.2.0 | 2025-12-20 | Propagation video_id/sponsor_id/analytics_category dans le déploiement et tracking |
 | 1.1.0 | 2025-12-15 | Phase 4 - Tests automatisés (39 tests) - 98% conformité BP §13 |
 | 1.0.0 | 2025-12-14 | Release initiale - 95% conformité BP §13 |
 | 0.3.0 | 2025-12-14 | Semaine 3 - PDF graphiques avec Chart.js |
@@ -444,7 +445,7 @@ npm test
 
 ---
 
-**Dernière mise à jour** : 15 Décembre 2025
+**Dernière mise à jour** : 20 Décembre 2025
 **Mainteneur** : Équipe Développement NEOPRO
 **Licence** : Propriétaire
 **Contact** : [Voir BUSINESS_PLAN_COMPLET.md pour contacts]
