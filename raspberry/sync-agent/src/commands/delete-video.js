@@ -92,6 +92,15 @@ class VideoDeleteHandler {
         category.videos = (category.videos || []).filter(filterFn);
       }
 
+      // Aussi supprimer du tableau sponsors si présent
+      if (configuration.sponsors && Array.isArray(configuration.sponsors)) {
+        const originalLength = configuration.sponsors.length;
+        configuration.sponsors = configuration.sponsors.filter(filterFn);
+        if (configuration.sponsors.length < originalLength) {
+          logger.info('Removed video from sponsors array', { path: relativePath });
+        }
+      }
+
       await fs.writeFile(configPath, JSON.stringify(configuration, null, 2));
 
       logger.info('Configuration updated after deletion');

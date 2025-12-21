@@ -336,6 +336,37 @@ class VideoDeployHandler {
         }
       }
 
+      // Mettre à jour le tableau sponsors si c'est une vidéo sponsor
+      // (catégorie SPONSORS ou sponsorId défini)
+      const isSponsorVideo = videoData.category?.toUpperCase() === 'SPONSORS' ||
+                             videoData.analyticsCategory === 'sponsor' ||
+                             videoData.sponsorId;
+
+      if (isSponsorVideo) {
+        if (!configuration.sponsors) {
+          configuration.sponsors = [];
+        }
+
+        const sponsorEntry = {
+          name: videoData.originalName.replace(/\.[^/.]+$/, ''),
+          path: relativePath,
+          type: 'video/mp4',
+          // Métadonnées pour le tracking analytics
+          video_id: videoData.videoId || null,
+          sponsor_id: videoData.sponsorId || null,
+          analytics_category: 'sponsor',
+        };
+
+        const existingSponsorIndex = configuration.sponsors.findIndex(s => s.path === relativePath);
+        if (existingSponsorIndex >= 0) {
+          configuration.sponsors[existingSponsorIndex] = sponsorEntry;
+          logger.info('Updated sponsor in sponsors array', { path: relativePath });
+        } else {
+          configuration.sponsors.push(sponsorEntry);
+          logger.info('Added sponsor to sponsors array', { path: relativePath });
+        }
+      }
+
       await fs.writeFile(configPath, JSON.stringify(configuration, null, 2));
 
       logger.info('Configuration updated', { configPath });
