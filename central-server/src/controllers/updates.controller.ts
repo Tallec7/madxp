@@ -85,7 +85,9 @@ export const createUpdate = async (req: AuthRequest, res: Response) => {
     const uploadResult = await uploadFile(file.buffer, filename, file.mimetype, UPDATE_BUCKET);
 
     if (!uploadResult) {
-      return res.status(500).json({ error: "Impossible d'uploader le package" });
+      return res.status(500).json({
+        error: "Impossible d'uploader le package vers Supabase Storage. Vérifiez que les variables SUPABASE_URL et SUPABASE_SERVICE_KEY sont configurées."
+      });
     }
 
     const result = await pool.query(
@@ -111,8 +113,17 @@ export const createUpdate = async (req: AuthRequest, res: Response) => {
       logger.warn('software_updates table missing while creating update');
       return res.status(503).json(updatesFeatureUnavailable('software_updates'));
     }
+
+    // Check for unique constraint violation on version
+    const dbError = error as DatabaseError;
+    if (dbError.code === '23505') {
+      logger.warn('Duplicate version attempted:', { version: req.body.version });
+      return res.status(409).json({ error: `La version "${req.body.version}" existe déjà` });
+    }
+
     logger.error('Error creating update:', error);
-    res.status(500).json({ error: 'Erreur lors de la création de la mise à jour' });
+    const errorMessage = dbError.message || 'Erreur inconnue';
+    res.status(500).json({ error: `Erreur lors de la création de la mise à jour: ${errorMessage}` });
   }
 };
 

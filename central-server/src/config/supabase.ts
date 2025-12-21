@@ -29,6 +29,34 @@ export const getPublicUrl = (path: string, bucket: string = STORAGE_BUCKET): str
   return `${supabaseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
 };
 
+const ensureBucketExists = async (bucket: string): Promise<boolean> => {
+  if (!supabase) return false;
+
+  const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+  if (listError) {
+    logger.error('Error listing buckets:', listError);
+    return false;
+  }
+
+  if (buckets?.some(b => b.name === bucket)) {
+    return true;
+  }
+
+  // Try to create the bucket
+  const { error: createError } = await supabase.storage.createBucket(bucket, {
+    public: true,
+    fileSizeLimit: 1024 * 1024 * 1024, // 1GB
+  });
+
+  if (createError) {
+    logger.error(`Error creating bucket "${bucket}":`, createError);
+    return false;
+  }
+
+  logger.info(`Bucket "${bucket}" created successfully`);
+  return true;
+};
+
 export const uploadFile = async (
   file: Buffer,
   filename: string,
@@ -36,7 +64,14 @@ export const uploadFile = async (
   bucket: string = STORAGE_BUCKET
 ): Promise<{ path: string; url: string } | null> => {
   if (!supabase) {
-    logger.error('Supabase client not initialized');
+    logger.error('Supabase client not initialized - check SUPABASE_URL and SUPABASE_SERVICE_KEY');
+    return null;
+  }
+
+  // Ensure bucket exists before uploading
+  const bucketReady = await ensureBucketExists(bucket);
+  if (!bucketReady) {
+    logger.error(`Bucket "${bucket}" does not exist and could not be created`);
     return null;
   }
 
