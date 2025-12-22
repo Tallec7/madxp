@@ -45,7 +45,8 @@ PACKAGE_VERSION="unknown"
 if [ -f "raspberry/deploy/VERSION" ]; then
     PACKAGE_VERSION=$(tr -d '\r' < raspberry/deploy/VERSION | head -n1 | tr -d '[:space:]')
 elif [ -f "${DEPLOY_ARCHIVE}" ]; then
-    PACKAGE_VERSION=$(tar -xOf "${DEPLOY_ARCHIVE}" deploy/VERSION 2>/dev/null | tr -d '\r' | head -n1 | tr -d '[:space:]')
+    # L'archive contient directement VERSION (sans préfixe deploy/)
+    PACKAGE_VERSION=$(tar -xOf "${DEPLOY_ARCHIVE}" VERSION 2>/dev/null | tr -d '\r' | head -n1 | tr -d '[:space:]')
 fi
 
 if [ -z "$PACKAGE_VERSION" ]; then
@@ -148,13 +149,17 @@ fi
 # Extraction et installation
 print_step "Installation de la nouvelle version..."
 ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
+    # Création d'un répertoire temporaire pour l'extraction
+    rm -rf ~/neopro-update
+    mkdir -p ~/neopro-update
+
     # Extraction (--warning=no-unknown-keyword supprime les warnings macOS xattr)
-    rm -rf ~/deploy
-    tar --warning=no-unknown-keyword -xzf ~/neopro-deploy.tar.gz
+    # L'archive contient directement webapp/, server/, etc. (sans préfixe deploy/)
+    tar --warning=no-unknown-keyword -xzf ~/neopro-deploy.tar.gz -C ~/neopro-update
 
     # Installation webapp
     # IMPORTANT: Préserver configuration.json et videos/ qui sont spécifiques au club
-    if [ -d ~/deploy/webapp ]; then
+    if [ -d ~/neopro-update/webapp ]; then
         # Sauvegarder les fichiers à préserver
         if [ -f ${RASPBERRY_DIR}/webapp/configuration.json ]; then
             cp ${RASPBERRY_DIR}/webapp/configuration.json /tmp/configuration.json.backup
@@ -167,7 +172,7 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
 
         # Supprimer et installer la nouvelle webapp
         sudo rm -rf ${RASPBERRY_DIR}/webapp/*
-        sudo cp -r ~/deploy/webapp/* ${RASPBERRY_DIR}/webapp/
+        sudo cp -r ~/neopro-update/webapp/* ${RASPBERRY_DIR}/webapp/
 
         # Restaurer les fichiers préservés
         if [ -f /tmp/configuration.json.backup ]; then
@@ -184,8 +189,8 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     fi
 
     # Installation serveur
-    if [ -d ~/deploy/server ]; then
-        sudo cp -r ~/deploy/server/* ${RASPBERRY_DIR}/server/
+    if [ -d ~/neopro-update/server ]; then
+        sudo cp -r ~/neopro-update/server/* ${RASPBERRY_DIR}/server/
         cd ${RASPBERRY_DIR}/server
         sudo npm install --production 2>/dev/null || true
         echo 'Serveur installé'
@@ -195,29 +200,30 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Elles sont gérées par le sync-agent depuis Google Drive
 
     # Installation sync-agent
-    if [ -d ~/deploy/sync-agent ]; then
+    if [ -d ~/neopro-update/sync-agent ]; then
         sudo mkdir -p ${RASPBERRY_DIR}/sync-agent
-        sudo cp -r ~/deploy/sync-agent/* ${RASPBERRY_DIR}/sync-agent/
+        sudo cp -r ~/neopro-update/sync-agent/* ${RASPBERRY_DIR}/sync-agent/
         echo 'Sync-agent installé'
     fi
 
     # Installation admin panel
-    if [ -d ~/deploy/admin ]; then
+    if [ -d ~/neopro-update/admin ]; then
         sudo mkdir -p ${RASPBERRY_DIR}/admin
-        sudo cp -r ~/deploy/admin/* ${RASPBERRY_DIR}/admin/
+        sudo cp -r ~/neopro-update/admin/* ${RASPBERRY_DIR}/admin/
         cd ${RASPBERRY_DIR}/admin
         sudo npm install --production 2>/dev/null || true
         echo 'Admin panel installé'
     fi
 
-    # Enregistrer les métadonnées de version
-    if [ -f ~/deploy/VERSION ]; then
-        sudo cp ~/deploy/VERSION ${RASPBERRY_DIR}/VERSION
+    # Enregistrer les métadonnées de version (à la racine de neopro/)
+    if [ -f ~/neopro-update/VERSION ]; then
+        sudo cp ~/neopro-update/VERSION ${RASPBERRY_DIR}/VERSION
         sudo chown pi:pi ${RASPBERRY_DIR}/VERSION
         sudo chmod 644 ${RASPBERRY_DIR}/VERSION
+        echo \"Version installée: \$(cat ${RASPBERRY_DIR}/VERSION)\"
     fi
-    if [ -f ~/deploy/release.json ]; then
-        sudo cp ~/deploy/release.json ${RASPBERRY_DIR}/release.json
+    if [ -f ~/neopro-update/release.json ]; then
+        sudo cp ~/neopro-update/release.json ${RASPBERRY_DIR}/release.json
         sudo chown pi:pi ${RASPBERRY_DIR}/release.json
         sudo chmod 644 ${RASPBERRY_DIR}/release.json
     fi
@@ -232,9 +238,9 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     fi
 
     # Installation des scripts runtime (compress/video, wifi, backup, etc.)
-    if [ -d ~/deploy/scripts ]; then
+    if [ -d ~/neopro-update/scripts ]; then
         sudo mkdir -p ${RASPBERRY_DIR}/scripts
-        sudo cp -r ~/deploy/scripts/* ${RASPBERRY_DIR}/scripts/
+        sudo cp -r ~/neopro-update/scripts/* ${RASPBERRY_DIR}/scripts/
         sudo chown -R pi:pi ${RASPBERRY_DIR}/scripts
         sudo chmod +x ${RASPBERRY_DIR}/scripts/*.sh 2>/dev/null || true
         echo 'Scripts runtime installés'
@@ -259,7 +265,7 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     echo 'Permissions configurées'
 
     # Nettoyage
-    rm -rf ~/deploy ~/neopro-deploy.tar.gz
+    rm -rf ~/neopro-update ~/neopro-deploy.tar.gz
 
     # Mise à jour de l'unité systemd neopro-admin si fournie
     if [ -f /tmp/neopro-admin.service ]; then

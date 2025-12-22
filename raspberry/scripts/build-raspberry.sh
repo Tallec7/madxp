@@ -295,10 +295,17 @@ else
 fi
 
 print_step "Compression de l'archive..."
-cd raspberry
 # COPYFILE_DISABLE=1 empêche tar d'inclure les fichiers ._ (AppleDouble)
-COPYFILE_DISABLE=1 tar -czf neopro-raspberry-deploy.tar.gz deploy/
-cd ..
+# Archive le CONTENU de deploy/ (sans le préfixe deploy/) pour extraction directe dans /home/pi/neopro/
+# Utiliser pigz (parallel gzip) si disponible pour accélérer la compression
+cd ${DEPLOY_DIR}
+if command -v pigz &> /dev/null; then
+    print_step "Utilisation de pigz (compression parallèle)..."
+    COPYFILE_DISABLE=1 tar -cf - . | pigz > ../neopro-raspberry-deploy.tar.gz
+else
+    COPYFILE_DISABLE=1 tar -czf ../neopro-raspberry-deploy.tar.gz .
+fi
+cd - > /dev/null
 print_success "Archive créée: raspberry/neopro-raspberry-deploy.tar.gz"
 
 # Afficher les statistiques
@@ -321,9 +328,13 @@ echo "     scp raspberry/neopro-raspberry-deploy.tar.gz pi@neopro.local:~/"
 echo ""
 echo "  2. Sur le Raspberry Pi:"
 echo "     ssh pi@neopro.local"
-echo "     tar -xzf neopro-raspberry-deploy.tar.gz"
-echo "     sudo cp -r deploy/webapp/* /home/pi/neopro/webapp/"
-echo "     sudo cp -r deploy/server/* /home/pi/neopro/server/"
+echo "     cd /home/pi/neopro"
+echo "     # Sauvegarder la configuration locale"
+echo "     cp webapp/configuration.json /tmp/configuration.json.bak"
+echo "     # Extraire la mise à jour (écrase webapp/, server/, etc.)"
+echo "     sudo tar -xzf ~/neopro-raspberry-deploy.tar.gz --exclude='videos' --exclude='logs'"
+echo "     # Restaurer la configuration locale"
+echo "     cp /tmp/configuration.json.bak webapp/configuration.json"
 echo "     sudo systemctl restart neopro-app"
 echo "     sudo systemctl restart nginx"
 echo ""
