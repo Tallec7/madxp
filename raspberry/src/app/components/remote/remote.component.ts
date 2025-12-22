@@ -64,6 +64,7 @@ export class RemoteComponent implements OnInit {
   // Phase active de la boucle vidéo
   public activePhase: 'neutral' | 'before' | 'during' | 'after' = 'neutral';
   public readonly matchPhases: ('before' | 'during' | 'after')[] = ['before', 'during', 'after'];
+  public isPhaseDropdownOpen = false;
 
   // Exposer Math pour le template
   public Math = Math;
@@ -524,6 +525,21 @@ export class RemoteComponent implements OnInit {
     this.activePhase = phase;
     console.log('Switching to phase:', phase);
     this.socketService.emit('phase-change', { phase });
+  }
+
+  /**
+   * Toggle le dropdown de sélection de phase
+   */
+  public togglePhaseDropdown(): void {
+    this.isPhaseDropdownOpen = !this.isPhaseDropdownOpen;
+  }
+
+  /**
+   * Sélectionne une phase depuis le dropdown
+   */
+  public selectPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
+    this.switchPhase(phase);
+    this.isPhaseDropdownOpen = false;
   }
 
   /**

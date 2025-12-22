@@ -49,6 +49,53 @@
         </div>
 
         <div class="header-right">
+          <!-- Sélecteur de phase (toujours visible) -->
+          <div class="phase-dropdown">
+            <button
+              class="phase-dropdown-trigger"
+              [class.phase-neutral]="activePhase === 'neutral'"
+              [class.phase-before]="activePhase === 'before'"
+              [class.phase-during]="activePhase === 'during'"
+              [class.phase-after]="activePhase === 'after'"
+              (click)="togglePhaseDropdown()"
+            >
+              <span class="phase-dropdown-icon">{{ getPhaseIcon(activePhase) }}</span>
+              <span class="phase-dropdown-label">{{ getPhaseLabel(activePhase) }}</span>
+              <span class="phase-dropdown-arrow">▼</span>
+            </button>
+            @if (isPhaseDropdownOpen) {
+              <div class="phase-dropdown-menu">
+                <button
+                  class="phase-dropdown-item"
+                  [class.active]="activePhase === 'neutral'"
+                  (click)="selectPhase('neutral')"
+                >
+                  <span class="item-icon">🔄</span>
+                  <span class="item-label">Boucle par défaut</span>
+                  <span class="item-count">{{ getLoopVideoCount('neutral') }}</span>
+                </button>
+                @for (phase of matchPhases; track phase) {
+                  <button
+                    class="phase-dropdown-item"
+                    [class.active]="activePhase === phase"
+                    [class.has-custom]="hasLoopForPhase(phase)"
+                    (click)="selectPhase(phase)"
+                  >
+                    <span class="item-icon">{{ getPhaseIcon(phase) }}</span>
+                    <span class="item-label">{{ getPhaseLabel(phase) }}</span>
+                    <span class="item-count">
+                      @if (hasLoopForPhase(phase)) {
+                        {{ getLoopVideoCount(phase) }}
+                      } @else {
+                        ⟵
+                      }
+                    </span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+
           <!-- Widget Score en Live minimaliste (si activé) -->
           @if (liveScoreEnabled) {
             <div class="score-mini">
