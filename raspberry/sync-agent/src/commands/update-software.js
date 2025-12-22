@@ -241,10 +241,11 @@ class SoftwareUpdateHandler {
       // - logs/: runtime logs
       // - backups/: backup archives
       // - webapp/configuration.json: club-specific configuration
+      // Note: 2>&1 | grep -v 'Ignoring unknown extended header' filters out macOS extended attribute warnings
       await execAsync(
         `tar -xzf ${packagePath} -C ${config.paths.root}/ ` +
         `--exclude='videos' --exclude='logs' --exclude='backups' ` +
-        `--exclude='webapp/configuration.json'`
+        `--exclude='webapp/configuration.json' 2>&1 | grep -v 'Ignoring unknown extended header' || true`
       );
 
       if (await fs.pathExists(path.join(config.paths.root, 'webapp/package.json'))) {
