@@ -7,7 +7,7 @@ on:
     branches: [main, develop]
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '20'
 
 jobs:
   # ============================================
@@ -96,4 +96,4 @@ jobs:
         continue-on-error: true
 
       - name: Build
-        run: ng build raspberry
+        run: npx ng build raspberry
