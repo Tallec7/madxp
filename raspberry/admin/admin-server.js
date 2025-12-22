@@ -2189,19 +2189,37 @@ app.post('/api/update', uploadPackage.single('package'), async (req, res) => {
     await runCommand(`tar -xzf ${req.file.path} -C ${extractDir}`, 'Échec de l\'extraction du package');
 
     // Vérifier que la structure du package est correcte
-    const checkWebapp = await execCommand(`test -d ${extractDir}/deploy/webapp`);
-    const checkServer = await execCommand(`test -d ${extractDir}/deploy/server`);
-    if (!checkWebapp.success || !checkServer.success) {
-      throw new Error('Structure du package invalide: les dossiers deploy/webapp et deploy/server sont requis');
+    // Support des deux formats: nouveau (webapp/, server/) et ancien (deploy/webapp/, deploy/server/)
+    const checkWebappNew = await execCommand(`test -d ${extractDir}/webapp`);
+    const checkServerNew = await execCommand(`test -d ${extractDir}/server`);
+    const checkWebappOld = await execCommand(`test -d ${extractDir}/deploy/webapp`);
+    const checkServerOld = await execCommand(`test -d ${extractDir}/deploy/server`);
+
+    const useNewFormat = checkWebappNew.success && checkServerNew.success;
+    const useOldFormat = checkWebappOld.success && checkServerOld.success;
+
+    if (!useNewFormat && !useOldFormat) {
+      throw new Error('Structure du package invalide: les dossiers webapp et server sont requis');
     }
+
+    const sourcePrefix = useNewFormat ? '' : 'deploy/';
 
     // S'assurer que les dossiers cibles existent
     await ensureDirectory(`${NEOPRO_DIR}/webapp`);
     await ensureDirectory(`${NEOPRO_DIR}/server`);
 
     // Copier les nouveaux fichiers
-    await runCommand(`cp -r ${extractDir}/deploy/webapp/* ${NEOPRO_DIR}/webapp/`, 'Échec de la copie des fichiers webapp');
-    await runCommand(`cp -r ${extractDir}/deploy/server/* ${NEOPRO_DIR}/server/`, 'Échec de la copie des fichiers server');
+    await runCommand(`cp -r ${extractDir}/${sourcePrefix}webapp/* ${NEOPRO_DIR}/webapp/`, 'Échec de la copie des fichiers webapp');
+    await runCommand(`cp -r ${extractDir}/${sourcePrefix}server/* ${NEOPRO_DIR}/server/`, 'Échec de la copie des fichiers server');
+
+    // Copier les fichiers de version si présents (nouveau format)
+    if (useNewFormat) {
+      await execCommand(`test -f ${extractDir}/VERSION && cp ${extractDir}/VERSION ${NEOPRO_DIR}/VERSION`);
+      await execCommand(`test -f ${extractDir}/release.json && cp ${extractDir}/release.json ${NEOPRO_DIR}/release.json`);
+    } else {
+      await execCommand(`test -f ${extractDir}/deploy/VERSION && cp ${extractDir}/deploy/VERSION ${NEOPRO_DIR}/VERSION`);
+      await execCommand(`test -f ${extractDir}/deploy/release.json && cp ${extractDir}/deploy/release.json ${NEOPRO_DIR}/release.json`);
+    }
 
     // Installer les dépendances
     await runCommand(`cd ${NEOPRO_DIR}/server && npm install --production`, 'Échec de l\'installation des dépendances');

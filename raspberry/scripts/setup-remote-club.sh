@@ -397,29 +397,46 @@ if [ -d ${RASPBERRY_DIR}/videos ]; then
     mv ${RASPBERRY_DIR}/videos /tmp/videos.backup
 fi
 
-# Extraire l'archive
+# Extraire l'archive dans un dossier temporaire
 cd ~
-tar -xzf neopro-raspberry-deploy.tar.gz
+rm -rf ~/neopro-update
+mkdir -p ~/neopro-update
+tar -xzf neopro-raspberry-deploy.tar.gz -C ~/neopro-update
+
+# Déterminer le format de l'archive (nouveau: webapp/, ancien: deploy/webapp/)
+if [ -d ~/neopro-update/webapp ]; then
+    SOURCE_DIR=~/neopro-update
+elif [ -d ~/neopro-update/deploy/webapp ]; then
+    SOURCE_DIR=~/neopro-update/deploy
+else
+    echo 'Erreur: Structure du package invalide'
+    exit 1
+fi
 
 # Déployer les composants
-sudo cp -r deploy/webapp/* ${RASPBERRY_DIR}/webapp/
-sudo cp -r deploy/server/* ${RASPBERRY_DIR}/server/
-sudo cp -r deploy/sync-agent/* ${RASPBERRY_DIR}/sync-agent/
-if [ -d deploy/admin ]; then
-    sudo cp -r deploy/admin/* ${RASPBERRY_DIR}/admin/
+sudo cp -r ${SOURCE_DIR}/webapp/* ${RASPBERRY_DIR}/webapp/
+sudo cp -r ${SOURCE_DIR}/server/* ${RASPBERRY_DIR}/server/
+if [ -d ${SOURCE_DIR}/sync-agent ]; then
+    sudo cp -r ${SOURCE_DIR}/sync-agent/* ${RASPBERRY_DIR}/sync-agent/
+fi
+if [ -d ${SOURCE_DIR}/admin ]; then
+    sudo cp -r ${SOURCE_DIR}/admin/* ${RASPBERRY_DIR}/admin/
 fi
 
 # Enregistrer la version et les métadonnées de build
-if [ -f deploy/VERSION ]; then
-    sudo cp deploy/VERSION ${RASPBERRY_DIR}/VERSION
+if [ -f ${SOURCE_DIR}/VERSION ]; then
+    sudo cp ${SOURCE_DIR}/VERSION ${RASPBERRY_DIR}/VERSION
     sudo chown pi:pi ${RASPBERRY_DIR}/VERSION
     sudo chmod 644 ${RASPBERRY_DIR}/VERSION
 fi
-if [ -f deploy/release.json ]; then
-    sudo cp deploy/release.json ${RASPBERRY_DIR}/release.json
+if [ -f ${SOURCE_DIR}/release.json ]; then
+    sudo cp ${SOURCE_DIR}/release.json ${RASPBERRY_DIR}/release.json
     sudo chown pi:pi ${RASPBERRY_DIR}/release.json
     sudo chmod 644 ${RASPBERRY_DIR}/release.json
 fi
+
+# Nettoyage
+rm -rf ~/neopro-update
 
 # S'assurer que le WiFi client (wlan1) conserve sa configuration
 if ip link show wlan1 >/dev/null 2>&1 && [ -f /etc/wpa_supplicant/wpa_supplicant.conf ]; then
