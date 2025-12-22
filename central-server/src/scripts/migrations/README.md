@@ -3,6 +3,7 @@
 ## 📋 Liste des Migrations
 
 ### 0. 00-create-rls-functions.sql ⚠️ (Optionnel - Troubleshooting)
+
 **Date:** 2025-12-16
 **Statut:** Optionnel - fonctions incluses dans enable-row-level-security.sql
 **Durée estimée:** < 1 seconde
@@ -11,17 +12,20 @@
 Crée uniquement les fonctions utilitaires RLS sans activer les policies. Utile pour le troubleshooting.
 
 **Quand l'utiliser:**
+
 - ⚠️ Si vous rencontrez l'erreur: `ERROR: function is_admin() does not exist`
 - 🔧 Pour tester les fonctions RLS avant d'activer les policies
 - 🐛 En cas de problème lors de l'exécution de `enable-row-level-security.sql`
 
 **Fonctions créées:**
+
 - `current_site_id()` - Retourne le site_id du contexte
 - `is_admin()` - Vérifie si l'utilisateur est admin
 - `current_user_id()` - Retourne l'user_id du contexte
 - `set_session_context(site_id, user_id, is_admin)` - Définit le contexte
 
 **Commande:**
+
 ```bash
 psql $DATABASE_URL -f central-server/src/scripts/migrations/00-create-rls-functions.sql
 ```
@@ -31,6 +35,7 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/00-create-rls-functi
 ---
 
 ### 1. enable-row-level-security.sql ✅
+
 **Date:** 2025-12-16
 **Statut:** Prêt pour exécution
 **Durée estimée:** 2-5 secondes
@@ -39,6 +44,7 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/00-create-rls-functi
 Active Row-Level Security (RLS) sur toutes les tables principales pour garantir l'isolation multi-tenant au niveau PostgreSQL.
 
 **Ce que fait cette migration:**
+
 - Active RLS sur 20+ tables
 - Crée 4 fonctions helper:
   - `current_site_id()` - Retourne le site_id du contexte
@@ -51,6 +57,7 @@ Active Row-Level Security (RLS) sur toutes les tables principales pour garantir 
   - Support des déploiements polymorphes (site/groupe)
 
 **Tables concernées:**
+
 - `sites`, `users`, `site_groups`, `group_sites`
 - `videos`, `sponsors`, `categories`
 - `content_deployments`, `update_deployments` (polymorphes)
@@ -59,11 +66,13 @@ Active Row-Level Security (RLS) sur toutes les tables principales pour garantir 
 - `commands`, `config_history`, `audit_logs`
 
 **Commande:**
+
 ```bash
 psql $DATABASE_URL -f central-server/src/scripts/migrations/enable-row-level-security.sql
 ```
 
 **Vérification:**
+
 ```sql
 -- Voir toutes les policies
 SELECT schemaname, tablename, policyname
@@ -88,6 +97,7 @@ SELECT current_site_id();
 ---
 
 ### 2. add-audience-and-score-fields.sql ✅
+
 **Date:** 2025-12-16
 **Statut:** Prêt pour exécution
 **Durée estimée:** 1-2 secondes
@@ -96,17 +106,20 @@ SELECT current_site_id();
 Ajoute les champs nécessaires pour la fonctionnalité live-score et analytics avancés.
 
 **Modifications:**
+
 - `club_sessions`:
   - `match_date DATE` - Date du match
   - `match_name VARCHAR(255)` - Nom du match (ex: "LYON vs PARIS")
   - `audience_estimate INTEGER` - Estimation du public
 
 **Commande:**
+
 ```bash
 psql $DATABASE_URL -f central-server/src/scripts/migrations/add-audience-and-score-fields.sql
 ```
 
 **Vérification:**
+
 ```sql
 -- Vérifier structure de club_sessions
 \d club_sessions
@@ -120,6 +133,7 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/add-audience-and-sco
 ---
 
 ### 3. fix-rls-content-deployments.sql ⚠️
+
 **Date:** 2025-12-16
 **Statut:** Optionnel (fix inclus dans enable-row-level-security.sql)
 **Durée estimée:** 1 seconde
@@ -128,10 +142,12 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/add-audience-and-sco
 Migration corrective pour les policies RLS des tables `content_deployments` et `update_deployments`.
 
 **Quand l'utiliser:**
+
 - Si vous avez exécuté une version antérieure de `enable-row-level-security.sql` avec l'erreur `column "site_id" does not exist`
 - Pour corriger les policies existantes sans tout recréer
 
 **Commande:**
+
 ```bash
 psql $DATABASE_URL -f central-server/src/scripts/migrations/fix-rls-content-deployments.sql
 ```
@@ -141,6 +157,7 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/fix-rls-content-depl
 ---
 
 ### 4. fix-analytics-rls.sql 🚨 **URGENT - Fix Analytics**
+
 **Date:** 2025-12-16
 **Statut:** ✅ **REQUIS SI ANALYTICS NE REMONTENT PLUS**
 **Durée estimée:** < 1 seconde
@@ -149,21 +166,25 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/fix-rls-content-depl
 Corrige le problème des analytics qui ne remontent plus depuis le 12 décembre. Les Raspberry Pi envoient des analytics sans authentification, mais les policies RLS bloquaient ces insertions car `current_site_id()` retourne NULL pour les requêtes non-authentifiées.
 
 **Ce que fait cette migration:**
+
 - Modifie les policies RLS pour `video_plays`, `club_sessions`, et `sponsor_impressions`
 - Permet l'insertion pour les requêtes authentifiées ET non-authentifiées
 - Maintient la sécurité en vérifiant que le `site_id` existe dans la table `sites`
 
 **Symptômes du problème:**
+
 - Aucune donnée analytics depuis le 12/12 à 23h45
 - Dashboard analytics vide ou données gelées
 - Raspberry Pi envoient des données mais elles ne sont pas enregistrées
 
 **Commande:**
+
 ```bash
 psql $DATABASE_URL -f central-server/src/scripts/migrations/fix-analytics-rls.sql
 ```
 
 **Vérification après migration:**
+
 ```sql
 -- Vérifier que des données récentes sont insérées
 SELECT COUNT(*), MAX(played_at) as dernier_envoi
@@ -172,6 +193,7 @@ WHERE played_at >= NOW() - INTERVAL '1 hour';
 ```
 
 **Sécurité maintenue:**
+
 - ✅ Requêtes authentifiées limitées à leur site
 - ✅ Requêtes non-authentifiées vérifient l'existence du site
 - ✅ Impossible d'insérer pour un site inexistant
@@ -354,11 +376,13 @@ ALTER TABLE club_sessions DROP COLUMN IF EXISTS audience_estimate;
 ## 🔐 Sécurité
 
 ### Avant RLS
+
 ❌ Isolation multi-tenant au niveau applicatif uniquement
 ❌ Risque de data leakage si bug dans le code
 ❌ Pas d'audit trail au niveau DB
 
 ### Après RLS
+
 ✅ Isolation garantie au niveau PostgreSQL
 ✅ Impossible d'accéder aux données d'un autre site (même avec bug code)
 ✅ Logs PostgreSQL capturent toutes les violations
@@ -377,6 +401,7 @@ ALTER TABLE club_sessions DROP COLUMN IF EXISTS audience_estimate;
 ---
 
 ### 5. add-video-id-to-video-plays.sql ✅ **NOUVEAU**
+
 **Date:** 2025-12-20
 **Statut:** Prêt pour exécution
 **Durée estimée:** < 1 seconde
@@ -385,22 +410,26 @@ ALTER TABLE club_sessions DROP COLUMN IF EXISTS audience_estimate;
 Ajoute les colonnes `video_id` et `sponsor_id` à la table `video_plays` pour permettre le tracking complet des analytics avec jointure vers les tables `videos` et `sponsors`.
 
 **Ce que fait cette migration:**
+
 - Ajoute `video_id UUID REFERENCES videos(id)` à `video_plays`
 - Ajoute `sponsor_id UUID REFERENCES sponsors(id)` à `video_plays`
 - Crée des index pour optimiser les jointures
 
 **Pourquoi cette migration:**
 Avant cette migration, les analytics vidéo n'étaient liées qu'au `video_filename` (string), ce qui empêchait :
+
 - La jointure avec la table `videos` pour récupérer les métadonnées
 - L'identification du sponsor associé à une vidéo
 - Les statistiques par sponsor/vidéo source
 
 **Commande:**
+
 ```bash
 psql $DATABASE_URL -f central-server/src/scripts/migrations/add-video-id-to-video-plays.sql
 ```
 
 **Vérification:**
+
 ```sql
 -- Vérifier les nouvelles colonnes
 \d video_plays
@@ -411,12 +440,51 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/add-video-id-to-vide
 ```
 
 **Impact:**
+
 - ✅ Compatible avec les anciennes données (colonnes NULL par défaut)
 - ✅ Les nouveaux déploiements de vidéos incluront automatiquement `video_id`
 - ✅ Permet des requêtes comme : `SELECT * FROM video_plays JOIN videos ON video_plays.video_id = videos.id`
 
 ---
 
-**Dernière mise à jour:** 20 décembre 2025
+### 6. add-is-critical-to-software-updates.sql ✅ **NOUVEAU**
+
+**Date:** 2025-12-22
+**Statut:** ✅ **REQUIS** - Corrige l'erreur `column "is_critical" does not exist`
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Ajoute la colonne `is_critical` manquante à la table `software_updates`. Cette colonne est référencée dans le code mais n'a jamais été migrée sur certaines bases de données de production.
+
+**Symptômes du problème:**
+
+- Erreur : `column "is_critical" does not exist`
+- Erreur : `column "is_critical" of relation "software_updates" does not exist`
+- Les mises à jour logicielles ne peuvent pas être créées ou listées
+
+**Ce que fait cette migration:**
+
+- Ajoute `is_critical BOOLEAN DEFAULT FALSE` à `software_updates`
+- Vérifie si la colonne existe déjà avant de l'ajouter (idempotent)
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/add-is-critical-to-software-updates.sql
+```
+
+**Vérification:**
+
+```sql
+-- Vérifier que la colonne existe
+\d software_updates
+
+-- La colonne is_critical doit apparaître:
+-- is_critical | boolean | default false
+```
+
+---
+
+**Dernière mise à jour:** 22 décembre 2025
 **Auteur:** Claude Code
-**Version migrations:** 1.1
+**Version migrations:** 1.2

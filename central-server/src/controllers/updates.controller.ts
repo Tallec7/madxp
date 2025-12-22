@@ -4,6 +4,7 @@ import logger from '../config/logger';
 import pool from '../config/database';
 import { AuthRequest } from '../types';
 import { UPDATE_BUCKET, uploadFile } from '../config/supabase';
+import { updateDeploymentService } from '../services/update-deployment.service';
 
 type DatabaseError = Error & { code?: string; message?: string };
 
@@ -263,7 +264,14 @@ export const createUpdateDeployment = async (req: AuthRequest, res: Response) =>
       [update_id, target_type || 'site', target_id, req.user?.id || null]
     );
 
-    logger.info('Update deployment created:', { id: result.rows[0].id, update_id, target_type, target_id });
+    const deploymentId = result.rows[0].id as string;
+    logger.info('Update deployment created:', { id: deploymentId, update_id, target_type, target_id });
+
+    // Démarrer le déploiement automatiquement (async, ne bloque pas la réponse)
+    updateDeploymentService.startDeployment(deploymentId).catch((error) => {
+      logger.error('Error starting update deployment:', { deploymentId, error });
+    });
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
     if (isTableMissingError(error, 'update_deployments')) {

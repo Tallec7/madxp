@@ -82,6 +82,7 @@ central-server/
 ### Authentication
 
 **POST /api/auth/login**
+
 ```json
 {
   "email": "admin@neopro.fr",
@@ -90,6 +91,7 @@ central-server/
 ```
 
 Response:
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -104,52 +106,81 @@ Response:
 
 ### Sites
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | /api/sites | Liste des sites |
-| GET | /api/sites/:id | Détail d'un site |
-| GET | /api/sites/:id/metrics | Métriques du site |
-| POST | /api/sites | Créer un site |
-| PUT | /api/sites/:id | Modifier un site |
-| DELETE | /api/sites/:id | Supprimer (admin) |
-| POST | /api/sites/:id/command | Envoyer une commande |
-| GET | /api/sites/:id/logs | Récupérer les logs |
+| Méthode | Endpoint               | Description          |
+| ------- | ---------------------- | -------------------- |
+| GET     | /api/sites             | Liste des sites      |
+| GET     | /api/sites/:id         | Détail d'un site     |
+| GET     | /api/sites/:id/metrics | Métriques du site    |
+| POST    | /api/sites             | Créer un site        |
+| PUT     | /api/sites/:id         | Modifier un site     |
+| DELETE  | /api/sites/:id         | Supprimer (admin)    |
+| POST    | /api/sites/:id/command | Envoyer une commande |
+| GET     | /api/sites/:id/logs    | Récupérer les logs   |
 
 ### Groups
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | /api/groups | Liste des groupes |
-| GET | /api/groups/:id | Détail d'un groupe |
-| POST | /api/groups | Créer un groupe |
-| PUT | /api/groups/:id | Modifier un groupe |
-| DELETE | /api/groups/:id | Supprimer |
-| POST | /api/groups/:id/command | Commande groupée |
+| Méthode | Endpoint                | Description        |
+| ------- | ----------------------- | ------------------ |
+| GET     | /api/groups             | Liste des groupes  |
+| GET     | /api/groups/:id         | Détail d'un groupe |
+| POST    | /api/groups             | Créer un groupe    |
+| PUT     | /api/groups/:id         | Modifier un groupe |
+| DELETE  | /api/groups/:id         | Supprimer          |
+| POST    | /api/groups/:id/command | Commande groupée   |
 
-### Updates
+### Updates (Mises à jour logicielles)
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | /api/updates | Liste des versions logicielles |
-| POST | /api/updates | Créer une version (multipart/form-data avec le fichier `package`) |
-| POST | /api/update-deployments | Déployer une version sur un site ou un groupe |
+| Méthode | Endpoint                    | Description                                                       |
+| ------- | --------------------------- | ----------------------------------------------------------------- |
+| GET     | /api/updates                | Liste des versions logicielles                                    |
+| GET     | /api/updates/:id            | Détail d'une version                                              |
+| POST    | /api/updates                | Créer une version (multipart/form-data avec le fichier `package`) |
+| PUT     | /api/updates/:id            | Modifier une version                                              |
+| DELETE  | /api/updates/:id            | Supprimer une version                                             |
+| GET     | /api/update-deployments     | Liste des déploiements de mises à jour                            |
+| GET     | /api/update-deployments/:id | Détail d'un déploiement                                           |
+| POST    | /api/update-deployments     | Déployer une version sur un site ou un groupe                     |
+| PUT     | /api/update-deployments/:id | Modifier un déploiement                                           |
+| DELETE  | /api/update-deployments/:id | Annuler un déploiement                                            |
+
+**Flux de déploiement automatique :**
+
+1. Uploader un package de mise à jour via `POST /api/updates`
+2. Créer un déploiement via `POST /api/update-deployments` avec `update_id` et `target_id`
+3. Le serveur envoie automatiquement la commande `update_software` aux sites connectés
+4. Les sites non connectés recevront la mise à jour à leur reconnexion
+5. Le Raspberry Pi émet des événements `update_progress` pour suivre l'avancement
+
+**Exemple de création de déploiement :**
+
+```bash
+curl -X POST https://api.neopro.fr/api/update-deployments \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "update_id": "uuid-de-la-mise-a-jour",
+    "target_type": "site",
+    "target_id": "uuid-du-site"
+  }'
+```
 
 ### Content (Videos & Deployments)
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | /api/videos | Liste des vidéos |
-| GET | /api/videos/:id | Détail d'une vidéo |
-| POST | /api/videos | Upload simple (1 fichier) |
-| POST | /api/videos/bulk | **Upload multiple (jusqu'à 20 fichiers)** |
-| PUT | /api/videos/:id | Modifier une vidéo |
-| DELETE | /api/videos/:id | Supprimer (admin) |
-| GET | /api/deployments | Liste des déploiements |
-| POST | /api/deployments | Créer un déploiement |
-| PUT | /api/deployments/:id | Modifier un déploiement |
-| DELETE | /api/deployments/:id | Annuler (admin) |
+| Méthode | Endpoint             | Description                               |
+| ------- | -------------------- | ----------------------------------------- |
+| GET     | /api/videos          | Liste des vidéos                          |
+| GET     | /api/videos/:id      | Détail d'une vidéo                        |
+| POST    | /api/videos          | Upload simple (1 fichier)                 |
+| POST    | /api/videos/bulk     | **Upload multiple (jusqu'à 20 fichiers)** |
+| PUT     | /api/videos/:id      | Modifier une vidéo                        |
+| DELETE  | /api/videos/:id      | Supprimer (admin)                         |
+| GET     | /api/deployments     | Liste des déploiements                    |
+| POST    | /api/deployments     | Créer un déploiement                      |
+| PUT     | /api/deployments/:id | Modifier un déploiement                   |
+| DELETE  | /api/deployments/:id | Annuler (admin)                           |
 
 **Exemple upload multiple :**
+
 ```bash
 curl -X POST https://api.neopro.fr/api/videos/bulk \
   -H "Authorization: Bearer $TOKEN" \
@@ -159,13 +190,12 @@ curl -X POST https://api.neopro.fr/api/videos/bulk \
 ```
 
 **Réponse :**
+
 ```json
 {
   "success": true,
   "message": "3/3 vidéo(s) uploadée(s) avec succès",
-  "files": [
-    { "id": "uuid", "name": "uuid.mp4", "title": "video1.mp4", "size": 12345678 }
-  ],
+  "files": [{ "id": "uuid", "name": "uuid.mp4", "title": "video1.mp4", "size": 12345678 }],
   "errors": []
 }
 ```
@@ -178,12 +208,12 @@ curl -X POST https://api.neopro.fr/api/videos/bulk \
 
 ```javascript
 const socket = io('wss://neopro-central.onrender.com', {
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
 });
 
 socket.emit('authenticate', {
   siteId: 'site-uuid',
-  apiKey: 'site-api-key'
+  apiKey: 'site-api-key',
 });
 
 socket.on('authenticated', (data) => {
@@ -201,8 +231,8 @@ socket.emit('heartbeat', {
     cpu: 45.2,
     memory: 62.1,
     temperature: 52.3,
-    disk: 78.5
-  }
+    disk: 78.5,
+  },
 });
 ```
 
@@ -213,6 +243,7 @@ socket.emit('heartbeat', {
 Voir `src/scripts/init-db.sql` pour le schéma complet.
 
 Tables principales :
+
 - `users` - Utilisateurs équipe NEOPRO
 - `sites` - Boîtiers Raspberry Pi
 - `groups` - Groupes de sites
@@ -235,6 +266,7 @@ Tables principales :
 ## 📊 Health Check
 
 **GET /health**
+
 ```json
 {
   "status": "healthy",
@@ -272,17 +304,17 @@ npm test
 
 ### Couverture par fichier
 
-| Fichier | Tests | Couverture |
-|---------|-------|------------|
-| auth.controller.ts | 16 | 100% |
-| sites.controller.ts | 35 | 91% |
-| groups.controller.ts | 21 | 90% |
-| content.controller.ts | 25 | 93% |
-| updates.controller.ts | 28 | 100% |
-| analytics.controller.ts | 40 | 93% |
-| config-history.controller.ts | 24 | 100% |
-| auth.ts (middleware) | 17 | 97% |
-| validation.ts | 25 | 100% |
+| Fichier                      | Tests | Couverture |
+| ---------------------------- | ----- | ---------- |
+| auth.controller.ts           | 16    | 100%       |
+| sites.controller.ts          | 35    | 91%        |
+| groups.controller.ts         | 21    | 90%        |
+| content.controller.ts        | 25    | 93%        |
+| updates.controller.ts        | 28    | 100%       |
+| analytics.controller.ts      | 40    | 93%        |
+| config-history.controller.ts | 24    | 100%       |
+| auth.ts (middleware)         | 17    | 97%        |
+| validation.ts                | 25    | 100%       |
 
 ### Structure
 
@@ -298,16 +330,16 @@ src/
 
 ## ⚙️ Variables d'environnement
 
-| Variable | Description | Exemple |
-|----------|-------------|---------|
-| NODE_ENV | Environnement | production |
-| PORT | Port serveur | 3001 |
-| DATABASE_URL | URL Supabase | postgresql://... |
-| DATABASE_SSL | SSL activé | true |
-| JWT_SECRET | Secret JWT | (généré) |
-| ALLOWED_ORIGINS | CORS origins | https://... |
-| SUPABASE_URL | URL projet Supabase | https://xxx.supabase.co |
-| SUPABASE_SERVICE_KEY | Clé service Supabase | eyJhbGci... |
+| Variable             | Description          | Exemple                 |
+| -------------------- | -------------------- | ----------------------- |
+| NODE_ENV             | Environnement        | production              |
+| PORT                 | Port serveur         | 3001                    |
+| DATABASE_URL         | URL Supabase         | postgresql://...        |
+| DATABASE_SSL         | SSL activé           | true                    |
+| JWT_SECRET           | Secret JWT           | (généré)                |
+| ALLOWED_ORIGINS      | CORS origins         | https://...             |
+| SUPABASE_URL         | URL projet Supabase  | https://xxx.supabase.co |
+| SUPABASE_SERVICE_KEY | Clé service Supabase | eyJhbGci...             |
 
 ### Supabase Storage
 
@@ -328,4 +360,4 @@ Les vidéos sont stockées temporairement dans Supabase Storage :
 
 ---
 
-**Dernière mise à jour :** 10 décembre 2025
+**Dernière mise à jour :** 22 décembre 2025

@@ -21,6 +21,15 @@ const getDeploymentService = async () => {
   return deploymentService;
 };
 
+let updateDeploymentService: { processPendingDeploymentsForSite: (siteId: string) => Promise<void>; handleDeploymentResult: (deploymentId: string, siteId: string, success: boolean, errorMessage?: string) => Promise<void>; updateProgress: (deploymentId: string, progress: number) => Promise<void> } | null = null;
+const getUpdateDeploymentService = async () => {
+  if (!updateDeploymentService) {
+    const module = await import('./update-deployment.service');
+    updateDeploymentService = module.default;
+  }
+  return updateDeploymentService;
+};
+
 let commandQueueService: { processPendingCommands: (siteId: string) => Promise<{ processed: number; failed: number; remaining: number }> } | null = null;
 const getCommandQueueService = async () => {
   if (!commandQueueService) {
@@ -298,6 +307,10 @@ class SocketService {
       this.handleDeployProgress(siteId, progress);
     });
 
+    socket.on('update_progress', (progress: any) => {
+      this.handleUpdateProgress(siteId, progress);
+    });
+
     socket.on('sync_local_state', (state: any) => {
       this.handleSyncLocalState(siteId, state);
     });
@@ -343,12 +356,20 @@ class SocketService {
       logger.error('Error processing pending commands on connect:', { siteId, error });
     }
 
-    // Traiter les déploiements en attente
+    // Traiter les déploiements de contenu en attente
     try {
       const service = await getDeploymentService();
       await service.processPendingDeploymentsForSite(siteId);
     } catch (error) {
-      logger.error('Error processing pending deployments on connect:', { siteId, error });
+      logger.error('Error processing pending content deployments on connect:', { siteId, error });
+    }
+
+    // Traiter les déploiements de mises à jour en attente
+    try {
+      const updateService = await getUpdateDeploymentService();
+      await updateService.processPendingDeploymentsForSite(siteId);
+    } catch (error) {
+      logger.error('Error processing pending update deployments on connect:', { siteId, error });
     }
   }
 
@@ -748,6 +769,50 @@ class SocketService {
       }
     } catch (err) {
       logger.error('Error handling deploy progress:', err);
+    }
+  }
+
+  /**
+   * Gère les événements de progression de mise à jour logicielle
+   */
+  private async handleUpdateProgress(siteId: string, progress: any) {
+    try {
+      const { deploymentId, progress: progressValue, completed, error, version } = progress;
+
+      logger.info('Update progress received', {
+        siteId,
+        deploymentId,
+        progress: progressValue,
+        completed,
+        error,
+        version,
+      });
+
+      const updateService = await getUpdateDeploymentService();
+
+      if (deploymentId) {
+        if (error) {
+          await updateService.handleDeploymentResult(deploymentId, siteId, false, error);
+        } else if (completed) {
+          await updateService.handleDeploymentResult(deploymentId, siteId, true);
+        } else {
+          await updateService.updateProgress(deploymentId, progressValue || 0);
+        }
+      }
+
+      // Émettre le progress au dashboard
+      if (this.io) {
+        this.io.emit('update_progress', {
+          siteId,
+          deploymentId,
+          progress: progressValue,
+          completed,
+          error,
+          version,
+        });
+      }
+    } catch (err) {
+      logger.error('Error handling update progress:', err);
     }
   }
 
