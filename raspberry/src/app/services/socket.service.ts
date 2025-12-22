@@ -17,6 +17,10 @@ export interface ScoreUpdate {
   awayScore: number;
 }
 
+export interface PhaseChange {
+  phase: 'neutral' | 'before' | 'during' | 'after';
+}
+
 interface Socket {
   on<T>(event: string, callback: (data: T) => void): void;
   emit(event: string, data: unknown): void;
@@ -48,7 +52,7 @@ export class SocketService {
     }
   }
 
-  public emit(action: string, data: Command | MatchConfig | ScoreUpdate) {
+  public emit(action: string, data: Command | MatchConfig | ScoreUpdate | PhaseChange) {
     if (this.socket) {
       console.log('socket service : emit', action, data);
       this.socket.emit(action, data);

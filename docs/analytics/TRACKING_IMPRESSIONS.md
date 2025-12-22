@@ -113,11 +113,13 @@ Ce document décrit le système complet de tracking des impressions sponsors dep
 **Localisation**: `raspberry/frontend/app/services/sponsor-analytics.service.ts`
 
 **Responsabilités**:
+
 - Tracker les lectures de vidéos sponsors
 - Maintenir un buffer local avec localStorage
 - Envoyer périodiquement au serveur local
 
 **Interface SponsorImpression**:
+
 ```typescript
 {
   site_id?: string;           // ID du club/site
@@ -135,6 +137,7 @@ Ce document décrit le système complet de tracking des impressions sponsors dep
 ```
 
 **Méthodes principales**:
+
 - `trackSponsorStart(video, triggerType, duration)` - Début de lecture
 - `trackSponsorEnd(completed)` - Fin de lecture
 - `setEventType(type)` - Définir le type d'événement
@@ -143,9 +146,10 @@ Ce document décrit le système complet de tracking des impressions sponsors dep
 - `forceFlush()` - Forcer l'envoi immédiat
 
 **Configuration**:
+
 ```typescript
-FLUSH_INTERVAL = 5 * 60 * 1000;  // 5 minutes
-MAX_BUFFER_SIZE = 50;             // Auto-flush à 50 impressions
+FLUSH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+MAX_BUFFER_SIZE = 50; // Auto-flush à 50 impressions
 STORAGE_KEY = 'neopro_sponsor_impressions';
 SYNC_AGENT_URL = environment.socketUrl + '/api/sync/sponsor-impressions';
 ```
@@ -155,6 +159,7 @@ SYNC_AGENT_URL = environment.socketUrl + '/api/sync/sponsor-impressions';
 **Localisation**: `raspberry/frontend/app/components/tv/tv.component.ts`
 
 **Intégration**:
+
 ```typescript
 // Injection du service
 private readonly sponsorAnalytics = inject(SponsorAnalyticsService);
@@ -167,7 +172,8 @@ ngOnInit() {
 
 // Tracking lors de la lecture
 this.player.on('play', () => {
-  const sponsor = this.configuration.sponsors.find(s => ...);
+  // La boucle active dépend de la phase courante
+  const sponsor = this.currentLoopVideos.find(s => ...);
   if (sponsor) {
     this.sponsorAnalytics.trackSponsorStart(
       sponsor,
@@ -183,16 +189,63 @@ this.player.on('ended', () => {
 });
 ```
 
+**Boucles vidéo par phase** (depuis décembre 2025):
+
+Le TV component supporte maintenant des boucles vidéo différentes par phase de match :
+
+```typescript
+// Phase active (neutral = boucle par défaut sponsors[])
+activePhase: 'neutral' | 'before' | 'during' | 'after' = 'neutral';
+
+// Écoute des changements de phase depuis la télécommande
+this.socketService.on('phase-change', (data) => {
+  this.switchToPhase(data.phase);
+});
+
+// Changement de phase : charge la nouvelle playlist et met à jour l'analytics
+switchToPhase(phase) {
+  this.activePhase = phase;
+
+  // Mapping phase → period analytics
+  const periodMap = {
+    'neutral': 'loop',
+    'before': 'pre_match',
+    'during': 'halftime',
+    'after': 'post_match'
+  };
+  this.updatePeriod(periodMap[phase]);
+
+  // Recharger la playlist
+  this.sponsors();
+}
+
+// Récupère les vidéos selon la phase
+getLoopVideosForPhase(phase) {
+  if (phase === 'neutral') return this.configuration.sponsors;
+
+  const timeCategory = this.configuration.timeCategories?.find(tc => tc.id === phase);
+  if (timeCategory?.loopVideos?.length > 0) {
+    return timeCategory.loopVideos;
+  }
+
+  // Fallback : boucle par défaut
+  return this.configuration.sponsors;
+}
+```
+
 **Méthodes publiques ajoutées**:
+
 ```typescript
 setEventContext(eventType, period?, audienceEstimate?)
 updatePeriod(period)
 updateAudienceEstimate(estimate)
+switchToPhase(phase)  // Nouveau : change la boucle et l'analytics
 ```
 
 Ces méthodes peuvent être appelées depuis:
-- La télécommande (remote component)
-- Des événements externes (match start, halftime, etc.)
+
+- La télécommande (remote component) - sélecteur de phase
+- Des événements socket externes (match start, halftime, etc.)
 - Configuration manuelle par l'opérateur
 
 ---
@@ -206,9 +259,11 @@ Ces méthodes peuvent être appelées depuis:
 **Nouveaux endpoints**:
 
 ##### POST `/api/sync/sponsor-impressions`
+
 Reçoit les impressions du frontend Angular.
 
 **Request Body**:
+
 ```json
 {
   "impressions": [
@@ -228,6 +283,7 @@ Reçoit les impressions du frontend Angular.
 ```
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -237,6 +293,7 @@ Reçoit les impressions du frontend Angular.
 ```
 
 **Comportement**:
+
 - **Mode Cloud (Render)**: Forwarde immédiatement au serveur central
 - **Mode Raspberry**: Stocke dans `~/neopro/data/sponsor_impressions.json`
 - Créé le dossier si nécessaire
@@ -244,9 +301,11 @@ Reçoit les impressions du frontend Angular.
 - Logs détaillés
 
 ##### GET `/api/sync/sponsor-impressions/stats`
+
 Retourne les statistiques du buffer local.
 
 **Response**:
+
 ```json
 {
   "count": 15,
@@ -266,23 +325,26 @@ Retourne les statistiques du buffer local.
 **Classe SponsorImpressionsCollector**:
 
 **Propriétés**:
+
 - `buffer` - Array d'impressions en attente
 - `lastSendTime` - Timestamp du dernier envoi réussi
 - `sendInterval` - Intervalle d'envoi (5min par défaut)
 - `maxBufferSize` - Taille max avant auto-flush (100)
 
 **Méthodes principales**:
+
 ```javascript
-loadBuffer()              // Charge depuis le fichier
-saveBuffer()              // Sauvegarde dans le fichier
-addImpressions(array)     // Ajoute au buffer
-flushBuffer()             // Récupère et vide le buffer
-sendToServer(url, siteId) // Envoie HTTP POST au central
-startPeriodicSync()       // Démarre l'envoi automatique
-getStats()                // Statistiques du buffer
+loadBuffer(); // Charge depuis le fichier
+saveBuffer(); // Sauvegarde dans le fichier
+addImpressions(array); // Ajoute au buffer
+flushBuffer(); // Récupère et vide le buffer
+sendToServer(url, siteId); // Envoie HTTP POST au central
+startPeriodicSync(); // Démarre l'envoi automatique
+getStats(); // Statistiques du buffer
 ```
 
 **Fonctionnalités**:
+
 - ✅ Persistance fichier JSON
 - ✅ Auto-récupération au démarrage
 - ✅ Envoi périodique (5min)
@@ -296,6 +358,7 @@ getStats()                // Statistiques du buffer
 **Localisation**: `raspberry/sync-agent/src/agent.js`
 
 **Modifications**:
+
 ```javascript
 // Import
 const sponsorImpressionsCollector = require('./sponsor-impressions');
@@ -355,6 +418,7 @@ getSponsorImpressionsStats() {
 ### Scénario 2: Lecture Manuelle (Télécommande)
 
 Même flux mais:
+
 - `triggerType` = 'manual'
 - `event_type` peut être défini par opérateur
 - `period` peut être 'pre_match', 'halftime', etc.
@@ -381,6 +445,7 @@ Même flux mais:
 ### Configuration Initiale
 
 **1. Frontend Angular (déjà fait)**
+
 ```typescript
 // Dans tv.component.ts
 this.sponsorAnalytics.setSiteId('site-uuid-here');
@@ -389,6 +454,7 @@ this.sponsorAnalytics.setPeriod('loop');
 ```
 
 **2. Variables d'environnement Raspberry**
+
 ```bash
 # /etc/neopro/site.conf
 SITE_ID="uuid-du-club"
@@ -396,6 +462,7 @@ CENTRAL_SERVER_URL="https://central.neopro.com"
 ```
 
 **3. Démarrage Services**
+
 ```bash
 # Serveur local (port 3000)
 cd ~/neopro/raspberry/server
@@ -426,17 +493,14 @@ tvComponent.updateAudienceEstimate(250);
 ```typescript
 // Socket.IO event ou HTTP webhook
 socket.on('match_started', (data) => {
-  tvComponent.setEventContext(
-    'match',
-    'pre_match',
-    data.expectedAudience
-  );
+  tvComponent.setEventContext('match', 'pre_match', data.expectedAudience);
 });
 ```
 
 ### Monitoring
 
 #### Vérifier le Buffer Local
+
 ```bash
 # Frontend buffer (localStorage)
 # Dans la console navigateur:
@@ -450,6 +514,7 @@ journalctl -u neopro-sync-agent -f
 ```
 
 #### API Stats
+
 ```bash
 # Stats buffer local
 curl http://neopro.local:3000/api/sync/sponsor-impressions/stats
@@ -463,7 +528,9 @@ curl http://neopro.local:3000/api/sync/sponsor-impressions/stats
 ```
 
 #### Dashboard Central
+
 Accéder à `/sponsors/:id/analytics` pour voir:
+
 - Impressions totales
 - Temps écran cumulé
 - Taux de complétion
@@ -477,6 +544,7 @@ Accéder à `/sponsors/:id/analytics` pour voir:
 ### Test End-to-End Manuel
 
 **1. Préparer l'environnement**
+
 ```bash
 # Terminal 1: Serveur local
 cd raspberry/server && npm start
@@ -489,14 +557,15 @@ cd raspberry/frontend && npm start
 ```
 
 **2. Simuler une impression**
+
 ```typescript
 // Dans la console navigateur (Dev Tools)
 const service = // récupérer l'instance SponsorAnalyticsService
-service.trackSponsorStart(
-  { id: 'test-1', path: '/sponsor.mp4', type: 'video/mp4' },
-  'manual',
-  30
-);
+  service.trackSponsorStart(
+    { id: 'test-1', path: '/sponsor.mp4', type: 'video/mp4' },
+    'manual',
+    30,
+  );
 
 // Attendre 10 secondes
 setTimeout(() => {
@@ -505,6 +574,7 @@ setTimeout(() => {
 ```
 
 **3. Vérifier la chaîne**
+
 ```bash
 # Vérifier localStorage
 localStorage.getItem('neopro_sponsor_impressions')
@@ -524,15 +594,19 @@ cat ~/neopro/data/sponsor_impressions.json
 **1. Démarrer en mode normal**
 **2. Créer plusieurs impressions**
 **3. Couper la connexion réseau**
+
 ```bash
 sudo ifconfig eth0 down
 ```
+
 **4. Créer plus d'impressions**
 **5. Vérifier que le buffer grandit**
 **6. Rétablir la connexion**
+
 ```bash
 sudo ifconfig eth0 up
 ```
+
 **7. Vérifier l'envoi automatique**
 
 ---
@@ -542,12 +616,14 @@ sudo ifconfig eth0 up
 ### Volumétrie Attendue
 
 **Par Club/Site**:
+
 - 50-100 vidéos sponsors/jour
 - 1 match/semaine = ~30 impressions
 - Boucle continue = ~200 impressions/jour
 - Total: **~250 impressions/jour/site**
 
 **100 Sites**:
+
 - 25,000 impressions/jour
 - 750,000 impressions/mois
 - ~9M impressions/an
@@ -555,16 +631,19 @@ sudo ifconfig eth0 up
 ### Dimensionnement Buffers
 
 **Frontend (localStorage)**:
+
 - Taille max: 50 impressions
 - Flush interval: 5 min
 - → Max 250 impressions/boîtier en attente
 
 **Fichier Local (Raspberry)**:
+
 - Pas de limite stricte
 - Nettoyé après envoi réussi
 - Mode offline: peut grandir indéfiniment
 
 **Base de Données (Central)**:
+
 - Index sur: site_id, video_id, played_at
 - Partition mensuelle recommandée
 - Archivage > 1 an
@@ -576,12 +655,14 @@ sudo ifconfig eth0 up
 ### Données Collectées
 
 **Uniquement**:
+
 - Métadonnées vidéo (filename, duration)
 - Timestamps lecture
 - Contexte événement (match/training)
 - Audience **estimée** (pas nominative)
 
 **Jamais**:
+
 - Identité spectateurs
 - Images/vidéos spectateurs
 - Données personnelles
@@ -606,6 +687,7 @@ sudo ifconfig eth0 up
 ### Problème: Impressions ne remontent pas au central
 
 **Diagnostic**:
+
 ```bash
 # 1. Vérifier frontend buffer
 localStorage.getItem('neopro_sponsor_impressions')
@@ -626,6 +708,7 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 ```
 
 **Solutions**:
+
 - Frontend: Vérifier `environment.socketUrl`
 - Serveur: Vérifier port 3000 ouvert
 - Sync-agent: Vérifier `CENTRAL_SERVER_URL` et `SITE_ID`
@@ -634,11 +717,13 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 ### Problème: Buffer grandit indéfiniment
 
 **Causes**:
+
 - Serveur central inaccessible
 - Erreur SQL côté central
 - Rate limiting
 
 **Actions**:
+
 1. Vérifier logs sync-agent pour l'erreur exacte
 2. Tester manuellement l'API centrale
 3. Vider manuellement si nécessaire:
@@ -649,6 +734,7 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 ### Problème: Doublons dans la DB
 
 **Prévention**:
+
 - Index unique sur `(site_id, video_id, played_at)`
 - Validation backend avec seuil de déduplication (< 5s)
 
@@ -692,6 +778,7 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 ### Version 1.0.0 - 14 Décembre 2025
 
 **Implémentation complète tracking impressions TV** :
+
 - ✅ Service frontend Angular (sponsor-analytics.service.ts)
 - ✅ Intégration TV component avec hooks play/ended
 - ✅ API serveur local (2 endpoints)
@@ -701,6 +788,7 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 - ✅ Métriques dimensionnement (25K impressions/jour pour 100 sites)
 
 **Performance** :
+
 - Buffer localStorage : instantané
 - Auto-flush : 5 min ou 50 items
 - Sync agent : 5 min interval
@@ -708,6 +796,7 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 - HTTP POST central : ~200ms
 
 **Fiabilité** :
+
 - Offline-capable : jusqu'à 24h de buffer
 - Retry avec backoff : 3 tentatives
 - Aucune perte de données validée

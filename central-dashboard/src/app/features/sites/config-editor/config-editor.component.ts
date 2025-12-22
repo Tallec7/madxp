@@ -461,6 +461,80 @@ import {
             </div>
           </div>
 
+          <!-- Section Boucles Vidéo par Phase -->
+          <div class="form-section">
+            <h4 class="section-title">
+              <span class="section-icon">🔄</span>
+              Boucles Vidéo par Phase
+              <span class="section-hint">(Configurer une boucle différente pour chaque temps de match)</span>
+            </h4>
+            <p class="section-info">
+              Par défaut, la boucle "Sponsors" est utilisée. Vous pouvez configurer une boucle spécifique pour chaque phase.
+              Si une phase n'a pas de boucle configurée, la boucle par défaut sera utilisée.
+            </p>
+            <div class="phase-loops-grid" *ngIf="config.timeCategories?.length">
+              <div class="phase-loop-card" *ngFor="let timeCategory of config.timeCategories; let tcIndex = index">
+                <div class="phase-loop-header">
+                  <span class="phase-loop-icon">{{ timeCategory.icon }}</span>
+                  <span class="phase-loop-name">{{ timeCategory.name }}</span>
+                  <span class="phase-loop-count">{{ getLoopVideoCount(tcIndex) }} vidéo(s)</span>
+                  <button class="btn-add-small" (click)="addLoopVideo(tcIndex)">+ Ajouter</button>
+                </div>
+                <div class="phase-loop-content">
+                  <div class="phase-loop-videos" *ngIf="timeCategory.loopVideos?.length">
+                    <div
+                      class="loop-video-item"
+                      *ngFor="let video of timeCategory.loopVideos; let vidIndex = index"
+                      draggable="true"
+                      (dragstart)="onLoopDragStart($event, tcIndex, vidIndex)"
+                      (dragover)="onLoopDragOver($event)"
+                      (drop)="onLoopDrop($event, tcIndex, vidIndex)"
+                      [class.dragging]="draggingLoopIndex?.tcIndex === tcIndex && draggingLoopIndex?.vidIndex === vidIndex"
+                    >
+                      <span class="drag-handle">⋮⋮</span>
+                      <span class="loop-video-number">{{ vidIndex + 1 }}</span>
+                      <input
+                        type="text"
+                        [value]="video.name"
+                        (input)="updateLoopVideo(tcIndex, vidIndex, 'name', $any($event.target).value)"
+                        placeholder="Nom de la vidéo"
+                        class="loop-video-name"
+                      />
+                      <input
+                        type="text"
+                        [value]="video.path"
+                        (input)="updateLoopVideo(tcIndex, vidIndex, 'path', $any($event.target).value)"
+                        placeholder="videos/BOUCLE/video.mp4"
+                        class="loop-video-path"
+                      />
+                      <button class="btn-remove-small" (click)="removeLoopVideo(tcIndex, vidIndex)">×</button>
+                    </div>
+                  </div>
+                  <div class="phase-loop-empty" *ngIf="!timeCategory.loopVideos?.length">
+                    <span class="empty-icon">📋</span>
+                    <span>Utilise la boucle par défaut ({{ config.sponsors.length }} vidéos)</span>
+                  </div>
+                  <div class="phase-loop-actions" *ngIf="config.sponsors.length > 0">
+                    <button
+                      class="btn btn-secondary btn-sm"
+                      (click)="copySponsorsToLoop(tcIndex)"
+                      *ngIf="!timeCategory.loopVideos?.length"
+                    >
+                      Copier depuis la boucle par défaut
+                    </button>
+                    <button
+                      class="btn btn-secondary btn-sm"
+                      (click)="clearLoopVideos(tcIndex)"
+                      *ngIf="timeCategory.loopVideos?.length"
+                    >
+                      Effacer (utiliser boucle par défaut)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Section Mapping Analytics -->
           <div class="form-section">
             <h4 class="section-title">
@@ -1278,6 +1352,172 @@ import {
 
     .warning-icon {
       font-size: 1rem;
+    }
+
+    /* Phase Loops Section */
+    .section-info {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin: 0 0 1rem 0;
+      line-height: 1.5;
+    }
+
+    .phase-loops-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .phase-loop-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      background: white;
+    }
+
+    .phase-loop-header {
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .phase-loop-card:nth-child(1) .phase-loop-header {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(29, 78, 216, 0.1));
+    }
+
+    .phase-loop-card:nth-child(2) .phase-loop-header {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.1));
+    }
+
+    .phase-loop-card:nth-child(3) .phase-loop-header {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(147, 51, 234, 0.1));
+    }
+
+    .phase-loop-icon {
+      font-size: 1.25rem;
+    }
+
+    .phase-loop-name {
+      font-weight: 600;
+      flex: 1;
+      color: #0f172a;
+    }
+
+    .phase-loop-count {
+      font-size: 0.75rem;
+      background: #e2e8f0;
+      color: #475569;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .phase-loop-content {
+      padding: 1rem;
+    }
+
+    .phase-loop-videos {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .loop-video-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .loop-video-item:hover {
+      border-color: #2563eb;
+    }
+
+    .loop-video-item.dragging {
+      opacity: 0.5;
+      border-style: dashed;
+      border-color: #2563eb;
+    }
+
+    .drag-handle {
+      color: #9ca3af;
+      font-size: 1rem;
+      cursor: grab;
+      user-select: none;
+      padding: 0 0.25rem;
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+
+    .loop-video-number {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #64748b;
+      background: #e2e8f0;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .loop-video-name {
+      flex: 1;
+      min-width: 120px;
+      padding: 0.375rem 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      font-size: 0.8125rem;
+    }
+
+    .loop-video-path {
+      flex: 2;
+      min-width: 200px;
+      padding: 0.375rem 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: monospace;
+      color: #64748b;
+    }
+
+    .loop-video-name:focus,
+    .loop-video-path:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+
+    .phase-loop-empty {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: #f8fafc;
+      border: 1px dashed #e2e8f0;
+      border-radius: 6px;
+      color: #64748b;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
+    .phase-loop-empty .empty-icon {
+      font-size: 1.25rem;
+    }
+
+    .phase-loop-actions {
+      display: flex;
+      gap: 0.5rem;
     }
 
     /* JSON Editor */
@@ -2432,6 +2672,126 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     return this.getUnassignedCategories()
       .map(c => c.name || '(Sans nom)')
       .join(', ');
+  }
+
+  // ============================================================================
+  // Loop Videos per Phase (loopVideos)
+  // ============================================================================
+
+  // Drag-drop state for loop videos
+  draggingLoopIndex: { tcIndex: number; vidIndex: number } | null = null;
+
+  /**
+   * Retourne le nombre de vidéos dans la boucle d'une phase
+   */
+  getLoopVideoCount(tcIndex: number): number {
+    return this.config.timeCategories?.[tcIndex]?.loopVideos?.length || 0;
+  }
+
+  /**
+   * Ajoute une vidéo à la boucle d'une phase
+   */
+  addLoopVideo(tcIndex: number): void {
+    const timeCategory = this.config.timeCategories?.[tcIndex];
+    if (!timeCategory) return;
+
+    if (!timeCategory.loopVideos) {
+      timeCategory.loopVideos = [];
+    }
+
+    timeCategory.loopVideos.push({
+      name: '',
+      path: '',
+      type: 'video/mp4'
+    });
+
+    this.onConfigChange();
+  }
+
+  /**
+   * Met à jour une vidéo dans la boucle d'une phase
+   */
+  updateLoopVideo(tcIndex: number, vidIndex: number, field: 'name' | 'path', value: string): void {
+    const video = this.config.timeCategories?.[tcIndex]?.loopVideos?.[vidIndex];
+    if (video) {
+      video[field] = value;
+      this.onConfigChange();
+    }
+  }
+
+  /**
+   * Supprime une vidéo de la boucle d'une phase
+   */
+  removeLoopVideo(tcIndex: number, vidIndex: number): void {
+    const timeCategory = this.config.timeCategories?.[tcIndex];
+    if (timeCategory?.loopVideos) {
+      timeCategory.loopVideos.splice(vidIndex, 1);
+      this.onConfigChange();
+    }
+  }
+
+  /**
+   * Copie les sponsors globaux vers la boucle d'une phase
+   */
+  copySponsorsToLoop(tcIndex: number): void {
+    const timeCategory = this.config.timeCategories?.[tcIndex];
+    if (!timeCategory) return;
+
+    timeCategory.loopVideos = this.config.sponsors.map(s => ({
+      name: s.name,
+      path: s.path,
+      type: s.type
+    }));
+
+    this.onConfigChange();
+  }
+
+  /**
+   * Efface la boucle d'une phase (revient à utiliser la boucle par défaut)
+   */
+  clearLoopVideos(tcIndex: number): void {
+    const timeCategory = this.config.timeCategories?.[tcIndex];
+    if (timeCategory) {
+      timeCategory.loopVideos = [];
+      this.onConfigChange();
+    }
+  }
+
+  /**
+   * Drag-drop handlers pour réordonner les vidéos de la boucle
+   */
+  onLoopDragStart(event: DragEvent, tcIndex: number, vidIndex: number): void {
+    this.draggingLoopIndex = { tcIndex, vidIndex };
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+    }
+  }
+
+  onLoopDragOver(event: DragEvent): void {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  onLoopDrop(event: DragEvent, tcIndex: number, targetIndex: number): void {
+    event.preventDefault();
+
+    if (!this.draggingLoopIndex || this.draggingLoopIndex.tcIndex !== tcIndex) {
+      this.draggingLoopIndex = null;
+      return;
+    }
+
+    const sourceIndex = this.draggingLoopIndex.vidIndex;
+    const loopVideos = this.config.timeCategories?.[tcIndex]?.loopVideos;
+
+    if (loopVideos && sourceIndex !== targetIndex) {
+      const [movedItem] = loopVideos.splice(sourceIndex, 1);
+      loopVideos.splice(targetIndex, 0, movedItem);
+      this.onConfigChange();
+    }
+
+    this.draggingLoopIndex = null;
   }
 
   // History

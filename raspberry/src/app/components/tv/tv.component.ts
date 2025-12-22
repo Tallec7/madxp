@@ -8,8 +8,9 @@ import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { SponsorAnalyticsService } from '../../services/sponsor-analytics.service';
 import { Video } from '../../interfaces/video.interface';
-import { Configuration } from '../../interfaces/configuration.interface';
+import { Configuration, TimeCategory } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
+import { Sponsor } from '../../interfaces/sponsor.interface';
 
 interface PlaylistItem {
   sources: { src: string; type: string }[];
@@ -52,6 +53,10 @@ export class TvComponent implements OnInit, OnDestroy {
   private currentSponsorIndex = 0;
   private currentEventType: 'match' | 'training' | 'tournament' | 'other' = 'other';
   private currentPeriod: 'pre_match' | 'halftime' | 'post_match' | 'loop' = 'loop';
+
+  // Phase active pour la boucle vidéo
+  public activePhase: 'neutral' | 'before' | 'during' | 'after' = 'neutral';
+  private currentLoopVideos: Sponsor[] = [];
 
   // Live Score
   public currentScore: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; period?: string; matchTime?: string } | null = null;
@@ -123,11 +128,11 @@ export class TvComponent implements OnInit, OnDestroy {
     // Tracker le changement de vidéo dans la playlist (sponsors)
     this.player.on('play', () => {
       const currentSrc = this.player.currentSrc();
-      console.log('[TV] Video play event:', { currentSrc, triggerType: this.lastTriggerType, sponsorsCount: this.configuration.sponsors.length });
+      console.log('[TV] Video play event:', { currentSrc, triggerType: this.lastTriggerType, phase: this.activePhase, loopCount: this.currentLoopVideos.length });
       if (currentSrc && this.lastTriggerType === 'auto') {
-        // C'est une vidéo de la boucle sponsors
-        const sponsor = this.configuration.sponsors.find(s => currentSrc.includes(s.path));
-        console.log('[TV] Sponsor lookup:', { found: !!sponsor, sponsorPaths: this.configuration.sponsors.map(s => s.path) });
+        // C'est une vidéo de la boucle active (selon la phase)
+        const sponsor = this.currentLoopVideos.find(s => currentSrc.includes(s.path));
+        console.log('[TV] Sponsor lookup:', { found: !!sponsor, loopPaths: this.currentLoopVideos.map(s => s.path) });
         if (sponsor) {
           this.analyticsService.trackVideoStart(sponsor, 'auto');
 
@@ -195,6 +200,12 @@ export class TvComponent implements OnInit, OnDestroy {
         this.updateAudienceEstimate(matchInfo.audienceEstimate);
       }
     });
+
+    // Écouter les changements de phase (boucle par temps de match)
+    this.socketService.on('phase-change', (data: { phase: 'neutral' | 'before' | 'during' | 'after' }) => {
+      console.log('[TV] Phase change received:', data.phase);
+      this.switchToPhase(data.phase);
+    });
   }
 
   public ngOnDestroy() {
@@ -212,8 +223,8 @@ export class TvComponent implements OnInit, OnDestroy {
     // Tracker le début de la vidéo manuelle
     this.analyticsService.trackVideoStart(video, 'manual');
 
-    // Si c'est une vidéo sponsor déclenchée manuellement, tracker l'impression
-    const isSponsor = this.configuration.sponsors.some(s => s.path === video.path);
+    // Si c'est une vidéo de la boucle courante déclenchée manuellement, tracker l'impression
+    const isSponsor = this.currentLoopVideos.some(s => s.path === video.path);
     if (isSponsor) {
       this.sponsorAnalytics.trackSponsorStart(video, 'manual', this.player.duration() || 0);
     }
@@ -236,10 +247,66 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   private sponsors() {
-    console.log('tv player : play sponsors loop');
-    (this.player as PlayerWithPlaylist).playlist.first();
-    (this.player as PlayerWithPlaylist).playlist.repeat(true);
-    (this.player as PlayerWithPlaylist).playlist.autoadvance(0);
+    console.log('[TV] Play loop for phase:', this.activePhase);
+
+    // Récupérer les vidéos de la boucle selon la phase active
+    const loopVideos = this.getLoopVideosForPhase(this.activePhase);
+    this.currentLoopVideos = loopVideos;
+
+    // Mettre à jour la playlist
+    const playlist = loopVideos.map((video) => ({
+      sources: [{ src: video.path, type: video.type }]
+    }));
+
+    if (playlist.length > 0) {
+      (this.player as PlayerWithPlaylist).playlist(playlist);
+      (this.player as PlayerWithPlaylist).playlist.first();
+      (this.player as PlayerWithPlaylist).playlist.repeat(true);
+      (this.player as PlayerWithPlaylist).playlist.autoadvance(0);
+    } else {
+      console.warn('[TV] No videos in loop for phase:', this.activePhase);
+    }
+  }
+
+  /**
+   * Récupère les vidéos de la boucle pour une phase donnée.
+   * Si la phase n'a pas de loopVideos configurés, utilise sponsors[] global.
+   */
+  private getLoopVideosForPhase(phase: 'neutral' | 'before' | 'during' | 'after'): Sponsor[] {
+    if (phase === 'neutral') {
+      return this.configuration.sponsors || [];
+    }
+
+    const timeCategory = this.configuration.timeCategories?.find(tc => tc.id === phase);
+    if (timeCategory?.loopVideos && timeCategory.loopVideos.length > 0) {
+      return timeCategory.loopVideos;
+    }
+
+    // Fallback: utiliser la boucle globale
+    return this.configuration.sponsors || [];
+  }
+
+  /**
+   * Change la phase active et recharge la boucle correspondante.
+   * Met également à jour le contexte analytics.
+   */
+  public switchToPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
+    console.log('[TV] Switching to phase:', phase);
+    this.activePhase = phase;
+
+    // Mapper la phase vers la période analytics
+    const periodMap: Record<string, 'pre_match' | 'halftime' | 'post_match' | 'loop'> = {
+      'neutral': 'loop',
+      'before': 'pre_match',
+      'during': 'halftime',
+      'after': 'post_match'
+    };
+    const period = periodMap[phase];
+    this.updatePeriod(period);
+
+    // Recharger la boucle avec les vidéos de la phase
+    this.lastTriggerType = 'auto';
+    this.sponsors();
   }
 
   private reloadConfiguration(config: Configuration) {
@@ -250,14 +317,11 @@ export class TvComponent implements OnInit, OnDestroy {
     this.analyticsService.setConfiguration(config);
     this.sponsorAnalytics.setConfiguration(config);
 
-    // Mettre à jour la playlist avec les nouveaux sponsors
-    const newPlaylist = config.sponsors.map((sponsor) => ({
-      sources: [{ src: sponsor.path, type: sponsor.type }]
-    }));
+    // Réinitialiser à la phase neutre
+    this.activePhase = 'neutral';
+    this.updatePeriod('loop');
 
-    (this.player as PlayerWithPlaylist).playlist(newPlaylist);
-
-    // Lancer la nouvelle boucle
+    // Lancer la nouvelle boucle (sponsors() gère maintenant la playlist selon la phase)
     this.lastTriggerType = 'auto';
     this.sponsors();
   }

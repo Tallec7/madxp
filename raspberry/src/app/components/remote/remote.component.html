@@ -129,16 +129,61 @@
       <!-- Vue principale - Accueil -->
       @if (currentView === 'home' && !isSearching) {
         <div class="view-home">
+          <!-- Sélecteur de phase de boucle -->
+          <div class="phase-selector-section">
+            <h2 class="section-title">Boucle vidéo active</h2>
+            <div class="phase-selector-grid">
+              <!-- Boucle par défaut -->
+              <button
+                class="phase-card"
+                [class.active]="activePhase === 'neutral'"
+                [class.has-loop]="hasLoopForPhase('neutral')"
+                (click)="switchPhase('neutral')"
+              >
+                <div class="phase-header">
+                  <span class="phase-icon">🔄</span>
+                  @if (activePhase === 'neutral') {
+                    <span class="phase-active-badge">EN COURS</span>
+                  }
+                </div>
+                <h3 class="phase-title">Boucle par défaut</h3>
+                <div class="phase-meta">{{ getLoopVideoCount('neutral') }} vidéos</div>
+              </button>
+
+              <!-- Phases de match -->
+              @for (phase of matchPhases; track phase) {
+                <button
+                  class="phase-card"
+                  [class.active]="activePhase === phase"
+                  [class.has-custom-loop]="hasLoopForPhase(phase)"
+                  [ngClass]="{
+                    'phase-before': phase === 'before',
+                    'phase-during': phase === 'during',
+                    'phase-after': phase === 'after',
+                  }"
+                  (click)="switchPhase(phase)"
+                >
+                  <div class="phase-header">
+                    <span class="phase-icon">{{ getPhaseIcon(phase) }}</span>
+                    @if (activePhase === phase) {
+                      <span class="phase-active-badge">EN COURS</span>
+                    }
+                  </div>
+                  <h3 class="phase-title">{{ getPhaseLabel(phase) }}</h3>
+                  <div class="phase-meta">
+                    @if (hasLoopForPhase(phase)) {
+                      {{ getLoopVideoCount(phase) }} vidéos
+                    } @else {
+                      Boucle par défaut
+                    }
+                  </div>
+                </button>
+              }
+            </div>
+          </div>
+
           <!-- Actions rapides -->
           <div class="quick-actions">
-            <button class="quick-action sponsors-action" (click)="launchSponsors()">
-              <span class="action-icon">👥</span>
-              <div class="action-content">
-                <div class="action-title">Boucle partenaires</div>
-                <div class="action-subtitle">Lancer la rotation automatique</div>
-              </div>
-            </button>
-
             <button class="quick-action all-videos-action" (click)="showAllVideos()">
               <span class="action-icon">🎬</span>
               <div class="action-content">

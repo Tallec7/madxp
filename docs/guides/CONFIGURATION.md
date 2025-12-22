@@ -8,9 +8,9 @@ Ce document explique **tous les fichiers de configuration** et leur rôle.
 
 Il y a **2 types** de configuration :
 
-| Type | Fichier | Usage |
-|------|---------|-------|
-| **Métier** | `configuration.json` | Vidéos, catégories, mot de passe, infos club |
+| Type        | Fichier              | Usage                                        |
+| ----------- | -------------------- | -------------------------------------------- |
+| **Métier**  | `configuration.json` | Vidéos, catégories, mot de passe, infos club |
 | **Système** | `.env` / `site.conf` | Connexion au serveur central, chemins, ports |
 
 ---
@@ -19,12 +19,12 @@ Il y a **2 types** de configuration :
 
 ### Où se trouve ce fichier ?
 
-| Emplacement | Usage |
-|-------------|-------|
-| `raspberry/config/templates/TEMPLATE-configuration.json` | Template vierge à copier |
-| `raspberry/config/templates/[CLUB]-configuration.json` | Config spécifique d'un club (généré par `setup-new-club.sh`) |
-| `raspberry/public/configuration.json` | Dev local uniquement |
-| **Sur le Pi : `/home/pi/neopro/configuration.json`** | **Config de production du club** |
+| Emplacement                                              | Usage                                                        |
+| -------------------------------------------------------- | ------------------------------------------------------------ |
+| `raspberry/config/templates/TEMPLATE-configuration.json` | Template vierge à copier                                     |
+| `raspberry/config/templates/[CLUB]-configuration.json`   | Config spécifique d'un club (généré par `setup-new-club.sh`) |
+| `raspberry/public/configuration.json`                    | Dev local uniquement                                         |
+| **Sur le Pi : `/home/pi/neopro/configuration.json`**     | **Config de production du club**                             |
 
 ### Structure
 
@@ -74,21 +74,58 @@ Il y a **2 types** de configuration :
         }
       ]
     }
+  ],
+  "timeCategories": [
+    {
+      "id": "before",
+      "name": "Avant-match",
+      "icon": "🏁",
+      "color": "from-blue-500 to-blue-600",
+      "description": "Échauffement & présentation",
+      "categoryIds": ["cat-ambiance"],
+      "loopVideos": [
+        {
+          "name": "Sponsor Welcome",
+          "path": "videos/BOUCLE_AVANT/welcome.mp4",
+          "type": "video/mp4"
+        }
+      ]
+    },
+    {
+      "id": "during",
+      "name": "Match",
+      "icon": "▶️",
+      "color": "from-green-500 to-green-600",
+      "description": "Live & animations",
+      "categoryIds": ["cat-animations"],
+      "loopVideos": []
+    },
+    {
+      "id": "after",
+      "name": "Après-match",
+      "icon": "🏆",
+      "color": "from-purple-500 to-purple-600",
+      "description": "Résultats & remerciements",
+      "categoryIds": ["cat-resultats"],
+      "loopVideos": []
+    }
   ]
 }
 ```
 
 ### Champs importants
 
-| Champ | Description |
-|-------|-------------|
-| `auth.password` | Mot de passe pour accéder à /tv et /remote (min 12 caractères) |
-| `auth.clubName` | Nom court du club (affiché sur la page login) |
-| `auth.sessionDuration` | Durée de session en ms (28800000 = 8h) |
-| `sync.enabled` | Active/désactive la synchronisation avec le serveur central |
-| `sync.serverUrl` | URL du serveur central |
-| `sponsors` | Vidéos en boucle (écran d'attente) |
-| `categories` | Catégories de vidéos accessibles via la télécommande |
+| Champ                         | Description                                                    |
+| ----------------------------- | -------------------------------------------------------------- |
+| `auth.password`               | Mot de passe pour accéder à /tv et /remote (min 12 caractères) |
+| `auth.clubName`               | Nom court du club (affiché sur la page login)                  |
+| `auth.sessionDuration`        | Durée de session en ms (28800000 = 8h)                         |
+| `sync.enabled`                | Active/désactive la synchronisation avec le serveur central    |
+| `sync.serverUrl`              | URL du serveur central                                         |
+| `sponsors`                    | Vidéos de la boucle par défaut (écran d'attente)               |
+| `categories`                  | Catégories de vidéos accessibles via la télécommande           |
+| `timeCategories`              | Organisation par temps de match (avant/pendant/après)          |
+| `timeCategories[].loopVideos` | Boucle vidéo spécifique à chaque phase (optionnel)             |
 
 ---
 
@@ -96,11 +133,11 @@ Il y a **2 types** de configuration :
 
 ### Fichiers `.env`
 
-| Fichier | Usage |
-|---------|-------|
-| `.env.example` (racine) | Template global pour le développement |
-| `raspberry/sync-agent/config/.env.example` | Template pour le sync-agent |
-| `central-server/.env.example` | Template pour le serveur central (cloud) |
+| Fichier                                    | Usage                                    |
+| ------------------------------------------ | ---------------------------------------- |
+| `.env.example` (racine)                    | Template global pour le développement    |
+| `raspberry/sync-agent/config/.env.example` | Template pour le sync-agent              |
+| `central-server/.env.example`              | Template pour le serveur central (cloud) |
 
 ### Sur le Pi : `/etc/neopro/site.conf`
 
@@ -141,22 +178,22 @@ Quand vous exécutez `npm run deploy:raspberry` :
 
 ### ✅ Préservé (non écrasé)
 
-| Fichier/Dossier | Raison |
-|-----------------|--------|
-| `/home/pi/neopro/configuration.json` | Config métier du club |
-| `/home/pi/neopro/videos/` | Vidéos du club |
-| `/home/pi/neopro/backups/` | Sauvegardes automatiques |
-| `/home/pi/neopro/logs/` | Historique des logs |
-| `/etc/neopro/site.conf` | Identifiants du site |
+| Fichier/Dossier                      | Raison                   |
+| ------------------------------------ | ------------------------ |
+| `/home/pi/neopro/configuration.json` | Config métier du club    |
+| `/home/pi/neopro/videos/`            | Vidéos du club           |
+| `/home/pi/neopro/backups/`           | Sauvegardes automatiques |
+| `/home/pi/neopro/logs/`              | Historique des logs      |
+| `/etc/neopro/site.conf`              | Identifiants du site     |
 
 ### ❌ Écrasé (mis à jour)
 
-| Fichier/Dossier | Raison |
-|-----------------|--------|
-| `/home/pi/neopro/webapp/` | Application Angular (nouveau build) |
-| `/home/pi/neopro/server/` | Serveur Socket.IO |
-| `/home/pi/neopro/admin/` | Interface admin |
-| `/home/pi/neopro/sync-agent/` | Agent de synchronisation |
+| Fichier/Dossier               | Raison                              |
+| ----------------------------- | ----------------------------------- |
+| `/home/pi/neopro/webapp/`     | Application Angular (nouveau build) |
+| `/home/pi/neopro/server/`     | Serveur Socket.IO                   |
+| `/home/pi/neopro/admin/`      | Interface admin                     |
+| `/home/pi/neopro/sync-agent/` | Agent de synchronisation            |
 
 ---
 
@@ -172,6 +209,7 @@ Lorsqu'on clique sur **Déployer** dans le dashboard central, la commande `updat
 ### Backup automatique
 
 Avant chaque déploiement, un backup est créé :
+
 ```
 /home/pi/neopro/backups/backup-YYYYMMDD-HHMMSS.tar.gz
 ```
@@ -189,6 +227,7 @@ Les 5 derniers backups sont conservés.
 ```
 
 Le script :
+
 1. Demande les infos du club
 2. Crée `raspberry/config/templates/[CLUB]-configuration.json`
 3. Build l'application
@@ -253,11 +292,11 @@ ssh pi@neopro.local 'sudo systemctl restart neopro-app'
 
 Pour le développement et les tests, des configs de démo existent :
 
-| Fichier | Usage |
-|---------|-------|
-| `raspberry/frontend/assets/demo-configs/default.json` | Config démo par défaut |
-| `raspberry/frontend/assets/demo-configs/clubs.json` | Liste des clubs démo |
-| `raspberry/frontend/assets/demo-configs/[club].json` | Config spécifique par club démo |
+| Fichier                                               | Usage                           |
+| ----------------------------------------------------- | ------------------------------- |
+| `raspberry/frontend/assets/demo-configs/default.json` | Config démo par défaut          |
+| `raspberry/frontend/assets/demo-configs/clubs.json`   | Liste des clubs démo            |
+| `raspberry/frontend/assets/demo-configs/[club].json`  | Config spécifique par club démo |
 
 Ces fichiers sont utilisés uniquement en mode démo (`npm start`).
 

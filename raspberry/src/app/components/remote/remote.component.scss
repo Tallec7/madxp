@@ -234,6 +234,127 @@
   opacity: 0.9;
 }
 
+/* ============================================================================
+   SÉLECTEUR DE PHASE DE BOUCLE
+   ============================================================================ */
+
+.phase-selector-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.phase-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.phase-card {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 2px solid #e5e7eb;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  &.active {
+    border-color: #10b981;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  }
+
+  &.phase-before {
+    &:hover:not(.active) {
+      border-color: #3b82f6;
+    }
+    &.active {
+      border-color: #3b82f6;
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+  }
+
+  &.phase-during {
+    &:hover:not(.active) {
+      border-color: #10b981;
+    }
+    &.active {
+      border-color: #10b981;
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+  }
+
+  &.phase-after {
+    &:hover:not(.active) {
+      border-color: #a855f7;
+    }
+    &.active {
+      border-color: #a855f7;
+      background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+    }
+  }
+
+  &.has-custom-loop .phase-meta {
+    color: #059669;
+    font-weight: 600;
+  }
+}
+
+.phase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.phase-icon {
+  font-size: 1.5rem;
+}
+
+.phase-active-badge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  background: #10b981;
+  color: white;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  .phase-before.active & {
+    background: #3b82f6;
+  }
+
+  .phase-during.active & {
+    background: #10b981;
+  }
+
+  .phase-after.active & {
+    background: #a855f7;
+  }
+}
+
+.phase-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.25rem 0;
+}
+
+.phase-meta {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
 /* Time Categories Section */
 .time-categories-section {
   display: flex;
@@ -861,6 +982,10 @@
     grid-template-columns: 1fr;
   }
 
+  .phase-selector-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .time-categories-grid,
   .categories-grid,
   .subcategories-grid {
@@ -889,5 +1014,23 @@
     .badge-edit {
       display: none;
     }
+  }
+}
+
+@media (max-width: 480px) {
+  .phase-selector-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .phase-card {
+    padding: 0.875rem;
+  }
+
+  .phase-icon {
+    font-size: 1.25rem;
+  }
+
+  .phase-title {
+    font-size: 0.875rem;
   }
 }

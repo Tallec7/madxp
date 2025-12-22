@@ -61,6 +61,10 @@ export class RemoteComponent implements OnInit {
     awayScore: 0
   };
 
+  // Phase active de la boucle vidéo
+  public activePhase: 'neutral' | 'before' | 'during' | 'after' = 'neutral';
+  public readonly matchPhases: ('before' | 'during' | 'after')[] = ['before', 'during', 'after'];
+
   // Exposer Math pour le template
   public Math = Math;
 
@@ -507,5 +511,70 @@ export class RemoteComponent implements OnInit {
     this.currentScore.homeScore = 0;
     this.currentScore.awayScore = 0;
     this.broadcastScore();
+  }
+
+  // ============================================================================
+  // PHASE DE BOUCLE VIDÉO
+  // ============================================================================
+
+  /**
+   * Change la phase active de la boucle vidéo
+   */
+  public switchPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
+    this.activePhase = phase;
+    console.log('Switching to phase:', phase);
+    this.socketService.emit('phase-change', { phase });
+  }
+
+  /**
+   * Retourne le label de la phase active
+   */
+  public getPhaseLabel(phase: 'neutral' | 'before' | 'during' | 'after'): string {
+    const labels: Record<string, string> = {
+      'neutral': 'Boucle par défaut',
+      'before': 'Avant-match',
+      'during': 'Match',
+      'after': 'Après-match'
+    };
+    return labels[phase] || phase;
+  }
+
+  /**
+   * Retourne l'icône de la phase
+   */
+  public getPhaseIcon(phase: 'neutral' | 'before' | 'during' | 'after'): string {
+    const icons: Record<string, string> = {
+      'neutral': '🔄',
+      'before': '🏁',
+      'during': '▶️',
+      'after': '🏆'
+    };
+    return icons[phase] || '🔄';
+  }
+
+  /**
+   * Vérifie si une phase a une boucle configurée
+   */
+  public hasLoopForPhase(phase: 'neutral' | 'before' | 'during' | 'after'): boolean {
+    if (phase === 'neutral') {
+      return (this.configuration?.sponsors?.length || 0) > 0;
+    }
+    const timeCategory = this.timeCategories.find(tc => tc.id === phase);
+    return (timeCategory?.loopVideos?.length || 0) > 0;
+  }
+
+  /**
+   * Retourne le nombre de vidéos dans la boucle de la phase
+   */
+  public getLoopVideoCount(phase: 'neutral' | 'before' | 'during' | 'after'): number {
+    if (phase === 'neutral') {
+      return this.configuration?.sponsors?.length || 0;
+    }
+    const timeCategory = this.timeCategories.find(tc => tc.id === phase);
+    if (timeCategory?.loopVideos?.length) {
+      return timeCategory.loopVideos.length;
+    }
+    // Fallback vers la boucle globale
+    return this.configuration?.sponsors?.length || 0;
   }
 }

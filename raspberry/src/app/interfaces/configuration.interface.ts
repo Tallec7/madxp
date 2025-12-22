@@ -9,6 +9,11 @@ export interface TimeCategory {
     color: string;
     description: string;
     categoryIds: string[]; // IDs des catégories assignées à ce bloc
+    /**
+     * Vidéos de la boucle spécifique à cette phase.
+     * Si non défini ou vide, la boucle globale (sponsors[]) sera utilisée.
+     */
+    loopVideos?: Sponsor[];
 }
 
 export interface Configuration {
