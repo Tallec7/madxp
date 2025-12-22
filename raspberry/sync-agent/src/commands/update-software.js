@@ -372,8 +372,9 @@ class SoftwareUpdateHandler {
 
     // 1. Vérifier l'espace disque (besoin 3x la taille du package)
     try {
-      const { stdout } = await execAsync("df -B1 /home/pi 2>/dev/null || df -B1 / | tail -1 | awk '{print $4}'");
-      const availableBytes = parseInt(stdout.trim().split('\n').pop()) || 0;
+      // Use a subshell to ensure tail and awk are applied to whichever df command succeeds
+      const { stdout } = await execAsync("(df -B1 /home/pi 2>/dev/null || df -B1 /) | tail -1 | awk '{print $4}'");
+      const availableBytes = parseInt(stdout.trim()) || 0;
       const requiredBytes = packageSize * 3;
 
       checks.diskSpace = {
