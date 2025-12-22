@@ -529,6 +529,10 @@ class SocketService {
       const commandRecord = commandRow.rows[0];
       const commandData = (commandRecord?.command_data as ConfigCommandData | null) || null;
       const configVersionId = typeof commandData?.configVersionId === 'string' ? commandData.configVersionId : null;
+      const updateDeploymentId =
+        commandData && typeof (commandData as Record<string, unknown>).deploymentId === 'string'
+          ? String((commandData as Record<string, unknown>).deploymentId)
+          : null;
 
       if (
         result.status === 'success' &&
@@ -536,6 +540,20 @@ class SocketService {
         configVersionId
       ) {
         await this.clearPendingConfig(siteId, configVersionId);
+      }
+
+      if (commandRecord?.command_type === 'update_software' && updateDeploymentId) {
+        const updateService = await getUpdateDeploymentService();
+        if (result.status === 'success') {
+          await updateService.handleDeploymentResult(updateDeploymentId, siteId, true);
+        } else {
+          await updateService.handleDeploymentResult(
+            updateDeploymentId,
+            siteId,
+            false,
+            result.error || 'Erreur inconnue'
+          );
+        }
       }
 
       logger.info('Command result received', {
