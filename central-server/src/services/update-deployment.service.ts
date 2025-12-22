@@ -201,7 +201,7 @@ class UpdateDeploymentService {
         deploymentId,
         updateId: update.id,
         version: update.version,
-        packageUrl: update.package_url,
+        updateUrl: update.package_url, // sync-agent expects 'updateUrl'
         packageSize: update.package_size,
         checksum: update.checksum,
         isCritical: update.is_critical,
@@ -214,7 +214,7 @@ class UpdateDeploymentService {
       siteId,
       deploymentId,
       version: update.version,
-      packageUrl: update.package_url,
+      updateUrl: update.package_url,
     });
 
     // Créer une commande dans remote_commands pour le suivi
