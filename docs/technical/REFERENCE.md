@@ -383,6 +383,16 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-sync -n 50'
 
 > `setup-wifi-client.sh` met à jour `/etc/wpa_supplicant/wpa_supplicant.conf`, crée le lien `wpa_supplicant-wlan1.conf`, active `wpa_supplicant@wlan1.service` et relance `dhcpcd` afin que la connexion WiFi du club survive aux redémarrages.
 
+### Traçabilité des versions
+
+1. `build-raspberry.sh` détecte automatiquement la version à partir du tag Git (ou suffixe `+<SHA>` pour les builds intermédiaires), génère `release.json`, `VERSION` et `webapp/version.json` et les embarque dans l’archive.
+2. `setup-remote-club.sh` / `deploy-remote.sh` copient ces fichiers sur le Pi et redémarrent le sync-agent.
+3. Le sync-agent lit cette version via `utils/version-info.js` et l’envoie dans chaque heartbeat.
+4. Le central-server met à jour `sites.software_version`, ce qui alimente les écrans “Sites” / “Détails” du dashboard central.
+5. L’admin local (port 8080) lit aussi `webapp/version.json` pour afficher la version (`Neopro vX.Y.Z | Raspberry Pi Admin Panel`).
+
+> ℹ️ Besoin d’un build plus rapide sur macOS : ajoute `--skip-xattr` ou `SKIP_XATTR_CLEANUP=true` à `build-raspberry.sh` / `build-and-deploy.sh` pour sauter la purge des attributs étendus (gain ~30 s, mais tar peut afficher des warnings sur Linux).
+
 ### Scripts npm (à la racine du projet)
 
 ```json

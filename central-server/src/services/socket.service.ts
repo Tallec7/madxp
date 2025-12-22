@@ -789,11 +789,13 @@ class SocketService {
       });
 
       const updateService = await getUpdateDeploymentService();
+      const isCompletedByProgress =
+        typeof progressValue === 'number' && Number.isFinite(progressValue) && progressValue >= 100;
 
       if (deploymentId) {
         if (error) {
           await updateService.handleDeploymentResult(deploymentId, siteId, false, error);
-        } else if (completed) {
+        } else if (completed || isCompletedByProgress) {
           await updateService.handleDeploymentResult(deploymentId, siteId, true);
         } else {
           await updateService.updateProgress(deploymentId, progressValue || 0);
