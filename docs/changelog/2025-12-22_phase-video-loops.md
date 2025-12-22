@@ -28,14 +28,16 @@ En tant que club, je souhaite pouvoir diffuser des contenus différents selon le
 
 ### Télécommande
 
-La page d'accueil affiche maintenant un sélecteur de phase avec 4 boutons :
+Un **dropdown** dans le header de la télécommande permet de changer de phase à tout moment, depuis n'importe quelle vue (accueil, catégories, vidéos, recherche).
+
+Le dropdown affiche 4 options :
 
 - **Boucle par défaut** - La boucle sponsors globale
 - **Avant-match** - Boucle spécifique pré-match
 - **Match** - Boucle pendant le match
 - **Après-match** - Boucle post-match
 
-Un badge "EN COURS" indique la phase actuellement active.
+Chaque option indique le nombre de vidéos configurées. Une flèche (⟵) indique que la phase utilise la boucle par défaut (pas de loopVideos personnalisé).
 
 ### Config Editor (Dashboard Central)
 
@@ -109,9 +111,9 @@ Les configurations existantes fonctionnent sans modification :
 
 ### Raspberry - Télécommande
 
-- `raspberry/src/app/components/remote/remote.component.ts` - Gestion phases
-- `raspberry/src/app/components/remote/remote.component.html` - UI sélecteur
-- `raspberry/src/app/components/remote/remote.component.scss` - Styles
+- `raspberry/src/app/components/remote/remote.component.ts` - Gestion phases, dropdown toggle/select
+- `raspberry/src/app/components/remote/remote.component.html` - Dropdown dans le header (toujours visible)
+- `raspberry/src/app/components/remote/remote.component.scss` - Styles dropdown
 
 ### Raspberry - Socket Service
 
