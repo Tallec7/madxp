@@ -58,7 +58,7 @@ class SoftwareUpdateHandler {
 
       progressCallback(60);
 
-      await this.extractAndInstall(packagePath);
+      await this.extractAndInstall(packagePath, version);
 
       progressCallback(80);
 
@@ -67,6 +67,9 @@ class SoftwareUpdateHandler {
       progressCallback(90);
 
       const newVersion = await this.getCurrentVersion(true);
+
+      // Si la version du dashboard est différente, utiliser celle du dashboard
+      const finalVersion = version || newVersion;
 
       progressCallback(95);
 
@@ -231,9 +234,9 @@ class SoftwareUpdateHandler {
     }
   }
 
-  async extractAndInstall(packagePath) {
+  async extractAndInstall(packagePath, version) {
     try {
-      logger.info('Extracting and installing update');
+      logger.info('Extracting and installing update', { version });
 
       // Exclude user data directories and configuration from extraction
       // These should never be overwritten by software updates:
@@ -256,10 +259,42 @@ class SoftwareUpdateHandler {
         await execAsync(`cd ${config.paths.root}/server && npm install --production`);
       }
 
+      // Écrire les fichiers de version avec la version fournie par le dashboard central
+      if (version) {
+        await this.writeVersionMetadata(version);
+      }
+
       logger.info('Update installed successfully');
     } catch (error) {
       logger.error('Installation failed:', error);
       throw error;
+    }
+  }
+
+  async writeVersionMetadata(version) {
+    try {
+      const buildDate = new Date().toISOString();
+      const rootDir = config.paths.root;
+
+      // Écrire VERSION
+      await fs.writeFile(path.join(rootDir, 'VERSION'), version + '\n');
+
+      // Écrire release.json
+      const releaseData = {
+        version,
+        buildDate,
+        source: 'central-dashboard',
+      };
+      await fs.writeJson(path.join(rootDir, 'release.json'), releaseData, { spaces: 2 });
+
+      // Écrire webapp/version.json
+      const webappVersionPath = path.join(rootDir, 'webapp', 'version.json');
+      await fs.writeJson(webappVersionPath, { version, buildDate }, { spaces: 2 });
+
+      logger.info('Version metadata written', { version });
+    } catch (error) {
+      logger.warn('Failed to write version metadata:', error.message);
+      // Ne pas faire échouer la mise à jour pour ça
     }
   }
 
