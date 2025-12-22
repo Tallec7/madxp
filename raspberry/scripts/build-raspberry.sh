@@ -298,18 +298,32 @@ print_step "Compression de l'archive..."
 # COPYFILE_DISABLE=1 empêche tar d'inclure les fichiers ._ (AppleDouble)
 # Archive le CONTENU de deploy/ (sans le préfixe deploy/) pour extraction directe dans /home/pi/neopro/
 # Utiliser pigz (parallel gzip) si disponible pour accélérer la compression
+
+# Nom de l'archive avec version (ex: neopro-raspberry-v1.0.8+abc1234.tar.gz)
+# Remplacer les caractères problématiques dans la version pour le nom de fichier
+SAFE_VERSION=$(echo "${RELEASE_VERSION}" | tr '/' '-' | tr ':' '-')
+ARCHIVE_NAME="neopro-raspberry-${SAFE_VERSION}.tar.gz"
+ARCHIVE_LINK="neopro-raspberry-deploy.tar.gz"
+
 cd ${DEPLOY_DIR}
 if command -v pigz &> /dev/null; then
     print_step "Utilisation de pigz (compression parallèle)..."
-    COPYFILE_DISABLE=1 tar -cf - . | pigz > ../neopro-raspberry-deploy.tar.gz
+    COPYFILE_DISABLE=1 tar -cf - . | pigz > "../${ARCHIVE_NAME}"
 else
-    COPYFILE_DISABLE=1 tar -czf ../neopro-raspberry-deploy.tar.gz .
+    COPYFILE_DISABLE=1 tar -czf "../${ARCHIVE_NAME}" .
 fi
 cd - > /dev/null
-print_success "Archive créée: raspberry/neopro-raspberry-deploy.tar.gz"
+
+# Créer un lien symbolique pour compatibilité avec les scripts existants
+cd raspberry
+rm -f "${ARCHIVE_LINK}"
+ln -s "${ARCHIVE_NAME}" "${ARCHIVE_LINK}"
+cd - > /dev/null
+
+print_success "Archive créée: raspberry/${ARCHIVE_NAME}"
 
 # Afficher les statistiques
-ARCHIVE_SIZE=$(du -h raspberry/neopro-raspberry-deploy.tar.gz | cut -f1)
+ARCHIVE_SIZE=$(du -h "raspberry/${ARCHIVE_NAME}" | cut -f1)
 
 echo -e "${GREEN}"
 echo "╔════════════════════════════════════════════════════════════════╗"
@@ -319,8 +333,9 @@ echo -e "${NC}"
 echo ""
 echo -e "${BLUE}Package de déploiement:${NC}"
 echo "  • Dossier: raspberry/deploy/"
-echo "  • Archive: raspberry/neopro-raspberry-deploy.tar.gz"
-echo "  • Taille: ${ARCHIVE_SIZE}"
+echo "  • Archive: raspberry/${ARCHIVE_NAME}"
+echo "  • Lien:    raspberry/${ARCHIVE_LINK} -> ${ARCHIVE_NAME}"
+echo "  • Taille:  ${ARCHIVE_SIZE}"
 echo ""
 echo -e "${YELLOW}Déploiement sur Raspberry Pi:${NC}"
 echo "  1. Copier l'archive sur le Pi:"
