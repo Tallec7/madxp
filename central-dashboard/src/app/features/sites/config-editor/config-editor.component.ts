@@ -12,6 +12,7 @@ import {
   ConfigValidationResult,
   ConfigValidationError,
   CategoryConfig,
+  SubcategoryConfig,
   VideoConfig,
   DEFAULT_CONFIG,
   AnalyticsCategory,
@@ -2430,7 +2431,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       const normalizedCategories = (parsed.categories || []).map((cat: CategoryConfig) => ({
         ...cat,
         videos: cat.videos || [],
-        subCategories: (cat.subCategories || []).map((subcat: CategoryConfig) => ({
+        subCategories: (cat.subCategories || []).map((subcat: SubcategoryConfig) => ({
           ...subcat,
           videos: subcat.videos || [],
         })),
