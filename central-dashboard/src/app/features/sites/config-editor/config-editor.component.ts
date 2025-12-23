@@ -11,9 +11,7 @@ import {
   ConfigDiff,
   ConfigValidationResult,
   ConfigValidationError,
-  SponsorConfig,
   CategoryConfig,
-  TimeCategoryConfig,
   VideoConfig,
   DEFAULT_CONFIG,
   AnalyticsCategory,
@@ -2240,7 +2238,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     };
   }
 
-  private resetToEmptyConfig(reason: string): void {
+  private resetToEmptyConfig(_reason: string): void {
     this.loading = false;
     this.config = this.getEmptyConfig();
     this.originalConfig = null;
@@ -2429,10 +2427,10 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     try {
       const parsed = JSON.parse(this.jsonString);
       // Normalize categories to ensure videos and subCategories arrays exist
-      const normalizedCategories = (parsed.categories || []).map((cat: any) => ({
+      const normalizedCategories = (parsed.categories || []).map((cat: CategoryConfig) => ({
         ...cat,
         videos: cat.videos || [],
-        subCategories: (cat.subCategories || []).map((subcat: any) => ({
+        subCategories: (cat.subCategories || []).map((subcat: CategoryConfig) => ({
           ...subcat,
           videos: subcat.videos || [],
         })),
@@ -2450,8 +2448,8 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       this.jsonError = '';
       this.hasChanges = JSON.stringify(this.config) !== JSON.stringify(this.originalConfig);
       this.validate();
-    } catch (e: any) {
-      this.jsonError = `Erreur de syntaxe JSON: ${e.message}`;
+    } catch (e) {
+      this.jsonError = `Erreur de syntaxe JSON: ${e instanceof Error ? e.message : 'Unknown error'}`;
       this.isValid = false;
     }
   }
@@ -2461,8 +2459,8 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       const parsed = JSON.parse(this.jsonString);
       this.jsonString = JSON.stringify(parsed, null, 2);
       this.jsonError = '';
-    } catch (e: any) {
-      this.jsonError = `Erreur de syntaxe JSON: ${e.message}`;
+    } catch (e) {
+      this.jsonError = `Erreur de syntaxe JSON: ${e instanceof Error ? e.message : 'Unknown error'}`;
     }
   }
 
@@ -2473,8 +2471,8 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       if (this.isValid) {
         this.notificationService.success('Configuration valide');
       }
-    } catch (e: any) {
-      this.jsonError = `Erreur de syntaxe JSON: ${e.message}`;
+    } catch (e) {
+      this.jsonError = `Erreur de syntaxe JSON: ${e instanceof Error ? e.message : 'Unknown error'}`;
       this.notificationService.error('JSON invalide');
     }
   }
@@ -2814,7 +2812,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
         this.historyCount = response.total;
         this.loadingHistory = false;
       },
-      error: (error) => {
+      error: (_error) => {
         this.loadingHistory = false;
         this.notificationService.error('Erreur lors du chargement de l\'historique');
       }
@@ -2852,7 +2850,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
         this.diffItems = response.diff;
         this.diffLoading = false;
       },
-      error: (error) => {
+      error: (_error) => {
         this.diffLoading = false;
         // Si pas d'historique, on peut quand même déployer
         this.diffItems = [];
@@ -2917,7 +2915,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   ownershipLabel(value: unknown): 'neopro' | 'club' | null {
     if (!value || typeof value !== 'object') return null;
-    const v: any = value;
+    const v = value as { owner?: string; locked?: boolean };
     if (v.owner === 'neopro' || v.locked === true) return 'neopro';
     if (v.owner === 'club') return 'club';
     return null;

@@ -858,8 +858,8 @@ export class GroupDetailComponent implements OnInit, OnDestroy {
         this.group = group;
         this.initEditForm();
       },
-      error: (error: any) => {
-        this.notificationService.error('Erreur lors du chargement du groupe: ' + (error.error?.error || error.message));
+      error: (error) => {
+        this.notificationService.error('Erreur lors du chargement du groupe: ' + ((error as { error?: { error?: string } })?.error?.error || (error instanceof Error ? error.message : 'Unknown error')));
       }
     });
   }

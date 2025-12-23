@@ -135,6 +135,7 @@ import { AnalyticsCategory } from '../../../core/models';
                     [style.background-color]="color"
                     [class.selected]="form.color === color"
                     (click)="form.color = color"
+                    [attr.aria-label]="'Select color ' + color"
                   ></button>
                 </div>
               </div>

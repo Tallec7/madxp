@@ -5,7 +5,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { SocketService } from '../../core/services/socket.service';
-import { NotificationService, Notification } from '../../core/services/notification.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { User } from '../../core/models';
 
 @Component({

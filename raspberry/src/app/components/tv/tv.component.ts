@@ -1,6 +1,6 @@
 import { Component, ElementRef, inject, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { trigger, state, style, transition, animate } from '@angular/animations';
+import { trigger, style, transition, animate } from '@angular/animations';
 import videojs from 'video.js';
 import "videojs-playlist";
 import Player from 'video.js/dist/types/player';
@@ -8,7 +8,7 @@ import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { SponsorAnalyticsService } from '../../services/sponsor-analytics.service';
 import { Video } from '../../interfaces/video.interface';
-import { Configuration, TimeCategory } from '../../interfaces/configuration.interface';
+import { Configuration } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
 import { Sponsor } from '../../interfaces/sponsor.interface';
 
@@ -62,7 +62,7 @@ export class TvComponent implements OnInit, OnDestroy {
   public currentScore: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; period?: string; matchTime?: string } | null = null;
   public showScoreOverlay = false;
   public showScorePopup = false;
-  private scorePopupTimeout: any = null;
+  private scorePopupTimeout: ReturnType<typeof setTimeout> | null = null;
 
   @ViewChild('target', { static: true }) target: ElementRef;
 
@@ -179,7 +179,7 @@ export class TvComponent implements OnInit, OnDestroy {
     });
 
     // Live Score - Écouter les mises à jour de score
-    this.socketService.on('score-update', (scoreData: any) => {
+    this.socketService.on('score-update', (scoreData: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; period?: string; matchTime?: string }) => {
       console.log('[TV] Score update received:', scoreData);
       this.handleScoreUpdate(scoreData);
     });
@@ -193,7 +193,7 @@ export class TvComponent implements OnInit, OnDestroy {
     });
 
     // Live Score - Écouter les infos de match mises à jour
-    this.socketService.on('match-info-updated', (matchInfo: any) => {
+    this.socketService.on('match-info-updated', (matchInfo: { audienceEstimate?: number }) => {
       console.log('[TV] Match info updated:', matchInfo);
       // Mettre à jour le contexte analytics si nécessaire
       if (matchInfo.audienceEstimate) {

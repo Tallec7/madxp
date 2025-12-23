@@ -1447,8 +1447,9 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
-  onFilesSelected(event: any): void {
-    const files = Array.from(event.target.files) as File[];
+  onFilesSelected(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const files = Array.from(target.files || []) as File[];
     this.addFilesToSelection(files);
   }
 
@@ -1522,7 +1523,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
       formData.append('video', files[0]);
 
       this.apiService.upload<Video>('/videos', formData).subscribe({
-        next: (video) => {
+        next: (_video) => {
           this.uploadProgress = 100;
           this.uploadResults = [{ name: files[0].name, success: true }];
           this.isUploading = false;
@@ -1674,10 +1675,10 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
           video_title: videoTitle
         });
         successes.push(videoTitle);
-      } catch (error: any) {
+      } catch (error) {
         failures.push({
           title: videoTitle,
-          error: error?.error?.error || error?.message || 'Erreur inconnue'
+          error: (error instanceof Error ? error.message : (error as { error?: { error?: string } })?.error?.error) || 'Erreur inconnue'
         });
       }
     }
