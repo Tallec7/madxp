@@ -2208,9 +2208,20 @@ app.post('/api/update', uploadPackage.single('package'), async (req, res) => {
     await ensureDirectory(`${NEOPRO_DIR}/webapp`);
     await ensureDirectory(`${NEOPRO_DIR}/server`);
 
+    // Sauvegarder configuration.json et videos/ avant nettoyage
+    await execCommand(`test -f ${NEOPRO_DIR}/webapp/configuration.json && cp ${NEOPRO_DIR}/webapp/configuration.json /tmp/configuration.json.backup`);
+    await execCommand(`test -d ${NEOPRO_DIR}/webapp/videos && mv ${NEOPRO_DIR}/webapp/videos /tmp/videos.backup`);
+
+    // Nettoyer webapp/ pour éviter les anciens fichiers (main-*.js)
+    await runCommand(`rm -rf ${NEOPRO_DIR}/webapp/*`, 'Échec du nettoyage de webapp');
+
     // Copier les nouveaux fichiers
     await runCommand(`cp -r ${extractDir}/${sourcePrefix}webapp/* ${NEOPRO_DIR}/webapp/`, 'Échec de la copie des fichiers webapp');
     await runCommand(`cp -r ${extractDir}/${sourcePrefix}server/* ${NEOPRO_DIR}/server/`, 'Échec de la copie des fichiers server');
+
+    // Restaurer configuration.json et videos/
+    await execCommand(`test -f /tmp/configuration.json.backup && cp /tmp/configuration.json.backup ${NEOPRO_DIR}/webapp/configuration.json && rm /tmp/configuration.json.backup`);
+    await execCommand(`test -d /tmp/videos.backup && mv /tmp/videos.backup ${NEOPRO_DIR}/webapp/videos`);
 
     // Copier les fichiers de version si présents (nouveau format)
     if (useNewFormat) {

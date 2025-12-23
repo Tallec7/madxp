@@ -98,4 +98,4 @@ jobs:
         continue-on-error: true
 
       - name: Build
-        run: npx ng build raspberry
+        run: npx ng build raspberry --configuration=raspberry

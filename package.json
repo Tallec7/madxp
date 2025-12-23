@@ -6,7 +6,7 @@
     "start": "ng serve raspberry",
     "start:raspberry": "ng serve raspberry",
     "start:central": "ng serve central-dashboard",
-    "build": "ng build raspberry && ng build central-dashboard",
+    "build": "ng build raspberry --configuration=raspberry && ng build central-dashboard",
     "build:raspberry": "./raspberry/scripts/build-raspberry.sh",
     "build:central": "ng build central-dashboard",
     "deploy:raspberry": "./raspberry/scripts/build-and-deploy.sh",

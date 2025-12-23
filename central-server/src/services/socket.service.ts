@@ -91,9 +91,15 @@ class SocketService {
   private lastPongReceived: Map<string, number> = new Map();
 
   async initialize(httpServer: HTTPServer) {
+    // Normalize origins like the HTTP middleware does
+    const allowedOrigins = process.env.ALLOWED_ORIGINS
+      ?.split(',')
+      .map((origin) => origin.trim().replace(/\/+$/, ''))
+      .filter(Boolean);
+
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+        origin: allowedOrigins && allowedOrigins.length > 0 ? allowedOrigins : '*',
         methods: ['GET', 'POST'],
         credentials: true,
       },

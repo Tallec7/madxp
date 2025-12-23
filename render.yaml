@@ -32,7 +32,7 @@ services:
       - key: JWT_EXPIRES_IN
         value: 8h
       - key: ALLOWED_ORIGINS
-        value: https://neopro-admin.kalonpartners.bzh,https://control.neopro.fr
+        value: https://neopro-admin.kalonpartners.bzh,https://control.neopro.fr,http://neopro.local,http://neopro.local:4200,http://192.168.4.1,http://192.168.4.1:4200
       - key: LOG_LEVEL
         value: info
       - key: STORAGE_TYPE
