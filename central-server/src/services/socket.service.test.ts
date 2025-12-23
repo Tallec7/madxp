@@ -71,6 +71,7 @@ const createMockSocket = (overrides: Partial<Socket> = {}): Partial<Socket> => {
     }),
     emit: jest.fn(),
     disconnect: jest.fn(),
+    join: jest.fn(), // Required for live-score room joining
     // Helper to trigger event handlers
     triggerEvent: (event: string, ...args: unknown[]) => {
       const handler = eventHandlers.get(event);
