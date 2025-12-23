@@ -15,13 +15,14 @@ import { query } from '../config/database';
 import { AuthRequest } from '../types';
 
 // Mock socket service
-const mockSocketService = {
-  isConnected: jest.fn(),
-  sendCommand: jest.fn(),
-};
 jest.mock('../services/socket.service', () => ({
-  default: mockSocketService,
+  default: {
+    isConnected: jest.fn(),
+    sendCommand: jest.fn(),
+  },
 }));
+
+const mockSocketService = require('../services/socket.service').default;
 
 // Helper to create mock response
 const createMockResponse = (): Response => {
