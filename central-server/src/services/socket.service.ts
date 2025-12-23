@@ -84,8 +84,11 @@ class SocketService {
   private connectedSites: Map<string, Socket> = new Map();
   private pendingCommands: Map<string, PendingCommand> = new Map();
   private timeoutCheckInterval: NodeJS.Timeout | null = null;
+  private connectionHealthCheckInterval: NodeJS.Timeout | null = null;
   private redisClient: RedisClientType | null = null;
   private redisSub: RedisClientType | null = null;
+  // Track last pong received for each site to detect zombie connections
+  private lastPongReceived: Map<string, number> = new Map();
 
   async initialize(httpServer: HTTPServer) {
     this.io = new SocketIOServer(httpServer, {
@@ -95,6 +98,9 @@ class SocketService {
         credentials: true,
       },
       transports: ['websocket', 'polling'],
+      // Configuration du ping/pong natif de Socket.IO pour détection des connexions mortes
+      pingInterval: 25000,  // Envoyer un ping toutes les 25 secondes
+      pingTimeout: 60000,   // Considérer déconnecté si pas de pong après 60 secondes
     });
 
     // Configuration Redis pour scalabilité horizontale
@@ -104,6 +110,9 @@ class SocketService {
 
     // Démarrer la vérification périodique des timeouts de commandes
     this.startCommandTimeoutChecker();
+
+    // Démarrer la vérification de santé des connexions (ping/pong)
+    this.startConnectionHealthCheck();
 
     logger.info('Socket.IO service initialized');
   }
@@ -219,10 +228,71 @@ class SocketService {
     }
   }
 
+  /**
+   * Démarre la vérification périodique de santé des connexions
+   * Envoie des pings aux sites connectés et détecte les connexions zombies
+   */
+  private startConnectionHealthCheck() {
+    // Vérifier toutes les 30 secondes (aligné avec le heartbeat)
+    this.connectionHealthCheckInterval = setInterval(() => {
+      this.checkConnectionHealth();
+    }, 30000);
+  }
+
+  /**
+   * Vérifie la santé des connexions et supprime les connexions zombies
+   */
+  private checkConnectionHealth() {
+    const now = Date.now();
+    const staleThresholdMs = 90000; // 90 secondes sans pong = connexion zombie
+
+    for (const [siteId, socket] of this.connectedSites.entries()) {
+      const lastPong = this.lastPongReceived.get(siteId);
+
+      // Si on n'a jamais reçu de pong, initialiser
+      if (!lastPong) {
+        this.lastPongReceived.set(siteId, now);
+      } else if (now - lastPong > staleThresholdMs) {
+        // Connexion zombie détectée - le client ne répond plus aux pongs
+        logger.warn('Zombie connection detected, forcing disconnect', {
+          siteId,
+          lastPongAgo: Math.round((now - lastPong) / 1000),
+          staleThresholdMs,
+        });
+
+        // Forcer la déconnexion pour nettoyer l'état
+        socket.disconnect(true);
+        this.connectedSites.delete(siteId);
+        this.lastPongReceived.delete(siteId);
+
+        // Mettre à jour le statut en base
+        query(
+          'UPDATE sites SET status = $1, last_seen_at = NOW() WHERE id = $2',
+          ['offline', siteId]
+        ).catch((error) => {
+          logger.error('Error updating site status on zombie disconnect:', error);
+        });
+      } else {
+        // Envoyer un ping au site pour maintenir la connexion et détecter les zombies
+        socket.emit('ping_check', { timestamp: now });
+      }
+    }
+  }
+
   private async handleConnection(socket: Socket) {
     logger.info('New socket connection', { socketId: socket.id });
 
+    // Timeout d'authentification : déconnecter si pas authentifié dans les 30 secondes
+    // Protège contre les connexions fantômes qui consomment des ressources
+    const authTimeout = setTimeout(() => {
+      if (!(socket as any).siteId) {
+        logger.warn('Authentication timeout, disconnecting socket', { socketId: socket.id });
+        socket.disconnect(true);
+      }
+    }, 30000);
+
     socket.on('authenticate', async (data: SocketData) => {
+      clearTimeout(authTimeout);
       try {
         await this.authenticateAgent(socket, data);
       } catch (error) {
@@ -234,6 +304,7 @@ class SocketService {
     });
 
     socket.on('disconnect', () => {
+      clearTimeout(authTimeout);
       this.handleDisconnection(socket);
     });
   }
@@ -330,6 +401,14 @@ class SocketService {
       handleScoreReset(socket);
     });
 
+    // Health check - Pong response
+    socket.on('pong_check', () => {
+      this.lastPongReceived.set(siteId, Date.now());
+    });
+
+    // Initialiser le timestamp de pong à maintenant (connexion fraîche)
+    this.lastPongReceived.set(siteId, Date.now());
+
     logger.info('Agent authenticated', { siteId, siteName: site.site_name, clientIp });
 
     // Traiter les commandes et déploiements en attente pour ce site
@@ -379,6 +458,7 @@ class SocketService {
     if (siteId) {
       const siteName = (socket as any).siteName || siteId;
       this.connectedSites.delete(siteId);
+      this.lastPongReceived.delete(siteId);
 
       query(
         'UPDATE sites SET status = $1, last_seen_at = NOW() WHERE id = $2',
@@ -400,6 +480,9 @@ class SocketService {
 
   private async handleHeartbeat(siteId: string, message: HeartbeatMessage) {
     try {
+      // Le heartbeat prouve que la connexion est vivante - mettre à jour lastPongReceived
+      this.lastPongReceived.set(siteId, Date.now());
+
       await query(
         `INSERT INTO metrics (site_id, cpu_usage, memory_usage, temperature, disk_usage, uptime, recorded_at)
          VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
@@ -909,8 +992,13 @@ class SocketService {
       clearInterval(this.timeoutCheckInterval);
       this.timeoutCheckInterval = null;
     }
+    if (this.connectionHealthCheckInterval) {
+      clearInterval(this.connectionHealthCheckInterval);
+      this.connectionHealthCheckInterval = null;
+    }
     this.pendingCommands.clear();
     this.connectedSites.clear();
+    this.lastPongReceived.clear();
 
     // Fermer les connexions Redis
     if (this.redisClient) {

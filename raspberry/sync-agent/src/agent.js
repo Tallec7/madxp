@@ -78,6 +78,16 @@ class NeoproSyncAgent {
     this.socket.on('authenticated', (data) => this.handleAuthenticated(data));
     this.socket.on('auth_error', (data) => this.handleAuthError(data));
     this.socket.on('command', (cmd) => this.handleCommand(cmd));
+    // Health check - Respond to server pings to prove connection is alive
+    this.socket.on('ping_check', () => this.handlePingCheck());
+  }
+
+  handlePingCheck() {
+    // Répondre immédiatement au ping du serveur
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('pong_check');
+      logger.debug('Responded to server ping_check');
+    }
   }
 
   handleConnect() {
