@@ -13,6 +13,9 @@ router.get('/stats', authenticate, sitesController.getSiteStats);
 
 router.get('/connection-status', authenticate, sitesController.getAllSitesConnectionStatus);
 
+// Route de debug pour voir l'état des connexions WebSocket (admin only)
+router.get('/debug/connections', authenticate, requireRole('admin'), sitesController.getConnectionsDebug);
+
 // Route globale pour le résumé de la queue (doit être avant /:id)
 router.get('/queue/summary', authenticate, sitesController.getQueueSummary);
 

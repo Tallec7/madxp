@@ -973,7 +973,14 @@ class SocketService {
   }
 
   isConnected(siteId: string): boolean {
-    return this.connectedSites.has(siteId);
+    const connected = this.connectedSites.has(siteId);
+    logger.debug('isConnected check', {
+      siteId,
+      connected,
+      connectedSitesCount: this.connectedSites.size,
+      connectedSiteIds: Array.from(this.connectedSites.keys()),
+    });
+    return connected;
   }
 
   getConnectedSites(): string[] {
@@ -982,6 +989,25 @@ class SocketService {
 
   getConnectionCount(): number {
     return this.connectedSites.size;
+  }
+
+  /**
+   * Retourne des informations de debug sur l'état des connexions
+   */
+  getDebugInfo(): {
+    connectedSites: string[];
+    lastPongReceived: Record<string, number>;
+    pendingCommandsCount: number;
+  } {
+    const pongInfo: Record<string, number> = {};
+    for (const [siteId, timestamp] of this.lastPongReceived.entries()) {
+      pongInfo[siteId] = timestamp;
+    }
+    return {
+      connectedSites: Array.from(this.connectedSites.keys()),
+      lastPongReceived: pongInfo,
+      pendingCommandsCount: this.pendingCommands.size,
+    };
   }
 
   /**

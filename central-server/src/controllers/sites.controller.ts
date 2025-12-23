@@ -418,6 +418,34 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
   }
 };
 
+/**
+ * Endpoint de debug pour voir l'état interne des connexions WebSocket
+ * GET /api/sites/debug/connections
+ */
+export const getConnectionsDebug = async (req: AuthRequest, res: Response) => {
+  try {
+    const socketService = (await import('../services/socket.service')).default;
+    const debugInfo = socketService.getDebugInfo();
+
+    // Ajouter les infos de la base de données pour comparaison
+    const dbSitesResult = await query(`
+      SELECT id, site_name, status, last_seen_at
+      FROM sites
+      WHERE status = 'online' OR last_seen_at > NOW() - INTERVAL '5 minutes'
+      ORDER BY last_seen_at DESC
+    `);
+
+    res.json({
+      socketService: debugInfo,
+      databaseOnlineSites: dbSitesResult.rows,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    logger.error('Get connections debug error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des infos de debug' });
+  }
+};
+
 const validateCommandPayload = (command: string, data?: any) => {
   if (command === 'update_config') {
     const hasValidPayload = data && (
