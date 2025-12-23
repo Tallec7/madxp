@@ -1,9 +1,12 @@
 # Changelog
 
-Généré le 2025-12-08
+Généré le 2025-12-08 (Mise à jour 2025-12-23)
 
 ## ✨ Nouvelles fonctionnalités
 
+- [Live Score - Finalisation complète](2025-12-23_livescore-complete.md) - 2025-12-23
+- [Boucles vidéo par phase de match](2025-12-22_phase-video-loops.md) - 2025-12-22
+- [RLS, Swagger, Live Score - Intégration](2025-12-16_rls-livescore-integration.md) - 2025-12-16
 - [ add timeCategories and video CRUD management (#81)](commits/3952296.md) - 2025-12-08
 - [ add timeCategories and video CRUD management (#80)](commits/5af64be.md) - 2025-12-08
 - [ add structured config editor with history and diff (#74)](commits/ff6ac9a.md) - 2025-12-08
@@ -155,4 +158,3 @@ Généré le 2025-12-08
 - [Configure CORS for neopro.kalonpartners.bzh and add deployment guide](commits/3bc885d.md) - 2025-12-03
 - [Merge pull request #1 from Tallec7/eloquent-bartik](commits/02ec91d.md) - 2025-12-03
 - [Add Render deployment configuration for Socket.IO server](commits/ab715ca.md) - 2025-12-03
-

@@ -1,32 +1,90 @@
 # Guide d'Implémentation - Estimation Audience & Score en Live
 
-> Date : 15 Décembre 2025 (Mise à jour 14h30)
+> Date : 15 Décembre 2025 (Mise à jour 23 Décembre 2025)
 > Référence : BACKLOG.md - Sprint Décembre 2025
-> **Statut** : ✅ UI Télécommande TERMINÉE
+> **Statut** : ✅ **TERMINÉ** - Prêt pour production
 
 ---
 
 ## 🎯 ÉTAT D'AVANCEMENT
 
-| Composant                       | Statut        | Notes                          |
-| ------------------------------- | ------------- | ------------------------------ |
-| **UI Télécommande - Affluence** | ✅ FAIT       | Badge + Modal                  |
-| **UI Télécommande - Score**     | ✅ FAIT       | Widget complet                 |
-| **Interface Configuration**     | ✅ FAIT       | `liveScoreEnabled` dans config |
-| **Socket Events**               | ✅ FAIT       | `match-config`, `score-update` |
-| **Migration DB**                | ⏳ À exécuter | SQL prêt                       |
-| **Backend Handler**             | ⏳ À faire    | Handler socket `match-config`  |
-| **UI TV - Overlay Score**       | ⏳ À faire    | tv.component                   |
-| **Admin Toggle**                | ✅ FAIT       | site-detail.component          |
+| Composant                       | Statut  | Notes                                                |
+| ------------------------------- | ------- | ---------------------------------------------------- |
+| **UI Télécommande - Affluence** | ✅ FAIT | Badge + Modal                                        |
+| **UI Télécommande - Score**     | ✅ FAIT | Widget complet (+/- et reset)                        |
+| **Interface Configuration**     | ✅ FAIT | `liveScoreEnabled` dans config                       |
+| **Socket Events**               | ✅ FAIT | `match-config`, `score-update`, `score-reset`        |
+| **Migration DB**                | ✅ PRÊT | SQL prêt à exécuter                                  |
+| **Backend Handler**             | ✅ FAIT | `score-update.handler.ts`, `match-config.handler.ts` |
+| **UI TV - Overlay Score**       | ✅ FAIT | Overlay + Popup animé                                |
+| **Admin Toggle**                | ✅ FAIT | site-detail.component (Premium)                      |
 
 ---
 
 ## 📋 TABLE DES MATIÈRES
 
 1. [Estimation d'Audience](#1-estimation-daudience) ✅
-2. [Score en Live - Phase 1](#2-score-en-live---phase-1) ✅ (UI)
-3. [Scripts de Migration](#3-scripts-de-migration)
+2. [Score en Live - Phase 1](#2-score-en-live---phase-1) ✅ TERMINÉ
+3. [Scripts de Migration](#3-scripts-de-migration) ✅
 4. [Tests à Effectuer](#4-tests-à-effectuer)
+5. [Résumé des Fichiers Implémentés](#5-résumé-des-fichiers-implémentés)
+
+---
+
+## 5. RÉSUMÉ DES FICHIERS IMPLÉMENTÉS
+
+### Backend (central-server)
+
+| Fichier                                                    | Description                                            |
+| ---------------------------------------------------------- | ------------------------------------------------------ |
+| `src/handlers/score-update.handler.ts`                     | Gestion des événements `score-update` et `score-reset` |
+| `src/handlers/match-config.handler.ts`                     | Gestion de l'événement `match-config`                  |
+| `src/services/socket.service.ts`                           | Enregistrement des handlers (lignes 318-331)           |
+| `src/controllers/sites.controller.ts`                      | Support `live_score_enabled` dans update               |
+| `src/middleware/validation.ts`                             | Validation du champ `live_score_enabled`               |
+| `src/scripts/migrations/add-audience-and-score-fields.sql` | Migration SQL                                          |
+
+### Frontend TV (raspberry)
+
+| Fichier                                   | Description                    |
+| ----------------------------------------- | ------------------------------ |
+| `src/app/components/tv/tv.component.ts`   | Logique score (lignes 62-415)  |
+| `src/app/components/tv/tv.component.html` | Overlay (5-21) + Popup (24-38) |
+| `src/app/components/tv/tv.component.scss` | Styles animés (11-245)         |
+
+### Frontend Remote (raspberry)
+
+| Fichier                                           | Description                   |
+| ------------------------------------------------- | ----------------------------- |
+| `src/app/components/remote/remote.component.ts`   | Widget score (lignes 451-515) |
+| `src/app/components/remote/remote.component.html` | UI widget (lignes 100-109)    |
+
+### Frontend Admin (central-dashboard)
+
+| Fichier                                           | Description                                |
+| ------------------------------------------------- | ------------------------------------------ |
+| `src/app/features/sites/site-detail.component.ts` | Toggle premium (lignes 313-338, 1911-1949) |
+
+---
+
+## Déploiement en Production
+
+### Étape 1 : Exécuter la migration SQL
+
+```bash
+psql -U neopro_user -d neopro_db -f central-server/src/scripts/migrations/add-audience-and-score-fields.sql
+```
+
+### Étape 2 : Vérifier la migration
+
+```sql
+SELECT column_name FROM information_schema.columns
+WHERE table_name = 'sites' AND column_name = 'live_score_enabled';
+```
+
+### Étape 3 : Activer pour un site
+
+Dans le dashboard admin, aller sur la page du site et activer le toggle "Score en Live" dans les Options Premium
 
 ---
 
