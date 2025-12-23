@@ -8,16 +8,17 @@
 
 ## 🎯 ÉTAT D'AVANCEMENT
 
-| Composant                       | Statut  | Notes                                                |
-| ------------------------------- | ------- | ---------------------------------------------------- |
-| **UI Télécommande - Affluence** | ✅ FAIT | Badge + Modal                                        |
-| **UI Télécommande - Score**     | ✅ FAIT | Widget complet (+/- et reset)                        |
-| **Interface Configuration**     | ✅ FAIT | `liveScoreEnabled` dans config                       |
-| **Socket Events**               | ✅ FAIT | `match-config`, `score-update`, `score-reset`        |
-| **Migration DB**                | ✅ PRÊT | SQL prêt à exécuter                                  |
-| **Backend Handler**             | ✅ FAIT | `score-update.handler.ts`, `match-config.handler.ts` |
-| **UI TV - Overlay Score**       | ✅ FAIT | Overlay + Popup animé                                |
-| **Admin Toggle**                | ✅ FAIT | site-detail.component (Premium)                      |
+| Composant                       | Statut  | Notes                                                   |
+| ------------------------------- | ------- | ------------------------------------------------------- |
+| **UI Télécommande - Affluence** | ✅ FAIT | Badge + Modal                                           |
+| **UI Télécommande - Score**     | ✅ FAIT | Panneau collapsible avec 4 boutons (+/- par équipe)     |
+| **Interface Configuration**     | ✅ FAIT | `liveScoreEnabled` dans config                          |
+| **Socket Events**               | ✅ FAIT | `match-config`, `score-update`, `score-reset`           |
+| **Communication Locale**        | ✅ FAIT | BroadcastChannel API pour Remote ↔ TV sur même appareil |
+| **Migration DB**                | ✅ PRÊT | SQL prêt à exécuter                                     |
+| **Backend Handler**             | ✅ FAIT | `score-update.handler.ts`, `match-config.handler.ts`    |
+| **UI TV - Overlay Score**       | ✅ FAIT | Overlay + Popup animé                                   |
+| **Admin Toggle**                | ✅ FAIT | site-detail.component (Premium) avec déploiement auto   |
 
 ---
 
@@ -46,18 +47,20 @@
 
 ### Frontend TV (raspberry)
 
-| Fichier                                   | Description                    |
-| ----------------------------------------- | ------------------------------ |
-| `src/app/components/tv/tv.component.ts`   | Logique score (lignes 62-415)  |
-| `src/app/components/tv/tv.component.html` | Overlay (5-21) + Popup (24-38) |
-| `src/app/components/tv/tv.component.scss` | Styles animés (11-245)         |
+| Fichier                                   | Description                                |
+| ----------------------------------------- | ------------------------------------------ |
+| `src/app/components/tv/tv.component.ts`   | Logique score + BroadcastChannel (210-258) |
+| `src/app/components/tv/tv.component.html` | Overlay (5-21) + Popup (24-38)             |
+| `src/app/components/tv/tv.component.scss` | Styles animés (11-245)                     |
 
 ### Frontend Remote (raspberry)
 
-| Fichier                                           | Description                   |
-| ------------------------------------------------- | ----------------------------- |
-| `src/app/components/remote/remote.component.ts`   | Widget score (lignes 451-515) |
-| `src/app/components/remote/remote.component.html` | UI widget (lignes 100-109)    |
+| Fichier                                           | Description                                  |
+| ------------------------------------------------- | -------------------------------------------- |
+| `src/app/components/remote/remote.component.ts`   | Panneau score collapsible + BroadcastChannel |
+| `src/app/components/remote/remote.component.html` | UI panneau score (360-408) + toggle header   |
+| `src/app/components/remote/remote.component.scss` | Styles panneau score (845-1081)              |
+| `src/app/services/local-broadcast.service.ts`     | Communication locale Remote ↔ TV             |
 
 ### Frontend Admin (central-dashboard)
 

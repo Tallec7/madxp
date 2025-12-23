@@ -1,12 +1,14 @@
 import { Component, ElementRef, inject, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { trigger, style, transition, animate } from '@angular/animations';
+import { trigger, state, style, transition, animate } from '@angular/animations';
+import { Subscription } from 'rxjs';
 import videojs from 'video.js';
 import "videojs-playlist";
 import Player from 'video.js/dist/types/player';
 import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { SponsorAnalyticsService } from '../../services/sponsor-analytics.service';
+import { LocalBroadcastService, ScoreUpdateEvent, PhaseChangeEvent } from '../../services/local-broadcast.service';
 import { Video } from '../../interfaces/video.interface';
 import { Configuration } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
@@ -46,6 +48,9 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly socketService = inject(SocketService);
   private readonly analyticsService = inject(AnalyticsService);
   private readonly sponsorAnalytics = inject(SponsorAnalyticsService);
+  private readonly localBroadcast = inject(LocalBroadcastService);
+
+  private localBroadcastSubscriptions: Subscription[] = [];
 
   @Input() public configuration: Configuration;
 
@@ -206,11 +211,60 @@ export class TvComponent implements OnInit, OnDestroy {
       console.log('[TV] Phase change received:', data.phase);
       this.switchToPhase(data.phase);
     });
+
+    // =========================================================================
+    // COMMUNICATION LOCALE VIA BROADCASTCHANNEL
+    // Permet à Remote et TV de communiquer directement sur le même appareil
+    // sans passer par le serveur cloud
+    // =========================================================================
+
+    // Écouter les mises à jour de score via BroadcastChannel (local)
+    this.localBroadcastSubscriptions.push(
+      this.localBroadcast.onScoreUpdate().subscribe((scoreData: ScoreUpdateEvent) => {
+        console.log('[TV] Local score update received:', scoreData);
+        if (scoreData.reset) {
+          // Reset du score
+          this.currentScore = null;
+          this.showScoreOverlay = false;
+          this.showScorePopup = false;
+        } else {
+          this.handleScoreUpdate(scoreData);
+        }
+      })
+    );
+
+    // Écouter les changements de phase via BroadcastChannel (local)
+    this.localBroadcastSubscriptions.push(
+      this.localBroadcast.onPhaseChange().subscribe((data: PhaseChangeEvent) => {
+        console.log('[TV] Local phase change received:', data.phase);
+        this.switchToPhase(data.phase);
+      })
+    );
+
+    // Écouter les commandes via BroadcastChannel (local)
+    this.localBroadcastSubscriptions.push(
+      this.localBroadcast.onCommand().subscribe((command) => {
+        console.log('[TV] Local command received:', command);
+        if (command.type === 'video' && command.data) {
+          this.lastTriggerType = 'manual';
+          this.play(command.data as Video);
+        } else if (command.type === 'sponsors') {
+          this.lastTriggerType = 'auto';
+          this.sponsors();
+        } else if (command.type === 'reload-config' && command.data) {
+          this.reloadConfiguration(command.data as Configuration);
+        }
+      })
+    );
   }
 
   public ngOnDestroy() {
     // Terminer la session analytics
     this.analyticsService.endSession();
+
+    // Se désabonner des événements BroadcastChannel
+    this.localBroadcastSubscriptions.forEach(sub => sub.unsubscribe());
+    this.localBroadcastSubscriptions = [];
 
     if (this.player) {
       this.player.dispose();

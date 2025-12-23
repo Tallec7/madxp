@@ -9,6 +9,7 @@ import { Video } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { DemoConfigService } from '../../services/demo-config.service';
+import { LocalBroadcastService } from '../../services/local-broadcast.service';
 import { ClubSelectorComponent } from '../club-selector/club-selector.component';
 
 type ViewType = 'club-selector' | 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos';
@@ -27,6 +28,7 @@ export class RemoteComponent implements OnInit {
   private readonly socketService = inject(SocketService);
   private readonly analyticsService = inject(AnalyticsService);
   private readonly demoConfigService = inject(DemoConfigService);
+  private readonly localBroadcast = inject(LocalBroadcastService);
 
   public configuration!: Configuration;
   public currentView: ViewType = 'home';
@@ -54,6 +56,7 @@ export class RemoteComponent implements OnInit {
 
   // Score en live
   public liveScoreEnabled = false;
+  public isScorePanelExpanded = false;
   public currentScore = {
     homeTeam: 'DOMICILE',
     awayTeam: 'EXTÉRIEUR',
@@ -494,15 +497,21 @@ export class RemoteComponent implements OnInit {
   }
 
   /**
-   * Envoie le score à la TV via socket
+   * Envoie le score à la TV via BroadcastChannel (local) + Socket (cloud)
    */
   public broadcastScore(): void {
-    this.socketService.emit('score-update', {
+    const scoreData = {
       homeTeam: this.currentScore.homeTeam,
       awayTeam: this.currentScore.awayTeam,
       homeScore: this.currentScore.homeScore,
       awayScore: this.currentScore.awayScore
-    });
+    };
+
+    // Communication locale (Remote ↔ TV sur le même Raspberry)
+    this.localBroadcast.emitScoreUpdate(scoreData);
+
+    // Communication cloud (pour monitoring/dashboard)
+    this.socketService.emit('score-update', scoreData);
   }
 
   /**
@@ -511,7 +520,24 @@ export class RemoteComponent implements OnInit {
   public resetScore(): void {
     this.currentScore.homeScore = 0;
     this.currentScore.awayScore = 0;
-    this.broadcastScore();
+
+    // Communication locale
+    this.localBroadcast.emitScoreReset();
+
+    // Communication cloud
+    this.socketService.emit('score-update', {
+      homeTeam: this.currentScore.homeTeam,
+      awayTeam: this.currentScore.awayTeam,
+      homeScore: 0,
+      awayScore: 0
+    });
+  }
+
+  /**
+   * Toggle le panneau de score en bas de l'écran
+   */
+  public toggleScorePanel(): void {
+    this.isScorePanelExpanded = !this.isScorePanelExpanded;
   }
 
   // ============================================================================

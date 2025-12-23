@@ -96,16 +96,19 @@
             }
           </div>
 
-          <!-- Widget Score en Live minimaliste (si activé) -->
+          <!-- Bouton toggle pour le panneau score (si activé) -->
           @if (liveScoreEnabled) {
-            <div class="score-mini">
-              <button class="score-mini-btn" (click)="decrementHomeScore()">−</button>
-              <span class="score-mini-value">{{ currentScore.homeScore }}</span>
-              <span class="score-mini-sep">-</span>
-              <span class="score-mini-value">{{ currentScore.awayScore }}</span>
-              <button class="score-mini-btn" (click)="incrementAwayScore()">+</button>
-              <button class="score-mini-reset" (click)="resetScore()" title="Reset">↺</button>
-            </div>
+            <button
+              class="score-toggle-btn"
+              [class.active]="isScorePanelExpanded"
+              (click)="toggleScorePanel()"
+              title="Score en live"
+            >
+              <span class="toggle-icon">⚽</span>
+              <span class="toggle-score"
+                >{{ currentScore.homeScore }} - {{ currentScore.awayScore }}</span
+              >
+            </button>
           }
 
           <!-- Badge estimation audience -->
@@ -355,6 +358,57 @@
         </div>
       }
     </div>
+
+    <!-- Panneau Score en bas (collapsible) -->
+    @if (liveScoreEnabled && isScorePanelExpanded) {
+      <div class="score-panel">
+        <div class="score-panel-header">
+          <h3>Score en direct</h3>
+          <button class="score-panel-close" (click)="toggleScorePanel()">×</button>
+        </div>
+        <div class="score-panel-content">
+          <!-- Équipe Domicile -->
+          <div class="team-score home">
+            <span class="team-name">{{ currentScore.homeTeam }}</span>
+            <div class="score-controls">
+              <button
+                class="score-btn minus"
+                (click)="decrementHomeScore()"
+                [disabled]="currentScore.homeScore === 0"
+              >
+                −
+              </button>
+              <span class="score-value">{{ currentScore.homeScore }}</span>
+              <button class="score-btn plus" (click)="incrementHomeScore()">+</button>
+            </div>
+          </div>
+
+          <!-- Séparateur -->
+          <div class="score-separator">
+            <span class="vs-text">VS</span>
+          </div>
+
+          <!-- Équipe Extérieure -->
+          <div class="team-score away">
+            <span class="team-name">{{ currentScore.awayTeam }}</span>
+            <div class="score-controls">
+              <button
+                class="score-btn minus"
+                (click)="decrementAwayScore()"
+                [disabled]="currentScore.awayScore === 0"
+              >
+                −
+              </button>
+              <span class="score-value">{{ currentScore.awayScore }}</span>
+              <button class="score-btn plus" (click)="incrementAwayScore()">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="score-panel-footer">
+          <button class="reset-btn" (click)="resetScore()"><span>↺</span> Réinitialiser</button>
+        </div>
+      </div>
+    }
 
     <!-- Modal configuration match -->
     @if (showMatchModal) {
