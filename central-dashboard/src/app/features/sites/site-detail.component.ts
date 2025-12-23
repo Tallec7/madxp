@@ -1920,42 +1920,26 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
           this.site.live_score_enabled = newValue;
 
           // Automatically deploy the configuration to the Raspberry Pi
-          if (this.site.neoProContent) {
-            // Update the neoProContent with the new value
-            const updatedNeoProContent = {
-              ...this.site.neoProContent,
-              liveScoreEnabled: newValue
-            };
-
-            // Send the update_config command
-            this.sitesService.sendCommand(this.siteId, 'update_config', {
-              neoProContent: updatedNeoProContent,
-              mode: 'merge'
-            }).subscribe({
-              next: () => {
-                this.savingLiveScore = false;
-                this.notificationService.success(
-                  newValue
-                    ? 'Score en Live activé et déployé sur le boîtier !'
-                    : 'Score en Live désactivé et déployé sur le boîtier !'
-                );
-              },
-              error: (error) => {
-                this.savingLiveScore = false;
-                this.notificationService.warning(
-                  `Score en Live ${newValue ? 'activé' : 'désactivé'} en base de données, mais erreur lors du déploiement: ${error.error?.error || error.message}`
-                );
-              }
-            });
-          } else {
-            // If no neoProContent, just show success without deployment
-            this.savingLiveScore = false;
-            this.notificationService.success(
-              newValue
-                ? 'Score en Live activé ! Utilisez "Déployer" pour appliquer sur le boîtier.'
-                : 'Score en Live désactivé.'
-            );
-          }
+          // Send update_config with just liveScoreEnabled - the sync-agent will merge it
+          this.sitesService.sendCommand(this.siteId, 'update_config', {
+            neoProContent: { liveScoreEnabled: newValue },
+            mode: 'merge'
+          }).subscribe({
+            next: () => {
+              this.savingLiveScore = false;
+              this.notificationService.success(
+                newValue
+                  ? 'Score en Live activé et déployé sur le boîtier !'
+                  : 'Score en Live désactivé et déployé sur le boîtier !'
+              );
+            },
+            error: (error) => {
+              this.savingLiveScore = false;
+              this.notificationService.warning(
+                `Score en Live ${newValue ? 'activé' : 'désactivé'} en base de données, mais erreur lors du déploiement: ${error.error?.error || error.message}`
+              );
+            }
+          });
         } else {
           this.savingLiveScore = false;
         }
