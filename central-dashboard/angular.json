@@ -25,6 +25,11 @@
                 "glob": "health.json",
                 "input": "src/",
                 "output": "/"
+              },
+              {
+                "glob": ".htaccess",
+                "input": "./",
+                "output": "/"
               }
             ],
             "styles": ["src/styles.css"],
