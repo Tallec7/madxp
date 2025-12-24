@@ -313,6 +313,34 @@ io.on('connection', (socket) => {
 		socket.emit('phase-change', { phase: currentPhase });
 	});
 
+	// Notification de mise à jour de la configuration (envoyé par le sync-agent)
+	socket.on('config_updated', () => {
+		console.log('[Config] Configuration updated notification received');
+
+		// Lire la nouvelle configuration depuis le fichier
+		const configPath = path.join(
+			process.env.HOME || '/home/pi',
+			'neopro',
+			'webapp',
+			'configuration.json'
+		);
+
+		try {
+			if (fs.existsSync(configPath)) {
+				const configData = fs.readFileSync(configPath, 'utf8');
+				const config = JSON.parse(configData);
+
+				console.log('[Config] Broadcasting reload-config to all clients');
+				// Envoyer la nouvelle config à tous les clients (TV, Remote)
+				io.emit('action', { type: 'reload-config', data: config });
+			} else {
+				console.warn('[Config] Configuration file not found:', configPath);
+			}
+		} catch (error) {
+			console.error('[Config] Error reading configuration:', error.message);
+		}
+	});
+
 	socket.on('disconnect', () => {
 		console.log('Client déconnecté:', socket.id);
 	});
