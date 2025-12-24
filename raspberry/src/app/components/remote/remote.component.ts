@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, NgZone, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -29,6 +29,7 @@ export class RemoteComponent implements OnInit {
   private readonly analyticsService = inject(AnalyticsService);
   private readonly demoConfigService = inject(DemoConfigService);
   private readonly localBroadcast = inject(LocalBroadcastService);
+  private readonly ngZone = inject(NgZone);
 
   public configuration!: Configuration;
   public currentView: ViewType = 'home';
@@ -117,18 +118,22 @@ export class RemoteComponent implements OnInit {
     // Écouter le score envoyé par le serveur
     this.socketService.on('score-update', (scoreData: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number }) => {
       console.log('[Remote] Score received from server:', scoreData);
-      this.currentScore = {
-        homeTeam: scoreData.homeTeam || this.currentScore.homeTeam,
-        awayTeam: scoreData.awayTeam || this.currentScore.awayTeam,
-        homeScore: scoreData.homeScore ?? this.currentScore.homeScore,
-        awayScore: scoreData.awayScore ?? this.currentScore.awayScore
-      };
+      this.ngZone.run(() => {
+        this.currentScore = {
+          homeTeam: scoreData.homeTeam || this.currentScore.homeTeam,
+          awayTeam: scoreData.awayTeam || this.currentScore.awayTeam,
+          homeScore: scoreData.homeScore ?? this.currentScore.homeScore,
+          awayScore: scoreData.awayScore ?? this.currentScore.awayScore
+        };
+      });
     });
 
     // Écouter la phase envoyée par le serveur
     this.socketService.on('phase-change', (data: { phase: 'neutral' | 'before' | 'during' | 'after' }) => {
       console.log('[Remote] Phase received from server:', data.phase);
-      this.activePhase = data.phase;
+      this.ngZone.run(() => {
+        this.activePhase = data.phase;
+      });
     });
 
     // Demander l'état actuel au serveur (le message initial peut avoir été manqué pendant le routing)
