@@ -21,16 +21,14 @@
 }
 
 // ============================================================================
-// OVERLAY SCORE (coin supérieur droit)
+// OVERLAY SCORE
+// Les styles de position, couleurs et tailles sont appliqués dynamiquement
+// via [ngStyle] depuis la configuration du site
 // ============================================================================
 
 .score-overlay {
   position: fixed;
-  top: 20px;
-  right: 20px;
   z-index: 1000;
-  background: rgba(0, 0, 0, 0.85);
-  border-radius: 12px;
   padding: 12px 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
@@ -55,17 +53,13 @@
       }
 
       .team-name {
-        font-size: 16px;
         font-weight: 600;
-        color: #ffffff;
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
 
       .team-score {
-        font-size: 28px;
         font-weight: 700;
-        color: #4caf50;
         min-width: 40px;
         text-align: center;
       }
@@ -112,7 +106,7 @@
 }
 
 // ============================================================================
-// POPUP SCORE (centre écran, affiché 5 secondes)
+// POPUP SCORE (centre écran, affiché lors d'un but)
 // ============================================================================
 
 .score-popup {
@@ -208,8 +202,6 @@
 
 @media (max-width: 768px) {
   .score-overlay {
-    top: 10px;
-    right: 10px;
     padding: 8px 14px;
 
     .score-container {

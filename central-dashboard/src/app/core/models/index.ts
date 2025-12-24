@@ -1,3 +1,28 @@
+/**
+ * Configuration de l'overlay du score affiché sur la TV
+ * Permet de personnaliser la position, les couleurs et les tailles
+ */
+export interface ScoreOverlayConfig {
+  /** Position de l'overlay : 'top-right', 'top-left', 'bottom-right', 'bottom-left' */
+  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+  /** Distance horizontale du bord (en pixels) */
+  offsetX?: number;
+  /** Distance verticale du bord (en pixels) */
+  offsetY?: number;
+  /** Couleur de fond (format CSS, ex: 'rgba(0, 0, 0, 0.85)') */
+  backgroundColor?: string;
+  /** Arrondi des coins (en pixels) */
+  borderRadius?: number;
+  /** Couleur du score (format CSS, ex: '#4caf50') */
+  scoreColor?: string;
+  /** Taille du score (en pixels) */
+  scoreSize?: number;
+  /** Couleur des noms d'équipe */
+  teamNameColor?: string;
+  /** Taille des noms d'équipe (en pixels) */
+  teamNameSize?: number;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -47,6 +72,7 @@ export interface Site {
    */
   neoProContent?: {
     liveScoreEnabled?: boolean;
+    scoreOverlay?: ScoreOverlayConfig;
     [key: string]: unknown;
   };
 }

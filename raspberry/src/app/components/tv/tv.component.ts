@@ -421,4 +421,61 @@ export class TvComponent implements OnInit, OnDestroy {
     this.showScoreOverlay = !this.showScoreOverlay;
   }
 
+  /**
+   * Styles dynamiques pour l'overlay du score
+   * Utilise la configuration scoreOverlay si disponible, sinon valeurs par défaut
+   */
+  public getOverlayStyles(): Record<string, string> {
+    const config = this.configuration?.scoreOverlay;
+    const position = config?.position || 'top-right';
+    const offsetX = (config?.offsetX ?? 20) + 'px';
+    const offsetY = (config?.offsetY ?? 20) + 'px';
+
+    const styles: Record<string, string> = {
+      'background': config?.backgroundColor || 'rgba(0, 0, 0, 0.85)',
+      'border-radius': (config?.borderRadius ?? 12) + 'px'
+    };
+
+    // Position dynamique
+    if (position.includes('top')) {
+      styles['top'] = offsetY;
+      styles['bottom'] = 'auto';
+    } else {
+      styles['bottom'] = offsetY;
+      styles['top'] = 'auto';
+    }
+
+    if (position.includes('right')) {
+      styles['right'] = offsetX;
+      styles['left'] = 'auto';
+    } else {
+      styles['left'] = offsetX;
+      styles['right'] = 'auto';
+    }
+
+    return styles;
+  }
+
+  /**
+   * Styles dynamiques pour les scores
+   */
+  public getScoreStyles(): Record<string, string> {
+    const config = this.configuration?.scoreOverlay;
+    return {
+      'color': config?.scoreColor || '#4caf50',
+      'font-size': (config?.scoreSize ?? 28) + 'px'
+    };
+  }
+
+  /**
+   * Styles dynamiques pour les noms d'équipe
+   */
+  public getTeamNameStyles(): Record<string, string> {
+    const config = this.configuration?.scoreOverlay;
+    return {
+      'color': config?.teamNameColor || '#ffffff',
+      'font-size': (config?.teamNameSize ?? 16) + 'px'
+    };
+  }
+
 }

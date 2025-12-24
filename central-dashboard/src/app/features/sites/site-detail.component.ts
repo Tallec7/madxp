@@ -333,6 +333,89 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
               Permet d'afficher le score du match en surimpression sur la TV pendant les vidéos.
               Le score est saisi depuis la télécommande.
             </p>
+            <!-- Score Overlay Configuration Button -->
+            <button
+              *ngIf="site.live_score_enabled"
+              class="btn btn-secondary btn-small"
+              (click)="toggleScoreOverlayConfig()"
+              style="margin-top: 12px;"
+            >
+              {{ showScoreOverlayConfig ? 'Fermer' : 'Personnaliser' }}
+            </button>
+            <!-- Score Overlay Config Form -->
+            <div *ngIf="showScoreOverlayConfig && site.live_score_enabled" class="score-overlay-config">
+              <h4>Apparence de l'overlay</h4>
+              <div class="config-grid">
+                <div class="config-field">
+                  <label>Position</label>
+                  <select [(ngModel)]="scoreOverlayConfig.position">
+                    <option value="top-right">Haut droite</option>
+                    <option value="top-left">Haut gauche</option>
+                    <option value="bottom-right">Bas droite</option>
+                    <option value="bottom-left">Bas gauche</option>
+                  </select>
+                </div>
+                <div class="config-field">
+                  <label>Distance horizontale (px)</label>
+                  <input type="number" [(ngModel)]="scoreOverlayConfig.offsetX" min="0" max="200" />
+                </div>
+                <div class="config-field">
+                  <label>Distance verticale (px)</label>
+                  <input type="number" [(ngModel)]="scoreOverlayConfig.offsetY" min="0" max="200" />
+                </div>
+                <div class="config-field">
+                  <label>Arrondi des coins (px)</label>
+                  <input type="number" [(ngModel)]="scoreOverlayConfig.borderRadius" min="0" max="50" />
+                </div>
+                <div class="config-field">
+                  <label>Couleur du score</label>
+                  <div class="color-input-wrapper">
+                    <input type="color" [(ngModel)]="scoreOverlayConfig.scoreColor" />
+                    <span class="color-value">{{ scoreOverlayConfig.scoreColor }}</span>
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label>Taille du score (px)</label>
+                  <input type="number" [(ngModel)]="scoreOverlayConfig.scoreSize" min="16" max="72" />
+                </div>
+                <div class="config-field">
+                  <label>Couleur des équipes</label>
+                  <div class="color-input-wrapper">
+                    <input type="color" [(ngModel)]="scoreOverlayConfig.teamNameColor" />
+                    <span class="color-value">{{ scoreOverlayConfig.teamNameColor }}</span>
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label>Taille noms équipes (px)</label>
+                  <input type="number" [(ngModel)]="scoreOverlayConfig.teamNameSize" min="10" max="36" />
+                </div>
+              </div>
+              <!-- Preview -->
+              <div class="overlay-preview">
+                <div class="preview-label">Aperçu</div>
+                <div class="preview-container" [style.justify-content]="scoreOverlayConfig.position.includes('right') ? 'flex-end' : 'flex-start'" [style.align-items]="scoreOverlayConfig.position.includes('top') ? 'flex-start' : 'flex-end'">
+                  <div class="preview-overlay"
+                    [style.background]="scoreOverlayConfig.backgroundColor"
+                    [style.border-radius.px]="scoreOverlayConfig.borderRadius"
+                    [style.margin]="scoreOverlayConfig.offsetY + 'px ' + scoreOverlayConfig.offsetX + 'px'"
+                  >
+                    <div class="preview-score-row">
+                      <span class="preview-team" [style.color]="scoreOverlayConfig.teamNameColor" [style.font-size.px]="scoreOverlayConfig.teamNameSize * 0.7">DOMICILE</span>
+                      <span class="preview-score" [style.color]="scoreOverlayConfig.scoreColor" [style.font-size.px]="scoreOverlayConfig.scoreSize * 0.7">2</span>
+                      <span class="preview-separator">-</span>
+                      <span class="preview-score" [style.color]="scoreOverlayConfig.scoreColor" [style.font-size.px]="scoreOverlayConfig.scoreSize * 0.7">1</span>
+                      <span class="preview-team" [style.color]="scoreOverlayConfig.teamNameColor" [style.font-size.px]="scoreOverlayConfig.teamNameSize * 0.7">EXTÉRIEUR</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="config-actions">
+                <button class="btn btn-primary" (click)="saveScoreOverlayConfig()" [disabled]="savingScoreOverlay">
+                  {{ savingScoreOverlay ? 'Déploiement...' : 'Déployer sur le boîtier' }}
+                </button>
+                <button class="btn btn-secondary" (click)="toggleScoreOverlayConfig()">Annuler</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1270,6 +1353,139 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
       line-height: 1.5;
     }
 
+    /* Score Overlay Config */
+    .score-overlay-config {
+      margin-top: 1.5rem;
+      padding: 1.5rem;
+      background: #f8fafc;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .score-overlay-config h4 {
+      margin: 0 0 1rem 0;
+      font-size: 1rem;
+      color: #1e293b;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+
+    .config-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .config-field label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+
+    .config-field input[type="number"],
+    .config-field select {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      background: #fff;
+    }
+
+    .config-field input[type="number"]:focus,
+    .config-field select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .color-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .color-input-wrapper input[type="color"] {
+      width: 40px;
+      height: 32px;
+      padding: 2px;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .color-value {
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .overlay-preview {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #1e293b;
+      border-radius: 8px;
+    }
+
+    .preview-label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+    }
+
+    .preview-container {
+      display: flex;
+      min-height: 80px;
+      background: linear-gradient(45deg, #334155 25%, transparent 25%),
+                  linear-gradient(-45deg, #334155 25%, transparent 25%),
+                  linear-gradient(45deg, transparent 75%, #334155 75%),
+                  linear-gradient(-45deg, transparent 75%, #334155 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      border-radius: 4px;
+    }
+
+    .preview-overlay {
+      padding: 8px 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .preview-score-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preview-team {
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .preview-score {
+      font-weight: 700;
+    }
+
+    .preview-separator {
+      color: #999;
+      font-weight: 300;
+    }
+
+    .config-actions {
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn-small {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+    }
+
     /* Network Diagnostics Modal */
     .network-diagnostics {
       display: flex;
@@ -1507,6 +1723,19 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   // Premium options
   savingLiveScore = false;
+  showScoreOverlayConfig = false;
+  savingScoreOverlay = false;
+  scoreOverlayConfig = {
+    position: 'top-right' as 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left',
+    offsetX: 20,
+    offsetY: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    borderRadius: 12,
+    scoreColor: '#4caf50',
+    scoreSize: 28,
+    teamNameColor: '#ffffff',
+    teamNameSize: 16
+  };
 
   // Modals
   showLogsModal = false;
@@ -1914,7 +2143,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
     this.savingLiveScore = true;
     this.sitesService.updateSite(this.siteId, { live_score_enabled: newValue }).subscribe({
-      next: (updatedSite) => {
+      next: (_updatedSite) => {
         // Update local site object
         if (this.site) {
           this.site.live_score_enabled = newValue;
@@ -1948,6 +2177,52 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         this.savingLiveScore = false;
         // Revert checkbox state
         checkbox.checked = !newValue;
+        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+      }
+    });
+  }
+
+  // Score Overlay config methods
+  toggleScoreOverlayConfig(): void {
+    this.showScoreOverlayConfig = !this.showScoreOverlayConfig;
+    if (this.showScoreOverlayConfig && this.site?.neoProContent?.scoreOverlay) {
+      // Load existing config
+      this.scoreOverlayConfig = {
+        position: this.site.neoProContent.scoreOverlay.position || 'top-right',
+        offsetX: this.site.neoProContent.scoreOverlay.offsetX ?? 20,
+        offsetY: this.site.neoProContent.scoreOverlay.offsetY ?? 20,
+        backgroundColor: this.site.neoProContent.scoreOverlay.backgroundColor || 'rgba(0, 0, 0, 0.85)',
+        borderRadius: this.site.neoProContent.scoreOverlay.borderRadius ?? 12,
+        scoreColor: this.site.neoProContent.scoreOverlay.scoreColor || '#4caf50',
+        scoreSize: this.site.neoProContent.scoreOverlay.scoreSize ?? 28,
+        teamNameColor: this.site.neoProContent.scoreOverlay.teamNameColor || '#ffffff',
+        teamNameSize: this.site.neoProContent.scoreOverlay.teamNameSize ?? 16
+      };
+    }
+  }
+
+  saveScoreOverlayConfig(): void {
+    this.savingScoreOverlay = true;
+
+    // Deploy the configuration to the Raspberry Pi
+    this.sitesService.sendCommand(this.siteId, 'update_config', {
+      neoProContent: { scoreOverlay: this.scoreOverlayConfig },
+      mode: 'merge'
+    }).subscribe({
+      next: () => {
+        this.savingScoreOverlay = false;
+        // Update local site object
+        if (this.site) {
+          if (!this.site.neoProContent) {
+            this.site.neoProContent = {};
+          }
+          this.site.neoProContent.scoreOverlay = { ...this.scoreOverlayConfig };
+        }
+        this.notificationService.success('Configuration de l\'overlay déployée !');
+        this.showScoreOverlayConfig = false;
+      },
+      error: (error) => {
+        this.savingScoreOverlay = false;
         this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
       }
     });

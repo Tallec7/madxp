@@ -1,17 +1,17 @@
 <!-- Lecteur vidéo Video.js -->
 <video #target class="video-js vjs-default-skin vjs-big-play-centered vjs-16-9" playsinline></video>
 
-<!-- Overlay Score (coin supérieur droit) -->
-<div class="score-overlay" *ngIf="showScoreOverlay && currentScore">
+<!-- Overlay Score (position dynamique selon configuration) -->
+<div class="score-overlay" *ngIf="showScoreOverlay && currentScore" [ngStyle]="getOverlayStyles()">
   <div class="score-container">
     <div class="team home-team">
-      <span class="team-name">{{ currentScore.homeTeam }}</span>
-      <span class="team-score">{{ currentScore.homeScore }}</span>
+      <span class="team-name" [ngStyle]="getTeamNameStyles()">{{ currentScore.homeTeam }}</span>
+      <span class="team-score" [ngStyle]="getScoreStyles()">{{ currentScore.homeScore }}</span>
     </div>
     <div class="score-separator">-</div>
     <div class="team away-team">
-      <span class="team-score">{{ currentScore.awayScore }}</span>
-      <span class="team-name">{{ currentScore.awayTeam }}</span>
+      <span class="team-score" [ngStyle]="getScoreStyles()">{{ currentScore.awayScore }}</span>
+      <span class="team-name" [ngStyle]="getTeamNameStyles()">{{ currentScore.awayTeam }}</span>
     </div>
   </div>
   <div class="score-meta" *ngIf="currentScore.period || currentScore.matchTime">
@@ -19,4 +19,3 @@
     <span class="match-time" *ngIf="currentScore.matchTime">{{ currentScore.matchTime }}</span>
   </div>
 </div>
-

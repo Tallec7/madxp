@@ -1,6 +1,31 @@
 import { Category } from "./category.interface";
 import { Sponsor } from "./sponsor.interface";
 
+/**
+ * Configuration de l'overlay du score affiché sur la TV
+ * Permet de personnaliser la position, les couleurs et les tailles
+ */
+export interface ScoreOverlayConfig {
+    /** Position de l'overlay : 'top-right', 'top-left', 'bottom-right', 'bottom-left' */
+    position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+    /** Distance horizontale du bord (en pixels) */
+    offsetX?: number;
+    /** Distance verticale du bord (en pixels) */
+    offsetY?: number;
+    /** Couleur de fond (format CSS, ex: 'rgba(0, 0, 0, 0.85)') */
+    backgroundColor?: string;
+    /** Arrondi des coins (en pixels) */
+    borderRadius?: number;
+    /** Couleur du score (format CSS, ex: '#4caf50') */
+    scoreColor?: string;
+    /** Taille du score (en pixels) */
+    scoreSize?: number;
+    /** Couleur des noms d'équipe */
+    teamNameColor?: string;
+    /** Taille des noms d'équipe (en pixels) */
+    teamNameSize?: number;
+}
+
 // TimeCategory pour organiser les catégories dans /remote (Avant-match, Match, Après-match)
 export interface TimeCategory {
     id: string;
@@ -56,4 +81,9 @@ export interface Configuration {
      * Cette option est activée manuellement par NEOPRO (option payante)
      */
     liveScoreEnabled?: boolean;
+    /**
+     * Configuration de l'overlay du score (position, couleurs, tailles)
+     * Modifiable depuis le Central Dashboard
+     */
+    scoreOverlay?: ScoreOverlayConfig;
 }

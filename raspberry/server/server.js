@@ -279,7 +279,7 @@ io.on('connection', (socket) => {
 		io.emit('action', data);
 	});
 
-	// Score updates - persister et relayer à tous les clients (TV, score-bridge, etc.)
+	// Score updates - persister et relayer à tous les clients (TV, etc.)
 	socket.on('score-update', (data) => {
 		console.log('Score update reçu:', data);
 		// Persister le score
