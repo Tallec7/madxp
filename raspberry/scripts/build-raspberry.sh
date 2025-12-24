@@ -127,7 +127,8 @@ check_prerequisites() {
 
 RELEASE_VERSION="${RELEASE_VERSION:-}"
 BUILD_SOURCE="${BUILD_SOURCE:-local-build}"
-SKIP_XATTR_CLEANUP="${SKIP_XATTR_CLEANUP:-false}"
+# xattr cleanup désactivé par défaut (les warnings tar sont inoffensifs sur Linux)
+SKIP_XATTR_CLEANUP="${SKIP_XATTR_CLEANUP:-true}"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -257,41 +258,19 @@ print_success "Package de déploiement créé"
 
 print_step "Création de l'archive de déploiement..."
 
-# Supprimer les attributs étendus macOS (xattr) pour éviter les warnings
-# "Ignoring unknown extended header keyword" lors de l'extraction sur Linux
-# Note: COPYFILE_DISABLE=1 gère déjà les fichiers AppleDouble dans tar
-if [ "$SKIP_XATTR_CLEANUP" = "true" ]; then
-    print_warning "Suppression des attributs étendus ignorée (SKIP_XATTR_CLEANUP=true)"
-elif command -v xattr &> /dev/null; then
-    print_step "Suppression des attributs étendus macOS (timeout 30s)..."
-    # Utiliser timeout si disponible, sinon skip après 30s
+# Note: Les warnings "Ignoring unknown extended header keyword" lors de l'extraction
+# sur Linux sont inoffensifs. On skip xattr par défaut pour gagner du temps.
+# Utiliser SKIP_XATTR_CLEANUP=false pour forcer le nettoyage si nécessaire.
+if [ "$SKIP_XATTR_CLEANUP" != "true" ] && command -v xattr &> /dev/null; then
+    print_step "Suppression des attributs étendus macOS (timeout 5s)..."
     if command -v gtimeout &> /dev/null; then
-        gtimeout 30 xattr -cr ${DEPLOY_DIR} 2>/dev/null || print_warning "xattr ignoré (timeout ou erreur)"
+        gtimeout 5 xattr -cr ${DEPLOY_DIR} 2>/dev/null || print_warning "xattr ignoré (timeout)"
     elif command -v timeout &> /dev/null; then
-        timeout 30 xattr -cr ${DEPLOY_DIR} 2>/dev/null || print_warning "xattr ignoré (timeout ou erreur)"
+        timeout 5 xattr -cr ${DEPLOY_DIR} 2>/dev/null || print_warning "xattr ignoré (timeout)"
     else
-        # Pas de timeout disponible, exécuter en arrière-plan avec kill après 30s
-        xattr -cr ${DEPLOY_DIR} 2>/dev/null &
-        XATTR_PID=$!
-        sleep 1
-        if ps -p $XATTR_PID > /dev/null 2>&1; then
-            # Toujours en cours après 1s, attendre max 29s de plus
-            for i in {1..29}; do
-                sleep 1
-                if ! ps -p $XATTR_PID > /dev/null 2>&1; then
-                    break
-                fi
-                if [ $i -eq 29 ]; then
-                    kill $XATTR_PID 2>/dev/null || true
-                    print_warning "xattr interrompu (timeout 30s)"
-                fi
-            done
-        fi
-        wait $XATTR_PID 2>/dev/null || true
+        # Fallback rapide sans timeout
+        xattr -cr ${DEPLOY_DIR} 2>/dev/null || true
     fi
-    print_success "Attributs étendus traités"
-else
-    print_warning "xattr non disponible - étape ignorée"
 fi
 
 print_step "Compression de l'archive..."
@@ -307,9 +286,9 @@ ARCHIVE_LINK="neopro-raspberry-deploy.tar.gz"
 
 cd ${DEPLOY_DIR}
 if command -v pigz &> /dev/null; then
-    print_step "Utilisation de pigz (compression parallèle)..."
     COPYFILE_DISABLE=1 tar -cf - . | pigz > "../${ARCHIVE_NAME}"
 else
+    print_warning "pigz non installé - compression lente (installer avec: brew install pigz)"
     COPYFILE_DISABLE=1 tar -czf "../${ARCHIVE_NAME}" .
 fi
 cd - > /dev/null

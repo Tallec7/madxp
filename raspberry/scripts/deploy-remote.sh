@@ -191,9 +191,19 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Installation serveur
     if [ -d ~/neopro-update/server ]; then
         sudo cp -r ~/neopro-update/server/* ${RASPBERRY_DIR}/server/
-        cd ${RASPBERRY_DIR}/server
-        sudo npm install --production 2>/dev/null || true
-        echo 'Serveur installé'
+        # npm install seulement si package.json a changé
+        if [ -f ~/neopro-update/server/package.json ]; then
+            cd ${RASPBERRY_DIR}/server
+            if ! cmp -s ~/neopro-update/server/package.json ${RASPBERRY_DIR}/server/.package.json.last 2>/dev/null; then
+                sudo npm install --production 2>/dev/null || true
+                sudo cp package.json .package.json.last
+                echo 'Serveur installé (dépendances mises à jour)'
+            else
+                echo 'Serveur installé (dépendances inchangées)'
+            fi
+        else
+            echo 'Serveur installé'
+        fi
     fi
 
     # NOTE: Les vidéos ne sont pas déployées ici
@@ -210,9 +220,19 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     if [ -d ~/neopro-update/admin ]; then
         sudo mkdir -p ${RASPBERRY_DIR}/admin
         sudo cp -r ~/neopro-update/admin/* ${RASPBERRY_DIR}/admin/
-        cd ${RASPBERRY_DIR}/admin
-        sudo npm install --production 2>/dev/null || true
-        echo 'Admin panel installé'
+        # npm install seulement si package.json a changé
+        if [ -f ~/neopro-update/admin/package.json ]; then
+            cd ${RASPBERRY_DIR}/admin
+            if ! cmp -s ~/neopro-update/admin/package.json ${RASPBERRY_DIR}/admin/.package.json.last 2>/dev/null; then
+                sudo npm install --production 2>/dev/null || true
+                sudo cp package.json .package.json.last
+                echo 'Admin panel installé (dépendances mises à jour)'
+            else
+                echo 'Admin panel installé (dépendances inchangées)'
+            fi
+        else
+            echo 'Admin panel installé'
+        fi
     fi
 
     # Enregistrer les métadonnées de version (à la racine de neopro/)
@@ -284,31 +304,31 @@ print_step "Redémarrage des services..."
 ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Arrêter proprement neopro-app
     sudo systemctl stop neopro-app 2>/dev/null || true
-    sleep 1
 
     # Libérer le port 3000 si un processus zombie l'occupe encore
     if sudo fuser 3000/tcp >/dev/null 2>&1; then
         echo 'Port 3000 occupé, libération en cours...'
         sudo fuser -k 3000/tcp 2>/dev/null || true
-        sleep 2
+        sleep 1
     fi
 
-    sudo systemctl start neopro-app
-    sleep 2
-    sudo systemctl restart nginx
-    sleep 1
+    # Redémarrer tous les services en parallèle
+    sudo systemctl start neopro-app &
+    sudo systemctl restart nginx &
 
     # Redémarrer admin panel si installé
     if systemctl list-unit-files neopro-admin.service >/dev/null 2>&1; then
-        sudo systemctl restart neopro-admin
-        sleep 1
+        sudo systemctl restart neopro-admin &
     fi
 
     # Redémarrer sync-agent si installé
     if systemctl list-unit-files neopro-sync-agent.service >/dev/null 2>&1; then
-        sudo systemctl restart neopro-sync-agent
-        sleep 1
+        sudo systemctl restart neopro-sync-agent &
     fi
+
+    # Attendre que tous les services redémarrent
+    wait
+    sleep 1
 
     # Vérification des services
     if systemctl is-active --quiet neopro-app; then
