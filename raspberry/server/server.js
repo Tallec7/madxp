@@ -252,9 +252,26 @@ app.get('/api/sync/sponsor-impressions/stats', (req, res) => {
 	}
 });
 
+// ============================================================================
+// PERSISTANCE DU SCORE EN MÉMOIRE
+// Le score est conservé côté serveur pour éviter le reset au refresh
+// ============================================================================
+let currentScore = {
+	homeTeam: 'DOMICILE',
+	awayTeam: 'EXTÉRIEUR',
+	homeScore: 0,
+	awayScore: 0
+};
+
+let currentPhase = 'neutral';
+
 // Gestion des connexions Socket.IO
 io.on('connection', (socket) => {
 	console.log('Client connecté:', socket.id);
+
+	// Envoyer l'état actuel au client qui vient de se connecter
+	socket.emit('score-update', currentScore);
+	socket.emit('phase-change', { phase: currentPhase });
 
 	socket.on('command', (data) => {
 		console.log('Commande reçue:', data);
@@ -262,20 +279,38 @@ io.on('connection', (socket) => {
 		io.emit('action', data);
 	});
 
-	// Score updates - relayer à tous les clients (TV, score-bridge, etc.)
+	// Score updates - persister et relayer à tous les clients (TV, score-bridge, etc.)
 	socket.on('score-update', (data) => {
 		console.log('Score update reçu:', data);
-		io.emit('score-update', data);
+		// Persister le score
+		currentScore = {
+			homeTeam: data.homeTeam || currentScore.homeTeam,
+			awayTeam: data.awayTeam || currentScore.awayTeam,
+			homeScore: data.homeScore ?? currentScore.homeScore,
+			awayScore: data.awayScore ?? currentScore.awayScore
+		};
+		io.emit('score-update', currentScore);
 	});
 
 	socket.on('score-reset', () => {
 		console.log('Score reset reçu');
+		currentScore.homeScore = 0;
+		currentScore.awayScore = 0;
 		io.emit('score-reset');
+		io.emit('score-update', currentScore);
 	});
 
 	socket.on('phase-change', (data) => {
 		console.log('Phase change reçu:', data);
+		currentPhase = data.phase;
 		io.emit('phase-change', data);
+	});
+
+	// Permet à un client de redemander l'état actuel (utile après routing Angular)
+	socket.on('request-state', () => {
+		console.log('Request state reçu de:', socket.id);
+		socket.emit('score-update', currentScore);
+		socket.emit('phase-change', { phase: currentPhase });
 	});
 
 	socket.on('disconnect', () => {

@@ -21,6 +21,11 @@ export interface PhaseChange {
   phase: 'neutral' | 'before' | 'during' | 'after';
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface RequestState {
+  // Empty interface - just a signal to request current state
+}
+
 interface Socket {
   on<T>(event: string, callback: (data: T) => void): void;
   emit(event: string, data: unknown): void;
@@ -52,7 +57,7 @@ export class SocketService {
     }
   }
 
-  public emit(action: string, data: Command | MatchConfig | ScoreUpdate | PhaseChange) {
+  public emit(action: string, data: Command | MatchConfig | ScoreUpdate | PhaseChange | RequestState) {
     if (this.socket) {
       console.log('socket service : emit', action, data);
       this.socket.emit(action, data);
