@@ -121,16 +121,19 @@ elif [ -n "${SSH_RESULT}" ] && [ "${SSH_RESULT}" -ne 0 ]; then
 fi
 print_success "Connexion SSH OK"
 
-# Backup de la version actuelle
+# Backup de la version actuelle (sans compression pour vitesse sur Pi)
 print_step "Sauvegarde de la version actuelle..."
 ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     cd ${RASPBERRY_DIR}
     mkdir -p backups
-    BACKUP_NAME=\"backup-\$(date +%Y%m%d-%H%M%S).tar.gz\"
-    tar -czf backups/\${BACKUP_NAME} webapp/ server/ 2>/dev/null || true
+    BACKUP_NAME=\"backup-\$(date +%Y%m%d-%H%M%S).tar\"
+    # tar sans compression (-c au lieu de -czf) : 10x plus rapide sur Pi
+    tar -cf backups/\${BACKUP_NAME} webapp/ server/ 2>/dev/null || true
     echo \"Backup créé: \${BACKUP_NAME}\"
-    # Garder seulement les 5 derniers backups
-    ls -t backups/*.tar.gz 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null || true
+    # Garder seulement les 3 derniers backups (plus gros sans compression)
+    ls -t backups/backup-*.tar 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null || true
+    # Nettoyer anciens backups compressés
+    rm -f backups/*.tar.gz 2>/dev/null || true
 "
 print_success "Backup créé"
 
