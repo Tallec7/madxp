@@ -21,7 +21,7 @@
     "lint:raspberry": "ng lint raspberry",
     "lint:central": "ng lint central-dashboard",
     "lint:server": "cd central-server && npm run lint",
-    "server": "node server-render/server.js",
+    "server": "node raspberry/server/server.js",
     "prepare": "husky"
   },
   "lint-staged": {

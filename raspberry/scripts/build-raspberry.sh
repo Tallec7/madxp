@@ -114,8 +114,8 @@ check_prerequisites() {
     fi
 
     # Vérifier les répertoires requis
-    if [ ! -d "server-render" ]; then
-        print_error "Répertoire server-render/ non trouvé"
+    if [ ! -d "raspberry/server" ]; then
+        print_error "Répertoire raspberry/server/ non trouvé"
         ERRORS=$((ERRORS + 1))
     fi
 
@@ -210,8 +210,8 @@ cp -r dist/raspberry/browser/* ${DEPLOY_DIR}/webapp/
 # Modifier l'environnement dans le build pour pointer vers la config raspberry
 # (L'application utilisera automatiquement environment.raspberry.ts)
 
-# Copier le serveur Node.js
-cp -r server-render/* ${DEPLOY_DIR}/server/
+# Copier le serveur Node.js (source de vérité: raspberry/server/)
+cp -r raspberry/server/* ${DEPLOY_DIR}/server/
 
 # Copier le sync-agent
 if [ -d "raspberry/sync-agent" ]; then

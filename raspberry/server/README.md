@@ -1,48 +1,40 @@
-# Serveur Neopro pour Raspberry Pi
+# Serveur Neopro Socket.IO
 
-⚠️ **IMPORTANT : NE PAS MODIFIER CES FICHIERS DIRECTEMENT**
+Ce dossier est la **source de vérité** pour le serveur Socket.IO utilisé à la fois :
 
-Ce dossier contient une **copie** des fichiers du serveur pour permettre une installation autonome du dossier `raspberry/`.
-
-## Source de vérité
-
-Les fichiers sources se trouvent dans : `../../server-render/`
+- En **développement local** (`npm run server`)
+- Sur le **Raspberry Pi** (déployé via `build-and-deploy.sh`)
 
 ## Workflow de développement
 
 ### Pour modifier le serveur :
 
-1. **Modifiez les fichiers dans** `server-render/`
+1. **Modifiez les fichiers ici** (`raspberry/server/`)
 
    ```bash
-   cd server-render/
+   cd raspberry/server/
    # Éditez server.js ou package.json
    ```
 
 2. **Testez localement**
 
    ```bash
-   cd server-render/
+   cd raspberry/server/
    npm install
    npm start
    ```
 
-3. **Synchronisez vers raspberry/server/**
+3. **Committez**
 
    ```bash
-   cd raspberry/scripts/
-   ./sync-server.sh
-   ```
-
-4. **Committez les deux dossiers**
-   ```bash
-   git add server-render/ raspberry/server/
+   git add raspberry/server/
    git commit -m "feat: update server"
    ```
 
-## Pourquoi cette duplication ?
-
-Le dossier `raspberry/` doit être autonome pour pouvoir être copié seul sur un Raspberry Pi sans nécessiter tout le projet. C'est pourquoi nous maintenons une copie synchronisée du serveur.
+4. **Déployez sur le Raspberry Pi**
+   ```bash
+   ./raspberry/scripts/build-and-deploy.sh
+   ```
 
 ## Fichiers
 

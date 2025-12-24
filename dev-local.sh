@@ -71,11 +71,11 @@ else
     echo -e "${GREEN}✓${NC} Dépendances Angular OK"
 fi
 
-if [ ! -d "server-render/node_modules" ]; then
+if [ ! -d "raspberry/server/node_modules" ]; then
     echo "Installation des dépendances serveur Socket.IO..."
-    cd server-render
+    cd raspberry/server
     npm install
-    cd ..
+    cd ../..
 else
     echo -e "${GREEN}✓${NC} Dépendances serveur Socket.IO OK"
 fi
@@ -142,10 +142,10 @@ trap cleanup SIGINT SIGTERM
 
 # 1. Démarrer le serveur Socket.IO
 echo -e "${GREEN}[1/5]${NC} Démarrage Socket.IO server (port 3003)..."
-cd server-render
-PORT=3003 node server.js > ../logs/socket.log 2>&1 &
+cd raspberry/server
+PORT=3003 node server.js > ../../logs/socket.log 2>&1 &
 PID_SOCKET=$!
-cd ..
+cd ../..
 sleep 2
 
 if ps -p $PID_SOCKET > /dev/null; then
