@@ -2696,6 +2696,18 @@ app.listen(PORT, '0.0.0.0', async () => {
   console.log(`  - http://192.168.4.1:${PORT}`);
   console.log(`  - http://localhost:${PORT}`);
 
+  // Créer les répertoires nécessaires au démarrage
+  try {
+    await fs.mkdir(VIDEOS_DIR, { recursive: true });
+    await fs.mkdir(TEMP_UPLOAD_DIR, { recursive: true });
+    await fs.mkdir(PROCESSING_DIR, { recursive: true });
+    await fs.mkdir(THUMBNAILS_DIR, { recursive: true });
+    await fs.mkdir(LOGS_DIR, { recursive: true });
+    console.log('✓ Répertoires système initialisés');
+  } catch (error) {
+    console.error('⚠ Erreur lors de la création des répertoires:', error.message);
+  }
+
   // Initialiser les notifications email
   await emailNotifier.init();
 });
