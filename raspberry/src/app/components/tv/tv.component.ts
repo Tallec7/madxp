@@ -1,6 +1,5 @@
 import { Component, ElementRef, inject, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { trigger, state, style, transition, animate } from '@angular/animations';
 import { Subscription } from 'rxjs';
 import videojs from 'video.js';
 import "videojs-playlist";
@@ -31,18 +30,7 @@ interface PlayerWithPlaylist extends Player {
   selector: 'app-tv',
   templateUrl: './tv.component.html',
   styleUrl: './tv.component.scss',
-  imports: [CommonModule],
-  animations: [
-    trigger('fadeInOut', [
-      transition(':enter', [
-        style({ opacity: 0, transform: 'scale(0.7)' }),
-        animate('400ms ease-out', style({ opacity: 1, transform: 'scale(1)' }))
-      ]),
-      transition(':leave', [
-        animate('300ms ease-in', style({ opacity: 0, transform: 'scale(0.9)' }))
-      ])
-    ])
-  ]
+  imports: [CommonModule]
 })
 export class TvComponent implements OnInit, OnDestroy {
   private readonly socketService = inject(SocketService);
@@ -66,8 +54,6 @@ export class TvComponent implements OnInit, OnDestroy {
   // Live Score
   public currentScore: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; period?: string; matchTime?: string } | null = null;
   public showScoreOverlay = false;
-  public showScorePopup = false;
-  private scorePopupTimeout: ReturnType<typeof setTimeout> | null = null;
 
   @ViewChild('target', { static: true }) target: ElementRef;
 
@@ -194,7 +180,6 @@ export class TvComponent implements OnInit, OnDestroy {
       console.log('[TV] Score reset received');
       this.currentScore = null;
       this.showScoreOverlay = false;
-      this.showScorePopup = false;
     });
 
     // Live Score - Écouter les infos de match mises à jour
@@ -226,7 +211,6 @@ export class TvComponent implements OnInit, OnDestroy {
           // Reset du score
           this.currentScore = null;
           this.showScoreOverlay = false;
-          this.showScorePopup = false;
         } else {
           this.handleScoreUpdate(scoreData);
         }
@@ -426,39 +410,8 @@ export class TvComponent implements OnInit, OnDestroy {
     period?: string;
     matchTime?: string;
   }): void {
-    const previousScore = this.currentScore;
     this.currentScore = scoreData;
     this.showScoreOverlay = true;
-
-    // Détecter un changement de score pour afficher le popup
-    if (previousScore) {
-      const scoreChanged =
-        previousScore.homeScore !== scoreData.homeScore ||
-        previousScore.awayScore !== scoreData.awayScore;
-
-      if (scoreChanged) {
-        this.triggerScorePopup();
-      }
-    }
-  }
-
-  /**
-   * Affiche temporairement le popup de score (5 secondes)
-   */
-  private triggerScorePopup(): void {
-    // Annuler le timeout précédent s'il existe
-    if (this.scorePopupTimeout) {
-      clearTimeout(this.scorePopupTimeout);
-    }
-
-    // Afficher le popup
-    this.showScorePopup = true;
-
-    // Masquer après 5 secondes
-    this.scorePopupTimeout = setTimeout(() => {
-      this.showScorePopup = false;
-      this.scorePopupTimeout = null;
-    }, 5000);
   }
 
   /**

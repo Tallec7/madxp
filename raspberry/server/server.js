@@ -262,6 +262,22 @@ io.on('connection', (socket) => {
 		io.emit('action', data);
 	});
 
+	// Score updates - relayer à tous les clients (TV, score-bridge, etc.)
+	socket.on('score-update', (data) => {
+		console.log('Score update reçu:', data);
+		io.emit('score-update', data);
+	});
+
+	socket.on('score-reset', () => {
+		console.log('Score reset reçu');
+		io.emit('score-reset');
+	});
+
+	socket.on('phase-change', (data) => {
+		console.log('Phase change reçu:', data);
+		io.emit('phase-change', data);
+	});
+
 	socket.on('disconnect', () => {
 		console.log('Client déconnecté:', socket.id);
 	});
