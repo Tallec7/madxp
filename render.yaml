@@ -41,6 +41,24 @@ services:
         value: /data/videos
 
   # ============================================
+  # SOCKET.IO SERVER (for demo site neopro.kalonpartners.bzh)
+  # ============================================
+  - type: web
+    name: neopro
+    env: node
+    region: frankfurt
+    plan: free
+    rootDirectory: raspberry/server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: https://neopro.kalonpartners.bzh,https://neopro-admin.kalonpartners.bzh,http://localhost:4200
+
+  # ============================================
   # CENTRAL DASHBOARD (Admin Frontend)
   # ============================================
   - type: web
