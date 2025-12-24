@@ -1,0 +1,39 @@
+# Systemd service pour le streaming FFmpeg Neopro
+# Stream les vidéos avec incrustation du score en temps réel
+
+[Unit]
+Description=Neopro FFmpeg Live Streaming with Score Overlay
+Documentation=https://github.com/neopro
+After=network.target neopro-score-bridge.service neopro-playlist-manager.service
+Requires=neopro-score-bridge.service neopro-playlist-manager.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/neopro
+Environment=HOME=/home/pi
+Environment=NEOPRO_DIR=/home/pi/neopro
+Environment=HLS_DIR=/var/www/neopro/hls
+Environment=SCORE_DIR=/tmp
+
+# Attendre que le playlist soit prêt
+ExecStartPre=/bin/sleep 3
+
+# Commande de lancement
+ExecStart=/home/pi/neopro/scripts/ffmpeg-stream.sh
+
+# Redémarrage automatique en cas de crash
+Restart=always
+RestartSec=10
+
+# Limite CPU pour ne pas surcharger le Pi
+CPUQuota=80%
+Nice=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=neopro-ffmpeg-stream
+
+[Install]
+WantedBy=multi-user.target

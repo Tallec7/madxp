@@ -1,0 +1,35 @@
+# Systemd service pour le mode Kiosque VLC Neopro
+# Lance VLC en plein écran pour afficher le stream HLS avec score incrusté
+# Alternative à neopro-kiosk.service (Chromium)
+
+[Unit]
+Description=Neopro VLC Kiosk Mode (HLS Stream Display)
+Documentation=https://github.com/neopro
+After=graphical.target neopro-ffmpeg-stream.service
+Wants=graphical.target
+Requires=neopro-ffmpeg-stream.service
+
+[Service]
+Type=simple
+User=pi
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+Environment=HLS_URL=http://localhost/hls/stream.m3u8
+
+# Attendre que le stream soit prêt
+ExecStartPre=/bin/sleep 10
+
+# Lancement de VLC
+ExecStart=/home/pi/neopro/scripts/vlc-kiosk.sh
+
+# Redémarrage automatique
+Restart=always
+RestartSec=5
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=neopro-vlc-kiosk
+
+[Install]
+WantedBy=graphical.target
