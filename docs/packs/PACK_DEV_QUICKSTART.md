@@ -145,7 +145,7 @@ neopro/ (root workspace)
 │       ├── middleware/          # Auth, validation, rate-limit
 │       └── scripts/             # Migrations, seed data
 │
-├── central-dashboard/           # Cloud admin (Angular 17)
+├── central-dashboard/           # Cloud admin (Angular 20)
 │   └── src/app/
 │       ├── features/            # Sites, Analytics, Admin
 │       └── core/                # Services, guards, models

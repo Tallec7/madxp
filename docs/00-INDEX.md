@@ -57,23 +57,24 @@ Documentation business, stratégie et planification.
 
 ### 🔍 [Audits](audit/)
 Rapports d'audit techniques et de conformité.
-- [Audit projet 14 déc 2025](audit/AUDIT_PROJET_2025-12-14.md) (51K)
-- [Audit solution v2](audit/AUDIT_SOLUTION_COMPLET_V2.md) (20K)
-- [Audit documentation 17 déc 2025](audit/AUDIT_DOCS_2025-12-17.md)
+- [Audit plateforme 25 déc 2025](audit/AUDIT_PLATEFORME_COMPLET_2025.md) (41K) - **Source de vérité**
+- [Analyse stratégie produit](audit/PRODUCT_STRATEGY_ANALYSIS.md) (33K)
+- [Audit documentation 25 déc 2025](audit/AUDIT_DOCS_2025-12-25.md) - Structure et doublons
 
 ### 📝 [Changelog](changelog/)
 Historique des modifications et commits.
-- [CHANGELOG principal](changelog/CHANGELOG.md)
-- [Commits détaillés](changelog/commits/)
+- [CHANGELOG principal](changelog/CHANGELOG.md) - Historique consolidé
+- Changelogs par feature (2025-12-*.md)
 
 ### 💻 [Documentation Développeur](dev/)
 Setup environnement et conventions de code.
 
 ### 📦 [Archive](archive/)
 Fichiers obsolètes et historiques.
-- [Audits archivés](archive/audits/)
-- [Rapports temporels](archive/reports/)
-- [Fixes spécifiques](archive/fixes/)
+- [Audits archivés](archive/audits/) - Anciens audits (avant 25/12)
+- [Rapports temporels](archive/reports/) - Corrections et sessions
+- [Fixes spécifiques](archive/fixes/) - Correctifs ponctuels
+- [Commits individuels](archive/commits/) - 138 fichiers changelog granulaires
 
 ---
 
@@ -156,6 +157,6 @@ neopro/
 
 ---
 
-**Dernière mise à jour** : 17 décembre 2025 - Restructuration complète documentation (Niveau 2)
+**Dernière mise à jour** : 25 décembre 2025 - Audit et nettoyage documentation
 
-**Version** : 2.0
+**Version** : 2.1

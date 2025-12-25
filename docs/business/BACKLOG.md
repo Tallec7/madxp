@@ -1,7 +1,7 @@
 # BACKLOG NEOPRO - Features à Développer
 
 > **Date de création** : 15 Décembre 2025
-> **Dernière MAJ** : 15 Décembre 2025 14:30
+> **Dernière MAJ** : 25 Décembre 2025
 > **Statut projet** : 🟢 Production-Ready (voir `STATUS.md`)
 
 Ce document regroupe les features planifiées et leur état d'avancement.

@@ -216,7 +216,7 @@ HTTP Response + Logging
 - Query optimization with indexes on `site_id`, `created_at`
 - Response compression (gzip)
 
-#### Central Dashboard (Angular 17)
+#### Central Dashboard (Angular 20)
 
 **Responsibility:** Admin UI for site/video/user management and analytics
 

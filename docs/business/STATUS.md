@@ -1,7 +1,7 @@
 # 📊 NEOPRO - État du Projet
 
-> **Dernière mise à jour** : 15 Décembre 2025 (14h30)
-> **Version** : 1.5.0
+> **Dernière mise à jour** : 25 Décembre 2025
+> **Version** : 2.0
 > **Note Globale** : **9.5/10** (Fonctionnel + Évolutif)
 
 ---

@@ -11,7 +11,7 @@ Neopro est une plateforme distribuée Edge + Cloud pour la diffusion de contenu 
 │                                                               │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌────────────┐ │
 │  │ Central Dashboard│  │  Central Server  │  │  Socket.IO │ │
-│  │   (Angular 17)   │  │ (Node.js/Express)│  │   Server   │ │
+│  │   (Angular 20)   │  │ (Node.js/Express)│  │   Server   │ │
 │  │   Port: 443      │  │   Port: 443      │  │  Port: 443 │ │
 │  │                  │  │                  │  │            │ │
 │  │  - Gestion sites │  │  - API REST      │  │  - WebRTC  │ │
