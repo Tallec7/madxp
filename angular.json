@@ -179,7 +179,15 @@
             "polyfills": ["zone.js"],
             "tsConfig": "central-dashboard/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
-            "assets": ["central-dashboard/src/favicon.ico", "central-dashboard/src/assets"],
+            "assets": [
+              "central-dashboard/src/favicon.ico",
+              "central-dashboard/src/assets",
+              {
+                "glob": ".htaccess",
+                "input": "central-dashboard/",
+                "output": "/"
+              }
+            ],
             "styles": ["central-dashboard/src/styles.scss"]
           },
           "configurations": {
