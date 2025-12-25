@@ -5,6 +5,12 @@ import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
 import { User, AuthResponse } from '../models';
 
+/**
+ * Tests for AuthService with HttpOnly cookie-based authentication.
+ *
+ * Note: With HttpOnly cookies, the token is no longer stored in localStorage.
+ * Authentication state is determined by the presence of a user from /auth/me.
+ */
 describe('AuthService', () => {
   let service: AuthService;
   let apiServiceSpy: jasmine.SpyObj<ApiService>;
@@ -20,7 +26,7 @@ describe('AuthService', () => {
   };
 
   const mockAuthResponse: AuthResponse = {
-    token: 'test-token-123',
+    token: 'test-token-123', // Still returned for SSE compatibility
     user: mockUser
   };
 
@@ -28,9 +34,8 @@ describe('AuthService', () => {
     apiServiceSpy = jasmine.createSpyObj('ApiService', ['get', 'post']);
     routerSpy = jasmine.createSpyObj('Router', ['navigate']);
 
-    // Default: no token, no user loaded
-    localStorage.clear();
-    apiServiceSpy.get.and.returnValue(throwError(() => new Error('No token')));
+    // Default: not authenticated
+    apiServiceSpy.get.and.returnValue(throwError(() => new Error('Unauthorized')));
 
     TestBed.configureTestingModule({
       providers: [
@@ -43,24 +48,19 @@ describe('AuthService', () => {
     service = TestBed.inject(AuthService);
   });
 
-  afterEach(() => {
-    localStorage.clear();
-  });
-
   describe('initialization', () => {
     it('should be created', () => {
       expect(service).toBeTruthy();
     });
 
-    it('should not be authenticated initially without token', () => {
-      expect(service.isAuthenticated()).toBeFalse();
-    });
+    it('should check authentication status via API on init', fakeAsync(() => {
+      tick();
+      expect(apiServiceSpy.get).toHaveBeenCalledWith('/auth/me');
+    }));
 
-    it('should load current user if token exists', fakeAsync(() => {
-      localStorage.setItem('neopro_token', 'existing-token');
+    it('should load current user if cookie session is valid', fakeAsync(() => {
       apiServiceSpy.get.and.returnValue(of(mockUser));
 
-      // Recreate service to trigger loadCurrentUser
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         providers: [
@@ -75,10 +75,10 @@ describe('AuthService', () => {
 
       expect(apiServiceSpy.get).toHaveBeenCalledWith('/auth/me');
       expect(newService.getCurrentUser()).toEqual(mockUser);
+      expect(newService.isAuthenticated()).toBeTrue();
     }));
 
-    it('should clear token if loadCurrentUser fails', fakeAsync(() => {
-      localStorage.setItem('neopro_token', 'invalid-token');
+    it('should set user to null if session is invalid', fakeAsync(() => {
       apiServiceSpy.get.and.returnValue(throwError(() => new Error('Unauthorized')));
 
       TestBed.resetTestingModule();
@@ -93,13 +93,13 @@ describe('AuthService', () => {
       const newService = TestBed.inject(AuthService);
       tick();
 
-      expect(localStorage.getItem('neopro_token')).toBeNull();
       expect(newService.getCurrentUser()).toBeNull();
+      expect(newService.isAuthenticated()).toBeFalse();
     }));
   });
 
   describe('login', () => {
-    it('should store token and update user on successful login', fakeAsync(() => {
+    it('should update current user on successful login', fakeAsync(() => {
       apiServiceSpy.post.and.returnValue(of(mockAuthResponse));
 
       let result: AuthResponse | undefined;
@@ -108,11 +108,35 @@ describe('AuthService', () => {
 
       expect(apiServiceSpy.post).toHaveBeenCalledWith('/auth/login', {
         email: 'test@example.com',
-        password: 'password123'
+        password: 'password123',
+        mfaCode: undefined
       });
-      expect(localStorage.getItem('neopro_token')).toBe('test-token-123');
       expect(service.getCurrentUser()).toEqual(mockUser);
       expect(result).toEqual(mockAuthResponse);
+    }));
+
+    it('should pass MFA code when provided', fakeAsync(() => {
+      apiServiceSpy.post.and.returnValue(of(mockAuthResponse));
+
+      service.login('test@example.com', 'password123', '123456').subscribe();
+      tick();
+
+      expect(apiServiceSpy.post).toHaveBeenCalledWith('/auth/login', {
+        email: 'test@example.com',
+        password: 'password123',
+        mfaCode: '123456'
+      });
+    }));
+
+    it('should store SSE token in memory (not localStorage)', fakeAsync(() => {
+      apiServiceSpy.post.and.returnValue(of(mockAuthResponse));
+
+      service.login('test@example.com', 'password123').subscribe();
+      tick();
+
+      expect(service.getSseToken()).toBe('test-token-123');
+      // Token should NOT be in localStorage
+      expect(localStorage.getItem('neopro_token')).toBeNull();
     }));
 
     it('should emit user through currentUser$ observable', fakeAsync(() => {
@@ -127,7 +151,7 @@ describe('AuthService', () => {
       expect(emittedUser).toEqual(mockUser as any);
     }));
 
-    it('should not store token on failed login', fakeAsync(() => {
+    it('should not update user on failed login', fakeAsync(() => {
       apiServiceSpy.post.and.returnValue(throwError(() => new Error('Invalid credentials')));
 
       service.login('test@example.com', 'wrong-password').subscribe({
@@ -135,8 +159,8 @@ describe('AuthService', () => {
       });
       tick();
 
-      expect(localStorage.getItem('neopro_token')).toBeNull();
       expect(service.getCurrentUser()).toBeNull();
+      expect(service.getSseToken()).toBeNull();
     }));
   });
 
@@ -145,54 +169,114 @@ describe('AuthService', () => {
       apiServiceSpy.post.and.returnValue(of(mockAuthResponse));
       service.login('test@example.com', 'password123').subscribe();
       tick();
+
+      // Reset for logout call
+      apiServiceSpy.post.and.returnValue(of({ success: true }));
     }));
 
-    it('should remove token from localStorage', () => {
+    it('should call logout API', fakeAsync(() => {
       service.logout();
-      expect(localStorage.getItem('neopro_token')).toBeNull();
-    });
+      tick();
 
-    it('should set current user to null', () => {
+      expect(apiServiceSpy.post).toHaveBeenCalledWith('/auth/logout', {});
+    }));
+
+    it('should clear SSE token', fakeAsync(() => {
       service.logout();
+      tick();
+
+      expect(service.getSseToken()).toBeNull();
+    }));
+
+    it('should set current user to null', fakeAsync(() => {
+      service.logout();
+      tick();
+
       expect(service.getCurrentUser()).toBeNull();
-    });
+    }));
 
-    it('should navigate to login page', () => {
+    it('should navigate to login page', fakeAsync(() => {
       service.logout();
-      expect(routerSpy.navigate).toHaveBeenCalledWith(['/login']);
-    });
+      tick();
 
-    it('should emit null through currentUser$ observable', fakeAsync(() => {
-      let emittedUser: User | null = mockUser;
-      service.currentUser$.subscribe(u => emittedUser = u);
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/login']);
+    }));
+
+    it('should logout locally even if API call fails', fakeAsync(() => {
+      apiServiceSpy.post.and.returnValue(throwError(() => new Error('Network error')));
 
       service.logout();
       tick();
 
-      expect(emittedUser).toBeNull();
+      expect(service.getCurrentUser()).toBeNull();
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/login']);
     }));
   });
 
-  describe('getToken', () => {
-    it('should return null if no token exists', () => {
-      expect(service.getToken()).toBeNull();
-    });
-
-    it('should return token if it exists', () => {
-      localStorage.setItem('neopro_token', 'my-token');
-      expect(service.getToken()).toBe('my-token');
-    });
-  });
-
   describe('isAuthenticated', () => {
-    it('should return false if no token', () => {
+    it('should return false when no user is loaded', () => {
       expect(service.isAuthenticated()).toBeFalse();
     });
 
-    it('should return true if token exists', () => {
-      localStorage.setItem('neopro_token', 'some-token');
+    it('should return true when user is loaded', fakeAsync(() => {
+      apiServiceSpy.post.and.returnValue(of(mockAuthResponse));
+      service.login('test@example.com', 'password123').subscribe();
+      tick();
+
       expect(service.isAuthenticated()).toBeTrue();
+    }));
+  });
+
+  describe('checkAuthentication', () => {
+    it('should return true when already authenticated', fakeAsync(() => {
+      apiServiceSpy.post.and.returnValue(of(mockAuthResponse));
+      service.login('test@example.com', 'password123').subscribe();
+      tick();
+
+      // Simulate auth check completing
+      (service as any).authChecked = true;
+
+      let result: boolean | undefined;
+      service.checkAuthentication().subscribe(r => result = r);
+      tick();
+
+      expect(result).toBeTrue();
+    }));
+
+    it('should verify via API when not yet checked', fakeAsync(() => {
+      apiServiceSpy.get.and.returnValue(of(mockUser));
+
+      let result: boolean | undefined;
+      service.checkAuthentication().subscribe(r => result = r);
+      tick();
+
+      expect(result).toBeTrue();
+      expect(service.getCurrentUser()).toEqual(mockUser);
+    }));
+
+    it('should return false when API returns error', fakeAsync(() => {
+      apiServiceSpy.get.and.returnValue(throwError(() => new Error('Unauthorized')));
+
+      let result: boolean | undefined;
+      service.checkAuthentication().subscribe(r => result = r);
+      tick();
+
+      expect(result).toBeFalse();
+    }));
+  });
+
+  describe('getSseToken', () => {
+    it('should return null when not logged in', () => {
+      expect(service.getSseToken()).toBeNull();
     });
+
+    it('should return token after login', fakeAsync(() => {
+      apiServiceSpy.post.and.returnValue(of(mockAuthResponse));
+      service.login('test@example.com', 'password123').subscribe();
+      tick();
+
+      expect(service.getSseToken()).toBe('test-token-123');
+    }));
   });
 
   describe('hasRole', () => {
@@ -214,23 +298,36 @@ describe('AuthService', () => {
       expect(service.hasRole('operator')).toBeFalse();
     });
 
-    it('should return false if no user is logged in', () => {
+    it('should return false if no user is logged in', fakeAsync(() => {
+      apiServiceSpy.post.and.returnValue(of({ success: true }));
       service.logout();
-      expect(service.hasRole('admin')).toBeFalse();
-    });
-  });
-
-  describe('getCurrentUser', () => {
-    it('should return null if not logged in', () => {
-      expect(service.getCurrentUser()).toBeNull();
-    });
-
-    it('should return user after login', fakeAsync(() => {
-      apiServiceSpy.post.and.returnValue(of(mockAuthResponse));
-      service.login('test@example.com', 'password123').subscribe();
       tick();
 
+      expect(service.hasRole('admin')).toBeFalse();
+    }));
+  });
+
+  describe('refreshCurrentUser', () => {
+    it('should update current user from API', fakeAsync(() => {
+      apiServiceSpy.get.and.returnValue(of(mockUser));
+
+      let result: User | null | undefined;
+      service.refreshCurrentUser().subscribe(r => result = r);
+      tick();
+
+      expect(result).toEqual(mockUser);
       expect(service.getCurrentUser()).toEqual(mockUser);
+    }));
+
+    it('should set user to null on API error', fakeAsync(() => {
+      apiServiceSpy.get.and.returnValue(throwError(() => new Error('Unauthorized')));
+
+      let result: User | null | undefined;
+      service.refreshCurrentUser().subscribe(r => result = r);
+      tick();
+
+      expect(result).toBeNull();
+      expect(service.getCurrentUser()).toBeNull();
     }));
   });
 });

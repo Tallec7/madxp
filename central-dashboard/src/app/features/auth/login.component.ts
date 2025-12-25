@@ -9,14 +9,15 @@ import { AuthService } from '../../core/services/auth.service';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   template: `
-    <div class="login-container">
-      <div class="login-card">
+    <div class="login-container" role="main">
+      <div class="login-card" role="region" aria-labelledby="login-title">
         <div class="login-header">
-          <img src="assets/neopro-logo.png" alt="Neopro" class="login-logo" />
+          <img src="assets/neopro-logo.png" alt="Logo Neopro" class="login-logo" />
+          <h1 id="login-title" class="visually-hidden">Connexion au Dashboard Central</h1>
           <p>Dashboard Central</p>
         </div>
 
-        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" aria-label="Formulaire de connexion">
           <div class="form-group">
             <label for="email">Email</label>
             <input
@@ -24,9 +25,17 @@ import { AuthService } from '../../core/services/auth.service';
               type="email"
               formControlName="email"
               placeholder="admin@neopro.fr"
+              autocomplete="email"
+              [attr.aria-invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+              [attr.aria-describedby]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched ? 'email-error' : null"
               [class.error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
             />
-            <span class="error-message" *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
+            <span
+              id="email-error"
+              class="error-message"
+              role="alert"
+              *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+            >
               Email requis
             </span>
           </div>
@@ -38,24 +47,39 @@ import { AuthService } from '../../core/services/auth.service';
               type="password"
               formControlName="password"
               placeholder="••••••••"
+              autocomplete="current-password"
+              [attr.aria-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+              [attr.aria-describedby]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched ? 'password-error' : null"
               [class.error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
             />
-            <span class="error-message" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+            <span
+              id="password-error"
+              class="error-message"
+              role="alert"
+              *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+            >
               Mot de passe requis
             </span>
           </div>
 
-          <div class="error-alert" *ngIf="errorMessage">
+          <div class="error-alert" role="alert" aria-live="polite" *ngIf="errorMessage">
             <span>⚠️ {{ errorMessage }}</span>
           </div>
 
-          <button type="submit" class="btn btn-primary btn-block" [disabled]="loading || loginForm.invalid">
+          <button
+            type="submit"
+            class="btn btn-primary btn-block"
+            [disabled]="loading || loginForm.invalid"
+            [attr.aria-busy]="loading"
+            aria-label="Se connecter au dashboard"
+          >
             <span *ngIf="!loading">Se connecter</span>
-            <span *ngIf="loading" class="spinner-small"></span>
+            <span *ngIf="loading" class="spinner-small" aria-hidden="true"></span>
+            <span *ngIf="loading" class="visually-hidden">Connexion en cours...</span>
           </button>
         </form>
 
-        <div class="login-footer">
+        <div class="login-footer" aria-label="Informations de version">
           <p>Version 1.0.0</p>
         </div>
       </div>
@@ -181,6 +205,48 @@ import { AuthService } from '../../core/services/auth.service';
       color: #94a3b8;
       font-size: 0.875rem;
       margin: 0;
+    }
+
+    /* WCAG AA Accessibility */
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Focus visible pour navigation clavier */
+    .form-group input:focus-visible {
+      outline: 3px solid var(--neo-hockey-dark, #2022E9);
+      outline-offset: 2px;
+    }
+
+    .btn:focus-visible {
+      outline: 3px solid #fff;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 6px var(--neo-hockey-dark, #2022E9);
+    }
+
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+      .form-group input {
+        border-width: 3px;
+      }
+      .btn {
+        border: 2px solid currentColor;
+      }
+    }
+
+    /* Reduced motion preference */
+    @media (prefers-reduced-motion: reduce) {
+      .spinner-small {
+        animation: none;
+      }
     }
   `]
 })

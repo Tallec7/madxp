@@ -368,4 +368,63 @@ ssh pi@neopro.local 'cat /etc/neopro/site.conf'
 
 ---
 
-**Dernière mise à jour :** 9 décembre 2025
+---
+
+## 9. Configuration Email (SMTP)
+
+### Variables d'environnement
+
+Pour activer les notifications email (alertes, déploiements, rapports), configurez les variables SMTP dans le `.env` du central-server :
+
+```bash
+# Configuration SMTP (Gmail recommandé)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=votre-email@gmail.com
+SMTP_PASSWORD=xxxx-xxxx-xxxx-xxxx  # App Password Google
+SMTP_FROM=NeoPro <noreply@neopro.fr>
+SMTP_SECURE=false
+```
+
+### Configuration Gmail
+
+1. **Activer 2FA** sur votre compte Google
+2. **Créer un App Password** : https://myaccount.google.com/apppasswords
+3. **Utiliser ce mot de passe** dans `SMTP_PASSWORD`
+
+### Types de notifications
+
+| Type | Déclencheur | Contenu |
+|------|-------------|---------|
+| Alerte | Site hors ligne, CPU > 90% | Détails du problème |
+| Déploiement | Fin de déploiement | Résumé succès/échec |
+| Rapport | Manuel ou planifié | PDF analytics |
+
+---
+
+## 10. Configuration Sécurité
+
+### CORS (Production)
+
+```bash
+# OBLIGATOIRE en production
+ALLOWED_ORIGINS=https://dashboard.neopro.fr,https://control.neopro.fr
+```
+
+Si non configuré en production, toutes les requêtes cross-origin seront **rejetées** (fail-closed).
+
+### TLS/SSL
+
+Les connexions à la base de données utilisent SSL par défaut. Ne **jamais** ajouter :
+```bash
+# ❌ INTERDIT - Vulnérabilité de sécurité
+NODE_TLS_REJECT_UNAUTHORIZED=0
+```
+
+### Authentification Admin Raspberry
+
+Au premier démarrage du panneau admin (port 8080), vous devrez configurer un mot de passe. Ce mot de passe est stocké dans `/home/pi/neopro/admin/auth-config.json`.
+
+---
+
+**Dernière mise à jour :** 25 décembre 2025

@@ -3,13 +3,19 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { ApiService } from './api.service';
 import { environment } from '@env/environment';
 
+/**
+ * Tests for ApiService with HttpOnly cookie-based authentication.
+ *
+ * Note: With HttpOnly cookies, the token is stored in a cookie managed by the browser.
+ * - No localStorage usage
+ * - No Authorization header set by the service (cookie sent automatically)
+ * - withCredentials: true enables automatic cookie transmission
+ */
 describe('ApiService', () => {
   let service: ApiService;
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
-    localStorage.clear();
-
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [ApiService]
@@ -21,7 +27,6 @@ describe('ApiService', () => {
 
   afterEach(() => {
     httpMock.verify();
-    localStorage.clear();
   });
 
   describe('GET requests', () => {
@@ -41,17 +46,15 @@ describe('ApiService', () => {
       req.flush({});
     });
 
-    it('should include Authorization header when token exists', () => {
-      localStorage.setItem('neopro_token', 'test-token');
-
+    it('should send requests with credentials for HttpOnly cookies', () => {
       service.get('/test').subscribe();
 
       const req = httpMock.expectOne(`${environment.apiUrl}/test`);
-      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
+      expect(req.request.withCredentials).toBeTrue();
       req.flush({});
     });
 
-    it('should not include Authorization header when no token', () => {
+    it('should NOT set Authorization header (cookie-based auth)', () => {
       service.get('/test').subscribe();
 
       const req = httpMock.expectOne(`${environment.apiUrl}/test`);
@@ -82,14 +85,6 @@ describe('ApiService', () => {
 
       expect(result).toEqual({ id: 1, name: 'Test' });
     });
-
-    it('should send requests with credentials for cookies', () => {
-      service.get('/test').subscribe();
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/test`);
-      expect(req.request.withCredentials).toBeTrue();
-      req.flush({});
-    });
   });
 
   describe('POST requests', () => {
@@ -110,21 +105,19 @@ describe('ApiService', () => {
       req.flush({});
     });
 
-    it('should include Authorization header when token exists', () => {
-      localStorage.setItem('neopro_token', 'test-token');
-
-      service.post('/test', {}).subscribe();
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/test`);
-      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
-      req.flush({});
-    });
-
     it('should send POST requests with credentials', () => {
       service.post('/test', {}).subscribe();
 
       const req = httpMock.expectOne(`${environment.apiUrl}/test`);
       expect(req.request.withCredentials).toBeTrue();
+      req.flush({});
+    });
+
+    it('should NOT set Authorization header (cookie-based auth)', () => {
+      service.post('/test', {}).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/test`);
+      expect(req.request.headers.has('Authorization')).toBeFalse();
       req.flush({});
     });
   });
@@ -156,6 +149,24 @@ describe('ApiService', () => {
     });
   });
 
+  describe('PATCH requests', () => {
+    it('should make PATCH request to correct URL', () => {
+      service.patch('/test/1', { field: 'value' }).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/test/1`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush({});
+    });
+
+    it('should send PATCH requests with credentials', () => {
+      service.patch('/test/1', {}).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/test/1`);
+      expect(req.request.withCredentials).toBeTrue();
+      req.flush({});
+    });
+  });
+
   describe('DELETE requests', () => {
     it('should make DELETE request to correct URL', () => {
       service.delete('/test/1').subscribe();
@@ -165,21 +176,19 @@ describe('ApiService', () => {
       req.flush({});
     });
 
-    it('should include Authorization header when token exists', () => {
-      localStorage.setItem('neopro_token', 'test-token');
-
-      service.delete('/sites/123').subscribe();
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/sites/123`);
-      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
-      req.flush({});
-    });
-
     it('should send DELETE requests with credentials', () => {
       service.delete('/sites/123').subscribe();
 
       const req = httpMock.expectOne(`${environment.apiUrl}/sites/123`);
       expect(req.request.withCredentials).toBeTrue();
+      req.flush({});
+    });
+
+    it('should NOT set Authorization header (cookie-based auth)', () => {
+      service.delete('/test/1').subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/test/1`);
+      expect(req.request.headers.has('Authorization')).toBeFalse();
       req.flush({});
     });
   });
@@ -204,17 +213,6 @@ describe('ApiService', () => {
       const req = httpMock.expectOne(`${environment.apiUrl}/upload`);
       // Content-Type should not be set (browser sets it with boundary)
       expect(req.request.headers.has('Content-Type')).toBeFalse();
-      req.flush({});
-    });
-
-    it('should include Authorization header when token exists', () => {
-      localStorage.setItem('neopro_token', 'test-token');
-      const formData = new FormData();
-
-      service.upload('/upload', formData).subscribe();
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/upload`);
-      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush({});
     });
 

@@ -4,11 +4,13 @@ import { catchError, map, tap } from 'rxjs/operators';
 import { AdminActionRequest, AdminJob, AdminActionType, LocalClient, LocalClientInput } from '../models/admin';
 import { NotificationService } from './notification.service';
 import { ApiService } from './api.service';
+import { AuthService } from './auth.service';
 import { environment } from '@env/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AdminOpsService {
   private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
   private readonly notifications = inject(NotificationService);
   private jobs$ = new BehaviorSubject<AdminJob[]>([]);
   private clients$ = new BehaviorSubject<LocalClient[]>([]);
@@ -45,7 +47,8 @@ export class AdminOpsService {
       return;
     }
 
-    const token = localStorage.getItem('neopro_token');
+    // Utiliser le token SSE du service d'authentification (pas localStorage)
+    const token = this.auth.getSseToken();
     const url = token
       ? `${environment.apiUrl}/admin/jobs/stream?token=${encodeURIComponent(token)}`
       : `${environment.apiUrl}/admin/jobs/stream`;

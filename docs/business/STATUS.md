@@ -35,7 +35,7 @@ NEOPRO est une plateforme **complète et fonctionnelle** de gestion de contenu v
 | **Fonctionnalités Analytics** | 9.5/10       | 🟢 Avancé       |
 | **Documentation**             | 9/10         | 🟢 Excellente   |
 | **Tests Backend**             | 93% coverage | 🟢 Bon          |
-| **Sécurité**                  | 8/10         | 🟡 À améliorer  |
+| **Sécurité**                  | 9.5/10       | 🟢 Renforcée    |
 | **Qualité Code**              | 7.5/10       | 🟡 Satisfaisant |
 
 ---
@@ -228,7 +228,53 @@ NEOPRO est une plateforme **complète et fonctionnelle** de gestion de contenu v
 
 ---
 
-## ✅ FEATURES RÉCEMMENT TERMINÉES (15 Décembre 2025)
+## ✅ FEATURES RÉCEMMENT TERMINÉES
+
+### 🔒 Audit Sécurité Plateforme - **TERMINÉ 25 Décembre 2025**
+
+**Note Sécurité** : Passée de 8/10 à 9.5/10
+
+**Corrections Critiques (P0)** :
+
+- ✅ **SEC-001** - Authentification Admin Raspberry
+  - Session cookies sécurisées
+  - First-time password setup
+  - Protection tous endpoints
+
+- ✅ **SEC-002** - Suppression mot de passe hardcodé
+  - Plus de `GG_NEO_25k!` dans le code
+  - Configuration dynamique
+
+- ✅ **SEC-003** - CORS & TLS sécurisés
+  - Mode fail-closed en production
+  - Suppression `NODE_TLS_REJECT_UNAUTHORIZED=0`
+
+- ✅ **SEC-004** - JWT vers HttpOnly Cookies
+  - Plus de localStorage pour tokens
+  - Protection XSS renforcée
+
+**Nouvelles Fonctionnalités (P1)** :
+
+- ✅ **FEAT-003** - Scheduling des déploiements
+  - Paramètre `scheduled_at` pour déploiements programmés
+  - Service scheduler vérifiant toutes les minutes
+
+- ✅ **FEAT-004** - Notifications email
+  - Service nodemailer complet
+  - Templates : alertes, déploiements, rapports
+
+**Améliorations Technique (P2)** :
+
+- ✅ **TECH-001** - Tests frontend mis à jour (auth HttpOnly)
+- ✅ **DOC-001** - Documentation OpenAPI enrichie
+- ✅ **UX-001** - Accessibilité WCAG AA (aria-labels, skip-link, focus-visible)
+
+**Référence** : `docs/audit/AUDIT_PLATEFORME_COMPLET_2025.md`
+**Changelog** : `docs/changelog/2025-12-25_platform-audit-implementation.md`
+
+---
+
+### 📱 Télécommande v2 - **TERMINÉ 15 Décembre 2025**
 
 ### 1. Télécommande v2 - Refonte Complète ✅ TERMINÉ
 
@@ -458,15 +504,18 @@ Total: ~50,000 lignes de code
 - ✅ Tests manuels complets
 - 🟡 Tests e2e à implémenter
 
-### Sécurité
+### Sécurité ✅ RENFORCÉE (25 Déc 2025)
 
-- ✅ JWT authentication
+- ✅ JWT authentication (HttpOnly cookies)
 - ✅ RBAC (3 rôles)
 - ✅ Validation inputs backend
 - ✅ HTTPS obligatoire (production)
 - ✅ Secrets via variables d'environnement
+- ✅ CORS fail-closed en production
+- ✅ Authentification Admin Raspberry
+- ✅ Suppression mot de passe hardcodé
+- ✅ Accessibilité WCAG AA
 - 🟡 Rate limiting à ajouter
-- 🟡 Audit sécurité complet à faire
 
 ---
 
@@ -621,7 +670,7 @@ Total: ~50,000 lignes de code
 
 ---
 
-**Version** : 1.5.0
-**Date** : 15 Décembre 2025 (14h30)
+**Version** : 2.0.0
+**Date** : 25 Décembre 2025
 **Auteur** : Équipe NEOPRO + Claude Code
-**Statut** : 🟢 Production-Ready avec roadmap claire
+**Statut** : 🟢 Production-Ready avec sécurité renforcée

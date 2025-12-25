@@ -62,6 +62,10 @@ tags:
     description: Statistiques et métriques
   - name: Audit
     description: Logs d'audit
+  - name: Admin
+    description: Administration système (admins uniquement)
+  - name: System
+    description: Endpoints système (health, metrics)
 
 components:
   securitySchemes:
@@ -174,13 +178,22 @@ components:
           format: uuid
         status:
           type: string
-          enum: [pending, in_progress, completed, failed, cancelled]
+          enum: [pending, scheduled, in_progress, completed, failed, cancelled]
+          description: "scheduled = déploiement planifié pour exécution future"
         progress:
           type: integer
           minimum: 0
           maximum: 100
         error_message:
           type: string
+        scheduled_at:
+          type: string
+          format: date-time
+          description: Date/heure d'exécution planifiée (si status=scheduled)
+        scheduled_by:
+          type: string
+          format: uuid
+          description: ID de l'utilisateur ayant planifié le déploiement
         created_at:
           type: string
           format: date-time
@@ -698,12 +711,44 @@ paths:
     get:
       tags: [Deployments]
       summary: Liste des déploiements
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, scheduled, in_progress, completed, failed, cancelled]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
           description: Liste des déploiements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deployments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Deployment'
+                  total:
+                    type: integer
     post:
       tags: [Deployments]
       summary: Créer un déploiement
+      description: |
+        Crée un nouveau déploiement de contenu.
+
+        Si `scheduled_at` est fourni, le déploiement sera planifié pour exécution future.
+        Le scheduler vérifie toutes les minutes les déploiements planifiés dus.
       requestBody:
         required: true
         content:
@@ -723,9 +768,17 @@ paths:
                   items:
                     type: string
                     format: uuid
+                scheduled_at:
+                  type: string
+                  format: date-time
+                  description: Date/heure d'exécution planifiée (optionnel)
       responses:
         '201':
           description: Déploiement créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deployment'
 
   /api/canary/deployments:
     get:
@@ -985,3 +1038,198 @@ paths:
                             type: integer
                           status:
                             type: string
+
+  # ===========================================================================
+  # SCHEDULED DEPLOYMENTS
+  # ===========================================================================
+
+  /api/deployments/scheduled:
+    get:
+      tags: [Deployments]
+      summary: Liste des déploiements planifiés
+      description: Retourne les déploiements avec status=scheduled
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Liste des déploiements planifiés
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Deployment'
+                  updates:
+                    type: array
+                    items:
+                      type: object
+
+  /api/deployments/{id}/cancel:
+    post:
+      tags: [Deployments]
+      summary: Annuler un déploiement planifié
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Déploiement annulé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '400':
+          description: Déploiement non planifié ou déjà exécuté
+        '404':
+          description: Déploiement non trouvé
+
+  # ===========================================================================
+  # ADMIN ENDPOINTS
+  # ===========================================================================
+
+  /api/admin/jobs:
+    get:
+      tags: [Admin]
+      summary: Liste des jobs système
+      description: Réservé aux admins
+      responses:
+        '200':
+          description: Liste des jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        status:
+                          type: string
+                          enum: [idle, running, completed, failed]
+                        lastRun:
+                          type: string
+                          format: date-time
+                        nextRun:
+                          type: string
+                          format: date-time
+    post:
+      tags: [Admin]
+      summary: Déclencher un job manuellement
+      description: Réservé aux admins
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [jobName]
+              properties:
+                jobName:
+                  type: string
+                  description: Nom du job à déclencher
+      responses:
+        '200':
+          description: Job déclenché
+        '404':
+          description: Job non trouvé
+
+  /api/admin/jobs/stream:
+    get:
+      tags: [Admin]
+      summary: Stream des logs de jobs (SSE)
+      description: |
+        Server-Sent Events pour les logs temps réel des jobs.
+        Réservé aux admins.
+      responses:
+        '200':
+          description: Stream SSE
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /api/admin/clients:
+    get:
+      tags: [Admin]
+      summary: Liste des clients (sites connectés)
+      description: Réservé aux admins
+      responses:
+        '200':
+          description: Liste des clients connectés
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clients:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        site_name:
+                          type: string
+                        connected_at:
+                          type: string
+                          format: date-time
+                        last_ping:
+                          type: string
+                          format: date-time
+    post:
+      tags: [Admin]
+      summary: Créer un client
+      description: Réservé aux admins
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [site_id]
+              properties:
+                site_id:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Client créé
+
+  /api/admin/clients/{id}/sync:
+    post:
+      tags: [Admin]
+      summary: Forcer la synchronisation d'un client
+      description: Réservé aux admins
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Synchronisation démarrée
+        '404':
+          description: Client non trouvé

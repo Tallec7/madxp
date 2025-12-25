@@ -5,6 +5,7 @@
 import { query } from '../config/database';
 import logger from '../config/logger';
 import metricsService from './metrics.service';
+import emailService from './email.service';
 
 export type AlertSeverity = 'info' | 'warning' | 'critical';
 export type AlertStatus = 'active' | 'acknowledged' | 'resolved' | 'escalated';
@@ -472,12 +473,53 @@ class AlertingService {
     severity: AlertSeverity,
     value: number
   ): Promise<void> {
-    // TODO: Implémenter les différents canaux de notification
+    // Recuperer les informations du site
+    let siteName = 'Site inconnu';
+    try {
+      const siteResult = await query(
+        'SELECT site_name FROM sites WHERE id = $1',
+        [siteId]
+      );
+      if (siteResult.rows.length > 0) {
+        siteName = siteResult.rows[0].site_name as string;
+      }
+    } catch (e) {
+      // Ignorer les erreurs de recuperation du nom du site
+    }
+
+    // Recuperer les emails des admins pour les notifications
+    let adminEmails: string[] = [];
+    try {
+      const usersResult = await query(
+        "SELECT email FROM users WHERE role = 'admin' AND email IS NOT NULL"
+      );
+      adminEmails = usersResult.rows.map(r => r.email as string);
+    } catch (e) {
+      // Ignorer les erreurs
+    }
+
     for (const channel of threshold.notifyChannels) {
       switch (channel) {
         case 'email':
-          // TODO: Envoyer email
-          logger.info('Would send email notification', { threshold: threshold.name, siteId, severity });
+          if (adminEmails.length > 0 && emailService.isEnabled()) {
+            await emailService.sendAlertNotification(adminEmails, {
+              siteName,
+              siteId,
+              alertType: threshold.name,
+              severity,
+              message: this.formatAlertMessage(threshold, value, severity),
+              timestamp: new Date(),
+              dashboardUrl: process.env.DASHBOARD_URL ? `${process.env.DASHBOARD_URL}/sites/${siteId}` : undefined,
+            });
+          } else {
+            logger.debug('Email notification skipped (no recipients or service disabled)', {
+              threshold: threshold.name,
+              siteId,
+              severity,
+              emailEnabled: emailService.isEnabled(),
+              adminCount: adminEmails.length,
+            });
+          }
           break;
         case 'webhook':
           // TODO: Appeler webhook

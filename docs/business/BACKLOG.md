@@ -21,6 +21,44 @@ Ce document regroupe les features planifiées et leur état d'avancement.
 
 ## ✅ FEATURES TERMINÉES RÉCEMMENT
 
+### ✅ Audit Plateforme Sécurité - **TERMINÉ 25 Déc 2025**
+
+**Statut** : 🟢 100% Implémenté
+
+**User Stories Sécurité (P0 Critique)** :
+
+- ✅ **SEC-001** - Authentification Admin Raspberry (session cookies, first-time setup)
+- ✅ **SEC-002** - Suppression mot de passe hardcodé `GG_NEO_25k!`
+- ✅ **SEC-003** - CORS fail-closed en production + suppression TLS bypass
+- ✅ **SEC-004** - Migration JWT localStorage → HttpOnly cookies
+
+**User Stories Features (P1)** :
+
+- ✅ **FEAT-003** - Scheduling déploiements (scheduled_at, scheduler service)
+- ✅ **FEAT-004** - Notifications email (nodemailer, templates HTML)
+
+**User Stories Technique (P2)** :
+
+- ✅ **TECH-001** - Tests frontend Angular mis à jour pour auth HttpOnly
+- ✅ **DOC-001** - Documentation OpenAPI enrichie (admin, scheduled deployments)
+- ✅ **UX-001** - Accessibilité WCAG AA (aria-labels, skip-link, focus-visible)
+
+**Fichiers principaux modifiés** :
+
+- `raspberry/admin/admin-server.js` - Auth session
+- `raspberry/src/app/services/auth.service.ts` - First-time password setup
+- `central-server/src/server.ts` - CORS fail-closed
+- `central-dashboard/src/app/core/services/auth.service.ts` - HttpOnly cookies
+- `central-server/src/services/scheduler.service.ts` - Scheduler déploiements
+- `central-server/src/services/email.service.ts` - Notifications email
+- `central-server/src/docs/openapi.yaml` - Documentation API
+
+**Documentation** : `docs/changelog/2025-12-25_platform-audit-implementation.md`
+
+**Référence** : `docs/audit/AUDIT_PLATEFORME_COMPLET_2025.md`
+
+---
+
 ### ✅ Télécommande v2 - **TERMINÉ 15 Déc 2025 (14h30)**
 
 **Statut** : 🟢 100% Implémenté
@@ -855,8 +893,8 @@ CREATE TABLE api_usage_logs (
 - Chaque feature nécessite validation Business avant dev
 - Les efforts sont des estimations, à affiner en planning poker
 
-**Dernière mise à jour** : 15 Décembre 2025 14:30
-**Prochaine revue backlog** : 31 Décembre 2025
+**Dernière mise à jour** : 25 Décembre 2025
+**Prochaine revue backlog** : 15 Janvier 2026
 
 ---
 

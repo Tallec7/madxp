@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { environment } from '@env/environment';
@@ -118,13 +118,9 @@ export class AnalyticsService {
   }
 
   exportClubData(siteId: string, format: 'csv' | 'json' = 'csv', days: number = 30): Observable<Blob> {
-    const token = localStorage.getItem('neopro_token');
-    const headers = new HttpHeaders({
-      ...(token && { 'Authorization': `Bearer ${token}` })
-    });
+    // L'authentification est geree par le cookie HttpOnly (withCredentials: true)
     const params = new HttpParams().set('format', format).set('days', days.toString());
     return this.http.get(`${this.apiUrl}/analytics/clubs/${siteId}/export`, {
-      headers,
       params,
       responseType: 'blob',
       withCredentials: true
@@ -132,15 +128,11 @@ export class AnalyticsService {
   }
 
   getClubPdfReport(siteId: string, from: string, to: string): Observable<Blob> {
-    const token = localStorage.getItem('neopro_token');
-    const headers = new HttpHeaders({
-      ...(token && { 'Authorization': `Bearer ${token}` })
-    });
+    // L'authentification est geree par le cookie HttpOnly (withCredentials: true)
     const params = new HttpParams()
       .set('from', from)
       .set('to', to);
     return this.http.get(`${this.apiUrl}/analytics/clubs/${siteId}/report/pdf`, {
-      headers,
       params,
       responseType: 'blob',
       withCredentials: true

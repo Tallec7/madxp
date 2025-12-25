@@ -4,6 +4,13 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router } from '@angular/router';
 import { authInterceptor } from './auth.interceptor';
 
+/**
+ * Tests for authInterceptor with HttpOnly cookie-based authentication.
+ *
+ * Note: With HttpOnly cookies, the token is managed by the browser.
+ * - No localStorage cleanup on 401 (cookie is cleared by server)
+ * - Interceptor only handles redirect to login on authentication errors
+ */
 describe('authInterceptor', () => {
   let httpClient: HttpClient;
   let httpMock: HttpTestingController;
@@ -11,7 +18,6 @@ describe('authInterceptor', () => {
 
   beforeEach(() => {
     routerSpy = jasmine.createSpyObj('Router', ['navigate']);
-    localStorage.clear();
 
     TestBed.configureTestingModule({
       providers: [
@@ -27,93 +33,116 @@ describe('authInterceptor', () => {
 
   afterEach(() => {
     httpMock.verify();
-    localStorage.clear();
   });
 
-  it('should pass through successful requests', () => {
-    let response: any;
-    httpClient.get('/api/test').subscribe(r => response = r);
+  describe('successful requests', () => {
+    it('should pass through successful requests', () => {
+      let response: any;
+      httpClient.get('/api/test').subscribe(r => response = r);
 
-    const req = httpMock.expectOne('/api/test');
-    req.flush({ data: 'success' });
+      const req = httpMock.expectOne('/api/test');
+      req.flush({ data: 'success' });
 
-    expect(response).toEqual({ data: 'success' });
-  });
-
-  it('should pass through non-401 errors', () => {
-    let error: any;
-    httpClient.get('/api/test').subscribe({
-      error: e => error = e
+      expect(response).toEqual({ data: 'success' });
     });
 
-    const req = httpMock.expectOne('/api/test');
-    req.flush('Not Found', { status: 404, statusText: 'Not Found' });
+    it('should not redirect on success', () => {
+      httpClient.get('/api/test').subscribe();
 
-    expect(error.status).toBe(404);
-    expect(routerSpy.navigate).not.toHaveBeenCalled();
+      const req = httpMock.expectOne('/api/test');
+      req.flush({ data: 'success' });
+
+      expect(routerSpy.navigate).not.toHaveBeenCalled();
+    });
   });
 
-  it('should redirect to login on 401 error', () => {
-    localStorage.setItem('neopro_token', 'test-token');
+  describe('401 Unauthorized errors', () => {
+    it('should redirect to login on 401 error', () => {
+      httpClient.get('/api/test').subscribe({
+        error: () => {}
+      });
 
-    httpClient.get('/api/test').subscribe({
-      error: () => {}
+      const req = httpMock.expectOne('/api/test');
+      req.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/login']);
     });
 
-    const req = httpMock.expectOne('/api/test');
-    req.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+    it('should propagate the error after redirecting on 401', () => {
+      let error: any;
+      httpClient.get('/api/test').subscribe({
+        error: e => error = e
+      });
 
-    expect(routerSpy.navigate).toHaveBeenCalledWith(['/login']);
+      const req = httpMock.expectOne('/api/test');
+      req.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+
+      expect(error.status).toBe(401);
+    });
+
+    it('should redirect on 401 for POST requests', () => {
+      httpClient.post('/api/test', {}).subscribe({
+        error: () => {}
+      });
+
+      const req = httpMock.expectOne('/api/test');
+      req.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/login']);
+    });
   });
 
-  it('should remove token on 401 error', () => {
-    localStorage.setItem('neopro_token', 'test-token');
+  describe('non-401 errors', () => {
+    it('should pass through 404 errors without redirect', () => {
+      let error: any;
+      httpClient.get('/api/test').subscribe({
+        error: e => error = e
+      });
 
-    httpClient.get('/api/test').subscribe({
-      error: () => {}
+      const req = httpMock.expectOne('/api/test');
+      req.flush('Not Found', { status: 404, statusText: 'Not Found' });
+
+      expect(error.status).toBe(404);
+      expect(routerSpy.navigate).not.toHaveBeenCalled();
     });
 
-    const req = httpMock.expectOne('/api/test');
-    req.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+    it('should pass through 403 Forbidden errors without redirect', () => {
+      let error: any;
+      httpClient.get('/api/test').subscribe({
+        error: e => error = e
+      });
 
-    expect(localStorage.getItem('neopro_token')).toBeNull();
-  });
+      const req = httpMock.expectOne('/api/test');
+      req.flush('Forbidden', { status: 403, statusText: 'Forbidden' });
 
-  it('should propagate the error after handling 401', () => {
-    let error: any;
-    httpClient.get('/api/test').subscribe({
-      error: e => error = e
+      expect(error.status).toBe(403);
+      expect(routerSpy.navigate).not.toHaveBeenCalled();
     });
 
-    const req = httpMock.expectOne('/api/test');
-    req.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+    it('should pass through 500 errors without redirect', () => {
+      let error: any;
+      httpClient.get('/api/test').subscribe({
+        error: e => error = e
+      });
 
-    expect(error.status).toBe(401);
-  });
+      const req = httpMock.expectOne('/api/test');
+      req.flush('Server Error', { status: 500, statusText: 'Server Error' });
 
-  it('should handle 500 errors without redirect', () => {
-    httpClient.get('/api/test').subscribe({
-      error: () => {}
+      expect(error.status).toBe(500);
+      expect(routerSpy.navigate).not.toHaveBeenCalled();
     });
 
-    const req = httpMock.expectOne('/api/test');
-    req.flush('Server Error', { status: 500, statusText: 'Server Error' });
+    it('should pass through 400 Bad Request errors without redirect', () => {
+      let error: any;
+      httpClient.post('/api/test', {}).subscribe({
+        error: e => error = e
+      });
 
-    expect(routerSpy.navigate).not.toHaveBeenCalled();
-    expect(localStorage.getItem('neopro_token')).toBeNull(); // was already null
-  });
+      const req = httpMock.expectOne('/api/test');
+      req.flush({ message: 'Invalid data' }, { status: 400, statusText: 'Bad Request' });
 
-  it('should handle 403 errors without redirect to login', () => {
-    localStorage.setItem('neopro_token', 'test-token');
-
-    httpClient.get('/api/test').subscribe({
-      error: () => {}
+      expect(error.status).toBe(400);
+      expect(routerSpy.navigate).not.toHaveBeenCalled();
     });
-
-    const req = httpMock.expectOne('/api/test');
-    req.flush('Forbidden', { status: 403, statusText: 'Forbidden' });
-
-    expect(routerSpy.navigate).not.toHaveBeenCalled();
-    expect(localStorage.getItem('neopro_token')).toBe('test-token'); // Token not removed for 403
   });
 });

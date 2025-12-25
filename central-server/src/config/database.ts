@@ -36,11 +36,18 @@ const shouldUseSSL =
 
 const sslCertificate = shouldUseSSL ? loadSslCertificate() : undefined;
 
-// For cloud providers with self-signed certificates, disable Node.js TLS verification
-// This is a fallback in case pg's ssl.rejectUnauthorized doesn't work
+// SECURITY: We intentionally do NOT set NODE_TLS_REJECT_UNAUTHORIZED=0 as it would
+// disable TLS verification globally for ALL connections (HTTP clients, etc.)
+// Instead, we configure rejectUnauthorized: false only for the pg connection pool.
+// This is scoped to PostgreSQL connections only and doesn't affect other TLS connections.
 if (process.env.NODE_ENV === 'production' && shouldUseSSL && !sslCertificate) {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-  logger.warn('NODE_TLS_REJECT_UNAUTHORIZED set to 0 for cloud provider compatibility');
+  logger.warn('='.repeat(80));
+  logger.warn('SECURITY NOTE: DATABASE_SSL_CA not configured.');
+  logger.warn('Using rejectUnauthorized: false for PostgreSQL connection ONLY.');
+  logger.warn('For better security, provide the Supabase/database CA certificate via:');
+  logger.warn('  - DATABASE_SSL_CA (inline certificate)');
+  logger.warn('  - DATABASE_SSL_CA_FILE (path to certificate file)');
+  logger.warn('='.repeat(80));
 }
 
 // Build SSL configuration

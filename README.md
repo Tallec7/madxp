@@ -278,6 +278,40 @@ npm run deploy:raspberry neopro.local
 
 ---
 
+## Sécurité
+
+### Authentification
+
+| Interface | Méthode | Stockage |
+|-----------|---------|----------|
+| Dashboard Central | HttpOnly Cookie | Serveur (cookie) |
+| Admin Raspberry | Session Cookie | Local (session) |
+| Webapp Raspberry | JWT (mémoire) | Configuration locale |
+
+### Bonnes pratiques
+
+1. **Première connexion Admin Raspberry** : Définir un mot de passe fort (12+ caractères)
+2. **CORS** : Toujours configurer `ALLOWED_ORIGINS` en production
+3. **HTTPS** : Utiliser un reverse proxy (nginx) avec certificat SSL
+4. **Mots de passe** : Ne jamais utiliser le mot de passe par défaut
+
+### Variables d'environnement critiques
+
+```bash
+# Production - OBLIGATOIRE
+ALLOWED_ORIGINS=https://dashboard.neopro.fr,https://control.neopro.fr
+NODE_ENV=production
+
+# Notifications email (optionnel)
+SMTP_HOST=smtp.gmail.com
+SMTP_USER=votre-email@gmail.com
+SMTP_PASSWORD=app-password
+```
+
+**Documentation sécurité :** [SECURITY_IMPROVEMENTS.md](SECURITY_IMPROVEMENTS.md)
+
+---
+
 ## Dépannage rapide
 
 ### Le boîtier ne répond pas

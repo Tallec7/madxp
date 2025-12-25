@@ -2,7 +2,155 @@
 
 ## 📋 Résumé des Modifications
 
-Toutes les améliorations recommandées dans l'audit de la page :8080 ont été implémentées pour le serveur d'administration Raspberry Pi.
+Ce document décrit toutes les améliorations de sécurité implémentées pour la plateforme NeoPro suite à l'audit de décembre 2025.
+
+---
+
+## 🔴 CORRECTIONS CRITIQUES (P0) - Décembre 2025
+
+### SEC-001: Authentification Admin Raspberry
+
+**Vulnérabilité corrigée:** Panneau admin accessible sans authentification sur le réseau local.
+
+**Implémentation:**
+```javascript
+// raspberry/admin/admin-server.js
+const cookieParser = require('cookie-parser');
+
+// Session sécurisée
+app.use(cookieParser());
+const sessions = new Map();
+
+// Protection de tous les endpoints
+app.use((req, res, next) => {
+  if (req.path === '/login' || req.path.startsWith('/api/auth')) {
+    return next();
+  }
+  const sessionId = req.cookies?.admin_session;
+  if (!sessionId || !sessions.has(sessionId)) {
+    return res.redirect('/login');
+  }
+  next();
+});
+```
+
+**Configuration:**
+- Session durée: 8 heures (configurable)
+- Cookies HTTPOnly et Secure en production
+- Setup first-time au premier démarrage
+
+---
+
+### SEC-002: Suppression Mot de Passe Hardcodé
+
+**Vulnérabilité corrigée:** Mot de passe `GG_NEO_25k!` visible dans le code source.
+
+**Avant (VULNÉRABLE):**
+```typescript
+// ❌ ANCIEN CODE
+private readonly DEFAULT_PASSWORD = 'GG_NEO_25k!';
+```
+
+**Après (SÉCURISÉ):**
+```typescript
+// ✅ NOUVEAU CODE
+requiresSetup$ = new BehaviorSubject<boolean>(false);
+
+setInitialPassword(password: string): Observable<boolean> {
+  return this.http.post('/api/auth/setup', { password });
+}
+```
+
+---
+
+### SEC-003: CORS Fail-Closed & TLS
+
+**Vulnérabilités corrigées:**
+1. CORS permissif autorisant toutes origines
+2. `NODE_TLS_REJECT_UNAUTHORIZED=0` désactivant SSL
+
+**Implémentation CORS Fail-Closed:**
+```typescript
+// central-server/src/server.ts
+const isProduction = process.env.NODE_ENV === 'production';
+const corsFailClosed = isProduction && allowedOrigins.length === 0;
+
+if (corsFailClosed) {
+  logger.error('SECURITY WARNING: ALLOWED_ORIGINS not configured!');
+  logger.error('All cross-origin requests will be REJECTED.');
+}
+
+const resolveOrigin = (origin?: string): string | null => {
+  if (corsFailClosed) {
+    logger.warn('CORS request rejected (fail-closed mode)', { origin });
+    return null;  // ← Rejette en production si non configuré
+  }
+  // ...
+};
+```
+
+**Suppression TLS Bypass:**
+```typescript
+// ❌ SUPPRIMÉ de database.ts
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+```
+
+---
+
+### SEC-004: JWT vers HttpOnly Cookies
+
+**Vulnérabilité corrigée:** JWT stocké dans localStorage (vulnérable XSS).
+
+**Architecture sécurisée:**
+```
+┌─────────────┐         ┌─────────────┐         ┌─────────────┐
+│   Browser   │ ──────► │   API       │ ──────► │  Database   │
+│             │ Cookie  │   Server    │         │             │
+│             │ HttpOnly│             │         │             │
+└─────────────┘         └─────────────┘         └─────────────┘
+      │
+      │ SSE Token (mémoire uniquement)
+      ▼
+┌─────────────┐
+│  EventSource│
+│  (Real-time)│
+└─────────────┘
+```
+
+**Implémentation Frontend:**
+```typescript
+// central-dashboard/src/app/core/services/auth.service.ts
+private sseToken: string | null = null;  // Mémoire uniquement
+
+login(email: string, password: string): Observable<AuthResponse> {
+  return this.api.post<AuthResponse>('/auth/login', { email, password }).pipe(
+    tap(response => {
+      this.currentUserSubject.next(response.user);
+      this.sseToken = response.token;  // Pour SSE uniquement
+      // ✅ PAS de localStorage.setItem()
+    })
+  );
+}
+
+getSseToken(): string | null {
+  return this.sseToken;  // Lecture mémoire uniquement
+}
+```
+
+**Implémentation Backend:**
+```typescript
+// Cookie HttpOnly défini par le serveur
+res.cookie('auth_token', token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
+  maxAge: 8 * 60 * 60 * 1000  // 8 heures
+});
+```
+
+---
+
+## 🟢 Implémentations Existantes (Conservées)
 
 ---
 

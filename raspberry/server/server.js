@@ -346,6 +346,101 @@ io.on('connection', (socket) => {
 	});
 });
 
+// ============================================================================
+// AUTH SETUP ENDPOINT
+// Permet de définir le mot de passe initial lors du premier démarrage
+// ============================================================================
+const CONFIG_PATH = path.join(
+	process.env.HOME || '/home/pi',
+	'neopro',
+	'webapp',
+	'configuration.json'
+);
+
+app.post('/api/auth/setup', async (req, res) => {
+	try {
+		const { password } = req.body;
+
+		if (!password) {
+			return res.status(400).json({ success: false, error: 'Mot de passe requis' });
+		}
+
+		if (password.length < 8) {
+			return res.status(400).json({ success: false, error: 'Le mot de passe doit contenir au moins 8 caractères' });
+		}
+
+		// Charger la configuration existante
+		let config = {
+			remote: { title: 'NeoPro' },
+			version: '1.0.0',
+			categories: [],
+			sponsors: []
+		};
+
+		if (fs.existsSync(CONFIG_PATH)) {
+			try {
+				const data = fs.readFileSync(CONFIG_PATH, 'utf8');
+				config = JSON.parse(data);
+			} catch (e) {
+				console.warn('[AuthSetup] Failed to parse existing config, using defaults');
+			}
+		}
+
+		// Vérifier si un mot de passe existe déjà
+		if (config.auth && config.auth.password) {
+			return res.status(403).json({
+				success: false,
+				error: 'Un mot de passe est déjà configuré. Utilisez le panneau admin pour le modifier.'
+			});
+		}
+
+		// Ajouter/mettre à jour la section auth
+		config.auth = config.auth || {};
+		config.auth.password = password;
+		config.auth.configuredAt = new Date().toISOString();
+
+		// S'assurer que le répertoire existe
+		const configDir = path.dirname(CONFIG_PATH);
+		if (!fs.existsSync(configDir)) {
+			fs.mkdirSync(configDir, { recursive: true });
+		}
+
+		// Sauvegarder la configuration
+		fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+
+		console.log('[AuthSetup] Initial password configured successfully');
+
+		// Notifier les clients de la mise à jour de config
+		io.emit('action', { type: 'reload-config', data: config });
+
+		res.json({ success: true });
+	} catch (error) {
+		console.error('[AuthSetup] Error:', error);
+		res.status(500).json({ success: false, error: error.message });
+	}
+});
+
+// Route pour vérifier si le setup est nécessaire
+app.get('/api/auth/status', (req, res) => {
+	try {
+		let requiresSetup = true;
+
+		if (fs.existsSync(CONFIG_PATH)) {
+			try {
+				const data = fs.readFileSync(CONFIG_PATH, 'utf8');
+				const config = JSON.parse(data);
+				requiresSetup = !config.auth || !config.auth.password;
+			} catch (e) {
+				console.warn('[AuthStatus] Failed to parse config');
+			}
+		}
+
+		res.json({ requiresSetup });
+	} catch (error) {
+		res.status(500).json({ error: error.message });
+	}
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
 	console.log(`✓ Serveur Socket.IO lancé sur le port ${PORT}`);

@@ -438,22 +438,56 @@ export const getDeployment = async (req: AuthRequest, res: Response) => {
 
 export const createDeployment = async (req: AuthRequest, res: Response) => {
   try {
-    const { video_id, target_type, target_id } = req.body;
+    const { video_id, target_type, target_id, scheduled_at } = req.body;
+
+    // Si scheduled_at est fourni, le deploiement sera planifie
+    const isScheduled = !!scheduled_at;
+    const status = isScheduled ? 'scheduled' : 'pending';
+    const scheduledDate = isScheduled ? new Date(scheduled_at) : null;
+
+    // Valider la date de planification
+    if (isScheduled && scheduledDate) {
+      if (isNaN(scheduledDate.getTime())) {
+        return res.status(400).json({ error: 'Date de planification invalide' });
+      }
+      if (scheduledDate <= new Date()) {
+        return res.status(400).json({ error: 'La date de planification doit etre dans le futur' });
+      }
+    }
 
     const result = await pool.query(
-      `INSERT INTO content_deployments (video_id, target_type, target_id, status, progress, deployed_by)
-       VALUES ($1, $2, $3, 'pending', 0, $4)
+      `INSERT INTO content_deployments (video_id, target_type, target_id, status, progress, deployed_by, scheduled_at, scheduled_by)
+       VALUES ($1, $2, $3, $4, 0, $5, $6, $7)
        RETURNING *`,
-      [video_id, target_type || 'site', target_id, req.user?.id || null]
+      [
+        video_id,
+        target_type || 'site',
+        target_id,
+        status,
+        req.user?.id || null,
+        scheduledDate,
+        isScheduled ? req.user?.id : null
+      ]
     );
 
     const deployment = result.rows[0];
-    logger.info('Deployment created:', { id: deployment.id, video_id, target_type, target_id });
 
-    // Lancer le déploiement de manière asynchrone
-    deploymentService.startDeployment(deployment.id as string).catch(err => {
-      logger.error('Error starting deployment:', err);
-    });
+    if (isScheduled) {
+      logger.info('Scheduled deployment created:', {
+        id: deployment.id,
+        video_id,
+        target_type,
+        target_id,
+        scheduled_at: scheduledDate
+      });
+    } else {
+      logger.info('Deployment created:', { id: deployment.id, video_id, target_type, target_id });
+
+      // Lancer le deploiement de maniere asynchrone (seulement si non planifie)
+      deploymentService.startDeployment(deployment.id as string).catch(err => {
+        logger.error('Error starting deployment:', err);
+      });
+    }
 
     res.status(201).json(deployment);
   } catch (error) {

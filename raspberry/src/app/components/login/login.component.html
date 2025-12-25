@@ -2,48 +2,145 @@
   <div class="login-card">
     <div class="logo-section">
       <img src="neopro-logo.png" alt="Neopro" class="app-logo" />
-      <p class="app-subtitle">Système de contrôle d'affichage</p>
+      @if (isSetupMode) {
+        <p class="app-subtitle">Configuration initiale</p>
+      } @else {
+        <p class="app-subtitle">Systeme de controle d'affichage</p>
+      }
     </div>
 
-    <form (ngSubmit)="onSubmit()" class="login-form">
-      <div class="form-group">
-        <label for="password" class="form-label">Mot de passe</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          [(ngModel)]="password"
-          (input)="onPasswordChange()"
-          [disabled]="isLoading"
-          class="form-input"
-          placeholder="Entrez le mot de passe"
-          autocomplete="current-password"
-        />
+    @if (!isConfigLoaded) {
+      <!-- Loading state -->
+      <div class="loading-state">
+        <span class="spinner"></span>
+        <p>Chargement de la configuration...</p>
+      </div>
+    } @else if (isSetupMode) {
+      <!-- SETUP MODE: First time password creation -->
+      <div class="setup-notice">
+        <span class="notice-icon">&#x1F511;</span>
+        <p>Bienvenue ! Veuillez definir un mot de passe pour securiser votre boitier.</p>
       </div>
 
-      @if (errorMessage) {
-        <div class="error-message">
-          <span class="error-icon">⚠️</span>
-          {{ errorMessage }}
+      <form (ngSubmit)="onSetupSubmit()" class="login-form">
+        <div class="form-group">
+          <label for="newPassword" class="form-label">Nouveau mot de passe</label>
+          <input
+            type="password"
+            id="newPassword"
+            name="newPassword"
+            [(ngModel)]="newPassword"
+            (input)="onNewPasswordChange()"
+            [disabled]="isLoading"
+            class="form-input"
+            placeholder="Minimum 8 caracteres"
+            autocomplete="new-password"
+          />
+          @if (newPassword.length > 0) {
+            <div class="password-strength" [class]="getPasswordStrengthClass()">
+              <div class="strength-bar">
+                <div class="strength-fill"></div>
+              </div>
+              <span class="strength-label">Force: {{ getPasswordStrengthLabel() }}</span>
+            </div>
+          }
         </div>
-      }
 
-      <button
-        type="submit"
-        class="submit-button"
-        [disabled]="isLoading || !password"
-      >
-        @if (!isLoading) {
-          <span>Se connecter</span>
+        <div class="form-group">
+          <label for="confirmPassword" class="form-label">Confirmer le mot de passe</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            name="confirmPassword"
+            [(ngModel)]="confirmPassword"
+            (input)="onConfirmPasswordChange()"
+            [disabled]="isLoading"
+            class="form-input"
+            placeholder="Retapez le mot de passe"
+            autocomplete="new-password"
+          />
+          @if (confirmPassword.length > 0 && newPassword !== confirmPassword) {
+            <span class="field-hint error">Les mots de passe ne correspondent pas</span>
+          }
+          @if (confirmPassword.length > 0 && newPassword === confirmPassword) {
+            <span class="field-hint success">Les mots de passe correspondent</span>
+          }
+        </div>
+
+        @if (setupError) {
+          <div class="error-message">
+            <span class="error-icon">&#x26A0;</span>
+            {{ setupError }}
+          </div>
         }
-        @if (isLoading) {
-          <span class="loading-spinner">
-            <span class="spinner"></span>
-            Connexion...
-          </span>
+
+        <button
+          type="submit"
+          class="submit-button"
+          [disabled]="isLoading || !newPassword || !confirmPassword || newPassword !== confirmPassword"
+        >
+          @if (!isLoading) {
+            <span>Configurer le mot de passe</span>
+          }
+          @if (isLoading) {
+            <span class="loading-spinner">
+              <span class="spinner"></span>
+              Configuration...
+            </span>
+          }
+        </button>
+      </form>
+
+      <div class="setup-tips">
+        <p class="tips-title">Conseils pour un mot de passe securise :</p>
+        <ul>
+          <li>Au moins 8 caracteres</li>
+          <li>Melangez majuscules et minuscules</li>
+          <li>Ajoutez des chiffres et symboles</li>
+        </ul>
+      </div>
+    } @else {
+      <!-- LOGIN MODE: Normal authentication -->
+      <form (ngSubmit)="onSubmit()" class="login-form">
+        <div class="form-group">
+          <label for="password" class="form-label">Mot de passe</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            [(ngModel)]="password"
+            (input)="onPasswordChange()"
+            [disabled]="isLoading"
+            class="form-input"
+            placeholder="Entrez le mot de passe"
+            autocomplete="current-password"
+          />
+        </div>
+
+        @if (errorMessage) {
+          <div class="error-message">
+            <span class="error-icon">&#x26A0;</span>
+            {{ errorMessage }}
+          </div>
         }
-      </button>
-    </form>
+
+        <button
+          type="submit"
+          class="submit-button"
+          [disabled]="isLoading || !password"
+        >
+          @if (!isLoading) {
+            <span>Se connecter</span>
+          }
+          @if (isLoading) {
+            <span class="loading-spinner">
+              <span class="spinner"></span>
+              Connexion...
+            </span>
+          }
+        </button>
+      </form>
+    }
 
     <div class="footer">
       <p class="footer-text">Kalon Partners - Handball</p>
