@@ -61,12 +61,18 @@ export class SponsorAnalyticsService {
 
   /**
    * Définir la configuration du site
+   * Extrait automatiquement les informations pertinentes pour le tracking
    */
   public setConfiguration(config: Configuration): void {
     this.configuration = config;
-    // Extraire le site_id de la configuration si disponible
-    // TODO: Adapter selon votre structure Configuration
-    console.log('[SponsorAnalytics] Configuration set:', config);
+
+    // Extract site name for logging (site_id is set separately via setSiteId)
+    const siteName = config.sync?.siteName || config.sync?.clubName;
+    if (siteName) {
+      console.log('[SponsorAnalytics] Configuration set for site:', siteName);
+    } else {
+      console.log('[SponsorAnalytics] Configuration set');
+    }
   }
 
   /**

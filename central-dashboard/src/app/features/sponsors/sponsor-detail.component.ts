@@ -5,6 +5,14 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 
+interface AvailableVideo {
+  id: string;
+  title: string;
+  filename: string;
+  duration: number;
+  file_size?: number;
+}
+
 interface Sponsor {
   id: string;
   name: string;
@@ -381,6 +389,84 @@ interface SponsorVideo {
             </button>
             <button class="btn btn-danger" (click)="deleteSponsor()" [disabled]="deleting">
               {{ deleting ? 'Suppression...' : 'Supprimer définitivement' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Videos Modal -->
+      <div class="modal-overlay" *ngIf="showAddVideosModal" (click)="closeAddVideosModal()">
+        <div class="modal modal-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>➕ Ajouter des vidéos</h2>
+            <button class="close-btn" (click)="closeAddVideosModal()">✕</button>
+          </div>
+
+          <div class="modal-body">
+            <!-- Search -->
+            <div class="search-box">
+              <input
+                type="text"
+                [(ngModel)]="videoSearchTerm"
+                (input)="filterAvailableVideos()"
+                placeholder="🔍 Rechercher une vidéo..."
+              />
+            </div>
+
+            <!-- Loading -->
+            <div *ngIf="loadingVideos" class="loading-small">
+              <div class="spinner-small"></div>
+              <span>Chargement des vidéos...</span>
+            </div>
+
+            <!-- Available Videos List -->
+            <div *ngIf="!loadingVideos" class="available-videos-list">
+              <div
+                *ngFor="let video of filteredAvailableVideos"
+                class="available-video-item"
+                [class.selected]="isVideoSelected(video.id)"
+                (click)="toggleVideoSelection(video.id)"
+              >
+                <div class="checkbox">
+                  <input
+                    type="checkbox"
+                    [checked]="isVideoSelected(video.id)"
+                    (change)="toggleVideoSelection(video.id)"
+                    (click)="$event.stopPropagation()"
+                  />
+                </div>
+                <div class="video-details">
+                  <h4>{{ video.title }}</h4>
+                  <div class="video-meta-small">
+                    <span>{{ video.filename }}</span>
+                    <span>⏱️ {{ formatVideoDuration(video.duration) }}</span>
+                    <span *ngIf="video.file_size">📦 {{ formatFileSize(video.file_size) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div *ngIf="filteredAvailableVideos.length === 0" class="empty-state-small">
+                <p *ngIf="videoSearchTerm">Aucune vidéo trouvée pour "{{ videoSearchTerm }}"</p>
+                <p *ngIf="!videoSearchTerm">Aucune vidéo disponible à ajouter</p>
+              </div>
+            </div>
+
+            <!-- Selected Count -->
+            <div class="selection-info" *ngIf="selectedVideoIds.length > 0">
+              {{ selectedVideoIds.length }} vidéo(s) sélectionnée(s)
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button class="btn btn-secondary" (click)="closeAddVideosModal()">
+              Annuler
+            </button>
+            <button
+              class="btn btn-primary"
+              (click)="addSelectedVideos()"
+              [disabled]="selectedVideoIds.length === 0 || addingVideos"
+            >
+              {{ addingVideos ? 'Ajout...' : 'Ajouter (' + selectedVideoIds.length + ')' }}
             </button>
           </div>
         </div>
@@ -784,6 +870,120 @@ interface SponsorVideo {
       max-width: 450px;
     }
 
+    .modal-lg {
+      max-width: 700px;
+    }
+
+    /* Add Videos Modal Styles */
+    .search-box {
+      margin-bottom: 1rem;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .loading-small {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 2rem;
+      color: #6b7280;
+    }
+
+    .spinner-small {
+      border: 2px solid #f3f4f6;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+    }
+
+    .available-videos-list {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+
+    .available-video-item {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+      border-bottom: 1px solid #f3f4f6;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .available-video-item:last-child {
+      border-bottom: none;
+    }
+
+    .available-video-item:hover {
+      background: #f9fafb;
+    }
+
+    .available-video-item.selected {
+      background: #eff6ff;
+    }
+
+    .checkbox {
+      display: flex;
+      align-items: center;
+    }
+
+    .checkbox input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .video-details {
+      flex: 1;
+    }
+
+    .video-details h4 {
+      margin: 0 0 0.25rem 0;
+      font-size: 1rem;
+      color: #111827;
+    }
+
+    .video-meta-small {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+
+    .empty-state-small {
+      padding: 2rem;
+      text-align: center;
+      color: #9ca3af;
+    }
+
+    .selection-info {
+      padding: 0.75rem;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      color: #1e40af;
+      font-weight: 500;
+      text-align: center;
+    }
+
     .modal-header {
       padding: 1.5rem;
       border-bottom: 1px solid #e5e7eb;
@@ -910,9 +1110,18 @@ export class SponsorDetailComponent implements OnInit {
 
   showEditModal = false;
   showDeleteModal = false;
+  showAddVideosModal = false;
   saving = false;
   deleting = false;
   removingVideo: string | null = null;
+
+  // Add Videos Modal
+  availableVideos: AvailableVideo[] = [];
+  filteredAvailableVideos: AvailableVideo[] = [];
+  selectedVideoIds: string[] = [];
+  videoSearchTerm = '';
+  loadingVideos = false;
+  addingVideos = false;
 
   editForm: Partial<Sponsor> = {};
 
@@ -1039,10 +1248,103 @@ export class SponsorDetailComponent implements OnInit {
       });
   }
 
-  // Video Management
+  // Video Management - Add Videos Modal
   openAddVideosModal() {
-    // TODO: Implement add videos modal
-    alert('Fonctionnalité en développement - utilisez le composant sponsor-videos');
+    this.showAddVideosModal = true;
+    this.selectedVideoIds = [];
+    this.videoSearchTerm = '';
+    this.loadAvailableVideos();
+  }
+
+  closeAddVideosModal() {
+    this.showAddVideosModal = false;
+    this.selectedVideoIds = [];
+    this.videoSearchTerm = '';
+    this.availableVideos = [];
+    this.filteredAvailableVideos = [];
+  }
+
+  loadAvailableVideos() {
+    this.loadingVideos = true;
+
+    this.api.get<{ success: boolean; data: { videos: AvailableVideo[] } }>('/videos')
+      .subscribe({
+        next: (response) => {
+          const allVideos = response.data.videos || [];
+          // Filter out already associated videos
+          const associatedIds = new Set(this.sponsorVideos.map(v => v.video_id));
+          this.availableVideos = allVideos.filter(v => !associatedIds.has(v.id));
+          this.filterAvailableVideos();
+        },
+        error: (err) => {
+          console.error('Error loading available videos:', err);
+          this.notification.error('Erreur lors du chargement des vidéos');
+        },
+        complete: () => {
+          this.loadingVideos = false;
+        }
+      });
+  }
+
+  filterAvailableVideos() {
+    const term = this.videoSearchTerm.toLowerCase();
+    this.filteredAvailableVideos = this.availableVideos.filter(video =>
+      video.title.toLowerCase().includes(term) ||
+      video.filename.toLowerCase().includes(term)
+    );
+  }
+
+  isVideoSelected(videoId: string): boolean {
+    return this.selectedVideoIds.includes(videoId);
+  }
+
+  toggleVideoSelection(videoId: string) {
+    const index = this.selectedVideoIds.indexOf(videoId);
+    if (index === -1) {
+      this.selectedVideoIds.push(videoId);
+    } else {
+      this.selectedVideoIds.splice(index, 1);
+    }
+  }
+
+  addSelectedVideos() {
+    if (this.selectedVideoIds.length === 0) return;
+
+    this.addingVideos = true;
+
+    this.api.post<{ success: boolean }>(`/analytics/sponsors/${this.sponsorId}/videos`, {
+      video_ids: this.selectedVideoIds
+    }).subscribe({
+      next: () => {
+        this.notification.success(`${this.selectedVideoIds.length} vidéo(s) ajoutée(s) avec succès`);
+        this.closeAddVideosModal();
+        // Reload sponsor videos
+        this.api.get<{ success: boolean; data: { videos: SponsorVideo[] } }>(`/analytics/sponsors/${this.sponsorId}/videos`)
+          .subscribe({
+            next: (response) => {
+              this.sponsorVideos = response.data.videos || [];
+            }
+          });
+      },
+      error: (err) => {
+        console.error('Error adding videos:', err);
+        this.notification.error('Erreur lors de l\'ajout des vidéos');
+      },
+      complete: () => {
+        this.addingVideos = false;
+      }
+    });
+  }
+
+  formatVideoDuration(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  formatFileSize(bytes: number): string {
+    const mb = bytes / (1024 * 1024);
+    return mb > 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
   }
 
   async removeVideo(videoId: string) {

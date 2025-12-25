@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { AuthService } from '../../core/services/auth.service';
 
 interface Sponsor {
   id: string;
@@ -527,6 +528,7 @@ export class SponsorsListComponent implements OnInit {
 
   private api = inject(ApiService);
   private notification = inject(NotificationService);
+  private authService = inject(AuthService);
 
   ngOnInit() {
     this.checkPermissions();
@@ -534,8 +536,8 @@ export class SponsorsListComponent implements OnInit {
   }
 
   checkPermissions() {
-    // TODO: Check user role from auth service
-    this.canManage = true; // Placeholder
+    // Only admin and operator roles can manage sponsors
+    this.canManage = this.authService.hasRole('admin', 'operator');
   }
 
   loadSponsors() {
