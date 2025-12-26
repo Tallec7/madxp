@@ -18,14 +18,14 @@ export class AppComponent implements OnInit {
   private readonly socketService = inject(SocketService);
 
   ngOnInit(): void {
-    const token = this.authService.getToken();
+    const token = this.authService.getSseToken();
     if (token) {
       this.socketService.connect(token);
     }
 
     this.authService.currentUser$.subscribe(user => {
       if (user && !this.socketService.isConnected()) {
-        const token = this.authService.getToken();
+        const token = this.authService.getSseToken();
         if (token) {
           this.socketService.connect(token);
         }

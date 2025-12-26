@@ -11,14 +11,14 @@ import { AgencyPortalService, AgencyDashboard, AgencySite } from '../../core/ser
     <div class="dashboard-container">
       <div class="header">
         <div class="agency-info" *ngIf="dashboard?.agency">
-          <img *ngIf="dashboard.agency.logo_url"
-               [src]="dashboard.agency.logo_url"
-               [alt]="dashboard.agency.name"
+          <img *ngIf="dashboard?.agency?.logo_url"
+               [src]="dashboard?.agency?.logo_url"
+               [alt]="dashboard?.agency?.name"
                class="agency-logo">
           <div>
-            <h1>{{ dashboard.agency.name }}</h1>
-            <span class="badge" [class]="'badge-' + dashboard.agency.status">
-              {{ dashboard.agency.status }}
+            <h1>{{ dashboard?.agency?.name }}</h1>
+            <span class="badge" [class]="'badge-' + dashboard?.agency?.status">
+              {{ dashboard?.agency?.status }}
             </span>
           </div>
         </div>

@@ -87,6 +87,7 @@ export interface Agency {
   contact_phone: string | null;
   status: string;
   created_at: Date;
+  site_count?: number;
 }
 
 @Injectable({
