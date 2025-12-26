@@ -259,6 +259,7 @@ app.use(cookieParser());
 // Serve static files (before auth middleware)
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/videos', express.static(VIDEOS_DIR));
+app.use('/thumbnails', express.static(THUMBNAILS_DIR));
 
 // =============================================================================
 // AUTHENTICATION ROUTES (before requireAuth middleware)
