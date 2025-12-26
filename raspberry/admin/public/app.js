@@ -195,6 +195,21 @@ if (DEMO_MODE) {
 // FIN MODE DEMO
 // ============================================================================
 
+// ============================================================================
+// AUTHENTIFICATION - Ajout automatique des credentials pour les appels API
+// ============================================================================
+// Les appels fetch vers /api/* doivent inclure les cookies d'authentification
+{
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options = {}) {
+        // Pour les appels API, toujours inclure les credentials (cookies)
+        if (typeof url === 'string' && url.startsWith('/api/')) {
+            options = { ...options, credentials: 'include' };
+        }
+        return originalFetch(url, options);
+    };
+}
+
 // État global
 let currentTab = 'dashboard';
 let currentLogService = 'app';
