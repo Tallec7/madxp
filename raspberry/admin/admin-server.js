@@ -427,9 +427,12 @@ app.post('/api/auth/login', async (req, res) => {
   const token = createSession();
 
   // Set cookie
+  // Note: secure should only be true for HTTPS connections
+  // On local network (neopro.local, 192.168.x.x), we use HTTP so secure must be false
+  const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
   res.cookie('admin_session', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecure,
     sameSite: 'lax',
     maxAge: SESSION_DURATION,
     path: '/'

@@ -203,7 +203,8 @@ if (DEMO_MODE) {
     const originalFetch = window.fetch;
     window.fetch = async function(url, options = {}) {
         // Pour les appels API, toujours inclure les credentials (cookies)
-        if (typeof url === 'string' && url.startsWith('/api/')) {
+        // Vérifie à la fois les URLs relatives (/api/) et absolues (http://.../api/)
+        if (typeof url === 'string' && (url.startsWith('/api/') || url.includes('/api/'))) {
             options = { ...options, credentials: 'include' };
         }
         return originalFetch(url, options);
