@@ -207,7 +207,17 @@ if (DEMO_MODE) {
         if (typeof url === 'string' && (url.startsWith('/api/') || url.includes('/api/'))) {
             options = { ...options, credentials: 'include' };
         }
-        return originalFetch(url, options);
+        const response = await originalFetch(url, options);
+
+        // Si une requête API retourne 401, rediriger vers la page de login
+        if (response.status === 401 && typeof url === 'string' && (url.startsWith('/api/') || url.includes('/api/'))) {
+            // Éviter les redirections multiples
+            if (!window.location.pathname.includes('/login')) {
+                window.location.href = '/login';
+            }
+        }
+
+        return response;
     };
 }
 
