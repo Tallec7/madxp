@@ -9,6 +9,7 @@ const SCHEDULER_CONFIG = {
 };
 
 interface ScheduledDeployment {
+  [key: string]: unknown;
   deployment_type: 'content' | 'update';
   deployment_id: string;
   scheduled_at: Date;

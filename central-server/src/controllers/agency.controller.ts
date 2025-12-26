@@ -11,6 +11,7 @@ import { isAdmin } from '../middleware/auth';
 // ============================================================================
 
 interface AgencySiteRow {
+  [key: string]: unknown;
   site_id: string;
   site_name: string;
   club_name: string;
@@ -23,6 +24,7 @@ interface AgencySiteRow {
 }
 
 interface AgencyDashboardStats {
+  [key: string]: unknown;
   total_sites: number;
   online_sites: number;
   offline_sites: number;

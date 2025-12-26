@@ -11,6 +11,7 @@ import { validate as validateUuid } from 'uuid';
 // ============================================================================
 
 interface SponsorDashboardStats {
+  [key: string]: unknown;
   total_videos: number;
   total_sites: number;
   total_impressions_30d: number;
@@ -19,6 +20,7 @@ interface SponsorDashboardStats {
 }
 
 interface SponsorSiteRow {
+  [key: string]: unknown;
   site_id: string;
   site_name: string;
   club_name: string;
@@ -31,6 +33,7 @@ interface SponsorSiteRow {
 }
 
 interface SponsorVideoRow {
+  [key: string]: unknown;
   video_id: string;
   filename: string;
   duration: number;

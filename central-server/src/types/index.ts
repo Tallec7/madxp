@@ -23,6 +23,7 @@ export interface AuthRequest extends Request {
 
 // Sponsor types
 export interface Sponsor {
+  [key: string]: unknown;
   id: string;
   name: string;
   logo_url: string | null;
@@ -37,6 +38,7 @@ export interface Sponsor {
 
 // Agency types
 export interface Agency {
+  [key: string]: unknown;
   id: string;
   name: string;
   description: string | null;
