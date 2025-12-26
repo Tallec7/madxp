@@ -1,28 +1,64 @@
 # NEOPRO - Business Plan & Roadmap Technique Complète
 
 > **Document de référence pour investisseurs, CTO et COO**
-> Version 1.5 - 9 Décembre 2025
+> Version 1.6 - 26 Décembre 2025
 > Classification : Confidentiel
+
+---
+
+## Changelog v1.6
+
+| Section | Type | Changement |
+|---------|------|------------|
+| 1.1-1.2 | RÉÉCRIT | Problème (4 douleurs chiffrées) + Solution (two-sided marketplace) |
+| 1.3-1.7 | RÉÉCRIT | Chiffres réalistes 2026-2028, traction actuelle, TAM combiné |
+| 2.5 | NOUVEAU | Stratégie d'acquisition annonceurs |
+| 2.6 | NOUVEAU | Marché annonceurs (TAM €1,2M) |
+| 2.7 | NOUVEAU | Production vidéo - différenciateur majeur |
+| 8.1-8.3 | RÉÉCRIT | Modèle revenus (€50-120/mois), projections réalistes, unit economics |
+| 9.1-9.5 | RÉÉCRIT | Bootstrap 2026, Seed conditionnel 2027 |
+| 13.7 | ENRICHI | Pricing analytics aligné (€50/€80/€120) |
+| 14.0 | NOUVEAU | Offre commerciale analytics club |
+
+**Documents de référence :**
+- Executive Summary v2.1 (Décembre 2025)
+- NEOPRO_Strategie_Pricing_FINALE_v4.0 (Décembre 2025)
 
 ---
 
 ## Table des Matières
 
 1. [Executive Summary](#1-executive-summary)
+   - 1.1 Le Problème (4 douleurs chiffrées)
+   - 1.2 La Solution (Two-sided marketplace)
+   - 1.3 Chiffres Clés
+   - 1.4 Traction Actuelle
+   - 1.5 Stratégie Financement
+   - 1.6 Points Forts
+   - 1.7 TAM Combiné
 2. [Le Produit](#2-le-produit)
+   - 2.1-2.4 Vue d'ensemble, composants, fonctionnalités
+   - **2.5 Stratégie d'Acquisition Annonceurs** *(nouveau)*
+   - **2.6 Marché Annonceurs (TAM)** *(nouveau)*
+   - **2.7 Production Vidéo - Différenciateur** *(nouveau)*
 3. [Architecture Technique](#3-architecture-technique)
-   - 3.5 [Architecture de Synchronisation](#35-architecture-de-synchronisation) *(nouveau)*
+   - 3.5 [Architecture de Synchronisation](#35-architecture-de-synchronisation)
 4. [Analyse Technique Actuelle](#4-analyse-technique-actuelle)
 5. [Roadmap Phase 1 (0-3 mois)](#5-roadmap-phase-1-0-3-mois)
 6. [Roadmap Phase 2 (3-12 mois)](#6-roadmap-phase-2-3-12-mois)
 7. [Roadmap Phase 3 (1-3 ans)](#7-roadmap-phase-3-1-3-ans)
-8. [Modèle Économique](#8-modèle-économique)
-9. [Budget & Ressources](#9-budget--ressources)
+8. [Modèle Économique](#8-modèle-économique) *(réécrit)*
+   - 8.1 Sources de Revenus (Clubs + Annonceurs)
+   - 8.2 Projections Financières
+   - 8.3 Unit Economics
+9. [Budget & Ressources](#9-budget--ressources) *(réécrit)*
+   - 9.1 Stratégie Financement (Bootstrap)
+   - 9.2-9.5 Équipes, Infrastructure, Seed conditionnel
 10. [KPIs & Métriques](#10-kpis--métriques)
 11. [Risques & Mitigations](#11-risques--mitigations)
 12. [Processus Opérationnels](#12-processus-opérationnels)
-13. [Analytics Sponsors & Annonceurs](#13-analytics-sponsors--annonceurs)
-14. [Analytics Club](#14-analytics-club)
+13. [Analytics Sponsors & Annonceurs](#13-analytics-sponsors--annonceurs) *(enrichi)*
+14. [Analytics Club](#14-analytics-club) *(enrichi)*
 15. [Annexes](#15-annexes)
 
 ---
@@ -31,59 +67,145 @@
 
 ## 1.1 Le Problème
 
-Les clubs sportifs amateurs et semi-professionnels (volleyball, handball, basketball, football) manquent d'outils modernes pour :
-- **Animer les matchs** avec du contenu vidéo dynamique
-- **Valoriser leurs sponsors** de manière professionnelle
-- **Gérer facilement** l'affichage sur les écrans du gymnase
-- **Centraliser la gestion** quand ils ont plusieurs sites
+Les clubs sportifs amateurs font face à **quatre douleurs majeures** qui impactent leur modèle économique et l'expérience match :
 
-Les solutions existantes sont soit trop chères (€500-2000+), soit trop complexes, soit inadaptées au contexte sportif amateur.
+### 📉 1. EXPÉRIENCE MATCH MÉDIOCRE
+- Écrans statiques (logo figé, aucun dynamisme pendant 90 min)
+- Zéro engagement spectateurs (pas d'interactivité)
+- Contenus amateurs (pas de vidéos professionnelles joueurs)
+- **Impact** : Spectateurs désengagés, ambiance terne
+
+### 💸 2. SPONSORS PAS VALORISÉS
+- Aucune donnée mesurable pour prouver le ROI (0 rapports)
+- Négociations renouvellements difficiles sans preuves
+- **30-40% churn sponsors annuel** par défaut de valorisation
+- **Impact financier** : Club N2 avec 5 sponsors à €3K/an risque perdre €6K-€9K annuels
+
+### 🤯 3. GESTION TECHNIQUE COMPLEXE
+- Ordinateur en bord de terrain (câbles, manipulations)
+- Bénévoles débordés pendant matchs
+- Changements manuels pénibles (buteurs, sponsors)
+- **Impact** : Erreurs matchs, bénévoles frustrés
+
+### 📊 4. COMMUNICATION INEFFICACE
+- Contenus non professionnels
+- Impossible de quantifier l'audience
+- Pas de reporting automatique sponsors
+- **Impact** : Sponsors mécontents, opportunités perdues
+
+> **Les solutions existantes** sont soit trop chères (€500-2000+), soit trop complexes, soit inadaptées au contexte sportif amateur.
 
 ## 1.2 La Solution NEOPRO
 
-**NEOPRO est un système TV interactif clé-en-main pour clubs sportifs** combinant :
+**NEOPRO construit le premier réseau publicitaire sportif amateur en France**, alliant affichage dynamique professionnel et marketplace annonceurs.
 
-| Composant | Description |
-|-----------|-------------|
-| **Hardware** | Raspberry Pi pré-configuré (€80), plug & play |
-| **Affichage TV** | Lecteur vidéo plein écran avec boucle sponsors automatique |
-| **Télécommande** | Interface mobile pour déclencher les vidéos en temps réel |
-| **Dashboard Central** | Gestion de flotte multi-clubs depuis le cloud |
+### 🏀 PLATEFORME DOUBLE-FACE (TWO-SIDED MARKETPLACE)
+
+#### CÔTÉ 1 : LES CLUBS SPORTIFS
+
+**Hardware + Software professionnel tout-en-un :**
+- Boîtier intelligent branché sur écran (10 min installation)
+- Télécommande smartphone (contrôle pendant match à distance)
+- Dashboard cloud (gestion contenus, analytics temps réel)
+- Rapports automatiques sponsors (PDF mensuels)
+
+**Fonctionnalités Match :**
+
+| Catégorie | Fonctionnalités |
+|-----------|-----------------|
+| 📺 **Affichage Dynamique** | Annonces joueurs (vidéos célébrations 5-10s), affichage buteurs temps réel (1 clic smartphone), faits de jeu (cartons, temps-morts), informations supporters |
+| 💰 **Valorisation Sponsors** | Diffusion automatique spots (rotation intelligente), analytics précis (passages, impressions, reach), rapports PDF mensuels automatiques, dashboard sponsors premium |
+| 🎮 **Engagement Spectateurs** | Jeux-concours QR code (vote meilleur joueur), sondages en direct mi-temps, feed réseaux sociaux sur écran |
+
+**Proposition de valeur clubs :**
+- ✅ Expérience match professionnelle (ambiance, dynamisme)
+- ✅ Valorisation sponsors mesurable (preuves ROI, renouvellements facilités)
+- ✅ Gestion ultra-simple (smartphone, fini PC bord terrain)
+- ✅ Revenus passifs annonceurs (€1,800/an)
+
+#### CÔTÉ 2 : LES ANNONCEURS RÉGIONAUX/NATIONAUX
+
+**Réseau publicitaire sportif local (unique en France) :**
+
+| Pour qui ? | Proposition de valeur |
+|------------|----------------------|
+| Marques régionales (Decathlon, Crédit Mutuel, MAIF) | Accès audience captive : 15,000+ spectateurs/mois |
+| Annonceurs locaux audience sportive qualifiée | Diffusion automatisée : 1 contrat = présence tous écrans |
+| Sponsors hors stades professionnels | CPM attractif : €8-12 (vs €15-25 digital) |
+
+**Modèle économique annonceurs :**
+1. Annonceur paie €250/mois pour diffusion réseau
+2. Vidéos passent sur tous clubs partenaires (max 3/club)
+3. NEOPRO garde 90% (€225/mois), reverse 10% clubs (€25/mois)
+4. Clubs touchent €1,800/an passifs via 6 annonceurs
+
+### 🔄 EFFET RÉSEAU VERTUEUX
+
+```
+Plus clubs → Plus audience → CPM attractif → Plus annonceurs
+                ↓
+    Revenus augmentent → Reverse clubs → Clubs payent moins
+```
+
+### 🎯 DIFFÉRENCIATEURS STRATÉGIQUES
+
+| # | Différenciateur | Description |
+|---|----------------|-------------|
+| 1 | **Solution complète expérience match** | Seul acteur combinant affichage temps réel + engagement spectateurs + analytics sponsors en UNE plateforme |
+| 2 | **Seul réseau publicitaire sportif amateur France** | Marché vierge €1,2M TAM |
+| 3 | **Modèle triple-win** | Clubs professionnalisent + valorisent + génèrent revenus passifs. Annonceurs accèdent audience qualifiée. NEOPRO scale ARR via deux sources revenus |
+| 4 | **Barrière entrée forte** | Effet réseau two-sided, relations clubs, tech propriétaire |
+| 5 | **Simplicité opérationnelle** | Plug & play 10min, smartphone 1 clic, rapports auto |
 
 ## 1.3 Chiffres Clés
 
-| Métrique | Actuel | Cible 12 mois | Cible 3 ans |
-|----------|--------|---------------|-------------|
-| Clubs actifs | ~10 pilotes | 300-500 | 5,000+ |
-| MRR | €0 | €30-50K | €200-400K |
-| ARR | €0 | €400-600K | €2-5M |
-| Équipe | 1-2 | 8-10 | 25-30 |
-| Pays | France | FR + BE/CH/DE | 5+ pays EU |
+| Métrique | Actuel (Dec 2025) | Fin 2026 | Fin 2027 | Fin 2028 |
+|----------|-------------------|----------|----------|----------|
+| Clubs actifs | 3 beta | 35 | 100 | 300 |
+| Annonceurs | 0 | 6-8 | 15 | 25+ |
+| MRR (récurrent) | €0 | €4,400 | €12,875 | €35,000 |
+| ARR | €0 | €53K | €154K | €420K |
+| Reach spectateurs | ~500/mois | 15,000/mois | 45,000/mois | 135,000/mois |
+| Équipe | 2 associés | 2 (bénévoles) | 4 | 8-10 |
 
-## 1.4 Investissement Recherché
+## 1.4 Traction Actuelle
 
-| Phase | Montant | Usage |
-|-------|---------|-------|
-| Seed | €500K - €1M | Consolidation technique + premiers clients |
-| Series A (18 mois) | €3-5M | Scale commercial + international |
+| Indicateur | Valeur | Preuve |
+|------------|--------|--------|
+| **Clubs beta** | 3 (CESSON, NARH, RACC) | Contrats signés |
+| **Uptime plateforme** | 98.5% | Monitoring production |
+| **Hardware déployé** | €1,050 investis | 3 boîtiers à €350 |
+| **Produit** | MVP complet en production | Déployé et fonctionnel |
+| **Pipeline commercial** | 15 clubs qualifiés | Démonstrations planifiées Q1 2026 |
 
-## 1.5 Points Forts
+## 1.5 Stratégie Financement
 
-- ✅ **Produit fonctionnel** - V1 en production, pas un prototype
-- ✅ **Coût hardware faible** - Raspberry Pi vs solutions pro
+| Phase | Modèle | Objectif |
+|-------|--------|----------|
+| **2026** | Bootstrap (autofinancement) | PMF avec 35 clubs, €53K ARR |
+| **2027** | Seed €150K (si scale accéléré) | 100+ clubs, 2 commerciaux |
+| **2028** | Profitabilité | €420K ARR, équipe de 8-10 |
+
+> **Philosophie** : Bootstrap jusqu'à profitabilité. Lever uniquement si opportunité scale accéléré.
+
+## 1.6 Points Forts
+
+- ✅ **Produit en production** - MVP déployé, 3 clubs beta, 98.5% uptime
+- ✅ **Two-sided marketplace** - Clubs + Annonceurs = 2 sources revenus récurrentes
+- ✅ **Coût hardware optimisé** - Boîtier €350 (coût €150, marge 57%)
 - ✅ **Stack moderne** - Angular 20, Node.js, PostgreSQL, Socket.IO
-- ✅ **Architecture scalable** - Fleet management cloud-native
-- ✅ **Marché fragmenté** - Peu de concurrence directe sur le segment amateur
-- ✅ **Analytics complet** - Dashboard club avec métriques usage/santé (ajouté 6 déc)
-- ✅ **Éditeur de config avancé** - Historique, diff, timeCategories (ajouté 8 déc)
-- ✅ **CRUD vidéos inline** - Gestion complète depuis le dashboard central (ajouté 8 déc)
+- ✅ **Marché vierge** - Aucun réseau publicitaire sportif amateur en France
+- ✅ **Analytics différenciateur** - Dashboard club + rapports sponsors automatiques
+- ✅ **Production vidéo intégrée** - Shooting + montage, argument commercial massue
+- ✅ **230 tests automatisés** - Couverture ~67% backend, CI/CD GitHub Actions
 
-## 1.6 Points d'Attention
+## 1.7 TAM Combiné
 
-- ✅ **230 tests automatisés** - Couverture ~67% backend (ajouté 8 déc)
-- ✅ **CI/CD configuré** - GitHub Actions avec tests automatiques (ajouté 8 déc)
-- ✅ **Vulnérabilités sécurité** - 5/5 corrections critiques effectuées (HttpOnly cookies ajouté 8 déc)
-- ⚠️ **Équipe à construire** - Recrutements clés en Phase 1
+| Segment | TAM France | SAM 2026 | SAM 2028 |
+|---------|------------|----------|----------|
+| **Clubs sportifs** | €5,2M (13,000 clubs × €400/an) | €53K (35 clubs) | €450K (300 clubs) |
+| **Annonceurs** | €1,2M (150 annonceurs × €8K/an) | €16K (6 annonceurs) | €80K (25 annonceurs) |
+| **TOTAL** | **€6,4M** | **€69K** | **€530K** |
 
 ---
 
@@ -240,6 +362,229 @@ Les solutions existantes sont soit trop chères (€500-2000+), soit trop comple
 | White-label | 2 | Personnalisation fédérations |
 | AR overlays | 3 | Réalité augmentée |
 | Publicité programmatique | 3 | Revenus pub automatisés |
+
+## 2.5 Stratégie d'Acquisition Annonceurs
+
+> **NEOPRO construit le seul réseau publicitaire sportif amateur en France.** Cette section détaille la stratégie d'acquisition et de gestion des annonceurs.
+
+### 2.5.1 Cibles Annonceurs Prioritaires
+
+#### TIER 1 - ANNONCEURS RÉGIONAUX (Q2-Q3 2026)
+
+| Profil | Exemples | Budget moyen | Objectif 2026 |
+|--------|----------|--------------|---------------|
+| Enseignes sportives | Decathlon Nantes, Intersport | €250-500/mois | 2-3 |
+| Banques régionales | Crédit Mutuel Bretagne, Caisse d'Épargne | €300-600/mois | 1-2 |
+| Assurances | MAIF, Groupama | €250-400/mois | 1-2 |
+
+**Total Tier 1 : 3-6 annonceurs en 2026**
+
+#### TIER 2 - ANNONCEURS NATIONAUX (Q4 2026 - 2027)
+
+| Profil | Exemples | Budget moyen | Objectif 2027 |
+|--------|----------|--------------|---------------|
+| Marques grand public | McDonald's, Orange, Carrefour | €500-1,500/mois | 3-5 |
+| Équipementiers | Nike, Adidas, Puma | €800-2,000/mois | 2-3 |
+
+**Total Tier 2 : 10-15 annonceurs en 2027**
+
+#### TIER 3 - ANNONCEURS LOCAUX (2027+)
+
+| Profil | Exemples | Budget moyen | Modèle |
+|--------|----------|--------------|--------|
+| Commerces proximité | Restaurants, magasins sport | €150-250/mois | Self-service plateforme |
+| PME locales | Garages, artisans | €100-200/mois | Self-service |
+
+### 2.5.2 Pipeline & Process de Vente Annonceurs
+
+#### Cycle de vente (45-60 jours)
+
+```
+PROSPECTION (J0-J15)
+├── Identification décideurs marketing régional
+├── Pitch deck annonceurs (cas d'usage, reach, CPM)
+└── Premier call découverte besoins
+
+QUALIFICATION (J15-J30)
+├── Présentation analytics réseau actuel
+├── Simulation reach & impressions sur cible
+└── Proposition commerciale personnalisée
+
+NÉGOCIATION (J30-J45)
+├── Test gratuit 1 mois (2-3 clubs pilotes)
+├── Rapports analytics temps réel
+└── Ajustements créatifs vidéos
+
+CLOSING (J45-J60)
+├── Contrat annuel reconductible
+├── Onboarding : création vidéos, ciblage
+└── Lancement diffusion réseau complet
+```
+
+#### Métriques de Vente
+
+| Métrique | Valeur |
+|----------|--------|
+| Taux conversion prospection → client | 15-20% |
+| CAC annonceur | €800 |
+| LTV annonceur | €8,100 (3 ans × €225/mois) |
+| LTV/CAC | **10x** |
+
+### 2.5.3 Arguments Commerciaux Annonceurs
+
+#### vs. Publicité Digitale Classique
+
+| Critère | Digital Display | NEOPRO |
+|---------|-----------------|--------|
+| **CPM** | €15-25 | €8-12 |
+| **Attention** | Faible (ad-block) | Captive (salle) |
+| **Ciblage** | Imprécis (cookies) | Hyper-local garanti |
+| **Fraude** | Risque élevé (bots) | Zéro (spectateurs) |
+| **Brand safety** | Variable | 100% sport amateur |
+
+#### Proposition de Valeur Unique
+
+- *"Sponsorisez le sport amateur de votre région sans gérer 30 contrats"*
+- *"1 signature = présence automatique 30+ salles sportives"*
+- *"Analytics temps réel par club, région, période"*
+- *"Association positive sport/jeunesse/territoire"*
+
+### 2.5.4 Seuils Critiques Réseau
+
+| Seuil | Clubs | Impact |
+|-------|-------|--------|
+| **SEUIL 1** | 15 clubs | Lancement réseau (reach minimal viable) |
+| **SEUIL 2** | 30 clubs | Scale annonceurs régionaux (CPM compétitif) |
+| **SEUIL 3** | 100 clubs | Attractivité annonceurs nationaux (couverture géo) |
+| **SEUIL 4** | 300 clubs | Pricing premium (quasi-monopole) |
+
+### 2.5.5 Équipe Dédiée Annonceurs
+
+| Phase | Structure | Mission |
+|-------|-----------|---------|
+| **2026** | Gwenvael double casquette | Clubs + annonceurs (mi-temps chaque) |
+| **2027** | +1 Commercial Annonceurs | 6 → 15 annonceurs en 12 mois |
+| **2028** | Équipe structurée (3 pers.) | 1 Head + 2 Account Managers régionaux |
+
+## 2.6 Marché Annonceurs (CÔTÉ 2)
+
+### TAM Annonceurs
+
+| Segment | Calcul | TAM ARR |
+|---------|--------|---------|
+| Publicité locale/régionale France | €3,5 Mds (Kantar) | - |
+| Part sport amateur | ~1% | €35M disponible |
+| **Annonceurs régionaux** | 50 × €250/mois × 90% × 12 | **€135K** |
+| **Annonceurs nationaux** | 100 × €1,000/mois × 90% × 12 | **€1,08M** |
+| **TOTAL TAM ANNONCEURS** | | **€1,2M ARR** |
+
+### SAM Annonceurs par Année
+
+| Année | Annonceurs | SAM ARR |
+|-------|------------|---------|
+| **2026** (Bretagne + Pays de Loire) | 6 régionaux | €16K |
+| **2027** (+3 régions) | 15 (dont 3 nationaux) | €40K |
+| **2028** (couverture nationale) | 25+ | €80K |
+
+### TAM Combiné NEOPRO
+
+| Segment | TAM ARR | SAM 2026 | SAM 2027 | SAM 2028 |
+|---------|---------|----------|----------|----------|
+| **Clubs** | €5,2M | €53K | €154K | €450K |
+| **Annonceurs** | €1,2M | €16K | €40K | €80K |
+| **TOTAL** | **€6,4M** | **€69K** | **€194K** | **€530K** |
+
+### Stratégie Go-To-Market
+
+| Phase | Focus | Actions |
+|-------|-------|---------|
+| **Phase 1 (2026)** | Clubs d'abord | Build réseau, annonceurs dès seuil 15 clubs |
+| **Phase 2 (2027)** | Scale annonceurs | Expansion géo + annonceurs régionaux |
+| **Phase 3 (2028)** | Pricing premium | Couverture nationale + annonceurs nationaux |
+
+## 2.7 Production Vidéo - Différenciateur Majeur
+
+> **La production vidéo professionnelle est un PILIER de l'offre NEOPRO**, pas une option secondaire.
+
+### 2.7.1 Pourquoi c'est Critique
+
+#### Problème Club
+
+- Clubs veulent célébrations joueurs personnalisées (buts, entrées)
+- Mais n'ont pas : équipement vidéo pro, compétences montage, temps
+
+#### Solution NEOPRO
+
+- Shooting terrain inclus dans offres Silver/Gold
+- Production vidéos célébrations (5-10s par joueur)
+- Photos équipe complète fournies (utilisables communication)
+- Montage professionnel avec motion design
+
+#### Impact Commercial
+
+- Clubs ADORENT voir leurs joueurs sur écran géant
+- Ambiance salle décuplée lors des buts
+- **Argument massue** : *"Vos joueurs comme des pros"*
+
+### 2.7.2 Offres Production Vidéo
+
+#### Équipe Principale
+
+| Pack | Prix | Contenu | Marge |
+|------|------|---------|-------|
+| **Bronze** | €800 | 10 vidéos 30s (contenu club fourni), motion design basique, 1 révision, livraison 7 jours | 56% |
+| **Silver** ⭐ | €1,500 | Shooting 1h30 + 1 vidéo présentation + 10 vidéos 30s, motion design pro, 2 révisions, livraison 5 jours | 32% |
+| **Gold** | €2,000 | Shooting 2h + 1 vidéo 60s + 15 vidéos (10×30s + 5×60s), interviews, révisions illimitées, livraison 3 jours | 30% |
+
+#### Équipes Supplémentaires
+
+| Option | Prix | Condition | Marge |
+|--------|------|-----------|-------|
+| **Équipe supp (montage seul)** | €500 | Assets shooting principal | 30% |
+| **Équipe supp (avec shooting)** | €1,200 | Shooting séparé | 15% |
+
+#### Packs Multi-Équipes (économies d'échelle)
+
+| Pack | Prix | Contenu | Économie |
+|------|------|---------|----------|
+| **2 Équipes** | €2,500 | 1 shooting 2h, 20 vidéos | €500 vs 2×Silver |
+| **3 Équipes** | €3,500 | 1 shooting 3h, 30 vidéos | €1,000 vs 3×Silver |
+| **4 Équipes** | €4,200 | 1 shooting 4h, 40 vidéos | €1,800 vs 4×Silver |
+
+### 2.7.3 Service Média Day
+
+| Service | Prix | Contenu | Marge |
+|---------|------|---------|-------|
+| **Média Day Multi-Équipes** | €2,500/journée | Shooting 1 journée (4-6 équipes), 50+ photos HD/équipe, 1 vidéo présentation/équipe | 44% |
+
+**Disponibilité** : Q3 2026
+
+**Pour qui** : Clubs nombreuses équipes voulant standardiser et économiser production
+
+### 2.7.4 Différenciation Concurrence
+
+| Concurrent | Prix | Qualité | Intégration |
+|------------|------|---------|-------------|
+| Agences vidéo | €2,000-5,000 | Pro | Aucune |
+| Freelances | €500-1,500 | Variable | Aucune |
+| Bénévoles club | Gratuit | Amateur | Manuelle |
+| **NEOPRO** | €800-2,000 | Pro | **Automatique** |
+
+#### Avantages NEOPRO
+
+- ✅ Intégré dans plateforme (vidéos uploadées automatiquement)
+- ✅ Prix compétitifs packs multi-équipes
+- ✅ Motion design standardisé pro (cohérence visuelle)
+- ✅ Livraison rapide (3-7 jours vs 2-3 semaines agences)
+- ✅ Photos incluses (utilisables communication club)
+
+### 2.7.5 Prévisions 2026
+
+| Métrique | Valeur |
+|----------|--------|
+| Taux adoption vidéo | 53% (16 clubs sur 30) |
+| Mix packs | 50% Bronze, 35% Silver, 15% Gold |
+| Revenus vidéo 2026 | ~€12,800 (amorti mensuel €1,066) |
 
 ---
 
@@ -1060,81 +1405,230 @@ CEO
 
 # 8. Modèle Économique
 
+> **NEOPRO génère des revenus via DEUX SOURCES RÉCURRENTES** : Abonnements Clubs (SaaS sportif) et Réseau Annonceurs (Marketplace).
+
 ## 8.1 Sources de Revenus
 
-### Revenue Streams
+### 8.1.1 STREAM 1 : Abonnements Clubs (SaaS sportif)
 
-| Stream | Description | % Revenue cible |
-|--------|-------------|-----------------|
-| **Hardware** | Vente kit Raspberry Pi configuré | 20% |
-| **SaaS** | Abonnement mensuel par site | 60% |
-| **Services Pro** | Installation, formation, support premium | 15% |
-| **Marketplace** | Commission sur ventes templates | 5% |
+#### Hardware (paiement unique An 1)
 
-### Pricing Suggéré
+| Produit | Prix | Coût | Marge |
+|---------|------|------|-------|
+| **Boîtier principal** | €350 | €150 | 57% |
+| **Boîtier supplémentaire** (2ème salle) | €250 | €100 | 60% |
+| **Écran 81" professionnel** | €1,500 | €1,100 | 27% |
 
-| Plan | Prix/mois | Fonctionnalités |
-|------|-----------|-----------------|
-| **Starter** | €19 | 1 site, features de base, support email |
-| **Pro** | €39 | 1 site, toutes features, support prioritaire |
-| **Business** | €29/site | Multi-sites, dashboard central, API |
-| **Enterprise** | Sur devis | White-label, SSO, SLA garanti |
+#### Abonnements Mensuels (3 paliers)
 
-### Hardware
+| Palier | Prix/mois | Hardware An 1 | Total An 1 | Marge nette |
+|--------|-----------|---------------|------------|-------------|
+| **Autonome** | €50/mois | €350 | €950 | 80% |
+| **Professionnel** | €80/mois | €350 | €1,310 | 82% |
+| **Premium** | €120/mois | €350 | €1,790 | 78% |
 
-| Produit | Prix | Marge |
-|---------|------|-------|
-| Kit NEOPRO Basic | €149 | 40% |
-| Kit NEOPRO Pro (+ boîtier) | €199 | 45% |
-| Installation sur site | €200-500 | 60% |
+#### Détail des Paliers
+
+**AUTONOME (€50/mois) :**
+- ✅ Boîtier pré-configuré
+- ✅ Application TV full-screen
+- ✅ Télécommande smartphone
+- ✅ Plateforme cloud sync auto
+- ✅ Support email 48h
+- ✅ Documentation complète
+- ✅ Mises à jour OTA automatiques
+
+**PROFESSIONNEL (€80/mois) = Tout Autonome + :**
+- ✅ Dashboard Analytics Club Premium
+  - Analytics avancés (heatmaps, engagement, trends)
+  - Rapports PDF club mensuels
+  - Export CSV données
+  - Comparaison vs autres clubs (benchmarking)
+  - Alertes automatiques
+- ✅ Support prioritaire 24h
+
+**PREMIUM (€120/mois) = Tout Professionnel + :**
+- ✅ Dashboard Sponsors Premium
+  - Dashboard sponsors temps réel
+  - Rapports PDF sponsors mensuels
+  - Certificat digital impressions
+  - Accès sponsors au portail
+- ✅ Pack Expérience Fan
+  - Jeux-concours QR code
+  - Sondages en direct
+  - Feed réseaux sociaux sur écran
+  - Module "Fan du match"
+- ✅ Support hotline 4h
+
+#### Upsells Haute Marge
+
+| Catégorie | Produit | Prix | Marge |
+|-----------|---------|------|-------|
+| **Production Vidéo** | Bronze (10 vidéos, contenu club) | €800 | 56% |
+| | Silver (shooting 1h30 + 10 vidéos) | €1,500 | 32% |
+| | Gold (shooting 2h + 15 vidéos) | €2,000 | 30% |
+| | Équipe supp montage seul | €500 | 30% |
+| | Équipe supp avec shooting | €1,200 | 15% |
+| | Pack 2 équipes | €2,500 | 31% |
+| | Pack 3 équipes | €3,500 | 31% |
+| | Pack 4 équipes | €4,200 | 26% |
+| **Analytics** | Analytics Club Premium | €200/an | 75% |
+| | Pack Sponsors Premium | €250/an | 80% |
+| | Bundle Analytics+Sponsors | €400/an | 75% |
+| **Engagement** | Pack Expérience Fan | €300/an | 67% |
+| **Branding** | White-Label Sponsor | €1,500/an | 87% |
+| **Services** | Média Day multi-équipes | €2,500/jour | 44% |
+| | Location écran événements | Commission 20% | - |
+
+**Pénétration prévue 2026 :**
+- Mix paliers : 60% Autonome / 33% Pro / 7% Premium
+- Taux adoption vidéo : 53% (16 clubs sur 30)
+- Taux adoption analytics : 60% (18 clubs sur 30)
+
+### 8.1.2 STREAM 2 : Réseau Annonceurs (Marketplace)
+
+#### Modèle Économique Annonceurs
+
+| Élément | Valeur |
+|---------|--------|
+| **Prix annonceur** | €250/mois |
+| **Commission NEOPRO** | 90% (€225/mois par annonceur) |
+| **Reverse club** | 10% (€25/mois par annonceur) |
+| **Limite par club** | 3 annonceurs maximum |
+| **Revenus club passifs** | €1,800/an (6 annonceurs × €25 × 12) |
+
+#### Economics Annonceurs
+
+- CPM facturé : €10 (moyenne spectateurs handball/basket)
+- Reach estimé 30 clubs : 15,000 spectateurs/mois
+- Budget annonceur €250/mois = 25,000 impressions garanties
+- Scalabilité : Marge pure 90% (coûts variables ~€0)
+
+#### Attractivité pour les Clubs
+
+**Coût net NEOPRO avec annonceurs :**
+```
+€950/an (abonnement Autonome) - €1,800/an (revenus annonceurs) = -€850/an
+```
+
+> **Résultat** : Le club GAGNE de l'argent en utilisant NEOPRO !
+>
+> Revenus annonceurs couvrent **190% du coût abonnement**.
+>
+> **Argument commercial massue** : *"NEOPRO vous paie pour l'utiliser"*
+
+### 8.1.3 Mix Revenus Projeté 2026
+
+| Source | Revenus/mois (Q4) | % total | Marge |
+|--------|-------------------|---------|-------|
+| Abonnements clubs | €1,840 | 37% | 92% |
+| Upsells (vidéo+analytics) | €1,208 | 25% | 65% |
+| **RÉSEAU ANNONCEURS** | €1,350 | 28% | 90% |
+| Hardware An 1 (amorti) | €500 | 10% | 57% |
+| **TOTAL** | **€4,898** | 100% | 89% |
+
+**ARR récurrent (hors hardware)** : €4,398/mois × 12 = **€52,776**
+
+### 8.1.4 Projection 2027
+
+Avec 100 clubs + 15 annonceurs :
+- Abonnements clubs : €6,000/mois
+- Upsells : €3,500/mois
+- Annonceurs : €3,375/mois (15 × €250 × 90%)
+- **TOTAL : €12,875/mois = €154K ARR**
+
+> **Point clé** : Les annonceurs deviennent la SOURCE REVENUS #1 à partir de 2027 (scale plus rapide que clubs).
 
 ## 8.2 Projections Financières
 
-### Hypothèses
+### Objectif Fin 2026 : 30 clubs payants + 6 annonceurs
 
-| Métrique | Valeur |
-|----------|--------|
-| ARPU (Average Revenue Per User) | €35/mois |
-| CAC (Customer Acquisition Cost) | €200 |
-| Churn mensuel | 3-5% |
-| Cycle de vente | 2-4 semaines |
-| LTV (Lifetime Value) | €840 (24 mois) |
-| LTV/CAC | 4.2x |
+| Trimestre | Clubs | Annonceurs | Revenus/mois | Marge |
+|-----------|-------|------------|--------------|-------|
+| **Q1 2026** | 10 | 0 | €600 | €184 |
+| **Q2 2026** | 22 | 3 | €2,075 | €1,619 |
+| **Q3 2026** | 30 | 5 | €4,325 | €3,842 |
+| **Q4 2026** | 35 | 6-8 | €4,898 | €4,398 |
 
-### Projections
+**Détail revenus Q4 2026 :**
+- Abonnements base : €1,840/mois
+- Upsells vidéo (amortis) : €866/mois
+- Upsells analytics (amortis) : €342/mois
+- Réseau annonceurs : €1,350/mois (6 × €225)
+- Hardware An 1 (amorti) : €500/mois
 
-| Métrique | M6 | M12 | M24 | M36 |
-|----------|-----|-----|-----|-----|
-| Clubs actifs | 100 | 400 | 1,500 | 5,000 |
-| MRR | €3.5K | €14K | €52K | €175K |
-| ARR | €42K | €168K | €630K | €2.1M |
-| Croissance MoM | 25% | 15% | 10% | 8% |
+**ARR Fin 2026 : €53K** (~€4,400/mois récurrent hors hardware)
+
+### Charges Mensuelles
+
+| Type | Montant | Détail |
+|------|---------|--------|
+| **Fixes** | €383/mois | Hosting €50 + Adobe €83 + dev externe €250 |
+| **Variables** | €3,33/club/mois | Hosting uniquement |
+| **Support** | €0 | 2 associés bénévoles temps partiel |
+
+**Résultat net projeté 2026 : €25K cash cumulé**
+
+### Analyse de Sensibilité
+
+| Clubs | Base | Upsells | Annonceurs | Total | Objectif |
+|-------|------|---------|------------|-------|----------|
+| 15 | €920 | €604 | €675 | €2,199 | ❌ -€1,8K |
+| 20 | €1,227 | €806 | €900 | €2,933 | ❌ -€1,1K |
+| 25 | €1,533 | €1,007 | €1,125 | €3,665 | ❌ -€335 |
+| **30** | €1,840 | €1,208 | €1,350 | **€4,398** | ✅ +€398 |
+| 35 | €2,147 | €1,410 | €1,575 | €5,132 | ✅ +€1,1K |
+
+> **Conclusion** : Minimum **25-30 clubs** nécessaires pour valider objectif €4,000/mois.
+
+### Roadmap Stratégique 2026-2028
+
+| Phase | Clubs | Annonceurs | ARR | Focus |
+|-------|-------|------------|-----|-------|
+| **2026 - PMF** | 35 | 6-8 | €53K | Reach 15,000+ spectateurs/mois |
+| **2027 - Scale** | 100 | 15 (dont 3 nationaux) | €154K | Expansion Nouvelle-Aquitaine + Hauts-de-France, +2 commerciaux |
+| **2028 - Dominance** | 300 | 25+ | €420K | CPM premium €12-15, équipe annonceurs 1 Head + 2 AM |
 
 ## 8.3 Unit Economics
 
+### Côté Clubs
+
+| Métrique | Valeur |
+|----------|--------|
+| **CAC** | €150 (démos gratuites + warm intros) |
+| **LTV** | €3,600 (3 ans × €100/mois moyen) |
+| **LTV/CAC** | **24x** |
+| **Payback** | 2 mois |
+
+### Côté Annonceurs
+
+| Métrique | Valeur |
+|----------|--------|
+| **CAC** | €800 (prospection B2B, négociations) |
+| **LTV** | €8,100 (3 ans × €225/mois × 90%) |
+| **LTV/CAC** | **10x** |
+| **Payback** | 4 mois |
+| **Churn attendu** | <10% annuel |
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           UNIT ECONOMICS                                    │
+│                           UNIT ECONOMICS v2                                 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   ACQUISITION                          MONÉTISATION                         │
-│   ┌─────────────────┐                  ┌─────────────────┐                 │
-│   │ CAC = €200      │                  │ ARPU = €35/mois │                 │
-│   │                 │                  │                 │                 │
-│   │ • Marketing: €80│                  │ • SaaS: €29     │                 │
-│   │ • Sales: €100   │                  │ • Services: €6  │                 │
-│   │ • Onboard: €20  │                  │                 │                 │
-│   └─────────────────┘                  └─────────────────┘                 │
+│   CLUBS                                 ANNONCEURS                          │
+│   ┌─────────────────┐                   ┌─────────────────┐                │
+│   │ CAC = €150      │                   │ CAC = €800      │                │
+│   │ LTV = €3,600    │                   │ LTV = €8,100    │                │
+│   │ LTV/CAC = 24x   │                   │ LTV/CAC = 10x   │                │
+│   │ Payback = 2 mois│                   │ Payback = 4 mois│                │
+│   │ Churn = 5%/an   │                   │ Churn = 10%/an  │                │
+│   └─────────────────┘                   └─────────────────┘                │
 │                                                                             │
-│   RÉTENTION                            MARGE                                │
-│   ┌─────────────────┐                  ┌─────────────────┐                 │
-│   │ Churn = 4%/mois │                  │ Gross Margin    │                 │
-│   │                 │                  │ = 75%           │                 │
-│   │ LTV = 24 mois   │                  │                 │                 │
-│   │ = €840          │                  │ LTV/CAC = 4.2x  │                 │
-│   └─────────────────┘                  └─────────────────┘                 │
+│   MARGE GLOBALE = 89% (Q4 2026)                                            │
 │                                                                             │
-│   PAYBACK PERIOD = 6 mois                                                  │
+│   TWO-SIDED NETWORK EFFECTS                                                │
+│   • Plus de clubs → Plus d'audience → Plus d'annonceurs                   │
+│   • Plus d'annonceurs → Revenus passifs clubs → CAC clubs réduit          │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -1143,82 +1637,141 @@ CEO
 
 # 9. Budget & Ressources
 
-## 9.1 Récapitulatif par Phase
+> **Philosophie : Bootstrap jusqu'à profitabilité.** Lever uniquement si opportunité de scale accéléré.
 
-| Phase | Durée | Budget | Équipe | Focus |
-|-------|-------|--------|--------|-------|
-| **Phase 1** | 0-3 mois | €50K | 3-4 | Consolidation technique |
-| **Phase 2** | 3-12 mois | €500K | 8-10 | Scale & PMF |
-| **Phase 3** | 1-3 ans | €2-3M/an | 25-30 | Expansion EU |
+## 9.1 Stratégie Financement
 
-## 9.2 Détail Phase 1 (€50K)
+### Besoin Immédiat : €0 (Bootstrap)
 
-| Poste | Mensuel | 3 mois |
+| Phase | Modèle | Investissement externe | Focus |
+|-------|--------|------------------------|-------|
+| **2026** | Autofinancement | €0 | PMF avec 35 clubs, €53K ARR |
+| **2027** | Seed conditionnel | €150K (si scale accéléré) | 100+ clubs, expansion géo |
+| **2028** | Profitabilité | €0 | €420K ARR, équipe de 8-10 |
+
+### Phase Actuelle : Pre-seed Autofinancée
+
+| Élément | Montant | Statut |
+|---------|---------|--------|
+| Hardware beta clubs | €1,050 investis | ✅ Fait (3 × €350) |
+| Développement produit | Finalisé | ✅ MVP en production |
+| Stratégie commerciale | Validée | ✅ Exécution janvier 2026 |
+
+## 9.2 Équipe Phase 1 (Q1-Q4 2026) : Bootstrap
+
+### Structure Actuelle
+
+| Rôle | Personne | Temps | Coût |
+|------|----------|-------|------|
+| **Commercial & Ops** | Gwenvael | Mi-temps (20h/sem) | €0 (bénévole) |
+| **Production vidéo** | Associé 2 | Temps partiel | €0 (bénévole) |
+
+**Coût RH total Phase 1 : €0**
+
+> **Modèle Lean** : 2 associés suffisent jusqu'à €50K ARR.
+> Recrutement commercial junior uniquement si dépassement objectif Q4 2026.
+
+### Utilisation Cash 2026
+
+| Poste | Montant | Détail |
 |-------|---------|--------|
-| Dev Backend Senior | €6,000 | €18,000 |
-| Dev Frontend Senior | €5,500 | €16,500 |
-| DevOps (50%) | €2,500 | €7,500 |
-| **Sous-total RH** | €14,000 | €42,000 |
-| Infrastructure | €120 | €360 |
-| Outils (GitHub, Sentry) | €80 | €240 |
-| Hardware pilotes (10 Pi) | - | €1,000 |
-| Buffer (10%) | - | €4,400 |
-| **Total** | | **€48,000** |
+| **Hardware nouveaux clients** | €10,500 | 30 clubs × €350 |
+| **Marketing/prospection** | €0 | Warm intros + ligues (gratuit) |
+| **Opérations** | Autofinancés | Revenus récurrents couvrent |
 
-## 9.3 Détail Phase 2 (€500K)
+### Projection Trésorerie 2026
 
-| Poste | Mensuel | 9 mois |
-|-------|---------|--------|
-| CTO/Tech Lead | €8,000 | €72,000 |
-| Dev Backend x2 | €11,000 | €99,000 |
-| Dev Frontend | €5,500 | €49,500 |
-| Dev Mobile | €6,000 | €54,000 |
-| DevOps/SRE | €6,500 | €58,500 |
-| QA Engineer | €4,500 | €40,500 |
-| Customer Success | €4,000 | €36,000 |
-| **Sous-total RH** | €45,500 | €409,500 |
-| Infrastructure | €950 | €8,550 |
-| Services (pentest, légal) | - | €30,000 |
-| Marketing | €3,500 | €31,500 |
-| Buffer (10%) | - | €48,000 |
-| **Total** | | **€527,550** |
+| Période | Cash flow | Cumul |
+|---------|-----------|-------|
+| **Jan-Mar 2026** | Négatif | Achats hardware upfront |
+| **Avr-Juin 2026** | Break-even | Revenus = charges |
+| **Juil-Déc 2026** | Positif €3-4K/mois | Accumulation cash |
 
-## 9.4 Coûts Infrastructure Détaillés
+**Résultat net 2026 : +€25K cash**
 
-### Phase 1
+## 9.3 Équipe Phase 2 (2027) : Post-Seed Conditionnel
 
-| Service | Usage | Coût/mois |
-|---------|-------|-----------|
-| Render.com Starter | Central server + DB | €14 |
-| GitHub Pro | 2 devs | €8 |
-| Sentry | Error tracking | €26 |
-| Logtail | Logging | €0 (free) |
-| UptimeRobot | Monitoring | €0 (free) |
-| **Total** | | **€48** |
+### Déclencheur Seed
 
-### Phase 2
+| Condition | Valeur | Statut |
+|-----------|--------|--------|
+| ARR atteint | > €80K | À valider Q4 2026 |
+| Pipeline annonceurs | > 10 qualifiés | À valider |
+| Opportunité scale | Demande > capacité | À évaluer |
 
-| Service | Usage | Coût/mois |
-|---------|-------|-----------|
-| Render.com Pro | Multi-services | €150 |
-| Redis Cloud | Socket.IO adapter | €50 |
-| Cloudflare Pro | CDN + WAF | €50 |
-| AWS S3 + CloudFront | Vidéos | €100 |
-| Datadog | APM + Logs | €200 |
-| Sentry Team | Error tracking | €50 |
-| **Total** | | **€600** |
+### Si Seed €150K levé (2027)
 
-### Phase 3
+| Poste | Profil | Coût annuel |
+|-------|--------|-------------|
+| **Commercial Clubs** | Junior, terrain | €35K |
+| **Commercial Annonceurs** | Expérience vente média | €45K |
+| **Sous-total RH** | | **€80K** |
+| Infrastructure | Scale | €15K |
+| Marketing | Events, collaterals | €20K |
+| Buffer | 20% | €35K |
+| **Total** | | **€150K** |
+
+### Objectif Post-Seed (Fin 2027)
+
+| Métrique | Objectif |
+|----------|----------|
+| Clubs | 150 |
+| Annonceurs | 12-15 |
+| ARR | €200K |
+| Équipe | 4 personnes |
+
+## 9.4 Coûts Infrastructure (Bootstrap)
+
+### Charges Fixes Mensuelles (2026)
 
 | Service | Usage | Coût/mois |
 |---------|-------|-----------|
-| Kubernetes (managed) | Multi-région | €2,000 |
-| PostgreSQL (replicated) | Primary + 2 replicas | €500 |
-| Redis Cluster | HA Socket.IO | €200 |
-| Cloudflare Enterprise | Full stack | €500 |
-| AWS (S3, CloudFront, etc.) | Assets | €500 |
-| Datadog Enterprise | Full observability | €1,000 |
-| **Total** | | **€4,700** |
+| **Render.com** | Hosting serveur central | €50 |
+| **Adobe Creative Cloud** | Production vidéo | €83 |
+| **Développement externe** | Maintenance ponctuelle | €250 |
+| **Total fixes** | | **€383/mois** |
+
+### Charges Variables
+
+| Élément | Coût unitaire | Échelle |
+|---------|---------------|---------|
+| Hosting par club | €3,33/club/mois | Linéaire |
+| Bande passante vidéos | ~€0,10/Go | Négligeable |
+
+### Projection Infrastructure 2026
+
+| Trimestre | Clubs | Coût infra | % revenus |
+|-----------|-------|------------|-----------|
+| Q1 | 10 | €416 | 69% |
+| Q2 | 22 | €456 | 22% |
+| Q3 | 30 | €483 | 11% |
+| Q4 | 35 | €500 | 10% |
+
+> **Conclusion** : Infrastructure très scalable, coûts négligeables à scale.
+
+## 9.5 Fundraising Futur (Conditionnel)
+
+### Seed €150K (2027) - Si Scale Accéléré
+
+| Élément | Valeur |
+|---------|--------|
+| **Montant** | €150K |
+| **Valorisation pre-money** | €500K (indicatif) |
+| **Dilution** | <20% |
+| **Utilisation** | 2 commerciaux + expansion géo |
+| **Objectif post-seed** | 150 clubs, €200K ARR fin 2027 |
+
+### Critères Go/No-Go
+
+| Critère | Seuil | Poids |
+|---------|-------|-------|
+| ARR Q4 2026 | > €80K | 30% |
+| Pipeline qualifié | > 50 clubs | 25% |
+| Demande annonceurs | > 10 intéressés | 25% |
+| Capacité exécution | Saturée | 20% |
+
+> **Philosophie** : Ne lever que si l'opportunité l'exige.
+> Bootstrap = contrôle total + valorisation maximale future.
 
 ---
 
@@ -1933,30 +2486,51 @@ Le rapport PDF inclut :
 
 ## 13.7 Modèle de Pricing Analytics
 
-### Option 1 : Inclus dans l'abonnement
+### Offres Analytics par Palier (inclus dans abonnement)
 
-| Plan | Analytics inclus |
-|------|------------------|
-| Starter (€19/mois) | Stats basiques (impressions, durée) |
-| Pro (€39/mois) | Stats complètes + export CSV |
-| Business (€29/site) | Tout + rapports PDF + multi-sites |
-| Enterprise | Tout + API + portail sponsor |
+| Palier | Prix/mois | Analytics inclus |
+|--------|-----------|------------------|
+| **Autonome** | €50/mois | Stats basiques (impressions, durée, reach estimé) |
+| **Professionnel** | €80/mois | Tout Autonome + Analytics Club Premium complet |
+| **Premium** | €120/mois | Tout Pro + Dashboard Sponsors Premium + Rapports PDF sponsors |
 
-### Option 2 : Module complémentaire
+### Upsells Analytics (add-ons annuels)
 
-| Module | Prix | Contenu |
-|--------|------|---------|
-| Analytics Basic | Gratuit | Impressions, durée totale |
-| Analytics Pro | +€10/mois | Contexte, PDF, comparaisons |
-| Analytics Enterprise | +€25/mois | API, portail sponsor, objectifs |
+| Module | Prix | Contenu | Marge |
+|--------|------|---------|-------|
+| **Analytics Club Premium** | €200/an | Heatmaps, trends, benchmarking, export CSV, alertes auto | 75% |
+| **Pack Sponsors Premium** | €250/an | Dashboard sponsors temps réel, rapports PDF mensuels, certificat digital, portail sponsors | 80% |
+| **Bundle Analytics+Sponsors** | €400/an | Tout Analytics Club + Pack Sponsors (économie €50) | 75% |
 
-### Option 3 : Par sponsor
+### Détail Pack Sponsors Premium (€250/an)
 
-| Formule | Prix | Usage |
-|---------|------|-------|
-| Rapport ponctuel | €15 | PDF one-shot |
-| Suivi mensuel | €5/sponsor/mois | Rapports auto |
-| Portail dédié | €20/sponsor/mois | Accès self-service |
+| Fonctionnalité | Description |
+|----------------|-------------|
+| ✅ Dashboard sponsors temps réel | Impressions, reach, durée exposition par sponsor |
+| ✅ Rapports PDF sponsors mensuels | KPIs détaillés, graphiques, évolutions |
+| ✅ Certificat digital impressions | Preuve officielle pour négociations |
+| ✅ Accès sponsors au portail | Login personnalisé par sponsor |
+| ✅ Support dédié sponsors | Assistance spécifique partenaires |
+
+### Impact Commercial
+
+> **Argument massue pitch clubs :**
+> *"Vos sponsors reçoivent rapports PDF automatiques mensuels prouvant 312 impressions en janvier. Renouvellement contrats facilité."*
+
+**Cas concret CESSON Handball (N3) :**
+- AVANT NEOPRO : 2 sponsors perdus (pas de preuves ROI)
+- AVEC NEOPRO : 5/5 sponsors renouvelés ("enfin des données !")
+- +1 nouveau sponsor attiré (visibilité écran démontrée)
+- **+€2,500 revenus sponsoring annuels**
+- **ROI NEOPRO : 4 mois**
+
+### Taux Adoption Prévu 2026
+
+| Module | Adoption | Clubs concernés |
+|--------|----------|-----------------|
+| Analytics Club Premium | 60% | 18 clubs sur 30 |
+| Pack Sponsors Premium | 40% | 12 clubs sur 30 |
+| Bundle complet | 25% | 8 clubs sur 30 |
 
 ## 13.8 KPIs Module Analytics
 
@@ -2021,6 +2595,54 @@ PHASE 3 (Mois 5-8)
 > **Objectif : Donner aux clubs une vision complète de leur utilisation du système pour optimiser l'animation des événements et justifier l'investissement.**
 
 Cette fonctionnalité permet aux clubs de mesurer l'utilisation réelle de leur système NEOPRO et d'identifier les axes d'amélioration.
+
+## 14.0 Offre Commerciale Analytics Club
+
+### Inclus dans Palier Professionnel (€80/mois)
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| ✅ Dashboard analytics avancé | Vue complète utilisation système |
+| ✅ Heatmaps d'engagement | Pics d'activité par moment match |
+| ✅ Trends et évolutions | Comparaison mois/saison |
+| ✅ Top contenus par période | Vidéos les plus diffusées |
+| ✅ Rapports PDF club mensuels | Export automatique |
+| ✅ Export CSV données brutes | Analyses custom |
+| ✅ Comparaison vs autres clubs | Benchmarking anonyme |
+| ✅ Alertes automatiques | Détection problèmes, baisse engagement |
+
+### Add-on Analytics Club Premium (€200/an)
+
+Pour les clubs sur palier Autonome qui veulent accéder aux analytics avancés :
+
+| Élément | Détail |
+|---------|--------|
+| **Prix** | €200/an (€16,67/mois) |
+| **Marge** | 75% |
+| **Contenu** | Toutes fonctionnalités analytics incluses dans Professionnel |
+| **Cible** | Clubs Autonome (€50/mois) voulant data sans upgrader |
+
+### Cas d'Usage Concrets
+
+**OPTIMISATION CONTENU :**
+> *"Analytics montrent vidéo célébration Joueur 7 passe 3x plus que Joueur 12 → Créer nouvelle vidéo Joueur 12 plus engageante"*
+
+**FIABILITÉ TECHNIQUE :**
+> *"Alerte automatique baisse uptime → Intervention rapide avant match"*
+
+**BENCHMARKING :**
+> *"Mon club utilise écran 60 min/match, moyenne réseau 45 min → Je suis au-dessus, sponsors contents"*
+
+**REPORTING INTERNE :**
+> *"Rapport PDF mensuel présenté au bureau directeur prouvant ROI investissement NEOPRO"*
+
+### Taux Adoption Prévu 2026
+
+| Segment | Adoption |
+|---------|----------|
+| Clubs Professionnel/Premium (analytics inclus) | 100% |
+| Clubs Autonome (add-on €200/an) | 30% |
+| **Total clubs avec analytics** | 60% (18 sur 30) |
 
 ## 14.1 Données Disponibles
 
