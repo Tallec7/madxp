@@ -24,6 +24,12 @@
     "strictTemplates": true
   },
   "files": [],
+  "exclude": [
+    "node_modules",
+    "**/*.tar.gz",
+    "deploy",
+    "backups"
+  ],
   "references": [
     {
       "path": "./tsconfig.app.json"
