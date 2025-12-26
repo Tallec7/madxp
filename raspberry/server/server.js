@@ -6,7 +6,7 @@ const path = require('path');
 const axios = require('axios');
 
 // Configuration pour l'envoi des analytics au serveur central
-const CENTRAL_SERVER_URL = process.env.CENTRAL_SERVER_URL || 'https://neopro-central.onrender.com';
+const CENTRAL_SERVER_URL = process.env.CENTRAL_SERVER_URL || 'https://neopro-central-production.up.railway.app';
 const SITE_ID = process.env.SITE_ID; // ID du site pour la démo
 const IS_CLOUD_ENV = process.env.RENDER || process.env.NODE_ENV === 'production';
 

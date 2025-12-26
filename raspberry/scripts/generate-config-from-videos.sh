@@ -461,7 +461,7 @@ cat > "$OUTPUT_FILE" << EOF
     },
     "sync": {
         "enabled": true,
-        "serverUrl": "https://neopro-central.onrender.com",
+        "serverUrl": "https://neopro-central-production.up.railway.app",
         "siteName": "$SITE_NAME",
         "clubName": "$CLUB_FULL_NAME",
         "location": {

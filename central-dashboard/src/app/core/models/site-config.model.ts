@@ -155,7 +155,7 @@ export const DEFAULT_CONFIG: Partial<SiteConfiguration> = {
   },
   sync: {
     enabled: true,
-    serverUrl: 'https://neopro-central.onrender.com',
+    serverUrl: 'https://neopro-central-production.up.railway.app',
     siteName: '',
     clubName: '',
   },

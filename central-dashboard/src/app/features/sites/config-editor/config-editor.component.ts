@@ -150,7 +150,7 @@ import {
                   id="serverUrl"
                   [(ngModel)]="config.sync.serverUrl"
                   (ngModelChange)="onConfigChange()"
-                  placeholder="https://neopro-central.onrender.com"
+                  placeholder="https://neopro-central-production.up.railway.app"
                 />
               </div>
               <div class="form-group" *ngIf="config.sync.enabled">
@@ -2151,7 +2151,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     version: '1.0',
     remote: { title: '' },
     auth: { password: '', clubName: '', sessionDuration: 28800000 },
-    sync: { enabled: true, serverUrl: 'https://neopro-central.onrender.com', siteName: '', clubName: '' },
+    sync: { enabled: true, serverUrl: 'https://neopro-central-production.up.railway.app', siteName: '', clubName: '' },
     sponsors: [],
     categories: [],
     timeCategories: [],
@@ -2227,7 +2227,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       version: '1.0',
       remote: { title: '' },
       auth: { password: '', clubName: '', sessionDuration: 28800000 },
-      sync: { enabled: true, serverUrl: 'https://neopro-central.onrender.com', siteName: '', clubName: '' },
+      sync: { enabled: true, serverUrl: 'https://neopro-central-production.up.railway.app', siteName: '', clubName: '' },
       sponsors: [],
       categories: [],
       timeCategories: [

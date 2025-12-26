@@ -248,7 +248,7 @@ create_configuration_json() {
   },
   "sync": {
     "enabled": false,
-    "serverUrl": "https://neopro-central.onrender.com",
+    "serverUrl": "https://neopro-central-production.up.railway.app",
     "apiKey": ""
   },
   "version": "${CONFIG_VERSION_ESC}",
@@ -596,7 +596,7 @@ setup_sync_agent() {
     # Exécuter register-site.js avec toutes les variables d'environnement
     ssh pi@"$PI_ADDRESS" "
         cd /home/pi/neopro/sync-agent
-        export CENTRAL_SERVER_URL='https://neopro-central.onrender.com'
+        export CENTRAL_SERVER_URL='https://neopro-central-production.up.railway.app'
         export ADMIN_EMAIL='${ADMIN_EMAIL}'
         export ADMIN_PASSWORD='${ESCAPED_ADMIN_PASSWORD}'
         export SITE_NAME='${ESCAPED_SITE_NAME}'
@@ -671,7 +671,7 @@ print_summary() {
     fi
     echo ""
     echo -e "${BLUE}Serveur central :${NC}"
-    echo "  • Dashboard : https://neopro-central.onrender.com"
+    echo "  • Dashboard : https://neopro-central-production.up.railway.app"
     echo "  • Le site devrait apparaître dans la liste des sites"
     echo ""
     echo -e "${YELLOW}Prochaines étapes :${NC}"

@@ -265,7 +265,7 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-app -n 50'
 - [Installation initiale du Pi](../README.md)
 - [Déploiement manuel](./build-and-deploy.sh)
 - [Configuration du sync-agent](../../sync-agent/README.md)
-- [Dashboard central](https://neopro-central.onrender.com)
+- [Dashboard central](https://neopro-central-production.up.railway.app)
 
 ---
 

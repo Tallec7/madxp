@@ -69,20 +69,20 @@ central-dashboard/
 
 ## ✅ Fonctionnalités
 
-| Composant | Description |
-|-----------|-------------|
-| Login | Authentification JWT |
-| Layout | Navigation sidebar + header |
-| Dashboard | Vue d'ensemble du parc avec stats |
-| Sites List | Liste, filtres, création, édition |
-| Site Detail | Métriques, commandes, logs |
-| Groups List | Gestion des groupes |
-| Group Detail | Actions groupées |
-| Content | Gestion et déploiement vidéos (upload multiple, drag & drop) |
-| Updates | Mises à jour logicielles |
-| **Sponsor Portal** | Dashboard dédié sponsors (vidéos, sites, stats) |
-| **Agency Portal** | Dashboard dédié agences (clubs gérés, alertes) |
-| **Admin Agencies** | Gestion des agences partenaires (CRUD) |
+| Composant          | Description                                                  |
+| ------------------ | ------------------------------------------------------------ |
+| Login              | Authentification JWT                                         |
+| Layout             | Navigation sidebar + header                                  |
+| Dashboard          | Vue d'ensemble du parc avec stats                            |
+| Sites List         | Liste, filtres, création, édition                            |
+| Site Detail        | Métriques, commandes, logs                                   |
+| Groups List        | Gestion des groupes                                          |
+| Group Detail       | Actions groupées                                             |
+| Content            | Gestion et déploiement vidéos (upload multiple, drag & drop) |
+| Updates            | Mises à jour logicielles                                     |
+| **Sponsor Portal** | Dashboard dédié sponsors (vidéos, sites, stats)              |
+| **Agency Portal**  | Dashboard dédié agences (clubs gérés, alertes)               |
+| **Admin Agencies** | Gestion des agences partenaires (CRUD)                       |
 
 ### Gestion du Contenu (Content)
 
@@ -97,20 +97,22 @@ central-dashboard/
 ## ⚙️ Configuration
 
 ### Development (`src/environments/environment.ts`)
+
 ```typescript
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:3001/api',
-  socketUrl: 'http://localhost:3001'
+  socketUrl: 'http://localhost:3001',
 };
 ```
 
 ### Production (`src/environments/environment.prod.ts`)
+
 ```typescript
 export const environment = {
   production: true,
-  apiUrl: 'https://neopro-central.onrender.com/api',
-  socketUrl: 'https://neopro-central.onrender.com'
+  apiUrl: 'https://neopro-central-production.up.railway.app/api',
+  socketUrl: 'https://neopro-central-production.up.railway.app',
 };
 ```
 
@@ -121,10 +123,10 @@ export const environment = {
 SCSS natif avec variables CSS :
 
 ```scss
---primary-color: #2563eb    // Bleu
---success-color: #10b981    // Vert
---warning-color: #f59e0b    // Orange
---danger-color: #ef4444     // Rouge
+--primary-color: #2563eb // Bleu
+  --success-color: #10b981 // Vert
+  --warning-color: #f59e0b // Orange
+  --danger-color: #ef4444; // Rouge
 ```
 
 ### Classes utilitaires
@@ -141,14 +143,14 @@ SCSS natif avec variables CSS :
 
 ### Rôles
 
-| Rôle | Permissions |
-|------|-------------|
-| super_admin | Accès complet, gestion utilisateurs |
-| admin | Accès complet |
-| operator | Déploiements, modifications |
-| viewer | Lecture seule |
+| Rôle        | Permissions                                     |
+| ----------- | ----------------------------------------------- |
+| super_admin | Accès complet, gestion utilisateurs             |
+| admin       | Accès complet                                   |
+| operator    | Déploiements, modifications                     |
+| viewer      | Lecture seule                                   |
 | **sponsor** | Portail sponsor uniquement (ses contenus/stats) |
-| **agency** | Portail agence uniquement (ses clubs) |
+| **agency**  | Portail agence uniquement (ses clubs)           |
 
 > Les rôles `sponsor` et `agency` ont un accès limité à leurs propres données via isolation JWT.
 

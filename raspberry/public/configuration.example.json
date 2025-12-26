@@ -1,63 +1,63 @@
 {
-    "remote": {
-        "title": "Télécommande Néopro - [NOM_CLUB]"
+  "remote": {
+    "title": "Télécommande Néopro - [NOM_CLUB]"
+  },
+  "auth": {
+    "password": "",
+    "clubName": "[NOM_CLUB]",
+    "sessionDuration": 28800000
+  },
+  "sync": {
+    "enabled": true,
+    "serverUrl": "https://neopro-central-production.up.railway.app",
+    "siteName": "[SITE_ID]",
+    "clubName": "[NOM_CLUB]",
+    "location": {
+      "city": "",
+      "region": "",
+      "country": "France"
     },
-    "auth": {
-        "password": "",
-        "clubName": "[NOM_CLUB]",
-        "sessionDuration": 28800000
+    "sports": ["handball"],
+    "contact": {
+      "email": "",
+      "phone": ""
+    }
+  },
+  "version": "1.0",
+  "language": "fr",
+  "liveScoreEnabled": false,
+  "sponsors": [],
+  "categories": [
+    {
+      "id": "ambiance",
+      "name": "Ambiance",
+      "videos": []
     },
-    "sync": {
-        "enabled": true,
-        "serverUrl": "https://neopro-central.onrender.com",
-        "siteName": "[SITE_ID]",
-        "clubName": "[NOM_CLUB]",
-        "location": {
-            "city": "",
-            "region": "",
-            "country": "France"
+    {
+      "id": "infos-club",
+      "name": "Infos Club",
+      "videos": []
+    },
+    {
+      "id": "match",
+      "name": "Match",
+      "subCategories": [
+        {
+          "id": "avant-match",
+          "name": "Avant-match",
+          "videos": []
         },
-        "sports": ["handball"],
-        "contact": {
-            "email": "",
-            "phone": ""
+        {
+          "id": "mi-temps",
+          "name": "Mi-temps",
+          "videos": []
+        },
+        {
+          "id": "apres-match",
+          "name": "Après-match",
+          "videos": []
         }
-    },
-    "version": "1.0",
-    "language": "fr",
-    "liveScoreEnabled": false,
-    "sponsors": [],
-    "categories": [
-        {
-            "id": "ambiance",
-            "name": "Ambiance",
-            "videos": []
-        },
-        {
-            "id": "infos-club",
-            "name": "Infos Club",
-            "videos": []
-        },
-        {
-            "id": "match",
-            "name": "Match",
-            "subCategories": [
-                {
-                    "id": "avant-match",
-                    "name": "Avant-match",
-                    "videos": []
-                },
-                {
-                    "id": "mi-temps",
-                    "name": "Mi-temps",
-                    "videos": []
-                },
-                {
-                    "id": "apres-match",
-                    "name": "Après-match",
-                    "videos": []
-                }
-            ]
-        }
-    ]
+      ]
+    }
+  ]
 }

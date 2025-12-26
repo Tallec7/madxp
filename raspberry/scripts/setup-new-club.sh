@@ -421,7 +421,7 @@ setup_sync_agent() {
     # Y compris ADMIN_EMAIL et ADMIN_PASSWORD pour éviter les prompts interactifs
     ssh pi@"$PI_ADDRESS" "
         cd /home/pi/neopro/sync-agent
-        export CENTRAL_SERVER_URL='https://neopro-central.onrender.com'
+        export CENTRAL_SERVER_URL='https://neopro-central-production.up.railway.app'
         export ADMIN_EMAIL='${ADMIN_EMAIL}'
         export ADMIN_PASSWORD='${ESCAPED_ADMIN_PASSWORD}'
         export SITE_NAME='${ESCAPED_SITE_NAME}'
@@ -493,7 +493,7 @@ print_summary() {
     fi
     echo ""
     echo -e "${BLUE}Serveur central :${NC}"
-    echo "  • Dashboard : https://neopro-central.onrender.com"
+    echo "  • Dashboard : https://neopro-central-production.up.railway.app"
     echo "  • Le site devrait apparaître dans la liste des sites"
     echo ""
     echo -e "${YELLOW}Prochaines étapes :${NC}"

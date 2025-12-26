@@ -137,7 +137,7 @@ if [[ $DELETE_CENTRAL =~ ^[Oo]$ ]]; then
         SITE_NAME=$(grep -o '"name"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" | head -1 | sed 's/.*"\([^"]*\)"$/\1/' || echo "$CLUB_NAME")
 
         # Appeler l'API pour supprimer le site
-        CENTRAL_URL="https://neopro-central.onrender.com"
+        CENTRAL_URL="https://neopro-central-production.up.railway.app"
 
         # D'abord, se connecter pour obtenir un token
         print_info "Connexion au serveur central..."

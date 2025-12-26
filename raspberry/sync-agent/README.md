@@ -35,7 +35,8 @@ sudo node scripts/register-site.js
 ```
 
 Vous devrez fournir :
-- URL du serveur central (ex: https://neopro-central.onrender.com)
+
+- URL du serveur central (ex: https://neopro-central-production.up.railway.app)
 - Email et mot de passe admin NEOPRO
 - Informations du site (nom, club, localisation, sports)
 - Modèle du boîtier (détecté automatiquement sur Raspberry Pi)
@@ -58,7 +59,7 @@ L'agent démarrera automatiquement et se lancera au boot du Raspberry Pi.
 
 ```ini
 # Serveur central
-CENTRAL_SERVER_URL=https://neopro-central.onrender.com
+CENTRAL_SERVER_URL=https://neopro-central-production.up.railway.app
 CENTRAL_SERVER_ENABLED=true
 
 # Identifiants (générés automatiquement lors de l'enregistrement)
@@ -136,6 +137,7 @@ npm run diagnose
 ```
 
 Ce script vérifie :
+
 - La présence et validité des fichiers de configuration
 - Les variables requises (SITE_ID, SITE_API_KEY, etc.)
 - La connectivité au serveur central
@@ -150,6 +152,7 @@ npm run resync
 ```
 
 Ce script :
+
 1. Se connecte au serveur central avec vos credentials admin
 2. Régénère une nouvelle API key pour le site
 3. Met à jour automatiquement la configuration locale
@@ -168,7 +171,7 @@ npm test
 // L'agent se connecte automatiquement au démarrage
 socket.emit('authenticate', {
   siteId: 'uuid-du-site',
-  apiKey: 'cle-api-unique'
+  apiKey: 'cle-api-unique',
 });
 
 // Confirmation d'authentification
@@ -208,7 +211,7 @@ socket.on('command', async (cmd) => {
   socket.emit('command_result', {
     commandId: cmd.id,
     status: 'success',
-    result: result
+    result: result,
   });
 });
 ```
@@ -235,6 +238,7 @@ Déploie une vidéo sur le boîtier.
 ```
 
 Processus :
+
 1. Téléchargement depuis serveur central
 2. Enregistrement dans `/home/neopro/videos/Technique/Passes/`
 3. Mise à jour de `configuration.json`
@@ -271,6 +275,7 @@ Met à jour le logiciel NEOPRO.
 ```
 
 Processus :
+
 1. Téléchargement du package
 2. Vérification checksum (si fourni)
 3. **Backup automatique**
@@ -320,6 +325,7 @@ Redémarre un service spécifique.
 ```
 
 Services disponibles :
+
 - `neopro-app` - Application Angular
 - `neopro-admin` - Interface admin
 - `neopro-sync-agent` - Cet agent
@@ -349,6 +355,7 @@ Récupère des informations système détaillées.
 ```
 
 Retourne :
+
 - Informations matériel (CPU, RAM, modèle Raspberry Pi)
 - Informations OS (distribution, kernel, arch)
 - État réseau
@@ -365,6 +372,7 @@ Retourne :
 ### Whitelist de commandes
 
 Par défaut, seules ces commandes sont autorisées :
+
 - `deploy_video`
 - `delete_video`
 - `update_software`
@@ -399,6 +407,7 @@ Configurable via `MAX_DOWNLOAD_SIZE` (en bytes).
 ### Alertes automatiques
 
 Le serveur central génère des alertes si :
+
 - Température > 75°C (warning) ou > 80°C (critical)
 - Disque > 90% (warning) ou > 95% (critical)
 - Mémoire > 90% (warning)
@@ -407,6 +416,7 @@ Le serveur central génère des alertes si :
 ### Logs
 
 Logs écrits dans :
+
 - **Journal systemd** : `journalctl -u neopro-sync-agent`
 - **Fichier local** : `/home/neopro/logs/sync-agent.log`
 
@@ -512,7 +522,7 @@ npm run diagnose
 cat /etc/neopro/site.conf
 
 # Vérifier la connectivité
-ping neopro-central.onrender.com
+ping neopro-central-production.up.railway.app
 
 # Vérifier les logs
 sudo journalctl -u neopro-sync-agent -n 50
@@ -522,11 +532,11 @@ sudo journalctl -u neopro-sync-agent -n 50
 
 Le message d'erreur détaillé indique la cause :
 
-| Message | Cause | Solution |
-|---------|-------|----------|
-| `Site non trouvé: <id>` | Le site n'existe pas sur le serveur | Ré-enregistrer avec `npm run register` |
-| `Clé API invalide` | API key locale ≠ API key serveur | Resync avec `npm run resync` |
-| `Identifiants manquants` | SITE_ID ou SITE_API_KEY vide | Vérifier `/etc/neopro/site.conf` |
+| Message                  | Cause                               | Solution                               |
+| ------------------------ | ----------------------------------- | -------------------------------------- |
+| `Site non trouvé: <id>`  | Le site n'existe pas sur le serveur | Ré-enregistrer avec `npm run register` |
+| `Clé API invalide`       | API key locale ≠ API key serveur    | Resync avec `npm run resync`           |
+| `Identifiants manquants` | SITE_ID ou SITE_API_KEY vide        | Vérifier `/etc/neopro/site.conf`       |
 
 **Diagnostic rapide :**
 
@@ -564,6 +574,7 @@ node -e "require('./src/metrics').collectAll().then(console.log)"
 Les analytics sont collectées par le frontend Angular, stockées localement, puis envoyées au serveur central par le sync-agent.
 
 **Flux des analytics :**
+
 ```
 Frontend Angular → POST /api/analytics → serveur local → analytics_buffer.json
                                                               ↓
@@ -592,12 +603,12 @@ sudo systemctl restart neopro-sync-agent
 
 **Causes courantes :**
 
-| Symptôme | Cause | Solution |
-|----------|-------|----------|
-| Buffer vide `[]` | Frontend n'envoie pas ou serveur local manque l'endpoint | Vérifier `server.js` contient `/api/analytics` |
-| "Cannot POST /api/analytics" | Ancienne version du serveur | Mettre à jour `/home/pi/neopro/server/server.js` |
-| Buffer plein mais pas envoyé | Sync-agent ne démarre pas le sync | Vérifier les logs, redémarrer le service |
-| Erreur HTTP 404 sur le central | Endpoint central non déployé | Vérifier que le serveur central est à jour |
+| Symptôme                       | Cause                                                    | Solution                                         |
+| ------------------------------ | -------------------------------------------------------- | ------------------------------------------------ |
+| Buffer vide `[]`               | Frontend n'envoie pas ou serveur local manque l'endpoint | Vérifier `server.js` contient `/api/analytics`   |
+| "Cannot POST /api/analytics"   | Ancienne version du serveur                              | Mettre à jour `/home/pi/neopro/server/server.js` |
+| Buffer plein mais pas envoyé   | Sync-agent ne démarre pas le sync                        | Vérifier les logs, redémarrer le service         |
+| Erreur HTTP 404 sur le central | Endpoint central non déployé                             | Vérifier que le serveur central est à jour       |
 
 ### Mise à jour échouée
 

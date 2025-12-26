@@ -42,7 +42,7 @@ Le déploiement est configuré via `render.yaml` à la racine du projet.
 3. Configurer manuellement `DATABASE_URL` avec l'URL Supabase dans Environment
 4. Déployer
 
-**URL déployée :** `https://neopro-central.onrender.com`
+**URL déployée :** `https://neopro-central-production.up.railway.app`
 
 ---
 
@@ -204,35 +204,35 @@ curl -X POST https://api.neopro.fr/api/videos/bulk \
 
 ### Sponsor Portal (Portail Sponsors)
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | /api/sponsor/dashboard | Dashboard sponsor avec KPIs |
-| GET | /api/sponsor/sites | Sites de diffusion du sponsor |
-| GET | /api/sponsor/videos | Vidéos du sponsor |
-| GET | /api/sponsor/stats | Statistiques détaillées |
+| Méthode | Endpoint               | Description                   |
+| ------- | ---------------------- | ----------------------------- |
+| GET     | /api/sponsor/dashboard | Dashboard sponsor avec KPIs   |
+| GET     | /api/sponsor/sites     | Sites de diffusion du sponsor |
+| GET     | /api/sponsor/videos    | Vidéos du sponsor             |
+| GET     | /api/sponsor/stats     | Statistiques détaillées       |
 
 > Accès restreint aux utilisateurs avec `role=sponsor` ou admins. Données filtrées par `sponsor_id` du JWT.
 
 ### Agencies (Agences)
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | /api/agencies | Liste des agences (admin) |
-| GET | /api/agencies/:id | Détail d'une agence |
-| POST | /api/agencies | Créer une agence |
-| PUT | /api/agencies/:id | Modifier une agence |
-| DELETE | /api/agencies/:id | Supprimer une agence |
-| POST | /api/agencies/:id/sites | Ajouter des sites à l'agence |
-| DELETE | /api/agencies/:id/sites/:siteId | Retirer un site |
+| Méthode | Endpoint                        | Description                  |
+| ------- | ------------------------------- | ---------------------------- |
+| GET     | /api/agencies                   | Liste des agences (admin)    |
+| GET     | /api/agencies/:id               | Détail d'une agence          |
+| POST    | /api/agencies                   | Créer une agence             |
+| PUT     | /api/agencies/:id               | Modifier une agence          |
+| DELETE  | /api/agencies/:id               | Supprimer une agence         |
+| POST    | /api/agencies/:id/sites         | Ajouter des sites à l'agence |
+| DELETE  | /api/agencies/:id/sites/:siteId | Retirer un site              |
 
 ### Agency Portal (Portail Agences)
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | /api/agencies/portal/dashboard | Dashboard agence |
-| GET | /api/agencies/portal/sites | Sites gérés par l'agence |
-| GET | /api/agencies/portal/sites/:id | Détail d'un site |
-| GET | /api/agencies/portal/stats | Statistiques agrégées |
+| Méthode | Endpoint                       | Description              |
+| ------- | ------------------------------ | ------------------------ |
+| GET     | /api/agencies/portal/dashboard | Dashboard agence         |
+| GET     | /api/agencies/portal/sites     | Sites gérés par l'agence |
+| GET     | /api/agencies/portal/sites/:id | Détail d'un site         |
+| GET     | /api/agencies/portal/stats     | Statistiques agrégées    |
 
 > Accès restreint aux utilisateurs avec `role=agency` ou admins. Données filtrées par `agency_id` du JWT.
 
@@ -243,7 +243,7 @@ curl -X POST https://api.neopro.fr/api/videos/bulk \
 ### Agent Connection (Raspberry Pi)
 
 ```javascript
-const socket = io('wss://neopro-central.onrender.com', {
+const socket = io('wss://neopro-central-production.up.railway.app', {
   transports: ['websocket', 'polling'],
 });
 

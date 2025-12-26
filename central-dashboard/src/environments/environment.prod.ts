@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://neopro-central.onrender.com/api',
-  socketUrl: 'https://neopro.onrender.com',
+  apiUrl: 'https://neopro-central-production.up.railway.app/api',
+  socketUrl: 'https://neopro-central-production.up.railway.app',
 };
