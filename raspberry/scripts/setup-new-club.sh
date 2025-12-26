@@ -144,6 +144,17 @@ collect_club_info() {
     read -p "Sports (séparés par des virgules, défaut: handball) : " SPORTS
     SPORTS=${SPORTS:-handball}
 
+    # Langue (fr par défaut)
+    echo ""
+    echo "Langues disponibles : fr (Français), en (English), es (Español)"
+    read -p "Langue de l'interface (défaut: fr) : " LANGUAGE
+    LANGUAGE=${LANGUAGE:-fr}
+    # Valider la langue
+    if [[ ! "$LANGUAGE" =~ ^(fr|en|es)$ ]]; then
+        print_warning "Langue non reconnue, utilisation de 'fr' par défaut"
+        LANGUAGE="fr"
+    fi
+
     # Contact
     read -p "Email de contact : " CONTACT_EMAIL
     read -p "Téléphone (optionnel) : " CONTACT_PHONE
@@ -189,6 +200,7 @@ collect_club_info() {
     echo "Région           : $REGION"
     echo "Pays             : $COUNTRY"
     echo "Sports           : $SPORTS"
+    echo "Langue           : $LANGUAGE"
     echo "Email            : $CONTACT_EMAIL"
     [ -n "$CONTACT_PHONE" ] && echo "Téléphone        : $CONTACT_PHONE"
     echo "Mot de passe     : ${PASSWORD:0:3}***********"
@@ -240,6 +252,9 @@ create_configuration() {
     else
         sed -i.bak "s/\[TELEPHONE\]//g" "$CONFIG_FILE"
     fi
+
+    # Langue (settings.language)
+    sed -i.bak "s/\"language\": \"fr\"/\"language\": \"$LANGUAGE\"/g" "$CONFIG_FILE"
 
     # Nettoyer les fichiers .bak
     rm -f "$CONFIG_FILE.bak"
@@ -456,6 +471,7 @@ print_summary() {
     echo "  • Nom du club : $CLUB_NAME"
     echo "  • Site : $SITE_NAME"
     echo "  • Localisation : $CITY, $REGION, $COUNTRY"
+    echo "  • Langue : $LANGUAGE"
     echo ""
     echo -e "${BLUE}Configuration :${NC}"
     echo "  • Fichier : $CONFIG_FILE"

@@ -7,6 +7,10 @@
         "clubName": "[NOM_DU_CLUB]",
         "sessionDuration": 28800000
     },
+    "settings": {
+        "language": "fr",
+        "timezone": "Europe/Paris"
+    },
     "sync": {
         "enabled": true,
         "serverUrl": "https://neopro-central.onrender.com",

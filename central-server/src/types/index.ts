@@ -1,12 +1,17 @@
 import { Request } from 'express';
 
+// Types de rôles disponibles
+export type UserRole = 'super_admin' | 'admin' | 'operator' | 'viewer' | 'sponsor' | 'agency';
+
 // User types
 export interface User {
   id: string;
   email: string;
   password_hash: string;
   full_name: string | null;
-  role: 'admin' | 'operator' | 'viewer';
+  role: UserRole;
+  sponsor_id: string | null;  // Pour les utilisateurs sponsor
+  agency_id: string | null;   // Pour les utilisateurs agence
   created_at: Date;
   updated_at: Date;
   last_login_at: Date | null;
@@ -14,6 +19,36 @@ export interface User {
 
 export interface AuthRequest extends Request {
   user?: Express.AuthenticatedUser;
+}
+
+// Sponsor types
+export interface Sponsor {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  contact_email: string | null;
+  contact_name: string | null;
+  contact_phone: string | null;
+  status: 'active' | 'inactive' | 'paused';
+  metadata: Record<string, unknown>;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// Agency types
+export interface Agency {
+  id: string;
+  name: string;
+  description: string | null;
+  logo_url: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  address: Record<string, unknown> | null;
+  status: 'active' | 'inactive' | 'suspended';
+  metadata: Record<string, unknown>;
+  created_at: Date;
+  updated_at: Date;
 }
 
 // Site types

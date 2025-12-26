@@ -23,6 +23,8 @@ Interface organisée en 4 sous-onglets :
 
 #### 📁 Bibliothèque
 - **Affichage de toutes les vidéos** par catégories et sous-catégories
+- **Miniatures vidéos** : aperçu visuel de chaque vidéo (générées automatiquement)
+- **Métadonnées** : durée affichée pour chaque vidéo
 - **Recherche/filtre en temps réel** : filtrer les vidéos par nom ou chemin
 - **Prévisualisation vidéo** : cliquez sur la miniature ou l'icône œil pour lire la vidéo
 - **Modifier une vidéo** : changer le nom, la catégorie ou la sous-catégorie
@@ -34,6 +36,12 @@ Interface organisée en 4 sous-onglets :
 #### 📤 Ajouter
 - **Upload multiple de vidéos** (jusqu'à 20 fichiers à la fois)
 - **Drag & Drop** : glisser-déposer des fichiers directement dans la zone d'upload
+- **Progression en temps réel** : affichage du pourcentage, taille envoyée/totale
+  ```
+  Upload en cours... 67% (45.2 MB / 67.5 MB)
+  ```
+- **Prévisualisation avant upload** : miniature et durée de chaque vidéo sélectionnée
+- **Preview vidéo** : cliquez sur 👁️ pour visualiser la vidéo avant de l'uploader
 - Formats supportés : MP4, MKV, MOV - Limite : 500MB par fichier
 - Sélection de catégorie et sous-catégorie
 - Affichage des résultats d'upload avec succès/erreurs détaillés
@@ -246,7 +254,7 @@ Pour toute question : support@neopro.fr
 
 ---
 
-**Version :** 1.1.0
+**Version :** 1.2.0
 **Licence :** MIT
 **Auteur :** Neopro / Kalon Partners
-**Dernière mise à jour :** 10 décembre 2025
+**Dernière mise à jour :** 26 décembre 2025

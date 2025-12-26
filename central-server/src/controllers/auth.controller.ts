@@ -2,7 +2,7 @@ import { Request, Response, CookieOptions } from 'express';
 import bcrypt from 'bcryptjs';
 import { query } from '../config/database';
 import { generateToken } from '../middleware/auth';
-import { AuthRequest } from '../types';
+import { AuthRequest, UserRole } from '../types';
 import logger from '../config/logger';
 import { mfaService } from '../services/mfa.service';
 
@@ -23,8 +23,10 @@ type UserRow = {
   email: string;
   password_hash: string;
   full_name: string;
-  role: 'admin' | 'operator' | 'viewer';
+  role: UserRole;
   mfa_enabled: boolean;
+  sponsor_id: string | null;
+  agency_id: string | null;
   created_at?: Date;
   last_login_at?: Date;
 };
@@ -42,7 +44,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
     };
 
     const result = await query<UserRow>(
-      'SELECT id, email, password_hash, full_name, role, mfa_enabled FROM users WHERE email = $1',
+      'SELECT id, email, password_hash, full_name, role, mfa_enabled, sponsor_id, agency_id FROM users WHERE email = $1',
       [email]
     );
 
@@ -83,9 +85,17 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
       id: user.id,
       email: user.email,
       role: user.role,
+      sponsor_id: user.sponsor_id,
+      agency_id: user.agency_id,
     });
 
-    logger.info('User logged in', { email: user.email, role: user.role, mfaUsed: user.mfa_enabled });
+    logger.info('User logged in', {
+      email: user.email,
+      role: user.role,
+      mfaUsed: user.mfa_enabled,
+      sponsor_id: user.sponsor_id,
+      agency_id: user.agency_id,
+    });
 
     // Définir le cookie HttpOnly sécurisé
     res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
@@ -98,6 +108,8 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
         full_name: user.full_name,
         role: user.role,
         mfa_enabled: user.mfa_enabled,
+        sponsor_id: user.sponsor_id,
+        agency_id: user.agency_id,
       },
     });
   } catch (error) {
@@ -120,7 +132,7 @@ export const me = async (req: AuthRequest, res: Response) => {
     }
 
     const result = await query<UserRow>(
-      'SELECT id, email, full_name, role, created_at, last_login_at FROM users WHERE id = $1',
+      'SELECT id, email, full_name, role, sponsor_id, agency_id, created_at, last_login_at FROM users WHERE id = $1',
       [req.user.id]
     );
 

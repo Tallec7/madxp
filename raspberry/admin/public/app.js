@@ -841,6 +841,9 @@ function createConfigVideoList(title, videos, categoryId, subcategoryId = null, 
         // Classes pour les boutons verrouillés
         const lockedBtnClass = videoLocked ? ' locked-btn' : '';
 
+        // Générer l'URL de la miniature
+        const thumbnailUrl = getThumbnailUrl(video.path);
+
         row.innerHTML = `
             <div class="video-row-checkbox">
                 <input type="checkbox" class="video-select-checkbox" data-path="${video.path}" ${selectedVideos.has(video.path) ? 'checked' : ''}${videoLocked ? ' disabled' : ''}>
@@ -848,12 +851,14 @@ function createConfigVideoList(title, videos, categoryId, subcategoryId = null, 
             ${videoLocked ? '<div class="video-row-lock"><span class="video-lock-icon lock-tooltip" data-tooltip="Géré par NEOPRO">🔒</span></div>' : '<div class="video-row-drag-handle" title="Glisser pour réorganiser">⋮⋮</div>'}
             <div class="video-row-preview">
                 <div class="video-thumbnail" data-video-url="${videoUrl}">
-                    <span class="play-icon">▶</span>
+                    ${thumbnailUrl ? `<img src="${thumbnailUrl}" alt="Miniature" class="thumbnail-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
+                    <span class="play-icon" ${thumbnailUrl ? 'style="display:none;"' : ''}>▶</span>
                 </div>
             </div>
             <div class="video-row-info">
                 <div class="video-row-title">${video.name || 'Sans nom'}</div>
                 <div class="video-row-path">${video.path || ''}</div>
+                ${video.duration ? `<div class="video-row-meta">${formatDuration(video.duration)}</div>` : ''}
             </div>
             <div class="video-row-actions">
                 <button class="btn btn-secondary btn-sm preview-video-btn" data-video-url="${videoUrl}" title="Prévisualiser">👁️</button>
@@ -1527,10 +1532,17 @@ function addFilesToSelection(files) {
     updateSelectedFilesUI();
 }
 
+// Stockage des URLs de preview pour nettoyage
+let previewObjectUrls = [];
+
 function updateSelectedFilesUI() {
     const container = document.getElementById('selected-files');
     const countSpan = document.getElementById('files-count');
     const listUl = document.getElementById('files-list');
+
+    // Nettoyer les anciennes URLs de preview
+    previewObjectUrls.forEach(url => URL.revokeObjectURL(url));
+    previewObjectUrls = [];
 
     if (selectedFilesForUpload.length === 0) {
         container.style.display = 'none';
@@ -1538,15 +1550,61 @@ function updateSelectedFilesUI() {
     }
 
     container.style.display = 'block';
-    countSpan.textContent = `${selectedFilesForUpload.length} fichier(s) sélectionné(s)`;
+    const totalSize = selectedFilesForUpload.reduce((sum, f) => sum + f.size, 0);
+    countSpan.textContent = `${selectedFilesForUpload.length} fichier(s) - ${formatBytes(totalSize)}`;
 
-    listUl.innerHTML = selectedFilesForUpload.map((file, index) => `
-        <li class="file-item">
-            <span class="file-name">🎬 ${file.name}</span>
-            <span class="file-size">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
-            <button type="button" class="btn btn-small btn-danger" onclick="removeFileFromSelection(${index})">✕</button>
-        </li>
-    `).join('');
+    listUl.innerHTML = selectedFilesForUpload.map((file, index) => {
+        // Créer une URL de preview pour la vidéo
+        const previewUrl = URL.createObjectURL(file);
+        previewObjectUrls.push(previewUrl);
+
+        return `
+        <li class="file-item file-item-with-preview">
+            <div class="file-preview-thumb" onclick="previewUploadFile(${index})">
+                <video src="${previewUrl}" muted preload="metadata" class="file-preview-video"></video>
+                <span class="file-preview-play">▶</span>
+            </div>
+            <div class="file-info-container">
+                <span class="file-name">${file.name}</span>
+                <span class="file-size">${formatBytes(file.size)}</span>
+            </div>
+            <div class="file-actions">
+                <button type="button" class="btn btn-small btn-secondary" onclick="previewUploadFile(${index})" title="Prévisualiser">👁️</button>
+                <button type="button" class="btn btn-small btn-danger" onclick="removeFileFromSelection(${index})" title="Retirer">✕</button>
+            </div>
+        </li>`;
+    }).join('');
+
+    // Charger les métadonnées pour afficher la durée
+    listUl.querySelectorAll('.file-preview-video').forEach((video, index) => {
+        video.addEventListener('loadedmetadata', () => {
+            const duration = formatDuration(video.duration);
+            const fileItem = listUl.querySelectorAll('.file-item')[index];
+            const sizeSpan = fileItem.querySelector('.file-size');
+            if (sizeSpan && duration) {
+                sizeSpan.textContent += ` • ${duration}`;
+            }
+        });
+    });
+}
+
+/**
+ * Prévisualiser un fichier avant upload
+ */
+function previewUploadFile(index) {
+    const file = selectedFilesForUpload[index];
+    if (!file) return;
+
+    const url = URL.createObjectURL(file);
+    openVideoPreview(url, file.name);
+
+    // Nettoyer l'URL quand la modale est fermée
+    const modal = document.getElementById('video-preview-modal');
+    const cleanup = () => {
+        URL.revokeObjectURL(url);
+        modal.removeEventListener('click', cleanup);
+    };
+    modal.addEventListener('click', cleanup, { once: true });
 }
 
 function removeFileFromSelection(index) {
@@ -1558,6 +1616,79 @@ function clearSelectedFiles() {
     selectedFilesForUpload = [];
     document.getElementById('video-file').value = '';
     updateSelectedFilesUI();
+}
+
+/**
+ * Upload avec progression réelle en pourcentage via XMLHttpRequest
+ */
+function uploadWithProgress(url, formData, onProgress) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+                const percentComplete = Math.round((event.loaded / event.total) * 100);
+                onProgress(percentComplete, event.loaded, event.total);
+            }
+        });
+
+        xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    resolve(JSON.parse(xhr.responseText));
+                } catch {
+                    resolve({ success: true, message: 'Upload terminé' });
+                }
+            } else {
+                reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+            }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Erreur réseau')));
+        xhr.addEventListener('abort', () => reject(new Error('Upload annulé')));
+
+        xhr.open('POST', url);
+        xhr.send(formData);
+    });
+}
+
+/**
+ * Formater la taille en bytes en format lisible
+ */
+function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+}
+
+/**
+ * Formater une durée en secondes en format mm:ss ou hh:mm:ss
+ */
+function formatDuration(seconds) {
+    if (!seconds || isNaN(seconds)) return '';
+    const s = Math.floor(seconds);
+    const hrs = Math.floor(s / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
+    if (hrs > 0) {
+        return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Générer l'URL de miniature à partir du chemin vidéo
+ * Les miniatures sont générées par video-processor.js dans /thumbnails/
+ */
+function getThumbnailUrl(videoPath) {
+    if (!videoPath) return null;
+    // Le chemin vidéo est comme: videos/category/video.mp4
+    // La miniature est dans: thumbnails/category/video.jpg
+    const pathWithoutExt = videoPath.replace(/\.\w+$/, '');
+    // Le chemin vidéo commence déjà par "videos/" donc on remplace
+    const thumbnailPath = pathWithoutExt.replace(/^videos\//, 'thumbnails/') + '.jpg';
+    return '/' + thumbnailPath;
 }
 
 async function uploadVideo() {
@@ -1596,10 +1727,14 @@ async function uploadVideo() {
     resultsDiv.style.display = 'none';
     resultsList.innerHTML = '';
 
+    // Calculer la taille totale
+    const totalSize = filesToUpload.reduce((sum, file) => sum + file.size, 0);
+
     console.log('[admin-ui] Upload multiple videos request', {
         category,
         subcategory,
-        filesCount: filesToUpload.length
+        filesCount: filesToUpload.length,
+        totalSize: formatBytes(totalSize)
     });
 
     // Upload multiple files
@@ -1612,25 +1747,24 @@ async function uploadVideo() {
             formData.append('videos', file);
         });
 
-        currentFileSpan.textContent = 'Upload en cours...';
-        fileCountSpan.textContent = `${filesToUpload.length} fichiers`;
+        currentFileSpan.textContent = `${filesToUpload.length} fichiers (${formatBytes(totalSize)})`;
+        fileCountSpan.textContent = '';
         progressBar.style.width = '0%';
-        statusText.textContent = 'Envoi des fichiers...';
+        statusText.textContent = 'Préparation...';
 
         try {
-            const response = await fetch('/api/videos/upload-multiple', {
-                method: 'POST',
-                body: formData
+            const data = await uploadWithProgress('/api/videos/upload-multiple', formData, (percent, loaded, total) => {
+                progressBar.style.width = percent + '%';
+                statusText.textContent = `Upload en cours... ${percent}% (${formatBytes(loaded)} / ${formatBytes(total)})`;
             });
 
-            const data = await response.json();
             console.log('[admin-ui] /api/videos/upload-multiple response', data);
 
             progressBar.style.width = '100%';
 
             if (data.success) {
-                statusText.textContent = data.message;
-                showNotification(data.message, 'success');
+                statusText.textContent = data.message || 'Upload terminé !';
+                showNotification(data.message || 'Upload terminé avec succès', 'success');
             } else {
                 statusText.textContent = data.message || 'Upload terminé avec des erreurs';
                 showNotification(data.message || 'Certains fichiers ont échoué', 'warning');
@@ -1663,28 +1797,28 @@ async function uploadVideo() {
 
         } catch (error) {
             console.error('[admin-ui] Upload error:', error);
-            showNotification('Erreur lors de l\'upload', 'error');
-            statusText.textContent = 'Erreur';
+            showNotification('Erreur lors de l\'upload: ' + error.message, 'error');
+            statusText.textContent = 'Erreur: ' + error.message;
         }
     } else {
-        // Single file upload (original behavior)
+        // Single file upload with progress
+        const file = filesToUpload[0];
         const formData = new FormData();
         formData.append('category', category);
         if (subcategory) formData.append('subcategory', subcategory);
-        formData.append('video', filesToUpload[0]);
+        formData.append('video', file);
 
-        currentFileSpan.textContent = filesToUpload[0].name;
-        fileCountSpan.textContent = '1 fichier';
+        currentFileSpan.textContent = `${file.name} (${formatBytes(file.size)})`;
+        fileCountSpan.textContent = '';
         progressBar.style.width = '0%';
-        statusText.textContent = 'Upload en cours...';
+        statusText.textContent = 'Préparation...';
 
         try {
-            const response = await fetch('/api/videos/upload', {
-                method: 'POST',
-                body: formData
+            const data = await uploadWithProgress('/api/videos/upload', formData, (percent, loaded, total) => {
+                progressBar.style.width = percent + '%';
+                statusText.textContent = `Upload en cours... ${percent}% (${formatBytes(loaded)} / ${formatBytes(total)})`;
             });
 
-            const data = await response.json();
             console.log('[admin-ui] /api/videos/upload response', data);
 
             if (data.success) {
@@ -1699,12 +1833,12 @@ async function uploadVideo() {
                     loadVideos();
                 }, 2000);
             } else {
-                showNotification('Erreur: ' + data.error, 'error');
-                progressDiv.style.display = 'none';
+                showNotification('Erreur: ' + (data.error || 'Erreur inconnue'), 'error');
+                statusText.textContent = 'Erreur: ' + (data.error || 'Erreur inconnue');
             }
         } catch (error) {
-            showNotification('Erreur lors de l\'upload', 'error');
-            progressDiv.style.display = 'none';
+            showNotification('Erreur lors de l\'upload: ' + error.message, 'error');
+            statusText.textContent = 'Erreur: ' + error.message;
         }
     }
 

@@ -178,6 +178,11 @@ export class SitesService {
     return this.sendCommand(id, 'network_diagnostics', {});
   }
 
+  // Update site settings (language, timezone)
+  updateSiteSettings(id: string, settings: { language?: 'fr' | 'en' | 'es'; timezone?: string }): Observable<{ success: boolean; commandId?: string; message: string }> {
+    return this.sendCommand(id, 'update_settings', settings);
+  }
+
   // Command Queue - Commandes en attente pour sites offline
   getPendingCommands(id: string): Observable<{
     siteId: string;

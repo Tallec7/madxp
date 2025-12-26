@@ -1,11 +1,15 @@
 <div class="login-container">
+  <div class="language-corner">
+    <app-language-selector></app-language-selector>
+  </div>
+
   <div class="login-card">
     <div class="logo-section">
       <img src="neopro-logo.png" alt="Neopro" class="app-logo" />
       @if (isSetupMode) {
-        <p class="app-subtitle">Configuration initiale</p>
+        <p class="app-subtitle">{{ 'auth.setupPassword' | translate }}</p>
       } @else {
-        <p class="app-subtitle">Systeme de controle d'affichage</p>
+        <p class="app-subtitle">{{ 'tv.mode' | translate }}</p>
       }
     </div>
 
@@ -13,18 +17,18 @@
       <!-- Loading state -->
       <div class="loading-state">
         <span class="spinner"></span>
-        <p>Chargement de la configuration...</p>
+        <p>{{ 'common.loading' | translate }}</p>
       </div>
     } @else if (isSetupMode) {
       <!-- SETUP MODE: First time password creation -->
       <div class="setup-notice">
         <span class="notice-icon">&#x1F511;</span>
-        <p>Bienvenue ! Veuillez definir un mot de passe pour securiser votre boitier.</p>
+        <p>{{ 'auth.setupPassword' | translate }}</p>
       </div>
 
       <form (ngSubmit)="onSetupSubmit()" class="login-form">
         <div class="form-group">
-          <label for="newPassword" class="form-label">Nouveau mot de passe</label>
+          <label for="newPassword" class="form-label">{{ 'auth.password' | translate }}</label>
           <input
             type="password"
             id="newPassword"
@@ -33,7 +37,6 @@
             (input)="onNewPasswordChange()"
             [disabled]="isLoading"
             class="form-input"
-            placeholder="Minimum 8 caracteres"
             autocomplete="new-password"
           />
           @if (newPassword.length > 0) {
@@ -41,13 +44,13 @@
               <div class="strength-bar">
                 <div class="strength-fill"></div>
               </div>
-              <span class="strength-label">Force: {{ getPasswordStrengthLabel() }}</span>
+              <span class="strength-label">{{ getPasswordStrengthLabel() }}</span>
             </div>
           }
         </div>
 
         <div class="form-group">
-          <label for="confirmPassword" class="form-label">Confirmer le mot de passe</label>
+          <label for="confirmPassword" class="form-label">{{ 'auth.confirmPassword' | translate }}</label>
           <input
             type="password"
             id="confirmPassword"
@@ -56,14 +59,13 @@
             (input)="onConfirmPasswordChange()"
             [disabled]="isLoading"
             class="form-input"
-            placeholder="Retapez le mot de passe"
             autocomplete="new-password"
           />
           @if (confirmPassword.length > 0 && newPassword !== confirmPassword) {
-            <span class="field-hint error">Les mots de passe ne correspondent pas</span>
+            <span class="field-hint error">{{ 'auth.passwordMismatch' | translate }}</span>
           }
           @if (confirmPassword.length > 0 && newPassword === confirmPassword) {
-            <span class="field-hint success">Les mots de passe correspondent</span>
+            <span class="field-hint success">&#10003;</span>
           }
         </div>
 
@@ -80,30 +82,21 @@
           [disabled]="isLoading || !newPassword || !confirmPassword || newPassword !== confirmPassword"
         >
           @if (!isLoading) {
-            <span>Configurer le mot de passe</span>
+            <span>{{ 'auth.setupPassword' | translate }}</span>
           }
           @if (isLoading) {
             <span class="loading-spinner">
               <span class="spinner"></span>
-              Configuration...
+              {{ 'common.loading' | translate }}
             </span>
           }
         </button>
       </form>
-
-      <div class="setup-tips">
-        <p class="tips-title">Conseils pour un mot de passe securise :</p>
-        <ul>
-          <li>Au moins 8 caracteres</li>
-          <li>Melangez majuscules et minuscules</li>
-          <li>Ajoutez des chiffres et symboles</li>
-        </ul>
-      </div>
     } @else {
       <!-- LOGIN MODE: Normal authentication -->
       <form (ngSubmit)="onSubmit()" class="login-form">
         <div class="form-group">
-          <label for="password" class="form-label">Mot de passe</label>
+          <label for="password" class="form-label">{{ 'auth.password' | translate }}</label>
           <input
             type="password"
             id="password"
@@ -112,7 +105,6 @@
             (input)="onPasswordChange()"
             [disabled]="isLoading"
             class="form-input"
-            placeholder="Entrez le mot de passe"
             autocomplete="current-password"
           />
         </div>
@@ -130,12 +122,12 @@
           [disabled]="isLoading || !password"
         >
           @if (!isLoading) {
-            <span>Se connecter</span>
+            <span>{{ 'auth.signIn' | translate }}</span>
           }
           @if (isLoading) {
             <span class="loading-spinner">
               <span class="spinner"></span>
-              Connexion...
+              {{ 'auth.signingIn' | translate }}
             </span>
           }
         </button>

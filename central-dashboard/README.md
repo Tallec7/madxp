@@ -46,7 +46,10 @@ central-dashboard/
 │   │   │   ├── sites/              # Gestion sites
 │   │   │   ├── groups/             # Gestion groupes
 │   │   │   ├── content/            # Gestion vidéos
-│   │   │   └── updates/            # Mises à jour
+│   │   │   ├── updates/            # Mises à jour
+│   │   │   ├── sponsor-portal/     # Portail sponsors
+│   │   │   ├── agency-portal/      # Portail agences
+│   │   │   └── admin/              # Administration (agences)
 │   │   │
 │   │   ├── app.component.ts
 │   │   ├── app.routes.ts
@@ -77,6 +80,9 @@ central-dashboard/
 | Group Detail | Actions groupées |
 | Content | Gestion et déploiement vidéos (upload multiple, drag & drop) |
 | Updates | Mises à jour logicielles |
+| **Sponsor Portal** | Dashboard dédié sponsors (vidéos, sites, stats) |
+| **Agency Portal** | Dashboard dédié agences (clubs gérés, alertes) |
+| **Admin Agencies** | Gestion des agences partenaires (CRUD) |
 
 ### Gestion du Contenu (Content)
 
@@ -137,9 +143,14 @@ SCSS natif avec variables CSS :
 
 | Rôle | Permissions |
 |------|-------------|
+| super_admin | Accès complet, gestion utilisateurs |
 | admin | Accès complet |
 | operator | Déploiements, modifications |
 | viewer | Lecture seule |
+| **sponsor** | Portail sponsor uniquement (ses contenus/stats) |
+| **agency** | Portail agence uniquement (ses clubs) |
+
+> Les rôles `sponsor` et `agency` ont un accès limité à leurs propres données via isolation JWT.
 
 ---
 
@@ -172,6 +183,6 @@ npm run lint           # Linter
 
 ---
 
-**Version :** 1.1.0
+**Version :** 1.2.0
 **Framework :** Angular 17 Standalone Components
-**Dernière mise à jour :** 10 décembre 2025
+**Dernière mise à jour :** 26 décembre 2025

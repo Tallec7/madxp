@@ -1,0 +1,81 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "retry": "Réessayer",
+    "close": "Fermer",
+    "yes": "Oui",
+    "no": "Non",
+    "save": "Enregistrer",
+    "cancel": "Annuler"
+  },
+  "auth": {
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "password": "Mot de passe",
+    "signIn": "Se connecter",
+    "signingIn": "Connexion en cours...",
+    "passwordRequired": "Mot de passe requis",
+    "loginError": "Erreur de connexion",
+    "invalidPassword": "Mot de passe invalide",
+    "setupPassword": "Configurer le mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "passwordUpdated": "Mot de passe mis à jour"
+  },
+  "tv": {
+    "mode": "Mode TV",
+    "noContent": "Aucun contenu disponible",
+    "loading": "Chargement du contenu...",
+    "error": "Erreur de chargement",
+    "offline": "Mode hors-ligne",
+    "connecting": "Connexion en cours...",
+    "connected": "Connecté",
+    "disconnected": "Déconnecté"
+  },
+  "remote": {
+    "mode": "Télécommande",
+    "play": "Lecture",
+    "pause": "Pause",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "volume": "Volume",
+    "mute": "Muet",
+    "fullscreen": "Plein écran"
+  },
+  "admin": {
+    "title": "Administration",
+    "systemInfo": "Informations système",
+    "network": "Réseau",
+    "storage": "Stockage",
+    "cpu": "CPU",
+    "memory": "Mémoire",
+    "temperature": "Température",
+    "uptime": "Temps de fonctionnement",
+    "version": "Version",
+    "reboot": "Redémarrer",
+    "shutdown": "Éteindre",
+    "update": "Mettre à jour",
+    "logs": "Journaux",
+    "config": "Configuration",
+    "sync": "Synchronisation",
+    "lastSync": "Dernière synchro",
+    "syncNow": "Synchroniser maintenant",
+    "rebootConfirm": "Êtes-vous sûr de vouloir redémarrer ?",
+    "shutdownConfirm": "Êtes-vous sûr de vouloir éteindre ?"
+  },
+  "status": {
+    "online": "En ligne",
+    "offline": "Hors ligne",
+    "syncing": "Synchronisation...",
+    "synced": "Synchronisé",
+    "error": "Erreur",
+    "ready": "Prêt"
+  },
+  "language": {
+    "select": "Langue",
+    "fr": "Français",
+    "en": "English",
+    "es": "Español"
+  }
+}

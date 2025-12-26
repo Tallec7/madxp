@@ -395,6 +395,74 @@ const commands = {
   },
 
   /**
+   * Met à jour les paramètres du boîtier (langue, timezone)
+   * Modifie la section "settings" de configuration.json
+   *
+   * @param {Object} data - { language?: 'fr'|'en'|'es', timezone?: string }
+   */
+  async update_settings(data) {
+    const { language, timezone } = data;
+
+    logger.info('Updating site settings', { language, timezone });
+
+    if (!language && !timezone) {
+      throw new Error('At least one of language or timezone must be provided');
+    }
+
+    // Validate language
+    const validLanguages = ['fr', 'en', 'es'];
+    if (language && !validLanguages.includes(language)) {
+      throw new Error(`Invalid language. Valid values: ${validLanguages.join(', ')}`);
+    }
+
+    try {
+      const configPath = config.paths.root + '/webapp/configuration.json';
+
+      if (!await fs.pathExists(configPath)) {
+        throw new Error('Configuration file not found');
+      }
+
+      const configContent = await fs.readFile(configPath, 'utf8');
+      const siteConfig = JSON.parse(configContent);
+
+      // Initialize settings if not exists
+      siteConfig.settings = siteConfig.settings || { language: 'fr', timezone: 'Europe/Paris' };
+
+      // Update only provided fields
+      if (language) {
+        siteConfig.settings.language = language;
+      }
+      if (timezone) {
+        siteConfig.settings.timezone = timezone;
+      }
+
+      // Write updated config
+      await fs.writeFile(configPath, JSON.stringify(siteConfig, null, 2));
+
+      logger.info('Site settings updated successfully', { settings: siteConfig.settings });
+
+      // Notify the local app of the change
+      try {
+        const io = require('socket.io-client');
+        const socket = io('http://localhost:3000', { timeout: 5000 });
+        socket.emit('settings_updated', siteConfig.settings);
+        setTimeout(() => socket.close(), 1000);
+      } catch (notifyError) {
+        logger.warn('Failed to notify local app of settings change:', notifyError.message);
+      }
+
+      return {
+        success: true,
+        settings: siteConfig.settings,
+        message: 'Settings updated successfully',
+      };
+    } catch (error) {
+      logger.error('Failed to update settings:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Effectue un diagnostic réseau complet
    * Teste la connectivité internet, la latence, le DNS, perte de paquets, etc.
    */

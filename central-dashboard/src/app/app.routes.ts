@@ -85,6 +85,27 @@ export const routes: Routes = [
       {
         path: 'sponsors/:id/videos',
         loadComponent: () => import('./features/sponsors/sponsor-videos.component').then(m => m.SponsorVideosComponent)
+      },
+      // Portail Sponsor (pour utilisateurs avec rôle 'sponsor')
+      {
+        path: 'sponsor-portal',
+        canActivate: [roleGuard],
+        data: { roles: ['sponsor', 'admin', 'super_admin'] },
+        loadComponent: () => import('./features/sponsor-portal/sponsor-dashboard.component').then(m => m.SponsorDashboardComponent)
+      },
+      // Portail Agence (pour utilisateurs avec rôle 'agency')
+      {
+        path: 'agency-portal',
+        canActivate: [roleGuard],
+        data: { roles: ['agency', 'admin', 'super_admin'] },
+        loadComponent: () => import('./features/agency-portal/agency-dashboard.component').then(m => m.AgencyDashboardComponent)
+      },
+      // Admin: Gestion des agences
+      {
+        path: 'admin/agencies',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'super_admin'] },
+        loadComponent: () => import('./features/admin/agencies/agencies-management.component').then(m => m.AgenciesManagementComponent)
       }
     ]
   },

@@ -61,7 +61,9 @@ central-server/
 │   │   ├── groups.controller.ts
 │   │   ├── analytics.controller.ts
 │   │   ├── content.controller.ts
-│   │   └── updates.controller.ts
+│   │   ├── updates.controller.ts
+│   │   ├── sponsor-portal.controller.ts  # Portail sponsors
+│   │   └── agency.controller.ts          # Portail agences
 │   ├── routes/                # Définition routes API
 │   ├── middleware/            # Auth, validation
 │   ├── services/              # Services (Socket.IO)
@@ -200,6 +202,40 @@ curl -X POST https://api.neopro.fr/api/videos/bulk \
 }
 ```
 
+### Sponsor Portal (Portail Sponsors)
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | /api/sponsor/dashboard | Dashboard sponsor avec KPIs |
+| GET | /api/sponsor/sites | Sites de diffusion du sponsor |
+| GET | /api/sponsor/videos | Vidéos du sponsor |
+| GET | /api/sponsor/stats | Statistiques détaillées |
+
+> Accès restreint aux utilisateurs avec `role=sponsor` ou admins. Données filtrées par `sponsor_id` du JWT.
+
+### Agencies (Agences)
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | /api/agencies | Liste des agences (admin) |
+| GET | /api/agencies/:id | Détail d'une agence |
+| POST | /api/agencies | Créer une agence |
+| PUT | /api/agencies/:id | Modifier une agence |
+| DELETE | /api/agencies/:id | Supprimer une agence |
+| POST | /api/agencies/:id/sites | Ajouter des sites à l'agence |
+| DELETE | /api/agencies/:id/sites/:siteId | Retirer un site |
+
+### Agency Portal (Portail Agences)
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | /api/agencies/portal/dashboard | Dashboard agence |
+| GET | /api/agencies/portal/sites | Sites gérés par l'agence |
+| GET | /api/agencies/portal/sites/:id | Détail d'un site |
+| GET | /api/agencies/portal/stats | Statistiques agrégées |
+
+> Accès restreint aux utilisateurs avec `role=agency` ou admins. Données filtrées par `agency_id` du JWT.
+
 ---
 
 ## 🔌 WebSocket Protocol
@@ -244,11 +280,14 @@ Voir `src/scripts/init-db.sql` pour le schéma complet.
 
 Tables principales :
 
-- `users` - Utilisateurs équipe NEOPRO
+- `users` - Utilisateurs (avec `sponsor_id` et `agency_id` optionnels)
 - `sites` - Boîtiers Raspberry Pi
 - `groups` - Groupes de sites
 - `metrics` - Historique métriques
 - `alerts` - Alertes actives
+- `agencies` - Agences partenaires
+- `agency_sites` - Association agences-sites
+- `sponsor_sites` - Association sponsors-sites
 
 ---
 
@@ -360,4 +399,4 @@ Les vidéos sont stockées temporairement dans Supabase Storage :
 
 ---
 
-**Dernière mise à jour :** 22 décembre 2025
+**Dernière mise à jour :** 26 décembre 2025

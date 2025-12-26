@@ -1,0 +1,81 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
+    "passwordRequired": "Password required",
+    "loginError": "Login error",
+    "invalidPassword": "Invalid password",
+    "setupPassword": "Setup password",
+    "confirmPassword": "Confirm password",
+    "passwordMismatch": "Passwords do not match",
+    "passwordUpdated": "Password updated"
+  },
+  "tv": {
+    "mode": "TV Mode",
+    "noContent": "No content available",
+    "loading": "Loading content...",
+    "error": "Loading error",
+    "offline": "Offline mode",
+    "connecting": "Connecting...",
+    "connected": "Connected",
+    "disconnected": "Disconnected"
+  },
+  "remote": {
+    "mode": "Remote",
+    "play": "Play",
+    "pause": "Pause",
+    "next": "Next",
+    "previous": "Previous",
+    "volume": "Volume",
+    "mute": "Mute",
+    "fullscreen": "Fullscreen"
+  },
+  "admin": {
+    "title": "Administration",
+    "systemInfo": "System information",
+    "network": "Network",
+    "storage": "Storage",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "temperature": "Temperature",
+    "uptime": "Uptime",
+    "version": "Version",
+    "reboot": "Reboot",
+    "shutdown": "Shutdown",
+    "update": "Update",
+    "logs": "Logs",
+    "config": "Configuration",
+    "sync": "Synchronization",
+    "lastSync": "Last sync",
+    "syncNow": "Sync now",
+    "rebootConfirm": "Are you sure you want to reboot?",
+    "shutdownConfirm": "Are you sure you want to shutdown?"
+  },
+  "status": {
+    "online": "Online",
+    "offline": "Offline",
+    "syncing": "Syncing...",
+    "synced": "Synced",
+    "error": "Error",
+    "ready": "Ready"
+  },
+  "language": {
+    "select": "Language",
+    "fr": "Français",
+    "en": "English",
+    "es": "Español"
+  }
+}

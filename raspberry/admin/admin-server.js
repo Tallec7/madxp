@@ -1729,6 +1729,71 @@ app.get('/api/configuration', async (req, res) => {
   }
 });
 
+// API: Get settings (language, timezone)
+app.get('/api/configuration/settings', async (req, res) => {
+  try {
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(404).json({ error: 'Configuration non trouvée' });
+    }
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+    res.json({
+      settings: config.settings || { language: 'fr', timezone: 'Europe/Paris' }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Update settings (language, timezone)
+app.put('/api/configuration/settings', async (req, res) => {
+  try {
+    const { language, timezone } = req.body;
+
+    // Validate language
+    const validLanguages = ['fr', 'en', 'es'];
+    if (language && !validLanguages.includes(language)) {
+      return res.status(400).json({ error: `Langue invalide. Valeurs acceptées: ${validLanguages.join(', ')}` });
+    }
+
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(500).json({ error: 'Impossible de localiser configuration.json' });
+    }
+
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+
+    // Initialize settings if not exists
+    config.settings = config.settings || { language: 'fr', timezone: 'Europe/Paris' };
+
+    // Update only provided fields
+    if (language) {
+      config.settings.language = language;
+    }
+    if (timezone) {
+      config.settings.timezone = timezone;
+    }
+
+    // Save config
+    await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
+
+    // Invalidate config cache
+    cache.delete(NAMESPACES.CONFIG, 'path');
+
+    console.log(`[admin] Settings updated: language=${config.settings.language}, timezone=${config.settings.timezone}`);
+
+    res.json({
+      success: true,
+      settings: config.settings
+    });
+  } catch (error) {
+    console.error('[admin] Failed to update settings:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: Vidéos orphelines (sur disque mais pas dans config)
 app.get('/api/videos/orphans', async (req, res) => {
   try {

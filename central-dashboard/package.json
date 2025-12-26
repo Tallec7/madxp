@@ -21,6 +21,8 @@
     "@angular/platform-browser": "^20.3.0",
     "@angular/platform-browser-dynamic": "^20.3.0",
     "@angular/router": "^20.3.0",
+    "@ngx-translate/core": "^17.0.0",
+    "@ngx-translate/http-loader": "^17.0.0",
     "@types/leaflet": "^1.9.8",
     "@types/pdfkit": "^0.17.4",
     "chart.js": "^4.5.1",

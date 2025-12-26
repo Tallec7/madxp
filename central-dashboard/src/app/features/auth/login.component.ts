@@ -2,24 +2,30 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
+import { TranslationService } from '../../core/services/translation.service';
+import { LanguageSelectorComponent } from '../../shared/components/language-selector/language-selector.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslateModule, LanguageSelectorComponent],
   template: `
     <div class="login-container" role="main">
+      <div class="language-corner">
+        <app-language-selector></app-language-selector>
+      </div>
       <div class="login-card" role="region" aria-labelledby="login-title">
         <div class="login-header">
           <img src="assets/neopro-logo.png" alt="Logo Neopro" class="login-logo" />
-          <h1 id="login-title" class="visually-hidden">Connexion au Dashboard Central</h1>
-          <p>Dashboard Central</p>
+          <h1 id="login-title" class="visually-hidden">{{ 'auth.centralDashboard' | translate }}</h1>
+          <p>{{ 'auth.centralDashboard' | translate }}</p>
         </div>
 
-        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" aria-label="Formulaire de connexion">
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" [attr.aria-label]="'auth.login' | translate">
           <div class="form-group">
-            <label for="email">Email</label>
+            <label for="email">{{ 'auth.email' | translate }}</label>
             <input
               id="email"
               type="email"
@@ -36,12 +42,12 @@ import { AuthService } from '../../core/services/auth.service';
               role="alert"
               *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
             >
-              Email requis
+              {{ 'auth.emailRequired' | translate }}
             </span>
           </div>
 
           <div class="form-group">
-            <label for="password">Mot de passe</label>
+            <label for="password">{{ 'auth.password' | translate }}</label>
             <input
               id="password"
               type="password"
@@ -58,12 +64,12 @@ import { AuthService } from '../../core/services/auth.service';
               role="alert"
               *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
             >
-              Mot de passe requis
+              {{ 'auth.passwordRequired' | translate }}
             </span>
           </div>
 
           <div class="error-alert" role="alert" aria-live="polite" *ngIf="errorMessage">
-            <span>⚠️ {{ errorMessage }}</span>
+            <span>{{ errorMessage }}</span>
           </div>
 
           <button
@@ -71,16 +77,16 @@ import { AuthService } from '../../core/services/auth.service';
             class="btn btn-primary btn-block"
             [disabled]="loading || loginForm.invalid"
             [attr.aria-busy]="loading"
-            aria-label="Se connecter au dashboard"
+            [attr.aria-label]="'auth.signIn' | translate"
           >
-            <span *ngIf="!loading">Se connecter</span>
+            <span *ngIf="!loading">{{ 'auth.signIn' | translate }}</span>
             <span *ngIf="loading" class="spinner-small" aria-hidden="true"></span>
-            <span *ngIf="loading" class="visually-hidden">Connexion en cours...</span>
+            <span *ngIf="loading" class="visually-hidden">{{ 'auth.signingIn' | translate }}</span>
           </button>
         </form>
 
-        <div class="login-footer" aria-label="Informations de version">
-          <p>Version 1.0.0</p>
+        <div class="login-footer">
+          <p>{{ 'common.version' | translate }} 1.0.0</p>
         </div>
       </div>
     </div>
@@ -93,6 +99,13 @@ import { AuthService } from '../../core/services/auth.service';
       justify-content: center;
       background: linear-gradient(135deg, var(--neo-hockey-dark, #2022E9) 0%, var(--neo-purple-dark, #3A0686) 100%);
       padding: 2rem;
+      position: relative;
+    }
+
+    .language-corner {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
     }
 
     .login-card {
@@ -253,6 +266,7 @@ import { AuthService } from '../../core/services/auth.service';
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+  private readonly translationService = inject(TranslationService);
   private readonly router = inject(Router);
 
   loginForm: FormGroup;
@@ -285,7 +299,7 @@ export class LoginComponent {
       },
       error: (error) => {
         this.loading = false;
-        this.errorMessage = error.error?.error || 'Erreur de connexion. Veuillez réessayer.';
+        this.errorMessage = error.error?.error || this.translationService.instant('auth.loginError');
       }
     });
   }

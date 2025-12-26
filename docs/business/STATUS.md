@@ -1,8 +1,8 @@
 # 📊 NEOPRO - État du Projet
 
-> **Dernière mise à jour** : 25 Décembre 2025
-> **Version** : 2.0
-> **Note Globale** : **9.5/10** (Fonctionnel + Évolutif)
+> **Dernière mise à jour** : 26 Décembre 2025
+> **Version** : 2.1
+> **Note Globale** : **9.6/10** (Fonctionnel + Évolutif + Multi-tenant)
 
 ---
 
@@ -271,6 +271,41 @@ NEOPRO est une plateforme **complète et fonctionnelle** de gestion de contenu v
 
 **Référence** : `docs/audit/AUDIT_PLATEFORME_COMPLET_2025.md`
 **Changelog** : `docs/changelog/2025-12-25_platform-audit-implementation.md`
+
+---
+
+### 🏢 Multi-tenant Portals - **TERMINÉ 26 Décembre 2025**
+
+**Architecture Multi-tenant** permettant différents niveaux d'accès :
+
+**Nouveaux Rôles Utilisateurs** :
+- ✅ `sponsor` - Accès portail sponsor uniquement
+- ✅ `agency` - Accès portail agence uniquement
+
+**Portail Sponsor** (`/sponsor-portal`) :
+- ✅ Dashboard dédié avec KPIs personnalisés
+- ✅ Liste des vidéos déployées
+- ✅ Sites de diffusion
+- ✅ Statistiques d'impressions
+
+**Portail Agence** (`/agency-portal`) :
+- ✅ Dashboard avec vue d'ensemble des clubs gérés
+- ✅ Statut temps réel (online/offline)
+- ✅ Alertes consolidées
+- ✅ Statistiques agrégées
+
+**Administration Agences** (`/admin/agencies`) :
+- ✅ CRUD complet agences
+- ✅ Association sites ↔ agences
+
+**Amélioration Admin Local Raspberry** :
+- ✅ Upload avec progression réelle (%)
+- ✅ Miniatures vidéos dans bibliothèque
+- ✅ Prévisualisation avant upload
+- ✅ Affichage durée vidéos
+
+**Référence** : `docs/technical/MULTI_TENANT.md`
+**Changelog** : `docs/changelog/2025-12-26_multi-tenant-portals.md`
 
 ---
 
@@ -578,7 +613,7 @@ Total: ~50,000 lignes de code
 2. **Rapports email** - Pas d'envoi automatique (manuel download)
 3. **Rate limiting** - Non implémenté (risque abus API)
 4. **Multi-langue** - Français uniquement
-5. **Portail sponsor** - Pas d'accès direct sponsors (admin seulement)
+5. ~~**Portail sponsor**~~ - ✅ Implémenté (26 Déc 2025)
 
 ### Dette Technique
 
@@ -670,7 +705,7 @@ Total: ~50,000 lignes de code
 
 ---
 
-**Version** : 2.0.0
-**Date** : 25 Décembre 2025
+**Version** : 2.1.0
+**Date** : 26 Décembre 2025
 **Auteur** : Équipe NEOPRO + Claude Code
-**Statut** : 🟢 Production-Ready avec sécurité renforcée
+**Statut** : 🟢 Production-Ready avec multi-tenant et sécurité renforcée

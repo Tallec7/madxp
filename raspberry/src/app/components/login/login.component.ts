@@ -3,17 +3,21 @@ import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
+import { TranslateModule } from '@ngx-translate/core';
 import { AuthService } from '../../services/auth.service';
+import { TranslationService } from '../../services/translation.service';
+import { LanguageSelectorComponent } from '../language-selector/language-selector.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule, LanguageSelectorComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'
 })
 export class LoginComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
+  private readonly translationService = inject(TranslationService);
   private readonly router = inject(Router);
   private subscriptions: Subscription[] = [];
 
@@ -63,7 +67,7 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   public onSubmit(): void {
     if (!this.password) {
-      this.errorMessage = 'Veuillez entrer le mot de passe';
+      this.errorMessage = this.translationService.instant('auth.passwordRequired');
       return;
     }
 
@@ -78,7 +82,7 @@ export class LoginComponent implements OnInit, OnDestroy {
         // Rediriger vers la page d'accueil (TV)
         this.router.navigate(['/tv']);
       } else {
-        this.errorMessage = 'Mot de passe incorrect';
+        this.errorMessage = this.translationService.instant('auth.invalidPassword');
         this.password = '';
       }
 
@@ -120,17 +124,17 @@ export class LoginComponent implements OnInit, OnDestroy {
   public async onSetupSubmit(): Promise<void> {
     // Validation
     if (!this.newPassword) {
-      this.setupError = 'Veuillez entrer un mot de passe';
+      this.setupError = this.translationService.instant('auth.passwordRequired');
       return;
     }
 
     if (this.newPassword.length < 8) {
-      this.setupError = 'Le mot de passe doit contenir au moins 8 caractères';
+      this.setupError = this.translationService.instant('auth.passwordRequired');
       return;
     }
 
     if (this.newPassword !== this.confirmPassword) {
-      this.setupError = 'Les mots de passe ne correspondent pas';
+      this.setupError = this.translationService.instant('auth.passwordMismatch');
       return;
     }
 

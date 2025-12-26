@@ -5,6 +5,13 @@
   min-height: 100vh;
   background: linear-gradient(135deg, var(--neo-hockey-dark, #2022E9) 0%, var(--neo-purple-dark, #3A0686) 100%);
   padding: 20px;
+  position: relative;
+}
+
+.language-corner {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
 }
 
 .login-card {

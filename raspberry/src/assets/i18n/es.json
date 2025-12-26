@@ -1,0 +1,81 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "retry": "Reintentar",
+    "close": "Cerrar",
+    "yes": "Sí",
+    "no": "No",
+    "save": "Guardar",
+    "cancel": "Cancelar"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "password": "Contraseña",
+    "signIn": "Iniciar sesión",
+    "signingIn": "Iniciando sesión...",
+    "passwordRequired": "Contraseña requerida",
+    "loginError": "Error de inicio de sesión",
+    "invalidPassword": "Contraseña inválida",
+    "setupPassword": "Configurar contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "passwordMismatch": "Las contraseñas no coinciden",
+    "passwordUpdated": "Contraseña actualizada"
+  },
+  "tv": {
+    "mode": "Modo TV",
+    "noContent": "Sin contenido disponible",
+    "loading": "Cargando contenido...",
+    "error": "Error de carga",
+    "offline": "Modo sin conexión",
+    "connecting": "Conectando...",
+    "connected": "Conectado",
+    "disconnected": "Desconectado"
+  },
+  "remote": {
+    "mode": "Control remoto",
+    "play": "Reproducir",
+    "pause": "Pausar",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "volume": "Volumen",
+    "mute": "Silenciar",
+    "fullscreen": "Pantalla completa"
+  },
+  "admin": {
+    "title": "Administración",
+    "systemInfo": "Información del sistema",
+    "network": "Red",
+    "storage": "Almacenamiento",
+    "cpu": "CPU",
+    "memory": "Memoria",
+    "temperature": "Temperatura",
+    "uptime": "Tiempo de actividad",
+    "version": "Versión",
+    "reboot": "Reiniciar",
+    "shutdown": "Apagar",
+    "update": "Actualizar",
+    "logs": "Registros",
+    "config": "Configuración",
+    "sync": "Sincronización",
+    "lastSync": "Última sincronización",
+    "syncNow": "Sincronizar ahora",
+    "rebootConfirm": "¿Está seguro de que desea reiniciar?",
+    "shutdownConfirm": "¿Está seguro de que desea apagar?"
+  },
+  "status": {
+    "online": "En línea",
+    "offline": "Sin conexión",
+    "syncing": "Sincronizando...",
+    "synced": "Sincronizado",
+    "error": "Error",
+    "ready": "Listo"
+  },
+  "language": {
+    "select": "Idioma",
+    "fr": "Français",
+    "en": "English",
+    "es": "Español"
+  }
+}

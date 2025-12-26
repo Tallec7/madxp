@@ -1,8 +1,8 @@
 # BACKLOG NEOPRO - Features à Développer
 
 > **Date de création** : 15 Décembre 2025
-> **Dernière MAJ** : 25 Décembre 2025
-> **Statut projet** : 🟢 Production-Ready (voir `STATUS.md`)
+> **Dernière MAJ** : 26 Décembre 2025
+> **Statut projet** : 🟢 Production-Ready v2.1 (voir `STATUS.md`)
 
 Ce document regroupe les features planifiées et leur état d'avancement.
 
@@ -20,6 +20,36 @@ Ce document regroupe les features planifiées et leur état d'avancement.
 ---
 
 ## ✅ FEATURES TERMINÉES RÉCEMMENT
+
+### ✅ Multi-tenant Portals & Admin Améliorations - **TERMINÉ 26 Déc 2025**
+
+**Statut** : 🟢 100% Implémenté
+
+**Architecture Multi-tenant** :
+
+- ✅ **FEAT-005** - Portail Sponsor (`/sponsor-portal`) - Dashboard dédié sponsors avec KPIs, vidéos, sites, stats
+- ✅ **FEAT-005** - Portail Agence (`/agency-portal`) - Dashboard dédié agences avec clubs gérés, alertes
+- ✅ **FEAT-005** - Gestion Agences (`/admin/agencies`) - CRUD complet des agences partenaires
+- ✅ **FEAT-005** - Nouveaux rôles `sponsor` et `agency` avec isolation JWT
+
+**Améliorations Admin Raspberry** :
+
+- ✅ Upload avec progression réelle (XHR + pourcentage + taille)
+- ✅ Miniatures vidéos dans la bibliothèque
+- ✅ Prévisualisation avant upload avec métadonnées
+
+**Fichiers principaux créés/modifiés** :
+
+- `central-dashboard/src/app/features/sponsor-portal/sponsor-dashboard.component.ts`
+- `central-dashboard/src/app/features/agency-portal/agency-dashboard.component.ts`
+- `central-dashboard/src/app/features/admin/agencies/agencies-management.component.ts`
+- `central-server/src/controllers/sponsor-portal.controller.ts`
+- `central-server/src/controllers/agency.controller.ts`
+- `raspberry/admin/public/app.js` (uploadWithProgress, thumbnails, preview)
+
+**Documentation** : `docs/changelog/2025-12-26_multi-tenant-portals.md`, `docs/technical/MULTI_TENANT.md`
+
+---
 
 ### ✅ Audit Plateforme Sécurité - **TERMINÉ 25 Déc 2025**
 
@@ -881,8 +911,14 @@ CREATE TABLE api_usage_logs (
 
 **T2 2026** :
 
-- Portail sponsor self-service
+- ~~Portail sponsor self-service~~ ✅ **TERMINÉ 26 Déc 2025** (voir Multi-tenant Portals)
 - API OAuth partenaires
+
+**Sprint Décembre 2025 - Addendum (26 Déc)** :
+
+- ✅ Multi-tenant Portals (Sponsor, Agence) - **TERMINÉ**
+- ✅ Admin gestion des agences - **TERMINÉ**
+- ✅ Améliorations admin Raspberry (upload, thumbnails, preview) - **TERMINÉ**
 
 ---
 
@@ -893,7 +929,7 @@ CREATE TABLE api_usage_logs (
 - Chaque feature nécessite validation Business avant dev
 - Les efforts sont des estimations, à affiner en planning poker
 
-**Dernière mise à jour** : 25 Décembre 2025
+**Dernière mise à jour** : 26 Décembre 2025
 **Prochaine revue backlog** : 15 Janvier 2026
 
 ---

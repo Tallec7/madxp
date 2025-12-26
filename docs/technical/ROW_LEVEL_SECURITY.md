@@ -124,6 +124,47 @@ npm run test:server
 |-------|--------|
 | `users` | Admin only |
 
+### Isolation Sponsor/Agence (Multi-tenant)
+
+En plus de l'isolation par site, le système supporte l'isolation pour les sponsors et agences :
+
+| Rôle | Isolation | Accès |
+|------|-----------|-------|
+| `sponsor` | Par `sponsor_id` | Ses vidéos, ses sites de diffusion, ses stats |
+| `agency` | Par `agency_id` | Ses clubs gérés, stats agrégées |
+
+**Middlewares dédiés** (`central-server/src/middleware/auth.ts`) :
+
+```typescript
+// Vérification accès sponsor
+export const requireSponsorAccess = (getSponsorIdFromRequest) => {
+  return async (req, res, next) => {
+    if (isAdmin(req.user.role)) return next();
+    if (req.user.role === 'sponsor' && req.user.sponsor_id === getSponsorIdFromRequest(req)) {
+      return next();
+    }
+    return res.status(403).json({ error: 'Accès non autorisé' });
+  };
+};
+
+// Vérification accès agence
+export const requireAgencyAccess = (getAgencyIdFromRequest) => {
+  return async (req, res, next) => {
+    if (isAdmin(req.user.role)) return next();
+    if (req.user.role === 'agency' && req.user.agency_id === getAgencyIdFromRequest(req)) {
+      return next();
+    }
+    return res.status(403).json({ error: 'Accès non autorisé' });
+  };
+};
+```
+
+**Tables concernées** :
+
+- `agencies` - Agences partenaires
+- `agency_sites` - Association agence ↔ sites
+- `sponsor_sites` - Association sponsor ↔ sites
+
 ## Utilisation dans le code
 
 ### Cas 1: Routes protégées standards
@@ -215,8 +256,10 @@ async function crossSiteOperation(sourceSiteId: string, targetSiteId: string) {
 export interface JwtPayload {
   id: string;
   email: string;
-  role: 'admin' | 'operator' | 'viewer';
-  siteId?: string;  // Ajout pour RLS
+  role: 'super_admin' | 'admin' | 'operator' | 'viewer' | 'sponsor' | 'agency';
+  siteId?: string;    // Pour RLS site
+  sponsor_id?: string; // Pour isolation sponsor
+  agency_id?: string;  // Pour isolation agence
 }
 ```
 
@@ -567,6 +610,6 @@ ALTER TABLE metrics DISABLE ROW LEVEL SECURITY;
 
 ---
 
-**Dernière mise à jour**: 16 décembre 2025
-**Version**: 1.0
+**Dernière mise à jour**: 26 décembre 2025
+**Version**: 1.1 (ajout isolation sponsor/agence)
 **Auteur**: Claude Code

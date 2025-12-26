@@ -3,15 +3,18 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { Subscription } from 'rxjs';
+import { TranslateModule } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { SocketService } from '../../core/services/socket.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { TranslationService } from '../../core/services/translation.service';
 import { User } from '../../core/models';
+import { LanguageSelectorComponent } from '../../shared/components/language-selector/language-selector.component';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslateModule, LanguageSelectorComponent],
   animations: [
     trigger('slideIn', [
       transition(':enter', [
@@ -25,68 +28,69 @@ import { User } from '../../core/models';
   ],
   template: `
     <!-- Skip link pour navigation clavier -->
-    <a href="#main-content" class="skip-link">Aller au contenu principal</a>
+    <a href="#main-content" class="skip-link">{{ 'nav.skipToContent' | translate }}</a>
 
     <div class="layout">
-      <aside class="sidebar" role="complementary" aria-label="Navigation principale">
+      <aside class="sidebar" role="complementary" [attr.aria-label]="'nav.dashboard' | translate">
         <div class="sidebar-header">
           <img src="assets/neopro-logo-white.png" alt="Neopro Dashboard Central" class="sidebar-logo" />
           <span
             class="connection-status"
             [class.connected]="isConnected"
             role="status"
-            [attr.aria-label]="isConnected ? 'État: connecté au serveur' : 'État: déconnecté du serveur'"
+            [attr.aria-label]="isConnected ? ('status.connected' | translate) : ('status.disconnected' | translate)"
           >
             <span class="status-dot" aria-hidden="true"></span>
-            {{ isConnected ? 'Connecté' : 'Déconnecté' }}
+            {{ isConnected ? ('status.connected' | translate) : ('status.disconnected' | translate) }}
           </span>
         </div>
 
-        <nav class="sidebar-nav" aria-label="Menu de navigation">
-          <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" aria-label="Dashboard">
+        <nav class="sidebar-nav" [attr.aria-label]="'nav.dashboard' | translate">
+          <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" [attr.aria-label]="'nav.dashboard' | translate">
             <span class="icon" aria-hidden="true">📊</span>
-            <span>Dashboard</span>
+            <span>{{ 'nav.dashboard' | translate }}</span>
           </a>
-          <a routerLink="/sites" routerLinkActive="active" class="nav-item" aria-label="Gestion des sites">
+          <a routerLink="/sites" routerLinkActive="active" class="nav-item" [attr.aria-label]="'nav.sites' | translate">
             <span class="icon" aria-hidden="true">🖥️</span>
-            <span>Sites</span>
+            <span>{{ 'nav.sites' | translate }}</span>
           </a>
-          <a routerLink="/groups" routerLinkActive="active" class="nav-item" aria-label="Gestion des groupes">
+          <a routerLink="/groups" routerLinkActive="active" class="nav-item" [attr.aria-label]="'nav.groups' | translate">
             <span class="icon" aria-hidden="true">👥</span>
-            <span>Groupes</span>
+            <span>{{ 'nav.groups' | translate }}</span>
           </a>
-          <a routerLink="/sponsors" routerLinkActive="active" class="nav-item" aria-label="Gestion des sponsors">
+          <a routerLink="/sponsors" routerLinkActive="active" class="nav-item" [attr.aria-label]="'nav.sponsors' | translate">
             <span class="icon" aria-hidden="true">💼</span>
-            <span>Sponsors</span>
+            <span>{{ 'nav.sponsors' | translate }}</span>
           </a>
-          <a routerLink="/content" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()" aria-label="Gestion du contenu vidéo">
+          <a routerLink="/content" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()" [attr.aria-label]="'nav.content' | translate">
             <span class="icon" aria-hidden="true">📹</span>
-            <span>Contenu</span>
+            <span>{{ 'nav.content' | translate }}</span>
           </a>
-          <a routerLink="/updates" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()" aria-label="Mises à jour logicielles">
+          <a routerLink="/updates" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()" [attr.aria-label]="'nav.updates' | translate">
             <span class="icon" aria-hidden="true">🔄</span>
-            <span>Mises à jour</span>
+            <span>{{ 'nav.updates' | translate }}</span>
           </a>
-          <a routerLink="/analytics" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()" aria-label="Statistiques et analytics">
+          <a routerLink="/analytics" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()" [attr.aria-label]="'nav.analytics' | translate">
             <span class="icon" aria-hidden="true">📈</span>
-            <span>Analytics</span>
+            <span>{{ 'nav.analytics' | translate }}</span>
           </a>
 
-          <div class="nav-section" *ngIf="isAdmin()" role="group" aria-label="Section administration">
-            <div class="nav-section-title" id="admin-section">Administration</div>
-            <a routerLink="/admin/analytics-categories" routerLinkActive="active" class="nav-item" aria-describedby="admin-section" aria-label="Catégories Analytics">
+          <div class="nav-section" *ngIf="isAdmin()" role="group" [attr.aria-label]="'nav.administration' | translate">
+            <div class="nav-section-title" id="admin-section">{{ 'nav.administration' | translate }}</div>
+            <a routerLink="/admin/analytics-categories" routerLinkActive="active" class="nav-item" aria-describedby="admin-section" [attr.aria-label]="'nav.analyticsCategories' | translate">
               <span class="icon" aria-hidden="true">🏷️</span>
-              <span>Catégories Analytics</span>
+              <span>{{ 'nav.analyticsCategories' | translate }}</span>
             </a>
-            <a routerLink="/admin/local" routerLinkActive="active" class="nav-item" aria-describedby="admin-section" aria-label="Console locale d'administration">
+            <a routerLink="/admin/local" routerLinkActive="active" class="nav-item" aria-describedby="admin-section" [attr.aria-label]="'nav.localConsole' | translate">
               <span class="icon" aria-hidden="true">🛠️</span>
-              <span>Console locale</span>
+              <span>{{ 'nav.localConsole' | translate }}</span>
             </a>
           </div>
         </nav>
 
         <div class="sidebar-footer" role="contentinfo">
-          <div class="user-info" aria-label="Utilisateur connecté">
+          <app-language-selector></app-language-selector>
+          <div class="user-info">
             <div class="user-avatar" aria-hidden="true">{{ getUserInitials() }}</div>
             <div class="user-details">
               <div class="user-name">{{ currentUser?.full_name || currentUser?.email }}</div>
@@ -96,20 +100,19 @@ import { User } from '../../core/models';
           <button
             class="btn-logout"
             (click)="logout()"
-            aria-label="Se déconnecter"
-            title="Déconnexion"
+            [attr.aria-label]="'auth.logout' | translate"
+            [title]="'auth.logout' | translate"
           >
             <span aria-hidden="true">🚪</span>
           </button>
         </div>
       </aside>
 
-      <main id="main-content" class="main-content" role="main" aria-label="Contenu principal">
+      <main id="main-content" class="main-content" role="main">
         <div
           class="notifications"
           *ngIf="notifications.length > 0"
           role="region"
-          aria-label="Notifications"
           aria-live="polite"
         >
           <div
@@ -123,7 +126,7 @@ import { User } from '../../core/models';
             <button
               class="notification-close"
               (click)="dismissNotification(notification)"
-              aria-label="Fermer cette notification"
+              [attr.aria-label]="'notifications.closeNotification' | translate"
             >×</button>
           </div>
         </div>
@@ -435,6 +438,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly socketService = inject(SocketService);
   private readonly notificationService = inject(NotificationService);
+  private readonly translationService = inject(TranslationService);
   private readonly router = inject(Router);
 
   currentUser: User | null = null;
@@ -501,12 +505,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   getRoleLabel(): string {
-    const roleLabels: Record<string, string> = {
-      admin: 'Administrateur',
-      operator: 'Opérateur',
-      viewer: 'Observateur'
-    };
-    return this.currentUser ? roleLabels[this.currentUser.role] : '';
+    if (!this.currentUser) return '';
+    return this.translationService.instant(`roles.${this.currentUser.role}`);
   }
 
   showNotification(type: string, message: string): void {
@@ -537,7 +537,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   logout(): void {
-    if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+    if (confirm(this.translationService.instant('auth.logoutConfirm'))) {
       this.authService.logout();
     }
   }

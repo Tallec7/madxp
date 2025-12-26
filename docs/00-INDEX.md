@@ -29,6 +29,7 @@ Architecture et documentation pour développeurs.
 - [Architecture complète](technical/ARCHITECTURE.md) - Edge + Cloud (368 lignes)
 - [Documentation de référence](technical/REFERENCE.md) (19K)
 - [Architecture de synchronisation](technical/SYNC_ARCHITECTURE.md) (26K)
+- [Architecture Multi-tenant](technical/MULTI_TENANT.md) - Portails Sponsor/Agence
 - [Command Queue (sites offline)](technical/COMMAND_QUEUE.md)
 - [Row-Level Security](technical/ROW_LEVEL_SECURITY.md)
 - [Guide des tests](technical/TESTING_GUIDE.md)
@@ -157,6 +158,6 @@ neopro/
 
 ---
 
-**Dernière mise à jour** : 25 décembre 2025 - Audit et nettoyage documentation
+**Dernière mise à jour** : 26 décembre 2025 - Ajout multi-tenant (sponsors/agences)
 
-**Version** : 2.1
+**Version** : 2.2

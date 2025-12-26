@@ -2028,3 +2028,191 @@ body {
   background: rgba(254, 89, 73, 0.15);
   color: var(--danger);
 }
+
+/* ============================================================================
+   Video Thumbnails and Preview Improvements
+   ============================================================================ */
+
+/* File preview thumbnail in upload list */
+.file-item-with-preview {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 12px;
+  padding: 12px;
+}
+
+.file-preview-thumb {
+  position: relative;
+  width: 80px;
+  height: 45px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.file-preview-thumb:hover {
+  transform: scale(1.05);
+}
+
+.file-preview-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.file-preview-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 10px;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.file-preview-thumb:hover .file-preview-play {
+  opacity: 1;
+  background: var(--primary);
+}
+
+.file-info-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.file-info-container .file-name {
+  font-weight: 500;
+}
+
+.file-info-container .file-size {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.file-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Video thumbnail in library */
+.thumbnail-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+}
+
+.video-thumbnail {
+  position: relative;
+  width: 60px;
+  height: 40px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.video-thumbnail:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.video-thumbnail .play-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  color: white;
+  background: rgba(0, 0, 0, 0.5);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.video-thumbnail:hover .play-icon {
+  background: var(--primary);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* Video row meta info (duration, resolution) */
+.video-row-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Video preview row layout improvements */
+.video-row-preview {
+  flex-shrink: 0;
+}
+
+/* Improved upload progress with percentage */
+.upload-progress {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.upload-progress .progress-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.upload-progress .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+#upload-status {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Responsive adjustments for file preview */
+@media (max-width: 480px) {
+  .file-item-with-preview {
+    grid-template-columns: 60px 1fr auto;
+    gap: 8px;
+  }
+  
+  .file-preview-thumb {
+    width: 60px;
+    height: 34px;
+  }
+  
+  .file-actions {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

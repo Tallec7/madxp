@@ -28,6 +28,8 @@ import sponsorAnalyticsRoutes from './routes/sponsor-analytics.routes';
 import auditRoutes from './routes/audit.routes';
 import canaryRoutes from './routes/canary.routes';
 import adminRoutes from './routes/admin.routes';
+import sponsorPortalRoutes from './routes/sponsor-portal.routes';
+import agencyRoutes from './routes/agency.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 
@@ -253,6 +255,8 @@ app.use('/api/analytics', apiRateLimit, sponsorAnalyticsRoutes); // Analytics sp
 app.use('/api/audit', apiRateLimit, auditRoutes);
 app.use('/api/canary', sensitiveRateLimit, canaryRoutes); // Déploiements canary - sensible
 app.use('/api/admin', sensitiveRateLimit, adminRoutes);
+app.use('/api/sponsor', apiRateLimit, sponsorPortalRoutes); // Portail sponsors
+app.use('/api/agencies', apiRateLimit, agencyRoutes); // Gestion agences
 
 // 404 handler - Skip Socket.IO paths as they are handled by Socket.IO server directly
 app.use((req: Request, res: Response, next: NextFunction) => {
