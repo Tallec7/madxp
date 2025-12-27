@@ -8,6 +8,7 @@ import logger from '../config/logger';
 import { auditService } from '../services/audit.service';
 import { formatPaginatedResponse, PaginationParams } from '../middleware/pagination';
 import { commandQueueService } from '../services/command-queue.service';
+import { isAdmin } from '../middleware/auth';
 
 class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -41,38 +42,74 @@ export const getSites = async (req: AuthRequest, res: Response) => {
   try {
     const { status, sport, region, search } = req.query;
     const pagination = req.pagination || { page: 1, limit: 20, offset: 0 };
+    const userRole = req.user?.role || 'viewer';
+    const userAgencyId = req.user?.agency_id;
+    const userSponsorId = req.user?.sponsor_id;
 
     let whereClause = 'WHERE 1=1';
     const params: any[] = [];
     let paramIndex = 1;
 
+    // Multi-tenant filtering based on user role
+    if (userRole === 'agency') {
+      if (userAgencyId) {
+        // Agency users only see their assigned sites
+        whereClause += ` AND s.id IN (SELECT site_id FROM agency_sites WHERE agency_id = $${paramIndex})`;
+        params.push(userAgencyId);
+        paramIndex++;
+      } else {
+        // Agency user without agency_id sees no sites
+        whereClause += ` AND 1=0`;
+      }
+    } else if (userRole === 'sponsor') {
+      if (userSponsorId) {
+        // Sponsor users see sites where their videos are deployed
+        whereClause += ` AND s.id IN (
+          SELECT DISTINCT cd.target_id FROM content_deployments cd
+          JOIN videos v ON v.id = cd.video_id
+          WHERE v.sponsor_id = $${paramIndex} AND cd.target_type = 'site'
+          UNION
+          SELECT DISTINCT sg.site_id FROM site_groups sg
+          JOIN content_deployments cd ON cd.target_id = sg.group_id AND cd.target_type = 'group'
+          JOIN videos v ON v.id = cd.video_id
+          WHERE v.sponsor_id = $${paramIndex + 1}
+        )`;
+        params.push(userSponsorId, userSponsorId);
+        paramIndex += 2;
+      } else {
+        // Sponsor user without sponsor_id sees no sites
+        whereClause += ` AND 1=0`;
+      }
+    }
+    // admin, super_admin, operator, viewer see all sites (no filter)
+
     if (status) {
-      whereClause += ` AND status = $${paramIndex}`;
+      whereClause += ` AND s.status = $${paramIndex}`;
       params.push(status);
       paramIndex++;
     }
 
     if (sport) {
-      whereClause += ` AND sports @> $${paramIndex}::jsonb`;
+      whereClause += ` AND s.sports @> $${paramIndex}::jsonb`;
       params.push(JSON.stringify([sport]));
       paramIndex++;
     }
 
     if (region) {
-      whereClause += ` AND location->>'region' = $${paramIndex}`;
+      whereClause += ` AND s.location->>'region' = $${paramIndex}`;
       params.push(region);
       paramIndex++;
     }
 
     if (search) {
-      whereClause += ` AND (site_name ILIKE $${paramIndex} OR club_name ILIKE $${paramIndex})`;
+      whereClause += ` AND (s.site_name ILIKE $${paramIndex} OR s.club_name ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
       paramIndex++;
     }
 
     // Requêtes paginée et count en parallèle
-    const dataQuery = `SELECT * FROM sites ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    const countQuery = `SELECT COUNT(*) as count FROM sites ${whereClause}`;
+    const dataQuery = `SELECT s.* FROM sites s ${whereClause} ORDER BY s.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    const countQuery = `SELECT COUNT(*) as count FROM sites s ${whereClause}`;
 
     const [dataResult, countResult] = await Promise.all([
       query(dataQuery, [...params, pagination.limit, pagination.offset]),
