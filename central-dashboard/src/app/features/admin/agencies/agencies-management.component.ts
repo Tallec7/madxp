@@ -16,105 +16,77 @@ interface AgencyForm {
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="container mx-auto p-6">
-      <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Gestion des Agences</h1>
-        <button
-          (click)="showCreateModal = true"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
+    <div class="container">
+      <div class="header">
+        <h1>Gestion des Agences</h1>
+        <button class="btn btn-primary" (click)="showCreateModal = true">
           + Nouvelle Agence
         </button>
       </div>
 
       <!-- Loading state -->
       @if (loading()) {
-        <div class="flex justify-center py-12">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div class="loading">
+          <div class="spinner"></div>
         </div>
       }
 
       <!-- Error state -->
       @if (error()) {
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+        <div class="error-message">
           {{ error() }}
         </div>
       }
 
       <!-- Agencies list -->
       @if (!loading() && agencies().length > 0) {
-        <div class="bg-white shadow rounded-lg overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+        <div class="card">
+          <table class="agencies-table">
+            <thead>
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Agence
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sites
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Statut
-                </th>
-                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th>Agence</th>
+                <th>Contact</th>
+                <th>Sites</th>
+                <th>Statut</th>
+                <th>Actions</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody>
               @for (agency of agencies(); track agency.id) {
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
+                <tr>
+                  <td>
+                    <div class="agency-cell">
                       @if (agency.logo_url) {
-                        <img [src]="agency.logo_url" class="h-10 w-10 rounded-full mr-3" alt="">
+                        <img [src]="agency.logo_url" class="agency-logo" alt="" />
                       } @else {
-                        <div class="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
-                          <span class="text-purple-600 font-medium">{{ agency.name.charAt(0) }}</span>
-                        </div>
+                        <div class="avatar">{{ agency.name.charAt(0) }}</div>
                       }
-                      <div>
-                        <div class="text-sm font-medium text-gray-900">{{ agency.name }}</div>
+                      <div class="agency-info">
+                        <span class="agency-name">{{ agency.name }}</span>
                         @if (agency.description) {
-                          <div class="text-sm text-gray-500 truncate max-w-xs">{{ agency.description }}</div>
+                          <span class="agency-desc">{{ agency.description }}</span>
                         }
                       </div>
                     </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">{{ agency.contact_name || '-' }}</div>
-                    <div class="text-sm text-gray-500">{{ agency.contact_email || '-' }}</div>
+                  <td>
+                    <div class="contact-cell">
+                      <span class="contact-name">{{ agency.contact_name || '-' }}</span>
+                      <span class="contact-email">{{ agency.contact_email || '-' }}</span>
+                    </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                      {{ agency.site_count || 0 }} sites
-                    </span>
+                  <td>
+                    <span class="badge badge-info"> {{ agency.site_count || 0 }} sites </span>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span [class]="getStatusClass(agency.status)">
+                  <td>
+                    <span class="badge" [class]="'badge-status-' + agency.status">
                       {{ agency.status === 'active' ? 'Actif' : 'Inactif' }}
                     </span>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      (click)="editAgency(agency)"
-                      class="text-blue-600 hover:text-blue-900 mr-4"
-                    >
-                      Modifier
-                    </button>
-                    <button
-                      (click)="manageSites(agency)"
-                      class="text-green-600 hover:text-green-900 mr-4"
-                    >
-                      Sites
-                    </button>
-                    <button
-                      (click)="confirmDelete(agency)"
-                      class="text-red-600 hover:text-red-900"
-                    >
+                  <td class="actions-cell">
+                    <button class="btn-link btn-edit" (click)="editAgency(agency)">Modifier</button>
+                    <button class="btn-link btn-success" (click)="manageSites(agency)">Sites</button>
+                    <button class="btn-link btn-danger" (click)="confirmDelete(agency)">
                       Supprimer
                     </button>
                   </td>
@@ -126,93 +98,54 @@ interface AgencyForm {
       }
 
       <!-- Empty state -->
-      @if (!loading() && agencies().length === 0) {
-        <div class="text-center py-12 bg-white rounded-lg shadow">
-          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900">Aucune agence</h3>
-          <p class="mt-1 text-sm text-gray-500">Commencez par creer une nouvelle agence.</p>
-          <div class="mt-6">
-            <button
-              (click)="showCreateModal = true"
-              class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-            >
-              + Nouvelle Agence
-            </button>
-          </div>
+      @if (!loading() && agencies().length === 0 && !error()) {
+        <div class="empty-state">
+          <div class="empty-icon">🏢</div>
+          <h3>Aucune agence</h3>
+          <p>Commencez par creer une nouvelle agence.</p>
+          <button class="btn btn-primary" (click)="showCreateModal = true">
+            + Nouvelle Agence
+          </button>
         </div>
       }
 
       <!-- Create/Edit Modal -->
       @if (showCreateModal || editingAgency) {
-        <div class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div class="px-6 py-4 border-b border-gray-200">
-              <h3 class="text-lg font-medium text-gray-900">
-                {{ editingAgency ? 'Modifier l\'agence' : 'Nouvelle agence' }}
-              </h3>
+        <div class="modal-overlay" (click)="cancelEdit()">
+          <div class="modal" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3>{{ editingAgency ? "Modifier l'agence" : 'Nouvelle agence' }}</h3>
             </div>
-            <form (ngSubmit)="saveAgency()" class="px-6 py-4 space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700">Nom *</label>
-                <input
-                  type="text"
-                  [(ngModel)]="agencyForm.name"
-                  name="name"
-                  required
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
+            <form (ngSubmit)="saveAgency()" class="modal-body">
+              <div class="form-group">
+                <label>Nom *</label>
+                <input type="text" [(ngModel)]="agencyForm.name" name="name" required />
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700">Description</label>
+              <div class="form-group">
+                <label>Description</label>
                 <textarea
                   [(ngModel)]="agencyForm.description"
                   name="description"
                   rows="2"
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 ></textarea>
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700">Nom du contact</label>
-                <input
-                  type="text"
-                  [(ngModel)]="agencyForm.contact_name"
-                  name="contact_name"
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
+              <div class="form-group">
+                <label>Nom du contact</label>
+                <input type="text" [(ngModel)]="agencyForm.contact_name" name="contact_name" />
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700">Email</label>
-                <input
-                  type="email"
-                  [(ngModel)]="agencyForm.contact_email"
-                  name="contact_email"
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" [(ngModel)]="agencyForm.contact_email" name="contact_email" />
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700">Telephone</label>
-                <input
-                  type="tel"
-                  [(ngModel)]="agencyForm.contact_phone"
-                  name="contact_phone"
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
+              <div class="form-group">
+                <label>Telephone</label>
+                <input type="tel" [(ngModel)]="agencyForm.contact_phone" name="contact_phone" />
               </div>
-              <div class="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  (click)="cancelEdit()"
-                  class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="cancelEdit()">
                   Annuler
                 </button>
-                <button
-                  type="submit"
-                  [disabled]="saving()"
-                  class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                >
+                <button type="submit" class="btn btn-primary" [disabled]="saving()">
                   {{ saving() ? 'Enregistrement...' : 'Enregistrer' }}
                 </button>
               </div>
@@ -223,24 +156,26 @@ interface AgencyForm {
 
       <!-- Delete Confirmation Modal -->
       @if (deletingAgency) {
-        <div class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div class="bg-white rounded-lg shadow-xl max-w-sm w-full mx-4 p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Confirmer la suppression</h3>
-            <p class="text-sm text-gray-500 mb-6">
-              Etes-vous sur de vouloir supprimer l'agence "{{ deletingAgency.name }}" ?
-              Cette action est irreversible.
-            </p>
-            <div class="flex justify-end space-x-3">
-              <button
-                (click)="deletingAgency = null"
-                class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
+        <div class="modal-overlay" (click)="deletingAgency = null">
+          <div class="modal modal-small" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3>Confirmer la suppression</h3>
+            </div>
+            <div class="modal-body">
+              <p>
+                Etes-vous sur de vouloir supprimer l'agence "{{ deletingAgency.name }}" ? Cette
+                action est irreversible.
+              </p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" (click)="deletingAgency = null">
                 Annuler
               </button>
               <button
+                type="button"
+                class="btn btn-danger"
                 (click)="deleteAgency()"
                 [disabled]="saving()"
-                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
               >
                 {{ saving() ? 'Suppression...' : 'Supprimer' }}
               </button>
@@ -249,7 +184,393 @@ interface AgencyForm {
         </div>
       }
     </div>
-  `
+  `,
+  styles: [
+    `
+      .container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+
+      .header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+      }
+
+      .card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .agencies-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .agencies-table th {
+        text-align: left;
+        padding: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .agencies-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.875rem;
+        color: #334155;
+      }
+
+      .agencies-table tr:hover {
+        background: #f8fafc;
+      }
+
+      .agency-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .agency-logo {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #f3e8ff;
+        color: #7c3aed;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 1rem;
+      }
+
+      .agency-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .agency-name {
+        font-weight: 500;
+        color: #0f172a;
+      }
+
+      .agency-desc {
+        font-size: 0.8125rem;
+        color: #64748b;
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .contact-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .contact-name {
+        color: #0f172a;
+      }
+
+      .contact-email {
+        font-size: 0.8125rem;
+        color: #64748b;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+
+      .badge-info {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+
+      .badge-status-active {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .badge-status-inactive {
+        background: #f1f5f9;
+        color: #475569;
+      }
+
+      .actions-cell {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .btn-link {
+        background: none;
+        border: none;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8125rem;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background 0.2s;
+      }
+
+      .btn-edit {
+        color: #2563eb;
+      }
+      .btn-edit:hover {
+        background: #dbeafe;
+      }
+
+      .btn-success {
+        color: #059669;
+      }
+      .btn-success:hover {
+        background: #dcfce7;
+      }
+
+      .btn-danger {
+        color: #dc2626;
+      }
+      .btn-danger:hover {
+        background: #fee2e2;
+      }
+
+      .btn {
+        padding: 0.625rem 1.25rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s;
+      }
+
+      .btn-primary {
+        background: #2563eb;
+        color: white;
+      }
+      .btn-primary:hover {
+        background: #1d4ed8;
+      }
+      .btn-primary:disabled {
+        background: #93c5fd;
+        cursor: not-allowed;
+      }
+
+      .btn-secondary {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+      }
+      .btn-secondary:hover {
+        background: #e2e8f0;
+      }
+
+      .btn.btn-danger {
+        background: #dc2626;
+        color: white;
+        padding: 0.625rem 1.25rem;
+      }
+      .btn.btn-danger:hover {
+        background: #b91c1c;
+      }
+
+      .loading {
+        display: flex;
+        justify-content: center;
+        padding: 3rem;
+      }
+
+      .spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #2563eb;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .error-message {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+      }
+
+      .empty-state h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #0f172a;
+        margin: 0 0 0.5rem 0;
+      }
+
+      .empty-state p {
+        color: #64748b;
+        margin: 0 0 1.5rem 0;
+      }
+
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 1rem;
+      }
+
+      .modal {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        width: 100%;
+        max-width: 480px;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      .modal-small {
+        max-width: 400px;
+      }
+
+      .modal-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .modal-header h3 {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #0f172a;
+      }
+
+      .modal-body {
+        padding: 1.5rem;
+      }
+
+      .modal-body p {
+        color: #64748b;
+        line-height: 1.5;
+        margin: 0;
+      }
+
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding-top: 1.5rem;
+      }
+
+      .form-group {
+        margin-bottom: 1.25rem;
+      }
+
+      .form-group label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.5rem;
+      }
+
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        width: 100%;
+        padding: 0.625rem 0.875rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        background: white;
+        box-sizing: border-box;
+        font-family: inherit;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus,
+      .form-group textarea:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      .form-group textarea {
+        resize: vertical;
+        min-height: 60px;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 1rem;
+        }
+
+        .header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 1rem;
+        }
+
+        .agencies-table {
+          display: block;
+          overflow-x: auto;
+        }
+
+        .actions-cell {
+          flex-direction: column;
+        }
+      }
+    `,
+  ],
 })
 export class AgenciesManagementComponent implements OnInit {
   private readonly agencyService = inject(AgencyPortalService);
@@ -268,7 +589,7 @@ export class AgenciesManagementComponent implements OnInit {
     description: '',
     contact_name: '',
     contact_email: '',
-    contact_phone: ''
+    contact_phone: '',
   };
 
   ngOnInit(): void {
@@ -291,7 +612,7 @@ export class AgenciesManagementComponent implements OnInit {
       error: (err) => {
         this.error.set(err.error?.error || 'Erreur de connexion');
         this.loading.set(false);
-      }
+      },
     });
   }
 
@@ -302,7 +623,7 @@ export class AgenciesManagementComponent implements OnInit {
       description: agency.description || '',
       contact_name: agency.contact_name || '',
       contact_email: agency.contact_email || '',
-      contact_phone: agency.contact_phone || ''
+      contact_phone: agency.contact_phone || '',
     };
   }
 
@@ -318,7 +639,7 @@ export class AgenciesManagementComponent implements OnInit {
       description: '',
       contact_name: '',
       contact_email: '',
-      contact_phone: ''
+      contact_phone: '',
     };
   }
 
@@ -332,7 +653,7 @@ export class AgenciesManagementComponent implements OnInit {
       description: this.agencyForm.description.trim() || undefined,
       contact_name: this.agencyForm.contact_name.trim() || undefined,
       contact_email: this.agencyForm.contact_email.trim() || undefined,
-      contact_phone: this.agencyForm.contact_phone.trim() || undefined
+      contact_phone: this.agencyForm.contact_phone.trim() || undefined,
     };
 
     const request = this.editingAgency
@@ -345,14 +666,14 @@ export class AgenciesManagementComponent implements OnInit {
           this.loadAgencies();
           this.cancelEdit();
         } else {
-          this.error.set('Erreur lors de l\'enregistrement');
+          this.error.set("Erreur lors de l'enregistrement");
         }
         this.saving.set(false);
       },
       error: (err) => {
-        this.error.set(err.error?.error || 'Erreur lors de l\'enregistrement');
+        this.error.set(err.error?.error || "Erreur lors de l'enregistrement");
         this.saving.set(false);
-      }
+      },
     });
   }
 
@@ -378,18 +699,12 @@ export class AgenciesManagementComponent implements OnInit {
       error: (err) => {
         this.error.set(err.error?.error || 'Erreur lors de la suppression');
         this.saving.set(false);
-      }
+      },
     });
   }
 
   manageSites(_agency: Agency): void {
     // TODO: Implement site management modal
-    alert('Fonctionnalité en cours de développement');
-  }
-
-  getStatusClass(status: string): string {
-    return status === 'active'
-      ? 'px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full'
-      : 'px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full';
+    alert('Fonctionnalite en cours de developpement');
   }
 }
