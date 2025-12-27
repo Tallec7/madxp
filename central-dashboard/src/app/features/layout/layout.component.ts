@@ -451,6 +451,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.authService.currentUser$.subscribe(user => {
         this.currentUser = user;
+        // Connecter le WebSocket quand l'utilisateur est authentifié
+        if (user) {
+          const token = this.authService.getSseToken();
+          if (token && !this.socketService.isConnected()) {
+            this.socketService.connect(token);
+          }
+        }
       })
     );
 
@@ -538,6 +545,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   logout(): void {
     if (confirm(this.translationService.instant('auth.logoutConfirm'))) {
+      this.socketService.disconnect();
       this.authService.logout();
     }
   }
