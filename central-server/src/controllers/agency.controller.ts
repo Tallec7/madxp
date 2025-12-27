@@ -45,11 +45,12 @@ export const listAgencies = async (req: AuthRequest, res: Response): Promise<voi
     let result;
 
     if (isAdmin(req.user?.role || 'viewer')) {
-      // Admin voit toutes les agences
+      // Admin voit toutes les agences avec compteur de sites
       result = await query<Agency>(
-        `SELECT id, name, description, logo_url, contact_name, contact_email, contact_phone, status, created_at
-         FROM agencies
-         ORDER BY name ASC`
+        `SELECT a.id, a.name, a.description, a.logo_url, a.contact_name, a.contact_email, a.contact_phone, a.status, a.created_at,
+                (SELECT COUNT(*) FROM agency_sites WHERE agency_id = a.id) as site_count
+         FROM agencies a
+         ORDER BY a.name ASC`
       );
     } else if (req.user?.role === 'agency' && req.user?.agency_id) {
       // Agence voit seulement la sienne
@@ -456,10 +457,22 @@ export const getAgencyDashboard = async (req: AuthRequest, res: Response): Promi
   try {
     const agencyId = req.user?.agency_id;
 
+    // Si pas d'agency_id, retourner données vides au lieu de 403
     if (!agencyId) {
-      res.status(403).json({
-        success: false,
-        error: 'Accès réservé aux agences',
+      res.json({
+        success: true,
+        data: {
+          agency: null,
+          stats: {
+            total_sites: 0,
+            online_sites: 0,
+            offline_sites: 0,
+            total_videos_played_30d: 0,
+            total_screen_time_30d: 0,
+          },
+          recent_alerts: [],
+          message: 'Aucune agence associée à votre compte. Contactez un administrateur.',
+        },
       });
       return;
     }
@@ -554,10 +567,15 @@ export const getAgencySites = async (req: AuthRequest, res: Response): Promise<v
   try {
     const agencyId = req.user?.agency_id;
 
+    // Si pas d'agency_id, retourner données vides au lieu de 403
     if (!agencyId) {
-      res.status(403).json({
-        success: false,
-        error: 'Accès réservé aux agences',
+      res.json({
+        success: true,
+        data: {
+          sites: [],
+          total: 0,
+          message: 'Aucune agence associée à votre compte. Contactez un administrateur.',
+        },
       });
       return;
     }
@@ -627,7 +645,7 @@ export const getAgencySiteDetails = async (req: AuthRequest, res: Response): Pro
     if (!agencyId) {
       res.status(403).json({
         success: false,
-        error: 'Accès réservé aux agences',
+        error: 'Aucune agence associée à votre compte',
       });
       return;
     }
@@ -729,16 +747,28 @@ export const getAgencyStats = async (req: AuthRequest, res: Response): Promise<v
     const agencyId = req.user?.agency_id;
     const { from, to } = req.query;
 
+    const fromDate = (from as string) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const toDate = (to as string) || new Date().toISOString().split('T')[0];
+
+    // Si pas d'agency_id, retourner données vides
     if (!agencyId) {
-      res.status(403).json({
-        success: false,
-        error: 'Accès réservé aux agences',
+      res.json({
+        success: true,
+        data: {
+          period: { from: fromDate, to: toDate },
+          summary: {
+            total_sites: 0,
+            total_videos: 0,
+            total_screen_time: 0,
+            avg_uptime: 0,
+          },
+          by_site: [],
+          trends: [],
+          message: 'Aucune agence associée à votre compte. Contactez un administrateur.',
+        },
       });
       return;
     }
-
-    const fromDate = (from as string) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const toDate = (to as string) || new Date().toISOString().split('T')[0];
 
     // Sites de l'agence
     const sitesResult = await query(

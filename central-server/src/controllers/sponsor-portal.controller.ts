@@ -54,10 +54,22 @@ export const getSponsorDashboard = async (req: AuthRequest, res: Response): Prom
   try {
     const sponsorId = req.user?.sponsor_id;
 
+    // Si pas de sponsor_id, retourner données vides au lieu de 403
     if (!sponsorId) {
-      res.status(403).json({
-        success: false,
-        error: 'Accès réservé aux sponsors',
+      res.json({
+        success: true,
+        data: {
+          sponsor: null,
+          stats: {
+            total_videos: 0,
+            total_sites: 0,
+            total_impressions_30d: 0,
+            total_screen_time_30d: 0,
+            avg_completion_rate: 0,
+          },
+          trends: [],
+          message: 'Aucun sponsor associé à votre compte. Contactez un administrateur.',
+        },
       });
       return;
     }
@@ -164,10 +176,15 @@ export const getSponsorSites = async (req: AuthRequest, res: Response): Promise<
   try {
     const sponsorId = req.user?.sponsor_id;
 
+    // Si pas de sponsor_id, retourner données vides
     if (!sponsorId) {
-      res.status(403).json({
-        success: false,
-        error: 'Accès réservé aux sponsors',
+      res.json({
+        success: true,
+        data: {
+          sites: [],
+          total: 0,
+          message: 'Aucun sponsor associé à votre compte. Contactez un administrateur.',
+        },
       });
       return;
     }
@@ -239,10 +256,15 @@ export const getSponsorVideos = async (req: AuthRequest, res: Response): Promise
   try {
     const sponsorId = req.user?.sponsor_id;
 
+    // Si pas de sponsor_id, retourner données vides
     if (!sponsorId) {
-      res.status(403).json({
-        success: false,
-        error: 'Accès réservé aux sponsors',
+      res.json({
+        success: true,
+        data: {
+          videos: [],
+          total: 0,
+          message: 'Aucun sponsor associé à votre compte. Contactez un administrateur.',
+        },
       });
       return;
     }
@@ -307,16 +329,30 @@ export const getSponsorDetailedStats = async (req: AuthRequest, res: Response): 
     const sponsorId = req.user?.sponsor_id;
     const { from, to } = req.query;
 
+    const fromDate = (from as string) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const toDate = (to as string) || new Date().toISOString().split('T')[0];
+
+    // Si pas de sponsor_id, retourner données vides
     if (!sponsorId) {
-      res.status(403).json({
-        success: false,
-        error: 'Accès réservé aux sponsors',
+      res.json({
+        success: true,
+        data: {
+          period: { from: fromDate, to: toDate },
+          summary: {
+            total_impressions: 0,
+            total_screen_time_seconds: 0,
+            avg_daily_impressions: 0,
+            completion_rate: 0,
+            active_sites: 0,
+          },
+          by_video: [],
+          by_site: [],
+          trends: [],
+          message: 'Aucun sponsor associé à votre compte. Contactez un administrateur.',
+        },
       });
       return;
     }
-
-    const fromDate = (from as string) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const toDate = (to as string) || new Date().toISOString().split('T')[0];
 
     // Récupérer les vidéos du sponsor
     const videosResult = await query(
