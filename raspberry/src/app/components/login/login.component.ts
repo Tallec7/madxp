@@ -79,8 +79,8 @@ export class LoginComponent implements OnInit, OnDestroy {
       const success = this.authService.login(this.password);
 
       if (success) {
-        // Rediriger vers la page d'accueil (TV)
-        this.router.navigate(['/tv']);
+        // Rediriger vers la télécommande après authentification
+        this.router.navigate(['/remote']);
       } else {
         this.errorMessage = this.translationService.instant('auth.invalidPassword');
         this.password = '';
@@ -110,11 +110,11 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   private updatePasswordStrength(): void {
     const password = this.newPassword;
-    if (password.length < 6) {
+    if (password.length < 4) {
       this.passwordStrength = 'weak';
-    } else if (password.length >= 12 && /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)) {
+    } else if (password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password)) {
       this.passwordStrength = 'strong';
-    } else if (password.length >= 8 && (/[A-Z]/.test(password) || /[0-9]/.test(password))) {
+    } else if (password.length >= 6) {
       this.passwordStrength = 'medium';
     } else {
       this.passwordStrength = 'weak';
@@ -128,8 +128,8 @@ export class LoginComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.newPassword.length < 8) {
-      this.setupError = this.translationService.instant('auth.passwordRequired');
+    if (this.newPassword.length < 4) {
+      this.setupError = this.translationService.instant('auth.passwordTooShort');
       return;
     }
 
@@ -148,7 +148,7 @@ export class LoginComponent implements OnInit, OnDestroy {
         // Connexion automatique après setup
         const loginSuccess = this.authService.login(this.newPassword);
         if (loginSuccess) {
-          this.router.navigate(['/tv']);
+          this.router.navigate(['/remote']);
         } else {
           // Fallback: rester sur la page de login
           this.isSetupMode = false;

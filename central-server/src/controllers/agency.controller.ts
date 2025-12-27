@@ -348,6 +348,59 @@ export const addSitesToAgency = async (req: AuthRequest, res: Response): Promise
 };
 
 /**
+ * GET /api/agencies/:id/sites
+ * Liste des sites associés à une agence (admin endpoint)
+ */
+export const getAgencySitesAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    if (!validateUuid(id)) {
+      res.status(400).json({
+        success: false,
+        error: 'ID agence invalide',
+      });
+      return;
+    }
+
+    // Vérifier que l'agence existe
+    const agencyCheck = await query(`SELECT id, name FROM agencies WHERE id = $1`, [id]);
+    if (agencyCheck.rowCount === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'Agence non trouvée',
+      });
+      return;
+    }
+
+    // Récupérer les sites associés
+    const result = await query(
+      `SELECT s.id, s.site_name, s.club_name, s.status, s.location
+       FROM agency_sites as2
+       JOIN sites s ON s.id = as2.site_id
+       WHERE as2.agency_id = $1
+       ORDER BY s.club_name ASC`,
+      [id]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        agency: agencyCheck.rows[0],
+        sites: result.rows,
+        total: result.rowCount || 0,
+      },
+    });
+  } catch (error) {
+    logger.error('Error getting agency sites:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors du chargement des sites de l\'agence',
+    });
+  }
+};
+
+/**
  * DELETE /api/agencies/:id/sites/:siteId
  * Retirer un site d'une agence
  */

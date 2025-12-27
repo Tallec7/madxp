@@ -1,11 +1,13 @@
 # Changelog
 
-Généré le 2025-12-08 (Mise à jour 2025-12-25)
+Généré le 2025-12-08 (Mise à jour 2025-12-27)
 
 > **Note** : Les fichiers de commits individuels (138 fichiers) ont été archivés vers `../archive/commits/` le 25/12/2025.
 
 ## ✨ Nouvelles fonctionnalités
 
+- [Gestion Utilisateurs & Agences](2025-12-27_user-management-agencies.md) - 2025-12-27
+- [Multi-tenant Portals](2025-12-26_multi-tenant-portals.md) - 2025-12-26
 - [Personnalisation overlay score](2025-12-24_score-overlay-customization.md) - 2025-12-24
 - [Live Score - Finalisation complète](2025-12-23_livescore-complete.md) - 2025-12-23
 - [Boucles vidéo par phase de match](2025-12-22_phase-video-loops.md) - 2025-12-22

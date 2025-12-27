@@ -54,31 +54,31 @@ export const routes: Routes = [
       {
         path: 'content',
         canActivate: [roleGuard],
-        data: { roles: ['admin', 'operator'] },
+        data: { roles: ['super_admin', 'admin', 'operator'] },
         loadComponent: () => import('./features/content/content-management.component').then(m => m.ContentManagementComponent)
       },
       {
         path: 'updates',
         canActivate: [roleGuard],
-        data: { roles: ['admin', 'operator'] },
+        data: { roles: ['super_admin', 'admin', 'operator'] },
         loadComponent: () => import('./features/updates/updates-management.component').then(m => m.UpdatesManagementComponent)
       },
       {
         path: 'analytics',
         canActivate: [roleGuard],
-        data: { roles: ['admin', 'operator'] },
+        data: { roles: ['super_admin', 'admin', 'operator'] },
         loadComponent: () => import('./features/analytics/analytics-overview.component').then(m => m.AnalyticsOverviewComponent)
       },
       {
         path: 'admin/analytics-categories',
         canActivate: [roleGuard],
-        data: { roles: ['admin'] },
+        data: { roles: ['super_admin', 'admin'] },
         loadComponent: () => import('./features/admin/analytics-categories/analytics-categories.component').then(m => m.AnalyticsCategoriesComponent)
       },
       {
         path: 'admin/local',
         canActivate: [roleGuard],
-        data: { roles: ['admin'] },
+        data: { roles: ['super_admin', 'admin'] },
         loadComponent: () => import('./features/admin/local-admin/local-admin.component').then(m => m.LocalAdminComponent)
       },
       {

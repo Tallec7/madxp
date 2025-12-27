@@ -9,6 +9,7 @@ import {
   deleteAgency,
   addSitesToAgency,
   removeSiteFromAgency,
+  getAgencySitesAdmin,
   // Portail Agence
   getAgencyDashboard,
   getAgencySites,
@@ -65,6 +66,14 @@ router.delete(
 // ============================================================================
 // AGENCY-SITE ASSOCIATION (Admin only)
 // ============================================================================
+
+// Récupérer les sites d'une agence
+router.get(
+  '/:id/sites',
+  authenticate,
+  requireAdmin(),
+  getAgencySitesAdmin
+);
 
 // Associer des sites à une agence
 router.post(

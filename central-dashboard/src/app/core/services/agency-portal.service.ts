@@ -137,6 +137,10 @@ export class AgencyPortalService {
     return this.api.delete(`/agencies/${id}`);
   }
 
+  getAgencySites(agencyId: string): Observable<{ success: boolean; data: { agency: { id: string; name: string }; sites: Array<{ id: string; site_name: string; club_name: string; status: string; location: Record<string, unknown> }>; total: number } }> {
+    return this.api.get(`/agencies/${agencyId}/sites`);
+  }
+
   addSitesToAgency(agencyId: string, siteIds: string[]): Observable<{ success: boolean; message: string }> {
     return this.api.post(`/agencies/${agencyId}/sites`, { site_ids: siteIds });
   }

@@ -2,6 +2,8 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AgencyPortalService, Agency } from '../../../core/services/agency-portal.service';
+import { SitesService } from '../../../core/services/sites.service';
+import { Site } from '../../../core/models';
 
 interface AgencyForm {
   name: string;
@@ -9,6 +11,13 @@ interface AgencyForm {
   contact_name: string;
   contact_email: string;
   contact_phone: string;
+}
+
+interface AgencySite {
+  id: string;
+  site_name: string;
+  club_name: string;
+  status: string;
 }
 
 @Component({
@@ -179,6 +188,114 @@ interface AgencyForm {
               >
                 {{ saving() ? 'Suppression...' : 'Supprimer' }}
               </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Sites Management Modal -->
+      @if (managingSitesAgency) {
+        <div class="modal-overlay" (click)="closeSitesModal()">
+          <div class="modal modal-large" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3>Gerer les sites - {{ managingSitesAgency.name }}</h3>
+              <button class="btn-close" (click)="closeSitesModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+              <!-- Loading state -->
+              @if (loadingSites()) {
+                <div class="loading">
+                  <div class="spinner"></div>
+                </div>
+              }
+
+              @if (!loadingSites()) {
+                <!-- Current sites section -->
+                <div class="sites-section">
+                  <h4>Sites associes ({{ agencySites().length }})</h4>
+                  @if (agencySites().length === 0) {
+                    <p class="empty-text">Aucun site associe a cette agence.</p>
+                  } @else {
+                    <div class="sites-list">
+                      @for (site of agencySites(); track site.id) {
+                        <div class="site-item">
+                          <div class="site-info">
+                            <span class="site-name">{{ site.club_name }}</span>
+                            <span class="site-subname">{{ site.site_name }}</span>
+                          </div>
+                          <span class="badge" [class]="'badge-status-' + site.status">
+                            {{ site.status }}
+                          </span>
+                          <button
+                            class="btn-link btn-danger"
+                            (click)="removeSiteFromAgency(site)"
+                            [disabled]="saving()"
+                          >
+                            Retirer
+                          </button>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+
+                <!-- Add sites section -->
+                <div class="sites-section">
+                  <h4>Ajouter des sites</h4>
+                  <input
+                    type="text"
+                    [(ngModel)]="siteSearchQuery"
+                    placeholder="Rechercher un site..."
+                    class="search-input"
+                    (input)="filterAvailableSites()"
+                  />
+                  @if (filteredAvailableSites().length === 0) {
+                    <p class="empty-text">
+                      @if (siteSearchQuery) {
+                        Aucun site trouve pour "{{ siteSearchQuery }}".
+                      } @else {
+                        Tous les sites sont deja associes ou aucun site disponible.
+                      }
+                    </p>
+                  } @else {
+                    <div class="sites-list sites-list-add">
+                      @for (site of filteredAvailableSites(); track site.id) {
+                        <div class="site-item">
+                          <label class="site-checkbox">
+                            <input
+                              type="checkbox"
+                              [checked]="selectedSitesToAdd.has(site.id)"
+                              (change)="toggleSiteSelection(site.id)"
+                            />
+                            <div class="site-info">
+                              <span class="site-name">{{ site.club_name }}</span>
+                              <span class="site-subname">{{ site.site_name }}</span>
+                            </div>
+                          </label>
+                          <span class="badge" [class]="'badge-status-' + site.status">
+                            {{ site.status }}
+                          </span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" (click)="closeSitesModal()">
+                Fermer
+              </button>
+              @if (selectedSitesToAdd.size > 0) {
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  (click)="addSelectedSites()"
+                  [disabled]="saving()"
+                >
+                  {{ saving() ? 'Ajout...' : 'Ajouter ' + selectedSitesToAdd.size + ' site(s)' }}
+                </button>
+              }
             </div>
           </div>
         </div>
@@ -480,6 +597,131 @@ interface AgencyForm {
 
       .modal-small {
         max-width: 400px;
+      }
+
+      .modal-large {
+        max-width: 700px;
+      }
+
+      .btn-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #64748b;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+      }
+
+      .btn-close:hover {
+        color: #0f172a;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .sites-section {
+        margin-bottom: 1.5rem;
+      }
+
+      .sites-section h4 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        margin: 0 0 0.75rem 0;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+      }
+
+      .sites-list {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+      }
+
+      .sites-list-add {
+        max-height: 250px;
+      }
+
+      .site-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .site-item:last-child {
+        border-bottom: none;
+      }
+
+      .site-item:hover {
+        background: #f8fafc;
+      }
+
+      .site-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        flex: 1;
+      }
+
+      .site-checkbox input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+
+      .site-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .site-name {
+        display: block;
+        font-weight: 500;
+        color: #0f172a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .site-subname {
+        display: block;
+        font-size: 0.8125rem;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .search-input {
+        width: 100%;
+        padding: 0.625rem 0.875rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        margin-bottom: 0.75rem;
+        box-sizing: border-box;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      .empty-text {
+        color: #64748b;
+        font-size: 0.875rem;
+        padding: 1rem;
+        text-align: center;
+        margin: 0;
       }
 
       .modal-header {
