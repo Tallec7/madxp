@@ -107,4 +107,36 @@ export const schemas = {
     command_type: Joi.string().required(),
     command_data: Joi.object().optional(),
   }),
+
+  // User management schemas
+  createUser: Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().min(8).required(),
+    full_name: Joi.string().required(),
+    role: Joi.string().valid('super_admin', 'admin', 'operator', 'viewer', 'sponsor', 'agency').required(),
+    sponsor_id: Joi.string().uuid().optional().allow(null),
+    agency_id: Joi.string().uuid().optional().allow(null),
+  }),
+
+  updateUser: Joi.object({
+    email: Joi.string().email().optional(),
+    full_name: Joi.string().optional(),
+    role: Joi.string().valid('super_admin', 'admin', 'operator', 'viewer', 'sponsor', 'agency').optional(),
+    sponsor_id: Joi.string().uuid().optional().allow(null),
+    agency_id: Joi.string().uuid().optional().allow(null),
+    status: Joi.string().valid('active', 'inactive', 'suspended').optional(),
+  }),
+
+  // Password reset schemas
+  forgotPassword: Joi.object({
+    email: Joi.string().email().required(),
+  }),
+
+  resetPassword: Joi.object({
+    token: Joi.string().required(),
+    password: Joi.string().min(8).required(),
+    password_confirm: Joi.string().valid(Joi.ref('password')).required().messages({
+      'any.only': 'Les mots de passe ne correspondent pas',
+    }),
+  }),
 };

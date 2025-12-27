@@ -5,6 +5,8 @@ import { generateToken } from '../middleware/auth';
 import { AuthRequest, UserRole } from '../types';
 import logger from '../config/logger';
 import { mfaService } from '../services/mfa.service';
+import { passwordResetService } from '../services/password-reset.service';
+import { emailService } from '../services/email.service';
 
 // Configuration des cookies sécurisés
 // Note: sameSite: 'none' est requis pour les cookies cross-origin (frontend et backend sur domaines différents)
@@ -186,5 +188,109 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error('Change password error:', error);
     return res.status(500).json({ error: 'Erreur lors du changement de mot de passe' });
+  }
+};
+
+// ============================================================================
+// PASSWORD RESET (Forgot Password Flow)
+// ============================================================================
+
+/**
+ * POST /api/auth/forgot-password
+ * Request a password reset email
+ */
+export const forgotPassword = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { email } = req.body as { email: string };
+
+    // Request reset token
+    const result = await passwordResetService.requestReset(email.toLowerCase());
+
+    if (result) {
+      // Build reset link
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+      const resetLink = `${frontendUrl}/reset-password?token=${result.token}`;
+
+      // Send email
+      await emailService.sendPasswordResetEmail(email, {
+        resetLink,
+        expiresAt: result.expiresAt,
+        userEmail: email,
+      });
+
+      logger.info('Password reset email sent', { email: email.substring(0, 3) + '***' });
+    }
+
+    // Always return success to prevent email enumeration
+    return res.json({
+      success: true,
+      message: 'Si cet email existe dans notre systeme, vous recevrez un lien de reinitialisation.',
+    });
+  } catch (error) {
+    logger.error('Forgot password error:', error);
+    return res.status(500).json({ error: 'Erreur lors de la demande de reinitialisation' });
+  }
+};
+
+/**
+ * GET /api/auth/verify-reset-token
+ * Verify if a reset token is valid
+ */
+export const verifyResetToken = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { token } = req.query as { token?: string };
+
+    if (!token) {
+      return res.status(400).json({ error: 'Token manquant' });
+    }
+
+    const result = await passwordResetService.verifyToken(token);
+
+    if (!result) {
+      return res.status(401).json({
+        valid: false,
+        error: 'Token invalide ou expire',
+      });
+    }
+
+    return res.json({
+      valid: true,
+      email: result.email,
+    });
+  } catch (error) {
+    logger.error('Verify reset token error:', error);
+    return res.status(500).json({ error: 'Erreur lors de la verification du token' });
+  }
+};
+
+/**
+ * POST /api/auth/reset-password
+ * Reset password using a valid token
+ */
+export const resetPassword = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { token, password } = req.body as { token: string; password: string };
+
+    if (!token) {
+      return res.status(400).json({ error: 'Token manquant' });
+    }
+
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 8 caracteres' });
+    }
+
+    const success = await passwordResetService.resetPassword(token, password);
+
+    if (!success) {
+      return res.status(401).json({ error: 'Token invalide ou expire' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Mot de passe reinitialise avec succes',
+    });
+  } catch (error) {
+    logger.error('Reset password error:', error);
+    return res.status(500).json({ error: 'Erreur lors de la reinitialisation du mot de passe' });
   }
 };

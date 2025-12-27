@@ -27,7 +27,8 @@
     "import": "Import",
     "download": "Download",
     "upload": "Upload",
-    "version": "Version"
+    "version": "Version",
+    "verifying": "Verifying..."
   },
   "auth": {
     "login": "Login",
@@ -40,7 +41,20 @@
     "passwordRequired": "Password is required",
     "loginError": "Login error. Please try again.",
     "logoutConfirm": "Are you sure you want to log out?",
-    "centralDashboard": "Central Dashboard"
+    "centralDashboard": "Central Dashboard",
+    "forgotPassword": "Forgot password?",
+    "forgotPasswordDesc": "Enter your email to receive a reset link",
+    "sendResetLink": "Send reset link",
+    "resetLinkSent": "Email sent!",
+    "checkEmail": "Check your inbox to reset your password.",
+    "backToLogin": "Back to login",
+    "resetPassword": "Reset password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordMismatch": "Passwords do not match",
+    "invalidToken": "Invalid or expired link",
+    "passwordResetSuccess": "Password reset successfully!"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -51,6 +65,8 @@
     "updates": "Updates",
     "analytics": "Analytics",
     "administration": "Administration",
+    "users": "Users",
+    "agencies": "Agencies",
     "analyticsCategories": "Analytics Categories",
     "localConsole": "Local Console",
     "skipToContent": "Skip to main content"
@@ -65,7 +81,8 @@
     "pending": "Pending",
     "completed": "Completed",
     "failed": "Failed",
-    "scheduled": "Scheduled"
+    "scheduled": "Scheduled",
+    "all": "All statuses"
   },
   "roles": {
     "admin": "Administrator",
@@ -176,5 +193,28 @@
     "fr": "Français",
     "en": "English",
     "es": "Español"
+  },
+  "users": {
+    "title": "Users Management",
+    "list": "Users list",
+    "addUser": "Add user",
+    "editUser": "Edit user",
+    "deleteUser": "Delete user",
+    "deleteConfirm": "Confirm deletion",
+    "email": "Email",
+    "fullName": "Full name",
+    "role": "Role",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "createdAt": "Created at",
+    "lastLogin": "Last login",
+    "mfaEnabled": "MFA enabled",
+    "noUsers": "No users",
+    "userCreated": "User created successfully",
+    "userUpdated": "User updated",
+    "userDeleted": "User deleted",
+    "filterByRole": "Filter by role",
+    "allRoles": "All roles"
   }
 }

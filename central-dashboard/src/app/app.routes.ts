@@ -1,11 +1,21 @@
 import { Routes } from '@angular/router';
 import { authGuard, roleGuard } from './core/guards/auth.guard';
 import { LoginComponent } from './features/auth/login.component';
+import { ForgotPasswordComponent } from './features/auth/forgot-password.component';
+import { ResetPasswordComponent } from './features/auth/reset-password.component';
 
 export const routes: Routes = [
   {
     path: 'login',
     component: LoginComponent
+  },
+  {
+    path: 'forgot-password',
+    component: ForgotPasswordComponent
+  },
+  {
+    path: 'reset-password',
+    component: ResetPasswordComponent
   },
   {
     path: '',
@@ -107,6 +117,13 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['admin', 'super_admin'] },
         loadComponent: () => import('./features/admin/agencies/agencies-management.component').then(m => m.AgenciesManagementComponent)
+      },
+      // Admin: Gestion des utilisateurs
+      {
+        path: 'admin/users',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'super_admin'] },
+        loadComponent: () => import('./features/admin/users/users-management.component').then(m => m.UsersManagementComponent)
       }
     ]
   },

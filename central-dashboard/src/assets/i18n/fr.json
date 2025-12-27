@@ -27,7 +27,8 @@
     "import": "Importer",
     "download": "Télécharger",
     "upload": "Téléverser",
-    "version": "Version"
+    "version": "Version",
+    "verifying": "Vérification..."
   },
   "auth": {
     "login": "Connexion",
@@ -40,7 +41,20 @@
     "passwordRequired": "Mot de passe requis",
     "loginError": "Erreur de connexion. Veuillez réessayer.",
     "logoutConfirm": "Êtes-vous sûr de vouloir vous déconnecter ?",
-    "centralDashboard": "Dashboard Central"
+    "centralDashboard": "Dashboard Central",
+    "forgotPassword": "Mot de passe oublié ?",
+    "forgotPasswordDesc": "Entrez votre email pour recevoir un lien de réinitialisation",
+    "sendResetLink": "Envoyer le lien",
+    "resetLinkSent": "Email envoyé !",
+    "checkEmail": "Vérifiez votre boîte mail pour réinitialiser votre mot de passe.",
+    "backToLogin": "Retour à la connexion",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "invalidToken": "Lien invalide ou expiré",
+    "passwordResetSuccess": "Mot de passe réinitialisé avec succès !"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -51,6 +65,8 @@
     "updates": "Mises à jour",
     "analytics": "Analytics",
     "administration": "Administration",
+    "users": "Utilisateurs",
+    "agencies": "Agences",
     "analyticsCategories": "Catégories Analytics",
     "localConsole": "Console locale",
     "skipToContent": "Aller au contenu principal"
@@ -65,7 +81,8 @@
     "pending": "En attente",
     "completed": "Terminé",
     "failed": "Échoué",
-    "scheduled": "Planifié"
+    "scheduled": "Planifié",
+    "all": "Tous les statuts"
   },
   "roles": {
     "admin": "Administrateur",
@@ -176,5 +193,28 @@
     "fr": "Français",
     "en": "English",
     "es": "Español"
+  },
+  "users": {
+    "title": "Gestion des utilisateurs",
+    "list": "Liste des utilisateurs",
+    "addUser": "Ajouter un utilisateur",
+    "editUser": "Modifier l'utilisateur",
+    "deleteUser": "Supprimer l'utilisateur",
+    "deleteConfirm": "Confirmer la suppression",
+    "email": "Email",
+    "fullName": "Nom complet",
+    "role": "Rôle",
+    "status": "Statut",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "createdAt": "Créé le",
+    "lastLogin": "Dernière connexion",
+    "mfaEnabled": "MFA activé",
+    "noUsers": "Aucun utilisateur",
+    "userCreated": "Utilisateur créé avec succès",
+    "userUpdated": "Utilisateur mis à jour",
+    "userDeleted": "Utilisateur supprimé",
+    "filterByRole": "Filtrer par rôle",
+    "allRoles": "Tous les rôles"
   }
 }

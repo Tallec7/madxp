@@ -27,7 +27,8 @@
     "import": "Importar",
     "download": "Descargar",
     "upload": "Subir",
-    "version": "Versión"
+    "version": "Versión",
+    "verifying": "Verificando..."
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -40,7 +41,20 @@
     "passwordRequired": "Contraseña requerida",
     "loginError": "Error de inicio de sesión. Por favor, inténtelo de nuevo.",
     "logoutConfirm": "¿Está seguro de que desea cerrar sesión?",
-    "centralDashboard": "Panel Central"
+    "centralDashboard": "Panel Central",
+    "forgotPassword": "¿Olvidó su contraseña?",
+    "forgotPasswordDesc": "Introduzca su correo para recibir un enlace de restablecimiento",
+    "sendResetLink": "Enviar enlace",
+    "resetLinkSent": "¡Correo enviado!",
+    "checkEmail": "Revise su bandeja de entrada para restablecer su contraseña.",
+    "backToLogin": "Volver al inicio de sesión",
+    "resetPassword": "Restablecer contraseña",
+    "newPassword": "Nueva contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
+    "passwordMismatch": "Las contraseñas no coinciden",
+    "invalidToken": "Enlace inválido o expirado",
+    "passwordResetSuccess": "¡Contraseña restablecida con éxito!"
   },
   "nav": {
     "dashboard": "Panel",
@@ -51,6 +65,8 @@
     "updates": "Actualizaciones",
     "analytics": "Estadísticas",
     "administration": "Administración",
+    "users": "Usuarios",
+    "agencies": "Agencias",
     "analyticsCategories": "Categorías de Analytics",
     "localConsole": "Consola local",
     "skipToContent": "Ir al contenido principal"
@@ -65,7 +81,8 @@
     "pending": "Pendiente",
     "completed": "Completado",
     "failed": "Fallido",
-    "scheduled": "Programado"
+    "scheduled": "Programado",
+    "all": "Todos los estados"
   },
   "roles": {
     "admin": "Administrador",
@@ -176,5 +193,28 @@
     "fr": "Français",
     "en": "English",
     "es": "Español"
+  },
+  "users": {
+    "title": "Gestión de usuarios",
+    "list": "Lista de usuarios",
+    "addUser": "Añadir usuario",
+    "editUser": "Editar usuario",
+    "deleteUser": "Eliminar usuario",
+    "deleteConfirm": "Confirmar eliminación",
+    "email": "Correo electrónico",
+    "fullName": "Nombre completo",
+    "role": "Rol",
+    "status": "Estado",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "createdAt": "Creado el",
+    "lastLogin": "Último acceso",
+    "mfaEnabled": "MFA activado",
+    "noUsers": "Sin usuarios",
+    "userCreated": "Usuario creado con éxito",
+    "userUpdated": "Usuario actualizado",
+    "userDeleted": "Usuario eliminado",
+    "filterByRole": "Filtrar por rol",
+    "allRoles": "Todos los roles"
   }
 }

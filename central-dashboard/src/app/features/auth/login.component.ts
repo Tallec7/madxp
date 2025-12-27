@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { TranslationService } from '../../core/services/translation.service';
@@ -10,7 +10,7 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslateModule, LanguageSelectorComponent],
+  imports: [CommonModule, ReactiveFormsModule, TranslateModule, LanguageSelectorComponent, RouterLink],
   template: `
     <div class="login-container" role="main">
       <div class="language-corner">
@@ -83,6 +83,10 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
             <span *ngIf="loading" class="spinner-small" aria-hidden="true"></span>
             <span *ngIf="loading" class="visually-hidden">{{ 'auth.signingIn' | translate }}</span>
           </button>
+
+          <div class="forgot-password-link">
+            <a [routerLink]="['/forgot-password']">{{ 'auth.forgotPassword' | translate }}</a>
+          </div>
         </form>
 
         <div class="login-footer">
@@ -218,6 +222,21 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
       color: #94a3b8;
       font-size: 0.875rem;
       margin: 0;
+    }
+
+    .forgot-password-link {
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    .forgot-password-link a {
+      color: var(--neo-hockey-dark, #2022E9);
+      text-decoration: none;
+      font-size: 0.875rem;
+    }
+
+    .forgot-password-link a:hover {
+      text-decoration: underline;
     }
 
     /* WCAG AA Accessibility */

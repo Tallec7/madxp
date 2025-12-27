@@ -40,6 +40,12 @@ export interface DeploymentEmailData {
   dashboardUrl?: string;
 }
 
+export interface PasswordResetEmailData {
+  resetLink: string;
+  expiresAt: Date;
+  userEmail: string;
+}
+
 class EmailService {
   private transporter: Transporter | null = null;
   private initialized = false;
@@ -196,6 +202,18 @@ class EmailService {
   }
 
   /**
+   * Envoie un email de reinitialisation de mot de passe
+   */
+  async sendPasswordResetEmail(to: string, data: PasswordResetEmailData): Promise<boolean> {
+    const subject = '🔐 [NeoPro] Reinitialisation de votre mot de passe';
+
+    const html = this.getPasswordResetEmailTemplate(data);
+    const text = `Reinitialisation de mot de passe NeoPro\n\nVous avez demande la reinitialisation de votre mot de passe.\n\nCliquez sur le lien suivant pour reinitialiser votre mot de passe:\n${data.resetLink}\n\nCe lien expire le ${data.expiresAt.toLocaleString('fr-FR')}.\n\nSi vous n'avez pas demande cette reinitialisation, ignorez cet email.`;
+
+    return this.send({ to, subject, html, text });
+  }
+
+  /**
    * Envoie un rapport quotidien/hebdomadaire
    */
   async sendSummaryReport(
@@ -336,6 +354,34 @@ class EmailService {
         </div>
         <h3>Points cles</h3>
         ${highlightsHtml}
+      </div>
+    `;
+
+    return this.getBaseTemplate(content);
+  }
+
+  private getPasswordResetEmailTemplate(data: PasswordResetEmailData): string {
+    const content = `
+      <div class="header">
+        <h1>🔐 Reinitialisation de mot de passe</h1>
+      </div>
+      <div class="content">
+        <p>Bonjour,</p>
+        <p>Vous avez demande la reinitialisation de votre mot de passe pour le compte <strong>${data.userEmail}</strong>.</p>
+        <p style="margin: 32px 0; text-align: center;">
+          <a href="${data.resetLink}" class="btn">Reinitialiser mon mot de passe</a>
+        </p>
+        <div class="alert-warning">
+          <p style="margin: 0;"><strong>Ce lien expire le ${data.expiresAt.toLocaleString('fr-FR')}</strong></p>
+        </div>
+        <p style="margin-top: 24px; color: #666; font-size: 14px;">
+          Si vous n'avez pas demande cette reinitialisation, vous pouvez ignorer cet email en toute securite.
+          Votre mot de passe restera inchange.
+        </p>
+        <p style="margin-top: 16px; color: #999; font-size: 12px;">
+          Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur:<br>
+          <a href="${data.resetLink}" style="color: #2022E9; word-break: break-all;">${data.resetLink}</a>
+        </p>
       </div>
     `;
 
