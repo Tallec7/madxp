@@ -7,11 +7,13 @@ import logger from '../config/logger';
 import { mfaService } from '../services/mfa.service';
 
 // Configuration des cookies sécurisés
+// Note: sameSite: 'none' est requis pour les cookies cross-origin (frontend et backend sur domaines différents)
+// secure: true est obligatoire avec sameSite: 'none'
 const COOKIE_NAME = 'neopro_token';
 const COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   maxAge: 8 * 60 * 60 * 1000, // 8 heures
   path: '/',
 };
