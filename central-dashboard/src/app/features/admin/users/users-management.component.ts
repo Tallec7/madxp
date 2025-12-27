@@ -2,9 +2,15 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { UsersService, User, UserRole, UserStatus, CreateUserData, UpdateUserData } from '../../../core/services/users.service';
+import {
+  UsersService,
+  User,
+  UserRole,
+  UserStatus,
+  CreateUserData,
+  UpdateUserData,
+} from '../../../core/services/users.service';
 import { AgencyPortalService, Agency } from '../../../core/services/agency-portal.service';
-import { TranslationService } from '../../../core/services/translation.service';
 import { ApiService } from '../../../core/services/api.service';
 
 interface Sponsor {
@@ -27,33 +33,24 @@ interface UserForm {
   standalone: true,
   imports: [CommonModule, FormsModule, TranslateModule],
   template: `
-    <div class="container mx-auto p-6">
-      <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">{{ 'users.title' | translate }}</h1>
-        <button
-          (click)="showCreateModal = true"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
+    <div class="container">
+      <div class="header">
+        <h1>{{ 'users.title' | translate }}</h1>
+        <button class="btn btn-primary" (click)="showCreateModal = true">
           + {{ 'users.addUser' | translate }}
         </button>
       </div>
 
       <!-- Filters -->
-      <div class="mb-6 flex gap-4 flex-wrap">
-        <div class="flex-1 min-w-48">
-          <input
-            type="text"
-            [(ngModel)]="searchQuery"
-            (ngModelChange)="applyFilters()"
-            [placeholder]="'common.search' | translate"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-        </div>
-        <select
-          [(ngModel)]="filterRole"
+      <div class="filters">
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
           (ngModelChange)="applyFilters()"
-          class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
+          [placeholder]="'common.search' | translate"
+          class="search-input"
+        />
+        <select [(ngModel)]="filterRole" (ngModelChange)="applyFilters()" class="filter-select">
           <option value="">{{ 'users.allRoles' | translate }}</option>
           <option value="super_admin">Super Admin</option>
           <option value="admin">{{ 'roles.admin' | translate }}</option>
@@ -62,11 +59,7 @@ interface UserForm {
           <option value="sponsor">Sponsor</option>
           <option value="agency">Agence</option>
         </select>
-        <select
-          [(ngModel)]="filterStatus"
-          (ngModelChange)="applyFilters()"
-          class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
+        <select [(ngModel)]="filterStatus" (ngModelChange)="applyFilters()" class="filter-select">
           <option value="">{{ 'status.all' | translate }}</option>
           <option value="active">{{ 'users.active' | translate }}</option>
           <option value="inactive">{{ 'users.inactive' | translate }}</option>
@@ -76,113 +69,87 @@ interface UserForm {
 
       <!-- Loading state -->
       @if (loading()) {
-        <div class="flex justify-center py-12">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div class="loading">
+          <div class="spinner"></div>
         </div>
       }
 
       <!-- Error state -->
       @if (error()) {
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+        <div class="error-message">
           {{ error() }}
         </div>
       }
 
       <!-- Users list -->
       @if (!loading() && users().length > 0) {
-        <div class="bg-white shadow rounded-lg overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+        <div class="card">
+          <table class="users-table">
+            <thead>
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {{ 'users.email' | translate }}
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {{ 'users.fullName' | translate }}
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {{ 'users.role' | translate }}
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {{ 'users.status' | translate }}
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  MFA
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {{ 'users.lastLogin' | translate }}
-                </th>
-                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {{ 'common.actions' | translate }}
-                </th>
+                <th>{{ 'users.email' | translate }}</th>
+                <th>{{ 'users.fullName' | translate }}</th>
+                <th>{{ 'users.role' | translate }}</th>
+                <th>{{ 'users.status' | translate }}</th>
+                <th>MFA</th>
+                <th>{{ 'users.lastLogin' | translate }}</th>
+                <th>{{ 'common.actions' | translate }}</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody>
               @for (user of users(); track user.id) {
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
-                      <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                        <span class="text-blue-600 font-medium">{{ getInitials(user) }}</span>
-                      </div>
-                      <div class="text-sm font-medium text-gray-900">{{ user.email }}</div>
+                <tr>
+                  <td>
+                    <div class="user-cell">
+                      <div class="avatar">{{ getInitials(user) }}</div>
+                      <span class="email">{{ user.email }}</span>
                     </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">{{ user.full_name || '-' }}</div>
-                    @if (user.sponsor_name) {
-                      <div class="text-xs text-purple-600">Sponsor: {{ user.sponsor_name }}</div>
-                    }
-                    @if (user.agency_name) {
-                      <div class="text-xs text-green-600">Agence: {{ user.agency_name }}</div>
-                    }
+                  <td>
+                    <div class="name-cell">
+                      <span>{{ user.full_name || '-' }}</span>
+                      @if (user.sponsor_name) {
+                        <span class="sub-info sponsor">Sponsor: {{ user.sponsor_name }}</span>
+                      }
+                      @if (user.agency_name) {
+                        <span class="sub-info agency">Agence: {{ user.agency_name }}</span>
+                      }
+                    </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span [class]="getRoleBadgeClass(user.role)">
+                  <td>
+                    <span class="badge" [class]="'badge-' + user.role">
                       {{ usersService.getRoleLabel(user.role) }}
                     </span>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span [class]="getStatusBadgeClass(user.status)">
+                  <td>
+                    <span class="badge" [class]="'badge-status-' + user.status">
                       {{ getStatusLabel(user.status) }}
                     </span>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
+                  <td>
                     @if (user.mfa_enabled) {
-                      <span class="text-green-600">Actif</span>
+                      <span class="mfa-active">Actif</span>
                     } @else {
-                      <span class="text-gray-400">-</span>
+                      <span class="mfa-inactive">-</span>
                     }
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td class="date-cell">
                     {{ user.last_login_at ? formatDate(user.last_login_at) : '-' }}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      (click)="editUser(user)"
-                      class="text-blue-600 hover:text-blue-900 mr-3"
-                    >
+                  <td class="actions-cell">
+                    <button class="btn-link btn-edit" (click)="editUser(user)">
                       {{ 'common.edit' | translate }}
                     </button>
                     @if (user.status === 'active') {
-                      <button
-                        (click)="toggleStatus(user, 'inactive')"
-                        class="text-yellow-600 hover:text-yellow-900 mr-3"
-                      >
+                      <button class="btn-link btn-warning" (click)="toggleStatus(user, 'inactive')">
                         Desactiver
                       </button>
                     } @else {
-                      <button
-                        (click)="toggleStatus(user, 'active')"
-                        class="text-green-600 hover:text-green-900 mr-3"
-                      >
+                      <button class="btn-link btn-success" (click)="toggleStatus(user, 'active')">
                         Activer
                       </button>
                     }
-                    <button
-                      (click)="confirmDelete(user)"
-                      class="text-red-600 hover:text-red-900"
-                    >
+                    <button class="btn-link btn-danger" (click)="confirmDelete(user)">
                       {{ 'common.delete' | translate }}
                     </button>
                   </td>
@@ -194,76 +161,49 @@ interface UserForm {
       }
 
       <!-- Empty state -->
-      @if (!loading() && users().length === 0) {
-        <div class="text-center py-12 bg-white rounded-lg shadow">
-          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900">{{ 'users.noUsers' | translate }}</h3>
-          <p class="mt-1 text-sm text-gray-500">Commencez par creer un nouvel utilisateur.</p>
-          <div class="mt-6">
-            <button
-              (click)="showCreateModal = true"
-              class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-            >
-              + {{ 'users.addUser' | translate }}
-            </button>
-          </div>
+      @if (!loading() && users().length === 0 && !error()) {
+        <div class="empty-state">
+          <div class="empty-icon">👤</div>
+          <h3>{{ 'users.noUsers' | translate }}</h3>
+          <p>Commencez par creer un nouvel utilisateur.</p>
+          <button class="btn btn-primary" (click)="showCreateModal = true">
+            + {{ 'users.addUser' | translate }}
+          </button>
         </div>
       }
 
       <!-- Create/Edit Modal -->
       @if (showCreateModal || editingUser) {
-        <div class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-screen overflow-y-auto">
-            <div class="px-6 py-4 border-b border-gray-200">
-              <h3 class="text-lg font-medium text-gray-900">
-                {{ editingUser ? ('users.editUser' | translate) : ('users.addUser' | translate) }}
-              </h3>
+        <div class="modal-overlay" (click)="cancelEdit()">
+          <div class="modal" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3>{{ editingUser ? ('users.editUser' | translate) : ('users.addUser' | translate) }}</h3>
             </div>
-            <form (ngSubmit)="saveUser()" class="px-6 py-4 space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700">{{ 'users.email' | translate }} *</label>
-                <input
-                  type="email"
-                  [(ngModel)]="userForm.email"
-                  name="email"
-                  required
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
+            <form (ngSubmit)="saveUser()" class="modal-body">
+              <div class="form-group">
+                <label>{{ 'users.email' | translate }} *</label>
+                <input type="email" [(ngModel)]="userForm.email" name="email" required />
               </div>
               @if (!editingUser) {
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">{{ 'auth.password' | translate }} *</label>
+                <div class="form-group">
+                  <label>{{ 'auth.password' | translate }} *</label>
                   <input
                     type="password"
                     [(ngModel)]="userForm.password"
                     name="password"
                     required
                     minlength="8"
-                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                  <p class="mt-1 text-xs text-gray-500">Minimum 8 caracteres</p>
+                  />
+                  <span class="hint">Minimum 8 caracteres</span>
                 </div>
               }
-              <div>
-                <label class="block text-sm font-medium text-gray-700">{{ 'users.fullName' | translate }} *</label>
-                <input
-                  type="text"
-                  [(ngModel)]="userForm.full_name"
-                  name="full_name"
-                  required
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
+              <div class="form-group">
+                <label>{{ 'users.fullName' | translate }} *</label>
+                <input type="text" [(ngModel)]="userForm.full_name" name="full_name" required />
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700">{{ 'users.role' | translate }} *</label>
-                <select
-                  [(ngModel)]="userForm.role"
-                  name="role"
-                  required
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
+              <div class="form-group">
+                <label>{{ 'users.role' | translate }} *</label>
+                <select [(ngModel)]="userForm.role" name="role" required>
                   <option value="super_admin">Super Admin</option>
                   <option value="admin">{{ 'roles.admin' | translate }}</option>
                   <option value="operator">{{ 'roles.operator' | translate }}</option>
@@ -273,48 +213,32 @@ interface UserForm {
                 </select>
               </div>
               @if (userForm.role === 'sponsor') {
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">Sponsor associe</label>
-                  <select
-                    [(ngModel)]="userForm.sponsor_id"
-                    name="sponsor_id"
-                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option [value]="null">Selectionnez un sponsor</option>
+                <div class="form-group">
+                  <label>Sponsor associe</label>
+                  <select [(ngModel)]="userForm.sponsor_id" name="sponsor_id">
+                    <option [ngValue]="null">Selectionnez un sponsor</option>
                     @for (sponsor of sponsors(); track sponsor.id) {
-                      <option [value]="sponsor.id">{{ sponsor.name }}</option>
+                      <option [ngValue]="sponsor.id">{{ sponsor.name }}</option>
                     }
                   </select>
                 </div>
               }
               @if (userForm.role === 'agency') {
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">Agence associee</label>
-                  <select
-                    [(ngModel)]="userForm.agency_id"
-                    name="agency_id"
-                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option [value]="null">Selectionnez une agence</option>
+                <div class="form-group">
+                  <label>Agence associee</label>
+                  <select [(ngModel)]="userForm.agency_id" name="agency_id">
+                    <option [ngValue]="null">Selectionnez une agence</option>
                     @for (agency of agencies(); track agency.id) {
-                      <option [value]="agency.id">{{ agency.name }}</option>
+                      <option [ngValue]="agency.id">{{ agency.name }}</option>
                     }
                   </select>
                 </div>
               }
-              <div class="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  (click)="cancelEdit()"
-                  class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="cancelEdit()">
                   {{ 'common.cancel' | translate }}
                 </button>
-                <button
-                  type="submit"
-                  [disabled]="saving()"
-                  class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                >
+                <button type="submit" class="btn btn-primary" [disabled]="saving()">
                   {{ saving() ? ('common.loading' | translate) : ('common.save' | translate) }}
                 </button>
               </div>
@@ -325,24 +249,26 @@ interface UserForm {
 
       <!-- Delete Confirmation Modal -->
       @if (deletingUser) {
-        <div class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div class="bg-white rounded-lg shadow-xl max-w-sm w-full mx-4 p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">{{ 'users.deleteConfirm' | translate }}</h3>
-            <p class="text-sm text-gray-500 mb-6">
-              Etes-vous sur de vouloir supprimer l'utilisateur "{{ deletingUser.email }}" ?
-              Cette action est irreversible.
-            </p>
-            <div class="flex justify-end space-x-3">
-              <button
-                (click)="deletingUser = null"
-                class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
+        <div class="modal-overlay" (click)="deletingUser = null">
+          <div class="modal modal-small" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3>{{ 'users.deleteConfirm' | translate }}</h3>
+            </div>
+            <div class="modal-body">
+              <p>
+                Etes-vous sur de vouloir supprimer l'utilisateur "{{ deletingUser.email }}" ? Cette
+                action est irreversible.
+              </p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" (click)="deletingUser = null">
                 {{ 'common.cancel' | translate }}
               </button>
               <button
+                type="button"
+                class="btn btn-danger"
                 (click)="deleteUser()"
                 [disabled]="saving()"
-                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
               >
                 {{ saving() ? 'Suppression...' : ('common.delete' | translate) }}
               </button>
@@ -351,12 +277,457 @@ interface UserForm {
         </div>
       }
     </div>
-  `
+  `,
+  styles: [
+    `
+      .container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+
+      .header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+      }
+
+      .filters {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+      }
+
+      .search-input {
+        flex: 1;
+        min-width: 200px;
+        padding: 0.625rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        background: white;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      .filter-select {
+        padding: 0.625rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        background: white;
+        cursor: pointer;
+      }
+
+      .filter-select:focus {
+        outline: none;
+        border-color: #2563eb;
+      }
+
+      .card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .users-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .users-table th {
+        text-align: left;
+        padding: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .users-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.875rem;
+        color: #334155;
+      }
+
+      .users-table tr:hover {
+        background: #f8fafc;
+      }
+
+      .user-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #dbeafe;
+        color: #2563eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.875rem;
+      }
+
+      .email {
+        font-weight: 500;
+        color: #0f172a;
+      }
+
+      .name-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .sub-info {
+        font-size: 0.75rem;
+      }
+
+      .sub-info.sponsor {
+        color: #7c3aed;
+      }
+
+      .sub-info.agency {
+        color: #059669;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+
+      .badge-super_admin {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .badge-admin {
+        background: #f3e8ff;
+        color: #6b21a8;
+      }
+      .badge-operator {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+      .badge-viewer {
+        background: #f1f5f9;
+        color: #475569;
+      }
+      .badge-sponsor {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .badge-agency {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .badge-status-active {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .badge-status-inactive {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .badge-status-suspended {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .mfa-active {
+        color: #059669;
+        font-weight: 500;
+      }
+      .mfa-inactive {
+        color: #94a3b8;
+      }
+
+      .date-cell {
+        color: #64748b;
+        font-size: 0.8125rem;
+      }
+
+      .actions-cell {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .btn-link {
+        background: none;
+        border: none;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8125rem;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background 0.2s;
+      }
+
+      .btn-edit {
+        color: #2563eb;
+      }
+      .btn-edit:hover {
+        background: #dbeafe;
+      }
+
+      .btn-warning {
+        color: #d97706;
+      }
+      .btn-warning:hover {
+        background: #fef3c7;
+      }
+
+      .btn-success {
+        color: #059669;
+      }
+      .btn-success:hover {
+        background: #dcfce7;
+      }
+
+      .btn-danger {
+        color: #dc2626;
+      }
+      .btn-danger:hover {
+        background: #fee2e2;
+      }
+
+      .btn {
+        padding: 0.625rem 1.25rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s;
+      }
+
+      .btn-primary {
+        background: #2563eb;
+        color: white;
+      }
+      .btn-primary:hover {
+        background: #1d4ed8;
+      }
+      .btn-primary:disabled {
+        background: #93c5fd;
+        cursor: not-allowed;
+      }
+
+      .btn-secondary {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+      }
+      .btn-secondary:hover {
+        background: #e2e8f0;
+      }
+
+      .btn.btn-danger {
+        background: #dc2626;
+        color: white;
+        padding: 0.625rem 1.25rem;
+      }
+      .btn.btn-danger:hover {
+        background: #b91c1c;
+      }
+
+      .loading {
+        display: flex;
+        justify-content: center;
+        padding: 3rem;
+      }
+
+      .spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #2563eb;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .error-message {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+      }
+
+      .empty-state h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #0f172a;
+        margin: 0 0 0.5rem 0;
+      }
+
+      .empty-state p {
+        color: #64748b;
+        margin: 0 0 1.5rem 0;
+      }
+
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 1rem;
+      }
+
+      .modal {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        width: 100%;
+        max-width: 480px;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      .modal-small {
+        max-width: 400px;
+      }
+
+      .modal-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .modal-header h3 {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #0f172a;
+      }
+
+      .modal-body {
+        padding: 1.5rem;
+      }
+
+      .modal-body p {
+        color: #64748b;
+        line-height: 1.5;
+        margin: 0;
+      }
+
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding-top: 1.5rem;
+      }
+
+      .form-group {
+        margin-bottom: 1.25rem;
+      }
+
+      .form-group label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.5rem;
+      }
+
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        padding: 0.625rem 0.875rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        background: white;
+        box-sizing: border-box;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      .hint {
+        display: block;
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 0.375rem;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 1rem;
+        }
+
+        .header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 1rem;
+        }
+
+        .users-table {
+          display: block;
+          overflow-x: auto;
+        }
+
+        .actions-cell {
+          flex-direction: column;
+        }
+      }
+    `,
+  ],
 })
 export class UsersManagementComponent implements OnInit {
   readonly usersService = inject(UsersService);
   private readonly agencyService = inject(AgencyPortalService);
-  private readonly translationService = inject(TranslationService);
   private readonly api = inject(ApiService);
 
   users = signal<User[]>([]);
@@ -380,7 +751,7 @@ export class UsersManagementComponent implements OnInit {
     full_name: '',
     role: 'viewer',
     sponsor_id: null,
-    agency_id: null
+    agency_id: null,
   };
 
   ngOnInit(): void {
@@ -410,7 +781,7 @@ export class UsersManagementComponent implements OnInit {
       error: (err) => {
         this.error.set(err.error?.error || 'Erreur de connexion');
         this.loading.set(false);
-      }
+      },
     });
   }
 
@@ -420,21 +791,23 @@ export class UsersManagementComponent implements OnInit {
         if (response.success) {
           this.agencies.set(response.data.agencies);
         }
-      }
+      },
     });
   }
 
   loadSponsors(): void {
-    this.api.get<{ success: boolean; data: { sponsors: Sponsor[] } }>('/analytics/sponsors').subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.sponsors.set(response.data.sponsors);
-        }
-      },
-      error: () => {
-        // Sponsors list may not be available, silently ignore
-      }
-    });
+    this.api
+      .get<{ success: boolean; data: { sponsors: Sponsor[] } }>('/analytics/sponsors')
+      .subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.sponsors.set(response.data.sponsors);
+          }
+        },
+        error: () => {
+          // Sponsors list may not be available, silently ignore
+        },
+      });
   }
 
   applyFilters(): void {
@@ -449,7 +822,7 @@ export class UsersManagementComponent implements OnInit {
       full_name: user.full_name || '',
       role: user.role,
       sponsor_id: user.sponsor_id,
-      agency_id: user.agency_id
+      agency_id: user.agency_id,
     };
   }
 
@@ -466,7 +839,7 @@ export class UsersManagementComponent implements OnInit {
       full_name: '',
       role: 'viewer',
       sponsor_id: null,
-      agency_id: null
+      agency_id: null,
     };
   }
 
@@ -482,7 +855,7 @@ export class UsersManagementComponent implements OnInit {
         full_name: this.userForm.full_name.trim(),
         role: this.userForm.role,
         sponsor_id: this.userForm.sponsor_id,
-        agency_id: this.userForm.agency_id
+        agency_id: this.userForm.agency_id,
       };
 
       this.usersService.update(this.editingUser.id, data).subscribe({
@@ -498,7 +871,7 @@ export class UsersManagementComponent implements OnInit {
         error: (err) => {
           this.error.set(err.error?.error || 'Erreur lors de la mise a jour');
           this.saving.set(false);
-        }
+        },
       });
     } else {
       const data: CreateUserData = {
@@ -507,7 +880,7 @@ export class UsersManagementComponent implements OnInit {
         full_name: this.userForm.full_name.trim(),
         role: this.userForm.role,
         sponsor_id: this.userForm.sponsor_id,
-        agency_id: this.userForm.agency_id
+        agency_id: this.userForm.agency_id,
       };
 
       this.usersService.create(data).subscribe({
@@ -523,7 +896,7 @@ export class UsersManagementComponent implements OnInit {
         error: (err) => {
           this.error.set(err.error?.error || 'Erreur lors de la creation');
           this.saving.set(false);
-        }
+        },
       });
     }
   }
@@ -550,7 +923,7 @@ export class UsersManagementComponent implements OnInit {
       error: (err) => {
         this.error.set(err.error?.error || 'Erreur lors de la suppression');
         this.saving.set(false);
-      }
+      },
     });
   }
 
@@ -565,44 +938,26 @@ export class UsersManagementComponent implements OnInit {
       },
       error: (err) => {
         this.error.set(err.error?.error || 'Erreur lors du changement de statut');
-      }
+      },
     });
   }
 
   getInitials(user: User): string {
     if (user.full_name) {
       const parts = user.full_name.split(' ');
-      return parts.map(p => p.charAt(0).toUpperCase()).slice(0, 2).join('');
+      return parts
+        .map((p) => p.charAt(0).toUpperCase())
+        .slice(0, 2)
+        .join('');
     }
     return user.email.charAt(0).toUpperCase();
-  }
-
-  getRoleBadgeClass(role: UserRole): string {
-    const classes: Record<UserRole, string> = {
-      super_admin: 'px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full',
-      admin: 'px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full',
-      operator: 'px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full',
-      viewer: 'px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full',
-      sponsor: 'px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full',
-      agency: 'px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full'
-    };
-    return classes[role] || 'px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full';
-  }
-
-  getStatusBadgeClass(status: UserStatus): string {
-    const classes: Record<UserStatus, string> = {
-      active: 'px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full',
-      inactive: 'px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full',
-      suspended: 'px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full'
-    };
-    return classes[status] || 'px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full';
   }
 
   getStatusLabel(status: UserStatus): string {
     const labels: Record<UserStatus, string> = {
       active: 'Actif',
       inactive: 'Inactif',
-      suspended: 'Suspendu'
+      suspended: 'Suspendu',
     };
     return labels[status] || status;
   }
@@ -615,7 +970,7 @@ export class UsersManagementComponent implements OnInit {
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   }
 }
