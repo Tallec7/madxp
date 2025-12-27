@@ -1,8 +1,6 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
-import { AuthService } from './core/services/auth.service';
-import { SocketService } from './core/services/socket.service';
 
 @Component({
   selector: 'app-root',
@@ -13,25 +11,7 @@ import { SocketService } from './core/services/socket.service';
   `,
   styles: []
 })
-export class AppComponent implements OnInit {
-  private readonly authService = inject(AuthService);
-  private readonly socketService = inject(SocketService);
-
-  ngOnInit(): void {
-    const token = this.authService.getSseToken();
-    if (token) {
-      this.socketService.connect(token);
-    }
-
-    this.authService.currentUser$.subscribe(user => {
-      if (user && !this.socketService.isConnected()) {
-        const token = this.authService.getSseToken();
-        if (token) {
-          this.socketService.connect(token);
-        }
-      } else if (!user) {
-        this.socketService.disconnect();
-      }
-    });
-  }
+export class AppComponent {
+  // Pas d'initialisation ici pour éviter les dépendances circulaires
+  // Les services s'initialiseront quand ils seront nécessaires
 }

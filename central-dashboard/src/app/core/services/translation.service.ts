@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateService as NgxTranslateService } from '@ngx-translate/core';
 import { BehaviorSubject } from 'rxjs';
 
 export type SupportedLanguage = 'fr' | 'en' | 'es';
@@ -14,11 +14,12 @@ export interface LanguageOption {
   providedIn: 'root'
 })
 export class TranslationService {
-  private readonly translate = inject(TranslateService);
+  private readonly translate = inject(NgxTranslateService);
   private readonly STORAGE_KEY = 'neopro_language';
 
   private currentLangSubject = new BehaviorSubject<SupportedLanguage>('fr');
   currentLang$ = this.currentLangSubject.asObservable();
+  private initialized = false;
 
   readonly supportedLanguages: LanguageOption[] = [
     { code: 'fr', label: 'Français', flag: '🇫🇷' },
@@ -26,16 +27,16 @@ export class TranslationService {
     { code: 'es', label: 'Español', flag: '🇪🇸' }
   ];
 
-  constructor() {
-    this.initializeLanguage();
-  }
+  initializeLanguage(): void {
+    if (this.initialized) return;
+    this.initialized = true;
 
-  private initializeLanguage(): void {
     // Set available languages
     this.translate.addLangs(['fr', 'en', 'es']);
 
-    // Set default language
+    // Set default and fallback language
     this.translate.setDefaultLang('fr');
+    this.translate.use('fr');
 
     // Get saved language or detect from browser
     const savedLang = this.getSavedLanguage();

@@ -274,6 +274,9 @@ export class LoginComponent {
   errorMessage = '';
 
   constructor() {
+    // Initialiser les traductions ici au lieu de AppComponent
+    this.translationService.initializeLanguage();
+
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required]

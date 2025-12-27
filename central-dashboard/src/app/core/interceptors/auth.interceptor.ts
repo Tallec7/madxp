@@ -1,5 +1,5 @@
 import { HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { inject, Injector } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 
@@ -10,11 +10,13 @@ import { Router } from '@angular/router';
  * Le serveur gere le cookie, donc on redirige simplement vers login en cas de 401.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const router = inject(Router);
+  const injector = inject(Injector);
 
   return next(req).pipe(
     catchError(error => {
       if (error.status === 401) {
+        // Injection differee pour eviter la dependance circulaire
+        const router = injector.get(Router);
         // Ne pas supprimer de localStorage car le token est dans un cookie HttpOnly
         // Simplement rediriger vers la page de login
         router.navigate(['/login']);

@@ -32,14 +32,10 @@ export class AuthService {
   // Ne pas utiliser pour l'authentification principale (utiliser les cookies)
   private sseToken: string | null = null;
 
-  constructor() {
-    this.checkAuthStatus();
-  }
-
   /**
    * Verifie l'etat d'authentification au demarrage via l'API
    */
-  private checkAuthStatus(): void {
+  checkAuthStatus(): void {
     if (this.authCheckInProgress) return;
     this.authCheckInProgress = true;
 
