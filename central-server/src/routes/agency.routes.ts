@@ -20,6 +20,42 @@ import {
 const router = express.Router();
 
 // ============================================================================
+// AGENCY PORTAL ROUTES (must be before /:id routes to avoid conflict)
+// ============================================================================
+
+// Dashboard de l'agence connectée
+router.get(
+  '/portal/dashboard',
+  authenticate,
+  requireRole('agency', 'admin', 'super_admin'),
+  getAgencyDashboard
+);
+
+// Sites de l'agence
+router.get(
+  '/portal/sites',
+  authenticate,
+  requireRole('agency', 'admin', 'super_admin'),
+  getAgencySites
+);
+
+// Détails d'un site
+router.get(
+  '/portal/sites/:siteId',
+  authenticate,
+  requireRole('agency', 'admin', 'super_admin'),
+  getAgencySiteDetails
+);
+
+// Statistiques de l'agence
+router.get(
+  '/portal/stats',
+  authenticate,
+  requireRole('agency', 'admin', 'super_admin'),
+  getAgencyStats
+);
+
+// ============================================================================
 // AGENCY CRUD (Admin only)
 // ============================================================================
 
@@ -89,42 +125,6 @@ router.delete(
   authenticate,
   requireAdmin(),
   removeSiteFromAgency
-);
-
-// ============================================================================
-// AGENCY PORTAL ROUTES
-// ============================================================================
-
-// Dashboard de l'agence connectée
-router.get(
-  '/portal/dashboard',
-  authenticate,
-  requireRole('agency', 'admin', 'super_admin'),
-  getAgencyDashboard
-);
-
-// Sites de l'agence
-router.get(
-  '/portal/sites',
-  authenticate,
-  requireRole('agency', 'admin', 'super_admin'),
-  getAgencySites
-);
-
-// Détails d'un site
-router.get(
-  '/portal/sites/:siteId',
-  authenticate,
-  requireRole('agency', 'admin', 'super_admin'),
-  getAgencySiteDetails
-);
-
-// Statistiques de l'agence
-router.get(
-  '/portal/stats',
-  authenticate,
-  requireRole('agency', 'admin', 'super_admin'),
-  getAgencyStats
 );
 
 export default router;
