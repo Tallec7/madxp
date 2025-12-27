@@ -64,15 +64,16 @@ export const getSites = async (req: AuthRequest, res: Response) => {
     } else if (userRole === 'sponsor') {
       if (userSponsorId) {
         // Sponsor users see sites where their videos are deployed
+        // Videos are linked to sponsors via sponsor_videos table
         whereClause += ` AND s.id IN (
           SELECT DISTINCT cd.target_id FROM content_deployments cd
-          JOIN videos v ON v.id = cd.video_id
-          WHERE v.sponsor_id = $${paramIndex} AND cd.target_type = 'site'
+          JOIN sponsor_videos sv ON sv.video_id = cd.video_id
+          WHERE sv.sponsor_id = $${paramIndex} AND cd.target_type = 'site'
           UNION
           SELECT DISTINCT sg.site_id FROM site_groups sg
           JOIN content_deployments cd ON cd.target_id = sg.group_id AND cd.target_type = 'group'
-          JOIN videos v ON v.id = cd.video_id
-          WHERE v.sponsor_id = $${paramIndex + 1}
+          JOIN sponsor_videos sv ON sv.video_id = cd.video_id
+          WHERE sv.sponsor_id = $${paramIndex + 1}
         )`;
         params.push(userSponsorId, userSponsorId);
         paramIndex += 2;
