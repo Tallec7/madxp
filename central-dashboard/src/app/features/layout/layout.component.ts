@@ -506,11 +506,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   canManageContent(): boolean {
-    return this.authService.hasRole('admin', 'operator');
+    return this.authService.hasRole('admin', 'super_admin', 'operator');
   }
 
   isAdmin(): boolean {
-    return this.authService.hasRole('admin');
+    return this.authService.hasRole('admin', 'super_admin');
   }
 
   getUserInitials(): string {
