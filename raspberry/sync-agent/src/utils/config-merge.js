@@ -30,6 +30,12 @@ function mergeConfigurations(localConfig, neoProContent) {
     logger.info(`[config-merge] liveScoreEnabled mis à jour: ${neoProContent.liveScoreEnabled}`);
   }
 
+  // Mettre à jour scoreOverlay (configuration de l'apparence de l'overlay)
+  if (neoProContent.scoreOverlay !== undefined) {
+    result.scoreOverlay = neoProContent.scoreOverlay;
+    logger.info(`[config-merge] scoreOverlay mis à jour: ${JSON.stringify(neoProContent.scoreOverlay)}`);
+  }
+
   // Fusionner les catégories
   result.categories = mergeCategories(
     localConfig.categories || [],
