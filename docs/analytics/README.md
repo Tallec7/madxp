@@ -109,11 +109,13 @@ Le module **Analytics Sponsors** permet aux clubs sportifs de mesurer précisém
    - Service tracking impressions
    - Buffer localStorage avec retry
    - Auto-flush configurable
+   - **Récupération automatique du site_id** via `/api/site-info`
 
 4. **Serveur Local (raspberry/server)**
    - 2 endpoints API impressions
    - Stockage JSON local
    - Forward cloud automatique
+   - **Endpoint `/api/site-info`** : expose le site_id pour les analytics
 
 5. **Sync Agent (raspberry/sync-agent)**
    - Collecteur impressions
@@ -436,6 +438,7 @@ npm test
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 1.3.0 | 2025-12-28 | **Tracking site_id** : Les impressions sponsors incluent désormais le site_id pour une attribution correcte |
 | 1.2.0 | 2025-12-20 | Propagation video_id/sponsor_id/analytics_category dans le déploiement et tracking |
 | 1.1.0 | 2025-12-15 | Phase 4 - Tests automatisés (39 tests) - 98% conformité BP §13 |
 | 1.0.0 | 2025-12-14 | Release initiale - 95% conformité BP §13 |
@@ -445,7 +448,7 @@ npm test
 
 ---
 
-**Dernière mise à jour** : 20 Décembre 2025
+**Dernière mise à jour** : 28 Décembre 2025
 **Mainteneur** : Équipe Développement NEOPRO
 **Licence** : Propriétaire
 **Contact** : [Voir BUSINESS_PLAN_COMPLET.md pour contacts]

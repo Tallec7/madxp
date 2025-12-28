@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { query } from '../config/database';
 import { AuthRequest } from '../types';
+import { SiteAuthRequest } from '../middleware/auth';
 import logger from '../config/logger';
 import { validate as validateUuid } from 'uuid';
 import { generateSponsorReport, generateClubReport } from '../services/pdf-report.service';
@@ -625,11 +626,28 @@ export const getSponsorStats = async (req: AuthRequest, res: Response): Promise<
 
 /**
  * POST /api/analytics/impressions
- * Recevoir un batch d'impressions depuis les boîtiers (via sync-agent)
+ * Recevoir un batch d'impressions depuis les boîtiers Raspberry (via sync-agent).
+ *
+ * Authentification: API key du site (Authorization: Bearer <site_api_key>)
+ * Le siteId est extrait de l'authentification et utilisé pour toutes les impressions.
+ *
+ * Body: { impressions: SponsorImpression[] }
  */
-export const recordImpressions = async (req: AuthRequest, res: Response): Promise<void> => {
+export const recordImpressions = async (req: SiteAuthRequest, res: Response): Promise<void> => {
   try {
     const { impressions } = req.body;
+
+    // Le siteId provient de l'authentification par API key
+    const authenticatedSiteId = req.siteId;
+
+    if (!authenticatedSiteId) {
+      res.status(401).json({
+        success: false,
+        error: 'Site authentication required',
+        message: 'Le site doit être authentifié par API key'
+      });
+      return;
+    }
 
     if (!Array.isArray(impressions) || impressions.length === 0) {
       res.status(400).json({
@@ -639,14 +657,24 @@ export const recordImpressions = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
+    // Limite de batch pour éviter les abus
+    const MAX_BATCH_SIZE = 500;
+    if (impressions.length > MAX_BATCH_SIZE) {
+      res.status(400).json({
+        success: false,
+        error: `Batch size exceeds limit of ${MAX_BATCH_SIZE} impressions`,
+      });
+      return;
+    }
+
     // Valider et insérer en batch
     const values: string[] = [];
     const params: unknown[] = [];
     let paramIndex = 1;
+    let skippedCount = 0;
 
     for (const imp of impressions) {
       const {
-        site_id,
         video_id,
         played_at,
         duration_played,
@@ -660,9 +688,17 @@ export const recordImpressions = async (req: AuthRequest, res: Response): Promis
         audience_estimate,
       } = imp;
 
-      // Validation basique
-      if (!validateUuid(site_id) || !validateUuid(video_id) || !played_at || duration_played == null || video_duration == null) {
+      // Validation basique - le site_id vient de l'auth, pas du body
+      // video_id peut être absent si le Raspberry n'a pas le mapping (on utilise video_filename pour le résoudre plus tard)
+      if (!played_at || duration_played == null || video_duration == null) {
+        skippedCount++;
         continue; // Skip invalid records
+      }
+
+      // Si video_id est fourni, le valider
+      if (video_id && !validateUuid(video_id)) {
+        skippedCount++;
+        continue;
       }
 
       values.push(
@@ -670,8 +706,8 @@ export const recordImpressions = async (req: AuthRequest, res: Response): Promis
       );
 
       params.push(
-        site_id,
-        video_id,
+        authenticatedSiteId,  // Utiliser le siteId authentifié, pas celui du body
+        video_id || null,
         played_at,
         duration_played,
         video_duration,
@@ -691,6 +727,7 @@ export const recordImpressions = async (req: AuthRequest, res: Response): Promis
       res.status(400).json({
         success: false,
         error: 'No valid impressions to insert',
+        skipped: skippedCount
       });
       return;
     }
@@ -702,9 +739,18 @@ export const recordImpressions = async (req: AuthRequest, res: Response): Promis
       params
     );
 
+    logger.info('Sponsor impressions recorded', {
+      siteId: authenticatedSiteId,
+      siteName: req.siteName,
+      recorded: values.length,
+      skipped: skippedCount
+    });
+
     res.status(201).json({
       success: true,
       message: `${values.length} impression(s) recorded`,
+      recorded: values.length,
+      skipped: skippedCount
     });
   } catch (error) {
     logger.error('Error recording impressions:', error);

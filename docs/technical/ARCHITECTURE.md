@@ -224,10 +224,11 @@ Video.js API (play/pause/seek)
 - Configuration via CLI interactive
 - Documentation : `docs/INSTALLATION_COMPLETE.md`
 
-**Méthode 3 : Mise à jour OTA**
-- `npm run deploy:raspberry <host>`
-- Build Angular + rsync + restart services
-- ~5 minutes
+**Méthode 3 : Mise à jour OTA (Over-The-Air)**
+- Via Dashboard Central : déploiement planifié ou immédiat
+- `updateDeploymentService.startDeployment()` déclenche la mise à jour
+- Le Raspberry Pi : backup, téléchargement, installation, redémarrage
+- ~10 minutes (backup + download + restart)
 
 ### Cloud
 
@@ -269,6 +270,12 @@ Video.js API (play/pause/seek)
 - Prometheus metrics (Port 9090)
 - Grafana dashboards (Port 3000)
 - Systemd journald logs
+
+### 6. Alerting Multi-Canal
+- Email (SMTP via emailService)
+- Webhook (POST JSON vers URL configurable)
+- Slack (Incoming Webhooks avec Block Kit)
+- Escalade automatique vers superviseurs
 
 ---
 
@@ -364,5 +371,5 @@ Video.js API (play/pause/seek)
 
 ---
 
-**Dernière mise à jour** : 17 décembre 2025
-**Version** : 2.0
+**Dernière mise à jour** : 28 décembre 2025
+**Version** : 2.1

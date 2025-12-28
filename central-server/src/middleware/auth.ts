@@ -173,3 +173,110 @@ export const generateToken = (user: JwtPayload): string => {
   const options: SignOptions = { expiresIn };
   return jwt.sign(user, JWT_SECRET, options);
 };
+
+// =============================================================================
+// AUTHENTIFICATION PAR API KEY (POUR LES SITES RASPBERRY)
+// =============================================================================
+
+import { query } from '../config/database';
+
+/**
+ * Interface étendue pour les requêtes authentifiées par API key de site.
+ * Ajoute les informations du site à la requête.
+ */
+export interface SiteAuthRequest extends AuthRequest {
+  siteId?: string;
+  siteName?: string;
+}
+
+/**
+ * Middleware d'authentification par API Key pour les boîtiers Raspberry.
+ * Vérifie le header Authorization: Bearer <site_api_key>
+ * et valide contre la table sites.api_key.
+ *
+ * Usage:
+ *   router.post('/impressions', authenticateSiteApiKey, recordImpressions);
+ *
+ * Le middleware ajoute siteId et siteName à la requête si l'authentification réussit.
+ */
+export const authenticateSiteApiKey = async (
+  req: SiteAuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({
+        success: false,
+        error: 'API key required',
+        message: 'Header Authorization: Bearer <api_key> manquant'
+      });
+      return;
+    }
+
+    const apiKey = authHeader.substring(7).trim();
+
+    if (!apiKey || apiKey.length < 10) {
+      res.status(401).json({
+        success: false,
+        error: 'Invalid API key format',
+        message: 'API key invalide ou trop courte'
+      });
+      return;
+    }
+
+    // Vérifier l'API key dans la base de données
+    const result = await query<{ id: string; site_name: string; status: string }>(
+      'SELECT id, site_name, status FROM sites WHERE api_key = $1',
+      [apiKey]
+    );
+
+    if (result.rowCount === 0) {
+      logger.warn('Site API key authentication failed: unknown key', {
+        keyPrefix: apiKey.substring(0, 8) + '...'
+      });
+      res.status(401).json({
+        success: false,
+        error: 'Invalid API key',
+        message: 'API key non reconnue'
+      });
+      return;
+    }
+
+    const site = result.rows[0];
+
+    // Vérifier que le site n'est pas désactivé
+    if (site.status === 'disabled') {
+      logger.warn('Site API key authentication failed: site disabled', {
+        siteId: site.id,
+        siteName: site.site_name
+      });
+      res.status(403).json({
+        success: false,
+        error: 'Site disabled',
+        message: 'Ce site a été désactivé'
+      });
+      return;
+    }
+
+    // Authentification réussie - attacher les infos du site à la requête
+    req.siteId = site.id;
+    req.siteName = site.site_name;
+
+    logger.debug('Site API key authentication successful', {
+      siteId: site.id,
+      siteName: site.site_name
+    });
+
+    next();
+  } catch (error) {
+    logger.error('Site API key authentication error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Authentication error',
+      message: 'Erreur interne lors de l\'authentification'
+    });
+  }
+};

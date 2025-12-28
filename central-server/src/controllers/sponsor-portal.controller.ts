@@ -170,11 +170,18 @@ export const getSponsorDashboard = async (req: AuthRequest, res: Response): Prom
 
 /**
  * GET /api/sponsor/sites
- * Liste des sites où le sponsor est diffusé
+ * Liste des sites où le sponsor est diffusé.
+ *
+ * Filtrage par contrat:
+ * - Par défaut: uniquement les contrats actifs (is_active=true, dates valides)
+ * - Query param ?include_expired=true: inclut aussi les contrats expirés
+ * - Query param ?include_pending=true: inclut aussi les contrats futurs
  */
 export const getSponsorSites = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const sponsorId = req.user?.sponsor_id;
+    const includeExpired = req.query.include_expired === 'true';
+    const includePending = req.query.include_pending === 'true';
 
     // Si pas de sponsor_id, retourner données vides
     if (!sponsorId) {
@@ -189,7 +196,26 @@ export const getSponsorSites = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    const result = await query<SponsorSiteRow>(
+    // Construire la clause WHERE pour le filtrage des contrats
+    let contractFilter = 'ss.is_active = true';
+
+    if (!includeExpired && !includePending) {
+      // Par défaut: uniquement les contrats actuellement valides
+      contractFilter += `
+        AND (ss.contract_start IS NULL OR ss.contract_start <= CURRENT_DATE)
+        AND (ss.contract_end IS NULL OR ss.contract_end >= CURRENT_DATE)`;
+    } else if (!includeExpired) {
+      // Inclure pending mais pas expired
+      contractFilter += `
+        AND (ss.contract_end IS NULL OR ss.contract_end >= CURRENT_DATE)`;
+    } else if (!includePending) {
+      // Inclure expired mais pas pending
+      contractFilter += `
+        AND (ss.contract_start IS NULL OR ss.contract_start <= CURRENT_DATE)`;
+    }
+    // Si les deux sont true, on montre tout (is_active = true seulement)
+
+    const result = await query<SponsorSiteRow & { contract_status: string; days_remaining: number | null }>(
       `SELECT
         s.id as site_id,
         s.site_name,
@@ -198,6 +224,20 @@ export const getSponsorSites = async (req: AuthRequest, res: Response): Promise<
         s.status,
         ss.contract_start,
         ss.contract_end,
+        ss.is_active,
+        -- Calcul du statut du contrat
+        CASE
+          WHEN NOT ss.is_active THEN 'inactive'
+          WHEN ss.contract_start IS NOT NULL AND ss.contract_start > CURRENT_DATE THEN 'pending'
+          WHEN ss.contract_end IS NOT NULL AND ss.contract_end < CURRENT_DATE THEN 'expired'
+          ELSE 'active'
+        END as contract_status,
+        -- Jours restants avant expiration
+        CASE
+          WHEN ss.contract_end IS NOT NULL AND ss.contract_end >= CURRENT_DATE
+          THEN ss.contract_end - CURRENT_DATE
+          ELSE NULL
+        END as days_remaining,
         COALESCE(stats.impressions, 0) as impressions_30d,
         COALESCE(stats.screen_time, 0) as screen_time_30d
        FROM sponsor_sites ss
@@ -213,10 +253,26 @@ export const getSponsorSites = async (req: AuthRequest, res: Response): Promise<
            AND sds.date >= CURRENT_DATE - INTERVAL '30 days'
          GROUP BY sds.site_id
        ) stats ON stats.site_id = s.id
-       WHERE ss.sponsor_id = $1 AND ss.is_active = true
-       ORDER BY stats.impressions DESC NULLS LAST`,
+       WHERE ss.sponsor_id = $1 AND ${contractFilter}
+       ORDER BY
+         CASE contract_status WHEN 'active' THEN 1 WHEN 'pending' THEN 2 WHEN 'expired' THEN 3 ELSE 4 END,
+         stats.impressions DESC NULLS LAST`,
       [sponsorId]
     );
+
+    // Compter les différents statuts
+    const statusCounts = {
+      active: 0,
+      pending: 0,
+      expired: 0,
+      inactive: 0
+    };
+    result.rows.forEach(r => {
+      const status = r.contract_status as keyof typeof statusCounts;
+      if (status in statusCounts) {
+        statusCounts[status]++;
+      }
+    });
 
     res.json({
       success: true,
@@ -229,10 +285,13 @@ export const getSponsorSites = async (req: AuthRequest, res: Response): Promise<
           status: r.status,
           contract_start: r.contract_start,
           contract_end: r.contract_end,
+          contract_status: r.contract_status,
+          days_remaining: r.days_remaining,
           impressions_30d: parseInt(String(r.impressions_30d)) || 0,
           screen_time_30d: parseInt(String(r.screen_time_30d)) || 0,
         })),
         total: result.rowCount || 0,
+        status_counts: statusCounts,
       },
     });
   } catch (error) {

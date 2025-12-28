@@ -1,7 +1,14 @@
 /**
- * Module de collecte et d'envoi des impressions sponsors
- * Reçoit les impressions depuis le frontend Angular via API locale
- * et les envoie au serveur central vers /api/analytics/impressions
+ * Module de collecte et d'envoi des impressions sponsors.
+ *
+ * Flux de données:
+ * 1. Frontend Angular envoie les impressions au serveur local (POST /api/sync/sponsor-impressions)
+ * 2. Le serveur local stocke dans un buffer JSON persistant
+ * 3. Ce module envoie périodiquement au central via POST /api/analytics/impressions
+ *
+ * Authentification:
+ * - Utilise l'API key du site (SITE_API_KEY) pour s'authentifier auprès du central
+ * - Le central valide l'API key et extrait le siteId automatiquement
  */
 
 const fs = require('fs');
@@ -110,7 +117,12 @@ class SponsorImpressionsCollector {
   }
 
   /**
-   * Envoyer les impressions au serveur central via HTTP
+   * Envoyer les impressions au serveur central via HTTP.
+   * Authentification par API key du site (Bearer token).
+   *
+   * @param {string} serverUrl - URL du serveur central
+   * @param {string} siteId - ID du site (pour logging, l'auth utilise l'API key)
+   * @returns {Promise<{sent: number, recorded?: number, error?: string}>}
    */
   async sendToServer(serverUrl, siteId) {
     const impressions = this.loadBuffer();
@@ -126,21 +138,32 @@ class SponsorImpressionsCollector {
         throw new Error('Central server URL is not configured');
       }
 
-      // Ajouter le site_id à chaque impression si manquant
-      const impressionsWithSiteId = impressions.map(imp => ({
+      // Récupérer l'API key du site pour l'authentification
+      const apiKey = config.site?.apiKey;
+      if (!apiKey) {
+        throw new Error('Site API key is not configured (SITE_API_KEY)');
+      }
+
+      // Note: Le site_id n'est plus nécessaire dans le payload,
+      // il est extrait automatiquement de l'API key par le central.
+      // On le garde pour compatibilité mais le central utilise l'auth.
+      const impressionsToSend = impressions.map(imp => ({
         ...imp,
-        site_id: imp.site_id || siteId
+        site_id: imp.site_id || siteId  // Conservé pour rétrocompatibilité
       }));
 
       const url = `${baseUrl}/api/analytics/impressions`;
       const response = await axios.post(
         url,
         {
-          impressions: impressionsWithSiteId,
+          impressions: impressionsToSend,
         },
         {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 10000,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`  // Auth par API key du site
+          },
+          timeout: 15000,  // 15 secondes pour les gros batches
         }
       );
 
@@ -153,18 +176,33 @@ class SponsorImpressionsCollector {
 
       logger.info('[SponsorImpressions] Sent to server', {
         sent: impressions.length,
-        recorded: result.data?.recorded || result.recorded || 0,
+        recorded: result.recorded || 0,
+        skipped: result.skipped || 0,
       });
 
       return {
         sent: impressions.length,
-        recorded: result.data?.recorded || result.recorded || 0
+        recorded: result.recorded || 0,
+        skipped: result.skipped || 0
       };
     } catch (error) {
-      const message = error.response
-        ? `HTTP ${error.response.status}: ${error.response.data?.message || error.response.statusText}`
-        : error.message;
-      logger.error('[SponsorImpressions] Failed to send to server:', message);
+      // Analyser le type d'erreur pour un meilleur logging
+      let message;
+      let isAuthError = false;
+
+      if (error.response) {
+        const status = error.response.status;
+        message = `HTTP ${status}: ${error.response.data?.message || error.response.data?.error || error.response.statusText}`;
+        isAuthError = status === 401 || status === 403;
+      } else {
+        message = error.message;
+      }
+
+      if (isAuthError) {
+        logger.error('[SponsorImpressions] Authentication failed - check SITE_API_KEY:', message);
+      } else {
+        logger.error('[SponsorImpressions] Failed to send to server:', message);
+      }
 
       // Garder les impressions dans le buffer pour réessayer plus tard
       return { sent: 0, error: message };

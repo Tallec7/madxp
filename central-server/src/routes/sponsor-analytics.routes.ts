@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate } from '../middleware/auth';
+import { authenticate, authenticateSiteApiKey } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
 import {
   listSponsors,
@@ -125,11 +125,14 @@ router.get(
   generateClubPdfReport
 );
 
-// Recevoir un batch d'impressions (depuis sync-agent via API key auth)
+// Recevoir un batch d'impressions (depuis sync-agent Raspberry via API key)
+// Header requis: Authorization: Bearer <site_api_key>
 // Body: { impressions: SponsorImpression[] }
+// Note: Les impressions sont envoyées par le sync-agent du Raspberry,
+// authentifié par l'API key du site (pas un token utilisateur JWT)
 router.post(
   '/impressions',
-  authenticate,
+  authenticateSiteApiKey,
   recordImpressions
 );
 

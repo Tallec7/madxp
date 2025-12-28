@@ -1,5 +1,6 @@
 import { Component, ElementRef, inject, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import videojs from 'video.js';
 import "videojs-playlist";
@@ -12,6 +13,7 @@ import { Video } from '../../interfaces/video.interface';
 import { Configuration } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
 import { Sponsor } from '../../interfaces/sponsor.interface';
+import { environment } from '../../../environments/environment';
 
 interface PlaylistItem {
   sources: { src: string; type: string }[];
@@ -37,6 +39,7 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly analyticsService = inject(AnalyticsService);
   private readonly sponsorAnalytics = inject(SponsorAnalyticsService);
   private readonly localBroadcast = inject(LocalBroadcastService);
+  private readonly http = inject(HttpClient);
 
   private localBroadcastSubscriptions: Subscription[] = [];
 
@@ -68,8 +71,9 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Configurer le service sponsor analytics
     this.sponsorAnalytics.setConfiguration(this.configuration);
-    // TODO: Récupérer le site_id depuis la configuration ou l'auth service
-    // this.sponsorAnalytics.setSiteId(this.configuration.siteId);
+
+    // Récupérer le site_id depuis l'API du serveur local
+    this.loadSiteId();
 
     const options = {
       fullscreen: true,
@@ -476,6 +480,27 @@ export class TvComponent implements OnInit, OnDestroy {
       'color': config?.teamNameColor || '#ffffff',
       'font-size': (config?.teamNameSize ?? 16) + 'px'
     };
+  }
+
+  /**
+   * Récupère le site_id depuis l'API du serveur local et configure le service analytics
+   */
+  private loadSiteId(): void {
+    const siteInfoUrl = `${environment.socketUrl}/api/site-info`;
+    this.http.get<{ siteId: string | null; siteName: string | null; configured: boolean }>(siteInfoUrl)
+      .subscribe({
+        next: (response) => {
+          if (response.siteId) {
+            this.sponsorAnalytics.setSiteId(response.siteId);
+            console.log('[TV] Site ID loaded for sponsor analytics:', response.siteId);
+          } else {
+            console.warn('[TV] No site ID configured - sponsor analytics will not include site_id');
+          }
+        },
+        error: (error) => {
+          console.error('[TV] Failed to load site info:', error.message || error);
+        }
+      });
   }
 
 }

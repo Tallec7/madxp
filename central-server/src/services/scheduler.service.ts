@@ -1,5 +1,6 @@
 import { query } from '../config/database';
 import deploymentService from './deployment.service';
+import updateDeploymentService from './update-deployment.service';
 import logger from '../config/logger';
 
 // Configuration du scheduler
@@ -130,10 +131,8 @@ class SchedulerService {
           [deployment_id]
         );
 
-        // TODO: Implementer updateDeploymentService.startDeployment()
-        logger.info('Update deployment scheduled execution not yet implemented', {
-          deploymentId: deployment_id
-        });
+        // Demarrer le deploiement de mise a jour
+        await updateDeploymentService.startDeployment(deployment_id);
       }
 
     } catch (error) {

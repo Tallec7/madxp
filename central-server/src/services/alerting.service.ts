@@ -7,6 +7,11 @@ import logger from '../config/logger';
 import metricsService from './metrics.service';
 import emailService from './email.service';
 
+// Configuration des notifications externes (via variables d'environnement)
+const WEBHOOK_URL = process.env.ALERTING_WEBHOOK_URL;
+const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
+const DASHBOARD_URL = process.env.DASHBOARD_URL;
+
 export type AlertSeverity = 'info' | 'warning' | 'critical';
 export type AlertStatus = 'active' | 'acknowledged' | 'resolved' | 'escalated';
 
@@ -338,11 +343,7 @@ class AlertingService {
    * Met à jour un seuil d'alerte
    */
   async updateThreshold(id: string, updates: Partial<AlertThreshold>): Promise<void> {
-    const allowedFields = [
-      'name', 'warning_value', 'critical_value', 'duration',
-      'enabled', 'cooldown_minutes', 'escalate_after_minutes', 'notify_channels'
-    ];
-
+    // Champs autorisés pour la mise à jour (validation implicite via les conditions if ci-dessous)
     const setClauses: string[] = [];
     const params: unknown[] = [];
     let paramIndex = 1;
@@ -483,7 +484,7 @@ class AlertingService {
       if (siteResult.rows.length > 0) {
         siteName = siteResult.rows[0].site_name as string;
       }
-    } catch (e) {
+    } catch {
       // Ignorer les erreurs de recuperation du nom du site
     }
 
@@ -494,7 +495,7 @@ class AlertingService {
         "SELECT email FROM users WHERE role = 'admin' AND email IS NOT NULL"
       );
       adminEmails = usersResult.rows.map(r => r.email as string);
-    } catch (e) {
+    } catch {
       // Ignorer les erreurs
     }
 
@@ -522,10 +523,26 @@ class AlertingService {
           }
           break;
         case 'webhook':
-          // TODO: Appeler webhook
+          await this.sendWebhookNotification({
+            siteName,
+            siteId,
+            alertType: threshold.name,
+            severity,
+            message: this.formatAlertMessage(threshold, value, severity),
+            metric: threshold.metric,
+            value,
+            timestamp: new Date(),
+          });
           break;
         case 'slack':
-          // TODO: Envoyer sur Slack
+          await this.sendSlackNotification({
+            siteName,
+            siteId,
+            alertType: threshold.name,
+            severity,
+            message: this.formatAlertMessage(threshold, value, severity),
+            timestamp: new Date(),
+          });
           break;
       }
     }
@@ -541,6 +558,263 @@ class AlertingService {
 
     for (const row of result.rows) {
       metricsService.recordActiveAlerts(row.severity as string, parseInt(row.count as string, 10));
+    }
+  }
+
+  /**
+   * Envoie une notification via webhook HTTP POST
+   */
+  private async sendWebhookNotification(data: {
+    siteName: string;
+    siteId: string;
+    alertType: string;
+    severity: AlertSeverity;
+    message: string;
+    metric: string;
+    value: number;
+    timestamp: Date;
+  }): Promise<void> {
+    if (!WEBHOOK_URL) {
+      logger.debug('Webhook notification skipped (ALERTING_WEBHOOK_URL not configured)');
+      return;
+    }
+
+    try {
+      const payload = {
+        event: 'alert',
+        site: {
+          id: data.siteId,
+          name: data.siteName,
+        },
+        alert: {
+          type: data.alertType,
+          severity: data.severity,
+          message: data.message,
+          metric: data.metric,
+          value: data.value,
+        },
+        timestamp: data.timestamp.toISOString(),
+        dashboardUrl: DASHBOARD_URL ? `${DASHBOARD_URL}/sites/${data.siteId}` : undefined,
+      };
+
+      const response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'NEOPRO-Alerting/1.0',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Webhook returned ${response.status}: ${response.statusText}`);
+      }
+
+      logger.info('Webhook notification sent', {
+        alertType: data.alertType,
+        siteId: data.siteId,
+        severity: data.severity,
+      });
+    } catch (error) {
+      logger.error('Failed to send webhook notification', {
+        error: error instanceof Error ? error.message : error,
+        alertType: data.alertType,
+        siteId: data.siteId,
+      });
+    }
+  }
+
+  /**
+   * Envoie une notification sur Slack via Incoming Webhook
+   */
+  private async sendSlackNotification(data: {
+    siteName: string;
+    siteId: string;
+    alertType: string;
+    severity: AlertSeverity;
+    message: string;
+    timestamp: Date;
+  }): Promise<void> {
+    if (!SLACK_WEBHOOK_URL) {
+      logger.debug('Slack notification skipped (SLACK_WEBHOOK_URL not configured)');
+      return;
+    }
+
+    try {
+      // Couleur selon sévérité (Slack Block Kit)
+      const colorMap: Record<AlertSeverity, string> = {
+        info: '#36a64f',      // vert
+        warning: '#ff9800',   // orange
+        critical: '#f44336',  // rouge
+      };
+
+      const emojiMap: Record<AlertSeverity, string> = {
+        info: 'ℹ️',
+        warning: '⚠️',
+        critical: '🚨',
+      };
+
+      const payload = {
+        attachments: [
+          {
+            color: colorMap[data.severity],
+            blocks: [
+              {
+                type: 'header',
+                text: {
+                  type: 'plain_text',
+                  text: `${emojiMap[data.severity]} Alerte NEOPRO - ${data.alertType}`,
+                  emoji: true,
+                },
+              },
+              {
+                type: 'section',
+                fields: [
+                  {
+                    type: 'mrkdwn',
+                    text: `*Site:*\n${data.siteName}`,
+                  },
+                  {
+                    type: 'mrkdwn',
+                    text: `*Sévérité:*\n${data.severity.toUpperCase()}`,
+                  },
+                ],
+              },
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: `*Message:*\n${data.message}`,
+                },
+              },
+              {
+                type: 'context',
+                elements: [
+                  {
+                    type: 'mrkdwn',
+                    text: `📅 ${data.timestamp.toLocaleString('fr-FR')}`,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      // Ajouter le bouton dashboard si configuré
+      if (DASHBOARD_URL) {
+        payload.attachments[0].blocks.push({
+          type: 'actions',
+          elements: [
+            {
+              type: 'button',
+              text: {
+                type: 'plain_text',
+                text: '📊 Voir le dashboard',
+                emoji: true,
+              },
+              url: `${DASHBOARD_URL}/sites/${data.siteId}`,
+              style: 'primary',
+            },
+          ],
+        } as any);
+      }
+
+      const response = await fetch(SLACK_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Slack webhook returned ${response.status}: ${response.statusText}`);
+      }
+
+      logger.info('Slack notification sent', {
+        alertType: data.alertType,
+        siteId: data.siteId,
+        severity: data.severity,
+      });
+    } catch (error) {
+      logger.error('Failed to send Slack notification', {
+        error: error instanceof Error ? error.message : error,
+        alertType: data.alertType,
+        siteId: data.siteId,
+      });
+    }
+  }
+
+  /**
+   * Notifie les superviseurs lors d'une escalade d'alerte
+   */
+  private async notifySupervisors(alertData: {
+    alertId: string;
+    siteId: string;
+    type: string;
+    severity: string;
+    message: string;
+    createdAt: Date;
+    escalatedAt: Date;
+  }): Promise<void> {
+    try {
+      // Récupérer le nom du site
+      let siteName = 'Site inconnu';
+      try {
+        const siteResult = await query('SELECT site_name FROM sites WHERE id = $1', [alertData.siteId]);
+        if (siteResult.rows.length > 0) {
+          siteName = siteResult.rows[0].site_name as string;
+        }
+      } catch {
+        // Ignorer
+      }
+
+      // Récupérer les emails des superviseurs et admins
+      const supervisorResult = await query(
+        "SELECT email FROM users WHERE role IN ('admin', 'supervisor') AND email IS NOT NULL"
+      );
+      const supervisorEmails = supervisorResult.rows.map(r => r.email as string);
+
+      if (supervisorEmails.length === 0) {
+        logger.warn('No supervisors to notify for escalation', { alertId: alertData.alertId });
+        return;
+      }
+
+      // Envoyer email aux superviseurs
+      if (emailService.isEnabled()) {
+        await emailService.sendAlertNotification(supervisorEmails, {
+          siteName,
+          siteId: alertData.siteId,
+          alertType: `[ESCALADE] ${alertData.type}`,
+          severity: alertData.severity as AlertSeverity,
+          message: `Cette alerte a été escaladée car non traitée depuis ${Math.round((alertData.escalatedAt.getTime() - alertData.createdAt.getTime()) / 60000)} minutes.\n\n${alertData.message}`,
+          timestamp: alertData.escalatedAt,
+          dashboardUrl: DASHBOARD_URL ? `${DASHBOARD_URL}/sites/${alertData.siteId}` : undefined,
+        });
+
+        logger.info('Supervisor escalation notification sent', {
+          alertId: alertData.alertId,
+          recipientCount: supervisorEmails.length,
+        });
+      }
+
+      // Également envoyer sur Slack si configuré (escalades importantes)
+      if (SLACK_WEBHOOK_URL) {
+        await this.sendSlackNotification({
+          siteName,
+          siteId: alertData.siteId,
+          alertType: `🔺 ESCALADE: ${alertData.type}`,
+          severity: 'critical', // Les escalades sont toujours critiques
+          message: `Alerte non traitée depuis ${Math.round((alertData.escalatedAt.getTime() - alertData.createdAt.getTime()) / 60000)} minutes. Action requise immédiatement.`,
+          timestamp: alertData.escalatedAt,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to notify supervisors for escalation', {
+        alertId: alertData.alertId,
+        error: error instanceof Error ? error.message : error,
+      });
     }
   }
 
@@ -563,14 +837,24 @@ class AlertingService {
       `);
 
       for (const row of result.rows) {
+        const escalatedAt = new Date();
         await query(
-          `UPDATE ${this.tableName} SET status = 'escalated', escalated_at = NOW() WHERE id = $1`,
-          [row.id]
+          `UPDATE ${this.tableName} SET status = 'escalated', escalated_at = $2 WHERE id = $1`,
+          [row.id, escalatedAt]
         );
 
         logger.warn('Alert escalated', { alertId: row.id, type: row.type });
 
-        // TODO: Notifier les superviseurs
+        // Notifier les superviseurs
+        await this.notifySupervisors({
+          alertId: row.id as string,
+          siteId: row.site_id as string,
+          type: row.type as string,
+          severity: row.severity as string,
+          message: row.message as string,
+          createdAt: new Date(row.created_at as string),
+          escalatedAt,
+        });
       }
     } catch (error) {
       logger.error('Error checking escalations:', error);

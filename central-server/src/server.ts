@@ -25,6 +25,7 @@ import contentRoutes from './routes/content.routes';
 import updatesRoutes from './routes/updates.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import sponsorAnalyticsRoutes from './routes/sponsor-analytics.routes';
+import sponsorSitesRoutes from './routes/sponsor-sites.routes';
 import auditRoutes from './routes/audit.routes';
 import canaryRoutes from './routes/canary.routes';
 import adminRoutes from './routes/admin.routes';
@@ -253,6 +254,7 @@ app.use('/api', sensitiveRateLimit, contentRoutes); // Upload de vidéos - plus 
 app.use('/api', sensitiveRateLimit, updatesRoutes); // Mises à jour - sensible
 app.use('/api/analytics', apiRateLimit, analyticsRoutes);
 app.use('/api/analytics', apiRateLimit, sponsorAnalyticsRoutes); // Analytics sponsors
+app.use('/api', apiRateLimit, sponsorSitesRoutes); // Gestion associations sponsors <-> sites
 app.use('/api/audit', apiRateLimit, auditRoutes);
 app.use('/api/canary', sensitiveRateLimit, canaryRoutes); // Déploiements canary - sensible
 app.use('/api/admin', sensitiveRateLimit, adminRoutes);

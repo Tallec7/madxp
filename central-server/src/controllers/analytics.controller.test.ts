@@ -14,10 +14,20 @@ jest.mock('../config/logger', () => ({
 }));
 
 /**
- * TODO: Ces tests nécessitent une mise à jour pour correspondre à l'implémentation actuelle du controller.
- * Les tests qui échouent sont marqués comme .skip temporairement.
- * Le controller a évolué et fait plus de requêtes DB que ce que les mocks prévoient.
- * Priorité: Basse (non critique pour la synchronisation)
+ * Tests unitaires pour analytics.controller.ts
+ *
+ * Ces tests valident les endpoints d'analytics du dashboard central:
+ * - getClubHealth: Métriques de santé d'un site
+ * - getClubAvailability: Historique de disponibilité
+ * - getClubAlerts: Alertes d'un site
+ * - recordVideoPlays: Enregistrement des lectures vidéo
+ * - manageSession: Gestion des sessions utilisateur
+ * - exportClubData: Export CSV des données
+ * - getClubUsage: Statistiques d'utilisation
+ * - getClubContent: Analytics de contenu
+ * - getClubDashboard: Vue complète du dashboard
+ * - calculateDailyStats: Calcul des stats quotidiennes
+ * - getAnalyticsOverview: Vue d'ensemble globale
  */
 
 import {

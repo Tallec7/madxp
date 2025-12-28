@@ -64,37 +64,17 @@ interface PdfReportOptions {
 /**
  * Génère un rapport PDF pour un sponsor
  *
+ * Génère un PDF professionnel avec:
+ * - Page de garde (logo NEOPRO, nom sponsor, période)
+ * - Résumé exécutif (KPIs: impressions, temps d'écran, audience)
+ * - Graphiques (évolution quotidienne, répartition par type d'événement)
+ * - Certificat de diffusion optionnel avec signature numérique
+ *
  * @param sponsorId - ID du sponsor
  * @param from - Date de début (YYYY-MM-DD)
  * @param to - Date de fin (YYYY-MM-DD)
- * @param options - Options de génération
+ * @param options - Options de génération (format, langue, signature)
  * @returns Buffer du PDF généré
- *
- * TODO: Implémenter la génération réelle avec PDFKit
- * Exemple d'implémentation:
- *
- * ```typescript
- * import PDFDocument from 'pdfkit';
- * import { PassThrough } from 'stream';
- *
- * const doc = new PDFDocument({ size: 'A4', margin: 50 });
- * const stream = new PassThrough();
- *
- * doc.pipe(stream);
- *
- * // Page de garde
- * doc.fontSize(25).text('Rapport Sponsor NEOPRO', { align: 'center' });
- * doc.fontSize(12).text(`Période: ${from} - ${to}`, { align: 'center' });
- *
- * // KPIs
- * doc.fontSize(16).text('Résumé', { underline: true });
- * doc.fontSize(12).text(`Impressions: ${data.summary.total_impressions}`);
- *
- * // ... etc
- *
- * doc.end();
- * return streamToBuffer(stream);
- * ```
  */
 export async function generateSponsorReport(
   sponsorId: string,
