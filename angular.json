@@ -29,6 +29,11 @@
               },
               {
                 "glob": "**/*",
+                "input": "raspberry/src/assets/i18n",
+                "output": "assets/i18n"
+              },
+              {
+                "glob": "**/*",
                 "input": "raspberry/src/assets/demo-configs",
                 "output": "demo-configs"
               },
