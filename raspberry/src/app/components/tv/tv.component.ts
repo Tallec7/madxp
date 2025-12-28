@@ -48,6 +48,9 @@ export class TvComponent implements OnInit, OnDestroy {
   // Options locales (provenant de Remote)
   public localOptions: LocalOptions = this.localOptionsService.getOptions();
 
+  // Timer local (pour mise à jour fluide)
+  private localTimerInterval: ReturnType<typeof setInterval> | null = null;
+
   @Input() public configuration: Configuration;
 
   private lastTriggerType: 'auto' | 'manual' = 'auto';
@@ -84,11 +87,16 @@ export class TvComponent implements OnInit, OnDestroy {
   public player: Player;
 
   public ngOnInit() {
+    // Charger les options locales et s'abonner aux changements
+    this.localOptions = this.localOptionsService.getOptions();
+    this.localBroadcastSubscriptions.push(
+      this.localOptionsService.getOptions$().subscribe((options) => {
+        this.localOptions = options;
+      })
+    );
+
     // Configurer l'analytics service avec la configuration (pour le mapping des catégories)
     this.analyticsService.setConfiguration(this.configuration);
-
-    // Démarrer une session analytics
-    this.analyticsService.startSession();
 
     // Configurer le service sponsor analytics
     this.sponsorAnalytics.setConfiguration(this.configuration);
@@ -322,14 +330,65 @@ export class TvComponent implements OnInit, OnDestroy {
     if (event.currentTime !== undefined) {
       this.timerCurrentTime = event.currentTime;
     }
-    if (event.isRunning !== undefined) {
-      this.timerIsRunning = event.isRunning;
-    }
     if (event.halfDuration !== undefined) {
       this.timerHalfDuration = event.halfDuration;
     }
     if (event.countDown !== undefined) {
       this.timerCountDown = event.countDown;
+    }
+
+    // Gérer les actions du timer
+    if (event.action === 'start' && !this.timerIsRunning) {
+      this.timerIsRunning = true;
+      this.startLocalTimer();
+    } else if (event.action === 'pause' && this.timerIsRunning) {
+      this.timerIsRunning = false;
+      this.stopLocalTimer();
+    } else if (event.action === 'reset') {
+      this.timerIsRunning = false;
+      this.stopLocalTimer();
+    } else if (event.action === 'sync') {
+      // Sync: mettre à jour isRunning si différent
+      if (event.isRunning !== undefined && event.isRunning !== this.timerIsRunning) {
+        this.timerIsRunning = event.isRunning;
+        if (this.timerIsRunning && !this.localTimerInterval) {
+          this.startLocalTimer();
+        } else if (!this.timerIsRunning && this.localTimerInterval) {
+          this.stopLocalTimer();
+        }
+      }
+    }
+  }
+
+  /**
+   * Démarre le timer local pour mise à jour fluide chaque seconde
+   */
+  private startLocalTimer(): void {
+    if (this.localTimerInterval) return;
+
+    this.localTimerInterval = setInterval(() => {
+      if (this.timerCountDown) {
+        // Compte à rebours
+        if (this.timerCurrentTime > 0) {
+          this.timerCurrentTime--;
+        }
+      } else {
+        // Compteur croissant
+        const maxTime = this.timerHalfDuration * 60;
+        if (this.timerCurrentTime < maxTime) {
+          this.timerCurrentTime++;
+        }
+      }
+    }, 1000);
+  }
+
+  /**
+   * Arrête le timer local
+   */
+  private stopLocalTimer(): void {
+    if (this.localTimerInterval) {
+      clearInterval(this.localTimerInterval);
+      this.localTimerInterval = null;
     }
   }
 
@@ -379,6 +438,9 @@ export class TvComponent implements OnInit, OnDestroy {
   public ngOnDestroy() {
     // Terminer la session analytics
     this.analyticsService.endSession();
+
+    // Arrêter le timer local
+    this.stopLocalTimer();
 
     // Se désabonner des événements BroadcastChannel
     this.localBroadcastSubscriptions.forEach(sub => sub.unsubscribe());
