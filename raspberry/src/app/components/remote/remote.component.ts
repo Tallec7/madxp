@@ -915,8 +915,8 @@ export class RemoteComponent implements OnInit {
   public updateOverlayOption(key: keyof LocalOptions['overlay'], value: boolean): void {
     this.localOptionsService.updateOverlayOptions({ [key]: value });
     this.localOptions = this.localOptionsService.getOptions();
-    // Broadcast aux composants TV
-    this.localBroadcast.broadcast('options-update', this.localOptions);
+    // Broadcast aux composants TV (local + socket)
+    this.broadcastOptions();
   }
 
   /**
@@ -928,7 +928,7 @@ export class RemoteComponent implements OnInit {
   ): void {
     this.localOptionsService.updateTimerOptions({ [key]: value });
     this.localOptions = this.localOptionsService.getOptions();
-    this.localBroadcast.broadcast('options-update', this.localOptions);
+    this.broadcastOptions();
 
     // Si on change le mode countdown ou la durée, réinitialiser le timer
     if (key === 'countDown' || key === 'halfDuration') {
@@ -945,7 +945,7 @@ export class RemoteComponent implements OnInit {
   ): void {
     this.localOptionsService.updateBreakingNewsOptions({ [key]: value });
     this.localOptions = this.localOptionsService.getOptions();
-    this.localBroadcast.broadcast('options-update', this.localOptions);
+    this.broadcastOptions();
   }
 
   /**
@@ -954,7 +954,7 @@ export class RemoteComponent implements OnInit {
   public setTemplate(template: LocalOptions['template']): void {
     this.localOptionsService.setTemplate(template);
     this.localOptions = this.localOptionsService.getOptions();
-    this.localBroadcast.broadcast('options-update', this.localOptions);
+    this.broadcastOptions();
   }
 
   /**
@@ -981,8 +981,18 @@ export class RemoteComponent implements OnInit {
   public resetOptions(): void {
     this.localOptionsService.resetToDefaults();
     this.localOptions = this.localOptionsService.getOptions();
-    this.localBroadcast.broadcast('options-update', this.localOptions);
+    this.broadcastOptions();
     this.displayToast('Options réinitialisées', 'success');
+  }
+
+  /**
+   * Envoie les options à la TV via BroadcastChannel (local) ET Socket.IO (réseau)
+   */
+  private broadcastOptions(): void {
+    // Local (même navigateur)
+    this.localBroadcast.broadcast('options-update', this.localOptions);
+    // Réseau (via serveur socket)
+    this.socketService.emit('options-update', this.localOptions);
   }
 
   /**
@@ -1028,12 +1038,17 @@ export class RemoteComponent implements OnInit {
     const text = message || this.breakingNewsMessage.trim();
     if (!text) return;
 
-    this.localBroadcast.emitBreakingNews({
+    const news = {
       message: text,
       duration: this.localOptions.breakingNews.defaultDuration,
       position: this.localOptions.breakingNews.position,
       displayMode: this.localOptions.breakingNews.displayMode
-    });
+    };
+
+    // Local (même navigateur)
+    this.localBroadcast.emitBreakingNews(news);
+    // Réseau (via serveur socket)
+    this.socketService.emit('breaking-news', news);
 
     this.breakingNewsMessage = '';
     this.showBreakingNewsPanel = false;
@@ -1071,7 +1086,7 @@ export class RemoteComponent implements OnInit {
     this.timerIsRunning = true;
 
     // Émettre l'événement start
-    this.localBroadcast.emitTimerUpdate({
+    this.emitTimerUpdate({
       action: 'start',
       currentTime: this.timerCurrentTime,
       isRunning: true,
@@ -1123,7 +1138,7 @@ export class RemoteComponent implements OnInit {
     }
 
     // Émettre l'événement pause
-    this.localBroadcast.emitTimerUpdate({
+    this.emitTimerUpdate({
       action: 'pause',
       currentTime: this.timerCurrentTime,
       isRunning: false
@@ -1146,7 +1161,7 @@ export class RemoteComponent implements OnInit {
     }
 
     // Émettre l'événement reset
-    this.localBroadcast.emitTimerUpdate({
+    this.emitTimerUpdate({
       action: 'reset',
       currentTime: this.timerCurrentTime,
       isRunning: false,
@@ -1161,13 +1176,29 @@ export class RemoteComponent implements OnInit {
    * Synchronise le timer avec la TV
    */
   private syncTimer(): void {
-    this.localBroadcast.emitTimerUpdate({
+    this.emitTimerUpdate({
       action: 'sync',
       currentTime: this.timerCurrentTime,
       isRunning: this.timerIsRunning,
       halfDuration: this.localOptions.timer.halfDuration,
       countDown: this.localOptions.timer.countDown
     });
+  }
+
+  /**
+   * Émet une mise à jour du timer via BroadcastChannel (local) ET Socket.IO (réseau)
+   */
+  private emitTimerUpdate(update: {
+    action: 'start' | 'pause' | 'reset' | 'sync';
+    currentTime?: number;
+    isRunning?: boolean;
+    halfDuration?: number;
+    countDown?: boolean;
+  }): void {
+    // Local (même navigateur)
+    this.localBroadcast.emitTimerUpdate(update);
+    // Réseau (via serveur socket)
+    this.socketService.emit('timer-update', update);
   }
 
   /**

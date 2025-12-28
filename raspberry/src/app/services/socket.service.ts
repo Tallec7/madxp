@@ -21,6 +21,41 @@ export interface PhaseChange {
   phase: 'neutral' | 'before' | 'during' | 'after';
 }
 
+export interface TimerUpdate {
+  action: 'start' | 'pause' | 'reset' | 'sync';
+  currentTime?: number;
+  isRunning?: boolean;
+  halfDuration?: number;
+  countDown?: boolean;
+}
+
+export interface BreakingNews {
+  message: string;
+  duration: number;
+  position: 'top' | 'bottom';
+  displayMode: 'scroll' | 'truncate' | 'multiline';
+}
+
+export interface OptionsUpdate {
+  overlay: {
+    scoreEnabled: boolean;
+    goalPopupEnabled: boolean;
+  };
+  timer: {
+    enabled: boolean;
+    halfDuration: number;
+    countDown: boolean;
+  };
+  breakingNews: {
+    enabled: boolean;
+    position: 'top' | 'bottom';
+    defaultDuration: number;
+    displayMode: 'scroll' | 'truncate' | 'multiline';
+    quickMessages: string[];
+  };
+  template: 'sportif' | 'elegant' | 'minimal';
+}
+
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RequestState {
   // Empty interface - just a signal to request current state
@@ -57,7 +92,7 @@ export class SocketService {
     }
   }
 
-  public emit(action: string, data: Command | MatchConfig | ScoreUpdate | PhaseChange | RequestState) {
+  public emit(action: string, data: Command | MatchConfig | ScoreUpdate | PhaseChange | RequestState | TimerUpdate | BreakingNews | OptionsUpdate) {
     if (this.socket) {
       console.log('socket service : emit', action, data);
       this.socket.emit(action, data);
