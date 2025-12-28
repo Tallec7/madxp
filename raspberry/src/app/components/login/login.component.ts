@@ -36,6 +36,10 @@ export class LoginComponent implements OnInit, OnDestroy {
   // Password strength
   public passwordStrength: 'weak' | 'medium' | 'strong' = 'weak';
 
+  // Site info pour le footer
+  public clubName = '';
+  public sportLabel = '';
+
   ngOnInit(): void {
     // Attendre que la configuration soit chargée
     this.subscriptions.push(
@@ -53,6 +57,20 @@ export class LoginComponent implements OnInit, OnDestroy {
         this.isSetupMode = requiresSetup;
       })
     );
+
+    // Observer les infos du site pour le footer
+    this.subscriptions.push(
+      this.authService.siteInfo$.subscribe((info) => {
+        this.clubName = info.clubName || '';
+        this.sportLabel = this.formatSports(info.sports);
+      })
+    );
+  }
+
+  private formatSports(sports?: string[]): string {
+    if (!sports || sports.length === 0) return '';
+    // Capitaliser la première lettre de chaque sport
+    return sports.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ');
   }
 
   ngOnDestroy(): void {

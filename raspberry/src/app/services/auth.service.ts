@@ -26,6 +26,10 @@ export class AuthService {
   private configLoadedSubject = new BehaviorSubject<boolean>(false);
   public configLoaded$: Observable<boolean> = this.configLoadedSubject.asObservable();
 
+  // Informations du site pour l'affichage
+  private siteInfoSubject = new BehaviorSubject<{ clubName?: string; sports?: string[] }>({});
+  public siteInfo$: Observable<{ clubName?: string; sports?: string[] }> = this.siteInfoSubject.asObservable();
+
   constructor() {
     // Charger la configuration au démarrage
     this.loadConfiguration();
@@ -70,6 +74,12 @@ export class AuthService {
         if (config.auth.clubName) {
           console.log(`✓ Configuration pour le club: ${config.auth.clubName}`);
         }
+
+        // Stocker les infos du site pour l'affichage
+        this.siteInfoSubject.next({
+          clubName: config.auth?.clubName || config.sync?.clubName,
+          sports: config.sync?.sports
+        });
       } else {
         // Pas de section auth -> setup requis
         this.password = null;
