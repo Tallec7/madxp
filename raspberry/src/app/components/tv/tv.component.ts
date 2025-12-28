@@ -230,6 +230,27 @@ export class TvComponent implements OnInit, OnDestroy {
       this.switchToPhase(data.phase);
     });
 
+    // Écouter les mises à jour d'options via Socket.IO (réseau)
+    this.socketService.on<OptionsUpdateEvent>('options-update', (options) => {
+      console.log('[TV] Options update received via socket:', options);
+      this.localOptions = options as LocalOptions;
+      if (!options.overlay.scoreEnabled) {
+        this.showScoreOverlay = false;
+      }
+    });
+
+    // Écouter les breaking news via Socket.IO (réseau)
+    this.socketService.on<BreakingNewsEvent>('breaking-news', (news) => {
+      console.log('[TV] Breaking news received via socket:', news);
+      this.displayBreakingNews(news);
+    });
+
+    // Écouter les mises à jour du timer via Socket.IO (réseau)
+    this.socketService.on<TimerUpdateEvent>('timer-update', (timerEvent) => {
+      console.log('[TV] Timer update received via socket:', timerEvent);
+      this.handleTimerUpdate(timerEvent);
+    });
+
     // =========================================================================
     // COMMUNICATION LOCALE VIA BROADCASTCHANNEL
     // Permet à Remote et TV de communiquer directement sur le même appareil
