@@ -148,6 +148,9 @@ export class RemoteComponent implements OnInit {
     // Charger les vidéos récentes depuis localStorage
     this.loadRecentVideos();
 
+    // Initialiser le timer selon le mode (compte à rebours ou non)
+    this.initializeTimer();
+
     if (this.isDemoMode) {
       // En mode démo, on commence par la sélection du club
       this.currentView = 'club-selector';
@@ -926,6 +929,11 @@ export class RemoteComponent implements OnInit {
     this.localOptionsService.updateTimerOptions({ [key]: value });
     this.localOptions = this.localOptionsService.getOptions();
     this.localBroadcast.broadcast('options-update', this.localOptions);
+
+    // Si on change le mode countdown ou la durée, réinitialiser le timer
+    if (key === 'countDown' || key === 'halfDuration') {
+      this.initializeTimer();
+    }
   }
 
   /**
@@ -1176,5 +1184,16 @@ export class RemoteComponent implements OnInit {
    */
   public getDisplayTime(): string {
     return this.formatTime(this.timerCurrentTime);
+  }
+
+  /**
+   * Initialise le timer avec la bonne valeur de départ
+   */
+  private initializeTimer(): void {
+    if (this.localOptions.timer.countDown) {
+      this.timerCurrentTime = this.localOptions.timer.halfDuration * 60;
+    } else {
+      this.timerCurrentTime = 0;
+    }
   }
 }
