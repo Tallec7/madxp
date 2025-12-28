@@ -1,9 +1,9 @@
 import { Category } from "./category.interface";
-import { Sponsor } from "./sponsor.interface";
+import { LoopVideo, Sponsor } from "./sponsor.interface";
 
 /**
- * Configuration de l'overlay du score affiché sur la TV
- * Permet de personnaliser la position, les couleurs et les tailles
+ * Configuration de l'overlay du score affiché sur la TV.
+ * Permet de personnaliser la position, les couleurs et les tailles.
  */
 export interface ScoreOverlayConfig {
     /** Position de l'overlay : 'top-right', 'top-left', 'bottom-right', 'bottom-left' */
@@ -26,7 +26,10 @@ export interface ScoreOverlayConfig {
     teamNameSize?: number;
 }
 
-// TimeCategory pour organiser les catégories dans /remote (Avant-match, Match, Après-match)
+/**
+ * TimeCategory pour organiser les catégories dans /remote (Avant-match, Match, Après-match).
+ * Chaque phase peut avoir sa propre boucle de vidéos spécifique.
+ */
 export interface TimeCategory {
     id: string;
     name: string;
@@ -35,12 +38,16 @@ export interface TimeCategory {
     description: string;
     categoryIds: string[]; // IDs des catégories assignées à ce bloc
     /**
-     * Vidéos de la boucle spécifique à cette phase.
+     * Vidéos de la boucle spécifique à cette phase de jeu.
      * Si non défini ou vide, la boucle globale (sponsors[]) sera utilisée.
      */
-    loopVideos?: Sponsor[];
+    loopVideos?: LoopVideo[];
 }
 
+/**
+ * Configuration complète d'un site Neopro.
+ * Structure principale stockée localement et synchronisée avec le central.
+ */
 export interface Configuration {
     remote: {
         title: string;
@@ -68,22 +75,27 @@ export interface Configuration {
     };
     version: string;
     categories: Category[];
-    sponsors: Sponsor[];
+    /**
+     * Boucle de vidéos globale (sponsors, annonces, animations).
+     * Jouée automatiquement en mode boucle.
+     * @deprecated Le champ s'appelle 'sponsors' pour rétrocompatibilité mais contient des LoopVideo
+     */
+    sponsors: LoopVideo[];
     timeCategories?: TimeCategory[]; // Organisation des catégories pour /remote
     /**
-     * Mapping des catégories de vidéos vers les catégories analytics
+     * Mapping des catégories de vidéos vers les catégories analytics.
      * Clé: ID de la catégorie vidéo (ex: "But", "Entrée")
      * Valeur: ID de la catégorie analytics (ex: "jingle", "ambiance")
      */
     categoryMappings?: Record<string, string>;
     /**
-     * Active l'affichage du score en live sur la télécommande et la TV
-     * Cette option est activée manuellement par NEOPRO (option payante)
+     * Active l'affichage du score en live sur la télécommande et la TV.
+     * Cette option est activée manuellement par NEOPRO (option payante).
      */
     liveScoreEnabled?: boolean;
     /**
-     * Configuration de l'overlay du score (position, couleurs, tailles)
-     * Modifiable depuis le Central Dashboard
+     * Configuration de l'overlay du score (position, couleurs, tailles).
+     * Modifiable depuis le Central Dashboard.
      */
     scoreOverlay?: ScoreOverlayConfig;
 }

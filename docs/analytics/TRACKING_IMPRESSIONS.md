@@ -1,8 +1,8 @@
 # Tracking des Impressions Sponsors - Guide d'Implémentation
 
-**Date**: 14 Décembre 2025
-**Version**: 1.0
-**Conformité**: BP §13 - Analytics Sponsors (90%)
+**Date**: 28 Décembre 2025
+**Version**: 1.1
+**Conformité**: BP §13 - Analytics Sponsors (95%)
 
 ---
 
@@ -667,11 +667,46 @@ sudo ifconfig eth0 up
 - Images/vidéos spectateurs
 - Données personnelles
 
+### Authentification API Key (Mise à jour Décembre 2025)
+
+L'endpoint `/api/analytics/impressions` utilise désormais une authentification par **API key du site** au lieu d'un JWT utilisateur. Cette approche est mieux adaptée aux boîtiers Raspberry Pi.
+
+**Fonctionnement** :
+
+```
+Authorization: Bearer <site_api_key>
+```
+
+- Le `site_id` est extrait de l'API key authentifiée (pas du body de la requête)
+- L'API key est vérifiée contre la table `sites` en base de données
+- Le site doit être actif (`is_disabled = false`)
+- Limite de batch : 500 impressions maximum par requête
+
+**Configuration sync-agent** :
+
+```javascript
+// raspberry/sync-agent/src/sponsor-impressions.js
+headers: {
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${apiKey}` // API key du site
+}
+```
+
+**Middleware serveur central** :
+
+```typescript
+// central-server/src/middleware/auth.ts
+export const authenticateSiteApiKey = async (req, res, next) => {
+  // Vérifie l'API key contre la table sites
+  // Injecte req.siteId et req.siteName
+};
+```
+
 ### Transport
 
 - HTTPS obligatoire en production
 - Certificats SSL valides
-- Pas d'authentification utilisateur (site_id suffit)
+- Authentification par API key du site (validée côté serveur)
 
 ### RGPD
 
@@ -775,6 +810,17 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 
 ## 📝 Changelog
 
+### Version 1.1.0 - 28 Décembre 2025
+
+**Authentification API Key pour impressions** :
+
+- ✅ Nouveau middleware `authenticateSiteApiKey` pour authentifier les boîtiers Raspberry
+- ✅ L'API key du site remplace l'authentification JWT utilisateur
+- ✅ `site_id` extrait de l'auth (plus sécurisé)
+- ✅ Limite de batch : 500 impressions maximum
+- ✅ Sync-agent mis à jour avec header `Authorization: Bearer <apiKey>`
+- ✅ Documentation sécurité mise à jour
+
 ### Version 1.0.0 - 14 Décembre 2025
 
 **Implémentation complète tracking impressions TV** :
@@ -805,7 +851,7 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 ---
 
 **Auteur** : Claude Code + Équipe NEOPRO
-**Version** : 1.0.0
-**Conformité** : 95% BP §13 (mise à jour après semaine 3)
-**Dernière mise à jour** : 14 Décembre 2025
-**Prochaine révision** : Tests terrain avec données réelles (J+14)
+**Version** : 1.1.0
+**Conformité** : 95% BP §13
+**Dernière mise à jour** : 28 Décembre 2025
+**Prochaine révision** : Tests terrain avec données réelles

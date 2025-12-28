@@ -70,6 +70,18 @@ app.get('/', (req, res) => {
 });
 
 // ============================================================================
+// SITE INFO ENDPOINT
+// Expose le site_id pour les analytics sponsors
+// ============================================================================
+app.get('/api/site-info', (req, res) => {
+	res.json({
+		siteId: SITE_ID || null,
+		siteName: process.env.SITE_NAME || null,
+		configured: !!SITE_ID
+	});
+});
+
+// ============================================================================
 // ANALYTICS ENDPOINT
 // Reçoit les analytics de l'app Angular et les sauvegarde pour le sync-agent
 // ============================================================================
