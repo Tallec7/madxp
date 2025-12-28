@@ -211,18 +211,19 @@ cp -r dist/raspberry/browser/* ${DEPLOY_DIR}/webapp/
 # (L'application utilisera automatiquement environment.raspberry.ts)
 
 # Copier le serveur Node.js (source de vérité: raspberry/server/)
-cp -r raspberry/server/* ${DEPLOY_DIR}/server/
+# Exclure les fichiers .md (documentation) du déploiement
+rsync -a --exclude='*.md' raspberry/server/ ${DEPLOY_DIR}/server/
 
 # Copier le sync-agent
 if [ -d "raspberry/sync-agent" ]; then
-    cp -r raspberry/sync-agent/* ${DEPLOY_DIR}/sync-agent/
+    rsync -a --exclude='*.md' raspberry/sync-agent/ ${DEPLOY_DIR}/sync-agent/
     print_success "Sync-agent copié"
 fi
 
 # Copier l'admin panel
 if [ -d "raspberry/admin" ]; then
     mkdir -p ${DEPLOY_DIR}/admin
-    cp -r raspberry/admin/* ${DEPLOY_DIR}/admin/
+    rsync -a --exclude='*.md' raspberry/admin/ ${DEPLOY_DIR}/admin/
     print_success "Admin panel copié"
 fi
 

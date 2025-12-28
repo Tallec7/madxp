@@ -365,8 +365,8 @@ app.post('/api/auth/setup', async (req, res) => {
 			return res.status(400).json({ success: false, error: 'Mot de passe requis' });
 		}
 
-		if (password.length < 8) {
-			return res.status(400).json({ success: false, error: 'Le mot de passe doit contenir au moins 8 caractères' });
+		if (password.length < 4) {
+			return res.status(400).json({ success: false, error: 'Le mot de passe doit contenir au moins 4 caractères' });
 		}
 
 		// Charger la configuration existante

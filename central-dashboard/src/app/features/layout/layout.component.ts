@@ -62,6 +62,20 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
             <span class="icon" aria-hidden="true">💼</span>
             <span>{{ 'nav.sponsors' | translate }}</span>
           </a>
+
+          <!-- Portals section for admin users -->
+          <div class="nav-section" *ngIf="isAdmin()" role="group" aria-label="Portails">
+            <div class="nav-section-title" id="portals-section">Portails</div>
+            <a routerLink="/sponsor-portal" routerLinkActive="active" class="nav-item" aria-describedby="portals-section">
+              <span class="icon" aria-hidden="true">🎯</span>
+              <span>Portail Sponsor</span>
+            </a>
+            <a routerLink="/agency-portal" routerLinkActive="active" class="nav-item" aria-describedby="portals-section">
+              <span class="icon" aria-hidden="true">🏢</span>
+              <span>Portail Agence</span>
+            </a>
+          </div>
+
           <a routerLink="/content" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()" [attr.aria-label]="'nav.content' | translate">
             <span class="icon" aria-hidden="true">📹</span>
             <span>{{ 'nav.content' | translate }}</span>
@@ -97,22 +111,24 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
         </nav>
 
         <div class="sidebar-footer" role="contentinfo">
-          <app-language-selector></app-language-selector>
-          <div class="user-info">
+          <div class="footer-top">
+            <app-language-selector></app-language-selector>
+          </div>
+          <div class="footer-user">
             <div class="user-avatar" aria-hidden="true">{{ getUserInitials() }}</div>
             <div class="user-details">
               <div class="user-name">{{ currentUser?.full_name || currentUser?.email }}</div>
               <div class="user-role">{{ getRoleLabel() }}</div>
             </div>
+            <button
+              class="btn-logout"
+              (click)="logout()"
+              [attr.aria-label]="'auth.logout' | translate"
+              [title]="'auth.logout' | translate"
+            >
+              <span aria-hidden="true">🚪</span>
+            </button>
           </div>
-          <button
-            class="btn-logout"
-            (click)="logout()"
-            [attr.aria-label]="'auth.logout' | translate"
-            [title]="'auth.logout' | translate"
-          >
-            <span aria-hidden="true">🚪</span>
-          </button>
         </div>
       </aside>
 
@@ -245,27 +261,35 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
       padding: 1rem;
       border-top: 1px solid rgba(255, 255, 255, 0.1);
       display: flex;
-      align-items: center;
+      flex-direction: column;
       gap: 0.75rem;
     }
 
-    .user-info {
+    .footer-top {
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .footer-user {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      flex: 1;
+      padding: 0.75rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
     }
 
     .user-avatar {
-      width: 40px;
-      height: 40px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       background: linear-gradient(135deg, var(--neo-hockey-dark, #2022E9) 0%, var(--neo-purple-dark, #3A0686) 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 600;
-      font-size: 0.875rem;
+      font-size: 0.8rem;
+      flex-shrink: 0;
     }
 
     .user-details {
@@ -274,32 +298,36 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
     }
 
     .user-name {
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 500;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.3;
     }
 
     .user-role {
-      font-size: 0.75rem;
-      color: #94a3b8;
+      font-size: 0.6875rem;
+      color: rgba(255, 255, 255, 0.6);
       text-transform: capitalize;
+      line-height: 1.3;
     }
 
     .btn-logout {
-      background: rgba(239, 68, 68, 0.1);
+      background: rgba(239, 68, 68, 0.15);
       border: none;
-      color: #ef4444;
+      color: #f87171;
       padding: 0.5rem;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
       transition: all 0.2s;
-      font-size: 1.25rem;
+      font-size: 1rem;
+      flex-shrink: 0;
     }
 
     .btn-logout:hover {
-      background: rgba(239, 68, 68, 0.2);
+      background: rgba(239, 68, 68, 0.25);
+      color: #fca5a5;
     }
 
     .main-content {
@@ -371,7 +399,8 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
       .connection-status,
       .nav-item span:not(.icon),
       .user-details,
-      .btn-logout {
+      .btn-logout,
+      .footer-top {
         display: none;
       }
 
@@ -385,8 +414,9 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
         padding: 1rem;
       }
 
-      .user-info {
+      .footer-user {
         justify-content: center;
+        padding: 0.5rem;
       }
     }
 

@@ -264,7 +264,7 @@ interface AgencySite {
                           <label class="site-checkbox">
                             <input
                               type="checkbox"
-                              [checked]="selectedSitesToAdd.has(site.id)"
+                              [checked]="selectedSitesToAdd().has(site.id)"
                               (change)="toggleSiteSelection(site.id)"
                             />
                             <div class="site-info">
@@ -286,14 +286,14 @@ interface AgencySite {
               <button type="button" class="btn btn-secondary" (click)="closeSitesModal()">
                 Fermer
               </button>
-              @if (selectedSitesToAdd.size > 0) {
+              @if (selectedSitesToAdd().size > 0) {
                 <button
                   type="button"
                   class="btn btn-primary"
                   (click)="addSelectedSites()"
                   [disabled]="saving()"
                 >
-                  {{ saving() ? 'Ajout...' : 'Ajouter ' + selectedSitesToAdd.size + ' site(s)' }}
+                  {{ saving() ? 'Ajout...' : 'Ajouter ' + selectedSitesToAdd().size + ' site(s)' }}
                 </button>
               }
             </div>
@@ -816,6 +816,7 @@ interface AgencySite {
 })
 export class AgenciesManagementComponent implements OnInit {
   private readonly agencyService = inject(AgencyPortalService);
+  private readonly sitesService = inject(SitesService);
 
   agencies = signal<Agency[]>([]);
   loading = signal(false);
@@ -825,6 +826,15 @@ export class AgenciesManagementComponent implements OnInit {
   showCreateModal = false;
   editingAgency: Agency | null = null;
   deletingAgency: Agency | null = null;
+
+  // Sites management
+  managingSitesAgency: Agency | null = null;
+  loadingSites = signal(false);
+  agencySites = signal<AgencySite[]>([]);
+  allSites = signal<Site[]>([]);
+  filteredAvailableSites = signal<Site[]>([]);
+  selectedSitesToAdd = signal<Set<string>>(new Set());
+  siteSearchQuery = '';
 
   agencyForm: AgencyForm = {
     name: '',
@@ -945,8 +955,141 @@ export class AgenciesManagementComponent implements OnInit {
     });
   }
 
-  manageSites(_agency: Agency): void {
-    // TODO: Implement site management modal
-    alert('Fonctionnalite en cours de developpement');
+  manageSites(agency: Agency): void {
+    this.managingSitesAgency = agency;
+    this.loadingSites.set(true);
+    this.selectedSitesToAdd.set(new Set());
+    this.siteSearchQuery = '';
+
+    // Load agency sites and all sites in parallel
+    this.agencyService.getAgencySites(agency.id).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.agencySites.set(response.data.sites as AgencySite[]);
+        }
+        this.loadAllSites();
+      },
+      error: () => {
+        this.error.set('Erreur lors du chargement des sites');
+        this.loadingSites.set(false);
+      },
+    });
+  }
+
+  private loadAllSites(): void {
+    this.sitesService.loadSites().subscribe({
+      next: (response) => {
+        this.allSites.set(response.sites);
+        this.filterAvailableSites();
+        this.loadingSites.set(false);
+      },
+      error: () => {
+        this.error.set('Erreur lors du chargement des sites');
+        this.loadingSites.set(false);
+      },
+    });
+  }
+
+  filterAvailableSites(): void {
+    const agencySiteIds = new Set(this.agencySites().map(s => s.id));
+    const query = this.siteSearchQuery.toLowerCase();
+
+    const available = this.allSites().filter(site => {
+      // Exclude already associated sites
+      if (agencySiteIds.has(site.id)) return false;
+
+      // Filter by search query
+      if (query) {
+        return (
+          site.club_name?.toLowerCase().includes(query) ||
+          site.site_name?.toLowerCase().includes(query)
+        );
+      }
+      return true;
+    });
+
+    this.filteredAvailableSites.set(available);
+  }
+
+  toggleSiteSelection(siteId: string): void {
+    const current = this.selectedSitesToAdd();
+    const newSet = new Set(current);
+    if (newSet.has(siteId)) {
+      newSet.delete(siteId);
+    } else {
+      newSet.add(siteId);
+    }
+    this.selectedSitesToAdd.set(newSet);
+  }
+
+  addSelectedSites(): void {
+    if (!this.managingSitesAgency || this.selectedSitesToAdd().size === 0) return;
+
+    this.saving.set(true);
+    const siteIds = Array.from(this.selectedSitesToAdd());
+
+    this.agencyService.addSitesToAgency(this.managingSitesAgency.id, siteIds).subscribe({
+      next: (response) => {
+        if (response.success) {
+          // Refresh agency sites
+          this.refreshAgencySites();
+          this.selectedSitesToAdd.set(new Set());
+          this.loadAgencies(); // Refresh site count
+        } else {
+          this.error.set("Erreur lors de l'ajout des sites");
+        }
+        this.saving.set(false);
+      },
+      error: (err) => {
+        this.error.set(err.error?.error || "Erreur lors de l'ajout des sites");
+        this.saving.set(false);
+      },
+    });
+  }
+
+  removeSiteFromAgency(site: AgencySite): void {
+    if (!this.managingSitesAgency) return;
+
+    if (!confirm(`Retirer "${site.club_name}" de cette agence ?`)) return;
+
+    this.saving.set(true);
+
+    this.agencyService.removeSiteFromAgency(this.managingSitesAgency.id, site.id).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.refreshAgencySites();
+          this.loadAgencies(); // Refresh site count
+        } else {
+          this.error.set('Erreur lors du retrait du site');
+        }
+        this.saving.set(false);
+      },
+      error: (err) => {
+        this.error.set(err.error?.error || 'Erreur lors du retrait du site');
+        this.saving.set(false);
+      },
+    });
+  }
+
+  private refreshAgencySites(): void {
+    if (!this.managingSitesAgency) return;
+
+    this.agencyService.getAgencySites(this.managingSitesAgency.id).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.agencySites.set(response.data.sites as AgencySite[]);
+          this.filterAvailableSites();
+        }
+      },
+    });
+  }
+
+  closeSitesModal(): void {
+    this.managingSitesAgency = null;
+    this.agencySites.set([]);
+    this.allSites.set([]);
+    this.filteredAvailableSites.set([]);
+    this.selectedSitesToAdd.set(new Set());
+    this.siteSearchQuery = '';
   }
 }
