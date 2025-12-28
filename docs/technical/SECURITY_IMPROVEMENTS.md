@@ -13,6 +13,7 @@ Ce document décrit toutes les améliorations de sécurité implémentées pour 
 **Vulnérabilité corrigée:** Panneau admin accessible sans authentification sur le réseau local.
 
 **Implémentation:**
+
 ```javascript
 // raspberry/admin/admin-server.js
 const cookieParser = require('cookie-parser');
@@ -35,6 +36,7 @@ app.use((req, res, next) => {
 ```
 
 **Configuration:**
+
 - Session durée: 8 heures (configurable)
 - Cookies HTTPOnly et Secure en production
 - Setup first-time au premier démarrage
@@ -46,12 +48,14 @@ app.use((req, res, next) => {
 **Vulnérabilité corrigée:** Mot de passe `GG_NEO_25k!` visible dans le code source.
 
 **Avant (VULNÉRABLE):**
+
 ```typescript
 // ❌ ANCIEN CODE
 private readonly DEFAULT_PASSWORD = 'GG_NEO_25k!';
 ```
 
 **Après (SÉCURISÉ):**
+
 ```typescript
 // ✅ NOUVEAU CODE
 requiresSetup$ = new BehaviorSubject<boolean>(false);
@@ -66,10 +70,12 @@ setInitialPassword(password: string): Observable<boolean> {
 ### SEC-003: CORS Fail-Closed & TLS
 
 **Vulnérabilités corrigées:**
+
 1. CORS permissif autorisant toutes origines
 2. `NODE_TLS_REJECT_UNAUTHORIZED=0` désactivant SSL
 
 **Implémentation CORS Fail-Closed:**
+
 ```typescript
 // central-server/src/server.ts
 const isProduction = process.env.NODE_ENV === 'production';
@@ -83,13 +89,14 @@ if (corsFailClosed) {
 const resolveOrigin = (origin?: string): string | null => {
   if (corsFailClosed) {
     logger.warn('CORS request rejected (fail-closed mode)', { origin });
-    return null;  // ← Rejette en production si non configuré
+    return null; // ← Rejette en production si non configuré
   }
   // ...
 };
 ```
 
 **Suppression TLS Bypass:**
+
 ```typescript
 // ❌ SUPPRIMÉ de database.ts
 // process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -102,6 +109,7 @@ const resolveOrigin = (origin?: string): string | null => {
 **Vulnérabilité corrigée:** JWT stocké dans localStorage (vulnérable XSS).
 
 **Architecture sécurisée:**
+
 ```
 ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
 │   Browser   │ ──────► │   API       │ ──────► │  Database   │
@@ -118,6 +126,7 @@ const resolveOrigin = (origin?: string): string | null => {
 ```
 
 **Implémentation Frontend:**
+
 ```typescript
 // central-dashboard/src/app/core/services/auth.service.ts
 private sseToken: string | null = null;  // Mémoire uniquement
@@ -138,13 +147,14 @@ getSseToken(): string | null {
 ```
 
 **Implémentation Backend:**
+
 ```typescript
 // Cookie HttpOnly défini par le serveur
 res.cookie('auth_token', token, {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'strict',
-  maxAge: 8 * 60 * 60 * 1000  // 8 heures
+  maxAge: 8 * 60 * 60 * 1000, // 8 heures
 });
 ```
 
@@ -157,11 +167,13 @@ res.cookie('auth_token', token, {
 ## ✅ 1. Headers HTTP de Sécurité
 
 ### Fichier modifié
+
 `/raspberry/admin/admin-server.js` (lignes 51-112)
 
 ### Headers ajoutés
 
 #### Content-Security-Policy (CSP)
+
 ```javascript
 Content-Security-Policy:
   default-src 'self';
@@ -180,6 +192,7 @@ Content-Security-Policy:
 **Protection contre** : XSS, injection de code, clickjacking
 
 #### X-Frame-Options
+
 ```javascript
 X-Frame-Options: DENY
 ```
@@ -187,6 +200,7 @@ X-Frame-Options: DENY
 **Protection contre** : Clickjacking, embedding malveillant
 
 #### X-Content-Type-Options
+
 ```javascript
 X-Content-Type-Options: nosniff
 ```
@@ -194,6 +208,7 @@ X-Content-Type-Options: nosniff
 **Protection contre** : MIME sniffing attacks
 
 #### X-XSS-Protection
+
 ```javascript
 X-XSS-Protection: 1; mode=block
 ```
@@ -201,6 +216,7 @@ X-XSS-Protection: 1; mode=block
 **Protection contre** : XSS reflected attacks (anciens navigateurs)
 
 #### Referrer-Policy
+
 ```javascript
 Referrer-Policy: strict-origin-when-cross-origin
 ```
@@ -208,6 +224,7 @@ Referrer-Policy: strict-origin-when-cross-origin
 **Protection** : Vie privée des utilisateurs
 
 #### Permissions-Policy
+
 ```javascript
 Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
 ```
@@ -215,6 +232,7 @@ Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
 **Protection** : Désactivation des APIs sensibles non nécessaires
 
 #### Strict-Transport-Security (HSTS)
+
 ```javascript
 Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
 ```
@@ -227,11 +245,13 @@ Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
 ## ✅ 2. Configuration du Cache
 
 ### Cache en Production
+
 - **Assets statiques** (JS, CSS, images, fonts) : 1 an (immutable)
 - **Vidéos** : 1 semaine
 - **HTML/API** : no-cache
 
 ### Cache en Développement
+
 - **Tout** : no-cache (facilite le développement)
 
 ```javascript
@@ -247,6 +267,7 @@ if (process.env.NODE_ENV === 'production') {
 ```
 
 **Bénéfices** :
+
 - ⚡ Réduction de 90%+ de la bande passante en production
 - ⚡ Chargement instantané des assets en cache
 - 🔄 Fraîcheur garantie des données dynamiques
@@ -256,6 +277,7 @@ if (process.env.NODE_ENV === 'production') {
 ## ✅ 3. Manifest PWA
 
 ### Fichier créé
+
 `/raspberry/admin/public/manifest.webmanifest`
 
 ```json
@@ -275,6 +297,7 @@ if (process.env.NODE_ENV === 'production') {
 ```
 
 **Bénéfices** :
+
 - 📱 Installation possible en tant qu'app
 - 🎨 Branding cohérent (couleurs, icônes)
 - 📲 Expérience app-like sur mobile
@@ -284,9 +307,11 @@ if (process.env.NODE_ENV === 'production') {
 ## ✅ 4. Favicon
 
 ### Fichier copié
+
 `/raspberry/admin/public/favicon.ico`
 
 **Bénéfices** :
+
 - 🎨 Identité visuelle dans les onglets
 - 📑 Meilleure UX dans les favoris
 - ✅ Pas d'erreur 404 dans les logs
@@ -298,27 +323,31 @@ if (process.env.NODE_ENV === 'production') {
 ### Modifications dans `index.html`
 
 #### Resource Hints
+
 ```html
 <!-- DNS Prefetch -->
-<link rel="dns-prefetch" href="//neopro.local">
+<link rel="dns-prefetch" href="//neopro.local" />
 
 <!-- Preconnect -->
-<link rel="preconnect" href="//neopro.local">
+<link rel="preconnect" href="//neopro.local" />
 ```
 
 **Bénéfices** :
+
 - ⚡ Résolution DNS anticipée
 - ⚡ Connexion TCP établie en avance
 - ⏱️ Gain de 100-300ms par requête
 
 #### Preload
+
 ```html
 <!-- Preload Critical Resources -->
-<link rel="preload" href="/styles.css" as="style">
-<link rel="preload" href="/app.js" as="script">
+<link rel="preload" href="/styles.css" as="style" />
+<link rel="preload" href="/app.js" as="script" />
 ```
 
 **Bénéfices** :
+
 - ⚡ Chargement prioritaire des ressources critiques
 - 📊 Amélioration du First Contentful Paint (FCP)
 - ⏱️ Réduction de 20-40% du temps de chargement initial
@@ -330,66 +359,84 @@ if (process.env.NODE_ENV === 'production') {
 ### Modifications dans `index.html`
 
 #### Skip Link
+
 ```html
-<a href="#main-content" class="sr-only focus:not-sr-only">
-  Aller au contenu principal
-</a>
+<a href="#main-content" class="sr-only focus:not-sr-only"> Aller au contenu principal </a>
 ```
 
 #### Rôles ARIA
+
 ```html
 <div class="container" role="application" aria-label="Interface d'administration Neopro">
-<header class="header" role="banner">
-<nav class="nav" role="navigation" aria-label="Navigation principale">
-<main id="main-content" class="content" role="main">
-<footer class="footer" role="contentinfo">
+  <header class="header" role="banner">
+    <nav class="nav" role="navigation" aria-label="Navigation principale">
+      <main id="main-content" class="content" role="main">
+        <footer class="footer" role="contentinfo"></footer>
+      </main>
+    </nav>
+  </header>
+</div>
 ```
 
 #### Navigation avec états
+
 ```html
-<button class="nav-btn active"
-        data-tab="dashboard"
-        aria-pressed="true"
-        aria-controls="tab-dashboard">
+<button
+  class="nav-btn active"
+  data-tab="dashboard"
+  aria-pressed="true"
+  aria-controls="tab-dashboard"
+>
   <span aria-hidden="true">📊</span> Dashboard
 </button>
 ```
 
 #### Tabpanels accessibles
+
 ```html
-<div id="tab-dashboard"
-     class="tab-content active"
-     role="tabpanel"
-     aria-labelledby="nav-dashboard">
+<div
+  id="tab-dashboard"
+  class="tab-content active"
+  role="tabpanel"
+  aria-labelledby="nav-dashboard"
+></div>
 ```
 
 #### Live Regions
+
 ```html
 <span id="cpu-usage" aria-live="polite">--</span>
 <span id="last-update" role="status" aria-live="polite">Dernière mise à jour: --</span>
 ```
 
 #### Progress Bars
+
 ```html
-<div class="progress-bar"
-     role="progressbar"
-     aria-valuenow="0"
-     aria-valuemin="0"
-     aria-valuemax="100"
-     aria-label="Utilisation CPU">
+<div
+  class="progress-bar"
+  role="progressbar"
+  aria-valuenow="0"
+  aria-valuemin="0"
+  aria-valuemax="100"
+  aria-label="Utilisation CPU"
+></div>
 ```
 
 #### Modales accessibles
+
 ```html
-<div id="modal"
-     class="modal"
-     role="alertdialog"
-     aria-labelledby="modal-title"
-     aria-describedby="modal-message"
-     aria-hidden="true">
+<div
+  id="modal"
+  class="modal"
+  role="alertdialog"
+  aria-labelledby="modal-title"
+  aria-describedby="modal-message"
+  aria-hidden="true"
+></div>
 ```
 
 **Bénéfices** :
+
 - ♿ Compatible avec les lecteurs d'écran
 - ⌨️ Navigation au clavier améliorée
 - 📱 Meilleure expérience pour tous les utilisateurs
@@ -400,22 +447,24 @@ if (process.env.NODE_ENV === 'production') {
 ## 📊 Impact des Améliorations
 
 ### Avant
-| Critère | Note |
-|---------|------|
-| Sécurité | 0/10 |
-| Performance | 12/20 |
-| Accessibilité | 10/15 |
-| SEO/PWA | 15/20 |
-| **TOTAL** | **69/100** |
+
+| Critère       | Note       |
+| ------------- | ---------- |
+| Sécurité      | 0/10       |
+| Performance   | 12/20      |
+| Accessibilité | 10/15      |
+| SEO/PWA       | 15/20      |
+| **TOTAL**     | **69/100** |
 
 ### Après
-| Critère | Note |
-|---------|------|
-| Sécurité | 9/10 |
-| Performance | 19/20 |
-| Accessibilité | 14/15 |
-| SEO/PWA | 20/20 |
-| **TOTAL** | **93/100** |
+
+| Critère       | Note       |
+| ------------- | ---------- |
+| Sécurité      | 9/10       |
+| Performance   | 19/20      |
+| Accessibilité | 14/15      |
+| SEO/PWA       | 20/20      |
+| **TOTAL**     | **93/100** |
 
 **Amélioration** : **+24 points** (+35%)
 
@@ -424,6 +473,7 @@ if (process.env.NODE_ENV === 'production') {
 ## 🚀 Déploiement
 
 ### Développement Local
+
 Les améliorations sont actives immédiatement après redémarrage du serveur admin :
 
 ```bash
@@ -434,18 +484,21 @@ node admin-server.js
 ### Production Raspberry Pi
 
 1. **Copier les fichiers modifiés** :
+
 ```bash
 scp -r raspberry/admin/admin-server.js pi@neopro.local:/home/pi/neopro/admin/
 scp -r raspberry/admin/public/* pi@neopro.local:/home/pi/neopro/admin/public/
 ```
 
 2. **Redémarrer le service** :
+
 ```bash
 ssh pi@neopro.local
 sudo systemctl restart neopro-admin
 ```
 
 3. **Activer HTTPS** (recommandé) :
+
 ```bash
 # Générer un certificat Let's Encrypt
 sudo certbot --nginx -d neopro.votredomaine.com
@@ -457,6 +510,7 @@ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 ```
 
 4. **Configurer Nginx pour HTTPS** :
+
 ```nginx
 server {
     listen 443 ssl http2;
@@ -473,6 +527,7 @@ server {
 ```
 
 5. **Activer NODE_ENV en production** :
+
 ```bash
 # Editer le service systemd
 sudo nano /etc/systemd/system/neopro-admin.service
@@ -490,11 +545,13 @@ sudo systemctl restart neopro-admin
 ## 🔍 Vérification
 
 ### Tester les headers de sécurité
+
 ```bash
 curl -I https://neopro.local:8080
 ```
 
 Devrait afficher :
+
 ```
 Content-Security-Policy: default-src 'self'; ...
 X-Frame-Options: DENY
@@ -506,6 +563,7 @@ Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
 ```
 
 ### Tester le cache
+
 ```bash
 # Premier appel
 curl -I https://neopro.local:8080/styles.css
@@ -514,12 +572,14 @@ curl -I https://neopro.local:8080/styles.css
 ```
 
 ### Tester l'accessibilité
+
 1. Ouvrir la page dans Chrome
 2. Ouvrir DevTools > Lighthouse
 3. Lancer un audit Accessibility
 4. Score attendu : **90+/100**
 
 ### Tester le PWA
+
 1. Ouvrir la page dans Chrome mobile
 2. Menu > "Ajouter à l'écran d'accueil"
 3. Vérifier l'icône et le nom "KAP"
@@ -530,28 +590,37 @@ curl -I https://neopro.local:8080/styles.css
 ## 📝 Notes Importantes
 
 ### SRI (Subresource Integrity)
+
 **Non implémenté** car tous les scripts sont servis depuis le même domaine (`self`).
 SRI est pertinent uniquement pour les scripts externes (CDN).
 
 Si vous utilisez des CDN à l'avenir :
+
 ```html
-<script src="https://cdn.example.com/lib.js"
-        integrity="sha384-hash..."
-        crossorigin="anonymous"></script>
+<script
+  src="https://cdn.example.com/lib.js"
+  integrity="sha384-hash..."
+  crossorigin="anonymous"
+></script>
 ```
 
 ### CSP 'unsafe-inline'
+
 Actuellement permis pour `script-src` et `style-src` car le code existant utilise :
+
 - Inline event handlers (`onclick="..."`)
 - Inline styles
 
 **Recommandation future** : Migrer vers :
+
 - Event listeners JavaScript (`.addEventListener()`)
 - Classes CSS au lieu de styles inline
 - Puis retirer `'unsafe-inline'` pour une sécurité maximale
 
 ### Compatibilité
+
 Toutes les améliorations sont **compatibles** avec :
+
 - ✅ Chrome/Edge 90+
 - ✅ Firefox 88+
 - ✅ Safari 14+

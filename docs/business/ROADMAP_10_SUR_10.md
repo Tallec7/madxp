@@ -1,22 +1,38 @@
 # ROADMAP VERS 10/10 - NEOPRO
 
 > Plan d'amelioration pour atteindre l'excellence sur chaque composant
-> Date: 13 Decembre 2025
+> Date initiale: 13 Decembre 2025
+> **Dernière MAJ: 28 Decembre 2025**
 
 ---
 
 ## RESUME DES AMELIORATIONS
 
-| Composant | Note Actuelle | Manque pour 10/10 | Effort Total |
-|-----------|---------------|-------------------|--------------|
-| Fonctionnement Hors Connexion | 9/10 | 3-4 jours | Faible |
-| Mises a Jour Distantes | 8.5/10 | 5-7 jours | Moyen |
-| Deploiement Videos | 8/10 | 5-6 jours | Moyen |
-| Architecture Serveur/Client | 8.5/10 | 7-10 jours | Moyen-Eleve |
-| Synchronisation Donnees | 9/10 | 2-3 jours | Faible |
-| Securite | 8/10 | 5-7 jours | Moyen |
-| Qualite Code/Tests | 7.5/10 | 10-15 jours | Eleve |
-| Documentation | 9/10 | 2-3 jours | Faible |
+| Composant                     | Note Initiale | Note Actuelle | Manque pour 10/10 | Effort Restant |
+| ----------------------------- | ------------- | ------------- | ----------------- | -------------- |
+| Fonctionnement Hors Connexion | 9/10          | 9/10          | 3-4 jours         | Faible         |
+| Mises a Jour Distantes        | 8.5/10        | **9.5/10** ✅ | 1-2 jours         | Faible         |
+| Deploiement Videos            | 8/10          | **9/10** ✅   | 2-3 jours         | Faible         |
+| Architecture Serveur/Client   | 8.5/10        | **9/10** ✅   | 3-5 jours         | Moyen          |
+| Synchronisation Donnees       | 9/10          | 9/10          | 2-3 jours         | Faible         |
+| Securite                      | 8/10          | **9.5/10** ✅ | 1 jour            | Faible         |
+| Qualite Code/Tests            | 7.5/10        | **8/10** ✅   | 8-10 jours        | Moyen          |
+| Documentation                 | 9/10          | **9.5/10** ✅ | 1 jour            | Faible         |
+
+### Changelog des améliorations (25-27 Décembre 2025)
+
+| Date   | Amélioration                                     | Impact            |
+| ------ | ------------------------------------------------ | ----------------- |
+| 25 Déc | SEC-001: Auth admin Raspberry (session cookies)  | Sécurité +1       |
+| 25 Déc | SEC-002: Suppression mot de passe hardcodé       | Sécurité +0.5     |
+| 25 Déc | SEC-003: CORS fail-closed + TLS activé           | Sécurité +0.5     |
+| 25 Déc | SEC-004: JWT HttpOnly cookies                    | Sécurité +0.5     |
+| 25 Déc | FEAT-003: Scheduling déploiements                | MAJ +0.5          |
+| 25 Déc | FEAT-004: Notifications email                    | MAJ +0.5          |
+| 25 Déc | DOC-001: OpenAPI enrichi                         | Doc +0.5          |
+| 25 Déc | UX-001: Accessibilité WCAG AA                    | Qualité +0.5      |
+| 26 Déc | FEAT-005: Multi-tenant (portails sponsor/agence) | Architecture +0.5 |
+| 27 Déc | Gestion utilisateurs (agences, sponsors)         | Fonctionnel +0.5  |
 
 ---
 
@@ -25,6 +41,7 @@
 ### Ce qui manque:
 
 #### 1.1 Queue de commandes offline
+
 **Probleme**: Quand le Pi est offline, les actions admin locales ne sont pas queued pour sync ulterieure.
 
 ```javascript
@@ -40,7 +57,7 @@ class OfflineCommandQueue {
       id: uuidv4(),
       command,
       timestamp: new Date().toISOString(),
-      retries: 0
+      retries: 0,
     });
     await fs.writeJson(this.queuePath, queue);
   }
@@ -65,6 +82,7 @@ class OfflineCommandQueue {
 **Effort**: 1 jour
 
 #### 1.2 Indicateur visuel de connectivite
+
 **Probleme**: L'utilisateur ne sait pas si le Pi est connecte au central.
 
 ```typescript
@@ -77,7 +95,7 @@ class OfflineCommandQueue {
       <span class="text">{{ isOnline ? 'Connecte au central' : 'Mode hors ligne' }}</span>
       <span class="last-sync" *ngIf="lastSync">Derniere sync: {{ lastSync | timeAgo }}</span>
     </div>
-  `
+  `,
 })
 export class ConnectionStatusComponent {
   isOnline = false;
@@ -88,6 +106,7 @@ export class ConnectionStatusComponent {
 **Effort**: 0.5 jour
 
 #### 1.3 Gestion expiration videos offline
+
 **Probleme**: Les videos NEOPRO avec `expires_at` ne sont pas supprimees automatiquement en offline.
 
 ```javascript
@@ -115,6 +134,7 @@ setInterval(() => expirationChecker.checkExpiredVideos(), 60 * 60 * 1000);
 **Effort**: 0.5 jour
 
 #### 1.4 Backup automatique local
+
 **Probleme**: Pas de backup automatique de la configuration locale.
 
 ```javascript
@@ -140,6 +160,7 @@ cron.schedule('0 3 * * *', () => backupService.createDailyBackup());
 **Effort**: 0.5 jour
 
 ### Checklist 10/10 Hors Connexion:
+
 - [ ] Queue de commandes offline avec retry
 - [ ] Indicateur visuel de connectivite temps reel
 - [ ] Suppression automatique videos expirees
@@ -153,6 +174,7 @@ cron.schedule('0 3 * * *', () => backupService.createDailyBackup());
 ### Ce qui manque:
 
 #### 2.1 Verification pre-mise a jour
+
 **Probleme**: Pas de verification de l'espace disque et de l'etat du systeme avant MAJ.
 
 ```javascript
@@ -199,6 +221,7 @@ async preUpdateChecks(packageSize) {
 **Effort**: 1 jour
 
 #### 2.2 Deploiement progressif (Canary)
+
 **Probleme**: Pas de deploiement progressif pour limiter les risques.
 
 ```typescript
@@ -243,6 +266,7 @@ class CanaryDeploymentService {
 **Effort**: 2 jours
 
 #### 2.3 Changelog et notes de version dans l'UI
+
 **Probleme**: Les utilisateurs ne voient pas les changements apres une MAJ.
 
 ```typescript
@@ -272,6 +296,7 @@ class CanaryDeploymentService {
 **Effort**: 0.5 jour
 
 #### 2.4 Notification avant reboot
+
 **Probleme**: Le Pi reboot sans prevenir l'utilisateur.
 
 ```javascript
@@ -294,6 +319,7 @@ async notifyUpcomingReboot() {
 **Effort**: 0.5 jour
 
 #### 2.5 Rapport post-mise a jour
+
 **Probleme**: Pas de verification automatique apres MAJ.
 
 ```javascript
@@ -330,6 +356,7 @@ async generatePostUpdateReport() {
 **Effort**: 0.5 jour
 
 ### Checklist 10/10 Mises a Jour:
+
 - [ ] Verification pre-MAJ (espace, sante, session)
 - [ ] Deploiement progressif canary (10% -> 50% -> 100%)
 - [ ] Changelog visible dans dashboard
@@ -344,6 +371,7 @@ async generatePostUpdateReport() {
 ### Ce qui manque:
 
 #### 3.1 Checksum obligatoire
+
 **Probleme**: Le checksum est optionnel, risque de fichiers corrompus.
 
 ```typescript
@@ -373,6 +401,7 @@ async execute(data, progressCallback) {
 **Effort**: 0.5 jour
 
 #### 3.2 Reprise de telechargement (Resume)
+
 **Probleme**: Si le telechargement echoue a 90%, il recommence a 0%.
 
 ```javascript
@@ -422,6 +451,7 @@ async downloadFileWithResume(url, targetPath, progressCallback) {
 **Effort**: 1 jour
 
 #### 3.3 Preview/Thumbnail automatique
+
 **Probleme**: Pas de preview des videos dans le dashboard.
 
 ```typescript
@@ -437,7 +467,7 @@ class ThumbnailService {
           folder: path.dirname(outputPath),
           filename: path.basename(outputPath),
           size: '320x180',
-          timemarks: ['10%'] // A 10% de la video
+          timemarks: ['10%'], // A 10% de la video
         })
         .on('end', () => resolve(outputPath))
         .on('error', reject);
@@ -458,6 +488,7 @@ class ThumbnailService {
 **Effort**: 1 jour
 
 #### 3.4 Compression automatique
+
 **Probleme**: Videos trop lourdes = telechargement long.
 
 ```typescript
@@ -468,11 +499,11 @@ class VideoProcessingService {
       ffmpeg(inputPath)
         .outputOptions([
           '-c:v libx264',
-          '-crf 23',           // Qualite (18-28, plus bas = meilleur)
-          '-preset medium',    // Vitesse compression
+          '-crf 23', // Qualite (18-28, plus bas = meilleur)
+          '-preset medium', // Vitesse compression
           '-c:a aac',
           '-b:a 128k',
-          '-movflags +faststart' // Optimise pour streaming
+          '-movflags +faststart', // Optimise pour streaming
         ])
         .output(outputPath)
         .on('end', resolve)
@@ -492,6 +523,7 @@ class VideoProcessingService {
 **Effort**: 1.5 jours
 
 #### 3.5 Historique des deploiements par video
+
 **Probleme**: Difficile de savoir ou une video a ete deployee.
 
 ```sql
@@ -519,6 +551,7 @@ ORDER BY cd.created_at DESC;
 **Effort**: 0.5 jour
 
 ### Checklist 10/10 Deploiement Videos:
+
 - [ ] Checksum SHA256 obligatoire
 - [ ] Reprise telechargement (Range headers)
 - [ ] Generation automatique thumbnails
@@ -533,6 +566,7 @@ ORDER BY cd.created_at DESC;
 ### Ce qui manque:
 
 #### 4.1 Redis adapter pour Socket.IO
+
 **Probleme**: Ne scale pas horizontalement (1 seule instance).
 
 ```typescript
@@ -549,12 +583,16 @@ class SocketService {
 
       await Promise.all([pubClient.connect(), subClient.connect()]);
 
-      this.io = new SocketIOServer(httpServer, { /* ... */ });
+      this.io = new SocketIOServer(httpServer, {
+        /* ... */
+      });
       this.io.adapter(createAdapter(pubClient, subClient));
 
       logger.info('Socket.IO using Redis adapter for horizontal scaling');
     } else {
-      this.io = new SocketIOServer(httpServer, { /* ... */ });
+      this.io = new SocketIOServer(httpServer, {
+        /* ... */
+      });
       logger.warn('Socket.IO running without Redis - single instance only');
     }
   }
@@ -564,6 +602,7 @@ class SocketService {
 **Effort**: 1 jour
 
 #### 4.2 Pagination sur toutes les API
+
 **Probleme**: Performance degradee avec beaucoup de donnees.
 
 ```typescript
@@ -589,7 +628,7 @@ export const getSites = async (req: AuthRequest, res: Response) => {
 
   const [sites, countResult] = await Promise.all([
     pool.query('SELECT * FROM sites ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset]),
-    pool.query('SELECT COUNT(*) FROM sites')
+    pool.query('SELECT COUNT(*) FROM sites'),
   ]);
 
   res.json({
@@ -598,8 +637,8 @@ export const getSites = async (req: AuthRequest, res: Response) => {
       page: req.pagination.page,
       limit,
       total: parseInt(countResult.rows[0].count),
-      totalPages: Math.ceil(countResult.rows[0].count / limit)
-    }
+      totalPages: Math.ceil(countResult.rows[0].count / limit),
+    },
   });
 };
 ```
@@ -607,6 +646,7 @@ export const getSites = async (req: AuthRequest, res: Response) => {
 **Effort**: 2 jours
 
 #### 4.3 Rate limiting par utilisateur
+
 **Probleme**: Rate limiting global, pas par utilisateur.
 
 ```typescript
@@ -625,19 +665,20 @@ export const createUserRateLimit = (windowMs: number, max: number) => {
     store: process.env.REDIS_URL
       ? new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) })
       : undefined,
-    message: { error: 'Trop de requetes, reessayez plus tard' }
+    message: { error: 'Trop de requetes, reessayez plus tard' },
   });
 };
 
 // Limites differentes par endpoint
-app.use('/api/auth', createUserRateLimit(15 * 60 * 1000, 10));  // 10 req/15min pour auth
-app.use('/api/videos', createUserRateLimit(60 * 1000, 30));     // 30 req/min pour videos
-app.use('/api', createUserRateLimit(60 * 1000, 100));           // 100 req/min general
+app.use('/api/auth', createUserRateLimit(15 * 60 * 1000, 10)); // 10 req/15min pour auth
+app.use('/api/videos', createUserRateLimit(60 * 1000, 30)); // 30 req/min pour videos
+app.use('/api', createUserRateLimit(60 * 1000, 100)); // 100 req/min general
 ```
 
 **Effort**: 1 jour
 
 #### 4.4 Health check enrichi
+
 **Probleme**: Endpoint /health basique.
 
 ```typescript
@@ -652,8 +693,8 @@ export const healthCheck = async (req: Request, res: Response) => {
       database: { status: 'unknown', latency: 0 },
       redis: { status: 'unknown', latency: 0 },
       supabase: { status: 'unknown' },
-      sockets: { connected: 0 }
-    }
+      sockets: { connected: 0 },
+    },
   };
 
   // Check database
@@ -687,6 +728,7 @@ export const healthCheck = async (req: Request, res: Response) => {
 **Effort**: 0.5 jour
 
 #### 4.5 WebSocket reconnection avec backoff exponentiel
+
 **Probleme**: Le backoff n'est pas exponentiel cote client dashboard.
 
 ```typescript
@@ -705,7 +747,7 @@ export class SocketService {
       reconnectionDelayMax: 30000,
       reconnectionAttempts: this.maxReconnectAttempts,
       // Backoff exponentiel
-      randomizationFactor: 0.5
+      randomizationFactor: 0.5,
     });
 
     this.socket.on('connect', () => {
@@ -725,6 +767,7 @@ export class SocketService {
 **Effort**: 0.5 jour
 
 ### Checklist 10/10 Architecture:
+
 - [ ] Redis adapter Socket.IO
 - [ ] Pagination sur toutes les API
 - [ ] Rate limiting par utilisateur
@@ -739,6 +782,7 @@ export class SocketService {
 ### Ce qui manque:
 
 #### 5.1 Resolution de conflits avancee
+
 **Probleme**: Conflit si meme categorie creee en local et central simultanement.
 
 ```javascript
@@ -769,6 +813,7 @@ function resolveConflict(localItem, remoteItem) {
 **Effort**: 1 jour
 
 #### 5.2 Historique des synchronisations
+
 **Probleme**: Pas de trace des syncs pour debug.
 
 ```javascript
@@ -786,7 +831,7 @@ class SyncHistoryService {
       type, // 'local_to_central', 'central_to_local', 'merge'
       timestamp: new Date().toISOString(),
       details,
-      success: true
+      success: true,
     });
 
     // Garder seulement les 100 derniers
@@ -807,6 +852,7 @@ class SyncHistoryService {
 **Effort**: 0.5 jour
 
 #### 5.3 Validation schema configuration
+
 **Probleme**: Pas de validation du format de configuration.json.
 
 ```javascript
@@ -820,7 +866,7 @@ const videoSchema = Joi.object({
   type: Joi.string().default('video/mp4'),
   locked: Joi.boolean().default(false),
   deployed_at: Joi.string().isoDate(),
-  expires_at: Joi.string().isoDate().allow(null)
+  expires_at: Joi.string().isoDate().allow(null),
 });
 
 const categorySchema = Joi.object({
@@ -829,24 +875,28 @@ const categorySchema = Joi.object({
   locked: Joi.boolean().default(false),
   owner: Joi.string().valid('neopro', 'club').default('club'),
   videos: Joi.array().items(videoSchema).default([]),
-  subCategories: Joi.array().items(Joi.object({
-    id: Joi.string().required(),
-    name: Joi.string().required(),
-    videos: Joi.array().items(videoSchema).default([])
-  })).default([])
+  subCategories: Joi.array()
+    .items(
+      Joi.object({
+        id: Joi.string().required(),
+        name: Joi.string().required(),
+        videos: Joi.array().items(videoSchema).default([]),
+      }),
+    )
+    .default([]),
 });
 
 const configurationSchema = Joi.object({
   version: Joi.string().default('2.0'),
   site_id: Joi.string(),
   categories: Joi.array().items(categorySchema).default([]),
-  settings: Joi.object().default({})
+  settings: Joi.object().default({}),
 });
 
 function validateConfiguration(config) {
   const { error, value } = configurationSchema.validate(config, { abortEarly: false });
   if (error) {
-    throw new Error(`Configuration invalide: ${error.details.map(d => d.message).join(', ')}`);
+    throw new Error(`Configuration invalide: ${error.details.map((d) => d.message).join(', ')}`);
   }
   return value;
 }
@@ -855,6 +905,7 @@ function validateConfiguration(config) {
 **Effort**: 0.5 jour
 
 ### Checklist 10/10 Synchronisation:
+
 - [ ] Resolution de conflits avec timestamps
 - [ ] Historique des syncs (100 derniers)
 - [ ] Validation schema Joi
@@ -862,11 +913,26 @@ function validateConfiguration(config) {
 
 ---
 
-## 6. SECURITE (8/10 -> 10/10)
+## 6. SECURITE (8/10 -> 9.5/10) ✅ MAJORITAIREMENT CORRIGÉ
 
-### Ce qui manque:
+> **Mise à jour 25 Décembre 2025**: Les vulnérabilités critiques ont été corrigées.
+> Voir `docs/changelog/2025-12-25_platform-audit-implementation.md`
+
+### ✅ CORRIGÉ (25 Déc 2025)
+
+| Item    | Description                                               | Statut                           |
+| ------- | --------------------------------------------------------- | -------------------------------- |
+| SEC-001 | Auth admin Raspberry (session cookies + first-time setup) | ✅ Implémenté                    |
+| SEC-002 | Suppression mot de passe hardcodé `GG_NEO_25k!`           | ✅ Implémenté                    |
+| SEC-003 | CORS fail-closed + TLS activé en production               | ✅ Implémenté                    |
+| SEC-004 | Migration JWT localStorage → HttpOnly cookies             | ✅ Implémenté                    |
+| 6.2     | Audit log des actions admin                               | ✅ Implémenté (audit.service.ts) |
+| 6.3     | MFA pour admins (TOTP)                                    | ✅ Implémenté (mfa.service.ts)   |
+
+### Ce qui reste:
 
 #### 6.1 API keys hashees en base
+
 **Probleme**: API keys stockees en clair dans la table sites.
 
 ```typescript
@@ -899,6 +965,7 @@ const isValidApiKey = await bcrypt.compare(providedApiKey, site.api_key_hash);
 **Effort**: 1 jour
 
 #### 6.2 Audit log des actions admin
+
 **Probleme**: Pas de trace des actions administratives.
 
 ```typescript
@@ -908,7 +975,7 @@ class AuditService {
     await pool.query(
       `INSERT INTO audit_logs (action, user_id, details, ip_address, user_agent, created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())`,
-      [action, userId, JSON.stringify(details), req.ip, req.headers['user-agent']]
+      [action, userId, JSON.stringify(details), req.ip, req.headers['user-agent']],
     );
   }
 }
@@ -938,6 +1005,7 @@ CREATE INDEX idx_audit_logs_date ON audit_logs(created_at);
 **Effort**: 1.5 jours
 
 #### 6.3 MFA pour admins
+
 **Probleme**: Pas d'authentification multi-facteurs.
 
 ```typescript
@@ -949,7 +1017,7 @@ class MFAService {
   generateSecret(email: string) {
     const secret = speakeasy.generateSecret({
       name: `NEOPRO (${email})`,
-      length: 32
+      length: 32,
     });
     return secret;
   }
@@ -963,7 +1031,7 @@ class MFAService {
       secret,
       encoding: 'base32',
       token,
-      window: 1 // Tolere 30s de decalage
+      window: 1, // Tolere 30s de decalage
     });
   }
 }
@@ -982,6 +1050,7 @@ if (user.mfa_enabled) {
 **Effort**: 2 jours
 
 #### 6.4 Rotation automatique des tokens
+
 **Probleme**: Les JWT n'expirent pas assez vite.
 
 ```typescript
@@ -993,10 +1062,9 @@ export const refreshToken = async (req: AuthRequest, res: Response) => {
   const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!);
 
   // Verifier qu'il n'est pas revoque
-  const isRevoked = await pool.query(
-    'SELECT 1 FROM revoked_tokens WHERE token_id = $1',
-    [decoded.jti]
-  );
+  const isRevoked = await pool.query('SELECT 1 FROM revoked_tokens WHERE token_id = $1', [
+    decoded.jti,
+  ]);
 
   if (isRevoked.rows.length > 0) {
     return res.status(401).json({ error: 'Token revoque' });
@@ -1006,26 +1074,23 @@ export const refreshToken = async (req: AuthRequest, res: Response) => {
   const newAccessToken = jwt.sign(
     { userId: decoded.userId },
     process.env.JWT_SECRET!,
-    { expiresIn: '15m' } // Access token court
+    { expiresIn: '15m' }, // Access token court
   );
 
   const newRefreshToken = jwt.sign(
     { userId: decoded.userId, jti: uuidv4() },
     process.env.REFRESH_TOKEN_SECRET!,
-    { expiresIn: '7d' }
+    { expiresIn: '7d' },
   );
 
   // Revoquer l'ancien refresh token
-  await pool.query(
-    'INSERT INTO revoked_tokens (token_id) VALUES ($1)',
-    [decoded.jti]
-  );
+  await pool.query('INSERT INTO revoked_tokens (token_id) VALUES ($1)', [decoded.jti]);
 
   res.cookie('refreshToken', newRefreshToken, {
     httpOnly: true,
     secure: true,
     sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   res.json({ accessToken: newAccessToken });
@@ -1035,6 +1100,7 @@ export const refreshToken = async (req: AuthRequest, res: Response) => {
 **Effort**: 1 jour
 
 ### Checklist 10/10 Securite:
+
 - [ ] API keys hashees (bcrypt)
 - [ ] Audit log toutes actions admin
 - [ ] MFA pour admins (TOTP)
@@ -1049,6 +1115,7 @@ export const refreshToken = async (req: AuthRequest, res: Response) => {
 ### Ce qui manque:
 
 #### 7.1 Tests E2E
+
 **Probleme**: 0 tests end-to-end.
 
 ```typescript
@@ -1085,6 +1152,7 @@ test.describe('Video Deployment Flow', () => {
 **Effort**: 5 jours
 
 #### 7.2 Tests d'integration sync-agent
+
 **Probleme**: Le sync-agent n'a pas de tests.
 
 ```javascript
@@ -1096,21 +1164,21 @@ describe('Config Merge', () => {
   test('should preserve local club content', () => {
     const local = {
       categories: [
-        { id: 'club', name: 'Club Content', locked: false, videos: [{ name: 'local.mp4' }] }
-      ]
+        { id: 'club', name: 'Club Content', locked: false, videos: [{ name: 'local.mp4' }] },
+      ],
     };
 
     const neopro = {
       categories: [
-        { id: 'neopro', name: 'NEOPRO', locked: true, videos: [{ name: 'sponsor.mp4' }] }
-      ]
+        { id: 'neopro', name: 'NEOPRO', locked: true, videos: [{ name: 'sponsor.mp4' }] },
+      ],
     };
 
     const merged = mergeConfigurations(local, neopro);
 
     expect(merged.categories).toHaveLength(2);
-    expect(merged.categories.find(c => c.id === 'club').videos).toHaveLength(1);
-    expect(merged.categories.find(c => c.id === 'neopro').locked).toBe(true);
+    expect(merged.categories.find((c) => c.id === 'club').videos).toHaveLength(1);
+    expect(merged.categories.find((c) => c.id === 'neopro').locked).toBe(true);
   });
 
   test('should not allow deletion of locked content', () => {
@@ -1132,6 +1200,7 @@ describe('Video Deployment', () => {
 **Effort**: 3 jours
 
 #### 7.3 Couverture > 80%
+
 **Probleme**: Couverture actuelle ~67%.
 
 ```bash
@@ -1145,6 +1214,7 @@ raspberry/sync-agent/src/        -> 80% (actuellement 0%)
 **Effort**: 5 jours
 
 #### 7.4 Linting strict
+
 **Probleme**: Regles ESLint pas assez strictes.
 
 ```javascript
@@ -1157,14 +1227,15 @@ module.exports = {
     'no-console': 'error',
     'prefer-const': 'error',
     'no-var': 'error',
-    'eqeqeq': 'error'
-  }
+    eqeqeq: 'error',
+  },
 };
 ```
 
 **Effort**: 2 jours (fix des erreurs)
 
 ### Checklist 10/10 Qualite:
+
 - [ ] Tests E2E Playwright (flux critiques)
 - [ ] Tests integration sync-agent
 - [ ] Couverture > 80%
@@ -1173,12 +1244,24 @@ module.exports = {
 
 ---
 
-## 8. DOCUMENTATION (9/10 -> 10/10)
+## 8. DOCUMENTATION (9/10 -> 9.5/10) ✅ AMÉLIORÉ
 
-### Ce qui manque:
+> **Mise à jour 25 Décembre 2025**: OpenAPI enrichi avec tous les endpoints admin.
+> Voir `docs/changelog/2025-12-25_platform-audit-implementation.md`
 
-#### 8.1 Documentation API OpenAPI/Swagger
-**Probleme**: Pas de spec OpenAPI.
+### ✅ CORRIGÉ (25 Déc 2025)
+
+| Item    | Description                                              | Statut        |
+| ------- | -------------------------------------------------------- | ------------- |
+| DOC-001 | OpenAPI enrichi (endpoints admin, scheduled deployments) | ✅ Implémenté |
+| DOC-001 | Tags Admin et System ajoutés                             | ✅ Implémenté |
+| DOC-001 | Schéma Deployment avec statut `scheduled`                | ✅ Implémenté |
+
+### Ce qui reste:
+
+#### 8.1 Guide utilisateur final (non technique)
+
+**Probleme**: Doc orientee developpeur uniquement.
 
 ```yaml
 # A creer dans central-server/openapi.yaml
@@ -1239,6 +1322,7 @@ paths:
 **Effort**: 2 jours
 
 #### 8.2 Guide utilisateur final (non technique)
+
 **Probleme**: Doc orientee developpeur uniquement.
 
 ```markdown
@@ -1249,23 +1333,27 @@ paths:
 ## Pour le Regisseur (jour de match)
 
 ### 1. Se connecter a la telecommande
+
 1. Connectez votre smartphone au WiFi `NEOPRO-[VOTRE_CLUB]`
 2. Ouvrez votre navigateur
 3. Allez sur `http://neopro.local/remote`
 4. Entrez le mot de passe du club
 
 ### 2. Lancer une video
+
 1. Selectionnez la categorie (Avant-match, Match, Apres-match)
 2. Cliquez sur la video souhaitee
 3. La video demarre immediatement sur la TV
 
 ### 3. Gerer la boucle sponsors
+
 ...
 ```
 
 **Effort**: 1 jour
 
 ### Checklist 10/10 Documentation:
+
 - [ ] OpenAPI/Swagger complet
 - [ ] Guide utilisateur non-technique
 - [ ] Videos tutoriels (optionnel)
@@ -1273,46 +1361,74 @@ paths:
 
 ---
 
-## RESUME - EFFORT TOTAL POUR 10/10
+## RESUME - EFFORT RESTANT POUR 10/10
 
-| Composant | Effort |
-|-----------|--------|
-| Hors Connexion | 3-4 jours |
-| Mises a Jour | 5-7 jours |
-| Deploiement Videos | 5-6 jours |
-| Architecture | 7-10 jours |
-| Synchronisation | 2-3 jours |
-| Securite | 5-7 jours |
-| Tests/Qualite | 10-15 jours |
-| Documentation | 2-3 jours |
-| **TOTAL** | **40-55 jours** |
+> **Mise à jour 28 Décembre 2025**: ~60% du travail initial a été accompli.
 
-### Priorisation Recommandee
+| Composant          | Effort Initial  | Effort Restant  | Progression |
+| ------------------ | --------------- | --------------- | ----------- |
+| Hors Connexion     | 3-4 jours       | 3-4 jours       | 0%          |
+| Mises a Jour       | 5-7 jours       | 1-2 jours       | **75%** ✅  |
+| Deploiement Videos | 5-6 jours       | 2-3 jours       | **50%** ✅  |
+| Architecture       | 7-10 jours      | 3-5 jours       | **50%** ✅  |
+| Synchronisation    | 2-3 jours       | 2-3 jours       | 0%          |
+| Securite           | 5-7 jours       | 1 jour          | **85%** ✅  |
+| Tests/Qualite      | 10-15 jours     | 8-10 jours      | **30%** ✅  |
+| Documentation      | 2-3 jours       | 1 jour          | **60%** ✅  |
+| **TOTAL**          | **40-55 jours** | **20-30 jours** | **~55%**    |
 
-**Sprint 1 (2 semaines) - Securite & Stabilite:**
-- API keys hashees
-- Audit logs
-- Checksum obligatoire
-- Tests E2E critiques
+### Ce qui a été fait (25-27 Décembre 2025)
 
-**Sprint 2 (2 semaines) - Performance & Scaling:**
-- Redis adapter
-- Pagination API
-- Compression videos
+**Sécurité (Sprint 1 - TERMINÉ):**
+
+- ✅ Auth admin Raspberry (SEC-001)
+- ✅ Suppression password hardcodé (SEC-002)
+- ✅ CORS fail-closed + TLS (SEC-003)
+- ✅ JWT HttpOnly cookies (SEC-004)
+- ✅ Audit logs (audit.service.ts)
+- ✅ MFA admins (mfa.service.ts)
+
+**Documentation (Sprint 3 - PARTIELLEMENT TERMINÉ):**
+
+- ✅ OpenAPI enrichi (DOC-001)
+- ⏳ Guide utilisateur
+
+**Architecture (Sprint 2 - PARTIELLEMENT TERMINÉ):**
+
+- ✅ Multi-tenant (FEAT-005)
+- ⏳ Redis adapter
+- ⏳ Pagination API
+
+**Mises à jour (Sprint 3 - PARTIELLEMENT TERMINÉ):**
+
+- ✅ Scheduling déploiements (FEAT-003)
+- ✅ Notifications email (FEAT-004)
+- ⏳ Déploiement canary
+
+### Priorisation Recommandee (Mise à jour)
+
+**Sprint 5 (Janvier 2026) - Offline & Sync:**
+
+- Queue de commandes offline
+- Indicateurs connectivité
+- Backup quotidien automatique
+- Historique syncs
+
+**Sprint 6 (Janvier 2026) - Performance:**
+
+- Redis adapter Socket.IO
+- Pagination toutes API
+- Compression vidéos auto
 - Resume download
 
-**Sprint 3 (2 semaines) - UX & Documentation:**
-- Indicateurs connectivite
-- Notifications MAJ
-- OpenAPI spec
-- Guide utilisateur
+**Sprint 7 (Février 2026) - Tests & Polish:**
 
-**Sprint 4 (1-2 semaines) - Polish:**
-- MFA admins
-- Deploi canary
-- Tests couverture 80%
+- Tests E2E Playwright
+- Couverture 80%
+- Guide utilisateur final
 - Thumbnails auto
 
 ---
 
-*Document genere le 13 Decembre 2025*
+_Document initial: 13 Decembre 2025_
+_Dernière mise à jour: 28 Décembre 2025_
