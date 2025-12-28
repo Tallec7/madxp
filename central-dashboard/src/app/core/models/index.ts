@@ -23,11 +23,15 @@ export interface ScoreOverlayConfig {
   teamNameSize?: number;
 }
 
+export type UserRole = 'super_admin' | 'admin' | 'operator' | 'viewer' | 'sponsor' | 'agency';
+
 export interface User {
   id: string;
   email: string;
   full_name: string;
-  role: 'admin' | 'operator' | 'viewer';
+  role: UserRole;
+  sponsor_id?: string | null;
+  agency_id?: string | null;
   created_at: Date;
   last_login_at: Date;
 }

@@ -1,7 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { SitesService } from '../../core/services/sites.service';
+import { AuthService } from '../../core/services/auth.service';
 import { SiteStats, Site } from '../../core/models';
 
 @Component({
@@ -425,13 +426,33 @@ import { SiteStats, Site } from '../../core/models';
 })
 export class DashboardComponent implements OnInit {
   private readonly sitesService = inject(SitesService);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   stats: SiteStats | null = null;
   recentSites: Site[] = [];
 
   ngOnInit(): void {
+    // Redirect non-admin users to their specific portals
+    this.redirectToRolePortal();
     this.loadStats();
     this.loadRecentSites();
+  }
+
+  private redirectToRolePortal(): void {
+    const user = this.authService.getCurrentUser();
+    if (!user) return;
+
+    // Only redirect if user has a specific portal role
+    switch (user.role) {
+      case 'sponsor':
+        this.router.navigate(['/sponsor-portal']);
+        break;
+      case 'agency':
+        this.router.navigate(['/agency-portal']);
+        break;
+      // admin, super_admin, operator, viewer stay on main dashboard
+    }
   }
 
   loadStats(): void {

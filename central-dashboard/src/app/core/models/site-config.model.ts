@@ -23,15 +23,28 @@ export interface SyncConfig {
   clubName: string;
 }
 
-// Sponsor (vidéo de boucle partenaires)
-// Format compatible avec l'app :8080
-export interface SponsorConfig {
+/**
+ * Configuration d'une vidéo dans la boucle de lecture.
+ * Les vidéos de la boucle sont souvent des sponsors mais pas exclusivement
+ * (peuvent inclure des annonces club, des animations, etc.)
+ *
+ * Format compatible avec l'app Raspberry :8080
+ */
+export interface LoopVideoConfig {
   name: string;
-  type: string;  // ex: "video/mp4"
-  path: string;  // ex: "videos/BOUCLE_PARTENAIRES/video.mp4"
+  type: string;        // ex: "video/mp4"
+  path: string;        // ex: "videos/BOUCLE/video.mp4"
   owner?: ContentOwner; // 'neopro' ou 'club'
-  locked?: boolean;
+  locked?: boolean;    // true = non modifiable par le club
+  video_id?: string;   // UUID de la vidéo dans la table videos (pour tracking analytics)
+  sponsor_id?: string; // UUID du sponsor associé (si applicable, pour filtrage contrat)
 }
+
+/**
+ * @deprecated Utiliser LoopVideoConfig à la place.
+ * Conservé pour rétrocompatibilité avec les configurations existantes.
+ */
+export type SponsorConfig = LoopVideoConfig;
 
 // Type de propriétaire du contenu
 export type ContentOwner = 'neopro' | 'club';
@@ -67,7 +80,10 @@ export interface CategoryConfig {
   subCategories: SubcategoryConfig[];
 }
 
-// TimeCategory pour organiser les catégories dans /remote (Avant-match, Match, Après-match)
+/**
+ * TimeCategory pour organiser les catégories dans /remote (Avant-match, Match, Après-match).
+ * Chaque phase peut avoir sa propre boucle de vidéos spécifique.
+ */
 export interface TimeCategoryConfig {
   id: string;
   name: string;
@@ -76,23 +92,31 @@ export interface TimeCategoryConfig {
   description: string;
   categoryIds: string[]; // IDs des catégories assignées à ce bloc
   /**
-   * Vidéos de la boucle spécifique à cette phase.
-   * Si non défini ou vide, la boucle globale (sponsors[]) sera utilisée.
+   * Vidéos de la boucle spécifique à cette phase de jeu.
+   * Si non défini ou vide, la boucle globale (loopVideos[]) sera utilisée.
    */
-  loopVideos?: SponsorConfig[];
+  loopVideos?: LoopVideoConfig[];
 }
 
-// Configuration complète du site
+/**
+ * Configuration complète d'un site Neopro.
+ * Structure principale stockée sur le Raspberry Pi et synchronisée avec le central.
+ */
 export interface SiteConfiguration {
   version: string;
   remote: RemoteConfig;
   auth: AuthConfig;
   sync: SyncConfig;
-  sponsors: SponsorConfig[];
+  /**
+   * Boucle de vidéos globale (sponsors, annonces, animations).
+   * Jouée automatiquement en mode boucle ou quand aucune vidéo spécifique n'est sélectionnée.
+   * @deprecated Le champ s'appelle 'sponsors' pour rétrocompatibilité mais contient des LoopVideoConfig
+   */
+  sponsors: LoopVideoConfig[];
   categories: CategoryConfig[];
   timeCategories?: TimeCategoryConfig[]; // Organisation des catégories pour /remote
   /**
-   * Mapping des catégories de vidéos vers les catégories analytics
+   * Mapping des catégories de vidéos vers les catégories analytics.
    * Clé: ID de la catégorie vidéo (ex: "But", "Entrée")
    * Valeur: ID de la catégorie analytics (ex: "jingle", "ambiance")
    */

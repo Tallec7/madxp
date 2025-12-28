@@ -70,6 +70,36 @@ export class RemoteComponent implements OnInit {
   public readonly matchPhases: ('before' | 'during' | 'after')[] = ['before', 'during', 'after'];
   public isPhaseDropdownOpen = false;
 
+  // Toast notification
+  public showToast = false;
+  public toastMessage = '';
+  public toastType: 'success' | 'info' = 'success';
+  private toastTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // Video en cours de lecture (pour état visuel)
+  public playingVideoPath: string | null = null;
+
+  // Vidéos récemment lancées
+  public recentVideos: Video[] = [];
+  private readonly MAX_RECENT_VIDEOS = 5;
+
+  // Loading state
+  public isLoading = false;
+
+  // Dark mode
+  public isDarkMode = false;
+
+  // Menu header (pour simplifier le header)
+  public isHeaderMenuOpen = false;
+
+  // Swipe gesture tracking
+  private touchStartX = 0;
+  private touchStartY = 0;
+  private readonly SWIPE_THRESHOLD = 50;
+
+  // Thumbnails - URL de base du serveur admin (port 8080)
+  private readonly ADMIN_BASE_URL = 'http://' + (typeof window !== 'undefined' ? window.location.hostname : 'localhost') + ':8080';
+
   // Exposer Math pour le template
   public Math = Math;
 
@@ -105,6 +135,13 @@ export class RemoteComponent implements OnInit {
 
   public ngOnInit(): void {
     this.isDemoMode = this.demoConfigService.isDemoMode();
+
+    // Charger le dark mode depuis localStorage
+    this.isDarkMode = localStorage.getItem('darkMode') === 'true';
+    this.applyDarkMode();
+
+    // Charger les vidéos récentes depuis localStorage
+    this.loadRecentVideos();
 
     if (this.isDemoMode) {
       // En mode démo, on commence par la sélection du club
@@ -231,6 +268,56 @@ export class RemoteComponent implements OnInit {
     // Tracker le déclenchement manuel
     this.analyticsService.trackManualTrigger(video);
     this.socketService.emit('command', { type: 'video', data: video });
+
+    // Ajouter aux vidéos récentes
+    this.addToRecentVideos(video);
+
+    // Feedback visuel
+    this.playingVideoPath = video.path;
+    this.displayToast(`${video.name} lancée sur l'écran`, 'success');
+
+    // Reset après 3 secondes
+    setTimeout(() => {
+      this.playingVideoPath = null;
+    }, 3000);
+  }
+
+  /**
+   * Affiche un toast de notification
+   */
+  private displayToast(message: string, type: 'success' | 'info' = 'success'): void {
+    // Clear previous timeout
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
+
+    this.toastMessage = message;
+    this.toastType = type;
+    this.showToast = true;
+
+    this.toastTimeout = setTimeout(() => {
+      this.showToast = false;
+    }, 3000);
+  }
+
+  /**
+   * Retourne le nom de la catégorie d'une vidéo
+   */
+  public getVideoCategoryName(video: Video): string {
+    if (!video.categoryId) return '';
+
+    const findCategory = (categories: Category[]): string => {
+      for (const cat of categories) {
+        if (cat.id === video.categoryId) return cat.name;
+        if (cat.subCategories) {
+          const found = findCategory(cat.subCategories);
+          if (found) return found;
+        }
+      }
+      return '';
+    };
+
+    return findCategory(this.configuration?.categories || []);
   }
 
   // Helpers
@@ -297,6 +384,7 @@ export class RemoteComponent implements OnInit {
     if (this.isReloading || this.isDemoMode) return;
 
     this.isReloading = true;
+    this.isLoading = true;
     const timestamp = Date.now();
 
     this.http.get<Configuration>(`/configuration.json?t=${timestamp}`).subscribe({
@@ -311,10 +399,14 @@ export class RemoteComponent implements OnInit {
         this.selectedCategory = null;
         this.selectedSubCategory = null;
         this.isReloading = false;
+        this.isLoading = false;
+        this.displayToast('Configuration mise à jour', 'success');
       },
       error: (err) => {
         console.error('Erreur lors du rechargement de la configuration', err);
         this.isReloading = false;
+        this.isLoading = false;
+        this.displayToast('Erreur de chargement', 'info');
       }
     });
   }
@@ -643,5 +735,156 @@ export class RemoteComponent implements OnInit {
     }
     // Fallback vers la boucle globale
     return this.configuration?.sponsors?.length || 0;
+  }
+
+  // ============================================================================
+  // DARK MODE
+  // ============================================================================
+
+  /**
+   * Toggle le mode sombre
+   */
+  public toggleDarkMode(): void {
+    this.isDarkMode = !this.isDarkMode;
+    localStorage.setItem('darkMode', String(this.isDarkMode));
+    this.applyDarkMode();
+  }
+
+  /**
+   * Applique le mode sombre au DOM
+   */
+  private applyDarkMode(): void {
+    if (this.isDarkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }
+
+  /**
+   * Toggle le menu header
+   */
+  public toggleHeaderMenu(): void {
+    this.isHeaderMenuOpen = !this.isHeaderMenuOpen;
+  }
+
+  /**
+   * Ferme le menu header
+   */
+  public closeHeaderMenu(): void {
+    this.isHeaderMenuOpen = false;
+  }
+
+  // ============================================================================
+  // VIDÉOS RÉCENTES
+  // ============================================================================
+
+  /**
+   * Charge les vidéos récentes depuis localStorage
+   */
+  private loadRecentVideos(): void {
+    try {
+      const stored = localStorage.getItem('recentVideos');
+      if (stored) {
+        this.recentVideos = JSON.parse(stored);
+      }
+    } catch {
+      this.recentVideos = [];
+    }
+  }
+
+  /**
+   * Ajoute une vidéo aux récents
+   */
+  private addToRecentVideos(video: Video): void {
+    // Retirer si déjà présente
+    this.recentVideos = this.recentVideos.filter(v => v.path !== video.path);
+    // Ajouter au début
+    this.recentVideos.unshift(video);
+    // Limiter à MAX_RECENT_VIDEOS
+    this.recentVideos = this.recentVideos.slice(0, this.MAX_RECENT_VIDEOS);
+    // Sauvegarder
+    localStorage.setItem('recentVideos', JSON.stringify(this.recentVideos));
+  }
+
+  // ============================================================================
+  // SWIPE GESTURES
+  // ============================================================================
+
+  /**
+   * Gestionnaire de début de touch
+   */
+  public onTouchStart(event: TouchEvent): void {
+    this.touchStartX = event.touches[0].clientX;
+    this.touchStartY = event.touches[0].clientY;
+  }
+
+  /**
+   * Gestionnaire de fin de touch
+   */
+  public onTouchEnd(event: TouchEvent): void {
+    const touchEndX = event.changedTouches[0].clientX;
+    const touchEndY = event.changedTouches[0].clientY;
+
+    const deltaX = touchEndX - this.touchStartX;
+    const deltaY = touchEndY - this.touchStartY;
+
+    // Vérifier que c'est un swipe horizontal (pas vertical)
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > this.SWIPE_THRESHOLD) {
+      if (deltaX > 0) {
+        // Swipe vers la droite = retour
+        this.onSwipeRight();
+      }
+    }
+  }
+
+  /**
+   * Action sur swipe vers la droite (retour)
+   */
+  private onSwipeRight(): void {
+    // Ne pas swiper si on est à la racine
+    if (this.currentView === 'home' && !this.isSearching) {
+      return;
+    }
+
+    // Retour arrière
+    this.handleBack();
+  }
+
+  // ============================================================================
+  // THUMBNAILS
+  // ============================================================================
+
+  /**
+   * Construit l'URL du thumbnail pour une vidéo
+   * Les thumbnails sont générés par le video-processor et stockés dans /home/pi/neopro/thumbnails/
+   * Structure: thumbnails/{category}/{subcategory?}/{videoname}.jpg
+   * Servies par le serveur admin sur le port 8080
+   */
+  public getVideoThumbnailUrl(video: Video): string | null {
+    if (!video.path) return null;
+
+    // Le path de la vidéo est relatif: videos/{category}/{subcategory?}/{filename}.mp4
+    // On remplace "videos/" par "thumbnails/" et l'extension par ".jpg"
+    const thumbnailPath = video.path
+      .replace(/^videos\//, 'thumbnails/')
+      .replace(/\.\w+$/, '.jpg');
+
+    return `${this.ADMIN_BASE_URL}/${thumbnailPath}`;
+  }
+
+  /**
+   * Gère l'erreur de chargement du thumbnail (fallback sur icône)
+   */
+  public onThumbnailError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img) {
+      img.style.display = 'none';
+      // Le parent affichera l'icône SVG comme fallback
+      const parent = img.parentElement;
+      if (parent) {
+        parent.classList.add('thumbnail-error');
+      }
+    }
   }
 }
