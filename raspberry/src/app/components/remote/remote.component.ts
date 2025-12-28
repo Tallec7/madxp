@@ -9,10 +9,11 @@ import { Video } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { DemoConfigService } from '../../services/demo-config.service';
-import { LocalBroadcastService } from '../../services/local-broadcast.service';
+import { LocalBroadcastService, TimerUpdateEvent } from '../../services/local-broadcast.service';
+import { LocalOptionsService, LocalOptions } from '../../services/local-options.service';
 import { ClubSelectorComponent } from '../club-selector/club-selector.component';
 
-type ViewType = 'club-selector' | 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos';
+type ViewType = 'club-selector' | 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos' | 'options';
 
 @Component({
   selector: 'app-remote',
@@ -29,9 +30,13 @@ export class RemoteComponent implements OnInit {
   private readonly analyticsService = inject(AnalyticsService);
   private readonly demoConfigService = inject(DemoConfigService);
   private readonly localBroadcast = inject(LocalBroadcastService);
+  private readonly localOptionsService = inject(LocalOptionsService);
   private readonly ngZone = inject(NgZone);
 
   public configuration!: Configuration;
+
+  // Options locales
+  public localOptions: LocalOptions = this.localOptionsService.getOptions();
   public currentView: ViewType = 'home';
   public breadcrumb: string[] = ['Télécommande'];
   public isDemoMode = false;
@@ -202,8 +207,8 @@ export class RemoteComponent implements OnInit {
       return;
     }
 
-    // Si on est dans "toutes les vidéos", on revient à home
-    if (this.currentView === 'all-videos') {
+    // Si on est dans "toutes les vidéos" ou "options", on revient à home
+    if (this.currentView === 'all-videos' || this.currentView === 'options') {
       this.currentView = 'home';
       this.breadcrumb = ['Télécommande'];
       return;
@@ -886,5 +891,290 @@ export class RemoteComponent implements OnInit {
         parent.classList.add('thumbnail-error');
       }
     }
+  }
+
+  // ============================================================================
+  // OPTIONS LOCALES
+  // ============================================================================
+
+  /**
+   * Ouvre la page des options
+   */
+  public openOptions(): void {
+    this.currentView = 'options';
+    this.breadcrumb = ['Télécommande', 'Options'];
+    this.closeHeaderMenu();
+  }
+
+  /**
+   * Met à jour une option d'overlay
+   */
+  public updateOverlayOption(key: keyof LocalOptions['overlay'], value: boolean): void {
+    this.localOptionsService.updateOverlayOptions({ [key]: value });
+    this.localOptions = this.localOptionsService.getOptions();
+    // Broadcast aux composants TV
+    this.localBroadcast.broadcast('options-update', this.localOptions);
+  }
+
+  /**
+   * Met à jour une option du timer
+   */
+  public updateTimerOption<K extends keyof LocalOptions['timer']>(
+    key: K,
+    value: LocalOptions['timer'][K]
+  ): void {
+    this.localOptionsService.updateTimerOptions({ [key]: value });
+    this.localOptions = this.localOptionsService.getOptions();
+    this.localBroadcast.broadcast('options-update', this.localOptions);
+  }
+
+  /**
+   * Met à jour une option de breaking news
+   */
+  public updateBreakingNewsOption<K extends keyof LocalOptions['breakingNews']>(
+    key: K,
+    value: LocalOptions['breakingNews'][K]
+  ): void {
+    this.localOptionsService.updateBreakingNewsOptions({ [key]: value });
+    this.localOptions = this.localOptionsService.getOptions();
+    this.localBroadcast.broadcast('options-update', this.localOptions);
+  }
+
+  /**
+   * Change le template actif
+   */
+  public setTemplate(template: LocalOptions['template']): void {
+    this.localOptionsService.setTemplate(template);
+    this.localOptions = this.localOptionsService.getOptions();
+    this.localBroadcast.broadcast('options-update', this.localOptions);
+  }
+
+  /**
+   * Ajoute un message rapide personnalisé
+   */
+  public addQuickMessage(message: string): void {
+    if (message.trim()) {
+      this.localOptionsService.addQuickMessage(message);
+      this.localOptions = this.localOptionsService.getOptions();
+    }
+  }
+
+  /**
+   * Supprime un message rapide
+   */
+  public removeQuickMessage(index: number): void {
+    this.localOptionsService.removeQuickMessage(index);
+    this.localOptions = this.localOptionsService.getOptions();
+  }
+
+  /**
+   * Réinitialise les options par défaut
+   */
+  public resetOptions(): void {
+    this.localOptionsService.resetToDefaults();
+    this.localOptions = this.localOptionsService.getOptions();
+    this.localBroadcast.broadcast('options-update', this.localOptions);
+    this.displayToast('Options réinitialisées', 'success');
+  }
+
+  /**
+   * Durées de mi-temps disponibles (en minutes)
+   */
+  public readonly halfDurations = [15, 20, 25, 30, 35, 40, 45];
+
+  /**
+   * Durées d'affichage breaking news disponibles (en secondes)
+   */
+  public readonly newsDurations = [5, 10, 15, 20, 30];
+
+  // ============================================================================
+  // BREAKING NEWS
+  // ============================================================================
+
+  public showBreakingNewsPanel = false;
+  public breakingNewsMessage = '';
+
+  // ============================================================================
+  // TIMER / CHRONOMÈTRE
+  // ============================================================================
+
+  public timerCurrentTime = 0; // temps en secondes
+  public timerIsRunning = false;
+  private timerInterval: ReturnType<typeof setInterval> | null = null;
+
+  /**
+   * Ouvre/ferme le panneau de saisie des breaking news
+   */
+  public toggleBreakingNewsPanel(): void {
+    if (!this.localOptions.breakingNews.enabled) {
+      this.displayToast('Activez les annonces dans les Options', 'info');
+      return;
+    }
+    this.showBreakingNewsPanel = !this.showBreakingNewsPanel;
+  }
+
+  /**
+   * Envoie une breaking news à la TV
+   */
+  public sendBreakingNews(message?: string): void {
+    const text = message || this.breakingNewsMessage.trim();
+    if (!text) return;
+
+    this.localBroadcast.emitBreakingNews({
+      message: text,
+      duration: this.localOptions.breakingNews.defaultDuration,
+      position: this.localOptions.breakingNews.position,
+      displayMode: this.localOptions.breakingNews.displayMode
+    });
+
+    this.breakingNewsMessage = '';
+    this.showBreakingNewsPanel = false;
+    this.displayToast('Annonce envoyée', 'success');
+  }
+
+  /**
+   * Envoie un message rapide prédéfini
+   */
+  public sendQuickNews(message: string): void {
+    this.sendBreakingNews(message);
+  }
+
+  // ============================================================================
+  // TIMER CONTROLS
+  // ============================================================================
+
+  /**
+   * Démarre ou met en pause le chronomètre
+   */
+  public toggleTimer(): void {
+    if (this.timerIsRunning) {
+      this.pauseTimer();
+    } else {
+      this.startTimer();
+    }
+  }
+
+  /**
+   * Démarre le chronomètre
+   */
+  public startTimer(): void {
+    if (this.timerIsRunning) return;
+
+    this.timerIsRunning = true;
+
+    // Émettre l'événement start
+    this.localBroadcast.emitTimerUpdate({
+      action: 'start',
+      currentTime: this.timerCurrentTime,
+      isRunning: true,
+      halfDuration: this.localOptions.timer.halfDuration,
+      countDown: this.localOptions.timer.countDown
+    });
+
+    // Démarrer le timer local
+    this.timerInterval = setInterval(() => {
+      if (this.localOptions.timer.countDown) {
+        // Compte à rebours
+        if (this.timerCurrentTime > 0) {
+          this.timerCurrentTime--;
+        } else {
+          this.pauseTimer();
+          this.displayToast('Mi-temps terminée !', 'info');
+        }
+      } else {
+        // Compteur croissant
+        const maxTime = this.localOptions.timer.halfDuration * 60;
+        if (this.timerCurrentTime < maxTime) {
+          this.timerCurrentTime++;
+        } else {
+          this.pauseTimer();
+          this.displayToast('Mi-temps terminée !', 'info');
+        }
+      }
+
+      // Synchroniser toutes les 5 secondes
+      if (this.timerCurrentTime % 5 === 0) {
+        this.syncTimer();
+      }
+    }, 1000);
+
+    this.displayToast('Chronomètre démarré', 'success');
+  }
+
+  /**
+   * Met en pause le chronomètre
+   */
+  public pauseTimer(): void {
+    if (!this.timerIsRunning) return;
+
+    this.timerIsRunning = false;
+
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+
+    // Émettre l'événement pause
+    this.localBroadcast.emitTimerUpdate({
+      action: 'pause',
+      currentTime: this.timerCurrentTime,
+      isRunning: false
+    });
+
+    this.displayToast('Chronomètre en pause', 'info');
+  }
+
+  /**
+   * Réinitialise le chronomètre
+   */
+  public resetTimer(): void {
+    this.pauseTimer();
+
+    // Réinitialiser selon le mode
+    if (this.localOptions.timer.countDown) {
+      this.timerCurrentTime = this.localOptions.timer.halfDuration * 60;
+    } else {
+      this.timerCurrentTime = 0;
+    }
+
+    // Émettre l'événement reset
+    this.localBroadcast.emitTimerUpdate({
+      action: 'reset',
+      currentTime: this.timerCurrentTime,
+      isRunning: false,
+      halfDuration: this.localOptions.timer.halfDuration,
+      countDown: this.localOptions.timer.countDown
+    });
+
+    this.displayToast('Chronomètre réinitialisé', 'success');
+  }
+
+  /**
+   * Synchronise le timer avec la TV
+   */
+  private syncTimer(): void {
+    this.localBroadcast.emitTimerUpdate({
+      action: 'sync',
+      currentTime: this.timerCurrentTime,
+      isRunning: this.timerIsRunning,
+      halfDuration: this.localOptions.timer.halfDuration,
+      countDown: this.localOptions.timer.countDown
+    });
+  }
+
+  /**
+   * Formate le temps en MM:SS
+   */
+  public formatTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Temps d'affichage (selon mode countdown ou non)
+   */
+  public getDisplayTime(): string {
+    return this.formatTime(this.timerCurrentTime);
   }
 }

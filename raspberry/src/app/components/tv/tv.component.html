@@ -2,7 +2,14 @@
 <video #target class="video-js vjs-default-skin vjs-big-play-centered vjs-16-9" playsinline></video>
 
 <!-- Overlay Score (position dynamique selon configuration) -->
-<div class="score-overlay" *ngIf="showScoreOverlay && currentScore" [ngStyle]="getOverlayStyles()">
+<div
+  class="score-overlay"
+  *ngIf="showScoreOverlay && currentScore && localOptions.overlay.scoreEnabled"
+  [ngStyle]="getOverlayStyles()"
+  [class.template-sportif]="localOptions.template === 'sportif'"
+  [class.template-elegant]="localOptions.template === 'elegant'"
+  [class.template-minimal]="localOptions.template === 'minimal'"
+>
   <div class="score-container">
     <div class="team home-team">
       <span class="team-name" [ngStyle]="getTeamNameStyles()">{{ currentScore.homeTeam }}</span>
@@ -14,8 +21,75 @@
       <span class="team-name" [ngStyle]="getTeamNameStyles()">{{ currentScore.awayTeam }}</span>
     </div>
   </div>
-  <div class="score-meta" *ngIf="currentScore.period || currentScore.matchTime">
+  <div
+    class="score-meta"
+    *ngIf="
+      currentScore.period ||
+      currentScore.matchTime ||
+      (localOptions.timer.enabled && timerIsRunning)
+    "
+  >
     <span class="period" *ngIf="currentScore.period">{{ currentScore.period }}</span>
-    <span class="match-time" *ngIf="currentScore.matchTime">{{ currentScore.matchTime }}</span>
+    <span class="match-time" *ngIf="localOptions.timer.enabled && timerIsRunning">{{
+      formatTimerDisplay()
+    }}</span>
+    <span
+      class="match-time"
+      *ngIf="currentScore.matchTime && (!localOptions.timer.enabled || !timerIsRunning)"
+      >{{ currentScore.matchTime }}</span
+    >
+  </div>
+</div>
+
+<!-- Timer Overlay (standalone quand pas de score) -->
+<div
+  class="timer-overlay"
+  *ngIf="localOptions.timer.enabled && timerIsRunning && !showScoreOverlay"
+  [ngStyle]="getTimerOverlayStyles()"
+  [class.template-sportif]="localOptions.template === 'sportif'"
+  [class.template-elegant]="localOptions.template === 'elegant'"
+  [class.template-minimal]="localOptions.template === 'minimal'"
+>
+  <span class="timer-value">{{ formatTimerDisplay() }}</span>
+</div>
+
+<!-- Popup But (animation centrale lors d'un but) -->
+<div class="score-popup" *ngIf="showGoalPopup && currentScore">
+  <div
+    class="popup-content"
+    [class.home-scored]="goalScoringTeam === 'home'"
+    [class.away-scored]="goalScoringTeam === 'away'"
+  >
+    <div class="popup-teams">
+      <div class="popup-team home">
+        <span class="popup-team-name">{{ currentScore.homeTeam }}</span>
+        <span class="popup-team-score">{{ currentScore.homeScore }}</span>
+      </div>
+      <span class="popup-separator">-</span>
+      <div class="popup-team away">
+        <span class="popup-team-score">{{ currentScore.awayScore }}</span>
+        <span class="popup-team-name">{{ currentScore.awayTeam }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Breaking News Banner -->
+<div
+  class="breaking-news-banner"
+  *ngIf="showBreakingNews && currentBreakingNews"
+  [class.position-top]="currentBreakingNews.position === 'top'"
+  [class.position-bottom]="currentBreakingNews.position === 'bottom'"
+  [class.mode-scroll]="currentBreakingNews.displayMode === 'scroll'"
+  [class.mode-truncate]="currentBreakingNews.displayMode === 'truncate'"
+  [class.mode-multiline]="currentBreakingNews.displayMode === 'multiline'"
+>
+  <div class="breaking-news-content">
+    <span class="breaking-news-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+      </svg>
+    </span>
+    <span class="breaking-news-text">{{ currentBreakingNews.message }}</span>
   </div>
 </div>
