@@ -8,7 +8,8 @@ import Player from 'video.js/dist/types/player';
 import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { SponsorAnalyticsService } from '../../services/sponsor-analytics.service';
-import { LocalBroadcastService, ScoreUpdateEvent, PhaseChangeEvent } from '../../services/local-broadcast.service';
+import { LocalBroadcastService, ScoreUpdateEvent, PhaseChangeEvent, OptionsUpdateEvent, BreakingNewsEvent, TimerUpdateEvent } from '../../services/local-broadcast.service';
+import { LocalOptionsService, LocalOptions } from '../../services/local-options.service';
 import { Video } from '../../interfaces/video.interface';
 import { Configuration } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
@@ -39,9 +40,13 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly analyticsService = inject(AnalyticsService);
   private readonly sponsorAnalytics = inject(SponsorAnalyticsService);
   private readonly localBroadcast = inject(LocalBroadcastService);
+  private readonly localOptionsService = inject(LocalOptionsService);
   private readonly http = inject(HttpClient);
 
   private localBroadcastSubscriptions: Subscription[] = [];
+
+  // Options locales (provenant de Remote)
+  public localOptions: LocalOptions = this.localOptionsService.getOptions();
 
   @Input() public configuration: Configuration;
 
@@ -57,6 +62,22 @@ export class TvComponent implements OnInit, OnDestroy {
   // Live Score
   public currentScore: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; period?: string; matchTime?: string } | null = null;
   public showScoreOverlay = false;
+
+  // Goal Popup
+  public showGoalPopup = false;
+  public goalScoringTeam: 'home' | 'away' | null = null;
+  private goalPopupTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // Breaking News
+  public showBreakingNews = false;
+  public currentBreakingNews: BreakingNewsEvent | null = null;
+  private breakingNewsTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // Timer / Chronomètre
+  public timerCurrentTime = 0;
+  public timerIsRunning = false;
+  public timerCountDown = false;
+  public timerHalfDuration = 45;
 
   @ViewChild('target', { static: true }) target: ElementRef;
 
@@ -244,6 +265,115 @@ export class TvComponent implements OnInit, OnDestroy {
         }
       })
     );
+
+    // Écouter les mises à jour d'options via BroadcastChannel (local)
+    this.localBroadcastSubscriptions.push(
+      this.localBroadcast.onOptionsUpdate().subscribe((options: OptionsUpdateEvent) => {
+        console.log('[TV] Local options update received:', options);
+        this.localOptions = options as LocalOptions;
+
+        // Masquer l'overlay si désactivé
+        if (!options.overlay.scoreEnabled) {
+          this.showScoreOverlay = false;
+        }
+      })
+    );
+
+    // Écouter les breaking news via BroadcastChannel (local)
+    this.localBroadcastSubscriptions.push(
+      this.localBroadcast.onBreakingNews().subscribe((news: BreakingNewsEvent) => {
+        console.log('[TV] Breaking news received:', news);
+        this.displayBreakingNews(news);
+      })
+    );
+
+    // Écouter les mises à jour du timer via BroadcastChannel (local)
+    this.localBroadcastSubscriptions.push(
+      this.localBroadcast.onTimerUpdate().subscribe((timerEvent: TimerUpdateEvent) => {
+        console.log('[TV] Timer update received:', timerEvent);
+        this.handleTimerUpdate(timerEvent);
+      })
+    );
+  }
+
+  /**
+   * Affiche une breaking news sur l'écran
+   */
+  private displayBreakingNews(news: BreakingNewsEvent): void {
+    // Annuler un timeout précédent si existant
+    if (this.breakingNewsTimeout) {
+      clearTimeout(this.breakingNewsTimeout);
+    }
+
+    this.currentBreakingNews = news;
+    this.showBreakingNews = true;
+
+    // Masquer après la durée spécifiée
+    this.breakingNewsTimeout = setTimeout(() => {
+      this.showBreakingNews = false;
+      this.currentBreakingNews = null;
+    }, news.duration * 1000);
+  }
+
+  /**
+   * Gère les mises à jour du timer (provenant de Remote)
+   */
+  private handleTimerUpdate(event: TimerUpdateEvent): void {
+    if (event.currentTime !== undefined) {
+      this.timerCurrentTime = event.currentTime;
+    }
+    if (event.isRunning !== undefined) {
+      this.timerIsRunning = event.isRunning;
+    }
+    if (event.halfDuration !== undefined) {
+      this.timerHalfDuration = event.halfDuration;
+    }
+    if (event.countDown !== undefined) {
+      this.timerCountDown = event.countDown;
+    }
+  }
+
+  /**
+   * Formate le temps du timer en MM:SS
+   */
+  public formatTimerDisplay(): string {
+    const mins = Math.floor(this.timerCurrentTime / 60);
+    const secs = this.timerCurrentTime % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Styles dynamiques pour l'overlay timer (standalone)
+   */
+  public getTimerOverlayStyles(): Record<string, string> {
+    const config = this.configuration?.scoreOverlay;
+    const position = config?.position || 'top-right';
+    const offsetX = (config?.offsetX ?? 20) + 'px';
+    const offsetY = (config?.offsetY ?? 20) + 'px';
+
+    const styles: Record<string, string> = {
+      'background': config?.backgroundColor || 'rgba(0, 0, 0, 0.85)',
+      'border-radius': (config?.borderRadius ?? 12) + 'px'
+    };
+
+    // Position dynamique (même logique que score overlay)
+    if (position.includes('top')) {
+      styles['top'] = offsetY;
+      styles['bottom'] = 'auto';
+    } else {
+      styles['bottom'] = offsetY;
+      styles['top'] = 'auto';
+    }
+
+    if (position.includes('right')) {
+      styles['right'] = offsetX;
+      styles['left'] = 'auto';
+    } else {
+      styles['left'] = offsetX;
+      styles['right'] = 'auto';
+    }
+
+    return styles;
   }
 
   public ngOnDestroy() {
@@ -414,8 +544,43 @@ export class TvComponent implements OnInit, OnDestroy {
     period?: string;
     matchTime?: string;
   }): void {
+    // Détecter si un but a été marqué (et par quelle équipe)
+    if (this.currentScore && this.localOptions.overlay.goalPopupEnabled) {
+      const homeScored = scoreData.homeScore > this.currentScore.homeScore;
+      const awayScored = scoreData.awayScore > this.currentScore.awayScore;
+
+      if (homeScored || awayScored) {
+        this.triggerGoalPopup(homeScored ? 'home' : 'away');
+      }
+    }
+
     this.currentScore = scoreData;
-    this.showScoreOverlay = true;
+
+    // Afficher l'overlay selon les options
+    if (this.localOptions.overlay.scoreEnabled) {
+      this.showScoreOverlay = true;
+    }
+  }
+
+  /**
+   * Déclenche l'animation de but (popup centrale)
+   */
+  private triggerGoalPopup(team: 'home' | 'away'): void {
+    // Annuler un timeout précédent si existant
+    if (this.goalPopupTimeout) {
+      clearTimeout(this.goalPopupTimeout);
+    }
+
+    this.goalScoringTeam = team;
+    this.showGoalPopup = true;
+
+    console.log('[TV] Goal popup triggered for team:', team);
+
+    // Masquer après 4 secondes
+    this.goalPopupTimeout = setTimeout(() => {
+      this.showGoalPopup = false;
+      this.goalScoringTeam = null;
+    }, 4000);
   }
 
   /**

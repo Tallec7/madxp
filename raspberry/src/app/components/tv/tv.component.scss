@@ -197,6 +197,298 @@
 }
 
 // ============================================================================
+// BREAKING NEWS BANNER
+// ============================================================================
+
+.breaking-news-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 1500;
+  background: linear-gradient(90deg, #1a1a2e 0%, #16213e 100%);
+  padding: 16px 24px;
+  animation: slideInNews 0.5s ease-out;
+
+  &.position-top {
+    top: 0;
+  }
+
+  &.position-bottom {
+    bottom: 0;
+  }
+}
+
+.breaking-news-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 100%;
+}
+
+.breaking-news-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  color: #667eea;
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.breaking-news-text {
+  font-size: 24px;
+  font-weight: 600;
+  color: white;
+  line-height: 1.3;
+}
+
+// Mode Scroll (texte défilant)
+.breaking-news-banner.mode-scroll {
+  overflow: hidden;
+
+  .breaking-news-content {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .breaking-news-text {
+    display: inline-block;
+    animation: scrollText 15s linear infinite;
+    padding-left: 100%;
+  }
+}
+
+// Mode Truncate (texte tronqué)
+.breaking-news-banner.mode-truncate {
+  .breaking-news-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 60px);
+  }
+}
+
+// Mode Multiline (multi-lignes)
+.breaking-news-banner.mode-multiline {
+  .breaking-news-text {
+    white-space: normal;
+    word-wrap: break-word;
+    max-width: calc(100% - 60px);
+  }
+}
+
+@keyframes slideInNews {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.breaking-news-banner.position-bottom {
+  animation-name: slideInNewsBottom;
+}
+
+@keyframes slideInNewsBottom {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scrollText {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+// ============================================================================
+// TIMER OVERLAY (standalone quand pas de score)
+// ============================================================================
+
+.timer-overlay {
+  position: fixed;
+  z-index: 1000;
+  padding: 10px 18px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  animation: slideIn 0.3s ease-out;
+
+  .timer-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #64b5f6;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+  }
+}
+
+// ============================================================================
+// TEMPLATES OVERLAY
+// ============================================================================
+
+// Template SPORTIF : Style dynamique avec couleurs vives
+.score-overlay.template-sportif,
+.timer-overlay.template-sportif {
+  background: linear-gradient(
+    135deg,
+    rgba(26, 35, 126, 0.95) 0%,
+    rgba(13, 71, 161, 0.95) 100%
+  ) !important;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px !important;
+
+  .score-container {
+    .team-name {
+      color: #ffeb3b !important;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .team-score {
+      color: #ffffff !important;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      font-weight: 900 !important;
+    }
+
+    .score-separator {
+      color: #64b5f6 !important;
+    }
+  }
+
+  .score-meta {
+    border-top-color: rgba(255, 255, 255, 0.3);
+
+    .period {
+      color: #4caf50 !important;
+      background: rgba(76, 175, 80, 0.2);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .match-time {
+      color: #03a9f4 !important;
+    }
+  }
+
+  .timer-value {
+    color: #03a9f4 !important;
+  }
+}
+
+// Template ELEGANT : Style épuré avec gradient subtil
+.score-overlay.template-elegant,
+.timer-overlay.template-elegant {
+  background: linear-gradient(
+    180deg,
+    rgba(33, 33, 33, 0.9) 0%,
+    rgba(50, 50, 50, 0.85) 100%
+  ) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px !important;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+  .score-container {
+    .team-name {
+      color: #e0e0e0 !important;
+      font-weight: 400 !important;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-size: 14px !important;
+    }
+
+    .team-score {
+      color: #fafafa !important;
+      font-weight: 300 !important;
+      font-size: 32px !important;
+    }
+
+    .score-separator {
+      color: #757575 !important;
+      font-weight: 100 !important;
+    }
+  }
+
+  .score-meta {
+    border-top-color: rgba(255, 255, 255, 0.1);
+
+    .period {
+      color: #b39ddb !important;
+      font-style: italic;
+    }
+
+    .match-time {
+      color: #90caf9 !important;
+      font-weight: 300;
+    }
+  }
+
+  .timer-value {
+    color: #90caf9 !important;
+    font-weight: 300 !important;
+    font-size: 28px !important;
+  }
+}
+
+// Template MINIMAL : Style ultra-simple
+.score-overlay.template-minimal,
+.timer-overlay.template-minimal {
+  background: rgba(0, 0, 0, 0.6) !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 8px 12px !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(4px);
+
+  .score-container {
+    gap: 8px !important;
+
+    .team {
+      gap: 4px !important;
+    }
+
+    .team-name {
+      display: none !important; // Masquer les noms d'équipe en mode minimal
+    }
+
+    .team-score {
+      color: #ffffff !important;
+      font-size: 36px !important;
+      font-weight: 500 !important;
+    }
+
+    .score-separator {
+      color: #888888 !important;
+      font-size: 28px !important;
+    }
+  }
+
+  .score-meta {
+    display: none !important; // Masquer les méta en mode minimal
+  }
+
+  .timer-value {
+    color: #ffffff !important;
+    font-size: 20px !important;
+    font-weight: 400 !important;
+  }
+}
+
+// ============================================================================
 // RESPONSIVE (pour tests sur desktop)
 // ============================================================================
 

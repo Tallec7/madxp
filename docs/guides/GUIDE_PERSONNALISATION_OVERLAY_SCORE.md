@@ -4,49 +4,102 @@ Ce guide explique comment modifier l'apparence de l'overlay du score affiché su
 
 ---
 
-## Prérequis
+## Deux modes de personnalisation
+
+### Mode 1 : Via Central Dashboard (paramètres serveur)
+
+Configuration centralisée, déployée sur le Raspberry Pi.
+
+**Prérequis** :
 
 - Accès au **Central Dashboard** (https://neopro-central.onrender.com)
 - Le site doit avoir l'option **"Score en Live"** activée
 
----
-
-## Étapes
-
-### 1. Accéder au site
+**Étapes** :
 
 1. Se connecter au Central Dashboard
-2. Aller dans **Sites**
-3. Cliquer sur le site à modifier
+2. Aller dans **Sites** → Cliquer sur le site
+3. Activer **"Score en Live"** dans Options Premium
+4. Cliquer sur **"Personnaliser l'apparence"**
+5. Ajuster les paramètres, vérifier l'aperçu
+6. Cliquer sur **"Déployer sur le boîtier"**
 
-### 2. Activer le Score en Live (si pas déjà fait)
+---
 
-Dans la section **"Options Premium"**, activer le toggle **"Score en Live"**.
+### Mode 2 : Via Télécommande (paramètres locaux) - NOUVEAU
 
-### 3. Ouvrir les paramètres d'apparence
+Configuration locale depuis la télécommande, stockée en localStorage.
 
-Cliquer sur le bouton **"Personnaliser l'apparence"** qui apparaît sous le toggle.
+**Avantages** :
 
-### 4. Modifier les paramètres
+- ✅ Modification instantanée sans déploiement
+- ✅ Fonctionne hors ligne
+- ✅ Parfait pour ajustements rapides pendant un match
 
-| Paramètre                | Description                                                                              |
-| ------------------------ | ---------------------------------------------------------------------------------------- |
-| **Position**             | Coin de l'écran où afficher l'overlay (Haut droite, Haut gauche, Bas droite, Bas gauche) |
-| **Distance horizontale** | Espace entre l'overlay et le bord gauche/droit (en pixels)                               |
-| **Distance verticale**   | Espace entre l'overlay et le bord haut/bas (en pixels)                                   |
-| **Arrondi des coins**    | Courbure des coins de l'overlay (0 = carré, 20+ = très arrondi)                          |
-| **Couleur du score**     | Couleur des chiffres du score                                                            |
-| **Taille du score**      | Taille des chiffres du score (en pixels)                                                 |
-| **Couleur des équipes**  | Couleur des noms d'équipe                                                                |
-| **Taille noms équipes**  | Taille des noms d'équipe (en pixels)                                                     |
+**Accès** :
 
-### 5. Vérifier l'aperçu
+1. Ouvrir la télécommande (http://neopro.local/remote)
+2. Cliquer sur l'onglet **"Options"** (icône engrenage)
 
-L'aperçu en bas du formulaire montre en temps réel à quoi ressemblera l'overlay.
+---
 
-### 6. Déployer
+## Paramètres disponibles
 
-Cliquer sur **"Déployer sur le boîtier"** pour envoyer la configuration au Raspberry Pi.
+### Paramètres communs (Central Dashboard + Télécommande)
+
+| Paramètre               | Description                             |
+| ----------------------- | --------------------------------------- |
+| **Position**            | Coin de l'écran (9 positions possibles) |
+| **Couleur du score**    | Couleur des chiffres du score           |
+| **Taille du score**     | Taille des chiffres (16-72px)           |
+| **Couleur des équipes** | Couleur des noms d'équipe               |
+| **Taille noms équipes** | Taille des noms (10-36px)               |
+| **Arrondi des coins**   | Courbure (0 = carré, 50 = très arrondi) |
+
+### Paramètres exclusifs télécommande
+
+| Paramètre         | Description                                             |
+| ----------------- | ------------------------------------------------------- |
+| **Template**      | Style prédéfini (Sportif, Élégant, Minimal)             |
+| **Timer**         | Chronomètre intégré avec Start/Pause/Reset              |
+| **Breaking News** | Bandeau info avec 3 modes (scroll, truncate, multiline) |
+
+---
+
+## Templates disponibles (télécommande)
+
+| Template    | Style                                | Usage recommandé          |
+| ----------- | ------------------------------------ | ------------------------- |
+| **Sportif** | Gradient bleu, couleurs vives        | Matchs dynamiques         |
+| **Élégant** | Gradient gris, épuré                 | Événements formels        |
+| **Minimal** | Noir semi-transparent, ultra-discret | Contenu vidéo prioritaire |
+
+---
+
+## Fonctionnalités télécommande
+
+### Timer / Chronomètre
+
+- **Start** : Démarre le chronomètre
+- **Pause** : Met en pause (garde le temps)
+- **Reset** : Remet à zéro
+- **Affichage** : Intégré à l'overlay score si actif, sinon overlay standalone
+- **Sync** : Synchronisation TV automatique toutes les 5 secondes
+
+### Breaking News
+
+- **Mode scroll** : Texte défile horizontalement (animation 15s)
+- **Mode truncate** : Texte tronqué avec "..."
+- **Mode multiline** : Texte multi-lignes
+- **Position** : Haut ou bas de l'écran
+
+### Goal Popup
+
+Quand vous cliquez sur "+1" pour le score :
+
+- Animation centrale pendant 3 secondes
+- Effet scale + pulse
+- Affiche le nouveau score
 
 ---
 

@@ -1,8 +1,8 @@
 # BACKLOG NEOPRO - Features à Développer
 
 > **Date de création** : 15 Décembre 2025
-> **Dernière MAJ** : 26 Décembre 2025
-> **Statut projet** : 🟢 Production-Ready v2.1 (voir `STATUS.md`)
+> **Dernière MAJ** : 28 Décembre 2025
+> **Statut projet** : 🟢 Production-Ready v2.2 (voir `STATUS.md`)
 
 Ce document regroupe les features planifiées et leur état d'avancement.
 
@@ -20,6 +20,37 @@ Ce document regroupe les features planifiées et leur état d'avancement.
 ---
 
 ## ✅ FEATURES TERMINÉES RÉCEMMENT
+
+### ✅ Overlay Local System - **TERMINÉ 28 Déc 2025**
+
+**Statut** : 🟢 100% Implémenté
+
+**Contexte** : Après analyse des solutions d'intégration scores externes (Bodet, Stramatel, FDME), aucune API publique n'existe pour clubs amateurs. Solution retenue : double saisie locale par l'opérateur de table de marque.
+
+**Fonctionnalités implémentées** :
+
+- ✅ **Page Options** - Persistence localStorage, templates, positions, couleurs, tailles
+- ✅ **Timer / Chronomètre** - Start/Pause/Reset, sync TV toutes les 5s via BroadcastChannel
+- ✅ **Breaking News** - Bandeau info avec 3 modes (scroll, truncate, multiline)
+- ✅ **Goal Popup** - Animation centrale lors d'un but (3s, scale + pulse)
+- ✅ **3 Templates Overlay** - Sportif (vif), Élégant (épuré), Minimal (discret)
+
+**Architecture** :
+
+- Communication Remote ↔ TV via BroadcastChannel API
+- Persistence options via localStorage
+- Aucune dépendance serveur pour fonctionnement local
+
+**Fichiers principaux** :
+
+- `raspberry/src/app/services/local-options.service.ts` (nouveau)
+- `raspberry/src/app/services/local-broadcast.service.ts` (modifié)
+- `raspberry/src/app/components/remote/remote.component.*` (modifié)
+- `raspberry/src/app/components/tv/tv.component.*` (modifié)
+
+**Documentation** : `docs/changelog/2025-12-28_overlay-local-system.md`
+
+---
 
 ### ✅ Multi-tenant Portals & Admin Améliorations - **TERMINÉ 26 Déc 2025**
 
@@ -920,6 +951,15 @@ CREATE TABLE api_usage_logs (
 - ✅ Admin gestion des agences - **TERMINÉ**
 - ✅ Améliorations admin Raspberry (upload, thumbnails, preview) - **TERMINÉ**
 
+**Sprint Décembre 2025 - Addendum (28 Déc)** :
+
+- ✅ Overlay Local System - **TERMINÉ**
+  - Page Options avec persistence localStorage
+  - Timer/Chronomètre avec sync BroadcastChannel
+  - Breaking News (3 modes : scroll, truncate, multiline)
+  - Goal Popup animation
+  - 3 Templates (Sportif, Élégant, Minimal)
+
 ---
 
 ## 📝 NOTES
@@ -929,7 +969,7 @@ CREATE TABLE api_usage_logs (
 - Chaque feature nécessite validation Business avant dev
 - Les efforts sont des estimations, à affiner en planning poker
 
-**Dernière mise à jour** : 26 Décembre 2025
+**Dernière mise à jour** : 28 Décembre 2025
 **Prochaine revue backlog** : 15 Janvier 2026
 
 ---

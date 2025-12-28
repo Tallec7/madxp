@@ -17,6 +17,9 @@ export class LocalBroadcastService implements OnDestroy {
   private scoreUpdate$ = new Subject<ScoreUpdateEvent>();
   private phaseChange$ = new Subject<PhaseChangeEvent>();
   private command$ = new Subject<CommandEvent>();
+  private optionsUpdate$ = new Subject<OptionsUpdateEvent>();
+  private breakingNews$ = new Subject<BreakingNewsEvent>();
+  private timerUpdate$ = new Subject<TimerUpdateEvent>();
 
   constructor() {
     this.initChannel();
@@ -49,6 +52,15 @@ export class LocalBroadcastService implements OnDestroy {
         break;
       case 'command':
         this.command$.next(message.payload as CommandEvent);
+        break;
+      case 'options-update':
+        this.optionsUpdate$.next(message.payload as OptionsUpdateEvent);
+        break;
+      case 'breaking-news':
+        this.breakingNews$.next(message.payload as BreakingNewsEvent);
+        break;
+      case 'timer-update':
+        this.timerUpdate$.next(message.payload as TimerUpdateEvent);
         break;
     }
   }
@@ -113,6 +125,41 @@ export class LocalBroadcastService implements OnDestroy {
     return this.command$.asObservable();
   }
 
+  /**
+   * Observable des mises à jour d'options
+   */
+  public onOptionsUpdate(): Observable<OptionsUpdateEvent> {
+    return this.optionsUpdate$.asObservable();
+  }
+
+  /**
+   * Émet une breaking news
+   */
+  public emitBreakingNews(news: BreakingNewsEvent): void {
+    this.broadcast('breaking-news', news);
+  }
+
+  /**
+   * Observable des breaking news
+   */
+  public onBreakingNews(): Observable<BreakingNewsEvent> {
+    return this.breakingNews$.asObservable();
+  }
+
+  /**
+   * Émet une mise à jour du timer
+   */
+  public emitTimerUpdate(update: TimerUpdateEvent): void {
+    this.broadcast('timer-update', update);
+  }
+
+  /**
+   * Observable des mises à jour du timer
+   */
+  public onTimerUpdate(): Observable<TimerUpdateEvent> {
+    return this.timerUpdate$.asObservable();
+  }
+
   public ngOnDestroy(): void {
     if (this.channel) {
       this.channel.close();
@@ -121,11 +168,14 @@ export class LocalBroadcastService implements OnDestroy {
     this.scoreUpdate$.complete();
     this.phaseChange$.complete();
     this.command$.complete();
+    this.optionsUpdate$.complete();
+    this.breakingNews$.complete();
+    this.timerUpdate$.complete();
   }
 }
 
 // Types
-export type BroadcastMessageType = 'score-update' | 'score-reset' | 'phase-change' | 'command';
+export type BroadcastMessageType = 'score-update' | 'score-reset' | 'phase-change' | 'command' | 'options-update' | 'breaking-news' | 'timer-update';
 
 export interface BroadcastMessage {
   type: BroadcastMessageType;
@@ -148,4 +198,39 @@ export interface PhaseChangeEvent {
 export interface CommandEvent {
   type: string;
   data?: unknown;
+}
+
+export interface OptionsUpdateEvent {
+  overlay: {
+    scoreEnabled: boolean;
+    goalPopupEnabled: boolean;
+  };
+  timer: {
+    enabled: boolean;
+    halfDuration: number;
+    countDown: boolean;
+  };
+  breakingNews: {
+    enabled: boolean;
+    position: 'top' | 'bottom';
+    defaultDuration: number;
+    displayMode: 'scroll' | 'truncate' | 'multiline';
+    quickMessages: string[];
+  };
+  template: 'sportif' | 'elegant' | 'minimal';
+}
+
+export interface BreakingNewsEvent {
+  message: string;
+  duration: number; // en secondes
+  position: 'top' | 'bottom';
+  displayMode: 'scroll' | 'truncate' | 'multiline';
+}
+
+export interface TimerUpdateEvent {
+  action: 'start' | 'pause' | 'reset' | 'sync';
+  currentTime?: number; // temps actuel en secondes
+  isRunning?: boolean;
+  halfDuration?: number; // durée mi-temps en minutes
+  countDown?: boolean;
 }
