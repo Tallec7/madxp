@@ -9,6 +9,7 @@ Ce guide vous accompagne dans l'utilisation quotidienne de la plateforme NEOPRO 
 ## Table des matières
 
 ### Partie 1 : Guide Club (Utilisation locale)
+
 1. [Premier démarrage](#1-premier-démarrage)
 2. [Connexion locale](#2-connexion-locale)
 3. [Guide jour de match](#3-guide-jour-de-match)
@@ -17,6 +18,7 @@ Ce guide vous accompagne dans l'utilisation quotidienne de la plateforme NEOPRO 
 6. [Dépannage rapide](#6-dépannage-rapide)
 
 ### Partie 2 : Guide Dashboard (Gestionnaires)
+
 7. [Connexion au dashboard](#7-connexion-au-dashboard)
 8. [Tableau de bord](#8-tableau-de-bord)
 9. [Gestion des sites](#9-gestion-des-sites)
@@ -64,6 +66,7 @@ Votre système NEOPRO se compose d'un boîtier (Raspberry Pi) connecté à votre
 ### Démarrage automatique
 
 Le boîtier démarre automatiquement :
+
 1. Logo NEOPRO pendant le chargement (~30 secondes)
 2. Page d'accueil avec le nom de votre club
 3. Vos vidéos commencent à défiler automatiquement
@@ -73,6 +76,7 @@ Le boîtier démarre automatiquement :
 ### Vérification de bon fonctionnement
 
 Vous devriez voir :
+
 - ✅ Le logo ou nom de votre club
 - ✅ Les vidéos de vos sponsors en boucle
 - ✅ Une qualité d'image nette
@@ -99,17 +103,48 @@ Une fois connecté au WiFi NEOPRO :
 
 1. **Ouvrez votre navigateur** (Safari, Chrome, Firefox...)
 2. **Tapez l'adresse** : `http://192.168.4.1`
-3. **La télécommande s'affiche** automatiquement
+3. **Page de connexion** : Entrez le mot de passe fourni lors de l'installation
+4. **La télécommande s'affiche** après authentification
+
+### Page de connexion
+
+La page de connexion affiche :
+
+- Le logo **neopro.**
+- Un champ de mot de passe avec placeholder "Mot de passe"
+- Le nom de votre club et sport en bas (ex: "NTES - Handball")
+
+```
+┌────────────────────────────────────────┐
+│                                        │
+│              neopro.                   │
+│                                        │
+│   ┌────────────────────────────────┐   │
+│   │  Mot de passe                  │   │
+│   └────────────────────────────────┘   │
+│                                        │
+│   ┌────────────────────────────────┐   │
+│   │        Se connecter            │   │
+│   └────────────────────────────────┘   │
+│                                        │
+│          NTES - Handball               │
+│                                        │
+└────────────────────────────────────────┘
+```
+
+> 💡 **Premier démarrage** : Si aucun mot de passe n'est configuré, vous serez invité à en créer un. Un indicateur de force (Faible/Moyen/Fort) vous guide.
 
 ### Créer un raccourci rapide
 
 #### Sur iPhone (Safari) :
+
 1. Ouvrez la page dans Safari
 2. Appuyez sur l'icône de partage (carré avec flèche)
 3. Sélectionnez "Sur l'écran d'accueil"
 4. Nommez le raccourci "NEOPRO"
 
 #### Sur Android (Chrome) :
+
 1. Ouvrez la page dans Chrome
 2. Appuyez sur les 3 points en haut à droite
 3. Sélectionnez "Ajouter à l'écran d'accueil"
@@ -147,22 +182,22 @@ Le jour de match est le moment idéal pour profiter pleinement de votre système
 
 ### Pendant le match
 
-| Moment | Action recommandée |
-|--------|-------------------|
-| **Avant l'entrée des équipes** | Animations d'ambiance |
-| **Pendant le match** | Logo du club ou sponsors |
-| **Mi-temps** | Vidéos sponsors (audience maximale!) |
-| **Après le match** | Sponsors pendant la sortie du public |
+| Moment                         | Action recommandée                   |
+| ------------------------------ | ------------------------------------ |
+| **Avant l'entrée des équipes** | Animations d'ambiance                |
+| **Pendant le match**           | Logo du club ou sponsors             |
+| **Mi-temps**                   | Vidéos sponsors (audience maximale!) |
+| **Après le match**             | Sponsors pendant la sortie du public |
 
 ### Actions rapides télécommande
 
-| Action | Bouton |
-|--------|--------|
-| Pause vidéo | ⏸️ Pause |
-| Reprendre | ▶️ Play |
-| Vidéo suivante | ⏭️ Suivant |
+| Action           | Bouton       |
+| ---------------- | ------------ |
+| Pause vidéo      | ⏸️ Pause     |
+| Reprendre        | ▶️ Play      |
+| Vidéo suivante   | ⏭️ Suivant   |
 | Vidéo précédente | ⏮️ Précédent |
-| Afficher le logo | 🏠 Accueil |
+| Afficher le logo | 🏠 Accueil   |
 
 ### Après le match
 
@@ -202,14 +237,14 @@ La télécommande web est votre interface principale pour contrôler le système
 
 ### Contrôles de lecture
 
-| Icône | Action | Description |
-|-------|--------|-------------|
-| ▶️ | Play | Lance la lecture |
-| ⏸️ | Pause | Met en pause |
-| ⏭️ | Suivant | Passe à la vidéo suivante |
-| ⏮️ | Précédent | Revient à la vidéo précédente |
-| 🔄 | Boucle | Active/désactive la lecture en boucle |
-| 🔀 | Aléatoire | Lecture aléatoire |
+| Icône | Action    | Description                           |
+| ----- | --------- | ------------------------------------- |
+| ▶️    | Play      | Lance la lecture                      |
+| ⏸️    | Pause     | Met en pause                          |
+| ⏭️    | Suivant   | Passe à la vidéo suivante             |
+| ⏮️    | Précédent | Revient à la vidéo précédente         |
+| 🔄    | Boucle    | Active/désactive la lecture en boucle |
+| 🔀    | Aléatoire | Lecture aléatoire                     |
 
 ### Sélection de playlist
 
@@ -263,11 +298,11 @@ L'interface d'administration permet de gérer les paramètres avancés.
 
 ### Actions disponibles
 
-| Action | Description |
-|--------|-------------|
-| **🔄 Sync** | Force une synchronisation avec le serveur central |
-| **🔃 Redémarrer** | Redémarre le système (~60 secondes) |
-| **📋 Logs** | Consulte l'historique d'activité |
+| Action            | Description                                       |
+| ----------------- | ------------------------------------------------- |
+| **🔄 Sync**       | Force une synchronisation avec le serveur central |
+| **🔃 Redémarrer** | Redémarre le système (~60 secondes)               |
+| **📋 Logs**       | Consulte l'historique d'activité                  |
 
 ### Informations système
 
@@ -283,22 +318,26 @@ L'interface d'administration permet de gérer les paramètres avancés.
 ### L'écran reste noir
 
 **Vérifications :**
+
 1. ✅ Le boîtier est-il alimenté ? (LED verte allumée)
 2. ✅ Le câble HDMI est-il bien branché ?
 3. ✅ La TV est-elle sur la bonne source HDMI ?
 
 **Solution :**
+
 - Débranchez et rebranchez l'alimentation du boîtier
 - Attendez 60 secondes le redémarrage
 
 ### Impossible de se connecter au WiFi NEOPRO
 
 **Vérifications :**
+
 1. ✅ Êtes-vous à moins de 20 mètres du boîtier ?
 2. ✅ Le réseau `NEOPRO-[CLUB]` apparaît-il ?
 3. ✅ Moins de 5 appareils déjà connectés ?
 
 **Solution :**
+
 - Rapprochez-vous du boîtier
 - Déconnectez d'autres appareils si nécessaire
 - Redémarrez le WiFi de votre smartphone
@@ -306,10 +345,12 @@ L'interface d'administration permet de gérer les paramètres avancés.
 ### La télécommande ne charge pas
 
 **Vérifications :**
+
 1. ✅ Êtes-vous connecté au WiFi NEOPRO ?
 2. ✅ L'adresse est-elle `http://192.168.4.1` (pas https) ?
 
 **Solution :**
+
 - Vérifiez que vous n'êtes plus sur votre WiFi habituel
 - Tapez l'adresse complète avec `http://`
 
@@ -318,6 +359,7 @@ L'interface d'administration permet de gérer les paramètres avancés.
 **Cause possible :** Synchronisation en cours
 
 **Solution :**
+
 1. Accédez à l'admin (`http://192.168.4.1/admin`)
 2. Vérifiez l'espace disque
 3. Lancez une synchronisation manuelle
@@ -325,11 +367,13 @@ L'interface d'administration permet de gérer les paramètres avancés.
 ### Pas de son
 
 **Vérifications :**
+
 1. ✅ Volume TV monté ?
 2. ✅ TV pas en mode muet ?
 3. ✅ Volume télécommande NEOPRO activé ?
 
 **Solution :**
+
 - Augmentez le volume sur la télécommande NEOPRO
 - Vérifiez les paramètres audio TV (sortie HDMI)
 
@@ -341,6 +385,7 @@ Si le problème persiste :
 📞 **Téléphone** : 01 XX XX XX XX
 
 **Informations à fournir :**
+
 - Nom de votre club
 - Description du problème
 - Actions déjà tentées
@@ -388,6 +433,7 @@ Le tableau de bord vous offre une vue d'ensemble de votre parc d'écrans.
 ### Carte des sites
 
 La carte interactive affiche tous vos sites géographiquement :
+
 - **Point vert** : Site en ligne
 - **Point rouge** : Site hors ligne
 - **Point orange** : Site en maintenance
@@ -401,6 +447,7 @@ Cliquez sur un point pour voir les détails du site.
 ### Liste des sites
 
 La page **Sites** affiche tous vos écrans avec :
+
 - Nom du site et club
 - Statut de connexion
 - Dernière activité
@@ -409,6 +456,7 @@ La page **Sites** affiche tous vos écrans avec :
 ### Filtrer les sites
 
 Utilisez les filtres pour trouver rapidement un site :
+
 - **Par statut** : En ligne, Hors ligne, Maintenance
 - **Par sport** : Football, Tennis, Natation, etc.
 - **Par région** : Filtrez par zone géographique
@@ -529,11 +577,11 @@ Les groupes permettent de cibler plusieurs sites facilement :
 
 ### Types d'alertes
 
-| Icône | Type | Description |
-|-------|------|-------------|
-| 🔴 | Critique | Action immédiate requise |
-| 🟠 | Avertissement | Attention recommandée |
-| 🔵 | Information | Pour votre information |
+| Icône | Type          | Description              |
+| ----- | ------------- | ------------------------ |
+| 🔴    | Critique      | Action immédiate requise |
+| 🟠    | Avertissement | Attention recommandée    |
+| 🔵    | Information   | Pour votre information   |
 
 ### Alertes courantes
 
@@ -553,6 +601,7 @@ Les groupes permettent de cibler plusieurs sites facilement :
 ### Configurer les notifications
 
 Dans **Paramètres > Notifications** :
+
 - Activez/désactivez les emails
 - Choisissez les types d'alertes à recevoir
 - Définissez les horaires de notification
@@ -630,29 +679,29 @@ Pour renforcer la sécurité de votre compte :
 
 ## Glossaire
 
-| Terme | Définition |
-|-------|------------|
-| **Site** | Un écran NEOPRO installé dans un club |
-| **Déploiement** | Envoi d'une vidéo vers un ou plusieurs sites |
-| **Groupe** | Ensemble de sites regroupés par critère |
-| **Canary** | Déploiement progressif avec tests préalables |
-| **MFA** | Authentification à deux facteurs |
-| **Playlist** | Liste des vidéos configurées pour un site |
-| **Rollback** | Annulation d'une mise à jour en cas de problème |
+| Terme           | Définition                                      |
+| --------------- | ----------------------------------------------- |
+| **Site**        | Un écran NEOPRO installé dans un club           |
+| **Déploiement** | Envoi d'une vidéo vers un ou plusieurs sites    |
+| **Groupe**      | Ensemble de sites regroupés par critère         |
+| **Canary**      | Déploiement progressif avec tests préalables    |
+| **MFA**         | Authentification à deux facteurs                |
+| **Playlist**    | Liste des vidéos configurées pour un site       |
+| **Rollback**    | Annulation d'une mise à jour en cas de problème |
 
 ---
 
 ## Raccourcis clavier
 
-| Raccourci | Action |
-|-----------|--------|
-| `Ctrl + K` | Recherche rapide |
-| `Ctrl + N` | Nouvelle vidéo |
-| `Ctrl + G` | Aller aux groupes |
-| `Ctrl + S` | Aller aux sites |
-| `Esc` | Fermer la fenêtre modale |
+| Raccourci  | Action                   |
+| ---------- | ------------------------ |
+| `Ctrl + K` | Recherche rapide         |
+| `Ctrl + N` | Nouvelle vidéo           |
+| `Ctrl + G` | Aller aux groupes        |
+| `Ctrl + S` | Aller aux sites          |
+| `Esc`      | Fermer la fenêtre modale |
 
 ---
 
-*Guide mis à jour le 13 décembre 2024*
-*Version 1.0*
+_Guide mis à jour le 28 décembre 2024_
+_Version 1.1_

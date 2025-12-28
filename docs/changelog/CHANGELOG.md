@@ -6,6 +6,7 @@ Généré le 2025-12-08 (Mise à jour 2025-12-28)
 
 ## ✨ Nouvelles fonctionnalités
 
+- **Page Login Raspberry améliorée** - Footer dynamique (clubName/sport), UI modernisée - 2025-12-28
 - [Implémentation des TODOs système](2025-12-28_todos-implementation.md) - 2025-12-28
 - [Système Sponsors Production-Ready](2025-12-28_sponsor-system-production.md) - 2025-12-28
 - [Gestion Utilisateurs & Agences](2025-12-27_user-management-agencies.md) - 2025-12-27
