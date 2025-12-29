@@ -387,9 +387,10 @@ export const getAdvertiserVideos = async (req: AuthRequest, res: Response): Prom
         av.is_primary,
         av.added_at,
         v.filename,
+        v.original_name,
         v.duration,
         v.thumbnail_url,
-        v.status
+        v.file_size
        FROM advertiser_videos av
        JOIN videos v ON v.id = av.video_id
        WHERE av.advertiser_id = $1

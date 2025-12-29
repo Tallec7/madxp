@@ -102,8 +102,8 @@ export class RemoteComponent implements OnInit {
   private touchStartY = 0;
   private readonly SWIPE_THRESHOLD = 50;
 
-  // Thumbnails - URL de base du serveur admin (port 8080)
-  private readonly ADMIN_BASE_URL = 'http://' + (typeof window !== 'undefined' ? window.location.hostname : 'localhost') + ':8080';
+  // Thumbnails - URL de base (same origin via nginx proxy to avoid CORS/Private Network Access issues)
+  private readonly ADMIN_BASE_URL = '';
 
   // Exposer Math pour le template
   public Math = Math;

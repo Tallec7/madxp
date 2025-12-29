@@ -25,7 +25,8 @@ export class TranslationService {
   private readonly translate = inject(TranslateService);
   private readonly http = inject(HttpClient);
   private readonly STORAGE_KEY = 'neopro_language';
-  private readonly CONFIG_API_URL = 'http://localhost:8080/api/configuration/settings';
+  // Use dynamic hostname to work both locally and on Pi
+  private readonly CONFIG_API_URL = (typeof window !== 'undefined' ? `http://${window.location.hostname}:8080` : 'http://localhost:8080') + '/api/configuration/settings';
 
   private currentLangSubject = new BehaviorSubject<SupportedLanguage>('fr');
   currentLang$ = this.currentLangSubject.asObservable();
