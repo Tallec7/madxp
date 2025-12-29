@@ -60,7 +60,8 @@
     "dashboard": "Dashboard",
     "sites": "Sites",
     "groups": "Groups",
-    "sponsors": "Sponsors",
+    "advertisers": "Advertisers",
+    "sponsors": "Advertisers",
     "content": "Content",
     "updates": "Updates",
     "analytics": "Analytics",
@@ -86,10 +87,12 @@
   },
   "roles": {
     "super_admin": "Super Admin",
+    "superadmin": "Super Admin",
     "admin": "Administrator",
     "operator": "Operator",
     "viewer": "Viewer",
-    "sponsor": "Sponsor",
+    "advertiser": "Advertiser",
+    "sponsor": "Advertiser",
     "agency": "Agency"
   },
   "notifications": {

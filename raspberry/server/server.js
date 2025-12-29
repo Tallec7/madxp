@@ -277,6 +277,17 @@ let currentScore = {
 
 let currentPhase = 'neutral';
 
+// État des options locales (overlay, timer, breaking news, template)
+let currentOptions = null;
+
+// État du timer
+let currentTimer = {
+	currentTime: 0,
+	isRunning: false,
+	halfDuration: 45,
+	countDown: true
+};
+
 // Gestion des connexions Socket.IO
 io.on('connection', (socket) => {
 	console.log('Client connecté:', socket.id);
@@ -284,6 +295,15 @@ io.on('connection', (socket) => {
 	// Envoyer l'état actuel au client qui vient de se connecter
 	socket.emit('score-update', currentScore);
 	socket.emit('phase-change', { phase: currentPhase });
+	if (currentOptions) {
+		socket.emit('options-update', currentOptions);
+	}
+	if (currentTimer.isRunning || currentTimer.currentTime > 0) {
+		socket.emit('timer-update', {
+			action: 'sync',
+			...currentTimer
+		});
+	}
 
 	socket.on('command', (data) => {
 		console.log('Commande reçue:', data);
@@ -323,6 +343,47 @@ io.on('connection', (socket) => {
 		console.log('Request state reçu de:', socket.id);
 		socket.emit('score-update', currentScore);
 		socket.emit('phase-change', { phase: currentPhase });
+		if (currentOptions) {
+			socket.emit('options-update', currentOptions);
+		}
+		if (currentTimer.isRunning || currentTimer.currentTime > 0) {
+			socket.emit('timer-update', {
+				action: 'sync',
+				...currentTimer
+			});
+		}
+	});
+
+	// ========================================================================
+	// OPTIONS, TIMER & BREAKING NEWS - Communication Remote ↔ TV
+	// ========================================================================
+
+	// Options update - persister et relayer à tous les clients (TV)
+	socket.on('options-update', (data) => {
+		console.log('Options update reçu:', data);
+		currentOptions = data;
+		// Broadcast à tous les autres clients (notamment TV)
+		socket.broadcast.emit('options-update', data);
+	});
+
+	// Timer update - persister et relayer à tous les clients (TV)
+	socket.on('timer-update', (data) => {
+		console.log('Timer update reçu:', data);
+		// Mettre à jour l'état du timer
+		if (data.currentTime !== undefined) currentTimer.currentTime = data.currentTime;
+		if (data.isRunning !== undefined) currentTimer.isRunning = data.isRunning;
+		if (data.halfDuration !== undefined) currentTimer.halfDuration = data.halfDuration;
+		if (data.countDown !== undefined) currentTimer.countDown = data.countDown;
+
+		// Broadcast à tous les autres clients (notamment TV)
+		socket.broadcast.emit('timer-update', data);
+	});
+
+	// Breaking news - pas de persistance, juste relay immédiat
+	socket.on('breaking-news', (data) => {
+		console.log('Breaking news reçu:', data);
+		// Broadcast à tous les autres clients (notamment TV)
+		socket.broadcast.emit('breaking-news', data);
 	});
 
 	// Notification de mise à jour de la configuration (envoyé par le sync-agent)

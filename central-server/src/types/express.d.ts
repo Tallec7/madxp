@@ -1,7 +1,8 @@
 import 'express';
 
 // Types de rôles disponibles dans le système
-export type UserRole = 'super_admin' | 'admin' | 'operator' | 'viewer' | 'sponsor' | 'agency';
+// Note: 'advertiser' remplace 'sponsor' - 'sponsor' gardé pour rétrocompatibilité
+export type UserRole = 'super_admin' | 'superadmin' | 'admin' | 'operator' | 'viewer' | 'advertiser' | 'sponsor' | 'agency';
 
 declare global {
   namespace Express {
@@ -9,8 +10,9 @@ declare global {
       id: string;
       email: string;
       role: UserRole;
-      sponsor_id?: string | null;  // Pour les utilisateurs sponsor
-      agency_id?: string | null;   // Pour les utilisateurs agence
+      advertiser_id?: string | null;  // Pour les utilisateurs annonceurs
+      sponsor_id?: string | null;     // @deprecated - Utiliser advertiser_id
+      agency_id?: string | null;      // Pour les utilisateurs agence
     }
 
     interface Request {

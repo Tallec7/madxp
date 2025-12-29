@@ -1,7 +1,8 @@
 import { Request } from 'express';
 
 // Types de rôles disponibles
-export type UserRole = 'super_admin' | 'admin' | 'operator' | 'viewer' | 'sponsor' | 'agency';
+// Note: 'advertiser' remplace 'sponsor' - 'sponsor' gardé pour rétrocompatibilité
+export type UserRole = 'super_admin' | 'superadmin' | 'admin' | 'operator' | 'viewer' | 'advertiser' | 'sponsor' | 'agency';
 
 // User types
 export interface User {
@@ -10,8 +11,9 @@ export interface User {
   password_hash: string;
   full_name: string | null;
   role: UserRole;
-  sponsor_id: string | null;  // Pour les utilisateurs sponsor
-  agency_id: string | null;   // Pour les utilisateurs agence
+  advertiser_id: string | null;  // Pour les utilisateurs annonceurs
+  sponsor_id?: string | null;    // @deprecated - Utiliser advertiser_id
+  agency_id: string | null;      // Pour les utilisateurs agence
   created_at: Date;
   updated_at: Date;
   last_login_at: Date | null;
@@ -21,8 +23,8 @@ export interface AuthRequest extends Request {
   user?: Express.AuthenticatedUser;
 }
 
-// Sponsor types
-export interface Sponsor {
+// Advertiser types (anciennement Sponsor)
+export interface Advertiser {
   [key: string]: unknown;
   id: string;
   name: string;
@@ -35,6 +37,9 @@ export interface Sponsor {
   created_at: Date;
   updated_at: Date;
 }
+
+// @deprecated - Utiliser Advertiser
+export type Sponsor = Advertiser;
 
 // Agency types
 export interface Agency {

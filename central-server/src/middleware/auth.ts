@@ -62,13 +62,15 @@ export const authenticate = (
   }
 };
 
-// Hiérarchie des rôles (du plus puissant au moins puissant)
+// Hierarchie des roles (du plus puissant au moins puissant)
 const ROLE_HIERARCHY: Record<UserRole, number> = {
   'super_admin': 100,
+  'superadmin': 100,
   'admin': 80,
   'operator': 60,
   'viewer': 40,
-  'sponsor': 30,
+  'advertiser': 30,
+  'sponsor': 30,  // @deprecated - alias pour advertiser
   'agency': 30,
 };
 

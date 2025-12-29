@@ -86,28 +86,46 @@ export const routes: Routes = [
         data: { roles: ['super_admin', 'admin'] },
         loadComponent: () => import('./features/admin/local-admin/local-admin.component').then(m => m.LocalAdminComponent)
       },
+      // Annonceurs (nouveau terme pour Sponsors)
       {
-        path: 'sponsors',
-        loadComponent: () => import('./features/sponsors/sponsors-list.component').then(m => m.SponsorsListComponent)
+        path: 'advertisers',
+        loadComponent: () => import('./features/advertisers/advertisers-list.component').then(m => m.AdvertisersListComponent)
       },
       {
-        path: 'sponsors/:id',
+        path: 'advertisers/:id',
         loadComponent: () => import('./features/sponsors/sponsor-detail.component').then(m => m.SponsorDetailComponent)
       },
       {
-        path: 'sponsors/:id/analytics',
+        path: 'advertisers/:id/analytics',
         loadComponent: () => import('./features/sponsors/sponsor-analytics.component').then(m => m.SponsorAnalyticsComponent)
       },
       {
-        path: 'sponsors/:id/videos',
+        path: 'advertisers/:id/videos',
         loadComponent: () => import('./features/sponsors/sponsor-videos.component').then(m => m.SponsorVideosComponent)
       },
-      // Portail Sponsor (pour utilisateurs avec rôle 'sponsor')
+      // Routes legacy sponsors (redirection vers advertisers pour retrocompatibilite)
+      {
+        path: 'sponsors',
+        redirectTo: 'advertisers',
+        pathMatch: 'full'
+      },
+      {
+        path: 'sponsors/:id',
+        redirectTo: 'advertisers/:id',
+        pathMatch: 'full'
+      },
+      // Portail Annonceur (pour utilisateurs avec role 'advertiser' ou legacy 'sponsor')
+      {
+        path: 'advertiser-portal',
+        canActivate: [roleGuard],
+        data: { roles: ['advertiser', 'sponsor', 'admin', 'super_admin', 'superadmin'] },
+        loadComponent: () => import('./features/sponsor-portal/sponsor-dashboard.component').then(m => m.SponsorDashboardComponent)
+      },
+      // Legacy sponsor-portal redirect
       {
         path: 'sponsor-portal',
-        canActivate: [roleGuard],
-        data: { roles: ['sponsor', 'admin', 'super_admin'] },
-        loadComponent: () => import('./features/sponsor-portal/sponsor-dashboard.component').then(m => m.SponsorDashboardComponent)
+        redirectTo: 'advertiser-portal',
+        pathMatch: 'full'
       },
       // Portail Agence (pour utilisateurs avec rôle 'agency')
       {
