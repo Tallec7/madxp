@@ -780,7 +780,7 @@ export class SponsorVideosComponent implements OnInit {
 
     try {
       // Load sponsor info
-      const sponsorResponse = await fetch(`/api/analytics/sponsors/${this.sponsorId}`, {
+      const sponsorResponse = await fetch(`/api/analytics/advertisers/${this.sponsorId}`, {
         credentials: 'include'
       });
 
@@ -789,7 +789,7 @@ export class SponsorVideosComponent implements OnInit {
       }
 
       const sponsorData = await sponsorResponse.json();
-      this.sponsorName = sponsorData.data.sponsor.name;
+      this.sponsorName = sponsorData.data.advertiser.name;
 
       // Load associated videos
       await this.loadSponsorVideos();
@@ -806,7 +806,7 @@ export class SponsorVideosComponent implements OnInit {
   }
 
   async loadSponsorVideos() {
-    const response = await fetch(`/api/analytics/sponsors/${this.sponsorId}/videos`, {
+    const response = await fetch(`/api/analytics/advertisers/${this.sponsorId}/videos`, {
       credentials: 'include'
     });
 
@@ -873,7 +873,7 @@ export class SponsorVideosComponent implements OnInit {
     this.adding = true;
 
     try {
-      const response = await fetch(`/api/analytics/sponsors/${this.sponsorId}/videos`, {
+      const response = await fetch(`/api/analytics/advertisers/${this.sponsorId}/videos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -905,7 +905,7 @@ export class SponsorVideosComponent implements OnInit {
 
     try {
       const response = await fetch(
-        `/api/analytics/sponsors/${this.sponsorId}/videos/${videoId}`,
+        `/api/analytics/advertisers/${this.sponsorId}/videos/${videoId}`,
         {
           method: 'DELETE',
           credentials: 'include'
@@ -945,7 +945,7 @@ export class SponsorVideosComponent implements OnInit {
 
     try {
       const response = await fetch(
-        `/api/analytics/sponsors/${this.sponsorId}/videos/${this.editingVideo.video_id}`,
+        `/api/analytics/advertisers/${this.sponsorId}/videos/${this.editingVideo.video_id}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -1012,7 +1012,7 @@ export class SponsorVideosComponent implements OnInit {
       }));
 
       const response = await fetch(
-        `/api/analytics/sponsors/${this.sponsorId}/videos/reorder`,
+        `/api/analytics/advertisers/${this.sponsorId}/videos/reorder`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -1033,7 +1033,7 @@ export class SponsorVideosComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/sponsors', this.sponsorId]);
+    this.router.navigate(['/advertisers', this.sponsorId]);
   }
 
   formatDuration(seconds: number): string {

@@ -682,13 +682,13 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
     const { from, to } = this.getDateRange();
     this.updatePeriodLabel(from, to);
 
-    this.api.get<any>(`/analytics/sponsors/${this.sponsorId}/stats`, {
+    this.api.get<any>(`/analytics/advertisers/${this.sponsorId}/stats`, {
       from: from.toISOString().split('T')[0],
       to: to.toISOString().split('T')[0]
     }).subscribe({
       next: (data) => {
         // Store sponsor name
-        this.sponsorName = data.data.sponsor_name || 'Sponsor';
+        this.sponsorName = data.data.advertiser_name || 'Annonceur';
 
         // Store analytics data
         this.summary = data.data.summary;
@@ -967,7 +967,7 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
     this.exporting = true;
     const { from, to } = this.getDateRange();
 
-    this.api.get<any>(`/analytics/sponsors/${this.sponsorId}/export`, {
+    this.api.get<any>(`/analytics/advertisers/${this.sponsorId}/export`, {
       from: from.toISOString().split('T')[0],
       to: to.toISOString().split('T')[0],
       format: 'csv'
@@ -996,7 +996,7 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
     this.generatingPDF = true;
     const { from, to } = this.getDateRange();
 
-    this.api.get<any>(`/analytics/sponsors/${this.sponsorId}/report/pdf`, {
+    this.api.get<any>(`/analytics/advertisers/${this.sponsorId}/report/pdf`, {
       from: from.toISOString().split('T')[0],
       to: to.toISOString().split('T')[0]
     }).subscribe({
@@ -1021,7 +1021,7 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   goBack() {
-    this.router.navigate(['/sponsors', this.sponsorId]);
+    this.router.navigate(['/advertisers', this.sponsorId]);
   }
 
   formatDuration(seconds: number): string {

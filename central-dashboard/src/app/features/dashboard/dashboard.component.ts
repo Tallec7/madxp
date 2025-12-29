@@ -445,8 +445,11 @@ export class DashboardComponent implements OnInit {
 
     // Only redirect if user has a specific portal role
     switch (user.role) {
+      case 'advertiser':
+        this.router.navigate(['/advertiser-portal']);
+        break;
       case 'sponsor':
-        this.router.navigate(['/sponsor-portal']);
+        this.router.navigate(['/advertiser-portal']);
         break;
       case 'agency':
         this.router.navigate(['/agency-portal']);

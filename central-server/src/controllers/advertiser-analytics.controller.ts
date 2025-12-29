@@ -154,7 +154,7 @@ export const createAdvertiser = async (req: AuthRequest, res: Response): Promise
 
     res.status(201).json({
       success: true,
-      data: result.rows[0],
+      data: { advertiser: result.rows[0] },
     });
   } catch (error) {
     logger.error('Error creating advertiser:', error);
@@ -207,7 +207,7 @@ export const updateAdvertiser = async (req: AuthRequest, res: Response): Promise
 
     res.json({
       success: true,
-      data: result.rows[0],
+      data: { advertiser: result.rows[0] },
     });
   } catch (error) {
     logger.error('Error updating advertiser:', error);
@@ -431,6 +431,20 @@ export const getAdvertiserStats = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
+    const advertiserResult = await query<{ name: string }>(
+      'SELECT name FROM advertisers WHERE id = $1',
+      [id]
+    );
+    const advertiserName = advertiserResult.rows[0]?.name || null;
+
+    if (!advertiserName) {
+      res.status(404).json({
+        success: false,
+        error: 'Advertiser not found',
+      });
+      return;
+    }
+
     // Dates par défaut : 30 derniers jours
     const fromDate = (from as string) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const toDate = (to as string) || new Date().toISOString().split('T')[0];
@@ -445,6 +459,7 @@ export const getAdvertiserStats = async (req: AuthRequest, res: Response): Promi
       res.json({
         success: true,
         data: {
+          advertiser_name: advertiserName,
           period: `${fromDate}/${toDate}`,
           summary: {
             total_impressions: 0,
@@ -579,6 +594,7 @@ export const getAdvertiserStats = async (req: AuthRequest, res: Response): Promi
     res.json({
       success: true,
       data: {
+        advertiser_name: advertiserName,
         period: `${fromDate}/${toDate}`,
         summary: {
           total_impressions: totalImpressions,

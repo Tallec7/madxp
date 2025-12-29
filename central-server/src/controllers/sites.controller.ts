@@ -44,7 +44,7 @@ export const getSites = async (req: AuthRequest, res: Response) => {
     const pagination = req.pagination || { page: 1, limit: 20, offset: 0 };
     const userRole = req.user?.role || 'viewer';
     const userAgencyId = req.user?.agency_id;
-    const userSponsorId = req.user?.sponsor_id;
+    const userAdvertiserId = req.user?.advertiser_id ?? req.user?.sponsor_id;
 
     let whereClause = 'WHERE 1=1';
     const params: any[] = [];
@@ -61,24 +61,24 @@ export const getSites = async (req: AuthRequest, res: Response) => {
         // Agency user without agency_id sees no sites
         whereClause += ` AND 1=0`;
       }
-    } else if (userRole === 'sponsor') {
-      if (userSponsorId) {
-        // Sponsor users see sites where their videos are deployed
-        // Videos are linked to sponsors via sponsor_videos table
+    } else if (userRole === 'advertiser' || userRole === 'sponsor') {
+      if (userAdvertiserId) {
+        // Advertiser users see sites where their videos are deployed
+        // Videos are linked to advertisers via advertiser_videos table
         whereClause += ` AND s.id IN (
           SELECT DISTINCT cd.target_id FROM content_deployments cd
-          JOIN sponsor_videos sv ON sv.video_id = cd.video_id
-          WHERE sv.sponsor_id = $${paramIndex} AND cd.target_type = 'site'
+          JOIN advertiser_videos av ON av.video_id = cd.video_id
+          WHERE av.advertiser_id = $${paramIndex} AND cd.target_type = 'site'
           UNION
           SELECT DISTINCT sg.site_id FROM site_groups sg
           JOIN content_deployments cd ON cd.target_id = sg.group_id AND cd.target_type = 'group'
-          JOIN sponsor_videos sv ON sv.video_id = cd.video_id
-          WHERE sv.sponsor_id = $${paramIndex + 1}
+          JOIN advertiser_videos av ON av.video_id = cd.video_id
+          WHERE av.advertiser_id = $${paramIndex + 1}
         )`;
-        params.push(userSponsorId, userSponsorId);
+        params.push(userAdvertiserId, userAdvertiserId);
         paramIndex += 2;
       } else {
-        // Sponsor user without sponsor_id sees no sites
+        // Advertiser user without advertiser_id sees no sites
         whereClause += ` AND 1=0`;
       }
     }
