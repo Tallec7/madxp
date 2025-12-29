@@ -1,14 +1,16 @@
-# Tracking des Impressions Sponsors - Guide d'Implémentation
+# Tracking des Impressions Annonceurs - Guide d'Implémentation
 
-**Date**: 28 Décembre 2025
-**Version**: 1.1
-**Conformité**: BP §13 - Analytics Sponsors (95%)
+**Date**: 28 Décembre 2025 (Mise à jour: 29 Décembre 2025)
+**Version**: 1.2
+**Conformité**: BP §13 - Analytics Annonceurs (95%)
+
+> **Note terminologique** : Depuis le 2025-12-29, la terminologie "Sponsor" a été remplacée par "Advertiser" (Annonceur). Ce document conserve certaines références à "sponsor" pour la rétrocompatibilité du code legacy. Voir [Migration Sponsor → Advertiser](../changelog/2025-12-29_sponsor-to-advertiser-migration.md).
 
 ---
 
 ## 📋 Vue d'Ensemble
 
-Ce document décrit le système complet de tracking des impressions sponsors depuis les boîtiers TV Raspberry Pi jusqu'à l'affichage dans le dashboard central Angular.
+Ce document décrit le système complet de tracking des impressions annonceurs depuis les boîtiers TV Raspberry Pi jusqu'à l'affichage dans le dashboard central Angular.
 
 ### Architecture Globale
 

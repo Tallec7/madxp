@@ -60,14 +60,15 @@
     "dashboard": "Dashboard",
     "sites": "Sites",
     "groups": "Groupes",
-    "sponsors": "Sponsors",
+    "advertisers": "Annonceurs",
+    "sponsors": "Annonceurs",
     "content": "Contenu",
-    "updates": "Mises à jour",
+    "updates": "Mises a jour",
     "analytics": "Analytics",
     "administration": "Administration",
     "users": "Utilisateurs",
     "agencies": "Agences",
-    "analyticsCategories": "Catégories Analytics",
+    "analyticsCategories": "Categories Analytics",
     "localConsole": "Console locale",
     "skipToContent": "Aller au contenu principal"
   },
@@ -86,10 +87,12 @@
   },
   "roles": {
     "super_admin": "Super Admin",
+    "superadmin": "Super Admin",
     "admin": "Administrateur",
-    "operator": "Opérateur",
+    "operator": "Operateur",
     "viewer": "Observateur",
-    "sponsor": "Sponsor",
+    "advertiser": "Annonceur",
+    "sponsor": "Annonceur",
     "agency": "Agence"
   },
   "notifications": {

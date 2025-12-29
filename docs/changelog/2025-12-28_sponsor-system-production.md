@@ -2,6 +2,8 @@
 
 Date: 2025-12-28
 
+> **Note** : Ce document utilise la terminologie "Sponsor". Depuis le 2025-12-29, la terminologie officielle est "Advertiser" (Annonceur). Voir [Migration Sponsor → Advertiser](2025-12-29_sponsor-to-advertiser-migration.md).
+
 ## Résumé
 
 Implémentation complète du système de gestion des sponsors pour la production :

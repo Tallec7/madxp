@@ -55,56 +55,57 @@ interface ReportData {
 }
 
 interface PdfReportOptions {
-  type: 'sponsor' | 'club';
+  type: 'advertiser' | 'sponsor' | 'club';
   format?: 'a4' | 'letter';
   language?: 'fr' | 'en';
   includeSignature?: boolean;
 }
 
 /**
- * Génère un rapport PDF pour un sponsor
+ * Génère un rapport PDF pour un annonceur
  *
  * Génère un PDF professionnel avec:
- * - Page de garde (logo NEOPRO, nom sponsor, période)
+ * - Page de garde (logo NEOPRO, nom annonceur, période)
  * - Résumé exécutif (KPIs: impressions, temps d'écran, audience)
  * - Graphiques (évolution quotidienne, répartition par type d'événement)
  * - Certificat de diffusion optionnel avec signature numérique
  *
- * @param sponsorId - ID du sponsor
+ * @param advertiserId - ID de l'annonceur
  * @param from - Date de début (YYYY-MM-DD)
  * @param to - Date de fin (YYYY-MM-DD)
  * @param options - Options de génération (format, langue, signature)
  * @returns Buffer du PDF généré
  */
-export async function generateSponsorReport(
-  sponsorId: string,
+export async function generateAdvertiserReport(
+  advertiserId: string,
   from: string,
   to: string,
   options: PdfReportOptions = { type: 'sponsor' }
 ): Promise<Buffer> {
   try {
-    logger.info('Generating sponsor PDF report', { sponsorId, from, to });
+    logger.info('Generating advertiser PDF report', { advertiserId, from, to });
 
-    // 1. Récupérer les données du sponsor
-    const sponsorResult = await query(
-      `SELECT id, name, logo_url FROM sponsors WHERE id = $1`,
-      [sponsorId]
+    // 1. Récupérer les données de l'annonceur
+    // Note: Utilise les nouvelles tables 'advertisers' après migration
+    const advertiserResult = await query(
+      `SELECT id, name, logo_url FROM advertisers WHERE id = $1`,
+      [advertiserId]
     );
 
-    if (sponsorResult.rowCount === 0) {
-      throw new Error('Sponsor not found');
+    if (advertiserResult.rowCount === 0) {
+      throw new Error('Advertiser not found');
     }
 
-    const sponsor = sponsorResult.rows[0];
+    const advertiser = advertiserResult.rows[0];
 
     // 2. Récupérer les analytics (réutiliser la logique du controller)
     const videoIds = await query(
-      `SELECT video_id FROM sponsor_videos WHERE sponsor_id = $1`,
-      [sponsorId]
+      `SELECT video_id FROM advertiser_videos WHERE advertiser_id = $1`,
+      [advertiserId]
     );
 
     if (videoIds.rowCount === 0) {
-      throw new Error('No videos found for sponsor');
+      throw new Error('No videos found for advertiser');
     }
 
     const vids = videoIds.rows.map(r => r.video_id);
@@ -118,7 +119,7 @@ export async function generateSponsorReport(
         SUM(audience_estimate) as estimated_reach,
         COUNT(DISTINCT site_id) as active_sites,
         COUNT(DISTINCT DATE(played_at)) as active_days
-       FROM sponsor_impressions
+       FROM advertiser_impressions
        WHERE video_id = ANY($1::uuid[])
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')`,
@@ -131,7 +132,7 @@ export async function generateSponsorReport(
         DATE(played_at) as date,
         COUNT(*) as impressions,
         SUM(duration_played) as screen_time
-       FROM sponsor_impressions
+       FROM advertiser_impressions
        WHERE video_id = ANY($1::uuid[])
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
@@ -142,9 +143,9 @@ export async function generateSponsorReport(
 
     const reportData: ReportData = {
       sponsor: {
-        id: String(sponsor.id),
-        name: String(sponsor.name),
-        logo_url: sponsor.logo_url ? String(sponsor.logo_url) : undefined,
+        id: String(advertiser.id),
+        name: String(advertiser.name),
+        logo_url: advertiser.logo_url ? String(advertiser.logo_url) : undefined,
       },
       period: { from, to },
       summary: {
@@ -169,10 +170,13 @@ export async function generateSponsorReport(
 
     return await generatePlaceholderPdf(reportData, options);
   } catch (error) {
-    logger.error('Error generating sponsor report:', error);
+    logger.error('Error generating advertiser report:', error);
     throw error;
   }
 }
+
+// @deprecated - Utiliser generateAdvertiserReport
+export const generateSponsorReport = generateAdvertiserReport;
 
 /**
  * Génère un rapport PDF pour un club

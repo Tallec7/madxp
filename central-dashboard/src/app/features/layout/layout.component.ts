@@ -58,17 +58,17 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
             <span class="icon" aria-hidden="true">👥</span>
             <span>{{ 'nav.groups' | translate }}</span>
           </a>
-          <a routerLink="/sponsors" routerLinkActive="active" class="nav-item" [attr.aria-label]="'nav.sponsors' | translate">
+          <a routerLink="/advertisers" routerLinkActive="active" class="nav-item" [attr.aria-label]="'nav.advertisers' | translate">
             <span class="icon" aria-hidden="true">💼</span>
-            <span>{{ 'nav.sponsors' | translate }}</span>
+            <span>{{ 'nav.advertisers' | translate }}</span>
           </a>
 
           <!-- Portals section for admin users -->
           <div class="nav-section" *ngIf="isAdmin()" role="group" aria-label="Portails">
             <div class="nav-section-title" id="portals-section">Portails</div>
-            <a routerLink="/sponsor-portal" routerLinkActive="active" class="nav-item" aria-describedby="portals-section">
+            <a routerLink="/advertiser-portal" routerLinkActive="active" class="nav-item" aria-describedby="portals-section">
               <span class="icon" aria-hidden="true">🎯</span>
-              <span>Portail Sponsor</span>
+              <span>Portail Annonceur</span>
             </a>
             <a routerLink="/agency-portal" routerLinkActive="active" class="nav-item" aria-describedby="portals-section">
               <span class="icon" aria-hidden="true">🏢</span>
