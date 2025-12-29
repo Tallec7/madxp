@@ -97,16 +97,43 @@ class SocketService {
       .map((origin) => origin.trim().replace(/\/+$/, ''))
       .filter(Boolean);
 
+    const isProduction = process.env.NODE_ENV === 'production';
+    const hasAllowedOrigins = allowedOrigins && allowedOrigins.length > 0;
+
+    // SECURITY: Fail-closed in production - reject all origins if ALLOWED_ORIGINS not configured
+    if (isProduction && !hasAllowedOrigins) {
+      logger.error('='.repeat(80));
+      logger.error('SECURITY WARNING: Socket.IO CORS - ALLOWED_ORIGINS not configured in production!');
+      logger.error('WebSocket connections from browsers will be REJECTED.');
+      logger.error('Please set ALLOWED_ORIGINS environment variable (comma-separated list).');
+      logger.error('='.repeat(80));
+    }
+
+    // In production without ALLOWED_ORIGINS, use false to reject all cross-origin requests
+    // In development, allow all origins for easier testing
+    const corsOrigin = hasAllowedOrigins
+      ? allowedOrigins
+      : isProduction
+        ? false  // Reject all cross-origin in production
+        : true;  // Allow all in development
+
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: allowedOrigins && allowedOrigins.length > 0 ? allowedOrigins : '*',
+        origin: corsOrigin,
         methods: ['GET', 'POST'],
-        credentials: true,
+        credentials: hasAllowedOrigins,
       },
       transports: ['websocket', 'polling'],
       // Configuration du ping/pong natif de Socket.IO pour détection des connexions mortes
       pingInterval: 25000,  // Envoyer un ping toutes les 25 secondes
       pingTimeout: 60000,   // Considérer déconnecté si pas de pong après 60 secondes
+    });
+
+    logger.info('Socket.IO CORS configuration', {
+      isProduction,
+      hasAllowedOrigins,
+      allowedOrigins: hasAllowedOrigins ? allowedOrigins : 'none',
+      corsMode: hasAllowedOrigins ? 'whitelist' : isProduction ? 'reject-all' : 'allow-all',
     });
 
     // Configuration Redis pour scalabilité horizontale

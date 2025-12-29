@@ -9,9 +9,30 @@ import {
   deleteUser,
   toggleUserStatus,
   adminResetPassword,
+  deleteOwnAccount,
+  exportOwnData,
 } from '../controllers/users.controller';
 
 const router = express.Router();
+
+// ============================================================================
+// GDPR SELF-SERVICE ENDPOINTS (tous les utilisateurs authentifiés)
+// Ces routes doivent être AVANT les routes avec :id pour éviter les conflits
+// ============================================================================
+
+// GET /api/users/me/export - Export de données personnelles (RGPD Art. 20)
+router.get(
+  '/me/export',
+  authenticate,
+  exportOwnData
+);
+
+// DELETE /api/users/me - Suppression de son propre compte (RGPD Art. 17)
+router.delete(
+  '/me',
+  authenticate,
+  deleteOwnAccount
+);
 
 // ============================================================================
 // USERS CRUD (Admin/Super Admin only)

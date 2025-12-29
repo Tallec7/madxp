@@ -17,6 +17,11 @@ export const routes: Routes = [
     path: 'reset-password',
     component: ResetPasswordComponent
   },
+  // Pages juridiques (accessibles sans authentification)
+  {
+    path: 'legal/:page',
+    loadComponent: () => import('./features/legal/legal.component').then(m => m.LegalComponent)
+  },
   {
     path: '',
     canActivate: [authGuard],

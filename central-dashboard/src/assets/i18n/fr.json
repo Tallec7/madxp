@@ -266,5 +266,12 @@
     "userDeleted": "Utilisateur supprimé",
     "filterByRole": "Filtrer par rôle",
     "allRoles": "Tous les rôles"
+  },
+  "legal": {
+    "privacyPolicy": "Politique de confidentialité",
+    "termsOfService": "CGU",
+    "legalMentions": "Mentions légales",
+    "lastUpdate": "Dernière mise à jour",
+    "questions": "Des questions ?"
   }
 }
