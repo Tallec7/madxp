@@ -173,7 +173,8 @@ export const isAdmin = (role: UserRole): boolean => ADMIN_ROLES.includes(role);
 export const isInternal = (role: UserRole): boolean => INTERNAL_ROLES.includes(role);
 
 export const generateToken = (user: JwtPayload): string => {
-  const expiresIn = (process.env.JWT_EXPIRES_IN || '8h') as SignOptions['expiresIn'];
+  // Durée par défaut : 7 jours (cohérent avec le cookie)
+  const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as SignOptions['expiresIn'];
   const options: SignOptions = { expiresIn };
   return jwt.sign(user, JWT_SECRET, options);
 };
