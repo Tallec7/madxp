@@ -42,7 +42,7 @@ router.get(
 router.post(
   '/advertisers',
   authenticate,
-  requireRole('superadmin', 'admin', 'operator'),
+  requireRole('super_admin', 'superadmin', 'admin', 'operator'),
   createAdvertiser
 );
 
@@ -50,7 +50,7 @@ router.post(
 router.put(
   '/advertisers/:id',
   authenticate,
-  requireRole('superadmin', 'admin', 'operator'),
+  requireRole('super_admin', 'superadmin', 'admin', 'operator'),
   updateAdvertiser
 );
 
@@ -58,7 +58,7 @@ router.put(
 router.delete(
   '/advertisers/:id',
   authenticate,
-  requireRole('superadmin', 'admin'),
+  requireRole('super_admin', 'superadmin', 'admin'),
   deleteAdvertiser
 );
 
@@ -77,7 +77,7 @@ router.get(
 router.post(
   '/advertisers/:id/videos',
   authenticate,
-  requireRole('superadmin', 'admin', 'operator'),
+  requireRole('super_admin', 'superadmin', 'admin', 'operator'),
   addVideosToAdvertiser
 );
 
@@ -85,7 +85,7 @@ router.post(
 router.delete(
   '/advertisers/:id/videos/:videoId',
   authenticate,
-  requireRole('superadmin', 'admin', 'operator'),
+  requireRole('super_admin', 'superadmin', 'admin', 'operator'),
   removeVideoFromAdvertiser
 );
 
@@ -141,7 +141,7 @@ router.post(
 router.post(
   '/advertisers/calculate-daily-stats',
   authenticate,
-  requireRole('superadmin', 'admin'),
+  requireRole('super_admin', 'superadmin', 'admin'),
   calculateDailyStats
 );
 
@@ -166,15 +166,15 @@ import {
 
 router.get('/sponsors', authenticate, listSponsors);
 router.get('/sponsors/:id', authenticate, getSponsor);
-router.post('/sponsors', authenticate, requireRole('superadmin', 'admin', 'operator'), createSponsor);
-router.put('/sponsors/:id', authenticate, requireRole('superadmin', 'admin', 'operator'), updateSponsor);
-router.delete('/sponsors/:id', authenticate, requireRole('superadmin', 'admin'), deleteSponsor);
+router.post('/sponsors', authenticate, requireRole('super_admin', 'superadmin', 'admin', 'operator'), createSponsor);
+router.put('/sponsors/:id', authenticate, requireRole('super_admin', 'superadmin', 'admin', 'operator'), updateSponsor);
+router.delete('/sponsors/:id', authenticate, requireRole('super_admin', 'superadmin', 'admin'), deleteSponsor);
 router.get('/sponsors/:id/videos', authenticate, getSponsorVideos);
-router.post('/sponsors/:id/videos', authenticate, requireRole('superadmin', 'admin', 'operator'), addVideosToSponsor);
-router.delete('/sponsors/:id/videos/:videoId', authenticate, requireRole('superadmin', 'admin', 'operator'), removeVideoFromSponsor);
+router.post('/sponsors/:id/videos', authenticate, requireRole('super_admin', 'superadmin', 'admin', 'operator'), addVideosToSponsor);
+router.delete('/sponsors/:id/videos/:videoId', authenticate, requireRole('super_admin', 'superadmin', 'admin', 'operator'), removeVideoFromSponsor);
 router.get('/sponsors/:id/stats', authenticate, getSponsorStats);
 router.get('/sponsors/:id/export', authenticate, exportSponsorData);
 router.get('/sponsors/:id/report/pdf', authenticate, generateSponsorPdfReport);
-router.post('/sponsors/calculate-daily-stats', authenticate, requireRole('superadmin', 'admin'), calculateDailyStats);
+router.post('/sponsors/calculate-daily-stats', authenticate, requireRole('super_admin', 'superadmin', 'admin'), calculateDailyStats);
 
 export default router;
