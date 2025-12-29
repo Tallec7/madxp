@@ -1,12 +1,21 @@
 /**
  * Service de backup automatique local
  * Sauvegarde quotidienne de la configuration avec rétention de 7 jours
+ * SÉCURITÉ: Backups chiffrés avec AES-256-GCM
  */
 
 const fs = require('fs-extra');
 const path = require('path');
+const crypto = require('crypto');
 const { config } = require('../config');
 const logger = require('../logger');
+
+// Algorithme de chiffrement
+const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 16; // 128 bits pour GCM
+const AUTH_TAG_LENGTH = 16; // 128 bits pour GCM
+const SALT_LENGTH = 32;
+const KEY_LENGTH = 32; // 256 bits pour AES-256
 
 class LocalBackupService {
   constructor() {
@@ -14,10 +23,73 @@ class LocalBackupService {
     this.configPath = config.paths.config;
     this.retentionDays = 7;
     this.intervalId = null;
+    // Clé de chiffrement dérivée du secret ou générée
+    this.encryptionKey = this._deriveEncryptionKey();
   }
 
   /**
-   * Crée un backup de la configuration
+   * Dérive une clé de chiffrement à partir d'un secret ou la génère
+   * @private
+   */
+  _deriveEncryptionKey() {
+    const secret = process.env.BACKUP_ENCRYPTION_SECRET || process.env.SITE_API_KEY;
+    if (!secret) {
+      // Générer une clé persistante si aucun secret n'est configuré
+      const keyPath = path.join(config.paths.data || '/home/pi/neopro/data', '.backup-key');
+      try {
+        if (fs.existsSync(keyPath)) {
+          return Buffer.from(fs.readFileSync(keyPath, 'utf8'), 'hex');
+        }
+        const newKey = crypto.randomBytes(KEY_LENGTH);
+        fs.ensureDirSync(path.dirname(keyPath));
+        fs.writeFileSync(keyPath, newKey.toString('hex'), { mode: 0o600 });
+        logger.info('Generated new backup encryption key');
+        return newKey;
+      } catch (error) {
+        logger.error('Failed to manage encryption key, using fallback:', error);
+        return crypto.createHash('sha256').update('neopro-backup-default').digest();
+      }
+    }
+    // Dériver la clé du secret avec PBKDF2
+    const salt = crypto.createHash('sha256').update('neopro-backup-salt').digest().slice(0, SALT_LENGTH);
+    return crypto.pbkdf2Sync(secret, salt, 100000, KEY_LENGTH, 'sha512');
+  }
+
+  /**
+   * Chiffre les données avec AES-256-GCM
+   * @param {Buffer|string} data - Données à chiffrer
+   * @returns {Buffer} Données chiffrées (IV + authTag + ciphertext)
+   */
+  _encrypt(data) {
+    const iv = crypto.randomBytes(IV_LENGTH);
+    const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, this.encryptionKey, iv);
+
+    const dataBuffer = Buffer.isBuffer(data) ? data : Buffer.from(data, 'utf8');
+    const encrypted = Buffer.concat([cipher.update(dataBuffer), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+
+    // Format: IV (16) + AuthTag (16) + Ciphertext
+    return Buffer.concat([iv, authTag, encrypted]);
+  }
+
+  /**
+   * Déchiffre les données AES-256-GCM
+   * @param {Buffer} encryptedData - Données chiffrées
+   * @returns {Buffer} Données déchiffrées
+   */
+  _decrypt(encryptedData) {
+    const iv = encryptedData.slice(0, IV_LENGTH);
+    const authTag = encryptedData.slice(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
+    const ciphertext = encryptedData.slice(IV_LENGTH + AUTH_TAG_LENGTH);
+
+    const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, this.encryptionKey, iv);
+    decipher.setAuthTag(authTag);
+
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  }
+
+  /**
+   * Crée un backup chiffré de la configuration
    * @returns {Promise<string>} Chemin du backup créé
    */
   async createBackup() {
@@ -30,17 +102,23 @@ class LocalBackupService {
       await fs.ensureDir(this.backupDir);
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const backupPath = path.join(this.backupDir, `config-${timestamp}.json`);
+      // Extension .enc pour indiquer que le fichier est chiffré
+      const backupPath = path.join(this.backupDir, `config-${timestamp}.json.enc`);
 
-      // Copier la configuration
-      await fs.copy(this.configPath, backupPath);
+      // Lire et chiffrer la configuration
+      const configData = await fs.readFile(this.configPath, 'utf8');
+      const encryptedData = this._encrypt(configData);
+
+      // Écrire le backup chiffré
+      await fs.writeFile(backupPath, encryptedData, { mode: 0o600 });
 
       // Nettoyer les anciens backups
       await this.cleanOldBackups();
 
-      logger.info('Backup created', {
+      logger.info('Encrypted backup created', {
         backupPath,
-        size: (await fs.stat(backupPath)).size
+        originalSize: configData.length,
+        encryptedSize: encryptedData.length
       });
 
       return backupPath;
@@ -62,7 +140,8 @@ class LocalBackupService {
       let deletedCount = 0;
 
       for (const file of files) {
-        if (!file.startsWith('config-') || !file.endsWith('.json')) {
+        // Support both encrypted (.enc) and legacy unencrypted (.json) backups
+        if (!file.startsWith('config-') || (!file.endsWith('.json.enc') && !file.endsWith('.json'))) {
           continue;
         }
 
@@ -97,7 +176,8 @@ class LocalBackupService {
       const backups = [];
 
       for (const file of files) {
-        if (!file.startsWith('config-') || !file.endsWith('.json')) {
+        // Support both encrypted (.enc) and legacy unencrypted (.json) backups
+        if (!file.startsWith('config-') || (!file.endsWith('.json.enc') && !file.endsWith('.json'))) {
           continue;
         }
 
@@ -108,6 +188,7 @@ class LocalBackupService {
           filename: file,
           path: filePath,
           size: stats.size,
+          encrypted: file.endsWith('.enc'),
           createdAt: stats.mtime.toISOString(),
         });
       }
@@ -123,7 +204,7 @@ class LocalBackupService {
   }
 
   /**
-   * Restaure un backup
+   * Restaure un backup (supporte les backups chiffrés et non chiffrés)
    * @param {string} backupFilename Nom du fichier de backup
    * @returns {Promise<boolean>}
    */
@@ -136,8 +217,19 @@ class LocalBackupService {
         return false;
       }
 
-      // Valider que c'est un JSON valide
-      const content = await fs.readJson(backupPath);
+      let content;
+      const isEncrypted = backupFilename.endsWith('.enc');
+
+      if (isEncrypted) {
+        // Déchiffrer le backup
+        const encryptedData = await fs.readFile(backupPath);
+        const decryptedData = this._decrypt(encryptedData);
+        content = JSON.parse(decryptedData.toString('utf8'));
+      } else {
+        // Legacy: backup non chiffré
+        content = await fs.readJson(backupPath);
+      }
+
       if (!content.categories) {
         logger.error('Invalid backup format', { backupFilename });
         return false;
@@ -147,11 +239,12 @@ class LocalBackupService {
       const currentBackup = await this.createBackup();
       logger.info('Created safety backup before restore', { currentBackup });
 
-      // Restaurer
-      await fs.copy(backupPath, this.configPath, { overwrite: true });
+      // Restaurer (toujours en clair car c'est le fichier de configuration actif)
+      await fs.writeJson(this.configPath, content, { spaces: 2 });
 
       logger.info('Backup restored', {
         backupFilename,
+        encrypted: isEncrypted,
         categoriesCount: content.categories.length
       });
 
