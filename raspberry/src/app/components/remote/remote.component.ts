@@ -989,6 +989,7 @@ export class RemoteComponent implements OnInit {
    * Envoie les options à la TV via BroadcastChannel (local) ET Socket.IO (réseau)
    */
   private broadcastOptions(): void {
+    console.log('[Remote] Broadcasting options:', this.localOptions);
     // Local (même navigateur)
     this.localBroadcast.broadcast('options-update', this.localOptions);
     // Réseau (via serveur socket)

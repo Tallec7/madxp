@@ -536,8 +536,8 @@ export class SponsorsListComponent implements OnInit {
   }
 
   checkPermissions() {
-    // Only admin and operator roles can manage sponsors
-    this.canManage = this.authService.hasRole('admin', 'operator');
+    // Only superadmin, admin and operator roles can manage sponsors
+    this.canManage = this.authService.hasRole('superadmin', 'admin', 'operator');
   }
 
   loadSponsors() {
