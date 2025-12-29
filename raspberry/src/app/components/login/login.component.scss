@@ -10,12 +10,16 @@
   );
   padding: 20px;
   position: relative;
+  overflow: visible;
 }
 
 .language-corner {
   position: absolute;
   top: 1rem;
   right: 1rem;
+  z-index: 1000;
+  /* Ensure dropdown has space to expand */
+  overflow: visible;
 }
 
 .login-card {

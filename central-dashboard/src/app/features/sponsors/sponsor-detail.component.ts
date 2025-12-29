@@ -1267,10 +1267,10 @@ export class SponsorDetailComponent implements OnInit {
   loadAvailableVideos() {
     this.loadingVideos = true;
 
-    this.api.get<{ success: boolean; data: { videos: AvailableVideo[] } }>('/videos')
+    this.api.get<{ data: AvailableVideo[]; pagination: any }>('/videos')
       .subscribe({
         next: (response) => {
-          const allVideos = response.data.videos || [];
+          const allVideos = response.data || [];
           // Filter out already associated videos
           const associatedIds = new Set(this.sponsorVideos.map(v => v.video_id));
           this.availableVideos = allVideos.filter(v => !associatedIds.has(v.id));
