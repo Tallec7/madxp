@@ -263,5 +263,12 @@
     "userDeleted": "User deleted",
     "filterByRole": "Filter by role",
     "allRoles": "All roles"
+  },
+  "legal": {
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "legalMentions": "Legal Notice",
+    "lastUpdate": "Last updated",
+    "questions": "Questions?"
   }
 }

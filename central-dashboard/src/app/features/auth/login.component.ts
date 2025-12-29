@@ -90,6 +90,13 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
         </form>
 
         <div class="login-footer">
+          <div class="legal-links">
+            <a [routerLink]="['/legal/privacy']">{{ 'legal.privacyPolicy' | translate }}</a>
+            <span class="separator">|</span>
+            <a [routerLink]="['/legal/terms']">{{ 'legal.termsOfService' | translate }}</a>
+            <span class="separator">|</span>
+            <a [routerLink]="['/legal/mentions']">{{ 'legal.legalMentions' | translate }}</a>
+          </div>
           <p>{{ 'common.version' | translate }} 1.0.0</p>
         </div>
       </div>
@@ -222,6 +229,30 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
       color: #94a3b8;
       font-size: 0.875rem;
       margin: 0;
+    }
+
+    .legal-links {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .legal-links a {
+      color: var(--neo-hockey-dark, #2022E9);
+      text-decoration: none;
+      font-size: 0.8rem;
+    }
+
+    .legal-links a:hover {
+      text-decoration: underline;
+    }
+
+    .legal-links .separator {
+      color: #cbd5e1;
+      font-size: 0.8rem;
     }
 
     .forgot-password-link {
