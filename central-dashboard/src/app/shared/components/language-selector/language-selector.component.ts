@@ -102,18 +102,18 @@ import { TranslationService, SupportedLanguage, LanguageOption } from '../../../
 
     .language-dropdown {
       position: absolute;
-      bottom: 100%;
-      left: 0;
-      margin-bottom: 0.5rem;
+      top: calc(100% + 0.5rem);
+      right: 0;
+      bottom: auto !important;
       background: #1e293b;
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
-      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       list-style: none;
       padding: 0.5rem;
-      margin: 0 0 0.5rem 0;
+      margin: 0;
       min-width: 150px;
-      z-index: 1000;
+      z-index: 10000;
     }
 
     .language-option {

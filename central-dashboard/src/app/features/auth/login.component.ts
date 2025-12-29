@@ -117,6 +117,8 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
       position: absolute;
       top: 1rem;
       right: 1rem;
+      z-index: 1000;
+      overflow: visible;
     }
 
     .login-card {

@@ -61,6 +61,8 @@ export class AuthService {
       tap(response => {
         if (response.user) {
           this.currentUserSubject.next(response.user);
+          // Marquer comme vérifié pour éviter une re-vérification inutile
+          this.authChecked = true;
         }
         // Stocker le token en memoire UNIQUEMENT pour les SSE
         // Il n'est pas accessible via localStorage donc plus sur contre XSS
@@ -110,19 +112,28 @@ export class AuthService {
    * Verifie l'authentification de maniere asynchrone (utile pour les guards)
    */
   checkAuthentication(): Observable<boolean> {
-    // Si deja verifie et on a un utilisateur, retourner true
-    if (this.authChecked && this.currentUserSubject.value) {
+    // Si on a déjà un utilisateur en mémoire, retourner true immédiatement
+    // Ceci est crucial après le login pour éviter une race condition
+    if (this.currentUserSubject.value) {
+      this.authChecked = true;
       return of(true);
+    }
+
+    // Si déjà vérifié et pas d'utilisateur, retourner false
+    if (this.authChecked) {
+      return of(false);
     }
 
     // Sinon, verifier via l'API
     return this.api.get<User>('/auth/me').pipe(
       map(user => {
         this.currentUserSubject.next(user);
+        this.authChecked = true;
         return true;
       }),
       catchError(() => {
         this.currentUserSubject.next(null);
+        this.authChecked = true;
         return of(false);
       })
     );

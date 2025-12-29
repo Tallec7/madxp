@@ -823,7 +823,8 @@ export class SponsorVideosComponent implements OnInit {
 
     if (response.ok) {
       const data = await response.json();
-      this.availableVideos = data.data.videos || [];
+      // Backend returns { data: [...videos], pagination: {...} }
+      this.availableVideos = data.data || [];
       this.filteredAvailableVideos = this.availableVideos;
     }
   }
