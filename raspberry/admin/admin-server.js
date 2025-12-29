@@ -19,6 +19,7 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const fsCore = require('fs');
 const fs = fsCore.promises;
+const fsSync = fsCore;
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
@@ -256,10 +257,53 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Middleware to normalize Unicode paths for filesystem compatibility
+// The filesystem may use NFD (decomposed: E + combining accent) or NFC (precomposed: É)
+// This middleware tries both normalizations to find the file
+const normalizeUnicodePath = (baseDir) => {
+  return (req, res, next) => {
+    // Decode the URL-encoded path
+    const decodedPath = decodeURIComponent(req.path);
+
+    // Try NFC first (precomposed), then NFD (decomposed)
+    const nfcPath = decodedPath.normalize('NFC');
+    const nfdPath = decodedPath.normalize('NFD');
+
+    const fullNfcPath = path.join(baseDir, nfcPath);
+    const fullNfdPath = path.join(baseDir, nfdPath);
+
+    // Check which version exists on the filesystem
+    if (fsSync.existsSync(fullNfcPath)) {
+      req.url = '/' + nfcPath.split('/').map(encodeURIComponent).join('/');
+    } else if (fsSync.existsSync(fullNfdPath)) {
+      req.url = '/' + nfdPath.split('/').map(encodeURIComponent).join('/');
+    }
+    // If neither exists, let express.static handle the 404
+
+    next();
+  };
+};
+
+// CORS middleware for static assets (thumbnails, videos)
+// Required for cross-origin requests from Angular app on port 80 to admin on port 8080
+// Also handles Private Network Access preflight requests
+const staticAssetsCors = (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+};
+
 // Serve static files (before auth middleware)
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/videos', express.static(VIDEOS_DIR));
-app.use('/thumbnails', express.static(THUMBNAILS_DIR));
+app.use('/videos', staticAssetsCors, normalizeUnicodePath(VIDEOS_DIR), express.static(VIDEOS_DIR));
+app.use('/thumbnails', staticAssetsCors, normalizeUnicodePath(THUMBNAILS_DIR), express.static(THUMBNAILS_DIR));
 
 // =============================================================================
 // AUTHENTICATION ROUTES (before requireAuth middleware)
