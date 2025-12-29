@@ -537,7 +537,7 @@ export class AdvertisersListComponent implements OnInit {
 
   checkPermissions() {
     // Only superadmin, admin and operator roles can manage advertisers
-    this.canManage = this.authService.hasRole('superadmin', 'admin', 'operator');
+    this.canManage = this.authService.hasRole('super_admin', 'superadmin', 'admin', 'operator');
   }
 
   loadAdvertisers() {
