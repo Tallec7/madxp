@@ -482,10 +482,20 @@
                     (click)="launchVideo(video)"
                     [attr.aria-label]="'Relancer ' + video.name"
                   >
-                    <div class="recent-video-icon">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="5 3 19 12 5 21 5 3" />
-                      </svg>
+                    <div class="recent-video-thumbnail">
+                      @if (getVideoThumbnailUrl(video)) {
+                        <img
+                          [src]="getVideoThumbnailUrl(video)"
+                          [alt]="video.name"
+                          class="recent-thumbnail-img"
+                          (error)="onThumbnailError($event)"
+                        />
+                      }
+                      <div class="recent-video-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                      </div>
                     </div>
                     <span class="recent-video-name">{{ video.name }}</span>
                   </button>

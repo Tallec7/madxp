@@ -558,10 +558,20 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # Fichiers vidéos
+    # Fichiers vidéos (proxy vers admin-server pour normalisation Unicode)
     location /videos/ {
-        alias /home/pi/neopro/videos/;
-        autoindex off;
+        proxy_pass http://127.0.0.1:8080/videos/;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+    }
+
+    # Thumbnails (proxy vers admin-server pour normalisation Unicode)
+    location /thumbnails/ {
+        proxy_pass http://127.0.0.1:8080/thumbnails/;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
     }
 
     # Proxy Socket.IO

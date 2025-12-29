@@ -22,6 +22,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     const authService = injector.get(AuthService);
     const token = authService.getSseToken();
 
+    // Debug: log pour comprendre le problème mobile
+    console.log('[auth-interceptor]', req.url, 'token:', token ? 'present' : 'null');
+
     let headers = req.headers;
     if (token) {
       // Ajouter le header Authorization en plus du cookie
