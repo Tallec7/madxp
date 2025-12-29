@@ -14,12 +14,19 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError(error => {
-      if (error.status === 401) {
-        // Injection differee pour eviter la dependance circulaire
+      // Seulement rediriger vers login si:
+      // 1. C'est une vraie 401 (pas une erreur réseau status 0)
+      // 2. Ce n'est pas déjà une requête sur /auth/login ou /auth/me
+      const isAuthEndpoint = req.url.includes('/auth/login') || req.url.includes('/auth/me');
+      const isRealUnauthorized = error.status === 401 && !isAuthEndpoint;
+
+      if (isRealUnauthorized) {
         const router = injector.get(Router);
-        // Ne pas supprimer de localStorage car le token est dans un cookie HttpOnly
-        // Simplement rediriger vers la page de login
-        router.navigate(['/login']);
+        // Éviter les redirections multiples
+        const currentUrl = router.url;
+        if (currentUrl !== '/login') {
+          router.navigate(['/login']);
+        }
       }
       return throwError(() => error);
     })

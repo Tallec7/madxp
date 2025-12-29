@@ -12,12 +12,19 @@ import { emailService } from '../services/email.service';
 // Note: sameSite: 'none' est requis pour les cookies cross-origin (frontend et backend sur domaines différents)
 // secure: true est obligatoire avec sameSite: 'none'
 const COOKIE_NAME = 'neopro_token';
+
+// Durée de session plus longue : 7 jours (au lieu de 8h)
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 jours
+
 const COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  maxAge: 8 * 60 * 60 * 1000, // 8 heures
+  maxAge: COOKIE_MAX_AGE,
   path: '/',
+  // Safari iOS/iPadOS : partitioned cookies pour contourner ITP
+  // Note: Safari 16.4+ supporte les Partitioned cookies
+  ...(process.env.NODE_ENV === 'production' && { partitioned: true }),
 };
 
 export { COOKIE_NAME };
