@@ -81,7 +81,46 @@ if (NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
-app.use(helmet());
+// Security headers with Helmet
+// Comprehensive configuration for XSS, clickjacking, and other protections
+app.use(helmet({
+  // Content Security Policy - restrict resource loading
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // Allow inline for Swagger UI
+      styleSrc: ["'self'", "'unsafe-inline'"],  // Allow inline styles
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'wss:', 'ws:'],    // Allow WebSocket connections
+      fontSrc: ["'self'", 'https:', 'data:'],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  // X-XSS-Protection header (legacy but still useful for older browsers)
+  xssFilter: true,
+  // Prevent clickjacking
+  frameguard: { action: 'deny' },
+  // Prevent MIME type sniffing
+  noSniff: true,
+  // HSTS - force HTTPS (only in production)
+  hsts: NODE_ENV === 'production' ? {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  } : false,
+  // Referrer policy
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  // Disable X-Powered-By header
+  hidePoweredBy: true,
+  // DNS prefetch control
+  dnsPrefetchControl: { allow: false },
+  // IE no open
+  ieNoOpen: true,
+  // Permitted cross-domain policies
+  permittedCrossDomainPolicies: { permittedPolicies: 'none' },
+}));
 
 const resolveOrigin = (origin?: string | undefined): string | null => {
   if (!origin) return null;

@@ -495,3 +495,200 @@ export const adminResetPassword = async (req: AuthRequest, res: Response): Promi
     });
   }
 };
+
+// ============================================================================
+// GDPR SELF-SERVICE ENDPOINTS
+// ============================================================================
+
+/**
+ * DELETE /api/users/me
+ * Suppression de son propre compte (RGPD Art. 17 - Droit à l'effacement)
+ * Accessible à tout utilisateur authentifié
+ */
+export const deleteOwnAccount = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        error: 'Non authentifie',
+      });
+      return;
+    }
+
+    // Vérifier que l'utilisateur existe et n'est pas le seul super_admin
+    const userCheck = await query<{ role: string }>(
+      'SELECT role FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userCheck.rowCount === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'Compte non trouve',
+      });
+      return;
+    }
+
+    // Si c'est un super_admin, vérifier qu'il n'est pas le seul
+    if (userCheck.rows[0].role === 'super_admin') {
+      const superAdminCount = await query<{ count: string }>(
+        "SELECT COUNT(*) as count FROM users WHERE role = 'super_admin' AND status = 'active'",
+        []
+      );
+
+      if (parseInt(superAdminCount.rows[0].count, 10) <= 1) {
+        res.status(400).json({
+          success: false,
+          error: 'Impossible de supprimer le dernier super administrateur. Nommez un autre super_admin avant de supprimer votre compte.',
+        });
+        return;
+      }
+    }
+
+    // Supprimer le compte (les cascades s'occupent des données liées)
+    await query('DELETE FROM users WHERE id = $1', [userId]);
+
+    logger.info('User deleted their own account (GDPR Art. 17)', {
+      userId,
+      email: req.user?.email,
+    });
+
+    // Invalider le cookie de session
+    res.clearCookie('neopro_token');
+
+    res.json({
+      success: true,
+      message: 'Votre compte a ete supprime avec succes. Conformement au RGPD Art. 17, toutes vos donnees personnelles ont ete effacees.',
+    });
+  } catch (error) {
+    logger.error('Error deleting own account:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la suppression du compte',
+    });
+  }
+};
+
+/**
+ * GET /api/users/me/export
+ * Export de toutes les données personnelles (RGPD Art. 20 - Droit à la portabilité)
+ * Retourne un JSON avec toutes les données de l'utilisateur
+ */
+export const exportOwnData = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        error: 'Non authentifie',
+      });
+      return;
+    }
+
+    // Récupérer les informations de base de l'utilisateur
+    const userResult = await query<UserRow>(
+      `SELECT id, email, full_name, role, status, created_at, updated_at, last_login_at,
+              sponsor_id, agency_id, mfa_enabled
+       FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    if (userResult.rowCount === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'Compte non trouve',
+      });
+      return;
+    }
+
+    const user = userResult.rows[0];
+
+    // Récupérer l'historique d'audit de l'utilisateur
+    const auditResult = await query<{
+      action: string;
+      ip_address: string;
+      user_agent: string;
+      accessed_at: Date;
+    }>(
+      `SELECT action, ip_address, user_agent, accessed_at
+       FROM audit_logs
+       WHERE user_id = $1
+       ORDER BY accessed_at DESC
+       LIMIT 100`,
+      [userId]
+    );
+
+    // Récupérer les tokens de reset de mot de passe (sans les hashs)
+    const resetTokensResult = await query<{
+      created_at: Date;
+      expires_at: Date;
+      used_at: Date | null;
+    }>(
+      `SELECT created_at, expires_at, used_at
+       FROM password_reset_tokens
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    // Construire l'export RGPD
+    const exportData = {
+      _metadata: {
+        export_date: new Date().toISOString(),
+        format_version: '1.0',
+        gdpr_article: 'Article 20 - Droit à la portabilité des données',
+        controller: 'NEOPRO',
+        contact: 'privacy@neopro.fr',
+      },
+      personal_data: {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        status: user.status,
+        mfa_enabled: user.mfa_enabled,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        last_login_at: user.last_login_at,
+      },
+      associations: {
+        sponsor_id: user.sponsor_id,
+        agency_id: user.agency_id,
+      },
+      activity_logs: auditResult.rows.map(log => ({
+        action: log.action,
+        ip_address: log.ip_address,
+        user_agent: log.user_agent,
+        timestamp: log.accessed_at,
+      })),
+      password_reset_history: resetTokensResult.rows.map(token => ({
+        requested_at: token.created_at,
+        expires_at: token.expires_at,
+        used_at: token.used_at,
+      })),
+    };
+
+    logger.info('User exported their data (GDPR Art. 20)', {
+      userId,
+      email: req.user?.email,
+    });
+
+    // Envoyer en JSON avec headers appropriés pour le téléchargement
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="neopro-data-export-${new Date().toISOString().split('T')[0]}.json"`);
+
+    res.json({
+      success: true,
+      data: exportData,
+    });
+  } catch (error) {
+    logger.error('Error exporting user data:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de l\'export des donnees',
+    });
+  }
+};
