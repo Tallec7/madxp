@@ -160,6 +160,136 @@ res.cookie('auth_token', token, {
 
 ---
 
+### SEC-005: Chiffrement des Sauvegardes (AES-256-GCM)
+
+**Vulnérabilité corrigée:** Backups locaux stockés en clair sur les Raspberry Pi.
+
+**Fichier:** `raspberry/sync-agent/src/tasks/local-backup.js`
+
+**Implémentation:**
+
+```javascript
+const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 16;
+const AUTH_TAG_LENGTH = 16;
+const KEY_LENGTH = 32;
+
+_deriveEncryptionKey() {
+  const secret = process.env.BACKUP_ENCRYPTION_SECRET || process.env.SITE_API_KEY;
+  if (!secret) {
+    // Génère une clé persistante si pas de secret
+    const keyPath = path.join(config.paths.data, '.backup-key');
+    // ... génération et stockage sécurisé
+  }
+  return crypto.pbkdf2Sync(secret, salt, 100000, KEY_LENGTH, 'sha512');
+}
+
+_encrypt(data) {
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, this.encryptionKey, iv);
+  // Format: IV (16) + AuthTag (16) + Ciphertext
+  return Buffer.concat([iv, authTag, encrypted]);
+}
+```
+
+**Rétrocompatibilité:** Lecture des anciens backups .json non chiffrés supportée.
+
+---
+
+### SEC-006: Socket.IO CORS Fail-Closed
+
+**Vulnérabilité corrigée:** WebSocket acceptant toutes les origines en production si ALLOWED_ORIGINS non configuré.
+
+**Fichier:** `central-server/src/services/socket.service.ts`
+
+**Implémentation:**
+
+```typescript
+const corsOrigin = hasAllowedOrigins
+  ? allowedOrigins
+  : isProduction
+    ? false  // ← REJETTE tout en production si non configuré
+    : true;  // Autorise tout en développement
+
+if (isProduction && !hasAllowedOrigins) {
+  logger.error('SECURITY WARNING: Socket.IO CORS - ALLOWED_ORIGINS not configured!');
+  logger.error('WebSocket connections from browsers will be REJECTED.');
+}
+```
+
+---
+
+### SEC-007: Configuration Helmet Renforcée
+
+**Amélioration:** CSP, XSS, HSTS, Frameguard configurés explicitement.
+
+**Fichier:** `central-server/src/server.ts`
+
+**Implémentation:**
+
+```typescript
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'wss:', 'ws:'],
+      objectSrc: ["'none'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  xssFilter: true,
+  frameguard: { action: 'deny' },
+  noSniff: true,
+  hsts: NODE_ENV === 'production' ? {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  } : false,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  hidePoweredBy: true,
+  dnsPrefetchControl: { allow: false },
+  permittedCrossDomainPolicies: { permittedPolicies: 'none' },
+}));
+```
+
+---
+
+### GDPR-001: Endpoints Self-Service RGPD
+
+**Conformité RGPD:** Articles 17 (Effacement) et 20 (Portabilité).
+
+**Fichiers:**
+- `central-server/src/controllers/users.controller.ts`
+- `central-server/src/routes/users.routes.ts`
+
+**Endpoints:**
+
+| Route | Méthode | Article | Description |
+|-------|---------|---------|-------------|
+| `/api/users/me` | DELETE | Art. 17 | Suppression compte utilisateur |
+| `/api/users/me/export` | GET | Art. 20 | Export données personnelles (JSON) |
+
+**Protection dernier super_admin:**
+
+```typescript
+if (userCheck.rows[0].role === 'super_admin') {
+  const superAdminCount = await query(
+    "SELECT COUNT(*) FROM users WHERE role = 'super_admin' AND status = 'active'"
+  );
+  if (parseInt(superAdminCount.rows[0].count, 10) <= 1) {
+    res.status(400).json({
+      error: 'Impossible de supprimer le dernier super administrateur.'
+    });
+    return;
+  }
+}
+```
+
+---
+
 ## 🟢 Implémentations Existantes (Conservées)
 
 ---
@@ -648,6 +778,6 @@ Toutes les améliorations sont **compatibles** avec :
 
 ---
 
-**Date de mise à jour** : 18 décembre 2025
-**Version** : 1.0
+**Date de mise à jour** : 29 décembre 2025
+**Version** : 2.0
 **Auteur** : Claude (Anthropic)

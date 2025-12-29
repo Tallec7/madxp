@@ -1,11 +1,12 @@
 # Changelog
 
-Généré le 2025-12-08 (Mise à jour 2025-12-28)
+Généré le 2025-12-08 (Mise à jour 2025-12-29)
 
 > **Note** : Les fichiers de commits individuels (138 fichiers) ont été archivés vers `../archive/commits/` le 25/12/2025.
 
 ## ✨ Nouvelles fonctionnalités
 
+- [Audit RGPD et Sécurité](2025-12-29_gdpr-security-audit.md) - Conformité RGPD, documentation juridique, corrections sécurité - 2025-12-29
 - [Overlay Local System](2025-12-28_overlay-local-system.md) - Options, Timer, Breaking News, Templates - 2025-12-28
 - **Page Login Raspberry améliorée** - Footer dynamique (clubName/sport), UI modernisée - 2025-12-28
 - [Implémentation des TODOs système](2025-12-28_todos-implementation.md) - 2025-12-28

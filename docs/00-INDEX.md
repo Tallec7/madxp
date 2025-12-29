@@ -58,9 +58,17 @@ Documentation business, stratégie et planification.
 
 ### 🔍 [Audits](audit/)
 Rapports d'audit techniques et de conformité.
+- [Audit RGPD/Sécurité 29 déc 2025](audit/AUDIT_RGPD_SECURITE_2025-12-29.md) - **Conformité RGPD**
 - [Audit plateforme 25 déc 2025](audit/AUDIT_PLATEFORME_COMPLET_2025.md) (41K) - **Source de vérité**
 - [Analyse stratégie produit](audit/PRODUCT_STRATEGY_ANALYSIS.md) (33K)
 - [Audit documentation 25 déc 2025](audit/AUDIT_DOCS_2025-12-25.md) - Structure et doublons
+
+### 📜 [Documentation Juridique](legal/)
+Documents légaux et conformité RGPD.
+- [Politique de Confidentialité](legal/PRIVACY_POLICY.md) - RGPD Art. 13-14
+- [Conditions Générales d'Utilisation](legal/TERMS_OF_SERVICE.md) - CGU
+- [Conditions Générales de Vente](legal/GENERAL_SALES_CONDITIONS.md) - CGV B2B
+- [Registre des Traitements](legal/GDPR_PROCESSING_REGISTER.md) - RGPD Art. 30
 
 ### 📝 [Changelog](changelog/)
 Historique des modifications et commits.
@@ -158,6 +166,6 @@ neopro/
 
 ---
 
-**Dernière mise à jour** : 26 décembre 2025 - Ajout multi-tenant (sponsors/agences)
+**Dernière mise à jour** : 29 décembre 2025 - Audit RGPD/Sécurité, documentation juridique
 
-**Version** : 2.2
+**Version** : 2.3
