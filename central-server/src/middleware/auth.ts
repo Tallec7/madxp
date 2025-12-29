@@ -18,6 +18,7 @@ export interface JwtPayload {
   id: string;
   email: string;
   role: UserRole;
+  advertiser_id?: string | null;
   sponsor_id?: string | null;
   agency_id?: string | null;
 }
@@ -121,9 +122,10 @@ export const requireSponsorAccess = (getSponsorIdFromRequest: (req: AuthRequest)
     }
 
     // Sponsors ne peuvent accéder qu'à leurs propres données
-    if (req.user.role === 'sponsor') {
+    if (req.user.role === 'sponsor' || req.user.role === 'advertiser') {
       const requestedSponsorId = getSponsorIdFromRequest(req);
-      if (!requestedSponsorId || requestedSponsorId !== req.user.sponsor_id) {
+      const userSponsorId = req.user.advertiser_id ?? req.user.sponsor_id;
+      if (!requestedSponsorId || requestedSponsorId !== userSponsorId) {
         return res.status(403).json({
           error: 'Accès refusé',
           message: 'Vous ne pouvez accéder qu\'à vos propres données sponsor'

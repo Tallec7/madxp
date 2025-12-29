@@ -29,7 +29,8 @@ type UserRow = {
   full_name: string;
   role: UserRole;
   mfa_enabled: boolean;
-  sponsor_id: string | null;
+  advertiser_id?: string | null;
+  sponsor_id?: string | null;
   agency_id: string | null;
   created_at?: Date;
   last_login_at?: Date;
@@ -37,6 +38,45 @@ type UserRow = {
 
 type PasswordRow = {
   password_hash: string;
+};
+
+const isMissingColumnError = (error: unknown, column: string): boolean => {
+  const candidate = error as { code?: string; message?: string };
+  return candidate?.code === '42703' && typeof candidate?.message === 'string' && candidate.message.includes(`"${column}"`);
+};
+
+const getUserByEmail = async (email: string) => {
+  try {
+    return await query<UserRow>(
+      'SELECT id, email, password_hash, full_name, role, mfa_enabled, advertiser_id, agency_id FROM users WHERE email = $1',
+      [email]
+    );
+  } catch (error) {
+    if (isMissingColumnError(error, 'advertiser_id')) {
+      return await query<UserRow>(
+        'SELECT id, email, password_hash, full_name, role, mfa_enabled, sponsor_id, agency_id FROM users WHERE email = $1',
+        [email]
+      );
+    }
+    throw error;
+  }
+};
+
+const getUserById = async (id: string) => {
+  try {
+    return await query<UserRow>(
+      'SELECT id, email, full_name, role, advertiser_id, agency_id, created_at, last_login_at FROM users WHERE id = $1',
+      [id]
+    );
+  } catch (error) {
+    if (isMissingColumnError(error, 'advertiser_id')) {
+      return await query<UserRow>(
+        'SELECT id, email, full_name, role, sponsor_id, agency_id, created_at, last_login_at FROM users WHERE id = $1',
+        [id]
+      );
+    }
+    throw error;
+  }
 };
 
 export const login = async (req: Request, res: Response): Promise<Response> => {
@@ -47,16 +87,15 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
       mfaCode?: string;
     };
 
-    const result = await query<UserRow>(
-      'SELECT id, email, password_hash, full_name, role, mfa_enabled, sponsor_id, agency_id FROM users WHERE email = $1',
-      [email]
-    );
+    const result = await getUserByEmail(email);
 
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
     const user = result.rows[0];
+    const advertiserId = user.advertiser_id ?? user.sponsor_id ?? null;
+    const sponsorId = user.sponsor_id ?? user.advertiser_id ?? null;
 
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
@@ -89,7 +128,8 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
       id: user.id,
       email: user.email,
       role: user.role,
-      sponsor_id: user.sponsor_id,
+      advertiser_id: advertiserId,
+      sponsor_id: sponsorId,
       agency_id: user.agency_id,
     });
 
@@ -112,7 +152,8 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
         full_name: user.full_name,
         role: user.role,
         mfa_enabled: user.mfa_enabled,
-        sponsor_id: user.sponsor_id,
+        advertiser_id: advertiserId,
+        sponsor_id: sponsorId,
         agency_id: user.agency_id,
       },
     });
@@ -135,16 +176,18 @@ export const me = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Non authentifié' });
     }
 
-    const result = await query<UserRow>(
-      'SELECT id, email, full_name, role, sponsor_id, agency_id, created_at, last_login_at FROM users WHERE id = $1',
-      [req.user.id]
-    );
+    const result = await getUserById(req.user.id);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    return res.json(result.rows[0]);
+    const user = result.rows[0];
+    return res.json({
+      ...user,
+      advertiser_id: user.advertiser_id ?? user.sponsor_id ?? null,
+      sponsor_id: user.sponsor_id ?? user.advertiser_id ?? null,
+    });
   } catch (error) {
     logger.error('Get current user error:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des informations' });
