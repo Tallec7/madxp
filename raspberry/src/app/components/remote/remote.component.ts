@@ -367,13 +367,7 @@ export class RemoteComponent implements OnInit {
   }
 
   public getTotalCategoriesForTimeCategory(timeCategory: TimeCategory): number {
-    const categories = this.getCategoriesForTimeCategory(timeCategory);
-    return categories.reduce((sum, cat) => {
-      if (cat.subCategories && cat.subCategories.length > 0) {
-        return sum + cat.subCategories.length;
-      }
-      return sum + 1;
-    }, 0);
+    return this.getCategoriesForTimeCategory(timeCategory).length;
   }
 
   /**
