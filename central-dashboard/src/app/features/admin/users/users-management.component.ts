@@ -13,7 +13,7 @@ import {
 import { AgencyPortalService, Agency } from '../../../core/services/agency-portal.service';
 import { ApiService } from '../../../core/services/api.service';
 
-interface Sponsor {
+interface Advertiser {
   id: string;
   name: string;
   status: string;
@@ -24,7 +24,7 @@ interface UserForm {
   password: string;
   full_name: string;
   role: UserRole;
-  sponsor_id: string | null;
+  advertiser_id: string | null;
   agency_id: string | null;
 }
 
@@ -56,7 +56,7 @@ interface UserForm {
           <option value="admin">{{ 'roles.admin' | translate }}</option>
           <option value="operator">{{ 'roles.operator' | translate }}</option>
           <option value="viewer">{{ 'roles.viewer' | translate }}</option>
-          <option value="sponsor">Sponsor</option>
+          <option value="advertiser">Annonceur</option>
           <option value="agency">Agence</option>
         </select>
         <select [(ngModel)]="filterStatus" (ngModelChange)="applyFilters()" class="filter-select">
@@ -108,8 +108,8 @@ interface UserForm {
                   <td>
                     <div class="name-cell">
                       <span>{{ user.full_name || '-' }}</span>
-                      @if (user.sponsor_name) {
-                        <span class="sub-info sponsor">Sponsor: {{ user.sponsor_name }}</span>
+                      @if (user.advertiser_name) {
+                        <span class="sub-info advertiser">Annonceur: {{ user.advertiser_name }}</span>
                       }
                       @if (user.agency_name) {
                         <span class="sub-info agency">Agence: {{ user.agency_name }}</span>
@@ -208,17 +208,17 @@ interface UserForm {
                   <option value="admin">{{ 'roles.admin' | translate }}</option>
                   <option value="operator">{{ 'roles.operator' | translate }}</option>
                   <option value="viewer">{{ 'roles.viewer' | translate }}</option>
-                  <option value="sponsor">Sponsor</option>
+                  <option value="advertiser">Annonceur</option>
                   <option value="agency">Agence</option>
                 </select>
               </div>
-              @if (userForm.role === 'sponsor') {
+              @if (userForm.role === 'advertiser') {
                 <div class="form-group">
-                  <label>Sponsor associe</label>
-                  <select [(ngModel)]="userForm.sponsor_id" name="sponsor_id">
-                    <option [ngValue]="null">Selectionnez un sponsor</option>
-                    @for (sponsor of sponsors(); track sponsor.id) {
-                      <option [ngValue]="sponsor.id">{{ sponsor.name }}</option>
+                  <label>Annonceur associe</label>
+                  <select [(ngModel)]="userForm.advertiser_id" name="advertiser_id">
+                    <option [ngValue]="null">Selectionnez un annonceur</option>
+                    @for (advertiser of advertisers(); track advertiser.id) {
+                      <option [ngValue]="advertiser.id">{{ advertiser.name }}</option>
                     }
                   </select>
                 </div>
@@ -405,7 +405,7 @@ interface UserForm {
         font-size: 0.75rem;
       }
 
-      .sub-info.sponsor {
+      .sub-info.advertiser {
         color: #7c3aed;
       }
 
@@ -437,7 +437,7 @@ interface UserForm {
         background: #f1f5f9;
         color: #475569;
       }
-      .badge-sponsor {
+      .badge-advertiser {
         background: #fef3c7;
         color: #92400e;
       }
@@ -732,7 +732,7 @@ export class UsersManagementComponent implements OnInit {
 
   users = signal<User[]>([]);
   agencies = signal<Agency[]>([]);
-  sponsors = signal<Sponsor[]>([]);
+  advertisers = signal<Advertiser[]>([]);
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
@@ -750,14 +750,14 @@ export class UsersManagementComponent implements OnInit {
     password: '',
     full_name: '',
     role: 'viewer',
-    sponsor_id: null,
+    advertiser_id: null,
     agency_id: null,
   };
 
   ngOnInit(): void {
     this.loadUsers();
     this.loadAgencies();
-    this.loadSponsors();
+    this.loadAdvertisers();
   }
 
   loadUsers(): void {
@@ -795,17 +795,17 @@ export class UsersManagementComponent implements OnInit {
     });
   }
 
-  loadSponsors(): void {
+  loadAdvertisers(): void {
     this.api
-      .get<{ success: boolean; data: { sponsors: Sponsor[] } }>('/analytics/sponsors')
+      .get<{ success: boolean; data: { advertisers: Advertiser[] } }>('/analytics/advertisers')
       .subscribe({
         next: (response) => {
           if (response.success) {
-            this.sponsors.set(response.data.sponsors);
+            this.advertisers.set(response.data.advertisers);
           }
         },
         error: () => {
-          // Sponsors list may not be available, silently ignore
+          // Advertisers list may not be available, silently ignore
         },
       });
   }
@@ -821,7 +821,7 @@ export class UsersManagementComponent implements OnInit {
       password: '',
       full_name: user.full_name || '',
       role: user.role,
-      sponsor_id: user.sponsor_id,
+      advertiser_id: user.advertiser_id,
       agency_id: user.agency_id,
     };
   }
@@ -838,7 +838,7 @@ export class UsersManagementComponent implements OnInit {
       password: '',
       full_name: '',
       role: 'viewer',
-      sponsor_id: null,
+      advertiser_id: null,
       agency_id: null,
     };
   }
@@ -854,7 +854,7 @@ export class UsersManagementComponent implements OnInit {
         email: this.userForm.email.trim(),
         full_name: this.userForm.full_name.trim(),
         role: this.userForm.role,
-        sponsor_id: this.userForm.sponsor_id,
+        advertiser_id: this.userForm.advertiser_id,
         agency_id: this.userForm.agency_id,
       };
 
@@ -879,7 +879,7 @@ export class UsersManagementComponent implements OnInit {
         password: this.userForm.password,
         full_name: this.userForm.full_name.trim(),
         role: this.userForm.role,
-        sponsor_id: this.userForm.sponsor_id,
+        advertiser_id: this.userForm.advertiser_id,
         agency_id: this.userForm.agency_id,
       };
 

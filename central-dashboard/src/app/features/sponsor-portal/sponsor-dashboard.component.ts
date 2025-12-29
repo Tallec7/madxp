@@ -10,15 +10,15 @@ import { SponsorPortalService, SponsorDashboard, SponsorSite, SponsorVideo } fro
   template: `
     <div class="dashboard-container">
       <div class="header">
-        <div class="sponsor-info" *ngIf="dashboard?.sponsor">
-          <img *ngIf="dashboard?.sponsor?.logo_url"
-               [src]="dashboard?.sponsor?.logo_url"
-               [alt]="dashboard?.sponsor?.name"
+        <div class="sponsor-info" *ngIf="dashboard?.advertiser">
+          <img *ngIf="dashboard?.advertiser?.logo_url"
+               [src]="dashboard?.advertiser?.logo_url"
+               [alt]="dashboard?.advertiser?.name"
                class="sponsor-logo">
           <div>
-            <h1>{{ dashboard?.sponsor?.name }}</h1>
-            <span class="badge" [class]="'badge-' + dashboard?.sponsor?.status">
-              {{ dashboard?.sponsor?.status }}
+            <h1>{{ dashboard?.advertiser?.name }}</h1>
+            <span class="badge" [class]="'badge-' + dashboard?.advertiser?.status">
+              {{ dashboard?.advertiser?.status }}
             </span>
           </div>
         </div>

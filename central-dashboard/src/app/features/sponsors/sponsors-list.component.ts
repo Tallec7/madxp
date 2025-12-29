@@ -68,7 +68,7 @@ interface Sponsor {
 
       <!-- Sponsors Grid -->
       <div *ngIf="!loading && filteredSponsors.length > 0" class="sponsors-grid">
-        <div *ngFor="let sponsor of filteredSponsors" class="sponsor-card" [routerLink]="['/sponsors', sponsor.id]">
+        <div *ngFor="let sponsor of filteredSponsors" class="sponsor-card" [routerLink]="['/advertisers', sponsor.id]">
           <div class="sponsor-header">
             <div class="sponsor-logo" *ngIf="sponsor.logo_url">
               <img [src]="sponsor.logo_url" [alt]="sponsor.name" />
@@ -542,10 +542,10 @@ export class SponsorsListComponent implements OnInit {
 
   loadSponsors() {
     this.loading = true;
-    this.api.get<{ success: boolean; data: { sponsors: Sponsor[] } }>('/analytics/sponsors')
+    this.api.get<{ success: boolean; data: { advertisers: Sponsor[] } }>('/analytics/advertisers')
       .subscribe({
         next: (response) => {
-          this.sponsors = response.data.sponsors || [];
+          this.sponsors = response.data.advertisers || [];
           this.filteredSponsors = this.sponsors;
         },
         error: (error) => {
@@ -617,8 +617,8 @@ export class SponsorsListComponent implements OnInit {
     this.saving = true;
 
     const endpoint = this.isEditing && this.formData.id
-      ? `/analytics/sponsors/${this.formData.id}`
-      : '/analytics/sponsors';
+      ? `/analytics/advertisers/${this.formData.id}`
+      : '/analytics/advertisers';
 
     const request$ = this.isEditing && this.formData.id
       ? this.api.put<{ success: boolean; data: Sponsor }>(endpoint, this.formData)
@@ -646,6 +646,6 @@ export class SponsorsListComponent implements OnInit {
   viewAnalytics(event: Event, sponsorId: string) {
     event.stopPropagation();
     // Navigate to analytics view
-    window.location.href = `/sponsors/${sponsorId}`;
+    window.location.href = `/advertisers/${sponsorId}`;
   }
 }

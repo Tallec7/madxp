@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 
 export interface SponsorDashboard {
-  sponsor: {
+  advertiser: {
     id: string;
     name: string;
     logo_url: string | null;
@@ -81,21 +81,21 @@ export class SponsorPortalService {
   private readonly api = inject(ApiService);
 
   getDashboard(): Observable<{ success: boolean; data: SponsorDashboard }> {
-    return this.api.get('/sponsor/dashboard');
+    return this.api.get('/advertiser/dashboard');
   }
 
   getSites(): Observable<{ success: boolean; data: { sites: SponsorSite[]; total: number } }> {
-    return this.api.get('/sponsor/sites');
+    return this.api.get('/advertiser/sites');
   }
 
   getVideos(): Observable<{ success: boolean; data: { videos: SponsorVideo[]; total: number } }> {
-    return this.api.get('/sponsor/videos');
+    return this.api.get('/advertiser/videos');
   }
 
   getStats(from?: string, to?: string): Observable<{ success: boolean; data: SponsorStats }> {
     const params: Record<string, string> = {};
     if (from) params['from'] = from;
     if (to) params['to'] = to;
-    return this.api.get('/sponsor/stats', params);
+    return this.api.get('/advertiser/stats', params);
   }
 }

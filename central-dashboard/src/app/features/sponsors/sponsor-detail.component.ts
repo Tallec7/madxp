@@ -1140,13 +1140,13 @@ export class SponsorDetailComponent implements OnInit {
     this.error = '';
 
     // Load sponsor details
-    this.api.get<{ success: boolean; data: { sponsor: Sponsor } }>(`/analytics/sponsors/${this.sponsorId}`)
+    this.api.get<{ success: boolean; data: { advertiser: Sponsor } }>(`/analytics/advertisers/${this.sponsorId}`)
       .subscribe({
         next: (response) => {
-          this.sponsor = response.data.sponsor;
+          this.sponsor = response.data.advertiser;
 
           // Load associated videos
-          this.api.get<{ success: boolean; data: { videos: SponsorVideo[] } }>(`/analytics/sponsors/${this.sponsorId}/videos`)
+          this.api.get<{ success: boolean; data: { videos: SponsorVideo[] } }>(`/analytics/advertisers/${this.sponsorId}/videos`)
             .subscribe({
               next: (videoResponse) => {
                 this.sponsorVideos = videoResponse.data.videos || [];
@@ -1157,7 +1157,7 @@ export class SponsorDetailComponent implements OnInit {
             });
 
           // Load quick stats (last 30 days)
-          this.api.get<{ success: boolean; data: { summary: any } }>(`/analytics/sponsors/${this.sponsorId}/stats`, { days: '30' })
+          this.api.get<{ success: boolean; data: { summary: any } }>(`/analytics/advertisers/${this.sponsorId}/stats`, { days: '30' })
             .subscribe({
               next: (statsResponse) => {
                 this.quickStats = statsResponse.data.summary;
@@ -1180,11 +1180,11 @@ export class SponsorDetailComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/sponsors']);
+    this.router.navigate(['/advertisers']);
   }
 
   navigateToAnalytics() {
-    this.router.navigate(['/sponsors', this.sponsorId, 'analytics']);
+    this.router.navigate(['/advertisers', this.sponsorId, 'analytics']);
   }
 
   // Edit Functions
@@ -1202,10 +1202,10 @@ export class SponsorDetailComponent implements OnInit {
     event.preventDefault();
     this.saving = true;
 
-    this.api.put<{ success: boolean; data: { sponsor: Sponsor } }>(`/analytics/sponsors/${this.sponsorId}`, this.editForm)
+    this.api.put<{ success: boolean; data: { advertiser: Sponsor } }>(`/analytics/advertisers/${this.sponsorId}`, this.editForm)
       .subscribe({
         next: (response) => {
-          this.sponsor = response.data.sponsor;
+          this.sponsor = response.data.advertiser;
           this.notification.success('Sponsor modifié avec succès');
           this.closeEditModal();
         },
@@ -1232,11 +1232,11 @@ export class SponsorDetailComponent implements OnInit {
   deleteSponsor() {
     this.deleting = true;
 
-    this.api.delete<{ success: boolean }>(`/analytics/sponsors/${this.sponsorId}`)
+    this.api.delete<{ success: boolean }>(`/analytics/advertisers/${this.sponsorId}`)
       .subscribe({
         next: () => {
           this.notification.success('Sponsor supprimé avec succès');
-          this.router.navigate(['/sponsors']);
+          this.router.navigate(['/advertisers']);
         },
         error: (err) => {
           this.notification.error('Erreur lors de la suppression');
@@ -1312,14 +1312,14 @@ export class SponsorDetailComponent implements OnInit {
 
     this.addingVideos = true;
 
-    this.api.post<{ success: boolean }>(`/analytics/sponsors/${this.sponsorId}/videos`, {
+    this.api.post<{ success: boolean }>(`/analytics/advertisers/${this.sponsorId}/videos`, {
       video_ids: this.selectedVideoIds
     }).subscribe({
       next: () => {
         this.notification.success(`${this.selectedVideoIds.length} vidéo(s) ajoutée(s) avec succès`);
         this.closeAddVideosModal();
         // Reload sponsor videos
-        this.api.get<{ success: boolean; data: { videos: SponsorVideo[] } }>(`/analytics/sponsors/${this.sponsorId}/videos`)
+        this.api.get<{ success: boolean; data: { videos: SponsorVideo[] } }>(`/analytics/advertisers/${this.sponsorId}/videos`)
           .subscribe({
             next: (response) => {
               this.sponsorVideos = response.data.videos || [];
@@ -1356,7 +1356,7 @@ export class SponsorDetailComponent implements OnInit {
 
     try {
       const response = await fetch(
-        `/api/analytics/sponsors/${this.sponsorId}/videos/${videoId}`,
+        `/api/analytics/advertisers/${this.sponsorId}/videos/${videoId}`,
         {
           method: 'DELETE',
           credentials: 'include'

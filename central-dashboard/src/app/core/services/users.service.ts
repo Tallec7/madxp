@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 
-export type UserRole = 'super_admin' | 'admin' | 'operator' | 'viewer' | 'sponsor' | 'agency';
+export type UserRole = 'super_admin' | 'admin' | 'operator' | 'viewer' | 'advertiser' | 'sponsor' | 'agency';
 export type UserStatus = 'active' | 'inactive' | 'suspended';
 
 export interface User {
@@ -10,8 +10,9 @@ export interface User {
   email: string;
   full_name: string | null;
   role: UserRole;
-  sponsor_id: string | null;
-  sponsor_name?: string | null;
+  advertiser_id: string | null;
+  advertiser_name?: string | null;
+  sponsor_id?: string | null;
   agency_id: string | null;
   agency_name?: string | null;
   mfa_enabled: boolean;
@@ -26,7 +27,7 @@ export interface CreateUserData {
   password: string;
   full_name: string;
   role: UserRole;
-  sponsor_id?: string | null;
+  advertiser_id?: string | null;
   agency_id?: string | null;
 }
 
@@ -34,7 +35,7 @@ export interface UpdateUserData {
   email?: string;
   full_name?: string;
   role?: UserRole;
-  sponsor_id?: string | null;
+  advertiser_id?: string | null;
   agency_id?: string | null;
   status?: UserStatus;
 }
@@ -107,6 +108,7 @@ export class UsersService {
       admin: 'Administrateur',
       operator: 'Operateur',
       viewer: 'Observateur',
+      advertiser: 'Annonceur',
       sponsor: 'Sponsor',
       agency: 'Agence',
     };

@@ -39,7 +39,7 @@ describe('SponsorsListComponent', () => {
 
   beforeEach(async () => {
     const apiServiceMock = {
-      get: jest.fn().mockReturnValue(of({ success: true, data: { sponsors: mockSponsors } })),
+      get: jest.fn().mockReturnValue(of({ success: true, data: { advertisers: mockSponsors } })),
       post: jest.fn().mockReturnValue(of({ success: true, data: { id: '4', name: 'New Sponsor' } })),
       put: jest.fn().mockReturnValue(of({ success: true, data: { id: '1', name: 'Updated Sponsor' } })),
     };
@@ -76,7 +76,7 @@ describe('SponsorsListComponent', () => {
       fixture.detectChanges();
       tick();
 
-      expect(apiService.get).toHaveBeenCalledWith('/analytics/sponsors');
+      expect(apiService.get).toHaveBeenCalledWith('/analytics/advertisers');
       expect(component.sponsors).toHaveLength(3);
     }));
 
@@ -249,7 +249,7 @@ describe('SponsorsListComponent', () => {
       component.saveSponsor(mockEvent);
       tick();
 
-      expect(apiService.post).toHaveBeenCalledWith('/analytics/sponsors', component.formData);
+      expect(apiService.post).toHaveBeenCalledWith('/analytics/advertisers', component.formData);
       expect(notificationService.success).toHaveBeenCalledWith('Sponsor créé avec succès');
       expect(component.showModal).toBe(false);
     }));
@@ -262,7 +262,7 @@ describe('SponsorsListComponent', () => {
       component.saveSponsor(mockEvent);
       tick();
 
-      expect(apiService.put).toHaveBeenCalledWith('/analytics/sponsors/1', component.formData);
+      expect(apiService.put).toHaveBeenCalledWith('/analytics/advertisers/1', component.formData);
       expect(notificationService.success).toHaveBeenCalledWith('Sponsor modifié avec succès');
     }));
 
@@ -294,7 +294,7 @@ describe('SponsorsListComponent', () => {
       component.saveSponsor(mockEvent);
       tick();
 
-      expect(apiService.get).toHaveBeenCalledWith('/analytics/sponsors');
+      expect(apiService.get).toHaveBeenCalledWith('/analytics/advertisers');
     }));
   });
 

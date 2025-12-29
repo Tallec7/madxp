@@ -36,7 +36,7 @@ interface DeploymentRow {
   storage_path: string;
   checksum: string | null;
   metadata: { title?: string; analytics_category?: string } | null;
-  sponsor_id: string | null;
+  advertiser_id: string | null;
   analytics_category: string | null;
 }
 
@@ -51,16 +51,16 @@ class DeploymentService {
       const deploymentResult = await query(
         `SELECT cd.*,
                 v.filename, v.original_name, v.category, v.subcategory, v.duration, v.storage_path, v.checksum, v.metadata,
-                sv.sponsor_id,
+                av.advertiser_id,
                 COALESCE(v.metadata->>'analytics_category',
                   CASE
-                    WHEN sv.sponsor_id IS NOT NULL THEN 'sponsor'
+                    WHEN av.advertiser_id IS NOT NULL THEN 'sponsor'
                     ELSE NULL
                   END
                 ) as analytics_category
          FROM content_deployments cd
          JOIN videos v ON cd.video_id = v.id
-         LEFT JOIN sponsor_videos sv ON sv.video_id = v.id AND sv.is_primary = true
+         LEFT JOIN advertiser_videos av ON av.video_id = v.id AND av.is_primary = true
          WHERE cd.id = $1`,
         [deploymentId]
       );
@@ -133,16 +133,16 @@ class DeploymentService {
       const result = await query(
         `SELECT cd.id, cd.video_id,
                 v.filename, v.original_name, v.category, v.subcategory, v.duration, v.storage_path, v.checksum, v.metadata,
-                sv.sponsor_id,
+                av.advertiser_id,
                 COALESCE(v.metadata->>'analytics_category',
                   CASE
-                    WHEN sv.sponsor_id IS NOT NULL THEN 'sponsor'
+                    WHEN av.advertiser_id IS NOT NULL THEN 'sponsor'
                     ELSE NULL
                   END
                 ) as analytics_category
          FROM content_deployments cd
          JOIN videos v ON cd.video_id = v.id
-         LEFT JOIN sponsor_videos sv ON sv.video_id = v.id AND sv.is_primary = true
+         LEFT JOIN advertiser_videos av ON av.video_id = v.id AND av.is_primary = true
          WHERE cd.status IN ('pending', 'in_progress')
            AND (
              (cd.target_type = 'site' AND cd.target_id = $1)
@@ -253,7 +253,7 @@ class DeploymentService {
         duration: deployment.duration || 0,
         checksum: deployment.checksum, // Checksum SHA256 OBLIGATOIRE
         // Métadonnées pour le tracking analytics
-        sponsorId: deployment.sponsor_id || null,
+        sponsorId: deployment.advertiser_id || null,
         analyticsCategory: deployment.analytics_category || null,
       }
     };

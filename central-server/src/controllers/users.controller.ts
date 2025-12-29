@@ -16,7 +16,7 @@ interface UserRow {
   email: string;
   full_name: string | null;
   role: UserRole;
-  sponsor_id: string | null;
+  advertiser_id: string | null;
   agency_id: string | null;
   mfa_enabled: boolean;
   status: string;
@@ -26,7 +26,7 @@ interface UserRow {
 }
 
 interface UserWithRelations extends UserRow {
-  sponsor_name?: string | null;
+  advertiser_name?: string | null;
   agency_name?: string | null;
 }
 
@@ -69,12 +69,12 @@ export const listUsers = async (req: AuthRequest, res: Response): Promise<void> 
 
     const result = await query<UserWithRelations>(
       `SELECT
-        u.id, u.email, u.full_name, u.role, u.sponsor_id, u.agency_id,
+        u.id, u.email, u.full_name, u.role, u.advertiser_id, u.agency_id,
         u.mfa_enabled, u.status, u.created_at, u.updated_at, u.last_login_at,
-        s.name as sponsor_name,
+        adv.name as advertiser_name,
         a.name as agency_name
        FROM users u
-       LEFT JOIN sponsors s ON s.id = u.sponsor_id
+       LEFT JOIN advertisers adv ON adv.id = u.advertiser_id
        LEFT JOIN agencies a ON a.id = u.agency_id
        ${whereClause}
        ORDER BY u.created_at DESC`,
@@ -89,8 +89,8 @@ export const listUsers = async (req: AuthRequest, res: Response): Promise<void> 
           email: u.email,
           full_name: u.full_name,
           role: u.role,
-          sponsor_id: u.sponsor_id,
-          sponsor_name: u.sponsor_name,
+          advertiser_id: u.advertiser_id,
+          advertiser_name: u.advertiser_name,
           agency_id: u.agency_id,
           agency_name: u.agency_name,
           mfa_enabled: u.mfa_enabled,
@@ -129,12 +129,12 @@ export const getUser = async (req: AuthRequest, res: Response): Promise<void> =>
 
     const result = await query<UserWithRelations>(
       `SELECT
-        u.id, u.email, u.full_name, u.role, u.sponsor_id, u.agency_id,
+        u.id, u.email, u.full_name, u.role, u.advertiser_id, u.agency_id,
         u.mfa_enabled, u.status, u.created_at, u.updated_at, u.last_login_at,
-        s.name as sponsor_name,
+        adv.name as advertiser_name,
         a.name as agency_name
        FROM users u
-       LEFT JOIN sponsors s ON s.id = u.sponsor_id
+       LEFT JOIN advertisers adv ON adv.id = u.advertiser_id
        LEFT JOIN agencies a ON a.id = u.agency_id
        WHERE u.id = $1`,
       [id]
@@ -157,8 +157,8 @@ export const getUser = async (req: AuthRequest, res: Response): Promise<void> =>
           email: u.email,
           full_name: u.full_name,
           role: u.role,
-          sponsor_id: u.sponsor_id,
-          sponsor_name: u.sponsor_name,
+          advertiser_id: u.advertiser_id,
+          advertiser_name: u.advertiser_name,
           agency_id: u.agency_id,
           agency_name: u.agency_name,
           mfa_enabled: u.mfa_enabled,
@@ -184,7 +184,16 @@ export const getUser = async (req: AuthRequest, res: Response): Promise<void> =>
  */
 export const createUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { email, password, full_name, role, sponsor_id, agency_id } = req.body;
+    const { email, password, full_name, role, advertiser_id, sponsor_id, agency_id } = req.body as {
+      email: string;
+      password: string;
+      full_name: string;
+      role: UserRole;
+      advertiser_id?: string | null;
+      sponsor_id?: string | null;
+      agency_id?: string | null;
+    };
+    const resolvedAdvertiserId = advertiser_id ?? sponsor_id ?? null;
 
     // Verifier que l'email n'existe pas deja
     const existingUser = await query<{ id: string }>(
@@ -201,10 +210,10 @@ export const createUser = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     // Valider les relations sponsor/agency selon le role
-    if (role === 'sponsor' && !sponsor_id) {
+    if ((role === 'advertiser' || role === 'sponsor') && !resolvedAdvertiserId) {
       res.status(400).json({
         success: false,
-        error: 'sponsor_id est requis pour le role sponsor',
+        error: 'advertiser_id est requis pour le role advertiser',
       });
       return;
     }
@@ -221,10 +230,10 @@ export const createUser = async (req: AuthRequest, res: Response): Promise<void>
     const password_hash = await bcrypt.hash(password, 10);
 
     const result = await query<UserRow>(
-      `INSERT INTO users (email, password_hash, full_name, role, sponsor_id, agency_id, status)
+      `INSERT INTO users (email, password_hash, full_name, role, advertiser_id, agency_id, status)
        VALUES ($1, $2, $3, $4, $5, $6, 'active')
-       RETURNING id, email, full_name, role, sponsor_id, agency_id, mfa_enabled, status, created_at, updated_at`,
-      [email, password_hash, full_name || null, role, sponsor_id || null, agency_id || null]
+       RETURNING id, email, full_name, role, advertiser_id, agency_id, mfa_enabled, status, created_at, updated_at`,
+      [email, password_hash, full_name || null, role, resolvedAdvertiserId, agency_id || null]
     );
 
     logger.info('User created', { userId: result.rows[0].id, email, role, by: req.user?.email });
@@ -250,7 +259,16 @@ export const createUser = async (req: AuthRequest, res: Response): Promise<void>
 export const updateUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { email, full_name, role, sponsor_id, agency_id, status } = req.body;
+    const { email, full_name, role, advertiser_id, sponsor_id, agency_id, status } = req.body as {
+      email?: string;
+      full_name?: string;
+      role?: UserRole;
+      advertiser_id?: string | null;
+      sponsor_id?: string | null;
+      agency_id?: string | null;
+      status?: string;
+    };
+    const resolvedAdvertiserId = advertiser_id ?? sponsor_id ?? null;
 
     if (!validateUuid(id)) {
       res.status(400).json({
@@ -290,13 +308,13 @@ export const updateUser = async (req: AuthRequest, res: Response): Promise<void>
        SET email = COALESCE($1, email),
            full_name = COALESCE($2, full_name),
            role = COALESCE($3, role),
-           sponsor_id = CASE WHEN $4::text = 'null' THEN NULL ELSE COALESCE($4::uuid, sponsor_id) END,
+           advertiser_id = CASE WHEN $4::text = 'null' THEN NULL ELSE COALESCE($4::uuid, advertiser_id) END,
            agency_id = CASE WHEN $5::text = 'null' THEN NULL ELSE COALESCE($5::uuid, agency_id) END,
            status = COALESCE($6, status),
            updated_at = NOW()
        WHERE id = $7
-       RETURNING id, email, full_name, role, sponsor_id, agency_id, mfa_enabled, status, created_at, updated_at, last_login_at`,
-      [email, full_name, role, sponsor_id === null ? 'null' : sponsor_id, agency_id === null ? 'null' : agency_id, status, id]
+       RETURNING id, email, full_name, role, advertiser_id, agency_id, mfa_enabled, status, created_at, updated_at, last_login_at`,
+      [email, full_name, role, resolvedAdvertiserId === null ? 'null' : resolvedAdvertiserId, agency_id === null ? 'null' : agency_id, status, id]
     );
 
     if (result.rowCount === 0) {
@@ -591,7 +609,7 @@ export const exportOwnData = async (req: AuthRequest, res: Response): Promise<vo
     // Récupérer les informations de base de l'utilisateur
     const userResult = await query<UserRow>(
       `SELECT id, email, full_name, role, status, created_at, updated_at, last_login_at,
-              sponsor_id, agency_id, mfa_enabled
+              advertiser_id, agency_id, mfa_enabled
        FROM users WHERE id = $1`,
       [userId]
     );
@@ -655,7 +673,7 @@ export const exportOwnData = async (req: AuthRequest, res: Response): Promise<vo
         last_login_at: user.last_login_at,
       },
       associations: {
-        sponsor_id: user.sponsor_id,
+        advertiser_id: user.advertiser_id,
         agency_id: user.agency_id,
       },
       activity_logs: auditResult.rows.map(log => ({
