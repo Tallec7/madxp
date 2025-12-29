@@ -4,15 +4,21 @@ import { catchError, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 
 /**
- * Intercepteur HTTP pour gerer les erreurs d'authentification.
- *
- * Note: Avec les cookies HttpOnly, le token n'est plus stocke en localStorage.
- * Le serveur gere le cookie, donc on redirige simplement vers login en cas de 401.
+ * Intercepteur HTTP pour:
+ * 1. Ajouter withCredentials à toutes les requêtes API (pour Safari)
+ * 2. Gérer les erreurs d'authentification
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const injector = inject(Injector);
 
-  return next(req).pipe(
+  // Ajouter withCredentials pour les requêtes vers l'API
+  // Ceci est crucial pour Safari qui peut ignorer withCredentials dans certains cas
+  const isApiRequest = req.url.includes('/api/') || req.url.includes('railway.app');
+  const modifiedReq = isApiRequest
+    ? req.clone({ withCredentials: true })
+    : req;
+
+  return next(modifiedReq).pipe(
     catchError(error => {
       // Seulement rediriger vers login si:
       // 1. C'est une vraie 401 (pas une erreur réseau status 0)
