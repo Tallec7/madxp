@@ -59,6 +59,8 @@ export class AuthService {
   login(email: string, password: string, mfaCode?: string): Observable<AuthResponse> {
     return this.api.post<AuthResponse>('/auth/login', { email, password, mfaCode }).pipe(
       tap(response => {
+        console.log('[auth-service] login response:', response);
+        console.log('[auth-service] token in response:', response.token ? 'present' : 'null');
         if (response.user) {
           this.currentUserSubject.next(response.user);
           // Marquer comme vérifié pour éviter une re-vérification inutile
@@ -68,6 +70,7 @@ export class AuthService {
         // Il n'est pas accessible via localStorage donc plus sur contre XSS
         if (response.token) {
           this.sseToken = response.token;
+          console.log('[auth-service] token stored, sseToken:', this.sseToken ? 'present' : 'null');
         }
       })
     );
