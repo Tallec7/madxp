@@ -17,13 +17,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const isApiRequest = req.url.includes('/api/') || req.url.includes('railway.app');
 
   if (isApiRequest) {
-    // Récupérer le token SSE (stocké en mémoire après login)
+    // Récupérer le token (stocké en mémoire après login)
     // Ce token sert de fallback quand les cookies sont bloqués (Safari mobile)
     const authService = injector.get(AuthService);
     const token = authService.getSseToken();
-
-    // Debug: log pour comprendre le problème mobile
-    console.log('[auth-interceptor]', req.url, 'token:', token ? 'present' : 'null');
 
     let headers = req.headers;
     if (token) {
