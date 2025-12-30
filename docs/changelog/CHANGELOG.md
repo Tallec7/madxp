@@ -45,6 +45,9 @@ Généré le 2025-12-08 (Mise à jour 2025-12-30)
 
 ## 🐛 Corrections
 
+- **Fix cache.invalidateNamespace error** - Correction appel méthode `invalidateNamespace` (était `clearNamespace`) dans admin-server.js - erreur 500 sur ajout vidéo à catégorie - 2025-12-30
+- **Fix sélecteur de langue pages login** - Dropdown s'ouvre maintenant vers le bas (visible à l'écran) sur Raspberry et Central Dashboard - 2025-12-30
+- **Fix modal ajout vidéos annonceur** - Correction du parsing réponse API `/api/videos` (format paginé) - 2025-12-30
 - **Fix comptage catégories/vidéos télécommande** - Correction du comptage récursif des vidéos dans les sous-catégories - 2025-12-30
 - [ fix Angular template arrow function error (#82)](../archive/commits/c072070.md) - 2025-12-08
 - [ handle undefined videos/subCategories arrays (#77)](../archive/commits/caedb7d.md) - 2025-12-08
