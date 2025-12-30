@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { Site, Metrics, SiteConnectionStatus } from '../../core/models';
+import { Site, Metrics, SiteConnectionStatus, OverlayPosition } from '../../core/models';
 import { formatVersion } from './utils/version';
 import { Subscription, interval } from 'rxjs';
 import { ConfigEditorComponent } from './config-editor/config-editor.component';
@@ -349,10 +349,15 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
                 <div class="config-field">
                   <label>Position</label>
                   <select [(ngModel)]="scoreOverlayConfig.position">
-                    <option value="top-right">Haut droite</option>
                     <option value="top-left">Haut gauche</option>
-                    <option value="bottom-right">Bas droite</option>
+                    <option value="top-center">Haut centre</option>
+                    <option value="top-right">Haut droite</option>
+                    <option value="middle-left">Milieu gauche</option>
+                    <option value="middle-center">Centre</option>
+                    <option value="middle-right">Milieu droite</option>
                     <option value="bottom-left">Bas gauche</option>
+                    <option value="bottom-center">Bas centre</option>
+                    <option value="bottom-right">Bas droite</option>
                   </select>
                 </div>
                 <div class="config-field">
@@ -1726,7 +1731,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   showScoreOverlayConfig = false;
   savingScoreOverlay = false;
   scoreOverlayConfig = {
-    position: 'top-right' as 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left',
+    position: 'top-right' as OverlayPosition,
     offsetX: 20,
     offsetY: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.85)',

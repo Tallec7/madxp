@@ -203,12 +203,17 @@ export interface CommandEvent {
 export interface OptionsUpdateEvent {
   overlay: {
     scoreEnabled: boolean;
-    goalPopupEnabled: boolean;
+    position?: string;
+    useLocalColors?: boolean;
+    backgroundColor?: string;
+    scoreColor?: string;
+    teamNameColor?: string;
   };
   timer: {
     enabled: boolean;
-    halfDuration: number;
+    periodDuration: number;
     countDown: boolean;
+    integratedWithScore: boolean;
   };
   breakingNews: {
     enabled: boolean;
@@ -218,6 +223,14 @@ export interface OptionsUpdateEvent {
     quickMessages: string[];
   };
   template: 'sportif' | 'elegant' | 'minimal';
+  sport?: string;
+  goalAnimation?: {
+    enabled: boolean;
+    style: 'popup' | 'fullscreen' | 'slide';
+    duration: number;
+    soundEnabled: boolean;
+    soundUrl?: string;
+  };
 }
 
 export interface BreakingNewsEvent {

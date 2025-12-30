@@ -21,12 +21,12 @@ Configuration centralisée, déployée sur le Raspberry Pi.
 2. Aller dans **Sites** → Cliquer sur le site
 3. Activer **"Score en Live"** dans Options Premium
 4. Cliquer sur **"Personnaliser l'apparence"**
-5. Ajuster les paramètres, vérifier l'aperçu
+5. Ajuster les paramètres (9 positions disponibles), vérifier l'aperçu
 6. Cliquer sur **"Déployer sur le boîtier"**
 
 ---
 
-### Mode 2 : Via Télécommande (paramètres locaux) - NOUVEAU
+### Mode 2 : Via Télécommande (paramètres locaux)
 
 Configuration locale depuis la télécommande, stockée en localStorage.
 
@@ -35,6 +35,9 @@ Configuration locale depuis la télécommande, stockée en localStorage.
 - ✅ Modification instantanée sans déploiement
 - ✅ Fonctionne hors ligne
 - ✅ Parfait pour ajustements rapides pendant un match
+- ✅ Support multi-sport avec périodes automatiques
+- ✅ Logos d'équipes
+- ✅ Présets sauvegardables
 
 **Accès** :
 
@@ -49,7 +52,7 @@ Configuration locale depuis la télécommande, stockée en localStorage.
 
 | Paramètre               | Description                             |
 | ----------------------- | --------------------------------------- |
-| **Position**            | Coin de l'écran (9 positions possibles) |
+| **Position**            | 9 positions (matrice 3x3)               |
 | **Couleur du score**    | Couleur des chiffres du score           |
 | **Taille du score**     | Taille des chiffres (16-72px)           |
 | **Couleur des équipes** | Couleur des noms d'équipe               |
@@ -58,11 +61,16 @@ Configuration locale depuis la télécommande, stockée en localStorage.
 
 ### Paramètres exclusifs télécommande
 
-| Paramètre         | Description                                             |
-| ----------------- | ------------------------------------------------------- |
-| **Template**      | Style prédéfini (Sportif, Élégant, Minimal)             |
-| **Timer**         | Chronomètre intégré avec Start/Pause/Reset              |
-| **Breaking News** | Bandeau info avec 3 modes (scroll, truncate, multiline) |
+| Paramètre            | Description                                               |
+| -------------------- | --------------------------------------------------------- |
+| **Sport**            | Football, Basketball, Handball, Volleyball, Rugby, Hockey |
+| **Période**          | Automatique selon le sport (mi-temps, quarts, sets...)    |
+| **Logos équipes**    | Upload depuis la télécommande (max 500KB)                 |
+| **Template**         | Style prédéfini (Sportif, Élégant, Minimal)               |
+| **Animation de but** | 3 styles : Popup, Fullscreen, Slide + son                 |
+| **Timer**            | Chronomètre intégré au score ou standalone                |
+| **Breaking News**    | Bandeau info avec 3 modes (scroll, truncate, multiline)   |
+| **Présets**          | Sauvegarder/charger des configurations                    |
 
 ---
 
@@ -93,13 +101,51 @@ Configuration locale depuis la télécommande, stockée en localStorage.
 - **Mode multiline** : Texte multi-lignes
 - **Position** : Haut ou bas de l'écran
 
-### Goal Popup
+### Animation de But (Goal Animation)
 
-Quand vous cliquez sur "+1" pour le score :
+Quand le score change, une animation se déclenche automatiquement :
 
-- Animation centrale pendant 3 secondes
-- Effet scale + pulse
-- Affiche le nouveau score
+**3 styles disponibles** :
+
+| Style          | Description                               |
+| -------------- | ----------------------------------------- |
+| **Popup**      | Animation centrale avec effet scale       |
+| **Fullscreen** | Plein écran spectaculaire avec "BUUUUT !" |
+| **Slide**      | Bandeau glissant depuis la gauche         |
+
+**Options** :
+
+- **Durée** : 2 à 6 secondes
+- **Son** : Activable (son différent par sport)
+- L'équipe qui marque est mise en surbrillance (jaune)
+
+---
+
+## Sports supportés
+
+| Sport      | Périodes                                       | Durée timer |
+| ---------- | ---------------------------------------------- | ----------- |
+| Football   | 1ère/2ème mi-temps, Prolongations, Tirs au but | 45 min      |
+| Basketball | 4 quart-temps + Prolongation                   | 10 min      |
+| Handball   | 1ère/2ème mi-temps, Prolongations              | 30 min      |
+| Volleyball | 5 Sets                                         | 25 min      |
+| Rugby      | 1ère/2ème mi-temps, Prolongations              | 40 min      |
+| Hockey     | 3 périodes + Prolongation + Tirs au but        | 20 min      |
+
+Changer le sport met automatiquement à jour les périodes et la durée du timer.
+
+---
+
+## Présets de configuration
+
+Sauvegardez vos configurations favorites pour les réutiliser :
+
+1. Configurer l'overlay (sport, template, position, couleurs)
+2. **Options > Presets** : "Sauvegarder config actuelle"
+3. Nommer le preset (ex: "Match championnat")
+4. Réutiliser via "Appliquer"
+
+Les présets incluent : Sport, Template, Position, Couleurs personnalisées.
 
 ---
 

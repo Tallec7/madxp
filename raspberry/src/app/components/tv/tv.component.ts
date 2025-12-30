@@ -9,9 +9,9 @@ import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { SponsorAnalyticsService } from '../../services/sponsor-analytics.service';
 import { LocalBroadcastService, ScoreUpdateEvent, PhaseChangeEvent, OptionsUpdateEvent, BreakingNewsEvent, TimerUpdateEvent } from '../../services/local-broadcast.service';
-import { LocalOptionsService, LocalOptions } from '../../services/local-options.service';
+import { LocalOptionsService, LocalOptions, GoalAnimationConfig, TeamConfig } from '../../services/local-options.service';
 import { Video } from '../../interfaces/video.interface';
-import { Configuration } from '../../interfaces/configuration.interface';
+import { Configuration, OverlayPosition, SportType } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
 import { Sponsor } from '../../interfaces/sponsor.interface';
 import { environment } from '../../../environments/environment';
@@ -62,14 +62,24 @@ export class TvComponent implements OnInit, OnDestroy {
   public activePhase: 'neutral' | 'before' | 'during' | 'after' = 'neutral';
   private currentLoopVideos: Sponsor[] = [];
 
-  // Live Score
-  public currentScore: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; period?: string; matchTime?: string } | null = null;
+  // Live Score - structure enrichie avec logos et période
+  public currentScore: {
+    homeTeam: string;
+    awayTeam: string;
+    homeScore: number;
+    awayScore: number;
+    homeLogo?: string;
+    awayLogo?: string;
+    period?: string;
+    matchTime?: string;
+  } | null = null;
   public showScoreOverlay = false;
 
-  // Goal Popup
-  public showGoalPopup = false;
+  // Goal Animation (remplace goalPopup)
+  public showGoalAnimation = false;
   public goalScoringTeam: 'home' | 'away' | null = null;
-  private goalPopupTimeout: ReturnType<typeof setTimeout> | null = null;
+  private goalAnimationTimeout: ReturnType<typeof setTimeout> | null = null;
+  private goalAudio: HTMLAudioElement | null = null;
 
   // Breaking News
   public showBreakingNews = false;
@@ -618,26 +628,35 @@ export class TvComponent implements OnInit, OnDestroy {
 
   /**
    * Gère la mise à jour du score en direct
+   * Inclut les logos des équipes depuis les options locales
    */
   private handleScoreUpdate(scoreData: {
     homeTeam: string;
     awayTeam: string;
     homeScore: number;
     awayScore: number;
+    homeLogo?: string;
+    awayLogo?: string;
     period?: string;
     matchTime?: string;
   }): void {
     // Détecter si un but a été marqué (et par quelle équipe)
-    if (this.currentScore && this.localOptions.overlay.goalPopupEnabled) {
+    if (this.currentScore && this.localOptions.goalAnimation.enabled) {
       const homeScored = scoreData.homeScore > this.currentScore.homeScore;
       const awayScored = scoreData.awayScore > this.currentScore.awayScore;
 
       if (homeScored || awayScored) {
-        this.triggerGoalPopup(homeScored ? 'home' : 'away');
+        this.triggerGoalAnimation(homeScored ? 'home' : 'away');
       }
     }
 
-    this.currentScore = scoreData;
+    // Enrichir avec les logos des options locales si non fournis
+    this.currentScore = {
+      ...scoreData,
+      homeLogo: scoreData.homeLogo || this.localOptions.match.homeTeam.logo,
+      awayLogo: scoreData.awayLogo || this.localOptions.match.awayTeam.logo,
+      period: scoreData.period || this.localOptions.match.period,
+    };
 
     // Afficher l'overlay selon les options
     if (this.localOptions.overlay.scoreEnabled) {
@@ -646,24 +665,65 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Déclenche l'animation de but (popup centrale)
+   * Déclenche l'animation de but/point
+   * Supporte 3 styles: popup, fullscreen, slide
+   * Avec son optionnel
    */
-  private triggerGoalPopup(team: 'home' | 'away'): void {
+  private triggerGoalAnimation(team: 'home' | 'away'): void {
+    const config = this.localOptions.goalAnimation;
+    if (!config.enabled) return;
+
     // Annuler un timeout précédent si existant
-    if (this.goalPopupTimeout) {
-      clearTimeout(this.goalPopupTimeout);
+    if (this.goalAnimationTimeout) {
+      clearTimeout(this.goalAnimationTimeout);
     }
 
     this.goalScoringTeam = team;
-    this.showGoalPopup = true;
+    this.showGoalAnimation = true;
 
-    console.log('[TV] Goal popup triggered for team:', team);
+    console.log('[TV] Goal animation triggered for team:', team, 'style:', config.style);
 
-    // Masquer après 4 secondes
-    this.goalPopupTimeout = setTimeout(() => {
-      this.showGoalPopup = false;
+    // Jouer le son si activé
+    if (config.soundEnabled && config.soundUrl) {
+      this.playGoalSound(config.soundUrl);
+    }
+
+    // Masquer après la durée configurée
+    this.goalAnimationTimeout = setTimeout(() => {
+      this.showGoalAnimation = false;
       this.goalScoringTeam = null;
-    }, 4000);
+    }, config.duration * 1000);
+  }
+
+  /**
+   * Joue le son de but
+   */
+  private playGoalSound(soundUrl: string): void {
+    try {
+      // Réutiliser ou créer l'élément audio
+      if (!this.goalAudio) {
+        this.goalAudio = new Audio();
+      }
+      this.goalAudio.src = soundUrl;
+      this.goalAudio.volume = 0.8;
+      this.goalAudio.play().catch(err => {
+        console.warn('[TV] Could not play goal sound:', err.message);
+      });
+    } catch (err) {
+      console.warn('[TV] Error playing goal sound:', err);
+    }
+  }
+
+  /**
+   * Retourne le style d'animation de but actuel
+   */
+  public getGoalAnimationStyle(): string {
+    return `style-${this.localOptions.goalAnimation.style}`;
+  }
+
+  // Rétrocompatibilité
+  public get showGoalPopup(): boolean {
+    return this.showGoalAnimation;
   }
 
   /**
@@ -676,33 +736,56 @@ export class TvComponent implements OnInit, OnDestroy {
   /**
    * Styles dynamiques pour l'overlay du score
    * Utilise la configuration scoreOverlay si disponible, sinon valeurs par défaut
+   * Supporte les 9 positions: top/middle/bottom x left/center/right
    */
   public getOverlayStyles(): Record<string, string> {
     const config = this.configuration?.scoreOverlay;
-    const position = config?.position || 'top-right';
+    // Position locale override la position du central si définie
+    const position: OverlayPosition = this.localOptions.overlay.position || config?.position || 'top-right';
     const offsetX = (config?.offsetX ?? 20) + 'px';
     const offsetY = (config?.offsetY ?? 20) + 'px';
 
+    // Couleurs: local override si useLocalColors est activé
+    const useLocal = this.localOptions.overlay.useLocalColors;
+    const backgroundColor = useLocal && this.localOptions.overlay.backgroundColor
+      ? this.localOptions.overlay.backgroundColor
+      : (config?.backgroundColor || 'rgba(0, 0, 0, 0.85)');
+
     const styles: Record<string, string> = {
-      'background': config?.backgroundColor || 'rgba(0, 0, 0, 0.85)',
+      'background': backgroundColor,
       'border-radius': (config?.borderRadius ?? 12) + 'px'
     };
 
-    // Position dynamique
+    // Position verticale (top/middle/bottom)
     if (position.includes('top')) {
       styles['top'] = offsetY;
       styles['bottom'] = 'auto';
-    } else {
+    } else if (position.includes('bottom')) {
       styles['bottom'] = offsetY;
       styles['top'] = 'auto';
+    } else {
+      // middle
+      styles['top'] = '50%';
+      styles['bottom'] = 'auto';
+      styles['transform'] = 'translateY(-50%)';
     }
 
+    // Position horizontale (left/center/right)
     if (position.includes('right')) {
       styles['right'] = offsetX;
       styles['left'] = 'auto';
-    } else {
+    } else if (position.includes('left')) {
       styles['left'] = offsetX;
       styles['right'] = 'auto';
+    } else {
+      // center
+      styles['left'] = '50%';
+      styles['right'] = 'auto';
+      if (position.includes('middle')) {
+        styles['transform'] = 'translate(-50%, -50%)';
+      } else {
+        styles['transform'] = 'translateX(-50%)';
+      }
     }
 
     return styles;
@@ -710,24 +793,58 @@ export class TvComponent implements OnInit, OnDestroy {
 
   /**
    * Styles dynamiques pour les scores
+   * Local override si useLocalColors est activé
    */
   public getScoreStyles(): Record<string, string> {
     const config = this.configuration?.scoreOverlay;
+    const useLocal = this.localOptions.overlay.useLocalColors;
+    const scoreColor = useLocal && this.localOptions.overlay.scoreColor
+      ? this.localOptions.overlay.scoreColor
+      : (config?.scoreColor || '#4caf50');
+
     return {
-      'color': config?.scoreColor || '#4caf50',
+      'color': scoreColor,
       'font-size': (config?.scoreSize ?? 28) + 'px'
     };
   }
 
   /**
    * Styles dynamiques pour les noms d'équipe
+   * Local override si useLocalColors est activé
    */
   public getTeamNameStyles(): Record<string, string> {
     const config = this.configuration?.scoreOverlay;
+    const useLocal = this.localOptions.overlay.useLocalColors;
+    const teamNameColor = useLocal && this.localOptions.overlay.teamNameColor
+      ? this.localOptions.overlay.teamNameColor
+      : (config?.teamNameColor || '#ffffff');
+
     return {
-      'color': config?.teamNameColor || '#ffffff',
+      'color': teamNameColor,
       'font-size': (config?.teamNameSize ?? 16) + 'px'
     };
+  }
+
+  /**
+   * Styles dynamiques pour le timer intégré au score
+   */
+  public getTimerStyles(): Record<string, string> {
+    const config = this.configuration?.scoreOverlay;
+    const useLocal = this.localOptions.overlay.useLocalColors;
+    const scoreColor = useLocal && this.localOptions.overlay.scoreColor
+      ? this.localOptions.overlay.scoreColor
+      : (config?.scoreColor || '#64b5f6');
+
+    return {
+      'color': scoreColor
+    };
+  }
+
+  /**
+   * Retourne la classe CSS du sport actuel
+   */
+  public getSportClass(): string {
+    return `sport-${this.localOptions.sport}`;
   }
 
   /**

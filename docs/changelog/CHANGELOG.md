@@ -6,6 +6,7 @@ Généré le 2025-12-08 (Mise à jour 2025-12-30)
 
 ## ✨ Nouvelles fonctionnalités
 
+- [Overlay V2 Multi-Sport](2025-12-30_overlay-v2-multi-sport.md) - Support 6 sports, 9 positions, logos équipes, animation but (3 styles + son), périodes auto, présets sauvegardables - 2025-12-30
 - **Système de thumbnails vidéos** - Miniatures automatiques pour les vidéos dans la télécommande et section "Récemment lancées", script de génération batch, normalisation Unicode pour accents - 2025-12-30
 - **Stockage vidéo FTP Hostinger** - Migration du stockage vidéo de Supabase (limité) vers FTP Hostinger (100GB+) - 2025-12-30
 - [Audit RGPD et Sécurité](2025-12-29_gdpr-security-audit.md) - Conformité RGPD, documentation juridique, corrections sécurité - 2025-12-29
