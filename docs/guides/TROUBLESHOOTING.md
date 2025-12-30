@@ -80,6 +80,7 @@ hostname -f
 ### Erreur 500 sur /tv et /remote
 
 #### Symptômes
+
 - `http://neopro.local:8080` fonctionne
 - `http://neopro.local/tv` → Erreur 500
 - `http://neopro.local/remote` → Erreur 500
@@ -127,6 +128,7 @@ npm run deploy:raspberry neopro.local
 #### Explication technique
 
 Pour qu'nginx (qui tourne sous `www-data`) puisse accéder aux fichiers :
+
 1. `/home/pi` doit avoir les permissions 755
 2. Les fichiers webapp doivent appartenir à `www-data`
 3. L'application Angular doit être déployée dans `/home/pi/neopro/webapp/`
@@ -134,6 +136,54 @@ Pour qu'nginx (qui tourne sous `www-data`) puisse accéder aux fichiers :
 ---
 
 ## Problèmes d'authentification
+
+### Déconnexion immédiate après login sur mobile (Safari iOS/iPadOS)
+
+#### Symptômes
+
+- Le login réussit (code 200)
+- Le dashboard s'affiche une seconde
+- Redirection automatique vers `/login`
+- Fonctionne sur desktop mais pas sur mobile
+
+#### Cause
+
+Safari iOS/iPadOS bloque les cookies cross-origin via **ITP** (Intelligent Tracking Prevention), même avec `SameSite=none` et `Secure=true`.
+
+Le frontend est sur `https://neopro-admin.kalonpartners.bzh` et le backend sur `https://neopro-central-production.up.railway.app` - Safari considère le cookie comme un "tracker" et le bloque.
+
+#### Solution implémentée (décembre 2025)
+
+Le frontend envoie maintenant le token via le header `Authorization: Bearer` en plus du cookie :
+
+1. Après le login, le token JWT est stocké en mémoire dans `AuthService.sseToken`
+2. L'intercepteur HTTP (`auth.interceptor.ts`) ajoute automatiquement le header Authorization
+3. Le serveur accepte l'authentification via cookie OU header Authorization
+
+**Fichiers concernés :**
+
+- `central-dashboard/src/app/core/interceptors/auth.interceptor.ts`
+- `central-dashboard/src/app/core/services/auth.service.ts`
+- `central-dashboard/src/app/core/guards/auth.guard.ts`
+
+#### Diagnostic
+
+Dans les logs Railway, vérifier le flux des requêtes :
+
+```
+POST /api/auth/login     200  ← Login OK
+GET  /api/sites          401  ← Cookie non envoyé (ITP)
+```
+
+Si les requêtes après login retournent 401, c'est un problème de cookie bloqué.
+
+#### Si le problème persiste
+
+1. Vérifier que le frontend est bien à jour (build récent)
+2. Vider le cache du navigateur sur mobile
+3. Vérifier les logs console côté client pour voir si le token est présent
+
+---
 
 ### Le login ne fonctionne pas
 
@@ -189,6 +239,7 @@ sudo systemctl restart nginx
 ```
 
 Valeurs :
+
 - `28800000` = 8 heures (par défaut)
 - `3600000` = 1 heure
 - `86400000` = 24 heures
@@ -285,12 +336,14 @@ sudo systemctl restart nginx
 ### Service neopro-kiosk (mode TV)
 
 Le mode kiosque utilise Chromium pour afficher automatiquement `/tv`. Le chemin de l'exécutable varie selon la version de Raspberry Pi OS :
+
 - **Raspberry Pi OS Bookworm et récent** : `/usr/bin/chromium`
 - **Raspberry Pi OS Bullseye et ancien** : `/usr/bin/chromium-browser`
 
 > **Note :** Depuis décembre 2025, le script `install.sh` détecte automatiquement le bon chemin lors de l'installation.
 
 #### Symptômes
+
 - L'écran reste noir ou n'affiche pas `/tv` après le boot
 - `journalctl -u neopro-kiosk` affiche `No such file or directory` pour le binaire Chromium
 
@@ -354,6 +407,7 @@ sudo apt install chromium
 ### Les analytics vidéo ne remontent pas au dashboard central
 
 #### Symptômes
+
 - Le dashboard central n'affiche pas les lectures vidéo
 - Les statistiques d'utilisation sont vides ou à zéro
 - Le buffer analytics reste vide sur le Pi
@@ -430,6 +484,7 @@ journalctl -u neopro-sync-agent -n 10 --no-pager
 #### Solution 3 : Vérifier que des vidéos sont jouées
 
 Les analytics ne sont générées que lorsque des vidéos sont effectivement lues sur le Pi.
+
 - Vérifier que le mode TV (`/tv`) est actif
 - Vérifier que des vidéos sont configurées dans `configuration.json`
 - Déclencher manuellement une lecture depuis la télécommande (`/remote`)
@@ -577,21 +632,23 @@ Depuis le **dashboard central**, vous pouvez diagnostiquer la connectivité d'un
 
 #### Tests effectués
 
-| Test | Description | Indicateur |
-|------|-------------|------------|
-| **Internet** | Ping vers 8.8.8.8 (5 paquets) | Connectivité générale + perte de paquets |
-| **Serveur central** | Ping, HTTP, port 443, SSL | Communication complète avec le dashboard |
-| **DNS** | Résolution de google.com | Fonctionnement du DNS + IP résolue |
-| **Passerelle** | Ping vers la gateway locale | Connexion au routeur |
+| Test                | Description                   | Indicateur                               |
+| ------------------- | ----------------------------- | ---------------------------------------- |
+| **Internet**        | Ping vers 8.8.8.8 (5 paquets) | Connectivité générale + perte de paquets |
+| **Serveur central** | Ping, HTTP, port 443, SSL     | Communication complète avec le dashboard |
+| **DNS**             | Résolution de google.com      | Fonctionnement du DNS + IP résolue       |
+| **Passerelle**      | Ping vers la gateway locale   | Connexion au routeur                     |
 
 #### Informations détaillées affichées
 
 **Internet :**
+
 - Latence ping (ms)
 - Perte de paquets (%) - utile pour détecter une connexion instable
 - Nombre de paquets envoyés/reçus
 
 **Serveur central :**
+
 - Latence ping (ms)
 - Latence HTTP (ms) - temps de réponse réel de l'API
 - Code HTTP (200 = OK, 4xx/5xx = erreur)
@@ -599,17 +656,20 @@ Depuis le **dashboard central**, vous pouvez diagnostiquer la connectivité d'un
 - Certificat SSL : Valide / Invalide
 
 **DNS :**
+
 - Domaine testé (google.com)
 - IP résolue
 - Temps de résolution (ms)
 
 **WiFi** (si applicable) :
+
 - SSID du réseau connecté
 - Qualité du signal (%)
 - Puissance (dBm)
 - Débit (Mb/s)
 
 **Stabilité :**
+
 - Uptime interface réseau
 - Nombre de reconnexions (depuis le boot)
 
@@ -617,29 +677,29 @@ Depuis le **dashboard central**, vous pouvez diagnostiquer la connectivité d'un
 
 #### Interprétation des résultats
 
-| Situation | Diagnostic probable |
-|-----------|---------------------|
-| ❌ Passerelle | Câble débranché ou problème DHCP |
-| ✅ Passerelle, ❌ Internet | Routeur sans accès internet |
-| ✅ Internet, ❌ DNS | Problème de configuration DNS |
-| ✅ Internet, ❌ Serveur central | Pare-feu bloquant ou serveur indisponible |
-| Tous ✅ mais "Connexion instable" | Latence élevée ou déconnexions fréquentes |
-| Perte de paquets > 0% | Connexion WiFi faible ou réseau encombré |
-| Perte de paquets > 10% | Connexion très instable, vidéos risquent de ne pas charger |
-| Port 443 fermé | Pare-feu bloque HTTPS, WebSocket impossible |
-| SSL invalide | Certificat expiré ou problème de date système |
-| Reconnexions > 5 | Interface réseau instable (câble, WiFi...) |
+| Situation                         | Diagnostic probable                                        |
+| --------------------------------- | ---------------------------------------------------------- |
+| ❌ Passerelle                     | Câble débranché ou problème DHCP                           |
+| ✅ Passerelle, ❌ Internet        | Routeur sans accès internet                                |
+| ✅ Internet, ❌ DNS               | Problème de configuration DNS                              |
+| ✅ Internet, ❌ Serveur central   | Pare-feu bloquant ou serveur indisponible                  |
+| Tous ✅ mais "Connexion instable" | Latence élevée ou déconnexions fréquentes                  |
+| Perte de paquets > 0%             | Connexion WiFi faible ou réseau encombré                   |
+| Perte de paquets > 10%            | Connexion très instable, vidéos risquent de ne pas charger |
+| Port 443 fermé                    | Pare-feu bloque HTTPS, WebSocket impossible                |
+| SSL invalide                      | Certificat expiré ou problème de date système              |
+| Reconnexions > 5                  | Interface réseau instable (câble, WiFi...)                 |
 
 #### Statut de connexion temps réel
 
 Le dashboard vérifie **en temps réel** si le boîtier est connecté via WebSocket au serveur central. Les actions à distance (logs, diagnostic, redémarrage, etc.) ne sont activées **que si** le boîtier est connecté.
 
-| Indicateur | Signification |
-|------------|---------------|
-| 🟢 **Connecté** | WebSocket actif, actions disponibles |
-| 🟡 **Instable** | Vu récemment (<2 min) mais pas de WebSocket actif |
-| 🔴 **Hors ligne** | Aucune connexion depuis >2 minutes |
-| ⚪ **Inconnu** | Jamais connecté ou données manquantes |
+| Indicateur        | Signification                                     |
+| ----------------- | ------------------------------------------------- |
+| 🟢 **Connecté**   | WebSocket actif, actions disponibles              |
+| 🟡 **Instable**   | Vu récemment (<2 min) mais pas de WebSocket actif |
+| 🔴 **Hors ligne** | Aucune connexion depuis >2 minutes                |
+| ⚪ **Inconnu**    | Jamais connecté ou données manquantes             |
 
 > **Important** : Si le site apparaît "instable" ou "hors ligne", les boutons d'action seront désactivés. Le boîtier doit être connecté en temps réel pour exécuter des commandes à distance.
 
@@ -647,22 +707,22 @@ Le dashboard vérifie **en temps réel** si le boîtier est connecté via WebSoc
 
 Le dashboard vérifie **en temps réel** si le boîtier est connecté via WebSocket au serveur central. Les actions à distance (logs, diagnostic, redémarrage, etc.) ne sont activées **que si** le boîtier est connecté.
 
-| Indicateur | Signification |
-|------------|---------------|
-| 🟢 **Connecté** | WebSocket actif, actions disponibles |
-| 🟡 **Instable** | Vu récemment (<2 min) mais pas de WebSocket actif |
-| 🔴 **Hors ligne** | Aucune connexion depuis >2 minutes |
-| ⚪ **Inconnu** | Jamais connecté ou données manquantes |
+| Indicateur        | Signification                                     |
+| ----------------- | ------------------------------------------------- |
+| 🟢 **Connecté**   | WebSocket actif, actions disponibles              |
+| 🟡 **Instable**   | Vu récemment (<2 min) mais pas de WebSocket actif |
+| 🔴 **Hors ligne** | Aucune connexion depuis >2 minutes                |
+| ⚪ **Inconnu**    | Jamais connecté ou données manquantes             |
 
 > **Important** : Si le site apparaît "instable" ou "hors ligne", les boutons d'action seront désactivés. Le boîtier doit être connecté en temps réel pour exécuter des commandes à distance.
 
 #### WiFi : qualité du signal
 
-| Qualité | Signal (dBm) | Interprétation |
-|---------|--------------|----------------|
-| 🟢 > 70% | > -60 dBm | Excellent |
-| 🟡 40-70% | -60 à -70 dBm | Correct |
-| 🔴 < 40% | < -70 dBm | Faible, risque de déconnexions |
+| Qualité   | Signal (dBm)  | Interprétation                 |
+| --------- | ------------- | ------------------------------ |
+| 🟢 > 70%  | > -60 dBm     | Excellent                      |
+| 🟡 40-70% | -60 à -70 dBm | Correct                        |
+| 🔴 < 40%  | < -70 dBm     | Faible, risque de déconnexions |
 
 #### Exemple de résultat
 
@@ -714,6 +774,7 @@ cd /home/pi/neopro
 ```
 
 **Ce script vérifie :**
+
 - ✅ Services systemd (neopro-app, neopro-admin, neopro-sync, nginx)
 - ✅ Ports ouverts (80, 3000, 8080)
 - ✅ Fichiers déployés
@@ -860,6 +921,7 @@ curl -I http://neopro.local/login
 ### Les commandes ne sont pas exécutées après reconnexion du site
 
 **Symptômes :**
+
 - Des commandes sont visibles dans "Commandes en attente" sur le dashboard
 - Le site se reconnecte mais les commandes restent en attente
 - Aucune action n'est effectuée sur le Raspberry Pi
@@ -878,17 +940,18 @@ FROM pending_commands WHERE site_id = 'UUID_DU_SITE';
 
 **Causes et solutions :**
 
-| Cause | Solution |
-|-------|----------|
-| `attempts >= max_attempts` | Réinitialiser : `UPDATE pending_commands SET attempts = 0 WHERE site_id = 'UUID';` |
-| `expires_at < NOW()` | La commande a expiré, en créer une nouvelle |
-| Site déconnecté pendant le traitement | Attendre la prochaine reconnexion |
+| Cause                                 | Solution                                                                           |
+| ------------------------------------- | ---------------------------------------------------------------------------------- |
+| `attempts >= max_attempts`            | Réinitialiser : `UPDATE pending_commands SET attempts = 0 WHERE site_id = 'UUID';` |
+| `expires_at < NOW()`                  | La commande a expiré, en créer une nouvelle                                        |
+| Site déconnecté pendant le traitement | Attendre la prochaine reconnexion                                                  |
 
 ### Une commande "temps réel" ne fonctionne pas sur un site offline
 
 **Symptôme :** Message d'erreur "La commande X ne peut pas être mise en file d'attente"
 
 **Explication :** Certaines commandes nécessitent une connexion temps réel et ne peuvent pas être différées :
+
 - `get_logs` - Lecture des logs
 - `get_system_info` - Informations système
 - `get_config` - Configuration actuelle
@@ -921,6 +984,7 @@ GROUP BY s.club_name;
 Si un site est connecté mais les commandes ne s'exécutent pas :
 
 1. **Méthode 1 : Reconnecter le site**
+
    ```bash
    # Sur le Raspberry Pi
    sudo systemctl restart neopro-sync
@@ -1025,11 +1089,13 @@ cat /home/pi/neopro/webapp/configuration.json
 Si le problème persiste après toutes ces vérifications :
 
 1. **Exécuter le diagnostic complet :**
+
    ```bash
    ssh pi@neopro.local './scripts/diagnose-pi.sh' > diagnostic.txt
    ```
 
 2. **Récupérer les logs :**
+
    ```bash
    ssh pi@neopro.local 'sudo journalctl -u neopro-app -n 200' > logs-app.txt
    ssh pi@neopro.local 'sudo journalctl -u neopro-sync -n 200' > logs-sync.txt
@@ -1045,4 +1111,4 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 16 décembre 2025
+**Dernière mise à jour :** 30 décembre 2025
