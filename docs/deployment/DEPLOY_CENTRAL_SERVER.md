@@ -287,6 +287,7 @@ sudo systemctl restart neopro-sync-agent
 1. `sameSite` du cookie mal configuré côté serveur
 2. `withCredentials: true` manquant côté frontend
 3. `ALLOWED_ORIGINS` ne contient pas l'URL du frontend
+4. **Safari mobile (iOS/iPadOS)** : ITP bloque les cookies cross-origin même avec `SameSite=none`
 
 **Solution côté serveur** (`central-server/src/controllers/auth.controller.ts`) :
 
@@ -294,13 +295,47 @@ sudo systemctl restart neopro-sync-agent
 const COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' pour cross-origin
-  maxAge: 8 * 60 * 60 * 1000,
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
   path: '/',
+  // Safari iOS/iPadOS : partitioned cookies
+  ...(process.env.NODE_ENV === 'production' && { partitioned: true }),
 };
 ```
 
+**Solution côté frontend (Safari mobile)** :
+
+Le frontend envoie maintenant le token via le header `Authorization: Bearer` en plus du cookie.
+Ceci permet de contourner le blocage ITP sur Safari mobile.
+
+Voir `central-dashboard/src/app/core/interceptors/auth.interceptor.ts` :
+
+```typescript
+if (token) {
+  headers = headers.set('Authorization', `Bearer ${token}`);
+}
+```
+
 **Solution Railway :** Vérifier `ALLOWED_ORIGINS` dans les variables d'environnement
+
+### Déconnexion automatique sur Safari mobile (iPhone/iPad)
+
+**Symptôme :** L'utilisateur se connecte, voit le dashboard une seconde, puis est redirigé vers `/login`
+
+**Cause :** Safari iOS/iPadOS bloque les cookies cross-origin via ITP (Intelligent Tracking Prevention), même avec `SameSite=none` et `Secure=true`.
+
+**Solution implémentée (décembre 2025) :**
+
+1. Après le login, le token JWT est stocké en mémoire dans `AuthService.sseToken`
+2. L'intercepteur HTTP ajoute automatiquement le header `Authorization: Bearer <token>` à toutes les requêtes API
+3. Le serveur accepte l'authentification via cookie OU header Authorization
+
+**Fichiers modifiés :**
+
+- `central-dashboard/src/app/core/interceptors/auth.interceptor.ts` - Ajout du header Authorization
+- `central-dashboard/src/app/core/services/auth.service.ts` - Stockage du token en mémoire
+- `central-dashboard/src/app/core/guards/auth.guard.ts` - Guard async pour éviter race conditions
+- `central-server/src/controllers/auth.controller.ts` - Sessions de 7 jours, partitioned cookies
 
 ### Erreur 500 lors du login
 
