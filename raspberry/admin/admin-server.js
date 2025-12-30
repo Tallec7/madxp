@@ -723,8 +723,8 @@ async function loadVideoPathMapping() {
 }
 
 function invalidateVideoCaches() {
-  cache.clearNamespace(NAMESPACES.CONFIG);
-  cache.clearNamespace(NAMESPACES.VIDEOS);
+  cache.invalidateNamespace(NAMESPACES.CONFIG);
+  cache.invalidateNamespace(NAMESPACES.VIDEOS);
   console.log('[admin] Video and config caches invalidated');
 }
 
@@ -3090,7 +3090,7 @@ app.delete('/api/cache/clear', (req, res) => {
           validNamespaces: Object.values(NAMESPACES)
         });
       }
-      cache.clearNamespace(namespace);
+      cache.invalidateNamespace(namespace);
       res.json({
         success: true,
         message: `Cache du namespace '${namespace}' vidé avec succès`
