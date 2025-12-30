@@ -1,10 +1,15 @@
 import express from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
+import { uploadVideo } from '../middleware/upload';
 import {
   getAdvertiserDashboard,
   getAdvertiserSites,
   getAdvertiserVideos,
   getAdvertiserDetailedStats,
+  uploadAdvertiserVideo,
+  updateAdvertiserVideo,
+  deleteAdvertiserVideo,
+  getAdvertiserVideoStats,
 } from '../controllers/advertiser-portal.controller';
 
 const router = express.Router();
@@ -46,6 +51,44 @@ router.get(
   authenticate,
   requireRole('advertiser', 'admin', 'superadmin', 'super_admin'),
   getAdvertiserDetailedStats
+);
+
+// ============================================================================
+// VIDEO UPLOAD & MANAGEMENT
+// Annonceurs peuvent gérer leurs propres vidéos/créas
+// ============================================================================
+
+// Upload d'une nouvelle vidéo
+router.post(
+  '/videos',
+  authenticate,
+  requireRole('advertiser', 'admin', 'superadmin', 'super_admin'),
+  uploadVideo.single('video'),
+  uploadAdvertiserVideo
+);
+
+// Mise à jour des métadonnées d'une vidéo
+router.put(
+  '/videos/:videoId',
+  authenticate,
+  requireRole('advertiser', 'admin', 'superadmin', 'super_admin'),
+  updateAdvertiserVideo
+);
+
+// Suppression d'une vidéo
+router.delete(
+  '/videos/:videoId',
+  authenticate,
+  requireRole('advertiser', 'admin', 'superadmin', 'super_admin'),
+  deleteAdvertiserVideo
+);
+
+// Stats détaillées d'une vidéo spécifique
+router.get(
+  '/videos/:videoId/stats',
+  authenticate,
+  requireRole('advertiser', 'admin', 'superadmin', 'super_admin'),
+  getAdvertiserVideoStats
 );
 
 export default router;
