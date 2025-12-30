@@ -1,6 +1,6 @@
 # Changelog
 
-Généré le 2025-12-08 (Mise à jour 2025-12-29)
+Généré le 2025-12-08 (Mise à jour 2025-12-30)
 
 > **Note** : Les fichiers de commits individuels (138 fichiers) ont été archivés vers `../archive/commits/` le 25/12/2025.
 
@@ -45,6 +45,7 @@ Généré le 2025-12-08 (Mise à jour 2025-12-29)
 
 ## 🐛 Corrections
 
+- **Fix comptage catégories/vidéos télécommande** - Correction du comptage récursif des vidéos dans les sous-catégories - 2025-12-30
 - [ fix Angular template arrow function error (#82)](../archive/commits/c072070.md) - 2025-12-08
 - [ handle undefined videos/subCategories arrays (#77)](../archive/commits/caedb7d.md) - 2025-12-08
 - [ fix trust proxy and deploy_video command data (#70)](../archive/commits/92e5e95.md) - 2025-12-07

@@ -337,15 +337,13 @@ export class RemoteComponent implements OnInit {
   }
 
   public getVideosCount(category: Category): number {
-    if (category.videos) {
-      return category.videos.length;
-    }
+    let count = category.videos?.length || 0;
     if (category.subCategories) {
-      return category.subCategories.reduce((sum, sub) => {
-        return sum + (sub.videos?.length || 0);
+      count += category.subCategories.reduce((sum, sub) => {
+        return sum + this.getVideosCount(sub);
       }, 0);
     }
-    return 0;
+    return count;
   }
 
   public getSubCategoriesCount(category: Category): number {
