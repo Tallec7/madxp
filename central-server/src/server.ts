@@ -16,6 +16,7 @@ import socketService from './services/socket.service';
 import metricsService from './services/metrics.service';
 import healthService from './services/health.service';
 import schedulerService from './services/scheduler.service';
+import cronSchedulerService from './services/cron-scheduler.service';
 
 import authRoutes from './routes/auth.routes';
 import mfaRoutes from './routes/mfa.routes';
@@ -32,6 +33,9 @@ import adminRoutes from './routes/admin.routes';
 import advertiserPortalRoutes from './routes/advertiser-portal.routes';
 import agencyRoutes from './routes/agency.routes';
 import usersRoutes from './routes/users.routes';
+import schedulesRoutes from './routes/schedules.routes';
+import objectivesRoutes from './routes/objectives.routes';
+import playlistSchedulesRoutes from './routes/playlist-schedules.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 
@@ -300,6 +304,9 @@ app.use('/api/admin', sensitiveRateLimit, adminRoutes);
 app.use('/api/advertiser', apiRateLimit, advertiserPortalRoutes); // Portail annonceurs
 app.use('/api/agencies', apiRateLimit, agencyRoutes); // Gestion agences
 app.use('/api/users', sensitiveRateLimit, usersRoutes); // Gestion utilisateurs (sensible)
+app.use('/api/schedules', sensitiveRateLimit, schedulesRoutes); // Tâches planifiées (admin only)
+app.use('/api/objectives', apiRateLimit, objectivesRoutes); // Objectifs clubs
+app.use('/api/playlist-schedules', apiRateLimit, playlistSchedulesRoutes); // Programmation playlists
 
 // 404 handler - Skip Socket.IO paths as they are handled by Socket.IO server directly
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -355,6 +362,10 @@ const startServer = async () => {
     // Demarrer le scheduler pour les deploiements planifies
     schedulerService.start();
     logger.info('Deployment scheduler started');
+
+    // Demarrer le cron scheduler pour les taches recurrentes (rapports, cleanup)
+    await cronSchedulerService.start();
+    logger.info('Cron scheduler started');
   } catch (error) {
     logger.error('Failed to initialize dependencies:', error);
     // Ne pas quitter - le serveur reste en mode dégradé et le health check rapportera l'état
@@ -364,6 +375,7 @@ const startServer = async () => {
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM signal received: closing HTTP server');
   schedulerService.stop();
+  cronSchedulerService.stop();
   httpServer.close(async () => {
     logger.info('HTTP server closed');
     await socketService.cleanup();
