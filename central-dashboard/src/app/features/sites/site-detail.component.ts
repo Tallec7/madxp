@@ -398,7 +398,7 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
               <!-- Preview -->
               <div class="overlay-preview">
                 <div class="preview-label">Aperçu</div>
-                <div class="preview-container" [style.justify-content]="scoreOverlayConfig.position.includes('right') ? 'flex-end' : 'flex-start'" [style.align-items]="scoreOverlayConfig.position.includes('top') ? 'flex-start' : 'flex-end'">
+                <div class="preview-container" [style.justify-content]="getPreviewJustifyContent()" [style.align-items]="getPreviewAlignItems()">
                   <div class="preview-overlay"
                     [style.background]="scoreOverlayConfig.backgroundColor"
                     [style.border-radius.px]="scoreOverlayConfig.borderRadius"
@@ -2188,6 +2188,27 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   }
 
   // Score Overlay config methods
+
+  /**
+   * Retourne la valeur justify-content pour l'aperçu (horizontal: left/center/right)
+   */
+  getPreviewJustifyContent(): string {
+    const pos = this.scoreOverlayConfig.position;
+    if (pos.includes('right')) return 'flex-end';
+    if (pos.includes('left')) return 'flex-start';
+    return 'center'; // center
+  }
+
+  /**
+   * Retourne la valeur align-items pour l'aperçu (vertical: top/middle/bottom)
+   */
+  getPreviewAlignItems(): string {
+    const pos = this.scoreOverlayConfig.position;
+    if (pos.includes('top')) return 'flex-start';
+    if (pos.includes('bottom')) return 'flex-end';
+    return 'center'; // middle
+  }
+
   toggleScoreOverlayConfig(): void {
     this.showScoreOverlayConfig = !this.showScoreOverlayConfig;
     if (this.showScoreOverlayConfig && this.site?.neoProContent?.scoreOverlay) {
