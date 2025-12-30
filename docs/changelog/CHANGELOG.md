@@ -48,6 +48,7 @@ Généré le 2025-12-08 (Mise à jour 2025-12-30)
 
 ## 🐛 Corrections
 
+- [Fix Socket.IO mode offline](2025-12-30_offline-socketio-fix.md) - Socket.IO chargeait depuis CDN, empêchant le fonctionnement sans internet. Maintenant inclus localement dans le build - 2025-12-30
 - **Fix authentification Safari mobile (iOS/iPadOS)** - Les cookies cross-origin étaient bloqués par ITP. Solution : fallback via header `Authorization: Bearer` - 2025-12-30
 - **Fix sessions trop courtes** - Durée étendue de 8h à 7 jours (JWT + cookie) - 2025-12-30
 - **Fix requête getAdvertiserVideos** - Correction colonne `status` inexistante dans table `videos` (erreur 500) - 2025-12-30
