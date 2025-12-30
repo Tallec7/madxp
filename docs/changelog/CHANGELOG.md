@@ -6,6 +6,7 @@ Généré le 2025-12-08 (Mise à jour 2025-12-30)
 
 ## ✨ Nouvelles fonctionnalités
 
+- **Stockage vidéo FTP Hostinger** - Migration du stockage vidéo de Supabase (limité) vers FTP Hostinger (100GB+) - 2025-12-30
 - [Audit RGPD et Sécurité](2025-12-29_gdpr-security-audit.md) - Conformité RGPD, documentation juridique, corrections sécurité - 2025-12-29
 - [Migration Sponsor → Advertiser](2025-12-29_sponsor-to-advertiser-migration.md) - Renommage sémantique complet (DB, API, Frontend) - 2025-12-29
 - [Overlay Local System](2025-12-28_overlay-local-system.md) - Options, Timer, Breaking News, Templates - 2025-12-28
@@ -45,6 +46,9 @@ Généré le 2025-12-08 (Mise à jour 2025-12-30)
 
 ## 🐛 Corrections
 
+- **Fix authentification Safari mobile (iOS/iPadOS)** - Les cookies cross-origin étaient bloqués par ITP. Solution : fallback via header `Authorization: Bearer` - 2025-12-30
+- **Fix sessions trop courtes** - Durée étendue de 8h à 7 jours (JWT + cookie) - 2025-12-30
+- **Fix requête getAdvertiserVideos** - Correction colonne `status` inexistante dans table `videos` (erreur 500) - 2025-12-30
 - **Fix cache.invalidateNamespace error** - Correction appel méthode `invalidateNamespace` (était `clearNamespace`) dans admin-server.js - erreur 500 sur ajout vidéo à catégorie - 2025-12-30
 - **Fix sélecteur de langue pages login** - Dropdown s'ouvre maintenant vers le bas (visible à l'écran) sur Raspberry et Central Dashboard - 2025-12-30
 - **Fix modal ajout vidéos annonceur** - Correction du parsing réponse API `/api/videos` (format paginé) - 2025-12-30

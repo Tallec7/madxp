@@ -197,16 +197,16 @@ Video.js API (play/pause/seek)
 
 ## Technologies par composant
 
-| Composant | Stack | Base de données | Déploiement |
-|-----------|-------|-----------------|-------------|
-| `raspberry/src` | Angular 20, Video.js, Socket.IO client | - | Raspberry Pi (systemd) |
-| `raspberry/server` | Node.js, Socket.IO 4.7 | - | Raspberry Pi (systemd) |
-| `raspberry/admin` | Express, vanilla JS | - | Raspberry Pi (systemd) |
-| `raspberry/sync-agent` | Node.js, Axios | - | Raspberry Pi (systemd) |
-| `central-server` | Node.js 18, Express, JWT | Supabase (PostgreSQL) | Render.com |
-| `central-dashboard` | Angular 17, Chart.js, Leaflet | - | Hostinger (static) |
-| `server-render` | Node.js, Socket.IO 4.7 | Redis (Upstash) | Render.com |
-| `e2e` | Playwright | - | CI/CD |
+| Composant              | Stack                                  | Base de données                               | Déploiement            |
+| ---------------------- | -------------------------------------- | --------------------------------------------- | ---------------------- |
+| `raspberry/src`        | Angular 20, Video.js, Socket.IO client | -                                             | Raspberry Pi (systemd) |
+| `raspberry/server`     | Node.js, Socket.IO 4.7                 | -                                             | Raspberry Pi (systemd) |
+| `raspberry/admin`      | Express, vanilla JS                    | -                                             | Raspberry Pi (systemd) |
+| `raspberry/sync-agent` | Node.js, Axios                         | -                                             | Raspberry Pi (systemd) |
+| `central-server`       | Node.js 18, Express, JWT               | Supabase (PostgreSQL), FTP Hostinger (vidéos) | Railway                |
+| `central-dashboard`    | Angular 17, Chart.js, Leaflet          | -                                             | Hostinger (static)     |
+| `server-render`        | Node.js, Socket.IO 4.7                 | Redis (Upstash)                               | Render.com             |
+| `e2e`                  | Playwright                             | -                                             | CI/CD                  |
 
 ---
 
@@ -215,16 +215,19 @@ Video.js API (play/pause/seek)
 ### Edge (Raspberry Pi)
 
 **Méthode 1 : Golden Image (recommandé)**
+
 - Image SD pré-configurée
 - Flash + boot = 10 minutes
 - Script : `raspberry/tools/prepare-golden-image.sh`
 
 **Méthode 2 : Installation manuelle**
+
 - `install.sh` (30 min) + `setup-new-club.sh` (10 min)
 - Configuration via CLI interactive
 - Documentation : `docs/INSTALLATION_COMPLETE.md`
 
 **Méthode 3 : Mise à jour OTA (Over-The-Air)**
+
 - Via Dashboard Central : déploiement planifié ou immédiat
 - `updateDeploymentService.startDeployment()` déclenche la mise à jour
 - Le Raspberry Pi : backup, téléchargement, installation, redémarrage
@@ -233,11 +236,13 @@ Video.js API (play/pause/seek)
 ### Cloud
 
 **Infrastructure as Code**
+
 - `render.yaml` : Central Server, Socket Server, Dashboard
 - `docker-compose.yml` : Stack locale (dev)
 - `k8s/` : Kubernetes manifests (base + overlays)
 
 **CI/CD**
+
 - GitHub Actions (via `.github/workflows/`)
 - Auto-deploy sur push main
 - Tests E2E avant deploy
@@ -247,31 +252,37 @@ Video.js API (play/pause/seek)
 ## Patterns architecturaux
 
 ### 1. Edge Computing
+
 - Processing local (lecture vidéo, UI)
 - Sync asynchrone avec cloud
 - Offline-first design
 
 ### 2. Event-Driven
+
 - WebSocket pour temps réel
 - Event sourcing (analytics)
 - Command Queue pour offline sites
 
 ### 3. Multi-tenancy
+
 - Row-Level Security (Supabase)
 - Isolation par `site_id`
 - RLS Context middleware
 
 ### 4. Configuration as Code
+
 - Templates JSON versionnés
 - Merge intelligent (central overrides)
 - Schema validation
 
 ### 5. Monitoring & Observability
+
 - Prometheus metrics (Port 9090)
 - Grafana dashboards (Port 3000)
 - Systemd journald logs
 
 ### 6. Alerting Multi-Canal
+
 - Email (SMTP via emailService)
 - Webhook (POST JSON vers URL configurable)
 - Slack (Incoming Webhooks avec Block Kit)
@@ -282,37 +293,50 @@ Video.js API (play/pause/seek)
 ## Sécurité
 
 ### Authentification
+
 - **Admin** : JWT (Supabase Auth)
 - **Raspberry Pi** : Mot de passe local (bcrypt)
 - **API** : Bearer tokens
 
 ### Réseau
+
 - HTTPS everywhere (Let's Encrypt)
 - WiFi AP isolé (hostapd)
 - Firewall ufw (ports 80, 443, 8080, 3000)
 
 ### Secrets
+
 - `.env` (gitignored)
 - Supabase anon key (RLS protected)
 - Service role key (backend only)
+- FTP credentials (Hostinger)
+
+### Stockage vidéo
+
+- **Production** : FTP Hostinger (`kalonpartners.bzh/neopro-video/`)
+- **Fallback** : Supabase Storage
+- **URLs publiques** : `https://kalonpartners.bzh/neopro-video/{uuid}.mp4`
 
 ---
 
 ## Performance
 
 ### Optimisations frontend
+
 - Lazy loading routes
 - Video.js streaming
 - SCSS compilation
 - Service Worker (PWA ready)
 
 ### Optimisations backend
+
 - Redis cache (sessions, config)
 - PostgreSQL indexes
 - Connection pooling
 - Rate limiting
 
 ### Optimisations edge
+
 - Local video storage
 - Zero latency control
 - Offline playback
@@ -322,11 +346,13 @@ Video.js API (play/pause/seek)
 ## Scalabilité
 
 ### Horizontal
+
 - Central Server : Multi-instance (Render)
 - Socket Server : Sticky sessions (Redis adapter)
 - Database : Supabase managed scaling
 
 ### Vertical
+
 - Raspberry Pi 4 (4GB RAM)
 - 32GB SD card minimum
 - H.264 hardware decode
@@ -336,26 +362,31 @@ Video.js API (play/pause/seek)
 ## Roadmap technique
 
 ### Phase 1 : MVP (✅ Complété)
+
 - Lecteur vidéo
 - Télécommande
 - Configuration locale
 
 ### Phase 2 : Cloud (✅ Complété)
+
 - Dashboard central
 - API REST
 - Synchronisation
 
 ### Phase 3 : Analytics (✅ Complété)
+
 - Tracking sponsors
 - Rapports PDF
 - Graphiques temps réel
 
 ### Phase 4 : Intelligence (🚧 En cours)
+
 - Estimation audience (caméra RPi)
 - Score live (websocket)
 - Prédictions ML
 
 ### Phase 5 : Scale (📋 Backlog)
+
 - Multi-tenant SaaS
 - White-label
 - App mobile iOS/Android
@@ -371,5 +402,5 @@ Video.js API (play/pause/seek)
 
 ---
 
-**Dernière mise à jour** : 28 décembre 2025
-**Version** : 2.1
+**Dernière mise à jour** : 30 décembre 2025
+**Version** : 2.2
