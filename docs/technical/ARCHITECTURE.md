@@ -304,6 +304,102 @@ Video.js API (play/pause/seek)
 - WiFi AP isolé (hostapd)
 - Firewall ufw (ports 80, 443, 8080, 3000)
 
+---
+
+## Modes réseau Raspberry Pi
+
+Le Raspberry Pi peut fonctionner dans différents modes réseau :
+
+### Mode 1 : Hotspot seul (100% autonome)
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                    RASPBERRY PI (192.168.4.1)                     │
+│                                                                   │
+│  wlan0: Hotspot "NEOPRO_xxx"     wlan1: Non utilisé              │
+│                                                                   │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────┐  │
+│  │   Nginx     │    │ Socket.IO   │    │      Chromium       │  │
+│  │  Port 80    │    │  Port 3000  │    │    /tv (kiosk)      │  │
+│  └──────┬──────┘    └──────┬──────┘    └──────────┬──────────┘  │
+│         │                  │                      │              │
+│         └──────────────────┼──────────────────────┘              │
+│                            │ Communication locale                │
+└────────────────────────────┼─────────────────────────────────────┘
+                             │
+                   WiFi (192.168.4.x)
+                             │
+                    ┌────────▼────────┐
+                    │   TÉLÉPHONE     │
+                    │   /remote       │
+                    └─────────────────┘
+```
+
+**Fonctionnalités disponibles :**
+
+- Lecture vidéos locales
+- Télécommande /remote
+- Score live, Timer, Breaking news
+- **Pas de sync cloud**
+
+### Mode 2 : Hotspot + WiFi externe (hybride)
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                    RASPBERRY PI                                   │
+│                                                                   │
+│  wlan0: Hotspot "NEOPRO_xxx"     wlan1: WiFi externe (internet)  │
+│  (pour télécommande locale)       (pour sync cloud)              │
+│                                                                   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                      Sync-Agent                           │   │
+│  │  - Heartbeat cloud (30s)                                  │   │
+│  │  - Push analytics                                         │   │
+│  │  - Pull config                                            │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Fonctionnalités disponibles :**
+
+- Toutes les fonctions du Mode 1
+- Synchronisation cloud
+- Analytics et impressions sponsors
+- Mise à jour OTA
+
+### Communication Socket.IO locale
+
+```
+Remote (téléphone)                    TV (Chromium kiosk)
+      │                                      ▲
+      │ emit('command', data)               │
+      ▼                                      │
+┌─────────────────────────────────────────────┐
+│           Socket.IO Server (:3000)          │
+│                                             │
+│  socket.on('command') → io.emit('action')  │
+└─────────────────────────────────────────────┘
+
+Événements :
+- command/action : vidéos, sponsors
+- score-update/score-reset : score live
+- phase-change : avant/pendant/après match
+- options-update : overlay config
+- breaking-news : flash info
+- timer-update : chronomètre
+```
+
+### Dépendances critiques en mode offline
+
+Pour fonctionner sans internet, le build Angular doit inclure :
+
+| Ressource        | Emplacement  | Raison                  |
+| ---------------- | ------------ | ----------------------- |
+| socket.io.min.js | assets/      | Communication WebSocket |
+| video.js         | bundled      | Lecture vidéo           |
+| polices          | media/       | Material Icons          |
+| i18n/\*.json     | assets/i18n/ | Traductions             |
+
 ### Secrets
 
 - `.env` (gitignored)

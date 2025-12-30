@@ -38,6 +38,11 @@
                 "output": "demo-configs"
               },
               {
+                "glob": "socket.io.min.js",
+                "input": "raspberry/src/assets",
+                "output": "assets"
+              },
+              {
                 "glob": "**/*",
                 "input": "raspberry/admin/public",
                 "output": "admin"

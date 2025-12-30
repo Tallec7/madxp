@@ -72,10 +72,31 @@ declare const io: (url: string) => Socket;
 export class SocketService {
   private socket: Socket | undefined;
 
+  /**
+   * Détermine l'URL du serveur Socket.IO dynamiquement.
+   * - Utilise environment.socketUrl si défini
+   * - Sinon, utilise l'hostname actuel avec le port 3000
+   * Cela permet de fonctionner depuis :
+   * - Le Pi lui-même (localhost ou neopro.local)
+   * - Un téléphone sur le hotspot (neopro.local ou 192.168.4.1)
+   */
+  private getSocketUrl(): string {
+    // Si l'environnement définit une URL, l'utiliser
+    if (environment.socketUrl) {
+      return environment.socketUrl;
+    }
+
+    // Sinon, construire dynamiquement depuis l'origine actuelle
+    const hostname = window.location.hostname || 'localhost';
+    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+    return `${protocol}//${hostname}:3000`;
+  }
+
   public initialize() {
     try {
-      console.log('Connecting to socket server:', environment.socketUrl);
-      this.socket = io(environment.socketUrl);
+      const socketUrl = this.getSocketUrl();
+      console.log('Connecting to socket server:', socketUrl);
+      this.socket = io(socketUrl);
     } catch (e) {
       if (e instanceof ReferenceError) {
           console.error('socket service : not initialized, reference error')
