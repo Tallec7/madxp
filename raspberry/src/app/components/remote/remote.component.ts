@@ -3,14 +3,22 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { Configuration, TimeCategory } from '../../interfaces/configuration.interface';
+import { Configuration, TimeCategory, SportType, OverlayPosition } from '../../interfaces/configuration.interface';
 import { Category } from '../../interfaces/category.interface';
 import { Video } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { DemoConfigService } from '../../services/demo-config.service';
 import { LocalBroadcastService, TimerUpdateEvent } from '../../services/local-broadcast.service';
-import { LocalOptionsService, LocalOptions } from '../../services/local-options.service';
+import {
+  LocalOptionsService,
+  LocalOptions,
+  OverlayPreset,
+  TeamConfig,
+  SPORT_LABELS,
+  SPORT_PERIODS,
+  SPORT_PERIOD_DURATIONS
+} from '../../services/local-options.service';
 import { ClubSelectorComponent } from '../club-selector/club-selector.component';
 
 type ViewType = 'club-selector' | 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos' | 'options';
@@ -96,6 +104,36 @@ export class RemoteComponent implements OnInit {
 
   // Menu header (pour simplifier le header)
   public isHeaderMenuOpen = false;
+
+  // Sports et Périodes
+  public readonly sportTypes: SportType[] = ['football', 'basketball', 'handball', 'volleyball', 'rugby', 'hockey'];
+  public readonly sportLabels = SPORT_LABELS;
+  public readonly sportPeriods = SPORT_PERIODS;
+  public readonly sportPeriodDurations = SPORT_PERIOD_DURATIONS;
+
+  // Positions overlay (9 positions)
+  public readonly overlayPositions: { value: OverlayPosition; label: string }[] = [
+    { value: 'top-left', label: 'Haut gauche' },
+    { value: 'top-center', label: 'Haut centre' },
+    { value: 'top-right', label: 'Haut droite' },
+    { value: 'middle-left', label: 'Milieu gauche' },
+    { value: 'middle-center', label: 'Centre' },
+    { value: 'middle-right', label: 'Milieu droite' },
+    { value: 'bottom-left', label: 'Bas gauche' },
+    { value: 'bottom-center', label: 'Bas centre' },
+    { value: 'bottom-right', label: 'Bas droite' },
+  ];
+
+  // Styles d'animation de but
+  public readonly goalAnimationStyles: { value: 'popup' | 'fullscreen' | 'slide'; label: string }[] = [
+    { value: 'popup', label: 'Popup central' },
+    { value: 'fullscreen', label: 'Plein écran' },
+    { value: 'slide', label: 'Bandeau glissant' },
+  ];
+
+  // Présets
+  public showPresetModal = false;
+  public newPresetName = '';
 
   // Swipe gesture tracking
   private touchStartX = 0;
@@ -268,6 +306,9 @@ export class RemoteComponent implements OnInit {
   // Actions
   public launchSponsors(): void {
     console.log('emit sponsors loop');
+    // Communication locale (Remote ↔ TV sur le même Raspberry) - PRIORITAIRE
+    this.localBroadcast.emitCommand({ type: 'sponsors' });
+    // Communication cloud (pour monitoring/dashboard - optionnel)
     this.socketService.emit('command', { type: 'sponsors' });
   }
 
@@ -275,6 +316,10 @@ export class RemoteComponent implements OnInit {
     console.log('emit video', video);
     // Tracker le déclenchement manuel
     this.analyticsService.trackManualTrigger(video);
+
+    // Communication locale (Remote ↔ TV sur le même Raspberry) - PRIORITAIRE
+    this.localBroadcast.emitCommand({ type: 'video', data: video });
+    // Communication cloud (pour monitoring/dashboard - optionnel)
     this.socketService.emit('command', { type: 'video', data: video });
 
     // Ajouter aux vidéos récentes
@@ -667,6 +712,9 @@ export class RemoteComponent implements OnInit {
   public switchPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
     this.activePhase = phase;
     console.log('Switching to phase:', phase);
+    // Communication locale (Remote ↔ TV sur le même Raspberry) - PRIORITAIRE
+    this.localBroadcast.emitPhaseChange({ phase });
+    // Communication cloud (pour monitoring/dashboard - optionnel)
     this.socketService.emit('phase-change', { phase });
   }
 
@@ -923,7 +971,7 @@ export class RemoteComponent implements OnInit {
     this.broadcastOptions();
 
     // Si on change le mode countdown ou la durée, réinitialiser le timer
-    if (key === 'countDown' || key === 'halfDuration') {
+    if (key === 'countDown' || key === 'periodDuration' || key === 'integratedWithScore') {
       this.initializeTimer();
     }
   }
@@ -986,6 +1034,236 @@ export class RemoteComponent implements OnInit {
     this.localBroadcast.broadcast('options-update', this.localOptions);
     // Réseau (via serveur socket)
     this.socketService.emit('options-update', this.localOptions);
+  }
+
+  // ============================================================================
+  // SPORT & PÉRIODES
+  // ============================================================================
+
+  /**
+   * Change le sport actuel
+   */
+  public setSport(sport: SportType): void {
+    this.localOptionsService.setSport(sport);
+    this.localOptions = this.localOptionsService.getOptions();
+    this.broadcastOptions();
+    this.displayToast(`Sport: ${SPORT_LABELS[sport]}`, 'success');
+  }
+
+  /**
+   * Change la période actuelle
+   */
+  public setPeriod(periodIndex: number): void {
+    this.localOptionsService.setPeriod(periodIndex);
+    this.localOptions = this.localOptionsService.getOptions();
+    this.broadcastScore(); // Envoyer le score avec la nouvelle période
+    this.displayToast(`Période: ${this.localOptions.match.period}`, 'success');
+  }
+
+  /**
+   * Passe à la période suivante
+   */
+  public nextPeriod(): void {
+    this.localOptionsService.nextPeriod();
+    this.localOptions = this.localOptionsService.getOptions();
+    this.broadcastScore();
+    this.displayToast(`Période: ${this.localOptions.match.period}`, 'success');
+  }
+
+  /**
+   * Retourne les périodes disponibles pour le sport actuel
+   */
+  public getAvailablePeriods(): string[] {
+    return this.localOptionsService.getAvailablePeriods();
+  }
+
+  // ============================================================================
+  // ÉQUIPES & LOGOS
+  // ============================================================================
+
+  /**
+   * Met à jour le nom de l'équipe domicile
+   */
+  public updateHomeTeamName(name: string): void {
+    this.localOptionsService.updateHomeTeam({ name });
+    this.localOptions = this.localOptionsService.getOptions();
+    this.currentScore.homeTeam = name;
+    this.broadcastScore();
+  }
+
+  /**
+   * Met à jour le nom de l'équipe extérieure
+   */
+  public updateAwayTeamName(name: string): void {
+    this.localOptionsService.updateAwayTeam({ name });
+    this.localOptions = this.localOptionsService.getOptions();
+    this.currentScore.awayTeam = name;
+    this.broadcastScore();
+  }
+
+  /**
+   * Gère l'upload d'un logo d'équipe
+   */
+  public onLogoUpload(event: Event, team: 'home' | 'away'): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    if (!file.type.startsWith('image/')) {
+      this.displayToast('Veuillez sélectionner une image', 'info');
+      return;
+    }
+
+    // Limiter la taille (max 500KB pour éviter la surcharge)
+    if (file.size > 500 * 1024) {
+      this.displayToast('Image trop volumineuse (max 500KB)', 'info');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      this.localOptionsService.setTeamLogo(team, base64);
+      this.localOptions = this.localOptionsService.getOptions();
+      this.broadcastScore();
+      this.displayToast('Logo mis à jour', 'success');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /**
+   * Supprime le logo d'une équipe
+   */
+  public clearTeamLogo(team: 'home' | 'away'): void {
+    this.localOptionsService.setTeamLogo(team, undefined);
+    this.localOptions = this.localOptionsService.getOptions();
+    this.broadcastScore();
+    this.displayToast('Logo supprimé', 'success');
+  }
+
+  /**
+   * Nouveau match : réinitialise les équipes et logos
+   */
+  public startNewMatch(): void {
+    this.localOptionsService.resetMatch();
+    this.localOptions = this.localOptionsService.getOptions();
+    this.currentScore = {
+      homeTeam: this.localOptions.match.homeTeam.name,
+      awayTeam: this.localOptions.match.awayTeam.name,
+      homeScore: 0,
+      awayScore: 0
+    };
+    this.resetTimer();
+    this.broadcastScore();
+    this.displayToast('Nouveau match préparé', 'success');
+  }
+
+  // ============================================================================
+  // ANIMATION DE BUT
+  // ============================================================================
+
+  /**
+   * Met à jour une option d'animation de but
+   */
+  public updateGoalAnimationOption<K extends keyof LocalOptions['goalAnimation']>(
+    key: K,
+    value: LocalOptions['goalAnimation'][K]
+  ): void {
+    this.localOptionsService.updateGoalAnimation({ [key]: value });
+    this.localOptions = this.localOptionsService.getOptions();
+    this.broadcastOptions();
+  }
+
+  // ============================================================================
+  // POSITION OVERLAY
+  // ============================================================================
+
+  /**
+   * Met à jour la position locale de l'overlay
+   */
+  public setOverlayPosition(position: OverlayPosition | undefined): void {
+    this.localOptionsService.updateOverlayOptions({ position });
+    this.localOptions = this.localOptionsService.getOptions();
+    this.broadcastOptions();
+  }
+
+  /**
+   * Active/désactive les couleurs locales
+   */
+  public toggleLocalColors(useLocal: boolean): void {
+    this.localOptionsService.updateOverlayOptions({ useLocalColors: useLocal });
+    this.localOptions = this.localOptionsService.getOptions();
+    this.broadcastOptions();
+  }
+
+  /**
+   * Met à jour une couleur locale
+   */
+  public setLocalColor(colorType: 'backgroundColor' | 'scoreColor' | 'teamNameColor', color: string): void {
+    this.localOptionsService.updateOverlayOptions({ [colorType]: color });
+    this.localOptions = this.localOptionsService.getOptions();
+    this.broadcastOptions();
+  }
+
+  // ============================================================================
+  // PRESETS
+  // ============================================================================
+
+  /**
+   * Ouvre la modal de création de preset
+   */
+  public openPresetModal(): void {
+    this.showPresetModal = true;
+    this.newPresetName = '';
+  }
+
+  /**
+   * Ferme la modal de preset
+   */
+  public closePresetModal(): void {
+    this.showPresetModal = false;
+    this.newPresetName = '';
+  }
+
+  /**
+   * Sauvegarde un nouveau preset
+   */
+  public savePreset(): void {
+    if (!this.newPresetName.trim()) {
+      this.displayToast('Veuillez entrer un nom', 'info');
+      return;
+    }
+    this.localOptionsService.savePreset(this.newPresetName.trim());
+    this.localOptions = this.localOptionsService.getOptions();
+    this.closePresetModal();
+    this.displayToast('Preset sauvegardé', 'success');
+  }
+
+  /**
+   * Applique un preset
+   */
+  public applyPreset(presetId: string): void {
+    if (this.localOptionsService.applyPreset(presetId)) {
+      this.localOptions = this.localOptionsService.getOptions();
+      this.broadcastOptions();
+      this.displayToast('Preset appliqué', 'success');
+    }
+  }
+
+  /**
+   * Supprime un preset
+   */
+  public deletePreset(presetId: string): void {
+    this.localOptionsService.deletePreset(presetId);
+    this.localOptions = this.localOptionsService.getOptions();
+    this.displayToast('Preset supprimé', 'success');
+  }
+
+  /**
+   * Récupère tous les presets
+   */
+  public getPresets(): OverlayPreset[] {
+    return this.localOptionsService.getPresets();
   }
 
   /**
@@ -1083,7 +1361,7 @@ export class RemoteComponent implements OnInit {
       action: 'start',
       currentTime: this.timerCurrentTime,
       isRunning: true,
-      halfDuration: this.localOptions.timer.halfDuration,
+      periodDuration: this.localOptions.timer.periodDuration,
       countDown: this.localOptions.timer.countDown
     });
 
@@ -1099,7 +1377,7 @@ export class RemoteComponent implements OnInit {
         }
       } else {
         // Compteur croissant
-        const maxTime = this.localOptions.timer.halfDuration * 60;
+        const maxTime = this.localOptions.timer.periodDuration * 60;
         if (this.timerCurrentTime < maxTime) {
           this.timerCurrentTime++;
         } else {
@@ -1148,7 +1426,7 @@ export class RemoteComponent implements OnInit {
 
     // Réinitialiser selon le mode
     if (this.localOptions.timer.countDown) {
-      this.timerCurrentTime = this.localOptions.timer.halfDuration * 60;
+      this.timerCurrentTime = this.localOptions.timer.periodDuration * 60;
     } else {
       this.timerCurrentTime = 0;
     }
@@ -1158,7 +1436,7 @@ export class RemoteComponent implements OnInit {
       action: 'reset',
       currentTime: this.timerCurrentTime,
       isRunning: false,
-      halfDuration: this.localOptions.timer.halfDuration,
+      periodDuration: this.localOptions.timer.periodDuration,
       countDown: this.localOptions.timer.countDown
     });
 
@@ -1173,7 +1451,7 @@ export class RemoteComponent implements OnInit {
       action: 'sync',
       currentTime: this.timerCurrentTime,
       isRunning: this.timerIsRunning,
-      halfDuration: this.localOptions.timer.halfDuration,
+      periodDuration: this.localOptions.timer.periodDuration,
       countDown: this.localOptions.timer.countDown
     });
   }
@@ -1185,7 +1463,7 @@ export class RemoteComponent implements OnInit {
     action: 'start' | 'pause' | 'reset' | 'sync';
     currentTime?: number;
     isRunning?: boolean;
-    halfDuration?: number;
+    periodDuration?: number;
     countDown?: boolean;
   }): void {
     // Local (même navigateur)
@@ -1215,7 +1493,7 @@ export class RemoteComponent implements OnInit {
    */
   private initializeTimer(): void {
     if (this.localOptions.timer.countDown) {
-      this.timerCurrentTime = this.localOptions.timer.halfDuration * 60;
+      this.timerCurrentTime = this.localOptions.timer.periodDuration * 60;
     } else {
       this.timerCurrentTime = 0;
     }

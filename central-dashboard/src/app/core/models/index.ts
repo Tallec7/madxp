@@ -1,10 +1,18 @@
 /**
+ * Positions disponibles pour l'overlay (9 positions)
+ */
+export type OverlayPosition =
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'middle-left' | 'middle-center' | 'middle-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+
+/**
  * Configuration de l'overlay du score affiché sur la TV
  * Permet de personnaliser la position, les couleurs et les tailles
  */
 export interface ScoreOverlayConfig {
-  /** Position de l'overlay : 'top-right', 'top-left', 'bottom-right', 'bottom-left' */
-  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+  /** Position de l'overlay (9 positions disponibles) */
+  position?: OverlayPosition;
   /** Distance horizontale du bord (en pixels) */
   offsetX?: number;
   /** Distance verticale du bord (en pixels) */
