@@ -1,8 +1,8 @@
 # BACKLOG NEOPRO - Features à Développer
 
 > **Date de création** : 15 Décembre 2025
-> **Dernière MAJ** : 28 Décembre 2025
-> **Statut projet** : 🟢 Production-Ready v2.2 (voir `STATUS.md`)
+> **Dernière MAJ** : 31 Décembre 2025
+> **Statut projet** : 🟢 Production-Ready v2.5 (voir `STATUS.md`)
 
 Ce document regroupe les features planifiées et leur état d'avancement.
 
@@ -20,6 +20,134 @@ Ce document regroupe les features planifiées et leur état d'avancement.
 ---
 
 ## ✅ FEATURES TERMINÉES RÉCEMMENT
+
+### ✅ Objectifs & Alertes Clubs - **TERMINÉ 30 Déc 2025**
+
+**Statut** : 🟢 100% Implémenté
+
+**Contexte** : Fonctionnalité P1 Janvier 2026 implémentée en avance. Permet aux clubs de définir des objectifs et recevoir des alertes automatiques.
+
+**Fonctionnalités implémentées** :
+
+- ✅ **Table club_objectives** - Définition d'objectifs avec métriques, périodes, priorités
+- ✅ **Table club_objectives_progress** - Suivi de progression avec calcul automatique %
+- ✅ **Table club_objective_alerts** - Alertes automatiques (at_risk, achieved, missed)
+- ✅ **API CRUD complète** - Liste, création, modification, suppression d'objectifs
+- ✅ **7 types de métriques** - screen_time, videos_played, sessions_count, manual_triggers, sponsor_plays, uptime_percent, avg_videos_per_session
+- ✅ **Périodes configurables** - daily, weekly, monthly
+- ✅ **Priorités** - low, medium, high, critical
+
+**Fichiers principaux** :
+
+- `central-server/src/controllers/objectives.controller.ts` (556 lignes)
+- `central-server/src/routes/objectives.routes.ts`
+- `central-server/src/scripts/migrations/add-club-objectives.sql` (283 lignes)
+
+**Documentation** : Backlog §5 (originalement P2)
+
+---
+
+### ✅ Programmation Playlists Automatiques - **TERMINÉ 30 Déc 2025**
+
+**Statut** : 🟢 100% Implémenté
+
+**Contexte** : Fonctionnalité P1 Janvier 2026 implémentée en avance. Remplace le "Mode Programmation" initialement en pause.
+
+**Fonctionnalités implémentées** :
+
+- ✅ **Table playlist_schedules** - Règles de programmation par site et catégorie
+- ✅ **Table custom_playlists** - Playlists personnalisées avec ordre des vidéos
+- ✅ **Table recurring_schedules** - Planifications récurrentes
+- ✅ **Cron Scheduler Service** - Service d'exécution automatique (793 lignes)
+- ✅ **Plages horaires** - start_time, end_time, days_of_week
+- ✅ **Contexte match** - before, during, after, all
+- ✅ **Priorités** - Gestion des conflits entre règles
+- ✅ **Modes de lecture** - sequential, shuffle, weighted
+
+**Fichiers principaux** :
+
+- `central-server/src/controllers/playlist-schedule.controller.ts` (532 lignes)
+- `central-server/src/services/cron-scheduler.service.ts` (793 lignes)
+- `central-server/src/routes/playlist-schedules.routes.ts`
+- `central-server/src/routes/schedules.routes.ts` (224 lignes)
+- `central-server/src/scripts/migrations/add-playlist-scheduling.sql`
+- `central-server/src/scripts/migrations/add-recurring-schedules.sql`
+
+**Documentation** : Backlog §⏸️ Mode Programmation - **RÉACTIVÉ ET IMPLÉMENTÉ**
+
+---
+
+### ✅ Overlay V2 Multi-Sport - **TERMINÉ 30 Déc 2025**
+
+**Statut** : 🟢 100% Implémenté
+
+**Contexte** : Refonte majeure du système d'overlay avec support multi-sport, animations configurables et gestion des périodes.
+
+**Fonctionnalités implémentées** :
+
+- ✅ **6 sports supportés** - Football, Basketball, Handball, Volleyball, Rugby, Hockey
+- ✅ **9 positions overlay** - Matrice 3x3 complète (top/middle/bottom × left/center/right)
+- ✅ **Logos équipes** - Upload base64, affichage dans overlay et animations
+- ✅ **3 styles animation but** - Popup, Fullscreen, Slide (avec son configurable)
+- ✅ **Périodes automatiques** - Par sport (mi-temps, quart-temps, sets, etc.)
+- ✅ **Timer intégré au score** - Option d'affichage sous le score
+- ✅ **Présets sauvegardables** - Configurations réutilisables (localStorage)
+- ✅ **Résolution conflit !important** - Couleurs via ngStyle, templates = structure
+
+**Score système** : 68/100 → 88/100
+
+**Fichiers principaux** :
+
+- `raspberry/src/app/services/local-options.service.ts` (refonte complète)
+- `raspberry/src/app/components/tv/tv.component.*` (9 positions, animations)
+- `raspberry/src/app/components/remote/remote.component.*` (UI Options)
+- `raspberry/src/app/interfaces/configuration.interface.ts` (SportType, OverlayPosition)
+
+**Documentation** : `docs/changelog/2025-12-30_overlay-v2-multi-sport.md`
+
+---
+
+### ✅ Socket.IO Mode Offline Autonome - **TERMINÉ 30 Déc 2025**
+
+**Statut** : 🟢 100% Implémenté
+
+**Contexte** : Correction critique permettant le fonctionnement 100% autonome sans internet.
+
+**Problème résolu** : Socket.IO était chargé depuis CDN, empêchant la communication Remote↔TV en mode hotspot sans internet.
+
+**Solution implémentée** :
+
+- ✅ **Socket.IO local** - Fichier `socket.io.min.js` (45KB) inclus dans assets
+- ✅ **Angular build** - Configuration pour copier l'asset
+- ✅ **Mode hotspot** - Communication locale fonctionnelle sans internet
+- ✅ **Sync-agent** - Buffer analytics/impressions pour retry à la reconnexion
+
+**Fichiers principaux** :
+
+- `raspberry/src/index.html` (CDN → fichier local)
+- `raspberry/src/assets/socket.io.min.js` (nouveau)
+- `angular.json` (configuration assets)
+
+**Documentation** : `docs/changelog/2025-12-30_offline-socketio-fix.md`
+
+---
+
+### ✅ Migration Sponsor → Advertiser (Annonceur) - **TERMINÉ 29 Déc 2025**
+
+**Statut** : 🟢 100% Implémenté
+
+**Contexte** : Renommage sémantique complet pour alignement avec le vocabulaire métier français.
+
+**Changements** :
+
+- ✅ **Base de données** - Table `sponsors` → renommage logique (alias)
+- ✅ **API** - Endpoints `/api/sponsors` → `/api/advertisers`
+- ✅ **Frontend** - Composants, services, labels "Annonceur"
+- ✅ **Portail Annonceur** - `advertiser-portal.controller.ts` (460 lignes)
+
+**Documentation** : `docs/changelog/2025-12-29_sponsor-to-advertiser-migration.md`
+
+---
 
 ### ✅ Overlay Local System - **TERMINÉ 28 Déc 2025**
 
@@ -483,64 +611,15 @@ server.on('message', (msg, rinfo) => {
 
 ---
 
-### 5. Objectifs & Alertes 🔵 **P2**
+### ✅ 5. Objectifs & Alertes - **TERMINÉ 30 Déc 2025**
 
-**Objectif** : Permettre aux clubs/sponsors de définir des objectifs et recevoir alertes automatiques
+> **Note** : Implémenté en avance (prévu P1 Janvier 2026). Voir section "Features Terminées Récemment".
 
-**Fonctionnalités** :
+**Statut** : 🟢 100% Implémenté
 
-#### 5.1 Configuration Objectifs
-
-- Temps d'écran mensuel (ex: 40h/mois)
-- Vidéos jouées par mois (ex: 1500 vidéos)
-- Uptime système (ex: 98% minimum)
-- Impressions sponsors (ex: 50,000/trimestre)
-
-#### 5.2 Types d'Alertes
-
-- 🎯 Objectif atteint (email félicitations)
-- ⚠️ Objectif en danger (< 80% à J-7)
-- 🚨 Pas d'activité (7 jours sans session)
-- 📊 Rapport mensuel automatique
-- 🔥 Alerte technique (température, uptime)
-
-#### 5.3 Canaux de Notification
-
-- Email
-- SMS (Twilio)
-- Webhook (pour intégrations tierces)
-- Notification dashboard
-
-**Tables DB** :
-
-```sql
-CREATE TABLE goals (
-  id UUID PRIMARY KEY,
-  site_id UUID REFERENCES sites(id),
-  sponsor_id UUID REFERENCES sponsors(id),
-  goal_type VARCHAR(50),
-  target_value DECIMAL(10,2),
-  period VARCHAR(20),
-  notification_threshold DECIMAL(5,2) DEFAULT 80,
-  notification_email VARCHAR(255),
-  active BOOLEAN DEFAULT true
-);
-
-CREATE TABLE alerts (
-  id UUID PRIMARY KEY,
-  goal_id UUID REFERENCES goals(id),
-  alert_type VARCHAR(50),
-  severity VARCHAR(20),
-  message TEXT,
-  sent_at TIMESTAMP,
-  acknowledged BOOLEAN DEFAULT false
-);
-```
-
-**Cron Job** : Vérification quotidienne des objectifs
-
-**Effort** : 2 semaines
-**Priorité** : P2 (feature engagement clubs)
+Tables créées : `club_objectives`, `club_objectives_progress`, `club_objective_alerts`
+API : `/api/objectives` (CRUD complet)
+Service : `cron-scheduler.service.ts`
 
 ---
 
@@ -885,20 +964,18 @@ CREATE TABLE api_usage_logs (
 
 ## ❌ FEATURES REJETÉES / EN PAUSE
 
-### ⏸️ Mode Programmation (Playlist Automatique)
+### ✅ Mode Programmation (Playlist Automatique) - **RÉACTIVÉ ET TERMINÉ 30 Déc 2025**
 
-**Statut** : En pause - reporté
-**Raison** : Non prioritaire pour le MVP. Les utilisateurs utilisent principalement les vidéos manuellement et la boucle partenaires.
+**Statut** : 🟢 100% Implémenté (voir "Programmation Playlists Automatiques" dans Features Terminées)
 
-**Fonctionnalités prévues** :
+**Fonctionnalités implémentées** :
 
-- Création de playlists ordonnées de vidéos
-- Exécution automatique sans intervention manuelle
-- Cas d'usage : rituels avant-match, mi-temps, après-match
-- Drag-and-drop pour réordonner les vidéos
-- Persistence localStorage
-
-**À reprendre quand** : Feedback utilisateurs demandant cette fonctionnalité
+- ✅ Création de playlists ordonnées de vidéos (`custom_playlists`)
+- ✅ Exécution automatique via cron (`cron-scheduler.service.ts`)
+- ✅ Planification horaire avec jours de semaine (`playlist_schedules`)
+- ✅ Contexte match (before, during, after)
+- ✅ Priorités et modes de lecture (sequential, shuffle, weighted)
+- ✅ Planifications récurrentes (`recurring_schedules`)
 
 ---
 
@@ -920,45 +997,41 @@ CREATE TABLE api_usage_logs (
 
 ### Prochains Sprints
 
-**Sprint Décembre 2025 (2 semaines)** :
+**Sprint Décembre 2025 - COMPLET** :
 
 - ✅ Rapport PDF Club - **TERMINÉ 15 Déc**
 - ✅ Estimation audience UI - **TERMINÉ 15 Déc**
 - ✅ Score en live UI télécommande - **TERMINÉ 15 Déc**
 - ✅ Télécommande v2 (refonte) - **TERMINÉ 15 Déc**
-- ⏳ Overlay score TV - **À faire**
-- ⏳ Migration DB production - **À faire**
+- ✅ Overlay score TV - **TERMINÉ 30 Déc** (V2 Multi-Sport)
+- ✅ Multi-tenant Portals - **TERMINÉ 26 Déc**
+- ✅ Overlay Local System - **TERMINÉ 28 Déc**
+- ✅ Migration Sponsor → Advertiser - **TERMINÉ 29 Déc**
+- ✅ Overlay V2 Multi-Sport - **TERMINÉ 30 Déc**
+- ✅ Socket.IO Offline Mode - **TERMINÉ 30 Déc**
 
-**Sprint Janvier 2026 (2 semaines)** :
+**Sprint Décembre 2025 - P1 Janvier 2026 (implémenté en avance)** :
 
-- Objectifs & Alertes
+- ✅ Objectifs & Alertes Clubs - **TERMINÉ 30 Déc**
+- ✅ Programmation Playlists Automatiques - **TERMINÉ 30 Déc**
+- ✅ Portail Annonceur amélioré - **TERMINÉ 30 Déc**
+- ✅ Cron Scheduler Service - **TERMINÉ 30 Déc**
+
+**Sprint Janvier 2026 (révisé)** :
+
 - Benchmark anonymisé
 - Rapports email automatiques
+- Score en live Phase 2 (API fédérations - début)
 
 **Sprint Février 2026 (2 semaines)** :
 
-- Score en live Phase 2 (API fédérations)
+- Score en live Phase 2 (API fédérations - suite)
 - A/B Testing MVP
 
 **T2 2026** :
 
 - ~~Portail sponsor self-service~~ ✅ **TERMINÉ 26 Déc 2025** (voir Multi-tenant Portals)
 - API OAuth partenaires
-
-**Sprint Décembre 2025 - Addendum (26 Déc)** :
-
-- ✅ Multi-tenant Portals (Sponsor, Agence) - **TERMINÉ**
-- ✅ Admin gestion des agences - **TERMINÉ**
-- ✅ Améliorations admin Raspberry (upload, thumbnails, preview) - **TERMINÉ**
-
-**Sprint Décembre 2025 - Addendum (28 Déc)** :
-
-- ✅ Overlay Local System - **TERMINÉ**
-  - Page Options avec persistence localStorage
-  - Timer/Chronomètre avec sync BroadcastChannel
-  - Breaking News (3 modes : scroll, truncate, multiline)
-  - Goal Popup animation
-  - 3 Templates (Sportif, Élégant, Minimal)
 
 ---
 
@@ -969,8 +1042,19 @@ CREATE TABLE api_usage_logs (
 - Chaque feature nécessite validation Business avant dev
 - Les efforts sont des estimations, à affiner en planning poker
 
-**Dernière mise à jour** : 28 Décembre 2025
+**Dernière mise à jour** : 31 Décembre 2025
 **Prochaine revue backlog** : 15 Janvier 2026
+
+### Résumé Sprint Décembre 2025
+
+Le sprint de décembre 2025 a été exceptionnellement productif avec **15 features majeures terminées**, incluant les P1 de janvier 2026 implémentées en avance :
+
+| Catégorie | Features terminées |
+|-----------|-------------------|
+| Overlay & UI | Overlay V2 Multi-Sport, Overlay Local System, Télécommande v2 |
+| Backend P1 | Objectifs & Alertes, Programmation Playlists, Cron Scheduler |
+| Architecture | Multi-tenant Portals, Migration Advertiser, Socket.IO Offline |
+| Analytics | Rapport PDF, Estimation audience, Score live UI |
 
 ---
 
