@@ -2,24 +2,25 @@
 
 > Plan d'amelioration pour atteindre l'excellence sur chaque composant
 > Date initiale: 13 Decembre 2025
-> **Dernière MAJ: 28 Decembre 2025**
+> **Dernière MAJ: 31 Decembre 2025**
 
 ---
 
 ## RESUME DES AMELIORATIONS
 
-| Composant                     | Note Initiale | Note Actuelle | Manque pour 10/10 | Effort Restant |
-| ----------------------------- | ------------- | ------------- | ----------------- | -------------- |
-| Fonctionnement Hors Connexion | 9/10          | 9/10          | 3-4 jours         | Faible         |
-| Mises a Jour Distantes        | 8.5/10        | **9.5/10** ✅ | 1-2 jours         | Faible         |
-| Deploiement Videos            | 8/10          | **9/10** ✅   | 2-3 jours         | Faible         |
-| Architecture Serveur/Client   | 8.5/10        | **9/10** ✅   | 3-5 jours         | Moyen          |
-| Synchronisation Donnees       | 9/10          | 9/10          | 2-3 jours         | Faible         |
-| Securite                      | 8/10          | **9.5/10** ✅ | 1 jour            | Faible         |
-| Qualite Code/Tests            | 7.5/10        | **8/10** ✅   | 8-10 jours        | Moyen          |
-| Documentation                 | 9/10          | **9.5/10** ✅ | 1 jour            | Faible         |
+| Composant                     | Note Initiale | Note Actuelle  | Manque pour 10/10 | Effort Restant |
+| ----------------------------- | ------------- | -------------- | ----------------- | -------------- |
+| Fonctionnement Hors Connexion | 9/10          | **9.8/10** ✅  | 1 jour            | Faible         |
+| Mises a Jour Distantes        | 8.5/10        | **9.5/10** ✅  | 1-2 jours         | Faible         |
+| Deploiement Videos            | 8/10          | **9/10** ✅    | 2-3 jours         | Faible         |
+| Architecture Serveur/Client   | 8.5/10        | **9.5/10** ✅  | 2-3 jours         | Faible         |
+| Synchronisation Donnees       | 9/10          | 9/10           | 2-3 jours         | Faible         |
+| Securite                      | 8/10          | **9.5/10** ✅  | 1 jour            | Faible         |
+| Qualite Code/Tests            | 7.5/10        | **8/10** ✅    | 8-10 jours        | Moyen          |
+| Documentation                 | 9/10          | **9.5/10** ✅  | 1 jour            | Faible         |
+| **Overlay Multi-Sport**       | 6.8/10        | **8.8/10** ✅  | 1-2 jours         | Faible         |
 
-### Changelog des améliorations (25-27 Décembre 2025)
+### Changelog des améliorations (25-31 Décembre 2025)
 
 | Date   | Amélioration                                     | Impact            |
 | ------ | ------------------------------------------------ | ----------------- |
@@ -33,12 +34,30 @@
 | 25 Déc | UX-001: Accessibilité WCAG AA                    | Qualité +0.5      |
 | 26 Déc | FEAT-005: Multi-tenant (portails sponsor/agence) | Architecture +0.5 |
 | 27 Déc | Gestion utilisateurs (agences, sponsors)         | Fonctionnel +0.5  |
+| 28 Déc | Overlay Local System (Options, Timer, Breaking)  | Overlay +1        |
+| 29 Déc | Migration Sponsor → Advertiser                   | Architecture +0.5 |
+| 30 Déc | Overlay V2 Multi-Sport (6 sports, 9 positions)   | Overlay +2        |
+| 30 Déc | Socket.IO Mode Offline (autonome sans internet)  | Offline +0.8      |
+| 30 Déc | Objectifs & Alertes Clubs (P1 Janvier avancé)    | Fonctionnel +1    |
+| 30 Déc | Programmation Playlists (P1 Janvier avancé)      | Fonctionnel +1    |
+| 30 Déc | Cron Scheduler Service (793 lignes)              | Architecture +0.5 |
 
 ---
 
-## 1. FONCTIONNEMENT HORS CONNEXION (9/10 -> 10/10)
+## 1. FONCTIONNEMENT HORS CONNEXION (9/10 -> 9.8/10) ✅ QUASI-COMPLET
 
-### Ce qui manque:
+> **Mise à jour 30 Décembre 2025** : Socket.IO mode offline implémenté.
+> Voir `docs/changelog/2025-12-30_offline-socketio-fix.md`
+
+### ✅ CORRIGÉ (30 Déc 2025)
+
+| Item               | Description                                         | Statut        |
+| ------------------ | --------------------------------------------------- | ------------- |
+| Socket.IO local    | Fichier `socket.io.min.js` inclus dans assets       | ✅ Implémenté |
+| Mode hotspot       | Communication Remote↔TV sans internet               | ✅ Implémenté |
+| Sync-agent buffer  | Analytics/impressions buffered pour retry           | ✅ Implémenté |
+
+### Ce qui reste (1 jour):
 
 #### 1.1 Queue de commandes offline
 
@@ -1363,21 +1382,22 @@ paths:
 
 ## RESUME - EFFORT RESTANT POUR 10/10
 
-> **Mise à jour 28 Décembre 2025**: ~60% du travail initial a été accompli.
+> **Mise à jour 31 Décembre 2025**: ~75% du travail initial a été accompli.
 
 | Composant          | Effort Initial  | Effort Restant  | Progression |
 | ------------------ | --------------- | --------------- | ----------- |
-| Hors Connexion     | 3-4 jours       | 3-4 jours       | 0%          |
-| Mises a Jour       | 5-7 jours       | 1-2 jours       | **75%** ✅  |
+| Hors Connexion     | 3-4 jours       | 1 jour          | **75%** ✅  |
+| Mises a Jour       | 5-7 jours       | 1-2 jours       | **80%** ✅  |
 | Deploiement Videos | 5-6 jours       | 2-3 jours       | **50%** ✅  |
-| Architecture       | 7-10 jours      | 3-5 jours       | **50%** ✅  |
+| Architecture       | 7-10 jours      | 2-3 jours       | **70%** ✅  |
 | Synchronisation    | 2-3 jours       | 2-3 jours       | 0%          |
 | Securite           | 5-7 jours       | 1 jour          | **85%** ✅  |
 | Tests/Qualite      | 10-15 jours     | 8-10 jours      | **30%** ✅  |
-| Documentation      | 2-3 jours       | 1 jour          | **60%** ✅  |
-| **TOTAL**          | **40-55 jours** | **20-30 jours** | **~55%**    |
+| Documentation      | 2-3 jours       | 1 jour          | **70%** ✅  |
+| Overlay Multi-Sport| 5-6 jours       | 1-2 jours       | **80%** ✅  |
+| **TOTAL**          | **45-60 jours** | **18-25 jours** | **~70%**    |
 
-### Ce qui a été fait (25-27 Décembre 2025)
+### Ce qui a été fait (25-31 Décembre 2025)
 
 **Sécurité (Sprint 1 - TERMINÉ):**
 
@@ -1387,6 +1407,26 @@ paths:
 - ✅ JWT HttpOnly cookies (SEC-004)
 - ✅ Audit logs (audit.service.ts)
 - ✅ MFA admins (mfa.service.ts)
+
+**Mode Offline (Sprint 4 - TERMINÉ):**
+
+- ✅ Socket.IO local (sans CDN)
+- ✅ Communication Remote↔TV sans internet
+- ✅ Mode hotspot autonome complet
+
+**Overlay Multi-Sport (Sprint 4 - TERMINÉ):**
+
+- ✅ 6 sports supportés
+- ✅ 9 positions overlay
+- ✅ Logos équipes
+- ✅ 3 styles animation but
+- ✅ Présets sauvegardables
+
+**P1 Janvier 2026 (IMPLÉMENTÉ EN AVANCE):**
+
+- ✅ Objectifs & Alertes Clubs
+- ✅ Programmation Playlists Automatiques
+- ✅ Cron Scheduler Service
 
 **Documentation (Sprint 3 - PARTIELLEMENT TERMINÉ):**
 
@@ -1399,36 +1439,28 @@ paths:
 - ⏳ Redis adapter
 - ⏳ Pagination API
 
-**Mises à jour (Sprint 3 - PARTIELLEMENT TERMINÉ):**
-
-- ✅ Scheduling déploiements (FEAT-003)
-- ✅ Notifications email (FEAT-004)
-- ⏳ Déploiement canary
-
 ### Priorisation Recommandee (Mise à jour)
 
-**Sprint 5 (Janvier 2026) - Offline & Sync:**
+**Sprint 5 (Janvier 2026) - Sync & Performance:**
 
 - Queue de commandes offline
 - Indicateurs connectivité
-- Backup quotidien automatique
-- Historique syncs
-
-**Sprint 6 (Janvier 2026) - Performance:**
-
 - Redis adapter Socket.IO
 - Pagination toutes API
-- Compression vidéos auto
-- Resume download
 
-**Sprint 7 (Février 2026) - Tests & Polish:**
+**Sprint 6 (Février 2026) - Tests & Polish:**
 
 - Tests E2E Playwright
 - Couverture 80%
 - Guide utilisateur final
-- Thumbnails auto
+- Compression vidéos auto
+
+**Sprint 7 (Mars 2026) - Score Live Phase 2:**
+
+- API fédérations (FFHB, FFVB, FFBB)
+- Intégration tableaux d'affichage
 
 ---
 
 _Document initial: 13 Decembre 2025_
-_Dernière mise à jour: 28 Décembre 2025_
+_Dernière mise à jour: 31 Décembre 2025_
