@@ -1,11 +1,12 @@
 # Changelog
 
-Généré le 2025-12-08 (Mise à jour 2025-12-30)
+Généré le 2025-12-08 (Mise à jour 2025-12-31)
 
 > **Note** : Les fichiers de commits individuels (138 fichiers) ont été archivés vers `../archive/commits/` le 25/12/2025.
 
 ## ✨ Nouvelles fonctionnalités
 
+- [Features P1 Janvier 2026](2025-12-30_p1-janvier-2026-features.md) - Objectifs clubs, programmation playlists, cron scheduler, upload vidéos annonceurs (implémenté en avance) - 2025-12-30
 - [Overlay V2 Multi-Sport](2025-12-30_overlay-v2-multi-sport.md) - Support 6 sports, 9 positions, logos équipes, animation but (3 styles + son), périodes auto, présets sauvegardables - 2025-12-30
 - **Système de thumbnails vidéos** - Miniatures automatiques pour les vidéos dans la télécommande et section "Récemment lancées", script de génération batch, normalisation Unicode pour accents - 2025-12-30
 - **Stockage vidéo FTP Hostinger** - Migration du stockage vidéo de Supabase (limité) vers FTP Hostinger (100GB+) - 2025-12-30
