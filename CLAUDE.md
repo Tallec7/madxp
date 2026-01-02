@@ -606,3 +606,446 @@ services:
 - [ ] Variables d'environnement configurées
 - [ ] Migration DB exécutée si nécessaire
 - [ ] Backup DB si migration destructive
+
+---
+
+## Diagrammes de Séquence
+
+### Authentification (Login)
+```
+┌────────┐     ┌─────────┐     ┌──────────┐     ┌────────┐
+│ Client │     │ Express │     │   Auth   │     │   DB   │
+└───┬────┘     └────┬────┘     └────┬─────┘     └───┬────┘
+    │               │               │               │
+    │ POST /login   │               │               │
+    │──────────────>│               │               │
+    │               │ validate()    │               │
+    │               │──────────────>│               │
+    │               │               │ SELECT user   │
+    │               │               │──────────────>│
+    │               │               │<──────────────│
+    │               │               │ bcrypt.compare│
+    │               │               │───────┐       │
+    │               │               │<──────┘       │
+    │               │               │ jwt.sign()    │
+    │               │<──────────────│               │
+    │ Set-Cookie    │               │               │
+    │<──────────────│               │               │
+    │ { user }      │               │               │
+    │<──────────────│               │               │
+```
+
+### Déploiement Vidéo
+```
+┌──────────┐   ┌─────────┐   ┌────────────┐   ┌──────────┐   ┌─────┐
+│ Dashboard│   │   API   │   │ Deployment │   │ Socket.IO│   │ Pi  │
+└────┬─────┘   └────┬────┘   └─────┬──────┘   └────┬─────┘   └──┬──┘
+     │              │              │               │            │
+     │ POST /deploy │              │               │            │
+     │─────────────>│              │               │            │
+     │              │ create record│               │            │
+     │              │─────────────>│               │            │
+     │ 202 Accepted │              │               │            │
+     │<─────────────│              │               │            │
+     │              │              │ getTargets()  │            │
+     │              │              │───────┐       │            │
+     │              │              │<──────┘       │            │
+     │              │              │               │            │
+     │              │              │ emit('deploy')│            │
+     │              │              │──────────────>│            │
+     │              │              │               │ deploy_video
+     │              │              │               │───────────>│
+     │              │              │               │            │
+     │              │              │               │  download  │
+     │              │              │               │<───────────│
+     │              │              │               │            │
+     │              │              │               │  progress  │
+     │              │              │<──────────────│────────────│
+     │              │              │ updateProgress│            │
+     │              │              │───────┐       │            │
+     │ SSE progress │              │<──────┘       │            │
+     │<─────────────│──────────────│               │            │
+     │              │              │               │  complete  │
+     │              │              │<──────────────│────────────│
+     │ SSE complete │              │               │            │
+     │<─────────────│──────────────│               │            │
+```
+
+### Heartbeat & Sync Pi
+```
+┌─────┐          ┌──────────┐          ┌─────────┐          ┌────────┐
+│ Pi  │          │ Socket.IO│          │ Metrics │          │   DB   │
+└──┬──┘          └────┬─────┘          └────┬────┘          └───┬────┘
+   │                  │                     │                   │
+   │ 'register'       │                     │                   │
+   │ {siteId, apiKey} │                     │                   │
+   │─────────────────>│                     │                   │
+   │                  │ validate apiKey     │                   │
+   │                  │────────────────────────────────────────>│
+   │                  │<────────────────────────────────────────│
+   │                  │ join room(siteId)   │                   │
+   │ 'registered' ✓   │                     │                   │
+   │<─────────────────│                     │                   │
+   │                  │                     │                   │
+   │ ┌────────────────────────────────────────────────────────┐ │
+   │ │                    EVERY 30 SECONDS                    │ │
+   │ └────────────────────────────────────────────────────────┘ │
+   │ 'heartbeat'      │                     │                   │
+   │ {metrics}        │                     │                   │
+   │─────────────────>│                     │                   │
+   │                  │ recordMetrics()     │                   │
+   │                  │────────────────────>│                   │
+   │                  │                     │ INSERT metrics    │
+   │                  │                     │──────────────────>│
+   │                  │ UPDATE last_seen    │                   │
+   │                  │────────────────────────────────────────>│
+   │                  │                     │                   │
+   │                  │ checkPendingConfig  │                   │
+   │                  │────────────────────────────────────────>│
+   │                  │<────────────────────────────────────────│
+   │ 'update_config'  │ (if pending)        │                   │
+   │<─────────────────│                     │                   │
+```
+
+---
+
+## Requêtes SQL Utiles
+
+### Sites avec métriques récentes
+```sql
+-- Sites avec leur dernière métrique (< 5 min = online)
+SELECT
+  s.id,
+  s.site_name,
+  s.club_name,
+  s.status,
+  s.last_seen_at,
+  m.cpu_usage,
+  m.memory_usage,
+  m.temperature,
+  CASE
+    WHEN s.last_seen_at > NOW() - INTERVAL '5 minutes' THEN 'online'
+    ELSE 'offline'
+  END AS real_status
+FROM sites s
+LEFT JOIN LATERAL (
+  SELECT * FROM metrics
+  WHERE site_id = s.id
+  ORDER BY recorded_at DESC
+  LIMIT 1
+) m ON true
+ORDER BY s.last_seen_at DESC NULLS LAST;
+```
+
+### Analytics : Top vidéos par club
+```sql
+-- Top 10 vidéos les plus jouées par site sur 30 jours
+SELECT
+  s.club_name,
+  vp.video_filename,
+  COUNT(*) as play_count,
+  SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END) as completed_count,
+  ROUND(AVG(vp.duration_played)::numeric, 1) as avg_watch_seconds
+FROM video_plays vp
+JOIN sites s ON s.id = vp.site_id
+WHERE vp.played_at > NOW() - INTERVAL '30 days'
+GROUP BY s.club_name, vp.video_filename
+ORDER BY s.club_name, play_count DESC;
+```
+
+### Déploiements en échec à retry
+```sql
+-- Déploiements failed récents avec infos pour debug
+SELECT
+  cd.id,
+  cd.status,
+  cd.error_message,
+  cd.progress,
+  cd.created_at,
+  v.filename as video,
+  CASE cd.target_type
+    WHEN 'site' THEN (SELECT site_name FROM sites WHERE id = cd.target_id)
+    WHEN 'group' THEN (SELECT name FROM groups WHERE id = cd.target_id)
+  END as target_name,
+  u.email as deployed_by
+FROM content_deployments cd
+JOIN videos v ON v.id = cd.video_id
+LEFT JOIN users u ON u.id = cd.deployed_by
+WHERE cd.status = 'failed'
+  AND cd.created_at > NOW() - INTERVAL '24 hours'
+ORDER BY cd.created_at DESC;
+```
+
+### Santé de la flotte
+```sql
+-- Vue globale de la flotte avec alertes
+SELECT
+  COUNT(*) FILTER (WHERE last_seen_at > NOW() - INTERVAL '5 min') as online,
+  COUNT(*) FILTER (WHERE last_seen_at <= NOW() - INTERVAL '5 min'
+                      OR last_seen_at IS NULL) as offline,
+  COUNT(*) FILTER (WHERE status = 'maintenance') as maintenance,
+  COUNT(*) FILTER (WHERE status = 'error') as error,
+  (
+    SELECT COUNT(DISTINCT site_id)
+    FROM metrics
+    WHERE recorded_at > NOW() - INTERVAL '1 hour'
+      AND temperature > 70
+  ) as overheating,
+  (
+    SELECT COUNT(DISTINCT site_id)
+    FROM metrics
+    WHERE recorded_at > NOW() - INTERVAL '1 hour'
+      AND disk_usage > 90
+  ) as disk_critical
+FROM sites;
+```
+
+### Config diff entre deux versions
+```sql
+-- Comparer deux versions de config d'un site
+WITH versions AS (
+  SELECT
+    id,
+    configuration,
+    deployed_at,
+    ROW_NUMBER() OVER (ORDER BY deployed_at DESC) as rn
+  FROM config_history
+  WHERE site_id = 'UUID_DU_SITE'
+)
+SELECT
+  v1.deployed_at as current_date,
+  v2.deployed_at as previous_date,
+  jsonb_diff(v2.configuration, v1.configuration) as changes
+FROM versions v1
+JOIN versions v2 ON v2.rn = v1.rn + 1
+WHERE v1.rn = 1;
+```
+
+### Advertiser ROI
+```sql
+-- Stats impressions par annonceur sur 30 jours
+SELECT
+  a.name as advertiser,
+  COUNT(DISTINCT av.video_id) as videos_count,
+  COUNT(DISTINCT vp.site_id) as sites_reached,
+  COUNT(vp.id) as total_impressions,
+  SUM(vp.duration_played) / 3600.0 as hours_watched,
+  ROUND(
+    COUNT(vp.id)::numeric / NULLIF(COUNT(DISTINCT vp.site_id), 0),
+    1
+  ) as avg_impressions_per_site
+FROM advertisers a
+JOIN advertiser_videos av ON av.advertiser_id = a.id
+JOIN videos v ON v.id = av.video_id
+LEFT JOIN video_plays vp ON vp.video_filename = v.filename
+  AND vp.played_at > NOW() - INTERVAL '30 days'
+GROUP BY a.id, a.name
+ORDER BY total_impressions DESC;
+```
+
+---
+
+## Troubleshooting Avancé
+
+### Par Service
+
+#### Socket.IO (socket.service.ts)
+| Symptôme | Cause probable | Solution |
+|----------|----------------|----------|
+| Pi ne se connecte pas | API key invalide | Vérifier `sites.api_key` en DB |
+| Déconnexions fréquentes | Timeout trop court | Augmenter `pingTimeout` (60s) |
+| Messages perdus | Redis non configuré | Ajouter `REDIS_URL` en prod |
+| "Transport close" | Proxy/firewall | Vérifier WebSocket pass-through |
+
+```bash
+# Debug connexions Socket.IO
+DEBUG=socket.io* npm run dev
+
+# Lister les rooms actives
+curl http://localhost:3001/api/admin/socket-rooms
+```
+
+#### Deployment (deployment.service.ts)
+| Symptôme | Cause probable | Solution |
+|----------|----------------|----------|
+| Stuck "in_progress" | Pi déconnecté pendant | Reset manuel (voir SQL) |
+| 0% progress | FTP inaccessible | Vérifier `FTP_HOST` connectivity |
+| Échec checksum | Fichier corrompu | Re-upload la vidéo |
+| Timeout | Fichier trop gros | Augmenter timeout, compresser |
+
+```bash
+# Forcer retry d'un déploiement
+curl -X POST http://localhost:3001/api/admin/deployments/UUID/retry
+
+# Voir les déploiements actifs
+curl http://localhost:3001/api/content/deployments?status=in_progress
+```
+
+#### Auth (auth.ts middleware)
+| Symptôme | Cause probable | Solution |
+|----------|----------------|----------|
+| 401 constant | Cookie expiré | Logout/login |
+| CORS cookie fail | sameSite config | Vérifier `ALLOWED_ORIGINS` |
+| Token invalid | JWT_SECRET changé | Tous re-login |
+| MFA loop | Backup codes épuisés | Reset MFA en DB |
+
+```sql
+-- Reset MFA pour un user
+UPDATE users SET
+  mfa_enabled = false,
+  mfa_secret = NULL,
+  mfa_backup_codes = NULL
+WHERE email = 'user@example.com';
+```
+
+#### Cron (cron-scheduler.service.ts)
+| Symptôme | Cause probable | Solution |
+|----------|----------------|----------|
+| Stats pas calculées | Cron pas démarré | Vérifier logs au boot |
+| Données manquantes | Timezone issue | Forcer UTC en DB |
+| Lenteur | Trop de données | Ajouter index, partitionner |
+
+```bash
+# Forcer calcul stats manuellement
+curl -X POST http://localhost:3001/api/admin/cron/daily-stats
+
+# Voir dernier run
+curl http://localhost:3001/api/admin/cron/status
+```
+
+#### FTP/Storage
+| Symptôme | Cause probable | Solution |
+|----------|----------------|----------|
+| Upload timeout | Connexion lente | Réduire taille fichier |
+| Permission denied | User FTP incorrect | Vérifier credentials |
+| Fichier introuvable | Path incorrect | Vérifier `FTP_PUBLIC_URL` |
+| Fallback Supabase | FTP down | Check `SUPABASE_URL` config |
+
+```bash
+# Test connexion FTP
+curl -v ftp://FTP_HOST --user FTP_USER:FTP_PASSWORD
+
+# Lister fichiers
+curl ftp://FTP_HOST/videos/ --user FTP_USER:FTP_PASSWORD
+```
+
+---
+
+## Historique Breaking Changes
+
+### v2.0.0 (Décembre 2024)
+- **Auth** : Cookie `neopro_token` remplace `session_token`
+  - Migration : Les users doivent se reconnecter
+- **API** : `/api/sponsors/*` renommé `/api/advertisers/*`
+  - Migration : Mettre à jour les appels frontend
+- **DB** : Table `sponsors` → `advertisers`
+  - Migration : `npm run db:migrate` (auto-rename)
+
+### v1.5.0 (Novembre 2024)
+- **Socket.IO** : Protocol v4 obligatoire
+  - Migration : Mettre à jour `socket.io-client` sur les Pi
+- **Config** : Format JSON v2 pour `configuration.json`
+  - Migration : Script `scripts/migrate-config-v2.sh`
+
+### v1.0.0 (Octobre 2024)
+- Release initiale
+
+---
+
+## FAQ Développeur
+
+### Comment ajouter une nouvelle route API ?
+
+1. Créer le contrôleur : `src/controllers/feature.controller.ts`
+2. Créer les routes : `src/routes/feature.routes.ts`
+3. Ajouter le schéma Joi : `src/middleware/validation.ts`
+4. Importer dans `src/routes/index.ts`
+5. Ajouter les tests : `src/controllers/feature.controller.test.ts`
+
+### Comment ajouter une colonne en DB ?
+
+1. Créer migration : `src/scripts/migrations/YYYYMMDD_add_column.sql`
+2. Mettre à jour types : `src/types/index.ts`
+3. Run : `npm run db:migrate`
+4. **Ne jamais** modifier une migration existante
+
+### Comment déployer sur un nouveau Pi ?
+
+```bash
+# Méthode remote (recommandée)
+curl -O https://raw.githubusercontent.com/.../setup-remote-club.sh
+chmod +x setup-remote-club.sh
+./setup-remote-club.sh
+
+# Méthode locale (dev)
+./raspberry/scripts/setup-new-club.sh
+```
+
+### Comment debug un Pi à distance ?
+
+```bash
+# Connexion SSH
+ssh pi@neopro.local  # ou IP directe
+
+# Logs en temps réel
+sudo journalctl -u neopro-app -f
+sudo journalctl -u neopro-sync -f
+
+# Diagnostic complet
+cd /home/pi/neopro && ./scripts/diagnose-pi.sh
+
+# Redémarrer
+sudo systemctl restart neopro-app neopro-sync
+```
+
+### Comment tester les emails en local ?
+
+```bash
+# Utiliser Mailhog (docker)
+docker run -d -p 1025:1025 -p 8025:8025 mailhog/mailhog
+
+# Config .env
+SMTP_HOST=localhost
+SMTP_PORT=1025
+
+# Voir emails : http://localhost:8025
+```
+
+---
+
+## Glossaire Métier
+
+| Terme | Définition |
+|-------|------------|
+| **Site** | Un club sportif équipé d'un Raspberry Pi + TV |
+| **Boîtier** | Le Raspberry Pi physique installé dans un club |
+| **Flotte** | L'ensemble des boîtiers gérés (50+) |
+| **Déploiement** | Envoi d'une vidéo du cloud vers un ou plusieurs Pi |
+| **Heartbeat** | Signal envoyé toutes les 30s par le Pi au cloud |
+| **Sync** | Synchronisation bidirectionnelle Pi ↔ Cloud |
+| **Config mirror** | Copie de la config locale stockée dans le cloud |
+| **Advertiser** | Annonceur qui diffuse des pubs sur les TV |
+| **Agency** | Agence gérant plusieurs annonceurs |
+| **Operator** | Utilisateur gérant un sous-ensemble de clubs |
+| **Golden image** | Image SD pré-configurée pour clonage rapide |
+| **Canary** | Déploiement progressif (10% → 50% → 100%) |
+
+---
+
+## Index Rapide
+
+| Je veux... | Section |
+|------------|---------|
+| Comprendre le projet | [Contexte Métier](#contexte-métier) |
+| Voir l'architecture | [Architecture](#architecture) |
+| Connaître la DB | [Base de Données](#base-de-données) |
+| Appeler l'API | [API Routes](#api-routes) |
+| Écrire du code | [Patterns de Code](#patterns-de-code) |
+| Éviter les erreurs | [NE JAMAIS FAIRE](#ne-jamais-faire) |
+| Lancer le projet | [Commandes](#commandes) |
+| Configurer l'env | [Variables d'Environnement](#variables-denvironnement) |
+| Résoudre un bug | [Debugging](#debugging) / [Troubleshooting](#troubleshooting-avancé) |
+| Comprendre un flow | [Diagrammes de Séquence](#diagrammes-de-séquence) |
+| Requêter la DB | [Requêtes SQL Utiles](#requêtes-sql-utiles) |
+| Déployer | [Déploiement Production](#déploiement-production) |
+| Comprendre le jargon | [Glossaire Métier](#glossaire-métier) |
