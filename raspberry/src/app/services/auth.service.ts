@@ -11,7 +11,9 @@ export class AuthService {
 
   private readonly STORAGE_KEY = 'neopro_auth_token';
   private readonly DEFAULT_SESSION_DURATION = 8 * 60 * 60 * 1000; // 8 heures en millisecondes
-  private readonly LOCAL_SERVER_URL = 'http://localhost:3000';
+
+  // Utiliser dynamiquement l'URL du serveur basée sur l'hôte actuel
+  private readonly LOCAL_SERVER_URL = `${window.location.protocol}//${window.location.hostname}:3000`;
 
   private password: string | null = null;
   private sessionDuration: number = this.DEFAULT_SESSION_DURATION;
