@@ -13,7 +13,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(),
     provideTranslateService({
-      defaultLanguage: 'fr',
+      fallbackLang: 'fr',
       loader: {
         provide: TranslateLoader,
         useClass: TranslateHttpLoader
