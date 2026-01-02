@@ -1,6 +1,6 @@
 # Changelog
 
-Généré le 2025-12-08 (Mise à jour 2025-12-31)
+Généré le 2025-12-08 (Mise à jour 2026-01-02)
 
 > **Note** : Les fichiers de commits individuels (138 fichiers) ont été archivés vers `../archive/commits/` le 25/12/2025.
 
@@ -51,6 +51,8 @@ Généré le 2025-12-08 (Mise à jour 2025-12-31)
 
 ## 🐛 Corrections
 
+- **Fix URL dynamique API auth** - `AuthService.LOCAL_SERVER_URL` utilisait `http://localhost:3000` en dur, ce qui échouait quand l'app était accédée depuis `neopro.local`. Maintenant utilise `window.location.hostname` dynamiquement - 2026-01-02
+- **Fix deprecation ngx-translate** - Remplacé `defaultLanguage` par `fallbackLang` dans `app.config.ts` pour éliminer le warning de dépréciation - 2026-01-02
 - [Fix Socket.IO mode offline](2025-12-30_offline-socketio-fix.md) - Socket.IO chargeait depuis CDN, empêchant le fonctionnement sans internet. Maintenant inclus localement dans le build - 2025-12-30
 - **Fix authentification Safari mobile (iOS/iPadOS)** - Les cookies cross-origin étaient bloqués par ITP. Solution : fallback via header `Authorization: Bearer` - 2025-12-30
 - **Fix sessions trop courtes** - Durée étendue de 8h à 7 jours (JWT + cookie) - 2025-12-30
