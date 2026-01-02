@@ -325,13 +325,11 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
                   [disabled]="savingLiveScore"
                 />
                 <span class="toggle-switch"></span>
-                <span class="toggle-text">Score en Live</span>
-                <span class="premium-badge">Premium</span>
+                <span class="toggle-text">Option Premium</span>
               </label>
             </div>
             <p class="premium-option-desc">
-              Permet d'afficher le score du match en surimpression sur la TV pendant les vidéos.
-              Le score est saisi depuis la télécommande.
+              Active le score en live, le chronomètre, les options d'overlay et les annonces sur la télécommande.
             </p>
             <!-- Score Overlay Configuration Button -->
             <button
@@ -422,6 +420,7 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
               </div>
             </div>
           </div>
+
         </div>
       </div>
 
@@ -2163,14 +2162,14 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
               this.savingLiveScore = false;
               this.notificationService.success(
                 newValue
-                  ? 'Score en Live activé et déployé sur le boîtier !'
-                  : 'Score en Live désactivé et déployé sur le boîtier !'
+                  ? 'Option Premium activée et déployée sur le boîtier !'
+                  : 'Option Premium désactivée et déployée sur le boîtier !'
               );
             },
             error: (error) => {
               this.savingLiveScore = false;
               this.notificationService.warning(
-                `Score en Live ${newValue ? 'activé' : 'désactivé'} en base de données, mais erreur lors du déploiement: ${error.error?.error || error.message}`
+                `Option Premium ${newValue ? 'activée' : 'désactivée'} en base de données, mais erreur lors du déploiement: ${error.error?.error || error.message}`
               );
             }
           });

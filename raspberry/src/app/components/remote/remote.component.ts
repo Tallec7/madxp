@@ -68,7 +68,7 @@ export class RemoteComponent implements OnInit {
   };
   public currentSessionId: string | null = null;
 
-  // Score en live
+  // Score en live + Options avancées (même option premium)
   public liveScoreEnabled = false;
   public isScorePanelExpanded = false;
   public currentScore = {
@@ -236,7 +236,7 @@ export class RemoteComponent implements OnInit {
     this.timeCategories = this.configuration.timeCategories?.length
       ? this.configuration.timeCategories
       : this.defaultTimeCategories;
-    // Charger l'état du live score depuis la config
+    // Charger l'état du live score depuis la config (contrôle aussi les options avancées)
     this.liveScoreEnabled = config.liveScoreEnabled ?? false;
   }
 
@@ -941,9 +941,14 @@ export class RemoteComponent implements OnInit {
   // ============================================================================
 
   /**
-   * Ouvre la page des options
+   * Ouvre la page des options (si premium activé - même option que le score en live)
    */
   public openOptions(): void {
+    if (!this.liveScoreEnabled) {
+      this.displayToast('Options non disponibles', 'info');
+      this.closeHeaderMenu();
+      return;
+    }
     this.currentView = 'options';
     this.breadcrumb = ['Télécommande', 'Options'];
     this.closeHeaderMenu();

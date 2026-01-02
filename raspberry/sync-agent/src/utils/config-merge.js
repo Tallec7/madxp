@@ -25,6 +25,7 @@ function mergeConfigurations(localConfig, neoProContent) {
   }
 
   // Mettre à jour liveScoreEnabled (option premium contrôlée par NEOPRO)
+  // Cette option active aussi l'accès aux options avancées de la télécommande
   if (neoProContent.liveScoreEnabled !== undefined) {
     result.liveScoreEnabled = neoProContent.liveScoreEnabled;
     logger.info(`[config-merge] liveScoreEnabled mis à jour: ${neoProContent.liveScoreEnabled}`);
