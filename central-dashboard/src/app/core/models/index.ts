@@ -75,7 +75,7 @@ export interface Site {
   created_at: Date;
   updated_at: Date;
   /**
-   * Active l'affichage du score en live sur la télécommande et la TV
+   * Active l'affichage du score en live et l'accès aux options avancées sur la télécommande
    * Option premium activable par NEOPRO
    */
   live_score_enabled?: boolean;

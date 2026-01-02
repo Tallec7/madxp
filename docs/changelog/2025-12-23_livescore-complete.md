@@ -10,6 +10,8 @@ Finalisation et vérification complète de la fonctionnalité Live Score.
 
 Après audit complet du code, la fonctionnalité Live Score est **100% implémentée** et prête pour la production.
 
+> **Mise à jour 2026-01-02** : L'option "Score en Live" a été renommée "Option Premium" et contrôle maintenant à la fois le score en live ET l'accès aux options avancées de la télécommande (overlay, chronomètre, animations, breaking news).
+
 ---
 
 ## Composants Vérifiés
@@ -126,7 +128,7 @@ Dans le dashboard admin :
 
 1. Aller sur la page du site
 2. Section "Options Premium"
-3. Activer le toggle "Score en Live"
+3. Activer le toggle "Option Premium" (active le score en live + options avancées télécommande)
 
 ---
 

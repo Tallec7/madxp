@@ -102,7 +102,7 @@ export interface Configuration {
      */
     categoryMappings?: Record<string, string>;
     /**
-     * Active l'affichage du score en live sur la télécommande et la TV.
+     * Active l'affichage du score en live et l'accès aux options avancées sur la télécommande.
      * Cette option est activée manuellement par NEOPRO (option payante).
      */
     liveScoreEnabled?: boolean;

@@ -6,6 +6,7 @@ Généré le 2025-12-08 (Mise à jour 2026-01-02)
 
 ## ✨ Nouvelles fonctionnalités
 
+- **Option Premium unifiée** - L'option "Score en Live" devient "Option Premium" et contrôle à la fois le score en live ET l'accès aux options avancées de la télécommande (overlay, chronomètre, animations, breaking news). Un seul toggle dans le Central Dashboard - 2026-01-02
 - [Features P1 Janvier 2026](2025-12-30_p1-janvier-2026-features.md) - Objectifs clubs, programmation playlists, cron scheduler, upload vidéos annonceurs (implémenté en avance) - 2025-12-30
 - **Objectifs & Alertes Clubs (P1 Janvier 2026)** - Système complet de suivi d'objectifs par club avec alertes automatiques. Tables `club_objectives`, `club_objectives_progress`, `club_objective_alerts`. API CRUD `/api/objectives`. 7 types de métriques (screen_time, videos_played, sessions_count, etc.) - 2025-12-30
 - **Programmation Playlists Automatiques (P1 Janvier 2026)** - Mode Programmation réactivé avec planification automatique. Tables `playlist_schedules`, `custom_playlists`, `recurring_schedules`. Service `cron-scheduler.service.ts` (793 lignes). Modes sequential, shuffle, weighted - 2025-12-30
