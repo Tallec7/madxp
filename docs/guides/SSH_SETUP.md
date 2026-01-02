@@ -56,6 +56,7 @@ ssh-keygen -t rsa -b 4096 -C "votre.email@example.com"
 ```
 
 **Résultat :**
+
 ```
 Your identification has been saved in /Users/vous/.ssh/id_rsa
 Your public key has been saved in /Users/vous/.ssh/id_rsa.pub
@@ -74,6 +75,7 @@ pi@neopro.local's password: ********
 ```
 
 **Résultat :**
+
 ```
 Number of key(s) added: 1
 
@@ -148,6 +150,7 @@ ssh-copy-id pi@192.168.4.1
 ## Résumé
 
 ### Sans clé SSH
+
 ```bash
 ./raspberry/scripts/setup-new-club.sh
 # Entrer le mot de passe à chaque connexion SSH
@@ -155,6 +158,7 @@ ssh-copy-id pi@192.168.4.1
 ```
 
 ### Avec clé SSH (RECOMMANDÉ)
+
 ```bash
 # Une seule fois :
 ssh-keygen -t rsa -b 4096
@@ -169,40 +173,105 @@ ssh-copy-id pi@neopro.local
 
 ## Configuration pour plusieurs boîtiers
 
-Si vous gérez plusieurs boîtiers Neopro, vous pouvez configurer des alias SSH :
+Si vous gérez plusieurs boîtiers Neopro depuis votre poste, vous devez comprendre comment fonctionne l'accès SSH selon le contexte.
+
+### Contexte : Réseau local vs WiFi du boîtier
+
+**Cas 1 : Vous êtes connecté au WiFi du boîtier (NEOPRO-CLUB_NAME)**
+
+- Le Pi est toujours accessible via `neopro.local` ou `192.168.4.1`
+- Vous ne pouvez accéder qu'à un seul boîtier à la fois
+
+**Cas 2 : Les boîtiers sont sur un réseau partagé (ex: réseau du club)**
+
+- Chaque Pi a une IP différente attribuée par DHCP
+- Vous pouvez accéder à plusieurs boîtiers simultanément
+
+### Configuration recommandée : ~/.ssh/config
+
+Éditez votre fichier de configuration SSH :
 
 ```bash
-# Éditer ~/.ssh/config
 nano ~/.ssh/config
 ```
 
-Ajouter :
+Ajoutez une entrée pour chaque boîtier **avec son IP fixe ou hostname unique** :
 
 ```
+# Boîtier Nantes - IP fixe sur le réseau du club
 Host neopro-nantes
-    HostName neopro.local
+    HostName 192.168.1.101
     User pi
     IdentityFile ~/.ssh/id_rsa
 
+# Boîtier Cesson - IP fixe sur le réseau du club
 Host neopro-cesson
-    HostName neopro.local
+    HostName 192.168.1.102
     User pi
     IdentityFile ~/.ssh/id_rsa
 
+# Boîtier Rennes - accessible via son hostname unique
 Host neopro-rennes
-    HostName neopro.local
+    HostName neopro-rennes.local
+    User pi
+    IdentityFile ~/.ssh/id_rsa
+
+# Configuration générique pour accès via WiFi direct du boîtier
+Host neopro-direct
+    HostName 192.168.4.1
     User pi
     IdentityFile ~/.ssh/id_rsa
 ```
 
-Puis :
+### Utilisation
 
 ```bash
-# Connexion directe par nom
+# Connexion directe par alias
 ssh neopro-nantes
+ssh neopro-cesson
 
-# Dans le script, entrer : neopro-nantes
+# Copier un fichier vers un boîtier spécifique
+scp fichier.mp4 neopro-nantes:/home/pi/neopro/videos/
+
+# Dans les scripts de déploiement, utiliser l'alias
+./raspberry/scripts/deploy-remote.sh neopro-nantes
 ```
+
+### Astuce : IP fixe pour chaque boîtier
+
+Pour éviter que les IP changent, configurez des baux DHCP statiques sur votre routeur, ou attribuez une IP fixe sur chaque Pi :
+
+```bash
+# Sur le Raspberry Pi, éditer la configuration réseau
+sudo nano /etc/dhcpcd.conf
+
+# Ajouter à la fin (exemple pour eth0 ou wlan0)
+interface eth0
+static ip_address=192.168.1.101/24
+static routers=192.168.1.1
+static domain_name_servers=192.168.1.1 8.8.8.8
+```
+
+### Changement de boîtier : réinitialiser la clé SSH
+
+Quand vous flashez un nouveau système sur un Pi ou changez de carte SD, la clé d'identification du Pi change. SSH refusera la connexion avec l'erreur :
+
+```
+WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!
+```
+
+**Solution :** Supprimer l'ancienne empreinte puis vous reconnecter :
+
+```bash
+# Supprimer l'ancienne clé du known_hosts
+ssh-keygen -R neopro.local        # ou l'IP/hostname concerné
+ssh-keygen -R 192.168.4.1
+
+# Se reconnecter (répondre "yes" pour accepter la nouvelle empreinte)
+ssh pi@neopro.local
+```
+
+Voir la section [Troubleshooting SSH](#lhôte-distant-a-changé-didentification) pour plus de détails.
 
 ---
 
