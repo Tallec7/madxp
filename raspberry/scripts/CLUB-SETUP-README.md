@@ -60,11 +60,26 @@ chmod +x setup-remote-club.sh
 Le script va :
 
 1. ✅ Collecter les informations du club (nom, localisation, sports, etc.)
-2. ✅ Créer la configuration JSON
+2. ✅ Créer la configuration JSON **au format dashboard central** (auth, remote, sync, timeCategories)
 3. ✅ Télécharger l'archive de déploiement depuis GitHub Releases
 4. ✅ Déployer sur le Pi via SSH
 5. ✅ Configurer le hotspot WiFi `NEOPRO-[CLUB_NAME]`
 6. ✅ Configurer la connexion au serveur central (optionnel)
+
+### Configuration générée
+
+Le script pré-remplit automatiquement les champs de configuration :
+
+| Champ Dashboard        | Valeur injectée                                  |
+| ---------------------- | ------------------------------------------------ |
+| `auth.clubName`        | Nom complet du club saisi                        |
+| `auth.password`        | Mot de passe saisi                               |
+| `auth.sessionDuration` | 8 heures (défaut)                                |
+| `remote.title`         | "Telecommande Neopro - [Nom du club]"            |
+| `sync.enabled`         | `true` (synchronisation activée)                 |
+| `sync.siteName`        | Nom du site saisi                                |
+| `sync.clubName`        | Nom complet du club                              |
+| `timeCategories`       | Avant-match, Match, Après-match (pré-configurés) |
 
 ### Options
 

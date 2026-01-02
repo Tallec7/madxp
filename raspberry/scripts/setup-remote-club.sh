@@ -147,17 +147,14 @@ collect_club_info() {
     # Mot de passe
     echo ""
     print_warning "Configuration du mot de passe d'authentification"
-    print_info "Le mot de passe doit contenir au moins 12 caractères"
-    print_info "Mélange recommandé : majuscules, minuscules, chiffres, symboles"
     echo ""
 
     while true; do
         read -s -p "Mot de passe : " PASSWORD
         echo ""
 
-        # Vérifier la longueur
-        if [ ${#PASSWORD} -lt 12 ]; then
-            print_error "Le mot de passe doit contenir au moins 12 caractères"
+        if [ -z "$PASSWORD" ]; then
+            print_error "Le mot de passe ne peut pas être vide"
             continue
         fi
 
@@ -224,41 +221,53 @@ create_configuration_json() {
     # Convertir les sports en tableau JSON
     SPORTS_JSON=$(echo "$SPORTS" | sed 's/,/","/g' | sed 's/^/["/' | sed 's/$/"]/')
 
-    # Générer le JSON complet
+    # Générer le JSON complet (format compatible dashboard central)
     CONFIG_JSON=$(cat <<EOF
 {
-  "club": {
-    "name": "${CLUB_NAME_ESC}",
-    "fullName": "${CLUB_FULL_NAME_ESC}",
-    "siteName": "${SITE_NAME_ESC}",
-    "location": {
-      "city": "${CITY_ESC}",
-      "region": "${REGION_ESC}",
-      "country": "${COUNTRY_ESC}"
-    },
-    "sports": ${SPORTS_JSON},
-    "contact": {
-      "email": "${CONTACT_EMAIL_ESC}",
-      "phone": "${CONTACT_PHONE_ESC}"
-    }
+  "version": "${CONFIG_VERSION_ESC}",
+  "remote": {
+    "title": "Telecommande Neopro - ${CLUB_FULL_NAME_ESC}"
   },
-  "authentication": {
-    "enabled": true,
-    "password": "${PASSWORD_ESC}"
+  "auth": {
+    "password": "${PASSWORD_ESC}",
+    "clubName": "${CLUB_FULL_NAME_ESC}",
+    "sessionDuration": 28800000
   },
   "sync": {
-    "enabled": false,
+    "enabled": true,
     "serverUrl": "https://neopro-central-production.up.railway.app",
-    "apiKey": ""
+    "siteName": "${SITE_NAME_ESC}",
+    "clubName": "${CLUB_FULL_NAME_ESC}"
   },
-  "version": "${CONFIG_VERSION_ESC}",
-  "features": {
-    "displayMode": "auto",
-    "autoStart": true,
-    "loop": true,
-    "shuffle": false
-  },
-  "videos": []
+  "sponsors": [],
+  "categories": [],
+  "timeCategories": [
+    {
+      "id": "before",
+      "name": "Avant-match",
+      "icon": "flag",
+      "color": "from-blue-500 to-blue-600",
+      "description": "Echauffement & presentation",
+      "categoryIds": []
+    },
+    {
+      "id": "during",
+      "name": "Match",
+      "icon": "play",
+      "color": "from-green-500 to-green-600",
+      "description": "Live & animations",
+      "categoryIds": []
+    },
+    {
+      "id": "after",
+      "name": "Apres-match",
+      "icon": "trophy",
+      "color": "from-purple-500 to-purple-600",
+      "description": "Resultats & remerciements",
+      "categoryIds": []
+    }
+  ],
+  "categoryMappings": {}
 }
 EOF
     )
