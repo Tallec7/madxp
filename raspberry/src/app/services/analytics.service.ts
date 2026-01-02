@@ -44,8 +44,21 @@ export class AnalyticsService {
   private readonly FLUSH_INTERVAL = 5 * 60 * 1000; // 5 minutes
   private readonly MAX_BUFFER_SIZE = 100;
 
-  // URL de l'API analytics sur le serveur local (même serveur que Socket.IO)
-  private readonly ANALYTICS_API_URL = environment.socketUrl + '/api/analytics';
+  /**
+   * Détermine l'URL de l'API analytics dynamiquement.
+   * Utilise la même logique que socket.service.ts pour fonctionner depuis :
+   * - Le Pi lui-même (localhost ou neopro.local)
+   * - Un téléphone sur le hotspot (neopro.local ou 192.168.4.1)
+   */
+  private getApiUrl(): string {
+    if (environment.socketUrl) {
+      return environment.socketUrl + '/api/analytics';
+    }
+    // Construire dynamiquement depuis l'origine actuelle
+    const hostname = window.location.hostname || 'localhost';
+    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+    return `${protocol}//${hostname}:3000/api/analytics`;
+  }
 
   constructor() {
     // Charger le buffer depuis le localStorage au démarrage
@@ -269,7 +282,7 @@ export class AnalyticsService {
     const eventsToSend = [...this.buffer];
 
     this.http.post<{ success: boolean; received: number; total: number }>(
-      this.ANALYTICS_API_URL,
+      this.getApiUrl(),
       { events: eventsToSend }
     ).subscribe({
       next: (response) => {
