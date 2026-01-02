@@ -2,13 +2,58 @@
 
 ## Table des matières
 
-1. [Problèmes de connexion](#problèmes-de-connexion)
-2. [Erreurs 500](#erreurs-500)
-3. [Problèmes d'authentification](#problèmes-dauthentification)
-4. [Services qui ne démarrent pas](#services-qui-ne-démarrent-pas)
-5. [Problèmes de synchronisation](#problèmes-de-synchronisation)
-6. [Diagnostic réseau à distance](#diagnostic-réseau-à-distance)
-7. [Diagnostic complet](#diagnostic-complet)
+1. [Problèmes SSH](#problèmes-ssh)
+2. [Problèmes de connexion](#problèmes-de-connexion)
+3. [Erreurs 500](#erreurs-500)
+4. [Problèmes d'authentification](#problèmes-dauthentification)
+5. [Services qui ne démarrent pas](#services-qui-ne-démarrent-pas)
+6. [Problèmes de synchronisation](#problèmes-de-synchronisation)
+7. [Diagnostic réseau à distance](#diagnostic-réseau-à-distance)
+8. [Diagnostic complet](#diagnostic-complet)
+
+---
+
+## Problèmes SSH
+
+### L'hôte distant a changé d'identification
+
+**Erreur :**
+
+```
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!
+...
+Host key verification failed.
+```
+
+**Cause :** Le Raspberry Pi a une nouvelle identité SSH. Cela arrive quand :
+
+- Vous avez réinstallé Raspberry Pi OS
+- Vous avez changé de carte SD
+- Vous avez flashé une nouvelle image
+- Vous avez un nouveau boîtier avec le même hostname
+
+**Solution :**
+
+```bash
+# Supprimer l'ancienne empreinte du fichier known_hosts
+ssh-keygen -R raspberrypi.local
+# ou
+ssh-keygen -R neopro.local
+# ou avec l'IP
+ssh-keygen -R 192.168.4.1
+
+# Se reconnecter - répondre "yes" pour accepter la nouvelle empreinte
+ssh pi@raspberrypi.local
+```
+
+**Explication :** SSH garde en mémoire l'empreinte (fingerprint) de chaque serveur dans `~/.ssh/known_hosts`. Quand cette empreinte change, SSH bloque la connexion par sécurité pour vous protéger d'une attaque man-in-the-middle. Si vous savez que le changement est légitime (réinstallation), supprimez simplement l'ancienne empreinte.
+
+### Gestion de plusieurs boîtiers
+
+Si vous gérez plusieurs Raspberry Pi Neopro, consultez la section **Configuration pour plusieurs boîtiers** dans [SSH_SETUP.md](SSH_SETUP.md#configuration-pour-plusieurs-boîtiers).
 
 ---
 
@@ -1111,4 +1156,4 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 30 décembre 2025
+**Dernière mise à jour :** 2 janvier 2026
