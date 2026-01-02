@@ -45,8 +45,21 @@ export class SponsorAnalyticsService {
   private readonly FLUSH_INTERVAL = 5 * 60 * 1000; // 5 minutes
   private readonly MAX_BUFFER_SIZE = 50;
 
-  // URL de l'API du serveur central (via sync-agent)
-  private readonly SYNC_AGENT_URL = environment.socketUrl + '/api/sync/sponsor-impressions';
+  /**
+   * Détermine l'URL de l'API sync-agent dynamiquement.
+   * Utilise la même logique que socket.service.ts pour fonctionner depuis :
+   * - Le Pi lui-même (localhost ou neopro.local)
+   * - Un téléphone sur le hotspot (neopro.local ou 192.168.4.1)
+   */
+  private getApiUrl(): string {
+    if (environment.socketUrl) {
+      return environment.socketUrl + '/api/sync/sponsor-impressions';
+    }
+    // Construire dynamiquement depuis l'origine actuelle
+    const hostname = window.location.hostname || 'localhost';
+    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+    return `${protocol}//${hostname}:3000/api/sync/sponsor-impressions`;
+  }
 
   constructor() {
     // Charger le buffer depuis le localStorage au démarrage
@@ -242,7 +255,7 @@ export class SponsorAnalyticsService {
 
     this.http
       .post<{ success: boolean; received: number; queued: number }>(
-        this.SYNC_AGENT_URL,
+        this.getApiUrl(),
         { impressions: impressionsToSend }
       )
       .subscribe({

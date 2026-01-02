@@ -52,6 +52,7 @@ Généré le 2025-12-08 (Mise à jour 2026-01-02)
 
 ## 🐛 Corrections
 
+- **Fix URL dynamique Analytics API** - `AnalyticsService` et `SponsorAnalyticsService` utilisaient `environment.socketUrl + '/api/...'` qui devenait `/api/...` (URL relative) en mode Raspberry. Maintenant utilise `getApiUrl()` dynamique avec port 3000, comme `socket.service.ts` - 2026-01-02
 - **Fix URL dynamique API auth** - `AuthService.LOCAL_SERVER_URL` utilisait `http://localhost:3000` en dur, ce qui échouait quand l'app était accédée depuis `neopro.local`. Maintenant utilise `window.location.hostname` dynamiquement - 2026-01-02
 - **Fix deprecation ngx-translate** - Remplacé `defaultLanguage` par `fallbackLang` dans `app.config.ts` pour éliminer le warning de dépréciation - 2026-01-02
 - [Fix Socket.IO mode offline](2025-12-30_offline-socketio-fix.md) - Socket.IO chargeait depuis CDN, empêchant le fonctionnement sans internet. Maintenant inclus localement dans le build - 2025-12-30
