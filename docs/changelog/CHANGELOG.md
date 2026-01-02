@@ -1,6 +1,6 @@
 # Changelog
 
-Généré le 2025-12-08 (Mise à jour 2026-01-02)
+Généré le 2025-12-08 (Mise à jour 2026-01-03)
 
 > **Note** : Les fichiers de commits individuels (138 fichiers) ont été archivés vers `../archive/commits/` le 25/12/2025.
 
@@ -124,6 +124,7 @@ Généré le 2025-12-08 (Mise à jour 2026-01-02)
 
 ## ♻️ Refactoring
 
+- **Optimisation CSS remote.component.scss** - Refactoring du fichier SCSS de la télécommande (3391→623 lignes source). Introduction de variables SCSS, mixins réutilisables (`flex-center`, `card-base`, `gradient`, `icon-size`). Consolidation des styles dupliqués et du dark mode. Ajustement des budgets Angular pour la configuration demo (48kB/64kB) - 2026-01-03
 - [ clean up project architecture and documentation (#53)](../archive/commits/4b2d5d6.md) - 2025-12-07
 - [ Remove redundant quick-install.sh script](../archive/commits/a8a6c2b.md) - 2025-12-04
 
