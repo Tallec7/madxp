@@ -182,6 +182,39 @@ Pour qu'nginx (qui tourne sous `www-data`) puisse accéder aux fichiers :
 
 ## Problèmes d'authentification
 
+### Erreur "Erreur lors de la configuration du mot de passe" au premier démarrage
+
+#### Symptômes
+
+- Message console : `Erreur lors de la configuration du mot de passe: Fa` (ou `Failed to fetch`)
+- L'URL dans l'erreur est `http://localhost:3000/api/auth/setup`
+- Vous accédez à l'app via `http://neopro.local` (pas localhost)
+
+#### Cause
+
+L'`AuthService` utilisait une URL hardcodée `http://localhost:3000` pour l'API d'authentification. Quand vous accédez à l'app depuis `http://neopro.local`, le navigateur essaie d'appeler `localhost:3000` sur votre machine locale (pas le Raspberry Pi), ce qui échoue.
+
+#### Solution (corrigé en janvier 2026)
+
+L'URL est maintenant construite dynamiquement à partir de `window.location.hostname` :
+
+```typescript
+// Avant (problématique)
+private readonly LOCAL_SERVER_URL = 'http://localhost:3000';
+
+// Après (corrigé)
+private readonly LOCAL_SERVER_URL = `${window.location.protocol}//${window.location.hostname}:3000`;
+```
+
+**Si vous avez une ancienne version :**
+
+1. Mettre à jour le code source (`raspberry/src/app/services/auth.service.ts`)
+2. Rebuild : `cd raspberry && ng build`
+3. Déployer : `scp -r dist/neopro/* pi@neopro.local:/home/pi/neopro/webapp/`
+4. Hard refresh dans le navigateur (Ctrl+Shift+R)
+
+---
+
 ### Déconnexion immédiate après login sur mobile (Safari iOS/iPadOS)
 
 #### Symptômes
