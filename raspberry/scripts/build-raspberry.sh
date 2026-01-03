@@ -38,6 +38,7 @@ detect_release_version() {
     fi
 
     if command -v git >/dev/null 2>&1; then
+        # Essayer de récupérer le tag exact du commit actuel
         local exact_tag
         exact_tag=$(git describe --tags --exact-match 2>/dev/null || true)
         if [ -n "$exact_tag" ]; then
@@ -45,15 +46,16 @@ detect_release_version() {
             return
         fi
 
+        # Sinon, utiliser le dernier tag (sans le hash)
         local latest_tag
         latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || true)
-        local short_sha
-        short_sha=$(git rev-parse --short HEAD 2>/dev/null || date +%Y%m%d)
 
         if [ -n "$latest_tag" ]; then
-            RELEASE_VERSION="${latest_tag}+${short_sha}"
+            # Version propre sans hash (géré par semantic-release)
+            RELEASE_VERSION="${latest_tag}"
         else
-            RELEASE_VERSION="dev-${short_sha}"
+            # Pas de tag trouvé, version dev avec date
+            RELEASE_VERSION="dev-$(date +%Y%m%d)"
         fi
     else
         RELEASE_VERSION="dev-$(date +%Y%m%d)"

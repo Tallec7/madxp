@@ -4,8 +4,14 @@ Généré le 2025-12-08 (Mise à jour 2026-01-03)
 
 > **Note** : Les fichiers de commits individuels (138 fichiers) ont été archivés vers `../archive/commits/` le 25/12/2025.
 
+> **🤖 Versioning Automatique** : À partir de la v2.1.0, ce fichier sera généré automatiquement par **semantic-release**.
+> Les versions suivront le format **Semantic Versioning** (v2.1.0, v2.1.1, etc.) sans hash de commit.
+> Voir [docs/VERSIONING.md](../VERSIONING.md) pour plus d'informations.
+
 ## ✨ Nouvelles fonctionnalités
 
+- **🤖 Versioning Automatique (v2.1.0)** - Migration vers semantic-release pour gérer automatiquement les versions selon les commits conventionnels. Fin des versions avec hash (`v2.0.1+91ed14a`), adoption de Semantic Versioning propre (`v2.1.0`). Configuration `.releaserc.json`, GitHub Actions workflow, modification du script `build-raspberry.sh`, documentation complète (`docs/VERSIONING.md`, `docs/MIGRATION_VERSIONING.md`), script utilitaire `scripts/check-version.sh`. Les versions seront automatiquement incrémentées : `feat:` → MINOR, `fix:` → PATCH, `BREAKING CHANGE:` → MAJOR. CHANGELOG généré automatiquement, GitHub Releases créées automatiquement - 2026-01-03
+- **Affichage infos club sur pages login (ports 80 et 8080)** - Les pages de connexion de l'interface admin (`http://neopro.local:8080/login`) et de l'application Angular (`http://neopro.local/login`) affichent les informations du club (nom, gymnase, sports, localisation) extraites de `configuration.json` sous forme d'un rappel discret en bas de page. Design minimaliste : texte gris clair (11px), une seule ligne avec séparateurs •. Support `club.*` et `sync.*` (rétrocompatibilité). Protection XSS, responsive. Fichiers : `raspberry/admin/admin-server.js`, `admin/test-login-display.html`, `admin/README-LOGIN.md`, `src/app/components/login/login.component.{ts,html,scss}`, `README-LOGIN-ANGULAR.md` - 2026-01-03
 - **Catégorisation groupée des vidéos orphelines** - Sélection multiple des vidéos sans catégorie avec checkbox "Tout sélectionner", barre d'action flottante pour assigner une catégorie à plusieurs vidéos en une seule action. Nouvel endpoint `POST /api/videos/add-to-config-bulk` - 2026-01-03
 - **Régénération des miniatures** - Bouton "Miniatures" dans l'interface admin pour régénérer les miniatures manquantes ou toutes. Endpoints `POST /api/thumbnails/regenerate` (async) et `POST /api/thumbnails/regenerate-sync` - 2026-01-03
 - **Option Premium unifiée** - L'option "Score en Live" devient "Option Premium" et contrôle à la fois le score en live ET l'accès aux options avancées de la télécommande (overlay, chronomètre, animations, breaking news). Un seul toggle dans le Central Dashboard - 2026-01-02
