@@ -6,6 +6,8 @@ Généré le 2025-12-08 (Mise à jour 2026-01-03)
 
 ## ✨ Nouvelles fonctionnalités
 
+- **Catégorisation groupée des vidéos orphelines** - Sélection multiple des vidéos sans catégorie avec checkbox "Tout sélectionner", barre d'action flottante pour assigner une catégorie à plusieurs vidéos en une seule action. Nouvel endpoint `POST /api/videos/add-to-config-bulk` - 2026-01-03
+- **Régénération des miniatures** - Bouton "Miniatures" dans l'interface admin pour régénérer les miniatures manquantes ou toutes. Endpoints `POST /api/thumbnails/regenerate` (async) et `POST /api/thumbnails/regenerate-sync` - 2026-01-03
 - **Option Premium unifiée** - L'option "Score en Live" devient "Option Premium" et contrôle à la fois le score en live ET l'accès aux options avancées de la télécommande (overlay, chronomètre, animations, breaking news). Un seul toggle dans le Central Dashboard - 2026-01-02
 - [Features P1 Janvier 2026](2025-12-30_p1-janvier-2026-features.md) - Objectifs clubs, programmation playlists, cron scheduler, upload vidéos annonceurs (implémenté en avance) - 2025-12-30
 - **Objectifs & Alertes Clubs (P1 Janvier 2026)** - Système complet de suivi d'objectifs par club avec alertes automatiques. Tables `club_objectives`, `club_objectives_progress`, `club_objective_alerts`. API CRUD `/api/objectives`. 7 types de métriques (screen_time, videos_played, sessions_count, etc.) - 2025-12-30
