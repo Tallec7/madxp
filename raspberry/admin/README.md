@@ -11,6 +11,7 @@ Accessible depuis n'importe quel appareil connecté au WiFi `NEOPRO-[CLUB]`.
 ## Fonctionnalités
 
 ### 📊 Dashboard
+
 - Monitoring système en temps réel
 - CPU, Mémoire, Température, Stockage
 - État des services
@@ -22,8 +23,10 @@ Accessible depuis n'importe quel appareil connecté au WiFi `NEOPRO-[CLUB]`.
 Interface organisée en 4 sous-onglets :
 
 #### 📁 Bibliothèque
+
 - **Affichage de toutes les vidéos** par catégories et sous-catégories
 - **Miniatures vidéos** : aperçu visuel de chaque vidéo (générées automatiquement)
+- **Régénération des miniatures** : bouton pour régénérer les miniatures manquantes ou toutes
 - **Métadonnées** : durée affichée pour chaque vidéo
 - **Recherche/filtre en temps réel** : filtrer les vidéos par nom ou chemin
 - **Prévisualisation vidéo** : cliquez sur la miniature ou l'icône œil pour lire la vidéo
@@ -32,8 +35,10 @@ Interface organisée en 4 sous-onglets :
 - **Drag & Drop** : réorganiser les vidéos par glisser-déposer (même catégorie ou vers une autre)
 - **Sélection multiple** : cocher plusieurs vidéos pour actions groupées (déplacer, supprimer)
 - **Vidéos orphelines** : détection et intégration des vidéos non référencées
+- **Catégorisation groupée** : sélectionner plusieurs vidéos orphelines et les ajouter à une catégorie en une seule action
 
 #### 📤 Ajouter
+
 - **Upload multiple de vidéos** (jusqu'à 20 fichiers à la fois)
 - **Drag & Drop** : glisser-déposer des fichiers directement dans la zone d'upload
 - **Progression en temps réel** : affichage du pourcentage, taille envoyée/totale
@@ -47,27 +52,32 @@ Interface organisée en 4 sous-onglets :
 - Affichage des résultats d'upload avec succès/erreurs détaillés
 
 #### 📂 Organiser
+
 - **Gestion des catégories** : création, modification et suppression
 - **Gestion des sous-catégories** : ajout et suppression
 
 #### ⏱️ Télécommande
+
 - **Configuration des blocs temps** : Avant-match, Match, Après-match
 - **Association des catégories** à chaque bloc temps
 
 Chaque modification met automatiquement à jour `configuration.json`.
 
 ### 📡 Réseau
+
 - Configuration WiFi client pour SSH distant
 - Affichage des interfaces réseau
 - Informations IP et MAC
 
 ### 📜 Logs
+
 - Logs application (neopro-app)
 - Logs Nginx
 - Logs système
 - Actualisation en temps réel
 
 ### ⚙️ Système
+
 - Redémarrage de services
 - Mise à jour OTA (Over-The-Air)
 - Redémarrage/Arrêt système
@@ -76,11 +86,13 @@ Chaque modification met automatiquement à jour `configuration.json`.
 ## Installation
 
 ### Automatique (via install.sh)
+
 ```bash
 sudo ./raspberry/install.sh CLUB_NAME PASSWORD
 ```
 
 ### Manuelle
+
 ```bash
 # Installation
 cd /home/pi/neopro/admin
@@ -98,6 +110,7 @@ sudo systemctl start neopro-admin
 ### Endpoints disponibles
 
 #### Système
+
 - `GET /api/system` - Infos système
 - `GET /api/config` - Configuration club
 - `GET /api/network` - Infos réseau
@@ -105,6 +118,7 @@ sudo systemctl start neopro-admin
 - `POST /api/system/shutdown` - Éteindre
 
 #### Vidéos
+
 - `GET /api/videos` - Liste toutes les vidéos (disque)
 - `GET /api/videos/orphans` - Liste les vidéos non référencées dans la config
 - `POST /api/videos/upload` - Upload simple (multipart, 1 fichier)
@@ -117,6 +131,14 @@ sudo systemctl start neopro-admin
   ```json
   { "videoPath": "MATCH_SF/BUT/video.mp4", "categoryId": "Match_SF", "subcategoryId": "But" }
   ```
+- `POST /api/videos/add-to-config-bulk` - Ajoute plusieurs vidéos orphelines à une catégorie
+  ```json
+  {
+    "videos": [{ "path": "video1.mp4" }, { "path": "video2.mp4" }],
+    "categoryId": "Match_SF",
+    "subcategoryId": "But"
+  }
+  ```
 - `DELETE /api/videos/:category/:filename` - Supprimer une vidéo orpheline
 - `DELETE /api/videos/delete-from-config` - Supprimer une vidéo de la config et du disque
   ```json
@@ -124,26 +146,50 @@ sudo systemctl start neopro-admin
   ```
 - `PUT /api/videos/edit` - Modifier une vidéo (déplacer, renommer)
   ```json
-  { "originalPath": "MATCH_SF/BUT/video.mp4", "categoryId": "Match_SF", "subcategoryId": "But", "displayName": "But n°1", "newFilename": "but_1.mp4" }
+  {
+    "originalPath": "MATCH_SF/BUT/video.mp4",
+    "categoryId": "Match_SF",
+    "subcategoryId": "But",
+    "displayName": "But n°1",
+    "newFilename": "but_1.mp4"
+  }
   ```
 - `PUT /api/videos/reorder` - Réorganiser une vidéo dans la même liste
   ```json
-  { "videoPath": "videos/MATCH_SF/BUT/video.mp4", "categoryId": "Match_SF", "subcategoryId": "But", "newIndex": 2 }
+  {
+    "videoPath": "videos/MATCH_SF/BUT/video.mp4",
+    "categoryId": "Match_SF",
+    "subcategoryId": "But",
+    "newIndex": 2
+  }
   ```
 - `PUT /api/videos/move` - Déplacer une vidéo vers une autre catégorie
   ```json
-  { "videoPath": "videos/MATCH_SF/BUT/video.mp4", "fromCategoryId": "Match_SF", "fromSubcategoryId": "But", "toCategoryId": "Match_H", "toSubcategoryId": "But", "newIndex": 0 }
+  {
+    "videoPath": "videos/MATCH_SF/BUT/video.mp4",
+    "fromCategoryId": "Match_SF",
+    "fromSubcategoryId": "But",
+    "toCategoryId": "Match_H",
+    "toSubcategoryId": "But",
+    "newIndex": 0
+  }
   ```
 
 #### Configuration
+
 - `GET /api/configuration` - Configuration complète (`configuration.json`)
 - `GET /api/configuration/time-categories` - Récupérer les blocs temps et catégories disponibles
 - `PUT /api/configuration/time-categories` - Mettre à jour les blocs temps
   ```json
-  { "timeCategories": [{ "id": "before", "name": "Avant-match", "icon": "🏁", "categoryIds": ["cat1"] }] }
+  {
+    "timeCategories": [
+      { "id": "before", "name": "Avant-match", "icon": "🏁", "categoryIds": ["cat1"] }
+    ]
+  }
   ```
 
 #### Catégories
+
 - `GET /api/configuration/categories` - Liste toutes les catégories
 - `POST /api/configuration/categories` - Créer une catégorie
   ```json
@@ -157,46 +203,67 @@ sudo systemctl start neopro-admin
   ```
 - `DELETE /api/configuration/categories/:categoryId/subcategories/:subCategoryId` - Supprimer une sous-catégorie
 
+#### Miniatures
+
+- `POST /api/thumbnails/regenerate` - Régénère les miniatures en arrière-plan
+  ```json
+  { "force": false } // true = régénère tout, false = seulement les manquantes
+  ```
+- `POST /api/thumbnails/regenerate-sync` - Régénère les miniatures (synchrone, avec résultat)
+  ```json
+  // Response
+  { "success": true, "stats": { "total": 10, "generated": 3, "skipped": 7, "failed": 0 } }
+  ```
+
 #### Logs
+
 - `GET /api/logs/:service?lines=100` - Récupérer logs
 
 #### Configuration
+
 - `POST /api/wifi/client` - Config WiFi client
   ```json
   { "ssid": "WiFi-Club", "password": "pass123" }
   ```
 
 #### Services
+
 - `POST /api/services/:service/restart` - Redémarrer service
 
-> ℹ️ En développement (conteneur Docker sans `sudo` ou avec l'option *no new privileges*),
+> ℹ️ En développement (conteneur Docker sans `sudo` ou avec l'option _no new privileges_),
 > le serveur retente automatiquement la commande **sans `sudo`** lorsqu'il tourne en root.
 > Le redémarrage peut néanmoins échouer si `systemd` n'est pas disponible dans l'environnement.
 
 #### Mise à jour
+
 - `POST /api/update` - Upload package (multipart .tar.gz)
 
 ## Configuration
 
 ### Port (défaut: 8080)
+
 Modifier dans `/etc/systemd/system/neopro-admin.service` :
+
 ```ini
 Environment=ADMIN_PORT=8888
 ```
 
 ### Répertoire d'installation
+
 Par défaut : `/home/pi/neopro`.
 En développement local, le serveur détecte automatiquement `public/` si seuls les médias y existent (pour que l'upload alimente `public/videos`). Vous pouvez forcer un autre chemin avec la variable d'environnement `NEOPRO_DIR`.
 
 ## Développement
 
 ### Lancement en mode dev
+
 ```bash
 npm install
 npm run dev
 ```
 
 ### Structure
+
 ```
 admin/
 ├── admin-server.js      # Serveur Express
@@ -210,6 +277,7 @@ admin/
 ## Dépannage
 
 ### Le serveur ne démarre pas
+
 ```bash
 # Vérifier le service
 sudo systemctl status neopro-admin
@@ -223,6 +291,7 @@ npm install
 ```
 
 ### Erreur d'upload
+
 ```bash
 # Vérifier l'espace
 df -h
@@ -232,6 +301,7 @@ sudo chown -R pi:pi /home/pi/neopro
 ```
 
 ### Port déjà utilisé
+
 ```bash
 # Voir ce qui utilise le port 8080
 sudo netstat -tlnp | grep 8080
@@ -254,7 +324,7 @@ Pour toute question : support@neopro.fr
 
 ---
 
-**Version :** 1.2.0
+**Version :** 1.3.0
 **Licence :** MIT
 **Auteur :** Neopro / Kalon Partners
-**Dernière mise à jour :** 26 décembre 2025
+**Dernière mise à jour :** 3 janvier 2026

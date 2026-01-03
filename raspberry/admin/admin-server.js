@@ -3129,6 +3129,195 @@ app.get('/api/cache/info', (req, res) => {
   }
 });
 
+// API: Ajouter plusieurs vidéos orphelines à la configuration (bulk)
+app.post('/api/videos/add-to-config-bulk', async (req, res) => {
+  try {
+    const { videos, categoryId, subcategoryId } = req.body;
+
+    if (!videos || !Array.isArray(videos) || videos.length === 0) {
+      return res.status(400).json({ error: 'videos doit être un tableau non vide' });
+    }
+
+    if (!categoryId) {
+      return res.status(400).json({ error: 'categoryId requis' });
+    }
+
+    const configPath = await resolveConfigurationPath();
+    if (!configPath) {
+      return res.status(500).json({ error: 'Impossible de localiser configuration.json' });
+    }
+
+    const configRaw = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configRaw);
+
+    // Trouver ou créer la catégorie
+    config.categories = config.categories || [];
+    let category = config.categories.find(
+      cat => (cat.id || '').toLowerCase() === categoryId.toLowerCase()
+    );
+
+    if (!category) {
+      category = {
+        id: categoryId,
+        name: categoryId,
+        videos: [],
+        subCategories: []
+      };
+      config.categories.push(category);
+    }
+
+    // Trouver ou créer la sous-catégorie si spécifiée
+    let targetVideosArray = category.videos = category.videos || [];
+    if (subcategoryId) {
+      category.subCategories = category.subCategories || [];
+      let subCategory = category.subCategories.find(
+        sub => (sub.id || '').toLowerCase() === subcategoryId.toLowerCase()
+      );
+
+      if (!subCategory) {
+        subCategory = {
+          id: subcategoryId,
+          name: subcategoryId,
+          videos: []
+        };
+        category.subCategories.push(subCategory);
+      }
+      targetVideosArray = subCategory.videos = subCategory.videos || [];
+    }
+
+    const results = { added: [], skipped: [], errors: [] };
+
+    for (const video of videos) {
+      const videoPath = video.path;
+      if (!videoPath) {
+        results.errors.push({ path: 'unknown', error: 'Chemin manquant' });
+        continue;
+      }
+
+      // Vérifier que le fichier existe
+      const fullPath = path.join(VIDEOS_DIR, videoPath);
+      try {
+        await fs.access(fullPath);
+      } catch {
+        results.errors.push({ path: videoPath, error: 'Fichier non trouvé' });
+        continue;
+      }
+
+      // Préparer l'entrée vidéo
+      const filename = path.basename(videoPath);
+      const fullVideoPath = `videos/${videoPath}`;
+      const mimeType = guessMimeFromExtension(filename);
+      const newEntry = createVideoEntry(
+        filename,
+        fullVideoPath,
+        mimeType,
+        video.displayName || buildDisplayNameFromFilename(filename)
+      );
+
+      // Vérifier si déjà présent
+      const alreadyExists = targetVideosArray.some(v => v.path === fullVideoPath);
+      if (alreadyExists) {
+        results.skipped.push(videoPath);
+      } else {
+        targetVideosArray.push(newEntry);
+        results.added.push(videoPath);
+      }
+    }
+
+    await fs.writeFile(configPath, JSON.stringify(config, null, CONFIG_JSON_INDENT));
+    invalidateVideoCaches();
+
+    res.json({
+      success: true,
+      message: `${results.added.length} vidéo(s) ajoutée(s)`,
+      results
+    });
+  } catch (error) {
+    console.error('[admin] Error adding videos to config (bulk):', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Régénérer les miniatures
+app.post('/api/thumbnails/regenerate', async (req, res) => {
+  try {
+    const { force = false } = req.body;
+    const scriptPath = path.join(__dirname, '..', 'scripts', 'generate-all-thumbnails.sh');
+
+    // Vérifier que le script existe
+    try {
+      await fs.access(scriptPath);
+    } catch {
+      return res.status(500).json({ error: 'Script de génération non trouvé' });
+    }
+
+    // Exécuter le script en arrière-plan
+    const args = force ? '--force' : '';
+    const command = `bash "${scriptPath}" ${args}`;
+
+    // On exécute de manière asynchrone et on répond immédiatement
+    exec(command, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+      if (error) {
+        console.error('[admin] Thumbnail regeneration failed:', error.message);
+      } else {
+        console.log('[admin] Thumbnail regeneration completed');
+        console.log(stdout);
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Régénération des miniatures lancée en arrière-plan',
+      force
+    });
+  } catch (error) {
+    console.error('[admin] Error starting thumbnail regeneration:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Régénérer les miniatures (synchrone, avec résultat)
+app.post('/api/thumbnails/regenerate-sync', async (req, res) => {
+  try {
+    const { force = false } = req.body;
+    const scriptPath = path.join(__dirname, '..', 'scripts', 'generate-all-thumbnails.sh');
+
+    // Vérifier que le script existe
+    try {
+      await fs.access(scriptPath);
+    } catch {
+      return res.status(500).json({ error: 'Script de génération non trouvé' });
+    }
+
+    const args = force ? '--force' : '';
+    const { stdout, stderr } = await execAsync(`bash "${scriptPath}" ${args}`, {
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: 600000 // 10 minutes timeout
+    });
+
+    // Parser le résumé du script
+    const totalMatch = stdout.match(/Total vidéos\s*:\s*(\d+)/);
+    const generatedMatch = stdout.match(/Générées\s*:\s*.*?(\d+)/);
+    const skippedMatch = stdout.match(/Ignorées\s*:\s*.*?(\d+)/);
+    const failedMatch = stdout.match(/Échecs\s*:\s*.*?(\d+)/);
+
+    res.json({
+      success: true,
+      message: 'Régénération des miniatures terminée',
+      stats: {
+        total: totalMatch ? parseInt(totalMatch[1]) : 0,
+        generated: generatedMatch ? parseInt(generatedMatch[1]) : 0,
+        skipped: skippedMatch ? parseInt(skippedMatch[1]) : 0,
+        failed: failedMatch ? parseInt(failedMatch[1]) : 0
+      },
+      output: stdout
+    });
+  } catch (error) {
+    console.error('[admin] Error during thumbnail regeneration:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 /**
  * Lancement du serveur
  */

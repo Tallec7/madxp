@@ -205,7 +205,16 @@
             <div class="card">
               <div class="card-header">
                 <h3>📁 Bibliothèque vidéos</h3>
-                <button class="btn btn-secondary" onclick="refreshVideos()">🔄 Actualiser</button>
+                <div class="header-actions">
+                  <button
+                    class="btn btn-secondary btn-sm"
+                    onclick="regenerateThumbnails()"
+                    title="Régénérer les miniatures manquantes"
+                  >
+                    🖼️ Miniatures
+                  </button>
+                  <button class="btn btn-secondary" onclick="refreshVideos()">🔄 Actualiser</button>
+                </div>
               </div>
               <div class="card-body">
                 <div class="search-bar">
