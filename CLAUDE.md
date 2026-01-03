@@ -7,6 +7,7 @@
 **Neopro** = Système de TV interactive pour clubs sportifs.
 
 ### Comment ça marche
+
 ```
 ┌─────────────────┐         ┌──────────────────┐         ┌─────────────────┐
 │   Dashboard     │ ──API── │  Central Server  │ ──WS──  │  Raspberry Pi   │
@@ -21,13 +22,14 @@
 - **Multi-tenant** : super_admin > admin > operator > viewer | advertiser | agency
 
 ### Utilisateurs types
-| Rôle | Actions |
-|------|---------|
-| Super Admin | Tout (users, sites, content, analytics) |
-| Operator | Gère ses clubs assignés, upload vidéos |
-| Advertiser | Upload pubs, voit ses stats d'impressions |
-| Agency | Gère plusieurs advertisers |
-| Club Staff | Utilise la télécommande locale |
+
+| Rôle        | Actions                                   |
+| ----------- | ----------------------------------------- |
+| Super Admin | Tout (users, sites, content, analytics)   |
+| Operator    | Gère ses clubs assignés, upload vidéos    |
+| Advertiser  | Upload pubs, voit ses stats d'impressions |
+| Agency      | Gère plusieurs advertisers                |
+| Club Staff  | Utilise la télécommande locale            |
 
 ---
 
@@ -67,17 +69,17 @@ neopro/
 
 ## Stack Technique
 
-| Composant | Technologies |
-|-----------|--------------|
-| Frontend Raspberry | Angular 20, Socket.IO client, SCSS |
-| Frontend Dashboard | Angular 17, Chart.js, Leaflet |
-| Backend API | Node.js 18+, Express 4.18, TypeScript strict |
-| Base de données | PostgreSQL 15 (Supabase) |
-| Cache | Redis (Upstash) - optionnel |
-| Stockage | FTP (Hostinger) + Supabase Storage (fallback) |
-| Auth | JWT HttpOnly cookie + Bearer token |
-| Logs | Winston + Logtail (Better Stack) |
-| Tests | Jest + Supertest (API), Karma (Angular), Playwright (E2E) |
+| Composant          | Technologies                                              |
+| ------------------ | --------------------------------------------------------- |
+| Frontend Raspberry | Angular 20, Socket.IO client, SCSS                        |
+| Frontend Dashboard | Angular 17, Chart.js, Leaflet                             |
+| Backend API        | Node.js 18+, Express 4.18, TypeScript strict              |
+| Base de données    | PostgreSQL 15 (Supabase)                                  |
+| Cache              | Redis (Upstash) - optionnel                               |
+| Stockage           | FTP (Hostinger) + Supabase Storage (fallback)             |
+| Auth               | JWT HttpOnly cookie + Bearer token                        |
+| Logs               | Winston + Logtail (Better Stack)                          |
+| Tests              | Jest + Supertest (API), Karma (Angular), Playwright (E2E) |
 
 ---
 
@@ -121,6 +123,7 @@ ADVERTISERS ──────────────────────�
 ```
 
 ### Row-Level Security (Multi-tenant)
+
 ```typescript
 // Activé en production - filtre automatique par rôle
 await query(`SELECT set_config('app.user_role', $1, false)`, [role]);
@@ -131,6 +134,7 @@ await query(`SELECT set_config('app.user_role', $1, false)`, [role]);
 ## API Routes
 
 ### Authentification
+
 ```
 POST /api/auth/login          → { email, password } → cookie + user
 POST /api/auth/logout         → clear cookie
@@ -140,6 +144,7 @@ POST /api/auth/reset-password
 ```
 
 ### Sites (clubs)
+
 ```
 GET    /api/sites             → liste paginée, filtres: status, sport, region
 GET    /api/sites/:id         → détails + config + metrics
@@ -150,6 +155,7 @@ POST   /api/sites/:id/api-key/regenerate
 ```
 
 ### Contenu
+
 ```
 POST   /api/content/upload    → multipart/form-data (vidéo)
 GET    /api/content/videos    → liste vidéos
@@ -158,6 +164,7 @@ POST   /api/content/deploy    → { videoId, targetType, targetId }
 ```
 
 ### Analytics
+
 ```
 GET /api/analytics/overview           → stats globales
 GET /api/analytics/sites/:id          → stats par site
@@ -166,6 +173,7 @@ GET /api/advertiser-analytics/...     → stats annonceurs
 ```
 
 ### Rate Limiting
+
 ```
 Auth:      5 req/15min   (anti-bruteforce)
 API:       100 req/15min (standard)
@@ -176,17 +184,18 @@ Sensitive: 20 req/15min  (uploads, admin ops)
 
 ## Services Critiques
 
-| Service | Fichier | Rôle |
-|---------|---------|------|
-| **Socket** | `socket.service.ts` | Communication temps réel Pi ↔ Cloud |
-| **Deployment** | `deployment.service.ts` | Orchestration déploiement vidéos |
-| **Metrics** | `metrics.service.ts` | Export Prometheus |
-| **Audit** | `audit.service.ts` | Log toutes les actions admin |
-| **MFA** | `mfa.service.ts` | 2FA avec backup codes |
-| **Email** | `email.service.ts` | Password reset, alertes |
-| **Cron** | `cron-scheduler.service.ts` | Stats quotidiennes, cleanup |
+| Service        | Fichier                     | Rôle                                |
+| -------------- | --------------------------- | ----------------------------------- |
+| **Socket**     | `socket.service.ts`         | Communication temps réel Pi ↔ Cloud |
+| **Deployment** | `deployment.service.ts`     | Orchestration déploiement vidéos    |
+| **Metrics**    | `metrics.service.ts`        | Export Prometheus                   |
+| **Audit**      | `audit.service.ts`          | Log toutes les actions admin        |
+| **MFA**        | `mfa.service.ts`            | 2FA avec backup codes               |
+| **Email**      | `email.service.ts`          | Password reset, alertes             |
+| **Cron**       | `cron-scheduler.service.ts` | Stats quotidiennes, cleanup         |
 
 ### Protocole Socket.IO
+
 ```javascript
 // Site → Cloud
 'register'          : { siteId, apiKey }
@@ -205,6 +214,7 @@ Sensitive: 20 req/15min  (uploads, admin ops)
 ## Patterns de Code
 
 ### Contrôleur Express
+
 ```typescript
 // central-server/src/controllers/sites.controller.ts
 export const getSite = async (req: AuthRequest, res: Response) => {
@@ -225,6 +235,7 @@ export const getSite = async (req: AuthRequest, res: Response) => {
 ```
 
 ### Service Singleton
+
 ```typescript
 // central-server/src/services/example.service.ts
 class ExampleService {
@@ -235,35 +246,38 @@ export default exampleService;
 ```
 
 ### Validation Joi
+
 ```typescript
 // central-server/src/middleware/validation.ts
 const schema = Joi.object({
   email: Joi.string().email().required(),
-  password: Joi.string().min(8).required()
+  password: Joi.string().min(8).required(),
 });
 router.post('/login', validate(schemas.login), controller.login);
 ```
 
 ### Angular Standalone Component
+
 ```typescript
 // central-dashboard/src/app/features/sites/sites-list.component.ts
 @Component({
   selector: 'app-sites-list',
   standalone: true,
   imports: [CommonModule, RouterModule],
-  template: `...`
+  template: `...`,
 })
-export class SitesListComponent implements OnInit { }
+export class SitesListComponent implements OnInit {}
 ```
 
 ### Pagination Standard
+
 ```typescript
 const { page = 1, limit = 20 } = req.query;
 const offset = (page - 1) * limit;
 
 res.json({
   data: rows,
-  pagination: { page, limit, total }
+  pagination: { page, limit, total },
 });
 ```
 
@@ -272,15 +286,17 @@ res.json({
 ## Conventions de Code
 
 ### Nommage
-| Type | Convention | Exemple |
-|------|------------|---------|
-| Fichiers | kebab-case + suffixe | `sites.controller.ts`, `auth.service.ts` |
-| Classes | PascalCase | `DeploymentService` |
-| Fonctions | camelCase + verbe | `getSites`, `createUser`, `deployVideo` |
-| Interfaces | PascalCase, pas de I | `interface User`, `interface SiteInput` |
-| Types union | PascalCase | `type UserRole = 'admin' | 'viewer'` |
+
+| Type        | Convention           | Exemple                                  |
+| ----------- | -------------------- | ---------------------------------------- | --------- |
+| Fichiers    | kebab-case + suffixe | `sites.controller.ts`, `auth.service.ts` |
+| Classes     | PascalCase           | `DeploymentService`                      |
+| Fonctions   | camelCase + verbe    | `getSites`, `createUser`, `deployVideo`  |
+| Interfaces  | PascalCase, pas de I | `interface User`, `interface SiteInput`  |
+| Types union | PascalCase           | `type UserRole = 'admin'                 | 'viewer'` |
 
 ### Structure des dossiers
+
 ```
 src/
 ├── controllers/   # Logique métier (1 fichier = 1 domaine)
@@ -293,6 +309,7 @@ src/
 ```
 
 ### Règles strictes
+
 - **TypeScript strict** : pas de `any` sauf exception justifiée
 - **Async/await** : jamais de callbacks, toujours try/catch
 - **Logs structurés** : `logger.info('Action', { context })` pas de string concat
@@ -328,6 +345,7 @@ query('SELECT * FROM users WHERE email = $1', [email]);
 ```
 
 ### Fichiers critiques à ne pas toucher sans review
+
 - `central-server/src/middleware/auth.ts` - Auth JWT
 - `central-server/src/config/database.ts` - Connexion DB
 - `central-server/src/services/socket.service.ts` - Protocole Pi ↔ Cloud
@@ -338,6 +356,7 @@ query('SELECT * FROM users WHERE email = $1', [email]);
 ## Commandes
 
 ### Développement
+
 ```bash
 npm start                    # Frontend Raspberry (port 4200)
 npm run start:central        # Dashboard central (port 4300)
@@ -349,6 +368,7 @@ npm run dev                  # nodemon + ts-node
 ```
 
 ### Build
+
 ```bash
 npm run build:raspberry      # Build Angular pour Pi
 npm run build:central        # Build dashboard
@@ -356,6 +376,7 @@ cd central-server && npm run build  # Compile TypeScript
 ```
 
 ### Tests
+
 ```bash
 npm run test:server          # Jest (API)
 npm run test:raspberry       # Karma (Angular Pi)
@@ -365,6 +386,7 @@ npm run lint                 # ESLint
 ```
 
 ### Base de données
+
 ```bash
 cd central-server
 npm run db:migrate           # Exécuter les migrations
@@ -372,6 +394,7 @@ npm run create-admin         # Créer un super_admin
 ```
 
 ### Déploiement Pi
+
 ```bash
 npm run deploy:raspberry neopro.local    # Déployer sur un Pi
 ./raspberry/scripts/setup-new-club.sh    # Configurer nouveau club
@@ -419,6 +442,7 @@ REDIS_URL=redis://xxx       # Pour Socket.IO multi-instance
 ## Debugging
 
 ### Site offline ?
+
 ```bash
 # Vérifier la connexion
 ping neopro.local
@@ -434,6 +458,7 @@ ssh pi@neopro.local 'sudo systemctl restart neopro-app neopro-sync'
 ```
 
 ### API qui ne répond pas ?
+
 ```bash
 # Health check
 curl http://localhost:3001/health
@@ -446,6 +471,7 @@ psql $DATABASE_URL -c "SELECT COUNT(*) FROM sites"
 ```
 
 ### Déploiement vidéo bloqué ?
+
 ```sql
 -- Vérifier les déploiements en cours
 SELECT id, status, progress, error_message
@@ -459,7 +485,25 @@ WHERE status = 'in_progress' AND started_at < NOW() - INTERVAL '1 hour';
 
 ---
 
-## Workflow Git
+## Workflow Git & Versioning
+
+### Versioning Automatique (semantic-release)
+
+Neopro utilise **semantic-release** pour gérer automatiquement les versions :
+
+```bash
+# Vérifier l'état du versioning
+./scripts/check-version.sh
+
+# Les versions sont incrémentées automatiquement selon les commits :
+feat:             → MINOR (2.0.1 → 2.1.0)
+fix:              → PATCH (2.0.1 → 2.0.2)
+BREAKING CHANGE:  → MAJOR (2.0.1 → 3.0.0)
+```
+
+**Documentation complète** : [docs/VERSIONING.md](docs/VERSIONING.md)
+
+### Workflow Standard
 
 ```bash
 # Nouvelle feature
@@ -468,7 +512,7 @@ git checkout -b feature/ma-feature
 npm run lint && npm run test:server
 git commit -m "feat(scope): description"
 git push -u origin feature/ma-feature
-# Créer PR sur GitHub
+# Créer PR sur GitHub → Merge → Version auto-incrémentée
 
 # Hotfix
 git checkout -b hotfix/description
@@ -476,61 +520,80 @@ git checkout -b hotfix/description
 git commit -m "fix(scope): description"
 ```
 
-### Format des commits
+### Format des commits (Conventional Commits)
+
 ```
-feat(sites): add bulk delete endpoint
-fix(auth): handle expired tokens correctly
-docs(readme): update deployment instructions
-refactor(socket): simplify heartbeat handling
-test(analytics): add coverage for daily stats
+feat(sites): add bulk delete endpoint        # → v2.1.0
+fix(auth): handle expired tokens correctly   # → v2.0.2
+docs(readme): update deployment instructions # → pas de version
+refactor(socket): simplify heartbeat         # → pas de version
+test(analytics): add coverage                # → pas de version
+
+# Breaking change
+feat(api): redesign auth flow
+
+BREAKING CHANGE: JWT format changed          # → v3.0.0
 ```
+
+**IMPORTANT** :
+
+- ✅ Utiliser les types conventionnels (`feat:`, `fix:`, etc.)
+- ❌ Ne **jamais** modifier `package.json` version manuellement
+- ❌ Ne **jamais** créer de tags manuels (géré par semantic-release)
+- 📖 Voir [docs/VERSIONING.md](docs/VERSIONING.md) pour la liste complète
 
 ---
 
 ## Fichiers Clés
 
 ### Backend
-| Fichier | Description |
-|---------|-------------|
-| `central-server/src/server.ts` | Point d'entrée, middleware order |
-| `central-server/src/routes/*.ts` | Tous les endpoints |
-| `central-server/src/types/index.ts` | Interfaces TypeScript |
-| `central-server/src/middleware/auth.ts` | JWT + cookie auth |
-| `central-server/src/services/socket.service.ts` | Protocole WebSocket |
-| `central-server/src/scripts/full-schema.sql` | Schéma DB complet |
+
+| Fichier                                         | Description                      |
+| ----------------------------------------------- | -------------------------------- |
+| `central-server/src/server.ts`                  | Point d'entrée, middleware order |
+| `central-server/src/routes/*.ts`                | Tous les endpoints               |
+| `central-server/src/types/index.ts`             | Interfaces TypeScript            |
+| `central-server/src/middleware/auth.ts`         | JWT + cookie auth                |
+| `central-server/src/services/socket.service.ts` | Protocole WebSocket              |
+| `central-server/src/scripts/full-schema.sql`    | Schéma DB complet                |
 
 ### Frontend Dashboard
-| Fichier | Description |
-|---------|-------------|
-| `central-dashboard/src/app/app.routes.ts` | Routes Angular |
-| `central-dashboard/src/app/core/services/auth.service.ts` | Auth client |
-| `central-dashboard/src/app/features/sites/` | Gestion des clubs |
+
+| Fichier                                                   | Description       |
+| --------------------------------------------------------- | ----------------- |
+| `central-dashboard/src/app/app.routes.ts`                 | Routes Angular    |
+| `central-dashboard/src/app/core/services/auth.service.ts` | Auth client       |
+| `central-dashboard/src/app/features/sites/`               | Gestion des clubs |
 
 ### Raspberry Pi
-| Fichier | Description |
-|---------|-------------|
-| `raspberry/frontend/src/app/components/tv.component.ts` | Affichage TV |
-| `raspberry/frontend/src/app/components/remote.component.ts` | Télécommande |
-| `raspberry/sync-agent/` | Synchronisation cloud |
-| `raspberry/scripts/setup-new-club.sh` | Setup nouveau club |
+
+| Fichier                                                     | Description           |
+| ----------------------------------------------------------- | --------------------- |
+| `raspberry/frontend/src/app/components/tv.component.ts`     | Affichage TV          |
+| `raspberry/frontend/src/app/components/remote.component.ts` | Télécommande          |
+| `raspberry/sync-agent/`                                     | Synchronisation cloud |
+| `raspberry/scripts/setup-new-club.sh`                       | Setup nouveau club    |
 
 ### Documentation
-| Fichier | Description |
-|---------|-------------|
-| `docs/REFERENCE.md` | Doc technique complète |
-| `docs/TROUBLESHOOTING.md` | Dépannage |
-| `docs/INSTALLATION_COMPLETE.md` | Setup Pi de A à Z |
+
+| Fichier                         | Description            |
+| ------------------------------- | ---------------------- |
+| `docs/REFERENCE.md`             | Doc technique complète |
+| `docs/TROUBLESHOOTING.md`       | Dépannage              |
+| `docs/INSTALLATION_COMPLETE.md` | Setup Pi de A à Z      |
 
 ---
 
 ## Tests
 
 ### Couverture cible
+
 - Branches: 60%
 - Functions: 75%
 - Lines: 80%
 
 ### Structure des tests
+
 ```typescript
 // central-server/src/controllers/sites.controller.test.ts
 describe('SitesController', () => {
@@ -540,9 +603,7 @@ describe('SitesController', () => {
 
   describe('GET /sites', () => {
     test('should return paginated sites', async () => {
-      const response = await request(app)
-        .get('/api/sites')
-        .set('Authorization', `Bearer ${token}`);
+      const response = await request(app).get('/api/sites').set('Authorization', `Bearer ${token}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('pagination');
@@ -552,10 +613,11 @@ describe('SitesController', () => {
 ```
 
 ### Mocks
+
 ```typescript
 // Mocker la DB
 jest.mock('../config/database', () => ({
-  query: jest.fn()
+  query: jest.fn(),
 }));
 
 // Mocker un service
@@ -567,16 +629,19 @@ jest.spyOn(deploymentService, 'startDeployment').mockResolvedValue({});
 ## Performance
 
 ### Requêtes lentes ?
+
 - Pagination obligatoire sur tous les list endpoints
 - Index sur `(site_id, date)` pour analytics
 - Agrégation quotidienne via cron (pas de calcul temps réel)
 
 ### Mémoire ?
+
 - PDF streaming avec PDFKit (pas de buffer complet)
 - Upload vidéo avec multer (stream vers FTP)
 - Pas de `SELECT *` sur grosses tables
 
 ### Socket.IO ?
+
 - Ping toutes les 25s, timeout 60s
 - Redis adapter en production pour scaling horizontal
 - Rooms par site_id pour broadcast ciblé
@@ -586,6 +651,7 @@ jest.spyOn(deploymentService, 'startDeployment').mockResolvedValue({});
 ## Déploiement Production
 
 ### Central Server (Render.com)
+
 ```yaml
 # render.yaml
 services:
@@ -601,6 +667,7 @@ services:
 ```
 
 ### Checklist avant deploy
+
 - [ ] `npm run lint` passe
 - [ ] `npm run test:server` passe
 - [ ] Variables d'environnement configurées
@@ -612,6 +679,7 @@ services:
 ## Diagrammes de Séquence
 
 ### Authentification (Login)
+
 ```
 ┌────────┐     ┌─────────┐     ┌──────────┐     ┌────────┐
 │ Client │     │ Express │     │   Auth   │     │   DB   │
@@ -636,6 +704,7 @@ services:
 ```
 
 ### Déploiement Vidéo
+
 ```
 ┌──────────┐   ┌─────────┐   ┌────────────┐   ┌──────────┐   ┌─────┐
 │ Dashboard│   │   API   │   │ Deployment │   │ Socket.IO│   │ Pi  │
@@ -672,6 +741,7 @@ services:
 ```
 
 ### Heartbeat & Sync Pi
+
 ```
 ┌─────┐          ┌──────────┐          ┌─────────┐          ┌────────┐
 │ Pi  │          │ Socket.IO│          │ Metrics │          │   DB   │
@@ -712,6 +782,7 @@ services:
 ## Requêtes SQL Utiles
 
 ### Sites avec métriques récentes
+
 ```sql
 -- Sites avec leur dernière métrique (< 5 min = online)
 SELECT
@@ -738,6 +809,7 @@ ORDER BY s.last_seen_at DESC NULLS LAST;
 ```
 
 ### Analytics : Top vidéos par club
+
 ```sql
 -- Top 10 vidéos les plus jouées par site sur 30 jours
 SELECT
@@ -754,6 +826,7 @@ ORDER BY s.club_name, play_count DESC;
 ```
 
 ### Déploiements en échec à retry
+
 ```sql
 -- Déploiements failed récents avec infos pour debug
 SELECT
@@ -777,6 +850,7 @@ ORDER BY cd.created_at DESC;
 ```
 
 ### Santé de la flotte
+
 ```sql
 -- Vue globale de la flotte avec alertes
 SELECT
@@ -801,6 +875,7 @@ FROM sites;
 ```
 
 ### Config diff entre deux versions
+
 ```sql
 -- Comparer deux versions de config d'un site
 WITH versions AS (
@@ -822,6 +897,7 @@ WHERE v1.rn = 1;
 ```
 
 ### Advertiser ROI
+
 ```sql
 -- Stats impressions par annonceur sur 30 jours
 SELECT
@@ -850,12 +926,13 @@ ORDER BY total_impressions DESC;
 ### Par Service
 
 #### Socket.IO (socket.service.ts)
-| Symptôme | Cause probable | Solution |
-|----------|----------------|----------|
-| Pi ne se connecte pas | API key invalide | Vérifier `sites.api_key` en DB |
-| Déconnexions fréquentes | Timeout trop court | Augmenter `pingTimeout` (60s) |
-| Messages perdus | Redis non configuré | Ajouter `REDIS_URL` en prod |
-| "Transport close" | Proxy/firewall | Vérifier WebSocket pass-through |
+
+| Symptôme                | Cause probable      | Solution                        |
+| ----------------------- | ------------------- | ------------------------------- |
+| Pi ne se connecte pas   | API key invalide    | Vérifier `sites.api_key` en DB  |
+| Déconnexions fréquentes | Timeout trop court  | Augmenter `pingTimeout` (60s)   |
+| Messages perdus         | Redis non configuré | Ajouter `REDIS_URL` en prod     |
+| "Transport close"       | Proxy/firewall      | Vérifier WebSocket pass-through |
 
 ```bash
 # Debug connexions Socket.IO
@@ -866,12 +943,13 @@ curl http://localhost:3001/api/admin/socket-rooms
 ```
 
 #### Deployment (deployment.service.ts)
-| Symptôme | Cause probable | Solution |
-|----------|----------------|----------|
-| Stuck "in_progress" | Pi déconnecté pendant | Reset manuel (voir SQL) |
-| 0% progress | FTP inaccessible | Vérifier `FTP_HOST` connectivity |
-| Échec checksum | Fichier corrompu | Re-upload la vidéo |
-| Timeout | Fichier trop gros | Augmenter timeout, compresser |
+
+| Symptôme            | Cause probable        | Solution                         |
+| ------------------- | --------------------- | -------------------------------- |
+| Stuck "in_progress" | Pi déconnecté pendant | Reset manuel (voir SQL)          |
+| 0% progress         | FTP inaccessible      | Vérifier `FTP_HOST` connectivity |
+| Échec checksum      | Fichier corrompu      | Re-upload la vidéo               |
+| Timeout             | Fichier trop gros     | Augmenter timeout, compresser    |
 
 ```bash
 # Forcer retry d'un déploiement
@@ -882,12 +960,13 @@ curl http://localhost:3001/api/content/deployments?status=in_progress
 ```
 
 #### Auth (auth.ts middleware)
-| Symptôme | Cause probable | Solution |
-|----------|----------------|----------|
-| 401 constant | Cookie expiré | Logout/login |
-| CORS cookie fail | sameSite config | Vérifier `ALLOWED_ORIGINS` |
-| Token invalid | JWT_SECRET changé | Tous re-login |
-| MFA loop | Backup codes épuisés | Reset MFA en DB |
+
+| Symptôme         | Cause probable       | Solution                   |
+| ---------------- | -------------------- | -------------------------- |
+| 401 constant     | Cookie expiré        | Logout/login               |
+| CORS cookie fail | sameSite config      | Vérifier `ALLOWED_ORIGINS` |
+| Token invalid    | JWT_SECRET changé    | Tous re-login              |
+| MFA loop         | Backup codes épuisés | Reset MFA en DB            |
 
 ```sql
 -- Reset MFA pour un user
@@ -899,11 +978,12 @@ WHERE email = 'user@example.com';
 ```
 
 #### Cron (cron-scheduler.service.ts)
-| Symptôme | Cause probable | Solution |
-|----------|----------------|----------|
-| Stats pas calculées | Cron pas démarré | Vérifier logs au boot |
-| Données manquantes | Timezone issue | Forcer UTC en DB |
-| Lenteur | Trop de données | Ajouter index, partitionner |
+
+| Symptôme            | Cause probable   | Solution                    |
+| ------------------- | ---------------- | --------------------------- |
+| Stats pas calculées | Cron pas démarré | Vérifier logs au boot       |
+| Données manquantes  | Timezone issue   | Forcer UTC en DB            |
+| Lenteur             | Trop de données  | Ajouter index, partitionner |
 
 ```bash
 # Forcer calcul stats manuellement
@@ -914,12 +994,13 @@ curl http://localhost:3001/api/admin/cron/status
 ```
 
 #### FTP/Storage
-| Symptôme | Cause probable | Solution |
-|----------|----------------|----------|
-| Upload timeout | Connexion lente | Réduire taille fichier |
-| Permission denied | User FTP incorrect | Vérifier credentials |
-| Fichier introuvable | Path incorrect | Vérifier `FTP_PUBLIC_URL` |
-| Fallback Supabase | FTP down | Check `SUPABASE_URL` config |
+
+| Symptôme            | Cause probable     | Solution                    |
+| ------------------- | ------------------ | --------------------------- |
+| Upload timeout      | Connexion lente    | Réduire taille fichier      |
+| Permission denied   | User FTP incorrect | Vérifier credentials        |
+| Fichier introuvable | Path incorrect     | Vérifier `FTP_PUBLIC_URL`   |
+| Fallback Supabase   | FTP down           | Check `SUPABASE_URL` config |
 
 ```bash
 # Test connexion FTP
@@ -934,6 +1015,7 @@ curl ftp://FTP_HOST/videos/ --user FTP_USER:FTP_PASSWORD
 ## Historique Breaking Changes
 
 ### v2.0.0 (Décembre 2024)
+
 - **Auth** : Cookie `neopro_token` remplace `session_token`
   - Migration : Les users doivent se reconnecter
 - **API** : `/api/sponsors/*` renommé `/api/advertisers/*`
@@ -942,12 +1024,14 @@ curl ftp://FTP_HOST/videos/ --user FTP_USER:FTP_PASSWORD
   - Migration : `npm run db:migrate` (auto-rename)
 
 ### v1.5.0 (Novembre 2024)
+
 - **Socket.IO** : Protocol v4 obligatoire
   - Migration : Mettre à jour `socket.io-client` sur les Pi
 - **Config** : Format JSON v2 pour `configuration.json`
   - Migration : Script `scripts/migrate-config-v2.sh`
 
 ### v1.0.0 (Octobre 2024)
+
 - Release initiale
 
 ---
@@ -1015,37 +1099,37 @@ SMTP_PORT=1025
 
 ## Glossaire Métier
 
-| Terme | Définition |
-|-------|------------|
-| **Site** | Un club sportif équipé d'un Raspberry Pi + TV |
-| **Boîtier** | Le Raspberry Pi physique installé dans un club |
-| **Flotte** | L'ensemble des boîtiers gérés (50+) |
-| **Déploiement** | Envoi d'une vidéo du cloud vers un ou plusieurs Pi |
-| **Heartbeat** | Signal envoyé toutes les 30s par le Pi au cloud |
-| **Sync** | Synchronisation bidirectionnelle Pi ↔ Cloud |
-| **Config mirror** | Copie de la config locale stockée dans le cloud |
-| **Advertiser** | Annonceur qui diffuse des pubs sur les TV |
-| **Agency** | Agence gérant plusieurs annonceurs |
-| **Operator** | Utilisateur gérant un sous-ensemble de clubs |
-| **Golden image** | Image SD pré-configurée pour clonage rapide |
-| **Canary** | Déploiement progressif (10% → 50% → 100%) |
+| Terme             | Définition                                         |
+| ----------------- | -------------------------------------------------- |
+| **Site**          | Un club sportif équipé d'un Raspberry Pi + TV      |
+| **Boîtier**       | Le Raspberry Pi physique installé dans un club     |
+| **Flotte**        | L'ensemble des boîtiers gérés (50+)                |
+| **Déploiement**   | Envoi d'une vidéo du cloud vers un ou plusieurs Pi |
+| **Heartbeat**     | Signal envoyé toutes les 30s par le Pi au cloud    |
+| **Sync**          | Synchronisation bidirectionnelle Pi ↔ Cloud        |
+| **Config mirror** | Copie de la config locale stockée dans le cloud    |
+| **Advertiser**    | Annonceur qui diffuse des pubs sur les TV          |
+| **Agency**        | Agence gérant plusieurs annonceurs                 |
+| **Operator**      | Utilisateur gérant un sous-ensemble de clubs       |
+| **Golden image**  | Image SD pré-configurée pour clonage rapide        |
+| **Canary**        | Déploiement progressif (10% → 50% → 100%)          |
 
 ---
 
 ## Index Rapide
 
-| Je veux... | Section |
-|------------|---------|
-| Comprendre le projet | [Contexte Métier](#contexte-métier) |
-| Voir l'architecture | [Architecture](#architecture) |
-| Connaître la DB | [Base de Données](#base-de-données) |
-| Appeler l'API | [API Routes](#api-routes) |
-| Écrire du code | [Patterns de Code](#patterns-de-code) |
-| Éviter les erreurs | [NE JAMAIS FAIRE](#ne-jamais-faire) |
-| Lancer le projet | [Commandes](#commandes) |
-| Configurer l'env | [Variables d'Environnement](#variables-denvironnement) |
-| Résoudre un bug | [Debugging](#debugging) / [Troubleshooting](#troubleshooting-avancé) |
-| Comprendre un flow | [Diagrammes de Séquence](#diagrammes-de-séquence) |
-| Requêter la DB | [Requêtes SQL Utiles](#requêtes-sql-utiles) |
-| Déployer | [Déploiement Production](#déploiement-production) |
-| Comprendre le jargon | [Glossaire Métier](#glossaire-métier) |
+| Je veux...           | Section                                                              |
+| -------------------- | -------------------------------------------------------------------- |
+| Comprendre le projet | [Contexte Métier](#contexte-métier)                                  |
+| Voir l'architecture  | [Architecture](#architecture)                                        |
+| Connaître la DB      | [Base de Données](#base-de-données)                                  |
+| Appeler l'API        | [API Routes](#api-routes)                                            |
+| Écrire du code       | [Patterns de Code](#patterns-de-code)                                |
+| Éviter les erreurs   | [NE JAMAIS FAIRE](#ne-jamais-faire)                                  |
+| Lancer le projet     | [Commandes](#commandes)                                              |
+| Configurer l'env     | [Variables d'Environnement](#variables-denvironnement)               |
+| Résoudre un bug      | [Debugging](#debugging) / [Troubleshooting](#troubleshooting-avancé) |
+| Comprendre un flow   | [Diagrammes de Séquence](#diagrammes-de-séquence)                    |
+| Requêter la DB       | [Requêtes SQL Utiles](#requêtes-sql-utiles)                          |
+| Déployer             | [Déploiement Production](#déploiement-production)                    |
+| Comprendre le jargon | [Glossaire Métier](#glossaire-métier)                                |
