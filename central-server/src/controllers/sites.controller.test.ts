@@ -22,6 +22,7 @@ jest.mock('../services/socket.service', () => ({
   },
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const mockSocketService = require('../services/socket.service').default;
 
 // Helper to create mock response
@@ -81,8 +82,8 @@ describe('Sites Controller', () => {
       await getSites(req, res);
 
       expect(query).toHaveBeenCalledWith(
-        expect.stringContaining('AND status = $1'),
-        ['online']
+        expect.stringContaining('AND s.status = $1'),
+        expect.arrayContaining(['online'])
       );
     });
 
@@ -96,7 +97,7 @@ describe('Sites Controller', () => {
 
       expect(query).toHaveBeenCalledWith(
         expect.stringContaining('ILIKE'),
-        ['%test%']
+        expect.arrayContaining(['%test%'])
       );
     });
 
@@ -386,7 +387,7 @@ describe('Sites Controller', () => {
 
       expect(query).toHaveBeenCalledWith(
         expect.stringContaining('sports @>'),
-        [JSON.stringify(['volleyball'])]
+        expect.arrayContaining([JSON.stringify(['volleyball'])])
       );
     });
 
@@ -400,7 +401,7 @@ describe('Sites Controller', () => {
 
       expect(query).toHaveBeenCalledWith(
         expect.stringContaining("location->>'region'"),
-        ['Ile-de-France']
+        expect.arrayContaining(['Ile-de-France'])
       );
     });
 
@@ -410,12 +411,14 @@ describe('Sites Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      (query as jest.Mock)
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ count: '0' }] });
 
       await getSites(req, res);
 
       expect(query).toHaveBeenCalledWith(
-        expect.stringContaining('AND status'),
+        expect.stringContaining('AND s.status'),
         expect.arrayContaining(['online', JSON.stringify(['basketball']), '%club%'])
       );
     });

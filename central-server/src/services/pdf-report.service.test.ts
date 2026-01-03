@@ -108,7 +108,7 @@ describe('PdfReportService', () => {
 
       await expect(
         generateSponsorReport('nonexistent', '2024-01-01', '2024-01-31')
-      ).rejects.toThrow('Sponsor not found');
+      ).rejects.toThrow('Advertiser not found');
 
       expect(mockLogger.error).toHaveBeenCalled();
     });
@@ -120,7 +120,7 @@ describe('PdfReportService', () => {
 
       await expect(
         generateSponsorReport('sponsor-123', '2024-01-01', '2024-01-31')
-      ).rejects.toThrow('No videos found for sponsor');
+      ).rejects.toThrow('No videos found for advertiser');
     });
   });
 
@@ -146,7 +146,7 @@ describe('PdfReportService', () => {
       ).rejects.toThrow('Database connection failed');
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error generating sponsor report:',
+        'Error generating advertiser report:',
         dbError
       );
     });
@@ -175,7 +175,7 @@ describe('PdfReportService', () => {
         .rejects.toThrow();
 
       expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('FROM sponsors'),
+        expect.stringContaining('FROM advertisers'),
         ['sponsor-123']
       );
     });
@@ -201,7 +201,7 @@ describe('PdfReportService', () => {
         .rejects.toThrow('No videos found');
 
       expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('sponsor_videos'),
+        expect.stringContaining('advertiser_videos'),
         ['sponsor-1']
       );
     });

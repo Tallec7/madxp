@@ -1,0 +1,12 @@
+{
+  "name": "neopro-test-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard de suivi des tests et bugs Neopro",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
