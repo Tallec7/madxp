@@ -135,15 +135,31 @@
       </form>
     }
 
-    @if (clubName || sportLabel) {
-      <div class="footer">
-        <p class="footer-text">
-          @if (clubName && sportLabel) {
-            {{ clubName }} - {{ sportLabel }}
-          } @else {
-            {{ clubName || sportLabel }}
+    @if (clubName || siteName || sportLabel || location) {
+      <div class="club-info">
+        <div class="club-info-text">
+          @if (clubName) {
+            <span>{{ clubName }}</span>
           }
-        </p>
+          @if (clubName && (siteName || sportLabel || location)) {
+            <span class="separator">•</span>
+          }
+          @if (siteName) {
+            <span>{{ siteName }}</span>
+          }
+          @if (siteName && (sportLabel || location)) {
+            <span class="separator">•</span>
+          }
+          @if (sportLabel) {
+            <span>{{ sportLabel }}</span>
+          }
+          @if (sportLabel && location) {
+            <span class="separator">•</span>
+          }
+          @if (location) {
+            <span>{{ location }}</span>
+          }
+        </div>
       </div>
     }
   </div>

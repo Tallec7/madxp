@@ -320,6 +320,85 @@ app.get('/login', async (req, res) => {
   const password = await getAdminPassword();
   const needsSetup = !password;
 
+  // Load site info from configuration.json
+  let siteInfo = { clubName: '', sports: [], location: {}, contact: {} };
+  try {
+    const configPath = path.join(
+      process.env.NEOPRO_DIR || path.resolve(__dirname, '..'),
+      'webapp',
+      'configuration.json'
+    );
+    const data = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(data);
+
+    // Extract site info from config (support both old sync format and new club format)
+    siteInfo = {
+      clubName: config.club?.fullName || config.club?.name || config.auth?.clubName || config.sync?.clubName || '',
+      sports: config.club?.sports || config.sync?.sports || [],
+      location: config.club?.location || config.sync?.location || {},
+      contact: config.club?.contact || config.sync?.contact || {},
+      siteName: config.club?.siteName || ''
+    };
+  } catch (error) {
+    // Ignore errors, site info is optional
+  }
+
+  // HTML escape function for security
+  const escapeHtml = (str) => {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  // Get sport icon based on sport type
+  const getSportIcon = (sports) => {
+    if (!sports || sports.length === 0) return '🏃';
+    const sport = sports[0].toLowerCase();
+    const iconMap = {
+      'handball': '🤾',
+      'football': '⚽',
+      'basketball': '🏀',
+      'volleyball': '🏐',
+      'rugby': '🏉',
+      'hockey': '🏒',
+      'tennis': '🎾'
+    };
+    return iconMap[sport] || '🏃';
+  };
+
+  // Format site info for display
+  const formatSports = (sports) => {
+    if (!sports || sports.length === 0) return '';
+    return sports.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ');
+  };
+
+  const formatLocation = (location) => {
+    const parts = [];
+    if (location.city) parts.push(location.city);
+    if (location.region) parts.push(location.region);
+    if (location.country) parts.push(location.country);
+    return parts.join(', ');
+  };
+
+  const formatContact = (contact) => {
+    const parts = [];
+    if (contact.email) parts.push(contact.email);
+    if (contact.phone) parts.push(contact.phone);
+    return parts.join(' • ');
+  };
+
+  const clubName = escapeHtml(siteInfo.clubName);
+  const sportLabel = escapeHtml(formatSports(siteInfo.sports));
+  const sportIcon = getSportIcon(siteInfo.sports);
+  const location = escapeHtml(formatLocation(siteInfo.location));
+  const contact = escapeHtml(formatContact(siteInfo.contact));
+  const siteName = escapeHtml(siteInfo.siteName);
+  const hasClubInfo = clubName || sportLabel || location || contact || siteName;
+
   res.send(`
 <!DOCTYPE html>
 <html lang="fr">
@@ -395,6 +474,34 @@ app.get('/login', async (req, res) => {
       font-size: 14px;
       color: #374151;
     }
+    .club-info {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+    }
+    .club-info-text {
+      font-size: 11px;
+      color: #9ca3af;
+      line-height: 1.6;
+    }
+    .club-info-text span {
+      display: inline;
+      white-space: nowrap;
+    }
+    .club-info-text .separator {
+      margin: 0 6px;
+      color: #d1d5db;
+    }
+    @media (max-width: 480px) {
+      .club-info-text {
+        font-size: 10px;
+        line-height: 1.5;
+      }
+      .club-info-text .separator {
+        margin: 0 4px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -412,6 +519,19 @@ app.get('/login', async (req, res) => {
       </div>
       <button type="submit" ${needsSetup ? 'disabled' : ''}>Se connecter</button>
     </form>
+    ${hasClubInfo ? `
+    <div class="club-info">
+      <div class="club-info-text">
+        ${clubName ? `<span>${clubName}</span>` : ''}
+        ${clubName && (siteName || sportLabel || location) ? `<span class="separator">•</span>` : ''}
+        ${siteName ? `<span>${siteName}</span>` : ''}
+        ${siteName && (sportLabel || location) ? `<span class="separator">•</span>` : ''}
+        ${sportLabel ? `<span>${sportLabel}</span>` : ''}
+        ${sportLabel && location ? `<span class="separator">•</span>` : ''}
+        ${location ? `<span>${location}</span>` : ''}
+      </div>
+    </div>
+    ` : ''}
   </div>
   <script>
     document.getElementById('loginForm').addEventListener('submit', async (e) => {

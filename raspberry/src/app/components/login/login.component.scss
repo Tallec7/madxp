@@ -366,16 +366,29 @@
   }
 }
 
-.footer {
-  text-align: center;
-  padding-top: 24px;
+/* Club Info Section - Minimalist */
+.club-info {
+  margin-top: 24px;
+  padding-top: 16px;
   border-top: 1px solid #e5e7eb;
+  text-align: center;
 }
 
-.footer-text {
-  font-size: 13px;
+.club-info-text {
+  font-size: 11px;
   color: #9ca3af;
-  margin: 0;
+  line-height: 1.6;
+  font-family: var(--neo-font-body);
+
+  span {
+    display: inline;
+    white-space: nowrap;
+  }
+
+  .separator {
+    margin: 0 6px;
+    color: #d1d5db;
+  }
 }
 
 /* Responsive */
@@ -394,6 +407,15 @@
 
     .notice-icon {
       font-size: 32px;
+    }
+  }
+
+  .club-info-text {
+    font-size: 10px;
+    line-height: 1.5;
+
+    .separator {
+      margin: 0 4px;
     }
   }
 }
