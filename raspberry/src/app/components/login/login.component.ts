@@ -38,7 +38,9 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   // Site info pour le footer
   public clubName = '';
+  public siteName = '';
   public sportLabel = '';
+  public location = '';
 
   ngOnInit(): void {
     // Attendre que la configuration soit chargée
@@ -47,6 +49,7 @@ export class LoginComponent implements OnInit, OnDestroy {
         this.isConfigLoaded = loaded;
         if (loaded) {
           this.checkSetupMode();
+          this.loadSiteInfo();
         }
       })
     );
@@ -71,6 +74,36 @@ export class LoginComponent implements OnInit, OnDestroy {
     if (!sports || sports.length === 0) return '';
     // Capitaliser la première lettre de chaque sport
     return sports.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ');
+  }
+
+  private async loadSiteInfo(): Promise<void> {
+    try {
+      const response = await fetch('/configuration.json');
+      const config = await response.json();
+
+      // Support both club.* (new) and sync.* (legacy) formats
+      // Priority: club.fullName > club.name > auth.clubName > sync.clubName
+      this.clubName = config.club?.fullName || config.club?.name || config.auth?.clubName || config.sync?.clubName || '';
+
+      // Site/gymnasium name
+      this.siteName = config.club?.siteName || '';
+
+      // Sports
+      const sports = config.club?.sports || config.sync?.sports || [];
+      this.sportLabel = this.formatSports(sports);
+
+      // Formater la localisation (support both formats)
+      const location = config.club?.location || config.sync?.location;
+      if (location) {
+        const locationParts: string[] = [];
+        if (location.city) locationParts.push(location.city);
+        if (location.region) locationParts.push(location.region);
+        if (location.country) locationParts.push(location.country);
+        this.location = locationParts.join(', ');
+      }
+    } catch (error) {
+      console.warn('Could not load additional site info:', error);
+    }
   }
 
   ngOnDestroy(): void {

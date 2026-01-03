@@ -184,6 +184,10 @@ if (DEMO_MODE) {
             return new Response(JSON.stringify({ success: true, message: 'Mise à jour simulée (mode démo)' }), { status: 200 });
         }
 
+        if (url.includes('/api/thumbnails/regenerate')) {
+            return new Response(JSON.stringify({ success: true, message: 'Régénération simulée (mode démo)' }), { status: 200 });
+        }
+
         // Fallback: appel original
         return originalFetch(url, options);
     };
@@ -3495,3 +3499,25 @@ async function executeBulkMove() {
         showNotification(`${successCount} déplacée(s), ${errorCount} erreur(s)`, 'error');
     }
 }
+
+// ============================================================================
+// EXPORTS GLOBAUX - Fonctions appelées depuis les handlers inline HTML
+// ============================================================================
+// Ces fonctions sont appelées via onclick="..." dans index.html
+// Elles doivent être explicitement exposées sur window pour être accessibles
+window.regenerateThumbnails = regenerateThumbnails;
+window.refreshVideos = refreshVideos;
+window.filterVideos = filterVideos;
+window.openVideoPreview = openVideoPreview;
+window.closeVideoPreview = closeVideoPreview;
+window.confirmAction = confirmAction;
+window.closeModal = closeModal;
+window.closeEditModal = closeEditModal;
+window.restartService = restartService;
+window.refreshNetwork = refreshNetwork;
+window.refreshLogs = refreshLogs;
+window.refreshCategories = refreshCategories;
+window.refreshTimeCategories = refreshTimeCategories;
+window.addCategory = addCategory;
+window.addTimeCategory = addTimeCategory;
+window.clearSelectedFiles = clearSelectedFiles;
