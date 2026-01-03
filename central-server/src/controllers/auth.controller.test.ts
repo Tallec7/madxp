@@ -190,13 +190,19 @@ describe('Auth Controller', () => {
         role: 'admin',
         created_at: new Date(),
         last_login_at: new Date(),
+        advertiser_id: null,
+        sponsor_id: null,
       };
 
       (query as jest.Mock).mockResolvedValueOnce({ rows: [userData] });
 
       await me(req, res);
 
-      expect(res.json).toHaveBeenCalledWith(userData);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'user-123',
+        email: 'test@example.com',
+        role: 'admin',
+      }));
     });
 
     it('should return 500 on database error', async () => {

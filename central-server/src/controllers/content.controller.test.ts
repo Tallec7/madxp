@@ -216,7 +216,7 @@ describe('Content Controller', () => {
         await createVideo(req, res);
 
         expect(res.status).toHaveBeenCalledWith(500);
-        expect(res.json).toHaveBeenCalledWith({ error: "Erreur lors de l'upload vers le stockage. Vérifiez la configuration Supabase (SUPABASE_URL et SUPABASE_SERVICE_KEY)." });
+        expect(res.json).toHaveBeenCalledWith({ error: "Erreur lors de l'upload vers le stockage. Vérifiez la configuration FTP ou Supabase." });
       });
 
       it('should return 500 on database error', async () => {

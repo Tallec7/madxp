@@ -1,0 +1,1602 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neopro - Test Dashboard</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0f0f1a;
+        color: #e0e0e0;
+        min-height: 100vh;
+        line-height: 1.5;
+      }
+
+      /* Layout */
+      .app {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        width: 280px;
+        background: #1a1a2e;
+        border-right: 1px solid #2a2a4a;
+        padding: 20px;
+        position: fixed;
+        height: 100vh;
+        overflow-y: auto;
+      }
+
+      .main {
+        margin-left: 280px;
+        flex: 1;
+        padding: 30px;
+        max-width: 1200px;
+      }
+
+      /* Logo */
+      .logo {
+        font-size: 20px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 30px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .logo-icon {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Navigation */
+      .nav {
+        list-style: none;
+      }
+      .nav-item {
+        padding: 12px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #888;
+        transition: all 0.2s;
+        margin-bottom: 4px;
+      }
+      .nav-item:hover {
+        background: #252542;
+        color: #fff;
+      }
+      .nav-item.active {
+        background: #667eea;
+        color: #fff;
+      }
+      .nav-icon {
+        font-size: 18px;
+        width: 24px;
+        text-align: center;
+      }
+
+      /* Coverage Card in Sidebar */
+      .coverage-card {
+        background: #252542;
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 30px;
+      }
+      .coverage-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #888;
+        margin-bottom: 15px;
+      }
+      .coverage-bar {
+        height: 8px;
+        background: #1a1a2e;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+      }
+      .coverage-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.3s;
+      }
+      .coverage-fill.low {
+        background: #ef4444;
+      }
+      .coverage-fill.medium {
+        background: #f59e0b;
+      }
+      .coverage-fill.high {
+        background: #10b981;
+      }
+      .coverage-stats {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+      }
+      .coverage-percent {
+        font-weight: 600;
+      }
+
+      /* Buttons */
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+      .btn-secondary {
+        background: #252542;
+        color: #e0e0e0;
+      }
+      .btn-secondary:hover {
+        background: #2a2a5a;
+      }
+      .btn-success {
+        background: #10b981;
+        color: white;
+      }
+      .btn-danger {
+        background: #ef4444;
+        color: white;
+      }
+      .btn-sm {
+        padding: 8px 16px;
+        font-size: 13px;
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .btn-group {
+        display: flex;
+        gap: 10px;
+      }
+
+      /* Page Header */
+      .page-header {
+        margin-bottom: 30px;
+      }
+      .page-title {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .page-subtitle {
+        color: #888;
+      }
+
+      /* Cards */
+      .card {
+        background: #1a1a2e;
+        border-radius: 12px;
+        border: 1px solid #2a2a4a;
+        margin-bottom: 20px;
+      }
+      .card-header {
+        padding: 20px;
+        border-bottom: 1px solid #2a2a4a;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .card-title {
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .card-body {
+        padding: 20px;
+      }
+
+      /* Test Results */
+      .results-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+        margin-bottom: 30px;
+      }
+      .result-card {
+        background: #1a1a2e;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        border: 1px solid #2a2a4a;
+      }
+      .result-value {
+        font-size: 36px;
+        font-weight: 700;
+        margin-bottom: 5px;
+      }
+      .result-value.success {
+        color: #10b981;
+      }
+      .result-value.danger {
+        color: #ef4444;
+      }
+      .result-value.warning {
+        color: #f59e0b;
+      }
+      .result-value.info {
+        color: #667eea;
+      }
+      .result-label {
+        font-size: 13px;
+        color: #888;
+      }
+
+      /* Checklist */
+      .checklist {
+        list-style: none;
+      }
+      .check-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        background: #252542;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .check-item:hover {
+        background: #2a2a5a;
+      }
+      .check-item.checked {
+        opacity: 0.6;
+      }
+      .check-item.checked .check-text {
+        text-decoration: line-through;
+      }
+      .check-box {
+        width: 22px;
+        height: 22px;
+        border: 2px solid #444;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: all 0.2s;
+      }
+      .check-item.checked .check-box {
+        background: #10b981;
+        border-color: #10b981;
+      }
+      .check-box::after {
+        content: '✓';
+        color: white;
+        font-size: 14px;
+        opacity: 0;
+      }
+      .check-item.checked .check-box::after {
+        opacity: 1;
+      }
+      .check-text {
+        flex: 1;
+      }
+      .check-priority {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .check-priority.high {
+        background: #ef4444;
+      }
+      .check-priority.medium {
+        background: #f59e0b;
+      }
+      .check-priority.low {
+        background: #10b981;
+      }
+
+      /* Section Toggle */
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 20px;
+        cursor: pointer;
+        border-bottom: 1px solid #2a2a4a;
+        transition: background 0.2s;
+      }
+      .section-header:hover {
+        background: #252542;
+      }
+      .section-icon {
+        font-size: 20px;
+      }
+      .section-title {
+        flex: 1;
+        font-weight: 600;
+      }
+      .section-count {
+        background: #252542;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        color: #888;
+      }
+      .section-count.complete {
+        background: #10b981;
+        color: white;
+      }
+      .section-arrow {
+        color: #888;
+        transition: transform 0.2s;
+      }
+      .section-header.collapsed .section-arrow {
+        transform: rotate(-90deg);
+      }
+      .section-content {
+        display: block;
+      }
+      .section-header.collapsed + .section-content {
+        display: none;
+      }
+
+      /* Console Output */
+      .console {
+        background: #0a0a12;
+        border-radius: 8px;
+        padding: 16px;
+        font-family: 'Monaco', 'Menlo', monospace;
+        font-size: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        line-height: 1.6;
+      }
+      .console .pass {
+        color: #10b981;
+      }
+      .console .fail {
+        color: #ef4444;
+        font-weight: 600;
+      }
+      .console .skip {
+        color: #f59e0b;
+      }
+      .console .info {
+        color: #667eea;
+      }
+      .console .section {
+        color: #fff;
+        font-weight: 600;
+        display: block;
+        margin: 10px 0 5px;
+      }
+
+      /* Failed Test Item */
+      .failed-item {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+      .failed-name {
+        color: #ef4444;
+        font-weight: 600;
+        margin-bottom: 8px;
+        font-family: monospace;
+      }
+      .failed-error {
+        background: #0a0a12;
+        padding: 12px;
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: 11px;
+        color: #f87171;
+        max-height: 100px;
+        overflow-y: auto;
+      }
+      .failed-actions {
+        margin-top: 10px;
+      }
+
+      /* Toast */
+      .toast {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        padding: 16px 24px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.3s;
+        z-index: 1000;
+      }
+      .toast.show {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      .toast.success {
+        background: #10b981;
+      }
+      .toast.error {
+        background: #ef4444;
+      }
+
+      /* Loading */
+      .spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Progress Bar */
+      .progress-container {
+        background: #252542;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        display: none;
+      }
+      .progress-container.active {
+        display: block;
+      }
+      .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .progress-bar {
+        height: 6px;
+        background: #1a1a2e;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 3px;
+        transition: width 0.3s;
+      }
+      .progress-status {
+        font-size: 13px;
+        color: #888;
+        margin-top: 8px;
+      }
+
+      /* Empty State */
+      .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #888;
+      }
+      .empty-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+        opacity: 0.5;
+      }
+
+      /* Tabs */
+      .tabs {
+        display: flex;
+        gap: 4px;
+        background: #252542;
+        padding: 4px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      .tab {
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        color: #888;
+        transition: all 0.2s;
+      }
+      .tab:hover {
+        color: #fff;
+      }
+      .tab.active {
+        background: #667eea;
+        color: #fff;
+      }
+
+      /* Responsive */
+      @media (max-width: 1024px) {
+        .sidebar {
+          display: none;
+        }
+        .main {
+          margin-left: 0;
+        }
+        .results-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="logo">
+          <div class="logo-icon">N</div>
+          Test Dashboard
+        </div>
+
+        <ul class="nav">
+          <li class="nav-item active" onclick="showPage('dashboard')">
+            <span class="nav-icon">📊</span> Dashboard
+          </li>
+          <li class="nav-item" onclick="showPage('checklist')">
+            <span class="nav-icon">✅</span> Checklist Tests
+          </li>
+          <li class="nav-item" onclick="showPage('bugs')">
+            <span class="nav-icon">🐛</span> Bugs & Notes
+          </li>
+          <li class="nav-item" onclick="showPage('history')">
+            <span class="nav-icon">📜</span> Historique
+          </li>
+        </ul>
+
+        <!-- Coverage Summary -->
+        <div class="coverage-card">
+          <div class="coverage-title">Couverture Totale</div>
+          <div class="coverage-bar">
+            <div class="coverage-fill" id="coverageFill" style="width: 0%"></div>
+          </div>
+          <div class="coverage-stats">
+            <span id="coverageDetail">0/0 tests</span>
+            <span class="coverage-percent" id="coveragePercent">0%</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px">
+          <button class="btn btn-primary" style="width: 100%" onclick="runTests('quick')">
+            ▶ Lancer les tests
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main">
+        <!-- Page: Dashboard -->
+        <div id="page-dashboard" class="page">
+          <div class="page-header">
+            <h1 class="page-title">Dashboard</h1>
+            <p class="page-subtitle">Vue d'ensemble des tests Neopro</p>
+          </div>
+
+          <!-- Progress -->
+          <div class="progress-container" id="progressContainer">
+            <div class="progress-header">
+              <span id="progressTitle">Tests en cours...</span>
+              <div class="spinner"></div>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <div class="progress-status" id="progressStatus">Initialisation...</div>
+          </div>
+
+          <!-- Results -->
+          <div class="results-grid">
+            <div class="result-card">
+              <div class="result-value success" id="statPassed">-</div>
+              <div class="result-label">Passés</div>
+            </div>
+            <div class="result-card">
+              <div class="result-value danger" id="statFailed">-</div>
+              <div class="result-label">Échoués</div>
+            </div>
+            <div class="result-card">
+              <div class="result-value warning" id="statSkipped">-</div>
+              <div class="result-label">Ignorés</div>
+            </div>
+            <div class="result-card">
+              <div class="result-value info" id="statManual">0/47</div>
+              <div class="result-label">Manuels validés</div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="btn-group" style="margin-bottom: 20px">
+            <button class="btn btn-primary" onclick="runTests('quick')" id="btnQuick">
+              ▶ Tests Rapides (~2min)
+            </button>
+            <button class="btn btn-secondary" onclick="runTests('full')" id="btnFull">
+              Tests Complets (~5min)
+            </button>
+            <button class="btn btn-secondary" onclick="exportReport()">📄 Exporter Rapport</button>
+          </div>
+
+          <!-- Failed Tests -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">❌ Tests Échoués</span>
+            </div>
+            <div class="card-body" id="failedList">
+              <div class="empty-state">
+                <div class="empty-icon">✓</div>
+                <p>Aucun test échoué</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Console -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">📟 Console</span>
+            </div>
+            <div class="card-body" style="padding: 0">
+              <div class="console" id="console">Lancez les tests pour voir la sortie...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Page: Checklist -->
+        <div id="page-checklist" class="page" style="display: none">
+          <div class="page-header">
+            <div style="display: flex; justify-content: space-between; align-items: center">
+              <div>
+                <h1 class="page-title">Checklist Tests Manuels</h1>
+                <p class="page-subtitle">Tests à valider manuellement avant release</p>
+              </div>
+              <div class="btn-group">
+                <button class="btn btn-secondary btn-sm" onclick="resetChecklist()">Reset</button>
+                <button class="btn btn-primary btn-sm" onclick="exportChecklist()">Exporter</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sections -->
+          <div class="card" style="overflow: hidden">
+            <!-- Super Admin -->
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-icon">👑</span>
+              <span class="section-title">Super Admin</span>
+              <span class="section-count" data-section="superadmin">0/9</span>
+              <span class="section-arrow">▼</span>
+            </div>
+            <div class="section-content" style="padding: 12px">
+              <ul class="checklist" data-section="superadmin">
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Login super_admin</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Création utilisateur</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Modification rôle</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Suppression utilisateur</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Création site</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Régénération API key</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Création groupe</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">MFA activation</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Export logs audit</span>
+                  <div class="check-priority low"></div>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Operator -->
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-icon">🔧</span>
+              <span class="section-title">Operator</span>
+              <span class="section-count" data-section="operator">0/10</span>
+              <span class="section-arrow">▼</span>
+            </div>
+            <div class="section-content" style="padding: 12px">
+              <ul class="checklist" data-section="operator">
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Login operator</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Voir ses sites uniquement</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Upload vidéo < 10MB</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Upload vidéo > 100MB</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Déploiement vers site</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Déploiement vers groupe</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Annulation déploiement</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Modification config</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Commande reboot Pi</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Mode maintenance</span>
+                  <div class="check-priority low"></div>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Advertiser -->
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-icon">📺</span>
+              <span class="section-title">Advertiser</span>
+              <span class="section-count" data-section="advertiser">0/6</span>
+              <span class="section-arrow">▼</span>
+            </div>
+            <div class="section-content" style="padding: 12px">
+              <ul class="checklist" data-section="advertiser">
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Login advertiser</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Voir ses vidéos uniquement</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Upload vidéo pub</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Stats impressions</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Export PDF stats</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Filtres période</span>
+                  <div class="check-priority low"></div>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Analytics -->
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-icon">📊</span>
+              <span class="section-title">Analytics</span>
+              <span class="section-count" data-section="analytics">0/5</span>
+              <span class="section-arrow">▼</span>
+            </div>
+            <div class="section-content" style="padding: 12px">
+              <ul class="checklist" data-section="analytics">
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Dashboard charge</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Graphiques OK</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Carte sites</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Export CSV</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Filtres date</span>
+                  <div class="check-priority low"></div>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Raspberry Pi -->
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-icon">🍓</span>
+              <span class="section-title">Raspberry Pi</span>
+              <span class="section-count" data-section="raspberry">0/7</span>
+              <span class="section-arrow">▼</span>
+            </div>
+            <div class="section-content" style="padding: 12px">
+              <ul class="checklist" data-section="raspberry">
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Interface TV (port 80)</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Vidéos se lancent</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Télécommande OK</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Admin local (8080)</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Réception déploiement</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Sync config</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Heartbeat visible</span>
+                  <div class="check-priority low"></div>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Auth & Security -->
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-icon">🔒</span>
+              <span class="section-title">Auth & Sécurité</span>
+              <span class="section-count" data-section="security">0/6</span>
+              <span class="section-arrow">▼</span>
+            </div>
+            <div class="section-content" style="padding: 12px">
+              <ul class="checklist" data-section="security">
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Logout OK</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Routes protégées</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Email reset password</span>
+                  <div class="check-priority high"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Lien reset fonctionne</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Session expire</span>
+                  <div class="check-priority medium"></div>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                  <div class="check-box"></div>
+                  <span class="check-text">Rate limiting</span>
+                  <div class="check-priority low"></div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Page: Bugs -->
+        <div id="page-bugs" class="page" style="display: none">
+          <div class="page-header">
+            <h1 class="page-title">Bugs & Notes</h1>
+            <p class="page-subtitle">Suivi des problèmes rencontrés</p>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px">
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">🐛 Bugs</span>
+                <button class="btn btn-primary btn-sm" onclick="showBugModal()">+ Ajouter</button>
+              </div>
+              <div class="card-body" id="bugList">
+                <div class="empty-state">
+                  <div class="empty-icon">🎉</div>
+                  <p>Aucun bug signalé</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">📝 Notes</span>
+              </div>
+              <div class="card-body">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px">
+                  <input
+                    type="text"
+                    id="noteInput"
+                    placeholder="Ajouter une note..."
+                    style="
+                      flex: 1;
+                      padding: 10px;
+                      background: #252542;
+                      border: 1px solid #2a2a4a;
+                      border-radius: 6px;
+                      color: #e0e0e0;
+                    "
+                  />
+                  <button class="btn btn-primary btn-sm" onclick="addNote()">+</button>
+                </div>
+                <div id="noteList"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Page: History -->
+        <div id="page-history" class="page" style="display: none">
+          <div class="page-header">
+            <h1 class="page-title">Historique</h1>
+            <p class="page-subtitle">Sessions de test précédentes</p>
+          </div>
+
+          <div class="card">
+            <div class="card-body" id="historyList">
+              <div class="empty-state">
+                <div class="empty-icon">📜</div>
+                <p>Aucune session enregistrée</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Bug Modal -->
+    <div
+      id="bugModal"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div
+        style="
+          background: #1a1a2e;
+          border-radius: 12px;
+          padding: 30px;
+          max-width: 500px;
+          width: 90%;
+        "
+      >
+        <h2 style="margin-bottom: 20px">Nouveau Bug</h2>
+        <input
+          type="text"
+          id="bugTitle"
+          placeholder="Titre du bug"
+          style="
+            width: 100%;
+            padding: 12px;
+            background: #252542;
+            border: 1px solid #2a2a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            margin-bottom: 15px;
+          "
+        />
+        <textarea
+          id="bugDesc"
+          placeholder="Description..."
+          style="
+            width: 100%;
+            padding: 12px;
+            background: #252542;
+            border: 1px solid #2a2a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            min-height: 100px;
+            margin-bottom: 15px;
+            resize: vertical;
+          "
+        ></textarea>
+        <select
+          id="bugSeverity"
+          style="
+            width: 100%;
+            padding: 12px;
+            background: #252542;
+            border: 1px solid #2a2a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            margin-bottom: 20px;
+          "
+        >
+          <option value="high">Critique</option>
+          <option value="medium" selected>Moyenne</option>
+          <option value="low">Basse</option>
+        </select>
+        <div style="display: flex; gap: 10px; justify-content: flex-end">
+          <button class="btn btn-secondary" onclick="closeBugModal()">Annuler</button>
+          <button class="btn btn-primary" onclick="addBug()">Ajouter</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let data = { sessions: [], bugs: [], notes: [], checklist: {} };
+
+      // Navigation
+      function showPage(page) {
+        document.querySelectorAll('.page').forEach((p) => (p.style.display = 'none'));
+        document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
+        document.getElementById(`page-${page}`).style.display = 'block';
+        document.querySelector(`.nav-item[onclick="showPage('${page}')"]`).classList.add('active');
+      }
+
+      // Load data
+      async function loadData() {
+        try {
+          const res = await fetch('/api/data');
+          data = await res.json();
+        } catch (e) {
+          data = { sessions: [], bugs: [], notes: [], checklist: {} };
+        }
+        loadChecklist();
+        render();
+      }
+
+      // Render
+      function render() {
+        const last = data.sessions[0];
+
+        // Stats
+        document.getElementById('statPassed').textContent = last?.passed ?? '-';
+        document.getElementById('statFailed').textContent = last?.failed ?? '-';
+        document.getElementById('statSkipped').textContent = last?.skipped ?? '-';
+
+        // Manual count
+        const manualChecked = document.querySelectorAll('.check-item.checked').length;
+        document.getElementById('statManual').textContent = `${manualChecked}/47`;
+
+        // Update section counts
+        updateSectionCounts();
+
+        // Coverage
+        updateCoverage();
+
+        // Failed tests
+        renderFailed(last);
+
+        // Console
+        if (last?.output) {
+          renderConsole(last.output);
+        }
+
+        // Bugs
+        renderBugs();
+
+        // Notes
+        renderNotes();
+
+        // History
+        renderHistory();
+      }
+
+      function updateSectionCounts() {
+        const sections = [
+          'superadmin',
+          'operator',
+          'advertiser',
+          'analytics',
+          'raspberry',
+          'security',
+        ];
+        sections.forEach((section) => {
+          const list = document.querySelector(`ul[data-section="${section}"]`);
+          const counter = document.querySelector(`.section-count[data-section="${section}"]`);
+          if (list && counter) {
+            const total = list.querySelectorAll('.check-item').length;
+            const checked = list.querySelectorAll('.check-item.checked').length;
+            counter.textContent = `${checked}/${total}`;
+            counter.classList.toggle('complete', checked === total);
+          }
+        });
+      }
+
+      function updateCoverage() {
+        const last = data.sessions[0];
+        const autoTotal = last ? last.passed + last.failed + last.skipped : 0;
+        const autoPassed = last?.passed || 0;
+
+        const manualTotal = 47;
+        const manualPassed = document.querySelectorAll('.check-item.checked').length;
+
+        const total = autoTotal + manualTotal;
+        const passed = autoPassed + manualPassed;
+        const percent = total > 0 ? Math.round((passed / total) * 100) : 0;
+
+        const fill = document.getElementById('coverageFill');
+        fill.style.width = percent + '%';
+        fill.className =
+          'coverage-fill ' + (percent >= 80 ? 'high' : percent >= 50 ? 'medium' : 'low');
+
+        document.getElementById('coveragePercent').textContent = percent + '%';
+        document.getElementById('coverageDetail').textContent = `${passed}/${total} tests`;
+      }
+
+      function renderFailed(session) {
+        const container = document.getElementById('failedList');
+        if (!session?.output || session.failed === 0) {
+          container.innerHTML =
+            '<div class="empty-state"><div class="empty-icon">✓</div><p>Aucun test échoué</p></div>';
+          return;
+        }
+
+        const failed = [];
+        const lines = session.output.split('\n');
+        lines.forEach((line, i) => {
+          if (line.includes('[FAIL]')) {
+            const match = line.match(/\[FAIL\]\s*(.+)/);
+            if (match) {
+              failed.push({
+                name: match[1].trim(),
+                error: lines
+                  .slice(i + 1, i + 4)
+                  .filter((l) => l.trim() && !l.includes('[PASS]'))
+                  .join('\n'),
+              });
+            }
+          }
+        });
+
+        if (failed.length === 0) {
+          container.innerHTML =
+            '<div class="empty-state"><div class="empty-icon">✓</div><p>Aucun test échoué</p></div>';
+          return;
+        }
+
+        container.innerHTML = failed
+          .map(
+            (f) => `
+        <div class="failed-item">
+          <div class="failed-name">${escapeHtml(f.name)}</div>
+          <div class="failed-error">${escapeHtml(f.error || 'Voir console')}</div>
+          <div class="failed-actions">
+            <button class="btn btn-danger btn-sm" onclick="createBugFromFailed('${escapeHtml(f.name)}')">Créer Bug</button>
+          </div>
+        </div>
+      `,
+          )
+          .join('');
+      }
+
+      function renderConsole(output) {
+        const html = output
+          .split('\n')
+          .map((line) => {
+            if (line.includes('[PASS]')) return `<span class="pass">${escapeHtml(line)}</span>`;
+            if (line.includes('[FAIL]')) return `<span class="fail">${escapeHtml(line)}</span>`;
+            if (line.includes('[SKIP]')) return `<span class="skip">${escapeHtml(line)}</span>`;
+            if (line.includes('[INFO]')) return `<span class="info">${escapeHtml(line)}</span>`;
+            if (line.match(/^\d+\./)) return `<span class="section">${escapeHtml(line)}</span>`;
+            return escapeHtml(line);
+          })
+          .join('\n');
+        document.getElementById('console').innerHTML = html;
+      }
+
+      function renderBugs() {
+        const container = document.getElementById('bugList');
+        if (!data.bugs?.length) {
+          container.innerHTML =
+            '<div class="empty-state"><div class="empty-icon">🎉</div><p>Aucun bug signalé</p></div>';
+          return;
+        }
+        container.innerHTML = data.bugs
+          .map(
+            (b) => `
+        <div class="check-item" style="cursor: default;">
+          <div class="check-priority ${b.severity}"></div>
+          <span class="check-text">${escapeHtml(b.title)}</span>
+          <button class="btn btn-danger btn-sm" onclick="deleteBug('${b.id}')">×</button>
+        </div>
+      `,
+          )
+          .join('');
+      }
+
+      function renderNotes() {
+        const container = document.getElementById('noteList');
+        if (!data.notes?.length) {
+          container.innerHTML = '<p style="color: #888; text-align: center;">Aucune note</p>';
+          return;
+        }
+        container.innerHTML = data.notes
+          .map(
+            (n) => `
+        <div class="check-item" style="cursor: default;">
+          <span class="check-text">${escapeHtml(n.content)}</span>
+          <button class="btn btn-danger btn-sm" onclick="deleteNote('${n.id}')">×</button>
+        </div>
+      `,
+          )
+          .join('');
+      }
+
+      function renderHistory() {
+        const container = document.getElementById('historyList');
+        if (!data.sessions?.length) {
+          container.innerHTML =
+            '<div class="empty-state"><div class="empty-icon">📜</div><p>Aucune session</p></div>';
+          return;
+        }
+        container.innerHTML = data.sessions
+          .slice(0, 20)
+          .map(
+            (s) => `
+        <div class="check-item" style="cursor: pointer;" onclick="viewSession('${s.id}')">
+          <span class="check-text">
+            <strong>${s.mode}</strong> - ${new Date(s.timestamp).toLocaleString('fr-FR')}
+          </span>
+          <span style="color: #10b981;">${s.passed}✓</span>
+          <span style="color: #ef4444;">${s.failed}✗</span>
+        </div>
+      `,
+          )
+          .join('');
+      }
+
+      function viewSession(id) {
+        const session = data.sessions.find((s) => s.id === id);
+        if (session) {
+          renderConsole(session.output);
+          renderFailed(session);
+          showPage('dashboard');
+        }
+      }
+
+      // Run tests
+      async function runTests(mode) {
+        const btnQuick = document.getElementById('btnQuick');
+        const btnFull = document.getElementById('btnFull');
+        const progress = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressStatus = document.getElementById('progressStatus');
+
+        btnQuick.disabled = btnFull.disabled = true;
+        progress.classList.add('active');
+
+        const steps =
+          mode === 'full'
+            ? ['Environnement', 'Config', 'API', 'Build', 'Jest (830+ tests)', 'Finalisation']
+            : ['Environnement', 'Config', 'API', 'Build', 'Lint', 'Finalisation'];
+
+        let step = 0;
+        const interval = setInterval(
+          () => {
+            if (step < steps.length) {
+              progressStatus.textContent = steps[step] + '...';
+              progressFill.style.width = ((step + 1) / steps.length) * 95 + '%';
+              step++;
+            }
+          },
+          mode === 'full' ? 50000 / steps.length : 20000 / steps.length,
+        );
+
+        try {
+          const res = await fetch('/api/run-tests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode }),
+          });
+          const session = await res.json();
+          clearInterval(interval);
+          progressFill.style.width = '100%';
+          progressStatus.textContent = 'Terminé!';
+
+          data.sessions.unshift(session);
+          render();
+          showToast(
+            session.failed === 0
+              ? 'Tous les tests passent!'
+              : `${session.failed} test(s) échoué(s)`,
+            session.failed === 0 ? 'success' : 'error',
+          );
+        } catch (e) {
+          clearInterval(interval);
+          showToast('Erreur lors des tests', 'error');
+        }
+
+        setTimeout(() => {
+          progress.classList.remove('active');
+          progressFill.style.width = '0%';
+        }, 1000);
+
+        btnQuick.disabled = btnFull.disabled = false;
+      }
+
+      // Checklist
+      function toggleCheck(item) {
+        item.classList.toggle('checked');
+        saveChecklist();
+        render();
+      }
+
+      function toggleSection(header) {
+        header.classList.toggle('collapsed');
+      }
+
+      function saveChecklist() {
+        const checked = [];
+        document.querySelectorAll('.check-item.checked').forEach((item, i) => {
+          checked.push(item.querySelector('.check-text').textContent);
+        });
+        localStorage.setItem('neopro-checklist', JSON.stringify(checked));
+      }
+
+      function loadChecklist() {
+        try {
+          const checked = JSON.parse(localStorage.getItem('neopro-checklist') || '[]');
+          document.querySelectorAll('.check-item').forEach((item) => {
+            const text = item.querySelector('.check-text').textContent;
+            if (checked.includes(text)) {
+              item.classList.add('checked');
+            }
+          });
+        } catch (e) {}
+      }
+
+      function resetChecklist() {
+        document.querySelectorAll('.check-item').forEach((i) => i.classList.remove('checked'));
+        localStorage.removeItem('neopro-checklist');
+        render();
+        showToast('Checklist réinitialisée', 'success');
+      }
+
+      // Bugs & Notes
+      function showBugModal() {
+        document.getElementById('bugModal').style.display = 'flex';
+      }
+
+      function closeBugModal() {
+        document.getElementById('bugModal').style.display = 'none';
+      }
+
+      async function addBug() {
+        const bug = {
+          title: document.getElementById('bugTitle').value,
+          description: document.getElementById('bugDesc').value,
+          severity: document.getElementById('bugSeverity').value,
+        };
+        if (!bug.title) return;
+
+        try {
+          const res = await fetch('/api/bugs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bug),
+          });
+          if (res.ok) {
+            const newBug = await res.json();
+            data.bugs.unshift(newBug);
+            render();
+            closeBugModal();
+            document.getElementById('bugTitle').value = '';
+            document.getElementById('bugDesc').value = '';
+            showToast('Bug ajouté', 'success');
+          }
+        } catch (e) {
+          showToast('Erreur', 'error');
+        }
+      }
+
+      async function deleteBug(id) {
+        await fetch(`/api/bugs/${id}`, { method: 'DELETE' });
+        data.bugs = data.bugs.filter((b) => b.id !== id);
+        render();
+      }
+
+      async function addNote() {
+        const input = document.getElementById('noteInput');
+        const content = input.value.trim();
+        if (!content) return;
+
+        try {
+          const res = await fetch('/api/notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content, category: 'note' }),
+          });
+          if (res.ok) {
+            const note = await res.json();
+            data.notes.unshift(note);
+            render();
+            input.value = '';
+          }
+        } catch (e) {}
+      }
+
+      async function deleteNote(id) {
+        await fetch(`/api/notes/${id}`, { method: 'DELETE' });
+        data.notes = data.notes.filter((n) => n.id !== id);
+        render();
+      }
+
+      function createBugFromFailed(name) {
+        document.getElementById('bugTitle').value = `Test échoué: ${name}`;
+        document.getElementById('bugSeverity').value = 'high';
+        showBugModal();
+      }
+
+      // Export
+      function exportReport() {
+        let md = `# Rapport de Test Neopro\n\n`;
+        md += `**Date:** ${new Date().toLocaleString('fr-FR')}\n\n`;
+
+        const last = data.sessions[0];
+        if (last) {
+          md += `## Résultats Tests Automatiques\n\n`;
+          md += `- ✅ Passés: ${last.passed}\n`;
+          md += `- ❌ Échoués: ${last.failed}\n`;
+          md += `- ⏭ Ignorés: ${last.skipped}\n\n`;
+        }
+
+        md += `## Tests Manuels\n\n`;
+        const sections = {
+          superadmin: 'Super Admin',
+          operator: 'Operator',
+          advertiser: 'Advertiser',
+          analytics: 'Analytics',
+          raspberry: 'Raspberry Pi',
+          security: 'Auth & Sécurité',
+        };
+        Object.entries(sections).forEach(([key, name]) => {
+          md += `### ${name}\n\n`;
+          document.querySelectorAll(`ul[data-section="${key}"] .check-item`).forEach((item) => {
+            const checked = item.classList.contains('checked');
+            const text = item.querySelector('.check-text').textContent;
+            md += `- ${checked ? '✅' : '❌'} ${text}\n`;
+          });
+          md += '\n';
+        });
+
+        const blob = new Blob([md], { type: 'text/markdown' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `neopro-test-report-${new Date().toISOString().split('T')[0]}.md`;
+        a.click();
+        showToast('Rapport exporté', 'success');
+      }
+
+      function exportChecklist() {
+        exportReport();
+      }
+
+      // Utils
+      function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      function showToast(msg, type) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.classList.remove('show'), 3000);
+      }
+
+      // Keyboard
+      document.getElementById('noteInput')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addNote();
+      });
+
+      // Init
+      loadData();
+    </script>
+  </body>
+</html>
