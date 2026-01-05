@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap, catchError, of, map } from 'rxjs';
+import { BehaviorSubject, Observable, tap, catchError, of, map, interval, Subscription } from 'rxjs';
 import { ApiService } from './api.service';
 import { AuthResponse, User } from '../models';
 
@@ -32,6 +32,9 @@ export class AuthService {
   // Ne pas utiliser pour l'authentification principale (utiliser les cookies)
   private sseToken: string | null = null;
 
+  // Vérification périodique de l'authentification (toutes les 5 minutes)
+  private authCheckInterval$?: Subscription;
+
   /**
    * Verifie l'etat d'authentification au demarrage via l'API
    */
@@ -39,18 +42,82 @@ export class AuthService {
     if (this.authCheckInProgress) return;
     this.authCheckInProgress = true;
 
-    this.api.get<User>('/auth/me').subscribe({
-      next: (user) => {
-        this.currentUserSubject.next(user);
+    this.api.get<User & { token?: string }>('/auth/me').subscribe({
+      next: (response) => {
+        // Stocker le token AVANT d'émettre l'utilisateur
+        // pour que LayoutComponent puisse établir la connexion Socket.IO
+        if (response.token) {
+          this.sseToken = response.token;
+        }
+        this.currentUserSubject.next(response);
         this.authChecked = true;
         this.authCheckInProgress = false;
+        // Démarrer la vérification périodique si ce n'est pas déjà fait
+        this.startPeriodicAuthCheck();
       },
       error: () => {
         this.currentUserSubject.next(null);
         this.authChecked = true;
         this.authCheckInProgress = false;
+        // Arrêter la vérification périodique si déconnecté
+        this.stopPeriodicAuthCheck();
       }
     });
+  }
+
+  /**
+   * Démarre une vérification périodique de l'authentification
+   * Vérifie toutes les 5 minutes si le token est toujours valide
+   */
+  private startPeriodicAuthCheck(): void {
+    // Ne démarrer qu'une seule fois
+    if (this.authCheckInterval$) {
+      return;
+    }
+
+    // Vérifier toutes les 5 minutes (300000 ms)
+    this.authCheckInterval$ = interval(300000).subscribe(() => {
+      // Vérifier silencieusement sans bloquer l'UI
+      console.log('[AUTH] Periodic auth check...', new Date().toISOString());
+      this.api.get<User>('/auth/me').subscribe({
+        next: (user) => {
+          console.log('[AUTH] Periodic check: still authenticated', user.email);
+          this.currentUserSubject.next(user);
+        },
+        error: (err) => {
+          // Token expiré ou invalide - déconnecter et rediriger
+          console.warn('[AUTH] Periodic check: session expired', err);
+          this.handleSessionExpired();
+        }
+      });
+    });
+  }
+
+  /**
+   * Arrête la vérification périodique
+   */
+  private stopPeriodicAuthCheck(): void {
+    if (this.authCheckInterval$) {
+      this.authCheckInterval$.unsubscribe();
+      this.authCheckInterval$ = undefined;
+    }
+  }
+
+  /**
+   * Gère l'expiration de la session
+   */
+  private handleSessionExpired(): void {
+    this.currentUserSubject.next(null);
+    this.sseToken = null;
+    this.stopPeriodicAuthCheck();
+
+    // Rediriger vers login seulement si pas déjà sur la page login
+    const currentUrl = this.router.url;
+    if (currentUrl !== '/login') {
+      this.router.navigate(['/login'], {
+        queryParams: { expired: 'true' }
+      });
+    }
   }
 
   /**
@@ -63,6 +130,8 @@ export class AuthService {
           this.currentUserSubject.next(response.user);
           // Marquer comme vérifié pour éviter une re-vérification inutile
           this.authChecked = true;
+          // Démarrer la vérification périodique après login réussi
+          this.startPeriodicAuthCheck();
         }
         // Stocker le token en memoire pour l'envoyer via header Authorization
         // Ceci est nécessaire pour Safari mobile qui bloque les cookies cross-origin
@@ -85,6 +154,9 @@ export class AuthService {
    * Deconnexion - le serveur supprime le cookie
    */
   logout(): void {
+    // Arrêter la vérification périodique
+    this.stopPeriodicAuthCheck();
+
     this.api.post('/auth/logout', {}).subscribe({
       next: () => {
         this.currentUserSubject.next(null);
@@ -120,20 +192,42 @@ export class AuthService {
     }
 
     // Si déjà vérifié et pas d'utilisateur, retourner false
-    if (this.authChecked) {
+    // SAUF si c'est un retry après un échec temporaire
+    if (this.authChecked && !this.authCheckInProgress) {
       return of(false);
     }
 
+    // Éviter les appels multiples simultanés
+    if (this.authCheckInProgress) {
+      // Retourner false temporairement, le guard réessayera
+      return of(false);
+    }
+
+    this.authCheckInProgress = true;
+
     // Sinon, verifier via l'API
-    return this.api.get<User>('/auth/me').pipe(
-      map(user => {
-        this.currentUserSubject.next(user);
+    return this.api.get<User & { token?: string }>('/auth/me').pipe(
+      map(response => {
+        console.log('[AUTH] checkAuthentication: user authenticated', response.email);
+        // Stocker le token AVANT d'émettre l'utilisateur
+        // pour que LayoutComponent puisse établir la connexion Socket.IO
+        if (response.token) {
+          this.sseToken = response.token;
+        }
+        this.currentUserSubject.next(response);
         this.authChecked = true;
+        this.authCheckInProgress = false;
+        // Démarrer la vérification périodique après refresh réussi
+        this.startPeriodicAuthCheck();
         return true;
       }),
-      catchError(() => {
+      catchError((err) => {
+        console.warn('[AUTH] checkAuthentication: failed, redirecting to login', err);
         this.currentUserSubject.next(null);
+        this.sseToken = null;
         this.authChecked = true;
+        this.authCheckInProgress = false;
+        this.stopPeriodicAuthCheck();
         return of(false);
       })
     );

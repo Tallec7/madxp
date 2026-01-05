@@ -4,6 +4,7 @@ import logger from '../config/logger';
 import pool from '../config/database';
 import { AuthRequest } from '../types';
 import { UPDATE_BUCKET, uploadFile } from '../config/supabase';
+import { isFtpUpdateConfigured, uploadUpdateToFtp } from '../config/ftp-storage';
 import { updateDeploymentService } from '../services/update-deployment.service';
 
 type DatabaseError = Error & { code?: string; message?: string };
@@ -83,13 +84,33 @@ export const createUpdate = async (req: AuthRequest, res: Response) => {
     const filename = `update-${version}-${Date.now()}-${file.originalname}`;
     const checksum = crypto.createHash('sha256').update(file.buffer).digest('hex');
 
-    const uploadResult = await uploadFile(file.buffer, filename, file.mimetype, UPDATE_BUCKET);
+    // Utiliser FTP Hostinger en priorité, fallback sur Supabase
+    let uploadResult: { path: string; url: string } | null = null;
+    let storageType = 'unknown';
+
+    if (isFtpUpdateConfigured()) {
+      logger.info('Using FTP storage for update package (Hostinger)');
+      uploadResult = await uploadUpdateToFtp(file.buffer, filename, file.mimetype);
+      if (uploadResult) {
+        storageType = 'FTP';
+      }
+    }
+
+    if (!uploadResult) {
+      logger.info('Using Supabase storage for update package (FTP not configured or failed)');
+      uploadResult = await uploadFile(file.buffer, filename, file.mimetype, UPDATE_BUCKET);
+      if (uploadResult) {
+        storageType = 'Supabase';
+      }
+    }
 
     if (!uploadResult) {
       return res.status(500).json({
-        error: "Impossible d'uploader le package vers Supabase Storage. Vérifiez que les variables SUPABASE_URL et SUPABASE_SERVICE_KEY sont configurées."
+        error: "Impossible d'uploader le package. Vérifiez la configuration FTP (FTP_UPDATE_*) ou Supabase (SUPABASE_URL, SUPABASE_SERVICE_KEY)."
       });
     }
+
+    logger.info('Update package uploaded successfully:', { filename, storageType, url: uploadResult.url });
 
     const result = await pool.query(
       `INSERT INTO software_updates (version, description, is_critical, changelog, package_url, package_size, checksum, uploaded_by)
@@ -192,7 +213,7 @@ export const getUpdateDeployments = async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
       `SELECT ud.id, ud.update_id, ud.target_type, ud.target_id, ud.status, ud.progress,
-              ud.error_message as error, ud.started_at, ud.completed_at, ud.created_at,
+              ud.error_message, ud.started_at, ud.completed_at, ud.created_at,
               ud.backup_path,
               su.version as update_version,
               CASE
@@ -223,7 +244,7 @@ export const getUpdateDeployment = async (req: AuthRequest, res: Response) => {
 
     const result = await pool.query(
       `SELECT ud.id, ud.update_id, ud.target_type, ud.target_id, ud.status, ud.progress,
-              ud.error_message as error, ud.started_at, ud.completed_at, ud.created_at,
+              ud.error_message, ud.started_at, ud.completed_at, ud.created_at,
               ud.backup_path,
               su.version as update_version,
               CASE

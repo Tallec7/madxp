@@ -28,8 +28,9 @@ interface UpdateDeployment {
   target_name?: string;
   status: 'pending' | 'in_progress' | 'completed' | 'failed';
   progress: number;
-  deployed_count: number;
-  total_count: number;
+  deployed_count?: number;
+  error_message?: string | null;
+  started_at?: Date;
   created_at: Date;
   completed_at?: Date;
 }
@@ -271,8 +272,15 @@ interface UpdateDeployment {
                 ></div>
               </div>
               <div class="progress-label">
-                <span>{{ deployment.deployed_count }} / {{ deployment.total_count }} sites</span>
+                <span>/ sites</span>
                 <span>{{ deployment.progress }}%</span>
+              </div>
+            </div>
+
+            <div class="deployment-error" *ngIf="deployment.status === 'failed' && deployment.error_message">
+              <div class="error-content">
+                <span class="error-icon">⚠️</span>
+                <span class="error-text">{{ deployment.error_message }}</span>
               </div>
             </div>
 
@@ -777,6 +785,31 @@ interface UpdateDeployment {
       color: #94a3b8;
       padding-top: 1rem;
       border-top: 1px solid #e2e8f0;
+    }
+
+    .deployment-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      margin-top: 0.75rem;
+    }
+
+    .deployment-error .error-content {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .deployment-error .error-icon {
+      flex-shrink: 0;
+    }
+
+    .deployment-error .error-text {
+      color: #dc2626;
+      font-size: 0.875rem;
+      line-height: 1.4;
+      word-break: break-word;
     }
 
     .versions-chart {

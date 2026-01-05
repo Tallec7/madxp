@@ -1,7 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { TranslationService } from '../../core/services/translation.service';
@@ -66,6 +66,10 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
             >
               {{ 'auth.passwordRequired' | translate }}
             </span>
+          </div>
+
+          <div class="info-alert" role="status" aria-live="polite" *ngIf="sessionExpired">
+            <span>{{ 'auth.sessionExpired' | translate }}</span>
           </div>
 
           <div class="error-alert" role="alert" aria-live="polite" *ngIf="errorMessage">
@@ -194,6 +198,15 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
       font-size: 0.875rem;
     }
 
+    .info-alert {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      font-size: 0.875rem;
+    }
+
     .btn-block {
       width: 100%;
       padding: 0.875rem;
@@ -315,15 +328,17 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
     }
   `]
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly translationService = inject(TranslationService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   loginForm: FormGroup;
   loading = false;
   errorMessage = '';
+  sessionExpired = false;
 
   constructor() {
     // Initialiser les traductions ici au lieu de AppComponent
@@ -332,6 +347,15 @@ export class LoginComponent {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required]
+    });
+  }
+
+  ngOnInit(): void {
+    // Vérifier si on arrive ici suite à une expiration de session
+    this.route.queryParams.subscribe(params => {
+      if (params['expired'] === 'true') {
+        this.sessionExpired = true;
+      }
     });
   }
 

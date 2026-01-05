@@ -1,6 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, forkJoin, throwError } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, throwError, catchError, map, switchMap, tap } from 'rxjs';
 import { AdminActionRequest, AdminJob, AdminActionType, LocalClient, LocalClientInput } from '../models/admin';
 import { NotificationService } from './notification.service';
 import { ApiService } from './api.service';
@@ -25,14 +24,19 @@ export class AdminOpsService {
   }
 
   refreshState(): Observable<void> {
-    return forkJoin({
-      jobs: this.api.get<{ jobs: AdminJob[] }>('/admin/jobs'),
-      clients: this.api.get<{ clients: LocalClient[] }>('/admin/clients')
-    }).pipe(
-      tap(({ jobs, clients }) => {
-        this.jobs$.next(jobs.jobs);
-        this.clients$.next(clients.clients);
+    // Stagger requests to avoid hitting rate limits on simultaneous requests
+    // Load jobs first, then clients after a short delay
+    return this.api.get<{ jobs: AdminJob[] }>('/admin/jobs').pipe(
+      tap(({ jobs }) => {
+        this.jobs$.next(jobs);
       }),
+      switchMap(() =>
+        this.api.get<{ clients: LocalClient[] }>('/admin/clients').pipe(
+          tap(({ clients }) => {
+            this.clients$.next(clients);
+          })
+        )
+      ),
       catchError(error => {
         this.notifications.error('Impossible de charger les données admin');
         return throwError(() => error);
