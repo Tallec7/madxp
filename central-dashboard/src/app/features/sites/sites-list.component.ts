@@ -544,9 +544,15 @@ export class SitesListComponent implements OnInit {
 
   /**
    * Calcule le statut temps réel basé sur last_seen_at
-   * Identique à la logique backend pour cohérence
+   * Logique simplifiée : si le serveur a mis à jour status='online',
+   * c'est qu'il a vérifié la connexion Socket.IO récemment
    */
   getRealTimeStatus(site: Site): 'online' | 'offline' | 'warning' | 'unknown' {
+    // Si le serveur dit 'online', faire confiance (il a vérifié Socket.IO)
+    if (site.status === 'online') {
+      return 'online';
+    }
+
     const lastSeenAt = site.last_seen_at ? new Date(site.last_seen_at) : null;
 
     if (!lastSeenAt) {
@@ -556,13 +562,11 @@ export class SitesListComponent implements OnInit {
     const now = new Date();
     const secondsSinceLastSeen = Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000);
 
-    // Logique identique au backend (sites.controller.ts)
-    if (secondsSinceLastSeen < 120) {
-      return 'online';   // Vu il y a moins de 2 minutes = online
-    } else if (secondsSinceLastSeen < 300) {
-      return 'warning';  // Entre 2 et 5 minutes = warning
+    // Si déconnecté mais vu récemment, afficher warning
+    if (secondsSinceLastSeen < 300) {
+      return 'warning';  // Vu il y a moins de 5 minutes mais déconnecté
     } else {
-      return 'offline';  // Plus de 5 minutes = offline
+      return 'offline';  // Plus de 5 minutes = vraiment offline
     }
   }
 
