@@ -13,7 +13,7 @@ describe('AdminOpsService', () => {
     'error',
     'info'
   ]);
-  const originalEventSource = (global as typeof globalThis).EventSource;
+  const originalEventSource = (window as typeof globalThis).EventSource;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -26,7 +26,7 @@ describe('AdminOpsService', () => {
 
   afterEach(() => {
     httpMock.verify();
-    (global as typeof globalThis).EventSource = originalEventSource;
+    (window as typeof globalThis).EventSource = originalEventSource;
   });
 
   it('should load jobs and clients from the API', done => {
@@ -98,7 +98,7 @@ describe('AdminOpsService', () => {
       }
     }
 
-    (global as typeof globalThis).EventSource = MockEventSource as unknown as typeof EventSource;
+    (window as typeof globalThis).EventSource = MockEventSource as unknown as typeof EventSource;
 
     service.initJobStream();
 

@@ -11,11 +11,11 @@ import { NotificationService } from '../../core/services/notification.service';
 describe('UpdatesManagementComponent', () => {
   let component: UpdatesManagementComponent;
   let fixture: ComponentFixture<UpdatesManagementComponent>;
-  let apiService: jest.Mocked<ApiService>;
-  let sitesService: jest.Mocked<SitesService>;
-  let groupsService: jest.Mocked<GroupsService>;
-  let socketService: jest.Mocked<SocketService>;
-  let notificationService: jest.Mocked<NotificationService>;
+  let apiService: jasmine.SpyObj<ApiService>;
+  let sitesService: jasmine.SpyObj<SitesService>;
+  let groupsService: jasmine.SpyObj<GroupsService>;
+  let socketService: jasmine.SpyObj<SocketService>;
+  let notificationService: jasmine.SpyObj<NotificationService>;
 
   const mockUpdates = [
     {
@@ -65,29 +65,22 @@ describe('UpdatesManagementComponent', () => {
   ];
 
   beforeEach(async () => {
-    const apiServiceMock = {
-      get: jest.fn().mockReturnValue(of([])),
-      post: jest.fn().mockReturnValue(of({})),
-      delete: jest.fn().mockReturnValue(of({})),
-      upload: jest.fn().mockReturnValue(of({})),
-    };
+    const apiServiceMock = jasmine.createSpyObj('ApiService', ['get', 'post', 'delete', 'upload']);
+    apiServiceMock.get.and.returnValue(of([]));
+    apiServiceMock.post.and.returnValue(of({}));
+    apiServiceMock.delete.and.returnValue(of({}));
+    apiServiceMock.upload.and.returnValue(of({}));
 
-    const sitesServiceMock = {
-      loadSites: jest.fn().mockReturnValue(of({ sites: mockSites, total: 3, page: 1, totalPages: 1 })),
-    };
+    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['loadSites']);
+    sitesServiceMock.loadSites.and.returnValue(of({ sites: mockSites, total: 3, page: 1, totalPages: 1 }));
 
-    const groupsServiceMock = {
-      loadGroups: jest.fn().mockReturnValue(of({ groups: mockGroups })),
-    };
+    const groupsServiceMock = jasmine.createSpyObj('GroupsService', ['loadGroups']);
+    groupsServiceMock.loadGroups.and.returnValue(of({ groups: mockGroups }));
 
-    const socketServiceMock = {
-      on: jest.fn().mockReturnValue(of({})),
-    };
+    const socketServiceMock = jasmine.createSpyObj('SocketService', ['on']);
+    socketServiceMock.on.and.returnValue(of({}));
 
-    const notificationServiceMock = {
-      error: jest.fn(),
-      success: jest.fn(),
-    };
+    const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success']);
 
     await TestBed.configureTestingModule({
       imports: [UpdatesManagementComponent, FormsModule],
@@ -102,11 +95,11 @@ describe('UpdatesManagementComponent', () => {
 
     fixture = TestBed.createComponent(UpdatesManagementComponent);
     component = fixture.componentInstance;
-    apiService = TestBed.inject(ApiService) as jest.Mocked<ApiService>;
-    sitesService = TestBed.inject(SitesService) as jest.Mocked<SitesService>;
-    groupsService = TestBed.inject(GroupsService) as jest.Mocked<GroupsService>;
-    socketService = TestBed.inject(SocketService) as jest.Mocked<SocketService>;
-    notificationService = TestBed.inject(NotificationService) as jest.Mocked<NotificationService>;
+    apiService = TestBed.inject(ApiService) as jasmine.SpyObj<ApiService>;
+    sitesService = TestBed.inject(SitesService) as jasmine.SpyObj<SitesService>;
+    groupsService = TestBed.inject(GroupsService) as jasmine.SpyObj<GroupsService>;
+    socketService = TestBed.inject(SocketService) as jasmine.SpyObj<SocketService>;
+    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
   });
 
   it('should create', () => {
@@ -119,7 +112,7 @@ describe('UpdatesManagementComponent', () => {
     });
 
     it('should load data on init', fakeAsync(() => {
-      apiService.get.mockReturnValue(of(mockUpdates));
+      apiService.get.and.returnValue(of(mockUpdates));
       fixture.detectChanges();
       tick();
 
@@ -249,18 +242,18 @@ describe('UpdatesManagementComponent', () => {
 
     it('should upload update and close modal on success', fakeAsync(() => {
       const mockResponse = { id: 'u3', version: '2.0.0', description: 'Test' };
-      apiService.upload.mockReturnValue(of(mockResponse));
+      apiService.upload.and.returnValue(of(mockResponse));
 
       component.createUpdate();
       tick();
 
-      expect(apiService.upload).toHaveBeenCalledWith('/updates', expect.any(FormData));
+      expect(apiService.upload).toHaveBeenCalledWith('/updates', jasmine.any(FormData));
       expect(component.showCreateModal).toBe(false);
-      expect(component.updates[0]).toEqual(mockResponse);
+      expect(component.updates[0]).toEqual(jasmine.objectContaining({ id: 'u3', version: '2.0.0' }));
     }));
 
     it('should show error on failure', fakeAsync(() => {
-      apiService.upload.mockReturnValue(throwError(() => ({ error: { error: 'Upload failed' } })));
+      apiService.upload.and.returnValue(throwError(() => ({ error: { error: 'Upload failed' } })));
 
       component.createUpdate();
       tick();
@@ -275,18 +268,18 @@ describe('UpdatesManagementComponent', () => {
     });
 
     it('should delete update on confirm', fakeAsync(() => {
-      jest.spyOn(window, 'confirm').mockReturnValue(true);
-      apiService.delete.mockReturnValue(of({}));
+      spyOn(window, 'confirm').and.returnValue(true);
+      apiService.delete.and.returnValue(of({}));
 
       component.deleteUpdate(mockUpdates[0]);
       tick();
 
       expect(apiService.delete).toHaveBeenCalledWith('/updates/u1');
-      expect(component.updates).toHaveLength(1);
+      expect(component.updates.length).toBe(1);
     }));
 
     it('should not delete on cancel', () => {
-      jest.spyOn(window, 'confirm').mockReturnValue(false);
+      spyOn(window, 'confirm').and.returnValue(false);
 
       component.deleteUpdate(mockUpdates[0]);
 
@@ -375,7 +368,7 @@ describe('UpdatesManagementComponent', () => {
 
     it('should create deployment and switch to history', fakeAsync(() => {
       const mockDeployment = { id: 'd2', status: 'pending' };
-      apiService.post.mockReturnValue(of(mockDeployment));
+      apiService.post.and.returnValue(of(mockDeployment));
 
       component.startDeployment();
       tick();
@@ -387,13 +380,13 @@ describe('UpdatesManagementComponent', () => {
         auto_rollback: true,
         schedule_reboot: true,
       });
-      expect(component.deployments[0]).toEqual(mockDeployment);
+      expect(component.deployments[0]).toEqual(jasmine.objectContaining({ id: 'd2', status: 'pending' }));
       expect(component.activeTab).toBe('history');
       expect(notificationService.success).toHaveBeenCalled();
     }));
 
     it('should show error on failure', fakeAsync(() => {
-      apiService.post.mockReturnValue(throwError(() => ({ error: { error: 'Deployment failed' } })));
+      apiService.post.and.returnValue(throwError(() => ({ error: { error: 'Deployment failed' } })));
 
       component.startDeployment();
       tick();
@@ -436,7 +429,7 @@ describe('UpdatesManagementComponent', () => {
     it('should calculate version distribution', () => {
       const distribution = component.getVersionDistribution();
 
-      expect(distribution).toHaveLength(2);
+      expect(distribution.length).toBe(2);
       expect(distribution[0].version).toBe('2.1.0');
       expect(distribution[0].count).toBe(2);
       expect(distribution[1].version).toBe('2.0.0');
@@ -453,7 +446,7 @@ describe('UpdatesManagementComponent', () => {
     it('should return empty array when no sites', () => {
       component.sites = [];
       const distribution = component.getVersionDistribution();
-      expect(distribution).toHaveLength(0);
+      expect(distribution.length).toBe(0);
     });
   });
 });

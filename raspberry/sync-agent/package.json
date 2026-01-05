@@ -14,7 +14,11 @@
     "test:watch": "jest --watch",
     "test:connection": "node src/test-connection.js"
   },
-  "keywords": ["neopro", "raspberry-pi", "sync-agent"],
+  "keywords": [
+    "neopro",
+    "raspberry-pi",
+    "sync-agent"
+  ],
   "author": "NEOPRO Team",
   "license": "PROPRIETARY",
   "dependencies": {
@@ -41,10 +45,17 @@
       "!src/agent.js"
     ],
     "coverageDirectory": "coverage",
-    "coverageReporters": ["text", "lcov", "html"],
-    "testMatch": ["**/__tests__/**/*.test.js"],
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ],
     "verbose": true,
     "clearMocks": true,
-    "resetMocks": true
+    "resetMocks": true,
+    "runInBand": true
   }
 }

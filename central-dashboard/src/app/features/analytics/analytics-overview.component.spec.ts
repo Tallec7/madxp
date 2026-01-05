@@ -7,7 +7,7 @@ import { AnalyticsService } from '../../core/services/analytics.service';
 describe('AnalyticsOverviewComponent', () => {
   let component: AnalyticsOverviewComponent;
   let fixture: ComponentFixture<AnalyticsOverviewComponent>;
-  let analyticsService: jest.Mocked<AnalyticsService>;
+  let analyticsService: jasmine.SpyObj<AnalyticsService>;
 
   const mockOverviewData = {
     total_sites: 10,
@@ -41,9 +41,8 @@ describe('AnalyticsOverviewComponent', () => {
   };
 
   beforeEach(async () => {
-    const analyticsServiceMock = {
-      getAnalyticsOverview: jest.fn().mockReturnValue(of(mockOverviewData)),
-    };
+    const analyticsServiceMock = jasmine.createSpyObj('AnalyticsService', ['getAnalyticsOverview']);
+    analyticsServiceMock.getAnalyticsOverview.and.returnValue(of(mockOverviewData));
 
     await TestBed.configureTestingModule({
       imports: [AnalyticsOverviewComponent, RouterTestingModule],
@@ -54,7 +53,7 @@ describe('AnalyticsOverviewComponent', () => {
 
     fixture = TestBed.createComponent(AnalyticsOverviewComponent);
     component = fixture.componentInstance;
-    analyticsService = TestBed.inject(AnalyticsService) as jest.Mocked<AnalyticsService>;
+    analyticsService = TestBed.inject(AnalyticsService) as jasmine.SpyObj<AnalyticsService>;
   });
 
   afterEach(() => {
@@ -88,7 +87,7 @@ describe('AnalyticsOverviewComponent', () => {
 
     it('should set up auto-refresh interval', fakeAsync(() => {
       fixture.detectChanges();
-      analyticsService.getAnalyticsOverview.mockClear();
+      analyticsService.getAnalyticsOverview.calls.reset();
 
       // Fast-forward 60 seconds
       tick(60000);
@@ -129,10 +128,10 @@ describe('AnalyticsOverviewComponent', () => {
     }));
 
     it('should handle error gracefully', fakeAsync(() => {
-      analyticsService.getAnalyticsOverview.mockReturnValue(
+      analyticsService.getAnalyticsOverview.and.returnValue(
         throwError(() => new Error('API Error'))
       );
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = spyOn(console, 'error');
 
       fixture.detectChanges();
       tick();
@@ -140,7 +139,6 @@ describe('AnalyticsOverviewComponent', () => {
       expect(component.loading).toBe(false);
       expect(consoleSpy).toHaveBeenCalled();
 
-      consoleSpy.mockRestore();
       discardPeriodicTasks();
     }));
   });
@@ -151,7 +149,7 @@ describe('AnalyticsOverviewComponent', () => {
       tick();
 
       component.ngOnDestroy();
-      analyticsService.getAnalyticsOverview.mockClear();
+      analyticsService.getAnalyticsOverview.calls.reset();
 
       // Fast-forward 60 seconds - should not trigger refresh
       tick(60000);

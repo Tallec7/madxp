@@ -1,5 +1,8 @@
 /**
  * Tests pour le service d'historique de synchronisation
+ *
+ * Le SyncHistoryService enregistre l'historique des operations de synchronisation
+ * pour le debug et la tracabilite.
  */
 
 const fs = require('fs-extra');
@@ -22,12 +25,16 @@ jest.mock('../logger', () => ({
   debug: jest.fn(),
 }));
 
-// Mock uuid
-jest.mock('uuid', () => ({
-  v4: jest.fn(() => 'test-uuid-1234'),
-}));
+// Ne pas mocker uuid - utiliser la vraie implementation
+// pour avoir des IDs valides
 
-const syncHistory = require('../services/sync-history');
+let syncHistory;
+
+beforeAll(() => {
+  // Reset modules et re-require pour avoir des mocks frais
+  jest.resetModules();
+  syncHistory = require('../services/sync-history');
+});
 
 describe('SyncHistoryService', () => {
   const testDataDir = '/tmp/neopro-test/data';
@@ -72,16 +79,18 @@ describe('SyncHistoryService', () => {
     test('should add entry to history', async () => {
       const id = await syncHistory.recordSync('connection', { connected: true }, true);
 
-      expect(id).toBe('test-uuid-1234');
+      // L'ID est retourne (valeur UUID)
+      expect(id).toBeDefined();
+      expect(typeof id).toBe('string');
 
       const history = await syncHistory.loadHistory();
       expect(history.length).toBe(1);
       expect(history[0]).toMatchObject({
-        id: 'test-uuid-1234',
         type: 'connection',
         success: true,
         details: { connected: true },
       });
+      expect(history[0].id).toBe(id);
     });
 
     test('should add failed entry with error', async () => {

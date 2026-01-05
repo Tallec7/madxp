@@ -7,22 +7,11 @@ import { SiteDetailComponent } from './site-detail.component';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 
-// Mock child components
-jest.mock('./config-editor/config-editor.component', () => ({
-  ConfigEditorComponent: { selector: 'app-config-editor' }
-}));
-jest.mock('./site-content-viewer/site-content-viewer.component', () => ({
-  SiteContentViewerComponent: { selector: 'app-site-content-viewer' }
-}));
-jest.mock('../../shared/components/connection-indicator.component', () => ({
-  ConnectionIndicatorComponent: { selector: 'app-connection-indicator' }
-}));
-
 describe('SiteDetailComponent', () => {
   let component: SiteDetailComponent;
   let fixture: ComponentFixture<SiteDetailComponent>;
-  let sitesService: jest.Mocked<SitesService>;
-  let notificationService: jest.Mocked<NotificationService>;
+  let sitesService: jasmine.SpyObj<SitesService>;
+  let notificationService: jasmine.SpyObj<NotificationService>;
 
   const mockSite = {
     id: 's1',
@@ -52,18 +41,13 @@ describe('SiteDetailComponent', () => {
   };
 
   beforeEach(async () => {
-    const sitesServiceMock = {
-      getSite: jest.fn().mockReturnValue(of(mockSite)),
-      getMetrics: jest.fn().mockReturnValue(of(mockMetrics)),
-      sendCommand: jest.fn().mockReturnValue(of({ success: true })),
-      regenerateApiKey: jest.fn().mockReturnValue(of({ api_key: 'new-key-123' })),
-    };
+    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['getSite', 'getSiteMetrics', 'sendCommand', 'regenerateApiKey']);
+    sitesServiceMock.getSite.and.returnValue(of(mockSite));
+    sitesServiceMock.getSiteMetrics.and.returnValue(of({ metrics: [mockMetrics] }));
+    sitesServiceMock.sendCommand.and.returnValue(of({ success: true, message: 'OK' }));
+    sitesServiceMock.regenerateApiKey.and.returnValue(of({ api_key: 'new-key-123' } as any));
 
-    const notificationServiceMock = {
-      error: jest.fn(),
-      success: jest.fn(),
-      info: jest.fn(),
-    };
+    const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
 
     await TestBed.configureTestingModule({
       imports: [SiteDetailComponent, RouterTestingModule, FormsModule],
@@ -82,8 +66,8 @@ describe('SiteDetailComponent', () => {
 
     fixture = TestBed.createComponent(SiteDetailComponent);
     component = fixture.componentInstance;
-    sitesService = TestBed.inject(SitesService) as jest.Mocked<SitesService>;
-    notificationService = TestBed.inject(NotificationService) as jest.Mocked<NotificationService>;
+    sitesService = TestBed.inject(SitesService) as jasmine.SpyObj<SitesService>;
+    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
   });
 
   afterEach(() => {
@@ -100,7 +84,7 @@ describe('SiteDetailComponent', () => {
       tick();
 
       expect(sitesService.getSite).toHaveBeenCalledWith('s1');
-      expect(component.site).toEqual(mockSite);
+      expect(component.site).toEqual(mockSite as any);
 
       discardPeriodicTasks();
     }));
@@ -109,21 +93,20 @@ describe('SiteDetailComponent', () => {
       fixture.detectChanges();
       tick();
 
-      expect(sitesService.getMetrics).toHaveBeenCalledWith('s1');
-      expect(component.currentMetrics).toEqual(mockMetrics);
+      expect(sitesService.getSiteMetrics).toHaveBeenCalledWith('s1', 24);
+      expect(component.currentMetrics).toEqual(mockMetrics as any);
 
       discardPeriodicTasks();
     }));
 
     it('should handle error when loading site', fakeAsync(() => {
-      sitesService.getSite.mockReturnValue(throwError(() => new Error('Not found')));
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      sitesService.getSite.and.returnValue(throwError(() => new Error('Not found')));
+      const consoleSpy = spyOn(console, 'error').and.callFake(() => {});
 
       fixture.detectChanges();
       tick();
 
       expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
 
       discardPeriodicTasks();
     }));
@@ -155,11 +138,11 @@ describe('SiteDetailComponent', () => {
     });
 
     it('should return N/A for null date', () => {
-      expect(component.formatLastSeen(null)).toBe('N/A');
+      expect(component.formatLastSeen(null as any)).toBe('N/A');
     });
 
     it('should return N/A for undefined date', () => {
-      expect(component.formatLastSeen(undefined)).toBe('N/A');
+      expect(component.formatLastSeen(null as any)).toBe('N/A');
     });
   });
 
@@ -177,11 +160,11 @@ describe('SiteDetailComponent', () => {
     });
 
     it('should return N/A for null', () => {
-      expect(component.formatUptime(null)).toBe('N/A');
+      expect(component.formatUptime(null as any)).toBe('N/A');
     });
 
     it('should return N/A for undefined', () => {
-      expect(component.formatUptime(undefined)).toBe('N/A');
+      expect(component.formatUptime(null as any)).toBe('N/A');
     });
   });
 
@@ -194,7 +177,7 @@ describe('SiteDetailComponent', () => {
 
     describe('restartService', () => {
       it('should send restart command', fakeAsync(() => {
-        sitesService.sendCommand.mockReturnValue(of({ success: true }));
+        sitesService.sendCommand.and.returnValue(of({ success: true, message: 'OK' }));
 
         component.restartService('neopro-app');
         tick();
@@ -204,7 +187,7 @@ describe('SiteDetailComponent', () => {
       }));
 
       it('should show error on failure', fakeAsync(() => {
-        sitesService.sendCommand.mockReturnValue(throwError(() => new Error('Command failed')));
+        sitesService.sendCommand.and.returnValue(throwError(() => new Error('Command failed')));
 
         component.restartService('neopro-app');
         tick();
@@ -215,8 +198,8 @@ describe('SiteDetailComponent', () => {
 
     describe('rebootSite', () => {
       it('should send reboot command on confirm', fakeAsync(() => {
-        jest.spyOn(window, 'confirm').mockReturnValue(true);
-        sitesService.sendCommand.mockReturnValue(of({ success: true }));
+        spyOn(window, 'confirm').and.returnValue(true);
+        sitesService.sendCommand.and.returnValue(of({ success: true, message: 'OK' }));
 
         component.rebootSite();
         tick();
@@ -225,7 +208,7 @@ describe('SiteDetailComponent', () => {
       }));
 
       it('should not reboot on cancel', () => {
-        jest.spyOn(window, 'confirm').mockReturnValue(false);
+        spyOn(window, 'confirm').and.returnValue(false);
 
         component.rebootSite();
 
@@ -235,8 +218,8 @@ describe('SiteDetailComponent', () => {
 
     describe('regenerateApiKey', () => {
       it('should regenerate API key on confirm', fakeAsync(() => {
-        jest.spyOn(window, 'confirm').mockReturnValue(true);
-        sitesService.regenerateApiKey.mockReturnValue(of({ api_key: 'new-key' }));
+        spyOn(window, 'confirm').and.returnValue(true);
+        sitesService.regenerateApiKey.and.returnValue(of({ api_key: 'new-key' } as any));
 
         component.regenerateApiKey();
         tick();
@@ -246,7 +229,7 @@ describe('SiteDetailComponent', () => {
       }));
 
       it('should not regenerate on cancel', () => {
-        jest.spyOn(window, 'confirm').mockReturnValue(false);
+        spyOn(window, 'confirm').and.returnValue(false);
 
         component.regenerateApiKey();
 
@@ -256,7 +239,7 @@ describe('SiteDetailComponent', () => {
 
     describe('getLogs', () => {
       it('should request logs from service', fakeAsync(() => {
-        sitesService.sendCommand.mockReturnValue(of({ logs: 'log content' }));
+        sitesService.sendCommand.and.returnValue(of({ logs: 'log content' } as any));
 
         component.getLogs();
         tick();
@@ -267,7 +250,7 @@ describe('SiteDetailComponent', () => {
 
     describe('getSystemInfo', () => {
       it('should request system info', fakeAsync(() => {
-        sitesService.sendCommand.mockReturnValue(of({ info: 'system info' }));
+        sitesService.sendCommand.and.returnValue(of({ info: 'system info' } as any));
 
         component.getSystemInfo();
         tick();

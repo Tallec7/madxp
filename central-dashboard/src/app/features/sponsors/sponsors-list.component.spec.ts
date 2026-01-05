@@ -9,8 +9,8 @@ import { NotificationService } from '../../core/services/notification.service';
 describe('SponsorsListComponent', () => {
   let component: SponsorsListComponent;
   let fixture: ComponentFixture<SponsorsListComponent>;
-  let apiService: jest.Mocked<ApiService>;
-  let notificationService: jest.Mocked<NotificationService>;
+  let apiService: jasmine.SpyObj<ApiService>;
+  let notificationService: jasmine.SpyObj<NotificationService>;
 
   const mockSponsors = [
     {
@@ -38,16 +38,12 @@ describe('SponsorsListComponent', () => {
   ];
 
   beforeEach(async () => {
-    const apiServiceMock = {
-      get: jest.fn().mockReturnValue(of({ success: true, data: { advertisers: mockSponsors } })),
-      post: jest.fn().mockReturnValue(of({ success: true, data: { id: '4', name: 'New Sponsor' } })),
-      put: jest.fn().mockReturnValue(of({ success: true, data: { id: '1', name: 'Updated Sponsor' } })),
-    };
+    const apiServiceMock = jasmine.createSpyObj('ApiService', ['get', 'post', 'put']);
+    apiServiceMock.get.and.returnValue(of({ success: true, data: { advertisers: mockSponsors } }));
+    apiServiceMock.post.and.returnValue(of({ success: true, data: { id: '4', name: 'New Sponsor' } }));
+    apiServiceMock.put.and.returnValue(of({ success: true, data: { id: '1', name: 'Updated Sponsor' } }));
 
-    const notificationServiceMock = {
-      error: jest.fn(),
-      success: jest.fn(),
-    };
+    const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success']);
 
     await TestBed.configureTestingModule({
       imports: [SponsorsListComponent, FormsModule, RouterTestingModule],
@@ -59,8 +55,8 @@ describe('SponsorsListComponent', () => {
 
     fixture = TestBed.createComponent(SponsorsListComponent);
     component = fixture.componentInstance;
-    apiService = TestBed.inject(ApiService) as jest.Mocked<ApiService>;
-    notificationService = TestBed.inject(NotificationService) as jest.Mocked<NotificationService>;
+    apiService = TestBed.inject(ApiService) as jasmine.SpyObj<ApiService>;
+    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
   });
 
   it('should create', () => {
@@ -77,14 +73,14 @@ describe('SponsorsListComponent', () => {
       tick();
 
       expect(apiService.get).toHaveBeenCalledWith('/analytics/advertisers');
-      expect(component.sponsors).toHaveLength(3);
+      expect(component.sponsors.length).toBe(3);
     }));
 
     it('should set filtered sponsors after loading', fakeAsync(() => {
       fixture.detectChanges();
       tick();
 
-      expect(component.filteredSponsors).toHaveLength(3);
+      expect(component.filteredSponsors.length).toBe(3);
     }));
 
     it('should check permissions on init', fakeAsync(() => {
@@ -105,7 +101,7 @@ describe('SponsorsListComponent', () => {
     }));
 
     it('should show error notification on failure', fakeAsync(() => {
-      apiService.get.mockReturnValue(throwError(() => new Error('API Error')));
+      apiService.get.and.returnValue(throwError(() => new Error('API Error')));
 
       component.loadSponsors();
       tick();
@@ -124,7 +120,7 @@ describe('SponsorsListComponent', () => {
       component.searchTerm = 'Sponsor A';
       component.filterSponsors();
 
-      expect(component.filteredSponsors).toHaveLength(1);
+      expect(component.filteredSponsors.length).toBe(1);
       expect(component.filteredSponsors[0].name).toBe('Sponsor A');
     });
 
@@ -132,7 +128,7 @@ describe('SponsorsListComponent', () => {
       component.statusFilter = 'active';
       component.filterSponsors();
 
-      expect(component.filteredSponsors).toHaveLength(1);
+      expect(component.filteredSponsors.length).toBe(1);
       expect(component.filteredSponsors[0].status).toBe('active');
     });
 
@@ -140,7 +136,7 @@ describe('SponsorsListComponent', () => {
       component.searchTerm = 'John';
       component.filterSponsors();
 
-      expect(component.filteredSponsors).toHaveLength(1);
+      expect(component.filteredSponsors.length).toBe(1);
       expect(component.filteredSponsors[0].contact_name).toBe('John Doe');
     });
 
@@ -149,7 +145,7 @@ describe('SponsorsListComponent', () => {
       component.statusFilter = 'inactive';
       component.filterSponsors();
 
-      expect(component.filteredSponsors).toHaveLength(1);
+      expect(component.filteredSponsors.length).toBe(1);
       expect(component.filteredSponsors[0].name).toBe('Sponsor B');
     });
 
@@ -158,14 +154,14 @@ describe('SponsorsListComponent', () => {
       component.statusFilter = '';
       component.filterSponsors();
 
-      expect(component.filteredSponsors).toHaveLength(3);
+      expect(component.filteredSponsors.length).toBe(3);
     });
 
     it('should be case insensitive', () => {
       component.searchTerm = 'sponsor a';
       component.filterSponsors();
 
-      expect(component.filteredSponsors).toHaveLength(1);
+      expect(component.filteredSponsors.length).toBe(1);
     });
   });
 
@@ -211,7 +207,7 @@ describe('SponsorsListComponent', () => {
     });
 
     it('should open edit modal with sponsor data', () => {
-      const mockEvent = { stopPropagation: jest.fn() } as unknown as Event;
+      const mockEvent = { stopPropagation: jasmine.createSpy('stopPropagation') } as unknown as Event;
 
       component.editSponsor(mockEvent, mockSponsors[0]);
 
@@ -232,7 +228,7 @@ describe('SponsorsListComponent', () => {
 
   describe('saveSponsor', () => {
     const mockEvent = {
-      preventDefault: jest.fn(),
+      preventDefault: jasmine.createSpy('preventDefault'),
     } as unknown as Event;
 
     beforeEach(() => {
@@ -280,7 +276,7 @@ describe('SponsorsListComponent', () => {
     }));
 
     it('should show error notification on failure', fakeAsync(() => {
-      apiService.post.mockReturnValue(throwError(() => new Error('API Error')));
+      apiService.post.and.returnValue(throwError(() => new Error('API Error')));
 
       component.saveSponsor(mockEvent);
       tick();
@@ -289,7 +285,7 @@ describe('SponsorsListComponent', () => {
     }));
 
     it('should reload sponsors after successful save', fakeAsync(() => {
-      apiService.get.mockClear();
+      apiService.get.calls.reset();
 
       component.saveSponsor(mockEvent);
       tick();
@@ -300,19 +296,11 @@ describe('SponsorsListComponent', () => {
 
   describe('viewAnalytics', () => {
     it('should stop event propagation', () => {
-      const mockEvent = { stopPropagation: jest.fn() } as unknown as Event;
-
-      // Mock window.location.href
-      const originalLocation = window.location;
-      delete (window as { location?: Location }).location;
-      window.location = { ...originalLocation, href: '' };
+      const mockEvent = { stopPropagation: jasmine.createSpy('stopPropagation') } as unknown as Event;
 
       component.viewAnalytics(mockEvent, '1');
 
       expect(mockEvent.stopPropagation).toHaveBeenCalled();
-
-      // Restore window.location
-      window.location = originalLocation;
     });
   });
 

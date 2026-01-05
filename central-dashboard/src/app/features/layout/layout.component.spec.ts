@@ -11,10 +11,10 @@ import { Router } from '@angular/router';
 describe('LayoutComponent', () => {
   let component: LayoutComponent;
   let fixture: ComponentFixture<LayoutComponent>;
-  let authService: jest.Mocked<AuthService>;
-  let socketService: jest.Mocked<SocketService>;
-  let notificationService: jest.Mocked<NotificationService>;
-  let router: jest.Mocked<Router>;
+  let authService: jasmine.SpyObj<AuthService>;
+  let socketService: jasmine.SpyObj<SocketService>;
+  let notificationService: jasmine.SpyObj<NotificationService>;
+  let router: jasmine.SpyObj<Router>;
 
   const mockUser = {
     id: '1',
@@ -28,24 +28,21 @@ describe('LayoutComponent', () => {
   const eventsSubject = new Subject<{ type: string; data?: any }>();
 
   beforeEach(async () => {
-    const authServiceMock = {
-      currentUser$: currentUserSubject.asObservable(),
-      hasRole: jest.fn().mockReturnValue(true),
-      logout: jest.fn(),
-    };
+    const authServiceMock = jasmine.createSpyObj('AuthService', ['hasRole', 'logout'], {
+      currentUser$: currentUserSubject.asObservable()
+    });
+    authServiceMock.hasRole.and.returnValue(true);
 
-    const socketServiceMock = {
-      events$: eventsSubject.asObservable(),
-      isConnected: jest.fn().mockReturnValue(true),
-    };
+    const socketServiceMock = jasmine.createSpyObj('SocketService', ['isConnected'], {
+      events$: eventsSubject.asObservable()
+    });
+    socketServiceMock.isConnected.and.returnValue(true);
 
-    const notificationServiceMock = {
-      notification$: notificationSubject.asObservable(),
-    };
+    const notificationServiceMock = jasmine.createSpyObj('NotificationService', [], {
+      notification$: notificationSubject.asObservable()
+    });
 
-    const routerMock = {
-      navigate: jest.fn(),
-    };
+    const routerMock = jasmine.createSpyObj('Router', ['navigate']);
 
     await TestBed.configureTestingModule({
       imports: [LayoutComponent, RouterTestingModule, NoopAnimationsModule],
@@ -59,10 +56,10 @@ describe('LayoutComponent', () => {
 
     fixture = TestBed.createComponent(LayoutComponent);
     component = fixture.componentInstance;
-    authService = TestBed.inject(AuthService) as jest.Mocked<AuthService>;
-    socketService = TestBed.inject(SocketService) as jest.Mocked<SocketService>;
-    notificationService = TestBed.inject(NotificationService) as jest.Mocked<NotificationService>;
-    router = TestBed.inject(Router) as jest.Mocked<Router>;
+    authService = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
+    socketService = TestBed.inject(SocketService) as jasmine.SpyObj<SocketService>;
+    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
+    router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
   });
 
   afterEach(() => {
@@ -78,7 +75,7 @@ describe('LayoutComponent', () => {
       fixture.detectChanges();
       tick();
 
-      expect(component.currentUser).toEqual(mockUser);
+      expect(component.currentUser).toEqual(mockUser as any);
     }));
 
     it('should check socket connection status', () => {
@@ -90,7 +87,7 @@ describe('LayoutComponent', () => {
 
     it('should start with empty notifications', () => {
       fixture.detectChanges();
-      expect(component.notifications).toHaveLength(0);
+      expect(component.notifications.length).toBe(0);
     });
   });
 
@@ -118,26 +115,26 @@ describe('LayoutComponent', () => {
     it('should show notification on command_completed', () => {
       eventsSubject.next({ type: 'command_completed' });
 
-      expect(component.notifications).toHaveLength(1);
+      expect(component.notifications.length).toBe(1);
       expect(component.notifications[0].type).toBe('success');
     });
 
     it('should show notification on deploy_progress at 100%', () => {
       eventsSubject.next({ type: 'deploy_progress', data: { progress: 100 } });
 
-      expect(component.notifications).toHaveLength(1);
+      expect(component.notifications.length).toBe(1);
     });
 
     it('should not show notification on deploy_progress below 100%', () => {
       eventsSubject.next({ type: 'deploy_progress', data: { progress: 50 } });
 
-      expect(component.notifications).toHaveLength(0);
+      expect(component.notifications.length).toBe(0);
     });
 
     it('should show warning on alert_created', () => {
       eventsSubject.next({ type: 'alert_created', data: { message: 'Alert!' } });
 
-      expect(component.notifications).toHaveLength(1);
+      expect(component.notifications.length).toBe(1);
       expect(component.notifications[0].type).toBe('warning');
     });
   });
@@ -150,16 +147,16 @@ describe('LayoutComponent', () => {
     it('should add notification from service', () => {
       notificationSubject.next({ type: 'info', message: 'Test message' });
 
-      expect(component.notifications).toHaveLength(1);
+      expect(component.notifications.length).toBe(1);
       expect(component.notifications[0].message).toBe('Test message');
     });
 
     it('should auto-dismiss notification after 5 seconds', fakeAsync(() => {
       component.showNotification('info', 'Test');
-      expect(component.notifications).toHaveLength(1);
+      expect(component.notifications.length).toBe(1);
 
       tick(5000);
-      expect(component.notifications).toHaveLength(0);
+      expect(component.notifications.length).toBe(0);
     }));
 
     it('should dismiss notification manually', () => {
@@ -168,7 +165,7 @@ describe('LayoutComponent', () => {
 
       component.dismissNotification(notification);
 
-      expect(component.notifications).toHaveLength(0);
+      expect(component.notifications.length).toBe(0);
     });
 
     it('should increment notification id', () => {
@@ -200,12 +197,12 @@ describe('LayoutComponent', () => {
     });
 
     it('should return true when user has role', () => {
-      authService.hasRole.mockReturnValue(true);
+      authService.hasRole.and.returnValue(true);
       expect(component.canManageContent()).toBe(true);
     });
 
     it('should return false when user lacks role', () => {
-      authService.hasRole.mockReturnValue(false);
+      authService.hasRole.and.returnValue(false);
       expect(component.canManageContent()).toBe(false);
     });
   });
@@ -259,7 +256,7 @@ describe('LayoutComponent', () => {
 
   describe('logout', () => {
     it('should call authService.logout on confirm', () => {
-      jest.spyOn(window, 'confirm').mockReturnValue(true);
+      spyOn(window, 'confirm').and.returnValue(true);
 
       component.logout();
 
@@ -267,7 +264,7 @@ describe('LayoutComponent', () => {
     });
 
     it('should not logout on cancel', () => {
-      jest.spyOn(window, 'confirm').mockReturnValue(false);
+      spyOn(window, 'confirm').and.returnValue(false);
 
       component.logout();
 

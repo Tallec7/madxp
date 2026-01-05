@@ -11,11 +11,11 @@ import { NotificationService } from '../../core/services/notification.service';
 describe('ContentManagementComponent', () => {
   let component: ContentManagementComponent;
   let fixture: ComponentFixture<ContentManagementComponent>;
-  let apiService: jest.Mocked<ApiService>;
-  let sitesService: jest.Mocked<SitesService>;
-  let groupsService: jest.Mocked<GroupsService>;
-  let socketService: jest.Mocked<SocketService>;
-  let notificationService: jest.Mocked<NotificationService>;
+  let apiService: jasmine.SpyObj<ApiService>;
+  let sitesService: jasmine.SpyObj<SitesService>;
+  let groupsService: jasmine.SpyObj<GroupsService>;
+  let socketService: jasmine.SpyObj<SocketService>;
+  let notificationService: jasmine.SpyObj<NotificationService>;
 
   const mockVideos = [
     {
@@ -60,30 +60,22 @@ describe('ContentManagementComponent', () => {
   ];
 
   beforeEach(async () => {
-    const apiServiceMock = {
-      get: jest.fn().mockReturnValue(of([])),
-      post: jest.fn().mockReturnValue(of({})),
-      delete: jest.fn().mockReturnValue(of({})),
-      upload: jest.fn().mockReturnValue(of({})),
-    };
+    const apiServiceMock = jasmine.createSpyObj('ApiService', ['get', 'post', 'delete', 'upload']);
+    apiServiceMock.get.and.returnValue(of([]));
+    apiServiceMock.post.and.returnValue(of({}));
+    apiServiceMock.delete.and.returnValue(of({}));
+    apiServiceMock.upload.and.returnValue(of({}));
 
-    const sitesServiceMock = {
-      loadSites: jest.fn().mockReturnValue(of({ sites: mockSites, total: 1, page: 1, totalPages: 1 })),
-    };
+    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['loadSites']);
+    sitesServiceMock.loadSites.and.returnValue(of({ sites: mockSites, total: 1, page: 1, totalPages: 1 }));
 
-    const groupsServiceMock = {
-      loadGroups: jest.fn().mockReturnValue(of({ groups: mockGroups })),
-    };
+    const groupsServiceMock = jasmine.createSpyObj('GroupsService', ['loadGroups']);
+    groupsServiceMock.loadGroups.and.returnValue(of({ groups: mockGroups }));
 
-    const socketServiceMock = {
-      on: jest.fn().mockReturnValue(of({})),
-    };
+    const socketServiceMock = jasmine.createSpyObj('SocketService', ['on']);
+    socketServiceMock.on.and.returnValue(of({}));
 
-    const notificationServiceMock = {
-      error: jest.fn(),
-      success: jest.fn(),
-      warning: jest.fn(),
-    };
+    const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success', 'warning']);
 
     await TestBed.configureTestingModule({
       imports: [ContentManagementComponent, FormsModule],
@@ -98,11 +90,11 @@ describe('ContentManagementComponent', () => {
 
     fixture = TestBed.createComponent(ContentManagementComponent);
     component = fixture.componentInstance;
-    apiService = TestBed.inject(ApiService) as jest.Mocked<ApiService>;
-    sitesService = TestBed.inject(SitesService) as jest.Mocked<SitesService>;
-    groupsService = TestBed.inject(GroupsService) as jest.Mocked<GroupsService>;
-    socketService = TestBed.inject(SocketService) as jest.Mocked<SocketService>;
-    notificationService = TestBed.inject(NotificationService) as jest.Mocked<NotificationService>;
+    apiService = TestBed.inject(ApiService) as jasmine.SpyObj<ApiService>;
+    sitesService = TestBed.inject(SitesService) as jasmine.SpyObj<SitesService>;
+    groupsService = TestBed.inject(GroupsService) as jasmine.SpyObj<GroupsService>;
+    socketService = TestBed.inject(SocketService) as jasmine.SpyObj<SocketService>;
+    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
   });
 
   it('should create', () => {
@@ -115,7 +107,7 @@ describe('ContentManagementComponent', () => {
     });
 
     it('should load data on init', fakeAsync(() => {
-      apiService.get.mockReturnValue(of(mockVideos));
+      apiService.get.and.returnValue(of(mockVideos));
       fixture.detectChanges();
       tick();
 
@@ -182,23 +174,23 @@ describe('ContentManagementComponent', () => {
 
     it('should return all videos when no search', () => {
       component.videoSearch = '';
-      expect(component.filteredVideos()).toHaveLength(2);
+      expect(component.filteredVideos().length).toBe(2);
     });
 
     it('should filter by title', () => {
       component.videoSearch = 'Test';
-      expect(component.filteredVideos()).toHaveLength(1);
+      expect(component.filteredVideos().length).toBe(1);
       expect(component.filteredVideos()[0].title).toBe('Video Test');
     });
 
     it('should filter by filename', () => {
       component.videoSearch = 'another';
-      expect(component.filteredVideos()).toHaveLength(1);
+      expect(component.filteredVideos().length).toBe(1);
     });
 
     it('should be case insensitive', () => {
       component.videoSearch = 'VIDEO';
-      expect(component.filteredVideos()).toHaveLength(2);
+      expect(component.filteredVideos().length).toBe(2);
     });
   });
 
@@ -215,7 +207,7 @@ describe('ContentManagementComponent', () => {
       component.closeUploadModal();
 
       expect(component.showUploadModal).toBe(false);
-      expect(component.uploadForm.files).toHaveLength(0);
+      expect(component.uploadForm.files.length).toBe(0);
     });
 
     it('should not close modal while uploading', () => {
@@ -249,7 +241,7 @@ describe('ContentManagementComponent', () => {
 
       component.addFilesToSelection(files);
 
-      expect(component.uploadForm.files).toHaveLength(2);
+      expect(component.uploadForm.files.length).toBe(2);
     });
 
     it('should limit to 20 files', () => {
@@ -259,7 +251,7 @@ describe('ContentManagementComponent', () => {
 
       component.addFilesToSelection(files);
 
-      expect(component.uploadForm.files).toHaveLength(20);
+      expect(component.uploadForm.files.length).toBe(20);
       expect(notificationService.warning).toHaveBeenCalled();
     });
 
@@ -271,7 +263,7 @@ describe('ContentManagementComponent', () => {
 
       component.removeFile(0);
 
-      expect(component.uploadForm.files).toHaveLength(1);
+      expect(component.uploadForm.files.length).toBe(1);
       expect(component.uploadForm.files[0].name).toBe('video2.mp4');
     });
 
@@ -280,13 +272,13 @@ describe('ContentManagementComponent', () => {
 
       component.clearSelectedFiles();
 
-      expect(component.uploadForm.files).toHaveLength(0);
+      expect(component.uploadForm.files.length).toBe(0);
     });
   });
 
   describe('Drag and Drop', () => {
     it('should set isDragOver on drag over', () => {
-      const event = { preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as DragEvent;
+      const event = { preventDefault: jasmine.createSpy('preventDefault'), stopPropagation: jasmine.createSpy('stopPropagation') } as unknown as DragEvent;
 
       component.onDragOver(event);
 
@@ -296,7 +288,7 @@ describe('ContentManagementComponent', () => {
 
     it('should unset isDragOver on drag leave', () => {
       component.isDragOver = true;
-      const event = { preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as DragEvent;
+      const event = { preventDefault: jasmine.createSpy('preventDefault'), stopPropagation: jasmine.createSpy('stopPropagation') } as unknown as DragEvent;
 
       component.onDragLeave(event);
 
@@ -310,18 +302,18 @@ describe('ContentManagementComponent', () => {
     });
 
     it('should delete video on confirm', fakeAsync(() => {
-      jest.spyOn(window, 'confirm').mockReturnValue(true);
-      apiService.delete.mockReturnValue(of({}));
+      spyOn(window, 'confirm').and.returnValue(true);
+      apiService.delete.and.returnValue(of({}));
 
       component.deleteVideo(mockVideos[0]);
       tick();
 
       expect(apiService.delete).toHaveBeenCalledWith('/videos/1');
-      expect(component.videos).toHaveLength(1);
+      expect(component.videos.length).toBe(1);
     }));
 
     it('should not delete video on cancel', () => {
-      jest.spyOn(window, 'confirm').mockReturnValue(false);
+      spyOn(window, 'confirm').and.returnValue(false);
 
       component.deleteVideo(mockVideos[0]);
 
@@ -329,8 +321,8 @@ describe('ContentManagementComponent', () => {
     });
 
     it('should show error on failure', fakeAsync(() => {
-      jest.spyOn(window, 'confirm').mockReturnValue(true);
-      apiService.delete.mockReturnValue(throwError(() => ({ error: { error: 'Delete failed' } })));
+      spyOn(window, 'confirm').and.returnValue(true);
+      apiService.delete.and.returnValue(throwError(() => ({ error: { error: 'Delete failed' } })));
 
       component.deleteVideo(mockVideos[0]);
       tick();
@@ -356,7 +348,7 @@ describe('ContentManagementComponent', () => {
 
       component.deployVideo(mockVideos[0]);
 
-      expect(component.deployForm.videoIds).toHaveLength(1);
+      expect(component.deployForm.videoIds.length).toBe(1);
     });
 
     it('should get video title by id', () => {
@@ -382,7 +374,7 @@ describe('ContentManagementComponent', () => {
 
       component.clearSelectedVideos();
 
-      expect(component.deployForm.videoIds).toHaveLength(0);
+      expect(component.deployForm.videoIds.length).toBe(0);
     });
   });
 
@@ -447,7 +439,7 @@ describe('ContentManagementComponent', () => {
         stats: { total: 5, completed: 3, failed: 1, pending: 1, in_progress: 0 },
         deployments: [],
       };
-      apiService.get.mockReturnValue(of(mockHistory));
+      apiService.get.and.returnValue(of(mockHistory));
 
       component.showVideoHistory(mockVideos[0]);
       tick();
