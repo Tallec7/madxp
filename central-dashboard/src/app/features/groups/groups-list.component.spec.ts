@@ -11,9 +11,9 @@ import { Group, Site } from '../../core/models';
 describe('GroupsListComponent', () => {
   let component: GroupsListComponent;
   let fixture: ComponentFixture<GroupsListComponent>;
-  let groupsService: jest.Mocked<GroupsService>;
-  let sitesService: jest.Mocked<SitesService>;
-  let notificationService: jest.Mocked<NotificationService>;
+  let groupsService: jasmine.SpyObj<GroupsService>;
+  let sitesService: jasmine.SpyObj<SitesService>;
+  let notificationService: jasmine.SpyObj<NotificationService>;
 
   const mockGroups: Group[] = [
     {
@@ -49,23 +49,19 @@ describe('GroupsListComponent', () => {
   const groupsSubject = new BehaviorSubject<Group[]>(mockGroups);
 
   beforeEach(async () => {
-    const groupsServiceMock = {
-      groups$: groupsSubject.asObservable(),
-      loadGroups: jest.fn().mockReturnValue(of(mockGroups)),
-      createGroup: jest.fn().mockReturnValue(of({ id: '3', name: 'New Group' })),
-      updateGroup: jest.fn().mockReturnValue(of({ id: '1', name: 'Updated Group' })),
-      deleteGroup: jest.fn().mockReturnValue(of(undefined)),
-      getGroupSites: jest.fn().mockReturnValue(of({ sites: mockSites })),
-    };
+    const groupsServiceMock = jasmine.createSpyObj('GroupsService', ['loadGroups', 'createGroup', 'updateGroup', 'deleteGroup', 'getGroupSites'], {
+      groups$: groupsSubject.asObservable()
+    });
+    groupsServiceMock.loadGroups.and.returnValue(of(mockGroups));
+    groupsServiceMock.createGroup.and.returnValue(of({ id: '3', name: 'New Group' }));
+    groupsServiceMock.updateGroup.and.returnValue(of({ id: '1', name: 'Updated Group' }));
+    groupsServiceMock.deleteGroup.and.returnValue(of(undefined));
+    groupsServiceMock.getGroupSites.and.returnValue(of({ sites: mockSites }));
 
-    const sitesServiceMock = {
-      loadSites: jest.fn().mockReturnValue(of({ sites: mockSites, total: 1, page: 1, totalPages: 1 })),
-    };
+    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['loadSites']);
+    sitesServiceMock.loadSites.and.returnValue(of({ sites: mockSites, total: 1, page: 1, totalPages: 1 }));
 
-    const notificationServiceMock = {
-      error: jest.fn(),
-      success: jest.fn(),
-    };
+    const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success']);
 
     await TestBed.configureTestingModule({
       imports: [GroupsListComponent, FormsModule, RouterTestingModule],
@@ -78,9 +74,9 @@ describe('GroupsListComponent', () => {
 
     fixture = TestBed.createComponent(GroupsListComponent);
     component = fixture.componentInstance;
-    groupsService = TestBed.inject(GroupsService) as jest.Mocked<GroupsService>;
-    sitesService = TestBed.inject(SitesService) as jest.Mocked<SitesService>;
-    notificationService = TestBed.inject(NotificationService) as jest.Mocked<NotificationService>;
+    groupsService = TestBed.inject(GroupsService) as jasmine.SpyObj<GroupsService>;
+    sitesService = TestBed.inject(SitesService) as jasmine.SpyObj<SitesService>;
+    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
   });
 
   it('should create', () => {
@@ -287,7 +283,7 @@ describe('GroupsListComponent', () => {
     }));
 
     it('should show error on failure', fakeAsync(() => {
-      groupsService.createGroup.mockReturnValue(throwError(() => ({ error: { error: 'Error' } })));
+      groupsService.createGroup.and.returnValue(throwError(() => ({ error: { error: 'Error' } })));
 
       component.createGroup();
       tick();
@@ -322,20 +318,14 @@ describe('GroupsListComponent', () => {
   });
 
   describe('deleteGroup', () => {
-    beforeEach(() => {
-      jest.spyOn(window, 'confirm').mockReturnValue(true);
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
     it('should show confirmation', () => {
+      spyOn(window, 'confirm').and.returnValue(true);
       component.deleteGroup(mockGroups[0]);
       expect(window.confirm).toHaveBeenCalled();
     });
 
     it('should call deleteGroup on confirmation', fakeAsync(() => {
+      spyOn(window, 'confirm').and.returnValue(true);
       component.deleteGroup(mockGroups[0]);
       tick();
 
@@ -343,7 +333,7 @@ describe('GroupsListComponent', () => {
     }));
 
     it('should not delete if cancelled', () => {
-      jest.spyOn(window, 'confirm').mockReturnValue(false);
+      spyOn(window, 'confirm').and.returnValue(false);
 
       component.deleteGroup(mockGroups[0]);
 

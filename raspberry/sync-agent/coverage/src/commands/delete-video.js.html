@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">8.77% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/52</span>
+                <span class='fraction'>5/57</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/22</span>
+                <span class='fraction'>0/28</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">9.25% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/49</span>
+                <span class='fraction'>5/54</span>
             </div>
         
             
@@ -168,10 +168,19 @@
 <a name='L103'></a><a href='#L103'>103</a>
 <a name='L104'></a><a href='#L104'>104</a>
 <a name='L105'></a><a href='#L105'>105</a>
-<a name='L106'></a><a href='#L106'>106</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -262,6 +271,15 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -272,11 +290,11 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const fs = <span class="cstat-no" title="statement not covered" >require('fs-extra');</span>
-const path = <span class="cstat-no" title="statement not covered" >require('path');</span>
-const logger = <span class="cstat-no" title="statement not covered" >require('../logger');</span>
-const { config } = <span class="cstat-no" title="statement not covered" >require('../config');</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const fs = require('fs-extra');
+const path = require('path');
+const logger = require('../logger');
+const { config } = require('../config');
 &nbsp;
 function <span class="fstat-no" title="function not covered" >buildRelativePath(</span>videoData) {
   const segments = <span class="cstat-no" title="statement not covered" >['videos', videoData.category];</span>
@@ -367,6 +385,15 @@ class VideoDeleteHandler {
 <span class="cstat-no" title="statement not covered" >        category.videos = (category.videos || []).filter(filterFn);</span>
       }
 &nbsp;
+      // Aussi supprimer du tableau sponsors si présent
+<span class="cstat-no" title="statement not covered" >      if (configuration.sponsors &amp;&amp; Array.isArray(configuration.sponsors)) {</span>
+        const originalLength = <span class="cstat-no" title="statement not covered" >configuration.sponsors.length;</span>
+<span class="cstat-no" title="statement not covered" >        configuration.sponsors = configuration.sponsors.filter(filterFn);</span>
+<span class="cstat-no" title="statement not covered" >        if (configuration.sponsors.length &lt; originalLength) {</span>
+<span class="cstat-no" title="statement not covered" >          logger.info('Removed video from sponsors array', { path: relativePath });</span>
+        }
+      }
+&nbsp;
 <span class="cstat-no" title="statement not covered" >      await fs.writeFile(configPath, JSON.stringify(configuration, null, 2));</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      logger.info('Configuration updated after deletion');</span>
@@ -377,7 +404,7 @@ class VideoDeleteHandler {
   }
 }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >module.exports = new VideoDeleteHandler();</span>
+module.exports = new VideoDeleteHandler();
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -385,7 +412,7 @@ class VideoDeleteHandler {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-12-12T14:14:21.662Z
+                at 2026-01-03T18:45:27.573Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

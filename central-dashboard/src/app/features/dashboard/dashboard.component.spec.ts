@@ -7,7 +7,7 @@ import { SitesService } from '../../core/services/sites.service';
 describe('DashboardComponent', () => {
   let component: DashboardComponent;
   let fixture: ComponentFixture<DashboardComponent>;
-  let sitesService: jest.Mocked<SitesService>;
+  let sitesService: jasmine.SpyObj<SitesService>;
 
   const mockStats = {
     total_sites: 20,
@@ -41,10 +41,9 @@ describe('DashboardComponent', () => {
   ];
 
   beforeEach(async () => {
-    const sitesServiceMock = {
-      loadStats: jest.fn().mockReturnValue(of(mockStats)),
-      loadSites: jest.fn().mockReturnValue(of({ sites: mockSites, total: 2, page: 1, totalPages: 1 })),
-    };
+    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['loadStats', 'loadSites']);
+    sitesServiceMock.loadStats.and.returnValue(of(mockStats));
+    sitesServiceMock.loadSites.and.returnValue(of({ sites: mockSites, total: 2, page: 1, totalPages: 1 }));
 
     await TestBed.configureTestingModule({
       imports: [DashboardComponent, RouterTestingModule],
@@ -53,7 +52,7 @@ describe('DashboardComponent', () => {
 
     fixture = TestBed.createComponent(DashboardComponent);
     component = fixture.componentInstance;
-    sitesService = TestBed.inject(SitesService) as jest.Mocked<SitesService>;
+    sitesService = TestBed.inject(SitesService) as jasmine.SpyObj<SitesService>;
   });
 
   it('should create', () => {
@@ -82,7 +81,7 @@ describe('DashboardComponent', () => {
       tick();
 
       expect(sitesService.loadSites).toHaveBeenCalled();
-      expect(component.recentSites).toHaveLength(2);
+      expect(component.recentSites.length).toBe(2);
     }));
 
     it('should limit recent sites to 5', fakeAsync(() => {
@@ -97,14 +96,14 @@ describe('DashboardComponent', () => {
           location: { city: 'Paris', region: 'Ile-de-France', country: 'France' },
           sports: [],
           last_seen_at: new Date(),
-        }));
+        })) as any;
 
-      sitesService.loadSites.mockReturnValue(of({ sites: manySites, total: 10, page: 1, totalPages: 1 }));
+      sitesService.loadSites.and.returnValue(of({ sites: manySites, total: 10, page: 1, totalPages: 1 }));
 
       fixture.detectChanges();
       tick();
 
-      expect(component.recentSites).toHaveLength(5);
+      expect(component.recentSites.length).toBe(5);
     }));
   });
 
@@ -122,7 +121,7 @@ describe('DashboardComponent', () => {
       component.loadRecentSites();
       tick();
 
-      expect(component.recentSites).toHaveLength(2);
+      expect(component.recentSites.length).toBe(2);
       expect(component.recentSites[0].club_name).toBe('Club A');
     }));
   });
@@ -206,7 +205,7 @@ describe('DashboardComponent', () => {
     });
 
     it('should show empty state when no sites', fakeAsync(() => {
-      sitesService.loadSites.mockReturnValue(of({ sites: [], total: 0, page: 1, totalPages: 0 }));
+      sitesService.loadSites.and.returnValue(of({ sites: [], total: 0, page: 1, totalPages: 0 }));
       component.recentSites = [];
       fixture.detectChanges();
 

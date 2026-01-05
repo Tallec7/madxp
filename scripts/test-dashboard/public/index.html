@@ -550,6 +550,249 @@
           grid-template-columns: repeat(2, 1fr);
         }
       }
+
+      /* Project Cards */
+      .project-card {
+        background: #1a1a2e;
+        border-radius: 12px;
+        border: 1px solid #2a2a4a;
+        margin-bottom: 16px;
+        overflow: hidden;
+        transition: all 0.2s;
+      }
+      .project-card:hover {
+        border-color: #667eea;
+      }
+      .project-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        background: #252542;
+        cursor: pointer;
+      }
+      .project-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .project-icon {
+        font-size: 24px;
+      }
+      .project-name {
+        font-weight: 600;
+        font-size: 16px;
+      }
+      .project-meta {
+        font-size: 12px;
+        color: #888;
+        margin-top: 2px;
+      }
+      .project-stats {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .project-stat {
+        text-align: center;
+      }
+      .project-stat-value {
+        font-size: 18px;
+        font-weight: 700;
+      }
+      .project-stat-label {
+        font-size: 11px;
+        color: #888;
+        text-transform: uppercase;
+      }
+      .project-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .project-content {
+        padding: 0;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+      }
+      .project-card.expanded .project-content {
+        max-height: 2000px;
+        padding: 16px 20px;
+      }
+      .project-status {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .project-status.idle {
+        background: #2a2a4a;
+        color: #888;
+      }
+      .project-status.running {
+        background: #667eea;
+        color: white;
+        animation: pulse 1.5s infinite;
+      }
+      .project-status.passed {
+        background: #10b981;
+        color: white;
+      }
+      .project-status.failed {
+        background: #ef4444;
+        color: white;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+      }
+
+      /* Test File List */
+      .test-file {
+        background: #0f0f1a;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        overflow: hidden;
+      }
+      .test-file-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .test-file-header:hover {
+        background: #1a1a2e;
+      }
+      .test-file-name {
+        font-family: 'Monaco', 'Menlo', monospace;
+        font-size: 13px;
+        color: #e0e0e0;
+      }
+      .test-file-count {
+        background: #252542;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        color: #888;
+      }
+      .test-file-content {
+        display: none;
+        padding: 0 16px 12px;
+      }
+      .test-file.expanded .test-file-content {
+        display: block;
+      }
+      .test-suite {
+        margin-bottom: 12px;
+      }
+      .test-suite-name {
+        font-size: 12px;
+        color: #667eea;
+        margin-bottom: 6px;
+        font-weight: 600;
+      }
+      .test-case {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+        color: #888;
+        background: #1a1a2e;
+        border-radius: 4px;
+        margin-bottom: 4px;
+      }
+      .test-case-icon {
+        font-size: 10px;
+      }
+      .test-case-name {
+        flex: 1;
+      }
+      .test-case-line {
+        font-size: 10px;
+        color: #666;
+      }
+
+      /* Framework Badge */
+      .framework-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .framework-badge.jest {
+        background: #c21325;
+        color: white;
+      }
+      .framework-badge.karma {
+        background: #00c7b7;
+        color: white;
+      }
+      .framework-badge.playwright {
+        background: #2ead33;
+        color: white;
+      }
+
+      /* Summary Card Enhanced */
+      .summary-card {
+        background: #1a1a2e;
+        border-radius: 12px;
+        padding: 16px;
+        border: 1px solid #2a2a4a;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .summary-card:hover {
+        border-color: #667eea;
+        transform: translateY(-2px);
+      }
+      .summary-card-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .summary-card-icon {
+        font-size: 24px;
+      }
+      .summary-card-title {
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .summary-card-stats {
+        display: flex;
+        justify-content: space-between;
+      }
+      .summary-stat {
+        text-align: center;
+      }
+      .summary-stat-value {
+        font-size: 20px;
+        font-weight: 700;
+      }
+      .summary-stat-value.success {
+        color: #10b981;
+      }
+      .summary-stat-value.danger {
+        color: #ef4444;
+      }
+      .summary-stat-value.warning {
+        color: #f59e0b;
+      }
+      .summary-stat-label {
+        font-size: 10px;
+        color: #888;
+      }
     </style>
   </head>
   <body>
@@ -573,6 +816,9 @@
           </li>
           <li class="nav-item" onclick="showPage('history')">
             <span class="nav-icon">📜</span> Historique
+          </li>
+          <li class="nav-item" onclick="showPage('tests')">
+            <span class="nav-icon">🧪</span> Tests par Projet
           </li>
         </ul>
 
@@ -1037,6 +1283,51 @@
               <div class="empty-state">
                 <div class="empty-icon">📜</div>
                 <p>Aucune session enregistrée</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Page: Tests par Projet -->
+        <div id="page-tests" class="page" style="display: none">
+          <div class="page-header">
+            <div style="display: flex; justify-content: space-between; align-items: center">
+              <div>
+                <h1 class="page-title">Tests par Projet</h1>
+                <p class="page-subtitle">Vue détaillée des tests unitaires et E2E</p>
+              </div>
+              <div class="btn-group">
+                <button class="btn btn-primary" onclick="runAllProjectTests()" id="btnRunAll">
+                  ▶ Lancer Tous les Tests
+                </button>
+                <button class="btn btn-secondary" onclick="refreshProjects()">🔄 Rafraîchir</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary Cards -->
+          <div class="results-grid" id="projectSummary">
+            <!-- Généré dynamiquement -->
+          </div>
+
+          <!-- Liste des projets -->
+          <div id="projectsList">
+            <div class="empty-state">
+              <div class="empty-icon">⏳</div>
+              <p>Chargement des projets...</p>
+            </div>
+          </div>
+
+          <!-- Détails du test sélectionné -->
+          <div class="card" id="testDetailsCard" style="display: none; margin-top: 20px">
+            <div class="card-header">
+              <span class="card-title" id="testDetailsTitle">Détails du Test</span>
+              <button class="btn btn-secondary btn-sm" onclick="closeTestDetails()">✕</button>
+            </div>
+            <div class="card-body">
+              <div id="testDetailsContent"></div>
+              <div class="console" id="testOutput" style="margin-top: 15px; max-height: 300px">
+                Aucune sortie
               </div>
             </div>
           </div>
@@ -1595,8 +1886,428 @@
         if (e.key === 'Enter') addNote();
       });
 
+      // ==========================================
+      // Tests par Projet
+      // ==========================================
+
+      let projects = [];
+      let projectTests = {};
+      let projectStatuses = {};
+      let pollingIntervals = {};
+
+      // Charger les projets
+      async function loadProjects() {
+        try {
+          const res = await fetch('/api/projects');
+          projects = await res.json();
+          renderProjects();
+          loadAllProjectStatuses();
+        } catch (e) {
+          console.error('Failed to load projects:', e);
+        }
+      }
+
+      // Charger les statuts de tous les projets
+      async function loadAllProjectStatuses() {
+        for (const project of projects) {
+          await loadProjectStatus(project.id);
+        }
+        renderProjectSummary();
+      }
+
+      // Charger le statut d'un projet
+      async function loadProjectStatus(projectId) {
+        try {
+          const res = await fetch(`/api/projects/${projectId}/status`);
+          projectStatuses[projectId] = await res.json();
+
+          // Si en cours, commencer le polling
+          if (projectStatuses[projectId].status === 'running' && !pollingIntervals[projectId]) {
+            startPolling(projectId);
+          }
+        } catch (e) {
+          projectStatuses[projectId] = { status: 'idle' };
+        }
+      }
+
+      // Charger les tests d'un projet
+      async function loadProjectTests(projectId) {
+        if (projectTests[projectId]) return projectTests[projectId];
+
+        try {
+          const res = await fetch(`/api/projects/${projectId}/tests`);
+          const data = await res.json();
+          projectTests[projectId] = data;
+          return data;
+        } catch (e) {
+          return { tests: [] };
+        }
+      }
+
+      // Rendre le résumé des projets
+      function renderProjectSummary() {
+        const container = document.getElementById('projectSummary');
+        if (!projects.length) return;
+
+        let totalPassed = 0,
+          totalFailed = 0,
+          totalTests = 0;
+
+        projects.forEach((p) => {
+          const status = projectStatuses[p.id];
+          if (status?.results) {
+            totalPassed += status.results.passed || 0;
+            totalFailed += status.results.failed || 0;
+            totalTests += status.results.total || 0;
+          }
+        });
+
+        container.innerHTML = projects
+          .map((p) => {
+            const status = projectStatuses[p.id] || { status: 'idle' };
+            const results = status.results || { passed: 0, failed: 0, total: 0 };
+
+            return `
+            <div class="summary-card" onclick="scrollToProject('${p.id}')">
+              <div class="summary-card-header">
+                <span class="summary-card-icon">${p.icon}</span>
+                <span class="summary-card-title">${p.name}</span>
+              </div>
+              <div class="summary-card-stats">
+                <div class="summary-stat">
+                  <div class="summary-stat-value success">${results.passed}</div>
+                  <div class="summary-stat-label">Passés</div>
+                </div>
+                <div class="summary-stat">
+                  <div class="summary-stat-value danger">${results.failed}</div>
+                  <div class="summary-stat-label">Échoués</div>
+                </div>
+                <div class="summary-stat">
+                  <div class="summary-stat-value warning">${results.total}</div>
+                  <div class="summary-stat-label">Total</div>
+                </div>
+              </div>
+            </div>
+          `;
+          })
+          .join('');
+      }
+
+      // Rendre la liste des projets
+      function renderProjects() {
+        const container = document.getElementById('projectsList');
+
+        if (!projects.length) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">📦</div>
+              <p>Aucun projet trouvé</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = projects
+          .map((p) => {
+            const status = projectStatuses[p.id] || { status: 'idle' };
+            const results = status.results || {};
+            const hasFailedTests = results.failedTests && results.failedTests.length > 0;
+
+            return `
+            <div class="project-card" id="project-${p.id}">
+              <div class="project-header" onclick="toggleProject('${p.id}')">
+                <div class="project-info">
+                  <span class="project-icon">${p.icon}</span>
+                  <div>
+                    <div class="project-name">${p.name}</div>
+                    <div class="project-meta">
+                      <span class="framework-badge ${p.framework}">${p.framework}</span>
+                      ${p.path}
+                    </div>
+                  </div>
+                </div>
+                <div class="project-stats">
+                  ${
+                    results.passed !== undefined
+                      ? `
+                    <div class="project-stat">
+                      <div class="project-stat-value" style="color: #10b981">${results.passed}</div>
+                      <div class="project-stat-label">Passés</div>
+                    </div>
+                    <div class="project-stat">
+                      <div class="project-stat-value" style="color: #ef4444">${results.failed}</div>
+                      <div class="project-stat-label">Échoués</div>
+                    </div>
+                    <div class="project-stat">
+                      <div class="project-stat-value" style="color: #888">${results.total}</div>
+                      <div class="project-stat-label">Total</div>
+                    </div>
+                  `
+                      : ''
+                  }
+                  <span class="project-status ${status.status}">${getStatusLabel(status.status)}</span>
+                  <div class="project-actions" onclick="event.stopPropagation()">
+                    <button class="btn btn-secondary btn-sm" onclick="showProjectOutput('${p.id}')" title="Voir la sortie">📋</button>
+                    <button class="btn btn-primary btn-sm" onclick="runProjectTests('${p.id}')" ${status.status === 'running' ? 'disabled' : ''}>
+                      ${status.status === 'running' ? '<div class="spinner" style="width:14px;height:14px"></div>' : '▶'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="project-content" id="project-content-${p.id}">
+                ${hasFailedTests ? renderFailedTests(p.id, results.failedTests) : ''}
+                <div class="empty-state">
+                  <div class="empty-icon">⏳</div>
+                  <p>Cliquez pour voir les tests...</p>
+                </div>
+              </div>
+            </div>
+          `;
+          })
+          .join('');
+      }
+
+      // Rendre les tests échoués
+      function renderFailedTests(projectId, failedTests) {
+        if (!failedTests || failedTests.length === 0) return '';
+
+        return `
+          <div style="margin-bottom: 16px;">
+            <div style="color: #ef4444; font-weight: 600; margin-bottom: 8px;">
+              ❌ ${failedTests.length} test(s) échoué(s)
+            </div>
+            ${failedTests
+              .map(
+                (test) => `
+              <div class="failed-item">
+                <div class="failed-name">${escapeHtml(test.name)}</div>
+                ${test.file ? `<div style="font-size: 11px; color: #888; margin-bottom: 8px;">${escapeHtml(test.file)}</div>` : ''}
+                ${test.message ? `<div class="failed-error">${escapeHtml(test.message.substring(0, 500))}${test.message.length > 500 ? '...' : ''}</div>` : ''}
+              </div>
+            `,
+              )
+              .join('')}
+          </div>
+        `;
+      }
+
+      // Afficher la sortie complète d'un projet
+      function showProjectOutput(projectId) {
+        const status = projectStatuses[projectId];
+        if (!status || !status.output) {
+          showToast('Aucune sortie disponible', 'error');
+          return;
+        }
+
+        const card = document.getElementById('testDetailsCard');
+        const title = document.getElementById('testDetailsTitle');
+        const output = document.getElementById('testOutput');
+
+        const project = projects.find((p) => p.id === projectId);
+        title.textContent = `Sortie: ${project?.name || projectId}`;
+
+        // Coloriser la sortie
+        let html = escapeHtml(status.output);
+        html = html.replace(
+          /PASS/g,
+          '<span style="color: #10b981; font-weight: bold;">PASS</span>',
+        );
+        html = html.replace(
+          /FAIL/g,
+          '<span style="color: #ef4444; font-weight: bold;">FAIL</span>',
+        );
+        html = html.replace(/✓/g, '<span style="color: #10b981;">✓</span>');
+        html = html.replace(/✕/g, '<span style="color: #ef4444;">✕</span>');
+        html = html.replace(
+          /Error:/g,
+          '<span style="color: #ef4444; font-weight: bold;">Error:</span>',
+        );
+
+        output.innerHTML = html;
+        card.style.display = 'block';
+        card.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      // Toggle un projet (expand/collapse)
+      async function toggleProject(projectId) {
+        const card = document.getElementById(`project-${projectId}`);
+        const content = document.getElementById(`project-content-${projectId}`);
+
+        if (card.classList.contains('expanded')) {
+          card.classList.remove('expanded');
+        } else {
+          card.classList.add('expanded');
+
+          // Charger les tests si pas encore fait
+          content.innerHTML = `
+            <div class="empty-state">
+              <div class="spinner" style="margin: 0 auto"></div>
+              <p style="margin-top: 10px">Chargement des tests...</p>
+            </div>
+          `;
+
+          const data = await loadProjectTests(projectId);
+          renderProjectTests(projectId, data);
+        }
+      }
+
+      // Rendre les tests d'un projet
+      function renderProjectTests(projectId, data) {
+        const content = document.getElementById(`project-content-${projectId}`);
+
+        if (!data.tests || data.tests.length === 0) {
+          content.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">📝</div>
+              <p>Aucun fichier de test trouvé</p>
+            </div>
+          `;
+          return;
+        }
+
+        content.innerHTML = `
+          <div style="margin-bottom: 12px; color: #888; font-size: 13px;">
+            ${data.count} fichiers de tests trouvés
+          </div>
+          ${data.tests
+            .map(
+              (test) => `
+            <div class="test-file" id="test-file-${projectId}-${test.name}">
+              <div class="test-file-header" onclick="toggleTestFile('${projectId}', '${test.name}')">
+                <span class="test-file-name">📄 ${test.file}</span>
+                <span class="test-file-count">${test.testCount} tests</span>
+              </div>
+              <div class="test-file-content">
+                ${test.testCases
+                  .map(
+                    (suite) => `
+                  <div class="test-suite">
+                    <div class="test-suite-name">📦 ${escapeHtml(suite.name)}</div>
+                    ${suite.tests
+                      .map(
+                        (t) => `
+                      <div class="test-case">
+                        <span class="test-case-icon">○</span>
+                        <span class="test-case-name">${escapeHtml(t.name)}</span>
+                        <span class="test-case-line">L${t.line}</span>
+                      </div>
+                    `,
+                      )
+                      .join('')}
+                  </div>
+                `,
+                  )
+                  .join('')}
+              </div>
+            </div>
+          `,
+            )
+            .join('')}
+        `;
+      }
+
+      // Toggle un fichier de test
+      function toggleTestFile(projectId, testName) {
+        const file = document.getElementById(`test-file-${projectId}-${testName}`);
+        file.classList.toggle('expanded');
+      }
+
+      // Lancer les tests d'un projet
+      async function runProjectTests(projectId) {
+        try {
+          const res = await fetch(`/api/projects/${projectId}/run`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          if (res.ok) {
+            showToast(
+              `Tests démarrés pour ${projects.find((p) => p.id === projectId)?.name}`,
+              'success',
+            );
+            projectStatuses[projectId] = { status: 'running' };
+            renderProjects();
+            startPolling(projectId);
+          } else {
+            const error = await res.json();
+            showToast(error.error || 'Erreur', 'error');
+          }
+        } catch (e) {
+          showToast('Erreur de connexion', 'error');
+        }
+      }
+
+      // Polling pour suivre l'exécution
+      function startPolling(projectId) {
+        if (pollingIntervals[projectId]) return;
+
+        pollingIntervals[projectId] = setInterval(async () => {
+          await loadProjectStatus(projectId);
+          renderProjects();
+          renderProjectSummary();
+
+          // Arrêter le polling si terminé
+          if (projectStatuses[projectId]?.status !== 'running') {
+            clearInterval(pollingIntervals[projectId]);
+            delete pollingIntervals[projectId];
+
+            // Afficher le résultat
+            const status = projectStatuses[projectId];
+            if (status.status === 'passed') {
+              showToast(`Tests réussis: ${status.results?.passed || 0} passés`, 'success');
+            } else if (status.status === 'failed') {
+              showToast(`Tests échoués: ${status.results?.failed || 0} échecs`, 'error');
+            }
+          }
+        }, 2000);
+      }
+
+      // Lancer tous les tests
+      async function runAllProjectTests() {
+        for (const project of projects) {
+          if (!projectStatuses[project.id] || projectStatuses[project.id].status !== 'running') {
+            await runProjectTests(project.id);
+            // Petite pause entre chaque lancement
+            await new Promise((r) => setTimeout(r, 500));
+          }
+        }
+      }
+
+      // Rafraîchir les projets
+      function refreshProjects() {
+        projectTests = {};
+        loadProjects();
+        showToast('Projets rafraîchis', 'success');
+      }
+
+      // Scroll vers un projet
+      function scrollToProject(projectId) {
+        const el = document.getElementById(`project-${projectId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          toggleProject(projectId);
+        }
+      }
+
+      // Fermer les détails du test
+      function closeTestDetails() {
+        document.getElementById('testDetailsCard').style.display = 'none';
+      }
+
+      // Helper pour le label de statut
+      function getStatusLabel(status) {
+        const labels = {
+          idle: 'En attente',
+          running: 'En cours...',
+          passed: 'Réussi',
+          failed: 'Échoué',
+        };
+        return labels[status] || status;
+      }
+
       // Init
       loadData();
+      loadProjects();
     </script>
   </body>
 </html>

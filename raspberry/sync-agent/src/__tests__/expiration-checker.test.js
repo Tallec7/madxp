@@ -1,17 +1,28 @@
 /**
  * Tests pour le service de verification d'expiration des videos
+ *
+ * L'ExpirationChecker supprime automatiquement les videos avec une date expires_at
+ * depassee et met a jour la configuration en consequence.
  */
 
 const fs = require('fs-extra');
 const path = require('path');
 
-// Mock du config
+// Mock de socket.io-client
+jest.mock('socket.io-client', () => {
+  return jest.fn(() => ({
+    emit: jest.fn(),
+    close: jest.fn(),
+  }));
+});
+
+// Mock du config - utiliser un repertoire unique pour ce test
 jest.mock('../config', () => ({
   config: {
     paths: {
-      root: '/tmp/neopro-test',
-      videos: '/tmp/neopro-test/videos',
-      config: '/tmp/neopro-test/configuration.json',
+      root: '/tmp/neopro-test-expiration',
+      videos: '/tmp/neopro-test-expiration/videos',
+      config: '/tmp/neopro-test-expiration/configuration.json',
     },
   },
 }));
@@ -27,9 +38,9 @@ jest.mock('../logger', () => ({
 const expirationChecker = require('../tasks/expiration-checker');
 
 describe('ExpirationChecker', () => {
-  const testDir = '/tmp/neopro-test';
-  const videosDir = '/tmp/neopro-test/videos';
-  const configPath = '/tmp/neopro-test/configuration.json';
+  const testDir = '/tmp/neopro-test-expiration';
+  const videosDir = '/tmp/neopro-test-expiration/videos';
+  const configPath = '/tmp/neopro-test-expiration/configuration.json';
 
   beforeEach(async () => {
     // Nettoyer et recreer les repertoires
@@ -41,10 +52,12 @@ describe('ExpirationChecker', () => {
 
   afterEach(async () => {
     await fs.remove(testDir);
+    // Arreter le checker si demarre
+    expirationChecker.stop();
   });
 
   describe('checkExpiredVideos', () => {
-    test('should identify expired videos', async () => {
+    test('should identify and remove expired videos', async () => {
       // Creer une configuration avec une video expiree
       const expiredDate = new Date(Date.now() - 86400000).toISOString(); // Hier
       const config = {
@@ -72,13 +85,18 @@ describe('ExpirationChecker', () => {
       await fs.writeFile(videoPath, 'dummy video content');
 
       // Verifier les expirations
-      const expired = await expirationChecker.checkExpiredVideos();
+      const result = await expirationChecker.checkExpiredVideos();
 
-      expect(expired).toBeInstanceOf(Array);
-      expect(expired.length).toBeGreaterThanOrEqual(0);
+      // L'API retourne un objet avec checked et removed
+      expect(result).toHaveProperty('checked');
+      expect(result).toHaveProperty('removed');
+      expect(result.removed).toBe(1);
+
+      // Le fichier devrait etre supprime
+      expect(await fs.pathExists(videoPath)).toBe(false);
     });
 
-    test('should not flag non-expired videos', async () => {
+    test('should not remove non-expired videos', async () => {
       // Creer une configuration avec une video non expiree
       const futureDate = new Date(Date.now() + 86400000 * 30).toISOString(); // Dans 30 jours
       const config = {
@@ -106,11 +124,13 @@ describe('ExpirationChecker', () => {
       await fs.writeFile(videoPath, 'dummy video content');
 
       // Verifier les expirations
-      const expired = await expirationChecker.checkExpiredVideos();
+      const result = await expirationChecker.checkExpiredVideos();
 
-      // La video valide ne devrait pas etre dans la liste des expirees
-      const hasValidVideo = expired.some((v) => v.name === 'valid-video');
-      expect(hasValidVideo).toBe(false);
+      expect(result.removed).toBe(0);
+      expect(result.checked).toBe(1);
+
+      // Le fichier devrait toujours exister
+      expect(await fs.pathExists(videoPath)).toBe(true);
     });
 
     test('should handle videos without expiration date', async () => {
@@ -134,8 +154,9 @@ describe('ExpirationChecker', () => {
       await fs.writeJson(configPath, config);
 
       // Ne devrait pas lever d'erreur
-      const expired = await expirationChecker.checkExpiredVideos();
-      expect(expired).toBeInstanceOf(Array);
+      const result = await expirationChecker.checkExpiredVideos();
+      expect(result.checked).toBe(1);
+      expect(result.removed).toBe(0);
     });
 
     test('should handle empty configuration', async () => {
@@ -143,32 +164,35 @@ describe('ExpirationChecker', () => {
 
       await fs.writeJson(configPath, config);
 
-      const expired = await expirationChecker.checkExpiredVideos();
-      expect(expired).toEqual([]);
+      const result = await expirationChecker.checkExpiredVideos();
+      expect(result).toEqual({ checked: 0, removed: 0 });
     });
 
     test('should handle missing configuration file', async () => {
       // Ne pas creer le fichier de config
 
-      const expired = await expirationChecker.checkExpiredVideos();
-      expect(expired).toEqual([]);
+      const result = await expirationChecker.checkExpiredVideos();
+      expect(result).toEqual({ checked: 0, removed: 0 });
     });
-  });
 
-  describe('removeExpiredVideo', () => {
-    test('should remove video file when removing expired video', async () => {
+    test('should handle subcategories', async () => {
+      const expiredDate = new Date(Date.now() - 86400000).toISOString();
       const config = {
         categories: [
           {
             id: 'neopro',
             name: 'NEOPRO',
-            videos: [
+            videos: [],
+            subCategories: [
               {
-                name: 'to-remove',
-                filename: 'remove.mp4',
-                path: 'videos/NEOPRO/remove.mp4',
-                expires_at: new Date(Date.now() - 86400000).toISOString(),
-                locked: true,
+                name: 'promo',
+                videos: [
+                  {
+                    name: 'sub-expired',
+                    path: 'videos/NEOPRO/promo/expired.mp4',
+                    expires_at: expiredDate,
+                  },
+                ],
               },
             ],
           },
@@ -176,21 +200,35 @@ describe('ExpirationChecker', () => {
       };
 
       await fs.writeJson(configPath, config);
+      await fs.ensureDir(path.join(videosDir, 'NEOPRO', 'promo'));
+      await fs.writeFile(path.join(videosDir, 'NEOPRO', 'promo', 'expired.mp4'), 'content');
 
-      const videoPath = path.join(videosDir, 'NEOPRO', 'remove.mp4');
-      await fs.writeFile(videoPath, 'dummy content');
+      const result = await expirationChecker.checkExpiredVideos();
+      expect(result.removed).toBe(1);
+    });
+  });
 
-      // Verifier que le fichier existe
-      expect(await fs.pathExists(videoPath)).toBe(true);
+  describe('start and stop', () => {
+    test('should start periodic checking', () => {
+      expirationChecker.start();
+      expect(expirationChecker.intervalHandle).not.toBeNull();
+      expirationChecker.stop();
+    });
 
-      // Supprimer la video expiree
-      await expirationChecker.removeExpiredVideo(
-        config.categories[0].videos[0],
-        config.categories[0]
-      );
+    test('should stop periodic checking', () => {
+      expirationChecker.start();
+      expirationChecker.stop();
+      expect(expirationChecker.intervalHandle).toBeNull();
+    });
+  });
 
-      // Le fichier devrait etre supprime
-      expect(await fs.pathExists(videoPath)).toBe(false);
+  describe('forceCheck', () => {
+    test('should trigger immediate check', async () => {
+      const config = { categories: [] };
+      await fs.writeJson(configPath, config);
+
+      const result = await expirationChecker.forceCheck();
+      expect(result).toEqual({ checked: 0, removed: 0 });
     });
   });
 });

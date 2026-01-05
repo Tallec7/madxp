@@ -10,8 +10,8 @@ import { Site } from '../../core/models';
 describe('SitesListComponent', () => {
   let component: SitesListComponent;
   let fixture: ComponentFixture<SitesListComponent>;
-  let sitesService: jest.Mocked<SitesService>;
-  let notificationService: jest.Mocked<NotificationService>;
+  let sitesService: jasmine.SpyObj<SitesService>;
+  let notificationService: jasmine.SpyObj<NotificationService>;
 
   const mockSites: Site[] = [
     {
@@ -39,18 +39,15 @@ describe('SitesListComponent', () => {
   const sitesSubject = new BehaviorSubject<Site[]>(mockSites);
 
   beforeEach(async () => {
-    const sitesServiceMock = {
+    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['loadSites', 'createSite', 'updateSite', 'deleteSite'], {
       sites$: sitesSubject.asObservable(),
-      loadSites: jest.fn().mockReturnValue(of({ sites: mockSites, total: 2, page: 1, totalPages: 1 })),
-      createSite: jest.fn().mockReturnValue(of({ id: '3', site_name: 'New Site' })),
-      updateSite: jest.fn().mockReturnValue(of({ id: '1', site_name: 'Updated Site' })),
-      deleteSite: jest.fn().mockReturnValue(of(undefined)),
-    };
+    });
+    sitesServiceMock.loadSites.and.returnValue(of({ sites: mockSites, total: 2, page: 1, totalPages: 1 }));
+    sitesServiceMock.createSite.and.returnValue(of({ id: '3', site_name: 'New Site' }));
+    sitesServiceMock.updateSite.and.returnValue(of({ id: '1', site_name: 'Updated Site' }));
+    sitesServiceMock.deleteSite.and.returnValue(of(undefined));
 
-    const notificationServiceMock = {
-      error: jest.fn(),
-      success: jest.fn(),
-    };
+    const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success']);
 
     await TestBed.configureTestingModule({
       imports: [SitesListComponent, FormsModule, RouterTestingModule],
@@ -62,8 +59,8 @@ describe('SitesListComponent', () => {
 
     fixture = TestBed.createComponent(SitesListComponent);
     component = fixture.componentInstance;
-    sitesService = TestBed.inject(SitesService) as jest.Mocked<SitesService>;
-    notificationService = TestBed.inject(NotificationService) as jest.Mocked<NotificationService>;
+    sitesService = TestBed.inject(SitesService) as jasmine.SpyObj<SitesService>;
+    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
   });
 
   it('should create', () => {
@@ -151,7 +148,7 @@ describe('SitesListComponent', () => {
     });
 
     it('should reload sites after clearing', () => {
-      sitesService.loadSites.mockClear();
+      sitesService.loadSites.calls.reset();
 
       component.clearFilters();
 
@@ -322,7 +319,7 @@ describe('SitesListComponent', () => {
     }));
 
     it('should reload sites after successful creation', fakeAsync(() => {
-      sitesService.loadSites.mockClear();
+      sitesService.loadSites.calls.reset();
 
       component.createSite();
       tick();
@@ -331,7 +328,7 @@ describe('SitesListComponent', () => {
     }));
 
     it('should show error notification on failure', fakeAsync(() => {
-      sitesService.createSite.mockReturnValue(throwError(() => ({ error: { error: 'Creation failed' } })));
+      sitesService.createSite.and.returnValue(throwError(() => ({ error: { error: 'Creation failed' } })));
 
       component.createSite();
       tick();
@@ -440,7 +437,7 @@ describe('SitesListComponent', () => {
     }));
 
     it('should close modal and reload after success', fakeAsync(() => {
-      sitesService.loadSites.mockClear();
+      sitesService.loadSites.calls.reset();
 
       component.saveEditSite();
       tick();
@@ -450,7 +447,7 @@ describe('SitesListComponent', () => {
     }));
 
     it('should show error notification on failure', fakeAsync(() => {
-      sitesService.updateSite.mockReturnValue(throwError(() => ({ error: { error: 'Update failed' } })));
+      sitesService.updateSite.and.returnValue(throwError(() => ({ error: { error: 'Update failed' } })));
 
       component.saveEditSite();
       tick();
@@ -463,11 +460,7 @@ describe('SitesListComponent', () => {
 
   describe('deleteSite', () => {
     beforeEach(() => {
-      jest.spyOn(window, 'confirm').mockReturnValue(true);
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
+      spyOn(window, 'confirm').and.returnValue(true);
     });
 
     it('should show confirmation dialog', () => {
@@ -479,7 +472,7 @@ describe('SitesListComponent', () => {
     });
 
     it('should not delete if user cancels', () => {
-      jest.spyOn(window, 'confirm').mockReturnValue(false);
+      (window.confirm as jasmine.Spy).and.returnValue(false);
 
       component.deleteSite(mockSites[0]);
 
@@ -494,7 +487,7 @@ describe('SitesListComponent', () => {
     }));
 
     it('should reload sites after successful deletion', fakeAsync(() => {
-      sitesService.loadSites.mockClear();
+      sitesService.loadSites.calls.reset();
 
       component.deleteSite(mockSites[0]);
       tick();
@@ -503,7 +496,7 @@ describe('SitesListComponent', () => {
     }));
 
     it('should show error notification on failure', fakeAsync(() => {
-      sitesService.deleteSite.mockReturnValue(throwError(() => ({ error: { error: 'Delete failed' } })));
+      sitesService.deleteSite.and.returnValue(throwError(() => ({ error: { error: 'Delete failed' } })));
 
       component.deleteSite(mockSites[0]);
       tick();
