@@ -1860,20 +1860,27 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     this.loadingDashboard = true;
     this.sitesService.getDashboardData(this.siteId, 24).subscribe({
       next: (data) => {
-        // Mise à jour du statut de connexion
+        // Mise à jour du statut de connexion (mapper vers le format SiteConnectionStatus)
         this.connectionStatus = {
           siteId: data.site.id,
           siteName: data.site.site_name,
           clubName: data.site.club_name,
           connection: {
             isConnected: data.connection.isConnected,
-            status: data.connection.status,
+            displayStatus: data.connection.status,
             lastSeenAt: data.connection.lastSeenAt,
             secondsSinceLastSeen: data.connection.secondsSinceLastSeen,
-            localIp: data.connection.localIp,
+            localIp: data.connection.localIp
+          },
+          sync: {
             lastConfigSync: data.connection.lastConfigSync
           },
-          heartbeat_24h: data.connection.heartbeat_24h
+          statistics: {
+            heartbeats24h: data.connection.heartbeat_24h.count,
+            uptime24h: 0, // Non fourni par l'endpoint dashboard
+            firstHeartbeat24h: data.connection.heartbeat_24h.firstAt,
+            lastHeartbeat24h: data.connection.heartbeat_24h.lastAt
+          }
         };
         this.isConnected = data.connection.isConnected;
 
