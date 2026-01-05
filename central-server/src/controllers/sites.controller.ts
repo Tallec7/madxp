@@ -1071,3 +1071,122 @@ export const getQueueSummary = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Erreur lors de la récupération du résumé de la queue' });
   }
 };
+
+/**
+ * Endpoint agrégé qui combine connection status + metrics en une seule requête
+ * Optimise le nombre d'appels API pour le dashboard temps réel
+ */
+export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { hours = 24 } = req.query;
+
+    // Récupérer les infos du site
+    const siteResult = await query(
+      `SELECT id, site_name, club_name, status, last_seen_at, local_ip, last_config_sync
+       FROM sites WHERE id = $1`,
+      [id]
+    );
+
+    if (siteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    const site = siteResult.rows[0] as {
+      id: string;
+      site_name: string;
+      club_name: string;
+      status: string;
+      last_seen_at: Date | null;
+      local_ip: string | null;
+      last_config_sync: Date | null;
+    };
+
+    // Vérifier la connexion en temps réel via le socket
+    const socketService = (await import('../services/socket.service')).default;
+    const isConnectedNow = socketService.isConnected(id);
+
+    // Récupérer les métriques (inclut aussi le last_heartbeat)
+    const metricsResult = await query(
+      `SELECT * FROM metrics
+       WHERE site_id = $1
+       AND recorded_at > NOW() - INTERVAL '${parseInt(hours as string)} hours'
+       ORDER BY recorded_at DESC`,
+      [id]
+    );
+
+    const lastMetricAt = metricsResult.rows[0]?.recorded_at as Date | null;
+
+    // Utiliser le plus récent entre last_seen_at (Socket.IO) et last_metric (table metrics)
+    const lastSeenFromSite = site.last_seen_at ? new Date(site.last_seen_at) : null;
+    const lastSeenFromMetrics = lastMetricAt ? new Date(lastMetricAt) : null;
+
+    let lastSeenAt: Date | null = null;
+    if (lastSeenFromSite && lastSeenFromMetrics) {
+      lastSeenAt = lastSeenFromSite > lastSeenFromMetrics ? lastSeenFromSite : lastSeenFromMetrics;
+    } else {
+      lastSeenAt = lastSeenFromSite || lastSeenFromMetrics;
+    }
+
+    const now = new Date();
+    const secondsSinceLastSeen = lastSeenAt
+      ? Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000)
+      : null;
+
+    // Déterminer le statut d'affichage
+    let displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
+    if (isConnectedNow) {
+      displayStatus = 'online';
+    } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < 60) {
+      displayStatus = 'online';
+    } else if (secondsSinceLastSeen === null) {
+      displayStatus = 'unknown';
+    } else if (secondsSinceLastSeen < 120) {
+      displayStatus = 'warning';
+    } else {
+      displayStatus = 'offline';
+    }
+
+    // Récupérer les statistiques de connexion récentes (24h)
+    const statsResult = await query(
+      `SELECT
+         COUNT(*) as heartbeat_count,
+         MIN(recorded_at) as first_heartbeat,
+         MAX(recorded_at) as last_heartbeat
+       FROM metrics
+       WHERE site_id = $1 AND recorded_at > NOW() - INTERVAL '24 hours'`,
+      [id]
+    );
+
+    const stats = statsResult.rows[0];
+
+    // Réponse combinée
+    res.json({
+      site: {
+        id: site.id,
+        site_name: site.site_name,
+        club_name: site.club_name,
+      },
+      connection: {
+        isConnected: isConnectedNow,
+        status: displayStatus,
+        lastSeenAt,
+        secondsSinceLastSeen,
+        localIp: site.local_ip,
+        lastConfigSync: site.last_config_sync,
+        heartbeat_24h: {
+          count: parseInt(stats.heartbeat_count as string),
+          firstAt: stats.first_heartbeat,
+          lastAt: stats.last_heartbeat,
+        },
+      },
+      metrics: {
+        period_hours: hours,
+        data: metricsResult.rows,
+      },
+    });
+  } catch (error) {
+    logger.error('Get site dashboard data error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des données du dashboard' });
+  }
+};
