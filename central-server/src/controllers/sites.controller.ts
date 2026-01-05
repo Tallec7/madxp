@@ -888,14 +888,17 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
     // Uptime estimé: heartbeat toutes les 30s = 2880 max par 24h
     const uptime24h = Math.min(100, (heartbeatCount24h / 2880) * 100);
 
+    // Un site est considéré "connecté" si Socket.IO actif OU heartbeat récent (<60s)
+    const isEffectivelyConnected = isConnectedNow || (secondsSinceLastSeen !== null && secondsSinceLastSeen < 60);
+
     res.json({
       siteId: id,
       siteName: site.site_name,
       clubName: site.club_name,
       connection: {
-        isConnected: isConnectedNow,
+        isConnected: isEffectivelyConnected,
         displayStatus,
-        lastSeenAt: site.last_seen_at,
+        lastSeenAt,
         secondsSinceLastSeen,
         localIp: site.local_ip,
       },
