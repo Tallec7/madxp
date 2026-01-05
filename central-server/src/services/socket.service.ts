@@ -2,6 +2,7 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
+import jwt, { Secret } from 'jsonwebtoken';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient, RedisClientType } from 'redis';
 import { query } from '../config/database';
@@ -48,6 +49,24 @@ const verifyApiKey = async (providedKey: string, storedHash: string): Promise<bo
     return await bcrypt.compare(providedKey, storedHash);
   } catch {
     return false;
+  }
+};
+
+/**
+ * Vérifie un JWT token et retourne le payload décodé
+ */
+const verifyJwtToken = (token: string): { id: string; email: string; role: string } | null => {
+  try {
+    const JWT_SECRET: Secret = process.env.JWT_SECRET || '';
+    if (!JWT_SECRET) {
+      logger.error('JWT_SECRET not configured');
+      return null;
+    }
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; email: string; role: string };
+    return decoded;
+  } catch (error) {
+    logger.error('JWT verification failed:', { error });
+    return null;
   }
 };
 
@@ -245,7 +264,7 @@ class SocketService {
 
           // Émettre un événement de timeout au dashboard
           if (this.io) {
-            this.io.emit('command_timeout', {
+            this.io.to('dashboard').emit('command_timeout', {
               siteId: pending.siteId,
               commandId,
               type: pending.type,
@@ -315,10 +334,51 @@ class SocketService {
   private async handleConnection(socket: Socket) {
     logger.info('New socket connection', { socketId: socket.id });
 
+    // Vérifier si c'est une connexion dashboard (JWT token dans auth)
+    const authData = socket.handshake.auth;
+    if (authData && authData.token && typeof authData.token === 'string') {
+      // Dashboard connection avec JWT
+      const decoded = verifyJwtToken(authData.token);
+      if (decoded) {
+        logger.info('Dashboard user authenticated via JWT', {
+          userId: decoded.id,
+          email: decoded.email,
+          role: decoded.role
+        });
+
+        (socket as any).userId = decoded.id;
+        (socket as any).userEmail = decoded.email;
+        (socket as any).userRole = decoded.role;
+        (socket as any).clientType = 'dashboard';
+
+        // Joindre la room "dashboard" pour broadcast global
+        socket.join('dashboard');
+
+        socket.emit('authenticated', {
+          message: 'Dashboard authentifié avec succès',
+          userId: decoded.id,
+          role: decoded.role,
+        });
+
+        // Pas besoin de timeout pour les dashboards
+        socket.on('disconnect', () => {
+          logger.info('Dashboard user disconnected', { userId: decoded.id, email: decoded.email });
+        });
+
+        return; // Connexion dashboard établie, pas besoin de 'authenticate' event
+      } else {
+        logger.warn('Invalid JWT token in dashboard connection', { socketId: socket.id });
+        socket.emit('auth_error', { message: 'Token JWT invalide' });
+        socket.disconnect();
+        return;
+      }
+    }
+
+    // Sinon, c'est une connexion Raspberry Pi (nécessite 'authenticate' event)
     // Timeout d'authentification : déconnecter si pas authentifié dans les 30 secondes
     // Protège contre les connexions fantômes qui consomment des ressources
     const authTimeout = setTimeout(() => {
-      if (!(socket as any).siteId) {
+      if (!(socket as any).siteId && !(socket as any).userId) {
         logger.warn('Authentication timeout, disconnecting socket', { socketId: socket.id });
         socket.disconnect(true);
       }
@@ -680,7 +740,8 @@ class SocketService {
       });
 
       if (this.io) {
-        this.io.emit('command_completed', {
+        // Broadcaster aux dashboards connectés
+        this.io.to('dashboard').emit('command_completed', {
           siteId,
           commandId: result.commandId,
           status: result.status,
@@ -719,7 +780,7 @@ class SocketService {
 
       // Émettre au dashboard pour mise à jour en temps réel
       if (this.io) {
-        this.io.emit('site_config_updated', {
+        this.io.to('dashboard').emit('site_config_updated', {
           siteId,
           configHash,
           categoriesCount: config?.categories?.length || 0,
@@ -892,7 +953,7 @@ class SocketService {
 
       // Émettre le progress au dashboard
       if (this.io) {
-        this.io.emit('deploy_progress', {
+        this.io.to('dashboard').emit('deploy_progress', {
           siteId,
           deploymentId,
           progress: progressValue,
@@ -938,7 +999,7 @@ class SocketService {
 
       // Émettre le progress au dashboard
       if (this.io) {
-        this.io.emit('update_progress', {
+        this.io.to('dashboard').emit('update_progress', {
           siteId,
           deploymentId,
           progress: progressValue,
