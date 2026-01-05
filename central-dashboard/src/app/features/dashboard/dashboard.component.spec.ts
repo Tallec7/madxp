@@ -41,9 +41,17 @@ describe('DashboardComponent', () => {
   ];
 
   beforeEach(async () => {
-    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['loadStats', 'loadSites']);
+    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['loadStats', 'loadSites', 'getAllConnectionStatus']);
     sitesServiceMock.loadStats.and.returnValue(of(mockStats));
     sitesServiceMock.loadSites.and.returnValue(of({ sites: mockSites, total: 2, page: 1, totalPages: 1 }));
+    sitesServiceMock.getAllConnectionStatus.and.returnValue(of({
+      sites: [
+        { siteId: '1', siteName: 'Site 1', clubName: 'Club A', isConnected: true, displayStatus: 'online', lastSeenAt: new Date(), secondsSinceLastSeen: 0, localIp: null },
+        { siteId: '2', siteName: 'Site 2', clubName: 'Club B', isConnected: false, displayStatus: 'offline', lastSeenAt: new Date(), secondsSinceLastSeen: 3600, localIp: null },
+      ],
+      stats: { total: 2, online: 1, warning: 0, offline: 1, unknown: 0 },
+      timestamp: new Date().toISOString(),
+    }));
 
     await TestBed.configureTestingModule({
       imports: [DashboardComponent, RouterTestingModule],
@@ -146,6 +154,31 @@ describe('DashboardComponent', () => {
     it('should return secondary for unknown status', () => {
       expect(component.getStatusBadge('unknown')).toBe('secondary');
     });
+  });
+
+  describe('getRealTimeStatus', () => {
+    it('should return online when connection status map has online status', fakeAsync(() => {
+      fixture.detectChanges();
+      tick();
+
+      const status = component.getRealTimeStatus(mockSites[0] as any);
+      expect(status).toBe('online');
+    }));
+
+    it('should return offline when connection status map has offline status', fakeAsync(() => {
+      fixture.detectChanges();
+      tick();
+
+      const status = component.getRealTimeStatus(mockSites[1] as any);
+      expect(status).toBe('offline');
+    }));
+
+    it('should load connection status on init', fakeAsync(() => {
+      fixture.detectChanges();
+      tick();
+
+      expect(sitesService.getAllConnectionStatus).toHaveBeenCalled();
+    }));
   });
 
   describe('getPercentage', () => {
