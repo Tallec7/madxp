@@ -60,6 +60,8 @@ Généré le 2025-12-08 (Mise à jour 2026-01-03)
 
 ## 🐛 Corrections
 
+- **Fix statut connexion sites incohérent** - Le dashboard affichait deux statuts différents pour le même boîtier : "online" dans la liste mais "Hors ligne" dans les détails. Problème : la liste utilisait uniquement `last_seen_at` tandis que le détail vérifiait aussi Socket.IO. Solution : la liste fait maintenant confiance au champ `site.status` de la DB qui est mis à jour automatiquement par le serveur lors des événements `authenticate`/`disconnect`. Également ajouté l'authentification JWT pour le dashboard dans Socket.IO (avant seuls les Pi pouvaient se connecter) - 2026-01-05
+- **Fix dashboard Socket.IO "disconnected"** - Le dashboard affichait toujours "status.disconnected" car Socket.IO n'acceptait que l'authentification Pi (`{siteId, apiKey}`). Ajouté support JWT via `socket.handshake.auth.token` pour les connexions dashboard. Les dashboards rejoignent la room `'dashboard'` et reçoivent les événements temps réel (`deploy_progress`, `command_completed`, etc.) - 2026-01-05
 - **Fix URL dynamique Analytics API** - `AnalyticsService` et `SponsorAnalyticsService` utilisaient `environment.socketUrl + '/api/...'` qui devenait `/api/...` (URL relative) en mode Raspberry. Maintenant utilise `getApiUrl()` dynamique avec port 3000, comme `socket.service.ts` - 2026-01-02
 - **Fix URL dynamique API auth** - `AuthService.LOCAL_SERVER_URL` utilisait `http://localhost:3000` en dur, ce qui échouait quand l'app était accédée depuis `neopro.local`. Maintenant utilise `window.location.hostname` dynamiquement - 2026-01-02
 - **Fix deprecation ngx-translate** - Remplacé `defaultLanguage` par `fallbackLang` dans `app.config.ts` pour éliminer le warning de dépréciation - 2026-01-02
