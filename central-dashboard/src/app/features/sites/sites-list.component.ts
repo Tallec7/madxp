@@ -49,8 +49,8 @@ import { formatVersion } from './utils/version';
         <div *ngFor="let site of sites$ | async" class="site-card card">
           <div class="site-header">
             <h3>{{ site.club_name }}</h3>
-            <span class="badge" [class]="'badge-' + getStatusBadge(site.status)">
-              {{ site.status }}
+            <span class="badge" [class]="'badge-' + getRealTimeStatusBadge(site)">
+              {{ getRealTimeStatusText(site) }}
             </span>
           </div>
 
@@ -540,6 +540,52 @@ export class SitesListComponent implements OnInit {
       maintenance: 'warning'
     };
     return badges[status] || 'secondary';
+  }
+
+  /**
+   * Calcule le statut temps réel basé sur last_seen_at
+   * Identique à la logique backend pour cohérence
+   */
+  getRealTimeStatus(site: Site): 'online' | 'offline' | 'warning' | 'unknown' {
+    const lastSeenAt = site.last_seen_at ? new Date(site.last_seen_at) : null;
+
+    if (!lastSeenAt) {
+      return 'unknown'; // Jamais vu
+    }
+
+    const now = new Date();
+    const secondsSinceLastSeen = Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000);
+
+    // Logique identique au backend (sites.controller.ts)
+    if (secondsSinceLastSeen < 120) {
+      return 'online';   // Vu il y a moins de 2 minutes = online
+    } else if (secondsSinceLastSeen < 300) {
+      return 'warning';  // Entre 2 et 5 minutes = warning
+    } else {
+      return 'offline';  // Plus de 5 minutes = offline
+    }
+  }
+
+  getRealTimeStatusBadge(site: Site): string {
+    const status = this.getRealTimeStatus(site);
+    const badges: Record<string, string> = {
+      online: 'success',    // Vert
+      warning: 'warning',   // Orange
+      offline: 'secondary', // Gris
+      unknown: 'secondary'  // Gris
+    };
+    return badges[status];
+  }
+
+  getRealTimeStatusText(site: Site): string {
+    const status = this.getRealTimeStatus(site);
+    const texts: Record<string, string> = {
+      online: 'Connecté',
+      warning: 'Connexion instable',
+      offline: 'Hors ligne',
+      unknown: 'Inconnu'
+    };
+    return texts[status];
   }
 
   formatLastSeen(date: Date | null): string {
