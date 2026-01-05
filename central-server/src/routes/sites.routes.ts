@@ -4,6 +4,7 @@ import * as configHistoryController from '../controllers/config-history.controll
 import { authenticate, requireRole } from '../middleware/auth';
 import { validate, schemas } from '../middleware/validation';
 import { paginationMiddleware } from '../middleware/pagination';
+import { monitoringRateLimit } from '../middleware/user-rate-limit';
 
 const router = Router();
 
@@ -11,7 +12,7 @@ router.get('/', authenticate, paginationMiddleware, sitesController.getSites);
 
 router.get('/stats', authenticate, sitesController.getSiteStats);
 
-router.get('/connection-status', authenticate, sitesController.getAllSitesConnectionStatus);
+router.get('/connection-status', authenticate, monitoringRateLimit, sitesController.getAllSitesConnectionStatus);
 
 // Route de debug pour voir l'état des connexions WebSocket (admin only)
 router.get('/debug/connections', authenticate, requireRole('admin'), sitesController.getConnectionsDebug);
@@ -21,9 +22,12 @@ router.get('/queue/summary', authenticate, sitesController.getQueueSummary);
 
 router.get('/:id', authenticate, sitesController.getSite);
 
-router.get('/:id/metrics', authenticate, sitesController.getSiteMetrics);
+router.get('/:id/metrics', authenticate, monitoringRateLimit, sitesController.getSiteMetrics);
 
-router.get('/:id/connection-status', authenticate, sitesController.getSiteConnectionStatus);
+router.get('/:id/connection-status', authenticate, monitoringRateLimit, sitesController.getSiteConnectionStatus);
+
+// Endpoint agrégé pour dashboard (réduit de 3 requêtes à 1)
+router.get('/:id/dashboard', authenticate, monitoringRateLimit, sitesController.getSiteDashboardData);
 
 router.get(
   '/:id/logs',

@@ -108,6 +108,16 @@ export const adminRateLimit = createUserRateLimit(
   200
 );
 
+// Monitoring endpoints - permissif (300 requêtes / minute)
+// Used for real-time status updates and metrics polling
+export const monitoringRateLimit = createUserRateLimit(
+  60 * 1000, // 1 minute
+  300,
+  {
+    message: { error: 'Trop de requêtes de monitoring. Réduisez la fréquence de polling.' },
+  }
+);
+
 /**
  * Rate limiter dynamique basé sur le rôle utilisateur
  * Les admins ont des limites plus élevées
@@ -141,5 +151,6 @@ export default {
   uploadRateLimit,
   publicRateLimit,
   adminRateLimit,
+  monitoringRateLimit,
   roleBasedRateLimit,
 };

@@ -148,10 +148,14 @@ POST /api/auth/reset-password
 ```
 GET    /api/sites             → liste paginée, filtres: status, sport, region
 GET    /api/sites/:id         → détails + config + metrics
+GET    /api/sites/:id/dashboard → endpoint agrégé (connection + metrics) ⚡ NEW
+GET    /api/sites/:id/connection-status → statut connexion temps réel
+GET    /api/sites/:id/metrics → métriques système (CPU, RAM, temp)
 POST   /api/sites             → créer site (génère api_key)
 PUT    /api/sites/:id         → modifier
 DELETE /api/sites/:id         → supprimer
 POST   /api/sites/:id/api-key/regenerate
+POST   /api/sites/:id/command → envoyer commande au Pi
 ```
 
 ### Contenu
@@ -175,10 +179,15 @@ GET /api/advertiser-analytics/...     → stats annonceurs
 ### Rate Limiting
 
 ```
-Auth:      5 req/15min   (anti-bruteforce)
-API:       100 req/15min (standard)
-Sensitive: 20 req/15min  (uploads, admin ops)
+Auth:       10 req/15min    (anti-bruteforce) - 1 min dev
+API:        100 req/min     (standard)
+Monitoring: 300 req/min     (status, metrics polling) ⚡ NEW
+Sensitive:  30 req/min      (commands, deployments)
+Upload:     10 req/hour     (video uploads)
+Admin:      200 req/min     (dashboard ops)
 ```
+
+**Note**: Les rate limits sont par utilisateur (user_id) et non par IP en production.
 
 ---
 
