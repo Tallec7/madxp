@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, BehaviorSubject, tap, map } from 'rxjs';
 import { ApiService } from './api.service';
+import { CacheService } from './cache.service';
 import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus } from '../models';
 
 @Injectable({
@@ -8,6 +9,7 @@ import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff,
 })
 export class SitesService {
   private readonly api = inject(ApiService);
+  private readonly cache = inject(CacheService);
 
   private sitesSubject = new BehaviorSubject<Site[]>([]);
   public sites$ = this.sitesSubject.asObservable();
@@ -151,6 +153,44 @@ export class SitesService {
 
   getAllConnectionStatus(): Observable<AllSitesConnectionStatus> {
     return this.api.get('/sites/connection-status');
+  }
+
+  /**
+   * Endpoint agrégé qui combine connection status + metrics en une seule requête
+   * Optimise les performances en réduisant de 3 requêtes à 1
+   * Utilise le cache pour éviter les appels redondants
+   */
+  getDashboardData(id: string, hours: number = 24, useCache = true): Observable<{
+    site: { id: string; site_name: string; club_name: string };
+    connection: {
+      isConnected: boolean;
+      status: 'online' | 'offline' | 'warning' | 'unknown';
+      lastSeenAt: Date | null;
+      secondsSinceLastSeen: number | null;
+      localIp: string | null;
+      lastConfigSync: Date | null;
+      heartbeat_24h: {
+        count: number;
+        firstAt: Date | null;
+        lastAt: Date | null;
+      };
+    };
+    metrics: {
+      period_hours: number;
+      data: Metrics[];
+    };
+  }> {
+    const cacheKey = `dashboard:${id}:${hours}`;
+
+    if (!useCache) {
+      this.cache.invalidate(cacheKey);
+    }
+
+    return this.cache.get(
+      cacheKey,
+      () => this.api.get(`/sites/${id}/dashboard`, { hours }),
+      5000 // TTL de 5 secondes
+    );
   }
 
   // Hotspot WiFi management
