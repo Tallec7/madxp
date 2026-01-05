@@ -1,10 +1,11 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { Subscription, interval } from 'rxjs';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { Site } from '../../core/models';
+import { Site, SiteConnectionSummary } from '../../core/models';
 import { formatVersion } from './utils/version';
 
 @Component({
@@ -467,7 +468,7 @@ import { formatVersion } from './utils/version';
     }
   `]
 })
-export class SitesListComponent implements OnInit {
+export class SitesListComponent implements OnInit, OnDestroy {
   private readonly sitesService = inject(SitesService);
   private readonly notificationService = inject(NotificationService);
   readonly formatVersion = formatVersion;
@@ -478,6 +479,11 @@ export class SitesListComponent implements OnInit {
   regionFilter = '';
   showCreateModal = false;
   showEditModal = false;
+
+  // Map des statuts de connexion temps réel (siteId -> status)
+  private connectionStatusMap = new Map<string, SiteConnectionSummary>();
+  private connectionStatusSubscription?: Subscription;
+  private refreshSubscription?: Subscription;
 
   newSite = {
     site_name: '',
@@ -506,6 +512,31 @@ export class SitesListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadSites();
+    this.loadConnectionStatus();
+    // Rafraîchir les statuts de connexion toutes les 30 secondes
+    this.refreshSubscription = interval(30000).subscribe(() => {
+      this.loadConnectionStatus();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.connectionStatusSubscription?.unsubscribe();
+    this.refreshSubscription?.unsubscribe();
+  }
+
+  private loadConnectionStatus(): void {
+    this.connectionStatusSubscription?.unsubscribe();
+    this.connectionStatusSubscription = this.sitesService.getAllConnectionStatus().subscribe({
+      next: (response) => {
+        this.connectionStatusMap.clear();
+        for (const site of response.sites) {
+          this.connectionStatusMap.set(site.siteId, site);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading connection status:', error);
+      }
+    });
   }
 
   loadSites(): void {
@@ -543,30 +574,33 @@ export class SitesListComponent implements OnInit {
   }
 
   /**
-   * Calcule le statut temps réel basé sur last_seen_at
-   * Logique simplifiée : si le serveur a mis à jour status='online',
-   * c'est qu'il a vérifié la connexion Socket.IO récemment
+   * Retourne le statut de connexion temps réel depuis l'endpoint dédié
+   * qui vérifie les connexions Socket.IO en temps réel
    */
   getRealTimeStatus(site: Site): 'online' | 'offline' | 'warning' | 'unknown' {
-    // Si le serveur dit 'online', faire confiance (il a vérifié Socket.IO)
+    // Utiliser les données temps réel si disponibles
+    const connectionStatus = this.connectionStatusMap.get(site.id);
+    if (connectionStatus) {
+      return connectionStatus.displayStatus;
+    }
+
+    // Fallback sur le statut DB (ne devrait pas arriver souvent)
     if (site.status === 'online') {
       return 'online';
     }
 
     const lastSeenAt = site.last_seen_at ? new Date(site.last_seen_at) : null;
-
     if (!lastSeenAt) {
-      return 'unknown'; // Jamais vu
+      return 'unknown';
     }
 
     const now = new Date();
     const secondsSinceLastSeen = Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000);
 
-    // Si déconnecté mais vu récemment, afficher warning
-    if (secondsSinceLastSeen < 300) {
-      return 'warning';  // Vu il y a moins de 5 minutes mais déconnecté
+    if (secondsSinceLastSeen < 120) {
+      return 'warning';
     } else {
-      return 'offline';  // Plus de 5 minutes = vraiment offline
+      return 'offline';
     }
   }
 

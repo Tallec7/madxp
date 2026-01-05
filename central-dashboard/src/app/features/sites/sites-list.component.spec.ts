@@ -39,13 +39,21 @@ describe('SitesListComponent', () => {
   const sitesSubject = new BehaviorSubject<Site[]>(mockSites);
 
   beforeEach(async () => {
-    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['loadSites', 'createSite', 'updateSite', 'deleteSite'], {
+    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['loadSites', 'createSite', 'updateSite', 'deleteSite', 'getAllConnectionStatus'], {
       sites$: sitesSubject.asObservable(),
     });
     sitesServiceMock.loadSites.and.returnValue(of({ sites: mockSites, total: 2, page: 1, totalPages: 1 }));
     sitesServiceMock.createSite.and.returnValue(of({ id: '3', site_name: 'New Site' }));
     sitesServiceMock.updateSite.and.returnValue(of({ id: '1', site_name: 'Updated Site' }));
     sitesServiceMock.deleteSite.and.returnValue(of(undefined));
+    sitesServiceMock.getAllConnectionStatus.and.returnValue(of({
+      sites: [
+        { siteId: '1', siteName: 'Site Rennes', clubName: 'Rennes FC', isConnected: true, displayStatus: 'online', lastSeenAt: new Date(), secondsSinceLastSeen: 0, localIp: null },
+        { siteId: '2', siteName: 'Site Nantes', clubName: 'Nantes FC', isConnected: false, displayStatus: 'offline', lastSeenAt: new Date(Date.now() - 3600000), secondsSinceLastSeen: 3600, localIp: null },
+      ],
+      stats: { total: 2, online: 1, warning: 0, offline: 1, unknown: 0 },
+      timestamp: new Date().toISOString(),
+    }));
 
     const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success']);
 
@@ -455,6 +463,31 @@ describe('SitesListComponent', () => {
       expect(notificationService.error).toHaveBeenCalledWith(
         'Erreur lors de la modification du site: Update failed'
       );
+    }));
+  });
+
+  describe('getRealTimeStatus', () => {
+    it('should return online when connection status map has online status', fakeAsync(() => {
+      fixture.detectChanges();
+      tick();
+
+      const status = component.getRealTimeStatus(mockSites[0]);
+      expect(status).toBe('online');
+    }));
+
+    it('should return offline when connection status map has offline status', fakeAsync(() => {
+      fixture.detectChanges();
+      tick();
+
+      const status = component.getRealTimeStatus(mockSites[1]);
+      expect(status).toBe('offline');
+    }));
+
+    it('should load connection status on init', fakeAsync(() => {
+      fixture.detectChanges();
+      tick();
+
+      expect(sitesService.getAllConnectionStatus).toHaveBeenCalled();
     }));
   });
 

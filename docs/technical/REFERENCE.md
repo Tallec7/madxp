@@ -359,8 +359,10 @@ if (isConnectedNow) {
 
 **Affichage dans le dashboard :**
 
-- **Liste des sites** : Utilise `site.status` (mis à jour par Socket.IO)
-- **Page détail** : Appelle `/api/sites/:id/connection-status` (calcul temps réel)
+- **Liste des sites** : Appelle `/api/sites/connection-status` toutes les 30s (vérifie connexions Socket.IO temps réel)
+- **Page détail** : Appelle `/api/sites/:id/connection-status` toutes les 15s (calcul temps réel)
+
+Les deux vues utilisent la même logique basée sur `socketService.getConnectedSites()` pour garantir une cohérence du statut affiché.
 
 ### Enregistrement d'un site
 
