@@ -190,10 +190,25 @@ export const me = async (req: AuthRequest, res: Response) => {
     }
 
     const user = result.rows[0];
+    const advertiserId = user.advertiser_id ?? user.sponsor_id ?? null;
+    const sponsorId = user.sponsor_id ?? user.advertiser_id ?? null;
+
+    // Générer un nouveau token pour la connexion Socket.IO après refresh
+    // Le cookie HttpOnly ne peut pas être lu par le JS, donc on renvoie le token
+    const token = generateToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      advertiser_id: advertiserId,
+      sponsor_id: sponsorId,
+      agency_id: user.agency_id,
+    });
+
     return res.json({
       ...user,
-      advertiser_id: user.advertiser_id ?? user.sponsor_id ?? null,
-      sponsor_id: user.sponsor_id ?? user.advertiser_id ?? null,
+      advertiser_id: advertiserId,
+      sponsor_id: sponsorId,
+      token, // Token pour Socket.IO après refresh de page
     });
   } catch (error) {
     logger.error('Get current user error:', error);

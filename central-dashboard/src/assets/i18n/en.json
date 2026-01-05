@@ -40,6 +40,7 @@
     "emailRequired": "Email is required",
     "passwordRequired": "Password is required",
     "loginError": "Login error. Please try again.",
+    "sessionExpired": "Your session has expired. Please log in again.",
     "logoutConfirm": "Are you sure you want to log out?",
     "centralDashboard": "Central Dashboard",
     "forgotPassword": "Forgot password?",

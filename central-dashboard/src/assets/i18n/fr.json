@@ -40,6 +40,7 @@
     "emailRequired": "Email requis",
     "passwordRequired": "Mot de passe requis",
     "loginError": "Erreur de connexion. Veuillez réessayer.",
+    "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
     "logoutConfirm": "Êtes-vous sûr de vouloir vous déconnecter ?",
     "centralDashboard": "Dashboard Central",
     "forgotPassword": "Mot de passe oublié ?",

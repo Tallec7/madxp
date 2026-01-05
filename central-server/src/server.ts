@@ -36,7 +36,7 @@ import usersRoutes from './routes/users.routes';
 import schedulesRoutes from './routes/schedules.routes';
 import objectivesRoutes from './routes/objectives.routes';
 import playlistSchedulesRoutes from './routes/playlist-schedules.routes';
-import { authRateLimit, apiRateLimit, sensitiveRateLimit } from './middleware/user-rate-limit';
+import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 
 dotenv.config();
@@ -300,7 +300,7 @@ app.use('/api/analytics', apiRateLimit, advertiserAnalyticsRoutes); // Analytics
 app.use('/api', apiRateLimit, advertiserSitesRoutes); // Gestion associations annonceurs <-> sites (+ backward compat)
 app.use('/api/audit', apiRateLimit, auditRoutes);
 app.use('/api/canary', sensitiveRateLimit, canaryRoutes); // Déploiements canary - sensible
-app.use('/api/admin', sensitiveRateLimit, adminRoutes);
+app.use('/api/admin', adminRateLimit, adminRoutes);
 app.use('/api/advertiser', apiRateLimit, advertiserPortalRoutes); // Portail annonceurs
 app.use('/api/agencies', apiRateLimit, agencyRoutes); // Gestion agences
 app.use('/api/users', sensitiveRateLimit, usersRoutes); // Gestion utilisateurs (sensible)
