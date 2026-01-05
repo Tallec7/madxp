@@ -363,44 +363,62 @@ export const getSiteMetrics = async (req: AuthRequest, res: Response) => {
 
 export const getSiteStats = async (req: AuthRequest, res: Response) => {
   try {
-    // Récupérer tous les sites avec leur last_seen_at
+    // Récupérer tous les sites avec leur dernier heartbeat depuis la table metrics
     const sitesResult = await query(`
-      SELECT id, status, last_seen_at FROM sites
+      SELECT
+        s.id,
+        s.status,
+        s.last_seen_at,
+        (SELECT recorded_at FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as last_metric_at
+      FROM sites s
     `);
 
     const socketService = (await import('../services/socket.service')).default;
     const connectedSiteIds = new Set(socketService.getConnectedSites());
     const now = new Date();
 
-    // Calculer les stats temps réel basées sur les connexions Socket.IO
+    // Calculer les stats temps réel basées sur les connexions Socket.IO et les métriques récentes
     let online = 0;
     let offline = 0;
     let maintenance = 0;
     let error = 0;
 
-    for (const site of sitesResult.rows as Array<{ id: string; status: string; last_seen_at: Date | null }>) {
+    for (const site of sitesResult.rows as Array<{
+      id: string;
+      status: string;
+      last_seen_at: Date | null;
+      last_metric_at: Date | null;
+    }>) {
       // Vérifier si connecté via Socket.IO
       const isConnectedNow = connectedSiteIds.has(site.id);
+
+      // Utiliser le plus récent entre last_seen_at et last_metric_at
+      const lastSeenFromSite = site.last_seen_at ? new Date(site.last_seen_at) : null;
+      const lastSeenFromMetrics = site.last_metric_at ? new Date(site.last_metric_at) : null;
+
+      let lastSeenAt: Date | null = null;
+      if (lastSeenFromSite && lastSeenFromMetrics) {
+        lastSeenAt = lastSeenFromSite > lastSeenFromMetrics ? lastSeenFromSite : lastSeenFromMetrics;
+      } else {
+        lastSeenAt = lastSeenFromSite || lastSeenFromMetrics;
+      }
+
+      const secondsSinceLastSeen = lastSeenAt
+        ? Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000)
+        : null;
 
       if (site.status === 'maintenance') {
         maintenance++;
       } else if (site.status === 'error') {
         error++;
-      } else if (isConnectedNow) {
+      } else if (isConnectedNow || (secondsSinceLastSeen !== null && secondsSinceLastSeen < 60)) {
+        // Connecté via Socket.IO OU heartbeat reçu il y a moins d'1 minute
+        online++;
+      } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < 120) {
+        // Vu il y a moins de 2 minutes = warning (compté comme online)
         online++;
       } else {
-        // Vérifier last_seen_at comme fallback
-        const lastSeenAt = site.last_seen_at ? new Date(site.last_seen_at) : null;
-        const secondsSinceLastSeen = lastSeenAt
-          ? Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000)
-          : null;
-
-        if (secondsSinceLastSeen !== null && secondsSinceLastSeen < 120) {
-          // Vu il y a moins de 2 minutes mais pas connecté Socket.IO = warning (compté comme online)
-          online++;
-        } else {
-          offline++;
-        }
+        offline++;
       }
     }
 
@@ -419,7 +437,7 @@ export const getSiteStats = async (req: AuthRequest, res: Response) => {
 
 export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Response) => {
   try {
-    // Récupérer tous les sites avec leur dernier heartbeat
+    // Récupérer tous les sites avec leur dernier heartbeat depuis la table metrics
     const sitesResult = await query(`
       SELECT
         s.id,
@@ -427,7 +445,8 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
         s.club_name,
         s.status,
         s.last_seen_at,
-        s.local_ip
+        s.local_ip,
+        (SELECT recorded_at FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as last_metric_at
       FROM sites s
       ORDER BY s.site_name
     `);
@@ -443,15 +462,31 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
       status: string;
       last_seen_at: Date | null;
       local_ip: string | null;
+      last_metric_at: Date | null;
     }>).map((site) => {
       const isConnectedNow = connectedSiteIds.has(site.id);
-      const lastSeenAt = site.last_seen_at ? new Date(site.last_seen_at) : null;
+
+      // Utiliser le plus récent entre last_seen_at et last_metric_at
+      const lastSeenFromSite = site.last_seen_at ? new Date(site.last_seen_at) : null;
+      const lastSeenFromMetrics = site.last_metric_at ? new Date(site.last_metric_at) : null;
+
+      let lastSeenAt: Date | null = null;
+      if (lastSeenFromSite && lastSeenFromMetrics) {
+        lastSeenAt = lastSeenFromSite > lastSeenFromMetrics ? lastSeenFromSite : lastSeenFromMetrics;
+      } else {
+        lastSeenAt = lastSeenFromSite || lastSeenFromMetrics;
+      }
+
       const secondsSinceLastSeen = lastSeenAt
         ? Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000)
         : null;
 
+      // Un site est "online" si connecté via Socket.IO OU si heartbeat récent
       let displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
       if (isConnectedNow) {
+        displayStatus = 'online';
+      } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < 60) {
+        // Heartbeat reçu il y a moins d'1 minute = online
         displayStatus = 'online';
       } else if (secondsSinceLastSeen === null) {
         displayStatus = 'unknown';
@@ -465,9 +500,9 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
         siteId: site.id,
         siteName: site.site_name,
         clubName: site.club_name,
-        isConnected: isConnectedNow,
+        isConnected: isConnectedNow || (secondsSinceLastSeen !== null && secondsSinceLastSeen < 60),
         displayStatus,
-        lastSeenAt: site.last_seen_at,
+        lastSeenAt,
         secondsSinceLastSeen,
         localIp: site.local_ip,
       };
@@ -791,16 +826,37 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
     const socketService = (await import('../services/socket.service')).default;
     const isConnectedNow = socketService.isConnected(id);
 
-    // Calculer le temps depuis la dernière connexion
-    const lastSeenAt = site.last_seen_at ? new Date(site.last_seen_at) : null;
+    // Récupérer le dernier heartbeat depuis la table metrics (source de vérité)
+    const lastMetricResult = await query(
+      `SELECT recorded_at FROM metrics WHERE site_id = $1 ORDER BY recorded_at DESC LIMIT 1`,
+      [id]
+    );
+    const lastMetricAt = lastMetricResult.rows[0]?.recorded_at as Date | null;
+
+    // Utiliser le plus récent entre last_seen_at (Socket.IO) et last_metric (table metrics)
+    const lastSeenFromSite = site.last_seen_at ? new Date(site.last_seen_at) : null;
+    const lastSeenFromMetrics = lastMetricAt ? new Date(lastMetricAt) : null;
+
+    // Prendre le plus récent des deux
+    let lastSeenAt: Date | null = null;
+    if (lastSeenFromSite && lastSeenFromMetrics) {
+      lastSeenAt = lastSeenFromSite > lastSeenFromMetrics ? lastSeenFromSite : lastSeenFromMetrics;
+    } else {
+      lastSeenAt = lastSeenFromSite || lastSeenFromMetrics;
+    }
+
     const now = new Date();
     const secondsSinceLastSeen = lastSeenAt
       ? Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000)
       : null;
 
     // Déterminer le statut d'affichage
+    // Un site est "online" si connecté via Socket.IO OU si on a reçu un heartbeat récemment
     let displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
     if (isConnectedNow) {
+      displayStatus = 'online';
+    } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < 60) {
+      // Heartbeat reçu il y a moins d'1 minute = online (même sans Socket.IO direct)
       displayStatus = 'online';
     } else if (secondsSinceLastSeen === null) {
       displayStatus = 'unknown';
