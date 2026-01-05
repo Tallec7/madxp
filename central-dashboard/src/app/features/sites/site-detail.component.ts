@@ -1707,7 +1707,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   // Connexion temps réel (WebSocket)
   connectionStatus: SiteConnectionStatus | null = null;
   isConnected = false;
-  private connectionCheckSubscription?: Subscription;
+  private loadingDashboard = false;
 
   // Configuration editor
   showConfigEditor = false;
@@ -1824,25 +1824,16 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.siteId = this.route.snapshot.paramMap.get('id')!;
     this.loadSite();
-    this.loadMetrics();
-    this.loadConnectionStatus();
+    this.loadDashboardData();
 
-    // Auto-refresh toutes les 30 secondes
-    this.refreshSubscription = interval(30000).subscribe(() => {
-      if (this.isConnected) {
-        this.loadMetrics();
-      }
-    });
-
-    // Vérification de la connexion temps réel toutes les 15 secondes
-    this.connectionCheckSubscription = interval(15000).subscribe(() => {
-      this.loadConnectionStatus();
+    // Auto-refresh consolidé toutes les 10 secondes (optimisé)
+    this.refreshSubscription = interval(10000).subscribe(() => {
+      this.loadDashboardData();
     });
   }
 
   ngOnDestroy(): void {
     this.refreshSubscription?.unsubscribe();
-    this.connectionCheckSubscription?.unsubscribe();
     if (this.networkDiagPollInterval) {
       clearInterval(this.networkDiagPollInterval);
       this.networkDiagPollInterval = null;
@@ -1860,29 +1851,43 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadConnectionStatus(): void {
-    this.sitesService.getConnectionStatus(this.siteId).subscribe({
-      next: (status) => {
-        this.connectionStatus = status;
-        this.isConnected = status.connection.isConnected;
-      },
-      error: (error) => {
-        console.error('Erreur chargement statut connexion:', error);
-        this.isConnected = false;
-      }
-    });
-  }
+  loadDashboardData(): void {
+    // Debounce: éviter les appels multiples simultanés
+    if (this.loadingDashboard) {
+      return;
+    }
 
-  loadMetrics(): void {
-    this.sitesService.getSiteMetrics(this.siteId, 24).subscribe({
-      next: (response) => {
-        this.metricsHistory = response.metrics;
-        if (response.metrics.length > 0) {
-          this.currentMetrics = response.metrics[0];
+    this.loadingDashboard = true;
+    this.sitesService.getDashboardData(this.siteId, 24).subscribe({
+      next: (data) => {
+        // Mise à jour du statut de connexion
+        this.connectionStatus = {
+          siteId: data.site.id,
+          siteName: data.site.site_name,
+          clubName: data.site.club_name,
+          connection: {
+            isConnected: data.connection.isConnected,
+            status: data.connection.status,
+            lastSeenAt: data.connection.lastSeenAt,
+            secondsSinceLastSeen: data.connection.secondsSinceLastSeen,
+            localIp: data.connection.localIp,
+            lastConfigSync: data.connection.lastConfigSync
+          },
+          heartbeat_24h: data.connection.heartbeat_24h
+        };
+        this.isConnected = data.connection.isConnected;
+
+        // Mise à jour des métriques
+        this.metricsHistory = data.metrics.data;
+        if (data.metrics.data.length > 0) {
+          this.currentMetrics = data.metrics.data[0];
         }
+        this.loadingDashboard = false;
       },
       error: (error) => {
-        console.error('Erreur chargement métriques:', error);
+        console.error('Erreur chargement dashboard:', error);
+        this.isConnected = false;
+        this.loadingDashboard = false;
       }
     });
   }
