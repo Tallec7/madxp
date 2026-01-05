@@ -325,6 +325,43 @@ Si aucun mot de passe n'est configuré : `GG_NEO_25k!`
    - Gestion des configurations
    - Push de contenu
 
+### Statut de connexion des sites
+
+Le serveur central calcule le statut de connexion des sites selon **deux critères** :
+
+1. **Connexion Socket.IO active** : Vérifie si le Pi a une connexion WebSocket établie
+2. **Dernier heartbeat** : Vérifie l'heure du dernier signal reçu (`last_seen_at`)
+
+**Logique de calcul du statut (`displayStatus`) :**
+
+```typescript
+// Fichier: central-server/src/controllers/sites.controller.ts
+
+const isConnectedNow = socketService.isConnected(siteId); // Vérifie Socket.IO
+const secondsSinceLastSeen = (now - last_seen_at) / 1000;
+
+if (isConnectedNow) {
+  displayStatus = 'online'; // ✅ Socket.IO actif
+} else if (secondsSinceLastSeen === null) {
+  displayStatus = 'unknown'; // ⚪ Jamais vu
+} else if (secondsSinceLastSeen < 120) {
+  displayStatus = 'warning'; // 🟡 Vu il y a < 2min mais déconnecté
+} else {
+  displayStatus = 'offline'; // 🔴 Déconnecté depuis > 2min
+}
+```
+
+**Mise à jour automatique du champ `sites.status` :**
+
+- Lors de l'événement `'authenticate'` (Pi se connecte) → `status = 'online'`
+- Lors de l'événement `'disconnect'` (Pi se déconnecte) → `status = 'offline'`
+- Lors de la détection de connexion zombie (90s sans pong) → `status = 'offline'`
+
+**Affichage dans le dashboard :**
+
+- **Liste des sites** : Utilise `site.status` (mis à jour par Socket.IO)
+- **Page détail** : Appelle `/api/sites/:id/connection-status` (calcul temps réel)
+
 ### Enregistrement d'un site
 
 ```bash
@@ -587,6 +624,120 @@ socket.emit('video-status', {
 // Angular environment
 socketUrl: 'http://neopro.local:3000';
 ```
+
+### Socket.IO (Pi & Dashboard ↔ Serveur Central)
+
+**Authentification :**
+
+Le serveur Socket.IO du serveur central supporte **deux types de connexions** :
+
+1. **Raspberry Pi** : Authentification via événement `'authenticate'`
+
+   ```javascript
+   socket.on('connect', () => {
+     socket.emit('authenticate', {
+       siteId: 'uuid-du-site',
+       apiKey: 'cle-api-bcrypt',
+     });
+   });
+   ```
+
+2. **Dashboard Admin** : Authentification via JWT dans handshake
+
+   ```typescript
+   const socket = io(serverUrl, {
+     auth: { token: jwtToken }, // Token JWT de l'utilisateur
+     transports: ['polling', 'websocket'],
+   });
+
+   socket.on('authenticated', (data) => {
+     console.log('Dashboard connecté:', data.userId);
+   });
+   ```
+
+**Événements (Pi → Serveur) :**
+
+```javascript
+// Heartbeat toutes les 30s
+socket.emit('heartbeat', {
+  cpu: 25.3,
+  memory: 512,
+  temperature: 45.2,
+  disk: 15.8,
+  uptime: 86400
+});
+
+// Progression déploiement vidéo
+socket.emit('deploy_progress', {
+  deploymentId: 'uuid',
+  progress: 75,
+  completed: false
+});
+
+// Résultat d'une commande
+socket.emit('command_result', {
+  commandId: 'uuid',
+  status: 'success',
+  result: { ... }
+});
+```
+
+**Événements (Serveur → Pi) :**
+
+```javascript
+// Déployer une vidéo
+socket.on('deploy_video', (data) => {
+  // data: { deploymentId, videoUrl, filename, checksum, ... }
+});
+
+// Mettre à jour la configuration
+socket.on('update_config', (data) => {
+  // data: { configVersionId, configuration }
+});
+
+// Exécuter une commande
+socket.on('execute_command', (data) => {
+  // data: { commandId, type, data }
+});
+
+// Health check ping
+socket.on('ping_check', () => {
+  socket.emit('pong_check');
+});
+```
+
+**Événements (Serveur → Dashboard via room 'dashboard') :**
+
+```javascript
+// Progression déploiement
+socket.on('deploy_progress', (data) => {
+  // data: { siteId, deploymentId, progress, ... }
+});
+
+// Commande complétée
+socket.on('command_completed', (data) => {
+  // data: { siteId, commandId, status }
+});
+
+// Statut site changé
+socket.on('site_status_changed', (data) => {
+  // data: { siteId, status }
+});
+
+// Mise à jour config
+socket.on('site_config_updated', (data) => {
+  // data: { siteId, configHash, timestamp }
+});
+```
+
+**Rooms Socket.IO :**
+
+- `siteId` : Chaque Pi rejoint une room avec son UUID pour broadcast ciblé
+- `'dashboard'` : Tous les dashboards admin rejoignent cette room pour recevoir les événements temps réel
+
+**Détection de connexion zombie :**
+
+Le serveur vérifie toutes les 30s si les clients répondent aux pings. Si pas de `pong_check` après 90s, la connexion est considérée comme zombie et déconnectée.
 
 ### Analytics API (Raspberry Pi)
 
