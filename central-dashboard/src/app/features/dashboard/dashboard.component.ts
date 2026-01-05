@@ -1,9 +1,10 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { Subscription, interval } from 'rxjs';
 import { SitesService } from '../../core/services/sites.service';
 import { AuthService } from '../../core/services/auth.service';
-import { SiteStats, Site } from '../../core/models';
+import { SiteStats, Site, SiteConnectionSummary } from '../../core/models';
 
 @Component({
   selector: 'app-dashboard',
@@ -59,7 +60,7 @@ import { SiteStats, Site } from '../../core/models';
           </div>
           <div class="sites-list">
             <div *ngFor="let site of recentSites" class="site-item" [routerLink]="['/sites', site.id]">
-              <span class="site-status" [class]="'status-' + site.status">●</span>
+              <span class="site-status" [class]="'status-' + getRealTimeStatus(site)">●</span>
               <div class="site-info">
                 <div class="site-name">{{ site.club_name }}</div>
                 <div class="site-meta">
@@ -68,8 +69,8 @@ import { SiteStats, Site } from '../../core/models';
                   <span>v{{ site.software_version }}</span>
                 </div>
               </div>
-              <span class="badge" [class]="'badge-' + getStatusBadge(site.status)">
-                {{ site.status }}
+              <span class="badge" [class]="'badge-' + getStatusBadge(getRealTimeStatus(site))">
+                {{ getRealTimeStatus(site) }}
               </span>
             </div>
             <div *ngIf="recentSites.length === 0" class="empty-state">
@@ -424,7 +425,7 @@ import { SiteStats, Site } from '../../core/models';
     }
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   private readonly sitesService = inject(SitesService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
@@ -432,11 +433,41 @@ export class DashboardComponent implements OnInit {
   stats: SiteStats | null = null;
   recentSites: Site[] = [];
 
+  // Map des statuts de connexion temps réel (siteId -> status)
+  private connectionStatusMap = new Map<string, SiteConnectionSummary>();
+  private connectionStatusSubscription?: Subscription;
+  private refreshSubscription?: Subscription;
+
   ngOnInit(): void {
     // Redirect non-admin users to their specific portals
     this.redirectToRolePortal();
     this.loadStats();
     this.loadRecentSites();
+    this.loadConnectionStatus();
+    // Rafraîchir les statuts de connexion toutes les 30 secondes
+    this.refreshSubscription = interval(30000).subscribe(() => {
+      this.loadConnectionStatus();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.connectionStatusSubscription?.unsubscribe();
+    this.refreshSubscription?.unsubscribe();
+  }
+
+  private loadConnectionStatus(): void {
+    this.connectionStatusSubscription?.unsubscribe();
+    this.connectionStatusSubscription = this.sitesService.getAllConnectionStatus().subscribe({
+      next: (response) => {
+        this.connectionStatusMap.clear();
+        for (const site of response.sites) {
+          this.connectionStatusMap.set(site.siteId, site);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading connection status:', error);
+      }
+    });
   }
 
   private redirectToRolePortal(): void {
@@ -470,12 +501,28 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  /**
+   * Retourne le statut de connexion temps réel depuis l'endpoint dédié
+   */
+  getRealTimeStatus(site: Site): 'online' | 'offline' | 'warning' | 'unknown' {
+    const connectionStatus = this.connectionStatusMap.get(site.id);
+    if (connectionStatus) {
+      return connectionStatus.displayStatus;
+    }
+    // Fallback sur le statut DB
+    if (site.status === 'online') return 'online';
+    if (site.status === 'offline') return 'offline';
+    return 'unknown';
+  }
+
   getStatusBadge(status: string): string {
     const badges: Record<string, string> = {
       online: 'success',
       offline: 'secondary',
+      warning: 'warning',
       error: 'danger',
-      maintenance: 'warning'
+      maintenance: 'warning',
+      unknown: 'secondary'
     };
     return badges[status] || 'secondary';
   }
