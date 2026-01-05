@@ -463,6 +463,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
         for (const site of response.sites) {
           this.connectionStatusMap.set(site.siteId, site);
         }
+        // Mettre à jour les stats temps réel depuis les données de connexion
+        this.stats = {
+          total_sites: response.stats.total,
+          online: response.stats.online + response.stats.warning, // warning = presque online
+          offline: response.stats.offline + response.stats.unknown,
+          maintenance: this.stats?.maintenance || 0,
+          error: this.stats?.error || 0,
+        };
       },
       error: (error) => {
         console.error('Error loading connection status:', error);

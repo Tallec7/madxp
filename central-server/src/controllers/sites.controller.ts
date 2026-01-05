@@ -363,19 +363,56 @@ export const getSiteMetrics = async (req: AuthRequest, res: Response) => {
 
 export const getSiteStats = async (req: AuthRequest, res: Response) => {
   try {
-    const result = await query(`
-      SELECT
-        COUNT(*) as total_sites,
-        COUNT(*) FILTER (WHERE status = 'online') as online,
-        COUNT(*) FILTER (WHERE status = 'offline') as offline,
-        COUNT(*) FILTER (WHERE status = 'maintenance') as maintenance,
-        COUNT(*) FILTER (WHERE status = 'error') as error
-      FROM sites
+    // Récupérer tous les sites avec leur last_seen_at
+    const sitesResult = await query(`
+      SELECT id, status, last_seen_at FROM sites
     `);
 
-    res.json(result.rows[0]);
-  } catch (error) {
-    logger.error('Get site stats error:', error);
+    const socketService = (await import('../services/socket.service')).default;
+    const connectedSiteIds = new Set(socketService.getConnectedSites());
+    const now = new Date();
+
+    // Calculer les stats temps réel basées sur les connexions Socket.IO
+    let online = 0;
+    let offline = 0;
+    let maintenance = 0;
+    let error = 0;
+
+    for (const site of sitesResult.rows as Array<{ id: string; status: string; last_seen_at: Date | null }>) {
+      // Vérifier si connecté via Socket.IO
+      const isConnectedNow = connectedSiteIds.has(site.id);
+
+      if (site.status === 'maintenance') {
+        maintenance++;
+      } else if (site.status === 'error') {
+        error++;
+      } else if (isConnectedNow) {
+        online++;
+      } else {
+        // Vérifier last_seen_at comme fallback
+        const lastSeenAt = site.last_seen_at ? new Date(site.last_seen_at) : null;
+        const secondsSinceLastSeen = lastSeenAt
+          ? Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000)
+          : null;
+
+        if (secondsSinceLastSeen !== null && secondsSinceLastSeen < 120) {
+          // Vu il y a moins de 2 minutes mais pas connecté Socket.IO = warning (compté comme online)
+          online++;
+        } else {
+          offline++;
+        }
+      }
+    }
+
+    res.json({
+      total_sites: sitesResult.rows.length,
+      online,
+      offline,
+      maintenance,
+      error,
+    });
+  } catch (err) {
+    logger.error('Get site stats error:', err);
     res.status(500).json({ error: 'Erreur lors de la récupération des statistiques' });
   }
 };
