@@ -20,6 +20,13 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const BCRYPT_ROUNDS = 10;
 
+// Seuils de connexion (en secondes)
+// Un site est considéré "online" si heartbeat reçu dans ce délai
+const ONLINE_THRESHOLD_SECONDS = 90; // 1min30 (3 heartbeats manqués max)
+// Un site passe en "warning" si heartbeat entre ONLINE et WARNING
+const WARNING_THRESHOLD_SECONDS = 180; // 3 minutes
+// Au-delà de WARNING_THRESHOLD = offline
+
 const generateApiKey = (): string => {
   return randomBytes(32).toString('hex');
 };
@@ -411,10 +418,10 @@ export const getSiteStats = async (req: AuthRequest, res: Response) => {
         maintenance++;
       } else if (site.status === 'error') {
         error++;
-      } else if (isConnectedNow || (secondsSinceLastSeen !== null && secondsSinceLastSeen < 60)) {
+      } else if (isConnectedNow || (secondsSinceLastSeen !== null && secondsSinceLastSeen < ONLINE_THRESHOLD_SECONDS)) {
         // Connecté via Socket.IO OU heartbeat reçu il y a moins d'1 minute
         online++;
-      } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < 120) {
+      } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < WARNING_THRESHOLD_SECONDS) {
         // Vu il y a moins de 2 minutes = warning (compté comme online)
         online++;
       } else {
@@ -485,12 +492,12 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
       let displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
       if (isConnectedNow) {
         displayStatus = 'online';
-      } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < 60) {
-        // Heartbeat reçu il y a moins d'1 minute = online
+      } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < ONLINE_THRESHOLD_SECONDS) {
+        // Heartbeat reçu récemment = online
         displayStatus = 'online';
       } else if (secondsSinceLastSeen === null) {
         displayStatus = 'unknown';
-      } else if (secondsSinceLastSeen < 120) {
+      } else if (secondsSinceLastSeen < WARNING_THRESHOLD_SECONDS) {
         displayStatus = 'warning';
       } else {
         displayStatus = 'offline';
@@ -500,7 +507,7 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
         siteId: site.id,
         siteName: site.site_name,
         clubName: site.club_name,
-        isConnected: isConnectedNow || (secondsSinceLastSeen !== null && secondsSinceLastSeen < 60),
+        isConnected: isConnectedNow || (secondsSinceLastSeen !== null && secondsSinceLastSeen < ONLINE_THRESHOLD_SECONDS),
         displayStatus,
         lastSeenAt,
         secondsSinceLastSeen,
@@ -855,13 +862,13 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
     let displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
     if (isConnectedNow) {
       displayStatus = 'online';
-    } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < 60) {
-      // Heartbeat reçu il y a moins d'1 minute = online (même sans Socket.IO direct)
+    } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < ONLINE_THRESHOLD_SECONDS) {
+      // Heartbeat reçu récemment = online (même sans Socket.IO direct)
       displayStatus = 'online';
     } else if (secondsSinceLastSeen === null) {
       displayStatus = 'unknown';
-    } else if (secondsSinceLastSeen < 120) {
-      // Moins de 2 minutes = probablement juste un petit délai
+    } else if (secondsSinceLastSeen < WARNING_THRESHOLD_SECONDS) {
+      // Heartbeat pas trop ancien = warning
       displayStatus = 'warning';
     } else {
       displayStatus = 'offline';
@@ -888,8 +895,8 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
     // Uptime estimé: heartbeat toutes les 30s = 2880 max par 24h
     const uptime24h = Math.min(100, (heartbeatCount24h / 2880) * 100);
 
-    // Un site est considéré "connecté" si Socket.IO actif OU heartbeat récent (<60s)
-    const isEffectivelyConnected = isConnectedNow || (secondsSinceLastSeen !== null && secondsSinceLastSeen < 60);
+    // Un site est considéré "connecté" si Socket.IO actif OU heartbeat récent
+    const isEffectivelyConnected = isConnectedNow || (secondsSinceLastSeen !== null && secondsSinceLastSeen < ONLINE_THRESHOLD_SECONDS);
 
     res.json({
       siteId: id,
@@ -1155,11 +1162,11 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
     let displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
     if (isConnectedNow) {
       displayStatus = 'online';
-    } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < 60) {
+    } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < ONLINE_THRESHOLD_SECONDS) {
       displayStatus = 'online';
     } else if (secondsSinceLastSeen === null) {
       displayStatus = 'unknown';
-    } else if (secondsSinceLastSeen < 120) {
+    } else if (secondsSinceLastSeen < WARNING_THRESHOLD_SECONDS) {
       displayStatus = 'warning';
     } else {
       displayStatus = 'offline';
