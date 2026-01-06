@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
 import { AnalyticsService } from '../../core/services/analytics.service';
+import { LoggerService } from '../../core/services/logger.service';
+import { ErrorExtractor } from '../../core/utils/error-extractor';
 
 interface SiteSummary {
   site_id: string;
@@ -376,6 +378,7 @@ export class AnalyticsOverviewComponent implements OnInit, OnDestroy {
   lastUpdate: Date | null = null;
 
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly logger = inject(LoggerService);
   private refreshSubscription?: Subscription;
 
   ngOnInit(): void {
@@ -400,7 +403,8 @@ export class AnalyticsOverviewComponent implements OnInit, OnDestroy {
         this.loading = false;
       },
       error: (err) => {
-        console.error('Error loading analytics overview:', err);
+        const message = ErrorExtractor.getMessage(err);
+        this.logger.warn('Failed to load analytics overview', { error: message });
         this.loading = false;
       }
     });

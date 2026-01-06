@@ -5,6 +5,8 @@ import { RouterModule } from '@angular/router';
 import { GroupsService } from '../../core/services/groups.service';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { LoggerService } from '../../core/services/logger.service';
+import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Group, Site } from '../../core/models';
 
 type GroupMetadataForm = {
@@ -591,6 +593,7 @@ export class GroupsListComponent implements OnInit {
   private readonly groupsService = inject(GroupsService);
   private readonly sitesService = inject(SitesService);
   private readonly notificationService = inject(NotificationService);
+  private readonly logger = inject(LoggerService);
 
   groups$ = this.groupsService.groups$;
   availableSites: Site[] = [];
@@ -719,7 +722,9 @@ export class GroupsListComponent implements OnInit {
         this.resetForm();
       },
       error: (error) => {
-        this.notificationService.error('Erreur lors de la création du groupe: ' + (error.error?.error || error.message));
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to create group', { error: message, groupName: this.groupForm.name });
+        this.notificationService.error(`Erreur lors de la création du groupe: ${message}`);
       }
     });
   }
@@ -744,7 +749,9 @@ export class GroupsListComponent implements OnInit {
         this.showEditModal = true;
       },
       error: (error: { error?: { error?: string }; message?: string }) => {
-        this.notificationService.error('Erreur lors du chargement du groupe: ' + (error.error?.error || error.message));
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to load group sites', { error: message, groupId: group.id });
+        this.notificationService.error(`Erreur lors du chargement du groupe: ${message}`);
       }
     });
   }
@@ -769,7 +776,9 @@ export class GroupsListComponent implements OnInit {
         this.resetForm();
       },
       error: (error) => {
-        this.notificationService.error('Erreur lors de la mise à jour du groupe: ' + (error.error?.error || error.message));
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to update group', { error: message, groupId: this.editingGroupId });
+        this.notificationService.error(`Erreur lors de la mise à jour du groupe: ${message}`);
       }
     });
   }
@@ -781,7 +790,9 @@ export class GroupsListComponent implements OnInit {
           this.loadGroups();
         },
         error: (error) => {
-          this.notificationService.error('Erreur lors de la suppression: ' + (error.error?.error || error.message));
+          const message = ErrorExtractor.getMessage(error);
+          this.logger.error('Failed to delete group', { error: message, groupId: group.id });
+          this.notificationService.error(`Erreur lors de la suppression: ${message}`);
         }
       });
     }

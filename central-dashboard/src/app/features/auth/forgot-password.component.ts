@@ -5,6 +5,8 @@ import { RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { ApiService } from '../../core/services/api.service';
 import { TranslationService } from '../../core/services/translation.service';
+import { LoggerService } from '../../core/services/logger.service';
+import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { LanguageSelectorComponent } from '../../shared/components/language-selector/language-selector.component';
 
 @Component({
@@ -247,6 +249,7 @@ export class ForgotPasswordComponent {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(ApiService);
   private readonly translationService = inject(TranslationService);
+  private readonly logger = inject(LoggerService);
 
   forgotForm: FormGroup;
   loading = false;
@@ -279,7 +282,9 @@ export class ForgotPasswordComponent {
       },
       error: (error) => {
         this.loading = false;
-        this.errorMessage = error.error?.error || this.translationService.instant('common.error');
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.warn('Forgot password request failed', { email, error: message });
+        this.errorMessage = message || this.translationService.instant('common.error');
       }
     });
   }

@@ -6,6 +6,8 @@ import { SitesService } from '../../core/services/sites.service';
 import { GroupsService } from '../../core/services/groups.service';
 import { SocketService } from '../../core/services/socket.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { LoggerService } from '../../core/services/logger.service';
+import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, Group } from '../../core/models';
 import { Subscription, firstValueFrom } from 'rxjs';
 
@@ -1348,6 +1350,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   private readonly groupsService = inject(GroupsService);
   private readonly socketService = inject(SocketService);
   private readonly notificationService = inject(NotificationService);
+  private readonly logger = inject(LoggerService);
   private subscriptions = new Subscription();
 
   ngOnInit(): void {
@@ -1368,7 +1371,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
         this.videos = response.data || [];
       },
       error: (error) => {
-        console.error('Error loading videos:', error);
+        this.logger.warn('Failed to load videos', { error: ErrorExtractor.getMessage(error) });
       }
     });
   }
@@ -1380,7 +1383,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
         this.deployments = deployments;
       },
       error: (error) => {
-        console.error('Error loading deployments:', error);
+        this.logger.warn('Failed to load deployments', { error: ErrorExtractor.getMessage(error) });
       }
     });
   }
@@ -1531,8 +1534,12 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
           this.loadVideos();
         },
         error: (error) => {
-          this.uploadResults = [{ name: files[0].name, success: false, error: error.error?.error || error.message }];
-          this.notificationService.error('Erreur lors de l\'upload');
+          const message = ErrorExtractor.getMessage(error);
+          this.uploadResults = [{ name: files[0].name, success: false, error: message }];
+          this.logger.error('Video upload failed', { error: message, fileName: files[0].name });
+          this.notificationService.error('Erreur lors de l\'upload', {
+            correlationId: ErrorExtractor.getCorrelationId(error)
+          });
           this.uploadProgress = 0;
           this.isUploading = false;
         }
@@ -1576,7 +1583,11 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
           this.loadVideos();
         },
         error: (error) => {
-          this.notificationService.error('Erreur lors de l\'upload: ' + (error.error?.error || error.message));
+          const message = ErrorExtractor.getMessage(error);
+          this.logger.error('Bulk video upload failed', { error: message, fileCount: files.length });
+          this.notificationService.error(`Erreur lors de l'upload: ${message}`, {
+            correlationId: ErrorExtractor.getCorrelationId(error)
+          });
           this.uploadProgress = 0;
           this.isUploading = false;
         }
@@ -1591,7 +1602,11 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
           this.videos = this.videos.filter(v => v.id !== video.id);
         },
         error: (error) => {
-          this.notificationService.error('Erreur lors de la suppression: ' + (error.error?.error || error.message));
+          const message = ErrorExtractor.getMessage(error);
+          this.logger.error('Video deletion failed', { error: message, videoId: video.id });
+          this.notificationService.error(`Erreur lors de la suppression: ${message}`, {
+            correlationId: ErrorExtractor.getCorrelationId(error)
+          });
         }
       });
     }
@@ -1609,8 +1624,11 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
         this.isLoadingHistory = false;
       },
       error: (error) => {
-        console.error('Error loading video history:', error);
-        this.notificationService.error('Erreur lors du chargement de l\'historique');
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Video history load failed', { error: message, videoId: video.id });
+        this.notificationService.error('Erreur lors du chargement de l\'historique', {
+          correlationId: ErrorExtractor.getCorrelationId(error)
+        });
         this.isLoadingHistory = false;
       }
     });
@@ -1676,9 +1694,11 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
         });
         successes.push(videoTitle);
       } catch (error) {
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Deployment failed', { error: message, videoId, videoTitle, targetId, targetType });
         failures.push({
           title: videoTitle,
-          error: (error instanceof Error ? error.message : (error as { error?: { error?: string } })?.error?.error) || 'Erreur inconnue'
+          error: message
         });
       }
     }

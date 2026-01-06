@@ -203,6 +203,8 @@ Admin:      200 req/min     (dashboard ops)
 | **MFA**        | `mfa.service.ts`            | 2FA avec backup codes               |
 | **Email**      | `email.service.ts`          | Password reset, alertes             |
 | **Cron**       | `cron-scheduler.service.ts` | Stats quotidiennes, cleanup         |
+| **Logger**     | `logger.service.ts`         | Logs structurés avec correlation ID |
+| **Errors**     | `error-extractor.ts`        | Extraction messages d'erreur        |
 
 ### Protocole Socket.IO
 
@@ -250,6 +252,35 @@ Le sync-agent remonte automatiquement la liste des vidéos présentes sur le Pi 
 - `raspberry/sync-agent/src/watchers/video-watcher.js` - Surveillance du dossier vidéos
 - `central-server/src/services/socket.service.ts` - Stockage dans `local_config_mirror`
 - `central-dashboard/src/app/features/sites/site-detail.component.ts` - Affichage dropdown
+
+### Mise à jour de Configuration (Merge Intelligent)
+
+La commande `update_config` utilise un **merge intelligent** qui préserve les paramètres locaux :
+
+```javascript
+// Modes disponibles
+'merge'   : Fusionne le contenu NEOPRO avec la config locale (défaut, recommandé)
+'replace' : Écrase tout (legacy, déconseillé - peut perdre des paramètres locaux)
+```
+
+**Paramètres locaux protégés** (jamais écrasés par le central) :
+
+| Paramètre      | Description                                       |
+| -------------- | ------------------------------------------------- |
+| `settings`     | language, timezone - configurés localement        |
+| `siteId`       | Identifiant unique du site                        |
+| `siteName`     | Nom du site (peut être personnalisé)              |
+| `clubName`     | Nom du club                                       |
+| `apiKey`       | Clé API du boîtier                                |
+| `hotspot`      | Configuration WiFi (SSID) - si stocké dans config |
+| `localNetwork` | Configuration réseau locale                       |
+
+**Note** : Le SSID WiFi est stocké dans `/etc/hostapd/hostapd.conf` (fichier système), pas dans `configuration.json`. Pour le modifier, utiliser la commande `update_hotspot`.
+
+**Fichiers impliqués** :
+
+- `raspberry/sync-agent/src/utils/config-merge.js` - Logique de fusion
+- `central-server/src/controllers/sites.controller.ts` - Normalisation des commandes
 
 ---
 
@@ -612,22 +643,29 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 
 ### Backend
 
-| Fichier                                         | Description                      |
-| ----------------------------------------------- | -------------------------------- |
-| `central-server/src/server.ts`                  | Point d'entrée, middleware order |
-| `central-server/src/routes/*.ts`                | Tous les endpoints               |
-| `central-server/src/types/index.ts`             | Interfaces TypeScript            |
-| `central-server/src/middleware/auth.ts`         | JWT + cookie auth                |
-| `central-server/src/services/socket.service.ts` | Protocole WebSocket              |
-| `central-server/src/scripts/full-schema.sql`    | Schéma DB complet                |
+| Fichier                                          | Description                      |
+| ------------------------------------------------ | -------------------------------- |
+| `central-server/src/server.ts`                   | Point d'entrée, middleware order |
+| `central-server/src/routes/*.ts`                 | Tous les endpoints               |
+| `central-server/src/types/index.ts`              | Interfaces TypeScript            |
+| `central-server/src/middleware/auth.ts`          | JWT + cookie auth                |
+| `central-server/src/middleware/correlation.ts`   | Correlation ID middleware        |
+| `central-server/src/middleware/errors.ts`        | Classes d'erreurs standardisées  |
+| `central-server/src/middleware/error-handler.ts` | Gestionnaire d'erreurs global    |
+| `central-server/src/services/socket.service.ts`  | Protocole WebSocket              |
+| `central-server/src/scripts/full-schema.sql`     | Schéma DB complet                |
 
 ### Frontend Dashboard
 
-| Fichier                                                   | Description       |
-| --------------------------------------------------------- | ----------------- |
-| `central-dashboard/src/app/app.routes.ts`                 | Routes Angular    |
-| `central-dashboard/src/app/core/services/auth.service.ts` | Auth client       |
-| `central-dashboard/src/app/features/sites/`               | Gestion des clubs |
+| Fichier                                                            | Description                   |
+| ------------------------------------------------------------------ | ----------------------------- |
+| `central-dashboard/src/app/app.routes.ts`                          | Routes Angular                |
+| `central-dashboard/src/app/core/services/auth.service.ts`          | Auth client                   |
+| `central-dashboard/src/app/core/services/logger.service.ts`        | Logs structurés + correlation |
+| `central-dashboard/src/app/core/utils/error-extractor.ts`          | Extraction messages d'erreur  |
+| `central-dashboard/src/app/core/interceptors/error.interceptor.ts` | HTTP retry + correlation      |
+| `central-dashboard/src/app/core/handlers/global-error.handler.ts`  | Error handler Angular         |
+| `central-dashboard/src/app/features/sites/`                        | Gestion des clubs             |
 
 ### Raspberry Pi
 
@@ -641,11 +679,12 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 
 ### Documentation
 
-| Fichier                         | Description            |
-| ------------------------------- | ---------------------- |
-| `docs/REFERENCE.md`             | Doc technique complète |
-| `docs/TROUBLESHOOTING.md`       | Dépannage              |
-| `docs/INSTALLATION_COMPLETE.md` | Setup Pi de A à Z      |
+| Fichier                            | Description              |
+| ---------------------------------- | ------------------------ |
+| `docs/REFERENCE.md`                | Doc technique complète   |
+| `docs/TROUBLESHOOTING.md`          | Dépannage                |
+| `docs/INSTALLATION_COMPLETE.md`    | Setup Pi de A à Z        |
+| `docs/technical/ERROR_HANDLING.md` | Système d'error handling |
 
 ---
 

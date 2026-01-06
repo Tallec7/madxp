@@ -1,14 +1,8 @@
-import { Injectable, isDevMode } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, Subject, filter, map } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 import { environment } from '@env/environment';
-
-// Logger conditionnel pour éviter les logs en production
-const logger = {
-  log: (...args: unknown[]) => isDevMode() && console.log(...args),
-  warn: (...args: unknown[]) => isDevMode() && console.warn(...args),
-  error: (...args: unknown[]) => isDevMode() && console.error(...args),
-};
+import { LoggerService } from './logger.service';
 
 export interface SocketEvent {
   type: string;
@@ -26,6 +20,8 @@ export interface ConnectionStatus {
   providedIn: 'root'
 })
 export class SocketService {
+  private readonly logger = inject(LoggerService);
+
   private socket: Socket | null = null;
   private eventsSubject = new Subject<SocketEvent>();
   public events$ = this.eventsSubject.asObservable();
@@ -60,7 +56,7 @@ export class SocketService {
     });
 
     this.socket.on('connect', () => {
-      logger.log('✅ Connected to central server');
+      this.logger.info('Socket connected to central server');
       this.connected = true;
       this.reconnectAttempt = 0;
       this.eventsSubject.next({ type: 'connected', data: null });
@@ -68,7 +64,7 @@ export class SocketService {
     });
 
     this.socket.on('disconnect', (reason) => {
-      logger.log('Disconnected from central server:', reason);
+      this.logger.warn('Socket disconnected from central server', { reason });
       this.connected = false;
       this.eventsSubject.next({ type: 'disconnected', data: { reason } });
       this.emitConnectionStatus();
@@ -78,25 +74,25 @@ export class SocketService {
     this.socket.io.on('reconnect_attempt', (attempt) => {
       this.reconnectAttempt = attempt;
       const delay = this.calculateBackoffDelay(attempt);
-      logger.log(`🔄 Reconnecting... (attempt ${attempt}/${this.maxReconnectAttempts}, next retry in ${delay}ms)`);
+      this.logger.info('Socket reconnecting', { attempt, maxAttempts: this.maxReconnectAttempts, nextRetryMs: delay });
       this.eventsSubject.next({ type: 'reconnecting', data: { attempt, delay } });
       this.emitConnectionStatus();
     });
 
     this.socket.io.on('reconnect', (attempt) => {
-      logger.log(`✅ Reconnected after ${attempt} attempts`);
+      this.logger.info('Socket reconnected', { attempts: attempt });
       this.reconnectAttempt = 0;
       this.eventsSubject.next({ type: 'reconnected', data: { attempts: attempt } });
       this.emitConnectionStatus();
     });
 
     this.socket.io.on('reconnect_error', (error) => {
-      logger.error('Reconnection error:', error.message);
+      this.logger.error('Socket reconnection error', { error: error.message });
       this.eventsSubject.next({ type: 'reconnect_error', data: { error: error.message } });
     });
 
     this.socket.io.on('reconnect_failed', () => {
-      logger.error(`❌ Failed to reconnect after ${this.maxReconnectAttempts} attempts`);
+      this.logger.error('Socket failed to reconnect', { maxAttempts: this.maxReconnectAttempts });
       this.eventsSubject.next({ type: 'reconnect_failed', data: null });
       this.emitConnectionStatus();
     });
@@ -173,7 +169,7 @@ export class SocketService {
    */
   forceReconnect(): void {
     if (this.socket && !this.connected) {
-      logger.log('Forcing reconnection...');
+      this.logger.info('Forcing socket reconnection');
       this.socket.connect();
     }
   }
@@ -189,7 +185,7 @@ export class SocketService {
     if (this.socket && this.connected) {
       this.socket.emit(event, data);
     } else {
-      logger.warn('Cannot emit: socket not connected');
+      this.logger.warn('Cannot emit: socket not connected', { event });
     }
   }
 }

@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { LoggerService } from '../../core/services/logger.service';
+import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, Metrics, SiteConnectionStatus, OverlayPosition, LocalVideo, LocalStorage } from '../../core/models';
 import { formatVersion } from './utils/version';
 import { Subscription, interval } from 'rxjs';
@@ -1953,6 +1955,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly sitesService = inject(SitesService);
   private readonly notificationService = inject(NotificationService);
+  private readonly logger = inject(LoggerService);
   private refreshSubscription?: Subscription;
 
   ngOnInit(): void {
@@ -1980,7 +1983,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         this.site = site;
       },
       error: (error) => {
-        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to load site', { error: message, siteId: this.siteId });
+        this.notificationService.error(`Erreur: ${message}`);
       }
     });
   }
@@ -2026,7 +2031,8 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         this.loadingDashboard = false;
       },
       error: (error) => {
-        console.error('Erreur chargement dashboard:', error);
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.warn('Failed to load dashboard data', { error: message, siteId: this.siteId });
         this.isConnected = false;
         this.loadingDashboard = false;
       }
@@ -2095,7 +2101,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.sendingCommand = false;
-          this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+          const message = ErrorExtractor.getMessage(error);
+          this.logger.error('Failed to restart service', { error: message, siteId: this.siteId, service });
+          this.notificationService.error(`Erreur: ${message}`);
         }
       });
     }
@@ -2114,7 +2122,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         this.logsLoading = false;
       },
       error: (error) => {
-        this.logs = [`Erreur lors de la récupération des logs: ${error.error?.error || error.message}`];
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.warn('Failed to fetch logs', { error: message, siteId: this.siteId });
+        this.logs = [`Erreur lors de la récupération des logs: ${message}`];
         this.logsLoading = false;
       }
     });
@@ -2131,7 +2141,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       error: (error) => {
         this.systemInfo = null;
         this.systemInfoLoading = false;
-        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to get system info', { error: message, siteId: this.siteId });
+        this.notificationService.error(`Erreur: ${message}`);
       }
     });
   }
@@ -2182,7 +2194,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.networkDiagLoading = false;
-        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to run network diagnostics', { error: message, siteId: this.siteId });
+        this.notificationService.error(`Erreur: ${message}`);
       }
     });
   }
@@ -2226,7 +2240,8 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
           // Si pending ou executing, on continue de poller
         },
         error: (error) => {
-          console.error('Error polling network diag result:', error);
+          const message = ErrorExtractor.getMessage(error);
+          this.logger.debug('Error polling network diag result', { error: message, siteId: this.siteId });
         }
       });
     }, 1000);
@@ -2250,7 +2265,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.sendingCommand = false;
-          this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+          const message = ErrorExtractor.getMessage(error);
+          this.logger.error('Failed to reboot site', { error: message, siteId: this.siteId });
+          this.notificationService.error(`Erreur: ${message}`);
         }
       });
     }
@@ -2264,7 +2281,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
           this.notificationService.success('Clé API régénérée avec succès !');
         },
         error: (error) => {
-          this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+          const message = ErrorExtractor.getMessage(error);
+          this.logger.error('Failed to regenerate API key', { error: message, siteId: this.siteId });
+          this.notificationService.error(`Erreur: ${message}`);
         }
       });
     }
@@ -2314,8 +2333,10 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
             },
             error: (error) => {
               this.savingLiveScore = false;
+              const deployMessage = ErrorExtractor.getMessage(error);
+              this.logger.warn('Failed to deploy live score config to device', { error: deployMessage, siteId: this.siteId, newValue });
               this.notificationService.warning(
-                `Option Premium ${newValue ? 'activée' : 'désactivée'} en base de données, mais erreur lors du déploiement: ${error.error?.error || error.message}`
+                `Option Premium ${newValue ? 'activée' : 'désactivée'} en base de données, mais erreur lors du déploiement: ${deployMessage}`
               );
             }
           });
@@ -2327,7 +2348,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         this.savingLiveScore = false;
         // Revert checkbox state
         checkbox.checked = !newValue;
-        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to update live score setting', { error: message, siteId: this.siteId, newValue });
+        this.notificationService.error(`Erreur: ${message}`);
       }
     });
   }
@@ -2394,7 +2417,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.savingScoreOverlay = false;
-        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to save score overlay config', { error: message, siteId: this.siteId });
+        this.notificationService.error(`Erreur: ${message}`);
       }
     });
   }
@@ -2450,7 +2475,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.updatingHotspot = false;
-        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to update hotspot config', { error: message, siteId: this.siteId });
+        this.notificationService.error(`Erreur: ${message}`);
       }
     });
   }
@@ -2484,7 +2511,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.updatingSyncAgent = false;
-        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to update sync agent remotely', { error: message, siteId: this.siteId });
+        this.notificationService.error(`Erreur: ${message}`);
       }
     });
   }
@@ -2994,7 +3023,9 @@ module.exports = commands;
       },
       error: (error) => {
         this.loadingLocalVideos = false;
-        this.notificationService.error('Erreur lors du chargement des vidéos: ' + error.message);
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to load local videos', { error: message, siteId: this.siteId });
+        this.notificationService.error(`Erreur lors du chargement des vidéos: ${message}`);
       }
     });
   }
@@ -3044,7 +3075,9 @@ module.exports = commands;
       },
       error: (error) => {
         this.playingVideo = false;
-        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to play video', { error: message, siteId: this.siteId, videoPath: this.selectedVideoPath });
+        this.notificationService.error(`Erreur: ${message}`);
       }
     });
   }

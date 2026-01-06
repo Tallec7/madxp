@@ -5,6 +5,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { ApiService } from '../../core/services/api.service';
 import { TranslationService } from '../../core/services/translation.service';
+import { LoggerService } from '../../core/services/logger.service';
+import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { LanguageSelectorComponent } from '../../shared/components/language-selector/language-selector.component';
 
 // Custom validator for password match
@@ -336,6 +338,7 @@ export class ResetPasswordComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly translationService = inject(TranslationService);
+  private readonly logger = inject(LoggerService);
 
   resetForm: FormGroup;
   loading = false;
@@ -370,7 +373,8 @@ export class ResetPasswordComponent implements OnInit {
           this.verifying = false;
           this.tokenValid = response.valid;
         },
-        error: () => {
+        error: (error) => {
+          this.logger.warn('Reset token verification failed', { error: ErrorExtractor.getMessage(error) });
           this.verifying = false;
           this.tokenValid = false;
         }
@@ -407,7 +411,9 @@ export class ResetPasswordComponent implements OnInit {
       },
       error: (error) => {
         this.loading = false;
-        this.errorMessage = error.error?.error || this.translationService.instant('common.error');
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.warn('Password reset failed', { error: message });
+        this.errorMessage = message || this.translationService.instant('common.error');
       }
     });
   }
