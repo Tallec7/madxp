@@ -12,6 +12,9 @@ import {
   AlertData
 } from '../../core/services/analytics.service';
 import { SitesService } from '../../core/services/sites.service';
+import { NotificationService } from '../../core/services/notification.service';
+import { LoggerService } from '../../core/services/logger.service';
+import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site } from '../../core/models';
 
 type TabType = 'overview' | 'usage' | 'content' | 'health';
@@ -1045,6 +1048,8 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly analyticsService = inject(AnalyticsService);
   private readonly sitesService = inject(SitesService);
+  private readonly notificationService = inject(NotificationService);
+  private readonly logger = inject(LoggerService);
   private refreshSubscription?: Subscription;
 
   ngOnInit(): void {
@@ -1067,7 +1072,10 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
     // Charger site
     this.sitesService.getSite(this.siteId).subscribe({
       next: (site) => this.site = site,
-      error: (err) => console.error('Error loading site:', err)
+      error: (err) => {
+        const message = ErrorExtractor.getMessage(err);
+        this.logger.warn('Failed to load site for analytics', { error: message, siteId: this.siteId });
+      }
     });
 
     // Charger toutes les analytics en parallèle
@@ -1085,7 +1093,10 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
         this.availability = data.availability.availability;
         this.recentAlerts = data.alerts.alerts;
       },
-      error: (err) => console.error('Error loading analytics:', err)
+      error: (err) => {
+        const message = ErrorExtractor.getMessage(err);
+        this.logger.error('Failed to load club analytics', { error: message, siteId: this.siteId });
+      }
     });
   }
 
@@ -1108,8 +1119,9 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
         this.exporting = false;
       },
       error: (err) => {
-        console.error('Export error:', err);
-        alert('Erreur lors de l\'export');
+        const message = ErrorExtractor.getMessage(err);
+        this.logger.error('Failed to export club data', { error: message, siteId: this.siteId });
+        this.notificationService.error(`Erreur lors de l'export: ${message}`);
         this.exporting = false;
       }
     });
@@ -1138,8 +1150,9 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
         this.exportingPdf = false;
       },
       error: (err) => {
-        console.error('PDF generation error:', err);
-        alert('Erreur lors de la génération du PDF');
+        const message = ErrorExtractor.getMessage(err);
+        this.logger.error('Failed to generate PDF report', { error: message, siteId: this.siteId });
+        this.notificationService.error(`Erreur lors de la génération du PDF: ${message}`);
         this.exportingPdf = false;
       }
     });

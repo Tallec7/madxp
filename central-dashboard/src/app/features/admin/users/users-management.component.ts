@@ -12,6 +12,8 @@ import {
 } from '../../../core/services/users.service';
 import { AgencyPortalService, Agency } from '../../../core/services/agency-portal.service';
 import { ApiService } from '../../../core/services/api.service';
+import { LoggerService } from '../../../core/services/logger.service';
+import { ErrorExtractor } from '../../../core/utils/error-extractor';
 
 interface Advertiser {
   id: string;
@@ -729,6 +731,7 @@ export class UsersManagementComponent implements OnInit {
   readonly usersService = inject(UsersService);
   private readonly agencyService = inject(AgencyPortalService);
   private readonly api = inject(ApiService);
+  private readonly logger = inject(LoggerService);
 
   users = signal<User[]>([]);
   agencies = signal<Agency[]>([]);
@@ -779,7 +782,9 @@ export class UsersManagementComponent implements OnInit {
         this.loading.set(false);
       },
       error: (err) => {
-        this.error.set(err.error?.error || 'Erreur de connexion');
+        const message = ErrorExtractor.getMessage(err);
+        this.logger.error('Failed to load users', { error: message });
+        this.error.set(message);
         this.loading.set(false);
       },
     });
@@ -869,7 +874,9 @@ export class UsersManagementComponent implements OnInit {
           this.saving.set(false);
         },
         error: (err) => {
-          this.error.set(err.error?.error || 'Erreur lors de la mise a jour');
+          const message = ErrorExtractor.getMessage(err);
+          this.logger.error('Failed to update user', { error: message, userId: this.editingUser?.id });
+          this.error.set(message);
           this.saving.set(false);
         },
       });
@@ -894,7 +901,9 @@ export class UsersManagementComponent implements OnInit {
           this.saving.set(false);
         },
         error: (err) => {
-          this.error.set(err.error?.error || 'Erreur lors de la creation');
+          const message = ErrorExtractor.getMessage(err);
+          this.logger.error('Failed to create user', { error: message, email: data.email });
+          this.error.set(message);
           this.saving.set(false);
         },
       });
@@ -921,7 +930,9 @@ export class UsersManagementComponent implements OnInit {
         this.saving.set(false);
       },
       error: (err) => {
-        this.error.set(err.error?.error || 'Erreur lors de la suppression');
+        const message = ErrorExtractor.getMessage(err);
+        this.logger.error('Failed to delete user', { error: message, userId: this.deletingUser?.id });
+        this.error.set(message);
         this.saving.set(false);
       },
     });
@@ -937,7 +948,9 @@ export class UsersManagementComponent implements OnInit {
         }
       },
       error: (err) => {
-        this.error.set(err.error?.error || 'Erreur lors du changement de statut');
+        const message = ErrorExtractor.getMessage(err);
+        this.logger.error('Failed to toggle user status', { error: message, userId: user.id, newStatus });
+        this.error.set(message);
       },
     });
   }

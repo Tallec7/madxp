@@ -13,6 +13,7 @@ Documentation architecture et technique pour développeurs.
 - **[COMMAND_QUEUE.md](COMMAND_QUEUE.md)** - File d'attente des commandes (sites offline)
 - **[SYNC_AGENT_CONFIG.md](SYNC_AGENT_CONFIG.md)** - Configuration sync agent
 - **[ROW_LEVEL_SECURITY.md](ROW_LEVEL_SECURITY.md)** - Sécurité niveau ligne (RLS)
+- **[ERROR_HANDLING.md](ERROR_HANDLING.md)** - Système d'error handling centralisé
 
 ## 🧪 Tests
 

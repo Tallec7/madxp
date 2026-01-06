@@ -5,6 +5,8 @@ import { RouterModule } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { LoggerService } from '../../core/services/logger.service';
+import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, SiteConnectionSummary } from '../../core/models';
 import { formatVersion } from './utils/version';
 
@@ -471,6 +473,7 @@ import { formatVersion } from './utils/version';
 export class SitesListComponent implements OnInit, OnDestroy {
   private readonly sitesService = inject(SitesService);
   private readonly notificationService = inject(NotificationService);
+  private readonly logger = inject(LoggerService);
   readonly formatVersion = formatVersion;
 
   sites$ = this.sitesService.sites$;
@@ -534,7 +537,7 @@ export class SitesListComponent implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        console.error('Error loading connection status:', error);
+        this.logger.warn('Failed to load connection status', { error: ErrorExtractor.getMessage(error) });
       }
     });
   }
@@ -660,7 +663,11 @@ export class SitesListComponent implements OnInit, OnDestroy {
         this.resetForm();
       },
       error: (error) => {
-        this.notificationService.error('Erreur lors de la création du site: ' + (error.error?.error || error.message));
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Site creation failed', { error: message, siteData: this.newSite });
+        this.notificationService.error(`Erreur lors de la création du site: ${message}`, {
+          correlationId: ErrorExtractor.getCorrelationId(error)
+        });
       }
     });
   }
@@ -718,7 +725,11 @@ export class SitesListComponent implements OnInit, OnDestroy {
         this.loadSites();
       },
       error: (error) => {
-        this.notificationService.error('Erreur lors de la modification du site: ' + (error.error?.error || error.message));
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Site update failed', { error: message, siteId: this.editingSite?.id });
+        this.notificationService.error(`Erreur lors de la modification du site: ${message}`, {
+          correlationId: ErrorExtractor.getCorrelationId(error)
+        });
       }
     });
   }
@@ -730,7 +741,11 @@ export class SitesListComponent implements OnInit, OnDestroy {
           this.loadSites();
         },
         error: (error) => {
-          this.notificationService.error('Erreur lors de la suppression: ' + (error.error?.error || error.message));
+          const message = ErrorExtractor.getMessage(error);
+          this.logger.error('Site deletion failed', { error: message, siteId: site.id });
+          this.notificationService.error(`Erreur lors de la suppression: ${message}`, {
+            correlationId: ErrorExtractor.getCorrelationId(error)
+          });
         }
       });
     }

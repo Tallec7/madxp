@@ -5,6 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { AuthService } from '../../core/services/auth.service';
+import { LoggerService } from '../../core/services/logger.service';
+import { ErrorExtractor } from '../../core/utils/error-extractor';
 
 interface Advertiser {
   id: string;
@@ -529,6 +531,7 @@ export class AdvertisersListComponent implements OnInit {
   private api = inject(ApiService);
   private notification = inject(NotificationService);
   private authService = inject(AuthService);
+  private logger = inject(LoggerService);
 
   ngOnInit() {
     this.checkPermissions();
@@ -550,8 +553,10 @@ export class AdvertisersListComponent implements OnInit {
           this.filteredAdvertisers = this.advertisers;
         },
         error: (error) => {
-          this.notification.error('Erreur lors du chargement des annonceurs');
-          console.error('Error loading advertisers:', error);
+          const message = ErrorExtractor.getMessage(error);
+          this.logger.error('Failed to load advertisers', { error: message });
+          this.notification.error(`Erreur lors du chargement des annonceurs: ${message}`);
+          this.loading = false;
         },
         complete: () => {
           this.loading = false;
@@ -634,8 +639,9 @@ export class AdvertisersListComponent implements OnInit {
         this.loadAdvertisers();
       },
       error: (error) => {
-        this.notification.error('Erreur lors de l\'enregistrement');
-        console.error('Error saving advertiser:', error);
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to save advertiser', { error: message, advertiserId: this.formData.id, isEditing: this.isEditing });
+        this.notification.error(`Erreur lors de l'enregistrement: ${message}`);
         this.saving = false;
       },
       complete: () => {

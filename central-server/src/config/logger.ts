@@ -1,6 +1,8 @@
 import winston from 'winston';
 import { Logtail } from '@logtail/node';
 import { LogtailTransport } from '@logtail/winston';
+import { CorrelationRequest } from '../middleware/correlation';
+import { AuthRequest } from '../types';
 
 const logLevel = process.env.LOG_LEVEL || 'info';
 
@@ -31,6 +33,39 @@ const logger = winston.createLogger({
     }),
   ],
 });
+
+/**
+ * Create a child logger with request context
+ *
+ * Use this in controllers and services to automatically include
+ * correlation ID and user context in all log entries.
+ *
+ * @example
+ * const log = getRequestLogger(req);
+ * log.info('Processing request', { siteId: '123' });
+ * // Output: { correlationId: 'abc', userId: 'xyz', siteId: '123', ... }
+ */
+export function getRequestLogger(req: AuthRequest): winston.Logger {
+  const correlationReq = req as CorrelationRequest;
+
+  return logger.child({
+    correlationId: correlationReq.correlationId || 'no-correlation-id',
+    userId: req.user?.id,
+    userEmail: req.user?.email,
+    userRole: req.user?.role,
+  });
+}
+
+/**
+ * Log context builder for non-request contexts (e.g., cron jobs, socket handlers)
+ *
+ * @example
+ * const log = createContextLogger({ jobName: 'dailyStats', correlationId: uuid() });
+ * log.info('Starting daily stats calculation');
+ */
+export function createContextLogger(context: Record<string, unknown>): winston.Logger {
+  return logger.child(context);
+}
 
 // Add Logtail transport in production if configured
 if (process.env.NODE_ENV === 'production') {

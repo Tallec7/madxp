@@ -5,6 +5,8 @@ import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { TranslationService } from '../../core/services/translation.service';
+import { LoggerService } from '../../core/services/logger.service';
+import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { LanguageSelectorComponent } from '../../shared/components/language-selector/language-selector.component';
 
 @Component({
@@ -332,6 +334,7 @@ export class LoginComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly translationService = inject(TranslationService);
+  private readonly logger = inject(LoggerService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
@@ -378,7 +381,9 @@ export class LoginComponent implements OnInit {
       },
       error: (error) => {
         this.loading = false;
-        this.errorMessage = error.error?.error || this.translationService.instant('auth.loginError');
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.warn('Login failed', { email, error: message });
+        this.errorMessage = message || this.translationService.instant('auth.loginError');
       }
     });
   }

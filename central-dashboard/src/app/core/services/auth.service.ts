@@ -2,6 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, tap, catchError, of, map, interval, Subscription } from 'rxjs';
 import { ApiService } from './api.service';
+import { LoggerService } from './logger.service';
+import { ErrorExtractor } from '../utils/error-extractor';
 import { AuthResponse, User } from '../models';
 
 /**
@@ -21,6 +23,7 @@ import { AuthResponse, User } from '../models';
 export class AuthService {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  private readonly logger = inject(LoggerService);
 
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
@@ -78,15 +81,15 @@ export class AuthService {
     // Vérifier toutes les 5 minutes (300000 ms)
     this.authCheckInterval$ = interval(300000).subscribe(() => {
       // Vérifier silencieusement sans bloquer l'UI
-      console.log('[AUTH] Periodic auth check...', new Date().toISOString());
+      this.logger.debug('Periodic auth check');
       this.api.get<User>('/auth/me').subscribe({
         next: (user) => {
-          console.log('[AUTH] Periodic check: still authenticated', user.email);
+          this.logger.debug('Periodic check: still authenticated', { email: user.email });
           this.currentUserSubject.next(user);
         },
         error: (err) => {
           // Token expiré ou invalide - déconnecter et rediriger
-          console.warn('[AUTH] Periodic check: session expired', err);
+          this.logger.warn('Periodic check: session expired', { error: ErrorExtractor.getMessage(err) });
           this.handleSessionExpired();
         }
       });
@@ -208,7 +211,7 @@ export class AuthService {
     // Sinon, verifier via l'API
     return this.api.get<User & { token?: string }>('/auth/me').pipe(
       map(response => {
-        console.log('[AUTH] checkAuthentication: user authenticated', response.email);
+        this.logger.debug('checkAuthentication: user authenticated', { email: response.email });
         // Stocker le token AVANT d'émettre l'utilisateur
         // pour que LayoutComponent puisse établir la connexion Socket.IO
         if (response.token) {
@@ -222,7 +225,7 @@ export class AuthService {
         return true;
       }),
       catchError((err) => {
-        console.warn('[AUTH] checkAuthentication: failed, redirecting to login', err);
+        this.logger.warn('checkAuthentication: failed, redirecting to login', { error: ErrorExtractor.getMessage(err) });
         this.currentUserSubject.next(null);
         this.sseToken = null;
         this.authChecked = true;
