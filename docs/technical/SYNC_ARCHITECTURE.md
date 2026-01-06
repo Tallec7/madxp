@@ -23,6 +23,7 @@
 ### 1.1 Le Problème Initial
 
 Les boîtiers NEOPRO dans les clubs peuvent être :
+
 - **Offline pendant des semaines** (pas de connexion internet permanente)
 - **Modifiés localement** par l'opérateur du club
 - **Mis à jour depuis le central** par l'équipe NEOPRO
@@ -78,6 +79,7 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 **Accès** : Dashboard Central (https://dashboard.neopro.fr)
 
 **Responsabilités** :
+
 - Gérer la flotte de tous les boîtiers clubs
 - Déployer du contenu vers un ou plusieurs clubs
 - Pousser les mises à jour logicielles
@@ -87,12 +89,12 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 
 **Cas d'usage typiques** :
 
-| Scénario | Action |
-|----------|--------|
+| Scénario                                    | Action                                                                                   |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | Nouveau partenaire national (ex: Décathlon) | Upload vidéo → Sélectionner "Tous les clubs" → Déployer dans catégorie "ANNONCES NEOPRO" |
-| Mise à jour logicielle | Créer package → Sélectionner groupes → Déployer avec rollback automatique |
-| Club en surchauffe | Recevoir alerte → Diagnostiquer → Envoyer commande de reboot |
-| Nouveau club client | Créer le site → Générer API key → Configurer le boîtier |
+| Mise à jour logicielle                      | Créer package → Sélectionner groupes → Déployer avec rollback automatique                |
+| Club en surchauffe                          | Recevoir alerte → Diagnostiquer → Envoyer commande de reboot                             |
+| Nouveau club client                         | Créer le site → Générer API key → Configurer le boîtier                                  |
 
 ### 2.2 Opérateur Club (Jean, régisseur au Stade Français)
 
@@ -101,30 +103,33 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 **Accès** : Admin UI Locale (http://neopro.local:8080)
 
 **Responsabilités** :
+
 - Préparer le contenu pour les matchs à domicile
 - Ajouter des vidéos spécifiques au club (hommages, annonces speaker)
 - Organiser les catégories de vidéos
 - Utiliser la télécommande pendant le match
 
 **Ce qu'il PEUT faire** :
+
 - Uploader des vidéos dans les catégories du club
 - Créer/modifier/supprimer des catégories et sous-catégories club
 - Réorganiser l'ordre des vidéos
 - Redémarrer les services locaux
 
 **Ce qu'il NE PEUT PAS faire** :
+
 - Modifier ou supprimer le contenu "ANNONCES NEOPRO"
 - Modifier les paramètres système poussés par NEOPRO
 - Accéder aux autres clubs
 
 **Cas d'usage typiques** :
 
-| Scénario | Action |
-|----------|--------|
-| Hommage joueur ce soir | Upload vidéo "Hommage Bertrand" → Catégorie "INFOS_CLUB" |
-| Nouveau sponsor local | Upload vidéo sponsor → Catégorie "SPONSORS_LOCAUX" |
-| Annonce speaker | Upload annonce → Catégorie "ANIMATIONS" |
-| Réorganiser pour le match | Modifier l'ordre des sous-catégories |
+| Scénario                  | Action                                                   |
+| ------------------------- | -------------------------------------------------------- |
+| Hommage joueur ce soir    | Upload vidéo "Hommage Bertrand" → Catégorie "INFOS_CLUB" |
+| Nouveau sponsor local     | Upload vidéo sponsor → Catégorie "SPONSORS_LOCAUX"       |
+| Annonce speaker           | Upload annonce → Catégorie "ANIMATIONS"                  |
+| Réorganiser pour le match | Modifier l'ordre des sous-catégories                     |
 
 ### 2.3 Partenaire National (Décathlon, Orange, etc.)
 
@@ -133,6 +138,7 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 **Accès** : Aucun accès direct (passe par l'équipe NEOPRO)
 
 **Workflow** :
+
 1. Partenaire envoie sa vidéo à NEOPRO
 2. NEOPRO upload sur le dashboard central
 3. NEOPRO déploie vers tous les clubs (ou un groupe ciblé)
@@ -145,28 +151,31 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 
 ### 3.1 Tableau Récapitulatif
 
-| Type | Propriétaire | Stockage Central | Stockage Local | Modifiable par Club | Supprimable par Club |
-|------|--------------|------------------|----------------|---------------------|----------------------|
-| **Annonces NEOPRO** | NEOPRO | DB + Supabase | configuration.json + /videos | Non | Non |
-| **Contenu Club** | Club | Miroir (lecture) | configuration.json + /videos | Oui | Oui |
-| **Config Système** | NEOPRO | DB | configuration.json | Non | Non |
+| Type                | Propriétaire | Stockage Central | Stockage Local               | Modifiable par Club | Supprimable par Club |
+| ------------------- | ------------ | ---------------- | ---------------------------- | ------------------- | -------------------- |
+| **Annonces NEOPRO** | NEOPRO       | DB + Supabase    | configuration.json + /videos | Non                 | Non                  |
+| **Contenu Club**    | Club         | Miroir (lecture) | configuration.json + /videos | Oui                 | Oui                  |
+| **Config Système**  | NEOPRO       | DB               | configuration.json           | Non                 | Non                  |
 
 ### 3.2 Contenu NEOPRO (Verrouillé)
 
 **Définition** : Contenu poussé par l'équipe NEOPRO centrale, non modifiable par les clubs.
 
 **Exemples** :
+
 - Vidéos partenaires nationaux (Décathlon, Orange...)
 - Animations NEOPRO (logo, transitions)
 - Annonces réglementaires
 
 **Caractéristiques** :
+
 - Catégorie dédiée : `ANNONCES_NEOPRO` (ou nom configurable)
 - Flag `locked: true` dans la configuration
 - L'admin UI affiche ces éléments en lecture seule
 - Icône cadenas visible pour l'opérateur
 
 **Structure dans configuration.json** :
+
 ```json
 {
   "categories": [
@@ -200,18 +209,21 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 **Définition** : Contenu créé localement par l'opérateur du club.
 
 **Exemples** :
+
 - Hommages joueurs
 - Annonces speaker
 - Sponsors locaux
 - Animations personnalisées
 
 **Caractéristiques** :
+
 - Catégories créées par l'opérateur ou par NEOPRO (mais éditables)
 - Pas de flag `locked` ou `locked: false`
 - Pleinement modifiable via l'admin UI
 - Synchronisé vers le central quand connecté (pour visibilité NEOPRO)
 
 **Structure dans configuration.json** :
+
 ```json
 {
   "categories": [
@@ -262,13 +274,16 @@ Commandes:          ────────────────────
 
 ### 4.2 Événements de Synchronisation
 
-| Événement | Direction | Déclencheur | Action |
-|-----------|-----------|-------------|--------|
-| **Connexion du Pi** | Bidirectionnel | Pi se connecte au central | Échange état complet |
-| **Déploiement vidéo NEOPRO** | Central → Local | Admin NEOPRO clique "Déployer" | Download + merge config |
-| **Modification locale** | Local → Central | Opérateur modifie via Admin UI | Upload état vers central |
-| **Heartbeat** | Local → Central | Timer 30s | Métriques système |
-| **Commande admin** | Central → Local | Admin NEOPRO envoie commande | Exécution sur Pi |
+| Événement                    | Direction       | Déclencheur                    | Action                           |
+| ---------------------------- | --------------- | ------------------------------ | -------------------------------- |
+| **Connexion du Pi**          | Bidirectionnel  | Pi se connecte au central      | Échange état complet             |
+| **Déploiement vidéo NEOPRO** | Central → Local | Admin NEOPRO clique "Déployer" | Download + merge config          |
+| **Modification locale**      | Local → Central | Opérateur modifie via Admin UI | Upload état vers central         |
+| **sync_local_state**         | Local → Central | Connexion + changement vidéos  | Config + liste vidéos + stockage |
+| **Heartbeat**                | Local → Central | Timer 30s                      | Métriques système uniquement     |
+| **Commande admin**           | Central → Local | Admin NEOPRO envoie commande   | Exécution sur Pi                 |
+
+> **Note** : Le heartbeat (30s) n'envoie que les métriques système. La liste des vidéos est synchronisée via `sync_local_state` à la connexion et lors de changements détectés par le VideoWatcher.
 
 ### 4.3 Processus de Synchronisation Détaillé
 
@@ -308,7 +323,7 @@ function mergeConfigurations(localConfig, remoteNeoProContent) {
 
   // 2. Ajouter/Mettre à jour les catégories NEOPRO (verrouillées)
   for (const neoProCat of remoteNeoProContent.categories) {
-    const existingIndex = result.categories.findIndex(c => c.id === neoProCat.id);
+    const existingIndex = result.categories.findIndex((c) => c.id === neoProCat.id);
     if (existingIndex >= 0) {
       result.categories[existingIndex] = neoProCat; // Remplacer
     } else {
@@ -331,24 +346,26 @@ function mergeConfigurations(localConfig, remoteNeoProContent) {
 
 ### 5.2 Tableau des Règles
 
-| Situation | Contenu NEOPRO | Contenu Club | Résultat |
-|-----------|----------------|--------------|----------|
-| Central ajoute une vidéo NEOPRO | Nouvelle vidéo | - | Ajoutée dans catégorie verrouillée |
-| Central supprime une vidéo NEOPRO expirée | Vidéo à supprimer | - | Supprimée du Pi |
-| Central modifie une catégorie NEOPRO | Modification | - | Appliquée (écrase) |
-| Opérateur ajoute une vidéo club | - | Nouvelle vidéo | Préservée, remontée au central |
-| Opérateur supprime une vidéo club | - | Suppression | Supprimée, central notifié |
-| Opérateur modifie catégorie club | - | Modification | Préservée, remontée au central |
-| Conflit : même ID catégorie | Catégorie verrouillée | Catégorie club | Central gagne (verrouillé prioritaire) |
+| Situation                                 | Contenu NEOPRO        | Contenu Club   | Résultat                               |
+| ----------------------------------------- | --------------------- | -------------- | -------------------------------------- |
+| Central ajoute une vidéo NEOPRO           | Nouvelle vidéo        | -              | Ajoutée dans catégorie verrouillée     |
+| Central supprime une vidéo NEOPRO expirée | Vidéo à supprimer     | -              | Supprimée du Pi                        |
+| Central modifie une catégorie NEOPRO      | Modification          | -              | Appliquée (écrase)                     |
+| Opérateur ajoute une vidéo club           | -                     | Nouvelle vidéo | Préservée, remontée au central         |
+| Opérateur supprime une vidéo club         | -                     | Suppression    | Supprimée, central notifié             |
+| Opérateur modifie catégorie club          | -                     | Modification   | Préservée, remontée au central         |
+| Conflit : même ID catégorie               | Catégorie verrouillée | Catégorie club | Central gagne (verrouillé prioritaire) |
 
 ### 5.3 Gestion des Conflits
 
 **Conflit de nommage** : Si NEOPRO crée une catégorie avec le même ID qu'une catégorie club existante :
+
 1. La catégorie NEOPRO (verrouillée) prend le dessus
 2. La catégorie club est renommée automatiquement (ajout suffixe `_club`)
 3. L'opérateur est notifié du changement
 
 **Conflit de suppression** : Si l'opérateur tente de supprimer du contenu NEOPRO :
+
 1. L'action est bloquée côté Admin UI
 2. Message d'erreur : "Ce contenu est géré par NEOPRO et ne peut pas être supprimé"
 
@@ -358,7 +375,7 @@ Depuis décembre 2025, les vidéos poussées depuis le central conservent leur n
 
 - **Sanitisation automatique** : caractères interdits (`<>:"/\|?*`), accents et espaces multiples sont nettoyés, l'extension reste en `.mp4`.
 - **Conflits évités** : si un fichier existe déjà dans la catégorie ciblée, le sync-agent ajoute un suffixe (`Golden Cup (1).mp4`) avant l'écriture.
-- **Traçabilité** : `configuration.json` stocke désormais le `filename` final *et* le `name` (sans extension) pour que la télécommande et l'analytics puissent afficher un intitulé utilisateur.
+- **Traçabilité** : `configuration.json` stocke désormais le `filename` final _et_ le `name` (sans extension) pour que la télécommande et l'analytics puissent afficher un intitulé utilisateur.
 - **Suppression sûre** : la commande `delete_video` s'appuie sur ce `filename` final tout en restant rétro-compatible avec les anciennes entrées basées sur `path`.
 
 👉 Résultat : les opérateurs voient les mêmes intitulés sur le dashboard central, la télécommande et dans les exports analytics, ce qui simplifie le support.
@@ -409,17 +426,20 @@ Depuis décembre 2025, les vidéos poussées depuis le central conservent leur n
 **Contexte** : Le club de Villeneuve n'a pas internet. Jean modifie la config localement.
 
 **Semaine 1-4 (Offline)** :
+
 1. Jean ajoute 5 vidéos locales
 2. Jean réorganise ses catégories
 3. Tout fonctionne en local
 4. Le central ne voit pas ces modifications
 
 **Pendant ce temps (côté NEOPRO)** :
+
 1. NEOPRO veut pousser une nouvelle vidéo sponsor
 2. Le site étant offline, la commande est mise en **file d'attente** (Command Queue)
 3. La commande reste stockée en base PostgreSQL avec priorité et expiration optionnelle
 
 **Reconnexion (Semaine 5)** :
+
 1. Pi se connecte au central
 2. **Traitement automatique de la queue** :
    - Le serveur détecte des commandes en attente
@@ -442,7 +462,7 @@ Depuis décembre 2025, les vidéos poussées depuis le central conservent leur n
 
 **Étapes :**
 
-1. **Opérateur** sélectionne plusieurs vidéos dans l'onglet *Déployer* (liste multisélection ou bouton 🚀 sur chaque carte).
+1. **Opérateur** sélectionne plusieurs vidéos dans l'onglet _Déployer_ (liste multisélection ou bouton 🚀 sur chaque carte).
 2. **Dashboard central** affiche le récapitulatif des vidéos retenues et permet de retirer une entrée individuellement.
 3. **Opérateur** choisit la cible (site ou groupe) et clique sur **Lancer le déploiement**.
 4. **Front Angular** envoie une requête par vidéo (séquentiellement) et affiche une synthèse : succès partiels, erreurs par vidéo.
@@ -557,19 +577,92 @@ CREATE TABLE site_configurations (
 
 ### 7.2 API Sync Agent
 
-#### Événement : `sync_state` (Pi → Central)
+#### VideoWatcher (Surveillance des vidéos locales)
+
+Le module `video-watcher.js` surveille le dossier `/home/pi/neopro/videos` et déclenche une synchronisation lorsque des fichiers sont ajoutés, modifiés ou supprimés.
+
+**Caractéristiques** :
+
+- Surveillance récursive avec `fs.watch({ recursive: true })`
+- Debounce de 2 secondes pour éviter les appels redondants
+- Hash SHA-256 de la liste pour détecter les vrais changements
+- Extraction automatique de la catégorie/sous-catégorie depuis le chemin
 
 ```javascript
-// Envoyé par le Pi à chaque connexion et après chaque modification locale
-socket.emit('sync_state', {
-  site_id: 'club_stade_francais',
-  config_hash: 'sha256:abc123...', // Hash de configuration.json
-  config: { /* configuration.json complète */ },
-  videos: [
-    { path: 'videos/INFOS_CLUB/hommage.mp4', size: 12345678, hash: 'sha256:...' }
-  ],
-  timestamp: '2024-12-09T15:00:00Z'
+// raspberry/sync-agent/src/watchers/video-watcher.js
+const VideoWatcher = require('./watchers/video-watcher');
+
+const watcher = new VideoWatcher('/home/pi/neopro/videos', async () => {
+  // Callback appelé quand la liste des vidéos change
+  await syncLocalState();
 });
+watcher.start();
+```
+
+**Structure retournée par `scanVideos()`** :
+
+```javascript
+[
+  {
+    filename: 'hommage_bertrand.mp4',
+    path: 'videos/INFOS_CLUB/hommages/hommage_bertrand.mp4',
+    category: 'INFOS_CLUB',
+    subcategory: 'hommages',
+    size: 12345678,
+    lastModified: '2024-12-09T14:30:00Z',
+  },
+];
+```
+
+#### Événement : `sync_local_state` (Pi → Central)
+
+```javascript
+// Envoyé par le Pi à chaque connexion et après chaque modification locale/vidéo
+socket.emit('sync_local_state', {
+  siteId: 'club_stade_francais',
+  configHash: 'sha256:abc123...', // Hash de configuration.json
+  config: {
+    /* configuration.json complète */
+  },
+  videos: [
+    {
+      filename: 'hommage.mp4',
+      path: 'videos/INFOS_CLUB/hommage.mp4',
+      category: 'INFOS_CLUB',
+      subcategory: null,
+      size: 12345678,
+      lastModified: '2024-12-09T14:30:00Z',
+    },
+  ],
+  storage: {
+    total: 32000000000, // Espace total en bytes
+    used: 8000000000,
+    free: 24000000000,
+  },
+  timestamp: '2024-12-09T15:00:00Z',
+});
+```
+
+**Stockage côté central** :
+
+Les données vidéos sont enrichies dans `local_config_mirror` (JSONB) :
+
+```javascript
+// central-server/src/services/socket.service.ts
+const enrichedConfig = {
+  ...config,
+  _localVideos: videos || [],
+  _localStorage: storage || null,
+  _lastVideoSync: timestamp,
+};
+// UPDATE sites SET local_config_mirror = $1 WHERE id = $2
+```
+
+**Exposition via API** :
+
+```
+GET /api/sites/:id/local-content
+→ { localVideos, localStorage, lastVideoSync, configuration, ... }
 ```
 
 #### Événement : `neopro_sync` (Central → Pi)
@@ -587,14 +680,14 @@ socket.emit('neopro_sync', {
         id: 'decathlon_noel_2024',
         name: 'Décathlon - Noël 2024',
         url: 'https://storage.supabase.co/videos/decathlon_noel.mp4',
-        expires_at: '2025-01-31T23:59:59Z'
-      }
+        expires_at: '2025-01-31T23:59:59Z',
+      },
     },
     {
       type: 'remove_video',
-      video_id: 'orange_promo_expired'
-    }
-  ]
+      video_id: 'orange_promo_expired',
+    },
+  ],
 });
 ```
 
@@ -607,7 +700,7 @@ function canModifyCategory(category, user) {
   if (category.locked && category.owner === 'neopro') {
     return {
       allowed: false,
-      reason: 'Cette catégorie est gérée par NEOPRO et ne peut pas être modifiée.'
+      reason: 'Cette catégorie est gérée par NEOPRO et ne peut pas être modifiée.',
     };
   }
   return { allowed: true };
@@ -617,7 +710,7 @@ function canDeleteVideo(video, category) {
   if (video.locked || category.locked) {
     return {
       allowed: false,
-      reason: 'Ce contenu est géré par NEOPRO et ne peut pas être supprimé.'
+      reason: 'Ce contenu est géré par NEOPRO et ne peut pas être supprimé.',
     };
   }
   return { allowed: true };
@@ -628,9 +721,7 @@ function canDeleteVideo(video, category) {
 <!-- Admin UI - Affichage avec cadenas -->
 <div class="category" :class="{ 'locked': category.locked }">
   <span class="category-name">{{ category.name }}</span>
-  <span v-if="category.locked" class="lock-icon" title="Géré par NEOPRO">
-    🔒
-  </span>
+  <span v-if="category.locked" class="lock-icon" title="Géré par NEOPRO"> 🔒 </span>
 </div>
 ```
 
@@ -649,6 +740,7 @@ function canDeleteVideo(video, category) {
 ### Q: Que se passe-t-il si une vidéo NEOPRO expire ?
 
 **R**: Deux options :
+
 1. **Suppression automatique** : Le sync-agent vérifie les dates d'expiration et supprime localement
 2. **Commande centrale** : NEOPRO envoie une commande de suppression explicite
 
@@ -659,6 +751,7 @@ function canDeleteVideo(video, category) {
 ### Q: Comment gérer un conflit de stockage (disque plein) ?
 
 **R**: Le sync-agent vérifie l'espace disponible avant de télécharger. Si insuffisant :
+
 1. Alerte envoyée au central
 2. Téléchargement reporté
 3. NEOPRO notifié pour action (nettoyage distant ou contact club)
@@ -666,6 +759,7 @@ function canDeleteVideo(video, category) {
 ### Q: L'opérateur peut-il réorganiser l'ordre des catégories NEOPRO ?
 
 **R**: À définir. Options :
+
 - **Strict** : Non, l'ordre est imposé par NEOPRO
 - **Souple** : Oui, l'opérateur peut réorganiser mais pas modifier le contenu
 
@@ -673,11 +767,12 @@ function canDeleteVideo(video, category) {
 
 ## Historique des Versions
 
-| Version | Date | Auteur | Modifications |
-|---------|------|--------|---------------|
-| 1.0 | 2024-12-09 | Claude/NEOPRO | Création initiale |
-| 1.1 | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline |
+| Version | Date       | Auteur        | Modifications                                      |
+| ------- | ---------- | ------------- | -------------------------------------------------- |
+| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                  |
+| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline             |
+| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos |
 
 ---
 
-*Document généré pour le projet NEOPRO - Confidentiel*
+_Document généré pour le projet NEOPRO - Confidentiel_

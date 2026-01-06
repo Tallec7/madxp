@@ -11,6 +11,7 @@ const analyticsCollector = require('./analytics');
 const sponsorImpressionsCollector = require('./sponsor-impressions');
 const { calculateConfigHash } = require('./utils/config-merge');
 const ConfigWatcher = require('./watchers/config-watcher');
+const VideoWatcher = require('./watchers/video-watcher');
 const expirationChecker = require('./tasks/expiration-checker');
 const syncHistory = require('./services/sync-history');
 const offlineQueue = require('./services/offline-queue');
@@ -26,6 +27,7 @@ class NeoproSyncAgent {
     this.analyticsInterval = null;
     this.connected = false;
     this.configWatcher = null;
+    this.videoWatcher = null;
   }
 
   async start() {
@@ -175,12 +177,30 @@ class NeoproSyncAgent {
     });
 
     this.configWatcher.start();
+
+    // Démarrer également la surveillance des vidéos
+    this.startVideoWatcher();
+  }
+
+  /**
+   * Démarre la surveillance du dossier vidéos
+   * pour synchroniser automatiquement les changements vers le central
+   */
+  startVideoWatcher() {
+    const videosPath = config.paths.videos;
+
+    this.videoWatcher = new VideoWatcher(videosPath, async () => {
+      logger.info('🎬 Video files changed, syncing to central...');
+      await this.syncLocalState();
+    });
+
+    this.videoWatcher.start();
   }
 
   /**
    * Synchronise l'état local vers le serveur central (miroir)
-   * Envoie la configuration actuelle pour que NEOPRO puisse voir
-   * ce qu'il y a sur ce boîtier.
+   * Envoie la configuration actuelle et la liste des vidéos
+   * pour que NEOPRO puisse voir ce qu'il y a sur ce boîtier.
    */
   async syncLocalState() {
     if (!this.connected) {
@@ -199,17 +219,26 @@ class NeoproSyncAgent {
       const localConfig = JSON.parse(configContent);
       const configHash = calculateConfigHash(localConfig);
 
+      // Récupérer la liste des vidéos et les stats de stockage
+      let videoState = { videos: [], totalVideoSize: 0, storage: null };
+      if (this.videoWatcher) {
+        videoState = this.videoWatcher.getStorageStats();
+      }
+
       // Envoyer l'état local au central
       this.socket.emit('sync_local_state', {
         siteId: config.site.id,
         configHash,
         config: localConfig,
+        videos: videoState.videos,
+        storage: videoState.storage,
         timestamp: new Date().toISOString(),
       });
 
       logger.info('📤 Local state synced to central', {
         configHash,
         categoriesCount: localConfig.categories?.length || 0,
+        videosCount: videoState.videos.length,
       });
 
       // Enregistrer la synchronisation réussie
@@ -540,6 +569,11 @@ class NeoproSyncAgent {
     // Arrêter la surveillance de la configuration
     if (this.configWatcher) {
       this.configWatcher.stop();
+    }
+
+    // Arrêter la surveillance des vidéos
+    if (this.videoWatcher) {
+      this.videoWatcher.stop();
     }
 
     // Envoyer les analytics restants avant de fermer

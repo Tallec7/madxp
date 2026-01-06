@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, BehaviorSubject, tap, map } from 'rxjs';
 import { ApiService } from './api.service';
 import { CacheService } from './cache.service';
-import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus } from '../models';
+import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus, LocalVideo, LocalStorage } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -142,6 +142,9 @@ export class SitesService {
     lastSync: Date | null;
     configHash: string | null;
     configuration: SiteConfiguration | null;
+    localVideos: LocalVideo[];
+    localStorage: LocalStorage | null;
+    lastVideoSync: string | null;
   }> {
     return this.api.get(`/sites/${id}/local-content`);
   }

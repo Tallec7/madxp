@@ -148,7 +148,8 @@ POST /api/auth/reset-password
 ```
 GET    /api/sites             → liste paginée, filtres: status, sport, region
 GET    /api/sites/:id         → détails + config + metrics
-GET    /api/sites/:id/dashboard → endpoint agrégé (connection + metrics) ⚡ NEW
+GET    /api/sites/:id/dashboard → endpoint agrégé (connection + metrics)
+GET    /api/sites/:id/local-content → vidéos locales + stockage ⚡ NEW
 GET    /api/sites/:id/connection-status → statut connexion temps réel
 GET    /api/sites/:id/metrics → métriques système (CPU, RAM, temp)
 POST   /api/sites             → créer site (génère api_key)
@@ -209,6 +210,7 @@ Admin:      200 req/min     (dashboard ops)
 // Site → Cloud
 'register'          : { siteId, apiKey }
 'heartbeat'         : { siteId, metrics: { cpu, memory, temp } }
+'sync_local_state'  : { siteId, config, videos, storage, timestamp } // ⚡ Vidéos locales
 'command:result'    : { commandId, status, result }
 'deployment:progress': { deploymentId, progress, status }
 
@@ -217,6 +219,37 @@ Admin:      200 req/min     (dashboard ops)
 'update_config'     : { configVersionId, configuration }
 'execute_command'   : { commandId, type, data }
 ```
+
+### Synchronisation des Vidéos Locales ⚡ NEW
+
+Le sync-agent remonte automatiquement la liste des vidéos présentes sur le Pi :
+
+```javascript
+// Structure envoyée via sync_local_state
+{
+  videos: [
+    {
+      filename: 'video.mp4',
+      path: 'videos/INFOS_CLUB/video.mp4',
+      category: 'INFOS_CLUB',
+      subcategory: null,
+      size: 12345678,
+      lastModified: '2024-12-09T14:30:00Z'
+    }
+  ],
+  storage: {
+    total: 32000000000,  // 32 GB
+    used: 8000000000,
+    free: 24000000000
+  }
+}
+```
+
+**Fichiers impliqués** :
+
+- `raspberry/sync-agent/src/watchers/video-watcher.js` - Surveillance du dossier vidéos
+- `central-server/src/services/socket.service.ts` - Stockage dans `local_config_mirror`
+- `central-dashboard/src/app/features/sites/site-detail.component.ts` - Affichage dropdown
 
 ---
 
@@ -598,12 +631,13 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 
 ### Raspberry Pi
 
-| Fichier                                                     | Description           |
-| ----------------------------------------------------------- | --------------------- |
-| `raspberry/frontend/src/app/components/tv.component.ts`     | Affichage TV          |
-| `raspberry/frontend/src/app/components/remote.component.ts` | Télécommande          |
-| `raspberry/sync-agent/`                                     | Synchronisation cloud |
-| `raspberry/scripts/setup-new-club.sh`                       | Setup nouveau club    |
+| Fichier                                                     | Description              |
+| ----------------------------------------------------------- | ------------------------ |
+| `raspberry/frontend/src/app/components/tv.component.ts`     | Affichage TV             |
+| `raspberry/frontend/src/app/components/remote.component.ts` | Télécommande             |
+| `raspberry/sync-agent/src/agent.js`                         | Agent de synchronisation |
+| `raspberry/sync-agent/src/watchers/video-watcher.js`        | Surveillance vidéos ⚡   |
+| `raspberry/scripts/setup-new-club.sh`                       | Setup nouveau club       |
 
 ### Documentation
 
@@ -1139,6 +1173,8 @@ SMTP_PORT=1025
 | **Heartbeat**     | Signal envoyé toutes les 30s par le Pi au cloud    |
 | **Sync**          | Synchronisation bidirectionnelle Pi ↔ Cloud        |
 | **Config mirror** | Copie de la config locale stockée dans le cloud    |
+| **VideoWatcher**  | Surveillance du dossier vidéos sur le Pi           |
+| **LocalVideo**    | Métadonnées d'une vidéo présente sur le boîtier    |
 | **Advertiser**    | Annonceur qui diffuse des pubs sur les TV          |
 | **Agency**        | Agence gérant plusieurs annonceurs                 |
 | **Operator**      | Utilisateur gérant un sous-ensemble de clubs       |
