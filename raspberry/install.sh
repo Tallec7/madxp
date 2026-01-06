@@ -553,6 +553,42 @@ server {
     access_log /home/pi/neopro/logs/nginx-access.log;
     error_log /home/pi/neopro/logs/nginx-error.log;
 
+    # ========================================================================
+    # CAPTIVE PORTAL - Endpoints de détection de connectivité
+    # ========================================================================
+
+    # Android (Google) - Principal check
+    location /generate_204 {
+        return 204;
+    }
+
+    # Android (ancienne version)
+    location /gen_204 {
+        return 204;
+    }
+
+    # Chrome Captive Portal detection
+    location /connecttest.txt {
+        return 200 "Microsoft Connect Test";
+        add_header Content-Type text/plain;
+    }
+
+    # Windows Captive Portal
+    location /ncsi.txt {
+        return 200 "Microsoft NCSI";
+        add_header Content-Type text/plain;
+    }
+
+    # Apple iOS Captive Portal
+    location /hotspot-detect.html {
+        return 200 "<!DOCTYPE html><html><head><title>Success</title></head><body>Success</body></html>";
+        add_header Content-Type text/html;
+    }
+
+    # ========================================================================
+    # APPLICATION PRINCIPALE
+    # ========================================================================
+
     # Application Angular
     location / {
         try_files $uri $uri/ /index.html;
