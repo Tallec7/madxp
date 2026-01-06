@@ -8,8 +8,6 @@ dist/
 
 .angular/
 .DS_Store
-package-lock.json
-
 # Environment variables
 .env
 .env.local
