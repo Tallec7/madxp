@@ -1,3 +1,9 @@
+# [2.2.0](https://github.com/Tallec7/neopro/compare/v2.1.3...v2.2.0) (2026-01-06)
+
+### Features
+
+- **dashboard:** add centralized error handling system ([f5aa854](https://github.com/Tallec7/neopro/commit/f5aa85428fc9c269029e74ac1bbea5e8dc43693a))
+
 ## [2.1.3](https://github.com/Tallec7/neopro/compare/v2.1.2...v2.1.3) (2026-01-06)
 
 ### Bug Fixes
