@@ -118,6 +118,45 @@ hostname -f
 # Devrait afficher : neopro.local
 ```
 
+#### 4. Android refuse de se connecter au hotspot WiFi
+
+**Symptômes :**
+
+- Android affiche "Pas d'accès Internet"
+- Le téléphone se déconnecte automatiquement du hotspot
+- Impossible d'accéder à `http://neopro.local/login`
+- Erreur "Pas de DNS" dans le navigateur
+
+**Cause :** Android détecte que le réseau n'a pas d'accès Internet et bloque la connexion.
+
+**Solution immédiate :**
+
+1. Connectez-vous au WiFi `NEOPRO-{CLUB}` malgré l'avertissement
+2. Tapez "Rester connecté" quand Android demande
+3. Utilisez l'IP directe dans le navigateur :
+   ```
+   http://192.168.4.1/login
+   ```
+
+**Solution permanente :**
+
+Le **captive portal** est automatiquement configuré sur les nouvelles installations (version 2.5.0+).
+
+Pour vérifier que le captive portal fonctionne :
+
+```bash
+ssh pi@192.168.4.1
+
+# Tester les endpoints captive portal
+curl -I http://localhost/generate_204
+# Doit retourner : HTTP/1.1 204 No Content
+
+curl http://localhost/connecttest.txt
+# Doit retourner : Microsoft Connect Test
+```
+
+Si les endpoints ne fonctionnent pas, consultez le guide complet : [ANDROID_HOTSPOT_FIX.md](ANDROID_HOTSPOT_FIX.md)
+
 ---
 
 ## Erreurs 500

@@ -492,6 +492,28 @@ UPDATE content_deployments SET status = 'failed'
 WHERE status = 'in_progress' AND started_at < NOW() - INTERVAL '1 hour';
 ```
 
+### Android refuse de se connecter au hotspot ?
+
+**Problème** : Android affiche "Pas d'accès Internet" et bloque la résolution DNS de `neopro.local`.
+
+**Solution immédiate** : Utiliser l'IP directe sur Android
+
+```
+http://192.168.4.1/login
+```
+
+**Solution permanente** : Le captive portal est configuré automatiquement depuis la version 2.5.0.
+
+Vérifier que le captive portal fonctionne :
+
+```bash
+# Sur le Pi
+curl -I http://localhost/generate_204
+# Doit retourner : HTTP/1.1 204 No Content
+```
+
+**Documentation complète** : [docs/guides/ANDROID_HOTSPOT_FIX.md](docs/guides/ANDROID_HOTSPOT_FIX.md)
+
 ---
 
 ## Workflow Git & Versioning
