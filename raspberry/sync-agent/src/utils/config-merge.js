@@ -10,6 +10,20 @@
 const logger = require('../logger');
 
 /**
+ * Liste des paramètres locaux qui ne doivent JAMAIS être écrasés par le central.
+ * Ces paramètres sont spécifiques à chaque boîtier et configurés localement.
+ */
+const LOCAL_ONLY_SETTINGS = [
+  'settings',        // language, timezone - configurés localement
+  'siteId',          // Identifiant unique du site
+  'siteName',        // Nom du site (peut être personnalisé)
+  'clubName',        // Nom du club
+  'apiKey',          // Clé API du boîtier
+  'hotspot',         // Configuration WiFi hotspot (SSID, etc.) - si jamais stocké ici
+  'localNetwork',    // Configuration réseau locale
+];
+
+/**
  * Fusionne la configuration locale avec le contenu NEOPRO
  *
  * @param {Object} localConfig - Configuration actuelle du Pi
@@ -18,6 +32,17 @@ const logger = require('../logger');
  */
 function mergeConfigurations(localConfig, neoProContent) {
   const result = JSON.parse(JSON.stringify(localConfig)); // Deep clone
+
+  // ========================================================================
+  // PROTECTION DES PARAMÈTRES LOCAUX
+  // Ces paramètres ne doivent JAMAIS être écrasés par le central
+  // ========================================================================
+  const preservedLocalSettings = {};
+  for (const key of LOCAL_ONLY_SETTINGS) {
+    if (localConfig[key] !== undefined) {
+      preservedLocalSettings[key] = JSON.parse(JSON.stringify(localConfig[key]));
+    }
+  }
 
   // Mettre à jour la version si nécessaire
   if (neoProContent.version) {
@@ -45,6 +70,17 @@ function mergeConfigurations(localConfig, neoProContent) {
 
   // Nettoyer les vidéos expirées
   result.categories = cleanExpiredVideos(result.categories);
+
+  // ========================================================================
+  // RESTAURATION DES PARAMÈTRES LOCAUX PROTÉGÉS
+  // On s'assure que les paramètres locaux ne sont jamais perdus
+  // ========================================================================
+  for (const [key, value] of Object.entries(preservedLocalSettings)) {
+    if (result[key] !== value) {
+      logger.info(`[config-merge] Paramètre local préservé: ${key}`);
+    }
+    result[key] = value;
+  }
 
   logger.info('[config-merge] Configuration fusionnée avec succès');
   return result;
@@ -228,4 +264,5 @@ module.exports = {
   hasLockedContent,
   createBackup,
   calculateConfigHash,
+  LOCAL_ONLY_SETTINGS,
 };

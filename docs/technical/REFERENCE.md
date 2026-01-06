@@ -807,17 +807,62 @@ Retourne les statistiques du buffer d'analytics local.
 
 **Base URL :** `https://neopro-central.onrender.com/api`
 
-**Endpoints :**
+**Endpoints Authentification :**
 
 ```
-POST   /auth/login              - Authentification dashboard
-GET    /sites                   - Liste des sites
-GET    /sites/:id               - Détails site
-GET    /sites/:id/metrics       - Métriques site
-POST   /sites/:id/commands      - Envoyer commande OTA
+POST   /auth/login              - Authentification (email, password)
+POST   /auth/logout             - Déconnexion
+GET    /auth/me                 - Utilisateur courant
+POST   /auth/forgot-password    - Demande reset mot de passe
+POST   /auth/reset-password     - Reset mot de passe
 ```
 
-**Authentification :** JWT Bearer token
+**Endpoints Sites :**
+
+```
+GET    /sites                   - Liste paginée, filtres: status, sport, region
+GET    /sites/:id               - Détails + config + metrics
+GET    /sites/:id/dashboard     - Endpoint agrégé (connection + metrics)
+GET    /sites/:id/local-content - Vidéos locales + stockage
+GET    /sites/:id/connection-status - Statut connexion temps réel
+GET    /sites/:id/metrics       - Métriques système (CPU, RAM, temp)
+POST   /sites                   - Créer site (génère api_key)
+PUT    /sites/:id               - Modifier
+DELETE /sites/:id               - Supprimer (admin)
+POST   /sites/:id/api-key/regenerate - Régénérer la clé API
+POST   /sites/:id/command       - Envoyer commande au Pi
+```
+
+**Endpoints Contenu :**
+
+```
+POST   /content/upload          - Upload vidéo (multipart/form-data)
+GET    /content/videos          - Liste vidéos
+DELETE /content/videos/:id      - Supprimer vidéo
+POST   /content/deploy          - Déployer vidéo vers site/groupe
+```
+
+**Endpoints Analytics :**
+
+```
+GET    /analytics/overview      - Stats globales
+GET    /analytics/sites/:id     - Stats par site
+GET    /analytics/daily-stats   - Agrégation journalière
+GET    /advertiser-analytics/*  - Stats annonceurs
+```
+
+**Authentification :** JWT HttpOnly cookie + Bearer token
+
+**Rate Limiting :**
+
+```
+Auth:       10 req/15min    (anti-bruteforce)
+API:        100 req/min     (standard)
+Monitoring: 300 req/min     (status, metrics polling)
+Sensitive:  30 req/min      (commands, deployments)
+Upload:     10 req/hour     (video uploads)
+Admin:      200 req/min     (dashboard ops)
+```
 
 ---
 
@@ -950,4 +995,4 @@ Voir **[docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ---
 
-**Dernière mise à jour :** 10 décembre 2025
+**Dernière mise à jour :** 6 janvier 2026

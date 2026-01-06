@@ -2,7 +2,21 @@
 
 Serveur central de gestion de flotte pour les boîtiers Raspberry Pi NEOPRO.
 
-## 🚀 Quick Start
+## Stack Technique
+
+| Composant | Technologies |
+|-----------|-------------|
+| Runtime | Node.js 18+, TypeScript strict |
+| Framework | Express 4.18 |
+| Base de données | PostgreSQL 15 (Supabase) |
+| Stockage vidéos | FTP (Hostinger) + Supabase Storage (fallback) |
+| WebSocket | Socket.IO 4.7 |
+| Auth | JWT HttpOnly cookie + Bearer token |
+| Validation | Joi |
+| Logs | Winston + Logtail |
+| Tests | Jest + Supertest |
+
+## Quick Start
 
 ### Installation locale
 
@@ -12,13 +26,13 @@ npm install
 
 # Copier et configurer les variables d'environnement
 cp .env.example .env
-# Éditer .env avec vos paramètres Supabase
+# Éditer .env avec vos paramètres
 
 # Lancer en développement
 npm run dev
 ```
 
-### Configuration Supabase
+### Configuration Base de Données
 
 1. Créer un projet sur [supabase.com](https://supabase.com)
 2. Récupérer l'URL de connexion : Project Settings > Database > Connection string > URI
@@ -39,39 +53,56 @@ Le déploiement est configuré via `render.yaml` à la racine du projet.
 
 1. Connecter votre repository Git à Render
 2. Render détectera automatiquement le fichier `render.yaml`
-3. Configurer manuellement `DATABASE_URL` avec l'URL Supabase dans Environment
+3. Configurer les variables d'environnement dans Environment
 4. Déployer
 
-**URL déployée :** `https://neopro-central-production.up.railway.app`
+**URL déployée :** `https://neopro-central.onrender.com`
 
 ---
 
-## 📂 Structure
+## Structure
 
 ```
 central-server/
 ├── src/
-│   ├── server.ts              # Point d'entrée
+│   ├── server.ts                    # Point d'entrée, middleware order
 │   ├── config/
-│   │   ├── database.ts        # Connexion PostgreSQL
-│   │   └── logger.ts          # Winston logging
-│   ├── controllers/           # Logique métier
+│   │   ├── database.ts              # Connexion PostgreSQL
+│   │   ├── logger.ts                # Winston logging
+│   │   ├── ftp-storage.ts           # Upload FTP Hostinger
+│   │   └── supabase.ts              # Supabase client
+│   ├── controllers/                 # Logique métier par domaine
 │   │   ├── auth.controller.ts
 │   │   ├── sites.controller.ts
 │   │   ├── groups.controller.ts
 │   │   ├── analytics.controller.ts
 │   │   ├── content.controller.ts
 │   │   ├── updates.controller.ts
-│   │   ├── sponsor-portal.controller.ts  # Portail sponsors
-│   │   └── agency.controller.ts          # Portail agences
-│   ├── routes/                # Définition routes API
-│   ├── middleware/            # Auth, validation
-│   ├── services/              # Services (Socket.IO)
-│   ├── scripts/               # SQL et scripts admin
-│   │   ├── init-db.sql
-│   │   ├── analytics-tables.sql
-│   │   └── create-admin.ts
-│   └── types/                 # TypeScript definitions
+│   │   ├── advertiser-portal.controller.ts   # Portail annonceurs
+│   │   └── agency.controller.ts              # Portail agences
+│   ├── routes/                      # Définition des endpoints REST
+│   ├── middleware/
+│   │   ├── auth.ts                  # JWT + cookie auth
+│   │   ├── validation.ts            # Schémas Joi
+│   │   ├── rate-limit.ts            # Rate limiting par utilisateur
+│   │   ├── correlation.ts           # Correlation ID middleware
+│   │   ├── errors.ts                # Classes d'erreurs standardisées
+│   │   └── error-handler.ts         # Gestionnaire d'erreurs global
+│   ├── services/
+│   │   ├── socket.service.ts        # Communication temps réel Pi ↔ Cloud
+│   │   ├── deployment.service.ts    # Orchestration déploiement vidéos
+│   │   ├── metrics.service.ts       # Export Prometheus
+│   │   ├── audit.service.ts         # Log actions admin
+│   │   ├── mfa.service.ts           # 2FA avec backup codes
+│   │   ├── email.service.ts         # Password reset, alertes
+│   │   └── cron-scheduler.service.ts # Stats quotidiennes, cleanup
+│   ├── handlers/                    # Socket.IO event handlers
+│   ├── scripts/
+│   │   ├── init-db.sql              # Schéma initial
+│   │   ├── full-schema.sql          # Schéma DB complet
+│   │   ├── create-admin.ts          # Créer super_admin
+│   │   └── migrations/              # Migrations SQL
+│   └── types/                       # Interfaces TypeScript
 ├── package.json
 ├── tsconfig.json
 └── .env.example
@@ -79,45 +110,33 @@ central-server/
 
 ---
 
-## 🔌 API Documentation
+## API Documentation
 
-### Authentication
+### Authentification
 
-**POST /api/auth/login**
-
-```json
-{
-  "email": "admin@neopro.fr",
-  "password": "admin123"
-}
+```
+POST /api/auth/login          → { email, password } → cookie + user
+POST /api/auth/logout         → clear cookie
+GET  /api/auth/me             → current user
+POST /api/auth/forgot-password
+POST /api/auth/reset-password
 ```
 
-Response:
+### Sites (clubs)
 
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": "uuid",
-    "email": "admin@neopro.fr",
-    "full_name": "Admin NEOPRO",
-    "role": "admin"
-  }
-}
-```
-
-### Sites
-
-| Méthode | Endpoint               | Description          |
-| ------- | ---------------------- | -------------------- |
-| GET     | /api/sites             | Liste des sites      |
-| GET     | /api/sites/:id         | Détail d'un site     |
-| GET     | /api/sites/:id/metrics | Métriques du site    |
-| POST    | /api/sites             | Créer un site        |
-| PUT     | /api/sites/:id         | Modifier un site     |
-| DELETE  | /api/sites/:id         | Supprimer (admin)    |
-| POST    | /api/sites/:id/command | Envoyer une commande |
-| GET     | /api/sites/:id/logs    | Récupérer les logs   |
+| Méthode | Endpoint                        | Description                          |
+| ------- | ------------------------------- | ------------------------------------ |
+| GET     | /api/sites                      | Liste paginée, filtres: status, sport, region |
+| GET     | /api/sites/:id                  | Détails + config + metrics           |
+| GET     | /api/sites/:id/dashboard        | Endpoint agrégé (connection + metrics) |
+| GET     | /api/sites/:id/local-content    | Vidéos locales + stockage            |
+| GET     | /api/sites/:id/connection-status| Statut connexion temps réel          |
+| GET     | /api/sites/:id/metrics          | Métriques système (CPU, RAM, temp)   |
+| POST    | /api/sites                      | Créer site (génère api_key)          |
+| PUT     | /api/sites/:id                  | Modifier                             |
+| DELETE  | /api/sites/:id                  | Supprimer (admin)                    |
+| POST    | /api/sites/:id/api-key/regenerate| Régénérer la clé API               |
+| POST    | /api/sites/:id/command          | Envoyer commande au Pi               |
 
 ### Groups
 
@@ -202,16 +221,16 @@ curl -X POST https://api.neopro.fr/api/videos/bulk \
 }
 ```
 
-### Sponsor Portal (Portail Sponsors)
+### Advertiser Portal (Portail Annonceurs)
 
-| Méthode | Endpoint               | Description                   |
-| ------- | ---------------------- | ----------------------------- |
-| GET     | /api/sponsor/dashboard | Dashboard sponsor avec KPIs   |
-| GET     | /api/sponsor/sites     | Sites de diffusion du sponsor |
-| GET     | /api/sponsor/videos    | Vidéos du sponsor             |
-| GET     | /api/sponsor/stats     | Statistiques détaillées       |
+| Méthode | Endpoint                        | Description                       |
+| ------- | ------------------------------- | --------------------------------- |
+| GET     | /api/advertiser/dashboard       | Dashboard annonceur avec KPIs     |
+| GET     | /api/advertiser/sites           | Sites de diffusion de l'annonceur |
+| GET     | /api/advertiser/videos          | Vidéos de l'annonceur             |
+| GET     | /api/advertiser/stats           | Statistiques détaillées           |
 
-> Accès restreint aux utilisateurs avec `role=sponsor` ou admins. Données filtrées par `sponsor_id` du JWT.
+> Accès restreint aux utilisateurs avec `role=advertiser` ou admins. Données filtrées par `advertiser_id` du JWT.
 
 ### Agencies (Agences)
 
@@ -367,26 +386,58 @@ src/
 
 ---
 
-## ⚙️ Variables d'environnement
+## Variables d'environnement
+
+### Obligatoires
+
+| Variable             | Description                    | Exemple                              |
+| -------------------- | ------------------------------ | ------------------------------------ |
+| DATABASE_URL         | URL PostgreSQL (Supabase)      | postgresql://user:pass@host:5432/db  |
+| JWT_SECRET           | Secret JWT (min 32 caractères) | minimum-32-caracteres-random         |
+| ALLOWED_ORIGINS      | CORS origins                   | https://dashboard.example.com        |
+
+### Base de données
+
+| Variable             | Description          | Exemple                 |
+| -------------------- | -------------------- | ----------------------- |
+| DATABASE_SSL         | SSL activé           | true                    |
+| DATABASE_SSL_CA      | Certificat SSL       | /path/to/cert.pem       |
+
+### Stockage vidéos (FTP)
+
+| Variable             | Description          | Exemple                              |
+| -------------------- | -------------------- | ------------------------------------ |
+| FTP_HOST             | Hôte FTP             | ftp.example.com                      |
+| FTP_USER             | Utilisateur FTP      | xxx                                  |
+| FTP_PASSWORD         | Mot de passe FTP     | xxx                                  |
+| FTP_PUBLIC_URL       | URL publique des vidéos | https://cdn.example.com/videos    |
+
+### Stockage vidéos (Fallback Supabase)
+
+| Variable             | Description          | Exemple                 |
+| -------------------- | -------------------- | ----------------------- |
+| SUPABASE_URL         | URL projet Supabase  | https://xxx.supabase.co |
+| SUPABASE_SERVICE_KEY | Clé service Supabase | eyJhbGci...             |
+
+### Email (SMTP)
+
+| Variable             | Description          | Exemple                 |
+| -------------------- | -------------------- | ----------------------- |
+| SMTP_HOST            | Serveur SMTP         | smtp.gmail.com          |
+| SMTP_PORT            | Port SMTP            | 587                     |
+| SMTP_USER            | Utilisateur SMTP     | xxx                     |
+| SMTP_PASSWORD        | Mot de passe SMTP    | xxx                     |
+
+### Optionnel
 
 | Variable             | Description          | Exemple                 |
 | -------------------- | -------------------- | ----------------------- |
 | NODE_ENV             | Environnement        | production              |
 | PORT                 | Port serveur         | 3001                    |
-| DATABASE_URL         | URL Supabase         | postgresql://...        |
-| DATABASE_SSL         | SSL activé           | true                    |
-| JWT_SECRET           | Secret JWT           | (généré)                |
-| ALLOWED_ORIGINS      | CORS origins         | https://...             |
-| SUPABASE_URL         | URL projet Supabase  | https://xxx.supabase.co |
-| SUPABASE_SERVICE_KEY | Clé service Supabase | eyJhbGci...             |
-
-### Supabase Storage
-
-Les vidéos sont stockées temporairement dans Supabase Storage :
-
-1. Créer un bucket `videos` dans Storage (mode public)
-2. Configurer `SUPABASE_URL` et `SUPABASE_SERVICE_KEY`
-3. Les vidéos sont automatiquement supprimées après déploiement vers les sites
+| LOG_LEVEL            | Niveau de log        | info                    |
+| LOGTAIL_TOKEN        | Token Logtail        | xxx                     |
+| SLACK_WEBHOOK_URL    | Webhook Slack        | https://hooks.slack...  |
+| REDIS_URL            | URL Redis (multi-instance) | redis://xxx       |
 
 ---
 
@@ -399,4 +450,4 @@ Les vidéos sont stockées temporairement dans Supabase Storage :
 
 ---
 
-**Dernière mise à jour :** 26 décembre 2025
+**Dernière mise à jour :** 6 janvier 2026

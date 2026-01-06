@@ -138,6 +138,26 @@ export interface LocalVideo {
   subcategory: string | null;
   size: number;
   lastModified: string;
+  checksum: string | null;
+}
+
+/**
+ * Vidéo stockée dans le cloud (table videos)
+ * Peut être déployée vers les Pi
+ */
+export interface CloudVideo {
+  id: string;
+  filename: string;
+  originalName: string;
+  title: string;
+  category: string | null;
+  subcategory: string | null;
+  size: number;
+  duration: number | null;
+  checksum: string | null;
+  url: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /**

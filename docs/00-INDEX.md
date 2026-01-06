@@ -39,6 +39,8 @@ Architecture et documentation pour développeurs.
 - [Command Queue (sites offline)](technical/COMMAND_QUEUE.md)
 - [Row-Level Security](technical/ROW_LEVEL_SECURITY.md)
 - [Guide des tests](technical/TESTING_GUIDE.md)
+- [Boucles par Phase](../CLAUDE.md#boucles-vidéo-par-phase--new-2026-01) - Configuration N vidéos par phase
+- [Mapping Analytics](../CLAUDE.md#mapping-analytics-des-catégories--new-2026-01) - Catégories → types standardisés
 
 ### 📊 [Module Analytics Sponsors](analytics/)
 
@@ -193,6 +195,6 @@ neopro/
 
 ---
 
-**Dernière mise à jour** : 6 janvier 2026 - Système error handling centralisé
+**Dernière mise à jour** : 6 janvier 2026 - Refactoring dashboard (tabs, N vidéos par phase, mapping sous-catégories)
 
-**Version** : 2.4
+**Version** : 2.5

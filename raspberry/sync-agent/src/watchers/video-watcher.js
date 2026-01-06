@@ -7,10 +7,14 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const logger = require('../logger');
 
 // Extensions vidéo supportées
 const VIDEO_EXTENSIONS = ['.mp4', '.mkv', '.avi', '.mov', '.webm', '.m4v'];
+
+// Cache file for checksums
+const CHECKSUM_CACHE_FILE = '.video-checksums.json';
 
 class VideoWatcher {
   constructor(videosPath, onChange) {
@@ -20,6 +24,9 @@ class VideoWatcher {
     this.debounceTimer = null;
     this.debounceDelay = 2000; // 2 secondes de debounce
     this.lastVideoList = null;
+    this.checksumCache = new Map(); // filename -> { checksum, size, mtime }
+    this.checksumQueue = []; // Files pending checksum calculation
+    this.isCalculatingChecksums = false;
   }
 
   /**
@@ -38,8 +45,14 @@ class VideoWatcher {
         fs.mkdirSync(this.videosPath, { recursive: true });
       }
 
+      // Charger le cache des checksums
+      this.loadChecksumCache();
+
       // Initialiser la liste des vidéos
       this.lastVideoList = this.hashVideoList(this.scanVideos());
+
+      // Lancer le calcul des checksums en background
+      this.processChecksumQueue();
 
       // Surveiller le dossier (récursif pour les sous-catégories)
       this.watcher = fs.watch(this.videosPath, { recursive: true }, (eventType, filename) => {
@@ -57,6 +70,136 @@ class VideoWatcher {
       logger.info('[video-watcher] Started watching videos directory', { path: this.videosPath });
     } catch (error) {
       logger.error('[video-watcher] Failed to start watcher:', error);
+    }
+  }
+
+  /**
+   * Charge le cache des checksums depuis le disque
+   */
+  loadChecksumCache() {
+    try {
+      const cachePath = path.join(this.videosPath, CHECKSUM_CACHE_FILE);
+      if (fs.existsSync(cachePath)) {
+        const data = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+        this.checksumCache = new Map(Object.entries(data));
+        logger.debug('[video-watcher] Loaded checksum cache', { entries: this.checksumCache.size });
+      }
+    } catch (error) {
+      logger.warn('[video-watcher] Could not load checksum cache:', error.message);
+      this.checksumCache = new Map();
+    }
+  }
+
+  /**
+   * Sauvegarde le cache des checksums sur le disque
+   */
+  saveChecksumCache() {
+    try {
+      const cachePath = path.join(this.videosPath, CHECKSUM_CACHE_FILE);
+      const data = Object.fromEntries(this.checksumCache);
+      fs.writeFileSync(cachePath, JSON.stringify(data, null, 2));
+      logger.debug('[video-watcher] Saved checksum cache', { entries: this.checksumCache.size });
+    } catch (error) {
+      logger.warn('[video-watcher] Could not save checksum cache:', error.message);
+    }
+  }
+
+  /**
+   * Calcule le checksum MD5 d'un fichier (plus rapide que SHA256)
+   * @param {string} filePath Chemin du fichier
+   * @returns {Promise<string>} Checksum MD5
+   */
+  async calculateChecksum(filePath) {
+    return new Promise((resolve, reject) => {
+      const hash = crypto.createHash('md5');
+      const stream = fs.createReadStream(filePath);
+
+      stream.on('data', (data) => hash.update(data));
+      stream.on('end', () => resolve(hash.digest('hex')));
+      stream.on('error', (error) => reject(error));
+    });
+  }
+
+  /**
+   * Obtient le checksum d'un fichier (depuis cache ou calcul)
+   * @param {string} fullPath Chemin complet du fichier
+   * @param {object} stat Stats du fichier
+   * @returns {string|null} Checksum ou null si en cours de calcul
+   */
+  getChecksumForFile(fullPath, stat) {
+    const cacheKey = fullPath;
+    const cached = this.checksumCache.get(cacheKey);
+
+    // Vérifier si le cache est valide (même taille et mtime)
+    if (cached && cached.size === stat.size && cached.mtime === stat.mtime.toISOString()) {
+      return cached.checksum;
+    }
+
+    // Ajouter à la queue de calcul si pas déjà présent
+    if (!this.checksumQueue.find((q) => q.path === fullPath)) {
+      this.checksumQueue.push({ path: fullPath, stat });
+      // Lancer le processing si pas déjà en cours
+      if (!this.isCalculatingChecksums) {
+        setImmediate(() => this.processChecksumQueue());
+      }
+    }
+
+    return null; // Sera calculé en background
+  }
+
+  /**
+   * Traite la queue des checksums à calculer
+   */
+  async processChecksumQueue() {
+    if (this.isCalculatingChecksums || this.checksumQueue.length === 0) {
+      return;
+    }
+
+    this.isCalculatingChecksums = true;
+    let needsSync = false;
+
+    while (this.checksumQueue.length > 0) {
+      const item = this.checksumQueue.shift();
+
+      try {
+        // Vérifier que le fichier existe encore
+        if (!fs.existsSync(item.path)) {
+          continue;
+        }
+
+        const checksum = await this.calculateChecksum(item.path);
+
+        this.checksumCache.set(item.path, {
+          checksum,
+          size: item.stat.size,
+          mtime: item.stat.mtime.toISOString(),
+        });
+
+        needsSync = true;
+        logger.debug('[video-watcher] Calculated checksum', {
+          file: path.basename(item.path),
+          checksum: checksum.substring(0, 8) + '...',
+        });
+
+        // Petite pause entre les fichiers pour ne pas bloquer le système
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } catch (error) {
+        logger.warn('[video-watcher] Error calculating checksum:', {
+          file: item.path,
+          error: error.message,
+        });
+      }
+    }
+
+    this.isCalculatingChecksums = false;
+
+    // Sauvegarder le cache et notifier si des checksums ont été calculés
+    if (needsSync) {
+      this.saveChecksumCache();
+      // Notifier le changement pour que les nouveaux checksums soient envoyés
+      if (this.onChange) {
+        await this.onChange();
+      }
     }
   }
 
@@ -182,6 +325,9 @@ class VideoWatcher {
           const category = pathParts[0] || null;
           const subcategory = pathParts[1] || null;
 
+          // Obtenir le checksum (depuis cache ou null si en cours de calcul)
+          const checksum = this.getChecksumForFile(fullPath, stat);
+
           videos.push({
             filename: entry.name,
             path: `videos/${entryRelativePath}`,
@@ -189,6 +335,7 @@ class VideoWatcher {
             subcategory,
             size: stat.size,
             lastModified: stat.mtime.toISOString(),
+            checksum,
           });
         } catch (error) {
           logger.warn('[video-watcher] Error reading file stats:', { file: entry.name, error: error.message });
@@ -201,7 +348,6 @@ class VideoWatcher {
    * Calcule un hash de la liste des vidéos pour détecter les changements
    */
   hashVideoList(videos) {
-    const crypto = require('crypto');
     // Créer une représentation stable de la liste
     const representation = videos
       .map((v) => `${v.path}:${v.size}:${v.lastModified}`)

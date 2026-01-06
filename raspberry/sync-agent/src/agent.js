@@ -113,11 +113,12 @@ class NeoproSyncAgent {
     // Enregistrer la connexion dans l'historique
     syncHistory.recordConnection(true, { siteId: config.site.id });
 
-    // Envoyer l'état local au central (miroir)
-    this.syncLocalState();
-
-    // Démarrer la surveillance des changements de configuration
+    // Démarrer la surveillance des changements de configuration ET des vidéos
+    // IMPORTANT: Doit être fait AVANT syncLocalState pour que videoWatcher soit initialisé
     this.startConfigWatcher();
+
+    // Envoyer l'état local au central (miroir) - après init du videoWatcher
+    this.syncLocalState();
 
     this.startHeartbeat();
     // Note: startAnalyticsSync() est appelé dans start() car les analytics

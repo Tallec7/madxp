@@ -172,12 +172,15 @@ neopro/
 | Composant | Technologies |
 |-----------|-------------|
 | Frontend Raspberry | Angular 20, Socket.IO client, SCSS |
-| Frontend Dashboard | Angular 17, Chart.js, Leaflet |
-| Backend API | Node.js 18+, Express, PostgreSQL, Redis |
+| Frontend Dashboard | Angular 20, Chart.js, Leaflet |
+| Backend API | Node.js 18+, Express 4.18, TypeScript strict |
+| Base de données | PostgreSQL 15 (Supabase) |
+| Stockage vidéos | FTP (Hostinger) + Supabase Storage (fallback) |
 | WebSocket | Socket.IO 4.7 |
-| Base de données | Supabase (PostgreSQL) |
-| Cache | Redis (Upstash) |
-| Tests | Jest, Karma, Playwright |
+| Cache | Redis (Upstash) - optionnel |
+| Auth | JWT HttpOnly cookie + Bearer token |
+| Logs | Winston + Logtail (Better Stack) |
+| Tests | Jest + Supertest (API), Karma (Angular), Playwright (E2E) |
 
 ---
 
@@ -397,6 +400,6 @@ sudo systemctl restart neopro-app
 
 ---
 
-**Version :** 2.0
+**Version :** 2.1.3
 **Licence :** MIT
-**Dernière mise à jour :** 14 décembre 2025
+**Dernière mise à jour :** 6 janvier 2026
