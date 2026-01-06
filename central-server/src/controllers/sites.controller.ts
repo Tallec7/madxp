@@ -1193,7 +1193,7 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
         club_name: site.club_name,
       },
       connection: {
-        isConnected: isConnectedNow,
+        isConnected: isConnectedNow || (secondsSinceLastSeen !== null && secondsSinceLastSeen < ONLINE_THRESHOLD_SECONDS),
         status: displayStatus,
         lastSeenAt,
         secondsSinceLastSeen,
