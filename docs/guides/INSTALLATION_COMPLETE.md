@@ -373,6 +373,21 @@ ping 192.168.4.1
 # Quand il demande l'adresse, entrer : 192.168.4.1
 ```
 
+### Android refuse de se connecter au hotspot
+
+**Symptômes :** Android affiche "Pas d'accès Internet" et se déconnecte du WiFi `NEOPRO-{CLUB}`.
+
+**Solution :** Le captive portal est automatiquement configuré depuis la version 2.5.0. Si vous avez des problèmes :
+
+1. **Solution immédiate :** Tapez "Rester connecté" et utilisez `http://192.168.4.1/login`
+2. **Vérifier le captive portal :**
+   ```bash
+   ssh pi@192.168.4.1
+   curl -I http://localhost/generate_204
+   # Doit retourner : HTTP/1.1 204 No Content
+   ```
+3. **Guide complet :** [docs/guides/ANDROID_HOTSPOT_FIX.md](ANDROID_HOTSPOT_FIX.md)
+
 ### Le sync-agent ne se connecte pas au serveur central
 
 ```bash
