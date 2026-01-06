@@ -1,3 +1,9 @@
+# [2.3.0](https://github.com/Tallec7/neopro/compare/v2.2.0...v2.3.0) (2026-01-06)
+
+### Features
+
+- **dashboard:** refactor site-detail with tabs, N videos per phase, subcategory mapping ([cc45214](https://github.com/Tallec7/neopro/commit/cc4521454cab904de865b6b428cc3fa756d98815))
+
 # [2.2.0](https://github.com/Tallec7/neopro/compare/v2.1.3...v2.2.0) (2026-01-06)
 
 ### Features
