@@ -1,3 +1,34 @@
+# [2.1.0](https://github.com/Tallec7/neopro/compare/v2.0.1...v2.1.0) (2026-01-06)
+
+### Bug Fixes
+
+- **api:** optimize monitoring endpoints to prevent rate limiting ([953bd9b](https://github.com/Tallec7/neopro/commit/953bd9b7fbfc001fe8ce683f5b30e94ee969baa5))
+- **api:** use effective connection status in getSiteConnectionStatus ([2c106b6](https://github.com/Tallec7/neopro/commit/2c106b6686bb17da38fd441d367129c96b00613e))
+- **api:** use metrics table as fallback for connection status detection ([d2ccf23](https://github.com/Tallec7/neopro/commit/d2ccf233d3f555653bf0992fb54f7e58de8541e4))
+- **api:** use real-time Socket.IO status in getSiteStats endpoint ([8bc235b](https://github.com/Tallec7/neopro/commit/8bc235b4e9dbef65ae80d988e59ec090576f0616))
+- **ci:** add package-lock.json for semantic-release workflow ([bbe1136](https://github.com/Tallec7/neopro/commit/bbe1136a79e91f9582bb5b5be4b12f137f9cb5bf))
+- **ci:** upgrade Node.js to v22 for semantic-release v24 ([1e14353](https://github.com/Tallec7/neopro/commit/1e14353037d818501c274a139d6b9c2e79668ff3))
+- **dashboard:** correct type mapping for SiteConnectionStatus ([8f62cdb](https://github.com/Tallec7/neopro/commit/8f62cdbfcb3e557de4f40b33e6779f8cff8d0859))
+- **dashboard:** display real-time connection status in sites list ([820fdfc](https://github.com/Tallec7/neopro/commit/820fdfc94e577decaf6af88958a40c9a0439ae1f))
+- **dashboard:** persist Socket.IO connection after page refresh ([1632c93](https://github.com/Tallec7/neopro/commit/1632c936005af2dc0957a6b798f0112a8910d44b))
+- **dashboard:** trust server status='online' when showing connection state ([cf7da77](https://github.com/Tallec7/neopro/commit/cf7da77d23455606fd3d6a5dda1a15de21dd661d))
+- **dashboard:** use real-time connection status in recent sites ([456e4e4](https://github.com/Tallec7/neopro/commit/456e4e4f21d64c99b281e981c80b457b160352d0))
+- **dashboard:** use real-time connection status in sites list ([e1cbf68](https://github.com/Tallec7/neopro/commit/e1cbf6854a3d9002af643c132612562633ae6ee5))
+- maj claude ([b273178](https://github.com/Tallec7/neopro/commit/b273178582bd62796c27c48a0ae2635daaf29116))
+- **setup:** generate config in dashboard-compatible format ([0598ceb](https://github.com/Tallec7/neopro/commit/0598cebae762e3e25c3d9b1612b5fcd927948944))
+- **socket:** add JWT authentication for dashboard users ([ebbb09f](https://github.com/Tallec7/neopro/commit/ebbb09fbb4db99c772fbe93d03223279fe4843cd))
+- use dynamic URL for analytics API instead of relative path ([70b9ea7](https://github.com/Tallec7/neopro/commit/70b9ea79fa88c598fe012e217997186532fe5f24))
+
+### Features
+
+- **admin:** add bulk video categorization and thumbnail regeneration ([4381d1a](https://github.com/Tallec7/neopro/commit/4381d1ab6850065c6a4334120a96918c70691f21))
+- **ci:** implement automatic semantic versioning ([3b564f4](https://github.com/Tallec7/neopro/commit/3b564f42179cb37579ae83b7efcce1b1c1b13b19))
+- **dashboard:** optimize API polling with cache and aggregated endpoint ([04b4fe1](https://github.com/Tallec7/neopro/commit/04b4fe1f217a36f6781b0b05bf78861a6f1733fe))
+- **login:** display club info on login pages (ports 80 & 8080) ([e4d7ba0](https://github.com/Tallec7/neopro/commit/e4d7ba0376ccb2dbb5bb98418c7b69158baa0a0e))
+- **raspberry:** add captive portal support for Android hotspot connectivity ([fc4e7ac](https://github.com/Tallec7/neopro/commit/fc4e7acea7593ac5f80f3c31084d4cbd1720ba7a))
+- **sync:** add local video list synchronization from Pi to central ([95426ee](https://github.com/Tallec7/neopro/commit/95426ee6e732bd37aaed2dc1f12be1086bdf090c))
+- **testing:** add comprehensive test dashboard and toolkit ([001b6fb](https://github.com/Tallec7/neopro/commit/001b6fb2c8be109938cf1a014a8bc03b67e0c00b))
+
 # Changelog
 
 Généré le 2025-12-08 (Mise à jour 2026-01-03)
