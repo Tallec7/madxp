@@ -1,3 +1,9 @@
+## [2.1.2](https://github.com/Tallec7/neopro/compare/v2.1.1...v2.1.2) (2026-01-06)
+
+### Bug Fixes
+
+- **api:** align isConnected with displayStatus in dashboard endpoint ([1f0fa71](https://github.com/Tallec7/neopro/commit/1f0fa71c9b4b896dccac692fc05d597f93d3f3e3))
+
 ## [2.1.1](https://github.com/Tallec7/neopro/compare/v2.1.0...v2.1.1) (2026-01-06)
 
 ### Bug Fixes
