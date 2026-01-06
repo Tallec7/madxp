@@ -1,3 +1,9 @@
+## [2.1.1](https://github.com/Tallec7/neopro/compare/v2.1.0...v2.1.1) (2026-01-06)
+
+### Bug Fixes
+
+- **api:** relax connection status thresholds to reduce false warnings ([d736511](https://github.com/Tallec7/neopro/commit/d736511db08bd4bfd65c19d7b9c56b7003adb3f0))
+
 # [2.1.0](https://github.com/Tallec7/neopro/compare/v2.0.1...v2.1.0) (2026-01-06)
 
 ### Bug Fixes
