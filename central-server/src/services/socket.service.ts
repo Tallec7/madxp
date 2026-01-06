@@ -759,23 +759,32 @@ class SocketService {
    */
   private async handleSyncLocalState(siteId: string, state: any) {
     try {
-      const { configHash, config, timestamp } = state;
+      const { configHash, config, videos, storage, timestamp } = state;
 
       logger.info('Received local state sync', {
         siteId,
         configHash,
         categoriesCount: config?.categories?.length || 0,
+        videosCount: videos?.length || 0,
         timestamp,
       });
 
-      // Stocker le miroir de la configuration locale
+      // Enrichir la config avec les vidéos et le stockage pour accès facile
+      const enrichedConfig = {
+        ...config,
+        _localVideos: videos || [],
+        _localStorage: storage || null,
+        _lastVideoSync: timestamp,
+      };
+
+      // Stocker le miroir de la configuration locale (enrichi avec vidéos)
       await query(
         `UPDATE sites
          SET local_config_mirror = $1,
              local_config_hash = $2,
              last_config_sync = NOW()
          WHERE id = $3`,
-        [JSON.stringify(config), configHash, siteId]
+        [JSON.stringify(enrichedConfig), configHash, siteId]
       );
 
       // Émettre au dashboard pour mise à jour en temps réel
@@ -784,11 +793,12 @@ class SocketService {
           siteId,
           configHash,
           categoriesCount: config?.categories?.length || 0,
+          videosCount: videos?.length || 0,
           timestamp,
         });
       }
 
-      logger.info('Local state stored', { siteId, configHash });
+      logger.info('Local state stored', { siteId, configHash, videosCount: videos?.length || 0 });
       await this.triggerPendingConfigSync(siteId);
     } catch (error) {
       logger.error('Error handling sync_local_state:', error);

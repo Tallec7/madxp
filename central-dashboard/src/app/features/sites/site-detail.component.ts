@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { Site, Metrics, SiteConnectionStatus, OverlayPosition } from '../../core/models';
+import { Site, Metrics, SiteConnectionStatus, OverlayPosition, LocalVideo, LocalStorage } from '../../core/models';
 import { formatVersion } from './utils/version';
 import { Subscription, interval } from 'rxjs';
 import { ConfigEditorComponent } from './config-editor/config-editor.component';
@@ -457,6 +457,70 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
         </div>
         <div *ngIf="showContentViewer" class="content-viewer-wrapper">
           <app-site-content-viewer [siteId]="siteId"></app-site-content-viewer>
+        </div>
+      </div>
+
+      <!-- Vidéos locales du site -->
+      <div class="card">
+        <div class="card-header-row">
+          <h3>Vidéos sur le boîtier</h3>
+          <button class="btn btn-secondary" (click)="toggleLocalVideos()" [disabled]="loadingLocalVideos">
+            <ng-container *ngIf="loadingLocalVideos">Chargement...</ng-container>
+            <ng-container *ngIf="!loadingLocalVideos">{{ showLocalVideos ? 'Masquer' : 'Afficher les vidéos' }}</ng-container>
+          </button>
+        </div>
+
+        <div *ngIf="showLocalVideos" class="local-videos-section">
+          <div *ngIf="localVideos.length === 0" class="empty-state">
+            <p>Aucune vidéo synchronisée sur ce boîtier</p>
+            <small *ngIf="lastVideoSync">Dernière synchro : {{ lastVideoSync | date:'dd/MM/yyyy HH:mm' }}</small>
+          </div>
+
+          <div *ngIf="localVideos.length > 0">
+            <div class="local-videos-stats">
+              <span class="stat-badge">{{ localVideos.length }} vidéo(s)</span>
+              <span class="stat-badge" *ngIf="localStorage">
+                {{ formatBytes(getTotalVideoSize()) }} / {{ formatBytes(localStorage.total) }}
+                ({{ formatBytes(localStorage.free) }} libre)
+              </span>
+              <span class="stat-badge sync-time" *ngIf="lastVideoSync">
+                Synchro : {{ lastVideoSync | date:'dd/MM HH:mm' }}
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label for="videoSelect">Sélectionner une vidéo</label>
+              <select
+                id="videoSelect"
+                [(ngModel)]="selectedVideoPath"
+                class="form-select"
+              >
+                <option value="">-- Choisir une vidéo --</option>
+                <optgroup *ngFor="let category of getVideoCategories()" [label]="category || 'Sans catégorie'">
+                  <option *ngFor="let video of getVideosByCategory(category)" [value]="video.path">
+                    {{ video.filename }} ({{ formatBytes(video.size) }})
+                  </option>
+                </optgroup>
+              </select>
+            </div>
+
+            <div class="form-actions" *ngIf="selectedVideoPath">
+              <button
+                class="btn btn-primary"
+                (click)="playSelectedVideo()"
+                [disabled]="playingVideo || !isConnected"
+                [class.btn-queued]="!isConnected"
+              >
+                <ng-container *ngIf="playingVideo">Lecture en cours...</ng-container>
+                <ng-container *ngIf="!playingVideo && isConnected">▶ Lire cette vidéo</ng-container>
+                <ng-container *ngIf="!playingVideo && !isConnected">📥 Lire (file d'attente)</ng-container>
+              </button>
+            </div>
+
+            <p class="connection-hint" *ngIf="!isConnected">
+              <span class="queue-note">Site hors ligne. La commande sera exécutée à la reconnexion.</span>
+            </p>
+          </div>
         </div>
       </div>
 
@@ -1693,6 +1757,67 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
         grid-template-columns: repeat(2, 1fr);
       }
     }
+
+    /* Vidéos locales */
+    .local-videos-section {
+      margin-top: 1rem;
+    }
+
+    .local-videos-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .stat-badge {
+      background: var(--card-background, #1e293b);
+      border: 1px solid var(--border-color, #334155);
+      border-radius: 6px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.85rem;
+      color: var(--text-muted, #94a3b8);
+    }
+
+    .stat-badge.sync-time {
+      color: #10b981;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted, #94a3b8);
+    }
+
+    .empty-state small {
+      display: block;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .form-select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--border-color, #334155);
+      border-radius: 6px;
+      background: var(--input-background, #0f172a);
+      color: var(--text-color, #f1f5f9);
+      font-size: 1rem;
+    }
+
+    .form-select:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .form-select optgroup {
+      font-weight: 600;
+      color: var(--text-muted, #94a3b8);
+    }
+
+    .form-select option {
+      padding: 0.5rem;
+    }
   `]
 })
 export class SiteDetailComponent implements OnInit, OnDestroy {
@@ -1715,6 +1840,15 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   // Content viewer
   showContentViewer = false;
+
+  // Vidéos locales
+  showLocalVideos = false;
+  localVideos: LocalVideo[] = [];
+  localStorage: LocalStorage | null = null;
+  lastVideoSync: string | null = null;
+  loadingLocalVideos = false;
+  selectedVideoPath = '';
+  playingVideo = false;
 
   // Hotspot config
   showHotspotConfig = false;
@@ -2836,5 +2970,82 @@ const commands = {
 
 module.exports = commands;
 `;
+  }
+
+  // ============================================================================
+  // Vidéos locales
+  // ============================================================================
+
+  toggleLocalVideos(): void {
+    if (!this.showLocalVideos) {
+      this.loadLocalVideos();
+    }
+    this.showLocalVideos = !this.showLocalVideos;
+  }
+
+  loadLocalVideos(): void {
+    this.loadingLocalVideos = true;
+    this.sitesService.getLocalContent(this.siteId).subscribe({
+      next: (content) => {
+        this.localVideos = content.localVideos || [];
+        this.localStorage = content.localStorage;
+        this.lastVideoSync = content.lastVideoSync;
+        this.loadingLocalVideos = false;
+      },
+      error: (error) => {
+        this.loadingLocalVideos = false;
+        this.notificationService.error('Erreur lors du chargement des vidéos: ' + error.message);
+      }
+    });
+  }
+
+  getVideoCategories(): (string | null)[] {
+    const categories = new Set<string | null>();
+    this.localVideos.forEach(v => categories.add(v.category));
+    return Array.from(categories).sort((a, b) => {
+      if (a === null) return 1;
+      if (b === null) return -1;
+      return a.localeCompare(b);
+    });
+  }
+
+  getVideosByCategory(category: string | null): LocalVideo[] {
+    return this.localVideos
+      .filter(v => v.category === category)
+      .sort((a, b) => a.filename.localeCompare(b.filename));
+  }
+
+  getTotalVideoSize(): number {
+    return this.localVideos.reduce((sum, v) => sum + v.size, 0);
+  }
+
+  formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  playSelectedVideo(): void {
+    if (!this.selectedVideoPath) return;
+
+    this.playingVideo = true;
+    this.sitesService.sendCommand(this.siteId, 'play_video', {
+      path: this.selectedVideoPath
+    }).subscribe({
+      next: (response) => {
+        this.playingVideo = false;
+        if (response.success) {
+          this.notificationService.success('Lecture de la vidéo lancée');
+        } else {
+          this.notificationService.info(response.message || 'Commande mise en file d\'attente');
+        }
+      },
+      error: (error) => {
+        this.playingVideo = false;
+        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+      }
+    });
   }
 }

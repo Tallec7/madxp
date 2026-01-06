@@ -127,6 +127,28 @@ export interface Video {
   updated_at: Date;
 }
 
+/**
+ * Vidéo locale présente sur un Raspberry Pi
+ * Synchronisée via sync_local_state
+ */
+export interface LocalVideo {
+  filename: string;
+  path: string;
+  category: string | null;
+  subcategory: string | null;
+  size: number;
+  lastModified: string;
+}
+
+/**
+ * Informations de stockage d'un Raspberry Pi
+ */
+export interface LocalStorage {
+  total: number;
+  used: number;
+  free: number;
+}
+
 export interface Metrics {
   id: string;
   site_id: string;
