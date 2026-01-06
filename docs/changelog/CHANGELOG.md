@@ -1,3 +1,9 @@
+## [2.1.3](https://github.com/Tallec7/neopro/compare/v2.1.2...v2.1.3) (2026-01-06)
+
+### Bug Fixes
+
+- **cors:** allow X-Correlation-ID header in preflight requests ([5499083](https://github.com/Tallec7/neopro/commit/549908342c90968c9c9788dcda331eb63eb7dca8))
+
 ## [2.1.2](https://github.com/Tallec7/neopro/compare/v2.1.1...v2.1.2) (2026-01-06)
 
 ### Bug Fixes
