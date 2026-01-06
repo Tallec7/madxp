@@ -36,8 +36,11 @@ import usersRoutes from './routes/users.routes';
 import schedulesRoutes from './routes/schedules.routes';
 import objectivesRoutes from './routes/objectives.routes';
 import playlistSchedulesRoutes from './routes/playlist-schedules.routes';
+import logsRoutes from './routes/logs.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
+import { correlationMiddleware } from './middleware/correlation';
+import { errorHandler, notFoundHandler } from './middleware/error-handler';
 
 dotenv.config();
 
@@ -181,7 +184,7 @@ app.use((req, res, next) => {
 
   // Toujours définir ces headers pour les requêtes OPTIONS
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Correlation-ID');
 
   // Gérer les requêtes preflight
   if (req.method === 'OPTIONS') {
@@ -196,6 +199,10 @@ app.use(cookieParser());
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Correlation ID middleware - must be early to capture all requests
+// Adds X-Correlation-ID header for request tracing across frontend/backend
+app.use(correlationMiddleware);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -307,34 +314,15 @@ app.use('/api/users', sensitiveRateLimit, usersRoutes); // Gestion utilisateurs 
 app.use('/api/schedules', sensitiveRateLimit, schedulesRoutes); // Tâches planifiées (admin only)
 app.use('/api/objectives', apiRateLimit, objectivesRoutes); // Objectifs clubs
 app.use('/api/playlist-schedules', apiRateLimit, playlistSchedulesRoutes); // Programmation playlists
+app.use('/api/logs', apiRateLimit, logsRoutes); // Frontend log ingestion
 
-// 404 handler - Skip Socket.IO paths as they are handled by Socket.IO server directly
-app.use((req: Request, res: Response, next: NextFunction) => {
-  // Socket.IO handles its own routes under /socket.io/*
-  // These requests should not reach this middleware
-  if (req.path.startsWith('/socket.io')) {
-    return next();
-  }
+// 404 handler - Must be AFTER all routes, BEFORE error handler
+// Uses standardized error format with correlation ID
+app.use(notFoundHandler);
 
-  res.status(404).json({
-    error: 'Route non trouvée',
-    path: req.path,
-  });
-});
-
-app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-  logger.error('Unhandled error:', {
-    error: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-  });
-
-  res.status(500).json({
-    error: 'Erreur serveur interne',
-    message: NODE_ENV === 'development' ? err.message : undefined,
-  });
-});
+// Global error handler - Must be LAST middleware
+// Catches all errors and formats them with correlation ID and error codes
+app.use(errorHandler);
 
 const startServer = async () => {
   // Démarrer le serveur HTTP immédiatement pour répondre aux health checks de Render
