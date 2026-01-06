@@ -2,6 +2,46 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
+**Version**: 2.2.0 | **Dernière mise à jour**: 2026-01-06
+
+---
+
+## Instructions pour Claude
+
+### Comportement Général
+- **Toujours lire un fichier avant de le modifier** - Ne jamais proposer de changements sur du code non lu
+- **Proposer des tests** pour tout nouveau code ou modification significative
+- **Vérifier les fichiers existants** avant de créer de nouveaux fichiers
+- **Utiliser les patterns existants** du projet (voir section Patterns de Code)
+
+### Priorités de Développement
+1. **Sécurité d'abord** : Vérifier les injections SQL, XSS, CSRF avant tout commit
+2. **TypeScript strict** : Jamais de `any`, toujours typer explicitement
+3. **Tests** : Couvrir les cas critiques (auth, paiement, déploiement)
+4. **Rétrocompatibilité** : Ne pas casser les Pi déjà déployés
+
+### Ce que Claude doit faire
+- Utiliser les requêtes SQL paramétrées (`$1`, `$2`...)
+- Logger avec Winston (`logger.info/error/warn`)
+- Suivre les Conventional Commits pour les messages
+- Valider les inputs avec Joi avant traitement
+- Gérer les erreurs avec try/catch et messages explicites
+
+### Ce que Claude ne doit JAMAIS faire
+- Modifier les migrations déjà en production
+- Changer le format des `api_key` des sites
+- Utiliser `console.log` (utiliser le logger)
+- Commit des secrets ou fichiers `.env`
+- Push directement sur `main` sans PR
+
+### Style de Réponse
+- Réponses concises et techniques
+- Code commenté uniquement si la logique n'est pas évidente
+- Proposer des alternatives quand pertinent
+- Signaler les risques de sécurité ou de breaking change
+
+---
+
 ## Contexte Métier
 
 **Neopro** = Système de TV interactive pour clubs sportifs.
@@ -48,9 +88,12 @@ neopro/
 │       ├── handlers/         # Socket.IO event handlers
 │       └── scripts/          # Migrations, seeds, admin CLI
 │
-├── central-dashboard/        # Dashboard Admin (Angular 17)
+├── central-dashboard/        # Dashboard Admin (Angular 20)
 │   └── src/app/
 │       ├── features/         # Composants par feature (sites, content, analytics)
+│       │   └── sites/        # Gestion des sites avec tabs (État/Contenu/Paramètres/Debug)
+│       │       └── components/   # Composants modulaires (remote-preview, video-selector, etc.)
+│       ├── shared/           # Composants partagés (video-selector, remote-preview)
 │       └── core/             # Services, guards, interceptors partagés
 │
 ├── raspberry/                # Application Raspberry Pi (Edge)
@@ -72,7 +115,7 @@ neopro/
 | Composant          | Technologies                                              |
 | ------------------ | --------------------------------------------------------- |
 | Frontend Raspberry | Angular 20, Socket.IO client, SCSS                        |
-| Frontend Dashboard | Angular 17, Chart.js, Leaflet                             |
+| Frontend Dashboard | Angular 20, Chart.js, Leaflet, Standalone Components      |
 | Backend API        | Node.js 18+, Express 4.18, TypeScript strict              |
 | Base de données    | PostgreSQL 15 (Supabase)                                  |
 | Cache              | Redis (Upstash) - optionnel                               |
@@ -281,6 +324,78 @@ La commande `update_config` utilise un **merge intelligent** qui préserve les p
 
 - `raspberry/sync-agent/src/utils/config-merge.js` - Logique de fusion
 - `central-server/src/controllers/sites.controller.ts` - Normalisation des commandes
+
+### Boucles Vidéo par Phase ⚡ NEW (2026-01)
+
+Les clubs peuvent définir des playlists différentes selon la **phase du match** :
+
+| Phase | ID | Description | Déclenchement |
+|-------|-----|-------------|---------------|
+| Boucle par défaut | `neutral` | Hors match | Par défaut |
+| Avant-match | `before` | Accueil spectateurs | Télécommande 🏁 |
+| Pendant le match | `during` | Mi-temps, temps morts | Télécommande ▶️ |
+| Après-match | `after` | Célébrations | Télécommande 🏆 |
+
+**Structure de configuration** :
+
+```typescript
+// configuration.json du Pi
+{
+  "sponsors": [...],           // Boucle par défaut (N vidéos)
+  "timeCategories": [
+    {
+      "id": "before",
+      "name": "Avant-match",
+      "icon": "🏁",
+      "loopVideos": [          // N vidéos pour cette phase
+        { "name": "Sponsor A", "path": "videos/sponsor_a.mp4", "type": "video/mp4" },
+        { "name": "Sponsor B", "path": "videos/sponsor_b.mp4", "type": "video/mp4" }
+      ]
+    }
+  ]
+}
+```
+
+**Fallback** : Si une phase n'a pas de `loopVideos`, utilise `sponsors[]` (boucle par défaut).
+
+**Fichiers impliqués** :
+- `raspberry/src/app/components/tv/tv.component.ts` - `getLoopVideosForPhase()`
+- `raspberry/src/app/components/remote/remote.component.ts` - `switchPhase()`
+- `central-dashboard/.../site-content-tab.component.ts` - UI de configuration
+- `central-dashboard/.../remote-preview.component.ts` - Prévisualisation
+
+### Mapping Analytics des Catégories ⚡ NEW (2026-01)
+
+Le mapping permet de normaliser les catégories locales vers des **types analytics standardisés** pour le reporting :
+
+| Type Analytics | Couleur | Exemples de catégories locales |
+|----------------|---------|-------------------------------|
+| `sponsor` | 🔵 Bleu | SPONSORS, PUBS, PARTENAIRES |
+| `jingle` | 🟢 Vert | JINGLES, BUTS, ANIMATIONS |
+| `ambiance` | 🟣 Violet | AMBIANCE, MUSIQUE, ENTREE_JOUEURS |
+| `other` | ⚪ Gris | Tout le reste |
+
+**Règle de mapping** :
+- Si catégorie **sans** sous-catégories → mapping sur la catégorie
+- Si catégorie **avec** sous-catégories → mapping sur chaque sous-catégorie (pas sur le parent)
+
+**Structure** :
+
+```typescript
+// configuration.json
+{
+  "categoryMappings": {
+    "ENTREE": "ambiance",           // Catégorie sans sous-cat
+    "MATCH_BUTS": "jingle",         // Sous-catégorie de MATCH
+    "MATCH_SPONSORS": "sponsor"     // Autre sous-catégorie de MATCH
+  }
+}
+```
+
+**Fichiers impliqués** :
+- `central-dashboard/.../site-content-tab.component.ts` - UI de mapping
+- `central-dashboard/.../config-editor.component.ts` - Éditeur complet
+- `central-server/src/controllers/analytics.controller.ts` - Agrégation par type
 
 ---
 
@@ -666,6 +781,19 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 | `central-dashboard/src/app/core/interceptors/error.interceptor.ts` | HTTP retry + correlation      |
 | `central-dashboard/src/app/core/handlers/global-error.handler.ts`  | Error handler Angular         |
 | `central-dashboard/src/app/features/sites/`                        | Gestion des clubs             |
+| `central-dashboard/src/app/features/sites/site-detail.component.ts`| Page détail site avec 4 tabs  |
+| `central-dashboard/src/app/features/sites/components/`             | Composants modulaires par tab |
+
+### Composants Site Detail (Refactoring 2026)
+
+| Composant | Fichier | Description |
+|-----------|---------|-------------|
+| **SiteContentTabComponent** | `components/site-content-tab/` | Onglet Contenu : boucles par phase, catégories, vidéos |
+| **SiteSettingsTabComponent** | `components/site-settings-tab/` | Onglet Paramètres : config réseau, hotspot |
+| **SiteDebugTabComponent** | `components/site-debug-tab/` | Onglet Debug : logs, commandes, diagnostics |
+| **RemotePreviewComponent** | `components/remote-preview/` | Simulation visuelle de la télécommande Pi |
+| **VideoSelectorComponent** | `shared/components/video-selector/` | Sélecteur de vidéos avec filtres catégorie |
+| **ConfigEditorComponent** | `config-editor/` | Éditeur complet de configuration JSON |
 
 ### Raspberry Pi
 
@@ -885,143 +1013,61 @@ services:
 
 ## Requêtes SQL Utiles
 
-### Sites avec métriques récentes
+Voir **[docs/technical/SQL_QUERIES.md](docs/technical/SQL_QUERIES.md)** pour les requêtes courantes :
+- Sites avec métriques récentes
+- Santé de la flotte
+- Analytics et top vidéos
+- Déploiements en échec
+- Reset MFA utilisateur
 
-```sql
--- Sites avec leur dernière métrique (< 5 min = online)
-SELECT
-  s.id,
-  s.site_name,
-  s.club_name,
-  s.status,
-  s.last_seen_at,
-  m.cpu_usage,
-  m.memory_usage,
-  m.temperature,
-  CASE
-    WHEN s.last_seen_at > NOW() - INTERVAL '5 minutes' THEN 'online'
-    ELSE 'offline'
-  END AS real_status
-FROM sites s
-LEFT JOIN LATERAL (
-  SELECT * FROM metrics
-  WHERE site_id = s.id
-  ORDER BY recorded_at DESC
-  LIMIT 1
-) m ON true
-ORDER BY s.last_seen_at DESC NULLS LAST;
+---
+
+## Sécurité
+
+### Principes OWASP appliqués
+
+| Risque | Protection | Implémentation |
+|--------|-----------|----------------|
+| **SQL Injection** | Requêtes paramétrées | `query('SELECT * FROM x WHERE id = $1', [id])` |
+| **XSS** | Sanitization Angular | `DomSanitizer` + échappement auto |
+| **CSRF** | Cookie SameSite + token | `sameSite: 'strict'` sur JWT cookie |
+| **Broken Auth** | JWT HttpOnly + MFA | Cookie non-accessible JS, 2FA optionnel |
+| **Sensitive Data** | Chiffrement + hashing | bcrypt pour passwords, TLS en transit |
+| **Broken Access** | RLS + middleware | Row-Level Security PostgreSQL |
+
+### Fichiers sensibles (ne jamais commit)
+
+```
+.env                    # Variables d'environnement
+*.pem, *.key           # Certificats SSL
+credentials.json       # Service accounts
 ```
 
-### Analytics : Top vidéos par club
+### Fichiers critiques (review obligatoire)
 
-```sql
--- Top 10 vidéos les plus jouées par site sur 30 jours
-SELECT
-  s.club_name,
-  vp.video_filename,
-  COUNT(*) as play_count,
-  SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END) as completed_count,
-  ROUND(AVG(vp.duration_played)::numeric, 1) as avg_watch_seconds
-FROM video_plays vp
-JOIN sites s ON s.id = vp.site_id
-WHERE vp.played_at > NOW() - INTERVAL '30 days'
-GROUP BY s.club_name, vp.video_filename
-ORDER BY s.club_name, play_count DESC;
+| Fichier | Risque si modifié |
+|---------|-------------------|
+| `middleware/auth.ts` | Bypass authentification |
+| `config/database.ts` | Fuite de connexion DB |
+| `socket.service.ts` | Compromission protocole Pi |
+| `setup-new-club.sh` | Backdoor sur Pi |
+
+### Validation des inputs
+
+```typescript
+// TOUJOURS valider avec Joi AVANT traitement
+const schema = Joi.object({
+  email: Joi.string().email().required(),
+  siteId: Joi.string().uuid().required(),
+  limit: Joi.number().integer().min(1).max(100).default(20)
+});
 ```
 
-### Déploiements en échec à retry
+### Audit et logs
 
-```sql
--- Déploiements failed récents avec infos pour debug
-SELECT
-  cd.id,
-  cd.status,
-  cd.error_message,
-  cd.progress,
-  cd.created_at,
-  v.filename as video,
-  CASE cd.target_type
-    WHEN 'site' THEN (SELECT site_name FROM sites WHERE id = cd.target_id)
-    WHEN 'group' THEN (SELECT name FROM groups WHERE id = cd.target_id)
-  END as target_name,
-  u.email as deployed_by
-FROM content_deployments cd
-JOIN videos v ON v.id = cd.video_id
-LEFT JOIN users u ON u.id = cd.deployed_by
-WHERE cd.status = 'failed'
-  AND cd.created_at > NOW() - INTERVAL '24 hours'
-ORDER BY cd.created_at DESC;
-```
-
-### Santé de la flotte
-
-```sql
--- Vue globale de la flotte avec alertes
-SELECT
-  COUNT(*) FILTER (WHERE last_seen_at > NOW() - INTERVAL '5 min') as online,
-  COUNT(*) FILTER (WHERE last_seen_at <= NOW() - INTERVAL '5 min'
-                      OR last_seen_at IS NULL) as offline,
-  COUNT(*) FILTER (WHERE status = 'maintenance') as maintenance,
-  COUNT(*) FILTER (WHERE status = 'error') as error,
-  (
-    SELECT COUNT(DISTINCT site_id)
-    FROM metrics
-    WHERE recorded_at > NOW() - INTERVAL '1 hour'
-      AND temperature > 70
-  ) as overheating,
-  (
-    SELECT COUNT(DISTINCT site_id)
-    FROM metrics
-    WHERE recorded_at > NOW() - INTERVAL '1 hour'
-      AND disk_usage > 90
-  ) as disk_critical
-FROM sites;
-```
-
-### Config diff entre deux versions
-
-```sql
--- Comparer deux versions de config d'un site
-WITH versions AS (
-  SELECT
-    id,
-    configuration,
-    deployed_at,
-    ROW_NUMBER() OVER (ORDER BY deployed_at DESC) as rn
-  FROM config_history
-  WHERE site_id = 'UUID_DU_SITE'
-)
-SELECT
-  v1.deployed_at as current_date,
-  v2.deployed_at as previous_date,
-  jsonb_diff(v2.configuration, v1.configuration) as changes
-FROM versions v1
-JOIN versions v2 ON v2.rn = v1.rn + 1
-WHERE v1.rn = 1;
-```
-
-### Advertiser ROI
-
-```sql
--- Stats impressions par annonceur sur 30 jours
-SELECT
-  a.name as advertiser,
-  COUNT(DISTINCT av.video_id) as videos_count,
-  COUNT(DISTINCT vp.site_id) as sites_reached,
-  COUNT(vp.id) as total_impressions,
-  SUM(vp.duration_played) / 3600.0 as hours_watched,
-  ROUND(
-    COUNT(vp.id)::numeric / NULLIF(COUNT(DISTINCT vp.site_id), 0),
-    1
-  ) as avg_impressions_per_site
-FROM advertisers a
-JOIN advertiser_videos av ON av.advertiser_id = a.id
-JOIN videos v ON v.id = av.video_id
-LEFT JOIN video_plays vp ON vp.video_filename = v.filename
-  AND vp.played_at > NOW() - INTERVAL '30 days'
-GROUP BY a.id, a.name
-ORDER BY total_impressions DESC;
-```
+- Toutes les actions admin sont loggées dans `audit_logs`
+- Correlation ID sur chaque requête pour traçabilité
+- Logs sensibles (passwords, tokens) jamais loggés
 
 ---
 
@@ -1117,6 +1163,17 @@ curl ftp://FTP_HOST/videos/ --user FTP_USER:FTP_PASSWORD
 ---
 
 ## Historique Breaking Changes
+
+### v2.2.0 (Janvier 2026)
+
+- **Dashboard** : Refactoring complet de `site-detail.component.ts`
+  - Nouvelle architecture avec 4 tabs : État / Contenu / Paramètres / Debug
+  - Composants modulaires dans `features/sites/components/`
+  - `RemotePreviewComponent` remplace `PhaseConfiguratorComponent`
+- **Boucles par Phase** : Support N vidéos par phase (était limité à 1)
+  - Migration : Aucune (rétrocompatible)
+- **Mapping Analytics** : Support mapping au niveau sous-catégorie
+  - Migration : Aucune (rétrocompatible, ancien mapping au niveau catégorie fonctionne)
 
 ### v2.0.0 (Décembre 2024)
 
@@ -1219,6 +1276,11 @@ SMTP_PORT=1025
 | **Operator**      | Utilisateur gérant un sous-ensemble de clubs       |
 | **Golden image**  | Image SD pré-configurée pour clonage rapide        |
 | **Canary**        | Déploiement progressif (10% → 50% → 100%)          |
+| **Phase de match** | Moment du match (neutral/before/during/after)      |
+| **TimeCategory**  | Configuration d'une phase avec ses vidéos et catégories |
+| **LoopVideo**     | Vidéo dans une boucle de phase                     |
+| **CategoryMapping** | Association catégorie locale → type analytics    |
+| **RemotePreview** | Simulation visuelle de la télécommande Pi dans le dashboard |
 
 ---
 

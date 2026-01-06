@@ -111,7 +111,7 @@ neopro/ (monorepo)
         ▼                 ▼                 ▼
 ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
 │  raspberry   │  │central-dash  │  │central-server│
-│  (Angular)   │  │ (Angular 17) │  │ (Express)    │
+│  (Angular 20)│  │ (Angular 20) │  │ (Express TS) │
 └──────────────┘  └──────────────┘  └──────────────┘
         │                 │                 │
         │                 └────────┬────────┘
@@ -202,9 +202,9 @@ Video.js API (play/pause/seek)
 | `raspberry/src`        | Angular 20, Video.js, Socket.IO client | -                                             | Raspberry Pi (systemd) |
 | `raspberry/server`     | Node.js, Socket.IO 4.7                 | -                                             | Raspberry Pi (systemd) |
 | `raspberry/admin`      | Express, vanilla JS                    | -                                             | Raspberry Pi (systemd) |
-| `raspberry/sync-agent` | Node.js, Axios                         | -                                             | Raspberry Pi (systemd) |
-| `central-server`       | Node.js 18, Express, JWT               | Supabase (PostgreSQL), FTP Hostinger (vidéos) | Railway                |
-| `central-dashboard`    | Angular 17, Chart.js, Leaflet          | -                                             | Hostinger (static)     |
+| `raspberry/sync-agent` | Node.js, Axios, MD5 checksum           | -                                             | Raspberry Pi (systemd) |
+| `central-server`       | Node.js 18, Express 4.18, TypeScript   | Supabase (PostgreSQL), FTP Hostinger (vidéos) | Render.com             |
+| `central-dashboard`    | Angular 20, Chart.js, Leaflet          | -                                             | Hostinger (static)     |
 | `server-render`        | Node.js, Socket.IO 4.7                 | Redis (Upstash)                               | Render.com             |
 | `e2e`                  | Playwright                             | -                                             | CI/CD                  |
 
@@ -498,5 +498,5 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 
 ---
 
-**Dernière mise à jour** : 30 décembre 2025
-**Version** : 2.2
+**Dernière mise à jour** : 6 janvier 2026
+**Version** : 2.1.3

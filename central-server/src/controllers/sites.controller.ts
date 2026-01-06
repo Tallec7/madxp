@@ -9,6 +9,7 @@ import { auditService } from '../services/audit.service';
 import { formatPaginatedResponse, PaginationParams } from '../middleware/pagination';
 import { commandQueueService } from '../services/command-queue.service';
 import { isAdmin } from '../middleware/auth';
+import { getFtpPublicUrl } from '../config/ftp-storage';
 
 class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -933,17 +934,56 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await query(
-      `SELECT id, site_name, club_name, local_config_mirror, local_config_hash, last_config_sync
-       FROM sites WHERE id = $1`,
-      [id]
-    );
+    // Récupérer le site et les vidéos cloud en parallèle
+    const [siteResult, cloudVideosResult] = await Promise.all([
+      query(
+        `SELECT id, site_name, club_name, local_config_mirror, local_config_hash, last_config_sync
+         FROM sites WHERE id = $1`,
+        [id]
+      ),
+      query(
+        `SELECT
+           v.id,
+           v.filename,
+           v.original_name,
+           v.category,
+           v.subcategory,
+           v.file_size,
+           v.duration,
+           v.checksum,
+           v.storage_path,
+           v.created_at,
+           v.updated_at,
+           v.metadata
+         FROM videos v
+         ORDER BY v.created_at DESC
+         LIMIT 500`,
+        []
+      )
+    ]);
 
-    if (result.rows.length === 0) {
+    if (siteResult.rows.length === 0) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    const site = result.rows[0];
+    const site = siteResult.rows[0];
+
+    // Formatter les vidéos cloud
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cloudVideos = cloudVideosResult.rows.map((v: any) => ({
+      id: v.id,
+      filename: v.filename,
+      originalName: v.original_name,
+      title: v.metadata?.title || v.original_name || v.filename,
+      category: v.category,
+      subcategory: v.subcategory,
+      size: v.file_size,
+      duration: v.duration,
+      checksum: v.checksum,
+      url: v.storage_path ? getFtpPublicUrl(v.storage_path) : null,
+      createdAt: v.created_at,
+      updatedAt: v.updated_at
+    }));
 
     if (!site.local_config_mirror) {
       return res.json({
@@ -955,6 +995,7 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
         configHash: null,
         configuration: null,
         localVideos: [],
+        cloudVideos,
         localStorage: null,
         lastVideoSync: null
       });
@@ -981,6 +1022,7 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       configHash: site.local_config_hash,
       configuration: cleanConfig,
       localVideos,
+      cloudVideos,
       localStorage,
       lastVideoSync
     });

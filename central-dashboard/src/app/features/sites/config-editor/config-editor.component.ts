@@ -16,12 +16,15 @@ import {
   VideoConfig,
   DEFAULT_CONFIG,
   AnalyticsCategory,
+  LocalVideo,
 } from '../../../core/models';
+import { VideoSelectorComponent } from '../../../shared/components/video-selector/video-selector.component';
+import { RemotePreviewComponent } from '../../../shared/components/remote-preview/remote-preview.component';
 
 @Component({
   selector: 'app-config-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, VideoSelectorComponent, RemotePreviewComponent],
   template: `
     <div class="config-editor-container">
       <!-- Tabs -->
@@ -175,17 +178,21 @@ import {
             </div>
           </div>
 
-          <!-- Section Sponsors -->
+          <!-- Section Boucle par défaut (ex-Sponsors) -->
           <div class="form-section">
             <h4 class="section-title">
-              <span class="section-icon">🏆</span>
-              Sponsors
+              <span class="section-icon">🔄</span>
+              Boucle par défaut
               <button class="btn-add" (click)="addSponsor()">+ Ajouter</button>
             </h4>
+            <p class="section-info">
+              Vidéos diffusées en boucle quand aucune vidéo n'est sélectionnée sur la télécommande.
+              Cette boucle est utilisée par défaut pour toutes les phases, sauf si une boucle spécifique est configurée ci-dessous.
+            </p>
             <div class="items-list" *ngIf="config.sponsors.length > 0">
               <div class="item-card" *ngFor="let sponsor of config.sponsors; let i = index">
                 <div class="item-header">
-                  <span class="item-name">{{ sponsor.name || 'Nouveau sponsor' }}</span>
+                  <span class="item-name">{{ sponsor.name || 'Nouvelle vidéo' }}</span>
                   <div class="ownership-controls inline">
                     <label class="ownership-option">
                       <input
@@ -217,7 +224,15 @@ import {
                     (ngModelChange)="onConfigChange()"
                     placeholder="Nom du sponsor"
                   />
+                  <app-video-selector
+                    *ngIf="localVideos.length > 0"
+                    [videos]="localVideos"
+                    [selectedPath]="sponsor.path"
+                    (pathChange)="sponsor.path = $event; onConfigChange()"
+                    placeholder="Sélectionner une vidéo"
+                  ></app-video-selector>
                   <input
+                    *ngIf="localVideos.length === 0"
                     type="text"
                     [(ngModel)]="sponsor.path"
                     (ngModelChange)="onConfigChange()"
@@ -228,12 +243,13 @@ import {
                     [(ngModel)]="sponsor.type"
                     (ngModelChange)="onConfigChange()"
                     placeholder="Type (ex: video/mp4)"
+                    class="type-input"
                   />
                 </div>
               </div>
             </div>
             <p class="empty-message" *ngIf="config.sponsors.length === 0">
-              Aucun sponsor configuré
+              Aucune vidéo dans la boucle par défaut
             </p>
           </div>
 
@@ -279,6 +295,27 @@ import {
                       <span class="ownership-label neopro">NEOPRO</span>
                     </label>
                   </div>
+                  <select
+                    *ngIf="!category.subCategories?.length"
+                    class="analytics-type-select"
+                    [ngModel]="getCategoryMapping(category.id)"
+                    (ngModelChange)="setCategoryMapping(category.id, $event)"
+                    (click)="$event.stopPropagation()"
+                    title="Type Analytics"
+                  >
+                    <option value="">📊 --</option>
+                    <option *ngFor="let ac of analyticsCategories" [value]="ac.id">
+                      📊 {{ ac.name }}
+                    </option>
+                  </select>
+                  <span
+                    *ngIf="category.subCategories?.length"
+                    class="analytics-hint"
+                    (click)="$event.stopPropagation()"
+                    title="Le mapping analytics se fait sur les sous-catégories"
+                  >
+                    📊 (sous-cat.)
+                  </span>
                   <span class="category-stats">
                     {{ category.videos.length || 0 }} vidéo(s)
                     <span *ngIf="category.subCategories?.length"> · {{ category.subCategories.length }} sous-cat.</span>
@@ -325,7 +362,16 @@ import {
                           placeholder="Nom de la vidéo"
                           class="video-name-input"
                         />
+                        <app-video-selector
+                          *ngIf="localVideos.length > 0"
+                          [videos]="localVideos"
+                          [selectedPath]="video.path"
+                          (pathChange)="updateVideo(catIndex, null, vidIndex, 'path', $event)"
+                          placeholder="Sélectionner une vidéo"
+                          class="video-path-selector"
+                        ></app-video-selector>
                         <input
+                          *ngIf="localVideos.length === 0"
                           type="text"
                           [value]="video.path"
                           (input)="updateVideo(catIndex, null, vidIndex, 'path', $any($event.target).value)"
@@ -378,6 +424,17 @@ import {
                               <span class="ownership-label neopro small">NEOPRO</span>
                             </label>
                           </div>
+                          <select
+                            class="analytics-type-select small"
+                            [ngModel]="getCategoryMapping(subcat.id)"
+                            (ngModelChange)="setCategoryMapping(subcat.id, $event)"
+                            title="Type Analytics"
+                          >
+                            <option value="">📊 --</option>
+                            <option *ngFor="let ac of analyticsCategories" [value]="ac.id">
+                              📊 {{ ac.name }}
+                            </option>
+                          </select>
                           <span class="subcategory-stats">{{ subcat.videos.length || 0 }} vidéo(s)</span>
                           <button class="btn-add-small" (click)="addVideo(catIndex, subIndex)">+ Vidéo</button>
                           <button class="btn-remove-small" (click)="removeSubcategory(catIndex, subIndex)">×</button>
@@ -392,7 +449,16 @@ import {
                               placeholder="Nom de la vidéo"
                               class="video-name-input"
                             />
+                            <app-video-selector
+                              *ngIf="localVideos.length > 0"
+                              [videos]="localVideos"
+                              [selectedPath]="video.path"
+                              (pathChange)="updateVideo(catIndex, subIndex, vidIndex, 'path', $event)"
+                              placeholder="Sélectionner une vidéo"
+                              class="video-path-selector"
+                            ></app-video-selector>
                             <input
+                              *ngIf="localVideos.length === 0"
                               type="text"
                               [value]="video.path"
                               (input)="updateVideo(catIndex, subIndex, vidIndex, 'path', $any($event.target).value)"
@@ -463,13 +529,13 @@ import {
           <!-- Section Boucles Vidéo par Phase -->
           <div class="form-section">
             <h4 class="section-title">
-              <span class="section-icon">🔄</span>
-              Boucles Vidéo par Phase
-              <span class="section-hint">(Configurer une boucle différente pour chaque temps de match)</span>
+              <span class="section-icon">⏱️</span>
+              Boucles par phase (optionnel)
+              <span class="section-hint">(Override la boucle par défaut selon le temps de match)</span>
             </h4>
             <p class="section-info">
-              Par défaut, la boucle "Sponsors" est utilisée. Vous pouvez configurer une boucle spécifique pour chaque phase.
-              Si une phase n'a pas de boucle configurée, la boucle par défaut sera utilisée.
+              Configurez une boucle différente pour chaque phase du match.
+              Si une phase n'a pas de boucle configurée, la "Boucle par défaut" ci-dessus sera utilisée.
             </p>
             <div class="phase-loops-grid" *ngIf="config.timeCategories?.length">
               <div class="phase-loop-card" *ngFor="let timeCategory of config.timeCategories; let tcIndex = index">
@@ -499,7 +565,16 @@ import {
                         placeholder="Nom de la vidéo"
                         class="loop-video-name"
                       />
+                      <app-video-selector
+                        *ngIf="localVideos.length > 0"
+                        [videos]="localVideos"
+                        [selectedPath]="video.path"
+                        (pathChange)="updateLoopVideo(tcIndex, vidIndex, 'path', $event)"
+                        placeholder="Sélectionner une vidéo"
+                        class="loop-video-path-selector"
+                      ></app-video-selector>
                       <input
+                        *ngIf="localVideos.length === 0"
                         type="text"
                         [value]="video.path"
                         (input)="updateLoopVideo(tcIndex, vidIndex, 'path', $any($event.target).value)"
@@ -534,40 +609,14 @@ import {
             </div>
           </div>
 
-          <!-- Section Mapping Analytics -->
-          <div class="form-section">
-            <h4 class="section-title">
-              <span class="section-icon">📊</span>
-              Catégories Analytics
-              <span class="section-hint">(Associer les catégories de vidéos aux types analytics pour les statistiques)</span>
-            </h4>
-            <div *ngIf="loadingAnalyticsCategories" class="loading-inline">
-              <div class="spinner-small"></div>
-              <span>Chargement des catégories...</span>
-            </div>
-            <div class="analytics-mappings-grid" *ngIf="!loadingAnalyticsCategories && configCategories.length > 0">
-              <div class="mapping-row" *ngFor="let category of getAllVideoCategories()">
-                <span class="mapping-category-name">{{ category.name || '(Sans nom)' }}</span>
-                <select
-                  [ngModel]="getCategoryMapping(category.id)"
-                  (ngModelChange)="setCategoryMapping(category.id, $event)"
-                  class="mapping-select"
-                >
-                  <option value="">-- Non défini (other) --</option>
-                  <option *ngFor="let ac of analyticsCategories" [value]="ac.id">
-                    {{ ac.name }}
-                  </option>
-                </select>
-                <span
-                  class="mapping-color-dot"
-                  *ngIf="getCategoryMapping(category.id)"
-                  [style.background]="getAnalyticsCategoryColor(getCategoryMapping(category.id))"
-                ></span>
-              </div>
-            </div>
-            <p class="empty-message" *ngIf="!loadingAnalyticsCategories && configCategories.length === 0">
-              Créez d'abord des catégories de vidéos
-            </p>
+          <!-- Note: Analytics Mapping est maintenant intégré dans le header de chaque catégorie (📊 select) -->
+
+          <!-- Aperçu Télécommande -->
+          <div class="form-section preview-section">
+            <app-remote-preview
+              [config]="config"
+              [localVideos]="localVideos"
+            ></app-remote-preview>
           </div>
         </div>
       </div>
@@ -850,6 +899,12 @@ import {
       border: 1px solid #e2e8f0;
     }
 
+    .form-section.preview-section {
+      background: transparent;
+      padding: 0;
+      border: none;
+    }
+
     .section-title {
       display: flex;
       align-items: center;
@@ -1056,6 +1111,40 @@ import {
       font-size: 0.75rem;
       color: #64748b;
       white-space: nowrap;
+    }
+
+    .analytics-type-select {
+      padding: 0.25rem 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      background: white;
+      cursor: pointer;
+      min-width: 80px;
+    }
+
+    .analytics-type-select:hover {
+      border-color: #cbd5e1;
+    }
+
+    .analytics-type-select:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+
+    .analytics-type-select.small {
+      padding: 0.15rem 0.35rem;
+      font-size: 0.7rem;
+      min-width: 70px;
+    }
+
+    .analytics-hint {
+      font-size: 0.7rem;
+      color: #94a3b8;
+      padding: 0.25rem 0.5rem;
+      background: #f8fafc;
+      border-radius: 4px;
+      cursor: help;
     }
 
     .category-content {
@@ -2132,6 +2221,9 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   @Input() isConnected: boolean = false;
   @Output() configDeployed = new EventEmitter<void>();
 
+  // Vidéos disponibles sur le Pi (chargées automatiquement)
+  localVideos: LocalVideo[] = [];
+
   activeTab: 'form' | 'json' | 'history' = 'form';
   // Use signal for loading state to ensure Angular detects changes
   readonly isLoading = signal(false);
@@ -2294,6 +2386,8 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     this.sitesService.getLocalContent(this.siteId).subscribe({
       next: (response) => {
         this.loading = false;
+        // Stocker les vidéos locales pour le sélecteur
+        this.localVideos = response.localVideos || [];
         if (response.configuration) {
           this.setConfig(response.configuration);
           const lastSyncInfo = response.lastSync
@@ -2541,6 +2635,24 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   }
 
   removeCategory(index: number): void {
+    const category = this.config.categories[index];
+
+    // Nettoyer les mappings analytics de la catégorie et ses sous-catégories
+    if (this.config.categoryMappings) {
+      // Supprimer le mapping de la catégorie
+      if (category.id) {
+        delete this.config.categoryMappings[category.id];
+      }
+      // Supprimer les mappings des sous-catégories
+      if (category.subCategories) {
+        for (const subcat of category.subCategories) {
+          if (subcat.id) {
+            delete this.config.categoryMappings[subcat.id];
+          }
+        }
+      }
+    }
+
     this.config.categories.splice(index, 1);
     this.configCategories = [...this.config.categories];
     this.updateAllVideoCategoriesCache();
@@ -2558,6 +2670,8 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   addSubcategory(catIndex: number): void {
     const category = this.config.categories[catIndex];
+    const hadNoSubcategories = !category.subCategories || category.subCategories.length === 0;
+
     if (!category.subCategories) {
       category.subCategories = [];
     }
@@ -2566,6 +2680,13 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       name: '',
       videos: [],
     });
+
+    // Si c'est la première sous-catégorie, supprimer le mapping de la catégorie parente
+    // (le mapping se fait maintenant au niveau des sous-catégories)
+    if (hadNoSubcategories && this.config.categoryMappings?.[category.id]) {
+      delete this.config.categoryMappings[category.id];
+    }
+
     this.updateAllVideoCategoriesCache();
     this.onConfigChange();
   }
@@ -2573,6 +2694,13 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   removeSubcategory(catIndex: number, subIndex: number): void {
     const category = this.config.categories[catIndex];
     if (category.subCategories) {
+      const subcatId = category.subCategories[subIndex]?.id;
+
+      // Supprimer le mapping de la sous-catégorie
+      if (subcatId && this.config.categoryMappings?.[subcatId]) {
+        delete this.config.categoryMappings[subcatId];
+      }
+
       category.subCategories.splice(subIndex, 1);
       this.updateAllVideoCategoriesCache();
       this.onConfigChange();
