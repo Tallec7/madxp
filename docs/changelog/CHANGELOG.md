@@ -1,3 +1,9 @@
+## [2.3.4](https://github.com/Tallec7/neopro/compare/v2.3.3...v2.3.4) (2026-01-07)
+
+### Bug Fixes
+
+- **config:** restore diff preview modal and fix config deployment ([3285724](https://github.com/Tallec7/neopro/commit/3285724b52140ad99c11311239fe417d31f83e63))
+
 ## [2.3.3](https://github.com/Tallec7/neopro/compare/v2.3.2...v2.3.3) (2026-01-07)
 
 ### Bug Fixes
