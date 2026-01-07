@@ -1,3 +1,9 @@
+## [2.8.1](https://github.com/Tallec7/neopro/compare/v2.8.0...v2.8.1) (2026-01-07)
+
+### Bug Fixes
+
+- **api:** fix FTP test route ordering and add package URL diagnostic ([e2044cc](https://github.com/Tallec7/neopro/commit/e2044cc27012af3ced651c95e24f728e075c86ea))
+
 # [2.8.0](https://github.com/Tallec7/neopro/compare/v2.7.3...v2.8.0) (2026-01-07)
 
 ### Features
