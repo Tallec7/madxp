@@ -7,6 +7,7 @@
     "edit": "Modifier",
     "create": "Créer",
     "search": "Rechercher",
+    "searchPlaceholder": "Rechercher...",
     "filter": "Filtrer",
     "actions": "Actions",
     "confirm": "Confirmer",
@@ -28,7 +29,26 @@
     "download": "Télécharger",
     "upload": "Téléverser",
     "version": "Version",
-    "verifying": "Vérification..."
+    "verifying": "Vérification...",
+    "deploy": "Déployer",
+    "deploying": "Déploiement...",
+    "deployQueued": "Déployer (file d'attente)",
+    "confirmDeploy": "Confirmer le déploiement",
+    "deployConfig": "Déployer la configuration",
+    "apply": "Appliquer",
+    "applying": "Application...",
+    "applyQueued": "Appliquer (file d'attente)",
+    "update": "Mettre à jour",
+    "updating": "Mise à jour...",
+    "updateQueued": "Mettre à jour (file d'attente)",
+    "selectVideo": "Sélectionner une vidéo",
+    "uncategorized": "Non catégorisé",
+    "deletePermanently": "Supprimer définitivement",
+    "deleting": "Suppression...",
+    "generating": "Génération...",
+    "downloadPdf": "Télécharger PDF",
+    "deployToPi": "Déployer vers le Pi",
+    "editPriority": "Modifier la priorité"
   },
   "auth": {
     "login": "Connexion",
@@ -63,6 +83,7 @@
     "groups": "Groupes",
     "advertisers": "Annonceurs",
     "sponsors": "Annonceurs",
+    "searchAdvertiser": "Rechercher un annonceur...",
     "content": "Contenu",
     "updates": "Mises a jour",
     "analytics": "Analytics",
@@ -141,7 +162,9 @@
     "groupName": "Nom du groupe",
     "description": "Description",
     "members": "Membres",
-    "sitesCount": "Nombre de sites"
+    "sitesCount": "Nombre de sites",
+    "newGroup": "Nouveau groupe",
+    "searchByName": "Rechercher par nom..."
   },
   "sponsors": {
     "title": "Gestion des sponsors",
@@ -153,7 +176,10 @@
     "logo": "Logo",
     "website": "Site web",
     "videos": "Vidéos",
-    "analytics": "Statistiques"
+    "analytics": "Statistiques",
+    "searchSponsor": "Rechercher un sponsor...",
+    "searchVideo": "Rechercher une vidéo...",
+    "editPriority": "Modifier la priorité"
   },
   "content": {
     "title": "Gestion du contenu",
@@ -166,7 +192,11 @@
     "deploy": "Déployer",
     "deployTo": "Déployer vers",
     "selectTargets": "Sélectionner les cibles",
-    "progress": "Progression"
+    "progress": "Progression",
+    "searchVideo": "Rechercher une vidéo...",
+    "launchDeployment": "Lancer le déploiement",
+    "deploymentInProgress": "Déploiement en cours...",
+    "startDeployment": "Lancer le déploiement"
   },
   "updates": {
     "title": "Gestion des mises à jour",
@@ -193,7 +223,9 @@
     "views": "Vues",
     "impressions": "Impressions",
     "engagement": "Engagement",
-    "exportReport": "Exporter le rapport"
+    "exportReport": "Exporter le rapport",
+    "uncategorized": "Non catégorisé",
+    "downloadPdf": "📥 Télécharger PDF"
   },
   "language": {
     "select": "Langue",
@@ -274,5 +306,27 @@
     "legalMentions": "Mentions légales",
     "lastUpdate": "Dernière mise à jour",
     "questions": "Des questions ?"
+  },
+  "analyticsCategories": {
+    "title": "Catégories Analytics",
+    "editCategory": "Modifier la catégorie",
+    "newCategory": "Nouvelle catégorie",
+    "saving": "Enregistrement...",
+    "name": "Nom",
+    "description": "Description"
+  },
+  "configEditor": {
+    "confirmDeployment": "Confirmer le déploiement",
+    "deployConfig": "Déployer la configuration"
+  },
+  "videoLibrary": {
+    "deployToPi": "Déployer vers le Pi"
+  },
+  "debug": {
+    "playing": "Lecture...",
+    "play": "▶ Lire",
+    "queued": "📥 File d'attente",
+    "restartsService": "Redémarre le service",
+    "fullReboot": "Reboot complet"
   }
 }

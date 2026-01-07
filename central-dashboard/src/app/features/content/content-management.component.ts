@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { ApiService } from '../../core/services/api.service';
 import { SitesService } from '../../core/services/sites.service';
 import { GroupsService } from '../../core/services/groups.service';
@@ -54,7 +55,7 @@ interface VideoDeploymentHistory {
 @Component({
   selector: 'app-content-management',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   template: `
     <div class="page-container">
       <h1>Gestion du contenu</h1>
@@ -89,7 +90,7 @@ interface VideoDeploymentHistory {
           <div class="search-bar">
             <input
               type="text"
-              placeholder="Rechercher une vidéo..."
+              [placeholder]="'content.searchVideo' | translate"
               [(ngModel)]="videoSearch"
               class="search-input"
             />
@@ -249,7 +250,7 @@ interface VideoDeploymentHistory {
               (click)="startDeployment()"
               [disabled]="!canDeploy() || isDeploying"
             >
-              🚀 {{ isDeploying ? 'Déploiement en cours...' : 'Lancer le déploiement' }}
+              🚀 {{ isDeploying ? ('content.deploymentInProgress' | translate) : ('content.startDeployment' | translate) }}
             </button>
           </div>
         </div>

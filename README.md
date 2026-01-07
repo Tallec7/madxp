@@ -174,18 +174,18 @@ neopro/
 
 ### Technologies
 
-| Composant          | Technologies                                              |
-| ------------------ | --------------------------------------------------------- |
-| Frontend Raspberry | Angular 20, Socket.IO client, SCSS                        |
+| Composant          | Technologies                                                  |
+| ------------------ | ------------------------------------------------------------- |
+| Frontend Raspberry | Angular 20, Socket.IO client, SCSS                            |
 | Frontend Dashboard | Angular 20, Chart.js, Leaflet, ngx-translate (i18n: EN/FR/ES) |
-| Backend API        | Node.js 20+, Express 4.18, TypeScript strict              |
-| Base de données    | PostgreSQL 15 (Supabase)                                  |
-| Stockage vidéos    | FTP (Hostinger) + Supabase Storage (fallback)             |
-| WebSocket          | Socket.IO 4.8                                             |
-| Cache              | Redis (Upstash) - optionnel                               |
-| Auth               | JWT HttpOnly cookie + Bearer token + MFA (TOTP)           |
-| Logs               | Winston + Logtail (Better Stack)                          |
-| Tests              | Jest + Supertest (API), Karma (Angular), Playwright (E2E) |
+| Backend API        | Node.js 20+, Express 4.18, TypeScript strict                  |
+| Base de données    | PostgreSQL 15 (Supabase)                                      |
+| Stockage vidéos    | FTP (Hostinger) + Supabase Storage (fallback)                 |
+| WebSocket          | Socket.IO 4.8                                                 |
+| Cache              | Redis (Upstash) - optionnel                                   |
+| Auth               | JWT HttpOnly cookie + Bearer token + MFA (TOTP)               |
+| Logs               | Winston + Logtail (Better Stack)                              |
+| Tests              | Jest + Supertest (API), Karma (Angular), Playwright (E2E)     |
 
 ---
 
@@ -247,20 +247,39 @@ Services : PostgreSQL (5432), Redis (6379), API (3001), Prometheus (9090), Grafa
 
 ### Commandes npm
 
-| Commande                          | Description                 |
-| --------------------------------- | --------------------------- |
-| `npm start`                       | Frontend Raspberry (dev)    |
-| `npm run start:central`           | Dashboard central (dev)     |
-| `npm run build`                   | Build les 2 projets Angular |
-| `npm run build:raspberry`         | Build pour déploiement Pi   |
-| `npm run build:central`           | Build dashboard             |
-| `npm run deploy:raspberry <host>` | Déployer sur un Pi          |
-| `npm test`                        | Tests (tous les projets)    |
-| `npm run test:raspberry`          | Tests frontend Raspberry    |
-| `npm run test:central`            | Tests dashboard             |
-| `npm run test:server`             | Tests API (Jest)            |
-| `npm run lint`                    | Linting                     |
-| `npm run server`                  | Serveur Socket.IO local     |
+| Commande                          | Description                  |
+| --------------------------------- | ---------------------------- |
+| `npm start`                       | Frontend Raspberry (dev)     |
+| `npm run start:central`           | Dashboard central (dev)      |
+| `npm run build`                   | Build les 2 projets Angular  |
+| `npm run build:raspberry`         | Build pour déploiement Pi    |
+| `npm run build:central`           | Build dashboard              |
+| `npm run deploy:raspberry <host>` | Déployer sur un Pi           |
+| `npm test`                        | Tests (tous les projets)     |
+| `npm run test:raspberry`          | Tests frontend Raspberry     |
+| `npm run test:central`            | Tests dashboard              |
+| `npm run test:server`             | Tests API (Jest)             |
+| `npm run lint`                    | Linting                      |
+| `npm run server`                  | Serveur Socket.IO local      |
+| `npm run i18n:check`              | Vérifier synchro traductions |
+
+### Internationalisation (i18n)
+
+Le dashboard central supporte 3 langues : **Anglais (EN)**, **Français (FR)**, **Espagnol (ES)**.
+
+**Fichiers de traduction :** `central-dashboard/src/assets/i18n/{en,fr,es}.json`
+
+**Scripts de vérification :**
+
+```bash
+# Vérifier que toutes les clés sont synchronisées entre langues
+npm run i18n:check
+
+# Détecter le texte hardcodé en français dans les composants
+npm run i18n:hardcoded
+```
+
+Ces vérifications sont automatiquement exécutées en pre-commit via Husky.
 
 ---
 
@@ -430,6 +449,6 @@ sudo systemctl restart neopro-app
 
 ---
 
-**Version :** 2.6.1
+**Version :** 2.7.0
 **Licence :** MIT
 **Dernière mise à jour :** 7 janvier 2026

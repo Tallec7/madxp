@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
@@ -10,7 +11,7 @@ import { LocalVideo, LocalStorage, ConfigHistory, SiteConfiguration } from '../.
 @Component({
   selector: 'app-site-debug-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   template: `
     <div class="debug-tab">
       <!-- Fichiers sur le Pi -->
@@ -79,7 +80,7 @@ import { LocalVideo, LocalStorage, ConfigHistory, SiteConfiguration } from '../.
               (click)="playVideo()"
               [disabled]="!selectedVideoPath || playingVideo || !isConnected"
             >
-              {{ playingVideo ? 'Lecture...' : (isConnected ? '▶ Lire' : '📥 File d'attente') }}
+              {{ playingVideo ? ('debug.playing' | translate) : (isConnected ? ('debug.play' | translate) : ('debug.queued' | translate)) }}
             </button>
           </div>
           <p class="hint" *ngIf="!isConnected">
@@ -187,6 +188,7 @@ import { LocalVideo, LocalStorage, ConfigHistory, SiteConfiguration } from '../.
           </div>
         </div>
       </div>
+
     </div>
   `,
   styles: [`

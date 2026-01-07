@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { Subscription, interval, forkJoin } from 'rxjs';
 import {
   AnalyticsService,
@@ -22,7 +23,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
 @Component({
   selector: 'app-club-analytics',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, TranslateModule],
   template: `
     <div class="page-container" *ngIf="site; else loading">
       <!-- Header -->
@@ -42,7 +43,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
             {{ exporting ? 'Export...' : 'Exporter CSV' }}
           </button>
           <button class="btn btn-success" (click)="downloadPdf()" [disabled]="exportingPdf">
-            {{ exportingPdf ? 'Génération...' : '📥 Télécharger PDF' }}
+            {{ exportingPdf ? ('common.generating' | translate) : ('analytics.downloadPdf' | translate) }}
           </button>
         </div>
       </div>
@@ -150,7 +151,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
                 class="category-item"
               >
                 <div class="category-info">
-                  <span class="category-name">{{ cat.category || 'Non catégorisé' }}</span>
+                  <span class="category-name">{{ cat.category || ('common.uncategorized' | translate) }}</span>
                   <span class="category-count">{{ cat.play_count }} lectures</span>
                 </div>
                 <div class="category-bar">
@@ -297,7 +298,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
             </thead>
             <tbody>
               <tr *ngFor="let cat of content?.categories_breakdown">
-                <td>{{ cat.category || 'Non catégorisé' }}</td>
+                <td>{{ cat.category || ('common.uncategorized' | translate) }}</td>
                 <td>{{ cat.play_count }}</td>
                 <td>{{ formatDuration(cat.total_duration) }}</td>
                 <td>{{ getCategoryPercent(cat.play_count).toFixed(1) }}%</td>

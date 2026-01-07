@@ -1,6 +1,7 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ChangeDetectorRef, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ChangeDetectorRef, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription, interval } from 'rxjs';
 import { SitesService } from '../../../core/services/sites.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -24,7 +25,7 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
 @Component({
   selector: 'app-config-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, VideoSelectorComponent, RemotePreviewComponent],
+  imports: [CommonModule, FormsModule, VideoSelectorComponent, RemotePreviewComponent, TranslateModule],
   template: `
     <div class="config-editor-container">
       <!-- Tabs -->
@@ -229,7 +230,7 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
                     [videos]="localVideos"
                     [selectedPath]="sponsor.path"
                     (pathChange)="sponsor.path = $event; onConfigChange()"
-                    placeholder="Sélectionner une vidéo"
+                    [placeholder]="'common.selectVideo' | translate"
                   ></app-video-selector>
                   <input
                     *ngIf="localVideos.length === 0"
@@ -367,7 +368,7 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
                           [videos]="localVideos"
                           [selectedPath]="video.path"
                           (pathChange)="updateVideo(catIndex, null, vidIndex, 'path', $event)"
-                          placeholder="Sélectionner une vidéo"
+                          [placeholder]="'common.selectVideo' | translate"
                           class="video-path-selector"
                         ></app-video-selector>
                         <input
@@ -454,7 +455,7 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
                               [videos]="localVideos"
                               [selectedPath]="video.path"
                               (pathChange)="updateVideo(catIndex, subIndex, vidIndex, 'path', $event)"
-                              placeholder="Sélectionner une vidéo"
+                              [placeholder]="'common.selectVideo' | translate"
                               class="video-path-selector"
                             ></app-video-selector>
                             <input
@@ -570,7 +571,7 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
                         [videos]="localVideos"
                         [selectedPath]="video.path"
                         (pathChange)="updateLoopVideo(tcIndex, vidIndex, 'path', $event)"
-                        placeholder="Sélectionner une vidéo"
+                        [placeholder]="'common.selectVideo' | translate"
                         class="loop-video-path-selector"
                       ></app-video-selector>
                       <input
@@ -765,13 +766,13 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="showDiffModal = false">Annuler</button>
+            <button class="btn btn-secondary" (click)="showDiffModal = false">{{ 'common.cancel' | translate }}</button>
             <button
               class="btn btn-primary"
               (click)="confirmDeploy()"
               [disabled]="deploying"
             >
-              {{ deploying ? 'Déploiement...' : 'Confirmer le déploiement' }}
+              {{ deploying ? ('common.deploying' | translate) : ('configEditor.confirmDeployment' | translate) }}
             </button>
           </div>
         </div>
@@ -798,7 +799,7 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
             (click)="previewAndDeploy()"
             [disabled]="!isValid || deploying"
           >
-            {{ deploying ? 'Déploiement...' : 'Déployer la configuration' }}
+            {{ deploying ? ('common.deploying' | translate) : ('configEditor.deployConfig' | translate) }}
           </button>
         </div>
       </div>

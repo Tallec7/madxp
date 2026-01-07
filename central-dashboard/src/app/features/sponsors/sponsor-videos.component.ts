@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 
 interface Video {
   id: string;
@@ -23,7 +24,7 @@ interface SponsorVideo {
 @Component({
   selector: 'app-sponsor-videos',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, TranslateModule],
   template: `
     <div class="sponsor-videos-container">
       <!-- Header -->
@@ -102,7 +103,7 @@ interface SponsorVideo {
                 <button
                   class="btn-icon"
                   (click)="editPriority(video)"
-                  title="Modifier la priorité"
+                  [title]="'sponsors.editPriority' | translate"
                 >
                   ✏️
                 </button>
@@ -151,7 +152,7 @@ interface SponsorVideo {
                 type="text"
                 [(ngModel)]="searchTerm"
                 (input)="filterAvailableVideos()"
-                placeholder="🔍 Rechercher une vidéo..."
+                [placeholder]="'content.searchVideo' | translate"
               />
             </div>
 
