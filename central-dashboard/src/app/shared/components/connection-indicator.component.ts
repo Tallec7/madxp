@@ -105,13 +105,28 @@ export class ConnectionIndicatorComponent implements OnInit, OnDestroy {
   @Input() showDetails = false;
   @Input() refreshInterval = 30000; // 30 secondes par defaut
 
+  /**
+   * Si fourni, le composant n'effectue PAS de polling et utilise ces données.
+   * Utilisé quand le parent gère déjà le polling (ex: site-detail).
+   */
+  @Input() set externalStatus(status: SiteConnectionStatus | null) {
+    if (status) {
+      this.connectionStatus = status;
+      this.displayStatus = status.connection.displayStatus;
+      this._useExternalStatus = true;
+      this.stopPolling();
+    }
+  }
+  private _useExternalStatus = false;
+
   connectionStatus: SiteConnectionStatus | null = null;
   displayStatus: ConnectionDisplayStatus = 'unknown';
   private subscription: Subscription | null = null;
   private errorCount = 0;
 
   ngOnInit(): void {
-    if (this.siteId) {
+    // Ne démarre le polling que si on n'utilise pas de données externes
+    if (this.siteId && !this._useExternalStatus) {
       this.startPolling();
     }
   }
@@ -121,6 +136,9 @@ export class ConnectionIndicatorComponent implements OnInit, OnDestroy {
   }
 
   private startPolling(): void {
+    // Ne pas démarrer si on utilise des données externes
+    if (this._useExternalStatus) return;
+
     this.subscription = interval(this.refreshInterval).pipe(
       startWith(0),
       switchMap(() => this.sitesService.getConnectionStatus(this.siteId).pipe(

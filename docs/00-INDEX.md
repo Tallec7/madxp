@@ -121,7 +121,7 @@ neopro/
 │   └── sync-agent/                 # Sync service with cloud
 │
 ├── central-server/                 # Cloud API backend (Node.js/Express)
-├── central-dashboard/              # Cloud admin dashboard (Angular 17)
+├── central-dashboard/              # Cloud admin dashboard (Angular 20)
 ├── server-render/                  # Cloud WebSocket server
 ├── e2e/                           # End-to-end tests
 │
@@ -195,6 +195,6 @@ neopro/
 
 ---
 
-**Dernière mise à jour** : 6 janvier 2026 - Refactoring dashboard (tabs, N vidéos par phase, mapping sous-catégories)
+**Dernière mise à jour** : 7 janvier 2026 - Optimisation polling dashboard (rate limit fix)
 
-**Version** : 2.5
+**Version** : 2.6.1

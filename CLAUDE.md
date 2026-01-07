@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.2.0 | **Dernière mise à jour**: 2026-01-06
+**Version**: 2.6.1 | **Dernière mise à jour**: 2026-01-07
 
 ---
 
@@ -312,6 +312,21 @@ La commande `update_config` utilise un **merge intelligent** qui préserve les p
 'replace' : Écrase tout (legacy, déconseillé - peut perdre des paramètres locaux)
 ```
 
+**Champs gérés par le merge** (envoyés dans `neoProContent`) :
+
+| Champ              | Comportement                                                                    |
+| ------------------ | ------------------------------------------------------------------------------- |
+| `sponsors`         | Central = source de vérité. Sponsors locaux non présents dans central préservés |
+| `categories`       | Fusion intelligente NEOPRO/Club (voir règles ci-dessous)                        |
+| `timeCategories`   | Remplacement complet (géré entièrement par le central)                          |
+| `categoryMappings` | Remplacement complet (géré entièrement par le central)                          |
+
+**Règles de merge pour les sponsors** :
+
+1. Tous les sponsors envoyés par le central sont appliqués (mise à jour ou ajout)
+2. Les sponsors Club créés localement (non présents dans la liste du central) sont préservés
+3. Le central est la **source de vérité** : si un sponsor est modifié dans le dashboard, la modification s'applique
+
 **Paramètres locaux protégés** (jamais écrasés par le central) :
 
 | Paramètre      | Description                                       |
@@ -330,6 +345,7 @@ La commande `update_config` utilise un **merge intelligent** qui préserve les p
 
 - `raspberry/sync-agent/src/utils/config-merge.js` - Logique de fusion
 - `central-server/src/controllers/sites.controller.ts` - Normalisation des commandes
+- `central-dashboard/.../site-content-tab.component.ts` - UI de déploiement avec choix du mode
 
 ### Boucles Vidéo par Phase ⚡ NEW (2026-01)
 
@@ -1173,6 +1189,17 @@ curl ftp://FTP_HOST/videos/ --user FTP_USER:FTP_PASSWORD
 ---
 
 ## Historique Breaking Changes
+
+### v2.6.x (Janvier 2026)
+
+- **Dashboard Polling** : Optimisation pour éviter les erreurs 429 (rate limit)
+  - `connection-indicator` : Nouvel input `[externalStatus]` pour recevoir les données du parent
+  - `site-detail` : Polling réduit de 10s à 30s
+  - Migration : Aucune (amélioration performance)
+- **Error Handling** : Système de correlation ID et logs structurés
+  - Migration : Aucune (amélioration debugging)
+- **i18n** : Support ngx-translate pour le dashboard
+  - Migration : Aucune (rétrocompatible)
 
 ### v2.2.0 (Janvier 2026)
 

@@ -360,9 +360,11 @@ if (isConnectedNow) {
 **Affichage dans le dashboard :**
 
 - **Liste des sites** : Appelle `/api/sites/connection-status` toutes les 30s (vérifie connexions Socket.IO temps réel)
-- **Page détail** : Appelle `/api/sites/:id/connection-status` toutes les 15s (calcul temps réel)
+- **Page détail** : Utilise les données du endpoint `/api/sites/:id/dashboard` (polling 30s) qui inclut le statut de connexion
 
 Les deux vues utilisent la même logique basée sur `socketService.getConnectedSites()` pour garantir une cohérence du statut affiché.
+
+> **Note (v2.6.1)** : Le composant `connection-indicator` peut recevoir les données via l'input `[externalStatus]` pour éviter le double polling quand le parent gère déjà le rafraîchissement.
 
 ### Enregistrement d'un site
 
