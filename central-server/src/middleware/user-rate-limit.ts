@@ -118,6 +118,18 @@ export const monitoringRateLimit = createUserRateLimit(
   }
 );
 
+// Frontend logging - permissif (200 requêtes / minute)
+// Logs should not be rate-limited too aggressively to avoid losing telemetry
+// But still protected against abuse
+export const loggingRateLimit = createUserRateLimit(
+  60 * 1000, // 1 minute
+  200,
+  {
+    skipFailedRequests: true, // Don't count failed log submissions
+    message: { error: 'Trop de logs. Certains logs peuvent être perdus.' },
+  }
+);
+
 /**
  * Rate limiter dynamique basé sur le rôle utilisateur
  * Les admins ont des limites plus élevées
@@ -152,5 +164,6 @@ export default {
   publicRateLimit,
   adminRateLimit,
   monitoringRateLimit,
+  loggingRateLimit,
   roleBasedRateLimit,
 };
