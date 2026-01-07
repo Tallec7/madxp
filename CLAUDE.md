@@ -9,18 +9,21 @@
 ## Instructions pour Claude
 
 ### Comportement Général
+
 - **Toujours lire un fichier avant de le modifier** - Ne jamais proposer de changements sur du code non lu
 - **Proposer des tests** pour tout nouveau code ou modification significative
 - **Vérifier les fichiers existants** avant de créer de nouveaux fichiers
 - **Utiliser les patterns existants** du projet (voir section Patterns de Code)
 
 ### Priorités de Développement
+
 1. **Sécurité d'abord** : Vérifier les injections SQL, XSS, CSRF avant tout commit
 2. **TypeScript strict** : Jamais de `any`, toujours typer explicitement
 3. **Tests** : Couvrir les cas critiques (auth, paiement, déploiement)
 4. **Rétrocompatibilité** : Ne pas casser les Pi déjà déployés
 
 ### Ce que Claude doit faire
+
 - Utiliser les requêtes SQL paramétrées (`$1`, `$2`...)
 - Logger avec Winston (`logger.info/error/warn`)
 - Suivre les Conventional Commits pour les messages
@@ -28,6 +31,7 @@
 - Gérer les erreurs avec try/catch et messages explicites
 
 ### Ce que Claude ne doit JAMAIS faire
+
 - Modifier les migrations déjà en production
 - Changer le format des `api_key` des sites
 - Utiliser `console.log` (utiliser le logger)
@@ -35,6 +39,7 @@
 - Push directement sur `main` sans PR
 
 ### Style de Réponse
+
 - Réponses concises et techniques
 - Code commenté uniquement si la logique n'est pas évidente
 - Proposer des alternatives quand pertinent
@@ -225,7 +230,8 @@ GET /api/advertiser-analytics/...     → stats annonceurs
 ```
 Auth:       10 req/15min    (anti-bruteforce) - 1 min dev
 API:        100 req/min     (standard)
-Monitoring: 300 req/min     (status, metrics polling) ⚡ NEW
+Monitoring: 300 req/min     (status, metrics polling)
+Logging:    200 req/min     (frontend logs - silently dropped if exceeded)
 Sensitive:  30 req/min      (commands, deployments)
 Upload:     10 req/hour     (video uploads)
 Admin:      200 req/min     (dashboard ops)
@@ -329,12 +335,12 @@ La commande `update_config` utilise un **merge intelligent** qui préserve les p
 
 Les clubs peuvent définir des playlists différentes selon la **phase du match** :
 
-| Phase | ID | Description | Déclenchement |
-|-------|-----|-------------|---------------|
-| Boucle par défaut | `neutral` | Hors match | Par défaut |
-| Avant-match | `before` | Accueil spectateurs | Télécommande 🏁 |
-| Pendant le match | `during` | Mi-temps, temps morts | Télécommande ▶️ |
-| Après-match | `after` | Célébrations | Télécommande 🏆 |
+| Phase             | ID        | Description           | Déclenchement   |
+| ----------------- | --------- | --------------------- | --------------- |
+| Boucle par défaut | `neutral` | Hors match            | Par défaut      |
+| Avant-match       | `before`  | Accueil spectateurs   | Télécommande 🏁 |
+| Pendant le match  | `during`  | Mi-temps, temps morts | Télécommande ▶️ |
+| Après-match       | `after`   | Célébrations          | Télécommande 🏆 |
 
 **Structure de configuration** :
 
@@ -359,6 +365,7 @@ Les clubs peuvent définir des playlists différentes selon la **phase du match*
 **Fallback** : Si une phase n'a pas de `loopVideos`, utilise `sponsors[]` (boucle par défaut).
 
 **Fichiers impliqués** :
+
 - `raspberry/src/app/components/tv/tv.component.ts` - `getLoopVideosForPhase()`
 - `raspberry/src/app/components/remote/remote.component.ts` - `switchPhase()`
 - `central-dashboard/.../site-content-tab.component.ts` - UI de configuration
@@ -368,14 +375,15 @@ Les clubs peuvent définir des playlists différentes selon la **phase du match*
 
 Le mapping permet de normaliser les catégories locales vers des **types analytics standardisés** pour le reporting :
 
-| Type Analytics | Couleur | Exemples de catégories locales |
-|----------------|---------|-------------------------------|
-| `sponsor` | 🔵 Bleu | SPONSORS, PUBS, PARTENAIRES |
-| `jingle` | 🟢 Vert | JINGLES, BUTS, ANIMATIONS |
-| `ambiance` | 🟣 Violet | AMBIANCE, MUSIQUE, ENTREE_JOUEURS |
-| `other` | ⚪ Gris | Tout le reste |
+| Type Analytics | Couleur   | Exemples de catégories locales    |
+| -------------- | --------- | --------------------------------- |
+| `sponsor`      | 🔵 Bleu   | SPONSORS, PUBS, PARTENAIRES       |
+| `jingle`       | 🟢 Vert   | JINGLES, BUTS, ANIMATIONS         |
+| `ambiance`     | 🟣 Violet | AMBIANCE, MUSIQUE, ENTREE_JOUEURS |
+| `other`        | ⚪ Gris   | Tout le reste                     |
 
 **Règle de mapping** :
+
 - Si catégorie **sans** sous-catégories → mapping sur la catégorie
 - Si catégorie **avec** sous-catégories → mapping sur chaque sous-catégorie (pas sur le parent)
 
@@ -393,6 +401,7 @@ Le mapping permet de normaliser les catégories locales vers des **types analyti
 ```
 
 **Fichiers impliqués** :
+
 - `central-dashboard/.../site-content-tab.component.ts` - UI de mapping
 - `central-dashboard/.../config-editor.component.ts` - Éditeur complet
 - `central-server/src/controllers/analytics.controller.ts` - Agrégation par type
@@ -772,28 +781,28 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 
 ### Frontend Dashboard
 
-| Fichier                                                            | Description                   |
-| ------------------------------------------------------------------ | ----------------------------- |
-| `central-dashboard/src/app/app.routes.ts`                          | Routes Angular                |
-| `central-dashboard/src/app/core/services/auth.service.ts`          | Auth client                   |
-| `central-dashboard/src/app/core/services/logger.service.ts`        | Logs structurés + correlation |
-| `central-dashboard/src/app/core/utils/error-extractor.ts`          | Extraction messages d'erreur  |
-| `central-dashboard/src/app/core/interceptors/error.interceptor.ts` | HTTP retry + correlation      |
-| `central-dashboard/src/app/core/handlers/global-error.handler.ts`  | Error handler Angular         |
-| `central-dashboard/src/app/features/sites/`                        | Gestion des clubs             |
-| `central-dashboard/src/app/features/sites/site-detail.component.ts`| Page détail site avec 4 tabs  |
-| `central-dashboard/src/app/features/sites/components/`             | Composants modulaires par tab |
+| Fichier                                                             | Description                   |
+| ------------------------------------------------------------------- | ----------------------------- |
+| `central-dashboard/src/app/app.routes.ts`                           | Routes Angular                |
+| `central-dashboard/src/app/core/services/auth.service.ts`           | Auth client                   |
+| `central-dashboard/src/app/core/services/logger.service.ts`         | Logs structurés + correlation |
+| `central-dashboard/src/app/core/utils/error-extractor.ts`           | Extraction messages d'erreur  |
+| `central-dashboard/src/app/core/interceptors/error.interceptor.ts`  | HTTP retry + correlation      |
+| `central-dashboard/src/app/core/handlers/global-error.handler.ts`   | Error handler Angular         |
+| `central-dashboard/src/app/features/sites/`                         | Gestion des clubs             |
+| `central-dashboard/src/app/features/sites/site-detail.component.ts` | Page détail site avec 4 tabs  |
+| `central-dashboard/src/app/features/sites/components/`              | Composants modulaires par tab |
 
 ### Composants Site Detail (Refactoring 2026)
 
-| Composant | Fichier | Description |
-|-----------|---------|-------------|
-| **SiteContentTabComponent** | `components/site-content-tab/` | Onglet Contenu : boucles par phase, catégories, vidéos |
-| **SiteSettingsTabComponent** | `components/site-settings-tab/` | Onglet Paramètres : config réseau, hotspot |
-| **SiteDebugTabComponent** | `components/site-debug-tab/` | Onglet Debug : logs, commandes, diagnostics |
-| **RemotePreviewComponent** | `components/remote-preview/` | Simulation visuelle de la télécommande Pi |
-| **VideoSelectorComponent** | `shared/components/video-selector/` | Sélecteur de vidéos avec filtres catégorie |
-| **ConfigEditorComponent** | `config-editor/` | Éditeur complet de configuration JSON |
+| Composant                    | Fichier                             | Description                                            |
+| ---------------------------- | ----------------------------------- | ------------------------------------------------------ |
+| **SiteContentTabComponent**  | `components/site-content-tab/`      | Onglet Contenu : boucles par phase, catégories, vidéos |
+| **SiteSettingsTabComponent** | `components/site-settings-tab/`     | Onglet Paramètres : config réseau, hotspot             |
+| **SiteDebugTabComponent**    | `components/site-debug-tab/`        | Onglet Debug : logs, commandes, diagnostics            |
+| **RemotePreviewComponent**   | `components/remote-preview/`        | Simulation visuelle de la télécommande Pi              |
+| **VideoSelectorComponent**   | `shared/components/video-selector/` | Sélecteur de vidéos avec filtres catégorie             |
+| **ConfigEditorComponent**    | `config-editor/`                    | Éditeur complet de configuration JSON                  |
 
 ### Raspberry Pi
 
@@ -1014,6 +1023,7 @@ services:
 ## Requêtes SQL Utiles
 
 Voir **[docs/technical/SQL_QUERIES.md](docs/technical/SQL_QUERIES.md)** pour les requêtes courantes :
+
 - Sites avec métriques récentes
 - Santé de la flotte
 - Analytics et top vidéos
@@ -1026,14 +1036,14 @@ Voir **[docs/technical/SQL_QUERIES.md](docs/technical/SQL_QUERIES.md)** pour les
 
 ### Principes OWASP appliqués
 
-| Risque | Protection | Implémentation |
-|--------|-----------|----------------|
-| **SQL Injection** | Requêtes paramétrées | `query('SELECT * FROM x WHERE id = $1', [id])` |
-| **XSS** | Sanitization Angular | `DomSanitizer` + échappement auto |
-| **CSRF** | Cookie SameSite + token | `sameSite: 'strict'` sur JWT cookie |
-| **Broken Auth** | JWT HttpOnly + MFA | Cookie non-accessible JS, 2FA optionnel |
-| **Sensitive Data** | Chiffrement + hashing | bcrypt pour passwords, TLS en transit |
-| **Broken Access** | RLS + middleware | Row-Level Security PostgreSQL |
+| Risque             | Protection              | Implémentation                                 |
+| ------------------ | ----------------------- | ---------------------------------------------- |
+| **SQL Injection**  | Requêtes paramétrées    | `query('SELECT * FROM x WHERE id = $1', [id])` |
+| **XSS**            | Sanitization Angular    | `DomSanitizer` + échappement auto              |
+| **CSRF**           | Cookie SameSite + token | `sameSite: 'strict'` sur JWT cookie            |
+| **Broken Auth**    | JWT HttpOnly + MFA      | Cookie non-accessible JS, 2FA optionnel        |
+| **Sensitive Data** | Chiffrement + hashing   | bcrypt pour passwords, TLS en transit          |
+| **Broken Access**  | RLS + middleware        | Row-Level Security PostgreSQL                  |
 
 ### Fichiers sensibles (ne jamais commit)
 
@@ -1045,12 +1055,12 @@ credentials.json       # Service accounts
 
 ### Fichiers critiques (review obligatoire)
 
-| Fichier | Risque si modifié |
-|---------|-------------------|
-| `middleware/auth.ts` | Bypass authentification |
-| `config/database.ts` | Fuite de connexion DB |
-| `socket.service.ts` | Compromission protocole Pi |
-| `setup-new-club.sh` | Backdoor sur Pi |
+| Fichier              | Risque si modifié          |
+| -------------------- | -------------------------- |
+| `middleware/auth.ts` | Bypass authentification    |
+| `config/database.ts` | Fuite de connexion DB      |
+| `socket.service.ts`  | Compromission protocole Pi |
+| `setup-new-club.sh`  | Backdoor sur Pi            |
 
 ### Validation des inputs
 
@@ -1059,7 +1069,7 @@ credentials.json       # Service accounts
 const schema = Joi.object({
   email: Joi.string().email().required(),
   siteId: Joi.string().uuid().required(),
-  limit: Joi.number().integer().min(1).max(100).default(20)
+  limit: Joi.number().integer().min(1).max(100).default(20),
 });
 ```
 
@@ -1260,27 +1270,27 @@ SMTP_PORT=1025
 
 ## Glossaire Métier
 
-| Terme             | Définition                                         |
-| ----------------- | -------------------------------------------------- |
-| **Site**          | Un club sportif équipé d'un Raspberry Pi + TV      |
-| **Boîtier**       | Le Raspberry Pi physique installé dans un club     |
-| **Flotte**        | L'ensemble des boîtiers gérés (50+)                |
-| **Déploiement**   | Envoi d'une vidéo du cloud vers un ou plusieurs Pi |
-| **Heartbeat**     | Signal envoyé toutes les 30s par le Pi au cloud    |
-| **Sync**          | Synchronisation bidirectionnelle Pi ↔ Cloud        |
-| **Config mirror** | Copie de la config locale stockée dans le cloud    |
-| **VideoWatcher**  | Surveillance du dossier vidéos sur le Pi           |
-| **LocalVideo**    | Métadonnées d'une vidéo présente sur le boîtier    |
-| **Advertiser**    | Annonceur qui diffuse des pubs sur les TV          |
-| **Agency**        | Agence gérant plusieurs annonceurs                 |
-| **Operator**      | Utilisateur gérant un sous-ensemble de clubs       |
-| **Golden image**  | Image SD pré-configurée pour clonage rapide        |
-| **Canary**        | Déploiement progressif (10% → 50% → 100%)          |
-| **Phase de match** | Moment du match (neutral/before/during/after)      |
-| **TimeCategory**  | Configuration d'une phase avec ses vidéos et catégories |
-| **LoopVideo**     | Vidéo dans une boucle de phase                     |
-| **CategoryMapping** | Association catégorie locale → type analytics    |
-| **RemotePreview** | Simulation visuelle de la télécommande Pi dans le dashboard |
+| Terme               | Définition                                                  |
+| ------------------- | ----------------------------------------------------------- |
+| **Site**            | Un club sportif équipé d'un Raspberry Pi + TV               |
+| **Boîtier**         | Le Raspberry Pi physique installé dans un club              |
+| **Flotte**          | L'ensemble des boîtiers gérés (50+)                         |
+| **Déploiement**     | Envoi d'une vidéo du cloud vers un ou plusieurs Pi          |
+| **Heartbeat**       | Signal envoyé toutes les 30s par le Pi au cloud             |
+| **Sync**            | Synchronisation bidirectionnelle Pi ↔ Cloud                 |
+| **Config mirror**   | Copie de la config locale stockée dans le cloud             |
+| **VideoWatcher**    | Surveillance du dossier vidéos sur le Pi                    |
+| **LocalVideo**      | Métadonnées d'une vidéo présente sur le boîtier             |
+| **Advertiser**      | Annonceur qui diffuse des pubs sur les TV                   |
+| **Agency**          | Agence gérant plusieurs annonceurs                          |
+| **Operator**        | Utilisateur gérant un sous-ensemble de clubs                |
+| **Golden image**    | Image SD pré-configurée pour clonage rapide                 |
+| **Canary**          | Déploiement progressif (10% → 50% → 100%)                   |
+| **Phase de match**  | Moment du match (neutral/before/during/after)               |
+| **TimeCategory**    | Configuration d'une phase avec ses vidéos et catégories     |
+| **LoopVideo**       | Vidéo dans une boucle de phase                              |
+| **CategoryMapping** | Association catégorie locale → type analytics               |
+| **RemotePreview**   | Simulation visuelle de la télécommande Pi dans le dashboard |
 
 ---
 

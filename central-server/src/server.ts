@@ -37,7 +37,7 @@ import schedulesRoutes from './routes/schedules.routes';
 import objectivesRoutes from './routes/objectives.routes';
 import playlistSchedulesRoutes from './routes/playlist-schedules.routes';
 import logsRoutes from './routes/logs.routes';
-import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit } from './middleware/user-rate-limit';
+import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 import { correlationMiddleware } from './middleware/correlation';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
@@ -314,7 +314,7 @@ app.use('/api/users', sensitiveRateLimit, usersRoutes); // Gestion utilisateurs 
 app.use('/api/schedules', sensitiveRateLimit, schedulesRoutes); // Tâches planifiées (admin only)
 app.use('/api/objectives', apiRateLimit, objectivesRoutes); // Objectifs clubs
 app.use('/api/playlist-schedules', apiRateLimit, playlistSchedulesRoutes); // Programmation playlists
-app.use('/api/logs', apiRateLimit, logsRoutes); // Frontend log ingestion
+app.use('/api/logs', loggingRateLimit, logsRoutes); // Frontend log ingestion - permissive rate limit
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler
 // Uses standardized error format with correlation ID

@@ -76,15 +76,21 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       const errorCode = ErrorExtractor.getErrorCode(error);
       const message = ErrorExtractor.getMessage(error);
 
-      // Log error to backend
-      logger.error('HTTP request failed', {
-        url: req.url,
-        method: req.method,
-        status: error.status,
-        correlationId: extractedCorrelationId,
-        errorCode,
-        message,
-      });
+      // Skip logging for log endpoint errors to prevent infinite loop:
+      // Log failure → 429 → intercept → log failure → 429 → ...
+      const isLogEndpoint = req.url.includes('/logs/frontend');
+
+      // Log error to backend (but not for logging endpoint itself)
+      if (!isLogEndpoint) {
+        logger.error('HTTP request failed', {
+          url: req.url,
+          method: req.method,
+          status: error.status,
+          correlationId: extractedCorrelationId,
+          errorCode,
+          message,
+        });
+      }
 
       // Handle specific error types
       if (ErrorExtractor.isAuthError(error)) {
@@ -93,7 +99,10 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       if (ErrorExtractor.isRateLimitError(error)) {
-        notificationService.error('Trop de requêtes - Veuillez patienter quelques instants');
+        // Don't show notification for logging endpoint rate limits (silent fail)
+        if (!isLogEndpoint) {
+          notificationService.error('Trop de requêtes - Veuillez patienter quelques instants');
+        }
         return throwError(() => error);
       }
 
