@@ -1,3 +1,9 @@
+## [2.7.1](https://github.com/Tallec7/neopro/compare/v2.7.0...v2.7.1) (2026-01-07)
+
+### Bug Fixes
+
+- **i18n:** replace hardcoded French text with translation keys ([79adc6e](https://github.com/Tallec7/neopro/commit/79adc6edc381981089f5f5429824d55c0ee870d5))
+
 # [2.7.0](https://github.com/Tallec7/neopro/compare/v2.6.1...v2.7.0) (2026-01-07)
 
 ### Features
