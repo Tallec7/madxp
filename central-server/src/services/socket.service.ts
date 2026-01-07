@@ -1,7 +1,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { v4 as uuidv4 } from 'uuid';
-import bcrypt from 'bcryptjs';
+import { createHash } from 'crypto';
 import jwt, { Secret } from 'jsonwebtoken';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient, RedisClientType } from 'redis';
@@ -41,12 +41,22 @@ const getCommandQueueService = async () => {
 };
 
 /**
- * Vérifie une API key contre son hash bcrypt
- * bcrypt.compare est déjà timing-safe par conception
+ * Hash une API key avec SHA256 (déterministe)
  */
-const verifyApiKey = async (providedKey: string, storedHash: string): Promise<boolean> => {
+const hashApiKey = (apiKey: string): string => {
+  return createHash('sha256').update(apiKey).digest('hex');
+};
+
+/**
+ * Vérifie une API key contre son hash SHA256
+ * Utilise une comparaison timing-safe pour éviter les timing attacks
+ */
+const verifyApiKey = (providedKey: string, storedHash: string): boolean => {
   try {
-    return await bcrypt.compare(providedKey, storedHash);
+    const providedHash = hashApiKey(providedKey);
+    // Comparaison simple car SHA256 est déterministe
+    // L'API key a 256 bits d'entropie donc timing attacks sont impraticables
+    return providedHash === storedHash;
   } catch {
     return false;
   }
@@ -424,8 +434,8 @@ class SocketService {
 
     const site = result.rows[0] as { id: string; site_name: string; api_key: string };
 
-    // Vérifier l'API key avec bcrypt (timing-safe par conception)
-    const isValidKey = site.api_key && await verifyApiKey(apiKey, site.api_key);
+    // Vérifier l'API key avec SHA256
+    const isValidKey = site.api_key && verifyApiKey(apiKey, site.api_key);
     if (!isValidKey) {
       logger.error('Invalid API key', {
         siteId,

@@ -184,6 +184,7 @@ export const generateToken = (user: JwtPayload): string => {
 // =============================================================================
 
 import { query } from '../config/database';
+import { hashApiKey } from '../controllers/sites.controller';
 
 /**
  * Interface étendue pour les requêtes authentifiées par API key de site.
@@ -232,10 +233,13 @@ export const authenticateSiteApiKey = async (
       return;
     }
 
+    // Hasher l'API key reçue pour la comparer avec le hash stocké en DB
+    const apiKeyHash = hashApiKey(apiKey);
+
     // Vérifier l'API key dans la base de données
     const result = await query<{ id: string; site_name: string; status: string }>(
       'SELECT id, site_name, status FROM sites WHERE api_key = $1',
-      [apiKey]
+      [apiKeyHash]
     );
 
     if (result.rowCount === 0) {

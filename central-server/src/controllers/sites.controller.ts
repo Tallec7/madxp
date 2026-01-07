@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { query } from '../config/database';
 import { AuthRequest } from '../types';
@@ -33,17 +33,20 @@ const generateApiKey = (): string => {
 };
 
 /**
- * Hash une API key avec bcrypt
+ * Hash une API key avec SHA256 (déterministe, permet comparaison SQL directe)
+ * Note: On utilise SHA256 au lieu de bcrypt car on doit pouvoir chercher par hash en SQL.
+ * L'API key elle-même est générée avec 32 bytes random (256 bits d'entropie),
+ * donc même si SHA256 n'est pas un "password hash", la sécurité reste excellente.
  */
-const hashApiKey = async (apiKey: string): Promise<string> => {
-  return bcrypt.hash(apiKey, BCRYPT_ROUNDS);
+export const hashApiKey = (apiKey: string): string => {
+  return createHash('sha256').update(apiKey).digest('hex');
 };
 
 /**
- * Vérifie une API key contre son hash
+ * Vérifie une API key contre son hash SHA256
  */
-export const verifyApiKey = async (apiKey: string, hash: string): Promise<boolean> => {
-  return bcrypt.compare(apiKey, hash);
+export const verifyApiKey = (apiKey: string, hash: string): boolean => {
+  return hashApiKey(apiKey) === hash;
 };
 
 export const getSites = async (req: AuthRequest, res: Response) => {
@@ -182,7 +185,7 @@ export const createSite = async (req: AuthRequest, res: Response) => {
 
     const id = uuidv4();
     const api_key = generateApiKey();
-    const api_key_hash = await hashApiKey(api_key);
+    const api_key_hash = hashApiKey(api_key);
 
     const result = await query(
       `INSERT INTO sites (id, site_name, club_name, location, sports, hardware_model, api_key)
@@ -316,7 +319,7 @@ export const regenerateApiKey = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     const newApiKey = generateApiKey();
-    const newApiKeyHash = await hashApiKey(newApiKey);
+    const newApiKeyHash = hashApiKey(newApiKey);
 
     const result = await query(
       'UPDATE sites SET api_key = $1, updated_at = NOW() WHERE id = $2 RETURNING id, site_name, club_name, status, updated_at',
