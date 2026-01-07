@@ -10,7 +10,8 @@ import {
   CategoryConfig,
   LocalVideo,
   CloudVideo,
-  LocalStorage
+  LocalStorage,
+  ConfigDiff
 } from '../../../../core/models';
 import { VideoLibraryComponent, VideoItem } from '../video-library/video-library.component';
 import { RemotePreviewComponent } from '../remote-preview/remote-preview.component';
@@ -431,9 +432,84 @@ interface SponsorVideo {
         <span class="dirty-indicator">⚠️ Modifications non enregistrées</span>
         <div class="actions-buttons">
           <button class="btn btn-secondary" (click)="resetConfig()">Annuler</button>
-          <button class="btn btn-primary" (click)="deployConfig()" [disabled]="deploying">
+          <button class="btn btn-primary" (click)="previewDeploy()" [disabled]="deploying">
             {{ deploying ? 'Déploiement...' : (isConnected ? 'Déployer' : '📥 Déployer (file d'attente)') }}
           </button>
+        </div>
+      </div>
+
+      <!-- Diff Preview Modal -->
+      <div class="modal" *ngIf="showDiffModal" (click)="showDiffModal = false">
+        <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>Aperçu des changements</h2>
+            <button class="modal-close" (click)="showDiffModal = false">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="mode-info">
+              <span class="mode-badge">Mode: Fusion</span>
+              <span class="mode-desc">Les paramètres locaux du club seront préservés</span>
+            </div>
+
+            <div *ngIf="diffLoading" class="loading-inline">
+              <div class="spinner-small"></div>
+              <span>Calcul des différences...</span>
+            </div>
+            <div *ngIf="!diffLoading && diffItems.length === 0" class="no-changes">
+              Aucun changement détecté par rapport à la configuration actuelle
+            </div>
+            <div *ngIf="!diffLoading && diffItems.length > 0" class="diff-list">
+              <div class="diff-summary">
+                <div class="diff-total">{{ diffItems.length }} changement(s) détecté(s)</div>
+                <div class="diff-pill added">+ {{ diffCounts.added }}</div>
+                <div class="diff-pill changed">~ {{ diffCounts.changed }}</div>
+                <div class="diff-pill removed">- {{ diffCounts.removed }}</div>
+              </div>
+              <div class="diff-item" *ngFor="let diff of diffItems" [class]="'diff-' + diff.type">
+                <div class="diff-head">
+                  <div class="diff-field">{{ diff.path }}</div>
+                  <div class="diff-type">
+                    <span *ngIf="diff.type === 'added'" class="badge badge-success">Ajouté</span>
+                    <span *ngIf="diff.type === 'removed'" class="badge badge-danger">Supprimé</span>
+                    <span *ngIf="diff.type === 'changed'" class="badge badge-warning">Modifié</span>
+                  </div>
+                </div>
+
+                <div class="diff-values" *ngIf="diff.type === 'changed'">
+                  <div class="diff-old">
+                    <span class="diff-label">Avant:</span>
+                    <pre class="diff-json">{{ formatJson(diff.oldValue) }}</pre>
+                  </div>
+                  <div class="diff-new">
+                    <span class="diff-label">Après:</span>
+                    <pre class="diff-json">{{ formatJson(diff.newValue) }}</pre>
+                  </div>
+                </div>
+                <div class="diff-values" *ngIf="diff.type === 'added'">
+                  <div class="diff-new">
+                    <span class="diff-label">Valeur:</span>
+                    <pre class="diff-json">{{ formatJson(diff.newValue) }}</pre>
+                  </div>
+                </div>
+                <div class="diff-values" *ngIf="diff.type === 'removed'">
+                  <div class="diff-old">
+                    <span class="diff-label">Valeur:</span>
+                    <pre class="diff-json">{{ formatJson(diff.oldValue) }}</pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="showDiffModal = false">Annuler</button>
+            <button
+              class="btn btn-primary"
+              (click)="confirmDeploy()"
+              [disabled]="deploying"
+            >
+              {{ deploying ? 'Déploiement...' : 'Confirmer le déploiement' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1174,6 +1250,282 @@ interface SponsorVideo {
     .btn-secondary:hover {
       background: #f8fafc;
     }
+
+    /* Diff Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 2rem;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-content.modal-large {
+      max-width: 800px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+    }
+
+    .modal-close:hover {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+      padding: 1.5rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .mode-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .mode-badge {
+      font-weight: 600;
+      color: #166534;
+      background: #dcfce7;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8125rem;
+    }
+
+    .mode-desc {
+      color: #166534;
+      font-size: 0.875rem;
+    }
+
+    .loading-inline {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 2rem;
+      justify-content: center;
+      color: #64748b;
+    }
+
+    .spinner-small {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .no-changes {
+      text-align: center;
+      padding: 2rem;
+      color: #64748b;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+
+    .diff-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .diff-summary {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.9rem 1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .diff-total {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .diff-pill {
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #0f172a;
+      border: 1px solid transparent;
+    }
+
+    .diff-pill.added {
+      background: #ecfdf3;
+      color: #166534;
+      border-color: #bbf7d0;
+    }
+
+    .diff-pill.changed {
+      background: #fff7ed;
+      color: #9a3412;
+      border-color: #fed7aa;
+    }
+
+    .diff-pill.removed {
+      background: #fef2f2;
+      color: #b91c1c;
+      border-color: #fecdd3;
+    }
+
+    .diff-item {
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .diff-added {
+      background: #ecfdf5;
+      border-color: #10b981;
+    }
+
+    .diff-removed {
+      background: #fef2f2;
+      border-color: #ef4444;
+    }
+
+    .diff-changed {
+      background: #fffbeb;
+      border-color: #f59e0b;
+    }
+
+    .diff-field {
+      font-family: monospace;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .diff-head {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .diff-type {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .badge-warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .diff-values {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .diff-old, .diff-new {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .diff-label {
+      font-size: 0.75rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .diff-json {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+      max-height: 150px;
+      overflow-y: auto;
+    }
   `]
 })
 export class SiteContentTabComponent implements OnInit, OnChanges {
@@ -1193,10 +1545,25 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
 
   private originalConfig: string = '';
 
+  // Diff modal
+  showDiffModal: boolean = false;
+  diffLoading: boolean = false;
+  diffItems: ConfigDiff[] = [];
+
   // Cached computed values for template
   cachedVideoCategories: string[] = [];
   cachedVideosByCategory: Map<string, LocalVideo[]> = new Map();
   cachedTimeCategories: { id: string; name: string; icon: string; description: string }[] = [];
+
+  get diffCounts() {
+    return this.diffItems.reduce(
+      (acc, item) => {
+        acc[item.type]++;
+        return acc;
+      },
+      { added: 0, changed: 0, removed: 0 }
+    );
+  }
 
   constructor(
     private sitesService: SitesService,
@@ -1645,8 +2012,36 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
     this.expandedCategories = (this.config.categories || []).map(() => false);
   }
 
-  deployConfig(): void {
+  /**
+   * Affiche la prévisualisation des changements avant déploiement
+   */
+  previewDeploy(): void {
+    this.showDiffModal = true;
+    this.diffLoading = true;
+    this.diffItems = [];
+    this.cdr.markForCheck();
+
+    this.sitesService.previewConfigDiff(this.siteId, this.config).subscribe({
+      next: (response) => {
+        this.diffItems = response.diff || [];
+        this.diffLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        // Si pas d'historique ou erreur, on peut quand même déployer
+        this.diffItems = [];
+        this.diffLoading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  /**
+   * Confirme et exécute le déploiement après prévisualisation
+   */
+  confirmDeploy(): void {
     this.deploying = true;
+    this.cdr.markForCheck();
 
     // Clean config before sending
     const configToSend = this.prepareConfigForDeploy();
@@ -1657,6 +2052,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
     }).subscribe({
       next: () => {
         this.deploying = false;
+        this.showDiffModal = false;
         this.originalConfig = JSON.stringify(this.config);
         this.isDirty = false;
         this.notificationService.success(
@@ -1675,6 +2071,32 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  /**
+   * Formate une valeur JSON pour l'affichage dans le diff
+   */
+  formatJson(value: unknown): string {
+    try {
+      if (value === null || value === undefined) {
+        return 'null';
+      }
+      if (typeof value === 'string') {
+        // Essayer de parser pour pretty-print s'il s'agit d'un JSON
+        try {
+          const parsed = JSON.parse(value);
+          return JSON.stringify(parsed, null, 2);
+        } catch {
+          return value;
+        }
+      }
+      if (typeof value === 'object') {
+        return JSON.stringify(value, null, 2);
+      }
+      return String(value);
+    } catch {
+      return String(value);
+    }
   }
 
   private prepareConfigForDeploy(): Partial<SiteConfiguration> {
