@@ -1,3 +1,9 @@
+# [2.7.0](https://github.com/Tallec7/neopro/compare/v2.6.1...v2.7.0) (2026-01-07)
+
+### Features
+
+- **dashboard:** add 'Refresh from Pi' button to Content tab ([0e24a86](https://github.com/Tallec7/neopro/commit/0e24a864154600322d0ad9c4b7288d3b72a08600))
+
 ## [2.6.1](https://github.com/Tallec7/neopro/compare/v2.6.0...v2.6.1) (2026-01-07)
 
 ### Bug Fixes
