@@ -15,6 +15,7 @@ import {
 } from '../../../../core/models';
 import { VideoLibraryComponent, VideoItem } from '../video-library/video-library.component';
 import { RemotePreviewComponent } from '../remote-preview/remote-preview.component';
+import { TranslateModule } from '@ngx-translate/core';
 
 interface SponsorVideo {
   name: string;
@@ -27,7 +28,7 @@ interface SponsorVideo {
 @Component({
   selector: 'app-site-content-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, VideoLibraryComponent, RemotePreviewComponent],
+  imports: [CommonModule, FormsModule, VideoLibraryComponent, RemotePreviewComponent, TranslateModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="content-tab">
@@ -68,7 +69,7 @@ interface SponsorVideo {
         </p>
 
         <div class="sponsors-list" *ngIf="config.sponsors && config.sponsors.length > 0">
-          <div class="sponsor-item" *ngFor="let sponsor of config.sponsors; let i = index" [class.neopro]="sponsor.owner === 'neopro'">
+          <div class="sponsor-item" *ngFor="let sponsor of config.sponsors; let i = index" [class.neopro]="sponsor.owner === 'neopro'" [class.has-error]="!sponsor.path">
             <span class="sponsor-order">{{ i + 1 }}</span>
             <div class="sponsor-content">
               <input
@@ -82,6 +83,7 @@ interface SponsorVideo {
                 [(ngModel)]="sponsor.path"
                 (ngModelChange)="markDirty()"
                 class="video-select"
+                [class.input-error]="!sponsor.path"
                 *ngIf="localVideos.length > 0"
               >
                 <option value="">-- Sélectionner --</option>
@@ -97,8 +99,10 @@ interface SponsorVideo {
                 (ngModelChange)="markDirty()"
                 placeholder="Chemin vidéo"
                 class="sponsor-path-input"
+                [class.input-error]="!sponsor.path"
                 *ngIf="localVideos.length === 0"
               />
+              <span class="error-hint" *ngIf="!sponsor.path">Vidéo requise</span>
             </div>
             <div class="sponsor-owner">
               <label class="owner-radio">
@@ -428,12 +432,17 @@ interface SponsorVideo {
       </div>
 
       <!-- Actions -->
-      <div class="actions-bar" *ngIf="isDirty">
-        <span class="dirty-indicator">⚠️ Modifications non enregistrées</span>
+      <div class="actions-bar" *ngIf="isDirty" [class.has-errors]="validationErrors.length > 0">
+        <div class="actions-status">
+          <span class="dirty-indicator">⚠️ Modifications non enregistrées</span>
+          <span class="error-count" *ngIf="validationErrors.length > 0">
+            ❌ {{ validationErrors.length }} erreur(s) de validation
+          </span>
+        </div>
         <div class="actions-buttons">
-          <button class="btn btn-secondary" (click)="resetConfig()">Annuler</button>
-          <button class="btn btn-primary" (click)="previewDeploy()" [disabled]="deploying">
-            {{ deploying ? 'Déploiement...' : (isConnected ? 'Déployer' : '📥 Déployer (file d'attente)') }}
+          <button class="btn btn-secondary" (click)="resetConfig()">{{ 'common.cancel' | translate }}</button>
+          <button class="btn btn-primary" (click)="previewDeploy()" [disabled]="deploying || validationErrors.length > 0">
+            {{ deploying ? ('common.deploying' | translate) : (isConnected ? ('common.deploy' | translate) : ('common.deployQueued' | translate)) }}
           </button>
         </div>
       </div>
@@ -446,9 +455,24 @@ interface SponsorVideo {
             <button class="modal-close" (click)="showDiffModal = false">×</button>
           </div>
           <div class="modal-body">
-            <div class="mode-info">
-              <span class="mode-badge">Mode: Fusion</span>
-              <span class="mode-desc">Les paramètres locaux du club seront préservés</span>
+            <div class="mode-selector">
+              <div class="mode-title">Mode de déploiement</div>
+              <div class="mode-options">
+                <label class="mode-option" [class.active]="deployMode === 'merge'">
+                  <input type="radio" name="deployMode" value="merge" [(ngModel)]="deployMode" />
+                  <div class="mode-option-content">
+                    <span class="mode-option-title">🔀 Fusionner</span>
+                    <span class="mode-option-desc">Préserve le contenu club existant, applique les modifications NEOPRO</span>
+                  </div>
+                </label>
+                <label class="mode-option" [class.active]="deployMode === 'replace'">
+                  <input type="radio" name="deployMode" value="replace" [(ngModel)]="deployMode" />
+                  <div class="mode-option-content">
+                    <span class="mode-option-title">🔄 Remplacer</span>
+                    <span class="mode-option-desc">Écrase totalement la configuration (⚠️ perte du contenu club)</span>
+                  </div>
+                </label>
+              </div>
             </div>
 
             <div *ngIf="diffLoading" class="loading-inline">
@@ -501,13 +525,13 @@ interface SponsorVideo {
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="showDiffModal = false">Annuler</button>
+            <button class="btn btn-secondary" (click)="showDiffModal = false">{{ 'common.cancel' | translate }}</button>
             <button
               class="btn btn-primary"
               (click)="confirmDeploy()"
               [disabled]="deploying"
             >
-              {{ deploying ? 'Déploiement...' : 'Confirmer le déploiement' }}
+              {{ deploying ? ('common.deploying' | translate) : ('common.confirmDeploy' | translate) }}
             </button>
           </div>
         </div>
@@ -1201,15 +1225,52 @@ interface SponsorVideo {
       bottom: 1rem;
     }
 
+    .actions-bar.has-errors {
+      background: #fef2f2;
+      border-color: #fecaca;
+    }
+
+    .actions-status {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
     .dirty-indicator {
       font-size: 0.875rem;
       font-weight: 500;
       color: #92400e;
     }
 
+    .has-errors .dirty-indicator {
+      color: #dc2626;
+    }
+
+    .error-count {
+      font-size: 0.8125rem;
+      color: #dc2626;
+    }
+
     .actions-buttons {
       display: flex;
       gap: 0.5rem;
+    }
+
+    /* Validation errors */
+    .input-error {
+      border-color: #f87171 !important;
+      background: #fef2f2 !important;
+    }
+
+    .has-error {
+      border-color: #fecaca !important;
+      background: #fef2f2 !important;
+    }
+
+    .error-hint {
+      font-size: 0.75rem;
+      color: #dc2626;
+      margin-top: 0.25rem;
     }
 
     .btn {
@@ -1325,29 +1386,65 @@ interface SponsorVideo {
       border-top: 1px solid #e2e8f0;
     }
 
-    .mode-info {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem 1rem;
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      border-radius: 8px;
+    .mode-selector {
       margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e2e8f0;
     }
 
-    .mode-badge {
+    .mode-title {
       font-weight: 600;
-      color: #166534;
-      background: #dcfce7;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.8125rem;
+      font-size: 0.875rem;
+      color: #374151;
+      margin-bottom: 0.75rem;
     }
 
-    .mode-desc {
-      color: #166534;
+    .mode-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .mode-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mode-option:hover {
+      border-color: #cbd5e1;
+    }
+
+    .mode-option.active {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+
+    .mode-option input[type="radio"] {
+      margin-top: 2px;
+    }
+
+    .mode-option-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .mode-option-title {
+      font-weight: 600;
       font-size: 0.875rem;
+      color: #1e293b;
+    }
+
+    .mode-option-desc {
+      font-size: 0.75rem;
+      color: #64748b;
+      line-height: 1.4;
     }
 
     .loading-inline {
@@ -1549,6 +1646,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
   showDiffModal: boolean = false;
   diffLoading: boolean = false;
   diffItems: ConfigDiff[] = [];
+  deployMode: 'merge' | 'replace' = 'merge';
 
   // Cached computed values for template
   cachedVideoCategories: string[] = [];
@@ -1563,6 +1661,47 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
       },
       { added: 0, changed: 0, removed: 0 }
     );
+  }
+
+  /**
+   * Retourne la liste des erreurs de validation
+   */
+  get validationErrors(): string[] {
+    const errors: string[] = [];
+
+    // Vérifier les sponsors sans path
+    this.config.sponsors?.forEach((s, i) => {
+      if (!s.path) {
+        errors.push(`Boucle par défaut: vidéo ${i + 1} sans fichier`);
+      }
+    });
+
+    // Vérifier les vidéos de catégories sans path
+    this.config.categories?.forEach(cat => {
+      cat.videos?.forEach((v, i) => {
+        if (!v.path) {
+          errors.push(`Catégorie "${cat.name || 'Sans nom'}": vidéo ${i + 1} sans fichier`);
+        }
+      });
+      cat.subCategories?.forEach(sub => {
+        sub.videos?.forEach((v, i) => {
+          if (!v.path) {
+            errors.push(`Sous-catégorie "${sub.name || 'Sans nom'}": vidéo ${i + 1} sans fichier`);
+          }
+        });
+      });
+    });
+
+    // Vérifier les loopVideos des timeCategories
+    this.config.timeCategories?.forEach(tc => {
+      tc.loopVideos?.forEach((v: { path?: string; name?: string }, i: number) => {
+        if (!v.path) {
+          errors.push(`Phase "${tc.name}": vidéo ${i + 1} sans fichier`);
+        }
+      });
+    });
+
+    return errors;
   }
 
   constructor(
@@ -2054,7 +2193,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
 
     this.sitesService.sendCommand(this.siteId, 'update_config', {
       neoProContent: configToSend,
-      mode: 'merge'
+      mode: this.deployMode
     }).subscribe({
       next: () => {
         this.deploying = false;
