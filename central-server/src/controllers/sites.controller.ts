@@ -684,14 +684,15 @@ export const sendCommand = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Commande requise' });
     }
 
-    // Si la commande update_config arrive sans mode, utiliser "merge" pour préserver le contenu local
-    // Le mode "replace" écrase tout et peut perdre des paramètres locaux (WiFi, settings, etc.)
+    // Si la commande update_config arrive avec "configuration", convertir en "neoProContent"
+    // Le sync-agent attend neoProContent pour le merge intelligent
     let normalizedData = data;
-    if (command === 'update_config' && data && !data.mode && data.configuration) {
-      // Convertir l'ancienne structure { configuration } en { neoProContent } pour le mode merge
-      normalizedData = { ...data, neoProContent: data.configuration, mode: 'merge' };
+    if (command === 'update_config' && data && data.configuration) {
+      // Convertir { configuration, mode? } en { neoProContent, mode }
+      const mode = data.mode || 'merge'; // Par défaut "merge" pour préserver le contenu local
+      normalizedData = { ...data, neoProContent: data.configuration, mode };
       delete normalizedData.configuration;
-      logger.info('update_config: converted legacy format to merge mode', { siteId: id });
+      logger.info('update_config: converted configuration to neoProContent', { siteId: id, mode });
     }
 
     validateCommandPayload(command, normalizedData);
