@@ -1,3 +1,9 @@
+## [2.3.5](https://github.com/Tallec7/neopro/compare/v2.3.4...v2.3.5) (2026-01-07)
+
+### Bug Fixes
+
+- **config:** preserve video owner/locked fields and fix category merge ([36ceb0b](https://github.com/Tallec7/neopro/commit/36ceb0b247b589b30707416841244966eefbb989))
+
 ## [2.3.4](https://github.com/Tallec7/neopro/compare/v2.3.3...v2.3.4) (2026-01-07)
 
 ### Bug Fixes
