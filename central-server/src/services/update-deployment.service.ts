@@ -6,6 +6,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/database';
 import socketService from './socket.service';
+import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
 import { getPublicUrl } from '../config/supabase';
 
@@ -85,10 +86,10 @@ class UpdateDeploymentService {
         return;
       }
 
-      // Tenter d'envoyer aux sites connectés
-      let connectedCount = 0;
-      const disconnectedSites: string[] = [];
+      // Tenter d'envoyer aux sites (ou mettre en queue si offline)
+      let successCount = 0;
       const commandSentSites: string[] = [];
+      const commandQueuedSites: string[] = [];
       const commandFailedSites: string[] = [];
 
       // Debug: Log l'état complet du socketService
@@ -102,58 +103,63 @@ class UpdateDeploymentService {
 
       for (const target of targets) {
         const isConnected = socketService.isConnected(target.siteId);
-        logger.info('Checking site connection', {
+        logger.info('Processing site for deployment', {
           deploymentId,
           siteId: target.siteId,
           siteName: target.siteName,
           isConnected,
-          connectedSitesList: socketDebugInfo.connectedSites,
         });
 
-        if (isConnected) {
-          const success = await this.deployToSite(deploymentId, target.siteId, deployment);
-          if (success) {
-            connectedCount++;
+        // deployToSite utilise maintenant sendOrQueue, donc fonctionne même si offline
+        const success = await this.deployToSite(deploymentId, target.siteId, deployment);
+        if (success) {
+          successCount++;
+          if (isConnected) {
             commandSentSites.push(target.siteName);
           } else {
-            commandFailedSites.push(target.siteName);
+            commandQueuedSites.push(target.siteName);
           }
         } else {
-          disconnectedSites.push(target.siteName);
+          commandFailedSites.push(target.siteName);
         }
       }
 
       // Mettre à jour le statut avec des informations détaillées
-      if (connectedCount > 0) {
+      if (successCount > 0) {
+        // Au moins une commande envoyée ou mise en queue
+        const statusMessage = [];
+        if (commandSentSites.length > 0) {
+          statusMessage.push(`Envoyé: ${commandSentSites.join(', ')}`);
+        }
+        if (commandQueuedSites.length > 0) {
+          statusMessage.push(`En attente de reconnexion: ${commandQueuedSites.join(', ')}`);
+        }
+
         await query(
           `UPDATE update_deployments
-           SET status = 'in_progress', started_at = NOW()
-           WHERE id = $1`,
-          [deploymentId]
+           SET status = 'in_progress', started_at = NOW(), error_message = $1
+           WHERE id = $2`,
+          [statusMessage.join(' | ') || null, deploymentId]
         );
+
         logger.info('Update deployment in progress', {
           deploymentId,
           commandSentSites,
+          commandQueuedSites,
           commandFailedSites,
-          disconnectedSites
         });
       } else {
-        // Aucun site connecté - mettre à jour avec un message informatif
-        const reason = disconnectedSites.length > 0
-          ? `En attente de connexion: ${disconnectedSites.join(', ')}`
-          : 'Aucun site connecté';
-
+        // Aucune commande n'a pu être envoyée ou mise en queue
         await query(
           `UPDATE update_deployments
            SET error_message = $1
            WHERE id = $2 AND status = 'pending'`,
-          [reason, deploymentId]
+          ['Échec de l\'envoi à tous les sites cibles', deploymentId]
         );
 
-        logger.warn('Update deployment waiting for site connection', {
+        logger.error('Update deployment failed for all sites', {
           deploymentId,
-          reason,
-          disconnectedSites
+          commandFailedSites,
         });
       }
 
@@ -161,11 +167,10 @@ class UpdateDeploymentService {
         deploymentId,
         version: deployment.version,
         totalSites: targets.length,
-        connectedSites: connectedCount,
-        pendingSites: targets.length - connectedCount,
+        successCount,
         commandSentSites,
+        commandQueuedSites,
         commandFailedSites,
-        disconnectedSites,
       });
     } catch (error) {
       logger.error('Error starting update deployment:', { deploymentId, error });
@@ -249,6 +254,8 @@ class UpdateDeploymentService {
 
   /**
    * Envoie la commande de mise à jour à un site spécifique
+   * Utilise commandQueueService.sendOrQueue() pour gérer les sites offline
+   * (même comportement que update_config)
    */
   private async deployToSite(
     deploymentId: string,
@@ -257,55 +264,50 @@ class UpdateDeploymentService {
   ): Promise<boolean> {
     logger.info('deployToSite called', { deploymentId, siteId, updateVersion: update.version });
 
-    if (!socketService.isConnected(siteId)) {
-      logger.warn('Site not connected for update deployment', { siteId, deploymentId });
-      return false;
-    }
-
-    const command = {
-      id: uuidv4(),
-      type: 'update_software',
-      data: {
-        deploymentId,
-        updateId: update.id,
-        version: update.version,
-        updateUrl: update.package_url, // sync-agent expects 'updateUrl'
-        packageSize: update.package_size,
-        checksum: update.checksum,
-        isCritical: update.is_critical,
-        description: update.description,
-        changelog: update.changelog,
-      },
+    const commandData = {
+      deploymentId,
+      updateId: update.id,
+      version: update.version,
+      updateUrl: update.package_url, // sync-agent expects 'updateUrl'
+      packageSize: update.package_size,
+      checksum: update.checksum,
+      isCritical: update.is_critical,
+      description: update.description,
+      changelog: update.changelog,
     };
 
-    logger.info('Sending update_software command', {
+    logger.info('Sending update_software command via sendOrQueue', {
       siteId,
       deploymentId,
-      commandId: command.id,
       version: update.version,
       updateUrl: update.package_url,
     });
 
-    // Créer une commande dans remote_commands pour le suivi
-    await query(
-      `INSERT INTO remote_commands (id, site_id, command_type, command_data, status, executed_at)
-       VALUES ($1, $2, 'update_software', $3, 'executing', NOW())`,
-      [command.id, siteId, JSON.stringify(command.data)]
+    // Utiliser sendOrQueue comme pour update_config
+    // Si le site est connecté, envoie immédiatement
+    // Sinon, met en queue pour envoi à la reconnexion
+    const result = await commandQueueService.sendOrQueue(
+      siteId,
+      'update_software',
+      commandData,
+      {
+        priority: update.is_critical ? 1 : 3, // Priorité haute pour les mises à jour critiques
+        description: `Mise à jour v${update.version}`,
+        expiresIn: 7 * 24 * 60 * 60 * 1000, // Expire après 7 jours
+      }
     );
 
-    const sent = socketService.sendCommand(siteId, command);
-    logger.info('Command send result', { deploymentId, siteId, commandId: command.id, sent });
+    logger.info('Command sendOrQueue result', {
+      deploymentId,
+      siteId,
+      sent: result.sent,
+      queued: result.queued,
+      commandId: result.commandId,
+      message: result.message,
+    });
 
-    if (!sent) {
-      // Mettre à jour la commande comme failed
-      await query(
-        `UPDATE remote_commands SET status = 'failed', error_message = 'Failed to send command'
-         WHERE id = $1`,
-        [command.id]
-      );
-    }
-
-    return sent;
+    // Retourne true si envoyé OU mis en queue (sera traité à la reconnexion)
+    return result.sent || result.queued;
   }
 
   /**
