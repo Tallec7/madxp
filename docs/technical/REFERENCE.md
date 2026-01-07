@@ -997,4 +997,4 @@ Voir **[docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ---
 
-**Dernière mise à jour :** 6 janvier 2026
+**Dernière mise à jour :** 7 janvier 2026

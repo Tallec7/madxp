@@ -7,6 +7,7 @@
     "edit": "Edit",
     "create": "Create",
     "search": "Search",
+    "searchPlaceholder": "Search...",
     "filter": "Filter",
     "actions": "Actions",
     "confirm": "Confirm",
@@ -28,7 +29,26 @@
     "download": "Download",
     "upload": "Upload",
     "version": "Version",
-    "verifying": "Verifying..."
+    "verifying": "Verifying...",
+    "deploy": "Deploy",
+    "deploying": "Deploying...",
+    "deployQueued": "Deploy (queued)",
+    "confirmDeploy": "Confirm deployment",
+    "deployConfig": "Deploy configuration",
+    "apply": "Apply",
+    "applying": "Applying...",
+    "applyQueued": "Apply (queued)",
+    "update": "Update",
+    "updating": "Updating...",
+    "updateQueued": "Update (queued)",
+    "selectVideo": "Select a video",
+    "uncategorized": "Uncategorized",
+    "deletePermanently": "Delete permanently",
+    "deleting": "Deleting...",
+    "generating": "Generating...",
+    "downloadPdf": "Download PDF",
+    "deployToPi": "Deploy to Pi",
+    "editPriority": "Edit priority"
   },
   "auth": {
     "login": "Login",
@@ -63,6 +83,7 @@
     "groups": "Groups",
     "advertisers": "Advertisers",
     "sponsors": "Advertisers",
+    "searchAdvertiser": "Search an advertiser...",
     "content": "Content",
     "updates": "Updates",
     "analytics": "Analytics",
@@ -141,7 +162,9 @@
     "groupName": "Group name",
     "description": "Description",
     "members": "Members",
-    "sitesCount": "Sites count"
+    "sitesCount": "Sites count",
+    "newGroup": "New group",
+    "searchByName": "Search by name..."
   },
   "sponsors": {
     "title": "Sponsors Management",
@@ -153,7 +176,10 @@
     "logo": "Logo",
     "website": "Website",
     "videos": "Videos",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "searchSponsor": "Search a sponsor...",
+    "searchVideo": "Search a video...",
+    "editPriority": "Edit priority"
   },
   "content": {
     "title": "Content Management",
@@ -166,7 +192,11 @@
     "deploy": "Deploy",
     "deployTo": "Deploy to",
     "selectTargets": "Select targets",
-    "progress": "Progress"
+    "progress": "Progress",
+    "searchVideo": "Search a video...",
+    "launchDeployment": "Launch deployment",
+    "deploymentInProgress": "Deployment in progress...",
+    "startDeployment": "Start deployment"
   },
   "updates": {
     "title": "Updates Management",
@@ -193,7 +223,9 @@
     "views": "Views",
     "impressions": "Impressions",
     "engagement": "Engagement",
-    "exportReport": "Export report"
+    "exportReport": "Export report",
+    "uncategorized": "Uncategorized",
+    "downloadPdf": "📥 Download PDF"
   },
   "language": {
     "select": "Language",
@@ -274,5 +306,27 @@
     "legalMentions": "Legal Notice",
     "lastUpdate": "Last updated",
     "questions": "Questions?"
+  },
+  "analyticsCategories": {
+    "title": "Analytics Categories",
+    "editCategory": "Edit category",
+    "newCategory": "New category",
+    "saving": "Saving...",
+    "name": "Name",
+    "description": "Description"
+  },
+  "configEditor": {
+    "confirmDeployment": "Confirm deployment",
+    "deployConfig": "Deploy configuration"
+  },
+  "videoLibrary": {
+    "deployToPi": "Deploy to Pi"
+  },
+  "debug": {
+    "playing": "Playing...",
+    "play": "▶ Play",
+    "queued": "📥 Queued",
+    "restartsService": "Restarts service",
+    "fullReboot": "Full reboot"
   }
 }

@@ -7,6 +7,7 @@
     "edit": "Editar",
     "create": "Crear",
     "search": "Buscar",
+    "searchPlaceholder": "Buscar...",
     "filter": "Filtrar",
     "actions": "Acciones",
     "confirm": "Confirmar",
@@ -28,7 +29,26 @@
     "download": "Descargar",
     "upload": "Subir",
     "version": "Versión",
-    "verifying": "Verificando..."
+    "verifying": "Verificando...",
+    "deploy": "Desplegar",
+    "deploying": "Desplegando...",
+    "deployQueued": "Desplegar (en cola)",
+    "confirmDeploy": "Confirmar despliegue",
+    "deployConfig": "Desplegar configuración",
+    "apply": "Aplicar",
+    "applying": "Aplicando...",
+    "applyQueued": "Aplicar (en cola)",
+    "update": "Actualizar",
+    "updating": "Actualizando...",
+    "updateQueued": "Actualizar (en cola)",
+    "selectVideo": "Seleccionar un vídeo",
+    "uncategorized": "Sin categorizar",
+    "deletePermanently": "Eliminar permanentemente",
+    "deleting": "Eliminando...",
+    "generating": "Generando...",
+    "downloadPdf": "Descargar PDF",
+    "deployToPi": "Desplegar al Pi",
+    "editPriority": "Editar prioridad"
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -40,6 +60,7 @@
     "emailRequired": "Correo electrónico requerido",
     "passwordRequired": "Contraseña requerida",
     "loginError": "Error de inicio de sesión. Por favor, inténtelo de nuevo.",
+    "sessionExpired": "Su sesión ha expirado. Por favor, inicie sesión de nuevo.",
     "logoutConfirm": "¿Está seguro de que desea cerrar sesión?",
     "centralDashboard": "Panel Central",
     "forgotPassword": "¿Olvidó su contraseña?",
@@ -60,7 +81,9 @@
     "dashboard": "Panel",
     "sites": "Sitios",
     "groups": "Grupos",
+    "advertisers": "Anunciantes",
     "sponsors": "Patrocinadores",
+    "searchAdvertiser": "Buscar un anunciante...",
     "content": "Contenido",
     "updates": "Actualizaciones",
     "analytics": "Estadísticas",
@@ -86,9 +109,11 @@
   },
   "roles": {
     "super_admin": "Super Admin",
+    "superadmin": "Super Admin",
     "admin": "Administrador",
     "operator": "Operador",
     "viewer": "Observador",
+    "advertiser": "Anunciante",
     "sponsor": "Patrocinador",
     "agency": "Agencia"
   },
@@ -137,7 +162,9 @@
     "groupName": "Nombre del grupo",
     "description": "Descripción",
     "members": "Miembros",
-    "sitesCount": "Número de sitios"
+    "sitesCount": "Número de sitios",
+    "newGroup": "Nuevo grupo",
+    "searchByName": "Buscar por nombre..."
   },
   "sponsors": {
     "title": "Gestión de patrocinadores",
@@ -149,7 +176,10 @@
     "logo": "Logo",
     "website": "Sitio web",
     "videos": "Vídeos",
-    "analytics": "Estadísticas"
+    "analytics": "Estadísticas",
+    "searchSponsor": "Buscar un patrocinador...",
+    "searchVideo": "Buscar un vídeo...",
+    "editPriority": "Editar prioridad"
   },
   "content": {
     "title": "Gestión de contenido",
@@ -162,7 +192,11 @@
     "deploy": "Desplegar",
     "deployTo": "Desplegar a",
     "selectTargets": "Seleccionar destinos",
-    "progress": "Progreso"
+    "progress": "Progreso",
+    "searchVideo": "Buscar un vídeo...",
+    "launchDeployment": "Lanzar despliegue",
+    "deploymentInProgress": "Despliegue en curso...",
+    "startDeployment": "Lanzar despliegue"
   },
   "updates": {
     "title": "Gestión de actualizaciones",
@@ -189,7 +223,9 @@
     "views": "Vistas",
     "impressions": "Impresiones",
     "engagement": "Interacción",
-    "exportReport": "Exportar informe"
+    "exportReport": "Exportar informe",
+    "uncategorized": "Sin categorizar",
+    "downloadPdf": "📥 Descargar PDF"
   },
   "language": {
     "select": "Idioma",
@@ -270,5 +306,27 @@
     "legalMentions": "Aviso legal",
     "lastUpdate": "Ultima actualizacion",
     "questions": "¿Preguntas?"
+  },
+  "analyticsCategories": {
+    "title": "Categorías de Analytics",
+    "editCategory": "Editar categoría",
+    "newCategory": "Nueva categoría",
+    "saving": "Guardando...",
+    "name": "Nombre",
+    "description": "Descripción"
+  },
+  "configEditor": {
+    "confirmDeployment": "Confirmar despliegue",
+    "deployConfig": "Desplegar configuración"
+  },
+  "videoLibrary": {
+    "deployToPi": "Desplegar al Pi"
+  },
+  "debug": {
+    "playing": "Reproduciendo...",
+    "play": "▶ Reproducir",
+    "queued": "📥 En cola",
+    "restartsService": "Reinicia el servicio",
+    "fullReboot": "Reinicio completo"
   }
 }

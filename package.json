@@ -25,12 +25,16 @@
     "lint:raspberry": "ng lint raspberry",
     "lint:central": "ng lint central-dashboard",
     "lint:server": "cd central-server && npm run lint",
+    "i18n:check": "node scripts/check-i18n.js",
+    "i18n:fix": "node scripts/check-i18n.js --fix",
+    "i18n:hardcoded": "node scripts/check-hardcoded-i18n.js",
+    "i18n:hardcoded:staged": "node scripts/check-hardcoded-i18n.js --staged",
     "server": "node raspberry/server/server.js",
     "prepare": "husky"
   },
   "lint-staged": {
     "*.{ts,js}": [
-      "eslint --fix"
+      "eslint --fix --max-warnings=-1"
     ],
     "*.{json,md,html,scss,css}": [
       "prettier --write"
@@ -88,6 +92,7 @@
     "@types/jasmine": "~5.1.0",
     "angular-eslint": "^20.0.0",
     "eslint": "^9.17.0",
+    "eslint-plugin-i18n-json": "^4.0.1",
     "husky": "^9.1.6",
     "jasmine-core": "~5.9.0",
     "karma": "~6.4.0",

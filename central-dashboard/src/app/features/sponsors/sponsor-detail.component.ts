@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 
@@ -41,7 +42,7 @@ interface SponsorVideo {
 @Component({
   selector: 'app-sponsor-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, TranslateModule],
   template: `
     <div class="sponsor-detail-container">
       <!-- Header -->
@@ -388,7 +389,7 @@ interface SponsorVideo {
               Annuler
             </button>
             <button class="btn btn-danger" (click)="deleteSponsor()" [disabled]="deleting">
-              {{ deleting ? 'Suppression...' : 'Supprimer définitivement' }}
+              {{ deleting ? ('common.deleting' | translate) : ('common.deletePermanently' | translate) }}
             </button>
           </div>
         </div>
@@ -409,7 +410,7 @@ interface SponsorVideo {
                 type="text"
                 [(ngModel)]="videoSearchTerm"
                 (input)="filterAvailableVideos()"
-                placeholder="🔍 Rechercher une vidéo..."
+                [placeholder]="'content.searchVideo' | translate"
               />
             </div>
 

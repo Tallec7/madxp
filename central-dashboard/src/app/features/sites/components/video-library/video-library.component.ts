@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { LocalVideo, CloudVideo, LocalStorage } from '../../../../core/models';
 
 export interface VideoItem {
@@ -23,7 +24,7 @@ export type SortDirection = 'asc' | 'desc';
 @Component({
   selector: 'app-video-library',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="video-library">
@@ -138,7 +139,7 @@ export type SortDirection = 'asc' | 'desc';
             <button
               class="action-btn deploy"
               (click)="onDeploy(video, $event)"
-              title="Déployer vers le Pi"
+              [title]="'videoLibrary.deployToPi' | translate"
               *ngIf="!video.isOnPi && video.source === 'cloud'"
             >
               🚀
@@ -888,11 +889,12 @@ export class VideoLibraryComponent implements OnChanges {
         case 'duration':
           comparison = (a.duration || 0) - (b.duration || 0);
           break;
-        case 'lastModified':
+        case 'lastModified': {
           const dateA = a.lastModified ? new Date(a.lastModified).getTime() : 0;
           const dateB = b.lastModified ? new Date(b.lastModified).getTime() : 0;
           comparison = dateA - dateB;
           break;
+        }
         case 'category':
           comparison = (a.category || '').localeCompare(b.category || '');
           break;
