@@ -510,15 +510,36 @@ interface HumanReadableDiff {
                   <span class="diff-section-count">{{ group.items.length }}</span>
                 </div>
                 <div class="diff-section-items">
-                  <div class="diff-item-compact" *ngFor="let diff of group.items" [class]="'diff-' + diff.type">
+                  <div class="diff-item-compact" *ngFor="let diff of group.items; let i = index" [class]="'diff-' + diff.type">
                     <div class="diff-badge-icon">
                       <span *ngIf="diff.type === 'added'" class="badge-icon added">+</span>
                       <span *ngIf="diff.type === 'removed'" class="badge-icon removed">−</span>
                       <span *ngIf="diff.type === 'changed'" class="badge-icon changed">~</span>
                     </div>
                     <div class="diff-item-content">
-                      <div class="diff-item-label">{{ diff.label }}</div>
+                      <div class="diff-item-header">
+                        <div class="diff-item-label">{{ diff.label }}</div>
+                        <button
+                          class="diff-toggle-btn"
+                          *ngIf="diff.oldValue || diff.newValue"
+                          (click)="toggleDiffDetail(group.section + '-' + i)"
+                        >
+                          {{ expandedDiffItems[group.section + '-' + i] ? '▼' : '▶' }} Détails
+                        </button>
+                      </div>
                       <div class="diff-item-summary">{{ diff.summary }}</div>
+
+                      <!-- Détails dépliables -->
+                      <div class="diff-detail" *ngIf="expandedDiffItems[group.section + '-' + i]">
+                        <div class="diff-detail-row" *ngIf="diff.type === 'changed' || diff.type === 'removed'">
+                          <span class="diff-detail-label">Avant:</span>
+                          <pre class="diff-detail-value old">{{ formatDiffValue(diff.oldValue) }}</pre>
+                        </div>
+                        <div class="diff-detail-row" *ngIf="diff.type === 'changed' || diff.type === 'added'">
+                          <span class="diff-detail-label">Après:</span>
+                          <pre class="diff-detail-value new">{{ formatDiffValue(diff.newValue) }}</pre>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1738,10 +1759,79 @@ interface HumanReadableDiff {
       line-height: 1.4;
     }
 
+    .diff-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
     .diff-item-summary {
       font-size: 0.75rem;
       color: #64748b;
       margin-top: 0.125rem;
+    }
+
+    .diff-toggle-btn {
+      background: none;
+      border: none;
+      padding: 0.125rem 0.375rem;
+      font-size: 0.6875rem;
+      color: #64748b;
+      cursor: pointer;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .diff-toggle-btn:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: #475569;
+    }
+
+    .diff-detail {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px dashed #e2e8f0;
+    }
+
+    .diff-detail-row {
+      margin-bottom: 0.5rem;
+    }
+
+    .diff-detail-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .diff-detail-label {
+      font-size: 0.6875rem;
+      color: #94a3b8;
+      font-weight: 500;
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .diff-detail-value {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.75rem;
+      padding: 0.5rem;
+      border-radius: 4px;
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .diff-detail-value.old {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .diff-detail-value.new {
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
     }
   `]
 })
@@ -1766,6 +1856,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
   showDiffModal: boolean = false;
   diffLoading: boolean = false;
   rawDiffItems: ConfigDiff[] = [];
+  expandedDiffItems: Record<string, boolean> = {};
   deployMode: 'merge' | 'replace' = 'merge';
 
   // Cached computed values for template
@@ -2014,6 +2105,52 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
     if (!path) return '(vide)';
     const parts = path.split('/');
     return parts[parts.length - 1] || path;
+  }
+
+  /**
+   * Bascule l'affichage des détails d'un item de diff
+   */
+  toggleDiffDetail(key: string): void {
+    this.expandedDiffItems[key] = !this.expandedDiffItems[key];
+  }
+
+  /**
+   * Formate une valeur de diff pour l'affichage
+   * Affiche les vidéos de manière compacte (nom + fichier)
+   */
+  formatDiffValue(value: unknown): string {
+    if (value === null || value === undefined) {
+      return '(vide)';
+    }
+
+    // Si c'est un tableau de vidéos, afficher de manière compacte
+    if (Array.isArray(value)) {
+      const items = value.map((item, idx) => {
+        if (typeof item === 'object' && item !== null) {
+          const obj = item as Record<string, unknown>;
+          if ('name' in obj || 'path' in obj) {
+            const name = obj['name'] || '(sans nom)';
+            const file = this.extractFilename(obj['path'] as string);
+            return `  ${idx + 1}. ${name} → ${file}`;
+          }
+        }
+        return `  ${idx + 1}. ${JSON.stringify(item)}`;
+      });
+      return items.join('\n');
+    }
+
+    // Si c'est un objet avec name/path (une vidéo)
+    if (typeof value === 'object' && value !== null) {
+      const obj = value as Record<string, unknown>;
+      if ('name' in obj || 'path' in obj) {
+        const name = obj['name'] || '(sans nom)';
+        const file = this.extractFilename(obj['path'] as string);
+        return `${name} → ${file}`;
+      }
+      return JSON.stringify(value, null, 2);
+    }
+
+    return String(value);
   }
 
   /**
@@ -2536,6 +2673,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
     this.showDiffModal = true;
     this.diffLoading = true;
     this.rawDiffItems = [];
+    this.expandedDiffItems = {};
     this.cdr.markForCheck();
 
     this.sitesService.previewConfigDiff(this.siteId, this.config).subscribe({
