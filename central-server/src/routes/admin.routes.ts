@@ -12,4 +12,7 @@ router.get('/clients', authenticate, requireRole('admin'), adminController.listC
 router.post('/clients', authenticate, requireRole('admin'), adminController.createClient);
 router.post('/clients/:id/sync', authenticate, requireRole('admin'), adminController.syncClient);
 
+// Debug endpoint pour l'état des connexions Socket.IO
+router.get('/socket-debug', authenticate, requireRole('admin'), adminController.getSocketDebugInfo);
+
 export default router;
