@@ -4,17 +4,18 @@ Serveur central de gestion de flotte pour les boîtiers Raspberry Pi NEOPRO.
 
 ## Stack Technique
 
-| Composant | Technologies |
-|-----------|-------------|
-| Runtime | Node.js 18+, TypeScript strict |
-| Framework | Express 4.18 |
-| Base de données | PostgreSQL 15 (Supabase) |
-| Stockage vidéos | FTP (Hostinger) + Supabase Storage (fallback) |
-| WebSocket | Socket.IO 4.7 |
-| Auth | JWT HttpOnly cookie + Bearer token |
-| Validation | Joi |
-| Logs | Winston + Logtail |
-| Tests | Jest + Supertest |
+| Composant             | Technologies                                         |
+| --------------------- | ---------------------------------------------------- |
+| Runtime               | Node.js 20+, TypeScript strict                       |
+| Framework             | Express 4.18                                         |
+| Base de données       | PostgreSQL 15 (Supabase)                             |
+| Stockage vidéos       | FTP (Hostinger) + Supabase Storage (fallback)        |
+| Stockage mises à jour | FTP séparé (Hostinger) + Supabase Storage (fallback) |
+| WebSocket             | Socket.IO 4.8                                        |
+| Auth                  | JWT HttpOnly cookie + Bearer token + MFA (TOTP)      |
+| Validation            | Joi                                                  |
+| Logs                  | Winston + Logtail (Better Stack)                     |
+| Tests                 | Jest + Supertest                                     |
 
 ## Quick Start
 
@@ -124,19 +125,19 @@ POST /api/auth/reset-password
 
 ### Sites (clubs)
 
-| Méthode | Endpoint                        | Description                          |
-| ------- | ------------------------------- | ------------------------------------ |
-| GET     | /api/sites                      | Liste paginée, filtres: status, sport, region |
-| GET     | /api/sites/:id                  | Détails + config + metrics           |
-| GET     | /api/sites/:id/dashboard        | Endpoint agrégé (connection + metrics) |
-| GET     | /api/sites/:id/local-content    | Vidéos locales + stockage            |
-| GET     | /api/sites/:id/connection-status| Statut connexion temps réel          |
-| GET     | /api/sites/:id/metrics          | Métriques système (CPU, RAM, temp)   |
-| POST    | /api/sites                      | Créer site (génère api_key)          |
-| PUT     | /api/sites/:id                  | Modifier                             |
-| DELETE  | /api/sites/:id                  | Supprimer (admin)                    |
-| POST    | /api/sites/:id/api-key/regenerate| Régénérer la clé API               |
-| POST    | /api/sites/:id/command          | Envoyer commande au Pi               |
+| Méthode | Endpoint                          | Description                                   |
+| ------- | --------------------------------- | --------------------------------------------- |
+| GET     | /api/sites                        | Liste paginée, filtres: status, sport, region |
+| GET     | /api/sites/:id                    | Détails + config + metrics                    |
+| GET     | /api/sites/:id/dashboard          | Endpoint agrégé (connection + metrics)        |
+| GET     | /api/sites/:id/local-content      | Vidéos locales + stockage                     |
+| GET     | /api/sites/:id/connection-status  | Statut connexion temps réel                   |
+| GET     | /api/sites/:id/metrics            | Métriques système (CPU, RAM, temp)            |
+| POST    | /api/sites                        | Créer site (génère api_key)                   |
+| PUT     | /api/sites/:id                    | Modifier                                      |
+| DELETE  | /api/sites/:id                    | Supprimer (admin)                             |
+| POST    | /api/sites/:id/api-key/regenerate | Régénérer la clé API                          |
+| POST    | /api/sites/:id/command            | Envoyer commande au Pi                        |
 
 ### Groups
 
@@ -223,12 +224,12 @@ curl -X POST https://api.neopro.fr/api/videos/bulk \
 
 ### Advertiser Portal (Portail Annonceurs)
 
-| Méthode | Endpoint                        | Description                       |
-| ------- | ------------------------------- | --------------------------------- |
-| GET     | /api/advertiser/dashboard       | Dashboard annonceur avec KPIs     |
-| GET     | /api/advertiser/sites           | Sites de diffusion de l'annonceur |
-| GET     | /api/advertiser/videos          | Vidéos de l'annonceur             |
-| GET     | /api/advertiser/stats           | Statistiques détaillées           |
+| Méthode | Endpoint                  | Description                       |
+| ------- | ------------------------- | --------------------------------- |
+| GET     | /api/advertiser/dashboard | Dashboard annonceur avec KPIs     |
+| GET     | /api/advertiser/sites     | Sites de diffusion de l'annonceur |
+| GET     | /api/advertiser/videos    | Vidéos de l'annonceur             |
+| GET     | /api/advertiser/stats     | Statistiques détaillées           |
 
 > Accès restreint aux utilisateurs avec `role=advertiser` ou admins. Données filtrées par `advertiser_id` du JWT.
 
@@ -390,27 +391,40 @@ src/
 
 ### Obligatoires
 
-| Variable             | Description                    | Exemple                              |
-| -------------------- | ------------------------------ | ------------------------------------ |
-| DATABASE_URL         | URL PostgreSQL (Supabase)      | postgresql://user:pass@host:5432/db  |
-| JWT_SECRET           | Secret JWT (min 32 caractères) | minimum-32-caracteres-random         |
-| ALLOWED_ORIGINS      | CORS origins                   | https://dashboard.example.com        |
+| Variable        | Description                    | Exemple                             |
+| --------------- | ------------------------------ | ----------------------------------- |
+| DATABASE_URL    | URL PostgreSQL (Supabase)      | postgresql://user:pass@host:5432/db |
+| JWT_SECRET      | Secret JWT (min 32 caractères) | minimum-32-caracteres-random        |
+| ALLOWED_ORIGINS | CORS origins                   | https://dashboard.example.com       |
 
 ### Base de données
 
-| Variable             | Description          | Exemple                 |
-| -------------------- | -------------------- | ----------------------- |
-| DATABASE_SSL         | SSL activé           | true                    |
-| DATABASE_SSL_CA      | Certificat SSL       | /path/to/cert.pem       |
+| Variable        | Description    | Exemple           |
+| --------------- | -------------- | ----------------- |
+| DATABASE_SSL    | SSL activé     | true              |
+| DATABASE_SSL_CA | Certificat SSL | /path/to/cert.pem |
 
 ### Stockage vidéos (FTP)
 
-| Variable             | Description          | Exemple                              |
-| -------------------- | -------------------- | ------------------------------------ |
-| FTP_HOST             | Hôte FTP             | ftp.example.com                      |
-| FTP_USER             | Utilisateur FTP      | xxx                                  |
-| FTP_PASSWORD         | Mot de passe FTP     | xxx                                  |
-| FTP_PUBLIC_URL       | URL publique des vidéos | https://cdn.example.com/videos    |
+| Variable       | Description             | Exemple                        |
+| -------------- | ----------------------- | ------------------------------ |
+| FTP_HOST       | Hôte FTP                | ftp.example.com                |
+| FTP_PORT       | Port FTP                | 21                             |
+| FTP_USER       | Utilisateur FTP         | xxx                            |
+| FTP_PASSWORD   | Mot de passe FTP        | xxx                            |
+| FTP_SECURE     | Connexion sécurisée     | false                          |
+| FTP_PUBLIC_URL | URL publique des vidéos | https://cdn.example.com/videos |
+
+### Stockage mises à jour logicielles (FTP séparé)
+
+| Variable              | Description              | Exemple                         |
+| --------------------- | ------------------------ | ------------------------------- |
+| FTP_UPDATE_HOST       | Hôte FTP pour updates    | ftp.example.com                 |
+| FTP_UPDATE_PORT       | Port FTP                 | 21                              |
+| FTP_UPDATE_USER       | Utilisateur FTP          | xxx                             |
+| FTP_UPDATE_PASSWORD   | Mot de passe FTP         | xxx                             |
+| FTP_UPDATE_SECURE     | Connexion sécurisée      | false                           |
+| FTP_UPDATE_PUBLIC_URL | URL publique des updates | https://cdn.example.com/updates |
 
 ### Stockage vidéos (Fallback Supabase)
 
@@ -421,23 +435,23 @@ src/
 
 ### Email (SMTP)
 
-| Variable             | Description          | Exemple                 |
-| -------------------- | -------------------- | ----------------------- |
-| SMTP_HOST            | Serveur SMTP         | smtp.gmail.com          |
-| SMTP_PORT            | Port SMTP            | 587                     |
-| SMTP_USER            | Utilisateur SMTP     | xxx                     |
-| SMTP_PASSWORD        | Mot de passe SMTP    | xxx                     |
+| Variable      | Description       | Exemple        |
+| ------------- | ----------------- | -------------- |
+| SMTP_HOST     | Serveur SMTP      | smtp.gmail.com |
+| SMTP_PORT     | Port SMTP         | 587            |
+| SMTP_USER     | Utilisateur SMTP  | xxx            |
+| SMTP_PASSWORD | Mot de passe SMTP | xxx            |
 
 ### Optionnel
 
-| Variable             | Description          | Exemple                 |
-| -------------------- | -------------------- | ----------------------- |
-| NODE_ENV             | Environnement        | production              |
-| PORT                 | Port serveur         | 3001                    |
-| LOG_LEVEL            | Niveau de log        | info                    |
-| LOGTAIL_TOKEN        | Token Logtail        | xxx                     |
-| SLACK_WEBHOOK_URL    | Webhook Slack        | https://hooks.slack...  |
-| REDIS_URL            | URL Redis (multi-instance) | redis://xxx       |
+| Variable          | Description                | Exemple                |
+| ----------------- | -------------------------- | ---------------------- |
+| NODE_ENV          | Environnement              | production             |
+| PORT              | Port serveur               | 3001                   |
+| LOG_LEVEL         | Niveau de log              | info                   |
+| LOGTAIL_TOKEN     | Token Logtail              | xxx                    |
+| SLACK_WEBHOOK_URL | Webhook Slack              | https://hooks.slack... |
+| REDIS_URL         | URL Redis (multi-instance) | redis://xxx            |
 
 ---
 
@@ -450,4 +464,4 @@ src/
 
 ---
 
-**Dernière mise à jour :** 6 janvier 2026
+**Dernière mise à jour :** 7 janvier 2026

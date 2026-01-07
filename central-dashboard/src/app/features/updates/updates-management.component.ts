@@ -277,6 +277,13 @@ interface UpdateDeployment {
               </div>
             </div>
 
+            <div class="deployment-info" *ngIf="deployment.status === 'pending' && deployment.error_message">
+              <div class="info-content">
+                <span class="info-icon">⏳</span>
+                <span class="info-text">{{ deployment.error_message }}</span>
+              </div>
+            </div>
+
             <div class="deployment-error" *ngIf="deployment.status === 'failed' && deployment.error_message">
               <div class="error-content">
                 <span class="error-icon">⚠️</span>
@@ -785,6 +792,31 @@ interface UpdateDeployment {
       color: #94a3b8;
       padding-top: 1rem;
       border-top: 1px solid #e2e8f0;
+    }
+
+    .deployment-info {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      margin-top: 0.75rem;
+    }
+
+    .deployment-info .info-content {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .deployment-info .info-icon {
+      flex-shrink: 0;
+    }
+
+    .deployment-info .info-text {
+      color: #1d4ed8;
+      font-size: 0.875rem;
+      line-height: 1.4;
+      word-break: break-word;
     }
 
     .deployment-error {

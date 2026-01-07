@@ -244,7 +244,57 @@ npm run deploy:raspberry neopro.local
 
 ### Mise à jour OTA (depuis le serveur central)
 
-**Prochainement :** Possibilité de pousser des mises à jour depuis le dashboard central.
+Le système de mises à jour logicielles permet de déployer de nouvelles versions sur les Raspberry Pi depuis le dashboard central.
+
+**Fonctionnement :**
+
+1. **Upload** : Créer une nouvelle version via `POST /api/updates` (package .tar.gz ou .zip)
+2. **Déploiement** : Lancer un déploiement via `POST /api/update-deployments`
+3. **Distribution** : Le serveur envoie la commande `update_software` aux sites connectés
+4. **Fallback** : Les sites déconnectés recevront la mise à jour à leur reconnexion
+
+**Endpoints API :**
+
+```
+GET    /api/updates                - Liste des versions disponibles
+POST   /api/updates                - Créer une version (multipart avec package)
+DELETE /api/updates/:id            - Supprimer une version
+
+GET    /api/update-deployments     - Historique des déploiements
+POST   /api/update-deployments     - Lancer un déploiement
+PUT    /api/update-deployments/:id - Mettre à jour statut
+DELETE /api/update-deployments/:id - Annuler un déploiement
+```
+
+**Variables d'environnement (FTP séparé pour les updates) :**
+
+```bash
+FTP_UPDATE_HOST=ftp.example.com
+FTP_UPDATE_PORT=21
+FTP_UPDATE_USER=xxx
+FTP_UPDATE_PASSWORD=xxx
+FTP_UPDATE_SECURE=false
+FTP_UPDATE_PUBLIC_URL=https://cdn.example.com/updates
+```
+
+**Commande Socket.IO (Serveur → Pi) :**
+
+```javascript
+socket.on('update_software', (data) => {
+  // data: { deploymentId, updateId, version, updateUrl, checksum, isCritical, ... }
+});
+```
+
+**Progression (Pi → Serveur) :**
+
+```javascript
+socket.emit('update_progress', {
+  deploymentId: 'uuid',
+  progress: 50,
+  completed: false,
+  error: null,
+});
+```
 
 ---
 
