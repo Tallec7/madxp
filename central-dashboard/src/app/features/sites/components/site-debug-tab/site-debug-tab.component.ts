@@ -737,9 +737,10 @@ export class SiteDebugTabComponent implements OnInit {
     this.restoringVersion = item.id;
 
     // Déployer directement la configuration restaurée via la commande update_config
+    // Mode 'replace' car on veut restaurer la configuration exactement comme elle était
     this.sitesService.sendCommand(this.siteId, 'update_config', {
       configuration: item.configuration,
-      mode: 'merge'
+      mode: 'replace'
     }).subscribe({
       next: () => {
         this.restoringVersion = null;
