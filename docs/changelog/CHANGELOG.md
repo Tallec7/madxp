@@ -1,3 +1,9 @@
+# [2.5.0](https://github.com/Tallec7/neopro/compare/v2.4.0...v2.5.0) (2026-01-07)
+
+### Features
+
+- **dashboard:** improve config diff display with human-readable labels ([ed886cd](https://github.com/Tallec7/neopro/commit/ed886cdeb7d0aebe0fc16b5e1f11a5402b0c338a))
+
 # [2.4.0](https://github.com/Tallec7/neopro/compare/v2.3.5...v2.4.0) (2026-01-07)
 
 ### Features
