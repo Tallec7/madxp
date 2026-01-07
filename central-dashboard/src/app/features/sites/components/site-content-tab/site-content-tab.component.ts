@@ -25,6 +25,18 @@ interface SponsorVideo {
   locked?: boolean;
 }
 
+/**
+ * Interface pour les items de diff avec labels lisibles
+ */
+interface HumanReadableDiff {
+  label: string;           // Ex: "Catégorie MATCH > Sous-cat BUTS > vidéo 2"
+  type: 'added' | 'removed' | 'changed';
+  summary: string;         // Ex: "Vidéo changée: JOUEUR_95.mp4 → VICTOIRE.mp4"
+  oldValue?: unknown;
+  newValue?: unknown;
+  isInternal?: boolean;    // owner, locked - à filtrer
+}
+
 @Component({
   selector: 'app-site-content-tab',
   standalone: true,
@@ -479,46 +491,35 @@ interface SponsorVideo {
               <div class="spinner-small"></div>
               <span>Calcul des différences...</span>
             </div>
-            <div *ngIf="!diffLoading && diffItems.length === 0" class="no-changes">
+            <div *ngIf="!diffLoading && humanReadableDiff.length === 0" class="no-changes">
               Aucun changement détecté par rapport à la configuration actuelle
             </div>
-            <div *ngIf="!diffLoading && diffItems.length > 0" class="diff-list">
+            <div *ngIf="!diffLoading && humanReadableDiff.length > 0" class="diff-list">
               <div class="diff-summary">
-                <div class="diff-total">{{ diffItems.length }} changement(s) détecté(s)</div>
-                <div class="diff-pill added">+ {{ diffCounts.added }}</div>
-                <div class="diff-pill changed">~ {{ diffCounts.changed }}</div>
-                <div class="diff-pill removed">- {{ diffCounts.removed }}</div>
+                <div class="diff-total">{{ humanReadableDiff.length }} changement(s)</div>
+                <div class="diff-pill added" *ngIf="diffCounts.added > 0">+ {{ diffCounts.added }} ajout(s)</div>
+                <div class="diff-pill changed" *ngIf="diffCounts.changed > 0">~ {{ diffCounts.changed }} modif(s)</div>
+                <div class="diff-pill removed" *ngIf="diffCounts.removed > 0">- {{ diffCounts.removed }} suppression(s)</div>
               </div>
-              <div class="diff-item" *ngFor="let diff of diffItems" [class]="'diff-' + diff.type">
-                <div class="diff-head">
-                  <div class="diff-field">{{ diff.path }}</div>
-                  <div class="diff-type">
-                    <span *ngIf="diff.type === 'added'" class="badge badge-success">Ajouté</span>
-                    <span *ngIf="diff.type === 'removed'" class="badge badge-danger">Supprimé</span>
-                    <span *ngIf="diff.type === 'changed'" class="badge badge-warning">Modifié</span>
-                  </div>
-                </div>
 
-                <div class="diff-values" *ngIf="diff.type === 'changed'">
-                  <div class="diff-old">
-                    <span class="diff-label">Avant:</span>
-                    <pre class="diff-json">{{ formatJson(diff.oldValue) }}</pre>
-                  </div>
-                  <div class="diff-new">
-                    <span class="diff-label">Après:</span>
-                    <pre class="diff-json">{{ formatJson(diff.newValue) }}</pre>
-                  </div>
+              <!-- Affichage groupé par section -->
+              <div class="diff-section" *ngFor="let group of groupedDiff">
+                <div class="diff-section-header">
+                  <span class="diff-section-icon">{{ group.icon }}</span>
+                  <span class="diff-section-title">{{ group.section }}</span>
+                  <span class="diff-section-count">{{ group.items.length }}</span>
                 </div>
-                <div class="diff-values" *ngIf="diff.type === 'added'">
-                  <div class="diff-new">
-                    <span class="diff-label">Valeur:</span>
-                    <pre class="diff-json">{{ formatJson(diff.newValue) }}</pre>
-                  </div>
-                </div>
-                <div class="diff-values" *ngIf="diff.type === 'removed'">
-                  <div class="diff-old">
-                    <span class="diff-label">Valeur:</span>
-                    <pre class="diff-json">{{ formatJson(diff.oldValue) }}</pre>
+                <div class="diff-section-items">
+                  <div class="diff-item-compact" *ngFor="let diff of group.items" [class]="'diff-' + diff.type">
+                    <div class="diff-badge-icon">
+                      <span *ngIf="diff.type === 'added'" class="badge-icon added">+</span>
+                      <span *ngIf="diff.type === 'removed'" class="badge-icon removed">−</span>
+                      <span *ngIf="diff.type === 'changed'" class="badge-icon changed">~</span>
+                    </div>
+                    <div class="diff-item-content">
+                      <div class="diff-item-label">{{ diff.label }}</div>
+                      <div class="diff-item-summary">{{ diff.summary }}</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1623,6 +1624,125 @@ interface SponsorVideo {
       max-height: 150px;
       overflow-y: auto;
     }
+
+    /* New grouped diff styles */
+    .diff-section {
+      margin-bottom: 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .diff-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .diff-section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .diff-section-icon {
+      font-size: 1rem;
+    }
+
+    .diff-section-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #1e293b;
+      flex: 1;
+    }
+
+    .diff-section-count {
+      background: #e2e8f0;
+      color: #475569;
+      padding: 0.125rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .diff-section-items {
+      padding: 0.5rem;
+    }
+
+    .diff-item-compact {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      margin-bottom: 0.25rem;
+    }
+
+    .diff-item-compact:last-child {
+      margin-bottom: 0;
+    }
+
+    .diff-item-compact.diff-added {
+      background: #f0fdf4;
+    }
+
+    .diff-item-compact.diff-removed {
+      background: #fef2f2;
+    }
+
+    .diff-item-compact.diff-changed {
+      background: #fffbeb;
+    }
+
+    .diff-badge-icon {
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .badge-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      font-weight: 700;
+    }
+
+    .badge-icon.added {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-icon.removed {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .badge-icon.changed {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .diff-item-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .diff-item-label {
+      font-size: 0.8125rem;
+      color: #1e293b;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    .diff-item-summary {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 0.125rem;
+    }
   `]
 })
 export class SiteContentTabComponent implements OnInit, OnChanges {
@@ -1645,7 +1765,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
   // Diff modal
   showDiffModal: boolean = false;
   diffLoading: boolean = false;
-  diffItems: ConfigDiff[] = [];
+  rawDiffItems: ConfigDiff[] = [];
   deployMode: 'merge' | 'replace' = 'merge';
 
   // Cached computed values for template
@@ -1653,14 +1773,266 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
   cachedVideosByCategory: Map<string, LocalVideo[]> = new Map();
   cachedTimeCategories: { id: string; name: string; icon: string; description: string }[] = [];
 
+  /**
+   * Propriétés internes à masquer dans le diff (ajoutées automatiquement)
+   */
+  private readonly INTERNAL_PROPERTIES = ['owner', 'locked', 'type'];
+
+  /**
+   * Transforme les diff items bruts en version lisible et filtre les propriétés internes
+   */
+  get humanReadableDiff(): HumanReadableDiff[] {
+    return this.rawDiffItems
+      .map(item => this.transformDiffItem(item))
+      .filter(item => !item.isInternal);
+  }
+
   get diffCounts() {
-    return this.diffItems.reduce(
+    return this.humanReadableDiff.reduce(
       (acc, item) => {
         acc[item.type]++;
         return acc;
       },
       { added: 0, changed: 0, removed: 0 }
     );
+  }
+
+  /**
+   * Groupe les changements par section pour un affichage plus clair
+   */
+  get groupedDiff(): { section: string; icon: string; items: HumanReadableDiff[] }[] {
+    const groups: Map<string, { icon: string; items: HumanReadableDiff[] }> = new Map();
+
+    for (const item of this.humanReadableDiff) {
+      const section = this.getSectionFromLabel(item.label);
+      if (!groups.has(section.name)) {
+        groups.set(section.name, { icon: section.icon, items: [] });
+      }
+      groups.get(section.name)!.items.push(item);
+    }
+
+    return Array.from(groups.entries()).map(([section, data]) => ({
+      section,
+      icon: data.icon,
+      items: data.items
+    }));
+  }
+
+  /**
+   * Transforme un item de diff technique en version lisible
+   */
+  private transformDiffItem(item: ConfigDiff): HumanReadableDiff {
+    const path = item.path;
+    const lastSegment = path.split('.').pop() || '';
+
+    // Détecter si c'est une propriété interne
+    if (this.INTERNAL_PROPERTIES.includes(lastSegment)) {
+      return {
+        label: '',
+        type: item.type,
+        summary: '',
+        isInternal: true
+      };
+    }
+
+    const label = this.pathToHumanLabel(path);
+    const summary = this.generateSummary(item);
+
+    return {
+      label,
+      type: item.type,
+      summary,
+      oldValue: item.oldValue,
+      newValue: item.newValue,
+      isInternal: false
+    };
+  }
+
+  /**
+   * Convertit un chemin technique en label lisible
+   * Ex: "categories[category-123].subCategories[subcat-456].videos" → "Catégorie X > Sous-cat Y > Vidéos"
+   */
+  private pathToHumanLabel(path: string): string {
+    const parts = path.split('.');
+    const labels: string[] = [];
+
+    for (const part of parts) {
+
+      // sponsors[0].name
+      if (part === 'sponsors' || part.startsWith('sponsors[')) {
+        const match = part.match(/sponsors\[(\d+)\]/);
+        if (match) {
+          const idx = parseInt(match[1]);
+          const sponsor = this.config.sponsors?.[idx];
+          labels.push(`Boucle par défaut > ${sponsor?.name || `Vidéo ${idx + 1}`}`);
+        } else {
+          labels.push('Boucle par défaut');
+        }
+        continue;
+      }
+
+      // categories[category-xxx]
+      if (part.startsWith('categories[')) {
+        const idMatch = part.match(/categories\[([^\]]+)\]/);
+        if (idMatch) {
+          const catId = idMatch[1];
+          const cat = this.config.categories?.find(c => c.id === catId);
+          labels.push(`Catégorie "${cat?.name || 'Sans nom'}"`);
+        }
+        continue;
+      }
+
+      // subCategories[subcat-xxx]
+      if (part.startsWith('subCategories[')) {
+        const idMatch = part.match(/subCategories\[([^\]]+)\]/);
+        if (idMatch) {
+          const subId = idMatch[1];
+          // Trouver la sous-catégorie
+          for (const cat of this.config.categories || []) {
+            const sub = cat.subCategories?.find(s => s.id === subId);
+            if (sub) {
+              labels.push(`Sous-catégorie "${sub.name || 'Sans nom'}"`);
+              break;
+            }
+          }
+        }
+        continue;
+      }
+
+      // timeCategories[before/during/after]
+      if (part.startsWith('timeCategories[')) {
+        const idMatch = part.match(/timeCategories\[([^\]]+)\]/);
+        if (idMatch) {
+          const tcId = idMatch[1];
+          const tc = this.cachedTimeCategories.find(t => t.id === tcId);
+          labels.push(`Phase "${tc?.name || tcId}"`);
+        }
+        continue;
+      }
+
+      // categoryMappings
+      if (part === 'categoryMappings') {
+        labels.push('Mapping Analytics');
+        continue;
+      }
+
+      // videos[0], loopVideos[0]
+      if (part === 'videos' || part === 'loopVideos') {
+        labels.push('Vidéos');
+        continue;
+      }
+      if (part.startsWith('videos[') || part.startsWith('loopVideos[')) {
+        const match = part.match(/\[(\d+)\]/);
+        if (match) {
+          labels.push(`Vidéo ${parseInt(match[1]) + 1}`);
+        }
+        continue;
+      }
+
+      // Propriétés de vidéo
+      if (part === 'name') {
+        labels.push('Nom');
+        continue;
+      }
+      if (part === 'path') {
+        labels.push('Fichier');
+        continue;
+      }
+
+      // categoryIds
+      if (part === 'categoryIds') {
+        labels.push('Catégories assignées');
+        continue;
+      }
+
+      // Fallback
+      labels.push(part);
+    }
+
+    return labels.join(' > ');
+  }
+
+  /**
+   * Génère un résumé lisible du changement
+   */
+  private generateSummary(item: ConfigDiff): string {
+    const lastSegment = item.path.split('.').pop() || '';
+
+    if (item.type === 'added') {
+      if (typeof item.newValue === 'object' && item.newValue !== null) {
+        const obj = item.newValue as Record<string, unknown>;
+        if ('name' in obj && 'path' in obj) {
+          return `Ajouté: ${obj['name'] || this.extractFilename(obj['path'] as string)}`;
+        }
+        if ('name' in obj) {
+          return `Ajouté: "${obj['name']}"`;
+        }
+      }
+      return `Ajouté`;
+    }
+
+    if (item.type === 'removed') {
+      if (typeof item.oldValue === 'object' && item.oldValue !== null) {
+        const obj = item.oldValue as Record<string, unknown>;
+        if ('name' in obj && 'path' in obj) {
+          return `Supprimé: ${obj['name'] || this.extractFilename(obj['path'] as string)}`;
+        }
+        if ('name' in obj) {
+          return `Supprimé: "${obj['name']}"`;
+        }
+      }
+      return `Supprimé`;
+    }
+
+    // changed
+    if (lastSegment === 'path') {
+      const oldFile = this.extractFilename(item.oldValue as string);
+      const newFile = this.extractFilename(item.newValue as string);
+      return `Fichier: ${oldFile} → ${newFile}`;
+    }
+    if (lastSegment === 'name') {
+      return `Nom: "${item.oldValue}" → "${item.newValue}"`;
+    }
+
+    // Changement d'array (ex: categoryIds)
+    if (Array.isArray(item.oldValue) && Array.isArray(item.newValue)) {
+      const added = (item.newValue as string[]).filter(id => !(item.oldValue as string[]).includes(id));
+      const removed = (item.oldValue as string[]).filter(id => !(item.newValue as string[]).includes(id));
+      const parts: string[] = [];
+      if (added.length) parts.push(`+${added.length}`);
+      if (removed.length) parts.push(`-${removed.length}`);
+      return parts.length ? parts.join(', ') : 'Modifié';
+    }
+
+    return `Modifié`;
+  }
+
+  /**
+   * Extrait le nom du fichier d'un chemin
+   */
+  private extractFilename(path: string): string {
+    if (!path) return '(vide)';
+    const parts = path.split('/');
+    return parts[parts.length - 1] || path;
+  }
+
+  /**
+   * Détermine la section à partir du label
+   */
+  private getSectionFromLabel(label: string): { name: string; icon: string } {
+    if (label.startsWith('Boucle par défaut')) {
+      return { name: 'Boucle par défaut', icon: '🔄' };
+    }
+    if (label.startsWith('Catégorie') || label.startsWith('Sous-catégorie')) {
+      return { name: 'Catégories', icon: '📁' };
+    }
+    if (label.startsWith('Phase')) {
+      return { name: 'Phases de match', icon: '🎬' };
+    }
+    if (label.startsWith('Mapping')) {
+      return { name: 'Analytics', icon: '📊' };
+    }
+    return { name: 'Autre', icon: '📝' };
   }
 
   /**
@@ -2163,18 +2535,18 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
   previewDeploy(): void {
     this.showDiffModal = true;
     this.diffLoading = true;
-    this.diffItems = [];
+    this.rawDiffItems = [];
     this.cdr.markForCheck();
 
     this.sitesService.previewConfigDiff(this.siteId, this.config).subscribe({
       next: (response) => {
-        this.diffItems = response.diff || [];
+        this.rawDiffItems = response.diff || [];
         this.diffLoading = false;
         this.cdr.markForCheck();
       },
       error: () => {
         // Si pas d'historique ou erreur, on peut quand même déployer
-        this.diffItems = [];
+        this.rawDiffItems = [];
         this.diffLoading = false;
         this.cdr.markForCheck();
       }
