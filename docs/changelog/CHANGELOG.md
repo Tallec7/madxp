@@ -1,3 +1,9 @@
+## [2.7.2](https://github.com/Tallec7/neopro/compare/v2.7.1...v2.7.2) (2026-01-07)
+
+### Bug Fixes
+
+- **updates:** add debug logging and endpoint for Socket.IO connection state ([b0962c0](https://github.com/Tallec7/neopro/commit/b0962c092c4e30d6e8e4d643d2602d3ec2fa7006))
+
 ## [2.7.1](https://github.com/Tallec7/neopro/compare/v2.7.0...v2.7.1) (2026-01-07)
 
 ### Bug Fixes
