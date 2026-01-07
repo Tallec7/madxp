@@ -63,6 +63,9 @@ export class LoggerService {
   private breadcrumbs: Breadcrumb[] = [];
   private readonly MAX_BREADCRUMBS = 50;
 
+  // Track if user is authenticated to avoid sending logs before login
+  private isAuthenticated = false;
+
   // Console colors for dev mode
   private readonly colors = {
     debug: '#9E9E9E',
@@ -130,6 +133,14 @@ export class LoggerService {
     this.breadcrumbs = [];
   }
 
+  /**
+   * Set authentication state - called by AuthService
+   * When authenticated, logs will be sent to backend in production
+   */
+  setAuthenticated(authenticated: boolean): void {
+    this.isAuthenticated = authenticated;
+  }
+
   // ========== Private Methods ==========
 
   private log(
@@ -156,7 +167,8 @@ export class LoggerService {
     this.logToConsole(entry);
 
     // Send to backend in production (or dev if explicitly enabled)
-    if (environment.production || (context?.['sendToBackend'] === true)) {
+    // Only send if user is authenticated to avoid 401 errors on login page
+    if ((environment.production || context?.['sendToBackend'] === true) && this.isAuthenticated) {
       this.sendToBackend(entry);
     }
   }

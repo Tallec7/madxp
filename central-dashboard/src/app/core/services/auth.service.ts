@@ -55,6 +55,8 @@ export class AuthService {
         this.currentUserSubject.next(response);
         this.authChecked = true;
         this.authCheckInProgress = false;
+        // Enable backend logging now that user is authenticated
+        this.logger.setAuthenticated(true);
         // Démarrer la vérification périodique si ce n'est pas déjà fait
         this.startPeriodicAuthCheck();
       },
@@ -62,6 +64,8 @@ export class AuthService {
         this.currentUserSubject.next(null);
         this.authChecked = true;
         this.authCheckInProgress = false;
+        // Disable backend logging when not authenticated
+        this.logger.setAuthenticated(false);
         // Arrêter la vérification périodique si déconnecté
         this.stopPeriodicAuthCheck();
       }
@@ -113,6 +117,8 @@ export class AuthService {
     this.currentUserSubject.next(null);
     this.sseToken = null;
     this.stopPeriodicAuthCheck();
+    // Disable backend logging when session expires
+    this.logger.setAuthenticated(false);
 
     // Rediriger vers login seulement si pas déjà sur la page login
     const currentUrl = this.router.url;
@@ -133,6 +139,8 @@ export class AuthService {
           this.currentUserSubject.next(response.user);
           // Marquer comme vérifié pour éviter une re-vérification inutile
           this.authChecked = true;
+          // Enable backend logging now that user is authenticated
+          this.logger.setAuthenticated(true);
           // Démarrer la vérification périodique après login réussi
           this.startPeriodicAuthCheck();
         }
@@ -159,6 +167,10 @@ export class AuthService {
   logout(): void {
     // Arrêter la vérification périodique
     this.stopPeriodicAuthCheck();
+    // Disable backend logging before logout
+    this.logger.setAuthenticated(false);
+    // Clear breadcrumbs on logout
+    this.logger.clearBreadcrumbs();
 
     this.api.post('/auth/logout', {}).subscribe({
       next: () => {
@@ -220,6 +232,8 @@ export class AuthService {
         this.currentUserSubject.next(response);
         this.authChecked = true;
         this.authCheckInProgress = false;
+        // Enable backend logging now that user is authenticated
+        this.logger.setAuthenticated(true);
         // Démarrer la vérification périodique après refresh réussi
         this.startPeriodicAuthCheck();
         return true;
@@ -230,6 +244,8 @@ export class AuthService {
         this.sseToken = null;
         this.authChecked = true;
         this.authCheckInProgress = false;
+        // Disable backend logging when not authenticated
+        this.logger.setAuthenticated(false);
         this.stopPeriodicAuthCheck();
         return of(false);
       })
