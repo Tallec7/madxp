@@ -1,3 +1,9 @@
+# [2.4.0](https://github.com/Tallec7/neopro/compare/v2.3.5...v2.4.0) (2026-01-07)
+
+### Features
+
+- **dashboard:** restore missing features from config editor refactoring ([97ceb1c](https://github.com/Tallec7/neopro/commit/97ceb1c7e00d565e20deef97b7bbbd882fbd042c))
+
 ## [2.3.5](https://github.com/Tallec7/neopro/compare/v2.3.4...v2.3.5) (2026-01-07)
 
 ### Bug Fixes
