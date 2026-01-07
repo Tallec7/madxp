@@ -725,15 +725,35 @@ export class SiteDebugTabComponent implements OnInit {
   }
 
   restoreVersion(item: ConfigHistory): void {
-    if (!confirm(`Restaurer la configuration du ${new Date(item.deployed_at).toLocaleString()} ?\n\nCela remplacera la configuration actuelle.`)) {
+    if (!item.configuration) {
+      this.notificationService.error('Configuration non disponible pour cette version');
+      return;
+    }
+
+    if (!confirm(`Restaurer et déployer la configuration du ${new Date(item.deployed_at).toLocaleString()} ?\n\nCela va remplacer la configuration actuelle sur le boîtier.`)) {
       return;
     }
 
     this.restoringVersion = item.id;
 
-    // Émettre la configuration restaurée vers le parent pour déploiement
-    this.configRestored.emit(item.configuration);
-    this.notificationService.success('Configuration restaurée. Cliquez sur "Déployer" dans l\'onglet Contenu pour appliquer.');
-    this.restoringVersion = null;
+    // Déployer directement la configuration restaurée via la commande update_config
+    this.sitesService.sendCommand(this.siteId, 'update_config', {
+      configuration: item.configuration,
+      mode: 'merge'
+    }).subscribe({
+      next: () => {
+        this.restoringVersion = null;
+        this.notificationService.success('Configuration restaurée et déployée avec succès !');
+        this.configRestored.emit(item.configuration);
+        // Recharger les infos de debug pour refléter la nouvelle config
+        this.loadDebugInfo();
+      },
+      error: (error) => {
+        this.restoringVersion = null;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur lors de la restauration: ${message}`);
+        this.logger.error('Failed to restore config version', { error: message, siteId: this.siteId, versionId: item.id });
+      }
+    });
   }
 }

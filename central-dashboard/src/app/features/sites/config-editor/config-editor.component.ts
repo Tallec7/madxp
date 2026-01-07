@@ -2957,6 +2957,11 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   }
 
   restoreVersion(item: ConfigHistory): void {
+    if (!item.configuration) {
+      this.notificationService.error('Configuration non disponible pour cette version');
+      return;
+    }
+
     if (confirm(`Restaurer la configuration du ${new Date(item.deployed_at).toLocaleString()} ?`)) {
       this.setConfig(item.configuration);
       this.hasChanges = true;
