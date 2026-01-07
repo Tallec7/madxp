@@ -1,3 +1,9 @@
+## [2.3.1](https://github.com/Tallec7/neopro/compare/v2.3.0...v2.3.1) (2026-01-07)
+
+### Bug Fixes
+
+- **logs:** prevent infinite loop on frontend log rate limiting ([3f326e8](https://github.com/Tallec7/neopro/commit/3f326e840849ac90b22b145e9c9c06633293ebcb))
+
 # [2.3.0](https://github.com/Tallec7/neopro/compare/v2.2.0...v2.3.0) (2026-01-06)
 
 ### Features
