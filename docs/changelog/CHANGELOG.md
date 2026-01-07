@@ -1,3 +1,9 @@
+## [2.7.3](https://github.com/Tallec7/neopro/compare/v2.7.2...v2.7.3) (2026-01-07)
+
+### Bug Fixes
+
+- **updates:** use commandQueueService for update deployments like update_config ([4832e4f](https://github.com/Tallec7/neopro/commit/4832e4f931165537dd5986428a947bbd4035fd25))
+
 ## [2.7.2](https://github.com/Tallec7/neopro/compare/v2.7.1...v2.7.2) (2026-01-07)
 
 ### Bug Fixes
