@@ -79,10 +79,14 @@ const commands = {
 
       let finalConfig;
 
-      if (data.mode === 'replace' && data.configuration) {
-        // Mode legacy : remplacement complet (pour rétrocompatibilité)
-        logger.warn('Using legacy replace mode - local changes may be lost');
-        finalConfig = data.configuration;
+      if (data.mode === 'replace') {
+        // Mode replace : remplacement complet de la configuration
+        const configToReplace = data.configuration || data.neoProContent;
+        if (!configToReplace) {
+          throw new Error('Missing configuration or neoProContent for replace mode');
+        }
+        logger.info('Using replace mode - replacing entire configuration');
+        finalConfig = configToReplace;
       } else if (data.neoProContent) {
         // Mode merge : fusionner le contenu NEOPRO avec la config locale
         const hashBefore = calculateConfigHash(localConfig);
