@@ -1,6 +1,7 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, OnDestroy, SimpleChanges, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { interval, Subscription } from 'rxjs';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
@@ -44,6 +45,27 @@ interface HumanReadableDiff {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="content-tab">
+      <!-- Header avec actions globales -->
+      <div class="content-header">
+        <div class="header-info">
+          <span class="sync-status" *ngIf="lastSyncTime">
+            Dernière sync: {{ lastSyncTime | date:'short' }}
+          </span>
+        </div>
+        <div class="header-actions">
+          <button
+            class="btn btn-sm btn-outline"
+            (click)="refreshFromPi()"
+            [disabled]="!isConnected || refreshingFromPi"
+            [title]="isConnected ? 'Récupérer la configuration actuelle du Pi' : 'Le Pi doit être connecté'"
+          >
+            <span *ngIf="refreshingFromPi">⏳</span>
+            <span *ngIf="!refreshingFromPi">🔄</span>
+            {{ refreshingFromPi ? 'Synchronisation...' : 'Rafraîchir depuis le Pi' }}
+          </button>
+        </div>
+      </div>
+
       <!-- Bibliothèque Vidéo -->
       <div class="section">
         <app-video-library
@@ -565,6 +587,48 @@ interface HumanReadableDiff {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
+    }
+
+    .content-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .header-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .sync-status {
+      font-size: 0.8125rem;
+      color: #64748b;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-outline {
+      background: white;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+    }
+
+    .btn-outline:hover:not(:disabled) {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    .btn-outline:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
     .section {
@@ -1835,7 +1899,7 @@ interface HumanReadableDiff {
     }
   `]
 })
-export class SiteContentTabComponent implements OnInit, OnChanges {
+export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   @Input() siteId!: string;
   @Input() isConnected: boolean = false;
   @Output() configDeployed = new EventEmitter<void>();
@@ -1851,6 +1915,12 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
   loading: boolean = false;
 
   private originalConfig: string = '';
+
+  // Refresh from Pi
+  refreshingFromPi: boolean = false;
+  lastSyncTime: Date | null = null;
+  private refreshCommandId: string | null = null;
+  private refreshPollSubscription: Subscription | null = null;
 
   // Diff modal
   showDiffModal: boolean = false;
@@ -2228,6 +2298,114 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
     if (changes['siteId'] && !changes['siteId'].firstChange) {
       this.loadContent();
     }
+  }
+
+  ngOnDestroy(): void {
+    this.refreshPollSubscription?.unsubscribe();
+  }
+
+  /**
+   * Rafraîchit la configuration depuis le Pi connecté
+   * Envoie une commande get_config et poll le résultat
+   */
+  refreshFromPi(): void {
+    if (!this.isConnected || this.refreshingFromPi) {
+      return;
+    }
+
+    this.refreshingFromPi = true;
+    this.cdr.markForCheck();
+
+    // Timeout global de 30 secondes
+    const timeoutId = setTimeout(() => {
+      if (this.refreshingFromPi) {
+        this.refreshPollSubscription?.unsubscribe();
+        this.refreshingFromPi = false;
+        this.notificationService.warning('Le Pi ne répond pas. Essayez à nouveau.');
+        this.cdr.markForCheck();
+      }
+    }, 30000);
+
+    this.sitesService.getConfiguration(this.siteId).subscribe({
+      next: (response) => {
+        if (response.commandId) {
+          this.refreshCommandId = response.commandId;
+          this.pollRefreshResult(timeoutId);
+        } else {
+          clearTimeout(timeoutId);
+          this.refreshingFromPi = false;
+          this.notificationService.warning('Impossible d\'envoyer la commande au Pi.');
+          this.cdr.markForCheck();
+        }
+      },
+      error: (error) => {
+        clearTimeout(timeoutId);
+        this.refreshingFromPi = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  /**
+   * Poll le résultat de la commande get_config
+   */
+  private pollRefreshResult(timeoutId: ReturnType<typeof setTimeout>): void {
+    if (!this.refreshCommandId) {
+      return;
+    }
+
+    let pollCount = 0;
+    const POLL_MAX = 30;
+
+    this.refreshPollSubscription = interval(1000).subscribe(() => {
+      pollCount++;
+
+      if (pollCount > POLL_MAX) {
+        clearTimeout(timeoutId);
+        this.refreshPollSubscription?.unsubscribe();
+        this.refreshingFromPi = false;
+        this.notificationService.warning('Timeout: le Pi ne répond pas.');
+        this.cdr.markForCheck();
+        return;
+      }
+
+      this.sitesService.getCommandStatus(this.siteId, this.refreshCommandId!).subscribe({
+        next: (status) => {
+          if (status.status === 'completed') {
+            clearTimeout(timeoutId);
+            this.refreshPollSubscription?.unsubscribe();
+            this.refreshingFromPi = false;
+
+            if (status.result?.configuration) {
+              // Mettre à jour la config avec celle du Pi
+              this.config = this.normalizeConfig(status.result.configuration);
+              this.originalConfig = JSON.stringify(this.config);
+              this.isDirty = false;
+              this.lastSyncTime = new Date();
+              this.expandedCategories = (this.config.categories || []).map(() => false);
+              this.rebuildVideoCache();
+              this.rebuildTimeCategoriesCache();
+              this.notificationService.success('Configuration synchronisée depuis le Pi');
+            } else {
+              this.notificationService.info('Aucune configuration sur le Pi.');
+            }
+            this.cdr.markForCheck();
+          } else if (status.status === 'failed') {
+            clearTimeout(timeoutId);
+            this.refreshPollSubscription?.unsubscribe();
+            this.refreshingFromPi = false;
+            this.notificationService.error(`Erreur: ${status.error_message || 'Commande échouée'}`);
+            this.cdr.markForCheck();
+          }
+          // Si status === 'pending', on continue à poller
+        },
+        error: () => {
+          // Ignorer les erreurs de polling, on réessaie
+        }
+      });
+    });
   }
 
   private loadContent(): void {
