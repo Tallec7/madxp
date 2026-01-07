@@ -1637,15 +1637,21 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
         videos: (c.videos || []).map((v: any) => ({
           name: v.name || '',
           path: v.path || '',
-          type: v.type || 'video/mp4'
+          type: v.type || 'video/mp4',
+          owner: v.owner || 'club',
+          locked: v.locked || false
         })),
         subCategories: (c.subCategories || []).map((sc: any) => ({
           id: sc.id || this.generateId(),
           name: sc.name || '',
+          owner: sc.owner || 'club',
+          locked: sc.locked || false,
           videos: (sc.videos || []).map((v: any) => ({
             name: v.name || '',
             path: v.path || '',
-            type: v.type || 'video/mp4'
+            type: v.type || 'video/mp4',
+            owner: v.owner || 'club',
+            locked: v.locked || false
           }))
         }))
       })),
@@ -1793,7 +1799,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
     const cat = this.config.categories?.[catIndex];
     if (!cat) return;
     if (!cat.videos) cat.videos = [];
-    cat.videos.push({ name: '', path: '', type: 'video/mp4' });
+    cat.videos.push({ name: '', path: '', type: 'video/mp4', owner: 'club', locked: false });
     this.markDirty();
   }
 
@@ -1819,7 +1825,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges {
     const subcat = this.config.categories?.[catIndex]?.subCategories?.[subIndex];
     if (!subcat) return;
     if (!subcat.videos) subcat.videos = [];
-    subcat.videos.push({ name: '', path: '', type: 'video/mp4' });
+    subcat.videos.push({ name: '', path: '', type: 'video/mp4', owner: 'club', locked: false });
     this.markDirty();
   }
 

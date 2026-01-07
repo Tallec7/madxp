@@ -178,63 +178,67 @@ function mergeSponsors(localSponsors, neoProSponsors) {
 /**
  * Fusionne les tableaux de catégories
  *
+ * Logique :
+ * - Catégories NEOPRO (locked=true) : contrôlées par le central
+ * - Catégories Club (locked=false) : le central peut les modifier via le dashboard
+ *
  * @param {Array} localCategories - Catégories locales
- * @param {Array} neoProCategories - Catégories NEOPRO
+ * @param {Array} centralCategories - Catégories envoyées par le central
  * @returns {Array} Catégories fusionnées
  */
-function mergeCategories(localCategories, neoProCategories) {
+function mergeCategories(localCategories, centralCategories) {
   const result = [];
   const processedIds = new Set();
 
-  // 1. Traiter les catégories NEOPRO (locked: true)
-  for (const neoCat of neoProCategories) {
-    if (neoCat.locked || neoCat.owner === 'neopro') {
+  // 1. Traiter les catégories du central
+  for (const centralCat of centralCategories) {
+    const localCat = localCategories.find((c) => c.id === centralCat.id);
+
+    if (centralCat.locked || centralCat.owner === 'neopro') {
       // Catégorie NEOPRO : utiliser la version du central
       result.push({
-        ...neoCat,
+        ...centralCat,
         locked: true,
         owner: 'neopro',
       });
-      processedIds.add(neoCat.id);
-      logger.debug(`[config-merge] Catégorie NEOPRO ajoutée/mise à jour: ${neoCat.id}`);
+      processedIds.add(centralCat.id);
+      logger.debug(`[config-merge] Catégorie NEOPRO ajoutée/mise à jour: ${centralCat.id}`);
+    } else {
+      // Catégorie Club envoyée par le central (modifiée via dashboard)
+      // Utiliser la version du central qui contient les modifications
+      result.push({
+        ...centralCat,
+        locked: false,
+        owner: centralCat.owner || 'club',
+      });
+      processedIds.add(centralCat.id);
+      if (localCat) {
+        logger.info(`[config-merge] Catégorie Club mise à jour depuis le central: ${centralCat.id} (${centralCat.name})`);
+      } else {
+        logger.debug(`[config-merge] Nouvelle catégorie Club ajoutée: ${centralCat.id}`);
+      }
     }
   }
 
-  // 2. Préserver les catégories Club (non verrouillées)
+  // 2. Préserver les catégories Club locales non présentes dans le central
   for (const localCat of localCategories) {
     if (processedIds.has(localCat.id)) {
-      // Cette catégorie a été traitée comme NEOPRO, skip
+      // Déjà traitée
       continue;
     }
 
     if (!localCat.locked && localCat.owner !== 'neopro') {
-      // Catégorie Club : préserver telle quelle
+      // Catégorie Club locale non envoyée par le central : préserver
       result.push({
         ...localCat,
         locked: false,
         owner: localCat.owner || 'club',
       });
-      logger.debug(`[config-merge] Catégorie Club préservée: ${localCat.id}`);
+      logger.debug(`[config-merge] Catégorie Club locale préservée: ${localCat.id}`);
     } else if (localCat.locked || localCat.owner === 'neopro') {
       // Ancienne catégorie NEOPRO qui n'est plus dans le nouveau contenu
       // → Ne pas la garder (elle a été supprimée côté central)
       logger.info(`[config-merge] Catégorie NEOPRO supprimée: ${localCat.id}`);
-    }
-  }
-
-  // 3. Ajouter les nouvelles catégories Club du central (si elles existent)
-  for (const neoCat of neoProCategories) {
-    if (!neoCat.locked && neoCat.owner !== 'neopro' && !processedIds.has(neoCat.id)) {
-      // Nouvelle catégorie Club suggérée par le central
-      const existingLocal = localCategories.find((c) => c.id === neoCat.id);
-      if (!existingLocal) {
-        result.push({
-          ...neoCat,
-          locked: false,
-          owner: 'club',
-        });
-        logger.debug(`[config-merge] Nouvelle catégorie Club ajoutée: ${neoCat.id}`);
-      }
     }
   }
 
