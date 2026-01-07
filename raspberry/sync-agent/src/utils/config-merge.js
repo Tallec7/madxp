@@ -62,14 +62,49 @@ function mergeConfigurations(localConfig, neoProContent) {
     logger.info(`[config-merge] scoreOverlay mis à jour: ${JSON.stringify(neoProContent.scoreOverlay)}`);
   }
 
+  // ========================================================================
+  // SPONSORS (Boucle par défaut)
+  // Fusion intelligente : les sponsors NEOPRO sont contrôlés par le central,
+  // les sponsors Club sont préservés
+  // ========================================================================
+  if (neoProContent.sponsors !== undefined) {
+    result.sponsors = mergeSponsors(
+      localConfig.sponsors || [],
+      neoProContent.sponsors || []
+    );
+    logger.info(`[config-merge] Sponsors fusionnés: ${result.sponsors.length} vidéos`);
+  }
+
+  // ========================================================================
+  // TIME CATEGORIES (Phases de match : avant/pendant/après)
+  // Remplacement complet car géré entièrement par le central
+  // ========================================================================
+  if (neoProContent.timeCategories !== undefined) {
+    result.timeCategories = neoProContent.timeCategories;
+    logger.info(`[config-merge] TimeCategories mis à jour: ${(neoProContent.timeCategories || []).length} phases`);
+  }
+
+  // ========================================================================
+  // CATEGORY MAPPINGS (Mapping analytics des catégories)
+  // Remplacement complet car géré entièrement par le central
+  // ========================================================================
+  if (neoProContent.categoryMappings !== undefined) {
+    result.categoryMappings = neoProContent.categoryMappings;
+    logger.info(`[config-merge] CategoryMappings mis à jour: ${Object.keys(neoProContent.categoryMappings || {}).length} mappings`);
+  }
+
   // Fusionner les catégories
-  result.categories = mergeCategories(
-    localConfig.categories || [],
-    neoProContent.categories || []
-  );
+  if (neoProContent.categories !== undefined) {
+    result.categories = mergeCategories(
+      localConfig.categories || [],
+      neoProContent.categories || []
+    );
+  }
 
   // Nettoyer les vidéos expirées
-  result.categories = cleanExpiredVideos(result.categories);
+  if (result.categories) {
+    result.categories = cleanExpiredVideos(result.categories);
+  }
 
   // ========================================================================
   // RESTAURATION DES PARAMÈTRES LOCAUX PROTÉGÉS
@@ -83,6 +118,60 @@ function mergeConfigurations(localConfig, neoProContent) {
   }
 
   logger.info('[config-merge] Configuration fusionnée avec succès');
+  return result;
+}
+
+/**
+ * Fusionne les sponsors (boucle par défaut)
+ * Les sponsors NEOPRO (locked/owner=neopro) sont contrôlés par le central
+ * Les sponsors Club sont préservés
+ *
+ * @param {Array} localSponsors - Sponsors locaux
+ * @param {Array} neoProSponsors - Sponsors du central
+ * @returns {Array} Sponsors fusionnés
+ */
+function mergeSponsors(localSponsors, neoProSponsors) {
+  const result = [];
+
+  // 1. Ajouter tous les sponsors NEOPRO du central
+  for (const sponsor of neoProSponsors) {
+    if (sponsor.locked || sponsor.owner === 'neopro') {
+      result.push({
+        ...sponsor,
+        locked: true,
+        owner: 'neopro',
+      });
+    }
+  }
+
+  // 2. Préserver les sponsors Club locaux
+  for (const sponsor of localSponsors) {
+    if (!sponsor.locked && sponsor.owner !== 'neopro') {
+      result.push({
+        ...sponsor,
+        locked: false,
+        owner: sponsor.owner || 'club',
+      });
+    }
+  }
+
+  // 3. Ajouter les nouveaux sponsors Club du central (non présents localement)
+  for (const sponsor of neoProSponsors) {
+    if (!sponsor.locked && sponsor.owner !== 'neopro') {
+      // Vérifier si ce sponsor existe déjà (par path ou nom)
+      const exists = result.some(
+        (s) => s.path === sponsor.path || (s.name === sponsor.name && s.name)
+      );
+      if (!exists) {
+        result.push({
+          ...sponsor,
+          locked: false,
+          owner: 'club',
+        });
+      }
+    }
+  }
+
   return result;
 }
 
@@ -258,6 +347,7 @@ function calculateConfigHash(config) {
 
 module.exports = {
   mergeConfigurations,
+  mergeSponsors,
   mergeCategories,
   cleanExpiredVideos,
   isLocked,

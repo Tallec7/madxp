@@ -322,7 +322,16 @@ export const compareConfigVersions = async (req: AuthRequest, res: Response) => 
 };
 
 /**
+ * Champs de configuration gérés par le dashboard central (NEOPRO)
+ * Seuls ces champs sont comparés lors du preview diff
+ * Les autres champs sont des paramètres locaux du Pi (préservés par le mode merge)
+ */
+const MANAGED_CONFIG_FIELDS = ['sponsors', 'categories', 'timeCategories', 'categoryMappings'];
+
+/**
  * Génère un diff entre la configuration actuelle du site et une nouvelle configuration
+ * Ne compare que les champs gérés par le dashboard (MANAGED_CONFIG_FIELDS)
+ * Les champs locaux (club, videos, features, authentication, settings, etc.) sont ignorés
  */
 export const previewConfigDiff = async (req: AuthRequest, res: Response) => {
   try {
@@ -333,25 +342,59 @@ export const previewConfigDiff = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Nouvelle configuration requise' });
     }
 
-    // Récupérer la dernière version
-    const lastVersionResult = await query(
-      `SELECT configuration FROM config_history
-       WHERE site_id = $1
-       ORDER BY deployed_at DESC
-       LIMIT 1`,
+    // Récupérer la configuration actuelle depuis local_config_mirror (plus fiable que config_history)
+    const siteResult = await query(
+      `SELECT local_config_mirror FROM sites WHERE id = $1`,
       [id]
     );
 
-    const lastVersionRow = lastVersionResult.rows[0] as { configuration: Record<string, unknown> } | undefined;
-    const currentConfig = lastVersionRow?.configuration || null;
-    const diff = computeConfigDiff(currentConfig, newConfiguration);
+    if (siteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    const localConfigMirror = siteResult.rows[0].local_config_mirror as Record<string, unknown> | null;
+
+    // Si pas de config locale, fallback sur config_history
+    let currentConfig: Record<string, unknown> | null = localConfigMirror;
+    if (!currentConfig) {
+      const lastVersionResult = await query(
+        `SELECT configuration FROM config_history
+         WHERE site_id = $1
+         ORDER BY deployed_at DESC
+         LIMIT 1`,
+        [id]
+      );
+      const lastVersionRow = lastVersionResult.rows[0] as { configuration: Record<string, unknown> } | undefined;
+      currentConfig = lastVersionRow?.configuration || null;
+    }
+
+    // Extraire uniquement les champs gérés des deux configs pour la comparaison
+    const extractManagedFields = (config: Record<string, unknown> | null): Record<string, unknown> => {
+      if (!config) return {};
+      const result: Record<string, unknown> = {};
+      for (const field of MANAGED_CONFIG_FIELDS) {
+        if (field in config) {
+          result[field] = config[field];
+        }
+      }
+      return result;
+    };
+
+    const currentManagedConfig = extractManagedFields(currentConfig);
+    const newManagedConfig = extractManagedFields(newConfiguration);
+
+    // Calculer le diff uniquement sur les champs gérés
+    const diff = computeConfigDiff(
+      Object.keys(currentManagedConfig).length > 0 ? currentManagedConfig : null,
+      newManagedConfig
+    );
 
     res.json({
       hasChanges: diff.length > 0,
       changesCount: diff.length,
       diff,
-      currentConfiguration: currentConfig,
-      newConfiguration,
+      currentConfiguration: currentManagedConfig,
+      newConfiguration: newManagedConfig,
     });
   } catch (error) {
     logger.error('Preview config diff error:', error);
