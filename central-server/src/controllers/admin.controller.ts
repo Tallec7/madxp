@@ -4,6 +4,8 @@ import { adminOpsService } from '../services/admin-ops.service';
 import { AdminActionRequest, LocalClientInput } from '../types/admin';
 import logger from '../config/logger';
 import { PassThrough } from 'stream';
+import socketService from '../services/socket.service';
+import { query } from '../config/database';
 
 export const listJobs = (_req: AuthRequest, res: Response) => {
   return res.json({ jobs: adminOpsService.listJobs() });
@@ -70,4 +72,62 @@ export const streamJobs = (req: AuthRequest, res: Response) => {
     unsubscribe();
     stream.end();
   });
+};
+
+/**
+ * Retourne l'état des connexions Socket.IO pour debug
+ * Permet de comparer les sites "connectés" en mémoire vs en base de données
+ */
+export const getSocketDebugInfo = async (_req: AuthRequest, res: Response) => {
+  try {
+    // État Socket.IO en mémoire
+    const socketInfo = socketService.getDebugInfo();
+
+    // Sites marqués "online" en DB
+    const dbResult = await query<{ id: string; site_name: string; status: string; last_seen_at: Date }>(
+      `SELECT id, site_name, status, last_seen_at
+       FROM sites
+       WHERE status = 'online'
+       ORDER BY last_seen_at DESC`
+    );
+
+    const dbOnlineSites = dbResult.rows;
+
+    // Comparer les deux sources
+    const socketConnectedSet = new Set(socketInfo.connectedSites);
+    const dbOnlineSet = new Set(dbOnlineSites.map(s => s.id));
+
+    // Sites dans Socket mais pas dans DB (rare)
+    const inSocketNotInDb = socketInfo.connectedSites.filter(id => !dbOnlineSet.has(id));
+
+    // Sites dans DB mais pas dans Socket (le problème probable)
+    const inDbNotInSocket = dbOnlineSites.filter(s => !socketConnectedSet.has(s.id));
+
+    return res.json({
+      socketState: {
+        connectedSites: socketInfo.connectedSites,
+        connectedCount: socketInfo.connectedSites.length,
+        pendingCommandsCount: socketInfo.pendingCommandsCount,
+        lastPongReceived: socketInfo.lastPongReceived,
+        isRedisConnected: socketService.isRedisConnected(),
+      },
+      databaseState: {
+        onlineSites: dbOnlineSites,
+        onlineCount: dbOnlineSites.length,
+      },
+      comparison: {
+        inSocketNotInDb,
+        inDbNotInSocket: inDbNotInSocket.map(s => ({
+          id: s.id,
+          siteName: s.site_name,
+          lastSeenAt: s.last_seen_at,
+          ageMs: Date.now() - new Date(s.last_seen_at).getTime(),
+        })),
+        synchronized: inSocketNotInDb.length === 0 && inDbNotInSocket.length === 0,
+      },
+    });
+  } catch (error) {
+    logger.error('Error getting socket debug info:', error);
+    return res.status(500).json({ error: 'Failed to get socket debug info' });
+  }
 };

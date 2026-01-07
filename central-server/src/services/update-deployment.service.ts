@@ -91,13 +91,23 @@ class UpdateDeploymentService {
       const commandSentSites: string[] = [];
       const commandFailedSites: string[] = [];
 
+      // Debug: Log l'état complet du socketService
+      const socketDebugInfo = socketService.getDebugInfo();
+      logger.info('Socket service state before deployment', {
+        deploymentId,
+        connectedSites: socketDebugInfo.connectedSites,
+        connectedCount: socketDebugInfo.connectedSites.length,
+        targetSiteIds: targets.map(t => t.siteId),
+      });
+
       for (const target of targets) {
         const isConnected = socketService.isConnected(target.siteId);
         logger.info('Checking site connection', {
           deploymentId,
           siteId: target.siteId,
           siteName: target.siteName,
-          isConnected
+          isConnected,
+          connectedSitesList: socketDebugInfo.connectedSites,
         });
 
         if (isConnected) {
