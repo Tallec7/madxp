@@ -199,12 +199,38 @@ Quand vous exécutez `npm run deploy:raspberry` :
 
 ## 4. Pousser une configuration depuis le central
 
-Il y a deux usages distincts :
+### Modes de déploiement
 
-- **Contenu club** : modifié localement sur le Pi. On le préserve en mode `merge`.
-- **Contenu imposé NEOPRO** : doit s'imposer même si le club avait des données différentes. On utilise le mode `replace`.
+Le dashboard central propose deux modes lors du déploiement :
 
-Lorsqu'on clique sur **Déployer** dans le dashboard central, la commande `update_config` est envoyée avec `mode: 'replace'` pour écraser le `configuration.json` du boîtier par la version centrale (comportement nécessaire pour synchroniser une config “référence” NEOPRO). Si vous souhaitez au contraire fusionner en préservant le contenu club, envoyez `update_config` avec `mode: 'merge'` (ou sans `mode`, le merge intelligent côté sync-agent reste actif).
+| Mode      | Comportement                                                                    | Quand l'utiliser                         |
+| --------- | ------------------------------------------------------------------------------- | ---------------------------------------- |
+| `merge`   | Fusionne le contenu envoyé avec la config locale, préserve les paramètres du Pi | **Par défaut** - Modification de contenu |
+| `replace` | Écrase entièrement le `configuration.json` du Pi                                | Réinitialisation complète uniquement     |
+
+### Mode Merge (recommandé)
+
+En mode `merge`, seuls les champs suivants sont envoyés et fusionnés :
+
+- **`sponsors`** : Le central est la source de vérité. Les sponsors modifiés sont mis à jour, les nouveaux sont ajoutés. Les sponsors créés localement (non présents dans la liste du central) sont préservés.
+- **`categories`** : Fusion intelligente entre contenu NEOPRO (verrouillé) et Club.
+- **`timeCategories`** : Remplacement complet par la version du central.
+- **`categoryMappings`** : Remplacement complet par la version du central.
+
+**Paramètres locaux protégés** (jamais écrasés) :
+
+- `settings` (langue, timezone)
+- `siteId`, `siteName`, `clubName`, `apiKey`
+- `hotspot`, `localNetwork`
+
+### Mode Replace (à utiliser avec précaution)
+
+Le mode `replace` écrase **tout** le fichier `configuration.json`. Utilisez-le uniquement pour :
+
+- Réinitialiser un boîtier défaillant
+- Appliquer une configuration de référence complète
+
+> **Attention** : Ce mode peut perdre des paramètres locaux configurés sur le Pi (settings, identifiants, etc.).
 
 ### Backup automatique
 
@@ -394,11 +420,11 @@ SMTP_SECURE=false
 
 ### Types de notifications
 
-| Type | Déclencheur | Contenu |
-|------|-------------|---------|
-| Alerte | Site hors ligne, CPU > 90% | Détails du problème |
-| Déploiement | Fin de déploiement | Résumé succès/échec |
-| Rapport | Manuel ou planifié | PDF analytics |
+| Type        | Déclencheur                | Contenu             |
+| ----------- | -------------------------- | ------------------- |
+| Alerte      | Site hors ligne, CPU > 90% | Détails du problème |
+| Déploiement | Fin de déploiement         | Résumé succès/échec |
+| Rapport     | Manuel ou planifié         | PDF analytics       |
 
 ---
 
@@ -416,6 +442,7 @@ Si non configuré en production, toutes les requêtes cross-origin seront **reje
 ### TLS/SSL
 
 Les connexions à la base de données utilisent SSL par défaut. Ne **jamais** ajouter :
+
 ```bash
 # ❌ INTERDIT - Vulnérabilité de sécurité
 NODE_TLS_REJECT_UNAUTHORIZED=0
@@ -427,4 +454,4 @@ Au premier démarrage du panneau admin (port 8080), vous devrez configurer un mo
 
 ---
 
-**Dernière mise à jour :** 25 décembre 2025
+**Dernière mise à jour :** 7 janvier 2026

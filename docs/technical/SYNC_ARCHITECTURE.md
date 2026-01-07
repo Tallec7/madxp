@@ -309,25 +309,72 @@ Pi                                              Central
 
 #### Étape 2 : Merge de la Configuration
 
-```javascript
-// Algorithme de merge simplifié
-function mergeConfigurations(localConfig, remoteNeoProContent) {
-  const result = { categories: [] };
+Le merge est géré par `config-merge.js` et traite plusieurs champs :
 
-  // 1. Préserver toutes les catégories locales non-verrouillées
-  for (const localCat of localConfig.categories) {
-    if (!localCat.locked) {
-      result.categories.push(localCat);
+```javascript
+// Algorithme de merge complet
+function mergeConfigurations(localConfig, neoProContent) {
+  const result = JSON.parse(JSON.stringify(localConfig)); // Deep clone
+
+  // 1. Préserver les paramètres locaux (settings, siteId, apiKey, etc.)
+  const preservedLocalSettings = {};
+  for (const key of LOCAL_ONLY_SETTINGS) {
+    if (localConfig[key] !== undefined) {
+      preservedLocalSettings[key] = localConfig[key];
     }
   }
 
-  // 2. Ajouter/Mettre à jour les catégories NEOPRO (verrouillées)
-  for (const neoProCat of remoteNeoProContent.categories) {
-    const existingIndex = result.categories.findIndex((c) => c.id === neoProCat.id);
-    if (existingIndex >= 0) {
-      result.categories[existingIndex] = neoProCat; // Remplacer
-    } else {
-      result.categories.push(neoProCat); // Ajouter
+  // 2. Fusionner les sponsors (central = source de vérité)
+  if (neoProContent.sponsors !== undefined) {
+    result.sponsors = mergeSponsors(localConfig.sponsors, neoProContent.sponsors);
+  }
+
+  // 3. Remplacer timeCategories et categoryMappings (gérés par le central)
+  if (neoProContent.timeCategories !== undefined) {
+    result.timeCategories = neoProContent.timeCategories;
+  }
+  if (neoProContent.categoryMappings !== undefined) {
+    result.categoryMappings = neoProContent.categoryMappings;
+  }
+
+  // 4. Fusionner les catégories
+  if (neoProContent.categories !== undefined) {
+    result.categories = mergeCategories(localConfig.categories, neoProContent.categories);
+  }
+
+  // 5. Restaurer les paramètres locaux protégés
+  for (const [key, value] of Object.entries(preservedLocalSettings)) {
+    result[key] = value;
+  }
+
+  return result;
+}
+```
+
+#### Merge des Sponsors (Boucle par défaut)
+
+Le central est la **source de vérité** pour les sponsors :
+
+```javascript
+function mergeSponsors(localSponsors, centralSponsors) {
+  const result = [];
+  const processedPaths = new Set();
+
+  // 1. Appliquer tous les sponsors du central
+  for (const sponsor of centralSponsors) {
+    const isNeopro = sponsor.locked || sponsor.owner === 'neopro';
+    result.push({
+      ...sponsor,
+      locked: isNeopro,
+      owner: isNeopro ? 'neopro' : sponsor.owner || 'club',
+    });
+    if (sponsor.path) processedPaths.add(sponsor.path);
+  }
+
+  // 2. Préserver les sponsors Club locaux NON présents dans le central
+  for (const sponsor of localSponsors) {
+    if (!sponsor.locked && sponsor.owner !== 'neopro' && !processedPaths.has(sponsor.path)) {
+      result.push(sponsor);
     }
   }
 
@@ -342,9 +389,31 @@ function mergeConfigurations(localConfig, remoteNeoProContent) {
 ### 5.1 Principe Fondamental
 
 > **Le contenu NEOPRO (verrouillé) est toujours contrôlé par le central.**
-> **Le contenu Club (non verrouillé) est toujours préservé lors du merge.**
+> **Le contenu Club (non verrouillé) est préservé sauf s'il est modifié depuis le central.**
 
-### 5.2 Tableau des Règles
+### 5.2 Modes de Déploiement
+
+Le dashboard central propose deux modes de déploiement :
+
+| Mode      | Comportement                                                                 | Usage                                |
+| --------- | ---------------------------------------------------------------------------- | ------------------------------------ |
+| `merge`   | Fusionne le contenu NEOPRO avec la config locale, préserve les paramètres Pi | **Recommandé** - Usage courant       |
+| `replace` | Écrase tout le `configuration.json` du Pi                                    | Réinitialisation complète uniquement |
+
+> **Note** : Le mode `merge` est le mode par défaut depuis janvier 2026. Le mode `replace` peut perdre des paramètres locaux (settings, siteId, etc.).
+
+### 5.3 Tableau des Règles par Champ
+
+| Champ              | Comportement en mode `merge`                           |
+| ------------------ | ------------------------------------------------------ |
+| `sponsors`         | Central = source de vérité + sponsors locaux préservés |
+| `categories`       | Fusion NEOPRO/Club (locked prend le dessus)            |
+| `timeCategories`   | Remplacement complet par le central                    |
+| `categoryMappings` | Remplacement complet par le central                    |
+| `settings`         | **JAMAIS écrasé** - Protégé localement                 |
+| `siteId`, `apiKey` | **JAMAIS écrasé** - Identifiants du boîtier            |
+
+### 5.4 Tableau des Règles pour les Catégories
 
 | Situation                                 | Contenu NEOPRO        | Contenu Club   | Résultat                               |
 | ----------------------------------------- | --------------------- | -------------- | -------------------------------------- |
@@ -356,7 +425,7 @@ function mergeConfigurations(localConfig, remoteNeoProContent) {
 | Opérateur modifie catégorie club          | -                     | Modification   | Préservée, remontée au central         |
 | Conflit : même ID catégorie               | Catégorie verrouillée | Catégorie club | Central gagne (verrouillé prioritaire) |
 
-### 5.3 Gestion des Conflits
+### 5.5 Gestion des Conflits
 
 **Conflit de nommage** : Si NEOPRO crée une catégorie avec le même ID qu'une catégorie club existante :
 
@@ -369,7 +438,7 @@ function mergeConfigurations(localConfig, remoteNeoProContent) {
 1. L'action est bloquée côté Admin UI
 2. Message d'erreur : "Ce contenu est géré par NEOPRO et ne peut pas être supprimé"
 
-### 5.4 Nommage des vidéos déployées
+### 5.6 Nommage des vidéos déployées
 
 Depuis décembre 2025, les vidéos poussées depuis le central conservent leur nom d'origine (ex. `Golden Cup.mp4`) au lieu d'un UUID Supabase illisible :
 
@@ -767,11 +836,12 @@ function canDeleteVideo(video, category) {
 
 ## Historique des Versions
 
-| Version | Date       | Auteur        | Modifications                                      |
-| ------- | ---------- | ------------- | -------------------------------------------------- |
-| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                  |
-| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline             |
-| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos |
+| Version | Date       | Auteur        | Modifications                                          |
+| ------- | ---------- | ------------- | ------------------------------------------------------ |
+| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                      |
+| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                 |
+| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos     |
+| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix |
 
 ---
 
