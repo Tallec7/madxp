@@ -1,11 +1,11 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
-import { LocalVideo, LocalStorage } from '../../../../core/models';
+import { LocalVideo, LocalStorage, ConfigHistory, SiteConfiguration } from '../../../../core/models';
 
 @Component({
   selector: 'app-site-debug-tab',
@@ -103,6 +103,58 @@ import { LocalVideo, LocalStorage } from '../../../../core/models';
             <button class="btn btn-secondary btn-sm" (click)="downloadJson()">💾 Télécharger</button>
           </div>
           <pre class="json-viewer">{{ configJson }}</pre>
+        </div>
+      </div>
+
+      <!-- Historique des configurations -->
+      <div class="debug-card">
+        <div class="debug-header" (click)="toggleHistory()">
+          <span class="expand-icon">{{ showHistory ? '▼' : '▶' }}</span>
+          <span class="debug-icon">📜</span>
+          <h4>Historique des configurations</h4>
+          <span class="debug-stats" *ngIf="historyTotal > 0">{{ historyTotal }} version(s)</span>
+        </div>
+
+        <div class="debug-content" *ngIf="showHistory">
+          <div *ngIf="loadingHistory" class="loading-inline">
+            <div class="spinner-small"></div>
+            <span>Chargement...</span>
+          </div>
+
+          <div *ngIf="!loadingHistory && history.length === 0" class="empty-hint">
+            Aucun historique. L'historique sera créé lors du premier déploiement.
+          </div>
+
+          <div class="history-list" *ngIf="!loadingHistory && history.length > 0">
+            <div
+              class="history-item"
+              *ngFor="let item of history"
+              [class.selected]="selectedHistoryId === item.id"
+            >
+              <div class="history-item-main">
+                <div class="history-item-date">{{ item.deployed_at | date:'dd/MM/yyyy HH:mm' }}</div>
+                <div class="history-item-user">{{ item.deployed_by_email || 'Système' }}</div>
+                <div class="history-item-comment" *ngIf="item.comment">{{ item.comment }}</div>
+              </div>
+              <div class="history-item-actions">
+                <button class="btn btn-secondary btn-sm" (click)="viewVersion(item)">Voir</button>
+                <button class="btn btn-primary btn-sm" (click)="restoreVersion(item)" [disabled]="restoringVersion">
+                  {{ restoringVersion === item.id ? 'Restauration...' : 'Restaurer' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Version viewer modal -->
+          <div class="version-modal" *ngIf="viewingVersion">
+            <div class="version-modal-header">
+              <h5>Version du {{ viewingVersion.deployed_at | date:'dd/MM/yyyy HH:mm' }}</h5>
+              <button class="btn-close" (click)="viewingVersion = null">×</button>
+            </div>
+            <div class="version-modal-body">
+              <pre class="json-viewer">{{ viewingVersionJson }}</pre>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -407,11 +459,121 @@ import { LocalVideo, LocalStorage } from '../../../../core/models';
     .btn-secondary:hover {
       background: #e2e8f0;
     }
+
+    /* History */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding-top: 1rem;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      background: #f8fafc;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .history-item.selected {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+
+    .history-item-main {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .history-item-date {
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .history-item-user {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .history-item-comment {
+      font-size: 0.8125rem;
+      color: #475569;
+      font-style: italic;
+    }
+
+    .history-item-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .loading-inline {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      color: #64748b;
+    }
+
+    .spinner-small {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .version-modal {
+      margin-top: 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .version-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .version-modal-header h5 {
+      margin: 0;
+      font-size: 0.875rem;
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 1.25rem;
+      cursor: pointer;
+      color: #64748b;
+    }
+
+    .btn-close:hover {
+      color: #1e293b;
+    }
+
+    .version-modal-body {
+      max-height: 300px;
+      overflow: auto;
+    }
   `]
 })
 export class SiteDebugTabComponent implements OnInit {
   @Input() siteId!: string;
   @Input() isConnected: boolean = false;
+  @Output() configRestored = new EventEmitter<SiteConfiguration>();
 
   localVideos: LocalVideo[] = [];
   localStorage: LocalStorage | null = null;
@@ -423,9 +585,19 @@ export class SiteDebugTabComponent implements OnInit {
   showFiles: boolean = false;
   showJson: boolean = false;
   showSyncInfo: boolean = false;
+  showHistory: boolean = false;
 
   selectedVideoPath: string = '';
   playingVideo: boolean = false;
+
+  // History
+  history: ConfigHistory[] = [];
+  historyTotal: number = 0;
+  loadingHistory: boolean = false;
+  selectedHistoryId: string | null = null;
+  viewingVersion: ConfigHistory | null = null;
+  viewingVersionJson: string = '';
+  restoringVersion: string | null = null;
 
   constructor(
     private sitesService: SitesService,
@@ -518,5 +690,48 @@ export class SiteDebugTabComponent implements OnInit {
     a.download = `config-${this.siteId}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // History methods
+  toggleHistory(): void {
+    this.showHistory = !this.showHistory;
+    if (this.showHistory && this.history.length === 0) {
+      this.loadHistory();
+    }
+  }
+
+  loadHistory(): void {
+    this.loadingHistory = true;
+    this.sitesService.getConfigHistory(this.siteId, 20, 0).subscribe({
+      next: (response) => {
+        this.history = response.history || [];
+        this.historyTotal = response.total || 0;
+        this.loadingHistory = false;
+      },
+      error: (error) => {
+        this.loadingHistory = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to load config history', { error: message, siteId: this.siteId });
+      }
+    });
+  }
+
+  viewVersion(item: ConfigHistory): void {
+    this.selectedHistoryId = item.id;
+    this.viewingVersion = item;
+    this.viewingVersionJson = JSON.stringify(item.configuration, null, 2);
+  }
+
+  restoreVersion(item: ConfigHistory): void {
+    if (!confirm(`Restaurer la configuration du ${new Date(item.deployed_at).toLocaleString()} ?\n\nCela remplacera la configuration actuelle.`)) {
+      return;
+    }
+
+    this.restoringVersion = item.id;
+
+    // Émettre la configuration restaurée vers le parent pour déploiement
+    this.configRestored.emit(item.configuration);
+    this.notificationService.success('Configuration restaurée. Cliquez sur "Déployer" dans l\'onglet Contenu pour appliquer.');
+    this.restoringVersion = null;
   }
 }
