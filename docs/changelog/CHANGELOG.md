@@ -1,3 +1,9 @@
+# [2.8.0](https://github.com/Tallec7/neopro/compare/v2.7.3...v2.8.0) (2026-01-07)
+
+### Features
+
+- **updates:** add FTP diagnostic endpoint for software updates ([a7af366](https://github.com/Tallec7/neopro/commit/a7af3664ea60d69658d13330126836ef47d18fec))
+
 ## [2.7.3](https://github.com/Tallec7/neopro/compare/v2.7.2...v2.7.3) (2026-01-07)
 
 ### Bug Fixes
