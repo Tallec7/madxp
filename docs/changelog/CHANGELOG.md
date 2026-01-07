@@ -1,3 +1,15 @@
+## [2.8.3](https://github.com/Tallec7/neopro/compare/v2.8.2...v2.8.3) (2026-01-07)
+
+### Bug Fixes
+
+- **dashboard:** restore config button now deploys directly ([#338](https://github.com/Tallec7/neopro/issues/338)) ([3d32ec3](https://github.com/Tallec7/neopro/commit/3d32ec3504cc2a0fef101dd30e8c207b6e134bbe))
+
+## [2.8.2](https://github.com/Tallec7/neopro/compare/v2.8.1...v2.8.2) (2026-01-07)
+
+### Bug Fixes
+
+- **auth:** use SHA256 instead of bcrypt for site API keys ([2ee564d](https://github.com/Tallec7/neopro/commit/2ee564d250fc057cd01b047efa40214e9d50551f))
+
 ## [2.8.1](https://github.com/Tallec7/neopro/compare/v2.8.0...v2.8.1) (2026-01-07)
 
 ### Bug Fixes
