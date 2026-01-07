@@ -1,3 +1,9 @@
+# [2.6.0](https://github.com/Tallec7/neopro/compare/v2.5.0...v2.6.0) (2026-01-07)
+
+### Features
+
+- **dashboard:** add expandable details to config diff items ([0f886e0](https://github.com/Tallec7/neopro/commit/0f886e0aa083925abaa74dad580bfe3df8961e4c))
+
 # [2.5.0](https://github.com/Tallec7/neopro/compare/v2.4.0...v2.5.0) (2026-01-07)
 
 ### Features
