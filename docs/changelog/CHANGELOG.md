@@ -1,3 +1,9 @@
+## [2.3.3](https://github.com/Tallec7/neopro/compare/v2.3.2...v2.3.3) (2026-01-07)
+
+### Bug Fixes
+
+- **auth:** separate rate limits for login vs session check ([19badc3](https://github.com/Tallec7/neopro/commit/19badc33f5e6b89d69cb17270a9b55e34777eefa))
+
 ## [2.3.2](https://github.com/Tallec7/neopro/compare/v2.3.1...v2.3.2) (2026-01-07)
 
 ### Bug Fixes
