@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import crypto from 'crypto';
+import * as ftp from 'basic-ftp';
 import logger from '../config/logger';
 import pool from '../config/database';
 import { AuthRequest } from '../types';
@@ -360,5 +361,100 @@ export const deleteUpdateDeployment = async (req: AuthRequest, res: Response) =>
     }
     logger.error('Error deleting update deployment:', error);
     res.status(500).json({ error: 'Erreur lors de la suppression du déploiement de mise à jour' });
+  }
+};
+
+/**
+ * Endpoint de diagnostic FTP pour les mises à jour
+ * Teste la connexion et liste les fichiers présents
+ */
+export const testFtpUpdateConnection = async (_req: AuthRequest, res: Response) => {
+  const ftpUpdateConfig = {
+    host: process.env.FTP_UPDATE_HOST || '',
+    port: parseInt(process.env.FTP_UPDATE_PORT || '21', 10),
+    user: process.env.FTP_UPDATE_USER || '',
+    password: process.env.FTP_UPDATE_PASSWORD || '',
+    secure: process.env.FTP_UPDATE_SECURE === 'true',
+    publicUrl: process.env.FTP_UPDATE_PUBLIC_URL || '',
+  };
+
+  // Vérifier la configuration
+  const configStatus = {
+    host: !!ftpUpdateConfig.host,
+    user: !!ftpUpdateConfig.user,
+    password: !!ftpUpdateConfig.password,
+    publicUrl: !!ftpUpdateConfig.publicUrl,
+    isConfigured: isFtpUpdateConfigured(),
+  };
+
+  if (!configStatus.isConfigured) {
+    return res.json({
+      status: 'not_configured',
+      configStatus,
+      message: 'FTP Update non configuré. Variables manquantes: ' +
+        Object.entries(configStatus)
+          .filter(([key, value]) => key !== 'isConfigured' && !value)
+          .map(([key]) => `FTP_UPDATE_${key.toUpperCase()}`)
+          .join(', '),
+    });
+  }
+
+  const client = new ftp.Client();
+  client.ftp.verbose = true;
+
+  try {
+    logger.info('Testing FTP Update connection:', {
+      host: ftpUpdateConfig.host,
+      port: ftpUpdateConfig.port,
+      user: ftpUpdateConfig.user,
+    });
+
+    await client.access({
+      host: ftpUpdateConfig.host,
+      port: ftpUpdateConfig.port,
+      user: ftpUpdateConfig.user,
+      password: ftpUpdateConfig.password,
+      secure: ftpUpdateConfig.secure,
+    });
+
+    // Lister les fichiers
+    const files = await client.list();
+    const pwd = await client.pwd();
+
+    logger.info('FTP Update connection successful:', {
+      currentDirectory: pwd,
+      filesCount: files.length,
+    });
+
+    res.json({
+      status: 'connected',
+      configStatus,
+      connection: {
+        host: ftpUpdateConfig.host,
+        port: ftpUpdateConfig.port,
+        user: ftpUpdateConfig.user,
+        publicUrl: ftpUpdateConfig.publicUrl,
+        currentDirectory: pwd,
+      },
+      files: files.map(f => ({
+        name: f.name,
+        size: f.size,
+        type: f.type,
+        modifiedAt: f.modifiedAt,
+      })),
+      message: `Connexion FTP réussie. ${files.length} fichier(s) trouvé(s) dans ${pwd}`,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    logger.error('FTP Update connection test failed:', error);
+
+    res.json({
+      status: 'error',
+      configStatus,
+      error: errorMessage,
+      message: `Échec de la connexion FTP: ${errorMessage}`,
+    });
+  } finally {
+    client.close();
   }
 };

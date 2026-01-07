@@ -25,4 +25,7 @@ router.post('/update-deployments', authenticate, requireRole('admin', 'operator'
 router.put('/update-deployments/:id', authenticate, requireRole('admin', 'operator'), updatesController.updateUpdateDeployment);
 router.delete('/update-deployments/:id', authenticate, requireRole('admin'), updatesController.deleteUpdateDeployment);
 
+// Diagnostic FTP
+router.get('/updates/ftp-test', authenticate, requireRole('admin'), updatesController.testFtpUpdateConnection);
+
 export default router;
