@@ -329,6 +329,41 @@ export const compareConfigVersions = async (req: AuthRequest, res: Response) => 
 const MANAGED_CONFIG_FIELDS = ['sponsors', 'categories', 'timeCategories', 'categoryMappings'];
 
 /**
+ * Propriétés de métadonnées à ignorer lors de la comparaison
+ * Ces propriétés sont ajoutées/modifiées par le sync-agent et ne représentent pas
+ * des changements de contenu réels
+ */
+const METADATA_PROPERTIES = ['owner', 'locked', 'type'];
+
+/**
+ * Normalise un objet en supprimant les propriétés de métadonnées
+ * pour permettre une comparaison basée uniquement sur le contenu
+ */
+function normalizeForComparison(obj: unknown): unknown {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => normalizeForComparison(item));
+  }
+
+  if (typeof obj === 'object') {
+    const normalized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      // Ignorer les propriétés de métadonnées
+      if (METADATA_PROPERTIES.includes(key)) {
+        continue;
+      }
+      normalized[key] = normalizeForComparison(value);
+    }
+    return normalized;
+  }
+
+  return obj;
+}
+
+/**
  * Génère un diff entre la configuration actuelle du site et une nouvelle configuration
  * Ne compare que les champs gérés par le dashboard (MANAGED_CONFIG_FIELDS)
  * Les champs locaux (club, videos, features, authentication, settings, etc.) sont ignorés
@@ -383,18 +418,23 @@ export const previewConfigDiff = async (req: AuthRequest, res: Response) => {
     const currentManagedConfig = extractManagedFields(currentConfig);
     const newManagedConfig = extractManagedFields(newConfiguration);
 
-    // Calculer le diff uniquement sur les champs gérés
+    // Normaliser les configs pour ignorer les métadonnées (owner, locked, type)
+    // qui sont ajoutées par le sync-agent et ne représentent pas des changements réels
+    const normalizedCurrentConfig = normalizeForComparison(currentManagedConfig) as Record<string, unknown>;
+    const normalizedNewConfig = normalizeForComparison(newManagedConfig) as Record<string, unknown>;
+
+    // Calculer le diff uniquement sur les champs gérés et normalisés
     const diff = computeConfigDiff(
-      Object.keys(currentManagedConfig).length > 0 ? currentManagedConfig : null,
-      newManagedConfig
+      Object.keys(normalizedCurrentConfig).length > 0 ? normalizedCurrentConfig : null,
+      normalizedNewConfig
     );
 
     res.json({
       hasChanges: diff.length > 0,
       changesCount: diff.length,
       diff,
-      currentConfiguration: currentManagedConfig,
-      newConfiguration: newManagedConfig,
+      currentConfiguration: normalizedCurrentConfig,
+      newConfiguration: normalizedNewConfig,
     });
   } catch (error) {
     logger.error('Preview config diff error:', error);
