@@ -365,6 +365,91 @@ export const deleteUpdateDeployment = async (req: AuthRequest, res: Response) =>
 };
 
 /**
+ * Endpoint de diagnostic pour vérifier l'URL d'un package de mise à jour
+ * Vérifie si le fichier est accessible (FTP, Supabase, ou autre)
+ */
+export const checkUpdatePackageUrl = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT id, version, package_url, package_size, checksum
+       FROM software_updates
+       WHERE id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Mise à jour non trouvée' });
+    }
+
+    const update = result.rows[0];
+    const packageUrl = update.package_url as string | null;
+
+    if (!packageUrl) {
+      return res.json({
+        status: 'no_url',
+        update: { id: update.id, version: update.version },
+        message: 'Aucune URL de package définie pour cette mise à jour',
+      });
+    }
+
+    // Déterminer le type de stockage
+    let storageType = 'unknown';
+    if (packageUrl.includes('supabase')) {
+      storageType = 'supabase';
+    } else if (packageUrl.includes(process.env.FTP_UPDATE_PUBLIC_URL || 'neopro-update')) {
+      storageType = 'ftp';
+    } else if (packageUrl.startsWith('http')) {
+      storageType = 'external';
+    }
+
+    // Tester l'accessibilité de l'URL
+    let isAccessible = false;
+    let accessError: string | null = null;
+
+    try {
+      const response = await fetch(packageUrl, { method: 'HEAD' });
+      isAccessible = response.ok;
+      if (!isAccessible) {
+        accessError = `HTTP ${response.status}: ${response.statusText}`;
+      }
+    } catch (error) {
+      accessError = error instanceof Error ? error.message : 'Erreur de connexion';
+    }
+
+    logger.info('Package URL check:', {
+      updateId: id,
+      version: update.version,
+      packageUrl,
+      storageType,
+      isAccessible,
+      accessError,
+    });
+
+    res.json({
+      status: isAccessible ? 'accessible' : 'inaccessible',
+      update: {
+        id: update.id,
+        version: update.version,
+        packageUrl,
+        packageSize: update.package_size,
+        checksum: update.checksum,
+      },
+      storageType,
+      isAccessible,
+      accessError,
+      message: isAccessible
+        ? `Le fichier est accessible (${storageType})`
+        : `Le fichier n'est pas accessible: ${accessError}`,
+    });
+  } catch (error) {
+    logger.error('Error checking update package URL:', error);
+    res.status(500).json({ error: 'Erreur lors de la vérification de l\'URL du package' });
+  }
+};
+
+/**
  * Endpoint de diagnostic FTP pour les mises à jour
  * Teste la connexion et liste les fichiers présents
  */
