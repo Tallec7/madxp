@@ -296,7 +296,7 @@ app.get('/ready', async (_req: Request, res: Response) => {
 app.use('/api', setRLSContext(pool));
 
 // Rate limiters spécifiques par type d'endpoint
-app.use('/api/auth', authRateLimit, authRoutes); // Restrictif pour auth
+app.use('/api/auth', authRoutes); // Rate limits are now per-route in auth.routes.ts
 app.use('/api/mfa', authRateLimit, mfaRoutes);   // MFA - même restrictions que auth
 app.use('/api/sites', apiRateLimit, sitesRoutes);
 app.use('/api/groups', apiRateLimit, groupsRoutes);

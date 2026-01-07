@@ -39,8 +39,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         // Seulement rediriger vers login si:
         // 1. C'est une vraie 401 (pas une erreur réseau status 0)
         // 2. Ce n'est pas déjà une requête sur /auth/login ou /auth/me
+        // 3. Ce n'est pas l'endpoint de logs (401 attendu si non authentifié)
         const isAuthEndpoint = req.url.includes('/auth/login') || req.url.includes('/auth/me');
-        const isRealUnauthorized = error.status === 401 && !isAuthEndpoint;
+        const isLogEndpoint = req.url.includes('/logs/frontend');
+        const isRealUnauthorized = error.status === 401 && !isAuthEndpoint && !isLogEndpoint;
 
         // DEBUG: Log pour comprendre les déconnexions
         if (error.status === 401) {
