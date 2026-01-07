@@ -1,3 +1,9 @@
+## [2.8.3](https://github.com/Tallec7/neopro/compare/v2.8.2...v2.8.3) (2026-01-07)
+
+### Bug Fixes
+
+- **dashboard:** restore config button now deploys directly ([#338](https://github.com/Tallec7/neopro/issues/338)) ([3d32ec3](https://github.com/Tallec7/neopro/commit/3d32ec3504cc2a0fef101dd30e8c207b6e134bbe))
+
 ## [2.8.2](https://github.com/Tallec7/neopro/compare/v2.8.1...v2.8.2) (2026-01-07)
 
 ### Bug Fixes
