@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggerService } from '../../core/services/logger.service';
@@ -23,6 +24,7 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
     CommonModule,
     RouterModule,
     FormsModule,
+    TranslateModule,
     ConnectionIndicatorComponent,
     SiteContentTabComponent,
     SiteSettingsTabComponent,
@@ -38,7 +40,7 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
           [siteId]="siteId"
           [showText]="true"
           [showDetails]="true"
-          [refreshInterval]="15000"
+          [externalStatus]="connectionStatus"
         ></app-connection-indicator>
         <button class="btn btn-primary" [routerLink]="['/sites', siteId, 'analytics']">
           📊 Analytics
@@ -207,7 +209,7 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
                 <span class="action-icon">🔄</span>
                 <div class="action-content">
                   <div class="action-title">Redémarrer l'app</div>
-                  <div class="action-desc">{{ isConnected ? 'Redémarre le service' : '📥 File d'attente' }}</div>
+                  <div class="action-desc">{{ isConnected ? ('debug.restartsService' | translate) : ('debug.queued' | translate) }}</div>
                 </div>
               </button>
 
@@ -231,7 +233,7 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
                 <span class="action-icon">⚡</span>
                 <div class="action-content">
                   <div class="action-title">Redémarrer Pi</div>
-                  <div class="action-desc">{{ isConnected ? 'Reboot complet' : '📥 File d'attente' }}</div>
+                  <div class="action-desc">{{ isConnected ? ('debug.fullReboot' | translate) : ('debug.queued' | translate) }}</div>
                 </div>
               </button>
 
@@ -954,7 +956,8 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     this.loadSite();
     this.loadDashboardData();
 
-    this.refreshSubscription = interval(10000).subscribe(() => {
+    // Polling toutes les 30 secondes (suffisant pour un dashboard)
+    this.refreshSubscription = interval(30000).subscribe(() => {
       this.loadDashboardData();
     });
   }

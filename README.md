@@ -22,6 +22,7 @@ Si votre Raspberry Pi n'a jamais été configuré, suivez le guide complet :
 **[Guide d'installation complète](docs/INSTALLATION_COMPLETE.md)**
 
 Ce guide couvre :
+
 1. Flash de la carte SD avec Raspberry Pi OS
 2. Installation système (`install.sh`) - ~30 min
 3. Configuration du club (`setup-new-club.sh`) - ~10 min
@@ -46,6 +47,7 @@ chmod +x setup-remote-club.sh
 ```
 
 **Avantages :**
+
 - ✅ Aucune dépendance locale (pas besoin du projet Neopro)
 - ✅ Télécharge depuis GitHub Releases (toujours à jour)
 - ✅ Rapide : 2-5 minutes
@@ -60,12 +62,14 @@ chmod +x setup-remote-club.sh
 ```
 
 **Avantages :**
+
 - ✅ Build local (modifications custom possibles)
 - ✅ Tests de développement
 
 ---
 
 Les deux scripts vont :
+
 - Collecter les infos du club (nom, localisation, contact)
 - Créer le mot de passe d'accès
 - Déployer sur le Raspberry Pi
@@ -73,6 +77,7 @@ Les deux scripts vont :
 - Connecter au serveur central (optionnel)
 
 **Informations à préparer :**
+
 - Nom du club (ex: CESSON, RENNES)
 - Ville et région
 - Email de contact
@@ -105,12 +110,12 @@ npm run deploy:raspberry neopro.local
 
 Une fois configuré, le boîtier est accessible via :
 
-| Interface | URL | Description |
-|-----------|-----|-------------|
-| Login | http://neopro.local/login | Page de connexion |
-| TV | http://neopro.local/tv | Affichage télévision |
-| Remote | http://neopro.local/remote | Télécommande mobile |
-| Admin | http://neopro.local:8080 | Administration locale |
+| Interface | URL                        | Description           |
+| --------- | -------------------------- | --------------------- |
+| Login     | http://neopro.local/login  | Page de connexion     |
+| TV        | http://neopro.local/tv     | Affichage télévision  |
+| Remote    | http://neopro.local/remote | Télécommande mobile   |
+| Admin     | http://neopro.local:8080   | Administration locale |
 
 **WiFi :** NEOPRO-[NOM_DU_CLUB]
 
@@ -169,18 +174,18 @@ neopro/
 
 ### Technologies
 
-| Composant | Technologies |
-|-----------|-------------|
-| Frontend Raspberry | Angular 20, Socket.IO client, SCSS |
-| Frontend Dashboard | Angular 20, Chart.js, Leaflet |
-| Backend API | Node.js 18+, Express 4.18, TypeScript strict |
-| Base de données | PostgreSQL 15 (Supabase) |
-| Stockage vidéos | FTP (Hostinger) + Supabase Storage (fallback) |
-| WebSocket | Socket.IO 4.7 |
-| Cache | Redis (Upstash) - optionnel |
-| Auth | JWT HttpOnly cookie + Bearer token |
-| Logs | Winston + Logtail (Better Stack) |
-| Tests | Jest + Supertest (API), Karma (Angular), Playwright (E2E) |
+| Composant          | Technologies                                              |
+| ------------------ | --------------------------------------------------------- |
+| Frontend Raspberry | Angular 20, Socket.IO client, SCSS                        |
+| Frontend Dashboard | Angular 20, Chart.js, Leaflet, ngx-translate (i18n: EN/FR/ES) |
+| Backend API        | Node.js 20+, Express 4.18, TypeScript strict              |
+| Base de données    | PostgreSQL 15 (Supabase)                                  |
+| Stockage vidéos    | FTP (Hostinger) + Supabase Storage (fallback)             |
+| WebSocket          | Socket.IO 4.8                                             |
+| Cache              | Redis (Upstash) - optionnel                               |
+| Auth               | JWT HttpOnly cookie + Bearer token + MFA (TOTP)           |
+| Logs               | Winston + Logtail (Better Stack)                          |
+| Tests              | Jest + Supertest (API), Karma (Angular), Playwright (E2E) |
 
 ---
 
@@ -188,8 +193,9 @@ neopro/
 
 ### Prérequis
 
-- Node.js 20+
-- Angular CLI 20.3.3
+- Node.js 20+ (LTS recommandé)
+- npm 10+
+- Angular CLI 20+
 - Docker (optionnel, pour la stack complète)
 
 ### Configuration
@@ -210,11 +216,13 @@ cp .env.example .env
 ### Démarrage
 
 **Option 1 : Script automatique**
+
 ```bash
 ./dev-local.sh
 ```
 
 **Option 2 : Manuel**
+
 ```bash
 # Terminal 1 - Frontend Raspberry (port 4200)
 npm start
@@ -230,27 +238,29 @@ cd raspberry/admin && node admin-server-demo.js
 ```
 
 **Option 3 : Docker Compose (stack complète)**
+
 ```bash
 docker-compose up -d
 ```
+
 Services : PostgreSQL (5432), Redis (6379), API (3001), Prometheus (9090), Grafana (3000)
 
 ### Commandes npm
 
-| Commande | Description |
-|----------|-------------|
-| `npm start` | Frontend Raspberry (dev) |
-| `npm run start:central` | Dashboard central (dev) |
-| `npm run build` | Build les 2 projets Angular |
-| `npm run build:raspberry` | Build pour déploiement Pi |
-| `npm run build:central` | Build dashboard |
-| `npm run deploy:raspberry <host>` | Déployer sur un Pi |
-| `npm test` | Tests (tous les projets) |
-| `npm run test:raspberry` | Tests frontend Raspberry |
-| `npm run test:central` | Tests dashboard |
-| `npm run test:server` | Tests API (Jest) |
-| `npm run lint` | Linting |
-| `npm run server` | Serveur Socket.IO local |
+| Commande                          | Description                 |
+| --------------------------------- | --------------------------- |
+| `npm start`                       | Frontend Raspberry (dev)    |
+| `npm run start:central`           | Dashboard central (dev)     |
+| `npm run build`                   | Build les 2 projets Angular |
+| `npm run build:raspberry`         | Build pour déploiement Pi   |
+| `npm run build:central`           | Build dashboard             |
+| `npm run deploy:raspberry <host>` | Déployer sur un Pi          |
+| `npm test`                        | Tests (tous les projets)    |
+| `npm run test:raspberry`          | Tests frontend Raspberry    |
+| `npm run test:central`            | Tests dashboard             |
+| `npm run test:server`             | Tests API (Jest)            |
+| `npm run lint`                    | Linting                     |
+| `npm run server`                  | Serveur Socket.IO local     |
 
 ---
 
@@ -258,10 +268,10 @@ Services : PostgreSQL (5432), Redis (6379), API (3001), Prometheus (9090), Grafa
 
 ### Cloud
 
-| Service | Hébergeur | URL |
-|---------|-----------|-----|
-| API (central-server) | Render | https://neopro-central.onrender.com |
-| Dashboard admin | Hostinger | https://neopro-admin.kalonpartners.bzh |
+| Service              | Hébergeur | URL                                    |
+| -------------------- | --------- | -------------------------------------- |
+| API (central-server) | Render    | https://neopro-central.onrender.com    |
+| Dashboard admin      | Hostinger | https://neopro-admin.kalonpartners.bzh |
 
 **Guide complet :** [GUIDE_MISE_EN_PRODUCTION.md](GUIDE_MISE_EN_PRODUCTION.md)
 
@@ -285,11 +295,11 @@ npm run deploy:raspberry neopro.local
 
 ### Authentification
 
-| Interface | Méthode | Stockage |
-|-----------|---------|----------|
-| Dashboard Central | HttpOnly Cookie | Serveur (cookie) |
-| Admin Raspberry | Session Cookie | Local (session) |
-| Webapp Raspberry | JWT (mémoire) | Configuration locale |
+| Interface         | Méthode         | Stockage             |
+| ----------------- | --------------- | -------------------- |
+| Dashboard Central | HttpOnly Cookie | Serveur (cookie)     |
+| Admin Raspberry   | Session Cookie  | Local (session)      |
+| Webapp Raspberry  | JWT (mémoire)   | Configuration locale |
 
 ### Bonnes pratiques
 
@@ -298,20 +308,40 @@ npm run deploy:raspberry neopro.local
 3. **HTTPS** : Utiliser un reverse proxy (nginx) avec certificat SSL
 4. **Mots de passe** : Ne jamais utiliser le mot de passe par défaut
 
-### Variables d'environnement critiques
+### Variables d'environnement
 
 ```bash
-# Production - OBLIGATOIRE
-ALLOWED_ORIGINS=https://dashboard.neopro.fr,https://control.neopro.fr
-NODE_ENV=production
+# === OBLIGATOIRES ===
+DATABASE_URL=postgresql://user:pass@host:5432/db
+JWT_SECRET=minimum-32-caracteres-random
+ALLOWED_ORIGINS=https://dashboard.example.com
 
-# Notifications email (optionnel)
+# === BASE DE DONNÉES ===
+DATABASE_SSL=true
+
+# === STOCKAGE VIDÉOS ===
+FTP_HOST=ftp.example.com
+FTP_USER=xxx
+FTP_PASSWORD=xxx
+FTP_PUBLIC_URL=https://cdn.example.com/videos
+# Fallback Supabase
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_SERVICE_KEY=xxx
+
+# === EMAIL (password reset, alertes) ===
 SMTP_HOST=smtp.gmail.com
-SMTP_USER=votre-email@gmail.com
-SMTP_PASSWORD=app-password
+SMTP_PORT=587
+SMTP_USER=xxx
+SMTP_PASSWORD=xxx
+
+# === OPTIONNEL ===
+LOG_LEVEL=info              # debug, info, warn, error
+LOGTAIL_TOKEN=xxx           # Logs centralisés
+REDIS_URL=redis://xxx       # Pour Socket.IO multi-instance
+NODE_ENV=production
 ```
 
-**Documentation sécurité :** [SECURITY_IMPROVEMENTS.md](SECURITY_IMPROVEMENTS.md)
+**Documentation complète des variables :** [CLAUDE.md](CLAUDE.md#variables-denvironnement)
 
 ---
 
@@ -363,17 +393,17 @@ sudo systemctl restart neopro-app
 
 ## Documentation complète
 
-| Document | Description |
-|----------|-------------|
-| [docs/INDEX.md](docs/INDEX.md) | Index de toute la documentation |
-| [docs/REFERENCE.md](docs/REFERENCE.md) | Documentation technique complète |
-| [docs/INSTALLATION_COMPLETE.md](docs/INSTALLATION_COMPLETE.md) | Installation Raspberry Pi |
-| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Dépannage approfondi |
-| [docs/GOLDEN_IMAGE.md](docs/GOLDEN_IMAGE.md) | Création d'image golden |
-| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Guide de configuration |
-| [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md) | Architecture de synchronisation |
-| [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) | Guide des tests |
-| [GUIDE_MISE_EN_PRODUCTION.md](GUIDE_MISE_EN_PRODUCTION.md) | Mise en production cloud |
+| Document                                                       | Description                      |
+| -------------------------------------------------------------- | -------------------------------- |
+| [docs/INDEX.md](docs/INDEX.md)                                 | Index de toute la documentation  |
+| [docs/REFERENCE.md](docs/REFERENCE.md)                         | Documentation technique complète |
+| [docs/INSTALLATION_COMPLETE.md](docs/INSTALLATION_COMPLETE.md) | Installation Raspberry Pi        |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)             | Dépannage approfondi             |
+| [docs/GOLDEN_IMAGE.md](docs/GOLDEN_IMAGE.md)                   | Création d'image golden          |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md)                 | Guide de configuration           |
+| [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md)         | Architecture de synchronisation  |
+| [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)                 | Guide des tests                  |
+| [GUIDE_MISE_EN_PRODUCTION.md](GUIDE_MISE_EN_PRODUCTION.md)     | Mise en production cloud         |
 
 ---
 
@@ -400,6 +430,6 @@ sudo systemctl restart neopro-app
 
 ---
 
-**Version :** 2.1.3
+**Version :** 2.6.1
 **Licence :** MIT
-**Dernière mise à jour :** 6 janvier 2026
+**Dernière mise à jour :** 7 janvier 2026
