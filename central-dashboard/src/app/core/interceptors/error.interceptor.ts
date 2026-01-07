@@ -93,7 +93,8 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       // Handle specific error types
-      if (ErrorExtractor.isAuthError(error)) {
+      // Skip auth error handling for log endpoint - it's expected to fail when not authenticated
+      if (ErrorExtractor.isAuthError(error) && !isLogEndpoint) {
         handleAuthError(error, errorCode, router, notificationService);
         return throwError(() => error);
       }
