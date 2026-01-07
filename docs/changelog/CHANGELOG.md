@@ -1,3 +1,9 @@
+## [2.3.2](https://github.com/Tallec7/neopro/compare/v2.3.1...v2.3.2) (2026-01-07)
+
+### Bug Fixes
+
+- **logs:** skip backend logging when user is not authenticated ([b66860b](https://github.com/Tallec7/neopro/commit/b66860bc9c4f6fa0845306cb80439201d4504d2c))
+
 ## [2.3.1](https://github.com/Tallec7/neopro/compare/v2.3.0...v2.3.1) (2026-01-07)
 
 ### Bug Fixes
