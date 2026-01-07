@@ -1,3 +1,9 @@
+## [2.6.1](https://github.com/Tallec7/neopro/compare/v2.6.0...v2.6.1) (2026-01-07)
+
+### Bug Fixes
+
+- **api:** normalize config before diff comparison to avoid false positives ([97a1028](https://github.com/Tallec7/neopro/commit/97a1028ed1a1a83fb32dce2b586ba767b968bd1a))
+
 # [2.6.0](https://github.com/Tallec7/neopro/compare/v2.5.0...v2.6.0) (2026-01-07)
 
 ### Features
