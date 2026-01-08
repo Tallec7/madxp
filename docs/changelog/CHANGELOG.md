@@ -1,3 +1,9 @@
+## [2.14.1](https://github.com/Tallec7/neopro/compare/v2.14.0...v2.14.1) (2026-01-08)
+
+### Bug Fixes
+
+- **sync-agent:** detect and recover from zombie connections ([093cac0](https://github.com/Tallec7/neopro/commit/093cac07952c340ef9941516cb52046b2b14a1cd))
+
 # [2.14.0](https://github.com/Tallec7/neopro/compare/v2.13.7...v2.14.0) (2026-01-08)
 
 ### Features
