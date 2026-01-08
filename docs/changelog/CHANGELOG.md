@@ -1,3 +1,9 @@
+## [2.10.3](https://github.com/Tallec7/neopro/compare/v2.10.2...v2.10.3) (2026-01-08)
+
+### Bug Fixes
+
+- **raspberry:** remove dead code referencing webapp/videos ([273de1a](https://github.com/Tallec7/neopro/commit/273de1adf254890568b9d69a30e828be8e526ad5))
+
 ## [2.10.2](https://github.com/Tallec7/neopro/compare/v2.10.1...v2.10.2) (2026-01-08)
 
 ### Bug Fixes
