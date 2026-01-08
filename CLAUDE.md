@@ -270,6 +270,8 @@ Upload:     10 req/hour     (video uploads)
 | **Socket**       | `socket.service.ts`         | Communication temps réel Pi ↔ Cloud       |
 | **CommandQueue** | `command-queue.service.ts`  | File d'attente commandes (offline/online) |
 | **Deployment**   | `deployment.service.ts`     | Orchestration déploiement vidéos          |
+| **FTP Storage**  | `ftp-storage.ts`            | Upload/download vidéos sur FTP Hostinger  |
+| **Supabase**     | `supabase.ts`               | Stockage fallback si FTP non configuré    |
 | **Metrics**      | `metrics.service.ts`        | Export Prometheus                         |
 | **Audit**        | `audit.service.ts`          | Log toutes les actions admin              |
 | **MFA**          | `mfa.service.ts`            | 2FA avec backup codes                     |
@@ -277,6 +279,40 @@ Upload:     10 req/hour     (video uploads)
 | **Cron**         | `cron-scheduler.service.ts` | Stats quotidiennes, cleanup               |
 | **Logger**       | `logger.service.ts`         | Logs structurés avec correlation ID       |
 | **Errors**       | `error-extractor.ts`        | Extraction messages d'erreur              |
+
+### Stockage Vidéo (Double backend) ⚡ IMPORTANT
+
+Le système utilise **deux backends de stockage** avec fallback automatique :
+
+```
+Upload vidéo → FTP configuré ?
+                ├── OUI → FTP Hostinger (storage_path = "filename.mp4")
+                └── NON → Supabase Storage (storage_path = "uploads/filename.mp4")
+```
+
+**Détection automatique lors du déploiement** :
+
+```typescript
+// deployment.service.ts - getVideoDownloadUrl()
+function getVideoDownloadUrl(storagePath: string): string {
+  const isFtpPath = !storagePath.includes('/'); // FTP = pas de slash
+  if (isFtpPath && isFtpConfigured()) {
+    return getFtpPublicUrl(storagePath); // https://cdn.neopro.tv/file.mp4
+  }
+  return getPublicUrl(storagePath); // Supabase URL
+}
+```
+
+**Variables d'environnement FTP** :
+
+```bash
+FTP_HOST=ftp.hostinger.com
+FTP_USER=xxx
+FTP_PASSWORD=xxx
+FTP_PUBLIC_URL=https://cdn.neopro.tv  # URL publique du CDN
+```
+
+**Documentation complète** : [docs/technical/VIDEO_STORAGE.md](docs/technical/VIDEO_STORAGE.md)
 
 ### Protocole Socket.IO
 
@@ -1396,6 +1432,23 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 
 ### v2.14.x (Janvier 2026)
 
+- **Fix URL téléchargement vidéo (v2.14.4)** : Correction critique du déploiement vidéo
+  - Bug : `deployment.service.ts` générait toujours des URLs Supabase même pour les fichiers FTP
+  - Symptôme : Erreur 400 sur le Pi lors du téléchargement
+  - Fix : Ajout `getVideoDownloadUrl()` qui détecte le type de stockage via le format du `storage_path`
+  - FTP = pas de `/` dans le path → utilise `getFtpPublicUrl()`
+  - Supabase = path contient `/` → utilise `getPublicUrl()`
+  - Migration : Aucune (fix serveur uniquement)
+- **Nommage fichiers lisible (v2.14.3)** : Les vidéos gardent leur nom original
+  - Avant : UUID (`f07d625a-3e85-45a0-94d7-de8462a07bfd.mp4`)
+  - Après : Nom sanitisé (`Decathlon_FOCUS_Partenaire.mp4`)
+  - Sanitization : accents supprimés, espaces → `_`, caractères spéciaux supprimés
+  - Doublons : suffixe numérique (`video_1.mp4`, `video_2.mp4`)
+  - Migration : Les nouveaux uploads utilisent le nouveau format, anciens inchangés
+- **Affichage nom vidéo dashboard** : `displayName` pour l'affichage utilisateur
+  - Utilise `title || original_name || filename` pour l'affichage
+  - Le `filename` technique (potentiellement UUID) reste en tooltip
+  - Migration : Aucune (amélioration UI)
 - **Video Deployment Queue** : Alignement sur le pattern `update_config`/`update_software`
   - `deployment.service.ts` utilise maintenant `commandQueueService.sendOrQueue()`
   - Sites offline : commandes mises en queue, envoyées automatiquement à la reconnexion
