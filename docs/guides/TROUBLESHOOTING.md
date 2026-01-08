@@ -610,6 +610,20 @@ Les analytics ne sont générées que lorsque des vidéos sont effectivement lue
 
 ## Problèmes de synchronisation
 
+### Erreur EACCES permission denied sur configuration.backup.json
+
+**Symptôme** : Les logs du sync-agent affichent :
+```
+Configuration update failed: EACCES: permission denied, open '/home/pi/neopro/webapp/configuration.backup.json'
+```
+
+**Cause** : Le dossier webapp a le mauvais groupe (www-data au lieu de pi).
+
+**Solution** :
+```bash
+ssh pi@neopro.local 'sudo chown -R pi:pi /home/pi/neopro/webapp && sudo usermod -a -G pi www-data'
+```
+
 ### Le site n'apparaît pas sur le serveur central
 
 #### 1. Vérifier le service sync-agent
@@ -617,11 +631,11 @@ Les analytics ne sont générées que lorsque des vidéos sont effectivement lue
 ```bash
 ssh pi@neopro.local
 
-# Statut
-sudo systemctl status neopro-sync
+# IMPORTANT: Le service s'appelle neopro-sync-agent (pas neopro-sync)
+sudo systemctl status neopro-sync-agent
 
 # Logs
-sudo journalctl -u neopro-sync -n 50
+sudo journalctl -u neopro-sync-agent -n 50
 ```
 
 **Erreurs courantes :**
@@ -1228,4 +1242,4 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 2 janvier 2026
+**Dernière mise à jour :** 8 janvier 2026

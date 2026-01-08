@@ -1251,12 +1251,47 @@ curl -v ftp://FTP_HOST --user FTP_USER:FTP_PASSWORD
 curl ftp://FTP_HOST/videos/ --user FTP_USER:FTP_PASSWORD
 ```
 
+#### Sync-Agent (Raspberry Pi)
+
+| Symptôme                    | Cause probable           | Solution                                              |
+| --------------------------- | ------------------------ | ----------------------------------------------------- |
+| EACCES permission denied    | Mauvais ownership webapp | `sudo chown -R pi:pi /home/pi/neopro/webapp`          |
+| Config update failed        | Backup impossible        | Vérifier permissions sur `configuration.backup.json`  |
+| Command not executed        | Sync-agent déconnecté    | `sudo systemctl restart neopro-sync-agent`            |
+| No entries in logs          | Mauvais nom de service   | Utiliser `neopro-sync-agent` (pas `neopro-sync`)      |
+
+```bash
+# Voir les logs du sync-agent
+ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -n 100 --no-pager'
+
+# Suivre en temps réel
+ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -f'
+
+# Corriger les permissions webapp
+ssh pi@neopro.local 'sudo chown -R pi:pi /home/pi/neopro/webapp && sudo usermod -a -G pi www-data'
+
+# Vérifier la configuration
+ssh pi@neopro.local 'cat /home/pi/neopro/webapp/configuration.json | head -50'
+
+# Lister les services neopro
+ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
+```
+
 ---
 
 ## Historique Breaking Changes
 
 ### v2.6.x (Janvier 2026)
 
+- **Restauration Config Historique** : Le bouton "Restaurer" dans l'onglet Debug déploie directement
+  - Mode `replace` pour restaurer exactement la configuration historique
+  - Conversion automatique `configuration` → `neoProContent` côté serveur
+  - Sync-agent : support du mode `replace` avec `neoProContent`
+  - Migration : Mettre à jour le sync-agent sur les Pi existants
+- **Permissions webapp** : Corrigé le groupe `pi:www-data` → `pi:pi`
+  - Évite les erreurs `EACCES` lors de la création de `configuration.backup.json`
+  - `www-data` est ajouté au groupe `pi` pour l'accès nginx
+  - Migration : `sudo chown -R pi:pi /home/pi/neopro/webapp && sudo usermod -a -G pi www-data`
 - **Dashboard Polling** : Optimisation pour éviter les erreurs 429 (rate limit)
   - `connection-indicator` : Nouvel input `[externalStatus]` pour recevoir les données du parent
   - `site-detail` : Polling réduit de 10s à 30s
