@@ -1,3 +1,9 @@
+## [2.14.2](https://github.com/Tallec7/neopro/compare/v2.14.1...v2.14.2) (2026-01-08)
+
+### Bug Fixes
+
+- **dashboard:** display original video filename instead of UUID ([7035fda](https://github.com/Tallec7/neopro/commit/7035fda873e4cc2ff27515d85977146111db4c9e))
+
 ## [2.14.1](https://github.com/Tallec7/neopro/compare/v2.14.0...v2.14.1) (2026-01-08)
 
 ### Bug Fixes
