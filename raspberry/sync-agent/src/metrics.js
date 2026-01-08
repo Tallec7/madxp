@@ -73,7 +73,10 @@ class MetricsCollector {
   async getMemoryUsage() {
     try {
       const mem = await si.mem();
-      const usedPercent = (mem.used / mem.total) * 100;
+      // Utiliser (total - available) pour exclure le buff/cache Linux
+      // mem.used inclut le cache, ce qui donne des valeurs trompeuses (ex: 88% alors que 73% est disponible)
+      const actualUsed = mem.total - mem.available;
+      const usedPercent = (actualUsed / mem.total) * 100;
       return parseFloat(usedPercent.toFixed(1));
     } catch (error) {
       logger.error('Error getting memory usage:', error);
