@@ -1,3 +1,9 @@
+## [2.8.5](https://github.com/Tallec7/neopro/compare/v2.8.4...v2.8.5) (2026-01-08)
+
+### Bug Fixes
+
+- **sync-agent:** config deployment now properly notifies local app and supports replace mode ([ce6eb57](https://github.com/Tallec7/neopro/commit/ce6eb57ac99e3d4e819e40fbac6f5bc3d5d0eb6c))
+
 ## [2.8.4](https://github.com/Tallec7/neopro/compare/v2.8.3...v2.8.4) (2026-01-08)
 
 ### Bug Fixes
