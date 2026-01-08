@@ -759,22 +759,14 @@ export const sendCommand = async (req: AuthRequest, res: Response) => {
 
       const { commandId } = await dispatchCommand(id, command, normalizedShellData, req.user?.id);
 
-      // Attendre le résultat (timeout plus long pour les commandes shell)
-      const timeout = Math.min(data?.timeout || 60000, 300000); // Max 5 minutes
-      try {
-        const result = await waitForCommandResult(commandId, timeout);
-        return res.json({
-          success: true,
-          commandId,
-          result,
-        });
-      } catch {
-        return res.status(504).json({
-          error: 'La commande a expiré',
-          commandId,
-          timeout,
-        });
-      }
+      // Retourner immédiatement le commandId - le résultat sera envoyé via WebSocket (command_completed)
+      // Cela évite les timeouts 504 sur Railway Gateway (60s max)
+      return res.status(202).json({
+        success: true,
+        commandId,
+        status: 'pending',
+        message: 'Commande envoyée. Le résultat sera reçu via WebSocket (événement command_completed).',
+      });
     }
 
     // Si la commande update_config arrive avec "configuration", convertir en "neoProContent"
