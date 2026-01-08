@@ -208,8 +208,26 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Installation sync-agent
     if [ -d ~/neopro-update/sync-agent ]; then
         sudo mkdir -p ${RASPBERRY_DIR}/sync-agent
+        # Sauvegarder les configs locales du sync-agent (.env, config/.env)
+        if [ -f ${RASPBERRY_DIR}/sync-agent/.env ]; then
+            cp ${RASPBERRY_DIR}/sync-agent/.env /tmp/sync-agent.env.backup
+        fi
+        if [ -f ${RASPBERRY_DIR}/sync-agent/config/.env ]; then
+            cp ${RASPBERRY_DIR}/sync-agent/config/.env /tmp/sync-agent-config.env.backup
+        fi
+        # Copier les nouveaux fichiers
         sudo cp -r ~/neopro-update/sync-agent/* ${RASPBERRY_DIR}/sync-agent/
-        echo 'Sync-agent installé'
+        # Restaurer les configs locales
+        if [ -f /tmp/sync-agent.env.backup ]; then
+            sudo cp /tmp/sync-agent.env.backup ${RASPBERRY_DIR}/sync-agent/.env
+            rm /tmp/sync-agent.env.backup
+        fi
+        if [ -f /tmp/sync-agent-config.env.backup ]; then
+            sudo mkdir -p ${RASPBERRY_DIR}/sync-agent/config
+            sudo cp /tmp/sync-agent-config.env.backup ${RASPBERRY_DIR}/sync-agent/config/.env
+            rm /tmp/sync-agent-config.env.backup
+        fi
+        echo 'Sync-agent installé (configuration préservée)'
     fi
 
     # Installation admin panel
