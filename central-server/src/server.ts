@@ -17,6 +17,8 @@ import metricsService from './services/metrics.service';
 import healthService from './services/health.service';
 import schedulerService from './services/scheduler.service';
 import cronSchedulerService from './services/cron-scheduler.service';
+import memoryManagerService from './services/memory-manager.service';
+import { adminOpsService } from './services/admin-ops.service';
 
 import authRoutes from './routes/auth.routes';
 import mfaRoutes from './routes/mfa.routes';
@@ -354,6 +356,18 @@ const startServer = async () => {
     // Demarrer le cron scheduler pour les taches recurrentes (rapports, cleanup)
     await cronSchedulerService.start();
     logger.info('Cron scheduler started');
+
+    // Start memory manager with cleanup callbacks
+    memoryManagerService.registerCleanupCallback(() => {
+      // Force cleanup of socket service pending commands
+      const debugInfo = socketService.getDebugInfo();
+      logger.info('Memory pressure cleanup - socket service stats', {
+        pendingCommands: debugInfo.pendingCommandsCount,
+        connectedSites: debugInfo.connectedSites.length,
+      });
+    });
+    memoryManagerService.start();
+    logger.info('Memory manager started');
   } catch (error) {
     logger.error('Failed to initialize dependencies:', error);
     // Ne pas quitter - le serveur reste en mode dégradé et le health check rapportera l'état
@@ -364,6 +378,8 @@ process.on('SIGTERM', async () => {
   logger.info('SIGTERM signal received: closing HTTP server');
   schedulerService.stop();
   cronSchedulerService.stop();
+  memoryManagerService.stop();
+  adminOpsService.stopCleanup();
   httpServer.close(async () => {
     logger.info('HTTP server closed');
     await socketService.cleanup();

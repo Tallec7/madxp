@@ -48,14 +48,73 @@ const actionSchema = Joi.object<AdminActionRequest>({
   note: Joi.string().max(500).allow('', null),
 });
 
+// Configuration for job cleanup
+const MAX_JOBS_IN_MEMORY = 100;
+const JOB_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
+const JOB_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
 class AdminOpsService {
   private readonly store: AdminStateStore;
   private readonly events = new EventEmitter();
   private state: AdminState;
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor(store = new AdminStateStore()) {
     this.store = store;
     this.state = this.store.load({ jobs: [], clients: [...DEFAULT_CLIENTS] });
+    this.startJobCleanup();
+  }
+
+  /**
+   * Starts periodic cleanup of old jobs to prevent memory leaks
+   */
+  private startJobCleanup(): void {
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupOldJobs();
+    }, JOB_CLEANUP_INTERVAL_MS);
+
+    // Run initial cleanup
+    this.cleanupOldJobs();
+  }
+
+  /**
+   * Removes jobs older than JOB_MAX_AGE_MS or exceeding MAX_JOBS_IN_MEMORY
+   */
+  private cleanupOldJobs(): void {
+    const now = Date.now();
+    const initialCount = this.state.jobs.length;
+
+    // Filter out old jobs (keep only jobs < 1 hour old)
+    let filteredJobs = this.state.jobs.filter((job) => {
+      const jobAge = now - new Date(job.createdAt).getTime();
+      return jobAge < JOB_MAX_AGE_MS;
+    });
+
+    // Also enforce max jobs limit (keep most recent)
+    if (filteredJobs.length > MAX_JOBS_IN_MEMORY) {
+      filteredJobs = filteredJobs.slice(0, MAX_JOBS_IN_MEMORY);
+    }
+
+    const removedCount = initialCount - filteredJobs.length;
+
+    if (removedCount > 0) {
+      this.state = { ...this.state, jobs: filteredJobs };
+      this.persist();
+      logger.info('Cleaned up old admin jobs', {
+        removedCount,
+        remainingCount: filteredJobs.length,
+      });
+    }
+  }
+
+  /**
+   * Stops the cleanup interval (for tests and shutdown)
+   */
+  stopCleanup(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
   }
 
   listJobs(): AdminJob[] {

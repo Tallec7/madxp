@@ -96,6 +96,10 @@ const COMMAND_TIMEOUTS: Record<string, number> = {
   default: 2 * 60 * 1000,             // 2 minutes par défaut
 };
 
+// Memory safety limits
+const MAX_PENDING_COMMANDS = 500; // Maximum pending commands in memory
+const MAX_PONG_ENTRIES = 200;     // Maximum pong tracking entries
+
 type ConfigCommandData = {
   configVersionId?: string;
 } & Record<string, unknown>;
@@ -247,9 +251,11 @@ class SocketService {
 
   /**
    * Vérifie les commandes en attente qui ont dépassé leur timeout
+   * Also enforces memory limits on pendingCommands Map
    */
   private async checkCommandTimeouts() {
     const now = Date.now();
+    let cleanedCount = 0;
 
     for (const [commandId, pending] of this.pendingCommands.entries()) {
       const elapsed = now - pending.sentAt;
@@ -286,7 +292,41 @@ class SocketService {
 
         // Retirer de la liste des commandes en attente
         this.pendingCommands.delete(commandId);
+        cleanedCount++;
       }
+    }
+
+    // Memory safety: if Map is still too large, remove oldest entries
+    if (this.pendingCommands.size > MAX_PENDING_COMMANDS) {
+      const entries = Array.from(this.pendingCommands.entries())
+        .sort((a, b) => a[1].sentAt - b[1].sentAt); // Sort by oldest first
+
+      const toRemove = entries.slice(0, this.pendingCommands.size - MAX_PENDING_COMMANDS);
+      for (const [commandId, pending] of toRemove) {
+        logger.warn('Removing old pending command due to memory limit', {
+          commandId,
+          siteId: pending.siteId,
+          type: pending.type,
+          ageMs: now - pending.sentAt,
+        });
+        this.pendingCommands.delete(commandId);
+        cleanedCount++;
+
+        // Mark as failed in DB
+        query(
+          `UPDATE remote_commands
+           SET status = 'failed', error_message = 'Evicted from memory due to queue overflow', completed_at = NOW()
+           WHERE id = $1 AND status IN ('pending', 'executing')`,
+          [commandId]
+        ).catch((err) => logger.error('Error marking evicted command as failed:', err));
+      }
+    }
+
+    if (cleanedCount > 0) {
+      logger.info('Command timeout check completed', {
+        cleanedCount,
+        remainingPendingCommands: this.pendingCommands.size,
+      });
     }
   }
 
@@ -469,48 +509,43 @@ class SocketService {
       siteId,
     });
 
-    socket.on('heartbeat', (message: HeartbeatMessage) => {
-      this.handleHeartbeat(siteId, message);
-    });
+    // Create bound handlers for cleanup on disconnect
+    const handlers = {
+      heartbeat: (message: HeartbeatMessage) => this.handleHeartbeat(siteId, message),
+      command_result: (result: CommandResult) => this.handleCommandResult(siteId, result),
+      deploy_progress: (progress: any) => this.handleDeployProgress(siteId, progress),
+      update_progress: (progress: any) => this.handleUpdateProgress(siteId, progress),
+      sync_local_state: (state: any) => this.handleSyncLocalState(siteId, state),
+      'match-config': (payload: any) => handleMatchConfig(socket, payload),
+      'score-update': (payload: any) => handleScoreUpdate(socket, payload),
+      'score-reset': () => handleScoreReset(socket),
+      pong_check: () => this.lastPongReceived.set(siteId, Date.now()),
+    };
 
-    socket.on('command_result', (result: CommandResult) => {
-      this.handleCommandResult(siteId, result);
-    });
+    // Register all handlers
+    socket.on('heartbeat', handlers.heartbeat);
+    socket.on('command_result', handlers.command_result);
+    socket.on('deploy_progress', handlers.deploy_progress);
+    socket.on('update_progress', handlers.update_progress);
+    socket.on('sync_local_state', handlers.sync_local_state);
+    socket.on('match-config', handlers['match-config']);
+    socket.on('score-update', handlers['score-update']);
+    socket.on('score-reset', handlers['score-reset']);
+    socket.on('pong_check', handlers.pong_check);
 
-    socket.on('deploy_progress', (progress: any) => {
-      this.handleDeployProgress(siteId, progress);
-    });
-
-    socket.on('update_progress', (progress: any) => {
-      this.handleUpdateProgress(siteId, progress);
-    });
-
-    socket.on('sync_local_state', (state: any) => {
-      this.handleSyncLocalState(siteId, state);
-    });
-
-    // Live Score - Match Configuration
-    socket.on('match-config', (payload: any) => {
-      handleMatchConfig(socket, payload);
-    });
-
-    // Live Score - Score Update
-    socket.on('score-update', (payload: any) => {
-      handleScoreUpdate(socket, payload);
-    });
-
-    // Live Score - Score Reset
-    socket.on('score-reset', () => {
-      handleScoreReset(socket);
-    });
-
-    // Health check - Pong response
-    socket.on('pong_check', () => {
-      this.lastPongReceived.set(siteId, Date.now());
-    });
+    // Store handlers reference for cleanup on disconnect
+    (socket as any)._neoHandlers = handlers;
 
     // Initialiser le timestamp de pong à maintenant (connexion fraîche)
     this.lastPongReceived.set(siteId, Date.now());
+
+    // Memory safety: limit lastPongReceived Map size
+    if (this.lastPongReceived.size > MAX_PONG_ENTRIES) {
+      const oldestSiteId = this.lastPongReceived.keys().next().value;
+      if (oldestSiteId && !this.connectedSites.has(oldestSiteId)) {
+        this.lastPongReceived.delete(oldestSiteId);
+      }
+    }
 
     logger.info('Agent authenticated', { siteId, siteName: site.site_name, clientIp });
 
@@ -557,6 +592,43 @@ class SocketService {
 
   private handleDisconnection(socket: Socket) {
     const siteId = (socket as any).siteId;
+
+    // Explicitly remove all registered handlers to prevent memory leaks
+    const handlers = (socket as any)._neoHandlers;
+    if (handlers) {
+      socket.off('heartbeat', handlers.heartbeat);
+      socket.off('command_result', handlers.command_result);
+      socket.off('deploy_progress', handlers.deploy_progress);
+      socket.off('update_progress', handlers.update_progress);
+      socket.off('sync_local_state', handlers.sync_local_state);
+      socket.off('match-config', handlers['match-config']);
+      socket.off('score-update', handlers['score-update']);
+      socket.off('score-reset', handlers['score-reset']);
+      socket.off('pong_check', handlers.pong_check);
+      delete (socket as any)._neoHandlers;
+    }
+
+    // Clean up any pending commands for this site if it disconnects unexpectedly
+    if (siteId) {
+      for (const [commandId, pending] of this.pendingCommands.entries()) {
+        if (pending.siteId === siteId) {
+          logger.warn('Cleaning up pending command for disconnected site', {
+            commandId,
+            siteId,
+            type: pending.type,
+          });
+          this.pendingCommands.delete(commandId);
+
+          // Mark as failed in DB (fire and forget)
+          query(
+            `UPDATE remote_commands
+             SET status = 'failed', error_message = 'Site disconnected', completed_at = NOW()
+             WHERE id = $1 AND status IN ('pending', 'executing')`,
+            [commandId]
+          ).catch((err) => logger.error('Error marking command as failed on disconnect:', err));
+        }
+      }
+    }
 
     if (siteId) {
       const siteName = (socket as any).siteName || siteId;
