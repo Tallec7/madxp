@@ -1,3 +1,9 @@
+## [2.13.7](https://github.com/Tallec7/neopro/compare/v2.13.6...v2.13.7) (2026-01-08)
+
+### Bug Fixes
+
+- **sync-agent:** use available memory instead of used for accurate RAM metrics ([fadbb56](https://github.com/Tallec7/neopro/commit/fadbb567a8fb5a0e5465fe4d5722841bba4ed278))
+
 ## [2.13.6](https://github.com/Tallec7/neopro/compare/v2.13.5...v2.13.6) (2026-01-08)
 
 ### Bug Fixes
