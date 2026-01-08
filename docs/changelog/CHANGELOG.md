@@ -1,3 +1,9 @@
+## [2.11.4](https://github.com/Tallec7/neopro/compare/v2.11.3...v2.11.4) (2026-01-08)
+
+### Performance Improvements
+
+- **memory:** adjust thresholds for Railway Hobby plan ([2d00421](https://github.com/Tallec7/neopro/commit/2d00421bbbfc671ca8241728968f88cbddce8d6e))
+
 ## [2.11.3](https://github.com/Tallec7/neopro/compare/v2.11.2...v2.11.3) (2026-01-08)
 
 ### Bug Fixes
