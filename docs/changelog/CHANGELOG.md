@@ -1,3 +1,9 @@
+## [2.11.2](https://github.com/Tallec7/neopro/compare/v2.11.1...v2.11.2) (2026-01-08)
+
+### Bug Fixes
+
+- **audit:** add REMOTE_SHELL audit action types ([732b132](https://github.com/Tallec7/neopro/commit/732b132e05e6fe40a737bc1c6131e8c3b980a666))
+
 ## [2.11.1](https://github.com/Tallec7/neopro/compare/v2.11.0...v2.11.1) (2026-01-08)
 
 ### Bug Fixes
