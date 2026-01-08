@@ -1,3 +1,9 @@
+# [2.13.0](https://github.com/Tallec7/neopro/compare/v2.12.2...v2.13.0) (2026-01-08)
+
+### Features
+
+- **remote-shell:** allow rm -rf on safe paths for super_admin ([544f968](https://github.com/Tallec7/neopro/commit/544f96831a50c69aae0ba048aff77cb4222f9a89))
+
 ## [2.12.2](https://github.com/Tallec7/neopro/compare/v2.12.1...v2.12.2) (2026-01-08)
 
 ### Bug Fixes
