@@ -1,3 +1,9 @@
+## [2.13.1](https://github.com/Tallec7/neopro/compare/v2.13.0...v2.13.1) (2026-01-08)
+
+### Bug Fixes
+
+- **remote-shell:** allow /dev/null redirection in security blacklist ([56ba965](https://github.com/Tallec7/neopro/commit/56ba965b7547e98ffb5f79c8409002187e903ed2))
+
 # [2.13.0](https://github.com/Tallec7/neopro/compare/v2.12.2...v2.13.0) (2026-01-08)
 
 ### Features
