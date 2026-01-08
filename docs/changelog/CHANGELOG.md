@@ -1,3 +1,9 @@
+# [2.14.0](https://github.com/Tallec7/neopro/compare/v2.13.7...v2.14.0) (2026-01-08)
+
+### Features
+
+- **deployment:** use commandQueueService for video deployments ([027d365](https://github.com/Tallec7/neopro/commit/027d36563541a204dae0b417c6312922a78bfcb7))
+
 ## [2.13.7](https://github.com/Tallec7/neopro/compare/v2.13.6...v2.13.7) (2026-01-08)
 
 ### Bug Fixes
