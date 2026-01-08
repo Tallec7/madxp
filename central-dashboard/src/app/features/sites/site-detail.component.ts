@@ -7,7 +7,7 @@ import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
-import { Site, Metrics, SiteConnectionStatus } from '../../core/models';
+import { Site, Metrics, SiteConnectionStatus, ConnectionHealth } from '../../core/models';
 import { formatVersion } from './utils/version';
 import { Subscription, interval } from 'rxjs';
 import { ConnectionIndicatorComponent } from '../../shared/components/connection-indicator.component';
@@ -203,6 +203,11 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
             <p class="connection-hint" *ngIf="!isConnected">
               <strong>Site hors ligne.</strong> Les commandes temps réel sont désactivées.
               Les autres actions seront mises en file d'attente.
+            </p>
+            <p class="connection-hint warning" *ngIf="isConnected && connectionHealth && !connectionHealth.isHealthy">
+              <strong>⚠️ Connexion instable.</strong>
+              {{ getHealthReason() }}
+              Les commandes peuvent échouer ou être mises en file d'attente.
             </p>
             <div class="actions-grid">
               <button class="action-card" (click)="restartService('neopro-app')" [disabled]="sendingCommand">
@@ -612,6 +617,12 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
       color: #92400e;
     }
 
+    .connection-hint.warning {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      color: #92400e;
+    }
+
     .actions-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -917,6 +928,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   // Connection
   connectionStatus: SiteConnectionStatus | null = null;
   isConnected = false;
+  connectionHealth: ConnectionHealth | null = null;
   private loadingDashboard = false;
 
   // UI state
@@ -984,14 +996,21 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
     this.loadingDashboard = true;
     this.sitesService.getDashboardData(this.siteId, 24).subscribe({
-      next: (data) => {
+      next: (data: any) => {
+        // Récupérer l'état de santé de la connexion (nouveau champ)
+        this.connectionHealth = data.health || null;
+
+        // Utiliser health.isHealthy pour déterminer si la connexion est vraiment fonctionnelle
+        // Cela détecte les "connexions zombies" où isConnected=true mais la socket est morte
+        const isReallyConnected = this.connectionHealth?.isHealthy ?? data.connection.isConnected;
+
         this.connectionStatus = {
           siteId: data.site.id,
           siteName: data.site.site_name,
           clubName: data.site.club_name,
           connection: {
-            isConnected: data.connection.isConnected,
-            displayStatus: data.connection.status,
+            isConnected: isReallyConnected,
+            displayStatus: isReallyConnected ? 'online' : (data.connection.isConnected ? 'warning' : data.connection.status),
             lastSeenAt: data.connection.lastSeenAt,
             secondsSinceLastSeen: data.connection.secondsSinceLastSeen,
             localIp: data.connection.localIp
@@ -1004,9 +1023,10 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
             uptime24h: 0,
             firstHeartbeat24h: data.connection.heartbeat_24h.firstAt,
             lastHeartbeat24h: data.connection.heartbeat_24h.lastAt
-          }
+          },
+          health: this.connectionHealth || undefined
         };
-        this.isConnected = data.connection.isConnected;
+        this.isConnected = isReallyConnected;
         this.metricsHistory = data.metrics.data;
         if (data.metrics.data.length > 0) {
           this.currentMetrics = data.metrics.data[0];
@@ -1017,6 +1037,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         const message = ErrorExtractor.getMessage(error);
         this.logger.warn('Failed to load dashboard data', { error: message, siteId: this.siteId });
         this.isConnected = false;
+        this.connectionHealth = null;
         this.loadingDashboard = false;
       }
     });
@@ -1173,5 +1194,27 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   onSiteUpdated(site: Site): void {
     this.site = site;
+  }
+
+  /**
+   * Retourne un message explicatif pour l'état de santé de la connexion
+   */
+  getHealthReason(): string {
+    if (!this.connectionHealth) return '';
+
+    switch (this.connectionHealth.reason) {
+      case 'socket_disconnected':
+        return 'La socket est déconnectée.';
+      case 'pong_stale': {
+        const ageSeconds = Math.round((this.connectionHealth.lastPongAgeMs || 0) / 1000);
+        return `Pas de réponse depuis ${ageSeconds}s.`;
+      }
+      case 'no_pong_received':
+        return 'Aucune réponse reçue du boîtier.';
+      case 'not_in_map':
+        return 'Connexion non enregistrée.';
+      default:
+        return '';
+    }
   }
 }

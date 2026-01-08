@@ -123,6 +123,9 @@ class CommandQueueService {
   /**
    * Tente d'envoyer une commande : si le site est connecté, envoie immédiatement,
    * sinon met en file d'attente.
+   *
+   * IMPORTANT: Si l'envoi échoue malgré isConnected=true (connexion zombie),
+   * on fait un fallback vers la queue pour les commandes queueables.
    */
   async sendOrQueue(
     siteId: string,
@@ -167,9 +170,45 @@ class CommandQueueService {
           message: 'Commande envoyée au site.',
         };
       }
+
+      // L'envoi a échoué malgré isConnected=true (connexion zombie détectée)
+      // Marquer la commande comme failed et faire un fallback vers la queue
+      logger.warn('Command send failed despite isConnected=true (zombie connection)', {
+        siteId,
+        commandType,
+        commandId,
+      });
+
+      await query(
+        `UPDATE remote_commands SET status = 'failed', error_message = 'Connexion zombie détectée' WHERE id = $1`,
+        [commandId]
+      );
+
+      // Fallback vers queue si la commande est queueable
+      if (!REALTIME_ONLY_COMMANDS.includes(commandType)) {
+        const queueResult = await this.queueCommand(siteId, commandType, commandData, {
+          ...options,
+          createdBy: options.userId,
+        });
+
+        return {
+          sent: false,
+          queued: queueResult.queued,
+          commandId: queueResult.commandId,
+          message: 'Connexion instable détectée. ' + queueResult.message,
+        };
+      }
+
+      // Commande temps réel uniquement, impossible de mettre en queue
+      return {
+        sent: false,
+        queued: false,
+        commandId: '',
+        message: `Connexion instable détectée. La commande "${commandType}" nécessite une connexion stable.`,
+      };
     }
 
-    // Site non connecté ou envoi échoué, mettre en queue si possible
+    // Site non connecté, mettre en queue si possible
     if (REALTIME_ONLY_COMMANDS.includes(commandType)) {
       return {
         sent: false,
