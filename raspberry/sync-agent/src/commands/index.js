@@ -78,15 +78,46 @@ const commands = {
       logger.info('Backup created', { path: backupPath });
 
       let finalConfig;
+      const contentToApply = data.neoProContent || data.configuration;
 
-      if (data.mode === 'replace' && data.configuration) {
-        // Mode legacy : remplacement complet (pour rétrocompatibilité)
-        logger.warn('Using legacy replace mode - local changes may be lost');
-        finalConfig = data.configuration;
-      } else if (data.neoProContent) {
-        // Mode merge : fusionner le contenu NEOPRO avec la config locale
+      if (!contentToApply) {
+        throw new Error('Missing neoProContent or configuration in update_config command');
+      }
+
+      if (data.mode === 'replace') {
+        // Mode replace : remplacement des champs envoyés (sponsors, categories, etc.)
+        // Les paramètres locaux (settings, siteId, apiKey, etc.) sont préservés
+        logger.info('Using replace mode - replacing content fields');
+        finalConfig = { ...localConfig };
+
+        // Remplacer les champs de contenu envoyés
+        if (contentToApply.sponsors !== undefined) {
+          finalConfig.sponsors = contentToApply.sponsors;
+        }
+        if (contentToApply.categories !== undefined) {
+          finalConfig.categories = contentToApply.categories;
+        }
+        if (contentToApply.timeCategories !== undefined) {
+          finalConfig.timeCategories = contentToApply.timeCategories;
+        }
+        if (contentToApply.categoryMappings !== undefined) {
+          finalConfig.categoryMappings = contentToApply.categoryMappings;
+        }
+        if (contentToApply.liveScoreEnabled !== undefined) {
+          finalConfig.liveScoreEnabled = contentToApply.liveScoreEnabled;
+        }
+        if (contentToApply.scoreOverlay !== undefined) {
+          finalConfig.scoreOverlay = contentToApply.scoreOverlay;
+        }
+
+        logger.info('Configuration replaced', {
+          sponsorsCount: finalConfig.sponsors?.length || 0,
+          categoriesCount: finalConfig.categories?.length || 0,
+        });
+      } else {
+        // Mode merge (défaut) : fusionner le contenu NEOPRO avec la config locale
         const hashBefore = calculateConfigHash(localConfig);
-        finalConfig = mergeConfigurations(localConfig, data.neoProContent);
+        finalConfig = mergeConfigurations(localConfig, contentToApply);
         const hashAfter = calculateConfigHash(finalConfig);
 
         logger.info('Configuration merged', {
@@ -94,12 +125,6 @@ const commands = {
           hashAfter,
           changed: hashBefore !== hashAfter,
         });
-      } else if (data.configuration) {
-        // Fallback : ancien format (remplacement)
-        logger.warn('Legacy configuration format detected, using merge');
-        finalConfig = mergeConfigurations(localConfig, data.configuration);
-      } else {
-        throw new Error('Missing neoProContent or configuration in update_config command');
       }
 
       // Écrire la configuration fusionnée
@@ -110,8 +135,28 @@ const commands = {
       // Notifier l'application locale du changement
       const io = require('socket.io-client');
       const socket = io('http://localhost:3000', { timeout: 5000 });
-      socket.emit('config_updated');
-      setTimeout(() => socket.close(), 1000);
+      let timeoutId = null;
+
+      // Attendre que la connexion soit établie avant d'émettre
+      socket.on('connect', () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        logger.info('Connected to local server, sending config_updated notification');
+        socket.emit('config_updated');
+        setTimeout(() => socket.close(), 500);
+      });
+
+      socket.on('connect_error', (err) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        logger.warn('Failed to connect to local server for config notification:', err.message);
+        socket.close();
+      });
+
+      // Timeout de sécurité si la connexion prend trop de temps
+      timeoutId = setTimeout(() => {
+        if (socket.connected) return;
+        logger.warn('Timeout connecting to local server for config notification');
+        socket.close();
+      }, 5000);
 
       logger.info('Configuration updated successfully');
 
