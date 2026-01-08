@@ -1,3 +1,9 @@
+## [2.11.6](https://github.com/Tallec7/neopro/compare/v2.11.5...v2.11.6) (2026-01-08)
+
+### Bug Fixes
+
+- **socket:** detect and handle zombie connections ([b731f89](https://github.com/Tallec7/neopro/commit/b731f8912029d3043cc921eff597e69fca7e8d85))
+
 ## [2.11.5](https://github.com/Tallec7/neopro/compare/v2.11.4...v2.11.5) (2026-01-08)
 
 ### Performance Improvements
