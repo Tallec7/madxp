@@ -515,7 +515,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
           this.isConnected = false;
           break;
         case 'command_completed':
-          this.showNotification('success', 'Commande exécutée avec succès');
+          // Ne pas afficher de notification globale ici -
+          // le composant qui a lancé la commande gère son propre feedback
           break;
         case 'deploy_progress':
           if (event.data.progress === 100) {

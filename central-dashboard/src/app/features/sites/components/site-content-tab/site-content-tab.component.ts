@@ -1,10 +1,11 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, OnDestroy, SimpleChanges, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { interval, Subscription } from 'rxjs';
+import { interval, Subscription, filter, take } from 'rxjs';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
+import { SocketService } from '../../../../core/services/socket.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import {
   SiteConfiguration,
@@ -466,6 +467,25 @@ interface HumanReadableDiff {
       </div>
 
       <!-- Actions -->
+      <!-- Deploy Status Banner -->
+      <div class="deploy-status-banner" *ngIf="deployStatus !== 'idle'" [class]="'status-' + deployStatus">
+        <div class="status-icon">
+          <span *ngIf="deployStatus === 'sending'">📤</span>
+          <span *ngIf="deployStatus === 'pending'">⏳</span>
+          <span *ngIf="deployStatus === 'success'">✅</span>
+          <span *ngIf="deployStatus === 'error'">❌</span>
+          <span *ngIf="deployStatus === 'timeout'">⏱️</span>
+        </div>
+        <div class="status-content">
+          <span class="status-text" *ngIf="deployStatus === 'sending'">Envoi de la configuration...</span>
+          <span class="status-text" *ngIf="deployStatus === 'pending'">En attente de confirmation du Pi...</span>
+          <span class="status-text" *ngIf="deployStatus === 'success'">Configuration appliquée avec succès !</span>
+          <span class="status-text" *ngIf="deployStatus === 'error'">Erreur : {{ deployError }}</span>
+          <span class="status-text" *ngIf="deployStatus === 'timeout'">{{ deployError }}</span>
+        </div>
+        <button class="status-close" *ngIf="deployStatus !== 'sending' && deployStatus !== 'pending'" (click)="resetDeployStatus()">×</button>
+      </div>
+
       <div class="actions-bar" *ngIf="isDirty" [class.has-errors]="validationErrors.length > 0">
         <div class="actions-status">
           <span class="dirty-indicator">⚠️ Modifications non enregistrées</span>
@@ -495,17 +515,30 @@ interface HumanReadableDiff {
                 <label class="mode-option" [class.active]="deployMode === 'merge'">
                   <input type="radio" name="deployMode" value="merge" [(ngModel)]="deployMode" />
                   <div class="mode-option-content">
-                    <span class="mode-option-title">🔀 Fusionner</span>
-                    <span class="mode-option-desc">Préserve le contenu club existant, applique les modifications NEOPRO</span>
+                    <span class="mode-option-title">🔀 Fusionner (recommandé)</span>
+                    <span class="mode-option-desc">Préserve les paramètres locaux du Pi (langue, timezone, etc.)</span>
                   </div>
                 </label>
                 <label class="mode-option" [class.active]="deployMode === 'replace'">
                   <input type="radio" name="deployMode" value="replace" [(ngModel)]="deployMode" />
                   <div class="mode-option-content">
                     <span class="mode-option-title">🔄 Remplacer</span>
-                    <span class="mode-option-desc">Écrase totalement la configuration (⚠️ perte du contenu club)</span>
+                    <span class="mode-option-desc">Écrase tout - utilisez si les modifications ne s'appliquent pas</span>
                   </div>
                 </label>
+              </div>
+              <div class="mode-help" *ngIf="deployMode === 'merge'">
+                <span class="mode-help-icon">💡</span>
+                <span class="mode-help-text">
+                  Si vos modifications ne s'appliquent pas après le déploiement, essayez le mode <strong>Remplacer</strong>
+                  ou mettez à jour le sync-agent depuis l'onglet <strong>Paramètres</strong>.
+                </span>
+              </div>
+              <div class="mode-warning" *ngIf="deployMode === 'replace'">
+                <span class="mode-warning-icon">⚠️</span>
+                <span class="mode-warning-text">
+                  Ce mode écrase les paramètres locaux du Pi. Les vidéos ajoutées localement par le club seront perdues.
+                </span>
               </div>
             </div>
 
@@ -587,6 +620,90 @@ interface HumanReadableDiff {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
+    }
+
+    /* Deploy Status Banner */
+    .deploy-status-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .deploy-status-banner.status-sending,
+    .deploy-status-banner.status-pending {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+    }
+
+    .deploy-status-banner.status-success {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+    }
+
+    .deploy-status-banner.status-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    .deploy-status-banner.status-timeout {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+    }
+
+    .status-icon {
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .status-content {
+      flex: 1;
+    }
+
+    .status-text {
+      font-weight: 500;
+    }
+
+    .status-close {
+      background: none;
+      border: none;
+      font-size: 1.25rem;
+      cursor: pointer;
+      opacity: 0.6;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .status-close:hover {
+      opacity: 1;
+    }
+
+    /* Pending animation */
+    .status-pending .status-icon {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
 
     .content-header {
@@ -1533,6 +1650,42 @@ interface HumanReadableDiff {
       line-height: 1.4;
     }
 
+    .mode-help, .mode-warning {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      line-height: 1.4;
+    }
+
+    .mode-help {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      color: #0369a1;
+    }
+
+    .mode-warning {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      color: #92400e;
+    }
+
+    .mode-help-icon, .mode-warning-icon {
+      flex-shrink: 0;
+      font-size: 1rem;
+    }
+
+    .mode-help-text, .mode-warning-text {
+      flex: 1;
+    }
+
+    .mode-help-text strong, .mode-warning-text strong {
+      font-weight: 600;
+    }
+
     .loading-inline {
       display: flex;
       align-items: center;
@@ -1929,6 +2082,13 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   expandedDiffItems: Record<string, boolean> = {};
   deployMode: 'merge' | 'replace' = 'merge';
 
+  // Deploy tracking
+  deployCommandId: string | null = null;
+  deployStatus: 'idle' | 'sending' | 'pending' | 'success' | 'error' | 'timeout' = 'idle';
+  deployError: string | null = null;
+  private deploySubscription: Subscription | null = null;
+  private deployTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
   // Cached computed values for template
   cachedVideoCategories: string[] = [];
   cachedVideosByCategory: Map<string, LocalVideo[]> = new Map();
@@ -2287,6 +2447,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     private sitesService: SitesService,
     private notificationService: NotificationService,
     private logger: LoggerService,
+    private socketService: SocketService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -2302,6 +2463,10 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.refreshPollSubscription?.unsubscribe();
+    this.deploySubscription?.unsubscribe();
+    if (this.deployTimeoutId) {
+      clearTimeout(this.deployTimeoutId);
+    }
   }
 
   /**
@@ -2874,6 +3039,8 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
    */
   confirmDeploy(): void {
     this.deploying = true;
+    this.deployStatus = 'sending';
+    this.deployError = null;
     this.cdr.markForCheck();
 
     // Clean config before sending
@@ -2883,27 +3050,134 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       neoProContent: configToSend,
       mode: this.deployMode
     }).subscribe({
-      next: () => {
-        this.deploying = false;
-        this.showDiffModal = false;
-        this.originalConfig = JSON.stringify(this.config);
-        this.isDirty = false;
-        this.notificationService.success(
-          this.isConnected
-            ? 'Configuration déployée avec succès !'
-            : '📥 Configuration mise en file d\'attente. Elle sera appliquée à la reconnexion.'
-        );
-        this.configDeployed.emit();
-        this.cdr.markForCheck();
+      next: (response) => {
+        if (response.commandId) {
+          this.deployCommandId = response.commandId;
+
+          if (response.queued && !response.sent) {
+            // Site offline - commande en queue
+            this.deployStatus = 'pending';
+            this.deploying = false;
+            this.showDiffModal = false;
+            this.originalConfig = JSON.stringify(this.config);
+            this.isDirty = false;
+            this.notificationService.info('📥 Configuration en file d\'attente. Elle sera appliquée à la reconnexion du Pi.');
+            this.configDeployed.emit();
+            this.cdr.markForCheck();
+          } else {
+            // Site online - attendre le résultat via socket
+            this.deployStatus = 'pending';
+            this.waitForDeployResult(response.commandId);
+            this.cdr.markForCheck();
+          }
+        } else {
+          // Pas de commandId retourné - comportement legacy
+          this.deploying = false;
+          this.deployStatus = 'success';
+          this.showDiffModal = false;
+          this.originalConfig = JSON.stringify(this.config);
+          this.isDirty = false;
+          this.notificationService.success('Configuration envoyée !');
+          this.configDeployed.emit();
+          this.cdr.markForCheck();
+        }
       },
       error: (error) => {
         this.deploying = false;
+        this.deployStatus = 'error';
         const message = ErrorExtractor.getMessage(error);
+        this.deployError = message;
         this.logger.error('Failed to deploy config', { error: message, siteId: this.siteId });
-        this.notificationService.error(`Erreur: ${message}`);
+        this.notificationService.error(`Erreur d'envoi: ${message}`);
         this.cdr.markForCheck();
       }
     });
+  }
+
+  /**
+   * Attend le résultat du déploiement via Socket.IO
+   */
+  private waitForDeployResult(commandId: string): void {
+    // Timeout de 45 secondes (légèrement plus que le timeout serveur de 30s)
+    const DEPLOY_TIMEOUT = 45000;
+
+    // Nettoyer les subscriptions précédentes
+    this.deploySubscription?.unsubscribe();
+    if (this.deployTimeoutId) {
+      clearTimeout(this.deployTimeoutId);
+    }
+
+    // Timeout de sécurité
+    this.deployTimeoutId = setTimeout(() => {
+      if (this.deployStatus === 'pending') {
+        this.deploySubscription?.unsubscribe();
+        this.deploying = false;
+        this.deployStatus = 'timeout';
+        this.deployError = 'Timeout: le Pi n\'a pas répondu dans les temps';
+        this.notificationService.warning('Timeout: le Pi n\'a pas confirmé l\'application de la configuration');
+        this.cdr.markForCheck();
+      }
+    }, DEPLOY_TIMEOUT);
+
+    // Écouter le résultat via socket
+    this.deploySubscription = this.socketService.on<{ siteId: string; commandId: string; status: string }>('command_completed')
+      .pipe(
+        filter(event => event.commandId === commandId),
+        take(1)
+      )
+      .subscribe(event => {
+        if (this.deployTimeoutId) {
+          clearTimeout(this.deployTimeoutId);
+        }
+
+        this.deploying = false;
+
+        if (event.status === 'success' || event.status === 'completed') {
+          this.deployStatus = 'success';
+          this.showDiffModal = false;
+          this.originalConfig = JSON.stringify(this.config);
+          this.isDirty = false;
+          this.notificationService.success('Configuration appliquée avec succès sur le Pi !');
+          this.configDeployed.emit();
+        } else {
+          this.deployStatus = 'error';
+          this.deployError = 'Le Pi a signalé une erreur lors de l\'application';
+          this.notificationService.error('Erreur: le Pi n\'a pas pu appliquer la configuration');
+        }
+
+        this.cdr.markForCheck();
+      });
+
+    // Écouter aussi les timeouts du serveur
+    const timeoutSub = this.socketService.on<{ siteId: string; commandId: string }>('command_timeout')
+      .pipe(
+        filter(event => event.commandId === commandId),
+        take(1)
+      )
+      .subscribe(() => {
+        if (this.deployTimeoutId) {
+          clearTimeout(this.deployTimeoutId);
+        }
+        this.deploySubscription?.unsubscribe();
+
+        this.deploying = false;
+        this.deployStatus = 'timeout';
+        this.deployError = 'Le Pi n\'a pas répondu dans les temps';
+        this.notificationService.warning('Timeout: le Pi ne répond pas');
+        this.cdr.markForCheck();
+      });
+
+    // Ajouter à la subscription principale pour cleanup
+    this.deploySubscription.add(timeoutSub);
+  }
+
+  /**
+   * Réinitialise l'état de déploiement
+   */
+  resetDeployStatus(): void {
+    this.deployStatus = 'idle';
+    this.deployError = null;
+    this.deployCommandId = null;
   }
 
   /**

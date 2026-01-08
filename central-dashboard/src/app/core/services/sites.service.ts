@@ -56,7 +56,13 @@ export class SitesService {
   }
 
   // Commandes à distance
-  sendCommand(id: string, command: string, params?: Record<string, unknown>): Observable<{ success: boolean; commandId?: string; message: string }> {
+  sendCommand(id: string, command: string, params?: Record<string, unknown>): Observable<{
+    success: boolean;
+    sent?: boolean;
+    queued?: boolean;
+    commandId?: string;
+    message: string;
+  }> {
     return this.api.post(`/sites/${id}/command`, { command, params });
   }
 
