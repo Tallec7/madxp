@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { Subscription, interval } from 'rxjs';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -13,7 +14,7 @@ import { formatVersion } from './utils/version';
 @Component({
   selector: 'app-sites-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, TranslateModule],
   template: `
     <div class="page-container">
       <div class="page-header">
@@ -24,7 +25,7 @@ import { formatVersion } from './utils/version';
       <div class="filters">
         <input
           type="text"
-          placeholder="Rechercher par nom..."
+          [placeholder]="'groups.searchByName' | translate"
           [(ngModel)]="searchTerm"
           (ngModelChange)="applyFilters()"
           class="search-input"

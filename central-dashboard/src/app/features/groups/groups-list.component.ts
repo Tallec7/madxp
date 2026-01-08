@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { GroupsService } from '../../core/services/groups.service';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -18,7 +19,7 @@ type GroupMetadataForm = {
 @Component({
   selector: 'app-groups-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, TranslateModule],
   template: `
     <div class="page-container">
       <div class="page-header">
@@ -29,7 +30,7 @@ type GroupMetadataForm = {
       <div class="filters">
         <input
           type="text"
-          placeholder="Rechercher par nom..."
+          [placeholder]="'groups.searchByName' | translate"
           [(ngModel)]="searchTerm"
           (ngModelChange)="applyFilters()"
           class="search-input"
@@ -121,7 +122,7 @@ type GroupMetadataForm = {
       <div class="modal" *ngIf="showCreateModal || showEditModal" (click)="closeModals()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h2>{{ showEditModal ? 'Modifier le groupe' : 'Nouveau groupe' }}</h2>
+            <h2>{{ showEditModal ? ('groups.editGroup' | translate) : ('groups.newGroup' | translate) }}</h2>
             <button class="modal-close" (click)="closeModals()">×</button>
           </div>
           <div class="modal-body">
@@ -185,13 +186,13 @@ type GroupMetadataForm = {
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="closeModals()">Annuler</button>
+            <button class="btn btn-secondary" (click)="closeModals()">{{ 'common.cancel' | translate }}</button>
             <button
               class="btn btn-primary"
               (click)="showEditModal ? updateGroup() : createGroup()"
               [disabled]="!isFormValid()"
             >
-              {{ showEditModal ? 'Mettre à jour' : 'Créer' }}
+              {{ showEditModal ? ('common.update' | translate) : ('common.create' | translate) }}
             </button>
           </div>
         </div>

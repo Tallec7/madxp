@@ -123,55 +123,52 @@ function mergeConfigurations(localConfig, neoProContent) {
 
 /**
  * Fusionne les sponsors (boucle par défaut)
- * Les sponsors NEOPRO (locked/owner=neopro) sont contrôlés par le central
- * Les sponsors Club sont préservés
  *
- * @param {Array} localSponsors - Sponsors locaux
- * @param {Array} neoProSponsors - Sponsors du central
+ * RÈGLE IMPORTANTE : Le central est la source de vérité pour les sponsors.
+ * Tous les sponsors envoyés par le central remplacent les sponsors locaux.
+ *
+ * - Les sponsors NEOPRO (locked/owner=neopro) sont verrouillés et ne peuvent pas être modifiés localement
+ * - Les sponsors Club (locked=false) peuvent être modifiés via le dashboard central
+ * - L'ordre des sponsors est préservé tel qu'envoyé par le central
+ *
+ * @param {Array} localSponsors - Sponsors locaux (utilisé uniquement pour préserver les sponsors non présents dans le central)
+ * @param {Array} centralSponsors - Sponsors envoyés par le central (source de vérité)
  * @returns {Array} Sponsors fusionnés
  */
-function mergeSponsors(localSponsors, neoProSponsors) {
+function mergeSponsors(localSponsors, centralSponsors) {
+  // Le central envoie la liste complète des sponsors à appliquer
+  // On utilise directement cette liste en ajoutant les métadonnées appropriées
   const result = [];
+  const processedPaths = new Set();
 
-  // 1. Ajouter tous les sponsors NEOPRO du central
-  for (const sponsor of neoProSponsors) {
-    if (sponsor.locked || sponsor.owner === 'neopro') {
-      result.push({
-        ...sponsor,
-        locked: true,
-        owner: 'neopro',
-      });
+  // 1. Traiter tous les sponsors du central (NEOPRO et Club confondus)
+  for (const sponsor of centralSponsors) {
+    const isNeopro = sponsor.locked || sponsor.owner === 'neopro';
+    result.push({
+      ...sponsor,
+      locked: isNeopro,
+      owner: isNeopro ? 'neopro' : (sponsor.owner || 'club'),
+    });
+    if (sponsor.path) {
+      processedPaths.add(sponsor.path);
     }
   }
 
-  // 2. Préserver les sponsors Club locaux
+  // 2. Préserver les sponsors Club locaux qui ne sont PAS dans la liste du central
+  // (sponsors créés localement via la télécommande ou l'admin Pi)
   for (const sponsor of localSponsors) {
-    if (!sponsor.locked && sponsor.owner !== 'neopro') {
+    // Ne garder que les sponsors Club locaux non traités
+    if (!sponsor.locked && sponsor.owner !== 'neopro' && sponsor.path && !processedPaths.has(sponsor.path)) {
       result.push({
         ...sponsor,
         locked: false,
         owner: sponsor.owner || 'club',
       });
+      logger.debug(`[config-merge] Sponsor local préservé (non présent dans central): ${sponsor.path}`);
     }
   }
 
-  // 3. Ajouter les nouveaux sponsors Club du central (non présents localement)
-  for (const sponsor of neoProSponsors) {
-    if (!sponsor.locked && sponsor.owner !== 'neopro') {
-      // Vérifier si ce sponsor existe déjà (par path ou nom)
-      const exists = result.some(
-        (s) => s.path === sponsor.path || (s.name === sponsor.name && s.name)
-      );
-      if (!exists) {
-        result.push({
-          ...sponsor,
-          locked: false,
-          owner: 'club',
-        });
-      }
-    }
-  }
-
+  logger.info(`[config-merge] Sponsors fusionnés: ${result.length} (${centralSponsors.length} du central)`);
   return result;
 }
 
