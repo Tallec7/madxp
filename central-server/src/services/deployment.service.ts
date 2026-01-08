@@ -3,6 +3,24 @@ import socketService from './socket.service';
 import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
 import { deleteFile, getPublicUrl } from '../config/supabase';
+import { isFtpConfigured, getFtpPublicUrl } from '../config/ftp-storage';
+
+/**
+ * Génère l'URL publique pour télécharger une vidéo.
+ * Détecte automatiquement si le fichier est sur FTP ou Supabase
+ * en fonction du format du storage_path.
+ */
+function getVideoDownloadUrl(storagePath: string): string {
+  // Si le path est juste un filename (pas de /) → c'est un fichier FTP
+  const isFtpPath = !storagePath.includes('/');
+
+  if (isFtpPath && isFtpConfigured()) {
+    return getFtpPublicUrl(storagePath);
+  }
+
+  // Sinon c'est un chemin Supabase (ex: uploads/filename.mp4)
+  return getPublicUrl(storagePath);
+}
 
 // Configuration du retry
 const RETRY_CONFIG = {
@@ -81,7 +99,7 @@ class DeploymentService {
       }
 
       // Construire l'URL de la vidéo depuis Supabase Storage
-      const videoUrl = getPublicUrl(deployment.storage_path);
+      const videoUrl = getVideoDownloadUrl(deployment.storage_path);
 
       // Tenter d'envoyer aux sites (ou mettre en queue si offline)
       let successCount = 0;
@@ -217,7 +235,7 @@ class DeploymentService {
 
       for (const row of result.rows) {
         const deployment = row as unknown as DeploymentRow;
-        const videoUrl = getPublicUrl(deployment.storage_path);
+        const videoUrl = getVideoDownloadUrl(deployment.storage_path);
 
         // deployToSite utilise sendOrQueue, donc si le site est maintenant connecté,
         // la commande sera envoyée immédiatement
@@ -583,7 +601,7 @@ class DeploymentService {
 
         // Obtenir les sites cibles
         const targets = await this.getTargetSites(deployment.target_type, deployment.target_id);
-        const videoUrl = getPublicUrl(deployment.storage_path);
+        const videoUrl = getVideoDownloadUrl(deployment.storage_path);
 
         for (const target of targets) {
           // sendOrQueue fonctionne que le site soit connecté ou non
