@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { AnalyticsService } from '../../../core/services/analytics.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AnalyticsCategory } from '../../../core/models';
@@ -8,16 +9,16 @@ import { AnalyticsCategory } from '../../../core/models';
 @Component({
   selector: 'app-analytics-categories',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   template: `
     <div class="page-container">
       <div class="page-header">
         <div>
-          <h1>Catégories Analytics</h1>
-          <p class="subtitle">Gérez les catégories utilisées pour classifier les lectures vidéo dans les rapports analytics.</p>
+          <h1>{{ 'analyticsCategories.title' | translate }}</h1>
+          <p class="subtitle">{{ 'analyticsCategories.description' | translate }}</p>
         </div>
         <button class="btn btn-primary" (click)="openCreateModal()">
-          + Nouvelle catégorie
+          + {{ 'analyticsCategories.newCategory' | translate }}
         </button>
       </div>
 
@@ -44,15 +45,15 @@ import { AnalyticsCategory } from '../../../core/models';
           </p>
           <div class="category-actions">
             <button class="btn btn-sm btn-secondary" (click)="openEditModal(category)">
-              Modifier
+              {{ 'common.edit' | translate }}
             </button>
             <button
               class="btn btn-sm btn-danger"
               (click)="deleteCategory(category)"
               [disabled]="category.is_default"
-              [title]="category.is_default ? 'Les catégories par défaut ne peuvent pas être supprimées' : 'Supprimer'"
+              [title]="category.is_default ? ('analyticsCategories.defaultCannotDelete' | translate) : ('common.delete' | translate)"
             >
-              Supprimer
+              {{ 'common.delete' | translate }}
             </button>
           </div>
         </div>
@@ -78,7 +79,7 @@ import { AnalyticsCategory } from '../../../core/models';
       <div class="modal" *ngIf="showModal" (click)="closeModal()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h2>{{ editingCategory ? 'Modifier la catégorie' : 'Nouvelle catégorie' }}</h2>
+            <h2>{{ editingCategory ? ('analyticsCategories.editCategory' | translate) : ('analyticsCategories.newCategory' | translate) }}</h2>
             <button class="modal-close" (click)="closeModal()">×</button>
           </div>
           <div class="modal-body">
@@ -95,7 +96,7 @@ import { AnalyticsCategory } from '../../../core/models';
               <small class="form-hint">Identifiant unique (lettres minuscules, chiffres, tirets)</small>
             </div>
             <div class="form-group">
-              <label for="categoryName">Nom *</label>
+              <label for="categoryName">{{ 'analyticsCategories.name' | translate }} *</label>
               <input
                 type="text"
                 id="categoryName"
@@ -104,7 +105,7 @@ import { AnalyticsCategory } from '../../../core/models';
               >
             </div>
             <div class="form-group">
-              <label for="categoryDescription">Description</label>
+              <label for="categoryDescription">{{ 'analyticsCategories.description' | translate }}</label>
               <textarea
                 id="categoryDescription"
                 [(ngModel)]="form.description"
@@ -142,13 +143,13 @@ import { AnalyticsCategory } from '../../../core/models';
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="closeModal()">Annuler</button>
+            <button class="btn btn-secondary" (click)="closeModal()">{{ 'common.cancel' | translate }}</button>
             <button
               class="btn btn-primary"
               (click)="saveCategory()"
               [disabled]="!canSave() || saving"
             >
-              {{ saving ? 'Enregistrement...' : (editingCategory ? 'Mettre à jour' : 'Créer') }}
+              {{ saving ? ('analyticsCategories.saving' | translate) : (editingCategory ? ('common.update' | translate) : ('common.create' | translate)) }}
             </button>
           </div>
         </div>

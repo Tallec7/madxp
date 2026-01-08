@@ -113,6 +113,19 @@ neopro/
 └── docs/                     # 180+ fichiers de documentation
 ```
 
+### Chemins sur le Raspberry Pi
+
+| Chemin                                      | Contenu                                             |
+| ------------------------------------------- | --------------------------------------------------- |
+| `/home/pi/neopro/videos/`                   | **Vidéos** (mp4, mkv, mov) organisées par catégorie |
+| `/home/pi/neopro/webapp/`                   | Application Angular (frontend TV/Remote)            |
+| `/home/pi/neopro/webapp/configuration.json` | Configuration du site (sponsors, catégories, etc.)  |
+| `/home/pi/neopro/sync-agent/`               | Agent de synchronisation avec le cloud              |
+| `/home/pi/neopro/server/`                   | Serveur Socket.IO local                             |
+| `/home/pi/neopro/scripts/`                  | Scripts de diagnostic et setup                      |
+
+**⚠️ ATTENTION** : Les vidéos sont dans `/home/pi/neopro/videos/`, PAS dans `/home/pi/neopro/webapp/videos/`
+
 ---
 
 ## Stack Technique
@@ -1253,12 +1266,12 @@ curl ftp://FTP_HOST/videos/ --user FTP_USER:FTP_PASSWORD
 
 #### Sync-Agent (Raspberry Pi)
 
-| Symptôme                    | Cause probable           | Solution                                              |
-| --------------------------- | ------------------------ | ----------------------------------------------------- |
-| EACCES permission denied    | Mauvais ownership webapp | `sudo chown -R pi:pi /home/pi/neopro/webapp`          |
-| Config update failed        | Backup impossible        | Vérifier permissions sur `configuration.backup.json`  |
-| Command not executed        | Sync-agent déconnecté    | `sudo systemctl restart neopro-sync-agent`            |
-| No entries in logs          | Mauvais nom de service   | Utiliser `neopro-sync-agent` (pas `neopro-sync`)      |
+| Symptôme                 | Cause probable           | Solution                                             |
+| ------------------------ | ------------------------ | ---------------------------------------------------- |
+| EACCES permission denied | Mauvais ownership webapp | `sudo chown -R pi:pi /home/pi/neopro/webapp`         |
+| Config update failed     | Backup impossible        | Vérifier permissions sur `configuration.backup.json` |
+| Command not executed     | Sync-agent déconnecté    | `sudo systemctl restart neopro-sync-agent`           |
+| No entries in logs       | Mauvais nom de service   | Utiliser `neopro-sync-agent` (pas `neopro-sync`)     |
 
 ```bash
 # Voir les logs du sync-agent

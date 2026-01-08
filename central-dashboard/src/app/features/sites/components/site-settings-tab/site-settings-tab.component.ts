@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
@@ -10,7 +11,7 @@ import { Site, OverlayPosition } from '../../../../core/models';
 @Component({
   selector: 'app-site-settings-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   template: `
     <div class="settings-tab">
       <!-- Authentification Club -->
@@ -55,7 +56,7 @@ import { Site, OverlayPosition } from '../../../../core/models';
           (click)="updateHotspot()"
           [disabled]="updatingHotspot || (!hotspotSsid && !hotspotPassword)"
         >
-          {{ updatingHotspot ? 'Mise à jour...' : (isConnected ? 'Appliquer' : '📥 Appliquer (file d'attente)') }}
+          {{ updatingHotspot ? ('common.updating' | translate) : (isConnected ? ('common.apply' | translate) : ('common.applyQueued' | translate)) }}
         </button>
         <p class="warning-text" *ngIf="hotspotSsid || hotspotPassword">
           ⚠️ Après modification, vous devrez vous reconnecter au nouveau réseau WiFi.
@@ -157,9 +158,9 @@ import { Site, OverlayPosition } from '../../../../core/models';
 
             <div class="overlay-actions">
               <button class="btn btn-primary" (click)="saveOverlayConfig()" [disabled]="savingOverlay">
-                {{ savingOverlay ? 'Déploiement...' : 'Déployer' }}
+                {{ savingOverlay ? ('common.deploying' | translate) : ('common.deploy' | translate) }}
               </button>
-              <button class="btn btn-secondary" (click)="showOverlayConfig = false">Annuler</button>
+              <button class="btn btn-secondary" (click)="showOverlayConfig = false">{{ 'common.cancel' | translate }}</button>
             </div>
           </div>
         </div>
@@ -179,7 +180,7 @@ import { Site, OverlayPosition } from '../../../../core/models';
           (click)="updateSyncAgent()"
           [disabled]="updatingSyncAgent"
         >
-          {{ updatingSyncAgent ? 'Mise à jour...' : (isConnected ? 'Mettre à jour' : '📥 Mettre à jour (file d'attente)') }}
+          {{ updatingSyncAgent ? ('common.updating' | translate) : (isConnected ? ('common.update' | translate) : ('common.updateQueued' | translate)) }}
         </button>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { AgencyPortalService, Agency } from '../../../core/services/agency-portal.service';
 import { SitesService } from '../../../core/services/sites.service';
 import { Site } from '../../../core/models';
@@ -23,13 +24,13 @@ interface AgencySite {
 @Component({
   selector: 'app-agencies-management',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   template: `
     <div class="container">
       <div class="header">
-        <h1>Gestion des Agences</h1>
+        <h1>{{ 'agencies.title' | translate }}</h1>
         <button class="btn btn-primary" (click)="showCreateModal = true">
-          + Nouvelle Agence
+          + {{ 'agencies.newAgency' | translate }}
         </button>
       </div>
 
@@ -53,11 +54,11 @@ interface AgencySite {
           <table class="agencies-table">
             <thead>
               <tr>
-                <th>Agence</th>
-                <th>Contact</th>
-                <th>Sites</th>
-                <th>Statut</th>
-                <th>Actions</th>
+                <th>{{ 'agencies.agency' | translate }}</th>
+                <th>{{ 'agencies.contact' | translate }}</th>
+                <th>{{ 'agencies.sites' | translate }}</th>
+                <th>{{ 'agencies.status' | translate }}</th>
+                <th>{{ 'agencies.actions' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -89,14 +90,14 @@ interface AgencySite {
                   </td>
                   <td>
                     <span class="badge" [class]="'badge-status-' + agency.status">
-                      {{ agency.status === 'active' ? 'Actif' : 'Inactif' }}
+                      {{ agency.status === 'active' ? ('agencies.active' | translate) : ('agencies.inactive' | translate) }}
                     </span>
                   </td>
                   <td class="actions-cell">
-                    <button class="btn-link btn-edit" (click)="editAgency(agency)">Modifier</button>
-                    <button class="btn-link btn-success" (click)="manageSites(agency)">Sites</button>
+                    <button class="btn-link btn-edit" (click)="editAgency(agency)">{{ 'agencies.edit' | translate }}</button>
+                    <button class="btn-link btn-success" (click)="manageSites(agency)">{{ 'agencies.manageSites' | translate }}</button>
                     <button class="btn-link btn-danger" (click)="confirmDelete(agency)">
-                      Supprimer
+                      {{ 'agencies.delete' | translate }}
                     </button>
                   </td>
                 </tr>
@@ -110,10 +111,10 @@ interface AgencySite {
       @if (!loading() && agencies().length === 0 && !error()) {
         <div class="empty-state">
           <div class="empty-icon">🏢</div>
-          <h3>Aucune agence</h3>
-          <p>Commencez par creer une nouvelle agence.</p>
+          <h3>{{ 'agencies.noAgencies' | translate }}</h3>
+          <p>{{ 'agencies.noAgenciesDesc' | translate }}</p>
           <button class="btn btn-primary" (click)="showCreateModal = true">
-            + Nouvelle Agence
+            + {{ 'agencies.newAgency' | translate }}
           </button>
         </div>
       }
@@ -123,15 +124,15 @@ interface AgencySite {
         <div class="modal-overlay" (click)="cancelEdit()">
           <div class="modal" (click)="$event.stopPropagation()">
             <div class="modal-header">
-              <h3>{{ editingAgency ? "Modifier l'agence" : 'Nouvelle agence' }}</h3>
+              <h3>{{ editingAgency ? ('agencies.editAgency' | translate) : ('agencies.newAgency' | translate) }}</h3>
             </div>
             <form (ngSubmit)="saveAgency()" class="modal-body">
               <div class="form-group">
-                <label>Nom *</label>
+                <label>{{ 'agencies.name' | translate }} *</label>
                 <input type="text" [(ngModel)]="agencyForm.name" name="name" required />
               </div>
               <div class="form-group">
-                <label>Description</label>
+                <label>{{ 'agencies.description' | translate }}</label>
                 <textarea
                   [(ngModel)]="agencyForm.description"
                   name="description"
@@ -139,23 +140,23 @@ interface AgencySite {
                 ></textarea>
               </div>
               <div class="form-group">
-                <label>Nom du contact</label>
+                <label>{{ 'agencies.contactName' | translate }}</label>
                 <input type="text" [(ngModel)]="agencyForm.contact_name" name="contact_name" />
               </div>
               <div class="form-group">
-                <label>Email</label>
+                <label>{{ 'agencies.email' | translate }}</label>
                 <input type="email" [(ngModel)]="agencyForm.contact_email" name="contact_email" />
               </div>
               <div class="form-group">
-                <label>Telephone</label>
+                <label>{{ 'agencies.phone' | translate }}</label>
                 <input type="tel" [(ngModel)]="agencyForm.contact_phone" name="contact_phone" />
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" (click)="cancelEdit()">
-                  Annuler
+                  {{ 'common.cancel' | translate }}
                 </button>
                 <button type="submit" class="btn btn-primary" [disabled]="saving()">
-                  {{ saving() ? 'Enregistrement...' : 'Enregistrer' }}
+                  {{ saving() ? ('agencies.saving' | translate) : ('common.save' | translate) }}
                 </button>
               </div>
             </form>
@@ -168,17 +169,16 @@ interface AgencySite {
         <div class="modal-overlay" (click)="deletingAgency = null">
           <div class="modal modal-small" (click)="$event.stopPropagation()">
             <div class="modal-header">
-              <h3>Confirmer la suppression</h3>
+              <h3>{{ 'agencies.confirmDelete' | translate }}</h3>
             </div>
             <div class="modal-body">
               <p>
-                Etes-vous sur de vouloir supprimer l'agence "{{ deletingAgency.name }}" ? Cette
-                action est irreversible.
+                {{ 'agencies.confirmDeleteDesc' | translate: {name: deletingAgency.name} }}
               </p>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" (click)="deletingAgency = null">
-                Annuler
+                {{ 'common.cancel' | translate }}
               </button>
               <button
                 type="button"
@@ -186,7 +186,7 @@ interface AgencySite {
                 (click)="deleteAgency()"
                 [disabled]="saving()"
               >
-                {{ saving() ? 'Suppression...' : 'Supprimer' }}
+                {{ saving() ? ('agencies.deleting' | translate) : ('common.delete' | translate) }}
               </button>
             </div>
           </div>
@@ -198,7 +198,7 @@ interface AgencySite {
         <div class="modal-overlay" (click)="closeSitesModal()">
           <div class="modal modal-large" (click)="$event.stopPropagation()">
             <div class="modal-header">
-              <h3>Gerer les sites - {{ managingSitesAgency.name }}</h3>
+              <h3>{{ 'agencies.manageSitesTitle' | translate }} - {{ managingSitesAgency.name }}</h3>
               <button class="btn-close" (click)="closeSitesModal()">&times;</button>
             </div>
             <div class="modal-body">
@@ -212,9 +212,9 @@ interface AgencySite {
               @if (!loadingSites()) {
                 <!-- Current sites section -->
                 <div class="sites-section">
-                  <h4>Sites associes ({{ agencySites().length }})</h4>
+                  <h4>{{ 'agencies.associatedSites' | translate }} ({{ agencySites().length }})</h4>
                   @if (agencySites().length === 0) {
-                    <p class="empty-text">Aucun site associe a cette agence.</p>
+                    <p class="empty-text">{{ 'agencies.noAssociatedSites' | translate }}</p>
                   } @else {
                     <div class="sites-list">
                       @for (site of agencySites(); track site.id) {
@@ -231,7 +231,7 @@ interface AgencySite {
                             (click)="removeSiteFromAgency(site)"
                             [disabled]="saving()"
                           >
-                            Retirer
+                            {{ 'agencies.remove' | translate }}
                           </button>
                         </div>
                       }
@@ -241,20 +241,20 @@ interface AgencySite {
 
                 <!-- Add sites section -->
                 <div class="sites-section">
-                  <h4>Ajouter des sites</h4>
+                  <h4>{{ 'agencies.addSites' | translate }}</h4>
                   <input
                     type="text"
                     [(ngModel)]="siteSearchQuery"
-                    placeholder="Rechercher un site..."
+                    [placeholder]="'agencies.searchSite' | translate"
                     class="search-input"
                     (input)="filterAvailableSites()"
                   />
                   @if (filteredAvailableSites().length === 0) {
                     <p class="empty-text">
                       @if (siteSearchQuery) {
-                        Aucun site trouve pour "{{ siteSearchQuery }}".
+                        {{ 'agencies.noSitesFound' | translate: {query: siteSearchQuery} }}
                       } @else {
-                        Tous les sites sont deja associes ou aucun site disponible.
+                        {{ 'agencies.allSitesAssigned' | translate }}
                       }
                     </p>
                   } @else {
@@ -284,7 +284,7 @@ interface AgencySite {
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" (click)="closeSitesModal()">
-                Fermer
+                {{ 'common.close' | translate }}
               </button>
               @if (selectedSitesToAdd().size > 0) {
                 <button
@@ -293,7 +293,7 @@ interface AgencySite {
                   (click)="addSelectedSites()"
                   [disabled]="saving()"
                 >
-                  {{ saving() ? 'Ajout...' : 'Ajouter ' + selectedSitesToAdd().size + ' site(s)' }}
+                  {{ saving() ? ('agencies.adding' | translate) : ('agencies.addSitesCount' | translate: {count: selectedSitesToAdd().size}) }}
                 </button>
               }
             </div>

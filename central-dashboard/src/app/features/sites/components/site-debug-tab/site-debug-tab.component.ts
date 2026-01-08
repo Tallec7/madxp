@@ -59,36 +59,6 @@ import { LocalVideo, LocalStorage, ConfigHistory, SiteConfiguration } from '../.
         </div>
       </div>
 
-      <!-- Test lecture vidéo -->
-      <div class="debug-card">
-        <div class="debug-header">
-          <span class="debug-icon">🎬</span>
-          <h4>Tester la lecture</h4>
-        </div>
-        <div class="debug-content always-visible">
-          <div class="play-controls">
-            <select [(ngModel)]="selectedVideoPath" class="form-select">
-              <option value="">-- Choisir une vidéo --</option>
-              <optgroup *ngFor="let cat of getVideoCategories()" [label]="cat || 'Sans catégorie'">
-                <option *ngFor="let video of getVideosByCategory(cat)" [value]="video.path">
-                  {{ video.filename }}
-                </option>
-              </optgroup>
-            </select>
-            <button
-              class="btn btn-primary"
-              (click)="playVideo()"
-              [disabled]="!selectedVideoPath || playingVideo || !isConnected"
-            >
-              {{ playingVideo ? ('debug.playing' | translate) : (isConnected ? ('debug.play' | translate) : ('debug.queued' | translate)) }}
-            </button>
-          </div>
-          <p class="hint" *ngIf="!isConnected">
-            ⚠️ Site hors ligne. La commande sera exécutée à la reconnexion.
-          </p>
-        </div>
-      </div>
-
       <!-- Configuration JSON -->
       <div class="debug-card">
         <div class="debug-header" (click)="showJson = !showJson">
@@ -341,26 +311,6 @@ import { LocalVideo, LocalStorage, ConfigHistory, SiteConfiguration } from '../.
       font-weight: 500;
     }
 
-    /* Play controls */
-    .play-controls {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .form-select {
-      flex: 1;
-      padding: 0.5rem 0.75rem;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      font-size: 0.875rem;
-    }
-
-    .hint {
-      margin: 0.5rem 0 0 0;
-      font-size: 0.8125rem;
-      color: #f59e0b;
-    }
-
     /* JSON viewer */
     .json-actions {
       display: flex;
@@ -589,9 +539,6 @@ export class SiteDebugTabComponent implements OnInit {
   showSyncInfo: boolean = false;
   showHistory: boolean = false;
 
-  selectedVideoPath: string = '';
-  playingVideo: boolean = false;
-
   // History
   history: ConfigHistory[] = [];
   historyTotal: number = 0;
@@ -658,25 +605,6 @@ export class SiteDebugTabComponent implements OnInit {
 
   getVideosByCategory(category: string): LocalVideo[] {
     return this.localVideos.filter(v => (v.category || '') === category);
-  }
-
-  playVideo(): void {
-    if (!this.selectedVideoPath) return;
-
-    this.playingVideo = true;
-    this.sitesService.sendCommand(this.siteId, 'play_video', { path: this.selectedVideoPath }).subscribe({
-      next: () => {
-        this.playingVideo = false;
-        this.notificationService.success(
-          this.isConnected ? 'Lecture lancée !' : '📥 Commande mise en file d\'attente'
-        );
-      },
-      error: (error) => {
-        this.playingVideo = false;
-        const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
-      }
-    });
   }
 
   copyJson(): void {

@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -22,7 +23,7 @@ interface Advertiser {
 @Component({
   selector: 'app-advertisers-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, TranslateModule],
   template: `
     <div class="advertisers-list-container">
       <div class="header">
@@ -36,7 +37,7 @@ interface Advertiser {
       <div class="filters">
         <input
           type="text"
-          placeholder="Rechercher un annonceur..."
+          [placeholder]="'nav.searchAdvertiser' | translate"
           [(ngModel)]="searchTerm"
           (input)="filterAdvertisers()"
           class="search-input"

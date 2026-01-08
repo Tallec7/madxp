@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -20,7 +21,7 @@ interface Sponsor {
 @Component({
   selector: 'app-sponsors-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, TranslateModule],
   template: `
     <div class="sponsors-list-container">
       <div class="header">
@@ -34,7 +35,7 @@ interface Sponsor {
       <div class="filters">
         <input
           type="text"
-          placeholder="Rechercher un sponsor..."
+          [placeholder]="'sponsors.searchSponsor' | translate"
           [(ngModel)]="searchTerm"
           (input)="filterSponsors()"
           class="search-input"
