@@ -309,7 +309,15 @@ export function validateShellCommand(
 
     case 'super_admin':
       // Blacklist only - already checked above
-      break;
+      // Super admins can access any path (no path validation)
+      logger.info('Shell command validated', {
+        command: sanitizedCommand.substring(0, 100),
+        role,
+      });
+      return {
+        valid: true,
+        sanitizedCommand,
+      };
 
     case 'advertiser':
     case 'sponsor':
