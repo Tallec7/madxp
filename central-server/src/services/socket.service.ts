@@ -346,7 +346,7 @@ class SocketService {
    */
   private checkConnectionHealth() {
     const now = Date.now();
-    const staleThresholdMs = 90000; // 90 secondes sans pong = connexion zombie
+    const staleThresholdMs = 60000; // 60 secondes sans pong = connexion zombie (réduit de 90s)
 
     for (const [siteId, socket] of this.connectedSites.entries()) {
       const lastPong = this.lastPongReceived.get(siteId);
@@ -1109,7 +1109,33 @@ class SocketService {
     const socket = this.connectedSites.get(siteId);
 
     if (!socket) {
-      logger.warn('Cannot send command: site not connected', { siteId });
+      logger.warn('Cannot send command: site not in connectedSites map', { siteId });
+      return false;
+    }
+
+    // Vérifier que la socket est réellement connectée (pas une connexion zombie)
+    if (!socket.connected) {
+      logger.warn('Cannot send command: socket exists but not connected (zombie)', {
+        siteId,
+        socketId: socket.id,
+        commandType: command.type,
+      });
+      // Nettoyer la connexion zombie
+      this.cleanupZombieConnection(siteId, socket);
+      return false;
+    }
+
+    // Vérifier la fraîcheur du dernier pong pour détecter les connexions mortes
+    const lastPong = this.lastPongReceived.get(siteId);
+    const now = Date.now();
+    if (lastPong && (now - lastPong) > 60000) {
+      logger.warn('Cannot send command: last pong too old (stale connection)', {
+        siteId,
+        lastPongAgeMs: now - lastPong,
+        commandType: command.type,
+      });
+      // Nettoyer la connexion stale
+      this.cleanupZombieConnection(siteId, socket);
       return false;
     }
 
@@ -1134,6 +1160,30 @@ class SocketService {
     });
 
     return true;
+  }
+
+  /**
+   * Nettoie une connexion zombie (socket présente mais non fonctionnelle)
+   */
+  private cleanupZombieConnection(siteId: string, socket: Socket) {
+    logger.info('Cleaning up zombie connection', { siteId, socketId: socket.id });
+
+    // Forcer la déconnexion
+    try {
+      socket.disconnect(true);
+    } catch (e) {
+      logger.error('Error disconnecting zombie socket:', e);
+    }
+
+    // Nettoyer les maps
+    this.connectedSites.delete(siteId);
+    this.lastPongReceived.delete(siteId);
+
+    // Mettre à jour le statut en base
+    query('UPDATE sites SET status = $1, last_seen_at = NOW() WHERE id = $2', ['offline', siteId])
+      .catch((error) => {
+        logger.error('Error updating site status on zombie cleanup:', error);
+      });
   }
 
   broadcastToGroup(siteIds: string[], command: CommandMessage) {
@@ -1186,6 +1236,50 @@ class SocketService {
       connectedSites: Array.from(this.connectedSites.keys()),
       lastPongReceived: pongInfo,
       pendingCommandsCount: this.pendingCommands.size,
+    };
+  }
+
+  /**
+   * Retourne l'état de santé détaillé d'une connexion pour un site
+   * Utilisé par le dashboard pour afficher un indicateur de santé fiable
+   */
+  getConnectionHealth(siteId: string): {
+    inMap: boolean;
+    socketConnected: boolean;
+    lastPongAgeMs: number | null;
+    isHealthy: boolean;
+    reason: string;
+  } {
+    const socket = this.connectedSites.get(siteId);
+    const lastPong = this.lastPongReceived.get(siteId);
+    const now = Date.now();
+    const lastPongAgeMs = lastPong ? now - lastPong : null;
+
+    // Critères de santé
+    const inMap = !!socket;
+    const socketConnected = socket?.connected ?? false;
+    const pongFresh = lastPongAgeMs !== null && lastPongAgeMs < 60000;
+
+    let isHealthy = false;
+    let reason = 'unknown';
+
+    if (!inMap) {
+      reason = 'not_in_map';
+    } else if (!socketConnected) {
+      reason = 'socket_disconnected';
+    } else if (!pongFresh) {
+      reason = lastPongAgeMs === null ? 'no_pong_received' : 'pong_stale';
+    } else {
+      isHealthy = true;
+      reason = 'healthy';
+    }
+
+    return {
+      inMap,
+      socketConnected,
+      lastPongAgeMs,
+      isHealthy,
+      reason,
     };
   }
 

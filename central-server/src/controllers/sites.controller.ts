@@ -1000,6 +1000,9 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
     // Un site est considéré "connecté" si Socket.IO actif OU heartbeat récent
     const isEffectivelyConnected = isConnectedNow || (secondsSinceLastSeen !== null && secondsSinceLastSeen < ONLINE_THRESHOLD_SECONDS);
 
+    // Récupérer l'état de santé détaillé de la connexion WebSocket
+    const connectionHealth = socketService.getConnectionHealth(id);
+
     res.json({
       siteId: id,
       siteName: site.site_name,
@@ -1019,6 +1022,14 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
         uptime24h: Math.round(uptime24h * 100) / 100,
         firstHeartbeat24h: stats?.first_heartbeat,
         lastHeartbeat24h: stats?.last_heartbeat,
+      },
+      // Nouvel objet health pour détecter les connexions zombies
+      health: {
+        socketInMap: connectionHealth.inMap,
+        socketConnected: connectionHealth.socketConnected,
+        lastPongAgeMs: connectionHealth.lastPongAgeMs,
+        isHealthy: connectionHealth.isHealthy,
+        reason: connectionHealth.reason,
       },
     });
   } catch (error) {
@@ -1328,6 +1339,9 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
 
     const stats = statsResult.rows[0];
 
+    // Récupérer l'état de santé détaillé de la connexion WebSocket
+    const connectionHealth = socketService.getConnectionHealth(id);
+
     // Réponse combinée
     res.json({
       site: {
@@ -1347,6 +1361,14 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
           firstAt: stats.first_heartbeat,
           lastAt: stats.last_heartbeat,
         },
+      },
+      // Nouvel objet health pour détecter les connexions zombies
+      health: {
+        socketInMap: connectionHealth.inMap,
+        socketConnected: connectionHealth.socketConnected,
+        lastPongAgeMs: connectionHealth.lastPongAgeMs,
+        isHealthy: connectionHealth.isHealthy,
+        reason: connectionHealth.reason,
       },
       metrics: {
         period_hours: hours,

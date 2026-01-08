@@ -231,6 +231,23 @@ export interface SiteStats {
 
 export type ConnectionDisplayStatus = 'online' | 'offline' | 'warning' | 'unknown';
 
+/**
+ * État de santé de la connexion WebSocket
+ * Permet de détecter les "connexions zombies" (socket présente mais non fonctionnelle)
+ */
+export interface ConnectionHealth {
+  /** Socket présente dans la map connectedSites */
+  socketInMap: boolean;
+  /** Socket réellement connectée (pas zombie) */
+  socketConnected: boolean;
+  /** Âge du dernier pong en millisecondes (null si jamais reçu) */
+  lastPongAgeMs: number | null;
+  /** Connexion saine et fonctionnelle */
+  isHealthy: boolean;
+  /** Raison de l'état (healthy, not_in_map, socket_disconnected, pong_stale, no_pong_received) */
+  reason: string;
+}
+
 export interface SiteConnectionStatus {
   siteId: string;
   siteName: string;
@@ -251,6 +268,8 @@ export interface SiteConnectionStatus {
     firstHeartbeat24h: Date | null;
     lastHeartbeat24h: Date | null;
   };
+  /** État de santé détaillé de la connexion WebSocket */
+  health?: ConnectionHealth;
 }
 
 export interface SiteConnectionSummary {
