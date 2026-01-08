@@ -606,6 +606,58 @@ Les analytics ne sont générées que lorsque des vidéos sont effectivement lue
 - Vérifier que des vidéos sont configurées dans `configuration.json`
 - Déclencher manuellement une lecture depuis la télécommande (`/remote`)
 
+### Les analytics restent dans le buffer et ne partent jamais
+
+#### Symptômes
+
+- Logs : `Failed to send analytics to server: timeout of 10000ms exceeded`
+- Le buffer analytics grossit indéfiniment
+- Les statistiques du dashboard n'affichent pas les nouvelles données
+
+#### Cause
+
+Si le Pi a été hors ligne longtemps ou si un bug a empêché l'envoi, le buffer peut accumuler des milliers d'événements. L'envoi de tout le buffer d'un coup dépasse le timeout de 10s.
+
+#### Diagnostic
+
+```bash
+# Vérifier la taille du buffer
+ssh pi@neopro.local 'cat /home/pi/neopro/data/analytics_buffer.json | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"'
+# Si > 1000, c'est probablement la cause du timeout
+
+# Vérifier les logs
+ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -n 50 --no-pager | grep -i analytics'
+```
+
+#### Solution (v2.15+)
+
+Depuis la version 2.15, le sync-agent envoie les analytics par batches de 100 événements avec :
+
+- Timeout de 15s par batch
+- Pause de 500ms entre batches
+- Sauvegarde progressive après chaque batch réussi
+
+**Mettre à jour :**
+
+```bash
+# Depuis votre Mac
+scp raspberry/sync-agent/src/analytics.js pi@neopro.local:/home/pi/neopro/sync-agent/src/
+
+# Redémarrer le sync-agent
+ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
+
+# Observer l'envoi par batches
+ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -f'
+# Devrait afficher : "Sending analytics in batches" puis "Analytics sent to server"
+```
+
+**Vérifier que le fix est actif :**
+
+```bash
+ssh pi@neopro.local 'grep "BATCH_SIZE" /home/pi/neopro/sync-agent/src/analytics.js'
+# Doit afficher : const BATCH_SIZE = 100;
+```
+
 ---
 
 ## Problèmes de synchronisation

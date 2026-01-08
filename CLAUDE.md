@@ -1290,6 +1290,8 @@ curl ftp://FTP_HOST/videos/ --user FTP_USER:FTP_PASSWORD
 | Command not executed     | Sync-agent déconnecté    | `sudo systemctl restart neopro-sync-agent`           |
 | No entries in logs       | Mauvais nom de service   | Utiliser `neopro-sync-agent` (pas `neopro-sync`)     |
 | "Connexion instable"     | Connexion zombie         | Mettre à jour vers v2.15+ ou restart sync-agent      |
+| Analytics send timeout   | Buffer trop gros (>1000) | Mettre à jour vers v2.15+ (envoi par batches)        |
+| Erreur log vide après :  | Bug format Winston       | Mettre à jour vers v2.15+ (logging corrigé)          |
 
 **Connexions zombies (v2.15+)** :
 
@@ -1324,6 +1326,34 @@ Le fichier `sync-agent/src/agent.js` inclut maintenant :
 
 **Voir aussi** : [TROUBLESHOOTING.md - Connexion instable](docs/guides/TROUBLESHOOTING.md#le-site-affiche-connexion-instable-alors-quil-est-connecté)
 
+**Timeout analytics (v2.15+)** :
+
+Si le buffer analytics n'a pas été vidé pendant longtemps (Pi hors ligne, bug), il peut accumuler des milliers d'événements. L'envoi de tout le buffer d'un coup dépasse alors le timeout de 10s.
+
+**Symptômes** :
+
+- Logs : `Failed to send analytics to server: timeout of 10000ms exceeded`
+- Buffer qui ne se vide jamais (vérifier avec `cat /home/pi/neopro/data/analytics_buffer.json | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"`)
+
+**Solution (v2.15+)** :
+
+Le sync-agent envoie maintenant les analytics par batches de 100 événements avec :
+
+- Timeout de 15s par batch
+- Pause de 500ms entre batches
+- Sauvegarde progressive après chaque batch réussi
+
+```bash
+# Vérifier la taille du buffer
+ssh pi@neopro.local 'cat /home/pi/neopro/data/analytics_buffer.json | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"'
+
+# Mettre à jour le fichier analytics.js
+scp raspberry/sync-agent/src/analytics.js pi@neopro.local:/home/pi/neopro/sync-agent/src/
+
+# Redémarrer pour envoyer
+ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
+```
+
 ```bash
 # Voir les logs du sync-agent
 ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -n 100 --no-pager'
@@ -1347,6 +1377,16 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 
 ### v2.15.x (Janvier 2026)
 
+- **Envoi analytics par batches** : Évite les timeouts avec de gros volumes
+  - Envoi par lots de 100 événements au lieu de tout d'un coup
+  - Timeout de 15s par batch, pause de 500ms entre batches
+  - Sauvegarde progressive du buffer après chaque batch réussi
+  - Si un batch échoue, les données restantes sont préservées pour réessai
+  - Migration : `scp raspberry/sync-agent/src/analytics.js pi@neopro.local:/home/pi/neopro/sync-agent/src/`
+- **Logging corrigé** : Messages d'erreur maintenant visibles dans les logs
+  - Fix du format Winston : `logger.error('msg', { error })` au lieu de `logger.error('msg:', error)`
+  - Fichiers corrigés : `analytics.js`, `sponsor-impressions.js`, `agent.js`, `deploy-video.js`, `update-software.js`
+  - Migration : Déployer les fichiers corrigés via SCP
 - **Détection connexions zombies sync-agent** : Le Pi détecte et récupère des connexions mortes
   - Ajout vérification `socket.connected` dans `sendHeartbeat()` avant envoi
   - Ajout détection zombie dans `handlePingCheck()` si ping reçu mais socket morte
