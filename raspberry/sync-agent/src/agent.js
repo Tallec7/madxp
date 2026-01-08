@@ -188,14 +188,19 @@ class NeoproSyncAgent {
    * pour synchroniser automatiquement les changements vers le central
    */
   startVideoWatcher() {
-    const videosPath = config.paths.videos;
+    try {
+      const videosPath = config.paths.videos;
+      logger.info('Starting video watcher', { videosPath });
 
-    this.videoWatcher = new VideoWatcher(videosPath, async () => {
-      logger.info('🎬 Video files changed, syncing to central...');
-      await this.syncLocalState();
-    });
+      this.videoWatcher = new VideoWatcher(videosPath, async () => {
+        logger.info('🎬 Video files changed, syncing to central...');
+        await this.syncLocalState();
+      });
 
-    this.videoWatcher.start();
+      this.videoWatcher.start();
+    } catch (error) {
+      logger.error('Failed to start video watcher:', error);
+    }
   }
 
   /**
