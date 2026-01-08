@@ -894,10 +894,14 @@ class SocketService {
 
       if (this.io) {
         // Broadcaster aux dashboards connectés
+        // Inclure le résultat pour les commandes qui en ont besoin (ex: remote_shell)
         this.io.to('dashboard').emit('command_completed', {
           siteId,
           commandId: result.commandId,
+          commandType: commandRecord?.command_type,
           status: result.status,
+          result: result.result || null,
+          error: result.error || null,
         });
       }
     } catch (error) {

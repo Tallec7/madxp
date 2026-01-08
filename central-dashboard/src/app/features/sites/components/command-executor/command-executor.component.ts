@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SitesService } from '../../../../core/services/sites.service';
 import { AuthService } from '../../../../core/services/auth.service';
-import { Subject, takeUntil, finalize } from 'rxjs';
+import { SocketService } from '../../../../core/services/socket.service';
+import { Subject, takeUntil, finalize, filter } from 'rxjs';
 
 interface CommandResult {
   success: boolean;
@@ -451,13 +452,71 @@ export class CommandExecutorComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
   private readonly HISTORY_KEY = 'neopro_shell_history';
   private readonly MAX_HISTORY = 20;
+  private pendingCommandId: string | null = null;
 
   private readonly sitesService = inject(SitesService);
   private readonly authService = inject(AuthService);
+  private readonly socketService = inject(SocketService);
 
   ngOnInit(): void {
     this.userRole = this.authService.getCurrentUser()?.role || '';
     this.loadHistory();
+    this.subscribeToCommandResults();
+  }
+
+  private subscribeToCommandResults(): void {
+    // Écouter les résultats de commandes via WebSocket
+    this.socketService.on<{
+      siteId: string;
+      commandId: string;
+      commandType: string;
+      status: string;
+      result: CommandResult | null;
+      error: string | null;
+    }>('command_completed')
+      .pipe(
+        takeUntil(this.destroy$),
+        // Filtrer pour ne recevoir que les résultats de nos commandes shell
+        filter(event =>
+          event.siteId === this.siteId &&
+          event.commandId === this.pendingCommandId &&
+          event.commandType === 'remote_shell'
+        )
+      )
+      .subscribe(event => {
+        console.log('Received command result via WebSocket:', event);
+        this.executing = false;
+        this.pendingCommandId = null;
+
+        if (event.status === 'success' && event.result) {
+          this.result = event.result;
+          this.addToHistory(this.command.trim(), event.result.success !== false);
+        } else {
+          this.error = event.error || 'La commande a échoué';
+          this.addToHistory(this.command.trim(), false);
+        }
+      });
+
+    // Écouter aussi les timeouts
+    this.socketService.on<{
+      siteId: string;
+      commandId: string;
+      type: string;
+    }>('command_timeout')
+      .pipe(
+        takeUntil(this.destroy$),
+        filter(event =>
+          event.siteId === this.siteId &&
+          event.commandId === this.pendingCommandId
+        )
+      )
+      .subscribe(event => {
+        console.log('Command timeout via WebSocket:', event);
+        this.executing = false;
+        this.pendingCommandId = null;
+        this.error = 'La commande a expiré (timeout)';
+        this.addToHistory(this.command.trim(), false);
+      });
   }
 
   ngOnDestroy(): void {
@@ -492,32 +551,48 @@ export class CommandExecutorComponent implements OnInit, OnDestroy {
     this.executing = true;
     this.result = null;
     this.error = null;
+    this.pendingCommandId = null;
 
     this.sitesService.sendCommand(this.siteId, 'remote_shell', { command: this.command.trim() })
-      .pipe(
-        takeUntil(this.destroy$),
-        finalize(() => {
-          this.executing = false;
-        })
-      )
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           console.log('Remote shell response:', response);
-          const res = response as { success?: boolean; result?: CommandResult; error?: string };
+          const res = response as {
+            success?: boolean;
+            commandId?: string;
+            status?: string;
+            result?: CommandResult;
+            error?: string;
+          };
+
+          // Nouveau comportement: le serveur retourne un commandId en status 202
+          // Le résultat sera reçu via WebSocket
+          if (res.commandId && res.status === 'pending') {
+            this.pendingCommandId = res.commandId;
+            console.log('Command sent, waiting for result via WebSocket. CommandId:', res.commandId);
+            // Ne pas désactiver executing, on attend le WebSocket
+            return;
+          }
+
+          // Ancien comportement (fallback): réponse synchrone
+          this.executing = false;
           if (res.result) {
             this.result = res.result;
-            this.addToHistory(this.command.trim(), res.result.success);
+            this.addToHistory(this.command.trim(), res.result.success !== false);
           } else if (res.error) {
             this.error = res.error;
             this.addToHistory(this.command.trim(), false);
           } else {
-            // Fallback: si la réponse n'a pas le format attendu
             this.error = 'Réponse inattendue du serveur';
             console.warn('Unexpected response format:', response);
           }
         },
         error: (err) => {
           console.error('Remote shell error:', err);
+          this.executing = false;
+          this.pendingCommandId = null;
+
           // Extraire le message d'erreur de la réponse HTTP
           if (err.status === 503) {
             this.error = err.error?.error || 'Le site n\'est pas connecté. Le terminal distant nécessite une connexion active.';
