@@ -19,6 +19,7 @@ import schedulerService from './services/scheduler.service';
 import cronSchedulerService from './services/cron-scheduler.service';
 import memoryManagerService from './services/memory-manager.service';
 import { adminOpsService } from './services/admin-ops.service';
+import { alertingService } from './services/alerting.service';
 
 import authRoutes from './routes/auth.routes';
 import mfaRoutes from './routes/mfa.routes';
@@ -365,6 +366,9 @@ const startServer = async () => {
         pendingCommands: debugInfo.pendingCommandsCount,
         connectedSites: debugInfo.connectedSites.length,
       });
+
+      // Clear alerting service memory cache
+      alertingService.clearMemoryCache();
     });
     memoryManagerService.start();
     logger.info('Memory manager started');
