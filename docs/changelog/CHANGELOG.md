@@ -1,3 +1,9 @@
+# [2.11.0](https://github.com/Tallec7/neopro/compare/v2.10.5...v2.11.0) (2026-01-08)
+
+### Features
+
+- **debug:** add remote shell terminal for Pi debugging ([dd16146](https://github.com/Tallec7/neopro/commit/dd161467170eb22b4e0cfc484a49811fcab39409))
+
 ## [2.10.5](https://github.com/Tallec7/neopro/compare/v2.10.4...v2.10.5) (2026-01-08)
 
 ### Bug Fixes
