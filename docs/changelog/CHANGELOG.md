@@ -1,3 +1,9 @@
+## [2.10.5](https://github.com/Tallec7/neopro/compare/v2.10.4...v2.10.5) (2026-01-08)
+
+### Bug Fixes
+
+- **central-server:** resolve memory leaks causing 503 errors ([d763ff2](https://github.com/Tallec7/neopro/commit/d763ff2129d6c3be4817e01e73e81964f84a5320))
+
 ## [2.10.4](https://github.com/Tallec7/neopro/compare/v2.10.3...v2.10.4) (2026-01-08)
 
 ### Bug Fixes
