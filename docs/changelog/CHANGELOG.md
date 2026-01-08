@@ -1,3 +1,9 @@
+## [2.13.5](https://github.com/Tallec7/neopro/compare/v2.13.4...v2.13.5) (2026-01-08)
+
+### Bug Fixes
+
+- **sync-agent:** use polling instead of recursive fs.watch on Linux ([fa4681e](https://github.com/Tallec7/neopro/commit/fa4681ee78eb93f3f14720ea33b4f4bc702e3347))
+
 ## [2.13.4](https://github.com/Tallec7/neopro/compare/v2.13.3...v2.13.4) (2026-01-08)
 
 ### Bug Fixes
