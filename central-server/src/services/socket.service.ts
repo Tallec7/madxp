@@ -100,6 +100,10 @@ const COMMAND_TIMEOUTS: Record<string, number> = {
 const MAX_PENDING_COMMANDS = 100; // Maximum pending commands in memory (was 500)
 const MAX_PONG_ENTRIES = 50;      // Maximum pong tracking entries (was 200)
 
+// DB/WebSocket sync interval and stale threshold
+const DB_SYNC_INTERVAL_MS = 60000; // Sync DB status with WebSocket state every 60s
+const STALE_ONLINE_THRESHOLD_MS = 90000; // Consider DB 'online' stale if last_seen_at > 90s ago
+
 type ConfigCommandData = {
   configVersionId?: string;
 } & Record<string, unknown>;
@@ -118,6 +122,7 @@ class SocketService {
   private pendingCommands: Map<string, PendingCommand> = new Map();
   private timeoutCheckInterval: NodeJS.Timeout | null = null;
   private connectionHealthCheckInterval: NodeJS.Timeout | null = null;
+  private dbSyncInterval: NodeJS.Timeout | null = null;
   private redisClient: RedisClientType | null = null;
   private redisSub: RedisClientType | null = null;
   // Track last pong received for each site to detect zombie connections
@@ -179,6 +184,9 @@ class SocketService {
 
     // Démarrer la vérification de santé des connexions (ping/pong)
     this.startConnectionHealthCheck();
+
+    // Démarrer la synchronisation DB/WebSocket pour corriger les status incohérents
+    this.startDbStatusSync();
 
     logger.info('Socket.IO service initialized');
   }
@@ -378,6 +386,69 @@ class SocketService {
         // Envoyer un ping au site pour maintenir la connexion et détecter les zombies
         socket.emit('ping_check', { timestamp: now });
       }
+    }
+  }
+
+  /**
+   * Démarre la synchronisation périodique entre le status DB et l'état WebSocket
+   * Corrige les sites qui sont marqués 'online' en DB mais ne sont plus connectés via WebSocket
+   */
+  private startDbStatusSync() {
+    // Synchroniser toutes les 60 secondes
+    this.dbSyncInterval = setInterval(() => {
+      this.syncDbWithWebSocketState();
+    }, DB_SYNC_INTERVAL_MS);
+  }
+
+  /**
+   * Synchronise le status DB avec l'état réel des connexions WebSocket
+   * Marque 'offline' les sites qui sont 'online' en DB mais pas dans connectedSites
+   */
+  private async syncDbWithWebSocketState() {
+    try {
+      const now = Date.now();
+
+      // Récupérer les sites marqués 'online' en DB avec un last_seen_at dépassé
+      const result = await query<{ id: string; site_name: string; last_seen_at: Date }>(
+        `SELECT id, site_name, last_seen_at
+         FROM sites
+         WHERE status = 'online'
+           AND last_seen_at < NOW() - INTERVAL '${Math.floor(STALE_ONLINE_THRESHOLD_MS / 1000)} seconds'`
+      );
+
+      let correctedCount = 0;
+
+      for (const site of result.rows) {
+        // Vérifier si le site est vraiment connecté via WebSocket
+        if (!this.connectedSites.has(site.id)) {
+          // Le site est marqué 'online' en DB mais n'est pas connecté via WebSocket
+          // et son last_seen_at est dépassé -> le marquer offline
+          const ageMs = now - new Date(site.last_seen_at).getTime();
+
+          logger.warn('DB/WebSocket desync detected - marking site offline', {
+            siteId: site.id,
+            siteName: site.site_name,
+            lastSeenAgoMs: ageMs,
+            thresholdMs: STALE_ONLINE_THRESHOLD_MS,
+          });
+
+          await query(
+            'UPDATE sites SET status = $1 WHERE id = $2',
+            ['offline', site.id]
+          );
+
+          correctedCount++;
+        }
+      }
+
+      if (correctedCount > 0) {
+        logger.info('DB/WebSocket sync completed', {
+          correctedSites: correctedCount,
+          connectedSitesCount: this.connectedSites.size,
+        });
+      }
+    } catch (error) {
+      logger.error('Error syncing DB with WebSocket state:', error);
     }
   }
 
@@ -1294,6 +1365,10 @@ class SocketService {
     if (this.connectionHealthCheckInterval) {
       clearInterval(this.connectionHealthCheckInterval);
       this.connectionHealthCheckInterval = null;
+    }
+    if (this.dbSyncInterval) {
+      clearInterval(this.dbSyncInterval);
+      this.dbSyncInterval = null;
     }
     this.pendingCommands.clear();
     this.connectedSites.clear();
