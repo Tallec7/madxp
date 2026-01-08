@@ -1,3 +1,9 @@
+## [2.10.4](https://github.com/Tallec7/neopro/compare/v2.10.3...v2.10.4) (2026-01-08)
+
+### Bug Fixes
+
+- **raspberry:** add fix_permissions command and preserve permissions after update ([ee8802b](https://github.com/Tallec7/neopro/commit/ee8802b9a84d522fbd29f6239abd52fc39fa8d88))
+
 ## [2.10.3](https://github.com/Tallec7/neopro/compare/v2.10.2...v2.10.3) (2026-01-08)
 
 ### Bug Fixes
