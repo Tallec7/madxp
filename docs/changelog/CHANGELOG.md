@@ -1,3 +1,9 @@
+## [2.10.1](https://github.com/Tallec7/neopro/compare/v2.10.0...v2.10.1) (2026-01-08)
+
+### Bug Fixes
+
+- **sync-agent:** include deploymentId in update_progress events ([1c25454](https://github.com/Tallec7/neopro/commit/1c254547759bb37e44031fcc648294072a8c81f7))
+
 # [2.10.0](https://github.com/Tallec7/neopro/compare/v2.9.0...v2.10.0) (2026-01-08)
 
 ### Features
