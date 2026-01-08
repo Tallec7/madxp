@@ -25,9 +25,11 @@ class NeoproSyncAgent {
     this.maxReconnectAttempts = 10;
     this.heartbeatInterval = null;
     this.analyticsInterval = null;
+    this.connectionHealthCheckInterval = null;
     this.connected = false;
     this.configWatcher = null;
     this.videoWatcher = null;
+    this.lastSuccessfulHeartbeat = null;
   }
 
   async start() {
@@ -89,6 +91,18 @@ class NeoproSyncAgent {
     if (this.socket && this.socket.connected) {
       this.socket.emit('pong_check');
       logger.debug('Responded to server ping_check');
+    } else {
+      // Socket morte mais on reçoit encore des événements = état incohérent
+      logger.warn('Received ping_check but socket is not connected', {
+        hasSocket: !!this.socket,
+        socketConnected: this.socket?.connected,
+        connectedFlag: this.connected,
+      });
+      // Corriger l'état si nécessaire
+      if (this.connected) {
+        this.connected = false;
+        connectionStatus.setConnected(false, 'ping_check_socket_dead');
+      }
     }
   }
 
@@ -123,6 +137,9 @@ class NeoproSyncAgent {
     this.startHeartbeat();
     // Note: startAnalyticsSync() est appelé dans start() car les analytics
     // sont envoyées via HTTP, indépendamment de la connexion WebSocket
+
+    // Démarrer le health check périodique de la connexion
+    this.startConnectionHealthCheck();
 
     // Traiter les commandes en attente dans la queue offline
     this.processOfflineQueue();
@@ -161,7 +178,7 @@ class NeoproSyncAgent {
 
       logger.info('Offline queue processed', processStats);
     } catch (error) {
-      logger.error('Failed to process offline queue:', error);
+      logger.error('Failed to process offline queue', { error: error.message });
     }
   }
 
@@ -199,7 +216,7 @@ class NeoproSyncAgent {
 
       this.videoWatcher.start();
     } catch (error) {
-      logger.error('Failed to start video watcher:', error);
+      logger.error('Failed to start video watcher', { error: error.message });
     }
   }
 
@@ -250,7 +267,7 @@ class NeoproSyncAgent {
       // Enregistrer la synchronisation réussie
       connectionStatus.recordSync(true);
     } catch (error) {
-      logger.error('Failed to sync local state:', error);
+      logger.error('Failed to sync local state', { error: error.message });
       connectionStatus.recordSync(false);
     }
   }
@@ -312,6 +329,14 @@ class NeoproSyncAgent {
       clearInterval(this.analyticsInterval);
       this.analyticsInterval = null;
     }
+
+    if (this.connectionHealthCheckInterval) {
+      clearInterval(this.connectionHealthCheckInterval);
+      this.connectionHealthCheckInterval = null;
+    }
+
+    // Reset le timestamp du dernier heartbeat réussi
+    this.lastSuccessfulHeartbeat = null;
 
     if (reason === 'io server disconnect') {
       logger.info('Server disconnected us, reconnecting...');
@@ -419,6 +444,57 @@ class NeoproSyncAgent {
     }
   }
 
+  /**
+   * Démarre un health check périodique de la connexion
+   * Détecte les connexions zombies même si handleDisconnect n'est pas appelé
+   */
+  startConnectionHealthCheck() {
+    const HEALTH_CHECK_INTERVAL = 60000; // 60 secondes
+    const STALE_THRESHOLD = 90000; // 90 secondes sans heartbeat réussi = problème
+
+    logger.info('Starting connection health check', { interval: HEALTH_CHECK_INTERVAL });
+
+    this.connectionHealthCheckInterval = setInterval(() => {
+      // Vérifier la cohérence entre le flag et l'état réel de la socket
+      const socketConnected = this.socket?.connected ?? false;
+
+      if (this.connected && !socketConnected) {
+        logger.warn('Health check: zombie connection detected (flag=true, socket=false)', {
+          connected: this.connected,
+          socketConnected,
+          lastSuccessfulHeartbeat: this.lastSuccessfulHeartbeat,
+        });
+        this.connected = false;
+        connectionStatus.setConnected(false, 'health_check_zombie');
+
+        // Forcer reconnexion
+        if (this.socket) {
+          this.socket.connect();
+        }
+        return;
+      }
+
+      // Vérifier si les heartbeats passent vraiment
+      if (this.connected && this.lastSuccessfulHeartbeat) {
+        const timeSinceLastHeartbeat = Date.now() - this.lastSuccessfulHeartbeat;
+        if (timeSinceLastHeartbeat > STALE_THRESHOLD) {
+          logger.warn('Health check: heartbeats not getting through', {
+            timeSinceLastHeartbeat,
+            threshold: STALE_THRESHOLD,
+            socketConnected,
+          });
+          // Ne pas déconnecter, juste logger - le serveur peut être lent
+        }
+      }
+
+      logger.debug('Health check: connection OK', {
+        connected: this.connected,
+        socketConnected,
+        lastSuccessfulHeartbeat: this.lastSuccessfulHeartbeat,
+      });
+    }, HEALTH_CHECK_INTERVAL);
+  }
+
   startHeartbeat() {
     logger.info('Starting heartbeat', { interval: config.monitoring.heartbeatInterval });
 
@@ -430,7 +506,25 @@ class NeoproSyncAgent {
   }
 
   async sendHeartbeat() {
+    // Vérifier à la fois le flag interne ET l'état réel de la socket
     if (!this.connected) {
+      return;
+    }
+
+    // Détecter les connexions zombies : this.connected=true mais socket morte
+    if (!this.socket?.connected) {
+      logger.warn('Zombie connection detected: connected flag is true but socket is disconnected', {
+        connected: this.connected,
+        socketConnected: this.socket?.connected,
+        socketId: this.socket?.id,
+      });
+      // Corriger l'état et forcer une reconnexion
+      this.connected = false;
+      connectionStatus.setConnected(false, 'zombie_detected');
+      if (this.socket) {
+        logger.info('Forcing socket reconnection...');
+        this.socket.connect();
+      }
       return;
     }
 
@@ -457,6 +551,9 @@ class NeoproSyncAgent {
           versionInfo,
         });
 
+        // Enregistrer le succès du heartbeat
+        this.lastSuccessfulHeartbeat = Date.now();
+
         logger.debug('Heartbeat sent', {
           cpu: metrics.cpu,
           memory: metrics.memory,
@@ -465,7 +562,7 @@ class NeoproSyncAgent {
         });
       }
     } catch (error) {
-      logger.error('Failed to send heartbeat:', error);
+      logger.error('Failed to send heartbeat', { error: error.message });
     }
   }
 
@@ -513,7 +610,7 @@ class NeoproSyncAgent {
         logger.warn('Analytics send failed', { error: result.error });
       }
     } catch (error) {
-      logger.error('Failed to send analytics:', error);
+      logger.error('Failed to send analytics', { error: error.message });
     }
   }
 
@@ -571,6 +668,10 @@ class NeoproSyncAgent {
 
     if (this.analyticsInterval) {
       clearInterval(this.analyticsInterval);
+    }
+
+    if (this.connectionHealthCheckInterval) {
+      clearInterval(this.connectionHealthCheckInterval);
     }
 
     // Arrêter la surveillance de la configuration
