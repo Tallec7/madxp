@@ -1,3 +1,9 @@
+## [2.14.3](https://github.com/Tallec7/neopro/compare/v2.14.2...v2.14.3) (2026-01-08)
+
+### Bug Fixes
+
+- **content:** use original filename instead of UUID for video storage ([d5c5ffe](https://github.com/Tallec7/neopro/commit/d5c5ffee9300f8d473552011eb609d054d760da7))
+
 ## [2.14.2](https://github.com/Tallec7/neopro/compare/v2.14.1...v2.14.2) (2026-01-08)
 
 ### Bug Fixes
