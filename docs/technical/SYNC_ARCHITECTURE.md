@@ -467,6 +467,8 @@ Depuis décembre 2025, les vidéos poussées depuis le central conservent leur n
    - Cibles : Tous les clubs (ou groupe "Premium")
 4. **NEOPRO déploie**
 5. **Sync-agents** des Pi connectés reçoivent la commande `deploy_video`
+   - Si le site est **online** : commande envoyée immédiatement
+   - Si le site est **offline** : commande mise en queue via `sendOrQueue()`, envoyée automatiquement à la reconnexion
 6. **Pi télécharge** la vidéo depuis Supabase
 7. **Pi merge** la config : vidéo ajoutée dans catégorie verrouillée
 8. **Opérateur Jean** voit la nouvelle vidéo avec un cadenas dans l'Admin UI
@@ -836,12 +838,13 @@ function canDeleteVideo(video, category) {
 
 ## Historique des Versions
 
-| Version | Date       | Auteur        | Modifications                                          |
-| ------- | ---------- | ------------- | ------------------------------------------------------ |
-| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                      |
-| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                 |
-| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos     |
-| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix |
+| Version | Date       | Auteur        | Modifications                                            |
+| ------- | ---------- | ------------- | -------------------------------------------------------- |
+| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                        |
+| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                   |
+| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos       |
+| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix   |
+| 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support) |
 
 ---
 
