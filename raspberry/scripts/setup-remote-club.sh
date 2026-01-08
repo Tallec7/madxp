@@ -493,12 +493,15 @@ REMOTE_SCRIPT
     print_success "Configuration installée"
 
     # Fix permissions pour nginx (www-data doit pouvoir accéder à /home/pi)
+    # webapp appartient à pi:pi pour que sync-agent puisse écrire
+    # www-data est ajouté au groupe pi pour la lecture (nginx)
     print_info "Configuration des permissions pour nginx..."
     ssh pi@"$PI_ADDRESS" "
         sudo chmod 755 /home/pi
         sudo chmod 755 /home/pi/neopro
+        sudo chown -R pi:pi /home/pi/neopro/webapp
         sudo chmod -R 755 /home/pi/neopro/webapp
-        sudo chown -R pi:www-data /home/pi/neopro/webapp
+        sudo usermod -a -G pi www-data 2>/dev/null || true
     "
     print_success "Permissions configurées"
 
