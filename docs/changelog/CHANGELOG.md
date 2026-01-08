@@ -1,3 +1,9 @@
+## [2.12.1](https://github.com/Tallec7/neopro/compare/v2.12.0...v2.12.1) (2026-01-08)
+
+### Bug Fixes
+
+- **deploy:** preserve sync-agent config during SSH deployments ([80a1ec3](https://github.com/Tallec7/neopro/commit/80a1ec3d61fa2f9d5a9d378d4993697f6f602c6e))
+
 # [2.12.0](https://github.com/Tallec7/neopro/compare/v2.11.7...v2.12.0) (2026-01-08)
 
 ### Features
