@@ -39,6 +39,14 @@ jest.mock('./socket.service', () => {
   };
 });
 
+// Mock commandQueueService.sendOrQueue
+const mockSendOrQueue = jest.fn();
+jest.mock('./command-queue.service', () => ({
+  commandQueueService: {
+    sendOrQueue: (...args: any[]) => mockSendOrQueue(...args),
+  },
+}));
+
 const mockDeleteFile = jest.fn();
 const mockGetPublicUrl = jest.fn();
 jest.mock('../config/supabase', () => ({
@@ -60,6 +68,17 @@ describe('DeploymentService', () => {
     mockGetPublicUrl.mockReturnValue('https://storage.example.com/videos/test.mp4');
     mockIsConnected.mockReset();
     mockSendCommand.mockReset();
+    mockSendOrQueue.mockReset();
+    // Default sendOrQueue behavior: return sent=true if isConnected, queued=true otherwise
+    mockSendOrQueue.mockImplementation((siteId: string) => {
+      const isConnected = mockIsConnected(siteId);
+      return Promise.resolve({
+        sent: isConnected,
+        queued: !isConnected,
+        commandId: 'mock-uuid-1234',
+        message: isConnected ? 'Commande envoyée au site.' : 'Commande mise en file d\'attente.',
+      });
+    });
   });
 
   describe('startDeployment', () => {
@@ -85,19 +104,21 @@ describe('DeploymentService', () => {
         .mockResolvedValueOnce({ rows: [] }); // Update status
 
       mockIsConnected.mockReturnValue(true);
-      mockSendCommand.mockReturnValue(true);
 
       await deploymentService.startDeployment('deploy-uuid-123');
 
-      expect(mockSendCommand).toHaveBeenCalledWith(
+      // Now uses sendOrQueue instead of sendCommand directly
+      expect(mockSendOrQueue).toHaveBeenCalledWith(
         'site-uuid-789',
+        'deploy_video',
         expect.objectContaining({
-          type: 'deploy_video',
-          data: expect.objectContaining({
-            deploymentId: 'deploy-uuid-123',
-            videoId: 'video-uuid-456',
-            videoUrl: 'https://storage.example.com/videos/test.mp4',
-          }),
+          deploymentId: 'deploy-uuid-123',
+          videoId: 'video-uuid-456',
+          videoUrl: 'https://storage.example.com/videos/test.mp4',
+        }),
+        expect.objectContaining({
+          priority: 3,
+          expiresIn: 7 * 24 * 60 * 60 * 1000,
         })
       );
 
@@ -135,26 +156,39 @@ describe('DeploymentService', () => {
       );
     });
 
-    it('should keep deployment pending if no sites connected', async () => {
+    it('should queue deployment and set in_progress if no sites connected', async () => {
       mockQuery
         .mockResolvedValueOnce({ rows: [mockDeploymentRow] })
-        .mockResolvedValueOnce({ rows: [{ siteId: 'site-uuid-789', siteName: 'Test Site' }] });
+        .mockResolvedValueOnce({ rows: [{ siteId: 'site-uuid-789', siteName: 'Test Site' }] })
+        .mockResolvedValueOnce({ rows: [] }); // Update to in_progress
 
       mockIsConnected.mockReturnValue(false);
 
       await deploymentService.startDeployment('deploy-uuid-123');
 
-      // Should NOT update to in_progress
-      expect(mockQuery).not.toHaveBeenCalledWith(
+      // With sendOrQueue, offline sites are queued and deployment is set to in_progress
+      // with a message indicating it's waiting for reconnection
+      expect(mockSendOrQueue).toHaveBeenCalledWith(
+        'site-uuid-789',
+        'deploy_video',
+        expect.any(Object),
+        expect.objectContaining({
+          priority: 3,
+          expiresIn: 7 * 24 * 60 * 60 * 1000,
+        })
+      );
+
+      // Should update to in_progress with "En attente de reconnexion" message
+      expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining("status = 'in_progress'"),
-        expect.any(Array)
+        expect.arrayContaining([expect.stringContaining('En attente de reconnexion')])
       );
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Deployment initiated',
         expect.objectContaining({
-          connectedSites: 0,
-          pendingSites: 1,
+          successCount: 1,
+          commandQueuedSites: ['Test Site'],
         })
       );
     });
@@ -177,11 +211,11 @@ describe('DeploymentService', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       mockIsConnected.mockReturnValue(true);
-      mockSendCommand.mockReturnValue(true);
 
       await deploymentService.startDeployment('deploy-uuid-123');
 
-      expect(mockSendCommand).toHaveBeenCalledTimes(2);
+      // sendOrQueue is called for each site in the group
+      expect(mockSendOrQueue).toHaveBeenCalledTimes(2);
     });
 
     it('should use metadata title when available', async () => {
@@ -191,17 +225,17 @@ describe('DeploymentService', () => {
         .mockResolvedValueOnce({ rows: [] });
 
       mockIsConnected.mockReturnValue(true);
-      mockSendCommand.mockReturnValue(true);
 
       await deploymentService.startDeployment('deploy-uuid-123');
 
-      expect(mockSendCommand).toHaveBeenCalledWith(
+      // sendOrQueue is called with originalName from metadata.title
+      expect(mockSendOrQueue).toHaveBeenCalledWith(
         'site-uuid-789',
+        'deploy_video',
         expect.objectContaining({
-          data: expect.objectContaining({
-            originalName: 'Custom Title', // From metadata.title
-          }),
-        })
+          originalName: 'Custom Title', // From metadata.title
+        }),
+        expect.any(Object)
       );
     });
   });
@@ -226,15 +260,17 @@ describe('DeploymentService', () => {
         .mockResolvedValueOnce({ rows: [] }); // Update status
 
       mockIsConnected.mockReturnValue(true);
-      mockSendCommand.mockReturnValue(true);
 
       await deploymentService.processPendingDeploymentsForSite('site-uuid-789');
 
-      expect(mockSendCommand).toHaveBeenCalledWith(
+      // Now uses sendOrQueue instead of sendCommand
+      expect(mockSendOrQueue).toHaveBeenCalledWith(
         'site-uuid-789',
+        'deploy_video',
         expect.objectContaining({
-          type: 'deploy_video',
-        })
+          deploymentId: 'deploy-pending-123',
+        }),
+        expect.any(Object)
       );
 
       expect(mockLogger.info).toHaveBeenCalledWith(
@@ -456,7 +492,7 @@ describe('DeploymentService', () => {
       );
     });
 
-    it('should handle socket send failures', async () => {
+    it('should handle sendOrQueue failures', async () => {
       const mockDeployment = {
         id: 'deploy-uuid-123',
         video_id: 'video-uuid-456',
@@ -474,17 +510,33 @@ describe('DeploymentService', () => {
 
       mockQuery
         .mockResolvedValueOnce({ rows: [mockDeployment] })
-        .mockResolvedValueOnce({ rows: [{ siteId: 'site-uuid-789', siteName: 'Test' }] });
+        .mockResolvedValueOnce({ rows: [{ siteId: 'site-uuid-789', siteName: 'Test' }] })
+        .mockResolvedValueOnce({ rows: [] }); // Update error_message for failed sites
 
       mockIsConnected.mockReturnValue(true);
-      mockSendCommand.mockReturnValue(false); // Send fails
+      // sendOrQueue fails completely (neither sent nor queued)
+      mockSendOrQueue.mockResolvedValueOnce({
+        sent: false,
+        queued: false,
+        commandId: null,
+        message: 'Erreur lors de l\'envoi',
+      });
 
       await deploymentService.startDeployment('deploy-uuid-123');
 
-      // Should NOT update to in_progress since send failed
+      // Should NOT update to in_progress since send and queue both failed
       expect(mockQuery).not.toHaveBeenCalledWith(
         expect.stringContaining("status = 'in_progress'"),
         expect.any(Array)
+      );
+
+      // Should log error about failed sites
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Video deployment failed for all sites',
+        expect.objectContaining({
+          deploymentId: 'deploy-uuid-123',
+          commandFailedSites: ['Test'],
+        })
       );
     });
   });
@@ -515,28 +567,27 @@ describe('DeploymentService', () => {
             { siteId: 'site-3', siteName: 'Site 3' },
           ],
         })
-        .mockResolvedValueOnce({ rows: [] });
+        .mockResolvedValueOnce({ rows: [] }); // Update to in_progress
 
-      // Only site-1 and site-3 are connected
-      // isConnected is called twice per connected site (once in loop, once in deployToSite)
-      mockIsConnected
-        .mockReturnValueOnce(true)   // site-1 in startDeployment loop
-        .mockReturnValueOnce(true)   // site-1 in deployToSite
-        .mockReturnValueOnce(false)  // site-2 in startDeployment loop (not connected)
-        .mockReturnValueOnce(true)   // site-3 in startDeployment loop
-        .mockReturnValueOnce(true);  // site-3 in deployToSite
-
-      mockSendCommand.mockReturnValue(true);
+      // Site-1 and site-3 are connected, site-2 is offline
+      // Use implementation based on siteId for consistent behavior
+      mockIsConnected.mockImplementation((siteId: string) => {
+        return siteId === 'site-1' || siteId === 'site-3';
+      });
 
       await deploymentService.startDeployment('deploy-group-123');
 
-      expect(mockSendCommand).toHaveBeenCalledTimes(2);
+      // sendOrQueue is called for all 3 sites
+      expect(mockSendOrQueue).toHaveBeenCalledTimes(3);
+
+      // New log format with commandSentSites and commandQueuedSites
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Deployment initiated',
         expect.objectContaining({
           totalSites: 3,
-          connectedSites: 2,
-          pendingSites: 1,
+          successCount: 3,
+          commandSentSites: ['Site 1', 'Site 3'],
+          commandQueuedSites: ['Site 2'],
         })
       );
     });
@@ -578,36 +629,33 @@ describe('DeploymentService', () => {
         .mockResolvedValueOnce({ rows: [] })  // update for deploy-1
         .mockResolvedValueOnce({ rows: [] }); // update for deploy-2
 
-      // isConnected is called once per deployment in deployToSite
-      mockIsConnected
-        .mockReturnValueOnce(true)  // deploy-1
-        .mockReturnValueOnce(true); // deploy-2
-      mockSendCommand.mockReturnValue(true);
+      mockIsConnected.mockReturnValue(true);
 
       await deploymentService.processPendingDeploymentsForSite('new-site-123');
 
-      expect(mockSendCommand).toHaveBeenCalledTimes(2);
+      // sendOrQueue is called for each pending deployment
+      expect(mockSendOrQueue).toHaveBeenCalledTimes(2);
 
       // First deployment
-      expect(mockSendCommand).toHaveBeenCalledWith(
+      expect(mockSendOrQueue).toHaveBeenCalledWith(
         'new-site-123',
+        'deploy_video',
         expect.objectContaining({
-          data: expect.objectContaining({
-            deploymentId: 'deploy-1',
-            originalName: 'Video 1.mp4',
-          }),
-        })
+          deploymentId: 'deploy-1',
+          originalName: 'Video 1.mp4',
+        }),
+        expect.any(Object)
       );
 
       // Second deployment with custom title
-      expect(mockSendCommand).toHaveBeenCalledWith(
+      expect(mockSendOrQueue).toHaveBeenCalledWith(
         'new-site-123',
+        'deploy_video',
         expect.objectContaining({
-          data: expect.objectContaining({
-            deploymentId: 'deploy-2',
-            originalName: 'Custom Title 2',
-          }),
-        })
+          deploymentId: 'deploy-2',
+          originalName: 'Custom Title 2',
+        }),
+        expect.any(Object)
       );
     });
   });

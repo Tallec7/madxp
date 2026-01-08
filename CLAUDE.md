@@ -265,17 +265,18 @@ Upload:     10 req/hour     (video uploads)
 
 ## Services Critiques
 
-| Service        | Fichier                     | Rôle                                |
-| -------------- | --------------------------- | ----------------------------------- |
-| **Socket**     | `socket.service.ts`         | Communication temps réel Pi ↔ Cloud |
-| **Deployment** | `deployment.service.ts`     | Orchestration déploiement vidéos    |
-| **Metrics**    | `metrics.service.ts`        | Export Prometheus                   |
-| **Audit**      | `audit.service.ts`          | Log toutes les actions admin        |
-| **MFA**        | `mfa.service.ts`            | 2FA avec backup codes               |
-| **Email**      | `email.service.ts`          | Password reset, alertes             |
-| **Cron**       | `cron-scheduler.service.ts` | Stats quotidiennes, cleanup         |
-| **Logger**     | `logger.service.ts`         | Logs structurés avec correlation ID |
-| **Errors**     | `error-extractor.ts`        | Extraction messages d'erreur        |
+| Service          | Fichier                     | Rôle                                      |
+| ---------------- | --------------------------- | ----------------------------------------- |
+| **Socket**       | `socket.service.ts`         | Communication temps réel Pi ↔ Cloud       |
+| **CommandQueue** | `command-queue.service.ts`  | File d'attente commandes (offline/online) |
+| **Deployment**   | `deployment.service.ts`     | Orchestration déploiement vidéos          |
+| **Metrics**      | `metrics.service.ts`        | Export Prometheus                         |
+| **Audit**        | `audit.service.ts`          | Log toutes les actions admin              |
+| **MFA**          | `mfa.service.ts`            | 2FA avec backup codes                     |
+| **Email**        | `email.service.ts`          | Password reset, alertes                   |
+| **Cron**         | `cron-scheduler.service.ts` | Stats quotidiennes, cleanup               |
+| **Logger**       | `logger.service.ts`         | Logs structurés avec correlation ID       |
+| **Errors**       | `error-extractor.ts`        | Extraction messages d'erreur              |
 
 ### Protocole Socket.IO
 
@@ -1207,6 +1208,13 @@ curl http://localhost:3001/api/admin/socket-rooms
 
 #### Deployment (deployment.service.ts)
 
+**Architecture** : Utilise `commandQueueService.sendOrQueue()` pour gérer les sites offline/online (même pattern que `update_config` et `update_software`).
+
+| État site   | Comportement                                          | Feedback dashboard                  |
+| ----------- | ----------------------------------------------------- | ----------------------------------- |
+| **Online**  | Commande envoyée immédiatement                        | "Envoyé: Site A"                    |
+| **Offline** | Commande mise en queue, envoyée auto à la reconnexion | "En attente de reconnexion: Site B" |
+
 | Symptôme            | Cause probable        | Solution                         |
 | ------------------- | --------------------- | -------------------------------- |
 | Stuck "in_progress" | Pi déconnecté pendant | Reset manuel (voir SQL)          |
@@ -1302,6 +1310,14 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 ---
 
 ## Historique Breaking Changes
+
+### v2.14.x (Janvier 2026)
+
+- **Video Deployment Queue** : Alignement sur le pattern `update_config`/`update_software`
+  - `deployment.service.ts` utilise maintenant `commandQueueService.sendOrQueue()`
+  - Sites offline : commandes mises en queue, envoyées automatiquement à la reconnexion
+  - Feedback dashboard amélioré : "Envoyé" vs "En attente de reconnexion"
+  - Migration : Aucune (amélioration transparente)
 
 ### v2.11.x (Janvier 2026)
 
