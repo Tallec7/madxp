@@ -118,13 +118,13 @@ interface HistoryEntry {
         <!-- Sortie stdout -->
         <div class="output-box" *ngIf="result?.stdout">
           <div class="output-label">stdout:</div>
-          <pre><code>{{ result.stdout }}</code></pre>
+          <pre><code>{{ result!.stdout }}</code></pre>
         </div>
 
         <!-- Sortie stderr -->
         <div class="output-box stderr" *ngIf="result?.stderr">
           <div class="output-label">stderr:</div>
-          <pre><code>{{ result.stderr }}</code></pre>
+          <pre><code>{{ result!.stderr }}</code></pre>
         </div>
 
         <!-- Pas de sortie -->
@@ -461,7 +461,7 @@ export class CommandExecutorComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
 
   ngOnInit(): void {
-    this.userRole = this.authService.currentUser?.role || '';
+    this.userRole = this.authService.getCurrentUser()?.role || '';
     this.loadHistory();
   }
 
