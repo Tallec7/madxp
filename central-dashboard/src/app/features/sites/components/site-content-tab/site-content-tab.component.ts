@@ -15,7 +15,7 @@ import {
   LocalStorage,
   ConfigDiff
 } from '../../../../core/models';
-import { VideoLibraryComponent, VideoItem } from '../video-library/video-library.component';
+import { VideoLibraryComponent, VideoItem, VideoDeployState } from '../video-library/video-library.component';
 import { RemotePreviewComponent } from '../remote-preview/remote-preview.component';
 import { TranslateModule } from '@ngx-translate/core';
 
@@ -74,6 +74,7 @@ interface HumanReadableDiff {
           [cloudVideos]="cloudVideos"
           [storage]="localStorage"
           [selectedPath]="selectedVideoPath"
+          [deployStates]="videoDeployStates"
           (videoSelect)="onVideoSelect($event)"
           (videoPreview)="onVideoPreview($event)"
           (videoDeploy)="onVideoDeploy($event)"
@@ -2082,12 +2083,17 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   expandedDiffItems: Record<string, boolean> = {};
   deployMode: 'merge' | 'replace' = 'merge';
 
-  // Deploy tracking
+  // Deploy tracking (config)
   deployCommandId: string | null = null;
   deployStatus: 'idle' | 'sending' | 'pending' | 'success' | 'error' | 'timeout' = 'idle';
   deployError: string | null = null;
   private deploySubscription: Subscription | null = null;
   private deployTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  // Video deploy tracking
+  videoDeployStates: Map<string, VideoDeployState> = new Map();
+  private videoDeploySubscriptions: Map<string, Subscription> = new Map();
+  private videoDeployTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
   // Cached computed values for template
   cachedVideoCategories: string[] = [];
@@ -2467,6 +2473,10 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     if (this.deployTimeoutId) {
       clearTimeout(this.deployTimeoutId);
     }
+    // Cleanup video deploy tracking
+    for (const videoId of this.videoDeploySubscriptions.keys()) {
+      this.cleanupVideoDeployTracking(videoId);
+    }
   }
 
   /**
@@ -2694,20 +2704,192 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
 
+    // Check if already deploying
+    const currentState = this.videoDeployStates.get(video.id);
+    if (currentState?.status === 'deploying') {
+      this.notificationService.warning('Déploiement déjà en cours pour cette vidéo');
+      return;
+    }
+
     if (confirm(`Déployer "${video.filename}" vers ce site ?`)) {
+      const videoId = video.id;
+
+      // Set initial deploying state
+      this.videoDeployStates.set(videoId, { status: 'deploying', progress: 0 });
+      this.cdr.markForCheck();
+
       this.sitesService.sendCommand(this.siteId, 'deploy_video', {
         videoId: video.id,
         filename: video.filename,
         url: video.path
       }).subscribe({
-        next: () => {
-          this.notificationService.success(`Déploiement de "${video.filename}" lancé`);
+        next: (response) => {
+          if (response.queued) {
+            // Site offline, command queued
+            this.notificationService.info(`Déploiement de "${video.filename}" en file d'attente (site hors ligne)`);
+            this.videoDeployStates.set(videoId, { status: 'deploying', progress: 0, commandId: response.commandId });
+          } else if (response.commandId) {
+            // Command sent, wait for socket events
+            this.notificationService.info(`Déploiement de "${video.filename}" lancé...`);
+            this.videoDeployStates.set(videoId, { status: 'deploying', progress: 0, commandId: response.commandId });
+            this.waitForVideoDeployResult(videoId, video.filename, response.commandId);
+          }
+          this.cdr.markForCheck();
         },
         error: (error) => {
           const message = ErrorExtractor.getMessage(error);
           this.notificationService.error(`Erreur: ${message}`);
+          this.videoDeployStates.set(videoId, { status: 'error', error: message });
+          this.cdr.markForCheck();
+          // Auto-clear error after 10 seconds
+          setTimeout(() => {
+            if (this.videoDeployStates.get(videoId)?.status === 'error') {
+              this.videoDeployStates.delete(videoId);
+              this.cdr.markForCheck();
+            }
+          }, 10000);
         }
       });
+    }
+  }
+
+  private waitForVideoDeployResult(videoId: string, filename: string, commandId: string): void {
+    // Clean up any existing subscription for this video
+    this.cleanupVideoDeployTracking(videoId);
+
+    // Timeout: 10 minutes for video deploy (large files)
+    const VIDEO_DEPLOY_TIMEOUT = 10 * 60 * 1000;
+
+    const timeoutId = setTimeout(() => {
+      const currentState = this.videoDeployStates.get(videoId);
+      if (currentState?.status === 'deploying') {
+        this.videoDeployStates.set(videoId, {
+          status: 'timeout',
+          error: 'Timeout: le Pi n\'a pas répondu dans les temps'
+        });
+        this.notificationService.warning(`Timeout: le Pi n'a pas confirmé le déploiement de "${filename}"`);
+        this.cdr.markForCheck();
+        this.cleanupVideoDeployTracking(videoId);
+        // Auto-clear timeout after 15 seconds
+        setTimeout(() => {
+          if (this.videoDeployStates.get(videoId)?.status === 'timeout') {
+            this.videoDeployStates.delete(videoId);
+            this.cdr.markForCheck();
+          }
+        }, 15000);
+      }
+    }, VIDEO_DEPLOY_TIMEOUT);
+    this.videoDeployTimeouts.set(videoId, timeoutId);
+
+    // Listen for command_completed event
+    const completedSub = this.socketService.on<{
+      siteId: string;
+      commandId: string;
+      commandType: string;
+      status: string;
+      result?: unknown;
+      error?: string;
+    }>('command_completed')
+      .pipe(
+        filter(event => event.commandId === commandId),
+        take(1)
+      )
+      .subscribe(event => {
+        if (event.status === 'success') {
+          this.videoDeployStates.set(videoId, { status: 'success', commandId });
+          this.notificationService.success(`"${filename}" déployé avec succès sur le Pi !`);
+          // Refresh video list after successful deploy
+          this.loadContent();
+          // Auto-clear success after 5 seconds
+          setTimeout(() => {
+            if (this.videoDeployStates.get(videoId)?.status === 'success') {
+              this.videoDeployStates.delete(videoId);
+              this.cdr.markForCheck();
+            }
+          }, 5000);
+        } else {
+          const errorMsg = event.error || 'Erreur inconnue';
+          this.videoDeployStates.set(videoId, { status: 'error', error: errorMsg, commandId });
+          this.notificationService.error(`Erreur de déploiement pour "${filename}": ${errorMsg}`);
+          // Auto-clear error after 10 seconds
+          setTimeout(() => {
+            if (this.videoDeployStates.get(videoId)?.status === 'error') {
+              this.videoDeployStates.delete(videoId);
+              this.cdr.markForCheck();
+            }
+          }, 10000);
+        }
+        this.cdr.markForCheck();
+        this.cleanupVideoDeployTracking(videoId);
+      });
+    this.videoDeploySubscriptions.set(videoId, completedSub);
+
+    // Listen for deploy_progress event
+    const progressSub = this.socketService.on<{
+      siteId: string;
+      commandId: string;
+      progress: number;
+    }>('deploy_progress')
+      .pipe(
+        filter(event => event.commandId === commandId)
+      )
+      .subscribe(event => {
+        const currentState = this.videoDeployStates.get(videoId);
+        if (currentState?.status === 'deploying') {
+          this.videoDeployStates.set(videoId, {
+            ...currentState,
+            progress: event.progress
+          });
+          this.cdr.markForCheck();
+        }
+      });
+    // Store progress subscription separately
+    const existingSub = this.videoDeploySubscriptions.get(videoId);
+    if (existingSub) {
+      existingSub.add(progressSub);
+    }
+
+    // Listen for command_timeout event
+    const timeoutSub = this.socketService.on<{
+      siteId: string;
+      commandId: string;
+      type: string;
+    }>('command_timeout')
+      .pipe(
+        filter(event => event.commandId === commandId),
+        take(1)
+      )
+      .subscribe(() => {
+        this.videoDeployStates.set(videoId, {
+          status: 'timeout',
+          error: 'Le serveur a signalé un timeout pour cette commande'
+        });
+        this.notificationService.warning(`Timeout serveur pour le déploiement de "${filename}"`);
+        this.cdr.markForCheck();
+        this.cleanupVideoDeployTracking(videoId);
+        // Auto-clear after 15 seconds
+        setTimeout(() => {
+          if (this.videoDeployStates.get(videoId)?.status === 'timeout') {
+            this.videoDeployStates.delete(videoId);
+            this.cdr.markForCheck();
+          }
+        }, 15000);
+      });
+    if (existingSub) {
+      existingSub.add(timeoutSub);
+    }
+  }
+
+  private cleanupVideoDeployTracking(videoId: string): void {
+    const sub = this.videoDeploySubscriptions.get(videoId);
+    if (sub) {
+      sub.unsubscribe();
+      this.videoDeploySubscriptions.delete(videoId);
+    }
+    const timeout = this.videoDeployTimeouts.get(videoId);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.videoDeployTimeouts.delete(videoId);
     }
   }
 

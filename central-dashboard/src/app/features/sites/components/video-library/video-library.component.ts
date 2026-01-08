@@ -18,6 +18,15 @@ export interface VideoItem {
   lastModified?: string;
 }
 
+export type VideoDeployStatus = 'idle' | 'deploying' | 'success' | 'error' | 'timeout';
+
+export interface VideoDeployState {
+  status: VideoDeployStatus;
+  progress?: number;
+  error?: string;
+  commandId?: string;
+}
+
 export type SortField = 'filename' | 'size' | 'duration' | 'lastModified' | 'category';
 export type SortDirection = 'asc' | 'desc';
 
@@ -124,8 +133,25 @@ export type SortDirection = 'asc' | 'desc';
           <span class="col-owner video-owner" [class.owner-neopro]="video.owner === 'neopro'" [class.owner-club]="video.owner === 'club'">
             {{ video.owner === 'neopro' ? 'NEOPRO' : 'CLUB' }}
           </span>
-          <span class="col-status video-status" [class.on-pi]="video.isOnPi" [class.pending]="!video.isOnPi">
-            {{ video.isOnPi ? '✅' : '⏳' }}
+          <span class="col-status video-status"
+                [class.on-pi]="video.isOnPi && !getDeployState(video)"
+                [class.pending]="!video.isOnPi && !getDeployState(video)"
+                [class.deploying]="getDeployState(video)?.status === 'deploying'"
+                [class.deploy-success]="getDeployState(video)?.status === 'success'"
+                [class.deploy-error]="getDeployState(video)?.status === 'error' || getDeployState(video)?.status === 'timeout'"
+                [title]="getDeployState(video)?.error || ''">
+            <ng-container *ngIf="!getDeployState(video)">
+              {{ video.isOnPi ? '✅' : '⏳' }}
+            </ng-container>
+            <ng-container *ngIf="getDeployState(video)?.status === 'deploying'">
+              <span class="deploy-spinner">⏳</span>
+            </ng-container>
+            <ng-container *ngIf="getDeployState(video)?.status === 'success'">
+              ✅
+            </ng-container>
+            <ng-container *ngIf="getDeployState(video)?.status === 'error' || getDeployState(video)?.status === 'timeout'">
+              ❌
+            </ng-container>
           </span>
           <div class="col-actions video-actions">
             <button
@@ -140,10 +166,14 @@ export type SortDirection = 'asc' | 'desc';
               class="action-btn deploy"
               (click)="onDeploy(video, $event)"
               [title]="'videoLibrary.deployToPi' | translate"
-              *ngIf="!video.isOnPi && video.source === 'cloud'"
+              *ngIf="!video.isOnPi && video.source === 'cloud' && !isDeploying(video)"
+              [disabled]="isDeploying(video)"
             >
               🚀
             </button>
+            <span class="deploy-progress" *ngIf="isDeploying(video)" [title]="'Déploiement en cours...'">
+              {{ getDeployState(video)?.progress ?? 0 }}%
+            </span>
             <button
               class="action-btn delete"
               (click)="onDelete(video, $event)"
@@ -503,6 +533,40 @@ export type SortDirection = 'asc' | 'desc';
       font-size: 0.875rem;
     }
 
+    .video-status.deploying {
+      color: #2563eb;
+    }
+
+    .video-status.deploy-success {
+      color: #16a34a;
+    }
+
+    .video-status.deploy-error {
+      color: #dc2626;
+      cursor: help;
+    }
+
+    .deploy-spinner {
+      display: inline-block;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .deploy-progress {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #2563eb;
+      background: #eff6ff;
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+      min-width: 35px;
+      text-align: center;
+    }
+
     /* Actions */
     .video-actions {
       display: flex;
@@ -730,6 +794,7 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() cloudVideos: CloudVideo[] = [];
   @Input() storage: LocalStorage | null = null;
   @Input() selectedPath: string = '';
+  @Input() deployStates: Map<string, VideoDeployState> = new Map();
 
   @Output() videoSelect = new EventEmitter<VideoItem>();
   @Output() videoPreview = new EventEmitter<VideoItem>();
@@ -952,5 +1017,15 @@ export class VideoLibraryComponent implements OnChanges {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  getDeployState(video: VideoItem): VideoDeployState | null {
+    if (!video.id) return null;
+    return this.deployStates.get(video.id) || null;
+  }
+
+  isDeploying(video: VideoItem): boolean {
+    const state = this.getDeployState(video);
+    return state?.status === 'deploying';
   }
 }

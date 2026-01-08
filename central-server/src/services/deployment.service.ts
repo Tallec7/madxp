@@ -1,6 +1,6 @@
-import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/database';
 import socketService from './socket.service';
+import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
 import { deleteFile, getPublicUrl } from '../config/supabase';
 
@@ -42,8 +42,9 @@ interface DeploymentRow {
 
 class DeploymentService {
   /**
-   * Tente de démarrer un déploiement vers les sites connectés.
-   * Les sites non connectés recevront le déploiement quand ils se connecteront.
+   * Tente de démarrer un déploiement vers les sites.
+   * Utilise commandQueueService.sendOrQueue() pour gérer les sites offline
+   * (même comportement que update_config et update_software).
    */
   async startDeployment(deploymentId: string): Promise<void> {
     try {
@@ -82,40 +83,89 @@ class DeploymentService {
       // Construire l'URL de la vidéo depuis Supabase Storage
       const videoUrl = getPublicUrl(deployment.storage_path);
 
-      // Tenter d'envoyer aux sites connectés
-      let connectedCount = 0;
+      // Tenter d'envoyer aux sites (ou mettre en queue si offline)
+      let successCount = 0;
+      const commandSentSites: string[] = [];
+      const commandQueuedSites: string[] = [];
+      const commandFailedSites: string[] = [];
 
       for (const target of targets) {
-        if (socketService.isConnected(target.siteId)) {
-          const success = await this.deployToSite(
-            deploymentId,
-            target.siteId,
-            deployment.video_id,
-            videoUrl,
-            deployment
-          );
-          if (success) {
-            connectedCount++;
+        const isConnected = socketService.isConnected(target.siteId);
+        logger.info('Processing site for video deployment', {
+          deploymentId,
+          siteId: target.siteId,
+          siteName: target.siteName,
+          isConnected,
+        });
+
+        // deployToSite utilise maintenant sendOrQueue, donc fonctionne même si offline
+        const success = await this.deployToSite(
+          deploymentId,
+          target.siteId,
+          deployment.video_id,
+          videoUrl,
+          deployment
+        );
+
+        if (success) {
+          successCount++;
+          if (isConnected) {
+            commandSentSites.push(target.siteName);
+          } else {
+            commandQueuedSites.push(target.siteName);
           }
+        } else {
+          commandFailedSites.push(target.siteName);
         }
       }
 
-      // Si au moins un site est connecté, passer en in_progress
-      if (connectedCount > 0) {
+      // Mettre à jour le statut avec des informations détaillées
+      if (successCount > 0) {
+        // Au moins une commande envoyée ou mise en queue
+        const statusMessage = [];
+        if (commandSentSites.length > 0) {
+          statusMessage.push(`Envoyé: ${commandSentSites.join(', ')}`);
+        }
+        if (commandQueuedSites.length > 0) {
+          statusMessage.push(`En attente de reconnexion: ${commandQueuedSites.join(', ')}`);
+        }
+
         await query(
           `UPDATE content_deployments
-           SET status = 'in_progress', started_at = NOW()
-           WHERE id = $1`,
-          [deploymentId]
+           SET status = 'in_progress', started_at = NOW(), error_message = $1
+           WHERE id = $2`,
+          [statusMessage.join(' | ') || null, deploymentId]
         );
+
+        logger.info('Video deployment in progress', {
+          deploymentId,
+          commandSentSites,
+          commandQueuedSites,
+          commandFailedSites,
+        });
+      } else {
+        // Aucune commande n'a pu être envoyée ou mise en queue
+        await query(
+          `UPDATE content_deployments
+           SET error_message = $1
+           WHERE id = $2 AND status = 'pending'`,
+          ['Échec de l\'envoi à tous les sites cibles', deploymentId]
+        );
+
+        logger.error('Video deployment failed for all sites', {
+          deploymentId,
+          commandFailedSites,
+        });
       }
-      // Sinon, le déploiement reste en "pending" et sera traité quand les sites se connecteront
 
       logger.info('Deployment initiated', {
         deploymentId,
+        videoFilename: deployment.filename,
         totalSites: targets.length,
-        connectedSites: connectedCount,
-        pendingSites: targets.length - connectedCount
+        successCount,
+        commandSentSites,
+        commandQueuedSites,
+        commandFailedSites,
       });
 
     } catch (error) {
@@ -125,7 +175,10 @@ class DeploymentService {
   }
 
   /**
-   * Traite les déploiements en attente pour un site qui vient de se connecter
+   * Traite les déploiements en attente pour un site qui vient de se connecter.
+   * Note: Avec commandQueueService, les commandes en queue sont automatiquement
+   * envoyées à la reconnexion. Cette méthode gère les cas où le déploiement
+   * DB est en 'pending' mais n'a pas été mis en queue (anciens déploiements).
    */
   async processPendingDeploymentsForSite(siteId: string): Promise<void> {
     try {
@@ -166,6 +219,8 @@ class DeploymentService {
         const deployment = row as unknown as DeploymentRow;
         const videoUrl = getPublicUrl(deployment.storage_path);
 
+        // deployToSite utilise sendOrQueue, donc si le site est maintenant connecté,
+        // la commande sera envoyée immédiatement
         const success = await this.deployToSite(
           deployment.id,
           siteId,
@@ -217,6 +272,8 @@ class DeploymentService {
 
   /**
    * Envoie la commande de déploiement à un site spécifique
+   * Utilise commandQueueService.sendOrQueue() pour gérer les sites offline
+   * (même comportement que update_config et update_software)
    */
   private async deployToSite(
     deploymentId: string,
@@ -225,11 +282,6 @@ class DeploymentService {
     videoUrl: string,
     deployment: DeploymentRow
   ): Promise<boolean> {
-    if (!socketService.isConnected(siteId)) {
-      logger.warn('Site not connected for deployment', { siteId, deploymentId });
-      return false;
-    }
-
     // Utiliser le titre depuis metadata, sinon le nom original du fichier
     const videoTitle = deployment.metadata?.title || deployment.original_name;
 
@@ -239,33 +291,54 @@ class DeploymentService {
       throw new Error('Video checksum is required for deployment');
     }
 
-    const command = {
-      id: uuidv4(),
-      type: 'deploy_video',
-      data: {
-        deploymentId,
-        videoId,
-        videoUrl,
-        filename: deployment.filename,
-        originalName: videoTitle,
-        category: deployment.category || 'default',
-        subcategory: deployment.subcategory || null,
-        duration: deployment.duration || 0,
-        checksum: deployment.checksum, // Checksum SHA256 OBLIGATOIRE
-        // Métadonnées pour le tracking analytics
-        sponsorId: deployment.advertiser_id || null,
-        analyticsCategory: deployment.analytics_category || null,
-      }
+    const commandData = {
+      deploymentId,
+      videoId,
+      videoUrl,
+      filename: deployment.filename,
+      originalName: videoTitle,
+      category: deployment.category || 'default',
+      subcategory: deployment.subcategory || null,
+      duration: deployment.duration || 0,
+      checksum: deployment.checksum, // Checksum SHA256 OBLIGATOIRE
+      // Métadonnées pour le tracking analytics
+      sponsorId: deployment.advertiser_id || null,
+      analyticsCategory: deployment.analytics_category || null,
     };
 
-    logger.info('Sending deploy_video command', {
+    logger.info('Sending deploy_video command via sendOrQueue', {
       siteId,
+      deploymentId,
       videoUrl,
       storagePath: deployment.storage_path,
       checksum: deployment.checksum,
     });
 
-    return socketService.sendCommand(siteId, command);
+    // Utiliser sendOrQueue comme pour update_config et update_software
+    // Si le site est connecté, envoie immédiatement
+    // Sinon, met en queue pour envoi à la reconnexion
+    const result = await commandQueueService.sendOrQueue(
+      siteId,
+      'deploy_video',
+      commandData,
+      {
+        priority: 3, // Priorité normale pour les vidéos
+        description: `Déploiement vidéo: ${deployment.filename}`,
+        expiresIn: 7 * 24 * 60 * 60 * 1000, // Expire après 7 jours
+      }
+    );
+
+    logger.info('Command sendOrQueue result', {
+      deploymentId,
+      siteId,
+      sent: result.sent,
+      queued: result.queued,
+      commandId: result.commandId,
+      message: result.message,
+    });
+
+    // Retourne true si envoyé OU mis en queue (sera traité à la reconnexion)
+    return result.sent || result.queued;
   }
 
   /**
@@ -479,8 +552,8 @@ class DeploymentService {
   }
 
   /**
-   * Retente les déploiements en échec qui peuvent être retryés
-   * À appeler périodiquement ou quand un site se reconnecte
+   * Retente les déploiements en échec qui peuvent être retryés.
+   * Avec sendOrQueue, les commandes sont mises en queue même si le site est offline.
    */
   async retryFailedDeployments(): Promise<{ retried: number; skipped: number }> {
     try {
@@ -513,26 +586,25 @@ class DeploymentService {
         const videoUrl = getPublicUrl(deployment.storage_path);
 
         for (const target of targets) {
-          if (socketService.isConnected(target.siteId)) {
-            const success = await this.deployToSite(
-              deployment.id,
-              target.siteId,
-              deployment.video_id,
-              videoUrl,
-              deployment
-            );
+          // sendOrQueue fonctionne que le site soit connecté ou non
+          const success = await this.deployToSite(
+            deployment.id,
+            target.siteId,
+            deployment.video_id,
+            videoUrl,
+            deployment
+          );
 
-            if (success) {
-              // Passer en in_progress et nettoyer le message d'erreur de retry
-              await query(
-                `UPDATE content_deployments
-                 SET status = 'in_progress', started_at = COALESCE(started_at, NOW())
-                 WHERE id = $1`,
-                [deployment.id]
-              );
-              retried++;
-              break;
-            }
+          if (success) {
+            // Passer en in_progress et nettoyer le message d'erreur de retry
+            await query(
+              `UPDATE content_deployments
+               SET status = 'in_progress', started_at = COALESCE(started_at, NOW())
+               WHERE id = $1`,
+              [deployment.id]
+            );
+            retried++;
+            break;
           }
         }
       }

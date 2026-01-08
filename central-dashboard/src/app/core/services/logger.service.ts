@@ -183,22 +183,32 @@ export class LoggerService {
       const levelBadge = `%c${entry.level.toUpperCase()}`;
       const style = `background: ${color}; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold;`;
 
+      // Build args array, only include context if it exists and has properties
+      const hasContext = entry.context && Object.keys(entry.context).length > 0;
+      const baseArgs = [prefix, levelBadge, style, entry.message];
+      const args = hasContext ? [...baseArgs, entry.context] : baseArgs;
+
       switch (entry.level) {
         case LogLevel.DEBUG:
-          console.debug(prefix, levelBadge, style, entry.message, entry.context || '');
+          console.debug(...args);
           break;
         case LogLevel.INFO:
-          console.info(prefix, levelBadge, style, entry.message, entry.context || '');
+          console.info(...args);
           break;
         case LogLevel.WARN:
-          console.warn(prefix, levelBadge, style, entry.message, entry.context || '');
+          console.warn(...args);
           break;
         case LogLevel.ERROR:
-          console.error(prefix, levelBadge, style, entry.message, entry.context || '');
+          console.error(...args);
           if (entry.breadcrumbs?.length) {
             console.groupCollapsed('%cBreadcrumbs', 'color: #888; font-style: italic;');
             entry.breadcrumbs.forEach((b) => {
-              console.log(`${b.timestamp} [${b.type}] ${b.message}`, b.data || '');
+              const hasBreadcrumbData = b.data && Object.keys(b.data).length > 0;
+              if (hasBreadcrumbData) {
+                console.log(`${b.timestamp} [${b.type}] ${b.message}`, b.data);
+              } else {
+                console.log(`${b.timestamp} [${b.type}] ${b.message}`);
+              }
             });
             console.groupEnd();
           }
