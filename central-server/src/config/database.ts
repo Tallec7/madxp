@@ -69,7 +69,7 @@ const sslConfig = getSslConfig();
 const poolConfig: PoolConfig = {
   connectionString: process.env.DATABASE_URL,
   ssl: sslConfig,
-  max: 20,
+  max: 5, // Reduced from 20 for Railway Hobby plan (~40MB heap)
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 };
