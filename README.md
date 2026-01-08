@@ -202,6 +202,15 @@ neopro/
 | Hébergement        | Railway (API), Hostinger (Dashboard)                          |
 | Tests              | Jest + Supertest (API), Karma (Angular), Playwright (E2E)     |
 
+### Fonctionnalités clés
+
+- **Gestion de flotte** : 50+ boîtiers Raspberry Pi gérés depuis un dashboard central
+- **Déploiement vidéo** : Upload cloud → déploiement automatique vers les Pi
+- **Boucles par phase** : Playlists différentes selon la phase du match (avant/pendant/après)
+- **Terminal distant** : Exécution de commandes shell sur les Pi depuis le dashboard
+- **Analytics** : Statistiques d'impressions sponsors, exports PDF
+- **Multi-tenant** : Rôles (super_admin, admin, operator, advertiser, agency)
+
 ---
 
 ## Développement local
@@ -410,6 +419,26 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -n 50'
 ssh pi@neopro.local 'cd /home/pi/neopro/sync-agent && sudo node scripts/register-site.js && sudo systemctl restart neopro-sync-agent'
 ```
 
+### Terminal distant (Remote Shell)
+
+Le dashboard central permet d'exécuter des commandes shell directement sur les Pi connectés :
+
+1. Ouvrir le détail d'un site sur le dashboard
+2. Aller dans l'onglet **Debug**
+3. Utiliser le terminal pour exécuter des commandes
+
+**Commandes utiles :**
+
+```bash
+df -h                                    # Espace disque
+cat /home/pi/neopro/webapp/configuration.json | head -50
+journalctl -u neopro-app -n 50 --no-pager
+systemctl status neopro-*
+ls -la /home/pi/neopro/videos/
+```
+
+**Note :** Le site doit être connecté (statut "En ligne") pour utiliser le terminal distant.
+
 ### Services systemd
 
 ```bash
@@ -464,6 +493,6 @@ sudo systemctl restart neopro-app
 
 ---
 
-**Version :** 2.11.7
+**Version :** 2.12.0
 **Licence :** MIT
 **Dernière mise à jour :** 8 janvier 2026

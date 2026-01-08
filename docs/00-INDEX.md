@@ -37,6 +37,7 @@ Architecture et documentation pour développeurs.
 - [Architecture Multi-tenant](technical/MULTI_TENANT.md) - Portails Sponsor/Agence
 - [Error Handling](technical/ERROR_HANDLING.md) - Correlation ID, logs structurés
 - [Command Queue (sites offline)](technical/COMMAND_QUEUE.md)
+- [Remote Shell](technical/REMOTE_SHELL.md) - Terminal distant sur les Pi
 - [Row-Level Security](technical/ROW_LEVEL_SECURITY.md)
 - [Guide des tests](technical/TESTING_GUIDE.md)
 - [Boucles par Phase](../CLAUDE.md#boucles-vidéo-par-phase--new-2026-01) - Configuration N vidéos par phase
@@ -197,6 +198,6 @@ neopro/
 
 ---
 
-**Dernière mise à jour** : 8 janvier 2026 - Mise à jour documentation (version, stack, architecture)
+**Dernière mise à jour** : 8 janvier 2026 - Ajout terminal distant (remote shell), mise à jour stack
 
-**Version** : 2.11.7
+**Version** : 2.12.0
