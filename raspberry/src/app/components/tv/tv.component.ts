@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, inject, Input, OnDestroy, OnInit, ViewChild, NgZone, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
@@ -33,7 +33,8 @@ interface PlayerWithPlaylist extends Player {
   selector: 'app-tv',
   templateUrl: './tv.component.html',
   styleUrl: './tv.component.scss',
-  imports: [CommonModule]
+  imports: [CommonModule],
+  encapsulation: ViewEncapsulation.None // Désactiver l'encapsulation pour le double-buffer
 })
 export class TvComponent implements OnInit, OnDestroy {
   private readonly socketService = inject(SocketService);
@@ -42,6 +43,7 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly localBroadcast = inject(LocalBroadcastService);
   private readonly localOptionsService = inject(LocalOptionsService);
   private readonly http = inject(HttpClient);
+  private readonly ngZone = inject(NgZone);
 
   private localBroadcastSubscriptions: Subscription[] = [];
 
@@ -94,6 +96,19 @@ export class TvComponent implements OnInit, OnDestroy {
 
   @ViewChild('target', { static: true }) target: ElementRef;
 
+  // Double-buffer video system
+  @ViewChild('playerA', { static: true }) playerARef: ElementRef<HTMLVideoElement>;
+  @ViewChild('playerB', { static: true }) playerBRef: ElementRef<HTMLVideoElement>;
+
+  // État de la boucle
+  public isLoopMode = true;
+  private currentLoopIndex = 0;
+  private playerA: HTMLVideoElement;
+  private playerB: HTMLVideoElement;
+  private activePlayer: 'A' | 'B' = 'A'; // Quel player est actuellement visible
+  private isStartingLoop = false;
+  private pendingSwitch = false; // Évite les switchs multiples
+
   public player: Player;
 
   public ngOnInit() {
@@ -114,35 +129,42 @@ export class TvComponent implements OnInit, OnDestroy {
     // Récupérer le site_id depuis l'API du serveur local
     this.loadSiteId();
 
+    // Initialiser le double-buffer
+    this.initDoubleBuffer();
+
+    // Lancer la boucle vidéo
+    this.startSeamlessLoop();
+
+    // Legacy Video.js (gardé pour compatibilité mais non utilisé)
     const options = {
       fullscreen: true,
-      autoplay: true,
-      muted: true, // Requis pour autoplay dans les navigateurs modernes (Chrome 66+, Safari 11+)
+      autoplay: false, // Désactivé car on utilise le player natif
+      muted: true,
       controls: false,
-      preload: "auto",
-      plugins: {
-        playlist: this.configuration.sponsors.map((sponsor) => ({ sources: [ { src: sponsor.path, type: sponsor.type }]}))
-      }
+      preload: "none"
     }
 
     this.player = videojs(this.target.nativeElement, options, () => {
-      console.log('tv player is ready');
-      this.player.poster('/neopro.png');
-      this.sponsors();
+      console.log('tv legacy player ready (not used)');
     });
 
     // Activer le plein écran ET le son au premier clic/touche utilisateur
     const activateFullscreenAndUnmute = () => {
-      // Activer le son (désactiver mute)
-      this.player.muted(false);
+      // Activer le son sur les deux players
+      if (this.playerA) this.playerA.muted = false;
+      if (this.playerB) this.playerB.muted = false;
+
       console.log('Sound unmuted after user interaction');
 
-      // Activer le plein écran
-      this.player.requestFullscreen().then(() => {
-        console.log('fullscreen activated');
-      }).catch((error) => {
-        console.error('fullscreen issue', error);
-      });
+      // Activer le plein écran sur le document
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().then(() => {
+          console.log('fullscreen activated');
+        }).catch((error) => {
+          console.error('fullscreen issue', error);
+        });
+      }
     };
     document.addEventListener('click', activateFullscreenAndUnmute, { once: true });
     document.addEventListener('keydown', activateFullscreenAndUnmute, { once: true });
@@ -473,6 +495,9 @@ export class TvComponent implements OnInit, OnDestroy {
     // Arrêter le timer local
     this.stopLocalTimer();
 
+    // Arrêter la boucle seamless
+    this.stopSeamlessLoop();
+
     // Se désabonner des événements BroadcastChannel
     this.localBroadcastSubscriptions.forEach(sub => sub.unsubscribe());
     this.localBroadcastSubscriptions = [];
@@ -483,7 +508,10 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   private play(video: Video) {
-    console.log('tv player : play video', video.path);
+    console.log('tv player : play manual video', video.path);
+
+    // Arrêter la boucle pour passer en mode manuel
+    this.stopSeamlessLoop();
 
     // Tracker le début de la vidéo manuelle
     this.analyticsService.trackVideoStart(video, 'manual');
@@ -491,46 +519,39 @@ export class TvComponent implements OnInit, OnDestroy {
     // Si c'est une vidéo de la boucle courante déclenchée manuellement, tracker l'impression
     const isSponsor = this.currentLoopVideos.some(s => s.path === video.path);
     if (isSponsor) {
-      this.sponsorAnalytics.trackSponsorStart(video, 'manual', this.player.duration() || 0);
+      this.sponsorAnalytics.trackSponsorStart(video, 'manual', 0);
     }
 
-    this.player.src({ src: video.path, type: video.type });
-    this.player.one('ended', () => {
-      console.log('tv player : video ended', video.path);
-      // Tracker la fin de la vidéo manuelle
-      this.analyticsService.trackVideoEnd(true);
+    // Utiliser le player actif pour les vidéos manuelles
+    const currentPlayer = this.getActivePlayer();
+    currentPlayer.src = video.path;
+    currentPlayer.load();
 
-      // Tracker fin de l'impression sponsor si applicable
+    // Listener pour la fin de la vidéo manuelle
+    const onManualEnded = () => {
+      console.log('tv player : manual video ended', video.path);
+      currentPlayer.removeEventListener('ended', onManualEnded);
+
+      // Tracker la fin
+      this.analyticsService.trackVideoEnd(true);
       if (isSponsor) {
         this.sponsorAnalytics.trackSponsorEnd(true);
       }
 
       this.lastTriggerType = 'auto';
-      this.sponsors();
-    });
-    this.player.play();
+      // Redémarrer la boucle
+      this.restartSeamlessLoop();
+    };
+
+    currentPlayer.addEventListener('ended', onManualEnded, { once: true });
+    currentPlayer.play();
   }
 
   private sponsors() {
     console.log('[TV] Play loop for phase:', this.activePhase);
 
-    // Récupérer les vidéos de la boucle selon la phase active
-    const loopVideos = this.getLoopVideosForPhase(this.activePhase);
-    this.currentLoopVideos = loopVideos;
-
-    // Mettre à jour la playlist
-    const playlist = loopVideos.map((video) => ({
-      sources: [{ src: video.path, type: video.type }]
-    }));
-
-    if (playlist.length > 0) {
-      (this.player as PlayerWithPlaylist).playlist(playlist);
-      (this.player as PlayerWithPlaylist).playlist.first();
-      (this.player as PlayerWithPlaylist).playlist.repeat(true);
-      (this.player as PlayerWithPlaylist).playlist.autoadvance(0);
-    } else {
-      console.warn('[TV] No videos in loop for phase:', this.activePhase);
-    }
+    // Utiliser le double-buffer pour la boucle seamless
+    this.startSeamlessLoop();
   }
 
   /**
@@ -866,6 +887,267 @@ export class TvComponent implements OnInit, OnDestroy {
           console.error('[TV] Failed to load site info:', error.message || error);
         }
       });
+  }
+
+  // ===========================================================================
+  // DOUBLE-BUFFER VIDEO SYSTEM
+  // Deux players qui alternent: un joue pendant que l'autre précharge
+  // Permet des transitions sans flash noir
+  // ===========================================================================
+
+  /**
+   * Initialise les deux players du double-buffer
+   */
+  private initDoubleBuffer(): void {
+    this.playerA = this.playerARef.nativeElement;
+    this.playerB = this.playerBRef.nativeElement;
+
+    // Configurer les deux players
+    [this.playerA, this.playerB].forEach((player, i) => {
+      player.muted = true;
+      player.playsInline = true;
+      player.preload = 'auto';
+      console.log(`[TV] Player ${i === 0 ? 'A' : 'B'} initialized`);
+    });
+
+    // Player A est visible au départ
+    this.setPlayerVisible(this.playerA, true);
+    this.setPlayerVisible(this.playerB, false);
+    this.activePlayer = 'A';
+
+    // Écouter la fin de vidéo sur les deux players
+    this.playerA.addEventListener('ended', () => this.onVideoEnded('A'));
+    this.playerB.addEventListener('ended', () => this.onVideoEnded('B'));
+
+    console.log('[TV] Double-buffer initialized');
+  }
+
+  /**
+   * Rend un player visible ou invisible via styles inline
+   */
+  private setPlayerVisible(player: HTMLVideoElement, visible: boolean): void {
+    player.style.opacity = visible ? '1' : '0';
+    player.style.zIndex = visible ? '1' : '0';
+  }
+
+  /**
+   * Retourne le player actuellement actif (visible)
+   */
+  private getActivePlayer(): HTMLVideoElement {
+    return this.activePlayer === 'A' ? this.playerA : this.playerB;
+  }
+
+  /**
+   * Retourne le player inactif (caché, pour préchargement)
+   */
+  private getInactivePlayer(): HTMLVideoElement {
+    return this.activePlayer === 'A' ? this.playerB : this.playerA;
+  }
+
+  /**
+   * Démarre la boucle vidéo avec double-buffer
+   */
+  private startSeamlessLoop(): void {
+    if (this.isStartingLoop) {
+      console.log('[TV] startSeamlessLoop already in progress, skipping');
+      return;
+    }
+    this.isStartingLoop = true;
+
+    // Arrêter les players existants
+    this.playerA?.pause();
+    this.playerB?.pause();
+
+    this.isLoopMode = true;
+    this.currentLoopIndex = 0;
+    this.pendingSwitch = false;
+
+    // Récupérer les vidéos de la boucle
+    const loopVideos = this.getLoopVideosForPhase(this.activePhase);
+    this.currentLoopVideos = loopVideos;
+
+    if (loopVideos.length === 0) {
+      console.warn('[TV] No videos in loop');
+      this.isLoopMode = false;
+      this.isStartingLoop = false;
+      return;
+    }
+
+    console.log('[TV] Starting loop with', loopVideos.length, 'videos');
+
+    // Jouer la première vidéo sur le player actif
+    this.playOnActivePlayer(0);
+
+    // Précharger la suivante sur le player inactif (si plus d'une vidéo)
+    if (loopVideos.length > 1) {
+      this.preloadOnInactivePlayer(1);
+    }
+
+    setTimeout(() => {
+      this.isStartingLoop = false;
+    }, 500);
+  }
+
+  /**
+   * Joue une vidéo sur le player actif
+   */
+  private playOnActivePlayer(index: number): void {
+    const loopVideos = this.currentLoopVideos;
+    if (loopVideos.length === 0) return;
+
+    const videoIndex = index % loopVideos.length;
+    const video = loopVideos[videoIndex];
+    const player = this.getActivePlayer();
+
+    console.log(`[TV] Playing video ${videoIndex} on player ${this.activePlayer}:`, video.path);
+
+    player.src = video.path;
+    player.load();
+
+    player.play().then(() => {
+      this.ngZone.run(() => {
+        this.currentLoopIndex = videoIndex;
+        this.lastTriggerType = 'auto';
+
+        // Tracker
+        this.analyticsService.trackVideoStart(video, 'auto');
+        this.sponsorAnalytics.trackSponsorStart(
+          video,
+          'auto',
+          player.duration || 0
+        );
+
+        console.log(`[TV] Now playing video ${videoIndex} on ${this.activePlayer}`);
+      });
+    }).catch(err => {
+      console.error('[TV] Error playing video:', err, '- skipping to next');
+      setTimeout(() => {
+        const nextIndex = (videoIndex + 1) % this.currentLoopVideos.length;
+        if (nextIndex !== videoIndex) {
+          this.playOnActivePlayer(nextIndex);
+        }
+      }, 1000);
+    });
+  }
+
+  /**
+   * Précharge une vidéo sur le player inactif
+   */
+  private preloadOnInactivePlayer(index: number): void {
+    const loopVideos = this.currentLoopVideos;
+    if (loopVideos.length === 0) return;
+
+    const videoIndex = index % loopVideos.length;
+    const video = loopVideos[videoIndex];
+    const player = this.getInactivePlayer();
+
+    console.log(`[TV] Preloading video ${videoIndex} on inactive player:`, video.path);
+
+    player.src = video.path;
+    player.load();
+
+    // Écouter quand la vidéo est prête
+    player.addEventListener('canplaythrough', () => {
+      console.log(`[TV] Video ${videoIndex} preloaded and ready`);
+    }, { once: true });
+  }
+
+  /**
+   * Appelé quand une vidéo se termine sur un player
+   */
+  private onVideoEnded(fromPlayer: 'A' | 'B'): void {
+    console.log(`[TV] onVideoEnded called from player ${fromPlayer}, isLoopMode=${this.isLoopMode}, activePlayer=${this.activePlayer}`);
+
+    // Ignorer si ce n'est pas le player actif ou si pas en mode boucle
+    if (!this.isLoopMode || fromPlayer !== this.activePlayer) {
+      console.log('[TV] Ignoring ended event (not active or not in loop mode)');
+      return;
+    }
+
+    // Éviter les switchs multiples
+    if (this.pendingSwitch) {
+      console.log('[TV] Switch already pending, ignoring');
+      return;
+    }
+    this.pendingSwitch = true;
+
+    this.ngZone.run(() => {
+      // Tracker la fin
+      this.analyticsService.trackVideoEnd(true);
+      this.sponsorAnalytics.trackSponsorEnd(true);
+
+      const loopVideos = this.currentLoopVideos;
+      const nextIndex = (this.currentLoopIndex + 1) % loopVideos.length;
+
+      console.log(`[TV] Video ended, switching to next (index ${nextIndex})`);
+
+      // Switch les players
+      this.switchPlayers(nextIndex);
+    });
+  }
+
+  /**
+   * Switch entre les deux players (transition sans flash)
+   */
+  private switchPlayers(nextVideoIndex: number): void {
+    const oldPlayer = this.getActivePlayer();
+    const newPlayer = this.getInactivePlayer();
+
+    console.log(`[TV] Switching from ${this.activePlayer} to ${this.activePlayer === 'A' ? 'B' : 'A'}`);
+
+    // Démarrer la vidéo préchargée AVANT de faire le switch visuel
+    newPlayer.play().then(() => {
+      // Une fois que la nouvelle vidéo joue, faire le switch visuel
+      this.setPlayerVisible(newPlayer, true);
+      this.setPlayerVisible(oldPlayer, false);
+
+      // Mettre à jour l'état
+      this.activePlayer = this.activePlayer === 'A' ? 'B' : 'A';
+      this.currentLoopIndex = nextVideoIndex;
+
+      // Tracker
+      const video = this.currentLoopVideos[nextVideoIndex];
+      this.analyticsService.trackVideoStart(video, 'auto');
+      this.sponsorAnalytics.trackSponsorStart(
+        video,
+        'auto',
+        newPlayer.duration || 0
+      );
+
+      console.log(`[TV] Switched to player ${this.activePlayer}, now playing index ${nextVideoIndex}`);
+
+      // Précharger la vidéo suivante sur l'ancien player (maintenant inactif)
+      const preloadIndex = (nextVideoIndex + 1) % this.currentLoopVideos.length;
+      setTimeout(() => {
+        this.preloadOnInactivePlayer(preloadIndex);
+        this.pendingSwitch = false;
+      }, 500);
+    }).catch(err => {
+      console.error('[TV] Error switching to next video:', err);
+      this.pendingSwitch = false;
+      // Fallback: rejouer sur le même player
+      setTimeout(() => {
+        this.playOnActivePlayer(nextVideoIndex);
+      }, 1000);
+    });
+  }
+
+  /**
+   * Arrête la boucle pour le mode manuel
+   */
+  private stopSeamlessLoop(): void {
+    this.isLoopMode = false;
+    this.playerA?.pause();
+    this.playerB?.pause();
+    console.log('[TV] Loop stopped, switching to manual mode');
+  }
+
+  /**
+   * Redémarre la boucle après une vidéo manuelle
+   */
+  private restartSeamlessLoop(): void {
+    console.log('[TV] Restarting loop');
+    this.startSeamlessLoop();
   }
 
 }

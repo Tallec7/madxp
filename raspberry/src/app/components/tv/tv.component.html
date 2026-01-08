@@ -1,5 +1,13 @@
-<!-- Lecteur vidéo Video.js -->
-<video #target class="video-js vjs-default-skin vjs-big-play-centered vjs-16-9" playsinline></video>
+<!-- Double-buffer vidéo: 2 players qui alternent pour transition sans flash -->
+<video #playerA class="double-buffer-player player-a" playsinline muted></video>
+<video #playerB class="double-buffer-player player-b" playsinline muted></video>
+
+<!-- Legacy Video.js player (gardé pour compatibilité mais caché) -->
+<video
+  #target
+  class="video-js vjs-default-skin vjs-big-play-centered vjs-16-9 hidden-player"
+  playsinline
+></video>
 
 <!-- Overlay Score (position dynamique selon configuration) -->
 <div

@@ -1,3 +1,21 @@
+# [2.9.0](https://github.com/Tallec7/neopro/compare/v2.8.5...v2.9.0) (2026-01-08)
+
+### Features
+
+- **tv:** implement double-buffer video system for seamless loop transitions ([#340](https://github.com/Tallec7/neopro/issues/340)) ([240e060](https://github.com/Tallec7/neopro/commit/240e0606c1c5642fb1fb0e4ac085d0a22f2fc632))
+
+## [2.8.5](https://github.com/Tallec7/neopro/compare/v2.8.4...v2.8.5) (2026-01-08)
+
+### Bug Fixes
+
+- **sync-agent:** config deployment now properly notifies local app and supports replace mode ([ce6eb57](https://github.com/Tallec7/neopro/commit/ce6eb57ac99e3d4e819e40fbac6f5bc3d5d0eb6c))
+
+## [2.8.4](https://github.com/Tallec7/neopro/compare/v2.8.3...v2.8.4) (2026-01-08)
+
+### Bug Fixes
+
+- **config:** use FTP IP address instead of hostname ([1e2c75c](https://github.com/Tallec7/neopro/commit/1e2c75c26fdaa1fc86659d7ead1fa42582668610))
+
 ## [2.8.3](https://github.com/Tallec7/neopro/compare/v2.8.2...v2.8.3) (2026-01-07)
 
 ### Bug Fixes

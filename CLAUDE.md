@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.6.2 | **Dernière mise à jour**: 2026-01-08
+**Version**: 2.7.2 | **Dernière mise à jour**: 2026-01-08
 
 ---
 
@@ -309,17 +309,28 @@ La commande `update_config` utilise un **merge intelligent** qui préserve les p
 ```javascript
 // Modes disponibles
 'merge'   : Fusionne le contenu NEOPRO avec la config locale (défaut, recommandé)
-'replace' : Écrase tout (legacy, déconseillé - peut perdre des paramètres locaux)
+'replace' : Remplace les champs de contenu tout en préservant les paramètres locaux
 ```
 
-**Champs gérés par le merge** (envoyés dans `neoProContent`) :
+**Payload de la commande** :
 
-| Champ              | Comportement                                                                    |
-| ------------------ | ------------------------------------------------------------------------------- |
-| `sponsors`         | Central = source de vérité. Sponsors locaux non présents dans central préservés |
-| `categories`       | Fusion intelligente NEOPRO/Club (voir règles ci-dessous)                        |
-| `timeCategories`   | Remplacement complet (géré entièrement par le central)                          |
-| `categoryMappings` | Remplacement complet (géré entièrement par le central)                          |
+```javascript
+{
+  neoProContent: { sponsors, categories, timeCategories, categoryMappings, ... },
+  mode: 'merge' | 'replace'  // défaut: 'merge'
+}
+```
+
+**Champs gérés** (envoyés dans `neoProContent`) :
+
+| Champ              | Mode merge                                                 | Mode replace         |
+| ------------------ | ---------------------------------------------------------- | -------------------- |
+| `sponsors`         | Fusion intelligente (locaux préservés si non dans central) | Remplacement complet |
+| `categories`       | Fusion NEOPRO/Club                                         | Remplacement complet |
+| `timeCategories`   | Remplacement complet                                       | Remplacement complet |
+| `categoryMappings` | Remplacement complet                                       | Remplacement complet |
+| `liveScoreEnabled` | Mise à jour                                                | Mise à jour          |
+| `scoreOverlay`     | Mise à jour                                                | Mise à jour          |
 
 **Règles de merge pour les sponsors** :
 
@@ -343,9 +354,17 @@ La commande `update_config` utilise un **merge intelligent** qui préserve les p
 
 **Fichiers impliqués** :
 
-- `raspberry/sync-agent/src/utils/config-merge.js` - Logique de fusion
+- `raspberry/sync-agent/src/commands/index.js` - Exécution de la commande `update_config`
+- `raspberry/sync-agent/src/utils/config-merge.js` - Logique de fusion (mode merge)
+- `raspberry/server/server.js` - Réception de `config_updated` et broadcast aux clients
 - `central-server/src/controllers/sites.controller.ts` - Normalisation des commandes
 - `central-dashboard/.../site-content-tab.component.ts` - UI de déploiement avec choix du mode
+
+**Flux de notification après déploiement** :
+
+```
+sync-agent (update_config) → socket.emit('config_updated') → server.js → io.emit('reload-config') → TV/Remote
+```
 
 ### Boucles Vidéo par Phase ⚡ NEW (2026-01)
 
@@ -386,6 +405,52 @@ Les clubs peuvent définir des playlists différentes selon la **phase du match*
 - `raspberry/src/app/components/remote/remote.component.ts` - `switchPhase()`
 - `central-dashboard/.../site-content-tab.component.ts` - UI de configuration
 - `central-dashboard/.../remote-preview.component.ts` - Prévisualisation
+
+### Double-Buffer Vidéo (Transitions Sans Flash) ⚡ NEW (2026-01-08)
+
+Le composant TV utilise un système **double-buffer** pour éliminer les flash noirs entre les vidéos de la boucle :
+
+**Principe** :
+
+- Deux éléments `<video>` (playerA et playerB) en position absolue superposés
+- Pendant qu'une vidéo joue sur un player, la suivante est préchargée sur l'autre
+- À la fin d'une vidéo, on lance `play()` sur le player préchargé AVANT de changer l'opacité
+- Transition CSS de 150ms pour un fondu doux
+
+**Architecture** :
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        TV Component                              │
+│  ┌──────────────┐    ┌──────────────┐                           │
+│  │   Player A   │    │   Player B   │                           │
+│  │  opacity: 1  │    │  opacity: 0  │  ← précharge next video   │
+│  │  z-index: 1  │    │  z-index: 0  │                           │
+│  │  [PLAYING]   │    │  [READY]     │                           │
+│  └──────────────┘    └──────────────┘                           │
+│         │                    │                                   │
+│         └────── SWITCH ──────┘                                   │
+│                   │                                              │
+│         playerA ←→ playerB alternent                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Méthodes clés** :
+
+| Méthode                     | Rôle                                              |
+| --------------------------- | ------------------------------------------------- |
+| `initDoubleBuffer()`        | Initialise les 2 players et leurs event listeners |
+| `setPlayerVisible()`        | Contrôle opacité/z-index via styles inline        |
+| `playOnActivePlayer()`      | Joue une vidéo sur le player visible              |
+| `preloadOnInactivePlayer()` | Précharge la prochaine vidéo sur le player caché  |
+| `switchPlayers()`           | Bascule entre les 2 players sans flash            |
+| `onVideoEnded()`            | Déclenche le switch à la fin d'une vidéo          |
+
+**Fichiers impliqués** :
+
+- `raspberry/src/app/components/tv/tv.component.ts` - Logique double-buffer
+- `raspberry/src/app/components/tv/tv.component.html` - Deux éléments `<video>`
+- `raspberry/src/app/components/tv/tv.component.scss` - CSS avec transition opacity
 
 ### Mapping Analytics des Catégories ⚡ NEW (2026-01)
 
@@ -822,13 +887,13 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 
 ### Raspberry Pi
 
-| Fichier                                                     | Description              |
-| ----------------------------------------------------------- | ------------------------ |
-| `raspberry/frontend/src/app/components/tv.component.ts`     | Affichage TV             |
-| `raspberry/frontend/src/app/components/remote.component.ts` | Télécommande             |
-| `raspberry/sync-agent/src/agent.js`                         | Agent de synchronisation |
-| `raspberry/sync-agent/src/watchers/video-watcher.js`        | Surveillance vidéos ⚡   |
-| `raspberry/scripts/setup-new-club.sh`                       | Setup nouveau club       |
+| Fichier                                                     | Description                  |
+| ----------------------------------------------------------- | ---------------------------- |
+| `raspberry/src/app/components/tv/tv.component.ts`           | Affichage TV (double-buffer) |
+| `raspberry/frontend/src/app/components/remote.component.ts` | Télécommande                 |
+| `raspberry/sync-agent/src/agent.js`                         | Agent de synchronisation     |
+| `raspberry/sync-agent/src/watchers/video-watcher.js`        | Surveillance vidéos ⚡       |
+| `raspberry/scripts/setup-new-club.sh`                       | Setup nouveau club           |
 
 ### Documentation
 
