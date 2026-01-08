@@ -161,34 +161,27 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     tar --warning=no-unknown-keyword -xzf ~/neopro-deploy.tar.gz -C ~/neopro-update
 
     # Installation webapp
-    # IMPORTANT: Préserver configuration.json et videos/ qui sont spécifiques au club
+    # IMPORTANT: Préserver configuration.json qui est spécifique au club
+    # Note: Les vidéos sont dans /home/pi/neopro/videos/, pas dans webapp/
     if [ -d ~/neopro-update/webapp ]; then
-        # Sauvegarder les fichiers à préserver
+        # Sauvegarder configuration.json
         if [ -f ${RASPBERRY_DIR}/webapp/configuration.json ]; then
             cp ${RASPBERRY_DIR}/webapp/configuration.json /tmp/configuration.json.backup
             echo 'Configuration locale sauvegardée'
-        fi
-        if [ -d ${RASPBERRY_DIR}/webapp/videos ]; then
-            mv ${RASPBERRY_DIR}/webapp/videos /tmp/videos.backup
-            echo 'Vidéos locales sauvegardées'
         fi
 
         # Supprimer et installer la nouvelle webapp
         sudo rm -rf ${RASPBERRY_DIR}/webapp/*
         sudo cp -r ~/neopro-update/webapp/* ${RASPBERRY_DIR}/webapp/
 
-        # Restaurer les fichiers préservés
+        # Restaurer configuration.json
         if [ -f /tmp/configuration.json.backup ]; then
             sudo cp /tmp/configuration.json.backup ${RASPBERRY_DIR}/webapp/configuration.json
             rm /tmp/configuration.json.backup
             echo 'Configuration locale restaurée'
         fi
-        if [ -d /tmp/videos.backup ]; then
-            sudo mv /tmp/videos.backup ${RASPBERRY_DIR}/webapp/videos
-            echo 'Vidéos locales restaurées'
-        fi
 
-        echo 'Webapp installée (configuration et vidéos préservées)'
+        echo 'Webapp installée (configuration préservée)'
     fi
 
     # Installation serveur
