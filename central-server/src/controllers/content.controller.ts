@@ -50,6 +50,69 @@ function calculateChecksum(buffer: Buffer): string {
   return crypto.createHash('sha256').update(buffer).digest('hex');
 }
 
+/**
+ * Sanitize un nom de fichier pour le stockage
+ * - Remplace les espaces par des underscores
+ * - Supprime les caractères spéciaux dangereux
+ * - Conserve uniquement lettres, chiffres, tirets, underscores et points
+ */
+function sanitizeFilename(filename: string): string {
+  const ext = path.extname(filename);
+  const name = path.basename(filename, ext);
+
+  // Sanitize: remplacer espaces par _, supprimer caractères spéciaux
+  const sanitized = name
+    .replace(/\s+/g, '_')           // Espaces → underscores
+    .replace(/[àáâãäå]/gi, 'a')     // Accents a
+    .replace(/[èéêë]/gi, 'e')       // Accents e
+    .replace(/[ìíîï]/gi, 'i')       // Accents i
+    .replace(/[òóôõö]/gi, 'o')      // Accents o
+    .replace(/[ùúûü]/gi, 'u')       // Accents u
+    .replace(/[ç]/gi, 'c')          // Cédille
+    .replace(/[ñ]/gi, 'n')          // Tilde
+    .replace(/[^a-zA-Z0-9_-]/g, '') // Supprimer tout caractère non autorisé
+    .substring(0, 100);              // Limiter la longueur
+
+  return sanitized + ext.toLowerCase();
+}
+
+/**
+ * Génère un nom de fichier unique basé sur le nom original
+ * Si le fichier existe déjà, ajoute un suffixe numérique (ex: video_1.mp4, video_2.mp4)
+ */
+async function generateUniqueFilename(originalName: string): Promise<string> {
+  const sanitized = sanitizeFilename(originalName);
+  const ext = path.extname(sanitized);
+  const baseName = path.basename(sanitized, ext);
+
+  // Vérifier si le nom existe déjà en base
+  let filename = sanitized;
+  let counter = 0;
+
+  while (true) {
+    const existing = await pool.query(
+      'SELECT id FROM videos WHERE filename = $1',
+      [filename]
+    );
+
+    if (existing.rows.length === 0) {
+      // Nom disponible
+      return filename;
+    }
+
+    // Nom pris, incrémenter le compteur
+    counter++;
+    filename = `${baseName}_${counter}${ext}`;
+
+    // Sécurité: éviter boucle infinie
+    if (counter > 1000) {
+      // Fallback vers UUID si trop de collisions
+      logger.warn('Too many filename collisions, falling back to UUID', { originalName });
+      return `${baseName}_${uuidv4().substring(0, 8)}${ext}`;
+    }
+  }
+}
+
 export const getVideos = async (req: AuthRequest, res: Response) => {
   try {
     const { category, search } = req.query;
@@ -204,10 +267,8 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
 
     const { title, category, subcategory } = req.body;
 
-    // Générer un nom de fichier unique
-    const uniqueId = uuidv4();
-    const ext = path.extname(file.originalname);
-    const filename = `${uniqueId}${ext}`;
+    // Générer un nom de fichier unique basé sur le nom original
+    const filename = await generateUniqueFilename(file.originalname);
 
     // Calculer le checksum SHA256 pour vérification d'intégrité
     const checksum = calculateChecksum(file.buffer);
@@ -270,10 +331,8 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
 
     for (const file of files) {
       try {
-        // Générer un nom de fichier unique
-        const uniqueId = uuidv4();
-        const ext = path.extname(file.originalname);
-        const filename = `${uniqueId}${ext}`;
+        // Générer un nom de fichier unique basé sur le nom original
+        const filename = await generateUniqueFilename(file.originalname);
 
         // Upload vers le stockage (FTP Hostinger ou Supabase)
         logger.info('Uploading video to storage (bulk):', { filename, size: file.size });
