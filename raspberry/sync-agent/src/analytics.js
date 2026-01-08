@@ -28,6 +28,11 @@ const ANALYTICS_FILE_PATH = path.join(
   'analytics_buffer.json'
 );
 
+// Configuration des batches pour éviter les timeouts
+const BATCH_SIZE = 100; // Nombre d'événements par batch
+const BATCH_TIMEOUT = 15000; // 15 secondes par batch
+const BATCH_DELAY = 500; // 500ms entre chaque batch
+
 class AnalyticsCollector {
   constructor() {
     this.buffer = [];
@@ -52,7 +57,7 @@ class AnalyticsCollector {
       // Pour simplifier, on utilise un fichier JSON dédié
       return [];
     } catch (error) {
-      logger.error('Failed to load analytics buffer:', error.message);
+      logger.error('Failed to load analytics buffer', { error: error.message });
       return [];
     }
   }
@@ -71,7 +76,7 @@ class AnalyticsCollector {
       fs.writeFileSync(ANALYTICS_FILE_PATH, JSON.stringify(this.buffer, null, 2));
       logger.debug('Analytics buffer saved', { count: this.buffer.length });
     } catch (error) {
-      logger.error('Failed to save analytics buffer:', error.message);
+      logger.error('Failed to save analytics buffer', { error: error.message });
     }
   }
 
@@ -112,7 +117,27 @@ class AnalyticsCollector {
   }
 
   /**
+   * Envoyer un batch d'analytics au serveur
+   * @private
+   */
+  async sendBatch(url, siteId, batch) {
+    const response = await axios.post(
+      url,
+      {
+        site_id: siteId,
+        plays: batch,
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: BATCH_TIMEOUT,
+      }
+    );
+    return response.data;
+  }
+
+  /**
    * Envoyer les analytics au serveur central via HTTP
+   * Utilise des batches pour éviter les timeouts avec de gros volumes
    */
   async sendToServer(serverUrl, siteId) {
     const events = this.loadBuffer();
@@ -122,47 +147,91 @@ class AnalyticsCollector {
       return { sent: 0 };
     }
 
-    try {
-      const baseUrl = serverUrl?.replace(/\/$/, '');
-      if (!baseUrl) {
-        throw new Error('Central server URL is not configured');
-      }
-
-      const url = `${baseUrl}/api/analytics/video-plays`;
-      const response = await axios.post(
-        url,
-        {
-          site_id: siteId,
-          plays: events,
-        },
-        {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 10000,
-        }
-      );
-
-      const result = response.data;
-
-      // Vider le buffer local après envoi réussi
-      this.buffer = [];
-      this.saveBuffer();
-      this.lastSendTime = new Date().toISOString();
-
-      logger.info('Analytics sent to server', {
-        sent: events.length,
-        recorded: result.recorded,
-      });
-
-      return { sent: events.length, recorded: result.recorded };
-    } catch (error) {
-      const message = error.response
-        ? `HTTP ${error.response.status}: ${error.response.statusText || 'Unknown error'}`
-        : error.message;
-      logger.error('Failed to send analytics to server:', message);
-
-      // Garder les événements dans le buffer pour réessayer plus tard
-      return { sent: 0, error: message };
+    const baseUrl = serverUrl?.replace(/\/$/, '');
+    if (!baseUrl) {
+      logger.error('Failed to send analytics to server', { error: 'Central server URL is not configured' });
+      return { sent: 0, error: 'Central server URL is not configured' };
     }
+
+    const url = `${baseUrl}/api/analytics/video-plays`;
+    let totalSent = 0;
+    let totalRecorded = 0;
+    let lastError = null;
+
+    // Diviser en batches
+    const batches = [];
+    for (let i = 0; i < events.length; i += BATCH_SIZE) {
+      batches.push(events.slice(i, i + BATCH_SIZE));
+    }
+
+    logger.info('Sending analytics in batches', {
+      totalEvents: events.length,
+      batchCount: batches.length,
+      batchSize: BATCH_SIZE,
+    });
+
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+
+      try {
+        const result = await this.sendBatch(url, siteId, batch);
+        totalSent += batch.length;
+        totalRecorded += result.recorded || 0;
+
+        logger.debug('Batch sent successfully', {
+          batch: i + 1,
+          of: batches.length,
+          sent: batch.length,
+          recorded: result.recorded,
+        });
+
+        // Mettre à jour le buffer après chaque batch réussi
+        // Supprimer les événements envoyés
+        this.buffer = events.slice(totalSent);
+        this.saveBuffer();
+
+        // Petite pause entre les batches pour ne pas surcharger le serveur
+        if (i < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+        }
+      } catch (error) {
+        const message = error.response
+          ? `HTTP ${error.response.status}: ${error.response.data?.error || error.response.statusText || 'Unknown error'}`
+          : error.message;
+
+        logger.warn('Batch send failed, stopping', {
+          batch: i + 1,
+          of: batches.length,
+          error: message,
+          sentSoFar: totalSent,
+        });
+
+        lastError = message;
+        break; // Arrêter l'envoi, on réessaiera les événements restants plus tard
+      }
+    }
+
+    this.lastSendTime = new Date().toISOString();
+
+    if (totalSent > 0) {
+      logger.info('Analytics sent to server', {
+        sent: totalSent,
+        recorded: totalRecorded,
+        remaining: this.buffer.length,
+      });
+    }
+
+    if (lastError && totalSent === 0) {
+      logger.error('Failed to send analytics to server', { error: lastError });
+      return { sent: 0, error: lastError };
+    }
+
+    return {
+      sent: totalSent,
+      recorded: totalRecorded,
+      remaining: this.buffer.length,
+      error: lastError,
+    };
   }
 }
 

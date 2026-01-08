@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.13.2 | **Dernière mise à jour**: 2026-01-08
+**Version**: 2.15.0 | **Dernière mise à jour**: 2026-01-08
 
 ---
 
@@ -1289,6 +1289,40 @@ curl ftp://FTP_HOST/videos/ --user FTP_USER:FTP_PASSWORD
 | Config update failed     | Backup impossible        | Vérifier permissions sur `configuration.backup.json` |
 | Command not executed     | Sync-agent déconnecté    | `sudo systemctl restart neopro-sync-agent`           |
 | No entries in logs       | Mauvais nom de service   | Utiliser `neopro-sync-agent` (pas `neopro-sync`)     |
+| "Connexion instable"     | Connexion zombie         | Mettre à jour vers v2.15+ ou restart sync-agent      |
+
+**Connexions zombies (v2.15+)** :
+
+Le sync-agent peut avoir une connexion "zombie" : le flag `this.connected = true` mais la socket WebSocket est morte (`this.socket.connected = false`). Les heartbeats sont alors envoyés dans le vide.
+
+**Symptômes** :
+
+- Dashboard affiche "Connexion instable" (orange) malgré un `secondsSinceLastSeen` faible
+- API `/dashboard` retourne `health.socketInMap = false` et `health.reason = "not_in_map"`
+- Logs Pi : pas d'événement `Disconnected` après le dernier `Connected`
+
+**Diagnostic** :
+
+```bash
+# Vérifier si le fix est actif (v2.15+)
+ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -n 20 | grep "health check"'
+# Doit afficher : "Starting connection health check"
+```
+
+**Solution immédiate** :
+
+```bash
+sudo systemctl restart neopro-sync-agent
+```
+
+**Solution permanente** (v2.15+) :
+Le fichier `sync-agent/src/agent.js` inclut maintenant :
+
+1. Vérification `socket.connected` dans `sendHeartbeat()` avant envoi
+2. Détection zombie dans `handlePingCheck()` si ping reçu mais socket morte
+3. Health check périodique (60s) qui vérifie la cohérence flag/socket
+
+**Voir aussi** : [TROUBLESHOOTING.md - Connexion instable](docs/guides/TROUBLESHOOTING.md#le-site-affiche-connexion-instable-alors-quil-est-connecté)
 
 ```bash
 # Voir les logs du sync-agent
@@ -1310,6 +1344,15 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 ---
 
 ## Historique Breaking Changes
+
+### v2.15.x (Janvier 2026)
+
+- **Détection connexions zombies sync-agent** : Le Pi détecte et récupère des connexions mortes
+  - Ajout vérification `socket.connected` dans `sendHeartbeat()` avant envoi
+  - Ajout détection zombie dans `handlePingCheck()` si ping reçu mais socket morte
+  - Ajout health check périodique (60s) qui vérifie la cohérence flag/socket
+  - Auto-reconnexion si zombie détecté via `this.socket.connect()`
+  - Migration : Mettre à jour `sync-agent/src/agent.js` sur les Pi existants (SCP)
 
 ### v2.14.x (Janvier 2026)
 

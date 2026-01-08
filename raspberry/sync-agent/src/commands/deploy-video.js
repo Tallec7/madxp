@@ -166,7 +166,7 @@ class VideoDeployHandler {
         filename: finalFilename,
       };
     } catch (error) {
-      logger.error('Video deployment failed:', error);
+      logger.error('Video deployment failed', { error: error.message, stack: error.stack });
       throw error;
     }
   }

@@ -199,9 +199,9 @@ class SponsorImpressionsCollector {
       }
 
       if (isAuthError) {
-        logger.error('[SponsorImpressions] Authentication failed - check SITE_API_KEY:', message);
+        logger.error('[SponsorImpressions] Authentication failed - check SITE_API_KEY', { error: message });
       } else {
-        logger.error('[SponsorImpressions] Failed to send to server:', message);
+        logger.error('[SponsorImpressions] Failed to send to server', { error: message });
       }
 
       // Garder les impressions dans le buffer pour réessayer plus tard

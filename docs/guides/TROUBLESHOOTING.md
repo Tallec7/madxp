@@ -720,11 +720,69 @@ ping neopro.local
 ssh pi@neopro.local 'ping -c 3 8.8.8.8'
 
 # 3. Service actif ?
-ssh pi@neopro.local 'sudo systemctl status neopro-sync'
+ssh pi@neopro.local 'sudo systemctl status neopro-sync-agent'
 
 # 4. Connexion serveur central ?
 ssh pi@neopro.local 'curl -I https://neopro-central-production.up.railway.app'
 ```
+
+### Le site affiche "Connexion instable" alors qu'il est connecté
+
+**Symptômes :**
+
+- Dashboard affiche "Connexion instable" (indicateur orange)
+- `health.socketInMap = false` dans l'API `/dashboard`
+- `health.reason = "not_in_map"`
+- Mais `connection.isConnected = true` et `secondsSinceLastSeen` est faible
+
+**Cause : Connexion zombie côté Pi**
+
+Le Pi pense être connecté (`this.connected = true`) mais la socket WebSocket est en réalité morte. Les heartbeats sont envoyés dans le vide.
+
+**Diagnostic :**
+
+```bash
+# Vérifier les logs du sync-agent
+ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -n 50 --no-pager'
+
+# Chercher :
+# - "Zombie connection detected" → Le Pi a détecté le problème (v2.15+)
+# - Pas de "Disconnected" après le dernier "Connected" → Zombie non détecté
+# - Pas de heartbeat loggé depuis longtemps
+```
+
+**Solution immédiate :**
+
+```bash
+# Redémarrer le sync-agent pour forcer une reconnexion propre
+ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
+```
+
+**Solution permanente (v2.15+) :**
+
+Depuis la version 2.15, le sync-agent inclut une détection automatique des connexions zombies :
+
+1. **Dans `sendHeartbeat()`** : Vérifie `socket.connected` avant d'envoyer
+2. **Dans `handlePingCheck()`** : Détecte si on reçoit un ping mais la socket est morte
+3. **Health check périodique (60s)** : Vérifie la cohérence entre le flag et la socket
+
+Si votre Pi a une version antérieure, mettez à jour le fichier `sync-agent/src/agent.js`.
+
+**Vérifier que le fix est actif :**
+
+```bash
+ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -n 20 | grep "health check"'
+# Doit afficher : "Starting connection health check"
+```
+
+**Pourquoi ça arrive :**
+
+- Le serveur central a redémarré/scalé pendant que le Pi était connecté
+- Le Pi n'a pas détecté la déconnexion (pas d'événement `disconnect`)
+- La socket TCP reste "ouverte" côté Pi mais ne fonctionne plus
+- Les heartbeats sont envoyés sur une connexion morte (pas d'erreur Socket.IO sur `.emit()`)
+
+**Voir aussi :** Section technique dans [CLAUDE.md](/CLAUDE.md#sync-agent-raspberry-pi)
 
 ### La progression des déploiements reste bloquée à 0 %
 
