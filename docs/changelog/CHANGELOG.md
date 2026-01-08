@@ -1,3 +1,9 @@
+## [2.11.3](https://github.com/Tallec7/neopro/compare/v2.11.2...v2.11.3) (2026-01-08)
+
+### Bug Fixes
+
+- **memory:** optimize memory usage for Railway Hobby plan ([60a10a9](https://github.com/Tallec7/neopro/commit/60a10a9bf70e105c99d1845bc08803d64c78f57e))
+
 ## [2.11.2](https://github.com/Tallec7/neopro/compare/v2.11.1...v2.11.2) (2026-01-08)
 
 ### Bug Fixes
