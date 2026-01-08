@@ -1,3 +1,9 @@
+## [2.13.4](https://github.com/Tallec7/neopro/compare/v2.13.3...v2.13.4) (2026-01-08)
+
+### Bug Fixes
+
+- sync ([d6b143a](https://github.com/Tallec7/neopro/commit/d6b143a68f94b1d1299d48b92a1c4d4d6d3a680d))
+
 ## [2.13.3](https://github.com/Tallec7/neopro/compare/v2.13.2...v2.13.3) (2026-01-08)
 
 ### Bug Fixes
