@@ -1,3 +1,9 @@
+## [2.12.2](https://github.com/Tallec7/neopro/compare/v2.12.1...v2.12.2) (2026-01-08)
+
+### Bug Fixes
+
+- **remote-shell:** use WebSocket for command results to avoid Gateway timeout ([e5f7171](https://github.com/Tallec7/neopro/commit/e5f71718285e567444f400ef314494512d30e137))
+
 ## [2.12.1](https://github.com/Tallec7/neopro/compare/v2.12.0...v2.12.1) (2026-01-08)
 
 ### Bug Fixes
