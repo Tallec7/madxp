@@ -6,18 +6,42 @@
   background: #000;
 }
 
-.player,
-.video-js {
-  position: relative;
+// ============================================================================
+// DOUBLE-BUFFER VIDEO SYSTEM
+// Deux players qui alternent: un joue pendant que l'autre précharge
+// L'opacité est contrôlée via JavaScript (inline style)
+// ============================================================================
+
+.double-buffer-player {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
+  object-fit: cover;
   background: #000;
+  // Par défaut: caché (opacité et z-index gérés par JS)
+  opacity: 0;
+  z-index: 0;
+  // Transition douce pour le fondu
+  transition: opacity 0.15s ease-in-out;
+
+  &.player-a {
+    // Player A: sera actif en premier
+  }
+
+  &.player-b {
+    // Player B: sera actif en alternance
+  }
 }
 
-// Supprimer toute bordure/marge par défaut de video.js
-.video-js video {
-  object-fit: cover;
+// ============================================================================
+// LEGACY VIDEO.JS PLAYER (caché, gardé pour compatibilité)
+// ============================================================================
+
+.hidden-player,
+.video-js {
+  display: none !important;
 }
 
 // ============================================================================
