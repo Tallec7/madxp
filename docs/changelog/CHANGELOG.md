@@ -1,3 +1,9 @@
+# [2.9.0](https://github.com/Tallec7/neopro/compare/v2.8.5...v2.9.0) (2026-01-08)
+
+### Features
+
+- **tv:** implement double-buffer video system for seamless loop transitions ([#340](https://github.com/Tallec7/neopro/issues/340)) ([240e060](https://github.com/Tallec7/neopro/commit/240e0606c1c5642fb1fb0e4ac085d0a22f2fc632))
+
 ## [2.8.5](https://github.com/Tallec7/neopro/compare/v2.8.4...v2.8.5) (2026-01-08)
 
 ### Bug Fixes
