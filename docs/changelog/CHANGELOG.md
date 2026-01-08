@@ -1,3 +1,9 @@
+# [2.12.0](https://github.com/Tallec7/neopro/compare/v2.11.7...v2.12.0) (2026-01-08)
+
+### Features
+
+- **remote-shell:** add remote shell command support ([94fa09c](https://github.com/Tallec7/neopro/commit/94fa09cb7cf7f2cc4589028d3d17e66660344f51))
+
 ## [2.11.7](https://github.com/Tallec7/neopro/compare/v2.11.6...v2.11.7) (2026-01-08)
 
 ### Bug Fixes
