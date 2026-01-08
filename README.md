@@ -213,6 +213,7 @@ neopro/
 - **Analytics** : Statistiques d'impressions sponsors, exports PDF
 - **Multi-tenant** : Rôles (super_admin, admin, operator, advertiser, agency)
 - **i18n** : Dashboard multilingue (EN/FR/ES)
+- **Rate Limiting intelligent** : Protection API par type d'endpoint (monitoring 300/min, admin 200/min, sensible 30/min)
 
 ---
 
@@ -509,6 +510,6 @@ sudo systemctl restart neopro-app
 
 ---
 
-**Version :** 2.13.1
+**Version :** 2.13.2
 **Licence :** MIT
 **Dernière mise à jour :** 8 janvier 2026

@@ -4,23 +4,23 @@ import * as configHistoryController from '../controllers/config-history.controll
 import { authenticate, requireRole } from '../middleware/auth';
 import { validate, schemas } from '../middleware/validation';
 import { paginationMiddleware } from '../middleware/pagination';
-import { monitoringRateLimit } from '../middleware/user-rate-limit';
+import { monitoringRateLimit, adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
 
 const router = Router();
 
-router.get('/', authenticate, paginationMiddleware, sitesController.getSites);
+router.get('/', authenticate, adminRateLimit, paginationMiddleware, sitesController.getSites);
 
-router.get('/stats', authenticate, sitesController.getSiteStats);
+router.get('/stats', authenticate, adminRateLimit, sitesController.getSiteStats);
 
 router.get('/connection-status', authenticate, monitoringRateLimit, sitesController.getAllSitesConnectionStatus);
 
 // Route de debug pour voir l'état des connexions WebSocket (admin only)
-router.get('/debug/connections', authenticate, requireRole('admin'), sitesController.getConnectionsDebug);
+router.get('/debug/connections', authenticate, requireRole('admin'), adminRateLimit, sitesController.getConnectionsDebug);
 
 // Route globale pour le résumé de la queue (doit être avant /:id)
-router.get('/queue/summary', authenticate, sitesController.getQueueSummary);
+router.get('/queue/summary', authenticate, adminRateLimit, sitesController.getQueueSummary);
 
-router.get('/:id', authenticate, sitesController.getSite);
+router.get('/:id', authenticate, adminRateLimit, sitesController.getSite);
 
 router.get('/:id/metrics', authenticate, monitoringRateLimit, sitesController.getSiteMetrics);
 
@@ -33,6 +33,7 @@ router.get(
   '/:id/logs',
   authenticate,
   requireRole('admin', 'operator'),
+  adminRateLimit,
   sitesController.getSiteLogs
 );
 
@@ -40,6 +41,7 @@ router.get(
   '/:id/system-info',
   authenticate,
   requireRole('admin', 'operator'),
+  adminRateLimit,
   sitesController.getSystemInfo
 );
 
@@ -47,6 +49,7 @@ router.post(
   '/',
   authenticate,
   requireRole('admin', 'operator'),
+  sensitiveRateLimit,
   validate(schemas.createSite),
   sitesController.createSite
 );
@@ -55,6 +58,7 @@ router.put(
   '/:id',
   authenticate,
   requireRole('admin', 'operator'),
+  sensitiveRateLimit,
   validate(schemas.updateSite),
   sitesController.updateSite
 );
@@ -63,6 +67,7 @@ router.delete(
   '/:id',
   authenticate,
   requireRole('admin'),
+  sensitiveRateLimit,
   sitesController.deleteSite
 );
 
@@ -70,6 +75,7 @@ router.post(
   '/:id/regenerate-key',
   authenticate,
   requireRole('admin'),
+  sensitiveRateLimit,
   sitesController.regenerateApiKey
 );
 
@@ -77,12 +83,14 @@ router.post(
   '/:id/command',
   authenticate,
   requireRole('admin', 'operator'),
+  sensitiveRateLimit,
   sitesController.sendCommand
 );
 
 router.get(
   '/:id/command/:commandId',
   authenticate,
+  adminRateLimit,
   sitesController.getCommandStatus
 );
 
@@ -90,6 +98,7 @@ router.get(
 router.get(
   '/:id/local-content',
   authenticate,
+  monitoringRateLimit,
   sitesController.getSiteLocalContent
 );
 
@@ -97,12 +106,14 @@ router.get(
 router.get(
   '/:id/config-history',
   authenticate,
+  adminRateLimit,
   configHistoryController.getConfigHistory
 );
 
 router.get(
   '/:id/config-history/:versionId',
   authenticate,
+  adminRateLimit,
   configHistoryController.getConfigVersion
 );
 
@@ -110,12 +121,14 @@ router.post(
   '/:id/config-history',
   authenticate,
   requireRole('admin', 'operator'),
+  sensitiveRateLimit,
   configHistoryController.saveConfigVersion
 );
 
 router.get(
   '/:id/config-history-compare',
   authenticate,
+  adminRateLimit,
   configHistoryController.compareConfigVersions
 );
 
@@ -123,6 +136,7 @@ router.post(
   '/:id/config-preview-diff',
   authenticate,
   requireRole('admin', 'operator'),
+  adminRateLimit,
   configHistoryController.previewConfigDiff
 );
 
@@ -130,6 +144,7 @@ router.post(
 router.get(
   '/:id/pending-commands',
   authenticate,
+  adminRateLimit,
   sitesController.getPendingCommands
 );
 
@@ -137,6 +152,7 @@ router.delete(
   '/:id/pending-commands/:commandId',
   authenticate,
   requireRole('admin', 'operator'),
+  sensitiveRateLimit,
   sitesController.cancelPendingCommand
 );
 
@@ -144,6 +160,7 @@ router.delete(
   '/:id/pending-commands',
   authenticate,
   requireRole('admin', 'operator'),
+  sensitiveRateLimit,
   sitesController.clearPendingCommands
 );
 
