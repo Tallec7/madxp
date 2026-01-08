@@ -304,8 +304,42 @@ cd - > /dev/null
 
 print_success "Archive créée: raspberry/${ARCHIVE_NAME}"
 
+# Créer aussi l'archive au format legacy (deploy/webapp, deploy/server)
+# pour compatibilité avec les anciens admin-server sur les Pi
+print_step "Création de l'archive legacy (compatibilité anciens Pi)..."
+LEGACY_ARCHIVE_NAME="neopro-raspberry-${SAFE_VERSION}-legacy.tar.gz"
+LEGACY_DIR="raspberry/deploy-legacy"
+
+rm -rf ${LEGACY_DIR}
+mkdir -p ${LEGACY_DIR}/deploy
+
+# Copier tout dans le sous-dossier deploy/
+cp -r ${DEPLOY_DIR}/webapp ${LEGACY_DIR}/deploy/
+cp -r ${DEPLOY_DIR}/server ${LEGACY_DIR}/deploy/
+[ -d ${DEPLOY_DIR}/sync-agent ] && cp -r ${DEPLOY_DIR}/sync-agent ${LEGACY_DIR}/deploy/
+[ -d ${DEPLOY_DIR}/admin ] && cp -r ${DEPLOY_DIR}/admin ${LEGACY_DIR}/deploy/
+[ -d ${DEPLOY_DIR}/scripts ] && cp -r ${DEPLOY_DIR}/scripts ${LEGACY_DIR}/deploy/
+
+# Copier VERSION et release.json à la racine
+cp ${DEPLOY_DIR}/VERSION ${LEGACY_DIR}/
+cp ${DEPLOY_DIR}/release.json ${LEGACY_DIR}/
+
+cd ${LEGACY_DIR}
+if command -v pigz &> /dev/null; then
+    COPYFILE_DISABLE=1 tar -cf - . | pigz > "../${LEGACY_ARCHIVE_NAME}"
+else
+    COPYFILE_DISABLE=1 tar -czf "../${LEGACY_ARCHIVE_NAME}" .
+fi
+cd - > /dev/null
+
+# Nettoyer le dossier temporaire
+rm -rf ${LEGACY_DIR}
+
+print_success "Archive legacy créée: raspberry/${LEGACY_ARCHIVE_NAME}"
+
 # Afficher les statistiques
 ARCHIVE_SIZE=$(du -h "raspberry/${ARCHIVE_NAME}" | cut -f1)
+LEGACY_ARCHIVE_SIZE=$(du -h "raspberry/${LEGACY_ARCHIVE_NAME}" | cut -f1)
 
 echo -e "${GREEN}"
 echo "╔════════════════════════════════════════════════════════════════╗"
@@ -313,26 +347,26 @@ echo "║              BUILD TERMINÉ AVEC SUCCÈS                         ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 echo ""
-echo -e "${BLUE}Package de déploiement:${NC}"
-echo "  • Dossier: raspberry/deploy/"
-echo "  • Archive: raspberry/${ARCHIVE_NAME}"
-echo "  • Lien:    raspberry/${ARCHIVE_LINK} -> ${ARCHIVE_NAME}"
-echo "  • Taille:  ${ARCHIVE_SIZE}"
+echo -e "${BLUE}Packages de déploiement:${NC}"
+echo "  • Dossier:        raspberry/deploy/"
+echo "  • Archive:        raspberry/${ARCHIVE_NAME} (${ARCHIVE_SIZE})"
+echo "  • Archive legacy: raspberry/${LEGACY_ARCHIVE_NAME} (${LEGACY_ARCHIVE_SIZE})"
+echo "  • Lien:           raspberry/${ARCHIVE_LINK} -> ${ARCHIVE_NAME}"
+echo ""
+echo -e "${YELLOW}Quelle archive utiliser ?${NC}"
+echo "  • ${ARCHIVE_NAME}        → Pour Pi avec admin-server récent (>= v2.7)"
+echo "  • ${LEGACY_ARCHIVE_NAME} → Pour Pi avec ancien admin-server (< v2.7)"
 echo ""
 echo -e "${YELLOW}Déploiement sur Raspberry Pi:${NC}"
-echo "  1. Copier l'archive sur le Pi:"
-echo "     scp raspberry/neopro-raspberry-deploy.tar.gz pi@neopro.local:~/"
+echo "  Via l'interface admin (port 8080) :"
+echo "     Ouvrir http://neopro.local:8080 → Section 'Mise à jour' → Upload l'archive"
 echo ""
-echo "  2. Sur le Raspberry Pi:"
-echo "     ssh pi@neopro.local"
-echo "     cd /home/pi/neopro"
-echo "     # Sauvegarder configuration (les vidéos sont dans /home/pi/neopro/videos/, pas touchées)"
-echo "     cp webapp/configuration.json /tmp/configuration.json.bak"
-echo "     # Nettoyer et extraire (évite les anciens fichiers main-*.js)"
-echo "     sudo rm -rf webapp/* && sudo tar -xzf ~/neopro-raspberry-deploy.tar.gz"
-echo "     # Restaurer configuration"
-echo "     sudo cp /tmp/configuration.json.bak webapp/configuration.json"
-echo "     sudo systemctl restart neopro-app"
-echo "     sudo systemctl restart nginx"
+echo "  Ou manuellement :"
+echo "     scp raspberry/${ARCHIVE_NAME} pi@neopro.local:~/"
+echo "     ssh pi@neopro.local 'cd /home/pi/neopro && \\"
+echo "       cp webapp/configuration.json /tmp/config.bak && \\"
+echo "       sudo rm -rf webapp/* && sudo tar -xzf ~/${ARCHIVE_NAME} && \\"
+echo "       sudo cp /tmp/config.bak webapp/configuration.json && \\"
+echo "       sudo systemctl restart neopro-app nginx'"
 echo ""
 echo -e "${GREEN}Build terminé!${NC}"

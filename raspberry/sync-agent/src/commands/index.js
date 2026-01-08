@@ -26,11 +26,33 @@ const commands = {
    * @param {Object} data - { neoProContent, mode?, configuration?, agentFiles? }
    */
   async update_config(data) {
+    // Mode spécial : correction des permissions (peut être appelé indépendamment)
+    if (data.mode === 'fix_permissions' || data.fixPermissions) {
+      logger.info('Fixing permissions on neopro directories');
+      try {
+        const rootPath = config.paths.root;
+        await execAsync(`sudo chown -R pi:pi ${rootPath}/webapp`);
+        await execAsync(`sudo chown -R pi:pi ${rootPath}/server`);
+        await execAsync(`sudo chown -R pi:pi ${rootPath}/sync-agent`);
+        await execAsync(`sudo chown -R pi:pi ${rootPath}/admin 2>/dev/null || true`);
+        await execAsync(`sudo chown -R pi:pi ${rootPath}/videos 2>/dev/null || true`);
+        await execAsync('sudo usermod -a -G pi www-data 2>/dev/null || true');
+        logger.info('Permissions fixed successfully');
+        return { success: true, message: 'Permissions fixed' };
+      } catch (error) {
+        logger.error('Failed to fix permissions:', error);
+        throw error;
+      }
+    }
+
     // Mode spécial : mise à jour des fichiers du sync-agent
     if (data.mode === 'update_agent' && data.agentFiles) {
       logger.info('Updating sync-agent files remotely');
       try {
         const syncAgentPath = config.paths.root + '/sync-agent';
+
+        // D'abord corriger les permissions si nécessaire
+        await execAsync(`sudo chown -R pi:pi ${syncAgentPath}`);
 
         for (const [filePath, content] of Object.entries(data.agentFiles)) {
           const fullPath = syncAgentPath + '/' + filePath;
@@ -511,6 +533,39 @@ const commands = {
    * Effectue un diagnostic réseau complet
    * Teste la connectivité internet, la latence, le DNS, perte de paquets, etc.
    */
+  /**
+   * Corrige les permissions des dossiers neopro
+   * Nécessaire après une mise à jour qui aurait changé les propriétaires
+   */
+  async fix_permissions() {
+    logger.info('Fixing permissions on neopro directories');
+
+    try {
+      const rootPath = config.paths.root;
+
+      // Corriger les permissions pour l'utilisateur pi
+      await execAsync(`sudo chown -R pi:pi ${rootPath}/webapp`);
+      await execAsync(`sudo chown -R pi:pi ${rootPath}/server`);
+      await execAsync(`sudo chown -R pi:pi ${rootPath}/sync-agent`);
+      await execAsync(`sudo chown -R pi:pi ${rootPath}/admin 2>/dev/null || true`);
+      await execAsync(`sudo chown -R pi:pi ${rootPath}/videos 2>/dev/null || true`);
+
+      // Ajouter www-data au groupe pi pour nginx
+      await execAsync('sudo usermod -a -G pi www-data 2>/dev/null || true');
+
+      logger.info('Permissions fixed successfully');
+
+      return {
+        success: true,
+        message: 'Permissions fixed for /home/pi/neopro/*',
+        paths: ['webapp', 'server', 'sync-agent', 'admin', 'videos'],
+      };
+    } catch (error) {
+      logger.error('Failed to fix permissions:', error);
+      throw error;
+    }
+  },
+
   async network_diagnostics(data) {
     logger.info('Running comprehensive network diagnostics');
 

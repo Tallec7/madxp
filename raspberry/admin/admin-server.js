@@ -2798,9 +2798,18 @@ app.post('/api/update', uploadPackage.single('package'), async (req, res) => {
     // Installer les dépendances
     await runCommand(`cd ${NEOPRO_DIR}/server && npm install --production`, 'Échec de l\'installation des dépendances');
 
+    // Corriger les permissions (important après copie avec sudo)
+    await execCommand(`sudo chown -R pi:pi ${NEOPRO_DIR}/webapp`);
+    await execCommand(`sudo chown -R pi:pi ${NEOPRO_DIR}/server`);
+    await execCommand(`sudo chown -R pi:pi ${NEOPRO_DIR}/sync-agent 2>/dev/null || true`);
+    await execCommand(`sudo chown -R pi:pi ${NEOPRO_DIR}/admin 2>/dev/null || true`);
+    await execCommand('sudo usermod -a -G pi www-data 2>/dev/null || true');
+
     // Redémarrer les services
     await runCommand('sudo systemctl restart neopro-app', 'Échec du redémarrage de neopro-app');
     await runCommand('sudo systemctl restart nginx', 'Échec du redémarrage de nginx');
+    // Redémarrer le sync-agent pour qu'il prenne en compte les nouveaux fichiers
+    await execCommand('sudo systemctl restart neopro-sync-agent 2>/dev/null || true');
 
     // Nettoyage
     await fs.unlink(req.file.path);
