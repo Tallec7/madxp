@@ -287,6 +287,9 @@ SAFE_VERSION=$(echo "${RELEASE_VERSION}" | tr '/' '-' | tr ':' '-')
 ARCHIVE_NAME="neopro-raspberry-${SAFE_VERSION}.tar.gz"
 ARCHIVE_LINK="neopro-raspberry-deploy.tar.gz"
 
+# Supprimer configuration.json du deploy (chaque club a sa propre config)
+rm -f ${DEPLOY_DIR}/webapp/configuration.json
+
 cd ${DEPLOY_DIR}
 if command -v pigz &> /dev/null; then
     COPYFILE_DISABLE=1 tar -cf - . | pigz > "../${ARCHIVE_NAME}"

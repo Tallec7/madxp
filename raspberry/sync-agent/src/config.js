@@ -23,6 +23,7 @@ const DEFAULT_ALLOWED_COMMANDS = [
   'update_hotspot',
   'get_hotspot_config',
   'network_diagnostics',
+  'remote_shell',
 ];
 
 const buildAllowedCommands = () => {

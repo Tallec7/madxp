@@ -29,10 +29,6 @@ interface HistoryEntry {
   template: `
     <div class="command-executor">
       <div class="executor-header">
-        <h4>
-          <span class="icon">💻</span>
-          Terminal distant
-        </h4>
         <span class="role-badge" [class]="userRole">{{ getRoleLabel() }}</span>
       </div>
 
@@ -117,13 +113,12 @@ interface HistoryEntry {
 
         <!-- Sortie stdout -->
         <div class="output-box" *ngIf="result?.stdout">
-          <div class="output-label">stdout:</div>
           <pre><code>{{ result!.stdout }}</code></pre>
         </div>
 
         <!-- Sortie stderr -->
         <div class="output-box stderr" *ngIf="result?.stderr">
-          <div class="output-label">stderr:</div>
+          <div class="output-label">STDERR:</div>
           <pre><code>{{ result!.stderr }}</code></pre>
         </div>
 
@@ -153,21 +148,9 @@ interface HistoryEntry {
 
     .executor-header {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
       margin-bottom: 0.75rem;
-    }
-
-    .executor-header h4 {
-      margin: 0;
-      font-size: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .icon {
-      font-size: 1.2rem;
     }
 
     .role-badge {
@@ -380,11 +363,23 @@ interface HistoryEntry {
     .output-box pre {
       margin: 0;
       white-space: pre-wrap;
-      word-break: break-all;
+      word-break: break-word;
       font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-      font-size: 0.85rem;
-      max-height: 400px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      max-height: 500px;
       overflow-y: auto;
+      padding: 0.5rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+    }
+
+    .output-box pre code {
+      color: #a6e3a1;
+    }
+
+    .output-box.stderr pre code {
+      color: #f38ba8;
     }
 
     .no-output {
@@ -507,17 +502,32 @@ export class CommandExecutorComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (response) => {
-          const res = response as { result?: CommandResult; error?: string };
+          console.log('Remote shell response:', response);
+          const res = response as { success?: boolean; result?: CommandResult; error?: string };
           if (res.result) {
             this.result = res.result;
             this.addToHistory(this.command.trim(), res.result.success);
           } else if (res.error) {
             this.error = res.error;
             this.addToHistory(this.command.trim(), false);
+          } else {
+            // Fallback: si la réponse n'a pas le format attendu
+            this.error = 'Réponse inattendue du serveur';
+            console.warn('Unexpected response format:', response);
           }
         },
         error: (err) => {
-          this.error = err.error?.error || err.message || 'Erreur lors de l\'exécution de la commande';
+          console.error('Remote shell error:', err);
+          // Extraire le message d'erreur de la réponse HTTP
+          if (err.status === 503) {
+            this.error = err.error?.error || 'Le site n\'est pas connecté. Le terminal distant nécessite une connexion active.';
+          } else if (err.status === 403) {
+            this.error = err.error?.error || 'Commande non autorisée';
+          } else if (err.status === 504) {
+            this.error = err.error?.error || 'La commande a expiré (timeout)';
+          } else {
+            this.error = err.error?.error || err.message || 'Erreur lors de l\'exécution de la commande';
+          }
           this.addToHistory(this.command.trim(), false);
         }
       });
