@@ -1,3 +1,9 @@
+## [2.13.6](https://github.com/Tallec7/neopro/compare/v2.13.5...v2.13.6) (2026-01-08)
+
+### Bug Fixes
+
+- **sync-agent:** add try/catch and logging to startVideoWatcher ([d543ef0](https://github.com/Tallec7/neopro/commit/d543ef09571aa55aa2c70557d56843657457d064))
+
 ## [2.13.5](https://github.com/Tallec7/neopro/compare/v2.13.4...v2.13.5) (2026-01-08)
 
 ### Bug Fixes
