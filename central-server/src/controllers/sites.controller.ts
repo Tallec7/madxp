@@ -716,15 +716,14 @@ export const sendCommand = async (req: AuthRequest, res: Response) => {
         // Audit log pour tentative bloquée
         auditService.log({
           action: 'REMOTE_SHELL_BLOCKED',
-          userId: req.user?.id || 'unknown',
-          resourceType: 'site',
-          resourceId: id,
+          userId: req.user?.id,
+          targetType: 'site',
+          targetId: id,
           details: {
             command: shellCommand.substring(0, 200),
             reason: validation.reason,
           },
-          req,
-        });
+        }, req);
 
         return res.status(403).json({
           error: validation.reason,
@@ -735,14 +734,13 @@ export const sendCommand = async (req: AuthRequest, res: Response) => {
       // Audit log pour commande shell exécutée
       auditService.log({
         action: 'REMOTE_SHELL_EXECUTE',
-        userId: req.user?.id || 'unknown',
-        resourceType: 'site',
-        resourceId: id,
+        userId: req.user?.id,
+        targetType: 'site',
+        targetId: id,
         details: {
           command: validation.sanitizedCommand?.substring(0, 500),
         },
-        req,
-      });
+      }, req);
 
       // Les commandes shell ne doivent pas être mises en queue (besoin de connexion temps réel)
       // Forcer queueIfOffline = false pour remote_shell

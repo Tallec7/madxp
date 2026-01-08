@@ -25,7 +25,9 @@ export type AuditAction =
   | 'GROUP_CREATED'
   | 'GROUP_UPDATED'
   | 'GROUP_DELETED'
-  | 'SETTINGS_UPDATED';
+  | 'SETTINGS_UPDATED'
+  | 'REMOTE_SHELL_EXECUTE'
+  | 'REMOTE_SHELL_BLOCKED';
 
 interface AuditLogEntry {
   action: AuditAction;
