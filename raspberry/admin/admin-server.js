@@ -2783,6 +2783,21 @@ app.post('/api/update', uploadPackage.single('package'), async (req, res) => {
     await runCommand(`cp -r ${extractDir}/${sourcePrefix}webapp/* ${NEOPRO_DIR}/webapp/`, 'Échec de la copie des fichiers webapp');
     await runCommand(`cp -r ${extractDir}/${sourcePrefix}server/* ${NEOPRO_DIR}/server/`, 'Échec de la copie des fichiers server');
 
+    // Copier le sync-agent s'il est présent dans le package
+    const hasSyncAgent = await execCommand(`test -d ${extractDir}/${sourcePrefix}sync-agent`);
+    if (hasSyncAgent.success) {
+      await ensureDirectory(`${NEOPRO_DIR}/sync-agent`);
+      // Sauvegarder la config locale du sync-agent (.env, config/.env)
+      await execCommand(`test -f ${NEOPRO_DIR}/sync-agent/.env && cp ${NEOPRO_DIR}/sync-agent/.env /tmp/sync-agent.env.backup`);
+      await execCommand(`test -f ${NEOPRO_DIR}/sync-agent/config/.env && cp ${NEOPRO_DIR}/sync-agent/config/.env /tmp/sync-agent-config.env.backup`);
+      // Copier les nouveaux fichiers du sync-agent
+      await runCommand(`cp -r ${extractDir}/${sourcePrefix}sync-agent/* ${NEOPRO_DIR}/sync-agent/`, 'Échec de la copie des fichiers sync-agent');
+      // Restaurer les configs locales
+      await execCommand(`test -f /tmp/sync-agent.env.backup && cp /tmp/sync-agent.env.backup ${NEOPRO_DIR}/sync-agent/.env && rm /tmp/sync-agent.env.backup`);
+      await execCommand(`test -f /tmp/sync-agent-config.env.backup && cp /tmp/sync-agent-config.env.backup ${NEOPRO_DIR}/sync-agent/config/.env && rm /tmp/sync-agent-config.env.backup`);
+      console.log('[UPDATE] Sync-agent mis à jour');
+    }
+
     // Restaurer configuration.json
     await execCommand(`test -f /tmp/configuration.json.backup && cp /tmp/configuration.json.backup ${NEOPRO_DIR}/webapp/configuration.json && rm /tmp/configuration.json.backup`);
 
