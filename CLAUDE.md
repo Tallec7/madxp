@@ -309,17 +309,28 @@ La commande `update_config` utilise un **merge intelligent** qui préserve les p
 ```javascript
 // Modes disponibles
 'merge'   : Fusionne le contenu NEOPRO avec la config locale (défaut, recommandé)
-'replace' : Écrase tout (legacy, déconseillé - peut perdre des paramètres locaux)
+'replace' : Remplace les champs de contenu tout en préservant les paramètres locaux
 ```
 
-**Champs gérés par le merge** (envoyés dans `neoProContent`) :
+**Payload de la commande** :
 
-| Champ              | Comportement                                                                    |
-| ------------------ | ------------------------------------------------------------------------------- |
-| `sponsors`         | Central = source de vérité. Sponsors locaux non présents dans central préservés |
-| `categories`       | Fusion intelligente NEOPRO/Club (voir règles ci-dessous)                        |
-| `timeCategories`   | Remplacement complet (géré entièrement par le central)                          |
-| `categoryMappings` | Remplacement complet (géré entièrement par le central)                          |
+```javascript
+{
+  neoProContent: { sponsors, categories, timeCategories, categoryMappings, ... },
+  mode: 'merge' | 'replace'  // défaut: 'merge'
+}
+```
+
+**Champs gérés** (envoyés dans `neoProContent`) :
+
+| Champ              | Mode merge                                                 | Mode replace         |
+| ------------------ | ---------------------------------------------------------- | -------------------- |
+| `sponsors`         | Fusion intelligente (locaux préservés si non dans central) | Remplacement complet |
+| `categories`       | Fusion NEOPRO/Club                                         | Remplacement complet |
+| `timeCategories`   | Remplacement complet                                       | Remplacement complet |
+| `categoryMappings` | Remplacement complet                                       | Remplacement complet |
+| `liveScoreEnabled` | Mise à jour                                                | Mise à jour          |
+| `scoreOverlay`     | Mise à jour                                                | Mise à jour          |
 
 **Règles de merge pour les sponsors** :
 
@@ -343,9 +354,17 @@ La commande `update_config` utilise un **merge intelligent** qui préserve les p
 
 **Fichiers impliqués** :
 
-- `raspberry/sync-agent/src/utils/config-merge.js` - Logique de fusion
+- `raspberry/sync-agent/src/commands/index.js` - Exécution de la commande `update_config`
+- `raspberry/sync-agent/src/utils/config-merge.js` - Logique de fusion (mode merge)
+- `raspberry/server/server.js` - Réception de `config_updated` et broadcast aux clients
 - `central-server/src/controllers/sites.controller.ts` - Normalisation des commandes
 - `central-dashboard/.../site-content-tab.component.ts` - UI de déploiement avec choix du mode
+
+**Flux de notification après déploiement** :
+
+```
+sync-agent (update_config) → socket.emit('config_updated') → server.js → io.emit('reload-config') → TV/Remote
+```
 
 ### Boucles Vidéo par Phase ⚡ NEW (2026-01)
 
