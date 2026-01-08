@@ -949,6 +949,20 @@ class AlertingService {
       clearInterval(this.checkInterval);
     }
   }
+
+  /**
+   * Nettoie le cache mémoire (appelé lors de pression mémoire)
+   */
+  clearMemoryCache(): void {
+    const historySize = this.metricHistory.size;
+    const alertTimeSize = this.lastAlertTime.size;
+    this.metricHistory.clear();
+    this.lastAlertTime.clear();
+    logger.info('Alerting service memory cache cleared', {
+      clearedHistoryEntries: historySize,
+      clearedAlertTimeEntries: alertTimeSize,
+    });
+  }
 }
 
 export const alertingService = new AlertingService();
