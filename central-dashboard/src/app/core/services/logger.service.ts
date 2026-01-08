@@ -59,8 +59,18 @@ interface LogEntry {
   providedIn: 'root',
 })
 export class LoggerService {
-  private http = inject(HttpClient);
+  // Optional injection - allows service to work without HttpClient in tests
+  private http: HttpClient | null = null;
   private breadcrumbs: Breadcrumb[] = [];
+
+  constructor() {
+    try {
+      this.http = inject(HttpClient);
+    } catch {
+      // HttpClient not provided (e.g., in tests without HttpClientTestingModule)
+      // Logger will still work for console output, just won't send to backend
+    }
+  }
   private readonly MAX_BREADCRUMBS = 50;
 
   // Track if user is authenticated to avoid sending logs before login
@@ -235,6 +245,11 @@ export class LoggerService {
   }
 
   private sendToBackend(entry: LogEntry): void {
+    // Skip if HttpClient is not available (e.g., in tests)
+    if (!this.http) {
+      return;
+    }
+
     // Fire and forget - don't block on logging
     this.http
       .post(`${environment.apiUrl}/logs/frontend`, entry, {

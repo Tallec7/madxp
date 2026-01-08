@@ -8,6 +8,7 @@ export interface VideoItem {
   id: string | null;
   path: string;
   filename: string;
+  displayName: string; // Title or original filename for display (filename may be UUID)
   category: string | null;
   subcategory: string | null;
   size: number;
@@ -123,8 +124,8 @@ export type SortDirection = 'asc' | 'desc';
           (click)="selectVideo(video)"
         >
           <span class="col-lock">{{ video.owner === 'neopro' ? '🔒' : '' }}</span>
-          <span class="col-name video-name">
-            {{ video.filename }}
+          <span class="col-name video-name" [title]="video.filename">
+            {{ video.displayName }}
             <span class="video-subcat" *ngIf="video.subcategory">{{ video.subcategory }}</span>
           </span>
           <span class="col-duration video-duration">{{ video.duration ? formatDuration(video.duration) : '-' }}</span>
@@ -206,7 +207,7 @@ export type SortDirection = 'asc' | 'desc';
         <div class="preview-modal" (click)="$event.stopPropagation()">
           <div class="preview-header">
             <div class="preview-title">
-              <span class="preview-filename">{{ previewVideo.filename }}</span>
+              <span class="preview-filename" [title]="previewVideo.filename">{{ previewVideo.displayName }}</span>
               <span class="preview-meta" *ngIf="previewVideo.category">
                 {{ previewVideo.category }}{{ previewVideo.subcategory ? ' / ' + previewVideo.subcategory : '' }}
               </span>
@@ -852,6 +853,7 @@ export class VideoLibraryComponent implements OnChanges {
         id: cloud.id,
         path: cloud.url,
         filename: cloud.filename,
+        displayName: cloud.title || cloud.originalName || cloud.filename,
         category: cloud.category,
         subcategory: cloud.subcategory,
         size: cloud.size,
@@ -873,6 +875,7 @@ export class VideoLibraryComponent implements OnChanges {
         id: null,
         path: local.path,
         filename: local.filename,
+        displayName: local.filename, // Local videos use filename directly
         category: local.category,
         subcategory: local.subcategory,
         size: local.size,
@@ -922,6 +925,7 @@ export class VideoLibraryComponent implements OnChanges {
     if (this.searchQuery) {
       const query = this.searchQuery.toLowerCase();
       filtered = filtered.filter(v =>
+        v.displayName.toLowerCase().includes(query) ||
         v.filename.toLowerCase().includes(query) ||
         v.path.toLowerCase().includes(query)
       );
@@ -946,7 +950,7 @@ export class VideoLibraryComponent implements OnChanges {
       let comparison = 0;
       switch (this.sortField) {
         case 'filename':
-          comparison = a.filename.localeCompare(b.filename);
+          comparison = a.displayName.localeCompare(b.displayName);
           break;
         case 'size':
           comparison = a.size - b.size;
