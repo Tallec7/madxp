@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.7.2 | **Dernière mise à jour**: 2026-01-08
+**Version**: 2.11.5 | **Dernière mise à jour**: 2026-01-08
 
 ---
 
@@ -135,11 +135,12 @@ neopro/
 | Frontend Raspberry | Angular 20, Socket.IO client, SCSS                        |
 | Frontend Dashboard | Angular 20, Chart.js, Leaflet, Standalone Components      |
 | Backend API        | Node.js 18+, Express 4.18, TypeScript strict              |
-| Base de données    | PostgreSQL 15 (Supabase)                                  |
-| Cache              | Redis (Upstash) - optionnel                               |
+| Base de données    | PostgreSQL 15 (Supabase) - Pool: 5 connexions             |
+| Cache              | Redis (Upstash) - optionnel, pour scaling horizontal      |
 | Stockage           | FTP (Hostinger) + Supabase Storage (fallback)             |
-| Auth               | JWT HttpOnly cookie + Bearer token                        |
+| Auth               | JWT HttpOnly cookie + Bearer token + MFA (TOTP)           |
 | Logs               | Winston + Logtail (Better Stack)                          |
+| Hébergement        | Railway (API - Hobby plan), Hostinger (Dashboard)         |
 | Tests              | Jest + Supertest (API), Karma (Angular), Playwright (E2E) |
 
 ---
@@ -1293,6 +1294,19 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 ---
 
 ## Historique Breaking Changes
+
+### v2.11.x (Janvier 2026)
+
+- **Optimisations mémoire Railway Hobby plan** : Le serveur fonctionne avec ~40 MB de heap
+  - Pool DB réduit de 20 à 5 connexions (`database.ts`)
+  - Logs Winston réduits de 10MB×5 à 2MB×2 (`logger.ts`)
+  - Pending commands Socket.IO réduit de 500 à 100 (`socket.service.ts`)
+  - Pong entries réduit de 200 à 50
+  - Seuils mémoire ajustés : warning 88%, critical 93%, emergency 97%
+  - Debug logging coûteux supprimé dans `isConnected()`
+  - Migration : Aucune (optimisation transparente)
+- **Audit Actions** : Ajout `REMOTE_SHELL_EXECUTE` et `REMOTE_SHELL_BLOCKED`
+  - Migration : Aucune (nouveaux types d'audit)
 
 ### v2.6.x (Janvier 2026)
 
