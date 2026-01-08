@@ -1,3 +1,9 @@
+## [2.11.1](https://github.com/Tallec7/neopro/compare/v2.11.0...v2.11.1) (2026-01-08)
+
+### Bug Fixes
+
+- **command-executor:** fix TypeScript compilation errors ([2670d11](https://github.com/Tallec7/neopro/commit/2670d11abbd961eca8f21d6156b149d42a044734))
+
 # [2.11.0](https://github.com/Tallec7/neopro/compare/v2.10.5...v2.11.0) (2026-01-08)
 
 ### Features
