@@ -1,3 +1,9 @@
+## [2.14.4](https://github.com/Tallec7/neopro/compare/v2.14.3...v2.14.4) (2026-01-08)
+
+### Bug Fixes
+
+- **deployment:** use correct storage URL for video downloads ([5e4fa5f](https://github.com/Tallec7/neopro/commit/5e4fa5fbe8ffa6da1bd7d9776b7d0dc9ce28695a))
+
 ## [2.14.3](https://github.com/Tallec7/neopro/compare/v2.14.2...v2.14.3) (2026-01-08)
 
 ### Bug Fixes
