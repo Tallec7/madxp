@@ -7,11 +7,12 @@ import { NotificationService } from '../../../../core/services/notification.serv
 import { LoggerService } from '../../../../core/services/logger.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import { LocalVideo, LocalStorage, ConfigHistory, SiteConfiguration } from '../../../../core/models';
+import { CommandExecutorComponent } from '../command-executor/command-executor.component';
 
 @Component({
   selector: 'app-site-debug-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
+  imports: [CommonModule, FormsModule, TranslateModule, CommandExecutorComponent],
   template: `
     <div class="debug-tab">
       <!-- Fichiers sur le Pi -->
@@ -156,6 +157,86 @@ import { LocalVideo, LocalStorage, ConfigHistory, SiteConfiguration } from '../.
               <span class="info-value">{{ lastVideoSync | date:'dd/MM/yyyy HH:mm:ss' }}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Commandes de maintenance -->
+      <div class="debug-card">
+        <div class="debug-header" (click)="showCommands = !showCommands">
+          <span class="expand-icon">{{ showCommands ? '▼' : '▶' }}</span>
+          <span class="debug-icon">🔧</span>
+          <h4>Commandes de maintenance</h4>
+        </div>
+
+        <div class="debug-content" *ngIf="showCommands">
+          <div class="commands-section">
+            <p class="commands-hint">Commandes rapides pour le dépannage du boîtier</p>
+
+            <div class="command-buttons">
+              <button class="btn btn-warning btn-sm" (click)="executeCommand('fix_permissions')" [disabled]="executingCommand">
+                🔐 Corriger permissions
+              </button>
+              <button class="btn btn-secondary btn-sm" (click)="executeCommand('reboot')" [disabled]="executingCommand">
+                🔄 Redémarrer le Pi
+              </button>
+              <button class="btn btn-secondary btn-sm" (click)="executeCommand('restart_sync')" [disabled]="executingCommand">
+                🔃 Relancer sync-agent
+              </button>
+            </div>
+
+            <div class="command-custom">
+              <h5>Commande personnalisée</h5>
+              <div class="command-form">
+                <select [(ngModel)]="customCommand" class="command-select">
+                  <option value="">-- Sélectionner --</option>
+                  <option value="fix_permissions">fix_permissions</option>
+                  <option value="reboot">reboot</option>
+                  <option value="restart_service">restart_service</option>
+                  <option value="get_logs">get_logs</option>
+                  <option value="get_system_info">get_system_info</option>
+                  <option value="network_diagnostics">network_diagnostics</option>
+                  <option value="update_config">update_config</option>
+                </select>
+                <textarea
+                  [(ngModel)]="customParams"
+                  class="command-params"
+                  placeholder='Paramètres JSON (ex: {"mode": "fix_permissions"})'
+                  rows="2"
+                ></textarea>
+                <button
+                  class="btn btn-primary btn-sm"
+                  (click)="executeCustomCommand()"
+                  [disabled]="!customCommand || executingCommand"
+                >
+                  {{ executingCommand ? 'Envoi...' : 'Exécuter' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="command-result" *ngIf="commandResult">
+              <h5>Résultat</h5>
+              <pre class="result-viewer">{{ commandResult }}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terminal distant -->
+      <div class="debug-card">
+        <div class="debug-header" (click)="showTerminal = !showTerminal">
+          <span class="expand-icon">{{ showTerminal ? '▼' : '▶' }}</span>
+          <span class="debug-icon">💻</span>
+          <h4>Terminal distant</h4>
+          <span class="debug-stats" [class.connected]="isConnected" [class.disconnected]="!isConnected">
+            {{ isConnected ? '● Connecté' : '○ Déconnecté' }}
+          </span>
+        </div>
+
+        <div class="debug-content always-visible" *ngIf="showTerminal">
+          <app-command-executor
+            [siteId]="siteId"
+            [isConnected]="isConnected"
+          ></app-command-executor>
         </div>
       </div>
 
@@ -520,6 +601,103 @@ import { LocalVideo, LocalStorage, ConfigHistory, SiteConfiguration } from '../.
       max-height: 300px;
       overflow: auto;
     }
+
+    /* Commands section */
+    .commands-section {
+      padding-top: 1rem;
+    }
+
+    .commands-hint {
+      margin: 0 0 1rem 0;
+      font-size: 0.8125rem;
+      color: #64748b;
+    }
+
+    .command-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-warning {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .btn-warning:hover:not(:disabled) {
+      background: #d97706;
+    }
+
+    .command-custom {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 1rem;
+    }
+
+    .command-custom h5 {
+      margin: 0 0 0.75rem 0;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .command-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .command-select {
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      background: white;
+    }
+
+    .command-params {
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      font-family: 'SF Mono', Monaco, monospace;
+      resize: vertical;
+    }
+
+    .command-result {
+      margin-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 1rem;
+    }
+
+    .command-result h5 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .result-viewer {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: 'SF Mono', Monaco, monospace;
+      max-height: 200px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* Terminal status badges */
+    .debug-stats.connected {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .debug-stats.disconnected {
+      background: #fee2e2;
+      color: #dc2626;
+    }
   `]
 })
 export class SiteDebugTabComponent implements OnInit {
@@ -538,6 +716,14 @@ export class SiteDebugTabComponent implements OnInit {
   showJson: boolean = false;
   showSyncInfo: boolean = false;
   showHistory: boolean = false;
+  showCommands: boolean = false;
+  showTerminal: boolean = false;
+
+  // Commands
+  customCommand: string = '';
+  customParams: string = '';
+  executingCommand: boolean = false;
+  commandResult: string = '';
 
   // History
   history: ConfigHistory[] = [];
@@ -682,6 +868,86 @@ export class SiteDebugTabComponent implements OnInit {
         const message = ErrorExtractor.getMessage(error);
         this.notificationService.error(`Erreur lors de la restauration: ${message}`);
         this.logger.error('Failed to restore config version', { error: message, siteId: this.siteId, versionId: item.id });
+      }
+    });
+  }
+
+  // Command methods
+  executeCommand(command: string): void {
+    this.executingCommand = true;
+    this.commandResult = '';
+
+    let commandType = command;
+    let params: Record<string, unknown> = {};
+
+    // Map quick commands to actual commands
+    switch (command) {
+      case 'fix_permissions':
+        commandType = 'update_config';
+        params = { mode: 'fix_permissions' };
+        break;
+      case 'restart_sync':
+        commandType = 'restart_service';
+        params = { service: 'neopro-sync-agent' };
+        break;
+      case 'reboot':
+        if (!confirm('Êtes-vous sûr de vouloir redémarrer le Raspberry Pi ?')) {
+          this.executingCommand = false;
+          return;
+        }
+        break;
+    }
+
+    this.sitesService.sendCommand(this.siteId, commandType, params).subscribe({
+      next: (response) => {
+        this.executingCommand = false;
+        this.commandResult = JSON.stringify(response, null, 2);
+        this.notificationService.success(`Commande "${command}" envoyée avec succès`);
+      },
+      error: (error) => {
+        this.executingCommand = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.commandResult = `Erreur: ${message}`;
+        this.notificationService.error(`Erreur: ${message}`);
+      }
+    });
+  }
+
+  executeCustomCommand(): void {
+    if (!this.customCommand) return;
+
+    this.executingCommand = true;
+    this.commandResult = '';
+
+    let params: Record<string, unknown> = {};
+    if (this.customParams.trim()) {
+      try {
+        params = JSON.parse(this.customParams);
+      } catch {
+        this.notificationService.error('Paramètres JSON invalides');
+        this.executingCommand = false;
+        return;
+      }
+    }
+
+    // Handle fix_permissions special case
+    let commandType = this.customCommand;
+    if (this.customCommand === 'fix_permissions') {
+      commandType = 'update_config';
+      params = { mode: 'fix_permissions', ...params };
+    }
+
+    this.sitesService.sendCommand(this.siteId, commandType, params).subscribe({
+      next: (response) => {
+        this.executingCommand = false;
+        this.commandResult = JSON.stringify(response, null, 2);
+        this.notificationService.success(`Commande "${this.customCommand}" envoyée avec succès`);
+      },
+      error: (error) => {
+        this.executingCommand = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.commandResult = `Erreur: ${message}`;
+        this.notificationService.error(`Erreur: ${message}`);
       }
     });
   }

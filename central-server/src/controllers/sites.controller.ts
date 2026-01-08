@@ -3,13 +3,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { randomBytes, createHash } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { query } from '../config/database';
-import { AuthRequest } from '../types';
+import { AuthRequest, UserRole } from '../types';
 import logger from '../config/logger';
 import { auditService } from '../services/audit.service';
 import { formatPaginatedResponse, PaginationParams } from '../middleware/pagination';
 import { commandQueueService } from '../services/command-queue.service';
 import { isAdmin } from '../middleware/auth';
 import { getFtpPublicUrl } from '../config/ftp-storage';
+import { validateShellCommand, getAllowedCommandsForRole } from '../middleware/remote-shell-security';
 
 class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -682,6 +683,100 @@ export const sendCommand = async (req: AuthRequest, res: Response) => {
 
     if (!command) {
       return res.status(400).json({ error: 'Commande requise' });
+    }
+
+    // Validation spéciale pour remote_shell
+    if (command === 'remote_shell') {
+      const userRole = req.user?.role as UserRole;
+
+      // Vérifier que l'utilisateur a le droit d'utiliser le terminal
+      if (!userRole || !['super_admin', 'superadmin', 'admin', 'operator'].includes(userRole)) {
+        return res.status(403).json({
+          error: 'Accès non autorisé au terminal distant',
+          allowedCommands: [],
+        });
+      }
+
+      // Valider la commande shell
+      const shellCommand = data?.command;
+      if (!shellCommand) {
+        return res.status(400).json({ error: 'Commande shell requise (params.command)' });
+      }
+
+      const validation = validateShellCommand(shellCommand, userRole);
+      if (!validation.valid) {
+        logger.warn('Shell command blocked', {
+          siteId: id,
+          command: shellCommand.substring(0, 100),
+          reason: validation.reason,
+          user: req.user?.email,
+          role: userRole,
+        });
+
+        // Audit log pour tentative bloquée
+        auditService.log({
+          action: 'REMOTE_SHELL_BLOCKED',
+          userId: req.user?.id || 'unknown',
+          resourceType: 'site',
+          resourceId: id,
+          details: {
+            command: shellCommand.substring(0, 200),
+            reason: validation.reason,
+          },
+          req,
+        });
+
+        return res.status(403).json({
+          error: validation.reason,
+          allowedCommands: getAllowedCommandsForRole(userRole),
+        });
+      }
+
+      // Audit log pour commande shell exécutée
+      auditService.log({
+        action: 'REMOTE_SHELL_EXECUTE',
+        userId: req.user?.id || 'unknown',
+        resourceType: 'site',
+        resourceId: id,
+        details: {
+          command: validation.sanitizedCommand?.substring(0, 500),
+        },
+        req,
+      });
+
+      // Les commandes shell ne doivent pas être mises en queue (besoin de connexion temps réel)
+      // Forcer queueIfOffline = false pour remote_shell
+      const socketService = (await import('../services/socket.service')).default;
+      if (!socketService.isConnected(id)) {
+        return res.status(503).json({
+          error: 'Le site n\'est pas connecté. Le terminal distant nécessite une connexion active.',
+        });
+      }
+
+      // Envoyer la commande avec la commande sanitizée
+      const normalizedShellData = {
+        ...data,
+        command: validation.sanitizedCommand,
+      };
+
+      const { commandId } = await dispatchCommand(id, command, normalizedShellData, req.user?.id);
+
+      // Attendre le résultat (timeout plus long pour les commandes shell)
+      const timeout = Math.min(data?.timeout || 60000, 300000); // Max 5 minutes
+      try {
+        const result = await waitForCommandResult(commandId, timeout);
+        return res.json({
+          success: true,
+          commandId,
+          result,
+        });
+      } catch {
+        return res.status(504).json({
+          error: 'La commande a expiré',
+          commandId,
+          timeout,
+        });
+      }
     }
 
     // Si la commande update_config arrive avec "configuration", convertir en "neoProContent"
