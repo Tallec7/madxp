@@ -56,7 +56,7 @@ export const BLACKLIST_PATTERNS: RegExp[] = [
 
   // Disk/filesystem operations
   /\b(mkfs|fdisk|parted|dd\s+if=)/i,
-  />\s*\/dev\//,  // Write to devices
+  />\s*\/dev\/(?!null\b)/,  // Write to devices (except /dev/null which is safe)
 
   // System shutdown (use dedicated commands)
   /\b(shutdown|poweroff|halt|init\s+0)\b/i,
