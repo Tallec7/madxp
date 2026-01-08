@@ -92,13 +92,15 @@ sudo systemctl status neopro-sync
 Quand vous exécutez `sudo node scripts/register-site.js`, le script va demander :
 
 **Étape 1 - Connexion au serveur central :**
+
 ```
-Central Server URL: https://neopro-central.onrender.com
+Central Server URL: https://neopro-central-production.up.railway.app
 Admin email: admin@neopro.fr
 Admin password: admin123
 ```
 
 **Étape 2 - Informations du site :**
+
 ```
 Site Name: MANGIN BEAULIEU
 Club Name: NANTES LOIRE FÉMININ HANDBALL
@@ -111,6 +113,7 @@ Contact Phone (optional): 0673565696
 ```
 
 **Résultat :**
+
 - Site enregistré sur le serveur central
 - Fichier `/etc/neopro/site.conf` créé
 - Service systemd `neopro-sync` installé et démarré
@@ -126,6 +129,7 @@ ssh pi@neopro.local 'sudo systemctl status neopro-sync'
 ```
 
 **Résultat attendu :**
+
 ```
 ● neopro-sync.service - Neopro Sync Agent
      Loaded: loaded
@@ -139,6 +143,7 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-sync -n 20'
 ```
 
 **Résultat attendu :**
+
 ```
 Connected to central server
 Metrics sent successfully
@@ -146,7 +151,7 @@ Metrics sent successfully
 
 ### 3. Dashboard central
 
-1. Aller sur https://neopro-central.onrender.com
+1. Aller sur https://neopro-central-production.up.railway.app
 2. Menu **Sites** → **Liste des sites**
 3. Chercher **MANGIN BEAULIEU**
 4. Vérifier le statut : 🟢 **En ligne**

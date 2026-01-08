@@ -15,6 +15,7 @@ Réagir efficacement aux alertes système pour maintenir la disponibilité et le
 ## 2. PÉRIMÈTRE
 
 ### Ce MODOP couvre
+
 - **MODOP-S11** : Réponse aux alertes CPU/Mémoire
 - **MODOP-S12** : Réponse aux alertes température Raspberry Pi
 - **MODOP-S13** : Réponse aux alertes disque plein
@@ -45,27 +46,28 @@ Support/Ops réagit (ce MODOP)
 
 Définis dans `central-server/src/services/alerting.service.ts:50-123`
 
-| Métrique | Seuil Warning | Seuil Critical | Durée | Cooldown | Escalade |
-|----------|---------------|----------------|-------|----------|----------|
-| **CPU** | 70% | 90% | 5 min | 15 min | 30 min |
-| **Mémoire** | 80% | 95% | 5 min | 15 min | 30 min |
-| **Température** | 65°C | 80°C | 1 min | 10 min | 15 min |
-| **Disque** | 80% | 95% | Immédiat | 60 min | 120 min |
-| **Site offline** | - | > 2 min | 2 min | 30 min | 60 min |
-| **Déploiement failed** | - | 1 échec | Immédiat | 5 min | 30 min |
+| Métrique               | Seuil Warning | Seuil Critical | Durée    | Cooldown | Escalade |
+| ---------------------- | ------------- | -------------- | -------- | -------- | -------- |
+| **CPU**                | 70%           | 90%            | 5 min    | 15 min   | 30 min   |
+| **Mémoire**            | 80%           | 95%            | 5 min    | 15 min   | 30 min   |
+| **Température**        | 65°C          | 80°C           | 1 min    | 10 min   | 15 min   |
+| **Disque**             | 80%           | 95%            | Immédiat | 60 min   | 120 min  |
+| **Site offline**       | -             | > 2 min        | 2 min    | 30 min   | 60 min   |
+| **Déploiement failed** | -             | 1 échec        | Immédiat | 5 min    | 30 min   |
 
 **Paramètres :**
+
 - **Durée** : Temps pendant lequel le seuil doit être dépassé avant alerte
 - **Cooldown** : Temps avant nouvelle alerte sur même métrique (évite le spam)
 - **Escalade** : Temps avant escalade vers superviseur
 
 ### 3.3 Canaux de notification
 
-| Canal | Configuration | Utilisation |
-|-------|---------------|-------------|
-| **Email** | support@neopro.fr | Alertes non-critiques (Warning) |
+| Canal       | Configuration                  | Utilisation                     |
+| ----------- | ------------------------------ | ------------------------------- |
+| **Email**   | support@neopro.fr              | Alertes non-critiques (Warning) |
 | **Webhook** | https://hooks.neopro.fr/alerts | Intégration avec systèmes tiers |
-| **Slack** | #alerts-neopro | Alertes critiques (temps réel) |
+| **Slack**   | #alerts-neopro                 | Alertes critiques (temps réel)  |
 
 ---
 
@@ -87,7 +89,7 @@ Valeur : 75%
 Seuil dépassé : 70% (warning)
 Depuis : 5 minutes
 
-Dashboard : https://neopro-central.onrender.com/sites/uuid-site
+Dashboard : https://neopro-central-production.up.railway.app/sites/uuid-site
 ```
 
 #### Étape 1 : Vérifier le contexte (2 min)
@@ -100,6 +102,7 @@ Dashboard : https://neopro-central.onrender.com/sites/uuid-site
    - Déploiements récents : Y a-t-il eu un déploiement dans les dernières heures ?
 
 **Questions à se poser :**
+
 - ✅ Le CPU est-il monté progressivement ou brutalement ?
 - ✅ Y a-t-il eu un déploiement récent qui pourrait expliquer ?
 - ✅ D'autres sites sont-ils affectés en même temps ?
@@ -124,16 +127,17 @@ ps aux | grep node
 
 **Causes courantes :**
 
-| Processus | Cause probable | Solution |
-|-----------|----------------|----------|
-| `node` (neopro-app) | Boucle infinie ou fuite mémoire | Redémarrer le service |
-| `chromium` (kiosk) | Vidéo lourde en lecture | Normal si en cours de lecture |
-| `ffmpeg` | Conversion vidéo | Attendre la fin du processus |
-| Inconnu | Processus zombie | `kill -9 <PID>` |
+| Processus           | Cause probable                  | Solution                      |
+| ------------------- | ------------------------------- | ----------------------------- |
+| `node` (neopro-app) | Boucle infinie ou fuite mémoire | Redémarrer le service         |
+| `chromium` (kiosk)  | Vidéo lourde en lecture         | Normal si en cours de lecture |
+| `ffmpeg`            | Conversion vidéo                | Attendre la fin du processus  |
+| Inconnu             | Processus zombie                | `kill -9 <PID>`               |
 
 #### Étape 3 : Actions correctives
 
 **Si CPU normal (< 70%) au moment de la vérification :**
+
 - Probablement un pic temporaire
 - Marquer l'alerte comme "Resolved"
 - Continuer la surveillance
@@ -168,6 +172,7 @@ sudo reboot
 #### Étape 4 : Documenter et clôturer (2 min)
 
 **Dans le dashboard :**
+
 1. Aller sur l'alerte
 2. Cliquer sur "Acknowledge" (acquitter)
 3. Ajouter un commentaire :
@@ -244,6 +249,7 @@ sudo reboot
 ```
 
 **⚠️ Si le problème revient après redémarrage :**
+
 - Fuite mémoire probable dans l'application
 - Escalader au niveau 3 (développement)
 - Fournir : logs + résultat de `top` + `ps aux --sort=-%mem`
@@ -345,6 +351,7 @@ done
 #### Solutions long terme
 
 **Recommandations au client :**
+
 1. Installer un ventilateur (dissipateur thermique + ventilateur 5V)
 2. Installer un boîtier avec ventilation active
 3. Éloigner des sources de chaleur (radiateurs, projecteurs)
@@ -490,6 +497,7 @@ Depuis : 2 minutes
 #### Étape 1 : Vérifier la connectivité (2 min)
 
 **Depuis le dashboard :**
+
 1. Menu Sites → LORIENT
 2. Vérifier **Dernière connexion** : Ex. "Il y a 5 minutes"
 3. Consulter **Historique de connexions** (si disponible)
@@ -553,10 +561,12 @@ Support Neopro
 #### Étape 3 : Résolution automatique
 
 **Si le site se reconnecte dans les 30 minutes :**
+
 - L'alerte sera automatiquement marquée comme "Resolved"
 - Vérifier qu'il n'y a pas de déconnexions fréquentes (pattern)
 
 **Si le site reste hors ligne > 24h :**
+
 - Créer un ticket de suivi
 - Relancer le client après 48h si pas de réponse
 - Escalader si > 72h sans nouvelles
@@ -568,6 +578,7 @@ Support Neopro
 ### 8.1 Accès aux logs centralisés
 
 **Via Logtail (si configuré) :**
+
 1. Se connecter à Logtail : https://logtail.com
 2. Sélectionner le projet Neopro
 3. Filtrer par :
@@ -576,6 +587,7 @@ Support Neopro
    - Time range : Last 24h
 
 **Via le dashboard central :**
+
 1. Menu **Sites** → [Site]
 2. Actions rapides → **Voir les logs**
 3. Sélectionner le type : app, nginx, system
@@ -612,15 +624,15 @@ message:"Deployment failed"
 
 ### 8.3 Erreurs courantes et solutions
 
-| Erreur dans les logs | Cause | Solution |
-|----------------------|-------|----------|
-| `ECONNREFUSED` | Service arrêté | Redémarrer le service |
-| `EADDRINUSE` | Port déjà utilisé | Tuer le processus, redémarrer |
-| `MODULE_NOT_FOUND` | Dépendances npm manquantes | `npm install` |
-| `Permission denied` | Permissions incorrectes | Fix permissions (MODOP-S06) |
-| `ETIMEDOUT` | Timeout réseau | Vérifier connectivité |
-| `401 Unauthorized` | API key invalide | Réenregistrer le site |
-| `502 Bad Gateway` | neopro-app ne répond pas | Redémarrer neopro-app |
+| Erreur dans les logs | Cause                      | Solution                      |
+| -------------------- | -------------------------- | ----------------------------- |
+| `ECONNREFUSED`       | Service arrêté             | Redémarrer le service         |
+| `EADDRINUSE`         | Port déjà utilisé          | Tuer le processus, redémarrer |
+| `MODULE_NOT_FOUND`   | Dépendances npm manquantes | `npm install`                 |
+| `Permission denied`  | Permissions incorrectes    | Fix permissions (MODOP-S06)   |
+| `ETIMEDOUT`          | Timeout réseau             | Vérifier connectivité         |
+| `401 Unauthorized`   | API key invalide           | Réenregistrer le site         |
+| `502 Bad Gateway`    | neopro-app ne répond pas   | Redémarrer neopro-app         |
 
 ### 8.4 Analyse proactive
 
@@ -637,6 +649,7 @@ message:"Deployment failed"
 # Analyse Logs Hebdomadaire - Semaine du [Date]
 
 ## Erreurs les plus fréquentes
+
 1. ECONNREFUSED (15 occurrences, 3 sites)
    - Cause : neopro-sync redémarre trop souvent
    - Action : Stabiliser le service sync
@@ -646,10 +659,12 @@ message:"Deployment failed"
    - Action : Corriger les permissions lors du déploiement
 
 ## Nouveaux types d'erreurs
+
 - MODULE_NOT_FOUND sur axios (1 occurrence)
   - Action : Investiguer package.json
 
 ## Recommandations
+
 - Améliorer la stabilité de neopro-sync
 - Ajouter vérification des permissions post-déploiement
 ```
@@ -660,12 +675,12 @@ message:"Deployment failed"
 
 ### 9.1 Matrice d'escalade
 
-| Niveau | Délai d'intervention | Critères |
-|--------|----------------------|----------|
-| **Support N1** | < 30 min | Alertes Warning, sites hors ligne < 24h |
-| **Support N2** | < 1h | Alertes Critical non résolues en 30 min |
-| **Ops N3** | < 30 min | Serveur central down, > 10 sites affectés |
-| **Dev** | < 4h | Bugs applicatifs, fuites mémoire |
+| Niveau         | Délai d'intervention | Critères                                  |
+| -------------- | -------------------- | ----------------------------------------- |
+| **Support N1** | < 30 min             | Alertes Warning, sites hors ligne < 24h   |
+| **Support N2** | < 1h                 | Alertes Critical non résolues en 30 min   |
+| **Ops N3**     | < 30 min             | Serveur central down, > 10 sites affectés |
+| **Dev**        | < 4h                 | Bugs applicatifs, fuites mémoire          |
 
 ### 9.2 Informations à fournir lors de l'escalade
 
@@ -675,10 +690,12 @@ message:"Deployment failed"
 # Escalade Ticket #[ID]
 
 ## Résumé
+
 Site : CESSON Handball
 Problème : CPU > 90% depuis 1h, redémarrages sans effet
 
 ## Contexte
+
 - Alerte déclenchée : 23/01/2025 10:30
 - Actions effectuées :
   - Redémarrage neopro-app : 10:40 (échec)
@@ -686,15 +703,18 @@ Problème : CPU > 90% depuis 1h, redémarrages sans effet
 - Situation actuelle : CPU toujours à 92%
 
 ## Logs et diagnostics
+
 - Logs neopro-app : [lien ou fichier joint]
 - Résultat `top` : [fichier joint]
 - Processus gourmand : node (PID 1234) - 85% CPU
 
 ## Impact client
+
 - Site inutilisable (interface lente)
 - Match prévu ce soir à 20h (4h restantes)
 
 ## Demande
+
 Investigation urgente + correctif avant le match
 ```
 
@@ -725,12 +745,14 @@ Investigation urgente + correctif avant le match
 ## 11. KPI ET MÉTRIQUES
 
 ### Objectifs de réponse aux alertes
+
 - **Temps de réponse (Warning)** : < 30 min
 - **Temps de réponse (Critical)** : < 10 min
 - **Taux de résolution niveau 1** : > 80%
 - **Taux d'escalade** : < 20%
 
 ### Métriques à suivre
+
 - Nombre d'alertes par jour/semaine
 - Temps moyen de résolution par type d'alerte
 - Taux de faux positifs (alertes résolues automatiquement)

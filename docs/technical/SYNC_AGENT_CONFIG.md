@@ -2,7 +2,7 @@
 
 ## ✅ Votre infrastructure
 
-- **Serveur central (API) :** https://neopro-central.onrender.com
+- **Serveur central (API) :** https://neopro-central-production.up.railway.app
 - **Dashboard :** https://neopro-admin.kalonpartners.bzh
 - **Base de données :** Supabase (PostgreSQL)
 - **Credentials admin :**
@@ -29,7 +29,7 @@ sudo node scripts/register-site.js
 #### Étape 1 : Connexion au serveur central
 
 ```
-Central Server URL: https://neopro-central.onrender.com
+Central Server URL: https://neopro-central-production.up.railway.app
 Admin email: admin@neopro.fr
 Admin password: admin123
 ```
@@ -67,6 +67,7 @@ sudo systemctl status neopro-sync-agent
 ```
 
 **Résultat attendu :**
+
 ```
 ● neopro-sync-agent.service - NEOPRO Sync Agent
    Active: active (running)
@@ -83,6 +84,7 @@ sudo journalctl -u neopro-sync-agent -n 50
 ```
 
 **Résultat attendu :**
+
 ```
 Connected to central server
 Metrics sent successfully
@@ -117,9 +119,10 @@ Metrics sent successfully
 **Problème :** L'URL du serveur n'est pas correcte
 
 **Solution :**
+
 ```bash
 # Vérifier que le serveur répond
-curl https://neopro-central.onrender.com/
+curl https://neopro-central-production.up.railway.app/
 
 # Devrait retourner
 {
@@ -134,12 +137,14 @@ curl https://neopro-central.onrender.com/
 **Problème :** Email ou mot de passe incorrect
 
 **Solution :**
+
 - Vérifier que vous utilisez bien :
   - Email : `admin@neopro.fr`
   - Password : `admin123`
 - Tester le login :
+
 ```bash
-curl -X POST https://neopro-central.onrender.com/api/auth/login \
+curl -X POST https://neopro-central-production.up.railway.app/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@neopro.fr","password":"admin123"}'
 # Devrait retourner un token
@@ -150,6 +155,7 @@ curl -X POST https://neopro-central.onrender.com/api/auth/login \
 **Problème :** Permissions incorrectes
 
 **Solution :**
+
 ```bash
 # Corriger les permissions
 sudo chown -R pi:pi /home/pi/neopro/sync-agent
@@ -171,18 +177,21 @@ sudo systemctl restart neopro-sync-agent
 **Vérifications :**
 
 1. **Service actif ?**
+
    ```bash
    sudo systemctl status neopro-sync-agent
    # Doit être "active (running)"
    ```
 
 2. **Connexion établie ?**
+
    ```bash
    sudo journalctl -u neopro-sync-agent -n 20
    # Chercher "Connected to central server"
    ```
 
 3. **Site enregistré ?**
+
    ```bash
    # Vérifier le fichier de config
    sudo cat /etc/neopro/site.conf
@@ -192,7 +201,7 @@ sudo systemctl restart neopro-sync-agent
 4. **Serveur accessible ?**
    ```bash
    # Depuis le Pi
-   curl https://neopro-central.onrender.com/
+   curl https://neopro-central-production.up.railway.app/
    ```
 
 ---

@@ -197,16 +197,16 @@ Video.js API (play/pause/seek)
 
 ## Technologies par composant
 
-| Composant              | Stack                                  | Base de données                               | Déploiement            |
-| ---------------------- | -------------------------------------- | --------------------------------------------- | ---------------------- |
-| `raspberry/src`        | Angular 20, Video.js, Socket.IO client | -                                             | Raspberry Pi (systemd) |
-| `raspberry/server`     | Node.js, Socket.IO 4.7                 | -                                             | Raspberry Pi (systemd) |
-| `raspberry/admin`      | Express, vanilla JS                    | -                                             | Raspberry Pi (systemd) |
-| `raspberry/sync-agent` | Node.js, Axios, MD5 checksum           | -                                             | Raspberry Pi (systemd) |
-| `central-server`       | Node.js 18, Express 4.18, TypeScript   | Supabase (PostgreSQL), FTP Hostinger (vidéos) | Render.com             |
-| `central-dashboard`    | Angular 20, Chart.js, Leaflet          | -                                             | Hostinger (static)     |
-| `server-render`        | Node.js, Socket.IO 4.7                 | Redis (Upstash)                               | Render.com             |
-| `e2e`                  | Playwright                             | -                                             | CI/CD                  |
+| Composant              | Stack                                      | Base de données                               | Déploiement            |
+| ---------------------- | ------------------------------------------ | --------------------------------------------- | ---------------------- |
+| `raspberry/src`        | Angular 20, Video.js 8.x, Socket.IO client | -                                             | Raspberry Pi (systemd) |
+| `raspberry/server`     | Node.js, Socket.IO 4.8                     | -                                             | Raspberry Pi (systemd) |
+| `raspberry/admin`      | Express, vanilla JS                        | -                                             | Raspberry Pi (systemd) |
+| `raspberry/sync-agent` | Node.js 20, Axios, SHA256 checksum         | -                                             | Raspberry Pi (systemd) |
+| `central-server`       | Node.js 20+, Express 4.18, TypeScript 5.9  | Supabase (PostgreSQL), FTP Hostinger (vidéos) | Railway                |
+| `central-dashboard`    | Angular 20.3, Chart.js 4.5, Leaflet        | -                                             | Hostinger (static)     |
+| `server-render`        | Node.js 20, Socket.IO 4.8                  | Redis (Upstash)                               | Railway                |
+| `e2e`                  | Playwright                                 | -                                             | CI/CD                  |
 
 ---
 
@@ -280,6 +280,9 @@ Video.js API (play/pause/seek)
 - Prometheus metrics (Port 9090)
 - Grafana dashboards (Port 3000)
 - Systemd journald logs
+- Winston structured logging with Correlation ID
+- Memory Manager Service (heap monitoring, pressure cleanup)
+- Health checks (/health, /live, /ready)
 
 ### 6. Alerting Multi-Canal
 
@@ -429,7 +432,10 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 - Redis cache (sessions, config)
 - PostgreSQL indexes
 - Connection pooling
-- Rate limiting
+- Rate limiting (per-user based)
+- Memory Manager with automatic cleanup at 93% heap usage
+- Bounded Maps/Arrays to prevent memory leaks (pendingCommands: 100, jobs: 100)
+- Node.js heap limit: 256MB (Railway Hobby plan optimization)
 
 ### Optimisations edge
 
@@ -498,5 +504,5 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 
 ---
 
-**Dernière mise à jour** : 6 janvier 2026
-**Version** : 2.1.3
+**Dernière mise à jour** : 8 janvier 2026
+**Version** : 2.11.7

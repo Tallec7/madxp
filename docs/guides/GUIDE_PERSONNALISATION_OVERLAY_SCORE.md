@@ -12,7 +12,7 @@ Configuration centralisée, déployée sur le Raspberry Pi.
 
 **Prérequis** :
 
-- Accès au **Central Dashboard** (https://neopro-central.onrender.com)
+- Accès au **Central Dashboard** (https://neopro-central-production.up.railway.app)
 - Le site doit avoir l'option **"Score en Live"** activée
 
 **Étapes** :

@@ -14,6 +14,7 @@ Permettre au support de diagnostiquer à distance les problèmes d'un boîtier N
 ## 2. PÉRIMÈTRE
 
 ### Situations couvertes
+
 - Boîtier signalé comme "hors ligne" sur le dashboard
 - Problèmes de performance (CPU, mémoire, température)
 - Erreurs de déploiement vidéo
@@ -21,6 +22,7 @@ Permettre au support de diagnostiquer à distance les problèmes d'un boîtier N
 - Services arrêtés ou en erreur
 
 ### Hors périmètre
+
 - Problèmes matériels nécessitant une intervention physique
 - Remplacement du Raspberry Pi
 - Problèmes de connectivité Internet (côté FAI)
@@ -28,11 +30,13 @@ Permettre au support de diagnostiquer à distance les problèmes d'un boîtier N
 ## 3. PRÉREQUIS
 
 ### Outils requis
-- Accès au dashboard central : https://neopro-central.onrender.com
+
+- Accès au dashboard central : https://neopro-central-production.up.railway.app
 - Compte avec permissions support/admin
 - Accès SSH au boîtier (si le boîtier est accessible)
 
 ### Informations nécessaires
+
 - Nom du club ou ID du site
 - Description du problème signalé
 - Heure de début du problème (si connue)
@@ -42,6 +46,7 @@ Permettre au support de diagnostiquer à distance les problèmes d'un boîtier N
 ### ÉTAPE 1 : Vérification du statut sur le Dashboard (2 min)
 
 #### 4.1 Accéder à la page du site
+
 1. Se connecter au dashboard central
 2. Menu **Sites** → **Liste des sites**
 3. Rechercher le club concerné
@@ -49,20 +54,22 @@ Permettre au support de diagnostiquer à distance les problèmes d'un boîtier N
 
 #### 4.2 Vérifier le statut de connexion
 
-| Indicateur | Signification | Action |
-|------------|---------------|--------|
-| 🟢 **Connecté** | WebSocket actif | Passer à l'étape 2 (diagnostic en ligne) |
-| 🟡 **Instable** | Vu récemment (<2 min) mais pas de WS | Attendre 2 minutes, actualiser la page |
-| 🔴 **Hors ligne** | Aucune connexion depuis >2 min | Passer à l'étape 3 (diagnostic hors ligne) |
-| ⚪ **Inconnu** | Jamais connecté | Vérifier l'installation initiale |
+| Indicateur        | Signification                        | Action                                     |
+| ----------------- | ------------------------------------ | ------------------------------------------ |
+| 🟢 **Connecté**   | WebSocket actif                      | Passer à l'étape 2 (diagnostic en ligne)   |
+| 🟡 **Instable**   | Vu récemment (<2 min) mais pas de WS | Attendre 2 minutes, actualiser la page     |
+| 🔴 **Hors ligne** | Aucune connexion depuis >2 min       | Passer à l'étape 3 (diagnostic hors ligne) |
+| ⚪ **Inconnu**    | Jamais connecté                      | Vérifier l'installation initiale           |
 
 #### 4.3 Consulter les informations système
+
 - **Dernière connexion** : Noter l'heure
 - **Version logicielle** : Vérifier qu'elle n'est pas trop ancienne
 - **Uptime** : Un uptime court peut indiquer des redémarrages fréquents
 - **Métriques** : CPU, mémoire, température, disque
 
 **🚨 POINT DE DÉCISION**
+
 - Si **Connecté (🟢)** → Continuer à l'étape 2
 - Si **Hors ligne (🔴)** → Aller à l'étape 3
 
@@ -80,16 +87,16 @@ Le boîtier est connecté au serveur central via WebSocket. Vous pouvez utiliser
 
 **Interprétation des résultats :**
 
-| Situation | Diagnostic probable | Action recommandée |
-|-----------|---------------------|---------------------|
-| ❌ Passerelle | Câble réseau débranché ou problème DHCP | Demander au client de vérifier le câble Ethernet |
-| ✅ Passerelle, ❌ Internet | Routeur sans accès internet | Demander au client de vérifier sa box internet |
-| ✅ Internet, ❌ DNS | Problème de configuration DNS | Vérifier `/etc/resolv.conf` via SSH |
-| ✅ Internet, ❌ Serveur central | Pare-feu ou serveur indisponible | Vérifier le statut du serveur central sur Render |
-| Perte de paquets > 10% | Connexion très instable | WiFi faible ou réseau encombré - proposer câble Ethernet |
-| Port 443 fermé | Pare-feu bloque HTTPS | Demander ouverture port 443 dans le pare-feu |
-| SSL invalide | Certificat expiré ou problème de date | Vérifier la date système du Pi |
-| Reconnexions > 5 | Interface réseau instable | Problème câble ou WiFi - demander changement de câble |
+| Situation                       | Diagnostic probable                     | Action recommandée                                       |
+| ------------------------------- | --------------------------------------- | -------------------------------------------------------- |
+| ❌ Passerelle                   | Câble réseau débranché ou problème DHCP | Demander au client de vérifier le câble Ethernet         |
+| ✅ Passerelle, ❌ Internet      | Routeur sans accès internet             | Demander au client de vérifier sa box internet           |
+| ✅ Internet, ❌ DNS             | Problème de configuration DNS           | Vérifier `/etc/resolv.conf` via SSH                      |
+| ✅ Internet, ❌ Serveur central | Pare-feu ou serveur indisponible        | Vérifier le statut du serveur central sur Render         |
+| Perte de paquets > 10%          | Connexion très instable                 | WiFi faible ou réseau encombré - proposer câble Ethernet |
+| Port 443 fermé                  | Pare-feu bloque HTTPS                   | Demander ouverture port 443 dans le pare-feu             |
+| SSL invalide                    | Certificat expiré ou problème de date   | Vérifier la date système du Pi                           |
+| Reconnexions > 5                | Interface réseau instable               | Problème câble ou WiFi - demander changement de câble    |
 
 #### 2.2 Récupération des logs système
 
@@ -102,14 +109,14 @@ Le boîtier est connecté au serveur central via WebSocket. Vous pouvez utiliser
 
 **Erreurs courantes à rechercher :**
 
-| Erreur dans les logs | Cause probable | Solution |
-|----------------------|----------------|----------|
-| `ECONNREFUSED` | Service arrêté | Redémarrer le service concerné |
-| `EADDRINUSE` | Port déjà utilisé | Tuer le processus sur le port (voir 2.4) |
-| `MODULE_NOT_FOUND` | Dépendances npm manquantes | Redéployer via dashboard ou SSH `npm install` |
-| `Permission denied` | Problème de permissions | Fix permissions (voir MODOP-S06) |
-| `No such file or directory` | Fichier manquant | Vérifier le déploiement |
-| `502 Bad Gateway` (nginx) | neopro-app ne répond pas | Redémarrer neopro-app |
+| Erreur dans les logs        | Cause probable             | Solution                                      |
+| --------------------------- | -------------------------- | --------------------------------------------- |
+| `ECONNREFUSED`              | Service arrêté             | Redémarrer le service concerné                |
+| `EADDRINUSE`                | Port déjà utilisé          | Tuer le processus sur le port (voir 2.4)      |
+| `MODULE_NOT_FOUND`          | Dépendances npm manquantes | Redéployer via dashboard ou SSH `npm install` |
+| `Permission denied`         | Problème de permissions    | Fix permissions (voir MODOP-S06)              |
+| `No such file or directory` | Fichier manquant           | Vérifier le déploiement                       |
+| `502 Bad Gateway` (nginx)   | neopro-app ne répond pas   | Redémarrer neopro-app                         |
 
 #### 2.3 Vérification des services systemd
 
@@ -123,6 +130,7 @@ Le boîtier est connecté au serveur central via WebSocket. Vous pouvez utiliser
    - ⚠️ `neopro-kiosk` : Mode kiosque (optionnel)
 
 **Si un service est ❌ inactif ou en erreur :**
+
 1. Noter le nom du service
 2. Consulter les logs de ce service (étape 2.2)
 3. Essayer un redémarrage (étape 2.4)
@@ -142,6 +150,7 @@ Le boîtier est connecté au serveur central via WebSocket. Vous pouvez utiliser
 5. Vérifier le statut du service
 
 **Ordre de redémarrage recommandé en cas de problème global :**
+
 1. `neopro-app` (application principale)
 2. `nginx` (serveur web)
 3. `neopro-sync` (synchronisation)
@@ -150,14 +159,15 @@ Le boîtier est connecté au serveur central via WebSocket. Vous pouvez utiliser
 
 Consulter les métriques en temps réel :
 
-| Métrique | Seuil Warning | Seuil Critical | Action si dépassé |
-|----------|---------------|----------------|-------------------|
-| **CPU** | > 70% | > 90% | Identifier processus gourmand via SSH `top` |
-| **Mémoire** | > 80% | > 95% | Vérifier les fuites mémoire, redémarrer services |
-| **Température** | > 65°C | > 80°C | Vérifier ventilation, éteindre temporairement |
-| **Disque** | > 80% | > 95% | Nettoyer les logs, supprimer anciennes vidéos |
+| Métrique        | Seuil Warning | Seuil Critical | Action si dépassé                                |
+| --------------- | ------------- | -------------- | ------------------------------------------------ |
+| **CPU**         | > 70%         | > 90%          | Identifier processus gourmand via SSH `top`      |
+| **Mémoire**     | > 80%         | > 95%          | Vérifier les fuites mémoire, redémarrer services |
+| **Température** | > 65°C        | > 80°C         | Vérifier ventilation, éteindre temporairement    |
+| **Disque**      | > 80%         | > 95%          | Nettoyer les logs, supprimer anciennes vidéos    |
 
 **Si les seuils critiques sont atteints :**
+
 1. Créer une alerte dans le système (voir MODOP-S11-15)
 2. Contacter le client pour intervention rapide
 3. Si possible, redémarrer le boîtier à distance
@@ -199,6 +209,7 @@ ssh pi@neopro.local
 **Si SSH fonctionne** → Le boîtier est allumé et accessible, passer à l'étape 3.3
 
 **Si SSH échoue** :
+
 - Contacter le client pour vérifier que le boîtier est allumé
 - Vérifier que le client est connecté au même réseau
 - Demander au client de redémarrer le boîtier physiquement
@@ -213,6 +224,7 @@ cd /home/pi/neopro
 ```
 
 **Le script vérifie automatiquement :**
+
 - ✅ Services systemd (neopro-app, nginx, etc.)
 - ✅ Ports ouverts (80, 3000, 8080)
 - ✅ Fichiers déployés
@@ -284,13 +296,14 @@ ping -c 5 8.8.8.8
 nslookup google.com
 
 # Test de connexion au serveur central
-curl -I https://neopro-central.onrender.com
+curl -I https://neopro-central-production.up.railway.app
 
 # Vérifier la passerelle
 ip route show default
 ```
 
 **Si pas d'Internet :**
+
 - Vérifier la configuration réseau du Pi
 - Demander au client de vérifier sa box Internet
 - Vérifier les câbles Ethernet
@@ -335,6 +348,7 @@ sudo systemctl restart neopro-app
    - Problème réseau complexe
    - Besoin d'intervention sur le serveur central
 2. **Collecter les informations de diagnostic** :
+
    ```bash
    # Exporter les logs
    ssh pi@neopro.local 'sudo journalctl -u neopro-app -n 200' > logs-app.txt
@@ -344,6 +358,7 @@ sudo systemctl restart neopro-app
    # Exporter le diagnostic
    ssh pi@neopro.local './scripts/diagnose-pi.sh' > diagnostic.txt
    ```
+
 3. **Créer un ticket escaladé** avec :
    - Nom du club et ID du site
    - Description détaillée du problème
@@ -377,23 +392,25 @@ sudo systemctl restart neopro-app
 
 ## 6. TEMPS ESTIMÉS
 
-| Scénario | Temps estimé |
-|----------|--------------|
-| Diagnostic simple (service à redémarrer) | 5 min |
-| Diagnostic complet en ligne | 10-15 min |
-| Diagnostic hors ligne avec SSH | 15-20 min |
-| Diagnostic + escalade | 25-30 min |
+| Scénario                                 | Temps estimé |
+| ---------------------------------------- | ------------ |
+| Diagnostic simple (service à redémarrer) | 5 min        |
+| Diagnostic complet en ligne              | 10-15 min    |
+| Diagnostic hors ligne avec SSH           | 15-20 min    |
+| Diagnostic + escalade                    | 25-30 min    |
 
 ---
 
 ## 7. KPI ET MÉTRIQUES
 
 ### Indicateurs de performance
+
 - **Temps moyen de diagnostic** : < 15 min
 - **Taux de résolution en niveau 1** : > 70%
 - **Taux de résolution sans SSH** : > 50% (via dashboard uniquement)
 
 ### Métriques à suivre
+
 - Nombre de diagnostics effectués par semaine
 - Types de problèmes les plus fréquents
 - Temps de résolution moyen par type de problème
@@ -429,13 +446,13 @@ sudo reboot
 
 ### B. Erreurs courantes et solutions rapides
 
-| Erreur | Solution rapide |
-|--------|-----------------|
-| Port 80 non accessible | `sudo systemctl restart nginx` |
+| Erreur                     | Solution rapide                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| Port 80 non accessible     | `sudo systemctl restart nginx`                                                       |
 | Application ne démarre pas | `cd /home/pi/neopro/server && sudo npm install && sudo systemctl restart neopro-app` |
-| Disque plein | Nettoyer `/home/pi/neopro/logs/` et `/var/log/` |
-| Température > 80°C | Éteindre, vérifier ventilation |
-| Site non enregistré | `cd /home/pi/neopro/sync-agent && sudo npm run register` |
+| Disque plein               | Nettoyer `/home/pi/neopro/logs/` et `/var/log/`                                      |
+| Température > 80°C         | Éteindre, vérifier ventilation                                                       |
+| Site non enregistré        | `cd /home/pi/neopro/sync-agent && sudo npm run register`                             |
 
 ### C. Contacts et escalade
 

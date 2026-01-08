@@ -127,13 +127,20 @@ Une fois configuré, le boîtier est accessible via :
 
 ```
 neopro/
-├── raspberry/                    # Application Raspberry Pi
-│   ├── frontend/                 # Angular (TV/Remote/Login)
-│   ├── server/                   # Serveur Socket.IO local
-│   ├── admin/                    # Interface admin (port 8080)
-│   ├── sync-agent/               # Synchronisation serveur central
+├── raspberry/                    # Application Raspberry Pi (Edge)
+│   ├── src/                      # Angular 20 (TV/Remote/Login)
+│   ├── server/                   # Serveur Socket.IO local (port 3000)
+│   ├── admin/                    # Interface admin locale (port 8080)
+│   ├── sync-agent/               # Agent synchronisation cloud
+│   │   ├── src/
+│   │   │   ├── agent.js          # Point d'entrée WebSocket
+│   │   │   ├── commands/         # Handlers (update_config, deploy_video)
+│   │   │   ├── watchers/         # Video-watcher (surveillance vidéos)
+│   │   │   └── utils/            # Config-merge, version-info
+│   │   └── scripts/              # register-site.js
 │   ├── scripts/                  # Scripts déploiement
-│   │   ├── setup-new-club.sh     # Configuration nouveau club
+│   │   ├── setup-new-club.sh     # Config nouveau club (local)
+│   │   ├── setup-remote-club.sh  # Config nouveau club (remote)
 │   │   ├── build-and-deploy.sh   # Build + déploiement
 │   │   ├── diagnose-pi.sh        # Diagnostic complet
 │   │   ├── backup-club.sh        # Sauvegarde configuration
@@ -143,20 +150,27 @@ neopro/
 │       ├── systemd/              # Services systemd
 │       └── templates/            # Templates configuration JSON
 │
-├── central-server/               # API Backend (Node.js/Express)
+├── central-server/               # API Backend (Node.js/Express/TypeScript)
 │   ├── src/
-│   │   ├── controllers/          # Logique métier
+│   │   ├── controllers/          # Logique métier par domaine
 │   │   ├── routes/               # Routes API REST
-│   │   ├── middleware/           # Auth, validation, rate-limit
-│   │   ├── services/             # Socket.IO, email
-│   │   └── scripts/              # Migrations, seeds
+│   │   ├── middleware/           # Auth JWT, validation Joi, rate-limit, RLS
+│   │   ├── services/             # Socket.IO, email, deployment, metrics
+│   │   ├── handlers/             # Socket.IO event handlers
+│   │   ├── types/                # Interfaces TypeScript
+│   │   ├── config/               # Database, logger, Supabase, FTP
+│   │   └── scripts/              # Migrations, seeds, CLI
 │   └── Dockerfile
 │
-├── central-dashboard/            # Dashboard admin (Angular 17)
+├── central-dashboard/            # Dashboard admin (Angular 20)
 │   └── src/
 │       ├── app/
-│       │   ├── features/         # Sites, Dashboard, Admin
-│       │   └── core/             # Services, guards, models
+│       │   ├── features/         # Sites, Content, Analytics, Users
+│       │   │   └── sites/        # Gestion sites (tabs: État/Contenu/Params/Debug)
+│       │   │       └── components/  # Composants modulaires
+│       │   ├── core/             # Services, guards, interceptors
+│       │   └── shared/           # Composants réutilisables
+│       ├── assets/i18n/          # Traductions (EN/FR/ES)
 │       └── environments/
 │
 ├── server-render/                # Serveur Socket.IO cloud
@@ -166,7 +180,7 @@ neopro/
 ├── k8s/                          # Configuration Kubernetes
 ├── docs/                         # Documentation (180+ fichiers)
 │
-├── render.yaml                   # Déploiement Render.com
+├── render.yaml                   # Déploiement Render.com/Railway
 ├── docker-compose.yml            # Stack développement local
 ├── angular.json                  # Configuration Angular CLI
 └── .env.example                  # Template variables d'environnement
@@ -176,15 +190,16 @@ neopro/
 
 | Composant          | Technologies                                                  |
 | ------------------ | ------------------------------------------------------------- |
-| Frontend Raspberry | Angular 20, Socket.IO client, SCSS                            |
-| Frontend Dashboard | Angular 20, Chart.js, Leaflet, ngx-translate (i18n: EN/FR/ES) |
-| Backend API        | Node.js 20+, Express 4.18, TypeScript strict                  |
-| Base de données    | PostgreSQL 15 (Supabase)                                      |
+| Frontend Raspberry | Angular 20.3, Socket.IO client 4.8, Video.js 8.x, SCSS        |
+| Frontend Dashboard | Angular 20.3, Chart.js 4.5, Leaflet, ngx-translate (EN/FR/ES) |
+| Backend API        | Node.js 20+, Express 4.18, TypeScript 5.9 strict              |
+| Base de données    | PostgreSQL 15 (Supabase) - Pool: 5 connexions                 |
 | Stockage vidéos    | FTP (Hostinger) + Supabase Storage (fallback)                 |
 | WebSocket          | Socket.IO 4.8                                                 |
-| Cache              | Redis (Upstash) - optionnel                                   |
+| Cache              | Redis (Upstash) - optionnel, pour scaling horizontal          |
 | Auth               | JWT HttpOnly cookie + Bearer token + MFA (TOTP)               |
-| Logs               | Winston + Logtail (Better Stack)                              |
+| Logs               | Winston + Logtail (Better Stack) + Correlation ID             |
+| Hébergement        | Railway (API), Hostinger (Dashboard)                          |
 | Tests              | Jest + Supertest (API), Karma (Angular), Playwright (E2E)     |
 
 ---
@@ -287,10 +302,10 @@ Ces vérifications sont automatiquement exécutées en pre-commit via Husky.
 
 ### Cloud
 
-| Service              | Hébergeur | URL                                    |
-| -------------------- | --------- | -------------------------------------- |
-| API (central-server) | Render    | https://neopro-central.onrender.com    |
-| Dashboard admin      | Hostinger | https://neopro-admin.kalonpartners.bzh |
+| Service              | Hébergeur | URL                                              |
+| -------------------- | --------- | ------------------------------------------------ |
+| API (central-server) | Railway   | https://neopro-central-production.up.railway.app |
+| Dashboard admin      | Hostinger | https://neopro-admin.kalonpartners.bzh           |
 
 **Guide complet :** [GUIDE_MISE_EN_PRODUCTION.md](GUIDE_MISE_EN_PRODUCTION.md)
 
@@ -386,23 +401,23 @@ ssh pi@neopro.local 'sudo reboot'
 
 ```bash
 # Vérifier le sync-agent
-ssh pi@neopro.local 'sudo systemctl status neopro-sync'
+ssh pi@neopro.local 'sudo systemctl status neopro-sync-agent'
 
 # Voir les logs
-ssh pi@neopro.local 'sudo journalctl -u neopro-sync -n 50'
+ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -n 50'
 
 # Réenregistrer le site
-ssh pi@neopro.local 'cd /home/pi/neopro/sync-agent && sudo node scripts/register-site.js && sudo systemctl restart neopro-sync'
+ssh pi@neopro.local 'cd /home/pi/neopro/sync-agent && sudo node scripts/register-site.js && sudo systemctl restart neopro-sync-agent'
 ```
 
 ### Services systemd
 
 ```bash
 # Statut des services
-sudo systemctl status neopro-app      # Application principale
-sudo systemctl status neopro-admin    # Interface admin
-sudo systemctl status neopro-sync     # Sync-agent
-sudo systemctl status neopro-kiosk    # Mode kiosk (Chromium)
+sudo systemctl status neopro-app         # Serveur Socket.IO local (port 3000)
+sudo systemctl status neopro-admin       # Interface admin (port 8080)
+sudo systemctl status neopro-sync-agent  # Sync-agent (connexion cloud)
+sudo systemctl status neopro-kiosk       # Mode kiosk (Chromium)
 
 # Redémarrer un service
 sudo systemctl restart neopro-app
@@ -445,10 +460,10 @@ sudo systemctl restart neopro-app
 - **Diagnostic automatique :** `./raspberry/scripts/diagnose-pi.sh`
 - **Documentation :** [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - **Logs application :** `ssh pi@neopro.local 'sudo journalctl -u neopro-app -f'`
-- **Logs sync :** `ssh pi@neopro.local 'sudo journalctl -u neopro-sync -f'`
+- **Logs sync :** `ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -f'`
 
 ---
 
-**Version :** 2.7.0
+**Version :** 2.11.7
 **Licence :** MIT
-**Dernière mise à jour :** 7 janvier 2026
+**Dernière mise à jour :** 8 janvier 2026

@@ -145,7 +145,7 @@ nano raspberry/config/templates/CESSON-configuration.json
   },
   "sync": {
     "enabled": true,
-    "serverUrl": "https://neopro-central.onrender.com",
+    "serverUrl": "https://neopro-central-production.up.railway.app",
     "siteName": "Complexe Sportif CESSON",
     "clubName": "CESSON Handball",
     "location": {
@@ -353,8 +353,8 @@ Si aucun mot de passe n'est configuré : `GG_NEO_25k!`
 
 ### URLs
 
-- **API :** `https://neopro-central.onrender.com`
-- **Dashboard :** `https://neopro-central.onrender.com`
+- **API :** `https://neopro-central-production.up.railway.app`
+- **Dashboard :** `https://neopro-admin.kalonpartners.bzh`
 
 ### Fonctionnalités
 
@@ -626,16 +626,16 @@ sudo journalctl -u neopro-admin -f
 
 **Fichier :** `/etc/systemd/system/neopro-admin.service`
 
-### neopro-sync
+### neopro-sync-agent
 
 **Agent de synchronisation** (connexion serveur central)
 
 ```bash
-sudo systemctl status neopro-sync
-sudo journalctl -u neopro-sync -f
+sudo systemctl status neopro-sync-agent
+sudo journalctl -u neopro-sync-agent -f
 ```
 
-**Fichier :** `/etc/systemd/system/neopro-sync.service`
+**Fichier :** `/etc/systemd/system/neopro-sync-agent.service`
 
 ### nginx
 
@@ -793,6 +793,10 @@ socket.on('site_config_updated', (data) => {
 
 Le serveur vérifie toutes les 30s si les clients répondent aux pings. Si pas de `pong_check` après 90s, la connexion est considérée comme zombie et déconnectée.
 
+**Synchronisation DB/WebSocket :**
+
+Toutes les 2 minutes, le service vérifie et synchronise les statuts entre la base de données et les connexions WebSocket réelles. Si un site est marqué "online" en DB mais n'est plus connecté via WebSocket, il est automatiquement passé en "offline" (détection des connexions zombies).
+
 ### Analytics API (Raspberry Pi)
 
 Le serveur Socket.IO sur le Raspberry Pi expose également une API REST pour les analytics.
@@ -857,7 +861,7 @@ Retourne les statistiques du buffer d'analytics local.
 
 ### API Serveur Central
 
-**Base URL :** `https://neopro-central.onrender.com/api`
+**Base URL :** `https://neopro-central-production.up.railway.app/api`
 
 **Endpoints Authentification :**
 
@@ -911,9 +915,49 @@ GET    /advertiser-analytics/*  - Stats annonceurs
 Auth:       10 req/15min    (anti-bruteforce)
 API:        100 req/min     (standard)
 Monitoring: 300 req/min     (status, metrics polling)
+Logging:    200 req/min     (frontend logs - silently dropped if exceeded)
 Sensitive:  30 req/min      (commands, deployments)
 Upload:     10 req/hour     (video uploads)
 Admin:      200 req/min     (dashboard ops)
+```
+
+**Note** : Les rate limits sont basés sur le `user_id` (et non sur l'IP) en production.
+
+### Services Backend Critiques
+
+| Service           | Fichier                     | Rôle                                        |
+| ----------------- | --------------------------- | ------------------------------------------- |
+| **Socket**        | `socket.service.ts`         | Communication temps réel Pi ↔ Cloud         |
+| **MemoryManager** | `memory-manager.service.ts` | Monitoring heap, cleanup automatique        |
+| **AdminOps**      | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire  |
+| **CronScheduler** | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)         |
+| **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook) |
+| **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready            |
+| **Metrics**       | `metrics.service.ts`        | Export Prometheus                           |
+
+### Gestion Mémoire (Railway Hobby Plan)
+
+Configuration optimisée pour ~256MB heap limit :
+
+```javascript
+// Limites pour éviter les fuites mémoire
+MAX_PENDING_COMMANDS = 100; // Commandes en attente max
+MAX_PONG_ENTRIES = 50; // Entrées pong max
+MAX_JOBS_IN_MEMORY = 100; // Jobs admin ops max
+JOB_MAX_AGE_MS = 3600000; // 1 heure avant cleanup
+
+// Seuils Memory Manager (% heap)
+HEAP_WARNING_THRESHOLD = 88; // Log warning
+HEAP_CRITICAL_THRESHOLD = 93; // Trigger cleanup callbacks
+HEAP_EMERGENCY_THRESHOLD = 97; // Emergency cleanup + GC
+```
+
+**Endpoints Health :**
+
+```
+GET /health    - Santé complète (DB, memory, uptime)
+GET /live      - Liveness probe (process vivant)
+GET /ready     - Readiness probe (prêt pour le trafic)
 ```
 
 ---
@@ -1047,4 +1091,4 @@ Voir **[docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ---
 
-**Dernière mise à jour :** 7 janvier 2026
+**Dernière mise à jour :** 8 janvier 2026

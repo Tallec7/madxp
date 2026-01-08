@@ -40,7 +40,7 @@ Il y a **2 types** de configuration :
   },
   "sync": {
     "enabled": true,
-    "serverUrl": "https://neopro-central.onrender.com",
+    "serverUrl": "https://neopro-central-production.up.railway.app",
     "siteName": "[NOM_DU_SITE]",
     "clubName": "[NOM_COMPLET_DU_CLUB]",
     "location": {
@@ -149,7 +149,7 @@ SITE_ID=uuid-du-site
 SITE_API_KEY=clé-api-secrète
 
 # Serveur central
-CENTRAL_SERVER_URL=https://neopro-central.onrender.com
+CENTRAL_SERVER_URL=https://neopro-central-production.up.railway.app
 
 # Infos du site
 SITE_NAME="Nom du site"

@@ -15,6 +15,7 @@ Surveiller proactivement l'infrastructure Neopro pour identifier et résoudre le
 ## 2. PÉRIMÈTRE
 
 ### Ce MODOP couvre
+
 - **MODOP-O05** : Revue quotidienne dashboard Grafana
 - **MODOP-O06** : Analyse hebdomadaire des métriques Prometheus
 - **MODOP-O07** : Revue mensuelle des audits
@@ -25,6 +26,7 @@ Surveiller proactivement l'infrastructure Neopro pour identifier et résoudre le
 ## 3. MODOP-O05 : REVUE QUOTIDIENNE GRAFANA
 
 ### 3.1 Objectif
+
 Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et identifier les anomalies.
 
 ### 3.2 Accès Grafana
@@ -32,6 +34,7 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 **URL** : `http://localhost:3000` (si Docker local) ou URL Grafana Cloud
 
 **Login** :
+
 - Username : admin
 - Password : [voir documentation interne]
 
@@ -43,13 +46,13 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 
 **Métriques clés à vérifier :**
 
-| Métrique | Valeur normale | Action si anormale |
-|----------|----------------|---------------------|
-| **Sites connectés** | Stable (±5% vs J-1) | Si chute > 10% → Vérifier logs serveur central |
-| **Requêtes HTTP/s** | 50-200 req/s | Si pic anormal → Vérifier logs nginx |
-| **Temps de réponse API** | < 200ms (p95) | Si > 500ms → Vérifier PostgreSQL |
-| **Déploiements en cours** | 0-5 | Si > 10 → Vérifier la queue |
-| **Alertes actives** | 0-2 | Si > 5 → Consulter MODOP-S11-15 |
+| Métrique                  | Valeur normale      | Action si anormale                             |
+| ------------------------- | ------------------- | ---------------------------------------------- |
+| **Sites connectés**       | Stable (±5% vs J-1) | Si chute > 10% → Vérifier logs serveur central |
+| **Requêtes HTTP/s**       | 50-200 req/s        | Si pic anormal → Vérifier logs nginx           |
+| **Temps de réponse API**  | < 200ms (p95)       | Si > 500ms → Vérifier PostgreSQL               |
+| **Déploiements en cours** | 0-5                 | Si > 10 → Vérifier la queue                    |
+| **Alertes actives**       | 0-2                 | Si > 5 → Consulter MODOP-S11-15                |
 
 **Exemple de vue :**
 
@@ -75,6 +78,7 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 ```
 
 **Actions :**
+
 - ✅ Tout vert → Aucune action, noter dans le rapport quotidien
 - ⚠️ Anomalie mineure → Créer une note pour investigation
 - 🚨 Anomalie critique → Intervention immédiate + escalade
@@ -84,6 +88,7 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 **URL** : Grafana → Dashboards → Sites Health
 
 **Vérifier :**
+
 - **Sites hors ligne > 24h** : Contacter le client
 - **CPU > 80% sur plusieurs sites** : Problème potentiel de version logicielle
 - **Température > 75°C** : Ventilation insuffisante, contacter le client
@@ -105,15 +110,15 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 
 **Métriques :**
 
-| Composant | Métrique | Seuil OK | Seuil Warning | Seuil Critical |
-|-----------|----------|----------|---------------|----------------|
-| **PostgreSQL** | Connexions | < 50 | 50-80 | > 80 |
-| **PostgreSQL** | Latence queries | < 10ms | 10-50ms | > 50ms |
-| **Redis** | Mémoire utilisée | < 500MB | 500-800MB | > 800MB |
-| **Redis** | Hit rate | > 90% | 80-90% | < 80% |
-| **WebSocket** | Connexions actives | 40-50 | 30-40 ou 50-60 | < 30 ou > 60 |
-| **CPU serveur** | Utilisation | < 60% | 60-80% | > 80% |
-| **Mémoire serveur** | Utilisation | < 70% | 70-85% | > 85% |
+| Composant           | Métrique           | Seuil OK | Seuil Warning  | Seuil Critical |
+| ------------------- | ------------------ | -------- | -------------- | -------------- |
+| **PostgreSQL**      | Connexions         | < 50     | 50-80          | > 80           |
+| **PostgreSQL**      | Latence queries    | < 10ms   | 10-50ms        | > 50ms         |
+| **Redis**           | Mémoire utilisée   | < 500MB  | 500-800MB      | > 800MB        |
+| **Redis**           | Hit rate           | > 90%    | 80-90%         | < 80%          |
+| **WebSocket**       | Connexions actives | 40-50    | 30-40 ou 50-60 | < 30 ou > 60   |
+| **CPU serveur**     | Utilisation        | < 60%    | 60-80%         | > 80%          |
+| **Mémoire serveur** | Utilisation        | < 70%    | 70-85%         | > 85%          |
 
 ### 3.4 Rapport quotidien (template)
 
@@ -121,11 +126,13 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 # Rapport Monitoring Quotidien - [Date]
 
 ## Synthèse
+
 - ✅ Statut global : OK / ⚠️ Surveillance / 🚨 Incident
 - Sites en ligne : 47/50 (94%)
 - Alertes actives : 1 warning, 0 critical
 
 ## Anomalies détectées
+
 1. **CPU élevé sur CESSON**
    - Valeur : 75%
    - Seuil warning : 70%
@@ -141,12 +148,14 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
    - Action : Email envoyé au client (20/01)
 
 ## Infrastructure centrale
+
 - PostgreSQL : ✅ 35 connexions, latence 8ms
 - Redis : ✅ 420MB, hit rate 93%
 - WebSocket : ✅ 47 connexions actives
 - Serveur : ✅ CPU 45%, Mémoire 60%
 
 ## Actions planifiées
+
 - [ ] Nettoyage logs RENNES (avant 25/01)
 - [ ] Relance client NANTES (si pas de réponse dans 2j)
 - [ ] Surveillance CESSON CPU (si > 80% → escalade)
@@ -159,6 +168,7 @@ Rédigé par : [Votre nom]
 ## 4. MODOP-O06 : ANALYSE HEBDOMADAIRE PROMETHEUS
 
 ### 4.1 Objectif
+
 Analyser les tendances sur 7 jours pour identifier les problèmes récurrents et optimiser les ressources.
 
 ### 4.2 Métriques clés (30 min)
@@ -174,6 +184,7 @@ sum by (path) (
 ```
 
 **Top 5 endpoints les plus sollicités :**
+
 1. `/api/sites/metrics` : 45%
 2. `/api/deployments/status` : 20%
 3. `/api/videos` : 15%
@@ -181,6 +192,7 @@ sum by (path) (
 5. Autres : 10%
 
 **Actions :**
+
 - Si un endpoint > 50% → Optimiser ou mettre en cache
 - Si latence > 500ms sur endpoint critique → Investiguer
 
@@ -195,15 +207,18 @@ sum by (status) (
 ```
 
 **Exemple :**
+
 - Success : 145 (95%)
 - Failed : 8 (5%)
 
 **Analyse des échecs :**
+
 - 5 échecs : Timeout réseau (sites hors ligne)
 - 2 échecs : Fichier corrompu
 - 1 échec : Espace disque insuffisant
 
 **Actions :**
+
 - Améliorer la gestion des sites hors ligne (queue)
 - Ajouter validation fichier avant déploiement
 - Alerter proactivement sur disque < 15%
@@ -219,11 +234,13 @@ sum by (type) (
 ```
 
 **Top 3 types d'alertes :**
+
 1. CPU élevé : 25 alertes (10 sites différents)
 2. Disque presque plein : 12 alertes (8 sites)
 3. Site hors ligne : 8 alertes (5 sites)
 
 **Actions :**
+
 - CPU : Optimiser l'application (profiling)
 - Disque : Activer rotation automatique des logs
 - Hors ligne : Améliorer la connectivité (4G backup ?)
@@ -235,20 +252,22 @@ sum by (type) (
 
 ## KPIs de la semaine
 
-| KPI | Valeur | Objectif | Statut |
-|-----|--------|----------|--------|
-| Disponibilité moyenne | 98.5% | > 99% | ⚠️ |
-| Temps de réponse API (p95) | 195ms | < 200ms | ✅ |
-| Taux de succès déploiements | 95% | > 95% | ✅ |
-| Sites en ligne | 94% (avg) | > 95% | ⚠️ |
+| KPI                         | Valeur    | Objectif | Statut |
+| --------------------------- | --------- | -------- | ------ |
+| Disponibilité moyenne       | 98.5%     | > 99%    | ⚠️     |
+| Temps de réponse API (p95)  | 195ms     | < 200ms  | ✅     |
+| Taux de succès déploiements | 95%       | > 95%    | ✅     |
+| Sites en ligne              | 94% (avg) | > 95%    | ⚠️     |
 
 ## Tendances (vs semaine précédente)
+
 - Sites connectés : 47 → 48 (+1) ✅
 - Requêtes HTTP/jour : 1.2M → 1.4M (+16%) ✅
 - Déploiements/semaine : 120 → 145 (+20%) ✅
 - Alertes actives : 8 → 12 (+50%) ⚠️
 
 ## Incidents notables
+
 1. **21/01 14:30 - Serveur central ralenti (30 min)**
    - Cause : Pic de connexions simultanées (match national)
    - Impact : Latence API 500ms → 2s
@@ -262,6 +281,7 @@ sum by (type) (
    - Prévention : Aucune (dépend du client)
 
 ## Top actions d'optimisation
+
 1. Optimiser endpoint `/api/sites/metrics` (45% du trafic)
 2. Mettre en place rotation automatique des logs
 3. Ajouter monitoring 4G backup pour sites critiques
@@ -274,6 +294,7 @@ Rédigé par : [Votre nom]
 ## 5. MODOP-O07 : REVUE MENSUELLE DES AUDITS
 
 ### 5.1 Objectif
+
 Analyser les audits système pour identifier les comportements anormaux, les patterns de sécurité, et les opportunités d'amélioration.
 
 ### 5.2 Requêtes d'audit (30 min)
@@ -297,13 +318,13 @@ ORDER BY count DESC;
 
 **Exemple de résultats :**
 
-| Action | Count | Unique Users |
-|--------|-------|--------------|
-| VIDEO_DEPLOYED | 145 | 5 |
-| USER_LOGIN | 120 | 8 |
-| CONFIG_PUSHED | 45 | 3 |
-| SITE_CREATED | 3 | 2 |
-| UPDATE_DEPLOYED | 2 | 1 |
+| Action          | Count | Unique Users |
+| --------------- | ----- | ------------ |
+| VIDEO_DEPLOYED  | 145   | 5            |
+| USER_LOGIN      | 120   | 8            |
+| CONFIG_PUSHED   | 45    | 3            |
+| SITE_CREATED    | 3     | 2            |
+| UPDATE_DEPLOYED | 2     | 1            |
 
 **Analyses :**
 
@@ -323,6 +344,7 @@ LIMIT 10;
 ```
 
 **Identifier :**
+
 - Comptes inactifs > 30 jours → Désactiver
 - Activité anormale (> 500 actions/jour) → Investiguer
 - Nouveaux utilisateurs → Vérifier formation
@@ -344,6 +366,7 @@ ORDER BY deployments DESC;
 ```
 
 **Identifier :**
+
 - Taux d'échec > 10% → Formation requise
 - Utilisateur avec 0 déploiement mais accès admin → Revoir permissions
 
@@ -362,6 +385,7 @@ ORDER BY created_at DESC;
 ```
 
 **Vérifier :**
+
 - Tous les sites créés sont bien en ligne
 - Documentation de chaque nouveau site
 - Formation client effectuée
@@ -372,32 +396,38 @@ ORDER BY created_at DESC;
 # Rapport Audit Mensuel - [Mois Année]
 
 ## Synthèse
+
 - Actions auditées : 315
 - Utilisateurs actifs : 8
 - Nouveaux sites : 3
 - Incidents de sécurité : 0
 
 ## Activité par type
+
 1. VIDEO_DEPLOYED : 145 (46%)
 2. USER_LOGIN : 120 (38%)
 3. CONFIG_PUSHED : 45 (14%)
 4. Autres : 5 (2%)
 
 ## Utilisateurs les plus actifs
+
 1. admin@neopro.fr : 150 actions (48%)
 2. ops@neopro.fr : 80 actions (25%)
 3. support@neopro.fr : 60 actions (19%)
 
 ## Nouveaux sites créés
+
 - CESSON Handball (05/01/2025)
 - RENNES Volley (12/01/2025)
 - NANTES Basket (20/01/2025)
 
 ## Anomalies détectées
+
 - Aucune anomalie de sécurité
 - Compte "dev@neopro.fr" inactif depuis 45 jours → Désactivation proposée
 
 ## Recommandations
+
 1. Former support@neopro.fr (taux d'échec 15% vs 5% pour ops)
 2. Documenter les 3 nouveaux sites
 3. Désactiver le compte dev@neopro.fr
@@ -411,6 +441,7 @@ Rédigé par : [Votre nom]
 ## 6. MODOP-O08 : VÉRIFICATION SANTÉ DÉPENDANCES
 
 ### 6.1 Objectif
+
 Vérifier quotidiennement que toutes les dépendances critiques (PostgreSQL, Redis, WebSocket) fonctionnent correctement.
 
 ### 6.2 PostgreSQL (5 min)
@@ -418,7 +449,7 @@ Vérifier quotidiennement que toutes les dépendances critiques (PostgreSQL, Red
 **Endpoint health :**
 
 ```bash
-curl https://neopro-central.onrender.com/health
+curl https://neopro-central-production.up.railway.app/health
 ```
 
 **Réponse attendue :**
@@ -462,6 +493,7 @@ SELECT pg_size_pretty(pg_database_size('neopro'));
 ```
 
 **Alertes :**
+
 - Connexions > 80 → Vérifier fuites de connexions
 - Query > 5s → Optimiser la requête
 - Taille DB > 10GB → Planifier archivage
@@ -503,7 +535,7 @@ DBSIZE
 
 ```bash
 # Vérifier les connexions WebSocket
-curl https://neopro-central.onrender.com/health
+curl https://neopro-central-production.up.railway.app/health
 
 # Devrait inclure :
 {
@@ -545,21 +577,22 @@ curl https://neopro-central.onrender.com/health
 
 ### Matrice de décision
 
-| Anomalie | Sévérité | Action | Délai |
-|----------|----------|--------|-------|
-| Site hors ligne > 24h | 🟡 Minor | Email client | 48h |
-| CPU > 80% | 🟡 Minor | Surveillance | 24h |
-| Disque > 90% | 🟠 Major | Nettoyage immédiat | 4h |
-| Serveur central CPU > 80% | 🔴 Critical | Investigation + escalade | 1h |
-| PostgreSQL down | 🔴 Critical | Intervention immédiate | Immédiat |
-| Redis down | 🔴 Critical | Intervention immédiate | Immédiat |
-| > 10 sites hors ligne | 🔴 Critical | Vérifier serveur central | Immédiat |
+| Anomalie                  | Sévérité    | Action                   | Délai    |
+| ------------------------- | ----------- | ------------------------ | -------- |
+| Site hors ligne > 24h     | 🟡 Minor    | Email client             | 48h      |
+| CPU > 80%                 | 🟡 Minor    | Surveillance             | 24h      |
+| Disque > 90%              | 🟠 Major    | Nettoyage immédiat       | 4h       |
+| Serveur central CPU > 80% | 🔴 Critical | Investigation + escalade | 1h       |
+| PostgreSQL down           | 🔴 Critical | Intervention immédiate   | Immédiat |
+| Redis down                | 🔴 Critical | Intervention immédiate   | Immédiat |
+| > 10 sites hors ligne     | 🔴 Critical | Vérifier serveur central | Immédiat |
 
 ---
 
 ## 8. KPI ET MÉTRIQUES
 
 ### Objectifs de monitoring
+
 - **Temps de détection anomalie** : < 10 min
 - **Temps de résolution incident mineur** : < 4h
 - **Temps de résolution incident majeur** : < 1h

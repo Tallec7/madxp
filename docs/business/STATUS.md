@@ -30,17 +30,17 @@ NEOPRO est une plateforme **complète et fonctionnelle** de gestion de contenu v
 
 ## 📈 MÉTRIQUES CLÉS
 
-| Indicateur                    | Valeur       | Statut          |
-| ----------------------------- | ------------ | --------------- |
-| **Conformité Business Plan**  | 140%         | 🟢 Dépassé      |
-| **Fonctionnalités Core**      | 10/10        | 🟢 Complet      |
-| **Fonctionnalités Analytics** | 10/10        | 🟢 Complet      |
-| **Overlay Multi-Sport**       | 88/100       | 🟢 Excellent    |
-| **Documentation**             | 9.5/10       | 🟢 Excellente   |
-| **Tests Backend**             | 93% coverage | 🟢 Bon          |
-| **Sécurité**                  | 9.5/10       | 🟢 Renforcée    |
-| **Qualité Code**              | 8/10         | 🟢 Bon          |
-| **Mode Offline**              | 100%         | 🟢 Autonome     |
+| Indicateur                    | Valeur       | Statut        |
+| ----------------------------- | ------------ | ------------- |
+| **Conformité Business Plan**  | 140%         | 🟢 Dépassé    |
+| **Fonctionnalités Core**      | 10/10        | 🟢 Complet    |
+| **Fonctionnalités Analytics** | 10/10        | 🟢 Complet    |
+| **Overlay Multi-Sport**       | 88/100       | 🟢 Excellent  |
+| **Documentation**             | 9.5/10       | 🟢 Excellente |
+| **Tests Backend**             | 93% coverage | 🟢 Bon        |
+| **Sécurité**                  | 9.5/10       | 🟢 Renforcée  |
+| **Qualité Code**              | 8/10         | 🟢 Bon        |
+| **Mode Offline**              | 100%         | 🟢 Autonome   |
 
 ---
 
@@ -345,26 +345,31 @@ Renommage sémantique complet pour vocabulaire métier français :
 **Architecture Multi-tenant** permettant différents niveaux d'accès :
 
 **Nouveaux Rôles Utilisateurs** :
+
 - ✅ `sponsor` - Accès portail sponsor uniquement
 - ✅ `agency` - Accès portail agence uniquement
 
 **Portail Sponsor** (`/sponsor-portal`) :
+
 - ✅ Dashboard dédié avec KPIs personnalisés
 - ✅ Liste des vidéos déployées
 - ✅ Sites de diffusion
 - ✅ Statistiques d'impressions
 
 **Portail Agence** (`/agency-portal`) :
+
 - ✅ Dashboard avec vue d'ensemble des clubs gérés
 - ✅ Statut temps réel (online/offline)
 - ✅ Alertes consolidées
 - ✅ Statistiques agrégées
 
 **Administration Agences** (`/admin/agencies`) :
+
 - ✅ CRUD complet agences
 - ✅ Association sites ↔ agences
 
 **Amélioration Admin Local Raspberry** :
+
 - ✅ Upload avec progression réelle (%)
 - ✅ Miniatures vidéos dans bibliothèque
 - ✅ Prévisualisation avant upload
@@ -642,22 +647,15 @@ Total: ~50,000 lignes de code
 ### ✅ Décembre 2025 (Sprint COMPLET)
 
 **Semaine 1-2** :
+
 1. ✅ Rapport PDF Club - **TERMINÉ 15 Déc**
 2. ✅ Estimation d'audience UI - **TERMINÉ 15 Déc**
 3. ✅ Score en live UI - **TERMINÉ 15 Déc**
 4. ✅ Télécommande v2 - **TERMINÉ 15 Déc**
 
-**Semaine 3-4** :
-5. ✅ Multi-tenant Portals - **TERMINÉ 26 Déc**
-6. ✅ Overlay Local System - **TERMINÉ 28 Déc**
-7. ✅ Migration Advertiser - **TERMINÉ 29 Déc**
-8. ✅ Overlay V2 Multi-Sport - **TERMINÉ 30 Déc**
-9. ✅ Socket.IO Offline - **TERMINÉ 30 Déc**
+**Semaine 3-4** : 5. ✅ Multi-tenant Portals - **TERMINÉ 26 Déc** 6. ✅ Overlay Local System - **TERMINÉ 28 Déc** 7. ✅ Migration Advertiser - **TERMINÉ 29 Déc** 8. ✅ Overlay V2 Multi-Sport - **TERMINÉ 30 Déc** 9. ✅ Socket.IO Offline - **TERMINÉ 30 Déc**
 
-**P1 Janvier 2026 (implémenté en avance)** :
-10. ✅ Objectifs & Alertes Clubs - **TERMINÉ 30 Déc**
-11. ✅ Programmation Playlists - **TERMINÉ 30 Déc**
-12. ✅ Cron Scheduler Service - **TERMINÉ 30 Déc**
+**P1 Janvier 2026 (implémenté en avance)** : 10. ✅ Objectifs & Alertes Clubs - **TERMINÉ 30 Déc** 11. ✅ Programmation Playlists - **TERMINÉ 30 Déc** 12. ✅ Cron Scheduler Service - **TERMINÉ 30 Déc**
 
 ### Janvier 2026 (Sprint révisé)
 
@@ -736,8 +734,8 @@ Total: ~50,000 lignes de code
 
 ### Déploiements
 
-- **Central Server** : https://neopro-central.onrender.com
-- **Central Dashboard** : https://neopro-central.onrender.com (static)
+- **Central Server** : https://neopro-central-production.up.railway.app
+- **Central Dashboard** : https://neopro-central-production.up.railway.app (static)
 - **Database** : Supabase PostgreSQL (Europe West)
 
 ### Documentation

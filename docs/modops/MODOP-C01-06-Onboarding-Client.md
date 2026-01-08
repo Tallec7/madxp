@@ -15,6 +15,7 @@ Accompagner un nouveau client dans l'installation et la configuration complète 
 ## 2. PÉRIMÈTRE
 
 ### Ce MODOP couvre
+
 - **MODOP-C01** : Questionnaire de collecte d'informations client
 - **MODOP-C02** : Installation à distance via `setup-remote-club.sh` (méthode recommandée)
 - **MODOP-C03** : Installation locale pour développement via `setup-new-club.sh`
@@ -23,6 +24,7 @@ Accompagner un nouveau client dans l'installation et la configuration complète 
 - **MODOP-C06** : Tests de validation post-installation (checklist)
 
 ### Prérequis matériels
+
 - Raspberry Pi 4 (4GB RAM minimum recommandé)
 - Carte microSD 32GB minimum (classe 10 ou UHS-I)
 - Alimentation officielle Raspberry Pi (5V 3A USB-C)
@@ -62,6 +64,7 @@ TEMPS TOTAL (méthode locale)  : 45-55 minutes
 ## 4. MODOP-C01 : COLLECTE D'INFORMATIONS CLIENT
 
 ### 4.1 Objectif
+
 Collecter toutes les informations nécessaires avant l'installation pour éviter les allers-retours.
 
 ### 4.2 Questionnaire de collecte
@@ -70,51 +73,51 @@ Collecter toutes les informations nécessaires avant l'installation pour éviter
 
 #### Informations Générales
 
-| Champ | Description | Exemple | Obligatoire |
-|-------|-------------|---------|-------------|
-| **Nom du club** | Identifiant court (majuscules, sans espaces) | CESSON, RENNES, NANTES | ✅ |
-| **Nom complet** | Nom officiel du club | CESSON Handball | ✅ |
-| **Nom du site** | Nom du lieu d'installation | Complexe Sportif Jean-Weille | ✅ |
-| **Ville** | Ville d'implantation | Cesson-Sévigné | ✅ |
-| **Région** | Région (défaut: Bretagne) | Bretagne | ⚠️ |
-| **Pays** | Pays (défaut: France) | France | ⚠️ |
+| Champ           | Description                                  | Exemple                      | Obligatoire |
+| --------------- | -------------------------------------------- | ---------------------------- | ----------- |
+| **Nom du club** | Identifiant court (majuscules, sans espaces) | CESSON, RENNES, NANTES       | ✅          |
+| **Nom complet** | Nom officiel du club                         | CESSON Handball              | ✅          |
+| **Nom du site** | Nom du lieu d'installation                   | Complexe Sportif Jean-Weille | ✅          |
+| **Ville**       | Ville d'implantation                         | Cesson-Sévigné               | ✅          |
+| **Région**      | Région (défaut: Bretagne)                    | Bretagne                     | ⚠️          |
+| **Pays**        | Pays (défaut: France)                        | France                       | ⚠️          |
 
 #### Sports et activités
 
-| Champ | Description | Exemple | Obligatoire |
-|-------|-------------|---------|-------------|
-| **Sports** | Liste séparée par virgules | handball, basketball, futsal | ✅ |
+| Champ      | Description                | Exemple                      | Obligatoire |
+| ---------- | -------------------------- | ---------------------------- | ----------- |
+| **Sports** | Liste séparée par virgules | handball, basketball, futsal | ✅          |
 
 #### Contact
 
-| Champ | Description | Exemple | Obligatoire |
-|-------|-------------|---------|-------------|
-| **Email** | Email de contact principal | contact@cessonhandball.fr | ✅ |
-| **Téléphone** | Numéro de téléphone | +33 2 99 XX XX XX | ⚠️ |
+| Champ         | Description                | Exemple                   | Obligatoire |
+| ------------- | -------------------------- | ------------------------- | ----------- |
+| **Email**     | Email de contact principal | contact@cessonhandball.fr | ✅          |
+| **Téléphone** | Numéro de téléphone        | +33 2 99 XX XX XX         | ⚠️          |
 
 #### Sécurité
 
-| Champ | Description | Exemple | Obligatoire |
-|-------|-------------|---------|-------------|
-| **Mot de passe auth** | Mot de passe pour accéder à l'interface (≥12 caractères) | MySecurePass2025! | ✅ |
-| **Mot de passe WiFi** | Mot de passe du hotspot WiFi (≥8 caractères) | WiFiNeopro2025 | ✅ |
+| Champ                 | Description                                              | Exemple           | Obligatoire |
+| --------------------- | -------------------------------------------------------- | ----------------- | ----------- |
+| **Mot de passe auth** | Mot de passe pour accéder à l'interface (≥12 caractères) | MySecurePass2025! | ✅          |
+| **Mot de passe WiFi** | Mot de passe du hotspot WiFi (≥8 caractères)             | WiFiNeopro2025    | ✅          |
 
 #### Réseau
 
-| Champ | Description | Exemple | Obligatoire |
-|-------|-------------|---------|-------------|
-| **Type de connexion** | WiFi Client OU Ethernet | Ethernet | ✅ |
-| **SSID WiFi** (si WiFi client) | Nom du réseau WiFi sur site | BOX-CLUB-WIFI | ⚠️ |
-| **Mot de passe WiFi** (si WiFi client) | Mot de passe du réseau WiFi | password123 | ⚠️ |
-| **IP fixe souhaitée** | Laisser vide pour DHCP | (vide) ou 192.168.1.100 | ❌ |
+| Champ                                  | Description                 | Exemple                 | Obligatoire |
+| -------------------------------------- | --------------------------- | ----------------------- | ----------- |
+| **Type de connexion**                  | WiFi Client OU Ethernet     | Ethernet                | ✅          |
+| **SSID WiFi** (si WiFi client)         | Nom du réseau WiFi sur site | BOX-CLUB-WIFI           | ⚠️          |
+| **Mot de passe WiFi** (si WiFi client) | Mot de passe du réseau WiFi | password123             | ⚠️          |
+| **IP fixe souhaitée**                  | Laisser vide pour DHCP      | (vide) ou 192.168.1.100 | ❌          |
 
 #### Serveur Central
 
-| Champ | Description | Exemple | Obligatoire |
-|-------|-------------|---------|-------------|
-| **Connexion centrale** | Connexion au dashboard central ? | Oui / Non | ✅ |
-| **Email admin** (si Oui) | Email du compte admin central | admin@neopro.fr | ⚠️ |
-| **Mot de passe admin** (si Oui) | Mot de passe du compte admin | AdminPass2025 | ⚠️ |
+| Champ                           | Description                      | Exemple         | Obligatoire |
+| ------------------------------- | -------------------------------- | --------------- | ----------- |
+| **Connexion centrale**          | Connexion au dashboard central ? | Oui / Non       | ✅          |
+| **Email admin** (si Oui)        | Email du compte admin central    | admin@neopro.fr | ⚠️          |
+| **Mot de passe admin** (si Oui) | Mot de passe du compte admin     | AdminPass2025   | ⚠️          |
 
 ### 4.3 Validation des informations
 
@@ -158,6 +161,7 @@ MOTS DE PASSE (à communiquer au client de manière sécurisée)
 ### 5.1 Pourquoi la méthode Remote ?
 
 ✅ **Avantages :**
+
 - Pas de dépendance au dossier Neopro local
 - Installation depuis n'importe quel ordinateur
 - Toujours à jour (dernière release GitHub)
@@ -165,17 +169,20 @@ MOTS DE PASSE (à communiquer au client de manière sécurisée)
 - Traçabilité de la version installée
 
 ❌ **Inconvénients :**
+
 - Nécessite une connexion Internet
 - Ne permet pas de tester des modifications locales
 
 ### 5.2 Prérequis
 
 **Sur votre ordinateur (Mac, Linux, Windows WSL) :**
+
 - Connexion Internet
 - SSH installé
 - Accès au réseau du Raspberry Pi
 
 **Sur le Raspberry Pi :**
+
 - Raspberry Pi OS installé
 - Connexion Internet
 - SSH activé
@@ -232,6 +239,7 @@ ssh pi@raspberrypi.local 'curl -sSL https://tallec7.github.io/neopro/install/set
 ```
 
 **Remplacer :**
+
 - `CLUB_NAME` : Nom du club (ex: CESSON)
 - `WIFI_PASSWORD` : Mot de passe du hotspot WiFi (≥8 caractères)
 
@@ -242,6 +250,7 @@ ssh pi@raspberrypi.local 'curl -sSL https://tallec7.github.io/neopro/install/set
 ```
 
 **Ce script va :**
+
 1. Mettre à jour le système
 2. Installer les dépendances (Node.js, nginx, hostapd, etc.)
 3. Configurer le hotspot WiFi `NEOPRO-CESSON`
@@ -360,12 +369,14 @@ ssh pi@neopro.local 'cat /home/pi/neopro/VERSION'
 ### 6.1 Quand utiliser cette méthode ?
 
 ✅ **Utilisez cette méthode si :**
+
 - Vous développez des fonctionnalités en local
 - Vous testez des modifications avant de les déployer
 - Vous n'avez pas accès à Internet pour télécharger depuis GitHub
 - Vous voulez déployer une version non-release
 
 ❌ **N'utilisez PAS cette méthode si :**
+
 - Vous installez un site en production
 - Vous n'avez pas le dossier Neopro complet sur votre machine
 - Vous n'avez pas les dépendances (Node.js, Angular CLI, etc.)
@@ -373,6 +384,7 @@ ssh pi@neopro.local 'cat /home/pi/neopro/VERSION'
 ### 6.2 Prérequis
 
 **Sur votre ordinateur :**
+
 - Dossier Neopro complet cloné
 - Node.js 20+ et npm
 - Angular CLI : `npm install -g @angular/cli`
@@ -389,6 +401,7 @@ cd /path/to/neopro
 ```
 
 **Le script va :**
+
 1. Collecter les informations (même questionnaire que C02)
 2. Builder l'application Angular localement (⏱️ 5-10 min)
 3. Créer l'archive de déploiement
@@ -399,12 +412,12 @@ cd /path/to/neopro
 
 ### 6.4 Différences avec la méthode Remote
 
-| Critère | Remote | Local |
-|---------|--------|-------|
-| **Source** | GitHub Releases | Build local |
-| **Version** | Release taggée | Branche courante |
-| **Temps** | 2-5 min | 30-40 min |
-| **Dépendances** | Aucune | Dossier Neopro complet |
+| Critère         | Remote          | Local                  |
+| --------------- | --------------- | ---------------------- |
+| **Source**      | GitHub Releases | Build local            |
+| **Version**     | Release taggée  | Branche courante       |
+| **Temps**       | 2-5 min         | 30-40 min              |
+| **Dépendances** | Aucune          | Dossier Neopro complet |
 
 ---
 
@@ -510,6 +523,7 @@ sudo journalctl -u neopro-sync -f
 ```
 
 **Rechercher dans les logs :**
+
 ```
 ✓ Site registered successfully
 ✓ Connected to central server
@@ -518,15 +532,16 @@ sudo journalctl -u neopro-sync -f
 
 ### 8.4 Vérification sur le dashboard central
 
-1. Se connecter à https://neopro-central.onrender.com
+1. Se connecter à https://neopro-central-production.up.railway.app
 2. Menu **Sites** → **Liste des sites**
 3. Chercher le club (ex: CESSON)
 4. Vérifier le statut : 🟢 **En ligne**
 
 **Si le site n'apparaît pas :**
+
 - Vérifier les logs du sync-agent (étape 8.3)
 - Vérifier que le Pi a accès à Internet : `ping 8.8.8.8`
-- Vérifier que le serveur central est accessible : `curl -I https://neopro-central.onrender.com`
+- Vérifier que le serveur central est accessible : `curl -I https://neopro-central-production.up.railway.app`
 
 ### 8.5 Vérification des clés API
 
@@ -538,7 +553,7 @@ cat /etc/neopro/site.conf
 # SITE_ID=uuid-du-site
 # SITE_NAME=CESSON Handball
 # API_KEY=clé-api-générée
-# CENTRAL_SERVER_URL=https://neopro-central.onrender.com
+# CENTRAL_SERVER_URL=https://neopro-central-production.up.railway.app
 ```
 
 **⚠️ Ne jamais partager ces clés API avec des tiers**
@@ -573,15 +588,16 @@ ssh pi@neopro.local 'sudo systemctl status neopro-app neopro-admin nginx hostapd
 
 **Tester chaque interface depuis un navigateur :**
 
-| URL | Page | Test | Résultat attendu |
-|-----|------|------|------------------|
-| `http://neopro.local/` | Accueil | Accéder à l'URL | Redirection vers `/login` |
-| `http://neopro.local/login` | Login | Entrer le mot de passe configuré | Connexion réussie, redirection vers `/remote` |
-| `http://neopro.local/remote` | Télécommande | Vérifier l'interface | Interface de contrôle affichée |
-| `http://neopro.local/tv` | Mode TV | Ouvrir sur un écran | Mode plein écran, affichage vidéos |
-| `http://neopro.local:8080` | Admin | Accéder à l'interface admin | Dashboard admin affiché |
+| URL                          | Page         | Test                             | Résultat attendu                              |
+| ---------------------------- | ------------ | -------------------------------- | --------------------------------------------- |
+| `http://neopro.local/`       | Accueil      | Accéder à l'URL                  | Redirection vers `/login`                     |
+| `http://neopro.local/login`  | Login        | Entrer le mot de passe configuré | Connexion réussie, redirection vers `/remote` |
+| `http://neopro.local/remote` | Télécommande | Vérifier l'interface             | Interface de contrôle affichée                |
+| `http://neopro.local/tv`     | Mode TV      | Ouvrir sur un écran              | Mode plein écran, affichage vidéos            |
+| `http://neopro.local:8080`   | Admin        | Accéder à l'interface admin      | Dashboard admin affiché                       |
 
 **Validation de l'authentification :**
+
 - [ ] Le mot de passe configuré fonctionne
 - [ ] Un mauvais mot de passe est rejeté
 - [ ] La session reste active pendant 8 heures (défaut)
@@ -590,11 +606,12 @@ ssh pi@neopro.local 'sudo systemctl status neopro-app neopro-admin nginx hostapd
 
 **Si le serveur central est configuré :**
 
-1. Se connecter à https://neopro-central.onrender.com
+1. Se connecter à https://neopro-central-production.up.railway.app
 2. Menu **Sites** → **Liste des sites**
 3. Trouver le club (ex: CESSON)
 
 **Vérifier :**
+
 - [ ] Le site apparaît dans la liste
 - [ ] Statut : 🟢 **Connecté**
 - [ ] Les métriques système sont affichées (CPU, mémoire, température)
@@ -608,6 +625,7 @@ ssh pi@neopro.local './scripts/diagnose-pi.sh'
 ```
 
 **Vérifier que tous les tests passent :**
+
 - [ ] Services systemd : ✅
 - [ ] Ports réseau : ✅
 - [ ] Fichiers et répertoires : ✅
@@ -617,6 +635,7 @@ ssh pi@neopro.local './scripts/diagnose-pi.sh'
 - [ ] Tests HTTP : ✅
 
 **Si un test échoue :**
+
 - Consulter la sortie détaillée du script
 - Suivre les recommandations affichées
 - Utiliser MODOP-S04-05 pour diagnostic approfondi
@@ -634,6 +653,7 @@ ssh pi@neopro.local './scripts/diagnose-pi.sh'
 7. Cliquer sur **Déployer**
 
 **Vérifier :**
+
 - [ ] Le dashboard affiche "En cours de déploiement"
 - [ ] La progression passe de 0% à 100%
 - [ ] Le statut final est "Déployé"
@@ -653,6 +673,7 @@ df -h
 ```
 
 **Valeurs normales :**
+
 - **Température** : < 60°C au repos
 - **CPU** : < 20% au repos
 - **Mémoire** : < 50% utilisée
@@ -745,7 +766,7 @@ SIGNATURE CLIENT (optionnel) : _______________
   Gérer les vidéos, voir les logs, redémarrer les services
 
 ☁️ DASHBOARD CENTRAL
-  URL : https://neopro-central.onrender.com
+  URL : https://neopro-central-production.up.railway.app
   Email : admin@neopro.fr
   Déployer des vidéos à distance
 
@@ -762,6 +783,7 @@ SIGNATURE CLIENT (optionnel) : _______________
 ### 10.2 Formation rapide (10 min)
 
 **Montrer au client comment :**
+
 1. Se connecter au WiFi `NEOPRO-[CLUB]`
 2. Accéder à l'interface de télécommande `/remote`
 3. Démarrer/arrêter les vidéos
@@ -786,6 +808,7 @@ SIGNATURE CLIENT (optionnel) : _______________
 **Cause** : Aucune release GitHub n'existe
 
 **Solution** :
+
 1. Vérifier qu'une release existe : https://github.com/Tallec7/neopro/releases
 2. Si aucune release, utiliser la méthode locale (MODOP-C03)
 3. Ou créer une release : `git tag v1.0.0 && git push origin v1.0.0`
@@ -795,6 +818,7 @@ SIGNATURE CLIENT (optionnel) : _______________
 **Cause** : Clé SSH a changé ou Pi non accessible
 
 **Solution** :
+
 ```bash
 # Réinitialiser la clé SSH
 ssh-keygen -R neopro.local
@@ -807,11 +831,13 @@ ssh pi@192.168.4.1
 ### Problème 3 : Service neopro-app ne démarre pas
 
 **Diagnostic** :
+
 ```bash
 ssh pi@neopro.local 'sudo journalctl -u neopro-app -n 50'
 ```
 
 **Solutions courantes** :
+
 - **MODULE_NOT_FOUND** : `cd /home/pi/neopro/server && sudo npm install`
 - **EADDRINUSE** : `sudo lsof -ti:3000 | xargs kill -9 && sudo systemctl restart neopro-app`
 - **Permission denied** : `sudo chown -R pi:pi /home/pi/neopro`
@@ -819,45 +845,49 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-app -n 50'
 ### Problème 4 : Le site n'apparaît pas sur le dashboard central
 
 **Vérifications** :
+
 ```bash
 # Connexion Internet
 ssh pi@neopro.local 'ping -c 3 8.8.8.8'
 
 # Serveur central accessible
-ssh pi@neopro.local 'curl -I https://neopro-central.onrender.com'
+ssh pi@neopro.local 'curl -I https://neopro-central-production.up.railway.app'
 
 # Logs du sync-agent
 ssh pi@neopro.local 'sudo journalctl -u neopro-sync -f'
 ```
 
 **Si les logs montrent "401 Unauthorized"** :
+
 - Réenregistrer le site (MODOP-C05, méthode manuelle)
 
 ---
 
 ## 12. TEMPS ESTIMÉS PAR ÉTAPE
 
-| Étape | Temps estimé |
-|-------|--------------|
-| C01 - Collecte informations | 5 min |
-| C02 - Installation remote | 20-25 min |
-| C03 - Installation locale | 40-50 min |
-| C04 - Configuration WiFi | 3 min (automatique) |
-| C05 - Enregistrement central | 2-5 min |
-| C06 - Tests validation | 10-15 min |
-| **TOTAL (remote)** | **30-40 min** |
-| **TOTAL (local)** | **60-80 min** |
+| Étape                        | Temps estimé        |
+| ---------------------------- | ------------------- |
+| C01 - Collecte informations  | 5 min               |
+| C02 - Installation remote    | 20-25 min           |
+| C03 - Installation locale    | 40-50 min           |
+| C04 - Configuration WiFi     | 3 min (automatique) |
+| C05 - Enregistrement central | 2-5 min             |
+| C06 - Tests validation       | 10-15 min           |
+| **TOTAL (remote)**           | **30-40 min**       |
+| **TOTAL (local)**            | **60-80 min**       |
 
 ---
 
 ## 13. KPI ET MÉTRIQUES
 
 ### Indicateurs de performance
+
 - **Temps moyen d'onboarding** : < 40 min (méthode remote)
 - **Taux de succès au premier essai** : > 95%
 - **Taux de satisfaction client** : > 90%
 
 ### Métriques à suivre
+
 - Nombre d'onboardings par semaine
 - Temps moyen par étape
 - Problèmes rencontrés les plus fréquents
