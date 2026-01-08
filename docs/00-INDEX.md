@@ -115,18 +115,20 @@ Fichiers obsolètes et historiques.
 ```
 neopro/
 ├── raspberry/                      # Edge application (Raspberry Pi)
-│   ├── src/                        # Angular frontend (TV/Remote/Login)
-│   ├── server/                     # Socket.IO local server
+│   ├── src/                        # Angular 20 frontend (TV/Remote/Login)
+│   ├── server/                     # Socket.IO local server (port 3000)
 │   ├── admin/                      # Admin interface (port 8080)
 │   └── sync-agent/                 # Sync service with cloud
+│       └── src/commands/           # Handlers (update_config, fix_permissions, remote_shell)
 │
-├── central-server/                 # Cloud API backend (Node.js/Express)
-├── central-dashboard/              # Cloud admin dashboard (Angular 20)
+├── central-server/                 # Cloud API backend (Node.js 20/Express/TypeScript)
+│   └── src/                        # Controllers, routes, middleware, services
+├── central-dashboard/              # Cloud admin dashboard (Angular 20.3)
+│   └── src/app/features/sites/     # Gestion sites (4 tabs: État/Contenu/Params/Debug)
 ├── server-render/                  # Cloud WebSocket server
-├── e2e/                           # End-to-end tests
+├── e2e/                           # End-to-end tests (Playwright)
 │
 ├── docs/                          # Documentation (vous êtes ici)
-├── config/                        # Shared configurations
 └── README.md                      # Point d'entrée principal
 ```
 
@@ -181,7 +183,7 @@ neopro/
 ## 🔗 Liens Utiles
 
 - **Déploiement Cloud**
-  - Central Server: https://neopro-central.onrender.com
+  - Central Server: https://neopro-central-production.up.railway.app
   - Dashboard Admin: https://neopro-admin.kalonpartners.bzh
 
 - **GitHub**
@@ -195,6 +197,6 @@ neopro/
 
 ---
 
-**Dernière mise à jour** : 7 janvier 2026 - Optimisation polling dashboard (rate limit fix)
+**Dernière mise à jour** : 8 janvier 2026 - Mise à jour documentation (version, stack, architecture)
 
-**Version** : 2.6.1
+**Version** : 2.11.7

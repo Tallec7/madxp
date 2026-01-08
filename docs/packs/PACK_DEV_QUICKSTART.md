@@ -7,6 +7,7 @@
 ## Usage
 
 Use this pack when:
+
 - You're a new developer joining the NEOPRO team
 - You need to set up a local development environment quickly
 - You want to understand the codebase architecture for coding
@@ -48,38 +49,38 @@ Use this pack when:
 
 ### Frontend
 
-| Component | Technology | Version |
-|-----------|-------------|---------|
-| Raspberry Pi App | Angular | 20.3.0 |
-| Central Dashboard | Angular | 17.0.0 |
-| Video Player | Video.js | 8.23.4 |
-| Real-time Client | Socket.IO Client | 4.8.1 |
-| Charts | Chart.js | 4.5.1 |
-| UI Framework | SCSS/CSS3 | Latest |
+| Component         | Technology       | Version |
+| ----------------- | ---------------- | ------- |
+| Raspberry Pi App  | Angular          | 20.3.0  |
+| Central Dashboard | Angular          | 17.0.0  |
+| Video Player      | Video.js         | 8.23.4  |
+| Real-time Client  | Socket.IO Client | 4.8.1   |
+| Charts            | Chart.js         | 4.5.1   |
+| UI Framework      | SCSS/CSS3        | Latest  |
 
 ### Backend
 
-| Component | Technology | Version |
-|-----------|-------------|---------|
-| API Server | Express.js | 4.18.2 |
-| Runtime | Node.js | 18+ LTS |
-| Real-time | Socket.IO | 4.7 |
-| Database | PostgreSQL | 15 |
-| Auth | JWT | 9.0.2 |
-| Validation | Joi | 17.11.0 |
-| ORM | Direct SQL | - |
+| Component  | Technology | Version |
+| ---------- | ---------- | ------- |
+| API Server | Express.js | 4.18.2  |
+| Runtime    | Node.js    | 18+ LTS |
+| Real-time  | Socket.IO  | 4.7     |
+| Database   | PostgreSQL | 15      |
+| Auth       | JWT        | 9.0.2   |
+| Validation | Joi        | 17.11.0 |
+| ORM        | Direct SQL | -       |
 
 ### Infrastructure
 
-| Component | Solution |
-|-----------|----------|
-| Cloud Hosting | Render.com |
-| Database | Supabase (PostgreSQL) |
-| Cache | Redis (Upstash) |
-| Local Hardware | Raspberry Pi 4 (4GB RAM) |
-| Web Server | Nginx |
-| Process Manager | Systemd |
-| Testing | Jest (Backend) + Karma (Frontend) |
+| Component       | Solution                          |
+| --------------- | --------------------------------- |
+| Cloud Hosting   | Render.com                        |
+| Database        | Supabase (PostgreSQL)             |
+| Cache           | Redis (Upstash)                   |
+| Local Hardware  | Raspberry Pi 4 (4GB RAM)          |
+| Web Server      | Nginx                             |
+| Process Manager | Systemd                           |
+| Testing         | Jest (Backend) + Karma (Frontend) |
 
 ---
 
@@ -186,6 +187,7 @@ sync-agent → REST API ──► PostgreSQL
 ### Data Flow Examples
 
 **Configuration Synchronization:**
+
 ```
 Central Dashboard (Admin edits config)
          ↓
@@ -203,6 +205,7 @@ Angular frontend (reload config)
 ```
 
 **Analytics Tracking:**
+
 ```
 TV Frontend (video play event)
          ↓
@@ -256,6 +259,7 @@ nano .env
 ```
 
 **Key environment variables:**
+
 ```
 NEOPRO_API_URL=http://localhost:3001
 SUPABASE_URL=<your-supabase-url>
@@ -272,6 +276,7 @@ JWT_SECRET=<your-jwt-secret>
 ```
 
 This starts:
+
 - Frontend Raspberry (port 4200)
 - Central Dashboard (port 4300)
 - Socket.IO server (port 3000)
@@ -280,18 +285,21 @@ This starts:
 **Option 2: Manual setup (3 terminals)**
 
 Terminal 1 - Raspberry Frontend:
+
 ```bash
 npm start
 # Opens http://localhost:4200
 ```
 
 Terminal 2 - Central Dashboard:
+
 ```bash
 npm run start:central
 # Opens http://localhost:4300
 ```
 
 Terminal 3 - Local servers:
+
 ```bash
 cd server-render && node server.js
 # Socket.IO at port 3000
@@ -362,6 +370,7 @@ npm run server              # Start Socket.IO local server
 ### Package-Specific Commands
 
 **Central Server:**
+
 ```bash
 cd central-server
 npm run dev                 # Development with nodemon
@@ -371,6 +380,7 @@ npm run migrate            # Database migrations
 ```
 
 **Raspberry Sync Agent:**
+
 ```bash
 cd raspberry/sync-agent
 npm test                   # Run tests
@@ -506,6 +516,7 @@ core/
 ### Configuration Files
 
 **`raspberry/config/templates/TEMPLATE-configuration.json`:**
+
 ```json
 {
   "auth": {
@@ -515,7 +526,7 @@ core/
   },
   "sync": {
     "enabled": true,
-    "serverUrl": "https://neopro-central.onrender.com",
+    "serverUrl": "https://neopro-central-production.up.railway.app",
     "siteName": "Club Name",
     "clubName": "Full Club Name",
     "location": {
@@ -551,6 +562,7 @@ core/
 **TV ↔ Remote Control:**
 
 Events emitted by Remote → TV listens:
+
 ```typescript
 // In remote.component.ts
 socket.emit('play-video', { id: videoId });
@@ -564,6 +576,7 @@ socket.on('play-video', (data) => {
 ### Configuration Management
 
 **Local Configuration Flow:**
+
 1. Admin loads `/admin` (port 8080)
 2. Displays `configuration.json`
 3. User edits JSON
@@ -575,6 +588,7 @@ socket.on('play-video', (data) => {
 ### Synchronization Architecture
 
 **Central Content → Local:**
+
 ```
 1. NEOPRO admin deploys video to "ANNONCES_NEOPRO" category
 2. Sync Agent polls /api/sites/status every 30s
@@ -585,6 +599,7 @@ socket.on('play-video', (data) => {
 ```
 
 **Club Content → Central (Mirroring):**
+
 ```
 1. Opérateur adds hommage video locally
 2. Admin UI saves to configuration.json
@@ -596,6 +611,7 @@ socket.on('play-video', (data) => {
 ### Authentication & Authorization
 
 **Local Authentication:**
+
 - Password stored in `configuration.json` (auth.password)
 - Login page (/login) validates password
 - JWT token generated on success
@@ -604,6 +620,7 @@ socket.on('play-video', (data) => {
 - Default password: `GG_NEO_25k!` (MUST change in production)
 
 **Cloud Authentication:**
+
 - Email + password → Supabase Auth
 - JWT token returned
 - Used for all API requests (Bearer token)
@@ -640,6 +657,7 @@ metrics (id, site_id, cpu_usage, memory, temperature, disk_usage, recorded_at)
 ### Task: Add a New Field to Configuration
 
 1. **Update schema** (`raspberry/src/app/models/configuration.interface.ts`):
+
 ```typescript
 export interface Configuration {
   // ... existing fields
@@ -651,6 +669,7 @@ export interface Configuration {
 ```
 
 2. **Update template** (`raspberry/config/templates/TEMPLATE-configuration.json`):
+
 ```json
 {
   "newFeature": {
@@ -661,6 +680,7 @@ export interface Configuration {
 ```
 
 3. **Load in component** (`raspberry/src/app/components/tv/tv.component.ts`):
+
 ```typescript
 constructor(private configService: ConfigService) {
   this.config = this.configService.getConfiguration();
@@ -673,11 +693,13 @@ constructor(private configService: ConfigService) {
 ### Task: Add a New Analytics Metric
 
 1. **Create database migration** (`central-server/src/scripts/migrations/`):
+
 ```sql
 ALTER TABLE club_daily_stats ADD COLUMN new_metric INTEGER DEFAULT 0;
 ```
 
 2. **Update analytics service** (`central-server/src/services/analytics.service.ts`):
+
 ```typescript
 async recordMetric(siteId: string, metric: any) {
   const query = `
@@ -689,6 +711,7 @@ async recordMetric(siteId: string, metric: any) {
 ```
 
 3. **Add API endpoint** (`central-server/src/routes/analytics.routes.ts`):
+
 ```typescript
 router.post('/analytics/new-metric', async (req, res) => {
   const { siteId, value } = req.body;
@@ -698,6 +721,7 @@ router.post('/analytics/new-metric', async (req, res) => {
 ```
 
 4. **Call from client** (`raspberry/src/app/services/analytics.service.ts`):
+
 ```typescript
 trackMetric(metric: any) {
   this.http.post('/api/analytics/new-metric', {
@@ -710,13 +734,13 @@ trackMetric(metric: any) {
 ### Task: Add a New Remote Control Button
 
 1. **Update remote template** (`raspberry/src/app/components/remote/remote.component.html`):
+
 ```html
-<button (click)="onNewAction()" class="action-btn">
-  New Action
-</button>
+<button (click)="onNewAction()" class="action-btn">New Action</button>
 ```
 
 2. **Add handler** (`raspberry/src/app/components/remote/remote.component.ts`):
+
 ```typescript
 onNewAction() {
   this.socketService.emit('new-action', { data: 'value' });
@@ -724,6 +748,7 @@ onNewAction() {
 ```
 
 3. **Listen on TV** (`raspberry/src/app/components/tv/tv.component.ts`):
+
 ```typescript
 this.socketService.on('new-action', (data) => {
   // Handle new action
@@ -732,6 +757,7 @@ this.socketService.on('new-action', (data) => {
 ```
 
 4. **Update styles** (`raspberry/src/app/components/remote/remote.component.scss`):
+
 ```scss
 .action-btn {
   // Styling
@@ -801,14 +827,14 @@ constructor(private socketService: SocketService) {
 
 ## Quick Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| Port 4200 already in use | `lsof -i :4200` then `kill -9 <pid>` |
-| npm install fails | Delete `node_modules` and `package-lock.json`, try again |
-| WebSocket connection refused | Ensure Socket.IO server is running on port 3000 |
-| Build fails | Check TypeScript version: `npm run build -- --version` |
-| Database connection error | Verify Supabase credentials in `.env` |
-| Remote doesn't control TV | Check WebSocket events in browser dev tools Console tab |
+| Problem                      | Solution                                                 |
+| ---------------------------- | -------------------------------------------------------- |
+| Port 4200 already in use     | `lsof -i :4200` then `kill -9 <pid>`                     |
+| npm install fails            | Delete `node_modules` and `package-lock.json`, try again |
+| WebSocket connection refused | Ensure Socket.IO server is running on port 3000          |
+| Build fails                  | Check TypeScript version: `npm run build -- --version`   |
+| Database connection error    | Verify Supabase credentials in `.env`                    |
+| Remote doesn't control TV    | Check WebSocket events in browser dev tools Console tab  |
 
 ---
 

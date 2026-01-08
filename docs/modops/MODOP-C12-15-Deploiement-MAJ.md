@@ -15,6 +15,7 @@ Gérer les déploiements de contenu et mises à jour logicielles vers les boîti
 ## 2. PÉRIMÈTRE
 
 ### Ce MODOP couvre
+
 - **MODOP-C12** : Déploiement standard de contenu
 - **MODOP-C13** : Déploiement canary (rollout progressif 10% → 100%)
 - **MODOP-C14** : Rollback en cas d'échec de déploiement
@@ -26,11 +27,11 @@ Gérer les déploiements de contenu et mises à jour logicielles vers les boîti
 
 ### 3.1 Types de déploiement
 
-| Type | Contenu | Fréquence | Durée |
-|------|---------|-----------|-------|
-| **Vidéo** | Fichier vidéo unique | À la demande | 1-5 min par site |
-| **Configuration** | Fichier configuration.json | Occasionnel | 30s par site |
-| **Mise à jour logicielle** | Package complet neopro | Mensuel | 10-15 min par site |
+| Type                       | Contenu                    | Fréquence    | Durée              |
+| -------------------------- | -------------------------- | ------------ | ------------------ |
+| **Vidéo**                  | Fichier vidéo unique       | À la demande | 1-5 min par site   |
+| **Configuration**          | Fichier configuration.json | Occasionnel  | 30s par site       |
+| **Mise à jour logicielle** | Package complet neopro     | Mensuel      | 10-15 min par site |
 
 ### 3.2 Déploiement de vidéo via le dashboard
 
@@ -39,7 +40,7 @@ Gérer les déploiements de contenu et mises à jour logicielles vers les boîti
 #### Étape 1 : Upload de la vidéo (5-10 min)
 
 ```
-https://neopro-central.onrender.com
+https://neopro-central-production.up.railway.app
 │
 ├─ Menu "Contenu" → "Vidéos"
 │  └─ Cliquer sur "Uploader une vidéo"
@@ -54,6 +55,7 @@ https://neopro-central.onrender.com
 ```
 
 **⏱️ Temps d'upload :**
+
 - 50MB → ~1 minute (connexion fibre)
 - 200MB → ~3-5 minutes
 
@@ -80,6 +82,7 @@ Sur la page de la vidéo :
 #### Étape 3 : Vérification du déploiement
 
 **Vérifier sur le dashboard :**
+
 1. Menu **Contenu** → **Historique des déploiements**
 2. Trouver le déploiement (ex: "sponsor_nike_2025 vers CESSON")
 3. Vérifier le statut :
@@ -89,6 +92,7 @@ Sur la page de la vidéo :
    - 🔄 **En attente** : Site hors ligne, mise en queue
 
 **Vérifier sur le site :**
+
 ```bash
 # Se connecter au Pi
 ssh pi@neopro.local
@@ -103,12 +107,14 @@ ls -lh /home/pi/neopro/videos/sponsors/ | grep nike
 ### 3.3 Déploiement de configuration
 
 **Depuis le dashboard :**
+
 1. Menu **Sites** → Sélectionner le site
 2. Section **Actions** → **Pousser la configuration**
 3. Modifier le JSON ou uploader un fichier
 4. Cliquer sur **Déployer**
 
 **⚠️ Attention :**
+
 - Toujours faire une sauvegarde avant modification
 - Valider le JSON avant déploiement (https://jsonlint.com)
 - Redémarrer les services après modification : `nginx`, `neopro-app`
@@ -175,12 +181,14 @@ Phase 5 : Full (100% des sites) → Terminé
 ```
 
 **Avantages :**
+
 - ✅ Détection précoce des problèmes
 - ✅ Impact limité en cas d'échec
 - ✅ Rollback automatique si taux d'échec > 5%
 - ✅ Observation de la stabilité entre phases
 
 **Utiliser pour :**
+
 - Mises à jour logicielles majeures
 - Changements de configuration impactants
 - Nouveaux contenus vidéo sensibles
@@ -207,6 +215,7 @@ Menu Contenu → Vidéos → [Vidéo] → Déployer
 ```
 
 **Le système va :**
+
 1. Sélectionner aléatoirement 10% des sites (5 sites sur 50)
 2. Déployer vers ces 5 sites
 3. Observer pendant 30 minutes
@@ -244,7 +253,7 @@ Menu Contenu → Vidéos → [Vidéo] → Déployer
 {
   "canaryPercentage": 10,
   "gradualSteps": [25, 50, 75, 100],
-  "stabilityPeriodMs": 1800000,    // 30 min en ms
+  "stabilityPeriodMs": 1800000, // 30 min en ms
   "successThreshold": 95,
   "autoAdvance": true
 }
@@ -252,11 +261,11 @@ Menu Contenu → Vidéos → [Vidéo] → Déployer
 
 **Exemples de configurations :**
 
-| Scénario | Canary % | Étapes | Période | Seuil |
-|----------|----------|--------|---------|-------|
-| **Conservateur** | 5% | [10, 25, 50, 75, 100] | 60 min | 98% |
-| **Standard** | 10% | [25, 50, 75, 100] | 30 min | 95% |
-| **Agressif** | 20% | [50, 100] | 15 min | 90% |
+| Scénario         | Canary % | Étapes                | Période | Seuil |
+| ---------------- | -------- | --------------------- | ------- | ----- |
+| **Conservateur** | 5%       | [10, 25, 50, 75, 100] | 60 min  | 98%   |
+| **Standard**     | 10%      | [25, 50, 75, 100]     | 30 min  | 95%   |
+| **Agressif**     | 20%      | [50, 100]             | 15 min  | 90%   |
 
 ---
 
@@ -265,11 +274,13 @@ Menu Contenu → Vidéos → [Vidéo] → Déployer
 ### 5.1 Détection automatique d'échec
 
 **Le système déclenche un rollback automatique si :**
+
 - Taux de succès < seuil configuré (défaut: 95%)
 - Plus de 3 sites en échec consécutif
 - Erreur critique détectée dans les logs
 
 **Exemple :**
+
 ```
 Phase : Canary (10% - 5 sites)
 Résultat :
@@ -321,6 +332,7 @@ sudo ./scripts/rollback.sh v1.2.0
 ### 5.3 Vérification post-rollback
 
 **Checklist :**
+
 - [ ] Services redémarrés : `sudo systemctl status neopro-app nginx`
 - [ ] Version correcte : `cat /home/pi/neopro/VERSION`
 - [ ] Interface accessible : `curl -I http://neopro.local`
@@ -330,6 +342,7 @@ sudo ./scripts/rollback.sh v1.2.0
 ### 5.4 Post-mortem après rollback
 
 **Documenter :**
+
 1. **Cause de l'échec** : Erreur réseau, fichier corrompu, incompatibilité...
 2. **Sites impactés** : Liste des sites en échec
 3. **Actions correctives** : Correctifs à apporter
@@ -341,28 +354,34 @@ sudo ./scripts/rollback.sh v1.2.0
 # Post-Mortem Rollback - [Date]
 
 ## Déploiement concerné
+
 - Type : Mise à jour logicielle v1.3.0
 - Cibles : 50 sites
 - Phase atteinte : Canary (10% - 5 sites)
 
 ## Incident
+
 - Taux d'échec : 40% (2/5 sites)
 - Symptôme : Erreur "MODULE_NOT_FOUND" au démarrage
 
 ## Cause racine
+
 - Dépendance npm manquante dans package.json
 
 ## Actions immédiates
+
 - Rollback automatique déclenché
 - Sites restaurés en v1.2.0
 - Tous les sites fonctionnels
 
 ## Actions correctives
+
 - Corriger package.json
 - Ajouter test d'intégration pour les dépendances
 - Revalider la v1.3.0 en local avant redéploiement
 
 ## Prévention
+
 - Ajouter vérification automatique des dépendances avant release
 - Améliorer les tests de smoke après déploiement
 ```
@@ -390,6 +409,7 @@ Déploiements en attente sont exécutés automatiquement
 ```
 
 **Avantages :**
+
 - ✅ Pas besoin de redéployer manuellement
 - ✅ Gestion automatique des sites intermittents
 - ✅ Ordre préservé (FIFO)
@@ -426,11 +446,11 @@ Déploiements en attente sont exécutés automatiquement
 
 ### 6.3 Paramètres de la queue
 
-| Paramètre | Valeur par défaut | Description |
-|-----------|-------------------|-------------|
-| **Tentatives max** | 3 | Nombre de tentatives avant abandon |
-| **Expiration** | 24h | Durée avant suppression automatique |
-| **Intervalle tentatives** | 5 min | Temps entre deux tentatives |
+| Paramètre                 | Valeur par défaut | Description                         |
+| ------------------------- | ----------------- | ----------------------------------- |
+| **Tentatives max**        | 3                 | Nombre de tentatives avant abandon  |
+| **Expiration**            | 24h               | Durée avant suppression automatique |
+| **Intervalle tentatives** | 5 min             | Temps entre deux tentatives         |
 
 ### 6.4 Gestion manuelle de la queue
 
@@ -438,7 +458,7 @@ Déploiements en attente sont exécutés automatiquement
 
 ```bash
 # Via l'API
-curl -X POST https://neopro-central.onrender.com/api/sites/{siteId}/queue/process \
+curl -X POST https://neopro-central-production.up.railway.app/api/sites/{siteId}/queue/process \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -446,7 +466,7 @@ curl -X POST https://neopro-central.onrender.com/api/sites/{siteId}/queue/proces
 
 ```bash
 # Supprimer toutes les commandes en attente pour un site
-curl -X DELETE https://neopro-central.onrender.com/api/sites/{siteId}/queue \
+curl -X DELETE https://neopro-central-production.up.railway.app/api/sites/{siteId}/queue \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -454,7 +474,7 @@ curl -X DELETE https://neopro-central.onrender.com/api/sites/{siteId}/queue \
 
 ```bash
 # Résumé de toutes les queues
-curl https://neopro-central.onrender.com/api/sites/queue/summary \
+curl https://neopro-central-production.up.railway.app/api/sites/queue/summary \
   -H "Authorization: Bearer $TOKEN"
 
 # Retourne :
@@ -468,6 +488,7 @@ curl https://neopro-central.onrender.com/api/sites/queue/summary \
 ### 6.5 Commandes temps réel (non mises en queue)
 
 **Certaines commandes NE PEUVENT PAS être mises en queue :**
+
 - `get_logs` : Lecture des logs en temps réel
 - `get_system_info` : Informations système actuelles
 - `get_config` : Configuration actuelle
@@ -475,6 +496,7 @@ curl https://neopro-central.onrender.com/api/sites/queue/summary \
 - `get_hotspot_config` : Configuration WiFi actuelle
 
 **Si le site est hors ligne :**
+
 - Ces commandes renvoient une erreur : "Site hors ligne"
 - L'utilisateur doit attendre la reconnexion du site
 
@@ -507,25 +529,27 @@ curl https://neopro-central.onrender.com/api/sites/queue/summary \
 
 ## 8. TEMPS ESTIMÉS
 
-| Type de déploiement | Temps estimé |
-|---------------------|--------------|
-| Vidéo (1 site) | 2-5 min |
-| Vidéo (10 sites) | 5-15 min (parallèle) |
-| Configuration (1 site) | 1 min |
-| Mise à jour logicielle (1 site) | 10-15 min |
-| Mise à jour canary (50 sites) | 3-4 heures (avec périodes de stabilité) |
-| Rollback | 5-10 min |
+| Type de déploiement             | Temps estimé                            |
+| ------------------------------- | --------------------------------------- |
+| Vidéo (1 site)                  | 2-5 min                                 |
+| Vidéo (10 sites)                | 5-15 min (parallèle)                    |
+| Configuration (1 site)          | 1 min                                   |
+| Mise à jour logicielle (1 site) | 10-15 min                               |
+| Mise à jour canary (50 sites)   | 3-4 heures (avec périodes de stabilité) |
+| Rollback                        | 5-10 min                                |
 
 ---
 
 ## 9. KPI ET MÉTRIQUES
 
 ### Indicateurs de performance
+
 - **Taux de succès des déploiements** : > 95%
 - **Temps moyen de déploiement vidéo** : < 3 min/site
 - **Taux de rollback** : < 5%
 
 ### Métriques à suivre
+
 - Nombre de déploiements par semaine
 - Types de déploiements les plus fréquents
 - Causes d'échecs les plus courantes

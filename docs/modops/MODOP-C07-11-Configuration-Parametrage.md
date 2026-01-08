@@ -15,6 +15,7 @@ Former le client à l'utilisation et à la configuration autonome de son boîtie
 ## 2. PÉRIMÈTRE
 
 ### Ce MODOP couvre
+
 - **MODOP-C07** : Formation client à l'interface admin (port 8080)
 - **MODOP-C08** : Upload et organisation des vidéos
 - **MODOP-C09** : Configuration des time-blocks (Before/Match/After)
@@ -54,6 +55,7 @@ TEMPS TOTAL : 40-45 minutes
 **URL** : `http://neopro.local:8080`
 
 **Étapes pour le client :**
+
 1. Se connecter au WiFi `NEOPRO-[CLUB]` OU être sur le même réseau Ethernet
 2. Ouvrir un navigateur (Chrome, Firefox, Safari)
 3. Aller sur : `http://neopro.local:8080`
@@ -94,6 +96,7 @@ Clients connectés : 3
 ```
 
 **Points à expliquer :**
+
 - **Métriques** : Les jauges changent de couleur (🟢🟡🔴) selon les seuils
   - Vert : tout va bien
   - Orange : attention, surveiller
@@ -141,6 +144,7 @@ LISTE DES VIDÉOS (12 vidéos, 3.2GB)
 ```
 
 **⚠️ Avertir le client :**
+
 - Modifications avancées uniquement
 - Toujours faire une sauvegarde avant modification
 - En cas d'erreur JSON, le système peut ne plus démarrer
@@ -148,11 +152,13 @@ LISTE DES VIDÉOS (12 vidéos, 3.2GB)
 #### D. Onglet "Logs"
 
 **Trois types de logs :**
+
 - **App** : Logs de l'application principale (neopro-app)
 - **Nginx** : Logs du serveur web
 - **System** : Logs système globaux
 
 **Utilisation :**
+
 - Voir les erreurs récentes en cas de problème
 - Partager les logs avec le support si nécessaire
 
@@ -182,21 +188,25 @@ LISTE DES VIDÉOS (12 vidéos, 3.2GB)
 ### 5.1 Préparation des vidéos
 
 **Formats supportés :**
+
 - MP4 (recommandé)
 - WebM
 - MOV
 
 **Résolution recommandée :**
+
 - 1080p (1920x1080) : optimal
 - 720p (1280x720) : acceptable
 - 4K : déconseillé (taille de fichier trop importante)
 
 **Taille recommandée :**
+
 - Sponsors : 30-60 secondes → 30-100MB
 - Highlights : 1-3 minutes → 50-200MB
 - Matchs complets : déconseillé (utiliser des extraits)
 
 **Nommage recommandé :**
+
 ```
 sponsor_nike.mp4
 sponsor_adidas.mp4
@@ -224,6 +234,7 @@ before_echauffement.mp4
 7. Attendre la fin de l'upload (barre de progression)
 
 **⏱️ Temps d'upload :**
+
 - 50MB → ~30 secondes en WiFi local
 - 200MB → ~2 minutes
 
@@ -231,7 +242,7 @@ before_echauffement.mp4
 
 **Méthode 2 : Upload depuis le dashboard central et déploiement à distance**
 
-1. Se connecter au dashboard : https://neopro-central.onrender.com
+1. Se connecter au dashboard : https://neopro-central-production.up.railway.app
 2. Menu **Contenu** → **Vidéos**
 3. Cliquer sur **Uploader une vidéo**
 4. Sélectionner la vidéo
@@ -246,6 +257,7 @@ before_echauffement.mp4
 9. Cliquer sur **Déployer**
 
 **Avantages :**
+
 - Upload depuis n'importe où (pas besoin d'être sur place)
 - Upload plus rapide (connexion Internet du bureau)
 - Gestion centralisée de toutes les vidéos
@@ -255,16 +267,17 @@ before_echauffement.mp4
 
 **Catégories par défaut :**
 
-| Catégorie | Usage | Exemples |
-|-----------|-------|----------|
-| **Sponsors** | Publicités partenaires | sponsor_nike.mp4, sponsor_adidas.mp4 |
-| **Highlights** | Résumés de matchs | highlight_match1.mp4, highlight_match2.mp4 |
-| **Before** | Avant-match (échauffement) | before_echauffement.mp4, before_hymne.mp4 |
-| **Match** | Pendant le match (mi-temps) | halftime_show.mp4, interview_coach.mp4 |
-| **After** | Après-match | after_celebration.mp4, after_recap.mp4 |
-| **Custom** | Autres contenus | club_presentation.mp4, formation.mp4 |
+| Catégorie      | Usage                       | Exemples                                   |
+| -------------- | --------------------------- | ------------------------------------------ |
+| **Sponsors**   | Publicités partenaires      | sponsor_nike.mp4, sponsor_adidas.mp4       |
+| **Highlights** | Résumés de matchs           | highlight_match1.mp4, highlight_match2.mp4 |
+| **Before**     | Avant-match (échauffement)  | before_echauffement.mp4, before_hymne.mp4  |
+| **Match**      | Pendant le match (mi-temps) | halftime_show.mp4, interview_coach.mp4     |
+| **After**      | Après-match                 | after_celebration.mp4, after_recap.mp4     |
+| **Custom**     | Autres contenus             | club_presentation.mp4, formation.mp4       |
 
 **Créer une nouvelle catégorie :**
+
 1. Onglet Vidéos → **🗂️ Catégories**
 2. Cliquer sur **Ajouter une catégorie**
 3. Nom : ex. "Formations"
@@ -274,12 +287,14 @@ before_echauffement.mp4
 ### 5.5 Gestion des vidéos
 
 **Supprimer une vidéo :**
+
 1. Onglet Vidéos → Trouver la vidéo
 2. Cliquer sur **[Supprimer]**
 3. Confirmer la suppression
 4. ⚠️ La vidéo est supprimée définitivement
 
 **Renommer une vidéo :**
+
 1. Via SSH :
    ```bash
    ssh pi@neopro.local
@@ -294,6 +309,7 @@ before_echauffement.mp4
    ```
 
 **Vérifier l'espace disque :**
+
 ```bash
 ssh pi@neopro.local 'df -h /home/pi/neopro/videos'
 ```
@@ -308,15 +324,16 @@ ssh pi@neopro.local 'df -h /home/pi/neopro/videos'
 
 **3 time-blocks par défaut :**
 
-| Time-block | Quand | Vidéos affichées | Durée typique |
-|------------|-------|------------------|---------------|
-| **Before** | Avant le match | Sponsors, échauffement, hymne | 30-60 min |
-| **Match** | Pendant le match | Mi-temps, interviews | 15-30 min |
-| **After** | Après le match | Highlights, célébrations | 15-30 min |
+| Time-block | Quand            | Vidéos affichées              | Durée typique |
+| ---------- | ---------------- | ----------------------------- | ------------- |
+| **Before** | Avant le match   | Sponsors, échauffement, hymne | 30-60 min     |
+| **Match**  | Pendant le match | Mi-temps, interviews          | 15-30 min     |
+| **After**  | Après le match   | Highlights, célébrations      | 15-30 min     |
 
 ### 6.2 Configuration manuelle via configuration.json
 
 **Accès :**
+
 1. Interface admin → Onglet **Configuration**
 2. OU via SSH :
    ```bash
@@ -359,14 +376,14 @@ ssh pi@neopro.local 'df -h /home/pi/neopro/videos'
 
 **Paramètres :**
 
-| Paramètre | Description | Valeurs |
-|-----------|-------------|---------|
-| `id` | Identifiant unique | before, match, after |
-| `name` | Nom affiché | "Before Match" |
+| Paramètre    | Description                    | Valeurs                |
+| ------------ | ------------------------------ | ---------------------- |
+| `id`         | Identifiant unique             | before, match, after   |
+| `name`       | Nom affiché                    | "Before Match"         |
 | `categories` | Catégories de vidéos à inclure | ["Sponsors", "Before"] |
-| `duration` | Durée en secondes | 3600 = 1h |
-| `loop` | Rejouer en boucle | true / false |
-| `shuffle` | Ordre aléatoire | true / false |
+| `duration`   | Durée en secondes              | 3600 = 1h              |
+| `loop`       | Rejouer en boucle              | true / false           |
+| `shuffle`    | Ordre aléatoire                | true / false           |
 
 ### 6.3 Activation d'un time-block
 
@@ -385,7 +402,7 @@ ssh pi@neopro.local 'df -h /home/pi/neopro/videos'
 
 **Méthode 3 : Programmation automatique**
 
-*Fonctionnalité future - actuellement manuel*
+_Fonctionnalité future - actuellement manuel_
 
 ### 6.4 Exemples de configuration
 
@@ -433,11 +450,11 @@ ssh pi@neopro.local 'df -h /home/pi/neopro/videos'
 
 **Actions disponibles :**
 
-| Action | Procédure |
-|--------|-----------|
-| **Créer** | Cliquer sur "Ajouter", nom + couleur |
-| **Modifier** | Cliquer sur ✏️ à côté de la catégorie |
-| **Supprimer** | Cliquer sur 🗑️ (si aucune vidéo) |
+| Action        | Procédure                             |
+| ------------- | ------------------------------------- |
+| **Créer**     | Cliquer sur "Ajouter", nom + couleur  |
+| **Modifier**  | Cliquer sur ✏️ à côté de la catégorie |
+| **Supprimer** | Cliquer sur 🗑️ (si aucune vidéo)      |
 
 ### 7.2 Configuration des sports
 
@@ -452,6 +469,7 @@ ssh pi@neopro.local 'df -h /home/pi/neopro/videos'
 ```
 
 **Sports supportés :**
+
 - handball
 - basketball
 - volleyball
@@ -471,7 +489,7 @@ ssh pi@neopro.local 'df -h /home/pi/neopro/videos'
 1. Onglet **Système** → Section **Serveur Central**
 2. Vérifier :
    - ✅ Statut : Connecté
-   - URL : https://neopro-central.onrender.com
+   - URL : https://neopro-central-production.up.railway.app
    - Site ID : uuid-du-site
 
 **Via SSH :**
@@ -508,7 +526,7 @@ sudo journalctl -u neopro-sync -n 50
 {
   "sync": {
     "enabled": true,
-    "serverUrl": "https://neopro-central.onrender.com"
+    "serverUrl": "https://neopro-central-production.up.railway.app"
   }
 }
 ```

@@ -8,19 +8,20 @@
 
 ## Changelog v1.6
 
-| Section | Type | Changement |
-|---------|------|------------|
-| 1.1-1.2 | RÉÉCRIT | Problème (4 douleurs chiffrées) + Solution (two-sided marketplace) |
-| 1.3-1.7 | RÉÉCRIT | Chiffres réalistes 2026-2028, traction actuelle, TAM combiné |
-| 2.5 | NOUVEAU | Stratégie d'acquisition annonceurs |
-| 2.6 | NOUVEAU | Marché annonceurs (TAM €1,2M) |
-| 2.7 | NOUVEAU | Production vidéo - différenciateur majeur |
+| Section | Type    | Changement                                                           |
+| ------- | ------- | -------------------------------------------------------------------- |
+| 1.1-1.2 | RÉÉCRIT | Problème (4 douleurs chiffrées) + Solution (two-sided marketplace)   |
+| 1.3-1.7 | RÉÉCRIT | Chiffres réalistes 2026-2028, traction actuelle, TAM combiné         |
+| 2.5     | NOUVEAU | Stratégie d'acquisition annonceurs                                   |
+| 2.6     | NOUVEAU | Marché annonceurs (TAM €1,2M)                                        |
+| 2.7     | NOUVEAU | Production vidéo - différenciateur majeur                            |
 | 8.1-8.3 | RÉÉCRIT | Modèle revenus (€50-120/mois), projections réalistes, unit economics |
-| 9.1-9.5 | RÉÉCRIT | Bootstrap 2026, Seed conditionnel 2027 |
-| 13.7 | ENRICHI | Pricing analytics aligné (€50/€80/€120) |
-| 14.0 | NOUVEAU | Offre commerciale analytics club |
+| 9.1-9.5 | RÉÉCRIT | Bootstrap 2026, Seed conditionnel 2027                               |
+| 13.7    | ENRICHI | Pricing analytics aligné (€50/€80/€120)                              |
+| 14.0    | NOUVEAU | Offre commerciale analytics club                                     |
 
 **Documents de référence :**
+
 - Executive Summary v2.1 (Décembre 2025)
 - NEOPRO_Strategie_Pricing_FINALE_v4.0 (Décembre 2025)
 
@@ -38,27 +39,27 @@
    - 1.7 TAM Combiné
 2. [Le Produit](#2-le-produit)
    - 2.1-2.4 Vue d'ensemble, composants, fonctionnalités
-   - **2.5 Stratégie d'Acquisition Annonceurs** *(nouveau)*
-   - **2.6 Marché Annonceurs (TAM)** *(nouveau)*
-   - **2.7 Production Vidéo - Différenciateur** *(nouveau)*
+   - **2.5 Stratégie d'Acquisition Annonceurs** _(nouveau)_
+   - **2.6 Marché Annonceurs (TAM)** _(nouveau)_
+   - **2.7 Production Vidéo - Différenciateur** _(nouveau)_
 3. [Architecture Technique](#3-architecture-technique)
    - 3.5 [Architecture de Synchronisation](#35-architecture-de-synchronisation)
 4. [Analyse Technique Actuelle](#4-analyse-technique-actuelle)
 5. [Roadmap Phase 1 (0-3 mois)](#5-roadmap-phase-1-0-3-mois)
 6. [Roadmap Phase 2 (3-12 mois)](#6-roadmap-phase-2-3-12-mois)
 7. [Roadmap Phase 3 (1-3 ans)](#7-roadmap-phase-3-1-3-ans)
-8. [Modèle Économique](#8-modèle-économique) *(réécrit)*
+8. [Modèle Économique](#8-modèle-économique) _(réécrit)_
    - 8.1 Sources de Revenus (Clubs + Annonceurs)
    - 8.2 Projections Financières
    - 8.3 Unit Economics
-9. [Budget & Ressources](#9-budget--ressources) *(réécrit)*
+9. [Budget & Ressources](#9-budget--ressources) _(réécrit)_
    - 9.1 Stratégie Financement (Bootstrap)
    - 9.2-9.5 Équipes, Infrastructure, Seed conditionnel
 10. [KPIs & Métriques](#10-kpis--métriques)
 11. [Risques & Mitigations](#11-risques--mitigations)
 12. [Processus Opérationnels](#12-processus-opérationnels)
-13. [Analytics Sponsors & Annonceurs](#13-analytics-sponsors--annonceurs) *(enrichi)*
-14. [Analytics Club](#14-analytics-club) *(enrichi)*
+13. [Analytics Sponsors & Annonceurs](#13-analytics-sponsors--annonceurs) _(enrichi)_
+14. [Analytics Club](#14-analytics-club) _(enrichi)_
 15. [Annexes](#15-annexes)
 
 ---
@@ -70,24 +71,28 @@
 Les clubs sportifs amateurs font face à **quatre douleurs majeures** qui impactent leur modèle économique et l'expérience match :
 
 ### 📉 1. EXPÉRIENCE MATCH MÉDIOCRE
+
 - Écrans statiques (logo figé, aucun dynamisme pendant 90 min)
 - Zéro engagement spectateurs (pas d'interactivité)
 - Contenus amateurs (pas de vidéos professionnelles joueurs)
 - **Impact** : Spectateurs désengagés, ambiance terne
 
 ### 💸 2. SPONSORS PAS VALORISÉS
+
 - Aucune donnée mesurable pour prouver le ROI (0 rapports)
 - Négociations renouvellements difficiles sans preuves
 - **30-40% churn sponsors annuel** par défaut de valorisation
 - **Impact financier** : Club N2 avec 5 sponsors à €3K/an risque perdre €6K-€9K annuels
 
 ### 🤯 3. GESTION TECHNIQUE COMPLEXE
+
 - Ordinateur en bord de terrain (câbles, manipulations)
 - Bénévoles débordés pendant matchs
 - Changements manuels pénibles (buteurs, sponsors)
 - **Impact** : Erreurs matchs, bénévoles frustrés
 
 ### 📊 4. COMMUNICATION INEFFICACE
+
 - Contenus non professionnels
 - Impossible de quantifier l'audience
 - Pas de reporting automatique sponsors
@@ -104,6 +109,7 @@ Les clubs sportifs amateurs font face à **quatre douleurs majeures** qui impact
 #### CÔTÉ 1 : LES CLUBS SPORTIFS
 
 **Hardware + Software professionnel tout-en-un :**
+
 - Boîtier intelligent branché sur écran (10 min installation)
 - Télécommande smartphone (contrôle pendant match à distance)
 - Dashboard cloud (gestion contenus, analytics temps réel)
@@ -111,13 +117,14 @@ Les clubs sportifs amateurs font face à **quatre douleurs majeures** qui impact
 
 **Fonctionnalités Match :**
 
-| Catégorie | Fonctionnalités |
-|-----------|-----------------|
-| 📺 **Affichage Dynamique** | Annonces joueurs (vidéos célébrations 5-10s), affichage buteurs temps réel (1 clic smartphone), faits de jeu (cartons, temps-morts), informations supporters |
-| 💰 **Valorisation Sponsors** | Diffusion automatique spots (rotation intelligente), analytics précis (passages, impressions, reach), rapports PDF mensuels automatiques, dashboard sponsors premium |
-| 🎮 **Engagement Spectateurs** | Jeux-concours QR code (vote meilleur joueur), sondages en direct mi-temps, feed réseaux sociaux sur écran |
+| Catégorie                     | Fonctionnalités                                                                                                                                                      |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 📺 **Affichage Dynamique**    | Annonces joueurs (vidéos célébrations 5-10s), affichage buteurs temps réel (1 clic smartphone), faits de jeu (cartons, temps-morts), informations supporters         |
+| 💰 **Valorisation Sponsors**  | Diffusion automatique spots (rotation intelligente), analytics précis (passages, impressions, reach), rapports PDF mensuels automatiques, dashboard sponsors premium |
+| 🎮 **Engagement Spectateurs** | Jeux-concours QR code (vote meilleur joueur), sondages en direct mi-temps, feed réseaux sociaux sur écran                                                            |
 
 **Proposition de valeur clubs :**
+
 - ✅ Expérience match professionnelle (ambiance, dynamisme)
 - ✅ Valorisation sponsors mesurable (preuves ROI, renouvellements facilités)
 - ✅ Gestion ultra-simple (smartphone, fini PC bord terrain)
@@ -127,13 +134,14 @@ Les clubs sportifs amateurs font face à **quatre douleurs majeures** qui impact
 
 **Réseau publicitaire sportif local (unique en France) :**
 
-| Pour qui ? | Proposition de valeur |
-|------------|----------------------|
-| Marques régionales (Decathlon, Crédit Mutuel, MAIF) | Accès audience captive : 15,000+ spectateurs/mois |
-| Annonceurs locaux audience sportive qualifiée | Diffusion automatisée : 1 contrat = présence tous écrans |
-| Sponsors hors stades professionnels | CPM attractif : €8-12 (vs €15-25 digital) |
+| Pour qui ?                                          | Proposition de valeur                                    |
+| --------------------------------------------------- | -------------------------------------------------------- |
+| Marques régionales (Decathlon, Crédit Mutuel, MAIF) | Accès audience captive : 15,000+ spectateurs/mois        |
+| Annonceurs locaux audience sportive qualifiée       | Diffusion automatisée : 1 contrat = présence tous écrans |
+| Sponsors hors stades professionnels                 | CPM attractif : €8-12 (vs €15-25 digital)                |
 
 **Modèle économique annonceurs :**
+
 1. Annonceur paie €250/mois pour diffusion réseau
 2. Vidéos passent sur tous clubs partenaires (max 3/club)
 3. NEOPRO garde 90% (€225/mois), reverse 10% clubs (€25/mois)
@@ -149,42 +157,42 @@ Plus clubs → Plus audience → CPM attractif → Plus annonceurs
 
 ### 🎯 DIFFÉRENCIATEURS STRATÉGIQUES
 
-| # | Différenciateur | Description |
-|---|----------------|-------------|
-| 1 | **Solution complète expérience match** | Seul acteur combinant affichage temps réel + engagement spectateurs + analytics sponsors en UNE plateforme |
-| 2 | **Seul réseau publicitaire sportif amateur France** | Marché vierge €1,2M TAM |
-| 3 | **Modèle triple-win** | Clubs professionnalisent + valorisent + génèrent revenus passifs. Annonceurs accèdent audience qualifiée. NEOPRO scale ARR via deux sources revenus |
-| 4 | **Barrière entrée forte** | Effet réseau two-sided, relations clubs, tech propriétaire |
-| 5 | **Simplicité opérationnelle** | Plug & play 10min, smartphone 1 clic, rapports auto |
+| #   | Différenciateur                                     | Description                                                                                                                                         |
+| --- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Solution complète expérience match**              | Seul acteur combinant affichage temps réel + engagement spectateurs + analytics sponsors en UNE plateforme                                          |
+| 2   | **Seul réseau publicitaire sportif amateur France** | Marché vierge €1,2M TAM                                                                                                                             |
+| 3   | **Modèle triple-win**                               | Clubs professionnalisent + valorisent + génèrent revenus passifs. Annonceurs accèdent audience qualifiée. NEOPRO scale ARR via deux sources revenus |
+| 4   | **Barrière entrée forte**                           | Effet réseau two-sided, relations clubs, tech propriétaire                                                                                          |
+| 5   | **Simplicité opérationnelle**                       | Plug & play 10min, smartphone 1 clic, rapports auto                                                                                                 |
 
 ## 1.3 Chiffres Clés
 
-| Métrique | Actuel (Dec 2025) | Fin 2026 | Fin 2027 | Fin 2028 |
-|----------|-------------------|----------|----------|----------|
-| Clubs actifs | 3 beta | 35 | 100 | 300 |
-| Annonceurs | 0 | 6-8 | 15 | 25+ |
-| MRR (récurrent) | €0 | €4,400 | €12,875 | €35,000 |
-| ARR | €0 | €53K | €154K | €420K |
-| Reach spectateurs | ~500/mois | 15,000/mois | 45,000/mois | 135,000/mois |
-| Équipe | 2 associés | 2 (bénévoles) | 4 | 8-10 |
+| Métrique          | Actuel (Dec 2025) | Fin 2026      | Fin 2027    | Fin 2028     |
+| ----------------- | ----------------- | ------------- | ----------- | ------------ |
+| Clubs actifs      | 3 beta            | 35            | 100         | 300          |
+| Annonceurs        | 0                 | 6-8           | 15          | 25+          |
+| MRR (récurrent)   | €0                | €4,400        | €12,875     | €35,000      |
+| ARR               | €0                | €53K          | €154K       | €420K        |
+| Reach spectateurs | ~500/mois         | 15,000/mois   | 45,000/mois | 135,000/mois |
+| Équipe            | 2 associés        | 2 (bénévoles) | 4           | 8-10         |
 
 ## 1.4 Traction Actuelle
 
-| Indicateur | Valeur | Preuve |
-|------------|--------|--------|
-| **Clubs beta** | 3 (CESSON, NARH, RACC) | Contrats signés |
-| **Uptime plateforme** | 98.5% | Monitoring production |
-| **Hardware déployé** | €1,050 investis | 3 boîtiers à €350 |
-| **Produit** | MVP complet en production | Déployé et fonctionnel |
-| **Pipeline commercial** | 15 clubs qualifiés | Démonstrations planifiées Q1 2026 |
+| Indicateur              | Valeur                    | Preuve                            |
+| ----------------------- | ------------------------- | --------------------------------- |
+| **Clubs beta**          | 3 (CESSON, NARH, RACC)    | Contrats signés                   |
+| **Uptime plateforme**   | 98.5%                     | Monitoring production             |
+| **Hardware déployé**    | €1,050 investis           | 3 boîtiers à €350                 |
+| **Produit**             | MVP complet en production | Déployé et fonctionnel            |
+| **Pipeline commercial** | 15 clubs qualifiés        | Démonstrations planifiées Q1 2026 |
 
 ## 1.5 Stratégie Financement
 
-| Phase | Modèle | Objectif |
-|-------|--------|----------|
-| **2026** | Bootstrap (autofinancement) | PMF avec 35 clubs, €53K ARR |
-| **2027** | Seed €150K (si scale accéléré) | 100+ clubs, 2 commerciaux |
-| **2028** | Profitabilité | €420K ARR, équipe de 8-10 |
+| Phase    | Modèle                         | Objectif                    |
+| -------- | ------------------------------ | --------------------------- |
+| **2026** | Bootstrap (autofinancement)    | PMF avec 35 clubs, €53K ARR |
+| **2027** | Seed €150K (si scale accéléré) | 100+ clubs, 2 commerciaux   |
+| **2028** | Profitabilité                  | €420K ARR, équipe de 8-10   |
 
 > **Philosophie** : Bootstrap jusqu'à profitabilité. Lever uniquement si opportunité scale accéléré.
 
@@ -201,11 +209,11 @@ Plus clubs → Plus audience → CPM attractif → Plus annonceurs
 
 ## 1.7 TAM Combiné
 
-| Segment | TAM France | SAM 2026 | SAM 2028 |
-|---------|------------|----------|----------|
-| **Clubs sportifs** | €5,2M (13,000 clubs × €400/an) | €53K (35 clubs) | €450K (300 clubs) |
-| **Annonceurs** | €1,2M (150 annonceurs × €8K/an) | €16K (6 annonceurs) | €80K (25 annonceurs) |
-| **TOTAL** | **€6,4M** | **€69K** | **€530K** |
+| Segment            | TAM France                      | SAM 2026            | SAM 2028             |
+| ------------------ | ------------------------------- | ------------------- | -------------------- |
+| **Clubs sportifs** | €5,2M (13,000 clubs × €400/an)  | €53K (35 clubs)     | €450K (300 clubs)    |
+| **Annonceurs**     | €1,2M (150 annonceurs × €8K/an) | €16K (6 annonceurs) | €80K (25 annonceurs) |
+| **TOTAL**          | **€6,4M**                       | **€69K**            | **€530K**            |
 
 ---
 
@@ -237,12 +245,14 @@ Plus clubs → Plus audience → CPM attractif → Plus annonceurs
 ### 2.2.1 Boîtier Raspberry Pi (Local)
 
 **Matériel :**
+
 - Raspberry Pi 4 (4GB RAM)
 - Carte SD 32GB+
 - Alimentation 5V/3A
 - Câble HDMI
 
 **Logiciels :**
+
 - Application Angular (affichage TV + télécommande)
 - Serveur Socket.IO (communication temps réel)
 - Interface admin (port 8080)
@@ -250,6 +260,7 @@ Plus clubs → Plus audience → CPM attractif → Plus annonceurs
 - Nginx (serveur web)
 
 **Fonctionnalités :**
+
 - Mode kiosk (affichage automatique)
 - Boucle sponsors automatique
 - Télécommande via smartphone
@@ -260,11 +271,13 @@ Plus clubs → Plus audience → CPM attractif → Plus annonceurs
 ### 2.2.2 Serveur Central (Cloud)
 
 **Infrastructure :**
+
 - Hébergé sur Render.com
 - PostgreSQL managé
 - WebSocket pour temps réel
 
 **Fonctionnalités :**
+
 - Dashboard de gestion flotte
 - Monitoring temps réel (CPU, RAM, température)
 - Déploiement de contenu à distance
@@ -274,12 +287,12 @@ Plus clubs → Plus audience → CPM attractif → Plus annonceurs
 
 ### 2.2.3 Applications
 
-| Application | Port | Usage |
-|-------------|------|-------|
-| TV Display | 80 | Affichage plein écran vidéos |
-| Remote Control | 80 | Télécommande smartphone |
-| Admin Interface | 8080 | Gestion locale du boîtier |
-| Socket.IO Server | 3000 | Communication temps réel |
+| Application      | Port | Usage                        |
+| ---------------- | ---- | ---------------------------- |
+| TV Display       | 80   | Affichage plein écran vidéos |
+| Remote Control   | 80   | Télécommande smartphone      |
+| Admin Interface  | 8080 | Gestion locale du boîtier    |
+| Socket.IO Server | 3000 | Communication temps réel     |
 
 ## 2.3 Parcours Utilisateur
 
@@ -321,47 +334,47 @@ Plus clubs → Plus audience → CPM attractif → Plus annonceurs
 
 ### Côté Club (✅ Fait)
 
-| Feature | Statut | Description |
-|---------|--------|-------------|
-| Mode TV kiosk | ✅ | Affichage automatique sans intervention |
-| Boucle sponsors | ✅ | Rotation automatique partenaires |
-| Télécommande temps réel | ✅ | Latence < 100ms |
-| Catégorisation vidéos | ✅ | Avant-match / Match / Après-match |
-| Interface admin | ✅ | Gestion complète locale |
-| Upload vidéos | ✅ | Drag & drop, formats multiples |
-| Monitoring système | ✅ | CPU, RAM, température, disque |
-| WiFi hotspot | ✅ | NEOPRO-[CLUB] |
+| Feature                 | Statut | Description                             |
+| ----------------------- | ------ | --------------------------------------- |
+| Mode TV kiosk           | ✅     | Affichage automatique sans intervention |
+| Boucle sponsors         | ✅     | Rotation automatique partenaires        |
+| Télécommande temps réel | ✅     | Latence < 100ms                         |
+| Catégorisation vidéos   | ✅     | Avant-match / Match / Après-match       |
+| Interface admin         | ✅     | Gestion complète locale                 |
+| Upload vidéos           | ✅     | Drag & drop, formats multiples          |
+| Monitoring système      | ✅     | CPU, RAM, température, disque           |
+| WiFi hotspot            | ✅     | NEOPRO-[CLUB]                           |
 
 ### Côté Central (✅ Fait)
 
-| Feature | Statut | Description |
-|---------|--------|-------------|
-| Dashboard flotte | ✅ | Vue temps réel tous sites |
-| Enregistrement sites | ✅ | Auto-registration avec API key |
-| Métriques historiques | ✅ | Graphiques CPU, RAM, etc. |
-| Alertes automatiques | ✅ | Température, disque, offline |
-| Groupes de sites | ✅ | Par région, sport, custom |
-| Déploiement contenu | ✅ | Push vidéos vers sites |
-| Mises à jour OTA | ✅ | Avec rollback automatique |
-| Gestion utilisateurs | ✅ | Admin, operator, viewer |
-| **Analytics Club** | ✅ | Dashboard usage, santé, export CSV (6 déc) |
-| **Éditeur config avancé** | ✅ | Historique, diff, timeCategories (8 déc) |
-| **CRUD vidéos inline** | ✅ | Ajouter/modifier/supprimer depuis dashboard (8 déc) |
-| **Upload fichiers** | ✅ | Multer avec gestion multipart (7 déc) |
-| **Toast notifications** | ✅ | Remplace alert() natifs (6 déc) |
+| Feature                   | Statut | Description                                         |
+| ------------------------- | ------ | --------------------------------------------------- |
+| Dashboard flotte          | ✅     | Vue temps réel tous sites                           |
+| Enregistrement sites      | ✅     | Auto-registration avec API key                      |
+| Métriques historiques     | ✅     | Graphiques CPU, RAM, etc.                           |
+| Alertes automatiques      | ✅     | Température, disque, offline                        |
+| Groupes de sites          | ✅     | Par région, sport, custom                           |
+| Déploiement contenu       | ✅     | Push vidéos vers sites                              |
+| Mises à jour OTA          | ✅     | Avec rollback automatique                           |
+| Gestion utilisateurs      | ✅     | Admin, operator, viewer                             |
+| **Analytics Club**        | ✅     | Dashboard usage, santé, export CSV (6 déc)          |
+| **Éditeur config avancé** | ✅     | Historique, diff, timeCategories (8 déc)            |
+| **CRUD vidéos inline**    | ✅     | Ajouter/modifier/supprimer depuis dashboard (8 déc) |
+| **Upload fichiers**       | ✅     | Multer avec gestion multipart (7 déc)               |
+| **Toast notifications**   | ✅     | Remplace alert() natifs (6 déc)                     |
 
 ### À Développer (Phase 2+)
 
-| Feature | Phase | Description |
-|---------|-------|-------------|
-| App mobile native | 2 | iOS/Android télécommande |
-| API publique | 2 | Intégrations tierces |
-| Marketplace vidéos | 2 | Templates et animations |
-| Intégration scoreboards | 2 | Sync avec systèmes de score |
-| Multi-écrans | 2 | Plusieurs TV par site |
-| White-label | 2 | Personnalisation fédérations |
-| AR overlays | 3 | Réalité augmentée |
-| Publicité programmatique | 3 | Revenus pub automatisés |
+| Feature                  | Phase | Description                  |
+| ------------------------ | ----- | ---------------------------- |
+| App mobile native        | 2     | iOS/Android télécommande     |
+| API publique             | 2     | Intégrations tierces         |
+| Marketplace vidéos       | 2     | Templates et animations      |
+| Intégration scoreboards  | 2     | Sync avec systèmes de score  |
+| Multi-écrans             | 2     | Plusieurs TV par site        |
+| White-label              | 2     | Personnalisation fédérations |
+| AR overlays              | 3     | Réalité augmentée            |
+| Publicité programmatique | 3     | Revenus pub automatisés      |
 
 ## 2.5 Stratégie d'Acquisition Annonceurs
 
@@ -371,29 +384,29 @@ Plus clubs → Plus audience → CPM attractif → Plus annonceurs
 
 #### TIER 1 - ANNONCEURS RÉGIONAUX (Q2-Q3 2026)
 
-| Profil | Exemples | Budget moyen | Objectif 2026 |
-|--------|----------|--------------|---------------|
-| Enseignes sportives | Decathlon Nantes, Intersport | €250-500/mois | 2-3 |
-| Banques régionales | Crédit Mutuel Bretagne, Caisse d'Épargne | €300-600/mois | 1-2 |
-| Assurances | MAIF, Groupama | €250-400/mois | 1-2 |
+| Profil              | Exemples                                 | Budget moyen  | Objectif 2026 |
+| ------------------- | ---------------------------------------- | ------------- | ------------- |
+| Enseignes sportives | Decathlon Nantes, Intersport             | €250-500/mois | 2-3           |
+| Banques régionales  | Crédit Mutuel Bretagne, Caisse d'Épargne | €300-600/mois | 1-2           |
+| Assurances          | MAIF, Groupama                           | €250-400/mois | 1-2           |
 
 **Total Tier 1 : 3-6 annonceurs en 2026**
 
 #### TIER 2 - ANNONCEURS NATIONAUX (Q4 2026 - 2027)
 
-| Profil | Exemples | Budget moyen | Objectif 2027 |
-|--------|----------|--------------|---------------|
-| Marques grand public | McDonald's, Orange, Carrefour | €500-1,500/mois | 3-5 |
-| Équipementiers | Nike, Adidas, Puma | €800-2,000/mois | 2-3 |
+| Profil               | Exemples                      | Budget moyen    | Objectif 2027 |
+| -------------------- | ----------------------------- | --------------- | ------------- |
+| Marques grand public | McDonald's, Orange, Carrefour | €500-1,500/mois | 3-5           |
+| Équipementiers       | Nike, Adidas, Puma            | €800-2,000/mois | 2-3           |
 
 **Total Tier 2 : 10-15 annonceurs en 2027**
 
 #### TIER 3 - ANNONCEURS LOCAUX (2027+)
 
-| Profil | Exemples | Budget moyen | Modèle |
-|--------|----------|--------------|--------|
+| Profil              | Exemples                    | Budget moyen  | Modèle                  |
+| ------------------- | --------------------------- | ------------- | ----------------------- |
 | Commerces proximité | Restaurants, magasins sport | €150-250/mois | Self-service plateforme |
-| PME locales | Garages, artisans | €100-200/mois | Self-service |
+| PME locales         | Garages, artisans           | €100-200/mois | Self-service            |
 
 ### 2.5.2 Pipeline & Process de Vente Annonceurs
 
@@ -423,84 +436,84 @@ CLOSING (J45-J60)
 
 #### Métriques de Vente
 
-| Métrique | Valeur |
-|----------|--------|
-| Taux conversion prospection → client | 15-20% |
-| CAC annonceur | €800 |
-| LTV annonceur | €8,100 (3 ans × €225/mois) |
-| LTV/CAC | **10x** |
+| Métrique                             | Valeur                     |
+| ------------------------------------ | -------------------------- |
+| Taux conversion prospection → client | 15-20%                     |
+| CAC annonceur                        | €800                       |
+| LTV annonceur                        | €8,100 (3 ans × €225/mois) |
+| LTV/CAC                              | **10x**                    |
 
 ### 2.5.3 Arguments Commerciaux Annonceurs
 
 #### vs. Publicité Digitale Classique
 
-| Critère | Digital Display | NEOPRO |
-|---------|-----------------|--------|
-| **CPM** | €15-25 | €8-12 |
-| **Attention** | Faible (ad-block) | Captive (salle) |
-| **Ciblage** | Imprécis (cookies) | Hyper-local garanti |
-| **Fraude** | Risque élevé (bots) | Zéro (spectateurs) |
-| **Brand safety** | Variable | 100% sport amateur |
+| Critère          | Digital Display     | NEOPRO              |
+| ---------------- | ------------------- | ------------------- |
+| **CPM**          | €15-25              | €8-12               |
+| **Attention**    | Faible (ad-block)   | Captive (salle)     |
+| **Ciblage**      | Imprécis (cookies)  | Hyper-local garanti |
+| **Fraude**       | Risque élevé (bots) | Zéro (spectateurs)  |
+| **Brand safety** | Variable            | 100% sport amateur  |
 
 #### Proposition de Valeur Unique
 
-- *"Sponsorisez le sport amateur de votre région sans gérer 30 contrats"*
-- *"1 signature = présence automatique 30+ salles sportives"*
-- *"Analytics temps réel par club, région, période"*
-- *"Association positive sport/jeunesse/territoire"*
+- _"Sponsorisez le sport amateur de votre région sans gérer 30 contrats"_
+- _"1 signature = présence automatique 30+ salles sportives"_
+- _"Analytics temps réel par club, région, période"_
+- _"Association positive sport/jeunesse/territoire"_
 
 ### 2.5.4 Seuils Critiques Réseau
 
-| Seuil | Clubs | Impact |
-|-------|-------|--------|
-| **SEUIL 1** | 15 clubs | Lancement réseau (reach minimal viable) |
-| **SEUIL 2** | 30 clubs | Scale annonceurs régionaux (CPM compétitif) |
+| Seuil       | Clubs     | Impact                                             |
+| ----------- | --------- | -------------------------------------------------- |
+| **SEUIL 1** | 15 clubs  | Lancement réseau (reach minimal viable)            |
+| **SEUIL 2** | 30 clubs  | Scale annonceurs régionaux (CPM compétitif)        |
 | **SEUIL 3** | 100 clubs | Attractivité annonceurs nationaux (couverture géo) |
-| **SEUIL 4** | 300 clubs | Pricing premium (quasi-monopole) |
+| **SEUIL 4** | 300 clubs | Pricing premium (quasi-monopole)                   |
 
 ### 2.5.5 Équipe Dédiée Annonceurs
 
-| Phase | Structure | Mission |
-|-------|-----------|---------|
-| **2026** | Gwenvael double casquette | Clubs + annonceurs (mi-temps chaque) |
-| **2027** | +1 Commercial Annonceurs | 6 → 15 annonceurs en 12 mois |
+| Phase    | Structure                   | Mission                               |
+| -------- | --------------------------- | ------------------------------------- |
+| **2026** | Gwenvael double casquette   | Clubs + annonceurs (mi-temps chaque)  |
+| **2027** | +1 Commercial Annonceurs    | 6 → 15 annonceurs en 12 mois          |
 | **2028** | Équipe structurée (3 pers.) | 1 Head + 2 Account Managers régionaux |
 
 ## 2.6 Marché Annonceurs (CÔTÉ 2)
 
 ### TAM Annonceurs
 
-| Segment | Calcul | TAM ARR |
-|---------|--------|---------|
-| Publicité locale/régionale France | €3,5 Mds (Kantar) | - |
-| Part sport amateur | ~1% | €35M disponible |
-| **Annonceurs régionaux** | 50 × €250/mois × 90% × 12 | **€135K** |
-| **Annonceurs nationaux** | 100 × €1,000/mois × 90% × 12 | **€1,08M** |
-| **TOTAL TAM ANNONCEURS** | | **€1,2M ARR** |
+| Segment                           | Calcul                       | TAM ARR         |
+| --------------------------------- | ---------------------------- | --------------- |
+| Publicité locale/régionale France | €3,5 Mds (Kantar)            | -               |
+| Part sport amateur                | ~1%                          | €35M disponible |
+| **Annonceurs régionaux**          | 50 × €250/mois × 90% × 12    | **€135K**       |
+| **Annonceurs nationaux**          | 100 × €1,000/mois × 90% × 12 | **€1,08M**      |
+| **TOTAL TAM ANNONCEURS**          |                              | **€1,2M ARR**   |
 
 ### SAM Annonceurs par Année
 
-| Année | Annonceurs | SAM ARR |
-|-------|------------|---------|
-| **2026** (Bretagne + Pays de Loire) | 6 régionaux | €16K |
-| **2027** (+3 régions) | 15 (dont 3 nationaux) | €40K |
-| **2028** (couverture nationale) | 25+ | €80K |
+| Année                               | Annonceurs            | SAM ARR |
+| ----------------------------------- | --------------------- | ------- |
+| **2026** (Bretagne + Pays de Loire) | 6 régionaux           | €16K    |
+| **2027** (+3 régions)               | 15 (dont 3 nationaux) | €40K    |
+| **2028** (couverture nationale)     | 25+                   | €80K    |
 
 ### TAM Combiné NEOPRO
 
-| Segment | TAM ARR | SAM 2026 | SAM 2027 | SAM 2028 |
-|---------|---------|----------|----------|----------|
-| **Clubs** | €5,2M | €53K | €154K | €450K |
-| **Annonceurs** | €1,2M | €16K | €40K | €80K |
-| **TOTAL** | **€6,4M** | **€69K** | **€194K** | **€530K** |
+| Segment        | TAM ARR   | SAM 2026 | SAM 2027  | SAM 2028  |
+| -------------- | --------- | -------- | --------- | --------- |
+| **Clubs**      | €5,2M     | €53K     | €154K     | €450K     |
+| **Annonceurs** | €1,2M     | €16K     | €40K      | €80K      |
+| **TOTAL**      | **€6,4M** | **€69K** | **€194K** | **€530K** |
 
 ### Stratégie Go-To-Market
 
-| Phase | Focus | Actions |
-|-------|-------|---------|
-| **Phase 1 (2026)** | Clubs d'abord | Build réseau, annonceurs dès seuil 15 clubs |
-| **Phase 2 (2027)** | Scale annonceurs | Expansion géo + annonceurs régionaux |
-| **Phase 3 (2028)** | Pricing premium | Couverture nationale + annonceurs nationaux |
+| Phase              | Focus            | Actions                                     |
+| ------------------ | ---------------- | ------------------------------------------- |
+| **Phase 1 (2026)** | Clubs d'abord    | Build réseau, annonceurs dès seuil 15 clubs |
+| **Phase 2 (2027)** | Scale annonceurs | Expansion géo + annonceurs régionaux        |
+| **Phase 3 (2028)** | Pricing premium  | Couverture nationale + annonceurs nationaux |
 
 ## 2.7 Production Vidéo - Différenciateur Majeur
 
@@ -524,38 +537,38 @@ CLOSING (J45-J60)
 
 - Clubs ADORENT voir leurs joueurs sur écran géant
 - Ambiance salle décuplée lors des buts
-- **Argument massue** : *"Vos joueurs comme des pros"*
+- **Argument massue** : _"Vos joueurs comme des pros"_
 
 ### 2.7.2 Offres Production Vidéo
 
 #### Équipe Principale
 
-| Pack | Prix | Contenu | Marge |
-|------|------|---------|-------|
-| **Bronze** | €800 | 10 vidéos 30s (contenu club fourni), motion design basique, 1 révision, livraison 7 jours | 56% |
-| **Silver** ⭐ | €1,500 | Shooting 1h30 + 1 vidéo présentation + 10 vidéos 30s, motion design pro, 2 révisions, livraison 5 jours | 32% |
-| **Gold** | €2,000 | Shooting 2h + 1 vidéo 60s + 15 vidéos (10×30s + 5×60s), interviews, révisions illimitées, livraison 3 jours | 30% |
+| Pack          | Prix   | Contenu                                                                                                     | Marge |
+| ------------- | ------ | ----------------------------------------------------------------------------------------------------------- | ----- |
+| **Bronze**    | €800   | 10 vidéos 30s (contenu club fourni), motion design basique, 1 révision, livraison 7 jours                   | 56%   |
+| **Silver** ⭐ | €1,500 | Shooting 1h30 + 1 vidéo présentation + 10 vidéos 30s, motion design pro, 2 révisions, livraison 5 jours     | 32%   |
+| **Gold**      | €2,000 | Shooting 2h + 1 vidéo 60s + 15 vidéos (10×30s + 5×60s), interviews, révisions illimitées, livraison 3 jours | 30%   |
 
 #### Équipes Supplémentaires
 
-| Option | Prix | Condition | Marge |
-|--------|------|-----------|-------|
-| **Équipe supp (montage seul)** | €500 | Assets shooting principal | 30% |
-| **Équipe supp (avec shooting)** | €1,200 | Shooting séparé | 15% |
+| Option                          | Prix   | Condition                 | Marge |
+| ------------------------------- | ------ | ------------------------- | ----- |
+| **Équipe supp (montage seul)**  | €500   | Assets shooting principal | 30%   |
+| **Équipe supp (avec shooting)** | €1,200 | Shooting séparé           | 15%   |
 
 #### Packs Multi-Équipes (économies d'échelle)
 
-| Pack | Prix | Contenu | Économie |
-|------|------|---------|----------|
-| **2 Équipes** | €2,500 | 1 shooting 2h, 20 vidéos | €500 vs 2×Silver |
+| Pack          | Prix   | Contenu                  | Économie           |
+| ------------- | ------ | ------------------------ | ------------------ |
+| **2 Équipes** | €2,500 | 1 shooting 2h, 20 vidéos | €500 vs 2×Silver   |
 | **3 Équipes** | €3,500 | 1 shooting 3h, 30 vidéos | €1,000 vs 3×Silver |
 | **4 Équipes** | €4,200 | 1 shooting 4h, 40 vidéos | €1,800 vs 4×Silver |
 
 ### 2.7.3 Service Média Day
 
-| Service | Prix | Contenu | Marge |
-|---------|------|---------|-------|
-| **Média Day Multi-Équipes** | €2,500/journée | Shooting 1 journée (4-6 équipes), 50+ photos HD/équipe, 1 vidéo présentation/équipe | 44% |
+| Service                     | Prix           | Contenu                                                                             | Marge |
+| --------------------------- | -------------- | ----------------------------------------------------------------------------------- | ----- |
+| **Média Day Multi-Équipes** | €2,500/journée | Shooting 1 journée (4-6 équipes), 50+ photos HD/équipe, 1 vidéo présentation/équipe | 44%   |
 
 **Disponibilité** : Q3 2026
 
@@ -563,12 +576,12 @@ CLOSING (J45-J60)
 
 ### 2.7.4 Différenciation Concurrence
 
-| Concurrent | Prix | Qualité | Intégration |
-|------------|------|---------|-------------|
-| Agences vidéo | €2,000-5,000 | Pro | Aucune |
-| Freelances | €500-1,500 | Variable | Aucune |
-| Bénévoles club | Gratuit | Amateur | Manuelle |
-| **NEOPRO** | €800-2,000 | Pro | **Automatique** |
+| Concurrent     | Prix         | Qualité  | Intégration     |
+| -------------- | ------------ | -------- | --------------- |
+| Agences vidéo  | €2,000-5,000 | Pro      | Aucune          |
+| Freelances     | €500-1,500   | Variable | Aucune          |
+| Bénévoles club | Gratuit      | Amateur  | Manuelle        |
+| **NEOPRO**     | €800-2,000   | Pro      | **Automatique** |
 
 #### Avantages NEOPRO
 
@@ -580,11 +593,11 @@ CLOSING (J45-J60)
 
 ### 2.7.5 Prévisions 2026
 
-| Métrique | Valeur |
-|----------|--------|
-| Taux adoption vidéo | 53% (16 clubs sur 30) |
-| Mix packs | 50% Bronze, 35% Silver, 15% Gold |
-| Revenus vidéo 2026 | ~€12,800 (amorti mensuel €1,066) |
+| Métrique            | Valeur                           |
+| ------------------- | -------------------------------- |
+| Taux adoption vidéo | 53% (16 clubs sur 30)            |
+| Mix packs           | 50% Bronze, 35% Silver, 15% Gold |
+| Revenus vidéo 2026  | ~€12,800 (amorti mensuel €1,066) |
 
 ---
 
@@ -594,38 +607,38 @@ CLOSING (J45-J60)
 
 ### Frontend
 
-| Composant | Technologie | Version |
-|-----------|-------------|---------|
-| App principale | Angular | 20.3.0 |
-| Dashboard central | Angular | 17.0.0 |
-| Lecteur vidéo | Video.js | 8.23.4 |
-| Charts | Chart.js + ng2-charts | 4.4.1 |
-| Maps | Leaflet | 1.9.4 |
-| Real-time client | Socket.IO Client | 4.7.2 |
+| Composant         | Technologie           | Version |
+| ----------------- | --------------------- | ------- |
+| App principale    | Angular               | 20.3.0  |
+| Dashboard central | Angular               | 17.0.0  |
+| Lecteur vidéo     | Video.js              | 8.23.4  |
+| Charts            | Chart.js + ng2-charts | 4.4.1   |
+| Maps              | Leaflet               | 1.9.4   |
+| Real-time client  | Socket.IO Client      | 4.7.2   |
 
 ### Backend
 
-| Composant | Technologie | Version |
-|-----------|-------------|---------|
-| Runtime | Node.js | 18+ LTS |
-| Framework | Express.js | 4.18.2 |
-| Real-time | Socket.IO | 4.7.2 |
-| Database | PostgreSQL | 15 |
-| Auth | JWT (jsonwebtoken) | 9.0.2 |
-| Validation | Joi | 17.11.0 |
-| Logging | Winston | 3.11.0 |
-| Security | Helmet + express-rate-limit | 7.1.0 |
+| Composant  | Technologie                 | Version |
+| ---------- | --------------------------- | ------- |
+| Runtime    | Node.js                     | 18+ LTS |
+| Framework  | Express.js                  | 4.18.2  |
+| Real-time  | Socket.IO                   | 4.7.2   |
+| Database   | PostgreSQL                  | 15      |
+| Auth       | JWT (jsonwebtoken)          | 9.0.2   |
+| Validation | Joi                         | 17.11.0 |
+| Logging    | Winston                     | 3.11.0  |
+| Security   | Helmet + express-rate-limit | 7.1.0   |
 
 ### Infrastructure
 
-| Composant | Solution |
-|-----------|----------|
-| Hosting cloud | Render.com |
-| Database | PostgreSQL (Render managed) |
-| Hardware local | Raspberry Pi 4 |
-| Web server local | Nginx |
-| Process manager | Systemd |
-| DNS local | Avahi (mDNS) |
+| Composant        | Solution                    |
+| ---------------- | --------------------------- |
+| Hosting cloud    | Render.com                  |
+| Database         | PostgreSQL (Render managed) |
+| Hardware local   | Raspberry Pi 4              |
+| Web server local | Nginx                       |
+| Process manager  | Systemd                     |
+| DNS local        | Avahi (mDNS)                |
 
 ## 3.2 Architecture Globale
 
@@ -832,10 +845,10 @@ CLOSING (J45-J60)
 
 Le système distingue deux types de contenu avec des règles de synchronisation différentes :
 
-| Type | Propriétaire | Modifiable par Club | Direction Sync |
-|------|--------------|---------------------|----------------|
-| **Contenu NEOPRO** | NEOPRO Central | Non (verrouillé) | Central → Local |
-| **Contenu Club** | Club local | Oui | Local → Central (miroir) |
+| Type               | Propriétaire   | Modifiable par Club | Direction Sync           |
+| ------------------ | -------------- | ------------------- | ------------------------ |
+| **Contenu NEOPRO** | NEOPRO Central | Non (verrouillé)    | Central → Local          |
+| **Contenu Club**   | Club local     | Oui                 | Local → Central (miroir) |
 
 ### Cas d'Usage
 
@@ -869,13 +882,13 @@ Le système distingue deux types de contenu avec des règles de synchronisation 
 
 ## 4.1 Points Positifs
 
-| Domaine | Évaluation | Détails |
-|---------|------------|---------|
-| **Architecture** | ✅ Solide | Séparation claire des responsabilités, scalable |
-| **Stack** | ✅ Moderne | Angular 20, Node 18, PostgreSQL 15, Socket.IO 4.7 |
-| **Documentation** | ✅ Bonne | README, REFERENCE, TROUBLESHOOTING bien structurés |
-| **UX produit** | ✅ Fonctionnel | Workflow clair, temps réel efficace |
-| **Déploiement** | ✅ Automatisé | Scripts setup-new-club.sh, deploy-remote.sh |
+| Domaine           | Évaluation     | Détails                                            |
+| ----------------- | -------------- | -------------------------------------------------- |
+| **Architecture**  | ✅ Solide      | Séparation claire des responsabilités, scalable    |
+| **Stack**         | ✅ Moderne     | Angular 20, Node 18, PostgreSQL 15, Socket.IO 4.7  |
+| **Documentation** | ✅ Bonne       | README, REFERENCE, TROUBLESHOOTING bien structurés |
+| **UX produit**    | ✅ Fonctionnel | Workflow clair, temps réel efficace                |
+| **Déploiement**   | ✅ Automatisé  | Scripts setup-new-club.sh, deploy-remote.sh        |
 
 ## 4.2 Dette Technique Critique
 
@@ -893,19 +906,20 @@ Situation actuelle:
 
 **Détail couverture par fichier :**
 
-| Fichier | Tests | Couverture |
-|---------|-------|------------|
-| auth.controller.ts | 14 | 100% |
-| auth.ts (middleware) | 13 | 97% |
-| validation.ts | 25 | 100% |
-| sites.controller.ts | 35 | 91% |
-| groups.controller.ts | 21 | 90% |
-| content.controller.ts | 25 | 93% |
-| updates.controller.ts | 28 | 100% |
-| analytics.controller.ts | 40 | 93% |
-| config-history.controller.ts | 24 | 100% |
+| Fichier                      | Tests | Couverture |
+| ---------------------------- | ----- | ---------- |
+| auth.controller.ts           | 14    | 100%       |
+| auth.ts (middleware)         | 13    | 97%        |
+| validation.ts                | 25    | 100%       |
+| sites.controller.ts          | 35    | 91%        |
+| groups.controller.ts         | 21    | 90%        |
+| content.controller.ts        | 25    | 93%        |
+| updates.controller.ts        | 28    | 100%       |
+| analytics.controller.ts      | 40    | 93%        |
+| config-history.controller.ts | 24    | 100%       |
 
 **Non couvert (volontairement) :**
+
 - Routes (0%) - Simple câblage, pas de logique métier
 - Services socket/deployment (0%) - WebSocket complexe, tests d'intégration nécessaires
 - Config database/logger (0%) - Mockés dans les tests
@@ -923,40 +937,42 @@ Situation actuelle:
 
 ### 4.2.3 Vulnérabilités Sécurité
 
-| Vulnérabilité | Fichier | Sévérité | Statut |
-|---------------|---------|----------|--------|
-| ~~JWT secret par défaut~~ | `central-server/src/middleware/auth.ts:6` | ~~🔴 CRITIQUE~~ | ✅ CORRIGÉ - Erreur si JWT_SECRET manquant |
-| ~~TLS désactivé~~ | `central-server/src/config/database.ts:11-28` | ~~🔴 CRITIQUE~~ | ✅ CORRIGÉ - TLS activé en production, CA configurable |
-| ~~Credentials admin en dur~~ | `central-server/src/scripts/init-db.sql` | ~~🔴 CRITIQUE~~ | ✅ CORRIGÉ - Script `npm run create-admin` sécurisé |
-| ~~Token localStorage~~ | `central-server/src/controllers/auth.controller.ts` | ~~🟠 HAUTE~~ | ✅ CORRIGÉ - HttpOnly cookies implémentés |
-| ~~API key non hashée~~ | `central-server/src/services/socket.service.ts:68-71` | ~~🟠 HAUTE~~ | ✅ CORRIGÉ - SHA256 hash + timing-safe compare |
+| Vulnérabilité                | Fichier                                               | Sévérité        | Statut                                                 |
+| ---------------------------- | ----------------------------------------------------- | --------------- | ------------------------------------------------------ |
+| ~~JWT secret par défaut~~    | `central-server/src/middleware/auth.ts:6`             | ~~🔴 CRITIQUE~~ | ✅ CORRIGÉ - Erreur si JWT_SECRET manquant             |
+| ~~TLS désactivé~~            | `central-server/src/config/database.ts:11-28`         | ~~🔴 CRITIQUE~~ | ✅ CORRIGÉ - TLS activé en production, CA configurable |
+| ~~Credentials admin en dur~~ | `central-server/src/scripts/init-db.sql`              | ~~🔴 CRITIQUE~~ | ✅ CORRIGÉ - Script `npm run create-admin` sécurisé    |
+| ~~Token localStorage~~       | `central-server/src/controllers/auth.controller.ts`   | ~~🟠 HAUTE~~    | ✅ CORRIGÉ - HttpOnly cookies implémentés              |
+| ~~API key non hashée~~       | `central-server/src/services/socket.service.ts:68-71` | ~~🟠 HAUTE~~    | ✅ CORRIGÉ - SHA256 hash + timing-safe compare         |
 
 ### 4.2.4 Autres Problèmes
 
-| Problème | Impact | Effort fix |
-|----------|--------|------------|
-| Pagination manquante API | Performance dégradée avec volume | 2-3 jours |
-| Versions Angular divergentes (17 vs 20) | Maintenance complexe | 1 semaine |
-| Pas de Redis pour Socket.IO | Ne scale pas horizontalement | 2-3 jours |
-| Logs non centralisés | Debugging difficile | 1-2 jours |
-| Pas de monitoring APM | Pas de visibilité performance | 1-2 jours |
+| Problème                                | Impact                           | Effort fix |
+| --------------------------------------- | -------------------------------- | ---------- |
+| Pagination manquante API                | Performance dégradée avec volume | 2-3 jours  |
+| Versions Angular divergentes (17 vs 20) | Maintenance complexe             | 1 semaine  |
+| Pas de Redis pour Socket.IO             | Ne scale pas horizontalement     | 2-3 jours  |
+| Logs non centralisés                    | Debugging difficile              | 1-2 jours  |
+| Pas de monitoring APM                   | Pas de visibilité performance    | 1-2 jours  |
 
 ## 4.3 Évaluation Globale
 
-| Critère | Note | Commentaire |
-|---------|------|-------------|
-| Fonctionnalité | **9/10** | Produit complet avec analytics, éditeur config, CRUD vidéos |
-| Qualité code | **7/10** | 230 tests, 67% couverture, 94% sur controllers |
-| Sécurité | **8/10** | HttpOnly cookies, JWT sécurisé, headers Helmet |
-| Scalabilité | 6/10 | Architecture OK, infra à renforcer (Redis) |
-| Maintenabilité | **8/10** | Doc complète, tests solides, CI/CD opérationnel |
-| **GLOBAL** | **7.6/10** | **Produit fonctionnel complet, dette technique largement résorbée** |
+| Critère        | Note       | Commentaire                                                         |
+| -------------- | ---------- | ------------------------------------------------------------------- |
+| Fonctionnalité | **9/10**   | Produit complet avec analytics, éditeur config, CRUD vidéos         |
+| Qualité code   | **7/10**   | 230 tests, 67% couverture, 94% sur controllers                      |
+| Sécurité       | **8/10**   | HttpOnly cookies, JWT sécurisé, headers Helmet                      |
+| Scalabilité    | 6/10       | Architecture OK, infra à renforcer (Redis)                          |
+| Maintenabilité | **8/10**   | Doc complète, tests solides, CI/CD opérationnel                     |
+| **GLOBAL**     | **7.6/10** | **Produit fonctionnel complet, dette technique largement résorbée** |
 
 > **Mise à jour 8 décembre 2025 (v1.5) :**
+>
 > - Note sécurité augmentée (7→8) : HttpOnly cookies implémentés pour JWT
 > - Note globale augmentée (7.4→7.6)
 >
 > **Mise à jour 8 décembre 2025 (v1.4) :**
+>
 > - Note qualité code augmentée (5→7) : 224 tests unitaires ajoutés avec 67% couverture globale
 > - Note maintenabilité augmentée (5→8) : Base de tests solide + CI/CD GitHub Actions opérationnel
 > - Note globale augmentée (6.4→7.4)
@@ -969,27 +985,28 @@ Situation actuelle:
 
 > **Mission : Transformer le prototype en produit production-ready**
 
-| Objectif | Métrique cible |
-|----------|----------------|
-| Qualité | Couverture tests > 60% |
+| Objectif | Métrique cible                 |
+| -------- | ------------------------------ |
+| Qualité  | Couverture tests > 60%         |
 | Sécurité | 0 vulnérabilité critique/haute |
-| Ops | CI/CD fonctionnel |
-| Produit | 20 clubs pilotes actifs |
-| Business | NPS pilotes > 40 |
+| Ops      | CI/CD fonctionnel              |
+| Produit  | 20 clubs pilotes actifs        |
+| Business | NPS pilotes > 40               |
 
 ## 5.2 Semaines 1-4 : Fondations
 
 ### Semaine 1 : CI/CD & Sécurité Critique
 
-| Jour | Tâche | Livrable |
-|------|-------|----------|
-| 1-2 | Audit sécurité complet | Rapport vulnérabilités |
-| 2 | Fix JWT secret fallback | PR merged |
-| 3 | Fix TLS PostgreSQL | PR merged |
-| 3 | Supprimer credentials init-db.sql | PR merged |
-| 4-5 | Setup GitHub Actions basique | Pipeline qui build + lint |
+| Jour | Tâche                             | Livrable                  |
+| ---- | --------------------------------- | ------------------------- |
+| 1-2  | Audit sécurité complet            | Rapport vulnérabilités    |
+| 2    | Fix JWT secret fallback           | PR merged                 |
+| 3    | Fix TLS PostgreSQL                | PR merged                 |
+| 3    | Supprimer credentials init-db.sql | PR merged                 |
+| 4-5  | Setup GitHub Actions basique      | Pipeline qui build + lint |
 
 **GitHub Actions workflow cible :**
+
 ```yaml
 # .github/workflows/ci.yml
 name: CI
@@ -1010,14 +1027,15 @@ jobs:
 
 ### Semaine 2 : Tests Backend ✅ FAIT (8 déc 2025)
 
-| Jour | Tâche | Livrable | Statut |
-|------|-------|----------|--------|
-| 1 | Config Jest central-server | jest.config.js fonctionnel | ✅ |
-| 2-3 | Tests AuthController | 100% couverture auth | ✅ |
-| 4 | Tests SitesController | 91% couverture sites | ✅ |
-| 5 | Tests ContentController | 93% couverture content | ✅ |
+| Jour | Tâche                      | Livrable                   | Statut |
+| ---- | -------------------------- | -------------------------- | ------ |
+| 1    | Config Jest central-server | jest.config.js fonctionnel | ✅     |
+| 2-3  | Tests AuthController       | 100% couverture auth       | ✅     |
+| 4    | Tests SitesController      | 91% couverture sites       | ✅     |
+| 5    | Tests ContentController    | 93% couverture content     | ✅     |
 
 **Structure tests implémentée :**
+
 ```
 central-server/src/
 ├── controllers/
@@ -1043,71 +1061,71 @@ central-server/src/
 
 ### Semaine 3 : Tests Frontend & Intégration
 
-| Jour | Tâche | Livrable |
-|------|-------|----------|
-| 1 | Config Karma central-dashboard | Tests Angular fonctionnels |
-| 2-3 | Tests services Angular | AuthService, ApiService testés |
-| 4-5 | Tests intégration API | Endpoints critiques couverts |
+| Jour | Tâche                          | Livrable                       |
+| ---- | ------------------------------ | ------------------------------ |
+| 1    | Config Karma central-dashboard | Tests Angular fonctionnels     |
+| 2-3  | Tests services Angular         | AuthService, ApiService testés |
+| 4-5  | Tests intégration API          | Endpoints critiques couverts   |
 
 ### Semaine 4 : Sécurité Avancée
 
-| Jour | Tâche | Livrable |
-|------|-------|----------|
-| ~~1-2~~ | ~~Migrer JWT vers HttpOnly cookies~~ | ✅ FAIT - 8 déc 2025 |
-| 3 | Hasher API keys en base | Migration DB + code |
-| 4 | Rate limiting par utilisateur | Config améliorée |
-| 5 | npm audit clean | 0 vulnérabilités high/critical |
+| Jour    | Tâche                                | Livrable                       |
+| ------- | ------------------------------------ | ------------------------------ |
+| ~~1-2~~ | ~~Migrer JWT vers HttpOnly cookies~~ | ✅ FAIT - 8 déc 2025           |
+| 3       | Hasher API keys en base              | Migration DB + code            |
+| 4       | Rate limiting par utilisateur        | Config améliorée               |
+| 5       | npm audit clean                      | 0 vulnérabilités high/critical |
 
 ## 5.3 Semaines 5-8 : Monitoring & Documentation
 
 ### Semaine 5-6 : Observabilité
 
-| Tâche | Outil | Effort |
-|-------|-------|--------|
-| Logging centralisé | Logtail ou Papertrail | 4h |
-| Alerting Slack | Webhooks | 2h |
-| Health checks enrichis | Endpoint /health | 4h |
-| Uptime monitoring | UptimeRobot | 1h |
-| Error tracking | Sentry | 4h |
+| Tâche                  | Outil                 | Effort |
+| ---------------------- | --------------------- | ------ |
+| Logging centralisé     | Logtail ou Papertrail | 4h     |
+| Alerting Slack         | Webhooks              | 2h     |
+| Health checks enrichis | Endpoint /health      | 4h     |
+| Uptime monitoring      | UptimeRobot           | 1h     |
+| Error tracking         | Sentry                | 4h     |
 
 ### Semaine 7-8 : Documentation
 
-| Document | Contenu | Effort |
-|----------|---------|--------|
-| OpenAPI spec | Swagger pour toutes les API | 2 jours |
-| CONTRIBUTING.md | Guide contribution développeur | 4h |
-| SECURITY.md | Politique sécurité, reporting | 4h |
-| ADR template | Architecture Decision Records | 2h |
-| Onboarding dev | Nouveau développeur autonome en 1 semaine | 1 jour |
+| Document        | Contenu                                   | Effort  |
+| --------------- | ----------------------------------------- | ------- |
+| OpenAPI spec    | Swagger pour toutes les API               | 2 jours |
+| CONTRIBUTING.md | Guide contribution développeur            | 4h      |
+| SECURITY.md     | Politique sécurité, reporting             | 4h      |
+| ADR template    | Architecture Decision Records             | 2h      |
+| Onboarding dev  | Nouveau développeur autonome en 1 semaine | 1 jour  |
 
 ## 5.4 Semaines 9-12 : Produit & Onboarding
 
 ### Améliorations UX
 
-| Feature | Description | Effort |
-|---------|-------------|--------|
-| Wizard onboarding | Configuration guidée premier club | 3 jours |
-| Loading states | Spinners, skeletons | 1 jour |
-| Pagination API | Limit/offset sur tous les endpoints | 2 jours |
+| Feature           | Description                         | Effort  |
+| ----------------- | ----------------------------------- | ------- |
+| Wizard onboarding | Configuration guidée premier club   | 3 jours |
+| Loading states    | Spinners, skeletons                 | 1 jour  |
+| Pagination API    | Limit/offset sur tous les endpoints | 2 jours |
 
 ## 5.5 Livrables Phase 1
 
-| Livrable | Critère d'acceptation | Statut |
-|----------|----------------------|--------|
-| Pipeline CI/CD | Build + test sur chaque PR | ✅ GitHub Actions |
-| Couverture tests | > 60% backend, > 40% frontend | ✅ 67% backend |
-| Sécurité | 0 vulnérabilité OWASP critical/high | ✅ 4/5 corrigées |
-| Monitoring | Logs centralisés + alertes Slack | ⏳ À faire |
-| Documentation | OpenAPI + CONTRIBUTING + SECURITY | ⏳ À faire |
-| Produit | 20 clubs pilotes avec NPS > 40 | ⏳ En cours |
+| Livrable         | Critère d'acceptation               | Statut            |
+| ---------------- | ----------------------------------- | ----------------- |
+| Pipeline CI/CD   | Build + test sur chaque PR          | ✅ GitHub Actions |
+| Couverture tests | > 60% backend, > 40% frontend       | ✅ 67% backend    |
+| Sécurité         | 0 vulnérabilité OWASP critical/high | ✅ 4/5 corrigées  |
+| Monitoring       | Logs centralisés + alertes Slack    | ⏳ À faire        |
+| Documentation    | OpenAPI + CONTRIBUTING + SECURITY   | ⏳ À faire        |
+| Produit          | 20 clubs pilotes avec NPS > 40      | ⏳ En cours       |
 
 ## 5.6 Équipe Phase 1
 
-| Rôle | Profil | Coût mensuel |
-|------|--------|--------------|
-| Dev Backend Senior | Node.js, PostgreSQL, Jest | €5-7K |
-| Dev Frontend Senior | Angular, TypeScript, Jasmine | €5-7K |
-| DevOps (50%) | CI/CD, monitoring, infra | €2-3K |
+| Rôle                | Profil                       | Coût mensuel |
+| ------------------- | ---------------------------- | ------------ |
+| Dev Backend Senior  | Node.js, PostgreSQL, Jest    | €5-7K        |
+| Dev Frontend Senior | Angular, TypeScript, Jasmine | €5-7K        |
+| DevOps (50%)        | CI/CD, monitoring, infra     | €2-3K        |
 
 **Budget total Phase 1 : €45-50K**
 
@@ -1119,25 +1137,25 @@ central-server/src/
 
 > **Mission : Atteindre le Product-Market Fit et scaler**
 
-| Objectif | Métrique cible |
-|----------|----------------|
-| Revenue | MRR €30-50K |
-| Clients | 300-500 clubs payants |
-| Croissance | +15% MoM |
-| Rétention | Churn < 5%/mois |
-| Tech | Uptime 99.5% |
+| Objectif   | Métrique cible        |
+| ---------- | --------------------- |
+| Revenue    | MRR €30-50K           |
+| Clients    | 300-500 clubs payants |
+| Croissance | +15% MoM              |
+| Rétention  | Churn < 5%/mois       |
+| Tech       | Uptime 99.5%          |
 
 ## 6.2 Mois 4-6 : Scalabilité
 
 ### Infrastructure
 
-| Tâche | Description | Effort |
-|-------|-------------|--------|
-| Redis adapter Socket.IO | Clustering multi-instances | 2-3 jours |
-| Database partitioning | Table metrics partitionnée par mois | 2 jours |
-| CDN vidéos | Cloudflare R2 ou AWS S3 + CloudFront | 3-5 jours |
-| Read replicas | PostgreSQL réplication | 1 jour |
-| Docker | Containerisation complète | 3 jours |
+| Tâche                   | Description                          | Effort    |
+| ----------------------- | ------------------------------------ | --------- |
+| Redis adapter Socket.IO | Clustering multi-instances           | 2-3 jours |
+| Database partitioning   | Table metrics partitionnée par mois  | 2 jours   |
+| CDN vidéos              | Cloudflare R2 ou AWS S3 + CloudFront | 3-5 jours |
+| Read replicas           | PostgreSQL réplication               | 1 jour    |
+| Docker                  | Containerisation complète            | 3 jours   |
 
 ### Architecture Socket.IO avec Redis
 
@@ -1158,84 +1176,84 @@ io.adapter(createAdapter(pubClient, subClient));
 
 ### Application Mobile
 
-| Composant | Technologie | Effort |
-|-----------|-------------|--------|
-| App télécommande | React Native ou Flutter | 4-6 semaines |
-| Push notifications | Firebase Cloud Messaging | 1 semaine |
-| Deep linking | Universal links | 2 jours |
+| Composant          | Technologie              | Effort       |
+| ------------------ | ------------------------ | ------------ |
+| App télécommande   | React Native ou Flutter  | 4-6 semaines |
+| Push notifications | Firebase Cloud Messaging | 1 semaine    |
+| Deep linking       | Universal links          | 2 jours      |
 
 ### API Publique v1
 
-| Feature | Description | Effort |
-|---------|-------------|--------|
-| Versioning API | Prefix `/api/v1/` | 1 jour |
-| OAuth2 | Authentification partenaires | 1 semaine |
-| Webhooks | Events push | 3 jours |
-| Rate limiting plans | Free/Pro/Enterprise | 2 jours |
-| SDK JavaScript | Package npm client | 1 semaine |
-| Documentation API | Portail développeur | 1 semaine |
+| Feature             | Description                  | Effort    |
+| ------------------- | ---------------------------- | --------- |
+| Versioning API      | Prefix `/api/v1/`            | 1 jour    |
+| OAuth2              | Authentification partenaires | 1 semaine |
+| Webhooks            | Events push                  | 3 jours   |
+| Rate limiting plans | Free/Pro/Enterprise          | 2 jours   |
+| SDK JavaScript      | Package npm client           | 1 semaine |
+| Documentation API   | Portail développeur          | 1 semaine |
 
 ## 6.4 Mois 8-10 : Intégrations & Marketplace
 
 ### Intégrations Scoreboards
 
-| Intégration | Protocole | Effort |
-|-------------|-----------|--------|
-| API générique | REST polling | 1 semaine |
-| Sportradar | WebSocket feed | 2 semaines |
-| Triggers automatiques | Goal = vidéo auto | 3 jours |
+| Intégration           | Protocole         | Effort     |
+| --------------------- | ----------------- | ---------- |
+| API générique         | REST polling      | 1 semaine  |
+| Sportradar            | WebSocket feed    | 2 semaines |
+| Triggers automatiques | Goal = vidéo auto | 3 jours    |
 
 ### Marketplace Vidéos
 
-| Composant | Description | Effort |
-|-----------|-------------|--------|
-| Catalogue templates | Animations pré-faites | 2 jours |
-| Upload vendeurs | Multi-tenancy | 1 semaine |
-| Paiement | Stripe Connect | 1 semaine |
-| DRM basique | Signed URLs | 2 jours |
+| Composant           | Description           | Effort    |
+| ------------------- | --------------------- | --------- |
+| Catalogue templates | Animations pré-faites | 2 jours   |
+| Upload vendeurs     | Multi-tenancy         | 1 semaine |
+| Paiement            | Stripe Connect        | 1 semaine |
+| DRM basique         | Signed URLs           | 2 jours   |
 
 ## 6.5 Mois 10-12 : Sécurité & Compliance
 
 ### Certifications
 
-| Action | Effort | Coût |
-|--------|--------|------|
-| RGPD compliance | DPO, registre, process | 2 semaines + €5K |
-| Pentest externe | Audit par cabinet | 1 semaine + €10K |
-| SOC 2 Type 1 (préparation) | Documentation | 1 mois |
+| Action                     | Effort                 | Coût             |
+| -------------------------- | ---------------------- | ---------------- |
+| RGPD compliance            | DPO, registre, process | 2 semaines + €5K |
+| Pentest externe            | Audit par cabinet      | 1 semaine + €10K |
+| SOC 2 Type 1 (préparation) | Documentation          | 1 mois           |
 
 ### Sécurité Avancée
 
-| Feature | Description | Effort |
-|---------|-------------|--------|
-| MFA admins | TOTP avec speakeasy | 3 jours |
-| WAF | Cloudflare rules | 2 jours |
-| SAST dans CI | SonarQube ou Snyk | 1 jour |
+| Feature         | Description         | Effort  |
+| --------------- | ------------------- | ------- |
+| MFA admins      | TOTP avec speakeasy | 3 jours |
+| WAF             | Cloudflare rules    | 2 jours |
+| SAST dans CI    | SonarQube ou Snyk   | 1 jour  |
 | Secret rotation | Processus documenté | 2 jours |
 
 ## 6.6 Équipe Phase 2
 
-| Rôle | Nombre | Focus |
-|------|--------|-------|
-| CTO/Tech Lead | 1 | Architecture, recrutement |
-| Dev Backend Senior | 2 | API, Socket.IO, intégrations |
-| Dev Frontend Senior | 1 | Dashboard, UX |
-| Dev Mobile | 1 | iOS/Android |
-| DevOps/SRE | 1 | Infra, CI/CD, monitoring |
-| QA Engineer | 1 | Tests auto, E2E |
-| Customer Success | 1 | Onboarding, support |
+| Rôle                | Nombre | Focus                        |
+| ------------------- | ------ | ---------------------------- |
+| CTO/Tech Lead       | 1      | Architecture, recrutement    |
+| Dev Backend Senior  | 2      | API, Socket.IO, intégrations |
+| Dev Frontend Senior | 1      | Dashboard, UX                |
+| Dev Mobile          | 1      | iOS/Android                  |
+| DevOps/SRE          | 1      | Infra, CI/CD, monitoring     |
+| QA Engineer         | 1      | Tests auto, E2E              |
+| Customer Success    | 1      | Onboarding, support          |
 
 **Masse salariale : €35-50K/mois**
 
 ## 6.7 Budget Phase 2
 
-| Poste | 9 mois |
-|-------|--------|
-| Salaires | €400K |
-| Infrastructure | €10K |
-| Services (pentest, légal) | €30K |
-| Marketing | €35K |
-| **Total** | **€475-550K** |
+| Poste                     | 9 mois        |
+| ------------------------- | ------------- |
+| Salaires                  | €400K         |
+| Infrastructure            | €10K          |
+| Services (pentest, légal) | €30K          |
+| Marketing                 | €35K          |
+| **Total**                 | **€475-550K** |
 
 ---
 
@@ -1245,24 +1263,24 @@ io.adapter(createAdapter(pubClient, subClient));
 
 > **Mission : Devenir le leader européen de l'affichage dynamique sportif**
 
-| Objectif | Métrique cible |
-|----------|----------------|
-| Revenue | ARR €2-5M |
-| Clients | 5,000+ clubs |
-| International | 5+ pays EU |
-| Équipe | 25-30 personnes |
-| Compliance | SOC 2 Type 2 + ISO 27001 |
+| Objectif      | Métrique cible           |
+| ------------- | ------------------------ |
+| Revenue       | ARR €2-5M                |
+| Clients       | 5,000+ clubs             |
+| International | 5+ pays EU               |
+| Équipe        | 25-30 personnes          |
+| Compliance    | SOC 2 Type 2 + ISO 27001 |
 
 ## 7.2 Architecture Enterprise
 
 ### Multi-Tenancy Avancé
 
-| Feature | Description | Effort |
-|---------|-------------|--------|
-| Isolation données | Row-level security PostgreSQL | 2-3 semaines |
-| Custom domains | SSL wildcard, DNS automation | 1 semaine |
-| SSO enterprise | SAML 2.0, OIDC, Active Directory | 3 semaines |
-| White-label complet | Branding, emails, domaines | 2 semaines |
+| Feature             | Description                      | Effort       |
+| ------------------- | -------------------------------- | ------------ |
+| Isolation données   | Row-level security PostgreSQL    | 2-3 semaines |
+| Custom domains      | SSL wildcard, DNS automation     | 1 semaine    |
+| SSO enterprise      | SAML 2.0, OIDC, Active Directory | 3 semaines   |
+| White-label complet | Branding, emails, domaines       | 2 semaines   |
 
 ### Infrastructure Multi-Région
 
@@ -1301,59 +1319,59 @@ io.adapter(createAdapter(pubClient, subClient));
 
 ### Marchés Cibles
 
-| Pays | Timeline | Taille marché | Approche |
-|------|----------|---------------|----------|
-| 🇧🇪 Belgique | M1-3 | ~5K clubs | Francophone, frontalier |
-| 🇨🇭 Suisse | M1-3 | ~3K clubs | Francophone, haut pouvoir achat |
-| 🇩🇪 Allemagne | M6-12 | ~90K clubs | Plus grand marché EU |
-| 🇬🇧 UK | M12-18 | ~50K clubs | Post-Brexit, anglophone |
-| 🇪🇸 Espagne | M12-18 | ~40K clubs | Culture sport forte |
-| 🇮🇹 Italie | M18-24 | ~35K clubs | Culture sport forte |
+| Pays         | Timeline | Taille marché | Approche                        |
+| ------------ | -------- | ------------- | ------------------------------- |
+| 🇧🇪 Belgique  | M1-3     | ~5K clubs     | Francophone, frontalier         |
+| 🇨🇭 Suisse    | M1-3     | ~3K clubs     | Francophone, haut pouvoir achat |
+| 🇩🇪 Allemagne | M6-12    | ~90K clubs    | Plus grand marché EU            |
+| 🇬🇧 UK        | M12-18   | ~50K clubs    | Post-Brexit, anglophone         |
+| 🇪🇸 Espagne   | M12-18   | ~40K clubs    | Culture sport forte             |
+| 🇮🇹 Italie    | M18-24   | ~35K clubs    | Culture sport forte             |
 
 ### Localisation
 
-| Tâche | Effort | Coût |
-|-------|--------|------|
-| Framework i18n (ngx-translate) | 1 semaine | - |
-| Traduction DE/EN/ES/IT | 2 semaines/langue | €5K/langue |
-| Adaptation légale | 1 semaine/pays | €2K/pays |
-| Support multilingue | Recrutement | Variable |
+| Tâche                          | Effort            | Coût       |
+| ------------------------------ | ----------------- | ---------- |
+| Framework i18n (ngx-translate) | 1 semaine         | -          |
+| Traduction DE/EN/ES/IT         | 2 semaines/langue | €5K/langue |
+| Adaptation légale              | 1 semaine/pays    | €2K/pays   |
+| Support multilingue            | Recrutement       | Variable   |
 
 ## 7.4 Features Avancées
 
 ### Intelligence Artificielle
 
-| Feature | Technologie | Effort |
-|---------|-------------|--------|
-| Recommendations vidéos | Collaborative filtering | 1 mois |
-| Auto-tagging contenu | Vision AI (Google/AWS) | 2 semaines |
-| Analytics prédictives | Time-series forecasting | 1 mois |
-| Chatbot support | LLM fine-tuned | 1 mois |
+| Feature                | Technologie             | Effort     |
+| ---------------------- | ----------------------- | ---------- |
+| Recommendations vidéos | Collaborative filtering | 1 mois     |
+| Auto-tagging contenu   | Vision AI (Google/AWS)  | 2 semaines |
+| Analytics prédictives  | Time-series forecasting | 1 mois     |
+| Chatbot support        | LLM fine-tuned          | 1 mois     |
 
 ### Réalité Augmentée
 
-| Feature | Plateforme | Effort |
-|---------|-----------|--------|
-| AR overlays live | WebXR / ARKit | 2-3 mois |
-| Stats temps réel superposées | Computer vision | 2 mois |
-| Expérience second écran | Mobile AR | 1 mois |
+| Feature                      | Plateforme      | Effort   |
+| ---------------------------- | --------------- | -------- |
+| AR overlays live             | WebXR / ARKit   | 2-3 mois |
+| Stats temps réel superposées | Computer vision | 2 mois   |
+| Expérience second écran      | Mobile AR       | 1 mois   |
 
 ### Publicité Programmatique
 
-| Composant | Description | Effort |
-|-----------|-------------|--------|
-| Ad server intégré | Gestion inventaire pub | 2 mois |
-| Header bidding | Prebid.js integration | 1 mois |
-| Analytics annonceurs | Dashboard ROI | 1 mois |
-| Ciblage géographique | Pub locale par région | 2 semaines |
+| Composant            | Description            | Effort     |
+| -------------------- | ---------------------- | ---------- |
+| Ad server intégré    | Gestion inventaire pub | 2 mois     |
+| Header bidding       | Prebid.js integration  | 1 mois     |
+| Analytics annonceurs | Dashboard ROI          | 1 mois     |
+| Ciblage géographique | Pub locale par région  | 2 semaines |
 
 ## 7.5 Certifications
 
-| Certification | Timeline | Coût |
-|---------------|----------|------|
-| SOC 2 Type 2 | 6-12 mois | €50-100K |
-| ISO 27001 | 12-18 mois | €30-50K |
-| GDPR audit externe | 2-3 mois | €10-20K |
+| Certification      | Timeline   | Coût     |
+| ------------------ | ---------- | -------- |
+| SOC 2 Type 2       | 6-12 mois  | €50-100K |
+| ISO 27001          | 12-18 mois | €30-50K  |
+| GDPR audit externe | 2-3 mois   | €10-20K  |
 
 ## 7.6 Organisation Cible (30 personnes)
 
@@ -1389,17 +1407,17 @@ CEO
 
 ## 7.7 Budget Phase 3 (Annuel)
 
-| Poste | Année 2 | Année 3 |
-|-------|---------|---------|
-| Masse salariale | €800K | €1.5M |
-| Infrastructure | €80K | €150K |
-| Certifications | €80K | €30K |
-| International | €150K | €300K |
-| Marketing | €150K | €250K |
-| R&D Hardware | €50K | €100K |
-| Légal/Compliance | €50K | €80K |
-| Buffer (10%) | €140K | €190K |
-| **Total** | **€1.5M** | **€2.6M** |
+| Poste            | Année 2   | Année 3   |
+| ---------------- | --------- | --------- |
+| Masse salariale  | €800K     | €1.5M     |
+| Infrastructure   | €80K      | €150K     |
+| Certifications   | €80K      | €30K      |
+| International    | €150K     | €300K     |
+| Marketing        | €150K     | €250K     |
+| R&D Hardware     | €50K      | €100K     |
+| Légal/Compliance | €50K      | €80K      |
+| Buffer (10%)     | €140K     | €190K     |
+| **Total**        | **€1.5M** | **€2.6M** |
 
 ---
 
@@ -1413,23 +1431,24 @@ CEO
 
 #### Hardware (paiement unique An 1)
 
-| Produit | Prix | Coût | Marge |
-|---------|------|------|-------|
-| **Boîtier principal** | €350 | €150 | 57% |
-| **Boîtier supplémentaire** (2ème salle) | €250 | €100 | 60% |
-| **Écran 81" professionnel** | €1,500 | €1,100 | 27% |
+| Produit                                 | Prix   | Coût   | Marge |
+| --------------------------------------- | ------ | ------ | ----- |
+| **Boîtier principal**                   | €350   | €150   | 57%   |
+| **Boîtier supplémentaire** (2ème salle) | €250   | €100   | 60%   |
+| **Écran 81" professionnel**             | €1,500 | €1,100 | 27%   |
 
 #### Abonnements Mensuels (3 paliers)
 
-| Palier | Prix/mois | Hardware An 1 | Total An 1 | Marge nette |
-|--------|-----------|---------------|------------|-------------|
-| **Autonome** | €50/mois | €350 | €950 | 80% |
-| **Professionnel** | €80/mois | €350 | €1,310 | 82% |
-| **Premium** | €120/mois | €350 | €1,790 | 78% |
+| Palier            | Prix/mois | Hardware An 1 | Total An 1 | Marge nette |
+| ----------------- | --------- | ------------- | ---------- | ----------- |
+| **Autonome**      | €50/mois  | €350          | €950       | 80%         |
+| **Professionnel** | €80/mois  | €350          | €1,310     | 82%         |
+| **Premium**       | €120/mois | €350          | €1,790     | 78%         |
 
 #### Détail des Paliers
 
 **AUTONOME (€50/mois) :**
+
 - ✅ Boîtier pré-configuré
 - ✅ Application TV full-screen
 - ✅ Télécommande smartphone
@@ -1439,6 +1458,7 @@ CEO
 - ✅ Mises à jour OTA automatiques
 
 **PROFESSIONNEL (€80/mois) = Tout Autonome + :**
+
 - ✅ Dashboard Analytics Club Premium
   - Analytics avancés (heatmaps, engagement, trends)
   - Rapports PDF club mensuels
@@ -1448,6 +1468,7 @@ CEO
 - ✅ Support prioritaire 24h
 
 **PREMIUM (€120/mois) = Tout Professionnel + :**
+
 - ✅ Dashboard Sponsors Premium
   - Dashboard sponsors temps réel
   - Rapports PDF sponsors mensuels
@@ -1462,25 +1483,26 @@ CEO
 
 #### Upsells Haute Marge
 
-| Catégorie | Produit | Prix | Marge |
-|-----------|---------|------|-------|
-| **Production Vidéo** | Bronze (10 vidéos, contenu club) | €800 | 56% |
-| | Silver (shooting 1h30 + 10 vidéos) | €1,500 | 32% |
-| | Gold (shooting 2h + 15 vidéos) | €2,000 | 30% |
-| | Équipe supp montage seul | €500 | 30% |
-| | Équipe supp avec shooting | €1,200 | 15% |
-| | Pack 2 équipes | €2,500 | 31% |
-| | Pack 3 équipes | €3,500 | 31% |
-| | Pack 4 équipes | €4,200 | 26% |
-| **Analytics** | Analytics Club Premium | €200/an | 75% |
-| | Pack Sponsors Premium | €250/an | 80% |
-| | Bundle Analytics+Sponsors | €400/an | 75% |
-| **Engagement** | Pack Expérience Fan | €300/an | 67% |
-| **Branding** | White-Label Sponsor | €1,500/an | 87% |
-| **Services** | Média Day multi-équipes | €2,500/jour | 44% |
-| | Location écran événements | Commission 20% | - |
+| Catégorie            | Produit                            | Prix           | Marge |
+| -------------------- | ---------------------------------- | -------------- | ----- |
+| **Production Vidéo** | Bronze (10 vidéos, contenu club)   | €800           | 56%   |
+|                      | Silver (shooting 1h30 + 10 vidéos) | €1,500         | 32%   |
+|                      | Gold (shooting 2h + 15 vidéos)     | €2,000         | 30%   |
+|                      | Équipe supp montage seul           | €500           | 30%   |
+|                      | Équipe supp avec shooting          | €1,200         | 15%   |
+|                      | Pack 2 équipes                     | €2,500         | 31%   |
+|                      | Pack 3 équipes                     | €3,500         | 31%   |
+|                      | Pack 4 équipes                     | €4,200         | 26%   |
+| **Analytics**        | Analytics Club Premium             | €200/an        | 75%   |
+|                      | Pack Sponsors Premium              | €250/an        | 80%   |
+|                      | Bundle Analytics+Sponsors          | €400/an        | 75%   |
+| **Engagement**       | Pack Expérience Fan                | €300/an        | 67%   |
+| **Branding**         | White-Label Sponsor                | €1,500/an      | 87%   |
+| **Services**         | Média Day multi-équipes            | €2,500/jour    | 44%   |
+|                      | Location écran événements          | Commission 20% | -     |
 
 **Pénétration prévue 2026 :**
+
 - Mix paliers : 60% Autonome / 33% Pro / 7% Premium
 - Taux adoption vidéo : 53% (16 clubs sur 30)
 - Taux adoption analytics : 60% (18 clubs sur 30)
@@ -1489,12 +1511,12 @@ CEO
 
 #### Modèle Économique Annonceurs
 
-| Élément | Valeur |
-|---------|--------|
-| **Prix annonceur** | €250/mois |
-| **Commission NEOPRO** | 90% (€225/mois par annonceur) |
-| **Reverse club** | 10% (€25/mois par annonceur) |
-| **Limite par club** | 3 annonceurs maximum |
+| Élément                  | Valeur                              |
+| ------------------------ | ----------------------------------- |
+| **Prix annonceur**       | €250/mois                           |
+| **Commission NEOPRO**    | 90% (€225/mois par annonceur)       |
+| **Reverse club**         | 10% (€25/mois par annonceur)        |
+| **Limite par club**      | 3 annonceurs maximum                |
 | **Revenus club passifs** | €1,800/an (6 annonceurs × €25 × 12) |
 
 #### Economics Annonceurs
@@ -1507,6 +1529,7 @@ CEO
 #### Attractivité pour les Clubs
 
 **Coût net NEOPRO avec annonceurs :**
+
 ```
 €950/an (abonnement Autonome) - €1,800/an (revenus annonceurs) = -€850/an
 ```
@@ -1515,23 +1538,24 @@ CEO
 >
 > Revenus annonceurs couvrent **190% du coût abonnement**.
 >
-> **Argument commercial massue** : *"NEOPRO vous paie pour l'utiliser"*
+> **Argument commercial massue** : _"NEOPRO vous paie pour l'utiliser"_
 
 ### 8.1.3 Mix Revenus Projeté 2026
 
-| Source | Revenus/mois (Q4) | % total | Marge |
-|--------|-------------------|---------|-------|
-| Abonnements clubs | €1,840 | 37% | 92% |
-| Upsells (vidéo+analytics) | €1,208 | 25% | 65% |
-| **RÉSEAU ANNONCEURS** | €1,350 | 28% | 90% |
-| Hardware An 1 (amorti) | €500 | 10% | 57% |
-| **TOTAL** | **€4,898** | 100% | 89% |
+| Source                    | Revenus/mois (Q4) | % total | Marge |
+| ------------------------- | ----------------- | ------- | ----- |
+| Abonnements clubs         | €1,840            | 37%     | 92%   |
+| Upsells (vidéo+analytics) | €1,208            | 25%     | 65%   |
+| **RÉSEAU ANNONCEURS**     | €1,350            | 28%     | 90%   |
+| Hardware An 1 (amorti)    | €500              | 10%     | 57%   |
+| **TOTAL**                 | **€4,898**        | 100%    | 89%   |
 
 **ARR récurrent (hors hardware)** : €4,398/mois × 12 = **€52,776**
 
 ### 8.1.4 Projection 2027
 
 Avec 100 clubs + 15 annonceurs :
+
 - Abonnements clubs : €6,000/mois
 - Upsells : €3,500/mois
 - Annonceurs : €3,375/mois (15 × €250 × 90%)
@@ -1543,14 +1567,15 @@ Avec 100 clubs + 15 annonceurs :
 
 ### Objectif Fin 2026 : 30 clubs payants + 6 annonceurs
 
-| Trimestre | Clubs | Annonceurs | Revenus/mois | Marge |
-|-----------|-------|------------|--------------|-------|
-| **Q1 2026** | 10 | 0 | €600 | €184 |
-| **Q2 2026** | 22 | 3 | €2,075 | €1,619 |
-| **Q3 2026** | 30 | 5 | €4,325 | €3,842 |
-| **Q4 2026** | 35 | 6-8 | €4,898 | €4,398 |
+| Trimestre   | Clubs | Annonceurs | Revenus/mois | Marge  |
+| ----------- | ----- | ---------- | ------------ | ------ |
+| **Q1 2026** | 10    | 0          | €600         | €184   |
+| **Q2 2026** | 22    | 3          | €2,075       | €1,619 |
+| **Q3 2026** | 30    | 5          | €4,325       | €3,842 |
+| **Q4 2026** | 35    | 6-8        | €4,898       | €4,398 |
 
 **Détail revenus Q4 2026 :**
+
 - Abonnements base : €1,840/mois
 - Upsells vidéo (amortis) : €866/mois
 - Upsells analytics (amortis) : €342/mois
@@ -1561,54 +1586,54 @@ Avec 100 clubs + 15 annonceurs :
 
 ### Charges Mensuelles
 
-| Type | Montant | Détail |
-|------|---------|--------|
-| **Fixes** | €383/mois | Hosting €50 + Adobe €83 + dev externe €250 |
-| **Variables** | €3,33/club/mois | Hosting uniquement |
-| **Support** | €0 | 2 associés bénévoles temps partiel |
+| Type          | Montant         | Détail                                     |
+| ------------- | --------------- | ------------------------------------------ |
+| **Fixes**     | €383/mois       | Hosting €50 + Adobe €83 + dev externe €250 |
+| **Variables** | €3,33/club/mois | Hosting uniquement                         |
+| **Support**   | €0              | 2 associés bénévoles temps partiel         |
 
 **Résultat net projeté 2026 : €25K cash cumulé**
 
 ### Analyse de Sensibilité
 
-| Clubs | Base | Upsells | Annonceurs | Total | Objectif |
-|-------|------|---------|------------|-------|----------|
-| 15 | €920 | €604 | €675 | €2,199 | ❌ -€1,8K |
-| 20 | €1,227 | €806 | €900 | €2,933 | ❌ -€1,1K |
-| 25 | €1,533 | €1,007 | €1,125 | €3,665 | ❌ -€335 |
-| **30** | €1,840 | €1,208 | €1,350 | **€4,398** | ✅ +€398 |
-| 35 | €2,147 | €1,410 | €1,575 | €5,132 | ✅ +€1,1K |
+| Clubs  | Base   | Upsells | Annonceurs | Total      | Objectif  |
+| ------ | ------ | ------- | ---------- | ---------- | --------- |
+| 15     | €920   | €604    | €675       | €2,199     | ❌ -€1,8K |
+| 20     | €1,227 | €806    | €900       | €2,933     | ❌ -€1,1K |
+| 25     | €1,533 | €1,007  | €1,125     | €3,665     | ❌ -€335  |
+| **30** | €1,840 | €1,208  | €1,350     | **€4,398** | ✅ +€398  |
+| 35     | €2,147 | €1,410  | €1,575     | €5,132     | ✅ +€1,1K |
 
 > **Conclusion** : Minimum **25-30 clubs** nécessaires pour valider objectif €4,000/mois.
 
 ### Roadmap Stratégique 2026-2028
 
-| Phase | Clubs | Annonceurs | ARR | Focus |
-|-------|-------|------------|-----|-------|
-| **2026 - PMF** | 35 | 6-8 | €53K | Reach 15,000+ spectateurs/mois |
-| **2027 - Scale** | 100 | 15 (dont 3 nationaux) | €154K | Expansion Nouvelle-Aquitaine + Hauts-de-France, +2 commerciaux |
-| **2028 - Dominance** | 300 | 25+ | €420K | CPM premium €12-15, équipe annonceurs 1 Head + 2 AM |
+| Phase                | Clubs | Annonceurs            | ARR   | Focus                                                          |
+| -------------------- | ----- | --------------------- | ----- | -------------------------------------------------------------- |
+| **2026 - PMF**       | 35    | 6-8                   | €53K  | Reach 15,000+ spectateurs/mois                                 |
+| **2027 - Scale**     | 100   | 15 (dont 3 nationaux) | €154K | Expansion Nouvelle-Aquitaine + Hauts-de-France, +2 commerciaux |
+| **2028 - Dominance** | 300   | 25+                   | €420K | CPM premium €12-15, équipe annonceurs 1 Head + 2 AM            |
 
 ## 8.3 Unit Economics
 
 ### Côté Clubs
 
-| Métrique | Valeur |
-|----------|--------|
-| **CAC** | €150 (démos gratuites + warm intros) |
-| **LTV** | €3,600 (3 ans × €100/mois moyen) |
-| **LTV/CAC** | **24x** |
-| **Payback** | 2 mois |
+| Métrique    | Valeur                               |
+| ----------- | ------------------------------------ |
+| **CAC**     | €150 (démos gratuites + warm intros) |
+| **LTV**     | €3,600 (3 ans × €100/mois moyen)     |
+| **LTV/CAC** | **24x**                              |
+| **Payback** | 2 mois                               |
 
 ### Côté Annonceurs
 
-| Métrique | Valeur |
-|----------|--------|
-| **CAC** | €800 (prospection B2B, négociations) |
-| **LTV** | €8,100 (3 ans × €225/mois × 90%) |
-| **LTV/CAC** | **10x** |
-| **Payback** | 4 mois |
-| **Churn attendu** | <10% annuel |
+| Métrique          | Valeur                               |
+| ----------------- | ------------------------------------ |
+| **CAC**           | €800 (prospection B2B, négociations) |
+| **LTV**           | €8,100 (3 ans × €225/mois × 90%)     |
+| **LTV/CAC**       | **10x**                              |
+| **Payback**       | 4 mois                               |
+| **Churn attendu** | <10% annuel                          |
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -1643,28 +1668,28 @@ Avec 100 clubs + 15 annonceurs :
 
 ### Besoin Immédiat : €0 (Bootstrap)
 
-| Phase | Modèle | Investissement externe | Focus |
-|-------|--------|------------------------|-------|
-| **2026** | Autofinancement | €0 | PMF avec 35 clubs, €53K ARR |
-| **2027** | Seed conditionnel | €150K (si scale accéléré) | 100+ clubs, expansion géo |
-| **2028** | Profitabilité | €0 | €420K ARR, équipe de 8-10 |
+| Phase    | Modèle            | Investissement externe    | Focus                       |
+| -------- | ----------------- | ------------------------- | --------------------------- |
+| **2026** | Autofinancement   | €0                        | PMF avec 35 clubs, €53K ARR |
+| **2027** | Seed conditionnel | €150K (si scale accéléré) | 100+ clubs, expansion géo   |
+| **2028** | Profitabilité     | €0                        | €420K ARR, équipe de 8-10   |
 
 ### Phase Actuelle : Pre-seed Autofinancée
 
-| Élément | Montant | Statut |
-|---------|---------|--------|
-| Hardware beta clubs | €1,050 investis | ✅ Fait (3 × €350) |
-| Développement produit | Finalisé | ✅ MVP en production |
-| Stratégie commerciale | Validée | ✅ Exécution janvier 2026 |
+| Élément               | Montant         | Statut                    |
+| --------------------- | --------------- | ------------------------- |
+| Hardware beta clubs   | €1,050 investis | ✅ Fait (3 × €350)        |
+| Développement produit | Finalisé        | ✅ MVP en production      |
+| Stratégie commerciale | Validée         | ✅ Exécution janvier 2026 |
 
 ## 9.2 Équipe Phase 1 (Q1-Q4 2026) : Bootstrap
 
 ### Structure Actuelle
 
-| Rôle | Personne | Temps | Coût |
-|------|----------|-------|------|
-| **Commercial & Ops** | Gwenvael | Mi-temps (20h/sem) | €0 (bénévole) |
-| **Production vidéo** | Associé 2 | Temps partiel | €0 (bénévole) |
+| Rôle                 | Personne  | Temps              | Coût          |
+| -------------------- | --------- | ------------------ | ------------- |
+| **Commercial & Ops** | Gwenvael  | Mi-temps (20h/sem) | €0 (bénévole) |
+| **Production vidéo** | Associé 2 | Temps partiel      | €0 (bénévole) |
 
 **Coût RH total Phase 1 : €0**
 
@@ -1673,19 +1698,19 @@ Avec 100 clubs + 15 annonceurs :
 
 ### Utilisation Cash 2026
 
-| Poste | Montant | Détail |
-|-------|---------|--------|
-| **Hardware nouveaux clients** | €10,500 | 30 clubs × €350 |
-| **Marketing/prospection** | €0 | Warm intros + ligues (gratuit) |
-| **Opérations** | Autofinancés | Revenus récurrents couvrent |
+| Poste                         | Montant      | Détail                         |
+| ----------------------------- | ------------ | ------------------------------ |
+| **Hardware nouveaux clients** | €10,500      | 30 clubs × €350                |
+| **Marketing/prospection**     | €0           | Warm intros + ligues (gratuit) |
+| **Opérations**                | Autofinancés | Revenus récurrents couvrent    |
 
 ### Projection Trésorerie 2026
 
-| Période | Cash flow | Cumul |
-|---------|-----------|-------|
-| **Jan-Mar 2026** | Négatif | Achats hardware upfront |
-| **Avr-Juin 2026** | Break-even | Revenus = charges |
-| **Juil-Déc 2026** | Positif €3-4K/mois | Accumulation cash |
+| Période           | Cash flow          | Cumul                   |
+| ----------------- | ------------------ | ----------------------- |
+| **Jan-Mar 2026**  | Négatif            | Achats hardware upfront |
+| **Avr-Juin 2026** | Break-even         | Revenus = charges       |
+| **Juil-Déc 2026** | Positif €3-4K/mois | Accumulation cash       |
 
 **Résultat net 2026 : +€25K cash**
 
@@ -1693,59 +1718,59 @@ Avec 100 clubs + 15 annonceurs :
 
 ### Déclencheur Seed
 
-| Condition | Valeur | Statut |
-|-----------|--------|--------|
-| ARR atteint | > €80K | À valider Q4 2026 |
-| Pipeline annonceurs | > 10 qualifiés | À valider |
-| Opportunité scale | Demande > capacité | À évaluer |
+| Condition           | Valeur             | Statut            |
+| ------------------- | ------------------ | ----------------- |
+| ARR atteint         | > €80K             | À valider Q4 2026 |
+| Pipeline annonceurs | > 10 qualifiés     | À valider         |
+| Opportunité scale   | Demande > capacité | À évaluer         |
 
 ### Si Seed €150K levé (2027)
 
-| Poste | Profil | Coût annuel |
-|-------|--------|-------------|
-| **Commercial Clubs** | Junior, terrain | €35K |
-| **Commercial Annonceurs** | Expérience vente média | €45K |
-| **Sous-total RH** | | **€80K** |
-| Infrastructure | Scale | €15K |
-| Marketing | Events, collaterals | €20K |
-| Buffer | 20% | €35K |
-| **Total** | | **€150K** |
+| Poste                     | Profil                 | Coût annuel |
+| ------------------------- | ---------------------- | ----------- |
+| **Commercial Clubs**      | Junior, terrain        | €35K        |
+| **Commercial Annonceurs** | Expérience vente média | €45K        |
+| **Sous-total RH**         |                        | **€80K**    |
+| Infrastructure            | Scale                  | €15K        |
+| Marketing                 | Events, collaterals    | €20K        |
+| Buffer                    | 20%                    | €35K        |
+| **Total**                 |                        | **€150K**   |
 
 ### Objectif Post-Seed (Fin 2027)
 
-| Métrique | Objectif |
-|----------|----------|
-| Clubs | 150 |
-| Annonceurs | 12-15 |
-| ARR | €200K |
-| Équipe | 4 personnes |
+| Métrique   | Objectif    |
+| ---------- | ----------- |
+| Clubs      | 150         |
+| Annonceurs | 12-15       |
+| ARR        | €200K       |
+| Équipe     | 4 personnes |
 
 ## 9.4 Coûts Infrastructure (Bootstrap)
 
 ### Charges Fixes Mensuelles (2026)
 
-| Service | Usage | Coût/mois |
-|---------|-------|-----------|
-| **Render.com** | Hosting serveur central | €50 |
-| **Adobe Creative Cloud** | Production vidéo | €83 |
-| **Développement externe** | Maintenance ponctuelle | €250 |
-| **Total fixes** | | **€383/mois** |
+| Service                   | Usage                   | Coût/mois     |
+| ------------------------- | ----------------------- | ------------- |
+| **Render.com**            | Hosting serveur central | €50           |
+| **Adobe Creative Cloud**  | Production vidéo        | €83           |
+| **Développement externe** | Maintenance ponctuelle  | €250          |
+| **Total fixes**           |                         | **€383/mois** |
 
 ### Charges Variables
 
-| Élément | Coût unitaire | Échelle |
-|---------|---------------|---------|
-| Hosting par club | €3,33/club/mois | Linéaire |
-| Bande passante vidéos | ~€0,10/Go | Négligeable |
+| Élément               | Coût unitaire   | Échelle     |
+| --------------------- | --------------- | ----------- |
+| Hosting par club      | €3,33/club/mois | Linéaire    |
+| Bande passante vidéos | ~€0,10/Go       | Négligeable |
 
 ### Projection Infrastructure 2026
 
 | Trimestre | Clubs | Coût infra | % revenus |
-|-----------|-------|------------|-----------|
-| Q1 | 10 | €416 | 69% |
-| Q2 | 22 | €456 | 22% |
-| Q3 | 30 | €483 | 11% |
-| Q4 | 35 | €500 | 10% |
+| --------- | ----- | ---------- | --------- |
+| Q1        | 10    | €416       | 69%       |
+| Q2        | 22    | €456       | 22%       |
+| Q3        | 30    | €483       | 11%       |
+| Q4        | 35    | €500       | 10%       |
 
 > **Conclusion** : Infrastructure très scalable, coûts négligeables à scale.
 
@@ -1753,22 +1778,22 @@ Avec 100 clubs + 15 annonceurs :
 
 ### Seed €150K (2027) - Si Scale Accéléré
 
-| Élément | Valeur |
-|---------|--------|
-| **Montant** | €150K |
-| **Valorisation pre-money** | €500K (indicatif) |
-| **Dilution** | <20% |
-| **Utilisation** | 2 commerciaux + expansion géo |
-| **Objectif post-seed** | 150 clubs, €200K ARR fin 2027 |
+| Élément                    | Valeur                        |
+| -------------------------- | ----------------------------- |
+| **Montant**                | €150K                         |
+| **Valorisation pre-money** | €500K (indicatif)             |
+| **Dilution**               | <20%                          |
+| **Utilisation**            | 2 commerciaux + expansion géo |
+| **Objectif post-seed**     | 150 clubs, €200K ARR fin 2027 |
 
 ### Critères Go/No-Go
 
-| Critère | Seuil | Poids |
-|---------|-------|-------|
-| ARR Q4 2026 | > €80K | 30% |
-| Pipeline qualifié | > 50 clubs | 25% |
-| Demande annonceurs | > 10 intéressés | 25% |
-| Capacité exécution | Saturée | 20% |
+| Critère            | Seuil           | Poids |
+| ------------------ | --------------- | ----- |
+| ARR Q4 2026        | > €80K          | 30%   |
+| Pipeline qualifié  | > 50 clubs      | 25%   |
+| Demande annonceurs | > 10 intéressés | 25%   |
+| Capacité exécution | Saturée         | 20%   |
 
 > **Philosophie** : Ne lever que si l'opportunité l'exige.
 > Bootstrap = contrôle total + valorisation maximale future.
@@ -1781,38 +1806,38 @@ Avec 100 clubs + 15 annonceurs :
 
 ### Phase 1 - Consolidation
 
-| Catégorie | KPI | Objectif |
-|-----------|-----|----------|
-| **Qualité** | Couverture tests | > 60% |
-| **Qualité** | Bugs critiques ouverts | 0 |
-| **Sécurité** | Vulnérabilités OWASP | 0 critical/high |
-| **Ops** | Temps CI/CD | < 10 min |
-| **Produit** | Clubs pilotes actifs | 20 |
-| **Produit** | NPS pilotes | > 40 |
+| Catégorie    | KPI                    | Objectif        |
+| ------------ | ---------------------- | --------------- |
+| **Qualité**  | Couverture tests       | > 60%           |
+| **Qualité**  | Bugs critiques ouverts | 0               |
+| **Sécurité** | Vulnérabilités OWASP   | 0 critical/high |
+| **Ops**      | Temps CI/CD            | < 10 min        |
+| **Produit**  | Clubs pilotes actifs   | 20              |
+| **Produit**  | NPS pilotes            | > 40            |
 
 ### Phase 2 - Croissance
 
-| Catégorie | KPI | Objectif |
-|-----------|-----|----------|
-| **Revenue** | MRR | €30-50K |
-| **Revenue** | Clubs payants | 300-500 |
-| **Growth** | Croissance MoM | > 15% |
-| **Retention** | Churn mensuel | < 5% |
-| **Produit** | Feature adoption | > 50% |
-| **Tech** | Uptime | > 99.5% |
-| **Tech** | Latence P95 | < 200ms |
+| Catégorie     | KPI              | Objectif |
+| ------------- | ---------------- | -------- |
+| **Revenue**   | MRR              | €30-50K  |
+| **Revenue**   | Clubs payants    | 300-500  |
+| **Growth**    | Croissance MoM   | > 15%    |
+| **Retention** | Churn mensuel    | < 5%     |
+| **Produit**   | Feature adoption | > 50%    |
+| **Tech**      | Uptime           | > 99.5%  |
+| **Tech**      | Latence P95      | < 200ms  |
 
 ### Phase 3 - Expansion
 
-| Catégorie | KPI | Objectif |
-|-----------|-----|----------|
-| **Revenue** | ARR | €2-5M |
-| **Clients** | Clubs actifs | 5,000+ |
-| **International** | Pays actifs | 5+ |
-| **Enterprise** | Contrats fédérations | 3+ |
-| **Team** | Effectif | 25-30 |
-| **Tech** | Uptime | > 99.95% |
-| **Compliance** | Certifications | SOC2 + ISO27001 |
+| Catégorie         | KPI                  | Objectif        |
+| ----------------- | -------------------- | --------------- |
+| **Revenue**       | ARR                  | €2-5M           |
+| **Clients**       | Clubs actifs         | 5,000+          |
+| **International** | Pays actifs          | 5+              |
+| **Enterprise**    | Contrats fédérations | 3+              |
+| **Team**          | Effectif             | 25-30           |
+| **Tech**          | Uptime               | > 99.95%        |
+| **Compliance**    | Certifications       | SOC2 + ISO27001 |
 
 ## 10.2 Dashboard Métriques
 
@@ -1842,13 +1867,13 @@ Avec 100 clubs + 15 annonceurs :
 
 ## 10.3 SLA Cibles
 
-| Métrique | Phase 1 | Phase 2 | Phase 3 |
-|----------|---------|---------|---------|
-| Uptime | 99.0% | 99.5% | 99.95% |
-| Latence P95 | < 500ms | < 200ms | < 100ms |
-| MTTR (P1) | < 8h | < 2h | < 30min |
-| Temps réponse support P1 | < 4h | < 1h | < 15min |
-| Temps réponse support P2 | < 24h | < 8h | < 4h |
+| Métrique                 | Phase 1 | Phase 2 | Phase 3 |
+| ------------------------ | ------- | ------- | ------- |
+| Uptime                   | 99.0%   | 99.5%   | 99.95%  |
+| Latence P95              | < 500ms | < 200ms | < 100ms |
+| MTTR (P1)                | < 8h    | < 2h    | < 30min |
+| Temps réponse support P1 | < 4h    | < 1h    | < 15min |
+| Temps réponse support P2 | < 24h   | < 8h    | < 4h    |
 
 ---
 
@@ -1856,32 +1881,32 @@ Avec 100 clubs + 15 annonceurs :
 
 ## 11.1 Risques Techniques
 
-| Risque | Probabilité | Impact | Mitigation |
-|--------|-------------|--------|------------|
-| Faille sécurité critique | Moyenne | Critique | Tests sécu, pentest, bug bounty |
-| Panne serveur central | Faible | Critique | Multi-AZ, DR, monitoring 24/7 |
-| Incompatibilité mise à jour Pi | Moyenne | Élevé | Tests staging, rollback auto |
-| Surcharge Socket.IO | Moyenne | Élevé | Redis cluster, rate limiting |
-| Corruption données | Faible | Critique | Backups, replication, audits |
+| Risque                         | Probabilité | Impact   | Mitigation                      |
+| ------------------------------ | ----------- | -------- | ------------------------------- |
+| Faille sécurité critique       | Moyenne     | Critique | Tests sécu, pentest, bug bounty |
+| Panne serveur central          | Faible      | Critique | Multi-AZ, DR, monitoring 24/7   |
+| Incompatibilité mise à jour Pi | Moyenne     | Élevé    | Tests staging, rollback auto    |
+| Surcharge Socket.IO            | Moyenne     | Élevé    | Redis cluster, rate limiting    |
+| Corruption données             | Faible      | Critique | Backups, replication, audits    |
 
 ## 11.2 Risques Business
 
-| Risque | Probabilité | Impact | Mitigation |
-|--------|-------------|--------|------------|
-| Churn élevé | Moyenne | Élevé | NPS, customer success, features |
-| Concurrent bien financé | Moyenne | Moyen | Exécution rapide, partenariats |
-| Difficulté recrutement | Élevée | Moyen | Employer branding, remote-first |
-| Burn rate excessif | Faible | Critique | Budget mensuel, runway 18+ mois |
-| Échec levée de fonds | Moyenne | Critique | Bootstrap, diversification |
+| Risque                  | Probabilité | Impact   | Mitigation                      |
+| ----------------------- | ----------- | -------- | ------------------------------- |
+| Churn élevé             | Moyenne     | Élevé    | NPS, customer success, features |
+| Concurrent bien financé | Moyenne     | Moyen    | Exécution rapide, partenariats  |
+| Difficulté recrutement  | Élevée      | Moyen    | Employer branding, remote-first |
+| Burn rate excessif      | Faible      | Critique | Budget mensuel, runway 18+ mois |
+| Échec levée de fonds    | Moyenne     | Critique | Bootstrap, diversification      |
 
 ## 11.3 Risques Opérationnels
 
-| Risque | Probabilité | Impact | Mitigation |
-|--------|-------------|--------|------------|
-| Panne hardware Pi | Moyenne | Faible | Stock spare, RMA rapide |
-| Problème réseau club | Élevée | Faible | Mode offline, hotspot dédié |
-| Formation insuffisante | Moyenne | Moyen | Documentation, vidéos, support |
-| Surcharge support | Moyenne | Moyen | FAQ, chatbot, self-service |
+| Risque                 | Probabilité | Impact | Mitigation                     |
+| ---------------------- | ----------- | ------ | ------------------------------ |
+| Panne hardware Pi      | Moyenne     | Faible | Stock spare, RMA rapide        |
+| Problème réseau club   | Élevée      | Faible | Mode offline, hotspot dédié    |
+| Formation insuffisante | Moyenne     | Moyen  | Documentation, vidéos, support |
+| Surcharge support      | Moyenne     | Moyen  | FAQ, chatbot, self-service     |
 
 ## 11.4 Matrice des Risques
 
@@ -1994,12 +2019,12 @@ T+24h    POST-MORTEM
 
 ## 12.3 Priorités Incidents
 
-| Priorité | Description | Temps réponse | Temps résolution |
-|----------|-------------|---------------|------------------|
-| **P1** | Service totalement down | < 15 min | < 4h |
-| **P2** | Feature majeure impactée | < 1h | < 8h |
-| **P3** | Feature secondaire impactée | < 4h | < 24h |
-| **P4** | Cosmétique, amélioration | < 24h | Best effort |
+| Priorité | Description                 | Temps réponse | Temps résolution |
+| -------- | --------------------------- | ------------- | ---------------- |
+| **P1**   | Service totalement down     | < 15 min      | < 4h             |
+| **P2**   | Feature majeure impactée    | < 1h          | < 8h             |
+| **P3**   | Feature secondaire impactée | < 4h          | < 24h            |
+| **P4**   | Cosmétique, amélioration    | < 24h         | Best effort      |
 
 ## 12.4 Release Process
 
@@ -2051,6 +2076,7 @@ Cette fonctionnalité représente un **différenciateur majeur** face à la conc
 ### Problématique Actuelle
 
 Les clubs sportifs amateurs peinent à :
+
 - **Justifier leurs tarifs sponsors** auprès des partenaires
 - **Renouveler les contrats** sans données de performance
 - **Attirer de nouveaux sponsors** sans preuves d'exposition
@@ -2088,30 +2114,30 @@ BOÎTIER RASPBERRY PI                         SERVEUR CENTRAL
 
 ### Métriques de Diffusion (par vidéo sponsor)
 
-| Métrique | Description | Usage |
-|----------|-------------|-------|
-| **Impressions** | Nombre total d'affichages | Volume d'exposition |
-| **Durée totale** | Temps cumulé à l'écran | Valeur temps d'antenne |
+| Métrique               | Description               | Usage                   |
+| ---------------------- | ------------------------- | ----------------------- |
+| **Impressions**        | Nombre total d'affichages | Volume d'exposition     |
+| **Durée totale**       | Temps cumulé à l'écran    | Valeur temps d'antenne  |
 | **Taux de complétion** | % vidéos vues entièrement | Qualité de l'exposition |
-| **Position boucle** | Rang dans la rotation | Optimisation placement |
-| **Horodatage** | Date/heure précise | Analyse temporelle |
+| **Position boucle**    | Rang dans la rotation     | Optimisation placement  |
+| **Horodatage**         | Date/heure précise        | Analyse temporelle      |
 
 ### Métriques de Contexte
 
-| Métrique | Description | Usage |
-|----------|-------------|-------|
-| **Type d'événement** | Match, entraînement, tournoi | Valorisation contexte |
-| **Période** | Avant-match, mi-temps, après-match | Pics d'audience |
-| **Sport** | Handball, volley, basket, etc. | Ciblage sponsors |
-| **Déclenchement** | Auto vs manuel | Engagement opérateur |
+| Métrique             | Description                        | Usage                 |
+| -------------------- | ---------------------------------- | --------------------- |
+| **Type d'événement** | Match, entraînement, tournoi       | Valorisation contexte |
+| **Période**          | Avant-match, mi-temps, après-match | Pics d'audience       |
+| **Sport**            | Handball, volley, basket, etc.     | Ciblage sponsors      |
+| **Déclenchement**    | Auto vs manuel                     | Engagement opérateur  |
 
 ### Métriques d'Audience (optionnel)
 
-| Métrique | Source | Précision |
-|----------|--------|-----------|
-| **Estimation manuelle** | Saisie opérateur | Approximative |
-| **Capteur présence** | Hardware additionnel | Moyenne |
-| **Intégration billetterie** | API externe | Précise |
+| Métrique                    | Source               | Précision     |
+| --------------------------- | -------------------- | ------------- |
+| **Estimation manuelle**     | Saisie opérateur     | Approximative |
+| **Capteur présence**        | Hardware additionnel | Moyenne       |
+| **Intégration billetterie** | API externe          | Précise       |
 
 ## 13.3 Architecture Technique
 
@@ -2410,15 +2436,16 @@ Le rapport PDF inclut :
 
 ### Phase 1 - MVP (2 semaines)
 
-| Fonctionnalité | Effort | Priorité |
-|----------------|--------|----------|
-| Collecte impressions basique | 3-4 jours | P0 |
-| Stockage PostgreSQL | 1 jour | P0 |
-| API stats simples | 2 jours | P0 |
-| Dashboard basique | 3-4 jours | P0 |
-| Export CSV | 1 jour | P1 |
+| Fonctionnalité               | Effort    | Priorité |
+| ---------------------------- | --------- | -------- |
+| Collecte impressions basique | 3-4 jours | P0       |
+| Stockage PostgreSQL          | 1 jour    | P0       |
+| API stats simples            | 2 jours   | P0       |
+| Dashboard basique            | 3-4 jours | P0       |
+| Export CSV                   | 1 jour    | P1       |
 
 **Livrables MVP :**
+
 - Tracking automatique de chaque diffusion vidéo
 - Endpoint API pour récupérer les stats
 - Page dashboard avec métriques de base
@@ -2426,16 +2453,17 @@ Le rapport PDF inclut :
 
 ### Phase 2 - V1 Complète (4 semaines)
 
-| Fonctionnalité | Effort | Priorité |
-|----------------|--------|----------|
-| Contexte événement (période, type) | 2 jours | P1 |
-| Génération rapport PDF | 3 jours | P1 |
-| Rapports email automatiques | 3 jours | P1 |
-| Dashboard avancé avec graphiques | 1 semaine | P1 |
-| Comparaison périodes | 2 jours | P2 |
-| Gestion sponsors (CRUD) | 2 jours | P1 |
+| Fonctionnalité                     | Effort    | Priorité |
+| ---------------------------------- | --------- | -------- |
+| Contexte événement (période, type) | 2 jours   | P1       |
+| Génération rapport PDF             | 3 jours   | P1       |
+| Rapports email automatiques        | 3 jours   | P1       |
+| Dashboard avancé avec graphiques   | 1 semaine | P1       |
+| Comparaison périodes               | 2 jours   | P2       |
+| Gestion sponsors (CRUD)            | 2 jours   | P1       |
 
 **Livrables V1 :**
+
 - Contextualisation complète des impressions
 - Rapports PDF professionnels
 - Envoi automatique mensuel aux sponsors
@@ -2443,81 +2471,82 @@ Le rapport PDF inclut :
 
 ### Phase 3 - Avancée (8 semaines)
 
-| Fonctionnalité | Effort | Priorité |
-|----------------|--------|----------|
-| Estimation audience (saisie manuelle) | 2 jours | P2 |
-| Capteur présence (hardware) | 2-4 semaines | P3 |
-| Intégration billetterie | 2 semaines | P3 |
-| Portail sponsor self-service | 2 semaines | P2 |
-| A/B testing créas | 1 semaine | P3 |
-| Benchmark anonymisé | 1 semaine | P3 |
-| Objectifs & alertes | 3 jours | P2 |
-| API partenaires OAuth | 1 semaine | P2 |
+| Fonctionnalité                        | Effort       | Priorité |
+| ------------------------------------- | ------------ | -------- |
+| Estimation audience (saisie manuelle) | 2 jours      | P2       |
+| Capteur présence (hardware)           | 2-4 semaines | P3       |
+| Intégration billetterie               | 2 semaines   | P3       |
+| Portail sponsor self-service          | 2 semaines   | P2       |
+| A/B testing créas                     | 1 semaine    | P3       |
+| Benchmark anonymisé                   | 1 semaine    | P3       |
+| Objectifs & alertes                   | 3 jours      | P2       |
+| API partenaires OAuth                 | 1 semaine    | P2       |
 
 ## 13.6 Valeur Business
 
 ### Pour les Clubs
 
-| Bénéfice | Impact |
-|----------|--------|
-| **Justifier les tarifs** | Négociation basée sur données réelles |
-| **Renouveler les contrats** | Preuve de valeur pour fidélisation |
-| **Attirer nouveaux sponsors** | Dossier commercial professionnel |
-| **Upsell partenaires** | Proposer plus de visibilité avec métriques |
+| Bénéfice                      | Impact                                     |
+| ----------------------------- | ------------------------------------------ |
+| **Justifier les tarifs**      | Négociation basée sur données réelles      |
+| **Renouveler les contrats**   | Preuve de valeur pour fidélisation         |
+| **Attirer nouveaux sponsors** | Dossier commercial professionnel           |
+| **Upsell partenaires**        | Proposer plus de visibilité avec métriques |
 
 ### Pour les Sponsors
 
-| Bénéfice | Impact |
-|----------|--------|
-| **ROI mesurable** | Justification interne de l'investissement |
-| **Optimisation créas** | Données pour améliorer les vidéos |
-| **Transparence** | Confiance dans le partenariat |
-| **Reporting automatisé** | Gain de temps administratif |
+| Bénéfice                 | Impact                                    |
+| ------------------------ | ----------------------------------------- |
+| **ROI mesurable**        | Justification interne de l'investissement |
+| **Optimisation créas**   | Données pour améliorer les vidéos         |
+| **Transparence**         | Confiance dans le partenariat             |
+| **Reporting automatisé** | Gain de temps administratif               |
 
 ### Pour NEOPRO
 
-| Bénéfice | Impact |
-|----------|--------|
-| **Différenciateur majeur** | Avantage concurrentiel fort |
-| **Argument de vente B2B** | Conversion clubs facilitée |
-| **Upsell analytics premium** | Nouvelle source de revenus |
-| **Base pub programmatique** | Préparation Phase 3 |
-| **Data insights marché** | Compréhension usage agrégé |
+| Bénéfice                     | Impact                      |
+| ---------------------------- | --------------------------- |
+| **Différenciateur majeur**   | Avantage concurrentiel fort |
+| **Argument de vente B2B**    | Conversion clubs facilitée  |
+| **Upsell analytics premium** | Nouvelle source de revenus  |
+| **Base pub programmatique**  | Préparation Phase 3         |
+| **Data insights marché**     | Compréhension usage agrégé  |
 
 ## 13.7 Modèle de Pricing Analytics
 
 ### Offres Analytics par Palier (inclus dans abonnement)
 
-| Palier | Prix/mois | Analytics inclus |
-|--------|-----------|------------------|
-| **Autonome** | €50/mois | Stats basiques (impressions, durée, reach estimé) |
-| **Professionnel** | €80/mois | Tout Autonome + Analytics Club Premium complet |
-| **Premium** | €120/mois | Tout Pro + Dashboard Sponsors Premium + Rapports PDF sponsors |
+| Palier            | Prix/mois | Analytics inclus                                              |
+| ----------------- | --------- | ------------------------------------------------------------- |
+| **Autonome**      | €50/mois  | Stats basiques (impressions, durée, reach estimé)             |
+| **Professionnel** | €80/mois  | Tout Autonome + Analytics Club Premium complet                |
+| **Premium**       | €120/mois | Tout Pro + Dashboard Sponsors Premium + Rapports PDF sponsors |
 
 ### Upsells Analytics (add-ons annuels)
 
-| Module | Prix | Contenu | Marge |
-|--------|------|---------|-------|
-| **Analytics Club Premium** | €200/an | Heatmaps, trends, benchmarking, export CSV, alertes auto | 75% |
-| **Pack Sponsors Premium** | €250/an | Dashboard sponsors temps réel, rapports PDF mensuels, certificat digital, portail sponsors | 80% |
-| **Bundle Analytics+Sponsors** | €400/an | Tout Analytics Club + Pack Sponsors (économie €50) | 75% |
+| Module                        | Prix    | Contenu                                                                                    | Marge |
+| ----------------------------- | ------- | ------------------------------------------------------------------------------------------ | ----- |
+| **Analytics Club Premium**    | €200/an | Heatmaps, trends, benchmarking, export CSV, alertes auto                                   | 75%   |
+| **Pack Sponsors Premium**     | €250/an | Dashboard sponsors temps réel, rapports PDF mensuels, certificat digital, portail sponsors | 80%   |
+| **Bundle Analytics+Sponsors** | €400/an | Tout Analytics Club + Pack Sponsors (économie €50)                                         | 75%   |
 
 ### Détail Pack Sponsors Premium (€250/an)
 
-| Fonctionnalité | Description |
-|----------------|-------------|
-| ✅ Dashboard sponsors temps réel | Impressions, reach, durée exposition par sponsor |
-| ✅ Rapports PDF sponsors mensuels | KPIs détaillés, graphiques, évolutions |
-| ✅ Certificat digital impressions | Preuve officielle pour négociations |
-| ✅ Accès sponsors au portail | Login personnalisé par sponsor |
-| ✅ Support dédié sponsors | Assistance spécifique partenaires |
+| Fonctionnalité                    | Description                                      |
+| --------------------------------- | ------------------------------------------------ |
+| ✅ Dashboard sponsors temps réel  | Impressions, reach, durée exposition par sponsor |
+| ✅ Rapports PDF sponsors mensuels | KPIs détaillés, graphiques, évolutions           |
+| ✅ Certificat digital impressions | Preuve officielle pour négociations              |
+| ✅ Accès sponsors au portail      | Login personnalisé par sponsor                   |
+| ✅ Support dédié sponsors         | Assistance spécifique partenaires                |
 
 ### Impact Commercial
 
 > **Argument massue pitch clubs :**
-> *"Vos sponsors reçoivent rapports PDF automatiques mensuels prouvant 312 impressions en janvier. Renouvellement contrats facilité."*
+> _"Vos sponsors reçoivent rapports PDF automatiques mensuels prouvant 312 impressions en janvier. Renouvellement contrats facilité."_
 
 **Cas concret CESSON Handball (N3) :**
+
 - AVANT NEOPRO : 2 sponsors perdus (pas de preuves ROI)
 - AVEC NEOPRO : 5/5 sponsors renouvelés ("enfin des données !")
 - +1 nouveau sponsor attiré (visibilité écran démontrée)
@@ -2526,21 +2555,21 @@ Le rapport PDF inclut :
 
 ### Taux Adoption Prévu 2026
 
-| Module | Adoption | Clubs concernés |
-|--------|----------|-----------------|
-| Analytics Club Premium | 60% | 18 clubs sur 30 |
-| Pack Sponsors Premium | 40% | 12 clubs sur 30 |
-| Bundle complet | 25% | 8 clubs sur 30 |
+| Module                 | Adoption | Clubs concernés |
+| ---------------------- | -------- | --------------- |
+| Analytics Club Premium | 60%      | 18 clubs sur 30 |
+| Pack Sponsors Premium  | 40%      | 12 clubs sur 30 |
+| Bundle complet         | 25%      | 8 clubs sur 30  |
 
 ## 13.8 KPIs Module Analytics
 
-| Métrique | Objectif M6 | Objectif M12 |
-|----------|-------------|--------------|
-| Clubs utilisant analytics | 60% | 85% |
-| Rapports générés/mois | 200 | 1,500 |
-| Sponsors avec accès portail | 50 | 500 |
-| NPS sponsors | > 50 | > 60 |
-| Upsell analytics premium | 20% | 35% |
+| Métrique                    | Objectif M6 | Objectif M12 |
+| --------------------------- | ----------- | ------------ |
+| Clubs utilisant analytics   | 60%         | 85%          |
+| Rapports générés/mois       | 200         | 1,500        |
+| Sponsors avec accès portail | 50          | 500          |
+| NPS sponsors                | > 50        | > 60         |
+| Upsell analytics premium    | 20%         | 35%          |
 
 ## 13.9 Roadmap Intégration
 
@@ -2600,74 +2629,78 @@ Cette fonctionnalité permet aux clubs de mesurer l'utilisation réelle de leur 
 
 ### Inclus dans Palier Professionnel (€80/mois)
 
-| Fonctionnalité | Description |
-|----------------|-------------|
-| ✅ Dashboard analytics avancé | Vue complète utilisation système |
-| ✅ Heatmaps d'engagement | Pics d'activité par moment match |
-| ✅ Trends et évolutions | Comparaison mois/saison |
-| ✅ Top contenus par période | Vidéos les plus diffusées |
-| ✅ Rapports PDF club mensuels | Export automatique |
-| ✅ Export CSV données brutes | Analyses custom |
-| ✅ Comparaison vs autres clubs | Benchmarking anonyme |
-| ✅ Alertes automatiques | Détection problèmes, baisse engagement |
+| Fonctionnalité                 | Description                            |
+| ------------------------------ | -------------------------------------- |
+| ✅ Dashboard analytics avancé  | Vue complète utilisation système       |
+| ✅ Heatmaps d'engagement       | Pics d'activité par moment match       |
+| ✅ Trends et évolutions        | Comparaison mois/saison                |
+| ✅ Top contenus par période    | Vidéos les plus diffusées              |
+| ✅ Rapports PDF club mensuels  | Export automatique                     |
+| ✅ Export CSV données brutes   | Analyses custom                        |
+| ✅ Comparaison vs autres clubs | Benchmarking anonyme                   |
+| ✅ Alertes automatiques        | Détection problèmes, baisse engagement |
 
 ### Add-on Analytics Club Premium (€200/an)
 
 Pour les clubs sur palier Autonome qui veulent accéder aux analytics avancés :
 
-| Élément | Détail |
-|---------|--------|
-| **Prix** | €200/an (€16,67/mois) |
-| **Marge** | 75% |
+| Élément     | Détail                                                       |
+| ----------- | ------------------------------------------------------------ |
+| **Prix**    | €200/an (€16,67/mois)                                        |
+| **Marge**   | 75%                                                          |
 | **Contenu** | Toutes fonctionnalités analytics incluses dans Professionnel |
-| **Cible** | Clubs Autonome (€50/mois) voulant data sans upgrader |
+| **Cible**   | Clubs Autonome (€50/mois) voulant data sans upgrader         |
 
 ### Cas d'Usage Concrets
 
 **OPTIMISATION CONTENU :**
-> *"Analytics montrent vidéo célébration Joueur 7 passe 3x plus que Joueur 12 → Créer nouvelle vidéo Joueur 12 plus engageante"*
+
+> _"Analytics montrent vidéo célébration Joueur 7 passe 3x plus que Joueur 12 → Créer nouvelle vidéo Joueur 12 plus engageante"_
 
 **FIABILITÉ TECHNIQUE :**
-> *"Alerte automatique baisse uptime → Intervention rapide avant match"*
+
+> _"Alerte automatique baisse uptime → Intervention rapide avant match"_
 
 **BENCHMARKING :**
-> *"Mon club utilise écran 60 min/match, moyenne réseau 45 min → Je suis au-dessus, sponsors contents"*
+
+> _"Mon club utilise écran 60 min/match, moyenne réseau 45 min → Je suis au-dessus, sponsors contents"_
 
 **REPORTING INTERNE :**
-> *"Rapport PDF mensuel présenté au bureau directeur prouvant ROI investissement NEOPRO"*
+
+> _"Rapport PDF mensuel présenté au bureau directeur prouvant ROI investissement NEOPRO"_
 
 ### Taux Adoption Prévu 2026
 
-| Segment | Adoption |
-|---------|----------|
-| Clubs Professionnel/Premium (analytics inclus) | 100% |
-| Clubs Autonome (add-on €200/an) | 30% |
-| **Total clubs avec analytics** | 60% (18 sur 30) |
+| Segment                                        | Adoption        |
+| ---------------------------------------------- | --------------- |
+| Clubs Professionnel/Premium (analytics inclus) | 100%            |
+| Clubs Autonome (add-on €200/an)                | 30%             |
+| **Total clubs avec analytics**                 | 60% (18 sur 30) |
 
 ## 14.1 Données Disponibles
 
 ### Données actuellement collectées (sans développement)
 
-| Donnée | Source | Stockage |
-|--------|--------|----------|
-| **Statut online/offline** | Sync-Agent heartbeat | `sites.status`, `sites.last_seen_at` |
-| **CPU, RAM, Température, Disque** | Sync-Agent métriques | `metrics.*` |
-| **Uptime système** | Sync-Agent | `metrics.uptime` |
-| **Version logicielle** | Sites | `sites.software_version` |
-| **Alertes système** | Central Server | `alerts.*` |
-| **Déploiements vidéos** | Central Server | `content_deployments.*` |
-| **Commandes exécutées** | Central Server | `remote_commands.*` |
-| **Vidéos disponibles** | Central Server | `videos.*` |
+| Donnée                            | Source               | Stockage                             |
+| --------------------------------- | -------------------- | ------------------------------------ |
+| **Statut online/offline**         | Sync-Agent heartbeat | `sites.status`, `sites.last_seen_at` |
+| **CPU, RAM, Température, Disque** | Sync-Agent métriques | `metrics.*`                          |
+| **Uptime système**                | Sync-Agent           | `metrics.uptime`                     |
+| **Version logicielle**            | Sites                | `sites.software_version`             |
+| **Alertes système**               | Central Server       | `alerts.*`                           |
+| **Déploiements vidéos**           | Central Server       | `content_deployments.*`              |
+| **Commandes exécutées**           | Central Server       | `remote_commands.*`                  |
+| **Vidéos disponibles**            | Central Server       | `videos.*`                           |
 
 ### Données à collecter (hooks existants)
 
-| Donnée | Source | Hook à implémenter |
-|--------|--------|-------------------|
-| **Lecture vidéo** | TV Player | `player.on('play')`, `player.one('ended')` |
-| **Erreurs lecture** | TV Player | `player.on('error')` |
-| **Déclenchement manuel** | Télécommande | `launchVideo()` |
-| **Navigation catégories** | Télécommande | `selectCategory()` |
-| **Retour boucle sponsors** | Télécommande | `launchSponsors()` |
+| Donnée                     | Source       | Hook à implémenter                         |
+| -------------------------- | ------------ | ------------------------------------------ |
+| **Lecture vidéo**          | TV Player    | `player.on('play')`, `player.one('ended')` |
+| **Erreurs lecture**        | TV Player    | `player.on('error')`                       |
+| **Déclenchement manuel**   | Télécommande | `launchVideo()`                            |
+| **Navigation catégories**  | Télécommande | `selectCategory()`                         |
+| **Retour boucle sponsors** | Télécommande | `launchSponsors()`                         |
 
 ## 14.2 Architecture Technique
 
@@ -2909,81 +2942,81 @@ launchVideo(video: Video) {
 
 ### Phase 1 - MVP avec données existantes (1 semaine)
 
-| Fonctionnalité | Source données | Effort |
-|----------------|----------------|--------|
-| Dashboard santé (CPU, RAM, temp, disque) | `metrics` existant | 2 jours |
-| Historique disponibilité | `sites.status`, `last_seen_at` | 1 jour |
-| Liste alertes avec historique | `alerts` existant | 1 jour |
-| API endpoints santé | Central Server | 1 jour |
+| Fonctionnalité                           | Source données                 | Effort  |
+| ---------------------------------------- | ------------------------------ | ------- |
+| Dashboard santé (CPU, RAM, temp, disque) | `metrics` existant             | 2 jours |
+| Historique disponibilité                 | `sites.status`, `last_seen_at` | 1 jour  |
+| Liste alertes avec historique            | `alerts` existant              | 1 jour  |
+| API endpoints santé                      | Central Server                 | 1 jour  |
 
 **Livrable :** Dashboard technique avec données déjà collectées
 
 ### Phase 2 - Tracking vidéos (2 semaines)
 
-| Fonctionnalité | Modification requise | Effort |
-|----------------|----------------------|--------|
-| Tables `video_plays`, `club_sessions` | PostgreSQL | 1 jour |
-| Hook TV Player (play/end/error) | `tv.component.ts` | 2 jours |
-| Hook télécommande (launch) | `remote.component.ts` | 2 jours |
-| Envoi analytics via sync-agent | `agent.js` | 2 jours |
-| API + stockage central | Central Server | 3 jours |
+| Fonctionnalité                        | Modification requise  | Effort  |
+| ------------------------------------- | --------------------- | ------- |
+| Tables `video_plays`, `club_sessions` | PostgreSQL            | 1 jour  |
+| Hook TV Player (play/end/error)       | `tv.component.ts`     | 2 jours |
+| Hook télécommande (launch)            | `remote.component.ts` | 2 jours |
+| Envoi analytics via sync-agent        | `agent.js`            | 2 jours |
+| API + stockage central                | Central Server        | 3 jours |
 
 **Livrable :** Tracking complet des lectures vidéo
 
 ### Phase 3 - Analytics avancées (2 semaines)
 
-| Fonctionnalité | Description | Effort |
-|----------------|-------------|--------|
-| Table `club_daily_stats` + cron | Agrégats quotidiens | 2 jours |
-| Comparaison périodes | M vs M-1, tendances | 2 jours |
-| Export CSV | Données brutes | 1 jour |
-| Dashboard Angular complet | Interface utilisateur | 4 jours |
-| Vidéos jamais jouées | Analyse contenu | 1 jour |
+| Fonctionnalité                  | Description           | Effort  |
+| ------------------------------- | --------------------- | ------- |
+| Table `club_daily_stats` + cron | Agrégats quotidiens   | 2 jours |
+| Comparaison périodes            | M vs M-1, tendances   | 2 jours |
+| Export CSV                      | Données brutes        | 1 jour  |
+| Dashboard Angular complet       | Interface utilisateur | 4 jours |
+| Vidéos jamais jouées            | Analyse contenu       | 1 jour  |
 
 **Livrable :** Analytics complètes avec exports
 
 ## 14.5 Fonctionnalités Futures
 
-| Fonctionnalité | Complexité | Description |
-|----------------|------------|-------------|
-| **Contexte événement** | Moyenne | Saisie type match/entraînement sur télécommande |
-| **Estimation audience** | Faible | Champ saisie manuelle sur télécommande |
-| **Sessions détaillées** | Moyenne | Détection auto début/fin événement |
-| **Heatmap horaire** | Faible | Agrégation par heure d'activité |
-| **Rapport PDF mensuel** | Moyenne | Génération automatique |
-| **Benchmarks anonymisés** | Élevée | Comparaison clubs similaires |
-| **Alertes personnalisées** | Moyenne | Seuils configurables par club |
-| **Multi-sites consolidé** | Élevée | Vue agrégée pour clubs multi-gymnases |
+| Fonctionnalité             | Complexité | Description                                     |
+| -------------------------- | ---------- | ----------------------------------------------- |
+| **Contexte événement**     | Moyenne    | Saisie type match/entraînement sur télécommande |
+| **Estimation audience**    | Faible     | Champ saisie manuelle sur télécommande          |
+| **Sessions détaillées**    | Moyenne    | Détection auto début/fin événement              |
+| **Heatmap horaire**        | Faible     | Agrégation par heure d'activité                 |
+| **Rapport PDF mensuel**    | Moyenne    | Génération automatique                          |
+| **Benchmarks anonymisés**  | Élevée     | Comparaison clubs similaires                    |
+| **Alertes personnalisées** | Moyenne    | Seuils configurables par club                   |
+| **Multi-sites consolidé**  | Élevée     | Vue agrégée pour clubs multi-gymnases           |
 
 ## 14.6 Valeur Business
 
 ### Pour les Clubs
 
-| Bénéfice | Impact |
-|----------|--------|
-| **Visibilité utilisation** | Justifier l'investissement auprès du bureau |
-| **Optimiser le contenu** | Identifier vidéos efficaces vs inutilisées |
-| **Anticiper les problèmes** | Alertes proactives santé système |
-| **Historique activité** | Preuve d'utilisation pour partenaires |
+| Bénéfice                    | Impact                                      |
+| --------------------------- | ------------------------------------------- |
+| **Visibilité utilisation**  | Justifier l'investissement auprès du bureau |
+| **Optimiser le contenu**    | Identifier vidéos efficaces vs inutilisées  |
+| **Anticiper les problèmes** | Alertes proactives santé système            |
+| **Historique activité**     | Preuve d'utilisation pour partenaires       |
 
 ### Pour NEOPRO
 
-| Bénéfice | Impact |
-|----------|--------|
+| Bénéfice             | Impact                        |
+| -------------------- | ----------------------------- |
 | **Réduire le churn** | Clubs engagés restent abonnés |
-| **Support proactif** | Détecter clubs en difficulté |
-| **Product insights** | Comprendre l'usage réel |
-| **Success stories** | Données pour marketing |
+| **Support proactif** | Détecter clubs en difficulté  |
+| **Product insights** | Comprendre l'usage réel       |
+| **Success stories**  | Données pour marketing        |
 
 ## 14.7 KPIs Module Analytics Club
 
-| Métrique | Objectif M6 | Objectif M12 |
-|----------|-------------|--------------|
-| Clubs consultant analytics | 50% | 80% |
-| Temps moyen sur dashboard | > 2 min | > 3 min |
-| Exports générés/mois | 50 | 300 |
-| Clubs avec > 50% utilisation | 60% | 75% |
-| Satisfaction feature (NPS) | > 40 | > 50 |
+| Métrique                     | Objectif M6 | Objectif M12 |
+| ---------------------------- | ----------- | ------------ |
+| Clubs consultant analytics   | 50%         | 80%          |
+| Temps moyen sur dashboard    | > 2 min     | > 3 min      |
+| Exports générés/mois         | 50          | 300          |
+| Clubs avec > 50% utilisation | 60%         | 75%          |
+| Satisfaction feature (NPS)   | > 40        | > 50         |
 
 ---
 
@@ -2991,37 +3024,37 @@ launchVideo(video: Video) {
 
 ## 15.1 Glossaire
 
-| Terme | Définition |
-|-------|------------|
-| ARR | Annual Recurring Revenue - Revenus récurrents annuels |
-| CAC | Customer Acquisition Cost - Coût d'acquisition client |
-| Churn | Taux d'attrition des clients |
-| LTV | Lifetime Value - Valeur vie client |
-| MRR | Monthly Recurring Revenue - Revenus récurrents mensuels |
-| MTTR | Mean Time To Recovery - Temps moyen de résolution |
-| NPS | Net Promoter Score - Score de recommandation |
-| OTA | Over-The-Air - Mise à jour à distance |
-| PMF | Product-Market Fit - Adéquation produit-marché |
-| RACI | Responsible, Accountable, Consulted, Informed |
-| SLA | Service Level Agreement |
-| Sync Agent | Service Raspberry Pi communiquant avec le cloud |
+| Terme      | Définition                                              |
+| ---------- | ------------------------------------------------------- |
+| ARR        | Annual Recurring Revenue - Revenus récurrents annuels   |
+| CAC        | Customer Acquisition Cost - Coût d'acquisition client   |
+| Churn      | Taux d'attrition des clients                            |
+| LTV        | Lifetime Value - Valeur vie client                      |
+| MRR        | Monthly Recurring Revenue - Revenus récurrents mensuels |
+| MTTR       | Mean Time To Recovery - Temps moyen de résolution       |
+| NPS        | Net Promoter Score - Score de recommandation            |
+| OTA        | Over-The-Air - Mise à jour à distance                   |
+| PMF        | Product-Market Fit - Adéquation produit-marché          |
+| RACI       | Responsible, Accountable, Consulted, Informed           |
+| SLA        | Service Level Agreement                                 |
+| Sync Agent | Service Raspberry Pi communiquant avec le cloud         |
 
 ## 15.2 Liens Utiles
 
-| Ressource | URL |
-|-----------|-----|
-| Dashboard Central | https://neopro-admin.kalonpartners.bzh |
-| API Central | https://neopro-central.onrender.com |
-| Documentation | docs/REFERENCE.md |
-| Troubleshooting | docs/TROUBLESHOOTING.md |
+| Ressource         | URL                                              |
+| ----------------- | ------------------------------------------------ |
+| Dashboard Central | https://neopro-admin.kalonpartners.bzh           |
+| API Central       | https://neopro-central-production.up.railway.app |
+| Documentation     | docs/REFERENCE.md                                |
+| Troubleshooting   | docs/TROUBLESHOOTING.md                          |
 
 ## 15.3 Contacts
 
-| Rôle | Email | Téléphone |
-|------|-------|-----------|
-| Fondateur | contact@neopro.fr | - |
-| Support technique | support@neopro.fr | - |
-| Commercial | sales@neopro.fr | - |
+| Rôle              | Email             | Téléphone |
+| ----------------- | ----------------- | --------- |
+| Fondateur         | contact@neopro.fr | -         |
+| Support technique | support@neopro.fr | -         |
+| Commercial        | sales@neopro.fr   | -         |
 
 ## 15.4 Template Incident Report
 
@@ -3029,24 +3062,28 @@ launchVideo(video: Video) {
 # Incident Report - [INC-XXXX]
 
 ## Résumé
+
 - **Date/Heure:** YYYY-MM-DD HH:MM UTC
 - **Durée:** X heures Y minutes
 - **Sévérité:** P1/P2/P3
 - **Impact:** X clubs affectés
 
 ## Timeline
-| Heure | Événement |
-|-------|-----------|
-| HH:MM | Détection |
-| HH:MM | Investigation |
+
+| Heure | Événement             |
+| ----- | --------------------- |
+| HH:MM | Détection             |
+| HH:MM | Investigation         |
 | HH:MM | Root cause identifiée |
-| HH:MM | Fix déployé |
-| HH:MM | Service restauré |
+| HH:MM | Fix déployé           |
+| HH:MM | Service restauré      |
 
 ## Root Cause
+
 [Description technique]
 
 ## Actions Préventives
+
 - [ ] Action 1 - Owner - Deadline
 - [ ] Action 2 - Owner - Deadline
 ```
@@ -3085,12 +3122,14 @@ SEMAINE 2: AUTONOMIE
 > Le projet NEOPRO présente un potentiel significatif sur un marché fragmenté avec peu de concurrence directe. Le produit est fonctionnel et répond à un besoin réel des clubs sportifs amateurs.
 >
 > **Points forts :**
+>
 > - Produit fonctionnel en production
 > - Stack technique moderne et scalable
 > - Coût hardware faible (Raspberry Pi)
 > - Marché adressable important (180K+ clubs en France)
 >
 > **Points d'attention :**
+>
 > - Dette technique à résorber (tests, CI/CD, sécurité)
 > - Équipe à construire
 > - Pas encore de revenus récurrents
@@ -3098,6 +3137,7 @@ SEMAINE 2: AUTONOMIE
 > **Investissement recommandé :** €500K - €1M en Seed
 >
 > **Conditions :**
+>
 > - Recrutement CTO dans les 60 jours
 > - Couverture tests > 60% dans les 90 jours
 > - 50 clubs payants dans les 6 mois
@@ -3109,6 +3149,7 @@ SEMAINE 2: AUTONOMIE
 > Ce projet offre l'opportunité de construire une équipe et des processus from scratch sur une base technique solide. Les 3 premiers mois de consolidation sont critiques pour transformer ce prototype avancé en produit enterprise-ready.
 >
 > **Quick wins (30 premiers jours) :**
+>
 > 1. Mettre en place CI/CD basique
 > 2. Corriger les 3 vulnérabilités sécurité critiques
 > 3. Ajouter tests sur les endpoints auth
@@ -3121,16 +3162,18 @@ SEMAINE 2: AUTONOMIE
 **Version :** 1.4
 **Date :** 15 Décembre 2025
 **Mise à jour :**
+
 - v1.4 (15 déc) : Rapport PDF Club terminé, migration DB audience/score prête, doc STATUS.md + IMPLEMENTATION_GUIDE créées
 - v1.3 (8 déc) : Ajout fonctionnalités réalisées (analytics, éditeur config, CRUD vidéos, timeCategories), réévaluation note globale
 - v1.2 (6 déc) : Ajout sections Analytics Sponsors (13) et Analytics Club (14)
-**Classification :** Confidentiel
+  **Classification :** Confidentiel
 
 **Voir aussi :**
+
 - `STATUS.md` - État complet et détaillé du projet (mise à jour quotidienne)
 - `BACKLOG.md` - Roadmap features futures et sprint tracking
 - `IMPLEMENTATION_GUIDE_AUDIENCE_SCORE.md` - Guide technique estimation audience + score live
 
 ---
 
-*Ce document constitue une analyse exhaustive du projet NEOPRO et sert de référence pour les décisions stratégiques, techniques et opérationnelles.*
+_Ce document constitue une analyse exhaustive du projet NEOPRO et sert de référence pour les décisions stratégiques, techniques et opérationnelles._

@@ -380,7 +380,7 @@ Généré le 2025-12-08 (Mise à jour 2026-01-03)
 - [ resolve 4 critical/high security vulnerabilities (#32)](../archive/commits/5e5c15e.md) - 2025-12-06
 - [ remove auth guard from /tv route for kiosk mode (#25)](../archive/commits/c08b79b.md) - 2025-12-06
 - [ replace chromium-browser with chromium for Raspberry Pi OS Trixie (#21)](../archive/commits/6025995.md) - 2025-12-05
-- [ update API URL to point to neopro-central.onrender.com](../archive/commits/bfe79fd.md) - 2025-12-05
+- [ update API URL to point to neopro-central-production.up.railway.app](../archive/commits/bfe79fd.md) - 2025-12-05
 - [ add rootDirectory for central-server deployment](../archive/commits/aeeba6c.md) - 2025-12-05
 - [ improve CORS preflight handling for admin interface](../archive/commits/b6d7e11.md) - 2025-12-05
 - [ handle CORS preflight manually](../archive/commits/1c446c9.md) - 2025-12-05

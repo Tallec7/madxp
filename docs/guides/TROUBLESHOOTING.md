@@ -564,7 +564,7 @@ cat ~/neopro/data/analytics_buffer.json
 journalctl -u neopro-sync-agent -n 50 --no-pager | grep -i analytic
 
 # 4. Tester l'envoi vers le serveur central
-curl -X POST https://neopro-central.onrender.com/api/analytics/video-plays \
+curl -X POST https://neopro-central-production.up.railway.app/api/analytics/video-plays \
   -H "Content-Type: application/json" \
   -d '{"site_id":"VOTRE_SITE_ID","plays":[]}'
 # Doit retourner {"success":true,"recorded":0}
@@ -613,6 +613,7 @@ Les analytics ne sont générées que lorsque des vidéos sont effectivement lue
 ### Erreur EACCES permission denied sur configuration.backup.json
 
 **Symptôme** : Les logs du sync-agent affichent :
+
 ```
 Configuration update failed: EACCES: permission denied, open '/home/pi/neopro/webapp/configuration.backup.json'
 ```
@@ -620,6 +621,7 @@ Configuration update failed: EACCES: permission denied, open '/home/pi/neopro/we
 **Cause** : Le dossier webapp a le mauvais groupe (www-data au lieu de pi).
 
 **Solution** :
+
 ```bash
 ssh pi@neopro.local 'sudo chown -R pi:pi /home/pi/neopro/webapp && sudo usermod -a -G pi www-data'
 ```
@@ -681,7 +683,7 @@ sudo journalctl -u neopro-sync -f
 
 #### 4. Vérifier sur le dashboard
 
-1. Aller sur https://neopro-central.onrender.com
+1. Aller sur https://neopro-central-production.up.railway.app
 2. Menu **Sites** → **Liste des sites**
 3. Chercher votre site dans la liste
 4. Vérifier le statut : 🟢 En ligne
@@ -721,7 +723,7 @@ ssh pi@neopro.local 'ping -c 3 8.8.8.8'
 ssh pi@neopro.local 'sudo systemctl status neopro-sync'
 
 # 4. Connexion serveur central ?
-ssh pi@neopro.local 'curl -I https://neopro-central.onrender.com'
+ssh pi@neopro.local 'curl -I https://neopro-central-production.up.railway.app'
 ```
 
 ### La progression des déploiements reste bloquée à 0 %
@@ -1096,7 +1098,7 @@ FROM pending_commands WHERE site_id = 'UUID_DU_SITE';
 ```bash
 # Via l'API
 curl -H "Authorization: Bearer $TOKEN" \
-  https://neopro-central.onrender.com/api/sites/queue/summary
+  https://neopro-central-production.up.railway.app/api/sites/queue/summary
 
 # Via SQL
 SELECT

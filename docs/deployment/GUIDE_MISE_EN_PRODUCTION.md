@@ -5,6 +5,7 @@ Guide complet et détaillé pour déployer **le serveur central** NeoPro en prod
 > 📖 **Note :** Ce guide couvre uniquement le déploiement du **serveur central** (Supabase, Render, Redis).
 >
 > Pour l'installation des **boîtiers Raspberry Pi** dans les clubs, consultez :
+>
 > - **[Installation en ligne (RECOMMANDÉE)](../ONLINE_INSTALLATION.md)** - Setup remote complet (~22 min)
 > - **[Configuration d'un nouveau club](../../raspberry/scripts/CLUB-SETUP-README.md)** - Remote vs Local
 > - **[Installation complète Raspberry Pi](../guides/INSTALLATION_COMPLETE.md)** - 3 méthodes comparées
@@ -63,11 +64,11 @@ NeoPro est composé de plusieurs parties qui doivent fonctionner ensemble :
 
 ### Explication de chaque service
 
-| Service | C'est quoi ? | Pourquoi on en a besoin ? | Coût |
-|---------|--------------|---------------------------|------|
-| **Supabase** | Une base de données PostgreSQL hébergée + stockage de fichiers | Stocker les utilisateurs, les clubs, les configurations, et les vidéos | Gratuit (500 MB de données, 1 GB de fichiers) |
-| **Upstash** | Un cache Redis hébergé | Accélérer l'application et gérer les sessions en temps réel | Gratuit (10 000 requêtes/jour) |
-| **Render** | Un hébergeur d'applications web | Faire tourner notre serveur API et notre interface web | Gratuit (avec mise en veille) ou 7$/mois (toujours actif) |
+| Service      | C'est quoi ?                                                   | Pourquoi on en a besoin ?                                              | Coût                                                      |
+| ------------ | -------------------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------- |
+| **Supabase** | Une base de données PostgreSQL hébergée + stockage de fichiers | Stocker les utilisateurs, les clubs, les configurations, et les vidéos | Gratuit (500 MB de données, 1 GB de fichiers)             |
+| **Upstash**  | Un cache Redis hébergé                                         | Accélérer l'application et gérer les sessions en temps réel            | Gratuit (10 000 requêtes/jour)                            |
+| **Render**   | Un hébergeur d'applications web                                | Faire tourner notre serveur API et notre interface web                 | Gratuit (avec mise en veille) ou 7$/mois (toujours actif) |
 
 ### Combien de temps ça prend ?
 
@@ -107,10 +108,12 @@ GitHub est une plateforme qui héberge le code source. Tous les services qu'on v
 Le code doit être dans votre compte GitHub. Deux options :
 
 **Option A : Vous avez déjà accès au repo (recommandé)**
+
 - Le propriétaire du repo vous a ajouté comme collaborateur
 - Vous pouvez voir le code sur https://github.com/[organisation]/neopro
 
 **Option B : Vous devez "forker" le repo**
+
 1. Aller sur la page du repo NeoPro
 2. Cliquer sur le bouton **Fork** (en haut à droite)
 3. Cliquer sur **Create fork**
@@ -162,6 +165,7 @@ ADMIN
 ### C'est quoi Supabase ?
 
 Supabase est un service qui fournit :
+
 - **Une base de données PostgreSQL** : C'est là où seront stockées toutes les informations (utilisateurs, clubs, configurations...)
 - **Un espace de stockage** : Pour stocker les vidéos et les fichiers
 - **Une interface d'administration** : Pour voir et modifier les données facilement
@@ -205,12 +209,12 @@ Un "projet" Supabase = une base de données complète avec son stockage.
 
 3. **Remplir les informations du projet**
 
-   | Champ | Que mettre | Explication |
-   |-------|------------|-------------|
-   | **Name** | `neopro-production` | Le nom de votre projet. Choisissez quelque chose de reconnaissable. |
+   | Champ                 | Que mettre                          | Explication                                                                                                                                                                        |
+   | --------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | **Name**              | `neopro-production`                 | Le nom de votre projet. Choisissez quelque chose de reconnaissable.                                                                                                                |
    | **Database Password** | Cliquer sur **Generate a password** | Un mot de passe sera généré automatiquement. **TRÈS IMPORTANT : copiez ce mot de passe maintenant et collez-le dans votre fichier de notes.** Vous ne pourrez plus le voir après ! |
-   | **Region** | `West EU (Paris)` | Choisissez la région la plus proche de vos utilisateurs. Pour la France, choisir Paris ou Frankfurt. |
-   | **Pricing Plan** | `Free` | Le plan gratuit suffit pour commencer. |
+   | **Region**            | `West EU (Paris)`                   | Choisissez la région la plus proche de vos utilisateurs. Pour la France, choisir Paris ou Frankfurt.                                                                               |
+   | **Pricing Plan**      | `Free`                              | Le plan gratuit suffit pour commencer.                                                                                                                                             |
 
 4. **Créer le projet**
    - Vérifier que vous avez bien copié le mot de passe
@@ -293,6 +297,7 @@ Quand une application se connecte à une base de données, elle ouvre une "conne
    ```
 
 **IMPORTANT : Vérifiez ces points dans votre URL :**
+
 - Le port est `6543` (PAS `5432`)
 - L'URL se termine par `?pgbouncer=true`
 - Le mot de passe est celui que vous avez noté (pas `[YOUR-PASSWORD]`)
@@ -328,6 +333,7 @@ L'application a besoin de clés spéciales pour communiquer avec Supabase.
      ```
 
 **⚠️ ATTENTION SÉCURITÉ :**
+
 - La clé `service_role` donne un accès TOTAL à votre base de données
 - Ne la mettez JAMAIS dans du code côté client (navigateur)
 - Ne la partagez JAMAIS publiquement
@@ -378,16 +384,18 @@ Par défaut, même les buckets "publics" ont des restrictions. On doit créer de
    - Choisir **For full customization** (en bas)
    - Remplir le formulaire :
 
-     | Champ | Valeur |
-     |-------|--------|
-     | Policy name | `Lecture publique` |
-     | Allowed operation | Sélectionner **SELECT** |
-     | Target roles | Laisser vide (tous les rôles) |
+     | Champ             | Valeur                        |
+     | ----------------- | ----------------------------- |
+     | Policy name       | `Lecture publique`            |
+     | Allowed operation | Sélectionner **SELECT**       |
+     | Target roles      | Laisser vide (tous les rôles) |
 
    - Dans le champ **Policy definition** (en bas), écrire simplement :
+
      ```sql
      true
      ```
+
      Cela signifie "autoriser tout le monde"
 
    - Cliquer sur **Review**
@@ -398,16 +406,18 @@ Par défaut, même les buckets "publics" ont des restrictions. On doit créer de
    - Choisir **For full customization**
    - Remplir :
 
-     | Champ | Valeur |
-     |-------|--------|
-     | Policy name | `Upload serveur` |
+     | Champ             | Valeur                  |
+     | ----------------- | ----------------------- |
+     | Policy name       | `Upload serveur`        |
      | Allowed operation | Sélectionner **INSERT** |
-     | Target roles | Laisser vide |
+     | Target roles      | Laisser vide            |
 
    - Dans **Policy definition**, écrire :
+
      ```sql
      auth.role() = 'service_role'
      ```
+
      Cela signifie "seul le serveur (avec la clé service_role) peut uploader"
 
    - Cliquer sur **Review** puis **Save policy**
@@ -431,6 +441,7 @@ SUPABASE
 ```
 
 Et dans Supabase :
+
 - Un projet créé
 - Connection pooling activé
 - Deux buckets créés (videos, software-updates) avec leurs policies
@@ -448,6 +459,7 @@ Redis est une base de données ultra-rapide qui stocke les données en mémoire 
 - **Communication en temps réel** : Pour synchroniser les données entre plusieurs serveurs
 
 **Pourquoi Upstash ?**
+
 - Service Redis gratuit et facile à utiliser
 - Fonctionne en mode "serverless" (pas besoin de gérer un serveur)
 - Connexion sécurisée par défaut
@@ -474,12 +486,12 @@ Redis est une base de données ultra-rapide qui stocke les données en mémoire 
    - Une fenêtre de configuration s'ouvre
    - Remplir :
 
-     | Champ | Valeur | Explication |
-     |-------|--------|-------------|
-     | **Name** | `neopro-redis` | Un nom pour reconnaître votre base |
-     | **Type** | `Regional` | Une seule région (gratuit) vs Global (payant) |
-     | **Region** | `eu-west-1` (Ireland) | La région la plus proche. Ireland est proche de la France. |
-     | **TLS (SSL)** | **Cocher** ✅ | Connexion sécurisée (chiffrée). Toujours activer ! |
+     | Champ         | Valeur                | Explication                                                |
+     | ------------- | --------------------- | ---------------------------------------------------------- |
+     | **Name**      | `neopro-redis`        | Un nom pour reconnaître votre base                         |
+     | **Type**      | `Regional`            | Une seule région (gratuit) vs Global (payant)              |
+     | **Region**    | `eu-west-1` (Ireland) | La région la plus proche. Ireland est proche de la France. |
+     | **TLS (SSL)** | **Cocher** ✅         | Connexion sécurisée (chiffrée). Toujours activer !         |
 
    - Cliquer sur **Create**
 
@@ -540,6 +552,7 @@ Render est un hébergeur web qui permet de déployer des applications. Il offre 
 - **Déploiement automatique** : À chaque fois que vous mettez à jour le code sur GitHub, Render redéploie automatiquement
 
 **Pourquoi Render ?**
+
 - Facile à utiliser
 - Plan gratuit disponible
 - Intégration GitHub native
@@ -589,6 +602,7 @@ Render doit avoir accès au code source de NeoPro.
 Avant de créer les services, on doit générer des clés secrètes pour la sécurité.
 
 **C'est quoi ces secrets ?**
+
 - **JWT_SECRET** : Clé pour signer les "tokens" d'authentification. Quand un utilisateur se connecte, on lui donne un token signé avec cette clé. Ça permet de vérifier que le token est authentique.
 - **MFA_ENCRYPTION_KEY** : Clé pour chiffrer les secrets MFA (authentification à deux facteurs).
 
@@ -630,6 +644,7 @@ Résultat exemple : `X7kL9mN2pQ4rS6tU8vW0xY3zA5bC7dE9`
 ```
 
 **Noter dans votre fichier :**
+
 ```
 SECRETS GÉNÉRÉS
 ---------------
@@ -642,6 +657,7 @@ SECRETS GÉNÉRÉS
 ## 6. Partie 4 : Déployer le serveur API
 
 Le serveur API est le "cerveau" de NeoPro. Il :
+
 - Reçoit les requêtes des clients (dashboard, Raspberry Pi)
 - Communique avec la base de données
 - Gère l'authentification
@@ -669,15 +685,15 @@ Le serveur API est le "cerveau" de NeoPro. Il :
 
 Un formulaire de configuration s'affiche. Remplissez **exactement** comme suit :
 
-| Champ | Valeur | Explication |
-|-------|--------|-------------|
-| **Name** | `neopro-central-server` | Nom du service. Sera dans l'URL. |
-| **Region** | `Frankfurt (EU Central)` | Serveur en Europe, proche de la France |
-| **Branch** | `main` | La branche Git à déployer |
-| **Root Directory** | `central-server` | Le dossier contenant le code du serveur |
-| **Runtime** | `Node` | Le langage de programmation utilisé |
-| **Build Command** | `npm install && npm run build` | Commandes pour construire l'application |
-| **Start Command** | `npm start` | Commande pour démarrer l'application |
+| Champ              | Valeur                         | Explication                             |
+| ------------------ | ------------------------------ | --------------------------------------- |
+| **Name**           | `neopro-central-server`        | Nom du service. Sera dans l'URL.        |
+| **Region**         | `Frankfurt (EU Central)`       | Serveur en Europe, proche de la France  |
+| **Branch**         | `main`                         | La branche Git à déployer               |
+| **Root Directory** | `central-server`               | Le dossier contenant le code du serveur |
+| **Runtime**        | `Node`                         | Le langage de programmation utilisé     |
+| **Build Command**  | `npm install && npm run build` | Commandes pour construire l'application |
+| **Start Command**  | `npm start`                    | Commande pour démarrer l'application    |
 
 **Détails importants :**
 
@@ -688,12 +704,13 @@ Un formulaire de configuration s'affiche. Remplissez **exactement** comme suit :
 
 Faire défiler jusqu'à **Instance Type** :
 
-| Plan | Prix | Caractéristiques | Recommandation |
-|------|------|------------------|----------------|
-| **Free** | 0$ | Mise en veille après 15 min d'inactivité. Redémarre lentement (30-60 sec). | Pour tester |
-| **Starter** | 7$/mois | Toujours actif. Réponse rapide. | Pour production |
+| Plan        | Prix    | Caractéristiques                                                           | Recommandation  |
+| ----------- | ------- | -------------------------------------------------------------------------- | --------------- |
+| **Free**    | 0$      | Mise en veille après 15 min d'inactivité. Redémarre lentement (30-60 sec). | Pour tester     |
+| **Starter** | 7$/mois | Toujours actif. Réponse rapide.                                            | Pour production |
 
 **Note sur le plan Free :**
+
 - Si personne n'utilise l'application pendant 15 minutes, Render "endort" le serveur
 - La prochaine requête prendra 30-60 secondes le temps que le serveur se réveille
 - C'est acceptable pour tester, mais pas idéal pour une utilisation réelle
@@ -712,26 +729,28 @@ C'est la partie la plus importante ! Les variables d'environnement sont les para
 
 **Variables obligatoires (TOUTES requises) :**
 
-| Key (Nom) | Value (Valeur) | Explication |
-|-----------|----------------|-------------|
-| `NODE_ENV` | `production` | Indique que c'est un environnement de production |
-| `PORT` | `3001` | Port sur lequel le serveur écoute |
-| `DATABASE_URL` | `postgresql://postgres.xxxxx:...` | URL de connexion Supabase (avec pooler) - copier depuis vos notes |
-| `SUPABASE_URL` | `https://xxxxx.supabase.co` | URL du projet Supabase - copier depuis vos notes |
-| `SUPABASE_SERVICE_KEY` | `eyJhbGci...` | Clé service_role Supabase - copier depuis vos notes |
-| `REDIS_URL` | `rediss://default:...` | URL de connexion Redis - copier depuis vos notes |
-| `JWT_SECRET` | `K7mN9pR2...` | Clé secrète pour les tokens - votre clé générée |
-| `JWT_EXPIRES_IN` | `7d` | Durée de validité des tokens (7 jours) |
-| `MFA_ISSUER` | `NeoPro` | Nom affiché dans les apps d'authentification |
-| `MFA_ENCRYPTION_KEY` | `X7kL9mN2...` | Clé de chiffrement MFA - votre clé générée |
+| Key (Nom)              | Value (Valeur)                    | Explication                                                       |
+| ---------------------- | --------------------------------- | ----------------------------------------------------------------- |
+| `NODE_ENV`             | `production`                      | Indique que c'est un environnement de production                  |
+| `PORT`                 | `3001`                            | Port sur lequel le serveur écoute                                 |
+| `DATABASE_URL`         | `postgresql://postgres.xxxxx:...` | URL de connexion Supabase (avec pooler) - copier depuis vos notes |
+| `SUPABASE_URL`         | `https://xxxxx.supabase.co`       | URL du projet Supabase - copier depuis vos notes                  |
+| `SUPABASE_SERVICE_KEY` | `eyJhbGci...`                     | Clé service_role Supabase - copier depuis vos notes               |
+| `REDIS_URL`            | `rediss://default:...`            | URL de connexion Redis - copier depuis vos notes                  |
+| `JWT_SECRET`           | `K7mN9pR2...`                     | Clé secrète pour les tokens - votre clé générée                   |
+| `JWT_EXPIRES_IN`       | `7d`                              | Durée de validité des tokens (7 jours)                            |
+| `MFA_ISSUER`           | `NeoPro`                          | Nom affiché dans les apps d'authentification                      |
+| `MFA_ENCRYPTION_KEY`   | `X7kL9mN2...`                     | Clé de chiffrement MFA - votre clé générée                        |
 
 **Pour ajouter chaque variable :**
+
 - Cliquer sur **Add Environment Variable**
 - Dans "Key", taper le nom (ex: `NODE_ENV`)
 - Dans "Value", taper la valeur (ex: `production`)
 - Répéter pour chaque variable
 
 **Vérification :**
+
 - Vous devez avoir **10 variables** au total
 - Vérifiez qu'il n'y a pas d'espaces en début ou fin de valeur
 - Vérifiez que DATABASE_URL contient bien votre mot de passe (pas `[YOUR-PASSWORD]`)
@@ -776,25 +795,27 @@ Une fois déployé :
 
 1. **Trouver l'URL**
    - En haut de la page, sous le nom du service
-   - URL comme : `https://neopro-central.onrender.com`
+   - URL comme : `https://neopro-central-production.up.railway.app`
 
 2. **Noter dans votre fichier**
    ```
    RENDER
    ------
-   - URL du serveur API : https://neopro-central.onrender.com
+   - URL du serveur API : https://neopro-central-production.up.railway.app
    ```
 
 ### Étape 6.8 : Tester le serveur
 
 1. **Ouvrir l'URL de health check**
    - Dans votre navigateur, aller sur :
+
    ```
-   https://neopro-central.onrender.com/health
+   https://neopro-central-production.up.railway.app/health
    ```
 
 2. **Vérifier la réponse**
    - Vous devez voir quelque chose comme :
+
    ```json
    {
      "status": "healthy",
@@ -802,6 +823,7 @@ Une fois déployé :
      "version": "1.0.0"
    }
    ```
+
    - Si vous voyez ça, **le serveur fonctionne !** 🎉
 
 3. **Si ça ne fonctionne pas**
@@ -822,6 +844,7 @@ Le dashboard est l'interface web d'administration. C'est une application Angular
 - **Dashboard (Static Site)** : Fichiers HTML/CSS/JS envoyés au navigateur du visiteur
 
 Pour un "Static Site", Render :
+
 1. Compile l'application Angular
 2. Génère des fichiers statiques (HTML, CSS, JS)
 3. Les sert via un CDN rapide
@@ -838,15 +861,16 @@ Pour un "Static Site", Render :
 
 ### Étape 7.2 : Configurer le site
 
-| Champ | Valeur | Explication |
-|-------|--------|-------------|
-| **Name** | `neopro-dashboard` | Nom du site |
-| **Branch** | `main` | Branche à déployer |
-| **Root Directory** | `central-dashboard` | Dossier contenant le code du dashboard |
-| **Build Command** | `npm install && npm run build:prod` | Compiler l'application Angular |
-| **Publish Directory** | `dist/central-dashboard` | Dossier où Angular génère les fichiers |
+| Champ                 | Valeur                              | Explication                            |
+| --------------------- | ----------------------------------- | -------------------------------------- |
+| **Name**              | `neopro-dashboard`                  | Nom du site                            |
+| **Branch**            | `main`                              | Branche à déployer                     |
+| **Root Directory**    | `central-dashboard`                 | Dossier contenant le code du dashboard |
+| **Build Command**     | `npm install && npm run build:prod` | Compiler l'application Angular         |
+| **Publish Directory** | `dist/central-dashboard`            | Dossier où Angular génère les fichiers |
 
 **Important :**
+
 - Le **Publish Directory** doit correspondre au dossier de sortie d'Angular
 - C'est généralement `dist/nom-du-projet`
 
@@ -857,9 +881,9 @@ Le dashboard doit savoir où se trouve le serveur API.
 1. **Faire défiler jusqu'à "Environment Variables"**
 2. **Ajouter une variable :**
 
-| Key | Value |
-|-----|-------|
-| `NG_APP_API_URL` | `https://neopro-central.onrender.com` |
+| Key              | Value                                              |
+| ---------------- | -------------------------------------------------- |
+| `NG_APP_API_URL` | `https://neopro-central-production.up.railway.app` |
 
 (Remplacer par l'URL de votre serveur, notée à l'étape 6.7)
 
@@ -875,6 +899,7 @@ Angular est une "Single Page Application" (SPA). Toutes les routes sont gérées
    - **Action** : Sélectionner `Rewrite`
 
 **Pourquoi c'est nécessaire ?**
+
 - Sans ça, si quelqu'un va directement sur `/sites` ou `/dashboard`, Render cherche un fichier `sites.html` qui n'existe pas
 - Avec la règle, Render renvoie `index.html` et Angular gère la route
 
@@ -905,8 +930,8 @@ Le serveur doit autoriser les requêtes venant du dashboard. C'est le "CORS" (Cr
 3. **Ajouter une variable**
    - Cliquer sur **Add Environment Variable**
 
-   | Key | Value |
-   |-----|-------|
+   | Key               | Value                                    |
+   | ----------------- | ---------------------------------------- |
    | `ALLOWED_ORIGINS` | `https://neopro-admin.kalonpartners.bzh` |
 
 4. **Sauvegarder**
@@ -1006,6 +1031,7 @@ COMMENT ON COLUMN users.mfa_verified_at IS 'Date de dernière vérification MFA 
 1. **Nouvelle requête**
 
 2. **Coller :**
+
 ```sql
 SELECT table_name
 FROM information_schema.tables
@@ -1050,6 +1076,7 @@ Render permet d'accéder à un terminal sur votre serveur.
    - Vous voyez un terminal
 
 3. **Exécuter le script de création**
+
    ```bash
    npm run create-admin
    ```
@@ -1106,6 +1133,7 @@ VALUES (
 4. **Exécuter**
 
 5. **Vérifier**
+
 ```sql
 SELECT id, email, full_name, role, is_active FROM users;
 ```
@@ -1118,16 +1146,16 @@ Vous devez voir votre utilisateur.
 
 ### Test 1 : Health Check du serveur
 
-1. Ouvrir : `https://neopro-central.onrender.com/health`
+1. Ouvrir : `https://neopro-central-production.up.railway.app/health`
 2. **Attendu :**
    ```json
-   {"status":"healthy","timestamp":"...","version":"1.0.0"}
+   { "status": "healthy", "timestamp": "...", "version": "1.0.0" }
    ```
 3. **Si erreur :** Voir les logs Render du serveur
 
 ### Test 2 : Documentation API
 
-1. Ouvrir : `https://neopro-central.onrender.com/api-docs`
+1. Ouvrir : `https://neopro-central-production.up.railway.app/api-docs`
 2. **Attendu :** Page Swagger avec la liste des endpoints
 3. **Si page blanche :** Le serveur n'a peut-être pas démarré correctement
 
@@ -1167,17 +1195,20 @@ Ces configurations ne sont pas obligatoires mais améliorent l'expérience.
 SendGrid permet d'envoyer des emails (alertes, notifications...).
 
 **Créer un compte :**
+
 1. Aller sur https://sendgrid.com
 2. Cliquer sur **Start For Free**
 3. Créer un compte
 
 **Vérifier un expéditeur :**
+
 1. Settings → Sender Authentication
 2. Verify a Single Sender
 3. Entrer votre email professionnel
 4. Confirmer via l'email reçu
 
 **Créer une clé API :**
+
 1. Settings → API Keys
 2. Create API Key
 3. Nom : `neopro-production`
@@ -1185,24 +1216,28 @@ SendGrid permet d'envoyer des emails (alertes, notifications...).
 5. Copier la clé (commence par `SG.`)
 
 **Ajouter sur Render :**
+
 - `SENDGRID_API_KEY` = `SG.xxxx...`
 - `EMAIL_FROM` = `noreply@votredomaine.com`
 
 ### 11.2. Notifications Slack
 
 **Créer une App Slack :**
+
 1. https://api.slack.com/apps
 2. Create New App → From scratch
 3. Nom : `NeoPro Alerts`
 4. Workspace : votre workspace
 
 **Configurer le Webhook :**
+
 1. Incoming Webhooks → activer
 2. Add New Webhook to Workspace
 3. Choisir un channel (ex: `#alerts-neopro`)
 4. Copier l'URL du webhook
 
 **Tester :**
+
 ```bash
 curl -X POST -H 'Content-type: application/json' \
   --data '{"text":"Test NeoPro!"}' \
@@ -1210,6 +1245,7 @@ curl -X POST -H 'Content-type: application/json' \
 ```
 
 **Ajouter sur Render :**
+
 - `SLACK_WEBHOOK_URL` = `https://hooks.slack.com/services/...`
 
 ### 11.3. Logs centralisés avec Logtail
@@ -1222,6 +1258,7 @@ Logtail permet de voir tous vos logs dans une interface web.
 4. Copier le token
 
 **Ajouter sur Render :**
+
 - `LOGTAIL_TOKEN` = `votre_token`
 
 ### 11.4. Monitoring avec UptimeRobot
@@ -1232,7 +1269,7 @@ UptimeRobot vérifie que votre site est en ligne et vous alerte en cas de probl�
 2. Créer un compte gratuit
 3. Add New Monitor :
    - Type : HTTP(s)
-   - URL : `https://neopro-central.onrender.com/health`
+   - URL : `https://neopro-central-production.up.railway.app/health`
    - Interval : 5 minutes
 4. Configurer les alertes (email, Slack...)
 
@@ -1245,6 +1282,7 @@ UptimeRobot vérifie que votre site est en ligne et vous alerte en cas de probl�
 **Symptômes :** Statut "Deploy failed" ou "Crashed"
 
 **Solutions :**
+
 1. **Vérifier les logs :**
    - Render → votre service → Logs
    - Chercher les lignes en rouge
@@ -1264,12 +1302,15 @@ UptimeRobot vérifie que votre site est en ligne et vous alerte en cas de probl�
 **Symptômes :** `Connection refused`, `Connection timeout`, `ECONNREFUSED`
 
 **Solutions :**
+
 1. Vérifier que DATABASE_URL utilise le port `6543` (pas `5432`)
 2. Vérifier que `?pgbouncer=true` est à la fin de l'URL
 3. Vérifier que le mot de passe est correct
 
 **Test de l'URL :**
+
 - L'URL doit ressembler à :
+
 ```
 postgresql://postgres.xxxxx:VOTRE_MOT_DE_PASSE@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true
 ```
@@ -1279,6 +1320,7 @@ postgresql://postgres.xxxxx:VOTRE_MOT_DE_PASSE@aws-0-eu-west-1.pooler.supabase.c
 **Symptômes :** Page blanche, erreur dans la console
 
 **Solutions :**
+
 1. Ouvrir les DevTools (F12) → Console
 2. Chercher les erreurs
 3. Vérifications :
@@ -1291,6 +1333,7 @@ postgresql://postgres.xxxxx:VOTRE_MOT_DE_PASSE@aws-0-eu-west-1.pooler.supabase.c
 **Symptômes :** Message `Access-Control-Allow-Origin` dans la console
 
 **Solutions :**
+
 1. Sur Render, service API
 2. Vérifier `ALLOWED_ORIGINS`
 3. Format correct : `https://neopro-admin.kalonpartners.bzh` (pas de `/` à la fin)
@@ -1301,6 +1344,7 @@ postgresql://postgres.xxxxx:VOTRE_MOT_DE_PASSE@aws-0-eu-west-1.pooler.supabase.c
 **Symptômes :** `Redis connection error`
 
 **Solutions :**
+
 1. Vérifier que REDIS_URL commence par `redis://` ou `rediss://`
 2. Vérifier le token dans l'URL
 
@@ -1309,6 +1353,7 @@ postgresql://postgres.xxxxx:VOTRE_MOT_DE_PASSE@aws-0-eu-west-1.pooler.supabase.c
 **Symptômes :** "Invalid credentials" malgré les bons identifiants
 
 **Solutions :**
+
 1. Vérifier que l'utilisateur existe :
    ```sql
    SELECT * FROM users WHERE email = 'votre@email.com';
@@ -1320,48 +1365,48 @@ postgresql://postgres.xxxxx:VOTRE_MOT_DE_PASSE@aws-0-eu-west-1.pooler.supabase.c
 
 ## 13. Glossaire
 
-| Terme | Définition |
-|-------|------------|
-| **API** | Interface de programmation. C'est comment les applications communiquent entre elles. |
-| **Backend** | La partie serveur d'une application. Gère la logique métier et la base de données. |
-| **Base de données** | Système pour stocker des données de manière organisée. |
-| **Bucket** | Un "dossier" dans le cloud pour stocker des fichiers. |
-| **Cache** | Stockage temporaire pour accélérer les accès aux données fréquentes. |
-| **CDN** | Content Delivery Network. Réseau de serveurs qui distribuent le contenu rapidement. |
-| **CORS** | Cross-Origin Resource Sharing. Mécanisme de sécurité des navigateurs. |
-| **Dashboard** | Interface d'administration visuelle. |
-| **Déploiement** | Mettre une application en ligne pour qu'elle soit accessible. |
-| **Frontend** | La partie visible d'une application (interface utilisateur). |
-| **Health Check** | Vérification automatique que l'application fonctionne. |
-| **JWT** | JSON Web Token. Méthode d'authentification sécurisée. |
-| **MFA** | Multi-Factor Authentication. Double authentification (mot de passe + code). |
-| **Policy** | Règle de sécurité qui définit qui peut accéder à quoi. |
-| **Pooler** | Gestionnaire de connexions à la base de données. |
-| **PostgreSQL** | Système de base de données relationnelle, gratuit et open-source. |
-| **Redis** | Base de données ultra-rapide stockant les données en mémoire. |
-| **Repository (Repo)** | Projet contenant du code source sur GitHub. |
-| **Serverless** | Architecture où le serveur est géré automatiquement. |
-| **SPA** | Single Page Application. Application web qui ne recharge pas la page. |
-| **SSL/TLS** | Protocole de sécurité pour chiffrer les communications. |
-| **Static Site** | Site web composé de fichiers fixes (HTML, CSS, JS). |
-| **Token** | Jeton d'authentification. Preuve que l'utilisateur est connecté. |
-| **Variable d'environnement** | Paramètre de configuration externe au code. |
-| **Web Service** | Application serveur qui tourne en permanence. |
-| **Webhook** | URL qui reçoit des notifications automatiques. |
+| Terme                        | Définition                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
+| **API**                      | Interface de programmation. C'est comment les applications communiquent entre elles. |
+| **Backend**                  | La partie serveur d'une application. Gère la logique métier et la base de données.   |
+| **Base de données**          | Système pour stocker des données de manière organisée.                               |
+| **Bucket**                   | Un "dossier" dans le cloud pour stocker des fichiers.                                |
+| **Cache**                    | Stockage temporaire pour accélérer les accès aux données fréquentes.                 |
+| **CDN**                      | Content Delivery Network. Réseau de serveurs qui distribuent le contenu rapidement.  |
+| **CORS**                     | Cross-Origin Resource Sharing. Mécanisme de sécurité des navigateurs.                |
+| **Dashboard**                | Interface d'administration visuelle.                                                 |
+| **Déploiement**              | Mettre une application en ligne pour qu'elle soit accessible.                        |
+| **Frontend**                 | La partie visible d'une application (interface utilisateur).                         |
+| **Health Check**             | Vérification automatique que l'application fonctionne.                               |
+| **JWT**                      | JSON Web Token. Méthode d'authentification sécurisée.                                |
+| **MFA**                      | Multi-Factor Authentication. Double authentification (mot de passe + code).          |
+| **Policy**                   | Règle de sécurité qui définit qui peut accéder à quoi.                               |
+| **Pooler**                   | Gestionnaire de connexions à la base de données.                                     |
+| **PostgreSQL**               | Système de base de données relationnelle, gratuit et open-source.                    |
+| **Redis**                    | Base de données ultra-rapide stockant les données en mémoire.                        |
+| **Repository (Repo)**        | Projet contenant du code source sur GitHub.                                          |
+| **Serverless**               | Architecture où le serveur est géré automatiquement.                                 |
+| **SPA**                      | Single Page Application. Application web qui ne recharge pas la page.                |
+| **SSL/TLS**                  | Protocole de sécurité pour chiffrer les communications.                              |
+| **Static Site**              | Site web composé de fichiers fixes (HTML, CSS, JS).                                  |
+| **Token**                    | Jeton d'authentification. Preuve que l'utilisateur est connecté.                     |
+| **Variable d'environnement** | Paramètre de configuration externe au code.                                          |
+| **Web Service**              | Application serveur qui tourne en permanence.                                        |
+| **Webhook**                  | URL qui reçoit des notifications automatiques.                                       |
 
 ---
 
 ## Récapitulatif des URLs
 
-| Service | URL |
-|---------|-----|
-| Supabase Dashboard | https://supabase.com/dashboard |
-| Upstash Dashboard | https://console.upstash.com |
-| Render Dashboard | https://dashboard.render.com |
-| Votre API | https://neopro-central.onrender.com |
-| Votre Dashboard | https://neopro-admin.kalonpartners.bzh |
-| Health Check | https://neopro-central.onrender.com/health |
-| Documentation API | https://neopro-central.onrender.com/api-docs |
+| Service            | URL                                                       |
+| ------------------ | --------------------------------------------------------- |
+| Supabase Dashboard | https://supabase.com/dashboard                            |
+| Upstash Dashboard  | https://console.upstash.com                               |
+| Render Dashboard   | https://dashboard.render.com                              |
+| Votre API          | https://neopro-central-production.up.railway.app          |
+| Votre Dashboard    | https://neopro-admin.kalonpartners.bzh                    |
+| Health Check       | https://neopro-central-production.up.railway.app/health   |
+| Documentation API  | https://neopro-central-production.up.railway.app/api-docs |
 
 ---
 

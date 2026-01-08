@@ -104,11 +104,11 @@ Ou directement dans le Shell Render :
 
 ```bash
 # Tester la santé du serveur
-curl https://neopro-central.onrender.com/health
+curl https://neopro-central-production.up.railway.app/health
 # Devrait retourner: {"status":"ok","timestamp":"..."}
 
 # Tester l'API
-curl https://neopro-central.onrender.com/api/sites
+curl https://neopro-central-production.up.railway.app/api/sites
 # Devrait retourner: {"sites":[]}
 ```
 
@@ -219,7 +219,7 @@ npm run build
 # OU directement dans central-server/public/
 ```
 
-**URL :** https://neopro-central.onrender.com
+**URL :** https://neopro-central-production.up.railway.app
 
 **Login :**
 
@@ -233,14 +233,14 @@ npm run build
 ### 1. Serveur central actif
 
 ```bash
-curl https://neopro-central.onrender.com/health
+curl https://neopro-central-production.up.railway.app/health
 # ✅ {"status":"ok"}
 ```
 
 ### 2. Boîtier enregistré
 
 ```bash
-curl https://neopro-central.onrender.com/api/sites
+curl https://neopro-central-production.up.railway.app/api/sites
 # ✅ Devrait lister votre site
 ```
 

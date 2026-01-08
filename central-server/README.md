@@ -57,7 +57,7 @@ Le déploiement est configuré via `render.yaml` à la racine du projet.
 3. Configurer les variables d'environnement dans Environment
 4. Déployer
 
-**URL déployée :** `https://neopro-central.onrender.com`
+**URL déployée :** `https://neopro-central-production.up.railway.app`
 
 ---
 
