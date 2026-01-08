@@ -1,3 +1,9 @@
+## [2.13.3](https://github.com/Tallec7/neopro/compare/v2.13.2...v2.13.3) (2026-01-08)
+
+### Bug Fixes
+
+- **rate-limit:** apply per-route rate limits to prevent 429 errors ([867318d](https://github.com/Tallec7/neopro/commit/867318dc17625b2248c3f216fd85a26011d8fe4a))
+
 ## [2.13.2](https://github.com/Tallec7/neopro/compare/v2.13.1...v2.13.2) (2026-01-08)
 
 ### Bug Fixes
