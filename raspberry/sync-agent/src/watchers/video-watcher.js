@@ -20,7 +20,8 @@ class VideoWatcher {
   constructor(videosPath, onChange) {
     this.videosPath = videosPath;
     this.onChange = onChange;
-    this.watcher = null;
+    this.watchers = []; // Multiple watchers for each subdirectory (Linux compatibility)
+    this.pollInterval = null; // Fallback polling for Linux
     this.debounceTimer = null;
     this.debounceDelay = 2000; // 2 secondes de debounce
     this.lastVideoList = null;
@@ -31,9 +32,10 @@ class VideoWatcher {
 
   /**
    * Démarre la surveillance du dossier vidéos
+   * Utilise le polling sur Linux car fs.watch recursive n'est pas supporté
    */
   start() {
-    if (this.watcher) {
+    if (this.watchers.length > 0 || this.pollInterval) {
       logger.warn('[video-watcher] Already watching videos directory');
       return;
     }
@@ -49,27 +51,65 @@ class VideoWatcher {
       this.loadChecksumCache();
 
       // Initialiser la liste des vidéos
-      this.lastVideoList = this.hashVideoList(this.scanVideos());
+      const initialVideos = this.scanVideos();
+      this.lastVideoList = this.hashVideoList(initialVideos);
 
       // Lancer le calcul des checksums en background
       this.processChecksumQueue();
 
-      // Surveiller le dossier (récursif pour les sous-catégories)
-      this.watcher = fs.watch(this.videosPath, { recursive: true }, (eventType, filename) => {
-        if (filename && this.isVideoFile(filename)) {
-          this.handleChange(eventType, filename);
-        }
-      });
+      // Sur Linux, fs.watch avec recursive: true n'est pas supporté
+      // On utilise un polling périodique à la place (plus fiable sur Raspberry Pi)
+      const POLL_INTERVAL = 30000; // 30 secondes
 
-      // Gérer les erreurs du watcher
-      this.watcher.on('error', (error) => {
-        logger.error('[video-watcher] Watcher error:', error);
-        this.restart();
-      });
+      this.pollInterval = setInterval(() => {
+        this.checkForChanges();
+      }, POLL_INTERVAL);
 
-      logger.info('[video-watcher] Started watching videos directory', { path: this.videosPath });
+      // Aussi surveiller le dossier racine pour les nouveaux sous-dossiers
+      try {
+        const rootWatcher = fs.watch(this.videosPath, (eventType, filename) => {
+          if (filename) {
+            this.handleChange(eventType, filename);
+          }
+        });
+        rootWatcher.on('error', (error) => {
+          logger.warn('[video-watcher] Root watcher error:', error.message);
+        });
+        this.watchers.push(rootWatcher);
+      } catch (watchError) {
+        logger.warn('[video-watcher] Could not create root watcher, using polling only:', watchError.message);
+      }
+
+      logger.info('[video-watcher] Started watching videos directory', {
+        path: this.videosPath,
+        mode: 'polling',
+        interval: POLL_INTERVAL,
+        initialVideoCount: initialVideos.length
+      });
     } catch (error) {
       logger.error('[video-watcher] Failed to start watcher:', error);
+    }
+  }
+
+  /**
+   * Vérifie les changements (appelé par le polling)
+   */
+  checkForChanges() {
+    try {
+      const videos = this.scanVideos();
+      const newHash = this.hashVideoList(videos);
+
+      if (newHash !== this.lastVideoList) {
+        logger.info('[video-watcher] Change detected via polling', {
+          videoCount: videos.length
+        });
+        this.lastVideoList = newHash;
+        if (this.onChange) {
+          this.onChange();
+        }
+      }
+    } catch (error) {
+      logger.error('[video-watcher] Error checking for changes:', error);
     }
   }
 
@@ -207,16 +247,28 @@ class VideoWatcher {
    * Arrête la surveillance
    */
   stop() {
-    if (this.watcher) {
-      this.watcher.close();
-      this.watcher = null;
-      logger.info('[video-watcher] Stopped watching videos directory');
+    // Arrêter tous les watchers
+    for (const watcher of this.watchers) {
+      try {
+        watcher.close();
+      } catch (e) {
+        // Ignorer les erreurs de fermeture
+      }
+    }
+    this.watchers = [];
+
+    // Arrêter le polling
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
     }
 
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
       this.debounceTimer = null;
     }
+
+    logger.info('[video-watcher] Stopped watching videos directory');
   }
 
   /**
