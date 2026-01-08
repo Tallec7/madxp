@@ -1,3 +1,9 @@
+## [2.11.5](https://github.com/Tallec7/neopro/compare/v2.11.4...v2.11.5) (2026-01-08)
+
+### Performance Improvements
+
+- **memory:** optimize for Railway Hobby plan constraints ([5371d8f](https://github.com/Tallec7/neopro/commit/5371d8f28e27cfa5d487ed217d1bdd73512ec9a3))
+
 ## [2.11.4](https://github.com/Tallec7/neopro/compare/v2.11.3...v2.11.4) (2026-01-08)
 
 ### Performance Improvements
