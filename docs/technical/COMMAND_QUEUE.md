@@ -23,6 +23,7 @@
 ### Le problème
 
 Les boîtiers Raspberry Pi dans les clubs ne sont pas toujours connectés à Internet :
+
 - **Sites isolés** sans connexion permanente
 - **Matchs** où le boîtier est offline pour des raisons de performance
 - **Pannes réseau** temporaires
@@ -65,12 +66,14 @@ Le système Command Queue permet de **mettre en file d'attente** les commandes d
 
 ### Composants
 
-| Composant | Rôle |
-|-----------|------|
-| `command-queue.service.ts` | Service central de gestion de la queue |
-| `socket.service.ts` | Traitement des commandes à la reconnexion |
-| `sites.controller.ts` | Endpoints API REST |
-| `pending_commands` (table) | Stockage PostgreSQL des commandes |
+| Composant                      | Rôle                                             |
+| ------------------------------ | ------------------------------------------------ |
+| `command-queue.service.ts`     | Service central de gestion de la queue           |
+| `socket.service.ts`            | Traitement des commandes à la reconnexion        |
+| `deployment.service.ts`        | Utilise `sendOrQueue()` pour déployer les vidéos |
+| `update-deployment.service.ts` | Utilise `sendOrQueue()` pour les mises à jour    |
+| `sites.controller.ts`          | Endpoints API REST                               |
+| `pending_commands` (table)     | Stockage PostgreSQL des commandes                |
 
 ### Fichiers modifiés
 
@@ -98,24 +101,24 @@ central-dashboard/
 
 ### Commandes "queueables" (peuvent être mises en attente)
 
-| Commande | Description | Cas d'usage |
-|----------|-------------|-------------|
-| `update_config` | Mise à jour de configuration | Pousser une nouvelle config |
-| `deploy_video` | Déployer une vidéo | Ajouter un contenu sponsor |
-| `delete_video` | Supprimer une vidéo | Retirer un contenu expiré |
-| `update_software` | Mise à jour logicielle | Déployer une nouvelle version |
+| Commande          | Description                  | Cas d'usage                   |
+| ----------------- | ---------------------------- | ----------------------------- |
+| `update_config`   | Mise à jour de configuration | Pousser une nouvelle config   |
+| `deploy_video`    | Déployer une vidéo           | Ajouter un contenu sponsor    |
+| `delete_video`    | Supprimer une vidéo          | Retirer un contenu expiré     |
+| `update_software` | Mise à jour logicielle       | Déployer une nouvelle version |
 
 Ces commandes ont du sens même si le site est offline car elles seront appliquées au réveil.
 
 ### Commandes "temps réel uniquement" (non queueables)
 
-| Commande | Description | Raison |
-|----------|-------------|--------|
-| `get_logs` | Récupérer les logs | Données temps réel |
-| `get_system_info` | Infos système | Données temps réel |
-| `get_config` | Récupérer la config actuelle | Données temps réel |
-| `network_diagnostics` | Diagnostic réseau | Interaction directe |
-| `get_hotspot_config` | Config WiFi hotspot | Données temps réel |
+| Commande              | Description                  | Raison              |
+| --------------------- | ---------------------------- | ------------------- |
+| `get_logs`            | Récupérer les logs           | Données temps réel  |
+| `get_system_info`     | Infos système                | Données temps réel  |
+| `get_config`          | Récupérer la config actuelle | Données temps réel  |
+| `network_diagnostics` | Diagnostic réseau            | Interaction directe |
+| `get_hotspot_config`  | Config WiFi hotspot          | Données temps réel  |
 
 Ces commandes nécessitent une réponse immédiate et n'ont pas de sens en mode différé.
 
@@ -130,6 +133,7 @@ POST /api/sites/:id/command
 ```
 
 **Body :**
+
 ```json
 {
   "command": "update_config",
@@ -143,6 +147,7 @@ POST /api/sites/:id/command
 **Réponses possibles :**
 
 Site connecté :
+
 ```json
 {
   "success": true,
@@ -152,6 +157,7 @@ Site connecté :
 ```
 
 Site offline, commande queueable :
+
 ```json
 {
   "success": true,
@@ -162,6 +168,7 @@ Site offline, commande queueable :
 ```
 
 Site offline, commande non queueable :
+
 ```json
 {
   "success": false,
@@ -176,6 +183,7 @@ GET /api/sites/:id/pending-commands
 ```
 
 **Réponse :**
+
 ```json
 {
   "siteId": "uuid-xxx",
@@ -205,6 +213,7 @@ DELETE /api/sites/:id/pending-commands/:commandId
 ```
 
 **Réponse :**
+
 ```json
 {
   "success": true,
@@ -219,6 +228,7 @@ DELETE /api/sites/:id/pending-commands
 ```
 
 **Réponse :**
+
 ```json
 {
   "success": true,
@@ -234,6 +244,7 @@ GET /api/sites/queue/summary
 ```
 
 **Réponse :**
+
 ```json
 {
   "totalPending": 15,
@@ -344,13 +355,13 @@ CREATE INDEX idx_pending_commands_expires_at ON pending_commands(expires_at);
 
 ### Système de priorité
 
-| Priorité | Niveau | Usage |
-|----------|--------|-------|
-| 1 | Urgent | Mises à jour de sécurité |
-| 2-4 | Haute | Corrections critiques |
-| 5 | Normal (défaut) | Déploiements standards |
-| 6-9 | Basse | Mises à jour mineures |
-| 10 | Très basse | Tâches de maintenance |
+| Priorité | Niveau          | Usage                    |
+| -------- | --------------- | ------------------------ |
+| 1        | Urgent          | Mises à jour de sécurité |
+| 2-4      | Haute           | Corrections critiques    |
+| 5        | Normal (défaut) | Déploiements standards   |
+| 6-9      | Basse           | Mises à jour mineures    |
+| 10       | Très basse      | Tâches de maintenance    |
 
 ### Vue de résumé
 
@@ -384,6 +395,7 @@ GROUP BY pc.site_id, s.club_name, s.status;
 4. Cliquer sur **Déployer**
 
 Si le site est offline :
+
 - Un message confirme que la commande est en file d'attente
 - La commande apparaît dans **Sites → [Site] → Commandes en attente**
 - À la reconnexion du site, la vidéo sera automatiquement déployée
@@ -503,10 +515,11 @@ psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f central-server/src/scripts/migration
 
 ## Historique des versions
 
-| Version | Date | Modifications |
-|---------|------|---------------|
-| 1.0 | 2025-12-16 | Création initiale |
+| Version | Date       | Modifications                                              |
+| ------- | ---------- | ---------------------------------------------------------- |
+| 1.0     | 2025-12-16 | Création initiale                                          |
+| 1.1     | 2026-01-08 | `deployment.service.ts` utilise maintenant `sendOrQueue()` |
 
 ---
 
-*Document généré pour le projet NEOPRO - Confidentiel*
+_Document généré pour le projet NEOPRO - Confidentiel_
