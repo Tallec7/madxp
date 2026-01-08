@@ -207,9 +207,12 @@ neopro/
 - **Gestion de flotte** : 50+ boîtiers Raspberry Pi gérés depuis un dashboard central
 - **Déploiement vidéo** : Upload cloud → déploiement automatique vers les Pi
 - **Boucles par phase** : Playlists différentes selon la phase du match (avant/pendant/après)
-- **Terminal distant** : Exécution de commandes shell sur les Pi depuis le dashboard
+- **Terminal distant** : Exécution de commandes shell sur les Pi via WebSocket (résultats asynchrones)
+- **Sécurité remote shell** : Whitelist/blacklist par rôle, protection contre commandes destructives
+- **Double-buffer vidéo** : Transitions sans flash entre les vidéos de la boucle
 - **Analytics** : Statistiques d'impressions sponsors, exports PDF
 - **Multi-tenant** : Rôles (super_admin, admin, operator, advertiser, agency)
+- **i18n** : Dashboard multilingue (EN/FR/ES)
 
 ---
 
@@ -431,13 +434,26 @@ Le dashboard central permet d'exécuter des commandes shell directement sur les 
 
 ```bash
 df -h                                    # Espace disque
+du -sh /* 2>/dev/null | sort -hr | head -15  # Utilisation par dossier
 cat /home/pi/neopro/webapp/configuration.json | head -50
 journalctl -u neopro-app -n 50 --no-pager
 systemctl status neopro-*
 ls -la /home/pi/neopro/videos/
+find /home/pi/neopro -name "*.js" -path "*sync*" | head -20
 ```
 
-**Note :** Le site doit être connecté (statut "En ligne") pour utiliser le terminal distant.
+**Sécurité par rôle :**
+
+| Rôle        | Accès                                                                  |
+| ----------- | ---------------------------------------------------------------------- |
+| super_admin | Toutes commandes sauf blacklist (rm -rf autorisé sur /tmp/, /var/tmp/) |
+| admin       | Whitelist étendue (systemctl, kill, curl, wget...)                     |
+| operator    | Whitelist stricte (ls, cat, df, ps, journalctl, ping...)               |
+| viewer      | Aucun accès terminal                                                   |
+
+**Commandes bloquées (tous rôles) :** rm -rf (sauf chemins sûrs), mkfs, dd, shutdown, passwd, chmod 777, eval, fork bombs...
+
+**Note :** Le site doit être connecté (statut "En ligne") pour utiliser le terminal distant. Les résultats sont transmis via WebSocket pour éviter les timeouts.
 
 ### Services systemd
 
@@ -493,6 +509,6 @@ sudo systemctl restart neopro-app
 
 ---
 
-**Version :** 2.12.0
+**Version :** 2.13.1
 **Licence :** MIT
 **Dernière mise à jour :** 8 janvier 2026
