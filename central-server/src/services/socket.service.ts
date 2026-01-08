@@ -96,9 +96,9 @@ const COMMAND_TIMEOUTS: Record<string, number> = {
   default: 2 * 60 * 1000,             // 2 minutes par défaut
 };
 
-// Memory safety limits
-const MAX_PENDING_COMMANDS = 500; // Maximum pending commands in memory
-const MAX_PONG_ENTRIES = 200;     // Maximum pong tracking entries
+// Memory safety limits (reduced for Railway Hobby plan)
+const MAX_PENDING_COMMANDS = 100; // Maximum pending commands in memory (was 500)
+const MAX_PONG_ENTRIES = 50;      // Maximum pong tracking entries (was 200)
 
 type ConfigCommandData = {
   configVersionId?: string;
@@ -1159,14 +1159,7 @@ class SocketService {
   }
 
   isConnected(siteId: string): boolean {
-    const connected = this.connectedSites.has(siteId);
-    logger.debug('isConnected check', {
-      siteId,
-      connected,
-      connectedSitesCount: this.connectedSites.size,
-      connectedSiteIds: Array.from(this.connectedSites.keys()),
-    });
-    return connected;
+    return this.connectedSites.has(siteId);
   }
 
   getConnectedSites(): string[] {
