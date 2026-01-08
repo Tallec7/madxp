@@ -1,3 +1,9 @@
+# [2.10.0](https://github.com/Tallec7/neopro/compare/v2.9.0...v2.10.0) (2026-01-08)
+
+### Features
+
+- **dashboard:** add real-time deployment feedback via Socket.IO ([801f261](https://github.com/Tallec7/neopro/commit/801f26111b4494cfa761734a40b5bf5366781d0f))
+
 # [2.9.0](https://github.com/Tallec7/neopro/compare/v2.8.5...v2.9.0) (2026-01-08)
 
 ### Features
