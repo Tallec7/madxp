@@ -124,12 +124,42 @@ function matchesWhitelist(command: string, whitelist: string[]): boolean {
   });
 }
 
+// Safe paths where rm -rf is allowed for super_admin
+const SAFE_RM_PATHS = ['/tmp/', '/var/tmp/', '/home/pi/neopro/videos/'];
+
+/**
+ * Check if rm -rf command only targets safe paths
+ */
+function isRmOnSafePath(command: string): boolean {
+  // Check if this is an rm command with -rf flags
+  if (!/\brm\s+(-[rf]+|--recursive|--force)/i.test(command)) {
+    return false;
+  }
+
+  // Extract all paths from the command
+  const pathMatches = command.match(/(?:^|\s)(\/[^\s;|&*]+)/g);
+  if (!pathMatches || pathMatches.length === 0) {
+    return false; // No explicit path = not safe
+  }
+
+  // Check if ALL paths are within safe directories
+  return pathMatches.every(match => {
+    const path = match.trim();
+    return SAFE_RM_PATHS.some(safePath => path.startsWith(safePath));
+  });
+}
+
 /**
  * Check if a command matches any blacklist pattern
  */
-function matchesBlacklist(command: string): { matched: boolean; pattern?: string } {
+function matchesBlacklist(command: string, role: string): { matched: boolean; pattern?: string } {
   for (const pattern of BLACKLIST_PATTERNS) {
     if (pattern.test(command)) {
+      // Exception: allow rm -rf on safe paths for super_admin
+      const normalizedRole = role === 'superadmin' ? 'super_admin' : role;
+      if (normalizedRole === 'super_admin' && isRmOnSafePath(command)) {
+        continue; // Skip this blacklist pattern
+      }
       return { matched: true, pattern: pattern.toString() };
     }
   }
@@ -213,7 +243,7 @@ export function validateShellCommand(
   }
 
   // Always check blacklist first - applies to all roles
-  const blacklistCheck = matchesBlacklist(sanitizedCommand);
+  const blacklistCheck = matchesBlacklist(sanitizedCommand, role);
   if (blacklistCheck.matched) {
     logger.warn('Blocked shell command (blacklist)', {
       command: sanitizedCommand.substring(0, 100),
