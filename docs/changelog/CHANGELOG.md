@@ -1,3 +1,9 @@
+## [2.13.2](https://github.com/Tallec7/neopro/compare/v2.13.1...v2.13.2) (2026-01-08)
+
+### Bug Fixes
+
+- **remote-shell:** allow super_admin to access any path ([95bf2a7](https://github.com/Tallec7/neopro/commit/95bf2a7ac77fb70536eee0548bbde11a54039bfa))
+
 ## [2.13.1](https://github.com/Tallec7/neopro/compare/v2.13.0...v2.13.1) (2026-01-08)
 
 ### Bug Fixes
