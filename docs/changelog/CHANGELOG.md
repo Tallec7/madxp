@@ -1,3 +1,9 @@
+## [2.11.7](https://github.com/Tallec7/neopro/compare/v2.11.6...v2.11.7) (2026-01-08)
+
+### Bug Fixes
+
+- **socket:** add periodic DB/WebSocket status sync to fix zombie sites ([46ca20e](https://github.com/Tallec7/neopro/commit/46ca20ebd88556a532610ad44dcef8a15cd8b86d))
+
 ## [2.11.6](https://github.com/Tallec7/neopro/compare/v2.11.5...v2.11.6) (2026-01-08)
 
 ### Bug Fixes
