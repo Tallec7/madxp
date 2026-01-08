@@ -301,7 +301,10 @@ app.use('/api', setRLSContext(pool));
 // Rate limiters spécifiques par type d'endpoint
 app.use('/api/auth', authRoutes); // Rate limits are now per-route in auth.routes.ts
 app.use('/api/mfa', authRateLimit, mfaRoutes);   // MFA - même restrictions que auth
-app.use('/api/sites', apiRateLimit, sitesRoutes);
+// Sites API: rate limits are applied per-route in sites.routes.ts
+// Monitoring endpoints (connection-status, dashboard, metrics, local-content) use monitoringRateLimit (300/min)
+// Other endpoints use the default rate or sensitiveRateLimit where appropriate
+app.use('/api/sites', sitesRoutes);
 app.use('/api/groups', apiRateLimit, groupsRoutes);
 app.use('/api', sensitiveRateLimit, contentRoutes); // Upload de vidéos - plus restrictif
 app.use('/api', sensitiveRateLimit, updatesRoutes); // Mises à jour - sensible

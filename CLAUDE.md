@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.11.5 | **Dernière mise à jour**: 2026-01-08
+**Version**: 2.13.2 | **Dernière mise à jour**: 2026-01-08
 
 ---
 
@@ -241,15 +241,23 @@ GET /api/advertiser-analytics/...     → stats annonceurs
 
 ### Rate Limiting
 
+Les rate limits sont appliqués **par route** pour éviter les conflits :
+
 ```
 Auth:       10 req/15min    (anti-bruteforce) - 1 min dev
-API:        100 req/min     (standard)
-Monitoring: 300 req/min     (status, metrics polling)
+Monitoring: 300 req/min     (status, metrics, dashboard, local-content)
+Admin:      200 req/min     (lecture sites, logs, config-history)
+Sensitive:  30 req/min      (commands, deployments, créations, suppressions)
 Logging:    200 req/min     (frontend logs - silently dropped if exceeded)
-Sensitive:  30 req/min      (commands, deployments)
 Upload:     10 req/hour     (video uploads)
-Admin:      200 req/min     (dashboard ops)
 ```
+
+**Architecture rate limiting** :
+
+- `/api/sites` : Rate limits **par route** (pas de limite globale pour éviter les doubles comptages)
+- `/api/sites/:id/dashboard`, `/api/sites/:id/connection-status`, `/api/sites/:id/metrics`, `/api/sites/:id/local-content` → `monitoringRateLimit` (300/min)
+- `/api/sites/:id`, `/api/sites/:id/logs`, `/api/sites/:id/config-history/*` → `adminRateLimit` (200/min)
+- POST/PUT/DELETE, `/api/sites/:id/command` → `sensitiveRateLimit` (30/min)
 
 **Note**: Les rate limits sont par utilisateur (user_id) et non par IP en production.
 

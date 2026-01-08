@@ -106,18 +106,19 @@ export class ConnectionIndicatorComponent implements OnInit, OnDestroy {
   @Input() refreshInterval = 30000; // 30 secondes par defaut
 
   /**
-   * Si fourni, le composant n'effectue PAS de polling et utilise ces données.
+   * Si fourni (même null initialement), le composant n'effectue PAS de polling et utilise ces données.
    * Utilisé quand le parent gère déjà le polling (ex: site-detail).
+   * Pour désactiver le polling interne dès le départ, le parent doit simplement déclarer l'Input.
    */
   @Input() set externalStatus(status: SiteConnectionStatus | null) {
+    this._externalStatusProvided = true;
     if (status) {
       this.connectionStatus = status;
       this.displayStatus = status.connection.displayStatus;
-      this._useExternalStatus = true;
-      this.stopPolling();
     }
+    this.stopPolling();
   }
-  private _useExternalStatus = false;
+  private _externalStatusProvided = false;
 
   connectionStatus: SiteConnectionStatus | null = null;
   displayStatus: ConnectionDisplayStatus = 'unknown';
@@ -125,8 +126,9 @@ export class ConnectionIndicatorComponent implements OnInit, OnDestroy {
   private errorCount = 0;
 
   ngOnInit(): void {
-    // Ne démarre le polling que si on n'utilise pas de données externes
-    if (this.siteId && !this._useExternalStatus) {
+    // Ne démarre le polling que si le parent ne fournit pas de données externes
+    // Note: le setter externalStatus est appelé AVANT ngOnInit si l'Input est déclaré dans le template
+    if (this.siteId && !this._externalStatusProvided) {
       this.startPolling();
     }
   }
@@ -137,7 +139,7 @@ export class ConnectionIndicatorComponent implements OnInit, OnDestroy {
 
   private startPolling(): void {
     // Ne pas démarrer si on utilise des données externes
-    if (this._useExternalStatus) return;
+    if (this._externalStatusProvided) return;
 
     this.subscription = interval(this.refreshInterval).pipe(
       startWith(0),
