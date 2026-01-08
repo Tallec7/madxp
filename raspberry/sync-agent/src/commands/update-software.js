@@ -87,12 +87,12 @@ class SoftwareUpdateHandler {
         report,
       };
     } catch (error) {
-      logger.error('Software update failed:', error);
+      logger.error('Software update failed', { error: error.message, stack: error.stack });
 
       try {
         await this.rollback();
       } catch (rollbackError) {
-        logger.error('Rollback failed:', rollbackError);
+        logger.error('Rollback failed', { error: rollbackError.message });
       }
 
       throw error;

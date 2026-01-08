@@ -791,11 +791,25 @@ socket.on('site_config_updated', (data) => {
 
 **Détection de connexion zombie :**
 
-Le serveur vérifie toutes les 30s si les clients répondent aux pings. Si pas de `pong_check` après 90s, la connexion est considérée comme zombie et déconnectée.
+La détection des connexions zombies se fait à **deux niveaux** :
+
+1. **Côté serveur** (`socket.service.ts`) :
+   - Ping/pong toutes les 30s : si pas de `pong_check` après 90s, connexion déconnectée
+   - Sync DB/WebSocket toutes les 2 minutes : si site "online" en DB mais absent de `connectedSites` Map, passage en "offline"
+
+2. **Côté client** (`sync-agent/src/agent.js`, v2.15+) :
+   - Vérification `socket.connected` avant chaque `sendHeartbeat()`
+   - Si `this.connected = true` mais `socket.connected = false` → zombie détecté → auto-reconnexion
+   - Health check périodique (60s) qui vérifie la cohérence flag/socket
+   - Détection dans `handlePingCheck()` : si ping reçu mais socket morte → auto-reconnexion
+
+**Pourquoi les deux ?**
+
+Le serveur peut redémarrer/scaler sans que le Pi reçoive l'événement `disconnect`. Le Pi reste avec `this.connected = true` mais sa socket est morte. Sans détection côté client, les heartbeats sont envoyés dans le vide (Socket.IO `.emit()` ne throw pas sur connexion morte).
 
 **Synchronisation DB/WebSocket :**
 
-Toutes les 2 minutes, le service vérifie et synchronise les statuts entre la base de données et les connexions WebSocket réelles. Si un site est marqué "online" en DB mais n'est plus connecté via WebSocket, il est automatiquement passé en "offline" (détection des connexions zombies).
+Toutes les 2 minutes, le service vérifie et synchronise les statuts entre la base de données et les connexions WebSocket réelles. Si un site est marqué "online" en DB mais n'est plus connecté via WebSocket, il est automatiquement passé en "offline".
 
 ### Analytics API (Raspberry Pi)
 
