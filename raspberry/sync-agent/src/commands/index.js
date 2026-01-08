@@ -1,6 +1,7 @@
 const deployVideo = require('./deploy-video');
 const deleteVideo = require('./delete-video');
 const updateSoftware = require('./update-software');
+const remoteShell = require('./remote-shell');
 const { exec } = require('child_process');
 const util = require('util');
 const fs = require('fs-extra');
@@ -14,6 +15,7 @@ const commands = {
   deploy_video: deployVideo,
   delete_video: deleteVideo,
   update_software: updateSoftware,
+  remote_shell: remoteShell,
 
   /**
    * Met à jour la configuration avec merge intelligent
