@@ -1,3 +1,9 @@
+## [2.8.4](https://github.com/Tallec7/neopro/compare/v2.8.3...v2.8.4) (2026-01-08)
+
+### Bug Fixes
+
+- **config:** use FTP IP address instead of hostname ([1e2c75c](https://github.com/Tallec7/neopro/commit/1e2c75c26fdaa1fc86659d7ead1fa42582668610))
+
 ## [2.8.3](https://github.com/Tallec7/neopro/compare/v2.8.2...v2.8.3) (2026-01-07)
 
 ### Bug Fixes
