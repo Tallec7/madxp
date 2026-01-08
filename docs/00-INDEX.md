@@ -198,6 +198,6 @@ neopro/
 
 ---
 
-**Dernière mise à jour** : 8 janvier 2026 - Ajout terminal distant (remote shell), mise à jour stack
+**Dernière mise à jour** : 8 janvier 2026 - Fix bug espace disque update-software, mise à jour stack
 
-**Version** : 2.12.0
+**Version** : 2.13.1
