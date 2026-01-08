@@ -101,6 +101,10 @@ export class SocketService {
       this.eventsSubject.next({ type: 'command_completed', data });
     });
 
+    this.socket.on('command_timeout', (data: unknown) => {
+      this.eventsSubject.next({ type: 'command_timeout', data });
+    });
+
     this.socket.on('deploy_progress', (data: unknown) => {
       this.eventsSubject.next({ type: 'deploy_progress', data });
     });
