@@ -380,6 +380,7 @@ class NeoproSyncAgent {
       } else if (type === 'update_software') {
         result = await handler.execute(data, (progress) => {
           this.socket.emit('update_progress', {
+            deploymentId: data.deploymentId,
             version: data.version,
             progress,
           });
