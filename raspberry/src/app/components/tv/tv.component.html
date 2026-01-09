@@ -10,9 +10,15 @@
 ></video>
 
 <!-- Overlay Score (position dynamique selon configuration) -->
+<!-- Requiert: liveScoreEnabled (central) ET scoreEnabled (local) -->
 <div
   class="score-overlay"
-  *ngIf="showScoreOverlay && currentScore && localOptions.overlay.scoreEnabled"
+  *ngIf="
+    showScoreOverlay &&
+    currentScore &&
+    configuration?.liveScoreEnabled &&
+    localOptions.overlay.scoreEnabled
+  "
   [ngStyle]="getOverlayStyles()"
   [class.template-sportif]="localOptions.template === 'sportif'"
   [class.template-elegant]="localOptions.template === 'elegant'"
@@ -81,9 +87,11 @@
 </div>
 
 <!-- Timer Overlay (standalone quand pas de score ou non intégré) -->
+<!-- Requiert: liveScoreEnabled (central) pour afficher le timer lié au match -->
 <div
   class="timer-overlay"
   *ngIf="
+    configuration?.liveScoreEnabled &&
     localOptions.timer.enabled &&
     timerIsRunning &&
     (!showScoreOverlay || !localOptions.timer.integratedWithScore)
@@ -97,9 +105,15 @@
 </div>
 
 <!-- Animation de But/Point (3 styles: popup, fullscreen, slide) -->
+<!-- Requiert: liveScoreEnabled (central) ET goalAnimation.enabled (local) -->
 <div
   class="goal-animation"
-  *ngIf="showGoalAnimation && currentScore"
+  *ngIf="
+    showGoalAnimation &&
+    currentScore &&
+    configuration?.liveScoreEnabled &&
+    localOptions.goalAnimation.enabled
+  "
   [ngClass]="getGoalAnimationStyle()"
 >
   <div class="goal-content">

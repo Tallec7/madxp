@@ -24,7 +24,7 @@
     }
   },
   "version": "1.0",
-  "liveScoreEnabled": true,
+  "liveScoreEnabled": false,
   "sponsors": [
     {
       "name": "Boucle partenaires",
