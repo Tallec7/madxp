@@ -21,7 +21,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│           SERVEUR CENTRAL (Render.com)               │
+│           SERVEUR CENTRAL (Railway)                  │
 │                                                      │
 │  • Dashboard Angular (monitoring)                   │
 │  • API REST + WebSocket                             │

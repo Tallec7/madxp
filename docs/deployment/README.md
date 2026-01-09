@@ -9,12 +9,12 @@ Guides pour déployer Neopro en production.
 
 ## 🎯 Cibles de déploiement
 
-| Composant | Hébergeur | Documentation |
-|-----------|-----------|---------------|
-| Central Server | Render.com | DEPLOY_CENTRAL_SERVER.md |
-| Dashboard | Hostinger | GUIDE_MISE_EN_PRODUCTION.md |
-| Socket Server | Render.com | GUIDE_MISE_EN_PRODUCTION.md |
-| Raspberry Pi | Local (edge) | [../guides/INSTALLATION_COMPLETE.md](../guides/INSTALLATION_COMPLETE.md) |
+| Composant            | Hébergeur    | Documentation                                                            |
+| -------------------- | ------------ | ------------------------------------------------------------------------ |
+| Central Server       | Railway      | DEPLOY_CENTRAL_SERVER.md                                                 |
+| Dashboard            | Hostinger    | GUIDE_MISE_EN_PRODUCTION.md                                              |
+| Socket Server (démo) | Render.com   | GUIDE_MISE_EN_PRODUCTION.md                                              |
+| Raspberry Pi         | Local (edge) | [../guides/INSTALLATION_COMPLETE.md](../guides/INSTALLATION_COMPLETE.md) |
 
 ---
 
