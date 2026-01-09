@@ -1,3 +1,9 @@
+## [2.21.3](https://github.com/Tallec7/neopro/compare/v2.21.2...v2.21.3) (2026-01-09)
+
+### Bug Fixes
+
+- **build:** include generate-all-thumbnails.sh in raspberry deploy ([2133eb7](https://github.com/Tallec7/neopro/commit/2133eb7e10fa12bd375e768243b5b042db8b5340))
+
 ## [2.21.2](https://github.com/Tallec7/neopro/compare/v2.21.1...v2.21.2) (2026-01-09)
 
 ### Bug Fixes
