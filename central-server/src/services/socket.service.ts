@@ -916,21 +916,23 @@ class SocketService {
    */
   private async handleSyncLocalState(siteId: string, state: any) {
     try {
-      const { configHash, config, videos, storage, timestamp } = state;
+      const { configHash, config, videos, storage, hotspotSsid, timestamp } = state;
 
       logger.info('Received local state sync', {
         siteId,
         configHash,
         categoriesCount: config?.categories?.length || 0,
         videosCount: videos?.length || 0,
+        hotspotSsid: hotspotSsid || null,
         timestamp,
       });
 
-      // Enrichir la config avec les vidéos et le stockage pour accès facile
+      // Enrichir la config avec les vidéos, le stockage et le SSID pour accès facile
       const enrichedConfig = {
         ...config,
         _localVideos: videos || [],
         _localStorage: storage || null,
+        _hotspotSsid: hotspotSsid || null,
         _lastVideoSync: timestamp,
       };
 

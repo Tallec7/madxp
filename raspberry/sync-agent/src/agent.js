@@ -248,6 +248,19 @@ class NeoproSyncAgent {
         videoState = this.videoWatcher.getStorageStats();
       }
 
+      // Récupérer le SSID du hotspot
+      let hotspotSsid = null;
+      try {
+        const hostapdPath = '/etc/hostapd/hostapd.conf';
+        if (await fs.pathExists(hostapdPath)) {
+          const hostapdContent = await fs.readFile(hostapdPath, 'utf8');
+          const ssidMatch = hostapdContent.match(/^ssid=(.*)$/m);
+          hotspotSsid = ssidMatch ? ssidMatch[1] : null;
+        }
+      } catch (err) {
+        logger.warn('Could not read hotspot SSID', { error: err.message });
+      }
+
       // Envoyer l'état local au central
       this.socket.emit('sync_local_state', {
         siteId: config.site.id,
@@ -255,6 +268,7 @@ class NeoproSyncAgent {
         config: localConfig,
         videos: videoState.videos,
         storage: videoState.storage,
+        hotspotSsid,
         timestamp: new Date().toISOString(),
       });
 
