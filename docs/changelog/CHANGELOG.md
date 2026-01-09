@@ -1,3 +1,9 @@
+# [2.21.0](https://github.com/Tallec7/neopro/compare/v2.20.0...v2.21.0) (2026-01-09)
+
+### Features
+
+- **qr-code:** use Neopro logo image instead of text ([e74ef69](https://github.com/Tallec7/neopro/commit/e74ef6935cfb6872a30a70151b965ce563224355))
+
 # [2.20.0](https://github.com/Tallec7/neopro/compare/v2.19.0...v2.20.0) (2026-01-09)
 
 ### Features
