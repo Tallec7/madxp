@@ -251,4 +251,54 @@ describe('ApiService', () => {
       expect(error.status).toBe(500);
     });
   });
+
+  describe('uploadWithProgress', () => {
+    it('should make POST request with FormData and report progress', () => {
+      const formData = new FormData();
+      formData.append('file', new Blob(['test content']), 'test.txt');
+
+      const progressEvents: any[] = [];
+      service.uploadWithProgress('/upload', formData).subscribe({
+        next: progress => progressEvents.push(progress)
+      });
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/upload`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.reportProgress).toBeTrue();
+      req.flush({ id: '123' });
+    });
+
+    it('should send requests with credentials', () => {
+      const formData = new FormData();
+      service.uploadWithProgress('/upload', formData).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/upload`);
+      expect(req.request.withCredentials).toBeTrue();
+      req.flush({});
+    });
+
+    it('should emit error status on failure with retries exhausted', (done) => {
+      const formData = new FormData();
+
+      service.uploadWithProgress('/upload', formData, { maxRetries: 1, retryDelayMs: 10 }).subscribe({
+        next: progress => {
+          if (progress.status === 'error' && progress.error?.includes('Échec')) {
+            // Final error after retries
+            done();
+          }
+        },
+        error: () => done()
+      });
+
+      // First attempt
+      const req1 = httpMock.expectOne(`${environment.apiUrl}/upload`);
+      req1.flush('Server Error', { status: 500, statusText: 'Server Error' });
+
+      // Wait for retry
+      setTimeout(() => {
+        const req2 = httpMock.expectOne(`${environment.apiUrl}/upload`);
+        req2.flush('Server Error', { status: 500, statusText: 'Server Error' });
+      }, 50);
+    });
+  });
 });

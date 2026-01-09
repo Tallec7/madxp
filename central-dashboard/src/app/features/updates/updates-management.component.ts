@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiService } from '../../core/services/api.service';
+import { TranslateModule } from '@ngx-translate/core';
+import { ApiService, UploadProgress } from '../../core/services/api.service';
 import { SitesService } from '../../core/services/sites.service';
 import { GroupsService } from '../../core/services/groups.service';
 import { SocketService } from '../../core/services/socket.service';
@@ -38,10 +39,10 @@ interface UpdateDeployment {
 @Component({
   selector: 'app-updates-management',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   template: `
     <div class="page-container">
-      <h1>Gestion des mises à jour</h1>
+      <h1>{{ 'updates.title' | translate }}</h1>
 
       <div class="tabs">
         <button
@@ -331,48 +332,91 @@ interface UpdateDeployment {
       </div>
 
       <!-- Create Update Modal -->
-      <div class="modal" *ngIf="showCreateModal" (click)="showCreateModal = false">
+      <div class="modal" *ngIf="showCreateModal" (click)="!isUploading && (showCreateModal = false)">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h2>Nouvelle version</h2>
-            <button class="modal-close" (click)="showCreateModal = false">×</button>
+            <h2>{{ 'updates.newVersion' | translate }}</h2>
+            <button class="modal-close" (click)="!isUploading && resetCreateForm()" [disabled]="isUploading">×</button>
           </div>
           <div class="modal-body">
-            <div class="form-group">
-              <label>Numéro de version *</label>
-              <input type="text" [(ngModel)]="createForm.version" placeholder="Ex: 2.1.0">
-            </div>
-            <div class="form-group">
-              <label>Description courte *</label>
-              <input type="text" [(ngModel)]="createForm.description" placeholder="Ex: Correction de bugs et améliorations">
-            </div>
-            <div class="form-group">
-              <label>Notes de version</label>
-              <textarea [(ngModel)]="createForm.release_notes" rows="5" placeholder="Détails des changements..."></textarea>
-            </div>
-            <div class="form-group">
-              <label>Package de mise à jour *</label>
-              <input type="file" accept=".tar.gz,.tgz,.gz,.tar,application/gzip,application/x-gzip,application/x-tar,application/x-compressed-tar,.zip,application/zip" (change)="onUpdateFileSelected($event)">
-              <div class="file-info" *ngIf="createForm.file">
-                {{ createForm.file.name }} ({{ formatFileSize(createForm.file.size) }})
+            <!-- Upload Progress -->
+            <div class="upload-progress-container" *ngIf="isUploading && uploadProgress">
+              <div class="upload-progress-header">
+                <span class="upload-status-icon" [ngClass]="{
+                  'uploading': uploadProgress.status === 'uploading',
+                  'processing': uploadProgress.status === 'processing',
+                  'complete': uploadProgress.status === 'complete',
+                  'error': uploadProgress.status === 'error'
+                }">
+                  <span *ngIf="uploadProgress.status === 'uploading'">⬆️</span>
+                  <span *ngIf="uploadProgress.status === 'processing'">⏳</span>
+                  <span *ngIf="uploadProgress.status === 'complete'">✅</span>
+                  <span *ngIf="uploadProgress.status === 'error'">⚠️</span>
+                </span>
+                <span class="upload-status-text">
+                  <span *ngIf="uploadProgress.status === 'uploading'">{{ 'updates.uploading' | translate }}</span>
+                  <span *ngIf="uploadProgress.status === 'processing'">{{ 'updates.processing' | translate }}</span>
+                  <span *ngIf="uploadProgress.status === 'complete'">{{ 'updates.complete' | translate }}</span>
+                  <span *ngIf="uploadProgress.status === 'error'">{{ uploadProgress.error }}</span>
+                </span>
+              </div>
+              <div class="upload-progress-bar-container">
+                <div class="upload-progress-bar" [style.width.%]="uploadProgress.progress" [ngClass]="{
+                  'error': uploadProgress.status === 'error'
+                }"></div>
+              </div>
+              <div class="upload-progress-details">
+                <span *ngIf="uploadProgress.loaded && uploadProgress.total">
+                  {{ formatFileSize(uploadProgress.loaded) }} / {{ formatFileSize(uploadProgress.total) }}
+                </span>
+                <span>{{ uploadProgress.progress }}%</span>
               </div>
             </div>
-            <label class="checkbox-option">
-              <input type="checkbox" [(ngModel)]="createForm.is_critical" />
-              <div class="option-content">
-                <div class="option-title">Mise à jour critique</div>
-                <div class="option-desc">Marquer cette version comme prioritaire</div>
+
+            <!-- Form (hidden during upload) -->
+            <ng-container *ngIf="!isUploading">
+              <div class="form-group">
+                <label>{{ 'updates.versionNumber' | translate }} *</label>
+                <input type="text" [(ngModel)]="createForm.version" [placeholder]="'updates.versionPlaceholder' | translate">
               </div>
-            </label>
+              <div class="form-group">
+                <label>{{ 'updates.shortDescription' | translate }} *</label>
+                <input type="text" [(ngModel)]="createForm.description" [placeholder]="'updates.descriptionPlaceholder' | translate">
+              </div>
+              <div class="form-group">
+                <label>{{ 'updates.releaseNotes' | translate }}</label>
+                <textarea [(ngModel)]="createForm.release_notes" rows="5" [placeholder]="'updates.notesPlaceholder' | translate"></textarea>
+              </div>
+              <div class="form-group">
+                <label>{{ 'updates.updatePackage' | translate }} *</label>
+                <input type="file" accept=".tar.gz,.tgz,.gz,.tar,application/gzip,application/x-gzip,application/x-tar,application/x-compressed-tar,.zip,application/zip" (change)="onUpdateFileSelected($event)">
+                <div class="file-info" *ngIf="createForm.file">
+                  {{ createForm.file.name }} ({{ formatFileSize(createForm.file.size) }})
+                </div>
+              </div>
+              <label class="checkbox-option">
+                <input type="checkbox" [(ngModel)]="createForm.is_critical" />
+                <div class="option-content">
+                  <div class="option-title">{{ 'updates.criticalUpdate' | translate }}</div>
+                  <div class="option-desc">{{ 'updates.criticalUpdateDesc' | translate }}</div>
+                </div>
+              </label>
+            </ng-container>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="showCreateModal = false">Annuler</button>
+            <button
+              class="btn btn-secondary"
+              (click)="isUploading ? cancelUpload() : resetCreateForm()"
+            >
+              {{ (isUploading ? 'updates.cancelUpload' : 'common.cancel') | translate }}
+            </button>
             <button
               class="btn btn-primary"
               (click)="createUpdate()"
               [disabled]="!canCreate()"
+              *ngIf="!isUploading"
             >
-              Créer
+              {{ 'updates.createVersion' | translate }}
             </button>
           </div>
         </div>
@@ -1036,6 +1080,86 @@ interface UpdateDeployment {
         grid-template-columns: 1fr;
       }
     }
+
+    /* Upload Progress Styles */
+    .upload-progress-container {
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border-radius: 12px;
+      border: 1px solid #bae6fd;
+    }
+
+    .upload-progress-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .upload-status-icon {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .upload-status-icon.uploading {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .upload-status-icon.processing {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .upload-status-text {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #0369a1;
+    }
+
+    .upload-progress-bar-container {
+      height: 12px;
+      background: #e0f2fe;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+
+    .upload-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%);
+      border-radius: 6px;
+      transition: width 0.3s ease;
+    }
+
+    .upload-progress-bar.error {
+      background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .upload-progress-details {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      color: #0369a1;
+    }
+
+    .upload-progress-container.error {
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      border-color: #fecaca;
+    }
+
+    .upload-progress-container.error .upload-status-text,
+    .upload-progress-container.error .upload-progress-details {
+      color: #dc2626;
+    }
   `]
 })
 export class UpdatesManagementComponent implements OnInit, OnDestroy {
@@ -1056,6 +1180,10 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
     file: null as File | null,
     is_critical: false
   };
+
+  // Upload progress state
+  uploadProgress: UploadProgress | null = null;
+  isUploading = false;
 
   deployForm = {
     updateId: '',
@@ -1173,7 +1301,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
   }
 
   canCreate(): boolean {
-    return !!(this.createForm.version && this.createForm.description && this.createForm.file);
+    return !!(this.createForm.version && this.createForm.description && this.createForm.file) && !this.isUploading;
   }
 
   createUpdate(): void {
@@ -1186,16 +1314,43 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
     formData.append('is_critical', String(this.createForm.is_critical));
     formData.append('package', this.createForm.file!);
 
-    this.apiService.upload<SoftwareUpdate>('/updates', formData).subscribe({
-      next: (update) => {
-        this.updates.unshift(update);
-        this.showCreateModal = false;
-        this.createForm = { version: '', description: '', release_notes: '', file: null, is_critical: false };
+    this.isUploading = true;
+    this.uploadProgress = { status: 'uploading', progress: 0 };
+
+    this.apiService.uploadWithProgress<SoftwareUpdate>('/updates', formData, {
+      maxRetries: 3,
+      retryDelayMs: 3000
+    }).subscribe({
+      next: (progress) => {
+        this.uploadProgress = progress;
+        if (progress.status === 'complete' && progress.response) {
+          const update = progress.response as SoftwareUpdate;
+          this.updates.unshift(update);
+          this.notificationService.success(`Version ${update.version} créée avec succès !`);
+          this.resetCreateForm();
+        }
       },
       error: (error) => {
+        this.isUploading = false;
+        this.uploadProgress = {
+          status: 'error',
+          progress: 0,
+          error: error.error?.error || error.message || 'Échec de l\'upload après plusieurs tentatives'
+        };
         this.notificationService.error('Erreur lors de la création: ' + (error.error?.error || error.message));
       }
     });
+  }
+
+  resetCreateForm(): void {
+    this.showCreateModal = false;
+    this.isUploading = false;
+    this.uploadProgress = null;
+    this.createForm = { version: '', description: '', release_notes: '', file: null, is_critical: false };
+  }
+
+  cancelUpload(): void {
+    this.resetCreateForm();
   }
 
   deleteUpdate(update: SoftwareUpdate): void {
