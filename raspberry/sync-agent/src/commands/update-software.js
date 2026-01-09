@@ -286,7 +286,7 @@ class SoftwareUpdateHandler {
       // Copier webapp (comme deploy-remote.sh)
       if (await fs.pathExists(path.join(sourcePath, 'webapp'))) {
         await execAsync(`rm -rf ${rootDir}/webapp/*`);
-        await execAsync(`cp -r ${sourcePath}webapp/* ${rootDir}/webapp/`);
+        await execAsync(`cp -r ${path.join(sourcePath, 'webapp')}/* ${rootDir}/webapp/`);
         logger.info('Webapp updated');
       }
 
@@ -299,7 +299,7 @@ class SoftwareUpdateHandler {
 
       // Copier server
       if (await fs.pathExists(path.join(sourcePath, 'server'))) {
-        await execAsync(`cp -r ${sourcePath}server/* ${rootDir}/server/`);
+        await execAsync(`cp -r ${path.join(sourcePath, 'server')}/* ${rootDir}/server/`);
         logger.info('Server updated');
       }
 
@@ -318,7 +318,7 @@ class SoftwareUpdateHandler {
 
         // Copier les nouveaux fichiers du sync-agent
         await fs.ensureDir(path.join(rootDir, 'sync-agent'));
-        await execAsync(`cp -r ${sourcePath}sync-agent/* ${rootDir}/sync-agent/`);
+        await execAsync(`cp -r ${path.join(sourcePath, 'sync-agent')}/* ${rootDir}/sync-agent/`);
         logger.info('Sync-agent updated');
 
         // Restaurer les configs locales
@@ -337,14 +337,14 @@ class SoftwareUpdateHandler {
       // Copier admin si présent
       if (await fs.pathExists(path.join(sourcePath, 'admin'))) {
         await fs.ensureDir(path.join(rootDir, 'admin'));
-        await execAsync(`cp -r ${sourcePath}admin/* ${rootDir}/admin/`);
+        await execAsync(`cp -r ${path.join(sourcePath, 'admin')}/* ${rootDir}/admin/`);
         logger.info('Admin panel updated');
       }
 
       // Copier scripts si présents
       if (await fs.pathExists(path.join(sourcePath, 'scripts'))) {
         await fs.ensureDir(path.join(rootDir, 'scripts'));
-        await execAsync(`cp -r ${sourcePath}scripts/* ${rootDir}/scripts/`);
+        await execAsync(`cp -r ${path.join(sourcePath, 'scripts')}/* ${rootDir}/scripts/`);
         await execAsync(`chmod +x ${rootDir}/scripts/*.sh 2>/dev/null || true`);
         logger.info('Scripts updated');
       }
