@@ -932,7 +932,7 @@ export class TvComponent implements OnInit, OnDestroy {
 
   /**
    * Appelé à chaque mise à jour du temps de lecture
-   * Déclenche le switch 500ms AVANT la fin pour une transition seamless
+   * Déclenche le préchargement 3s avant la fin, puis le switch 500ms avant
    * Throttled pour éviter la surcharge CPU
    */
   private onTimeUpdate(fromPlayer: 'A' | 'B'): void {
@@ -945,12 +945,24 @@ export class TvComponent implements OnInit, OnDestroy {
     this.lastTimeUpdateCheck = now;
 
     const player = this.getActivePlayer();
+    if (!player.duration || player.duration <= 0) return;
+
     const remaining = player.duration - player.currentTime;
 
-    // Déclencher le switch 500ms avant la fin (ou 300ms si vidéo courte)
-    const threshold = player.duration > 3 ? 0.5 : 0.3;
+    // Précharger 3s avant la fin (seulement si pas déjà fait)
+    // Cela évite de décoder 2 vidéos en parallèle pendant toute la lecture
+    const preloadThreshold = Math.min(3, player.duration * 0.3); // 3s ou 30% de la vidéo
+    if (remaining <= preloadThreshold && !this.preloadReady) {
+      const nextIndex = (this.currentLoopIndex + 1) % this.currentLoopVideos.length;
+      if (this.preloadedIndex !== nextIndex) {
+        console.log(`[TV] Starting late preload, ${remaining.toFixed(1)}s remaining`);
+        this.preloadOnInactivePlayer(nextIndex);
+      }
+    }
 
-    if (remaining <= threshold && remaining > 0 && player.duration > 0) {
+    // Déclencher le switch 500ms avant la fin (ou 300ms si vidéo courte)
+    const switchThreshold = player.duration > 3 ? 0.5 : 0.3;
+    if (remaining <= switchThreshold && remaining > 0) {
       console.log(`[TV] Triggering early switch, ${remaining.toFixed(2)}s remaining`);
       this.switchTriggered = true;
       this.triggerSwitch();
