@@ -23,8 +23,8 @@
   // Par défaut: caché (opacité et z-index gérés par JS)
   opacity: 0;
   z-index: 0;
-  // Transition douce pour le fondu
-  transition: opacity 0.15s ease-in-out;
+  // Transition plus longue pour un fondu doux (évite les sautes)
+  transition: opacity 0.3s ease-in-out;
 
   &.player-a {
     // Player A: sera actif en premier

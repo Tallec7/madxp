@@ -108,6 +108,8 @@ export class TvComponent implements OnInit, OnDestroy {
   private activePlayer: 'A' | 'B' = 'A'; // Quel player est actuellement visible
   private isStartingLoop = false;
   private pendingSwitch = false; // Évite les switchs multiples
+  private preloadedIndex: number | null = null; // Index de la vidéo préchargée
+  private preloadReady = false; // Le player inactif est-il prêt ?
 
   public player: Player;
 
@@ -1041,15 +1043,29 @@ export class TvComponent implements OnInit, OnDestroy {
     const video = loopVideos[videoIndex];
     const player = this.getInactivePlayer();
 
+    // Si déjà préchargé, ne rien faire
+    if (this.preloadedIndex === videoIndex && this.preloadReady) {
+      console.log(`[TV] Video ${videoIndex} already preloaded`);
+      return;
+    }
+
     console.log(`[TV] Preloading video ${videoIndex} on inactive player:`, video.path);
+
+    this.preloadReady = false;
+    this.preloadedIndex = videoIndex;
 
     player.src = video.path;
     player.load();
 
     // Écouter quand la vidéo est prête
-    player.addEventListener('canplaythrough', () => {
-      console.log(`[TV] Video ${videoIndex} preloaded and ready`);
-    }, { once: true });
+    const onCanPlay = () => {
+      if (this.preloadedIndex === videoIndex) {
+        this.preloadReady = true;
+        console.log(`[TV] Video ${videoIndex} preloaded and ready`);
+      }
+      player.removeEventListener('canplaythrough', onCanPlay);
+    };
+    player.addEventListener('canplaythrough', onCanPlay);
   }
 
   /**
@@ -1093,43 +1109,106 @@ export class TvComponent implements OnInit, OnDestroy {
     const oldPlayer = this.getActivePlayer();
     const newPlayer = this.getInactivePlayer();
 
-    console.log(`[TV] Switching from ${this.activePlayer} to ${this.activePlayer === 'A' ? 'B' : 'A'}`);
+    console.log(`[TV] Switching from ${this.activePlayer} to ${this.activePlayer === 'A' ? 'B' : 'A'}, preloadReady=${this.preloadReady}`);
 
-    // Démarrer la vidéo préchargée AVANT de faire le switch visuel
-    newPlayer.play().then(() => {
-      // Une fois que la nouvelle vidéo joue, faire le switch visuel
-      this.setPlayerVisible(newPlayer, true);
-      this.setPlayerVisible(oldPlayer, false);
+    // Fonction pour effectuer le switch une fois que la vidéo est prête
+    const doSwitch = () => {
+      // Démarrer la vidéo préchargée AVANT de faire le switch visuel
+      newPlayer.play().then(() => {
+        // Attendre un court instant pour s'assurer que le premier frame est affiché
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            // Une fois que la nouvelle vidéo joue vraiment, faire le switch visuel
+            this.setPlayerVisible(newPlayer, true);
+            this.setPlayerVisible(oldPlayer, false);
 
-      // Mettre à jour l'état
-      this.activePlayer = this.activePlayer === 'A' ? 'B' : 'A';
-      this.currentLoopIndex = nextVideoIndex;
+            // Mettre à jour l'état
+            this.activePlayer = this.activePlayer === 'A' ? 'B' : 'A';
+            this.currentLoopIndex = nextVideoIndex;
+            this.preloadReady = false;
+            this.preloadedIndex = null;
 
-      // Tracker
-      const video = this.currentLoopVideos[nextVideoIndex];
-      this.analyticsService.trackVideoStart(video, 'auto');
-      this.sponsorAnalytics.trackSponsorStart(
-        video,
-        'auto',
-        newPlayer.duration || 0
-      );
+            // Tracker
+            const video = this.currentLoopVideos[nextVideoIndex];
+            this.analyticsService.trackVideoStart(video, 'auto');
+            this.sponsorAnalytics.trackSponsorStart(
+              video,
+              'auto',
+              newPlayer.duration || 0
+            );
 
-      console.log(`[TV] Switched to player ${this.activePlayer}, now playing index ${nextVideoIndex}`);
+            console.log(`[TV] Switched to player ${this.activePlayer}, now playing index ${nextVideoIndex}`);
 
-      // Précharger la vidéo suivante sur l'ancien player (maintenant inactif)
-      const preloadIndex = (nextVideoIndex + 1) % this.currentLoopVideos.length;
-      setTimeout(() => {
-        this.preloadOnInactivePlayer(preloadIndex);
+            // Précharger la vidéo suivante sur l'ancien player (maintenant inactif)
+            const preloadIndex = (nextVideoIndex + 1) % this.currentLoopVideos.length;
+            // Précharger immédiatement pour être prêt au prochain switch
+            this.preloadOnInactivePlayer(preloadIndex);
+            this.pendingSwitch = false;
+          });
+        });
+      }).catch(err => {
+        console.error('[TV] Error switching to next video:', err);
         this.pendingSwitch = false;
-      }, 500);
-    }).catch(err => {
-      console.error('[TV] Error switching to next video:', err);
-      this.pendingSwitch = false;
-      // Fallback: rejouer sur le même player
+        this.preloadReady = false;
+        this.preloadedIndex = null;
+        // Fallback: rejouer sur le même player
+        setTimeout(() => {
+          this.playOnActivePlayer(nextVideoIndex);
+        }, 500);
+      });
+    };
+
+    // Si la vidéo n'est pas encore préchargée, attendre
+    if (!this.preloadReady || this.preloadedIndex !== nextVideoIndex) {
+      console.log(`[TV] Waiting for preload to complete...`);
+
+      // Charger si pas déjà en cours
+      if (this.preloadedIndex !== nextVideoIndex) {
+        this.preloadOnInactivePlayer(nextVideoIndex);
+      }
+
+      let switchExecuted = false;
+      const executeSwitchOnce = () => {
+        if (switchExecuted) return;
+        switchExecuted = true;
+        doSwitch();
+      };
+
+      // Vérifier périodiquement si prêt via readyState
+      const checkInterval = setInterval(() => {
+        if (switchExecuted) {
+          clearInterval(checkInterval);
+          return;
+        }
+        if (newPlayer.readyState >= 3) {
+          // readyState 3 = HAVE_FUTURE_DATA, assez pour jouer
+          clearInterval(checkInterval);
+          this.preloadReady = true;
+          executeSwitchOnce();
+        }
+      }, 30);
+
+      // Écouter aussi l'événement canplay
+      const onCanPlay = () => {
+        newPlayer.removeEventListener('canplay', onCanPlay);
+        clearInterval(checkInterval);
+        this.preloadReady = true;
+        executeSwitchOnce();
+      };
+      newPlayer.addEventListener('canplay', onCanPlay);
+
+      // Safety timeout - si toujours pas prêt après 2s, forcer
       setTimeout(() => {
-        this.playOnActivePlayer(nextVideoIndex);
-      }, 1000);
-    });
+        clearInterval(checkInterval);
+        newPlayer.removeEventListener('canplay', onCanPlay);
+        if (!switchExecuted) {
+          console.warn('[TV] Preload timeout, forcing switch');
+          executeSwitchOnce();
+        }
+      }, 2000);
+    } else {
+      doSwitch();
+    }
   }
 
   /**
