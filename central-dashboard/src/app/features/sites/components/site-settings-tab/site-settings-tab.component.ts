@@ -58,10 +58,12 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
             <div class="qr-detail">
               <span class="qr-label">WiFi :</span>
               <code>{{ getWifiSsid() }}</code>
+              <span class="ssid-source" *ngIf="realSsid">(reel)</span>
+              <span class="ssid-source ssid-generated" *ngIf="!realSsid">(genere)</span>
             </div>
           </div>
-          <button class="btn btn-primary" (click)="showQrCode = true">
-            Generer le QR Code
+          <button class="btn btn-primary" (click)="openQrCode()" [disabled]="fetchingSsid">
+            {{ fetchingSsid ? 'Chargement...' : 'Generer le QR Code' }}
           </button>
         </div>
       </div>
@@ -200,23 +202,6 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
         </div>
       </div>
 
-      <!-- Mise à jour Sync-Agent -->
-      <div class="settings-card">
-        <div class="settings-header">
-          <span class="settings-icon">🔄</span>
-          <h4>Mise à jour Sync-Agent</h4>
-        </div>
-        <p class="settings-desc">
-          Met à jour le sync-agent à distance pour activer les nouvelles fonctionnalités.
-        </p>
-        <button
-          class="btn btn-primary"
-          (click)="updateSyncAgent()"
-          [disabled]="updatingSyncAgent"
-        >
-          {{ updatingSyncAgent ? ('common.updating' | translate) : (isConnected ? ('common.update' | translate) : ('common.updateQueued' | translate)) }}
-        </button>
-      </div>
     </div>
 
     <!-- QR Code Modal -->
@@ -531,6 +516,20 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       font-size: 0.8125rem;
       color: #1e293b;
     }
+
+    .ssid-source {
+      font-size: 0.6875rem;
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+      background: #dcfce7;
+      color: #166534;
+      font-weight: 500;
+    }
+
+    .ssid-source.ssid-generated {
+      background: #fef3c7;
+      color: #92400e;
+    }
   `]
 })
 export class SiteSettingsTabComponent implements OnInit {
@@ -565,11 +564,11 @@ export class SiteSettingsTabComponent implements OnInit {
     teamNameSize: 16
   };
 
-  // Sync-agent
-  updatingSyncAgent: boolean = false;
 
   // QR Code
   showQrCode: boolean = false;
+  fetchingSsid: boolean = false;
+  realSsid: string | null = null;
 
   constructor(
     private sitesService: SitesService,
@@ -745,32 +744,17 @@ export class SiteSettingsTabComponent implements OnInit {
     });
   }
 
-  updateSyncAgent(): void {
-    if (!confirm('Mettre à jour le sync-agent à distance ?')) return;
-
-    this.updatingSyncAgent = true;
-    this.sitesService.updateSyncAgent(this.siteId, {}).subscribe({
-      next: (response: any) => {
-        this.updatingSyncAgent = false;
-        this.notificationService.success(
-          response.queued
-            ? '📥 Mise à jour mise en file d\'attente'
-            : 'Mise à jour du sync-agent envoyée !'
-        );
-      },
-      error: (error) => {
-        this.updatingSyncAgent = false;
-        const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
-      }
-    });
-  }
-
   getWifiSsid(): string {
+    // Utiliser le vrai SSID si déjà récupéré
+    if (this.realSsid) {
+      return this.realSsid;
+    }
+
     // Utiliser le vrai SSID depuis local_config_mirror si disponible
-    const realSsid = this.site?.local_config_mirror?._hotspotSsid;
-    if (realSsid) {
-      return realSsid;
+    const mirrorSsid = this.site?.local_config_mirror?._hotspotSsid;
+    if (mirrorSsid) {
+      this.realSsid = mirrorSsid;
+      return mirrorSsid;
     }
 
     // Fallback: générer un SSID depuis le nom du club
@@ -783,5 +767,32 @@ export class SiteSettingsTabComponent implements OnInit {
       .replace(/-+/g, '-')
       .substring(0, 20);
     return `NEOPRO-${sanitized}`;
+  }
+
+  openQrCode(): void {
+    // Si on a déjà le SSID réel ou si le site est offline, ouvrir directement
+    if (this.realSsid || !this.isConnected) {
+      this.showQrCode = true;
+      return;
+    }
+
+    // Sinon, essayer de récupérer le SSID réel via la commande get_hotspot_config
+    this.fetchingSsid = true;
+    this.sitesService.sendCommand(this.siteId, 'get_hotspot_config', {}).subscribe({
+      next: (response: any) => {
+        this.fetchingSsid = false;
+        if (response.result?.ssid) {
+          this.realSsid = response.result.ssid;
+          this.logger.info('SSID réel récupéré', { ssid: this.realSsid });
+        }
+        this.showQrCode = true;
+      },
+      error: (error) => {
+        this.fetchingSsid = false;
+        this.logger.warn('Impossible de récupérer le SSID réel, utilisation du SSID généré', { error });
+        // Ouvrir quand même le QR code avec le SSID généré
+        this.showQrCode = true;
+      }
+    });
   }
 }
