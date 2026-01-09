@@ -16,6 +16,7 @@ Documentation pour installer, configurer et utiliser Neopro.
 ## 📖 Utilisation
 
 - **[GUIDE_UTILISATEUR.md](GUIDE_UTILISATEUR.md)** - Guide complet utilisateur (21K)
+- **[QR_CODE_REMOTE.md](QR_CODE_REMOTE.md)** - Générer un QR code pour la télécommande
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Dépannage et diagnostic (30K)
 
 ---
