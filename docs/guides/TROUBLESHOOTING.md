@@ -713,6 +713,54 @@ ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
 
 ---
 
+### Dépendances npm manquantes après mise à jour (socket.io-client, axios, etc.)
+
+**Symptômes :**
+
+- Le service `neopro-sync-agent` crash en boucle
+- Logs affichent : `Error: Cannot find module 'socket.io-client'` (ou `axios`, `fs-extra`, `winston`)
+- Le dossier `sync-agent/node_modules/` est vide ou incomplet
+
+**Cause :**
+
+Avant v2.15.4, les `node_modules` n'étaient pas inclus dans l'archive de déploiement. Si `npm install` échouait sur le Pi (pas d'accès internet, timeout, etc.), les dépendances manquaient.
+
+**Diagnostic :**
+
+```bash
+# Vérifier les dépendances
+ls /home/pi/neopro/sync-agent/node_modules/ | head -10
+
+# Doit contenir : socket.io-client, axios, fs-extra, winston, etc.
+```
+
+**Solution immédiate :**
+
+```bash
+# Sur le Pi (nécessite accès internet)
+cd /home/pi/neopro/sync-agent
+npm install --production
+
+# Redémarrer le service
+sudo systemctl restart neopro-sync-agent
+```
+
+**Solution permanente :**
+
+Utiliser une archive v2.15.4+ qui inclut les `node_modules` pré-installés :
+
+```bash
+# Sur votre Mac
+npm run build:raspberry
+
+# L'archive inclut maintenant sync-agent/node_modules/
+# Déployer via le dashboard central ou l'admin panel :8080
+```
+
+**Note :** Depuis v2.15.4, `update-software.js` exécute aussi `npm install --production` comme fallback si les modules manquent.
+
+---
+
 ### Erreur EACCES permission denied sur configuration.backup.json
 
 **Symptôme** : Les logs du sync-agent affichent :
