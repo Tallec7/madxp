@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.21.1 | **Dernière mise à jour**: 2026-01-09
+**Version**: 2.22.0 | **Dernière mise à jour**: 2026-01-09
 
 ---
 
@@ -1469,6 +1469,20 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
   - **Fix** : Utilisation de `path.join(sourcePath, 'webapp')` pour tous les composants (webapp, server, sync-agent, admin, scripts)
   - **Fichier modifié** : `raspberry/sync-agent/src/commands/update-software.js`
   - **Migration** : Pour les Pi avec l'ancienne version, envoyer le fichier corrigé via SCP ou `cat | ssh` avant de relancer la mise à jour OTA
+- **Fix permission denied sur VERSION/release.json** : Erreur `EACCES: permission denied, unlink '/home/pi/neopro/VERSION'`
+  - **Bug** : `fs.copy()` et `fs.writeFile()` échouaient si le fichier VERSION appartenait à `root`
+  - **Symptôme** : Mise à jour échoue à 60% avec erreur de permission sur `/home/pi/neopro/VERSION`
+  - **Cause** : Le fichier VERSION pouvait avoir été créé par un script root lors de l'installation initiale
+  - **Fix** : Utilisation de `sudo cp` et `sudo tee` avec `sudo chown pi:pi` pour écrire VERSION et release.json
+  - **Fichier modifié** : `raspberry/sync-agent/src/commands/update-software.js`
+  - **Migration** : Pour les Pi bloqués, corriger manuellement avec `sudo chown pi:pi /home/pi/neopro/VERSION /home/pi/neopro/release.json` puis relancer la mise à jour
+- **Fix bulk upload sans checksum** : L'upload multi-fichiers ne calculait pas le checksum SHA256
+  - **Bug** : `POST /videos/bulk` n'appelait pas `calculateChecksum()` et n'incluait pas le checksum dans l'INSERT
+  - **Symptôme** : Déploiement échoue avec "Video checksum is required for deployment" (progress 0%)
+  - **Cause** : Le code bulk upload (lignes 332-377) avait été copié de l'upload simple mais le calcul du checksum avait été oublié
+  - **Fix** : Ajout de `const checksum = calculateChecksum(file.buffer)` et inclusion dans la requête INSERT
+  - **Fichier modifié** : `central-server/src/controllers/content.controller.ts`
+  - **Migration** : Les vidéos uploadées via bulk avant ce fix doivent être ré-uploadées (supprimer puis ré-uploader)
 
 ### v2.16.x (Janvier 2026)
 

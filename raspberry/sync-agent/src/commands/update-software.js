@@ -349,16 +349,25 @@ class SoftwareUpdateHandler {
         logger.info('Scripts updated');
       }
 
-      // Copier VERSION et release.json à la racine
-      if (await fs.pathExists(path.join(extractDir, 'VERSION'))) {
-        await fs.copy(path.join(extractDir, 'VERSION'), path.join(rootDir, 'VERSION'));
-      } else if (await fs.pathExists(path.join(sourcePath, 'VERSION'))) {
-        await fs.copy(path.join(sourcePath, 'VERSION'), path.join(rootDir, 'VERSION'));
+      // Copier VERSION et release.json à la racine (avec sudo car peuvent appartenir à root)
+      const versionSource = await fs.pathExists(path.join(extractDir, 'VERSION'))
+        ? path.join(extractDir, 'VERSION')
+        : await fs.pathExists(path.join(sourcePath, 'VERSION'))
+          ? path.join(sourcePath, 'VERSION')
+          : null;
+      if (versionSource) {
+        await execAsync(`sudo cp ${versionSource} ${path.join(rootDir, 'VERSION')}`);
+        await execAsync(`sudo chown pi:pi ${path.join(rootDir, 'VERSION')}`);
       }
-      if (await fs.pathExists(path.join(extractDir, 'release.json'))) {
-        await fs.copy(path.join(extractDir, 'release.json'), path.join(rootDir, 'release.json'));
-      } else if (await fs.pathExists(path.join(sourcePath, 'release.json'))) {
-        await fs.copy(path.join(sourcePath, 'release.json'), path.join(rootDir, 'release.json'));
+
+      const releaseSource = await fs.pathExists(path.join(extractDir, 'release.json'))
+        ? path.join(extractDir, 'release.json')
+        : await fs.pathExists(path.join(sourcePath, 'release.json'))
+          ? path.join(sourcePath, 'release.json')
+          : null;
+      if (releaseSource) {
+        await execAsync(`sudo cp ${releaseSource} ${path.join(rootDir, 'release.json')}`);
+        await execAsync(`sudo chown pi:pi ${path.join(rootDir, 'release.json')}`);
       }
 
       // Corriger les permissions (comme deploy-remote.sh et admin-server.js)
@@ -420,18 +429,24 @@ class SoftwareUpdateHandler {
       const buildDate = new Date().toISOString();
       const rootDir = config.paths.root;
 
-      // Écrire VERSION
-      await fs.writeFile(path.join(rootDir, 'VERSION'), version + '\n');
+      // Écrire VERSION (avec sudo car peut appartenir à root)
+      const versionPath = path.join(rootDir, 'VERSION');
+      const versionContent = version + '\n';
+      await execAsync(`echo '${versionContent.trim()}' | sudo tee ${versionPath} > /dev/null`);
+      await execAsync(`sudo chown pi:pi ${versionPath}`);
 
-      // Écrire release.json
+      // Écrire release.json (avec sudo car peut appartenir à root)
       const releaseData = {
         version,
         buildDate,
         source: 'central-dashboard',
       };
-      await fs.writeJson(path.join(rootDir, 'release.json'), releaseData, { spaces: 2 });
+      const releasePath = path.join(rootDir, 'release.json');
+      const releaseContent = JSON.stringify(releaseData, null, 2);
+      await execAsync(`echo '${releaseContent.replace(/'/g, "\\'")}' | sudo tee ${releasePath} > /dev/null`);
+      await execAsync(`sudo chown pi:pi ${releasePath}`);
 
-      // Écrire webapp/version.json
+      // Écrire webapp/version.json (pi:pi devrait avoir les droits)
       const webappVersionPath = path.join(rootDir, 'webapp', 'version.json');
       await fs.writeJson(webappVersionPath, { version, buildDate }, { spaces: 2 });
 
