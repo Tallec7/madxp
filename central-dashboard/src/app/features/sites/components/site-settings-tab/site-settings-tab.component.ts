@@ -767,7 +767,13 @@ export class SiteSettingsTabComponent implements OnInit {
   }
 
   getWifiSsid(): string {
-    // Generate SSID based on club name (format: NEOPRO-CLUBNAME)
+    // Utiliser le vrai SSID depuis local_config_mirror si disponible
+    const realSsid = this.site?.local_config_mirror?._hotspotSsid;
+    if (realSsid) {
+      return realSsid;
+    }
+
+    // Fallback: générer un SSID depuis le nom du club
     const name = this.site?.club_name || this.site?.site_name || 'CLUB';
     const sanitized = name
       .toUpperCase()

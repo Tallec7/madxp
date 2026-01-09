@@ -31,7 +31,7 @@ import * as QRCode from 'qrcode';
             </div>
           </div>
 
-          <div class="logo">NEOPRO</div>
+          <div class="logo">neopro.local</div>
         </div>
 
         <div class="actions">
@@ -367,7 +367,7 @@ export class QrCodeGeneratorComponent implements OnInit, OnChanges {
     ctx.fillStyle = '#2563eb';
     ctx.font = 'bold 14px Arial, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('NEOPRO', width / 2, 475);
+    ctx.fillText('neopro.local', width / 2, 475);
 
     // Download
     const link = document.createElement('a');

@@ -88,6 +88,28 @@ export interface Site {
     scoreOverlay?: ScoreOverlayConfig;
     [key: string]: unknown;
   };
+  /**
+   * Miroir de la configuration locale du Pi
+   * Contient les vidéos locales, le stockage, et le SSID du hotspot
+   */
+  local_config_mirror?: {
+    _localVideos?: Array<{
+      filename: string;
+      path: string;
+      category: string;
+      subcategory?: string;
+      size: number;
+      lastModified: string;
+    }>;
+    _localStorage?: {
+      total: number;
+      used: number;
+      free: number;
+    };
+    _hotspotSsid?: string;
+    _lastVideoSync?: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface GroupMetadata {
