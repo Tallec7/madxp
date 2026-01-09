@@ -1,3 +1,9 @@
+## [2.15.1](https://github.com/Tallec7/neopro/compare/v2.15.0...v2.15.1) (2026-01-09)
+
+### Bug Fixes
+
+- **cron:** handle self-referential FK in config_history cleanup ([58d1ce5](https://github.com/Tallec7/neopro/commit/58d1ce54f91c5443b041165eaa1a37224723cff3))
+
 # [2.15.0](https://github.com/Tallec7/neopro/compare/v2.14.7...v2.15.0) (2026-01-09)
 
 ### Features
