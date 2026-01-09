@@ -110,6 +110,8 @@ export class TvComponent implements OnInit, OnDestroy {
   private pendingSwitch = false; // Évite les switchs multiples
   private preloadedIndex: number | null = null; // Index de la vidéo préchargée
   private preloadReady = false; // Le player inactif est-il prêt ?
+  private switchTriggered = false; // Pour éviter de déclencher le switch plusieurs fois
+  private lastTimeUpdateCheck = 0; // Throttle timeupdate events
 
   public player: Player;
 
@@ -917,11 +919,53 @@ export class TvComponent implements OnInit, OnDestroy {
     this.setPlayerVisible(this.playerB, false);
     this.activePlayer = 'A';
 
-    // Écouter la fin de vidéo sur les deux players
+    // DÉSACTIVÉ: timeupdate cause des saccades sur Pi
+    // On utilise uniquement 'ended' - accepte une micro-pause entre vidéos
+    // this.playerA.addEventListener('timeupdate', () => this.onTimeUpdate('A'));
+    // this.playerB.addEventListener('timeupdate', () => this.onTimeUpdate('B'));
+
+    // Utiliser ended pour déclencher le switch
     this.playerA.addEventListener('ended', () => this.onVideoEnded('A'));
     this.playerB.addEventListener('ended', () => this.onVideoEnded('B'));
 
     console.log('[TV] Double-buffer initialized');
+  }
+
+  /**
+   * Appelé à chaque mise à jour du temps de lecture
+   * Déclenche le préchargement 3s avant la fin, puis le switch 500ms avant
+   * Throttled pour éviter la surcharge CPU
+   */
+  private onTimeUpdate(fromPlayer: 'A' | 'B'): void {
+    if (!this.isLoopMode || fromPlayer !== this.activePlayer) return;
+    if (this.switchTriggered || this.pendingSwitch) return;
+
+    // Throttle: ne vérifier que toutes les 200ms max
+    const now = performance.now();
+    if (now - this.lastTimeUpdateCheck < 200) return;
+    this.lastTimeUpdateCheck = now;
+
+    const player = this.getActivePlayer();
+    if (!player.duration || player.duration <= 0) return;
+
+    const remaining = player.duration - player.currentTime;
+
+    // Précharger 1s avant la fin seulement - minimise le temps de décodage parallèle
+    // Le préchargement cause une saccade, donc on le retarde au maximum
+    const preloadThreshold = Math.min(1.5, player.duration * 0.15); // 1.5s ou 15% max
+    if (remaining <= preloadThreshold && !this.preloadReady && !this.preloadedIndex) {
+      const nextIndex = (this.currentLoopIndex + 1) % this.currentLoopVideos.length;
+      console.log(`[TV] Starting late preload, ${remaining.toFixed(1)}s remaining`);
+      this.preloadOnInactivePlayer(nextIndex);
+    }
+
+    // Déclencher le switch 500ms avant la fin (ou 300ms si vidéo courte)
+    const switchThreshold = player.duration > 3 ? 0.5 : 0.3;
+    if (remaining <= switchThreshold && remaining > 0) {
+      console.log(`[TV] Triggering early switch, ${remaining.toFixed(2)}s remaining`);
+      this.switchTriggered = true;
+      this.triggerSwitch();
+    }
   }
 
   /**
@@ -963,6 +1007,7 @@ export class TvComponent implements OnInit, OnDestroy {
     this.isLoopMode = true;
     this.currentLoopIndex = 0;
     this.pendingSwitch = false;
+    this.switchTriggered = false;
 
     // Récupérer les vidéos de la boucle
     const loopVideos = this.getLoopVideosForPhase(this.activePhase);
@@ -980,10 +1025,8 @@ export class TvComponent implements OnInit, OnDestroy {
     // Jouer la première vidéo sur le player actif
     this.playOnActivePlayer(0);
 
-    // Précharger la suivante sur le player inactif (si plus d'une vidéo)
-    if (loopVideos.length > 1) {
-      this.preloadOnInactivePlayer(1);
-    }
+    // NE PAS précharger immédiatement - attendre les dernières secondes
+    // Cela évite de décoder 2 vidéos en parallèle et réduit les saccades
 
     setTimeout(() => {
       this.isStartingLoop = false;
@@ -1069,7 +1112,30 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Déclenche le switch vers la vidéo suivante
+   */
+  private triggerSwitch(): void {
+    if (this.pendingSwitch) return;
+    this.pendingSwitch = true;
+
+    this.ngZone.run(() => {
+      // Tracker la fin de la vidéo actuelle
+      this.analyticsService.trackVideoEnd(true);
+      this.sponsorAnalytics.trackSponsorEnd(true);
+
+      const loopVideos = this.currentLoopVideos;
+      const nextIndex = (this.currentLoopIndex + 1) % loopVideos.length;
+
+      console.log(`[TV] Triggering switch to next video (index ${nextIndex})`);
+
+      // Switch les players
+      this.switchPlayers(nextIndex);
+    });
+  }
+
+  /**
    * Appelé quand une vidéo se termine sur un player
+   * Mode simplifié: pas de préchargement anticipé pour éviter les saccades
    */
   private onVideoEnded(fromPlayer: 'A' | 'B'): void {
     console.log(`[TV] onVideoEnded called from player ${fromPlayer}, isLoopMode=${this.isLoopMode}, activePlayer=${this.activePlayer}`);
@@ -1082,24 +1148,12 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Éviter les switchs multiples
     if (this.pendingSwitch) {
-      console.log('[TV] Switch already pending, ignoring');
+      console.log('[TV] Switch already pending, ignoring ended event');
       return;
     }
-    this.pendingSwitch = true;
 
-    this.ngZone.run(() => {
-      // Tracker la fin
-      this.analyticsService.trackVideoEnd(true);
-      this.sponsorAnalytics.trackSponsorEnd(true);
-
-      const loopVideos = this.currentLoopVideos;
-      const nextIndex = (this.currentLoopIndex + 1) % loopVideos.length;
-
-      console.log(`[TV] Video ended, switching to next (index ${nextIndex})`);
-
-      // Switch les players
-      this.switchPlayers(nextIndex);
-    });
+    console.log('[TV] Video ended, triggering switch');
+    this.triggerSwitch();
   }
 
   /**
@@ -1139,16 +1193,17 @@ export class TvComponent implements OnInit, OnDestroy {
 
             console.log(`[TV] Switched to player ${this.activePlayer}, now playing index ${nextVideoIndex}`);
 
-            // Précharger la vidéo suivante sur l'ancien player (maintenant inactif)
-            const preloadIndex = (nextVideoIndex + 1) % this.currentLoopVideos.length;
-            // Précharger immédiatement pour être prêt au prochain switch
-            this.preloadOnInactivePlayer(preloadIndex);
+            // NE PAS précharger immédiatement après le switch
+            // Le préchargement sera déclenché par onTimeUpdate 3s avant la fin
+            // Cela évite de décoder 2 vidéos en parallèle
             this.pendingSwitch = false;
+            this.switchTriggered = false; // Reset pour le prochain cycle
           });
         });
       }).catch(err => {
         console.error('[TV] Error switching to next video:', err);
         this.pendingSwitch = false;
+        this.switchTriggered = false;
         this.preloadReady = false;
         this.preloadedIndex = null;
         // Fallback: rejouer sur le même player
