@@ -23,9 +23,8 @@ const commands = {
    * Modes supportés :
    * - mode: 'merge' (défaut) - Fusionne le contenu NEOPRO avec la config locale
    * - mode: 'replace' - Remplace entièrement (ancien comportement, pour migration)
-   * - mode: 'update_agent' - Met à jour les fichiers du sync-agent (pour remote update)
    *
-   * @param {Object} data - { neoProContent, mode?, configuration?, agentFiles? }
+   * @param {Object} data - { neoProContent, mode?, configuration? }
    */
   async update_config(data) {
     // Mode spécial : correction des permissions (peut être appelé indépendamment)
@@ -43,43 +42,6 @@ const commands = {
         return { success: true, message: 'Permissions fixed' };
       } catch (error) {
         logger.error('Failed to fix permissions:', error);
-        throw error;
-      }
-    }
-
-    // Mode spécial : mise à jour des fichiers du sync-agent
-    if (data.mode === 'update_agent' && data.agentFiles) {
-      logger.info('Updating sync-agent files remotely');
-      try {
-        const syncAgentPath = config.paths.root + '/sync-agent';
-
-        // D'abord corriger les permissions si nécessaire
-        await execAsync(`sudo chown -R pi:pi ${syncAgentPath}`);
-
-        for (const [filePath, content] of Object.entries(data.agentFiles)) {
-          const fullPath = syncAgentPath + '/' + filePath;
-          const dir = require('path').dirname(fullPath);
-          await fs.ensureDir(dir);
-          await fs.writeFile(fullPath, content);
-          logger.info('Updated sync-agent file', { path: filePath });
-        }
-
-        // Redémarrer le sync-agent pour appliquer les changements
-        logger.info('Restarting sync-agent to apply updates...');
-        // Utiliser spawn pour ne pas attendre (car le processus va se terminer)
-        const { spawn } = require('child_process');
-        spawn('sudo', ['systemctl', 'restart', 'neopro-sync-agent'], {
-          detached: true,
-          stdio: 'ignore'
-        }).unref();
-
-        return {
-          success: true,
-          message: 'Sync-agent files updated, restarting...',
-          filesUpdated: Object.keys(data.agentFiles),
-        };
-      } catch (error) {
-        logger.error('Failed to update sync-agent files:', error);
         throw error;
       }
     }
@@ -132,6 +94,19 @@ const commands = {
         }
         if (contentToApply.scoreOverlay !== undefined) {
           finalConfig.scoreOverlay = contentToApply.scoreOverlay;
+        }
+
+        // Gérer remotePassword et clubName pour l'authentification /remote
+        if (contentToApply.remotePassword !== undefined || contentToApply.clubName !== undefined) {
+          finalConfig.auth = finalConfig.auth || {};
+          if (contentToApply.remotePassword) {
+            finalConfig.auth.password = contentToApply.remotePassword;
+            logger.info('Remote password updated');
+          }
+          if (contentToApply.clubName) {
+            finalConfig.auth.clubName = contentToApply.clubName;
+            logger.info('Club name updated in auth section');
+          }
         }
 
         logger.info('Configuration replaced', {
