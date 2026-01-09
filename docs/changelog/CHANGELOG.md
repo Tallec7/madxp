@@ -1,3 +1,9 @@
+# [2.18.0](https://github.com/Tallec7/neopro/compare/v2.17.1...v2.18.0) (2026-01-09)
+
+### Features
+
+- **dashboard:** add QR code generator for remote access ([bdbfd3b](https://github.com/Tallec7/neopro/commit/bdbfd3b855af50db257a34328e3e2f0bf22b07c0))
+
 ## [2.17.1](https://github.com/Tallec7/neopro/compare/v2.17.0...v2.17.1) (2026-01-09)
 
 ### Bug Fixes
