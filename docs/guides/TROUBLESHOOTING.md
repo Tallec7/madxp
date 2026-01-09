@@ -761,6 +761,44 @@ npm run build:raspberry
 
 ---
 
+### Mise à jour OTA échoue avec "No such file or directory" (v2.21.1)
+
+**Symptôme** : La mise à jour depuis le dashboard échoue avec :
+
+```
+Command failed: cp -r /tmp/neopro-update-extractwebapp/* /home/pi/neopro/webapp/
+cp: cannot stat '/tmp/neopro-update-extractwebapp/*': No such file or directory
+```
+
+**Cause** : Bug dans `update-software.js` (corrigé en v2.21.1) : le chemin était mal construit. `sourcePath` se terminait par `/` et on concaténait directement `webapp/*` sans slash, donnant `/tmp/neopro-update-extractwebapp/*` au lieu de `/tmp/neopro-update-extract/webapp/*`.
+
+**Diagnostic** :
+
+```bash
+ssh pi@neopro.local "grep 'sourcePath}webapp' /home/pi/neopro/sync-agent/src/commands/update-software.js"
+# Si résultat non vide → ancienne version buggée
+# Devrait utiliser path.join(sourcePath, 'webapp')
+```
+
+**Solution** :
+
+Envoyer le fichier corrigé depuis votre Mac (le curl peut échouer si GitHub n'a pas encore propagé) :
+
+```bash
+cat raspberry/sync-agent/src/commands/update-software.js | ssh pi@<IP_DU_PI> 'cat > /home/pi/neopro/sync-agent/src/commands/update-software.js && sudo systemctl restart neopro-sync-agent'
+```
+
+Puis relancer la mise à jour depuis le dashboard.
+
+**Vérification** :
+
+```bash
+ssh pi@neopro.local "grep 'path.join(sourcePath' /home/pi/neopro/sync-agent/src/commands/update-software.js | head -3"
+# Doit afficher des lignes avec path.join(sourcePath, 'webapp') etc.
+```
+
+---
+
 ### Erreur EACCES permission denied sur configuration.backup.json
 
 **Symptôme** : Les logs du sync-agent affichent :
