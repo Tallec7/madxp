@@ -110,6 +110,7 @@ export class TvComponent implements OnInit, OnDestroy {
   private pendingSwitch = false; // Évite les switchs multiples
   private preloadedIndex: number | null = null; // Index de la vidéo préchargée
   private preloadReady = false; // Le player inactif est-il prêt ?
+  private switchTriggered = false; // Pour éviter de déclencher le switch plusieurs fois
 
   public player: Player;
 
@@ -917,11 +918,36 @@ export class TvComponent implements OnInit, OnDestroy {
     this.setPlayerVisible(this.playerB, false);
     this.activePlayer = 'A';
 
-    // Écouter la fin de vidéo sur les deux players
+    // Écouter timeupdate pour déclencher le switch AVANT la fin (anticipation)
+    this.playerA.addEventListener('timeupdate', () => this.onTimeUpdate('A'));
+    this.playerB.addEventListener('timeupdate', () => this.onTimeUpdate('B'));
+
+    // Fallback: écouter ended au cas où timeupdate rate le coche
     this.playerA.addEventListener('ended', () => this.onVideoEnded('A'));
     this.playerB.addEventListener('ended', () => this.onVideoEnded('B'));
 
     console.log('[TV] Double-buffer initialized');
+  }
+
+  /**
+   * Appelé à chaque mise à jour du temps de lecture
+   * Déclenche le switch 500ms AVANT la fin pour une transition seamless
+   */
+  private onTimeUpdate(fromPlayer: 'A' | 'B'): void {
+    if (!this.isLoopMode || fromPlayer !== this.activePlayer) return;
+    if (this.switchTriggered || this.pendingSwitch) return;
+
+    const player = this.getActivePlayer();
+    const remaining = player.duration - player.currentTime;
+
+    // Déclencher le switch 500ms avant la fin (ou 300ms si vidéo courte)
+    const threshold = player.duration > 3 ? 0.5 : 0.3;
+
+    if (remaining <= threshold && remaining > 0 && player.duration > 0) {
+      console.log(`[TV] Triggering early switch, ${remaining.toFixed(2)}s remaining`);
+      this.switchTriggered = true;
+      this.triggerSwitch();
+    }
   }
 
   /**
@@ -963,6 +989,7 @@ export class TvComponent implements OnInit, OnDestroy {
     this.isLoopMode = true;
     this.currentLoopIndex = 0;
     this.pendingSwitch = false;
+    this.switchTriggered = false;
 
     // Récupérer les vidéos de la boucle
     const loopVideos = this.getLoopVideosForPhase(this.activePhase);
@@ -1069,7 +1096,29 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Appelé quand une vidéo se termine sur un player
+   * Déclenche le switch vers la vidéo suivante
+   */
+  private triggerSwitch(): void {
+    if (this.pendingSwitch) return;
+    this.pendingSwitch = true;
+
+    this.ngZone.run(() => {
+      // Tracker la fin de la vidéo actuelle
+      this.analyticsService.trackVideoEnd(true);
+      this.sponsorAnalytics.trackSponsorEnd(true);
+
+      const loopVideos = this.currentLoopVideos;
+      const nextIndex = (this.currentLoopIndex + 1) % loopVideos.length;
+
+      console.log(`[TV] Triggering switch to next video (index ${nextIndex})`);
+
+      // Switch les players
+      this.switchPlayers(nextIndex);
+    });
+  }
+
+  /**
+   * Appelé quand une vidéo se termine sur un player (fallback)
    */
   private onVideoEnded(fromPlayer: 'A' | 'B'): void {
     console.log(`[TV] onVideoEnded called from player ${fromPlayer}, isLoopMode=${this.isLoopMode}, activePlayer=${this.activePlayer}`);
@@ -1080,26 +1129,16 @@ export class TvComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Éviter les switchs multiples
-    if (this.pendingSwitch) {
-      console.log('[TV] Switch already pending, ignoring');
+    // Si le switch a déjà été déclenché par timeupdate, ignorer
+    if (this.switchTriggered || this.pendingSwitch) {
+      console.log('[TV] Switch already triggered/pending, ignoring ended event');
       return;
     }
-    this.pendingSwitch = true;
 
-    this.ngZone.run(() => {
-      // Tracker la fin
-      this.analyticsService.trackVideoEnd(true);
-      this.sponsorAnalytics.trackSponsorEnd(true);
-
-      const loopVideos = this.currentLoopVideos;
-      const nextIndex = (this.currentLoopIndex + 1) % loopVideos.length;
-
-      console.log(`[TV] Video ended, switching to next (index ${nextIndex})`);
-
-      // Switch les players
-      this.switchPlayers(nextIndex);
-    });
+    // Fallback: déclencher le switch maintenant
+    console.log('[TV] Fallback: video ended without early trigger');
+    this.switchTriggered = true;
+    this.triggerSwitch();
   }
 
   /**
@@ -1144,11 +1183,13 @@ export class TvComponent implements OnInit, OnDestroy {
             // Précharger immédiatement pour être prêt au prochain switch
             this.preloadOnInactivePlayer(preloadIndex);
             this.pendingSwitch = false;
+            this.switchTriggered = false; // Reset pour le prochain cycle
           });
         });
       }).catch(err => {
         console.error('[TV] Error switching to next video:', err);
         this.pendingSwitch = false;
+        this.switchTriggered = false;
         this.preloadReady = false;
         this.preloadedIndex = null;
         // Fallback: rejouer sur le même player
