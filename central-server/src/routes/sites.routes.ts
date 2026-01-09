@@ -45,6 +45,14 @@ router.get(
   sitesController.getSystemInfo
 );
 
+router.get(
+  '/:id/hotspot-config',
+  authenticate,
+  requireRole('admin', 'operator'),
+  adminRateLimit,
+  sitesController.getHotspotConfig
+);
+
 router.post(
   '/',
   authenticate,
