@@ -161,6 +161,7 @@ class SoftwareUpdateHandler {
         'webapp',
         'server',
         'admin',
+        'sync-agent',
       ];
 
       for (const item of itemsToBackup) {
@@ -238,25 +239,152 @@ class SoftwareUpdateHandler {
     try {
       logger.info('Extracting and installing update', { version });
 
-      // Exclude user data directories and configuration from extraction
-      // These should never be overwritten by software updates:
-      // - videos/: user video content (managed by deploy-video.js)
-      // - logs/: runtime logs
-      // - backups/: backup archives
-      // - webapp/configuration.json: club-specific configuration
-      // Note: 2>&1 | grep -v 'Ignoring unknown extended header' filters out macOS extended attribute warnings
-      await execAsync(
-        `tar -xzf ${packagePath} -C ${config.paths.root}/ ` +
-        `--exclude='videos' --exclude='logs' --exclude='backups' ` +
-        `--exclude='webapp/configuration.json' 2>&1 | grep -v 'Ignoring unknown extended header' || true`
-      );
+      const rootDir = config.paths.root;
+      const extractDir = '/tmp/neopro-update-extract';
 
-      if (await fs.pathExists(path.join(config.paths.root, 'webapp/package.json'))) {
-        await execAsync(`cd ${config.paths.root}/webapp && npm install --production`);
+      // Nettoyer et créer le dossier d'extraction temporaire
+      await fs.remove(extractDir);
+      await fs.ensureDir(extractDir);
+
+      // Extraire dans un dossier temporaire (comme deploy-remote.sh et admin-server.js)
+      // Capturer stderr pour détecter les vraies erreurs
+      try {
+        const { stderr } = await execAsync(
+          `tar --warning=no-unknown-keyword -xzf ${packagePath} -C ${extractDir} 2>&1`
+        );
+        // Logger les warnings non-critiques mais ne pas échouer
+        if (stderr && !stderr.includes('Ignoring unknown extended header')) {
+          logger.warn('Tar extraction warnings', { stderr });
+        }
+      } catch (tarError) {
+        logger.error('Tar extraction failed', { error: tarError.message });
+        throw new Error(`Failed to extract update package: ${tarError.message}`);
       }
 
-      if (await fs.pathExists(path.join(config.paths.root, 'server/package.json'))) {
-        await execAsync(`cd ${config.paths.root}/server && npm install --production`);
+      // Détecter le format de l'archive (nouveau ou legacy avec préfixe deploy/)
+      let sourcePrefix = '';
+      if (await fs.pathExists(path.join(extractDir, 'deploy', 'webapp'))) {
+        sourcePrefix = 'deploy/';
+        logger.info('Detected legacy archive format (deploy/ prefix)');
+      } else if (await fs.pathExists(path.join(extractDir, 'webapp'))) {
+        sourcePrefix = '';
+        logger.info('Detected new archive format (no prefix)');
+      } else {
+        throw new Error('Invalid archive structure: webapp/ not found');
+      }
+
+      const sourcePath = path.join(extractDir, sourcePrefix);
+
+      // Sauvegarder configuration.json avant mise à jour
+      const configBackupPath = '/tmp/configuration.json.backup';
+      const webappConfigPath = path.join(rootDir, 'webapp', 'configuration.json');
+      if (await fs.pathExists(webappConfigPath)) {
+        await fs.copy(webappConfigPath, configBackupPath);
+        logger.info('Configuration saved');
+      }
+
+      // Copier webapp (comme deploy-remote.sh)
+      if (await fs.pathExists(path.join(sourcePath, 'webapp'))) {
+        await execAsync(`rm -rf ${rootDir}/webapp/*`);
+        await execAsync(`cp -r ${sourcePath}webapp/* ${rootDir}/webapp/`);
+        logger.info('Webapp updated');
+      }
+
+      // Restaurer configuration.json
+      if (await fs.pathExists(configBackupPath)) {
+        await fs.copy(configBackupPath, webappConfigPath);
+        await fs.remove(configBackupPath);
+        logger.info('Configuration restored');
+      }
+
+      // Copier server
+      if (await fs.pathExists(path.join(sourcePath, 'server'))) {
+        await execAsync(`cp -r ${sourcePath}server/* ${rootDir}/server/`);
+        logger.info('Server updated');
+      }
+
+      // Copier sync-agent (comme deploy-remote.sh et admin-server.js)
+      if (await fs.pathExists(path.join(sourcePath, 'sync-agent'))) {
+        // Sauvegarder les configs locales du sync-agent
+        const syncAgentEnvBackup = '/tmp/sync-agent.env.backup';
+        const syncAgentConfigEnvBackup = '/tmp/sync-agent-config.env.backup';
+
+        if (await fs.pathExists(path.join(rootDir, 'sync-agent', '.env'))) {
+          await fs.copy(path.join(rootDir, 'sync-agent', '.env'), syncAgentEnvBackup);
+        }
+        if (await fs.pathExists(path.join(rootDir, 'sync-agent', 'config', '.env'))) {
+          await fs.copy(path.join(rootDir, 'sync-agent', 'config', '.env'), syncAgentConfigEnvBackup);
+        }
+
+        // Copier les nouveaux fichiers du sync-agent
+        await fs.ensureDir(path.join(rootDir, 'sync-agent'));
+        await execAsync(`cp -r ${sourcePath}sync-agent/* ${rootDir}/sync-agent/`);
+        logger.info('Sync-agent updated');
+
+        // Restaurer les configs locales
+        if (await fs.pathExists(syncAgentEnvBackup)) {
+          await fs.copy(syncAgentEnvBackup, path.join(rootDir, 'sync-agent', '.env'));
+          await fs.remove(syncAgentEnvBackup);
+        }
+        if (await fs.pathExists(syncAgentConfigEnvBackup)) {
+          await fs.ensureDir(path.join(rootDir, 'sync-agent', 'config'));
+          await fs.copy(syncAgentConfigEnvBackup, path.join(rootDir, 'sync-agent', 'config', '.env'));
+          await fs.remove(syncAgentConfigEnvBackup);
+        }
+        logger.info('Sync-agent config restored');
+      }
+
+      // Copier admin si présent
+      if (await fs.pathExists(path.join(sourcePath, 'admin'))) {
+        await fs.ensureDir(path.join(rootDir, 'admin'));
+        await execAsync(`cp -r ${sourcePath}admin/* ${rootDir}/admin/`);
+        logger.info('Admin panel updated');
+      }
+
+      // Copier scripts si présents
+      if (await fs.pathExists(path.join(sourcePath, 'scripts'))) {
+        await fs.ensureDir(path.join(rootDir, 'scripts'));
+        await execAsync(`cp -r ${sourcePath}scripts/* ${rootDir}/scripts/`);
+        await execAsync(`chmod +x ${rootDir}/scripts/*.sh 2>/dev/null || true`);
+        logger.info('Scripts updated');
+      }
+
+      // Copier VERSION et release.json à la racine
+      if (await fs.pathExists(path.join(extractDir, 'VERSION'))) {
+        await fs.copy(path.join(extractDir, 'VERSION'), path.join(rootDir, 'VERSION'));
+      } else if (await fs.pathExists(path.join(sourcePath, 'VERSION'))) {
+        await fs.copy(path.join(sourcePath, 'VERSION'), path.join(rootDir, 'VERSION'));
+      }
+      if (await fs.pathExists(path.join(extractDir, 'release.json'))) {
+        await fs.copy(path.join(extractDir, 'release.json'), path.join(rootDir, 'release.json'));
+      } else if (await fs.pathExists(path.join(sourcePath, 'release.json'))) {
+        await fs.copy(path.join(sourcePath, 'release.json'), path.join(rootDir, 'release.json'));
+      }
+
+      // Corriger les permissions (comme deploy-remote.sh et admin-server.js)
+      logger.info('Fixing permissions...');
+      await execAsync(`sudo chown -R pi:pi ${rootDir}/webapp`);
+      await execAsync(`sudo chown -R pi:pi ${rootDir}/server`);
+      await execAsync(`sudo chown -R pi:pi ${rootDir}/sync-agent 2>/dev/null || true`);
+      await execAsync(`sudo chown -R pi:pi ${rootDir}/admin 2>/dev/null || true`);
+      await execAsync(`sudo chown -R pi:pi ${rootDir}/scripts 2>/dev/null || true`);
+      await execAsync('sudo usermod -a -G pi www-data 2>/dev/null || true');
+
+      // npm install si nécessaire
+      if (await fs.pathExists(path.join(rootDir, 'webapp', 'package.json'))) {
+        try {
+          await execAsync(`cd ${rootDir}/webapp && npm install --production 2>/dev/null || true`);
+        } catch (e) {
+          logger.warn('npm install webapp failed (non-critical)', { error: e.message });
+        }
+      }
+
+      if (await fs.pathExists(path.join(rootDir, 'server', 'package.json'))) {
+        try {
+          await execAsync(`cd ${rootDir}/server && npm install --production 2>/dev/null || true`);
+        } catch (e) {
+          logger.warn('npm install server failed (non-critical)', { error: e.message });
+        }
       }
 
       // Écrire les fichiers de version avec la version fournie par le dashboard central
@@ -264,9 +392,13 @@ class SoftwareUpdateHandler {
         await this.writeVersionMetadata(version);
       }
 
+      // Nettoyage
+      await fs.remove(extractDir);
+      await fs.remove(packagePath);
+
       logger.info('Update installed successfully');
     } catch (error) {
-      logger.error('Installation failed:', error);
+      logger.error('Installation failed', { error: error.message, stack: error.stack });
       throw error;
     }
   }
@@ -371,7 +503,7 @@ class SoftwareUpdateHandler {
 
       await this.stopServices();
 
-      const itemsToRestore = ['webapp', 'server', 'admin'];
+      const itemsToRestore = ['webapp', 'server', 'admin', 'sync-agent'];
 
       for (const item of itemsToRestore) {
         const sourcePath = path.join(backupPath, item);

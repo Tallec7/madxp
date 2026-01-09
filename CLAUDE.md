@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.15.0 | **Dernière mise à jour**: 2026-01-09
+**Version**: 2.15.1 | **Dernière mise à jour**: 2026-01-09
 
 ---
 
@@ -1413,6 +1413,18 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 
 ### v2.15.x (Janvier 2026)
 
+- **Fix update_software aligné sur deploy-remote.sh (v2.15.1)** : Correction critique du déploiement via central/admin
+  - **Bug** : `update-software.js` utilisait `tar -xzf` direct dans `/home/pi/neopro/` au lieu d'extraire dans un dossier temporaire puis copier avec `cp -r`
+  - **Symptôme** : Fichiers manquants dans `sync-agent/src/utils/` (ex: `version-info.js`) après mise à jour via dashboard central ou admin panel `:8080`
+  - **Cause** : Le `tar` direct n'écrasait pas proprement les sous-dossiers, et les erreurs étaient masquées par `|| true`
+  - **Fix** : Alignement sur la logique de `deploy-remote.sh` et `admin-server.js` :
+    - Extraction dans `/tmp/neopro-update-extract/` (dossier temporaire)
+    - Détection automatique du format d'archive (legacy `deploy/` ou nouveau)
+    - Copie explicite de chaque composant avec `cp -r` (webapp, server, sync-agent, admin, scripts)
+    - Sauvegarde/restauration des configs locales (`.env`, `configuration.json`)
+    - Meilleure gestion d'erreur (plus de `|| true` masquant les erreurs)
+  - **Ajouts** : `sync-agent` ajouté au backup et rollback
+  - **Migration** : Mettre à jour `sync-agent/src/commands/update-software.js` sur les Pi existants via SCP ou redéploiement complet
 - **Envoi analytics par batches** : Évite les timeouts avec de gros volumes
   - Envoi par lots de 100 événements au lieu de tout d'un coup
   - Timeout de 15s par batch, pause de 500ms entre batches
