@@ -1,3 +1,9 @@
+## [2.22.1](https://github.com/Tallec7/neopro/compare/v2.22.0...v2.22.1) (2026-01-09)
+
+### Bug Fixes
+
+- **content:** add checksum calculation to bulk video upload ([106bb8e](https://github.com/Tallec7/neopro/commit/106bb8e8f1255c12af39d61ab71ae205010b64fa))
+
 # [2.22.0](https://github.com/Tallec7/neopro/compare/v2.21.4...v2.22.0) (2026-01-09)
 
 ### Features
