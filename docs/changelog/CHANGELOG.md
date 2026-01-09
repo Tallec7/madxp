@@ -1,3 +1,9 @@
+## [2.14.7](https://github.com/Tallec7/neopro/compare/v2.14.6...v2.14.7) (2026-01-09)
+
+### Bug Fixes
+
+- **sync-agent:** add retry logic and service existence check to startServices ([094d2d4](https://github.com/Tallec7/neopro/commit/094d2d4fc81746e4dd108393cff15ce318e8805a))
+
 ## [2.14.6](https://github.com/Tallec7/neopro/compare/v2.14.5...v2.14.6) (2026-01-09)
 
 ### Bug Fixes
