@@ -111,6 +111,7 @@ export class TvComponent implements OnInit, OnDestroy {
   private preloadedIndex: number | null = null; // Index de la vidéo préchargée
   private preloadReady = false; // Le player inactif est-il prêt ?
   private switchTriggered = false; // Pour éviter de déclencher le switch plusieurs fois
+  private lastTimeUpdateCheck = 0; // Throttle timeupdate events
 
   public player: Player;
 
@@ -932,10 +933,16 @@ export class TvComponent implements OnInit, OnDestroy {
   /**
    * Appelé à chaque mise à jour du temps de lecture
    * Déclenche le switch 500ms AVANT la fin pour une transition seamless
+   * Throttled pour éviter la surcharge CPU
    */
   private onTimeUpdate(fromPlayer: 'A' | 'B'): void {
     if (!this.isLoopMode || fromPlayer !== this.activePlayer) return;
     if (this.switchTriggered || this.pendingSwitch) return;
+
+    // Throttle: ne vérifier que toutes les 200ms max
+    const now = performance.now();
+    if (now - this.lastTimeUpdateCheck < 200) return;
+    this.lastTimeUpdateCheck = now;
 
     const player = this.getActivePlayer();
     const remaining = player.duration - player.currentTime;
