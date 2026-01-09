@@ -7,11 +7,12 @@ import { NotificationService } from '../../../../core/services/notification.serv
 import { LoggerService } from '../../../../core/services/logger.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import { Site, OverlayPosition } from '../../../../core/models';
+import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-generator/qr-code-generator.component';
 
 @Component({
   selector: 'app-site-settings-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
+  imports: [CommonModule, FormsModule, TranslateModule, QrCodeGeneratorComponent],
   template: `
     <div class="settings-tab">
       <!-- Authentification Club -->
@@ -29,6 +30,39 @@ import { Site, OverlayPosition } from '../../../../core/models';
             <label>Mot de passe télécommande</label>
             <input type="text" [(ngModel)]="remotePassword" placeholder="Mot de passe" class="form-input"/>
           </div>
+        </div>
+        <button
+          class="btn btn-primary"
+          (click)="saveClubAuth()"
+          [disabled]="savingClubAuth || (!clubName && !remotePassword)"
+        >
+          {{ savingClubAuth ? ('common.deploying' | translate) : (isConnected ? ('common.deploy' | translate) : ('common.deployQueued' | translate)) }}
+        </button>
+      </div>
+
+      <!-- QR Code Telecommande -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <span class="settings-icon">📱</span>
+          <h4>QR Code Telecommande</h4>
+        </div>
+        <p class="settings-desc">
+          Generez un QR code a imprimer et afficher pres de la TV. Les utilisateurs pourront scanner pour acceder directement a la telecommande.
+        </p>
+        <div class="qr-preview-row">
+          <div class="qr-info">
+            <div class="qr-detail">
+              <span class="qr-label">URL :</span>
+              <code>http://neopro.local/remote</code>
+            </div>
+            <div class="qr-detail">
+              <span class="qr-label">WiFi :</span>
+              <code>{{ getWifiSsid() }}</code>
+            </div>
+          </div>
+          <button class="btn btn-primary" (click)="showQrCode = true">
+            Generer le QR Code
+          </button>
         </div>
       </div>
 
@@ -184,6 +218,15 @@ import { Site, OverlayPosition } from '../../../../core/models';
         </button>
       </div>
     </div>
+
+    <!-- QR Code Modal -->
+    <app-qr-code-generator
+      *ngIf="showQrCode"
+      [clubName]="site?.club_name || site?.site_name || 'Club'"
+      [wifiSsid]="getWifiSsid()"
+      [visible]="showQrCode"
+      (visibleChange)="showQrCode = $event"
+    ></app-qr-code-generator>
   `,
   styles: [`
     .settings-tab {
@@ -452,6 +495,42 @@ import { Site, OverlayPosition } from '../../../../core/models';
     .btn-secondary:hover {
       background: #e2e8f0;
     }
+
+    /* QR Code card */
+    .qr-preview-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .qr-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .qr-detail {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .qr-label {
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .qr-detail code {
+      background: #f1f5f9;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.8125rem;
+      color: #1e293b;
+    }
   `]
 })
 export class SiteSettingsTabComponent implements OnInit {
@@ -463,6 +542,7 @@ export class SiteSettingsTabComponent implements OnInit {
   // Auth
   clubName: string = '';
   remotePassword: string = '';
+  savingClubAuth: boolean = false;
 
   // Hotspot
   hotspotSsid: string = '';
@@ -488,6 +568,9 @@ export class SiteSettingsTabComponent implements OnInit {
   // Sync-agent
   updatingSyncAgent: boolean = false;
 
+  // QR Code
+  showQrCode: boolean = false;
+
   constructor(
     private sitesService: SitesService,
     private notificationService: NotificationService,
@@ -501,6 +584,62 @@ export class SiteSettingsTabComponent implements OnInit {
         this.overlayConfig = { ...this.overlayConfig, ...this.site.neoProContent.scoreOverlay };
       }
     }
+  }
+
+  saveClubAuth(): void {
+    if (!this.clubName && !this.remotePassword) {
+      this.notificationService.error('Veuillez renseigner au moins un champ');
+      return;
+    }
+
+    this.savingClubAuth = true;
+
+    // Build neoProContent with only non-empty fields
+    const neoProContent: { clubName?: string; remotePassword?: string } = {};
+    if (this.clubName) neoProContent.clubName = this.clubName;
+    if (this.remotePassword) neoProContent.remotePassword = this.remotePassword;
+
+    // Also update the site in the database if clubName changed
+    const updateDbAndDeploy = () => {
+      if (this.clubName) {
+        this.sitesService.updateSite(this.siteId, { club_name: this.clubName }).subscribe({
+          next: (updatedSite) => {
+            this.deployClubAuth(neoProContent);
+            this.siteUpdated.emit(updatedSite);
+          },
+          error: (error) => {
+            this.savingClubAuth = false;
+            const message = ErrorExtractor.getMessage(error);
+            this.notificationService.error(`Erreur: ${message}`);
+          }
+        });
+      } else {
+        this.deployClubAuth(neoProContent);
+      }
+    };
+
+    updateDbAndDeploy();
+  }
+
+  private deployClubAuth(neoProContent: { clubName?: string; remotePassword?: string }): void {
+    this.sitesService.sendCommand(this.siteId, 'update_config', {
+      neoProContent,
+      mode: 'merge'
+    }).subscribe({
+      next: (response: any) => {
+        this.savingClubAuth = false;
+        this.notificationService.success(
+          response.queued
+            ? '📥 Configuration mise en file d\'attente'
+            : 'Configuration déployée avec succès !'
+        );
+      },
+      error: (error) => {
+        this.savingClubAuth = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur déploiement: ${message}`);
+      }
+    });
   }
 
   updateHotspot(): void {
@@ -625,5 +764,18 @@ export class SiteSettingsTabComponent implements OnInit {
         this.notificationService.error(`Erreur: ${message}`);
       }
     });
+  }
+
+  getWifiSsid(): string {
+    // Generate SSID based on club name (format: NEOPRO-CLUBNAME)
+    const name = this.site?.club_name || this.site?.site_name || 'CLUB';
+    const sanitized = name
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^A-Z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .substring(0, 20);
+    return `NEOPRO-${sanitized}`;
   }
 }
