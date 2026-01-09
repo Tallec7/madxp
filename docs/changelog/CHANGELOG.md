@@ -1,3 +1,9 @@
+## [2.21.2](https://github.com/Tallec7/neopro/compare/v2.21.1...v2.21.2) (2026-01-09)
+
+### Bug Fixes
+
+- **sync-agent:** correct path concatenation in update-software.js ([d62bcfb](https://github.com/Tallec7/neopro/commit/d62bcfb5435da2ed746c51a0d3727c25f70e8410))
+
 ## [2.21.1](https://github.com/Tallec7/neopro/compare/v2.21.0...v2.21.1) (2026-01-09)
 
 ### Bug Fixes
