@@ -504,5 +504,5 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 
 ---
 
-**Dernière mise à jour** : 8 janvier 2026
-**Version** : 2.11.7
+**Dernière mise à jour** : 9 janvier 2026
+**Version** : 2.21.2
