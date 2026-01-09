@@ -1,3 +1,9 @@
+## [2.14.5](https://github.com/Tallec7/neopro/compare/v2.14.4...v2.14.5) (2026-01-09)
+
+### Bug Fixes
+
+- **remote:** sort search results alphabetically ([71dff26](https://github.com/Tallec7/neopro/commit/71dff2691733a3b6c95bbf2ce9ca19342cfdf4ff))
+
 ## [2.14.4](https://github.com/Tallec7/neopro/compare/v2.14.3...v2.14.4) (2026-01-08)
 
 ### Bug Fixes
