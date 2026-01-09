@@ -1,3 +1,9 @@
+## [2.18.1](https://github.com/Tallec7/neopro/compare/v2.18.0...v2.18.1) (2026-01-09)
+
+### Bug Fixes
+
+- **qr-code:** use real hotspot SSID and display neopro.local ([6c9d06e](https://github.com/Tallec7/neopro/commit/6c9d06e98feaeaa1970240f7fd51b4c752f49ca1))
+
 # [2.18.0](https://github.com/Tallec7/neopro/compare/v2.17.1...v2.18.0) (2026-01-09)
 
 ### Features
