@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.15.0 | **Dernière mise à jour**: 2026-01-08
+**Version**: 2.15.0 | **Dernière mise à jour**: 2026-01-09
 
 ---
 
@@ -1429,6 +1429,9 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
   - Ajout health check périodique (60s) qui vérifie la cohérence flag/socket
   - Auto-reconnexion si zombie détecté via `this.socket.connect()`
   - Migration : Mettre à jour `sync-agent/src/agent.js` sur les Pi existants (SCP)
+- **Tri alphabétique résultats de recherche (Remote)** : Les résultats de recherche sur `/remote` sont maintenant triés
+  - Utilisation de `sortByName()` avec `localeCompare` et `numeric: true`
+  - Migration : Aucune (mise à jour automatique via déploiement)
 
 ### v2.14.x (Janvier 2026)
 

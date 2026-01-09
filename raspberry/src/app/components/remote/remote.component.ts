@@ -490,9 +490,10 @@ export class RemoteComponent implements OnInit {
 
     this.isSearching = true;
     const query = this.searchQuery.toLowerCase().trim();
-    this.searchResults = this.getAllVideos().filter(video =>
+    const filtered = this.getAllVideos().filter(video =>
       video.name.toLowerCase().includes(query)
     );
+    this.searchResults = this.sortByName(filtered);
   }
 
   /**
