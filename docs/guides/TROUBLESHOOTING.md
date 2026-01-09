@@ -799,6 +799,41 @@ ssh pi@neopro.local "grep 'path.join(sourcePath' /home/pi/neopro/sync-agent/src/
 
 ---
 
+### Mise à jour OTA échoue avec "permission denied, unlink VERSION" (v2.21.3)
+
+**Symptôme** : La mise à jour depuis le dashboard échoue à 60% avec :
+
+```
+EACCES: permission denied, unlink '/home/pi/neopro/VERSION'
+```
+
+**Cause** : Le fichier `/home/pi/neopro/VERSION` appartient à `root` (créé lors d'une installation initiale avec sudo). Le sync-agent qui tourne en tant que `pi` ne peut pas le supprimer/écraser avec `fs.copy()`.
+
+**Diagnostic** :
+
+```bash
+ssh pi@neopro.local "ls -la /home/pi/neopro/VERSION"
+# Si ça affiche "root root" → c'est le problème
+```
+
+**Solution immédiate** (corriger les permissions) :
+
+```bash
+ssh pi@neopro.local "sudo chown pi:pi /home/pi/neopro/VERSION /home/pi/neopro/release.json 2>/dev/null; ls -la /home/pi/neopro/VERSION"
+```
+
+Puis relancer la mise à jour depuis le dashboard.
+
+**Solution définitive** (mettre à jour update-software.js) :
+
+Le fix en v2.21.3 utilise `sudo cp` et `sudo chown` pour écrire ces fichiers. Pour les Pi bloqués :
+
+```bash
+cat raspberry/sync-agent/src/commands/update-software.js | ssh pi@<IP_DU_PI> 'cat > /home/pi/neopro/sync-agent/src/commands/update-software.js && sudo systemctl restart neopro-sync-agent'
+```
+
+---
+
 ### Erreur EACCES permission denied sur configuration.backup.json
 
 **Symptôme** : Les logs du sync-agent affichent :
