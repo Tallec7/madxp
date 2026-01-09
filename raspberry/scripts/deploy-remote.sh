@@ -227,7 +227,19 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
             sudo cp /tmp/sync-agent-config.env.backup ${RASPBERRY_DIR}/sync-agent/config/.env
             rm /tmp/sync-agent-config.env.backup
         fi
-        echo 'Sync-agent installé (configuration préservée)'
+        # npm install pour sync-agent (CRITICAL - sans ça le service crash)
+        if [ -f ~/neopro-update/sync-agent/package.json ]; then
+            cd ${RASPBERRY_DIR}/sync-agent
+            if ! cmp -s ~/neopro-update/sync-agent/package.json ${RASPBERRY_DIR}/sync-agent/.package.json.last 2>/dev/null; then
+                sudo npm install --production 2>/dev/null || true
+                sudo cp package.json .package.json.last
+                echo 'Sync-agent installé (dépendances mises à jour)'
+            else
+                echo 'Sync-agent installé (dépendances inchangées)'
+            fi
+        else
+            echo 'Sync-agent installé (configuration préservée)'
+        fi
     fi
 
     # Installation admin panel
