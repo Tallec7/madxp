@@ -1,3 +1,9 @@
+# [2.15.0](https://github.com/Tallec7/neopro/compare/v2.14.7...v2.15.0) (2026-01-09)
+
+### Features
+
+- **data-retention:** add automatic cleanup for historical data ([5d57781](https://github.com/Tallec7/neopro/commit/5d57781511029f04c7a6252b579d09fcacafbb20))
+
 ## [2.14.7](https://github.com/Tallec7/neopro/compare/v2.14.6...v2.14.7) (2026-01-09)
 
 ### Bug Fixes
