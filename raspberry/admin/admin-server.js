@@ -2811,7 +2811,12 @@ app.post('/api/update', uploadPackage.single('package'), async (req, res) => {
     }
 
     // Installer les dépendances
-    await runCommand(`cd ${NEOPRO_DIR}/server && npm install --production`, 'Échec de l\'installation des dépendances');
+    await runCommand(`cd ${NEOPRO_DIR}/server && npm install --production`, 'Échec de l\'installation des dépendances server');
+
+    // npm install pour sync-agent (CRITICAL - sans ça le service crash)
+    if (hasSyncAgent) {
+      await runCommand(`cd ${NEOPRO_DIR}/sync-agent && npm install --production`, 'Échec de l\'installation des dépendances sync-agent');
+    }
 
     // Corriger les permissions (important après copie avec sudo)
     await execCommand(`sudo chown -R pi:pi ${NEOPRO_DIR}/webapp`);
