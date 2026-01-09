@@ -47,7 +47,8 @@ export type SortDirection = 'asc' | 'desc';
           <span class="stat">{{ filteredVideos.length }} vidéo(s)</span>
           <span class="stat on-pi" *ngIf="statsOnPi > 0">✅ {{ statsOnPi }}</span>
           <span class="stat to-deploy" *ngIf="statsToDeploy > 0">⏳ {{ statsToDeploy }}</span>
-          <span class="stat" *ngIf="totalSize > 0">{{ formatBytes(totalSize) }}</span>
+          <span class="stat" *ngIf="totalSize && totalSize > 0 && !isNaN(totalSize)">{{ formatBytes(totalSize) }}</span>
+          <span class="stat" *ngIf="totalDuration && totalDuration > 0">🕐 {{ formatDuration(totalDuration) }}</span>
         </div>
       </div>
 
@@ -91,13 +92,51 @@ export type SortDirection = 'asc' | 'desc';
           <option value="all">Toutes catégories</option>
           <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
         </select>
+        <button
+          class="btn-selection"
+          [class.active]="selectionMode"
+          (click)="toggleSelectionMode()"
+          title="Mode sélection multiple"
+        >
+          ☑️
+        </button>
+      </div>
+
+      <!-- Barre d'actions groupées -->
+      <div class="bulk-actions" *ngIf="selectionMode && selectedVideos.size > 0">
+        <span class="bulk-count">{{ 'videoLibrary.selectedCount' | translate: { count: selectedVideos.size } }}</span>
+        <button
+          class="btn btn-sm btn-primary"
+          (click)="onBulkDeploy()"
+          [disabled]="getSelectedToDeploy().length === 0"
+          [title]="'videoLibrary.deploySelectedVideos' | translate"
+        >
+          🚀 {{ 'common.deploy' | translate }} ({{ getSelectedToDeploy().length }})
+        </button>
+        <button
+          class="btn btn-sm btn-danger"
+          (click)="onBulkDelete()"
+          [disabled]="getSelectedToDelete().length === 0"
+          [title]="'videoLibrary.deleteSelectedVideos' | translate"
+        >
+          🗑️ {{ 'common.delete' | translate }} ({{ getSelectedToDelete().length }})
+        </button>
+        <button class="btn btn-sm btn-outline" (click)="selectedVideos.clear()">
+          {{ 'videoLibrary.deselect' | translate }}
+        </button>
       </div>
 
       <!-- En-tête de tri -->
       <div class="sort-header">
+        <span class="col-checkbox" *ngIf="selectionMode">
+          <input type="checkbox" [checked]="isAllSelected()" (change)="toggleSelectAll($event)" title="Tout sélectionner" />
+        </span>
         <span class="col-lock"></span>
         <button class="sort-btn col-name" [class.active]="sortField === 'filename'" (click)="toggleSort('filename')">
           Nom {{ getSortIcon('filename') }}
+        </button>
+        <button class="sort-btn col-category" [class.active]="sortField === 'category'" (click)="toggleSort('category')">
+          Catégorie {{ getSortIcon('category') }}
         </button>
         <button class="sort-btn col-duration" [class.active]="sortField === 'duration'" (click)="toggleSort('duration')">
           Durée {{ getSortIcon('duration') }}
@@ -118,15 +157,21 @@ export type SortDirection = 'asc' | 'desc';
         <div
           class="video-item"
           *ngFor="let video of filteredVideos"
-          [class.selected]="selectedPath === video.path"
+          [class.selected]="selectedPath === video.path || isSelected(video)"
           [class.neopro]="video.owner === 'neopro'"
           [class.to-deploy]="!video.isOnPi"
           (click)="selectVideo(video)"
         >
+          <span class="col-checkbox" *ngIf="selectionMode" (click)="$event.stopPropagation()">
+            <input type="checkbox" [checked]="isSelected(video)" (change)="toggleSelection(video, $event)" />
+          </span>
           <span class="col-lock">{{ video.owner === 'neopro' ? '🔒' : '' }}</span>
           <span class="col-name video-name" [title]="video.filename">
             {{ video.displayName }}
             <span class="video-subcat" *ngIf="video.subcategory">{{ video.subcategory }}</span>
+          </span>
+          <span class="col-category video-category" [title]="video.category || ''">
+            {{ video.category || '-' }}
           </span>
           <span class="col-duration video-duration">{{ video.duration ? formatDuration(video.duration) : '-' }}</span>
           <span class="col-size video-size">{{ formatBytes(video.size) }}</span>
@@ -172,13 +217,13 @@ export type SortDirection = 'asc' | 'desc';
             >
               🚀
             </button>
-            <span class="deploy-progress" *ngIf="isDeploying(video)" [title]="'Déploiement en cours...'">
+            <span class="deploy-progress" *ngIf="isDeploying(video)" [title]="'content.deploymentInProgress' | translate">
               {{ getDeployState(video)?.progress ?? 0 }}%
             </span>
             <button
               class="action-btn delete"
               (click)="onDelete(video, $event)"
-              title="Supprimer"
+              [title]="'common.delete' | translate"
               *ngIf="video.owner !== 'neopro'"
             >
               🗑️
@@ -236,6 +281,28 @@ export type SortDirection = 'asc' | 'desc';
             <span class="preview-status" [class.on-pi]="previewVideo.isOnPi" [class.pending]="!previewVideo.isOnPi">
               {{ previewVideo.isOnPi ? '✅ Sur le Pi' : '⏳ À déployer' }}
             </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Confirmation Modal -->
+      <div class="confirm-overlay" *ngIf="deleteConfirmVideo" (click)="cancelDelete()">
+        <div class="confirm-modal" (click)="$event.stopPropagation()">
+          <div class="confirm-header">
+            <span class="confirm-icon">⚠️</span>
+            <h4>{{ 'videoLibrary.confirmDeletion' | translate }}</h4>
+          </div>
+          <div class="confirm-content">
+            <p>{{ 'videoLibrary.confirmDeleteVideo' | translate }}</p>
+            <div class="confirm-video-info">
+              <span class="video-name">{{ deleteConfirmVideo.displayName }}</span>
+              <span class="video-meta">{{ formatBytes(deleteConfirmVideo.size) }}</span>
+            </div>
+            <p class="confirm-warning">{{ 'videoLibrary.deleteWarning' | translate }}</p>
+          </div>
+          <div class="confirm-actions">
+            <button class="btn btn-outline" (click)="cancelDelete()">{{ 'common.cancel' | translate }}</button>
+            <button class="btn btn-danger" (click)="confirmDelete()">🗑️ {{ 'common.delete' | translate }}</button>
           </div>
         </div>
       </div>
@@ -353,6 +420,91 @@ export type SortDirection = 'asc' | 'desc';
       gap: 0.5rem;
       margin-bottom: 0.5rem;
       flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn-selection {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-selection:hover {
+      background: #f1f5f9;
+      border-color: #2563eb;
+    }
+
+    .btn-selection.active {
+      background: #2563eb;
+      border-color: #2563eb;
+    }
+
+    .bulk-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+    }
+
+    .bulk-count {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #1e40af;
+      margin-right: auto;
+    }
+
+    .btn {
+      padding: 0.375rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #1d4ed8;
+    }
+
+    .btn-danger {
+      background: #dc2626;
+      color: white;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: #b91c1c;
+    }
+
+    .btn-outline {
+      background: white;
+      border-color: #e2e8f0;
+      color: #475569;
+    }
+
+    .btn-outline:hover {
+      background: #f1f5f9;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
     .search-input {
@@ -380,8 +532,10 @@ export type SortDirection = 'asc' | 'desc';
     }
 
     /* Grid columns - shared between header and items */
+    .col-checkbox { width: 28px; text-align: center; flex-shrink: 0; }
     .col-lock { width: 24px; text-align: center; flex-shrink: 0; }
     .col-name { flex: 1; min-width: 0; text-align: left; }
+    .col-category { width: 90px; text-align: left; flex-shrink: 0; }
     .col-duration { width: 55px; text-align: right; flex-shrink: 0; }
     .col-size { width: 65px; text-align: right; flex-shrink: 0; }
     .col-date { width: 70px; text-align: right; flex-shrink: 0; }
@@ -494,6 +648,14 @@ export type SortDirection = 'asc' | 'desc';
       font-size: 0.65rem;
       color: #94a3b8;
       font-weight: 400;
+    }
+
+    .video-category {
+      font-size: 0.7rem;
+      color: #64748b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .video-duration {
@@ -788,6 +950,93 @@ export type SortDirection = 'asc' | 'desc';
       margin-top: 0.5rem;
       color: #94a3b8;
     }
+
+    /* Confirmation Modal */
+    .confirm-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+    }
+
+    .confirm-modal {
+      background: white;
+      border-radius: 12px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .confirm-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .confirm-header h4 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .confirm-icon {
+      font-size: 1.5rem;
+    }
+
+    .confirm-content {
+      padding: 1rem 1.5rem;
+    }
+
+    .confirm-content p {
+      margin: 0 0 0.75rem;
+      color: #475569;
+    }
+
+    .confirm-video-info {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .confirm-video-info .video-name {
+      font-weight: 500;
+      color: #1e293b;
+      font-size: 0.875rem;
+    }
+
+    .confirm-video-info .video-meta {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .confirm-warning {
+      font-size: 0.75rem;
+      color: #dc2626;
+      font-style: italic;
+    }
+
+    .confirm-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      padding: 1rem 1.5rem;
+      border-top: 1px solid #e2e8f0;
+      background: #f8fafc;
+      border-radius: 0 0 12px 12px;
+    }
   `]
 })
 export class VideoLibraryComponent implements OnChanges {
@@ -801,14 +1050,20 @@ export class VideoLibraryComponent implements OnChanges {
   @Output() videoPreview = new EventEmitter<VideoItem>();
   @Output() videoDeploy = new EventEmitter<VideoItem>();
   @Output() videoDelete = new EventEmitter<VideoItem>();
+  @Output() bulkDeploy = new EventEmitter<VideoItem[]>();
+  @Output() bulkDelete = new EventEmitter<VideoItem[]>();
 
   filteredVideos: VideoItem[] = [];
   allVideos: VideoItem[] = [];
   categories: string[] = [];
   totalSize: number = 0;
+  totalDuration: number = 0;
   statsOnPi: number = 0;
   statsToDeploy: number = 0;
   storagePercent: number = 0;
+
+  // Expose isNaN to template
+  isNaN = isNaN;
 
   searchQuery: string = '';
   statusFilter: 'all' | 'on_pi' | 'to_deploy' = 'all';
@@ -817,6 +1072,13 @@ export class VideoLibraryComponent implements OnChanges {
 
   sortField: SortField = 'filename';
   sortDirection: SortDirection = 'asc';
+
+  // Selection mode
+  selectionMode: boolean = false;
+  selectedVideos: Set<string> = new Set(); // Set of video paths
+
+  // Delete confirmation
+  deleteConfirmVideo: VideoItem | null = null;
 
   previewVideo: VideoItem | null = null;
 
@@ -831,7 +1093,7 @@ export class VideoLibraryComponent implements OnChanges {
   }
 
   private processVideos(): void {
-    // Build maps for comparison
+    // Build maps for comparison - using multiple keys for robust matching
     const localByFilename = new Map(
       this.videos.map(v => [v.filename.toLowerCase(), v])
     );
@@ -839,17 +1101,37 @@ export class VideoLibraryComponent implements OnChanges {
       this.videos.filter(v => v.checksum).map(v => [v.checksum!, v])
     );
 
-    const cloudMapped: VideoItem[] = this.cloudVideos.map(cloud => {
+    // Track which cloud videos we've already added to avoid duplicates
+    const seenCloudIds = new Set<string>();
+    const seenFilenames = new Set<string>();
+
+    const cloudMapped: VideoItem[] = [];
+
+    for (const cloud of this.cloudVideos) {
+      // Skip if we've already processed a video with this ID
+      if (seenCloudIds.has(cloud.id)) {
+        continue;
+      }
+
+      // Skip if we've already processed a video with this filename (case-insensitive)
+      const filenameLower = cloud.filename.toLowerCase();
+      if (seenFilenames.has(filenameLower)) {
+        continue;
+      }
+
+      seenCloudIds.add(cloud.id);
+      seenFilenames.add(filenameLower);
+
       // Try to find matching local video by checksum first, then by filename
       let isOnPi = false;
       if (cloud.checksum && localByChecksum.has(cloud.checksum)) {
         isOnPi = true;
-      } else if (localByFilename.has(cloud.filename.toLowerCase())) {
+      } else if (localByFilename.has(filenameLower)) {
         // Fallback to filename comparison
         isOnPi = true;
       }
 
-      return {
+      cloudMapped.push({
         id: cloud.id,
         path: cloud.url,
         filename: cloud.filename,
@@ -862,15 +1144,12 @@ export class VideoLibraryComponent implements OnChanges {
         owner: this.detectOwner(cloud.filename),
         source: 'cloud' as const,
         lastModified: cloud.updatedAt?.toString()
-      };
-    });
+      });
+    }
 
-    const cloudFilenames = new Set(
-      this.cloudVideos.map(c => c.filename.toLowerCase())
-    );
-
+    // Local videos not in cloud list
     const localOnlyMapped: VideoItem[] = this.videos
-      .filter(local => !cloudFilenames.has(local.filename.toLowerCase()))
+      .filter(local => !seenFilenames.has(local.filename.toLowerCase()))
       .map(local => ({
         id: null,
         path: local.path,
@@ -879,7 +1158,7 @@ export class VideoLibraryComponent implements OnChanges {
         category: local.category,
         subcategory: local.subcategory,
         size: local.size,
-        duration: null,
+        duration: local.duration || null, // Use duration from Pi if available
         isOnPi: true,
         owner: this.detectOwner(local.path),
         source: 'local' as const,
@@ -895,6 +1174,7 @@ export class VideoLibraryComponent implements OnChanges {
     this.categories = Array.from(cats).sort();
 
     this.totalSize = this.allVideos.reduce((sum, v) => sum + (v.size || 0), 0);
+    this.totalDuration = this.allVideos.reduce((sum, v) => sum + (v.duration || 0), 0);
     this.statsOnPi = this.allVideos.filter(v => v.isOnPi).length;
     this.statsToDeploy = this.allVideos.filter(v => !v.isOnPi).length;
   }
@@ -996,7 +1276,81 @@ export class VideoLibraryComponent implements OnChanges {
 
   onDelete(video: VideoItem, event: Event): void {
     event.stopPropagation();
-    this.videoDelete.emit(video);
+    this.deleteConfirmVideo = video;
+  }
+
+  confirmDelete(): void {
+    if (this.deleteConfirmVideo) {
+      this.videoDelete.emit(this.deleteConfirmVideo);
+      this.deleteConfirmVideo = null;
+    }
+  }
+
+  cancelDelete(): void {
+    this.deleteConfirmVideo = null;
+  }
+
+  // Selection methods
+  toggleSelectionMode(): void {
+    this.selectionMode = !this.selectionMode;
+    if (!this.selectionMode) {
+      this.selectedVideos.clear();
+    }
+  }
+
+  isSelected(video: VideoItem): boolean {
+    return this.selectedVideos.has(video.path);
+  }
+
+  toggleSelection(video: VideoItem, event: Event): void {
+    event.stopPropagation();
+    if (this.selectedVideos.has(video.path)) {
+      this.selectedVideos.delete(video.path);
+    } else {
+      this.selectedVideos.add(video.path);
+    }
+  }
+
+  isAllSelected(): boolean {
+    return this.filteredVideos.length > 0 &&
+           this.filteredVideos.every(v => this.selectedVideos.has(v.path));
+  }
+
+  toggleSelectAll(event: Event): void {
+    const checkbox = event.target as HTMLInputElement;
+    if (checkbox.checked) {
+      this.filteredVideos.forEach(v => this.selectedVideos.add(v.path));
+    } else {
+      this.filteredVideos.forEach(v => this.selectedVideos.delete(v.path));
+    }
+  }
+
+  getSelectedVideos(): VideoItem[] {
+    return this.filteredVideos.filter(v => this.selectedVideos.has(v.path));
+  }
+
+  getSelectedToDeploy(): VideoItem[] {
+    return this.getSelectedVideos().filter(v => !v.isOnPi && v.source === 'cloud');
+  }
+
+  getSelectedToDelete(): VideoItem[] {
+    return this.getSelectedVideos().filter(v => v.owner !== 'neopro');
+  }
+
+  onBulkDeploy(): void {
+    const toDeploy = this.getSelectedToDeploy();
+    if (toDeploy.length > 0) {
+      this.bulkDeploy.emit(toDeploy);
+      this.selectedVideos.clear();
+    }
+  }
+
+  onBulkDelete(): void {
+    const toDelete = this.getSelectedToDelete();
+    if (toDelete.length > 0) {
+      this.bulkDelete.emit(toDelete);
+      this.selectedVideos.clear();
+    }
   }
 
   formatBytes(bytes: number | null | undefined): string {
@@ -1017,9 +1371,13 @@ export class VideoLibraryComponent implements OnChanges {
   }
 
   formatDuration(seconds: number): string {
-    if (!seconds || seconds <= 0) return '-';
-    const mins = Math.floor(seconds / 60);
+    if (!seconds || seconds <= 0 || !Number.isFinite(seconds)) return '-';
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
+    if (hours > 0) {
+      return `${hours}h${mins.toString().padStart(2, '0')}`;
+    }
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 

@@ -1443,6 +1443,46 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 
 ## Historique Breaking Changes
 
+### v2.22.x (Janvier 2026)
+
+- **Refactoring Bibliothèque Vidéo** : Amélioration majeure du composant VideoLibrary
+  - **Fix doublons** : Déduplication robuste par ID + nom de fichier (case-insensitive)
+    - Ajout de Sets `seenCloudIds` et `seenFilenames` pour tracker les vidéos traitées
+    - Évite les vidéos en double quand le même fichier est dans le cloud et sur le Pi
+  - **Fix "NaN undefined"** : Protections contre les valeurs invalides
+    - Ajout de `!isNaN(totalSize)` dans le template
+    - `formatDuration()` vérifie `Number.isFinite(seconds)`
+    - Exposition de `isNaN` au template Angular
+  - **Colonne catégorie** : Nouvelle colonne triable dans la liste
+    - Style `.col-category` avec ellipsis
+    - Tri par catégorie supporté
+  - **Confirmation suppression** : Modal avant suppression
+    - Propriété `deleteConfirmVideo` pour stocker la vidéo à supprimer
+    - Méthodes `confirmDelete()` et `cancelDelete()`
+    - Styles CSS `.confirm-overlay` et `.confirm-modal`
+  - **Sélection multiple** : Actions groupées sur plusieurs vidéos
+    - Bouton `☑️` pour activer le mode sélection
+    - Checkboxes sur chaque ligne + header
+    - Barre d'actions : "🚀 Déployer (N)" et "🗑️ Supprimer (N)"
+    - Nouveaux outputs : `bulkDeploy` et `bulkDelete`
+  - **Durée totale** : Affichage du total des durées dans le header
+    - Format `Xh00` si > 1 heure
+  - **Fichiers modifiés** :
+    - `central-dashboard/src/app/features/sites/components/video-library/video-library.component.ts`
+    - `central-dashboard/src/app/core/models/index.ts` (ajout `duration` à `LocalVideo`)
+  - **Migration** : Aucune (amélioration UI)
+
+- **Extraction durée vidéo via ffprobe** : Le Pi extrait maintenant la durée des vidéos
+  - **Fonctionnement** : `ffprobe` extrait la durée en secondes, stockée dans un cache `.video-durations.json`
+  - **Vérification ffprobe** : Au démarrage, le watcher vérifie si `ffprobe` est disponible
+  - **Cache intelligent** : Même logique que les checksums (invalidé si taille/mtime change)
+  - **Extraction asynchrone** : Queue de traitement avec pause 200ms entre fichiers
+  - **Données remontées** : La durée est incluse dans `sync_local_state` → `local_config_mirror._localVideos`
+  - **Fichiers modifiés** :
+    - `raspberry/sync-agent/src/watchers/video-watcher.js`
+  - **Prérequis** : `ffprobe` doit être installé sur le Pi (`sudo apt install ffmpeg`)
+  - **Migration** : Déployer le nouveau sync-agent, les durées seront extraites progressivement
+
 ### v2.21.x (Janvier 2026)
 
 - **Fix déploiement mot de passe télécommande /remote** : Le bouton "Déployer" dans l'onglet Paramètres ne mettait pas à jour le mot de passe sur le Pi
