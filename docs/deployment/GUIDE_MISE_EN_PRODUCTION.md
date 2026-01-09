@@ -2,7 +2,11 @@
 
 Guide complet et détaillé pour déployer **le serveur central** NeoPro en production. Ce guide est conçu pour les débutants : chaque étape est expliquée en détail.
 
-> 📖 **Note :** Ce guide couvre uniquement le déploiement du **serveur central** (Supabase, Render, Redis).
+> 📖 **Note :** Ce guide couvre le déploiement sur **Render.com** (utilisé pour le serveur de démo `server-render/`).
+>
+> **Pour la production**, le serveur central (`central-server/`) est hébergé sur **Railway** :
+>
+> - Voir **[DEPLOY_CENTRAL_SERVER.md](DEPLOY_CENTRAL_SERVER.md)** pour le déploiement Railway (recommandé)
 >
 > Pour l'installation des **boîtiers Raspberry Pi** dans les clubs, consultez :
 >

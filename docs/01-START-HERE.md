@@ -81,7 +81,7 @@ Puis selon vos besoins :
 
 → **[DEPLOY_CENTRAL_SERVER.md](deployment/DEPLOY_CENTRAL_SERVER.md)**
 
-- Déploiement Render.com
+- Déploiement Railway
 - Configuration Supabase
 - Variables d'environnement
 

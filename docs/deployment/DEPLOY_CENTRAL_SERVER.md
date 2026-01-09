@@ -85,20 +85,15 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ### Étape 5 : Initialiser la base de données
 
 ```bash
-# Dans Render Dashboard → Database → neopro-central-db → Shell
-# OU en local avec psql
+# En local avec psql ou via Supabase SQL Editor
 
-# Récupérer l'External Database URL depuis Render
+# Récupérer DATABASE_URL depuis Railway ou Supabase
 # Format: postgresql://user:password@host:port/dbname
 
 psql "postgresql://user:password@host:port/dbname" -f central-server/src/scripts/init-db.sql
 ```
 
-Ou directement dans le Shell Render :
-
-```sql
--- Copier/coller le contenu de central-server/src/scripts/init-db.sql
-```
+Ou via Supabase SQL Editor (Dashboard → SQL Editor → New Query).
 
 ### Étape 6 : Vérifier le déploiement
 
