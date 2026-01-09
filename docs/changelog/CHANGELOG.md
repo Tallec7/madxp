@@ -1,3 +1,9 @@
+# [2.16.0](https://github.com/Tallec7/neopro/compare/v2.15.4...v2.16.0) (2026-01-09)
+
+### Features
+
+- **build:** include node_modules in deploy archive ([9182ab8](https://github.com/Tallec7/neopro/commit/9182ab8762ab38a3cce0a45cd40b2b707836949a))
+
 ## [2.15.4](https://github.com/Tallec7/neopro/compare/v2.15.3...v2.15.4) (2026-01-09)
 
 ### Bug Fixes
