@@ -1,3 +1,9 @@
+## [2.14.6](https://github.com/Tallec7/neopro/compare/v2.14.5...v2.14.6) (2026-01-09)
+
+### Bug Fixes
+
+- **sync-agent:** align update-software.js with deploy-remote.sh ([bf60097](https://github.com/Tallec7/neopro/commit/bf600977e44724fa8a2ad705155351c353e358c8))
+
 ## [2.14.5](https://github.com/Tallec7/neopro/compare/v2.14.4...v2.14.5) (2026-01-09)
 
 ### Bug Fixes
