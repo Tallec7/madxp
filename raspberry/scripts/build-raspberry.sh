@@ -218,15 +218,33 @@ rsync -a --exclude='*.md' raspberry/server/ ${DEPLOY_DIR}/server/
 
 # Copier le sync-agent
 if [ -d "raspberry/sync-agent" ]; then
-    rsync -a --exclude='*.md' raspberry/sync-agent/ ${DEPLOY_DIR}/sync-agent/
-    print_success "Sync-agent copié"
+    rsync -a --exclude='*.md' --exclude='node_modules' raspberry/sync-agent/ ${DEPLOY_DIR}/sync-agent/
+
+    # Installer les dépendances du sync-agent pour les inclure dans l'archive
+    # Cela évite de devoir faire npm install sur chaque Pi après déploiement
+    print_step "Installation des dépendances sync-agent..."
+    cd ${DEPLOY_DIR}/sync-agent
+    npm install --production --silent 2>/dev/null || npm install --production
+    cd - > /dev/null
+
+    print_success "Sync-agent copié (avec node_modules)"
 fi
 
 # Copier l'admin panel
 if [ -d "raspberry/admin" ]; then
     mkdir -p ${DEPLOY_DIR}/admin
-    rsync -a --exclude='*.md' raspberry/admin/ ${DEPLOY_DIR}/admin/
-    print_success "Admin panel copié"
+    rsync -a --exclude='*.md' --exclude='node_modules' raspberry/admin/ ${DEPLOY_DIR}/admin/
+
+    # Installer les dépendances de l'admin panel
+    if [ -f "${DEPLOY_DIR}/admin/package.json" ]; then
+        print_step "Installation des dépendances admin..."
+        cd ${DEPLOY_DIR}/admin
+        npm install --production --silent 2>/dev/null || npm install --production
+        cd - > /dev/null
+        print_success "Admin panel copié (avec node_modules)"
+    else
+        print_success "Admin panel copié"
+    fi
 fi
 
 # Copier les scripts nécessaires sur le Pi (utilisés par l'admin et systemd)
