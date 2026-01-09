@@ -320,7 +320,14 @@
     "deployConfig": "Desplegar configuración"
   },
   "videoLibrary": {
-    "deployToPi": "Desplegar al Pi"
+    "deployToPi": "Desplegar al Pi",
+    "deploySelectedVideos": "Desplegar vídeos seleccionados",
+    "deleteSelectedVideos": "Eliminar vídeos seleccionados",
+    "confirmDeleteVideo": "¿Está seguro de que desea eliminar este vídeo?",
+    "deleteWarning": "Esta acción es irreversible.",
+    "selectedCount": "{{count}} seleccionado(s)",
+    "deselect": "Deseleccionar",
+    "confirmDeletion": "Confirmar eliminación"
   },
   "debug": {
     "playing": "Reproduciendo...",

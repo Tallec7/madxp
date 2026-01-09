@@ -8,13 +8,19 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { exec } = require('child_process');
+const { promisify } = require('util');
+const execAsync = promisify(exec);
 const logger = require('../logger');
 
 // Extensions vidéo supportées
 const VIDEO_EXTENSIONS = ['.mp4', '.mkv', '.avi', '.mov', '.webm', '.m4v'];
 
-// Cache file for checksums
+// Cache file for checksums and duration
 const CHECKSUM_CACHE_FILE = '.video-checksums.json';
+
+// Duration cache (separate for faster lookups)
+const DURATION_CACHE_FILE = '.video-durations.json';
 
 class VideoWatcher {
   constructor(videosPath, onChange) {
@@ -28,13 +34,17 @@ class VideoWatcher {
     this.checksumCache = new Map(); // filename -> { checksum, size, mtime }
     this.checksumQueue = []; // Files pending checksum calculation
     this.isCalculatingChecksums = false;
+    this.durationCache = new Map(); // filename -> { duration, size, mtime }
+    this.durationQueue = []; // Files pending duration extraction
+    this.isExtractingDurations = false;
+    this.ffprobeAvailable = null; // Will be checked on start
   }
 
   /**
    * Démarre la surveillance du dossier vidéos
    * Utilise le polling sur Linux car fs.watch recursive n'est pas supporté
    */
-  start() {
+  async start() {
     if (this.watchers.length > 0 || this.pollInterval) {
       logger.warn('[video-watcher] Already watching videos directory');
       return;
@@ -47,15 +57,20 @@ class VideoWatcher {
         fs.mkdirSync(this.videosPath, { recursive: true });
       }
 
-      // Charger le cache des checksums
+      // Charger les caches (checksums et durées)
       this.loadChecksumCache();
+      this.loadDurationCache();
+
+      // Vérifier si ffprobe est disponible
+      await this.checkFfprobeAvailable();
 
       // Initialiser la liste des vidéos
       const initialVideos = this.scanVideos();
       this.lastVideoList = this.hashVideoList(initialVideos);
 
-      // Lancer le calcul des checksums en background
+      // Lancer le calcul des checksums et durées en background
       this.processChecksumQueue();
+      this.processDurationQueue();
 
       // Sur Linux, fs.watch avec recursive: true n'est pas supporté
       // On utilise un polling périodique à la place (plus fiable sur Raspberry Pi)
@@ -141,6 +156,162 @@ class VideoWatcher {
       logger.debug('[video-watcher] Saved checksum cache', { entries: this.checksumCache.size });
     } catch (error) {
       logger.warn('[video-watcher] Could not save checksum cache:', error.message);
+    }
+  }
+
+  /**
+   * Charge le cache des durées depuis le disque
+   */
+  loadDurationCache() {
+    try {
+      const cachePath = path.join(this.videosPath, DURATION_CACHE_FILE);
+      if (fs.existsSync(cachePath)) {
+        const data = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+        this.durationCache = new Map(Object.entries(data));
+        logger.debug('[video-watcher] Loaded duration cache', { entries: this.durationCache.size });
+      }
+    } catch (error) {
+      logger.warn('[video-watcher] Could not load duration cache:', error.message);
+      this.durationCache = new Map();
+    }
+  }
+
+  /**
+   * Sauvegarde le cache des durées sur le disque
+   */
+  saveDurationCache() {
+    try {
+      const cachePath = path.join(this.videosPath, DURATION_CACHE_FILE);
+      const data = Object.fromEntries(this.durationCache);
+      fs.writeFileSync(cachePath, JSON.stringify(data, null, 2));
+      logger.debug('[video-watcher] Saved duration cache', { entries: this.durationCache.size });
+    } catch (error) {
+      logger.warn('[video-watcher] Could not save duration cache:', error.message);
+    }
+  }
+
+  /**
+   * Vérifie si ffprobe est disponible sur le système
+   */
+  async checkFfprobeAvailable() {
+    try {
+      await execAsync('ffprobe -version');
+      this.ffprobeAvailable = true;
+      logger.info('[video-watcher] ffprobe is available, video durations will be extracted');
+    } catch {
+      this.ffprobeAvailable = false;
+      logger.warn('[video-watcher] ffprobe not available, video durations will not be extracted');
+    }
+  }
+
+  /**
+   * Extrait la durée d'une vidéo via ffprobe
+   * @param {string} filePath Chemin du fichier vidéo
+   * @returns {Promise<number|null>} Durée en secondes ou null si erreur
+   */
+  async extractDuration(filePath) {
+    if (!this.ffprobeAvailable) {
+      return null;
+    }
+
+    try {
+      const { stdout } = await execAsync(
+        `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${filePath}"`,
+        { timeout: 30000 } // 30s timeout
+      );
+      const duration = parseFloat(stdout.trim());
+      if (isNaN(duration) || duration <= 0) {
+        return null;
+      }
+      return Math.round(duration); // Round to integer seconds
+    } catch (error) {
+      logger.debug('[video-watcher] Could not extract duration', { file: path.basename(filePath), error: error.message });
+      return null;
+    }
+  }
+
+  /**
+   * Obtient la durée d'un fichier (depuis cache ou extraction)
+   * @param {string} fullPath Chemin complet du fichier
+   * @param {object} stat Stats du fichier
+   * @returns {number|null} Durée en secondes ou null si en cours d'extraction
+   */
+  getDurationForFile(fullPath, stat) {
+    const cacheKey = fullPath;
+    const cached = this.durationCache.get(cacheKey);
+
+    // Vérifier si le cache est valide (même taille et mtime)
+    if (cached && cached.size === stat.size && cached.mtime === stat.mtime.toISOString()) {
+      return cached.duration;
+    }
+
+    // Ajouter à la queue d'extraction si pas déjà présent et ffprobe disponible
+    if (this.ffprobeAvailable && !this.durationQueue.find((q) => q.path === fullPath)) {
+      this.durationQueue.push({ path: fullPath, stat });
+      // Lancer le processing si pas déjà en cours
+      if (!this.isExtractingDurations) {
+        setImmediate(() => this.processDurationQueue());
+      }
+    }
+
+    return null; // Sera extrait en background
+  }
+
+  /**
+   * Traite la queue des durées à extraire
+   */
+  async processDurationQueue() {
+    if (this.isExtractingDurations || this.durationQueue.length === 0) {
+      return;
+    }
+
+    this.isExtractingDurations = true;
+    let needsSync = false;
+
+    while (this.durationQueue.length > 0) {
+      const item = this.durationQueue.shift();
+
+      try {
+        // Vérifier que le fichier existe encore
+        if (!fs.existsSync(item.path)) {
+          continue;
+        }
+
+        const duration = await this.extractDuration(item.path);
+
+        if (duration !== null) {
+          this.durationCache.set(item.path, {
+            duration,
+            size: item.stat.size,
+            mtime: item.stat.mtime.toISOString(),
+          });
+
+          needsSync = true;
+          logger.debug('[video-watcher] Extracted duration', {
+            file: path.basename(item.path),
+            duration: `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`,
+          });
+        }
+
+        // Petite pause entre les fichiers pour ne pas surcharger le CPU
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      } catch (error) {
+        logger.warn('[video-watcher] Error extracting duration', {
+          file: item.path,
+          error: error.message,
+        });
+      }
+    }
+
+    this.isExtractingDurations = false;
+
+    // Sauvegarder le cache et notifier si des durées ont été extraites
+    if (needsSync) {
+      this.saveDurationCache();
+      // Notifier le changement pour que les nouvelles durées soient envoyées
+      if (this.onChange) {
+        await this.onChange();
+      }
     }
   }
 
@@ -380,12 +551,16 @@ class VideoWatcher {
           // Obtenir le checksum (depuis cache ou null si en cours de calcul)
           const checksum = this.getChecksumForFile(fullPath, stat);
 
+          // Obtenir la durée (depuis cache ou null si en cours d'extraction)
+          const duration = this.getDurationForFile(fullPath, stat);
+
           videos.push({
             filename: entry.name,
             path: `videos/${entryRelativePath}`,
             category,
             subcategory,
             size: stat.size,
+            duration, // Durée en secondes (ou null si pas encore extraite)
             lastModified: stat.mtime.toISOString(),
             checksum,
           });

@@ -159,6 +159,7 @@ export interface LocalVideo {
   category: string | null;
   subcategory: string | null;
   size: number;
+  duration: number | null; // Durée en secondes (extraite via ffprobe sur le Pi)
   lastModified: string;
   checksum: string | null;
 }
