@@ -207,7 +207,22 @@
     "releaseDate": "Release date",
     "deploy": "Deploy",
     "rollback": "Rollback",
-    "canary": "Canary deployment"
+    "canary": "Canary deployment",
+    "cancelUpload": "Cancel upload",
+    "uploading": "Uploading...",
+    "processing": "Processing...",
+    "complete": "Complete!",
+    "createVersion": "Create",
+    "newVersion": "New version",
+    "versionNumber": "Version number",
+    "shortDescription": "Short description",
+    "releaseNotes": "Release notes",
+    "updatePackage": "Update package",
+    "criticalUpdate": "Critical update",
+    "criticalUpdateDesc": "Mark this version as priority",
+    "versionPlaceholder": "Ex: 2.1.0",
+    "descriptionPlaceholder": "Ex: Bug fixes and improvements",
+    "notesPlaceholder": "Details of changes..."
   },
   "analytics": {
     "title": "Analytics",

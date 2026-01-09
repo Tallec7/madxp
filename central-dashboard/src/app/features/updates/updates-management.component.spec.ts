@@ -65,11 +65,12 @@ describe('UpdatesManagementComponent', () => {
   ];
 
   beforeEach(async () => {
-    const apiServiceMock = jasmine.createSpyObj('ApiService', ['get', 'post', 'delete', 'upload']);
+    const apiServiceMock = jasmine.createSpyObj('ApiService', ['get', 'post', 'delete', 'upload', 'uploadWithProgress']);
     apiServiceMock.get.and.returnValue(of([]));
     apiServiceMock.post.and.returnValue(of({}));
     apiServiceMock.delete.and.returnValue(of({}));
     apiServiceMock.upload.and.returnValue(of({}));
+    apiServiceMock.uploadWithProgress.and.returnValue(of({ status: 'complete', progress: 100, response: {} }));
 
     const sitesServiceMock = jasmine.createSpyObj('SitesService', ['loadSites']);
     sitesServiceMock.loadSites.and.returnValue(of({ sites: mockSites, total: 3, page: 1, totalPages: 1 }));
@@ -237,28 +238,47 @@ describe('UpdatesManagementComponent', () => {
 
       component.createUpdate();
 
-      expect(apiService.upload).not.toHaveBeenCalled();
+      expect(apiService.uploadWithProgress).not.toHaveBeenCalled();
     });
 
     it('should upload update and close modal on success', fakeAsync(() => {
       const mockResponse = { id: 'u3', version: '2.0.0', description: 'Test' };
-      apiService.upload.and.returnValue(of(mockResponse));
+      apiService.uploadWithProgress.and.returnValue(of({
+        status: 'complete' as const,
+        progress: 100,
+        response: mockResponse
+      }));
 
       component.createUpdate();
       tick();
 
-      expect(apiService.upload).toHaveBeenCalledWith('/updates', jasmine.any(FormData));
+      expect(apiService.uploadWithProgress).toHaveBeenCalledWith('/updates', jasmine.any(FormData), jasmine.any(Object));
       expect(component.showCreateModal).toBe(false);
       expect(component.updates[0]).toEqual(jasmine.objectContaining({ id: 'u3', version: '2.0.0' }));
     }));
 
     it('should show error on failure', fakeAsync(() => {
-      apiService.upload.and.returnValue(throwError(() => ({ error: { error: 'Upload failed' } })));
+      apiService.uploadWithProgress.and.returnValue(throwError(() => ({ error: { error: 'Upload failed' } })));
 
       component.createUpdate();
       tick();
 
       expect(notificationService.error).toHaveBeenCalled();
+    }));
+
+    it('should track upload progress', fakeAsync(() => {
+      // Only emit uploading status (not complete) to verify progress tracking
+      apiService.uploadWithProgress.and.returnValue(of(
+        { status: 'uploading' as const, progress: 50, loaded: 25000000, total: 50000000 }
+      ));
+
+      component.createUpdate();
+      tick();
+
+      // Upload progress should reflect the uploading state
+      expect(component.isUploading).toBe(true);
+      expect(component.uploadProgress?.status).toBe('uploading');
+      expect(component.uploadProgress?.progress).toBe(50);
     }));
   });
 
