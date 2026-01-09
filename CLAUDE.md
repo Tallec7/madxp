@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.15.1 | **Dernière mise à jour**: 2026-01-09
+**Version**: 2.15.4 | **Dernière mise à jour**: 2026-01-09
 
 ---
 
@@ -108,7 +108,7 @@ neopro/
 │   ├── sync-agent/           # Synchronisation avec le cloud
 │   └── scripts/              # setup-new-club.sh, diagnose-pi.sh, etc.
 │
-├── server-render/            # Socket.IO cloud (Render.com)
+├── server-render/            # Socket.IO cloud (Render.com - démo uniquement)
 ├── e2e/                      # Tests Playwright
 └── docs/                     # 180+ fichiers de documentation
 ```
@@ -1065,20 +1065,17 @@ jest.spyOn(deploymentService, 'startDeployment').mockResolvedValue({});
 
 ## Déploiement Production
 
-### Central Server (Render.com)
+### Central Server (Railway)
 
-```yaml
-# render.yaml
-services:
-  - type: web
-    name: neopro-central
-    env: node
-    buildCommand: cd central-server && npm install && npm run build
-    startCommand: cd central-server && npm start
-    healthCheckPath: /health
-    envVars:
-      - key: NODE_ENV
-        value: production
+Railway déploie automatiquement depuis le repo GitHub. Configuration via variables d'environnement dans le dashboard Railway.
+
+```bash
+# Build & Start (configuré dans Railway)
+cd central-server && npm install && npm run build
+cd central-server && npm start
+
+# Health check endpoint
+GET /health
 ```
 
 ### Checklist avant deploy
@@ -1459,6 +1456,26 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 
 ### v2.15.x (Janvier 2026)
 
+- **Build raspberry robuste avec vérification d'intégrité (v2.15.4)** : Le script `build-raspberry.sh` vérifie maintenant tous les fichiers critiques avant de créer l'archive
+  - Vérification de 15+ fichiers critiques sync-agent (agent.js, commands/, utils/, watchers/, services/)
+  - Vérification des dépendances npm critiques (socket.io-client, axios, fs-extra, winston)
+  - Vérification des fichiers admin (admin-server.js, package.json, node_modules/)
+  - Vérification webapp (index.html) et server (server.js)
+  - **Le build échoue** si un fichier critique manque → évite les déploiements corrompus
+  - Affichage du résumé : nombre de fichiers, dossiers, taille totale
+  - Migration : Aucune (amélioration du workflow de build)
+- **Synchronisation automatique des versions sous-packages** : Les versions de `raspberry/admin/`, `raspberry/sync-agent/`, `raspberry/server/` sont maintenant synchronisées automatiquement avec la version principale lors du build
+  - Fonction `sync_subpackage_versions()` dans `build-raspberry.sh`
+  - Évite les problèmes de version incohérente entre packages
+  - Migration : Aucune (amélioration du workflow de build)
+- **node_modules inclus dans l'archive de déploiement** : Plus besoin de `npm install` sur le Pi après déploiement
+  - `npm install --production` exécuté pendant le build pour sync-agent et admin
+  - Les dépendances sont incluses dans l'archive tar.gz
+  - Évite les erreurs `MODULE_NOT_FOUND` après déploiement
+  - Migration : Aucune (amélioration transparente)
+- **npm install dans update-software.js** : En cas de déploiement via le dashboard central, `npm install --production` est maintenant exécuté pour sync-agent
+  - Fallback si les node_modules ne sont pas dans l'archive
+  - Migration : Mettre à jour `update-software.js` sur les Pi existants
 - **Fix update_software aligné sur deploy-remote.sh (v2.15.1)** : Correction critique du déploiement via central/admin
   - **Bug** : `update-software.js` utilisait `tar -xzf` direct dans `/home/pi/neopro/` au lieu d'extraire dans un dossier temporaire puis copier avec `cp -r`
   - **Symptôme** : Fichiers manquants dans `sync-agent/src/utils/` (ex: `version-info.js`) après mise à jour via dashboard central ou admin panel `:8080`

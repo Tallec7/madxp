@@ -62,6 +62,37 @@ detect_release_version() {
     fi
 }
 
+sync_subpackage_versions() {
+    print_step "Synchronisation des versions des sous-packages..."
+
+    # Liste des package.json à synchroniser avec la version principale
+    local SUBPACKAGES=(
+        "raspberry/admin/package.json"
+        "raspberry/sync-agent/package.json"
+        "raspberry/server/package.json"
+    )
+
+    for pkg in "${SUBPACKAGES[@]}"; do
+        if [ -f "$pkg" ]; then
+            # Extraire la version actuelle
+            local current_version
+            current_version=$(grep -o '"version": *"[^"]*"' "$pkg" | head -1 | cut -d'"' -f4)
+
+            if [ "$current_version" != "$RELEASE_VERSION" ]; then
+                # Mettre à jour la version avec sed
+                if [[ "$OSTYPE" == "darwin"* ]]; then
+                    sed -i '' "s/\"version\": *\"[^\"]*\"/\"version\": \"${RELEASE_VERSION}\"/" "$pkg"
+                else
+                    sed -i "s/\"version\": *\"[^\"]*\"/\"version\": \"${RELEASE_VERSION}\"/" "$pkg"
+                fi
+                print_success "  $pkg: $current_version → $RELEASE_VERSION"
+            else
+                echo "  $pkg: déjà à jour ($RELEASE_VERSION)"
+            fi
+        fi
+    done
+}
+
 create_version_metadata() {
     local build_date
     build_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -127,6 +158,110 @@ check_prerequisites() {
     fi
 }
 
+# Vérification de l'intégrité du build avant archivage
+verify_build_integrity() {
+    print_step "Vérification de l'intégrité du build..."
+    local ERRORS=0
+    local WARNINGS=0
+
+    # === FICHIERS CRITIQUES SYNC-AGENT ===
+    local SYNC_AGENT_CRITICAL=(
+        "sync-agent/src/agent.js"
+        "sync-agent/src/config.js"
+        "sync-agent/src/logger.js"
+        "sync-agent/src/analytics.js"
+        "sync-agent/src/metrics.js"
+        "sync-agent/src/commands/index.js"
+        "sync-agent/src/commands/update-software.js"
+        "sync-agent/src/commands/deploy-video.js"
+        "sync-agent/src/utils/version-info.js"
+        "sync-agent/src/utils/config-merge.js"
+        "sync-agent/src/utils/config-validator.js"
+        "sync-agent/src/watchers/video-watcher.js"
+        "sync-agent/src/watchers/config-watcher.js"
+        "sync-agent/src/services/connection-status.js"
+        "sync-agent/package.json"
+    )
+
+    for file in "${SYNC_AGENT_CRITICAL[@]}"; do
+        if [ ! -f "${DEPLOY_DIR}/${file}" ]; then
+            print_error "MANQUANT: ${file}"
+            ERRORS=$((ERRORS + 1))
+        fi
+    done
+
+    # === VÉRIFIER NODE_MODULES SYNC-AGENT ===
+    if [ ! -d "${DEPLOY_DIR}/sync-agent/node_modules" ]; then
+        print_error "MANQUANT: sync-agent/node_modules/"
+        ERRORS=$((ERRORS + 1))
+    else
+        # Vérifier les dépendances critiques
+        local CRITICAL_DEPS=("socket.io-client" "axios" "fs-extra" "winston")
+        for dep in "${CRITICAL_DEPS[@]}"; do
+            if [ ! -d "${DEPLOY_DIR}/sync-agent/node_modules/${dep}" ]; then
+                print_error "DÉPENDANCE MANQUANTE: sync-agent/node_modules/${dep}"
+                ERRORS=$((ERRORS + 1))
+            fi
+        done
+    fi
+
+    # === FICHIERS CRITIQUES ADMIN ===
+    if [ -d "${DEPLOY_DIR}/admin" ]; then
+        local ADMIN_CRITICAL=(
+            "admin/admin-server.js"
+            "admin/package.json"
+        )
+        for file in "${ADMIN_CRITICAL[@]}"; do
+            if [ ! -f "${DEPLOY_DIR}/${file}" ]; then
+                print_error "MANQUANT: ${file}"
+                ERRORS=$((ERRORS + 1))
+            fi
+        done
+
+        # Vérifier node_modules admin
+        if [ ! -d "${DEPLOY_DIR}/admin/node_modules" ]; then
+            print_error "MANQUANT: admin/node_modules/"
+            ERRORS=$((ERRORS + 1))
+        fi
+    fi
+
+    # === FICHIERS CRITIQUES WEBAPP ===
+    if [ ! -f "${DEPLOY_DIR}/webapp/index.html" ]; then
+        print_error "MANQUANT: webapp/index.html"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # === FICHIERS CRITIQUES SERVER ===
+    if [ ! -f "${DEPLOY_DIR}/server/server.js" ]; then
+        print_error "MANQUANT: server/server.js"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # === FICHIERS DE VERSION ===
+    if [ ! -f "${DEPLOY_DIR}/VERSION" ]; then
+        print_warning "MANQUANT: VERSION (non critique)"
+        WARNINGS=$((WARNINGS + 1))
+    fi
+
+    # === RÉSUMÉ ===
+    if [ $ERRORS -gt 0 ]; then
+        print_error "❌ INTÉGRITÉ ÉCHOUÉE: $ERRORS fichier(s) critique(s) manquant(s)"
+        print_error "Le build ne sera PAS créé pour éviter un déploiement corrompu"
+        exit 1
+    fi
+
+    if [ $WARNINGS -gt 0 ]; then
+        print_warning "$WARNINGS avertissement(s) non critique(s)"
+    fi
+
+    # Compter les fichiers
+    local FILE_COUNT=$(find ${DEPLOY_DIR} -type f | wc -l | tr -d ' ')
+    local DIR_COUNT=$(find ${DEPLOY_DIR} -type d | wc -l | tr -d ' ')
+    local TOTAL_SIZE=$(du -sh ${DEPLOY_DIR} | cut -f1)
+
+    print_success "Intégrité vérifiée: ${FILE_COUNT} fichiers, ${DIR_COUNT} dossiers, ${TOTAL_SIZE}"
+}
+
 RELEASE_VERSION="${RELEASE_VERSION:-}"
 BUILD_SOURCE="${BUILD_SOURCE:-local-build}"
 # xattr cleanup désactivé par défaut (les warnings tar sont inoffensifs sur Linux)
@@ -178,6 +313,9 @@ print_step "Paramètres de build"
 echo "  • Version : ${RELEASE_VERSION}"
 echo "  • Commit  : ${BUILD_COMMIT}"
 echo "  • Source  : ${BUILD_SOURCE}"
+
+# Synchroniser les versions des sous-packages
+sync_subpackage_versions
 
 # Vérifier si node_modules existe et est récent
 print_step "Vérification des dépendances..."
@@ -266,6 +404,9 @@ done
 print_success "Scripts runtime copiés"
 
 create_version_metadata
+
+# Vérifier l'intégrité avant de créer l'archive
+verify_build_integrity
 
 # NOTE: Les vidéos ne sont PAS incluses dans le déploiement
 # Elles sont gérées par le sync-agent depuis Google Drive
@@ -389,5 +530,16 @@ echo "       cp webapp/configuration.json /tmp/config.bak && \\"
 echo "       sudo rm -rf webapp/* && sudo tar -xzf ~/${ARCHIVE_NAME} && \\"
 echo "       sudo cp /tmp/config.bak webapp/configuration.json && \\"
 echo "       sudo systemctl restart neopro-app nginx'"
+echo ""
+echo -e "${BLUE}Contenu de l'archive:${NC}"
+echo "  ├── webapp/          Angular app (TV/Remote/Login)"
+echo "  ├── server/          Socket.IO serveur local"
+echo "  ├── sync-agent/      Agent de synchronisation cloud"
+echo "  │   └── node_modules/ ✓ Dépendances incluses"
+echo "  ├── admin/           Interface admin locale (port 8080)"
+echo "  │   └── node_modules/ ✓ Dépendances incluses"
+echo "  ├── scripts/         Scripts runtime (backup, compress, etc.)"
+echo "  ├── VERSION          Numéro de version"
+echo "  └── release.json     Métadonnées du build"
 echo ""
 echo -e "${GREEN}Build terminé!${NC}"
