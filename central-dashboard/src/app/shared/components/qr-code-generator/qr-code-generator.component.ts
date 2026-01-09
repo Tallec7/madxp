@@ -31,7 +31,7 @@ import * as QRCode from 'qrcode';
             </div>
           </div>
 
-          <div class="logo">neopro.local</div>
+          <img src="assets/neopro-logo.png" alt="Neopro" class="logo-img" />
         </div>
 
         <div class="actions">
@@ -170,12 +170,10 @@ import * as QRCode from 'qrcode';
       text-align: center;
     }
 
-    .logo {
+    .logo-img {
       margin-top: 1.5rem;
-      font-size: 0.875rem;
-      font-weight: 700;
-      color: #2563eb;
-      letter-spacing: 2px;
+      height: 32px;
+      width: auto;
     }
 
     .actions {
@@ -246,6 +244,7 @@ export class QrCodeGeneratorComponent implements OnInit, OnChanges {
   @ViewChild('printArea', { static: false }) printArea!: ElementRef<HTMLDivElement>;
 
   private readonly remoteUrl = 'http://neopro.local/remote';
+  private readonly logoUrl = 'assets/neopro-logo.png';
 
   ngOnInit(): void {
     this.generateQrCode();
@@ -364,10 +363,33 @@ export class QrCodeGeneratorComponent implements OnInit, OnChanges {
     ctx.fillText('2. Scannez ce QR code', 110, 425);
 
     // Logo
-    ctx.fillStyle = '#2563eb';
-    ctx.font = 'bold 14px Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('neopro.local', width / 2, 475);
+    try {
+      const logoImg = new Image();
+      await new Promise<void>((resolve, reject) => {
+        logoImg.onload = () => {
+          // Dessiner le logo centré, hauteur 28px
+          const logoHeight = 28;
+          const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
+          ctx.drawImage(logoImg, width / 2 - logoWidth / 2, 458, logoWidth, logoHeight);
+          resolve();
+        };
+        logoImg.onerror = () => {
+          // Fallback: texte si le logo ne charge pas
+          ctx.fillStyle = '#2563eb';
+          ctx.font = 'bold 14px Arial, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('NEOPRO', width / 2, 475);
+          resolve();
+        };
+        logoImg.src = this.logoUrl;
+      });
+    } catch {
+      // Fallback texte
+      ctx.fillStyle = '#2563eb';
+      ctx.font = 'bold 14px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('NEOPRO', width / 2, 475);
+    }
 
     // Download
     const link = document.createElement('a');
@@ -458,11 +480,10 @@ export class QrCodeGeneratorComponent implements OnInit, OnChanges {
             margin: 0.5rem 0 1rem;
             text-align: center;
           }
-          .logo {
+          .logo-img {
             margin-top: 1.5rem;
-            font-weight: 700;
-            color: #2563eb;
-            letter-spacing: 2px;
+            height: 28px;
+            width: auto;
           }
         </style>
       </head>
