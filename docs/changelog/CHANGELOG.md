@@ -1,3 +1,9 @@
+## [2.21.4](https://github.com/Tallec7/neopro/compare/v2.21.3...v2.21.4) (2026-01-09)
+
+### Bug Fixes
+
+- **sync-agent:** use sudo for VERSION/release.json to handle root ownership ([92ceb34](https://github.com/Tallec7/neopro/commit/92ceb344a15e4c2d2ba955c29f5ae4a9256cc901))
+
 ## [2.21.3](https://github.com/Tallec7/neopro/compare/v2.21.2...v2.21.3) (2026-01-09)
 
 ### Bug Fixes
