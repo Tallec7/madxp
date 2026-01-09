@@ -662,6 +662,57 @@ ssh pi@neopro.local 'grep "BATCH_SIZE" /home/pi/neopro/sync-agent/src/analytics.
 
 ## Problèmes de synchronisation
 
+### Fichiers manquants dans sync-agent après mise à jour (MODULE_NOT_FOUND)
+
+**Symptômes :**
+
+- Le service `neopro-sync-agent` crash en boucle (restart counter élevé)
+- Logs affichent : `Error: Cannot find module './utils/version-info'` (ou autre fichier)
+- Le dossier `sync-agent/src/utils/` est vide ou incomplet
+
+**Cause :**
+
+Bug dans `update-software.js` (corrigé en v2.15.1) : la commande `tar -xzf` était exécutée directement dans `/home/pi/neopro/` au lieu d'extraire dans un dossier temporaire puis copier avec `cp -r`. Cela causait des extractions partielles sans erreur visible.
+
+**Diagnostic :**
+
+```bash
+# Vérifier ce qui manque
+ls -la /home/pi/neopro/sync-agent/src/utils/
+
+# Le dossier devrait contenir :
+# - config-merge.js
+# - config-validator.js
+# - version-info.js
+```
+
+**Solution immédiate :**
+
+```bash
+# Télécharger les fichiers manquants depuis GitHub
+mkdir -p /home/pi/neopro/sync-agent/src/utils
+curl -fsSL https://raw.githubusercontent.com/tallec7/neopro/main/raspberry/sync-agent/src/utils/version-info.js -o /home/pi/neopro/sync-agent/src/utils/version-info.js
+curl -fsSL https://raw.githubusercontent.com/tallec7/neopro/main/raspberry/sync-agent/src/utils/config-merge.js -o /home/pi/neopro/sync-agent/src/utils/config-merge.js
+curl -fsSL https://raw.githubusercontent.com/tallec7/neopro/main/raspberry/sync-agent/src/utils/config-validator.js -o /home/pi/neopro/sync-agent/src/utils/config-validator.js
+
+# Redémarrer le service
+sudo systemctl restart neopro-sync-agent
+```
+
+**Solution permanente :**
+
+Mettre à jour `update-software.js` vers v2.15.1+ qui aligne la logique sur `deploy-remote.sh` :
+
+```bash
+# Depuis votre Mac
+scp raspberry/sync-agent/src/commands/update-software.js pi@neopro.local:/home/pi/neopro/sync-agent/src/commands/
+ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
+```
+
+**Voir aussi :** Section [v2.15.x dans CLAUDE.md](/CLAUDE.md#v215x-janvier-2026) pour les détails techniques.
+
+---
+
 ### Erreur EACCES permission denied sur configuration.backup.json
 
 **Symptôme** : Les logs du sync-agent affichent :
@@ -1354,4 +1405,4 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 8 janvier 2026
+**Dernière mise à jour :** 9 janvier 2026
