@@ -390,6 +390,7 @@ RUNTIME_SCRIPTS=(
     "raspberry/scripts/auto-backup.sh"
     "raspberry/scripts/compress-video.sh"
     "raspberry/scripts/generate-thumbnail.sh"
+    "raspberry/scripts/generate-all-thumbnails.sh"
     "raspberry/scripts/setup-wifi-client.sh"
 )
 mkdir -p ${DEPLOY_DIR}/scripts
