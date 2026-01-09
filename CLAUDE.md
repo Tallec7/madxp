@@ -191,6 +191,40 @@ ADVERTISERS ──────────────────────�
 await query(`SELECT set_config('app.user_role', $1, false)`, [role]);
 ```
 
+### Politique de Rétention des Données ⚡ NEW (2026-01)
+
+Des jobs de cleanup automatiques tournent quotidiennement à 3h du matin pour gérer la croissance de la base de données.
+
+| Table                           | Rétention            | Justification                                                            |
+| ------------------------------- | -------------------- | ------------------------------------------------------------------------ |
+| `video_plays`                   | **90 jours**         | Données granulaires, `club_daily_stats` conserve l'historique long terme |
+| `sponsor_impressions`           | **90 jours**         | Idem, `sponsor_daily_stats` conserve l'agrégation                        |
+| `metrics`                       | **7 jours**          | Debug court terme uniquement (CPU, RAM, temp)                            |
+| `config_history`                | **20 versions/site** | Rollback réaliste, pas besoin de 6 mois                                  |
+| `remote_commands`               | **30 jours**         | Historique des commandes pour debug                                      |
+| `alerts`                        | **90 jours**         | Patterns d'incidents                                                     |
+| `audit_logs`                    | **90 jours**         | Conformité/audit                                                         |
+| `recurring_schedule_executions` | **90 jours**         | Historique des crons                                                     |
+
+**Tables préservées indéfiniment** (agrégations) :
+
+- `club_daily_stats` - Stats journalières par site
+- `sponsor_daily_stats` - Stats journalières par sponsor
+
+**Buffers locaux Pi** (limite 50K événements) :
+
+- `analytics_buffer.json` - Lectures vidéo en attente d'envoi
+- `sponsor_impressions.json` - Impressions sponsors en attente
+
+Si un buffer dépasse 50K événements (ex: club fermé > 3 mois), les plus anciens sont supprimés (FIFO).
+
+**Fichiers** :
+
+- `central-server/src/scripts/migrations/add-data-retention-cleanup.sql` - Configuration des jobs
+- `central-server/src/services/cron-scheduler.service.ts` - Exécution des cleanups
+- `raspberry/sync-agent/src/analytics.js` - Buffer avec limite 50K
+- `raspberry/sync-agent/src/sponsor-impressions.js` - Buffer avec limite 50K
+
 ---
 
 ## API Routes
@@ -1410,6 +1444,18 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 ---
 
 ## Historique Breaking Changes
+
+### v2.16.x (Janvier 2026)
+
+- **Politique de rétention des données** : Nettoyage automatique de la DB et limites buffers Pi
+  - Jobs cron quotidiens pour nettoyer les tables volumineuses
+  - `video_plays`, `sponsor_impressions` : 90 jours
+  - `metrics` : 7 jours
+  - `config_history` : 20 versions par site
+  - `remote_commands` : 30 jours
+  - `alerts`, `audit_logs` : 90 jours
+  - Buffers Pi (`analytics_buffer.json`, `sponsor_impressions.json`) : limite 50K événements (FIFO)
+  - Migration : Exécuter `add-data-retention-cleanup.sql`, déployer `analytics.js` et `sponsor-impressions.js` sur les Pi
 
 ### v2.15.x (Janvier 2026)
 
