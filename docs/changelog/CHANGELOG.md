@@ -1,3 +1,9 @@
+## [2.15.2](https://github.com/Tallec7/neopro/compare/v2.15.1...v2.15.2) (2026-01-09)
+
+### Bug Fixes
+
+- **tv:** improve double-buffer video transitions to prevent stuttering ([#342](https://github.com/Tallec7/neopro/issues/342)) ([aab40f8](https://github.com/Tallec7/neopro/commit/aab40f81f79bc95301d1778e4aca38b8266e2114))
+
 ## [2.15.1](https://github.com/Tallec7/neopro/compare/v2.15.0...v2.15.1) (2026-01-09)
 
 ### Bug Fixes
