@@ -63,6 +63,22 @@ function mergeConfigurations(localConfig, neoProContent) {
   }
 
   // ========================================================================
+  // AUTHENTIFICATION TÉLÉCOMMANDE (remotePassword, clubName)
+  // Ces champs sont stockés dans la section "auth" pour /remote/login
+  // ========================================================================
+  if (neoProContent.remotePassword !== undefined || neoProContent.clubName !== undefined) {
+    result.auth = result.auth || {};
+    if (neoProContent.remotePassword) {
+      result.auth.password = neoProContent.remotePassword;
+      logger.info('[config-merge] Mot de passe télécommande mis à jour');
+    }
+    if (neoProContent.clubName) {
+      result.auth.clubName = neoProContent.clubName;
+      logger.info(`[config-merge] Nom du club mis à jour: ${neoProContent.clubName}`);
+    }
+  }
+
+  // ========================================================================
   // SPONSORS (Boucle par défaut)
   // Fusion intelligente : les sponsors NEOPRO sont contrôlés par le central,
   // les sponsors Club sont préservés
