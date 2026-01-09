@@ -387,6 +387,18 @@ class SoftwareUpdateHandler {
         }
       }
 
+      // npm install pour sync-agent (CRITICAL - sans ça le service crash)
+      if (await fs.pathExists(path.join(rootDir, 'sync-agent', 'package.json'))) {
+        try {
+          logger.info('Running npm install for sync-agent...');
+          await execAsync(`cd ${rootDir}/sync-agent && npm install --production`);
+          logger.info('npm install sync-agent completed');
+        } catch (e) {
+          logger.error('npm install sync-agent failed', { error: e.message });
+          // C'est critique pour le sync-agent, on log l'erreur mais on continue
+        }
+      }
+
       // Écrire les fichiers de version avec la version fournie par le dashboard central
       if (version) {
         await this.writeVersionMetadata(version);
