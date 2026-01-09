@@ -1,3 +1,9 @@
+# [2.17.0](https://github.com/Tallec7/neopro/compare/v2.16.0...v2.17.0) (2026-01-09)
+
+### Features
+
+- **build:** add integrity check and version sync to build-raspberry.sh ([67c8fb0](https://github.com/Tallec7/neopro/commit/67c8fb0a3771095ce3a1693e673e26e230d14625))
+
 # [2.16.0](https://github.com/Tallec7/neopro/compare/v2.15.4...v2.16.0) (2026-01-09)
 
 ### Features
