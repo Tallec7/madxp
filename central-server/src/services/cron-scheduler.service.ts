@@ -424,9 +424,26 @@ class CronSchedulerService {
 
   /**
    * Cleanup config_history keeping only the N most recent versions per site
+   * Handles self-referential FK (previous_version_id) by nullifying references first
    */
   private async cleanupConfigHistory(keepVersions: number): Promise<{ rowCount: number }> {
-    // Delete all config_history entries except the N most recent per site
+    // First, nullify FK references to records that will be deleted
+    await query(
+      `WITH ranked AS (
+        SELECT id, site_id,
+               ROW_NUMBER() OVER (PARTITION BY site_id ORDER BY deployed_at DESC) as rn
+        FROM config_history
+      ),
+      to_delete AS (
+        SELECT id FROM ranked WHERE rn > $1
+      )
+      UPDATE config_history
+      SET previous_version_id = NULL
+      WHERE previous_version_id IN (SELECT id FROM to_delete)`,
+      [keepVersions]
+    );
+
+    // Then delete the old versions
     const result = await query(
       `WITH ranked AS (
         SELECT id, site_id,
