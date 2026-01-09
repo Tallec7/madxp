@@ -33,6 +33,10 @@ const BATCH_SIZE = 100; // Nombre d'événements par batch
 const BATCH_TIMEOUT = 15000; // 15 secondes par batch
 const BATCH_DELAY = 500; // 500ms entre chaque batch
 
+// Limite maximale du buffer (50K événements ≈ 3 mois d'activité normale)
+// Évite la surcharge serveur si le Pi est offline longtemps (ex: club fermé l'été)
+const MAX_BUFFER_SIZE = 50000;
+
 class AnalyticsCollector {
   constructor() {
     this.buffer = [];
@@ -42,6 +46,7 @@ class AnalyticsCollector {
 
   /**
    * Charger le buffer depuis le fichier local
+   * Applique la limite MAX_BUFFER_SIZE si le buffer existant est trop gros
    */
   loadBuffer() {
     try {
@@ -49,6 +54,19 @@ class AnalyticsCollector {
       if (fs.existsSync(ANALYTICS_FILE_PATH)) {
         const data = fs.readFileSync(ANALYTICS_FILE_PATH, 'utf8');
         this.buffer = JSON.parse(data);
+
+        // Appliquer la limite au chargement (FIFO: garder les plus récents)
+        if (this.buffer.length > MAX_BUFFER_SIZE) {
+          const overflow = this.buffer.length - MAX_BUFFER_SIZE;
+          this.buffer = this.buffer.slice(overflow);
+          this.saveBuffer();
+          logger.warn('Analytics buffer truncated on load', {
+            dropped: overflow,
+            maxSize: MAX_BUFFER_SIZE,
+            remaining: this.buffer.length,
+          });
+        }
+
         logger.debug('Analytics buffer loaded', { count: this.buffer.length });
         return this.buffer;
       }
@@ -82,6 +100,7 @@ class AnalyticsCollector {
 
   /**
    * Ajouter des événements au buffer (appelé par l'API locale)
+   * Applique la limite MAX_BUFFER_SIZE en supprimant les plus anciens si nécessaire (FIFO)
    */
   addEvents(events) {
     if (!Array.isArray(events)) {
@@ -89,6 +108,18 @@ class AnalyticsCollector {
     }
 
     this.buffer.push(...events);
+
+    // Appliquer la limite: supprimer les plus anciens si on dépasse MAX_BUFFER_SIZE
+    if (this.buffer.length > MAX_BUFFER_SIZE) {
+      const overflow = this.buffer.length - MAX_BUFFER_SIZE;
+      this.buffer = this.buffer.slice(overflow);
+      logger.warn('Analytics buffer overflow, dropped oldest events', {
+        dropped: overflow,
+        maxSize: MAX_BUFFER_SIZE,
+        remaining: this.buffer.length,
+      });
+    }
+
     this.saveBuffer();
 
     logger.info('Analytics events added', { count: events.length, total: this.buffer.length });

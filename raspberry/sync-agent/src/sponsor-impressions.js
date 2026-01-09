@@ -25,28 +25,48 @@ const IMPRESSIONS_FILE_PATH = path.join(
   'sponsor_impressions.json'
 );
 
+// Limite maximale du buffer (50K événements ≈ 3 mois d'activité normale)
+// Évite la surcharge serveur si le Pi est offline longtemps (ex: club fermé l'été)
+const MAX_BUFFER_SIZE = 50000;
+
+// Seuil pour déclencher un auto-flush (envoyer les données au serveur)
+const AUTO_FLUSH_THRESHOLD = 100;
+
 class SponsorImpressionsCollector {
   constructor() {
     this.buffer = [];
     this.lastSendTime = null;
     this.sendInterval = config.monitoring?.analyticsInterval || 5 * 60 * 1000; // 5 minutes
-    this.maxBufferSize = 100;
   }
 
   /**
    * Charger le buffer depuis le fichier local
+   * Applique la limite MAX_BUFFER_SIZE si le buffer existant est trop gros
    */
   loadBuffer() {
     try {
       if (fs.existsSync(IMPRESSIONS_FILE_PATH)) {
         const data = fs.readFileSync(IMPRESSIONS_FILE_PATH, 'utf8');
         this.buffer = JSON.parse(data);
+
+        // Appliquer la limite au chargement (FIFO: garder les plus récents)
+        if (this.buffer.length > MAX_BUFFER_SIZE) {
+          const overflow = this.buffer.length - MAX_BUFFER_SIZE;
+          this.buffer = this.buffer.slice(overflow);
+          this.saveBuffer();
+          logger.warn('[SponsorImpressions] Buffer truncated on load', {
+            dropped: overflow,
+            maxSize: MAX_BUFFER_SIZE,
+            remaining: this.buffer.length,
+          });
+        }
+
         logger.debug('[SponsorImpressions] Buffer loaded', { count: this.buffer.length });
         return this.buffer;
       }
       return [];
     } catch (error) {
-      logger.error('[SponsorImpressions] Failed to load buffer:', error.message);
+      logger.error('[SponsorImpressions] Failed to load buffer', { error: error.message });
       return [];
     }
   }
@@ -71,6 +91,7 @@ class SponsorImpressionsCollector {
 
   /**
    * Ajouter des impressions au buffer (appelé par l'API locale)
+   * Applique la limite MAX_BUFFER_SIZE en supprimant les plus anciens si nécessaire (FIFO)
    */
   addImpressions(impressions) {
     if (!Array.isArray(impressions)) {
@@ -78,6 +99,18 @@ class SponsorImpressionsCollector {
     }
 
     this.buffer.push(...impressions);
+
+    // Appliquer la limite: supprimer les plus anciens si on dépasse MAX_BUFFER_SIZE
+    if (this.buffer.length > MAX_BUFFER_SIZE) {
+      const overflow = this.buffer.length - MAX_BUFFER_SIZE;
+      this.buffer = this.buffer.slice(overflow);
+      logger.warn('[SponsorImpressions] Buffer overflow, dropped oldest impressions', {
+        dropped: overflow,
+        maxSize: MAX_BUFFER_SIZE,
+        remaining: this.buffer.length,
+      });
+    }
+
     this.saveBuffer();
 
     logger.info('[SponsorImpressions] Impressions added', {
@@ -85,9 +118,9 @@ class SponsorImpressionsCollector {
       total: this.buffer.length
     });
 
-    // Auto-flush si le buffer est trop gros
-    if (this.buffer.length >= this.maxBufferSize) {
-      logger.info('[SponsorImpressions] Buffer full, auto-flushing');
+    // Auto-flush si le buffer atteint le seuil
+    if (this.buffer.length >= AUTO_FLUSH_THRESHOLD) {
+      logger.info('[SponsorImpressions] Buffer threshold reached, auto-flushing');
       return true; // Indique qu'un flush devrait être déclenché
     }
 

@@ -150,15 +150,17 @@ class CronSchedulerService {
         // Tous les jours à l'heure spécifiée
         return `${minute} ${hour} * * *`;
 
-      case 'weekly':
+      case 'weekly': {
         // Chaque semaine le jour spécifié
         const dayOfWeek = schedule.day_of_week ?? 1; // Lundi par défaut
         return `${minute} ${hour} * * ${dayOfWeek}`;
+      }
 
-      case 'monthly':
+      case 'monthly': {
         // Chaque mois le jour spécifié
         const dayOfMonth = schedule.day_of_month ?? 1; // 1er par défaut
         return `${minute} ${hour} ${dayOfMonth} * *`;
+      }
 
       default:
         // Par défaut: quotidien à 9h
@@ -347,43 +349,98 @@ class CronSchedulerService {
 
   /**
    * Exécute une tâche de nettoyage
+   *
+   * Supports two cleanup modes:
+   * 1. Time-based: Delete records older than X days (older_than_days)
+   * 2. Version-based: Keep only N most recent versions per site (keep_versions) - for config_history
    */
   private async executeCleanupTask(schedule: RecurringSchedule): Promise<ExecutionResult> {
     const config = schedule.task_config as {
       older_than_days?: number;
+      keep_versions?: number;
       tables?: string[];
     };
 
-    const olderThanDays = config.older_than_days || 30;
     const tables = config.tables || ['recurring_schedule_executions'];
-
     let totalDeleted = 0;
+    const details: Record<string, number> = {};
+
+    // Tables autorisées pour le cleanup avec leur colonne de date
+    const allowedTables: Record<string, string> = {
+      'recurring_schedule_executions': 'started_at',
+      'audit_logs': 'created_at',
+      'video_plays': 'played_at',
+      'sponsor_impressions': 'played_at',
+      'metrics': 'recorded_at',
+      'remote_commands': 'created_at',
+      'alerts': 'created_at',
+      'config_history': 'deployed_at', // Special handling below
+    };
 
     for (const table of tables) {
-      // Nettoyer uniquement les tables autorisées
-      const allowedTables = ['recurring_schedule_executions', 'audit_logs'];
-      if (!allowedTables.includes(table)) {
+      if (!allowedTables[table]) {
         logger.warn(`Cleanup skipped for unauthorized table: ${table}`);
         continue;
       }
 
-      const dateColumn = table === 'recurring_schedule_executions' ? 'started_at' : 'created_at';
+      let result;
 
-      const result = await query(
-        `DELETE FROM ${table}
-         WHERE ${dateColumn} < NOW() - INTERVAL '${olderThanDays} days'`,
-        []
-      );
+      // Special handling for config_history: keep N versions per site
+      if (table === 'config_history' && config.keep_versions) {
+        result = await this.cleanupConfigHistory(config.keep_versions);
+      } else {
+        // Standard time-based cleanup
+        const olderThanDays = config.older_than_days || 30;
+        const dateColumn = allowedTables[table];
 
-      totalDeleted += result.rowCount || 0;
-      logger.info(`Cleaned up ${result.rowCount} rows from ${table}`);
+        result = await query(
+          `DELETE FROM ${table}
+           WHERE ${dateColumn} < NOW() - INTERVAL '${olderThanDays} days'`,
+          []
+        );
+      }
+
+      const deletedCount = result.rowCount || 0;
+      totalDeleted += deletedCount;
+      details[table] = deletedCount;
+
+      if (deletedCount > 0) {
+        logger.info(`Cleaned up ${deletedCount} rows from ${table}`);
+      }
     }
 
     return {
       success: true,
       message: `Deleted ${totalDeleted} old records`,
-      details: { tables, olderThanDays, deletedCount: totalDeleted },
+      details: {
+        tables,
+        deletedByTable: details,
+        totalDeleted,
+        ...(config.older_than_days && { olderThanDays: config.older_than_days }),
+        ...(config.keep_versions && { keepVersions: config.keep_versions }),
+      },
     };
+  }
+
+  /**
+   * Cleanup config_history keeping only the N most recent versions per site
+   */
+  private async cleanupConfigHistory(keepVersions: number): Promise<{ rowCount: number }> {
+    // Delete all config_history entries except the N most recent per site
+    const result = await query(
+      `WITH ranked AS (
+        SELECT id, site_id,
+               ROW_NUMBER() OVER (PARTITION BY site_id ORDER BY deployed_at DESC) as rn
+        FROM config_history
+      )
+      DELETE FROM config_history
+      WHERE id IN (
+        SELECT id FROM ranked WHERE rn > $1
+      )`,
+      [keepVersions]
+    );
+
+    return { rowCount: result.rowCount || 0 };
   }
 
   /**
