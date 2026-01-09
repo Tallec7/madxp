@@ -111,7 +111,6 @@ export class TvComponent implements OnInit, OnDestroy {
   private preloadedIndex: number | null = null; // Index de la vidéo préchargée
   private preloadReady = false; // Le player inactif est-il prêt ?
   private switchTriggered = false; // Pour éviter de déclencher le switch plusieurs fois
-  private lastTimeUpdateCheck = 0; // Throttle timeupdate events
 
   public player: Player;
 
@@ -919,12 +918,11 @@ export class TvComponent implements OnInit, OnDestroy {
     this.setPlayerVisible(this.playerB, false);
     this.activePlayer = 'A';
 
-    // DÉSACTIVÉ: timeupdate cause des saccades sur Pi
-    // On utilise uniquement 'ended' - accepte une micro-pause entre vidéos
-    // this.playerA.addEventListener('timeupdate', () => this.onTimeUpdate('A'));
-    // this.playerB.addEventListener('timeupdate', () => this.onTimeUpdate('B'));
+    // Écouter timeupdate pour déclencher le switch AVANT la fin (anticipation)
+    this.playerA.addEventListener('timeupdate', () => this.onTimeUpdate('A'));
+    this.playerB.addEventListener('timeupdate', () => this.onTimeUpdate('B'));
 
-    // Utiliser ended pour déclencher le switch
+    // Fallback: écouter ended au cas où timeupdate rate le coche
     this.playerA.addEventListener('ended', () => this.onVideoEnded('A'));
     this.playerB.addEventListener('ended', () => this.onVideoEnded('B'));
 
@@ -933,35 +931,19 @@ export class TvComponent implements OnInit, OnDestroy {
 
   /**
    * Appelé à chaque mise à jour du temps de lecture
-   * Déclenche le préchargement 3s avant la fin, puis le switch 500ms avant
-   * Throttled pour éviter la surcharge CPU
+   * Déclenche le switch 500ms AVANT la fin pour une transition seamless
    */
   private onTimeUpdate(fromPlayer: 'A' | 'B'): void {
     if (!this.isLoopMode || fromPlayer !== this.activePlayer) return;
     if (this.switchTriggered || this.pendingSwitch) return;
 
-    // Throttle: ne vérifier que toutes les 200ms max
-    const now = performance.now();
-    if (now - this.lastTimeUpdateCheck < 200) return;
-    this.lastTimeUpdateCheck = now;
-
     const player = this.getActivePlayer();
-    if (!player.duration || player.duration <= 0) return;
-
     const remaining = player.duration - player.currentTime;
 
-    // Précharger 1s avant la fin seulement - minimise le temps de décodage parallèle
-    // Le préchargement cause une saccade, donc on le retarde au maximum
-    const preloadThreshold = Math.min(1.5, player.duration * 0.15); // 1.5s ou 15% max
-    if (remaining <= preloadThreshold && !this.preloadReady && !this.preloadedIndex) {
-      const nextIndex = (this.currentLoopIndex + 1) % this.currentLoopVideos.length;
-      console.log(`[TV] Starting late preload, ${remaining.toFixed(1)}s remaining`);
-      this.preloadOnInactivePlayer(nextIndex);
-    }
-
     // Déclencher le switch 500ms avant la fin (ou 300ms si vidéo courte)
-    const switchThreshold = player.duration > 3 ? 0.5 : 0.3;
-    if (remaining <= switchThreshold && remaining > 0) {
+    const threshold = player.duration > 3 ? 0.5 : 0.3;
+
+    if (remaining <= threshold && remaining > 0 && player.duration > 0) {
       console.log(`[TV] Triggering early switch, ${remaining.toFixed(2)}s remaining`);
       this.switchTriggered = true;
       this.triggerSwitch();
@@ -1134,8 +1116,7 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Appelé quand une vidéo se termine sur un player
-   * Mode simplifié: pas de préchargement anticipé pour éviter les saccades
+   * Appelé quand une vidéo se termine sur un player (fallback)
    */
   private onVideoEnded(fromPlayer: 'A' | 'B'): void {
     console.log(`[TV] onVideoEnded called from player ${fromPlayer}, isLoopMode=${this.isLoopMode}, activePlayer=${this.activePlayer}`);
@@ -1146,13 +1127,15 @@ export class TvComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Éviter les switchs multiples
-    if (this.pendingSwitch) {
-      console.log('[TV] Switch already pending, ignoring ended event');
+    // Si le switch a déjà été déclenché par timeupdate, ignorer
+    if (this.switchTriggered || this.pendingSwitch) {
+      console.log('[TV] Switch already triggered/pending, ignoring ended event');
       return;
     }
 
-    console.log('[TV] Video ended, triggering switch');
+    // Fallback: déclencher le switch maintenant
+    console.log('[TV] Fallback: video ended without early trigger');
+    this.switchTriggered = true;
     this.triggerSwitch();
   }
 
