@@ -1,3 +1,9 @@
+# [2.22.0](https://github.com/Tallec7/neopro/compare/v2.21.4...v2.22.0) (2026-01-09)
+
+### Features
+
+- **video-library:** add multi-select, category column, duration extraction ([c5cbc7c](https://github.com/Tallec7/neopro/commit/c5cbc7c875aae80de2b3fbf85b16765143300f58))
+
 ## [2.21.4](https://github.com/Tallec7/neopro/compare/v2.21.3...v2.21.4) (2026-01-09)
 
 ### Bug Fixes
