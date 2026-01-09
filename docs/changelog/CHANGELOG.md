@@ -1,3 +1,9 @@
+## [2.17.1](https://github.com/Tallec7/neopro/compare/v2.17.0...v2.17.1) (2026-01-09)
+
+### Bug Fixes
+
+- **tv:** require liveScoreEnabled from central to display score overlay ([2168784](https://github.com/Tallec7/neopro/commit/21687843519f3ae288fa2291b7268b53c7207e4d))
+
 # [2.17.0](https://github.com/Tallec7/neopro/compare/v2.16.0...v2.17.0) (2026-01-09)
 
 ### Features
