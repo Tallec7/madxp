@@ -248,6 +248,7 @@ GET    /api/sites/:id/dashboard → endpoint agrégé (connection + metrics)
 GET    /api/sites/:id/local-content → vidéos locales + stockage ⚡ NEW
 GET    /api/sites/:id/connection-status → statut connexion temps réel
 GET    /api/sites/:id/metrics → métriques système (CPU, RAM, temp)
+GET    /api/sites/:id/hotspot-config → SSID WiFi réel du boîtier (pour QR code)
 POST   /api/sites             → créer site (génère api_key)
 PUT    /api/sites/:id         → modifier
 DELETE /api/sites/:id         → supprimer
@@ -967,14 +968,15 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 
 ### Composants Site Detail (Refactoring 2026)
 
-| Composant                    | Fichier                             | Description                                            |
-| ---------------------------- | ----------------------------------- | ------------------------------------------------------ |
-| **SiteContentTabComponent**  | `components/site-content-tab/`      | Onglet Contenu : boucles par phase, catégories, vidéos |
-| **SiteSettingsTabComponent** | `components/site-settings-tab/`     | Onglet Paramètres : config réseau, hotspot             |
-| **SiteDebugTabComponent**    | `components/site-debug-tab/`        | Onglet Debug : logs, commandes, diagnostics            |
-| **RemotePreviewComponent**   | `components/remote-preview/`        | Simulation visuelle de la télécommande Pi              |
-| **VideoSelectorComponent**   | `shared/components/video-selector/` | Sélecteur de vidéos avec filtres catégorie             |
-| **ConfigEditorComponent**    | `config-editor/`                    | Éditeur complet de configuration JSON                  |
+| Composant                    | Fichier                                | Description                                            |
+| ---------------------------- | -------------------------------------- | ------------------------------------------------------ |
+| **SiteContentTabComponent**  | `components/site-content-tab/`         | Onglet Contenu : boucles par phase, catégories, vidéos |
+| **SiteSettingsTabComponent** | `components/site-settings-tab/`        | Onglet Paramètres : config réseau, hotspot, QR code    |
+| **SiteDebugTabComponent**    | `components/site-debug-tab/`           | Onglet Debug : logs, commandes, diagnostics            |
+| **RemotePreviewComponent**   | `components/remote-preview/`           | Simulation visuelle de la télécommande Pi              |
+| **VideoSelectorComponent**   | `shared/components/video-selector/`    | Sélecteur de vidéos avec filtres catégorie             |
+| **QrCodeGeneratorComponent** | `shared/components/qr-code-generator/` | Génération QR code télécommande (PNG/print)            |
+| **ConfigEditorComponent**    | `config-editor/`                       | Éditeur complet de configuration JSON                  |
 
 ### Raspberry Pi
 
@@ -994,6 +996,7 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 | `docs/TROUBLESHOOTING.md`          | Dépannage                |
 | `docs/INSTALLATION_COMPLETE.md`    | Setup Pi de A à Z        |
 | `docs/technical/ERROR_HANDLING.md` | Système d'error handling |
+| `docs/guides/QR_CODE_REMOTE.md`    | QR code télécommande     |
 
 ---
 

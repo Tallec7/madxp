@@ -85,11 +85,24 @@ Si un utilisateur rencontre des problemes, il peut utiliser l'URL alternative : 
 
 ## SSID WiFi
 
-Le SSID affiche sur le QR code est genere automatiquement a partir du nom du club :
+### Recuperation automatique du SSID reel
+
+Depuis la version 2.21, le dashboard recupere automatiquement le **vrai SSID** configure sur le boitier :
+
+1. Quand vous cliquez sur "Generer le QR Code", le dashboard interroge le Pi
+2. Le Pi lit le fichier `/etc/hostapd/hostapd.conf` et renvoie le SSID reel
+3. Le QR code affiche ce SSID avec un badge **(reel)** en vert
+
+**Prerequis** : Le site doit etre connecte (online) pour recuperer le SSID reel.
+
+### Fallback : SSID genere
+
+Si le site est offline ou si la recuperation echoue, un SSID est genere automatiquement :
 
 - Format : `NEOPRO-{NOM_CLUB}`
 - Caracteres speciaux et accents supprimes
-- Limite a 32 caracteres (norme WiFi)
+- Limite a 20 caracteres
+- Badge **(genere)** en orange
 
 **Exemples** :
 
@@ -97,7 +110,7 @@ Le SSID affiche sur le QR code est genere automatiquement a partir du nom du clu
 - "AS Saint-Etienne" → `NEOPRO-AS-SAINT-ETIENNE`
 - "Racing Club de Lens" → `NEOPRO-RACING-CLUB-DE-L`
 
-> **Note** : Si le SSID reel du boitier a ete personnalise via la configuration Hotspot, il peut differer de celui affiche. Dans ce cas, mettez a jour le nom du club pour correspondre.
+> **Important** : Si le SSID genere ne correspond pas au SSID reel du boitier, assurez-vous que le site est connecte avant de generer le QR code, ou modifiez le SSID du hotspot via l'onglet Parametres.
 
 ## Personnalisation
 
