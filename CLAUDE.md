@@ -854,25 +854,23 @@ UPDATE content_deployments SET status = 'failed'
 WHERE status = 'in_progress' AND started_at < NOW() - INTERVAL '1 hour';
 ```
 
-### Android refuse de se connecter au hotspot ?
+### Android et le hotspot (résolu depuis v2.5.0)
 
-**Problème** : Android affiche "Pas d'accès Internet" et bloque la résolution DNS de `neopro.local`.
+**Historique** : Android affichait "Pas d'accès Internet" et bloquait la résolution DNS de `neopro.local`.
 
-**Solution immédiate** : Utiliser l'IP directe sur Android
+**Résolu** : Le captive portal est configuré automatiquement depuis la version 2.5.0. Android reçoit une réponse `204 No Content` sur `/generate_204` et accepte le réseau.
 
-```
-http://192.168.4.1/login
-```
+**Résultat** : `http://neopro.local/remote` fonctionne sur **tous les appareils** (iOS, Android, Windows, macOS).
 
-**Solution permanente** : Le captive portal est configuré automatiquement depuis la version 2.5.0.
-
-Vérifier que le captive portal fonctionne :
+**Vérification** (si problème sur un ancien Pi) :
 
 ```bash
 # Sur le Pi
 curl -I http://localhost/generate_204
 # Doit retourner : HTTP/1.1 204 No Content
 ```
+
+**Fallback** : Si un Pi n'a pas le captive portal, utiliser `http://192.168.4.1/remote`
 
 **Documentation complète** : [docs/guides/ANDROID_HOTSPOT_FIX.md](docs/guides/ANDROID_HOTSPOT_FIX.md)
 
@@ -1444,6 +1442,22 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 
 ### v2.16.x (Janvier 2026)
 
+- **Fix live-score affiché par défaut** : Le score/timer/animation s'affichait même quand l'admin l'avait désactivé
+  - **Bug** : `tv.component.html` vérifiait uniquement `localOptions.overlay.scoreEnabled` (localStorage, défaut `true`) et ignorait `configuration.liveScoreEnabled` (du central)
+  - **Symptôme** : Score visible sur la TV même avec `liveScoreEnabled: false` dans le dashboard central
+  - **Fix** : Ajout de `configuration?.liveScoreEnabled &&` aux conditions d'affichage :
+    - Score overlay (ligne 16)
+    - Timer overlay (ligne 88)
+    - Animation de but (ligne 105)
+  - **Changement valeur par défaut** : `localOptions.overlay.scoreEnabled` passe de `true` à `false`
+  - **Nouvelle logique** : L'affichage requiert les DEUX conditions :
+    - `configuration.liveScoreEnabled` = true (contrôlé par l'admin central)
+    - `localOptions.overlay.scoreEnabled` = true (contrôlé par le staff du club)
+  - **Fichiers modifiés** :
+    - `raspberry/src/app/components/tv/tv.component.html`
+    - `raspberry/src/app/services/local-options.service.ts`
+    - `raspberry/public/configuration.json`
+  - **Migration** : Déployer la nouvelle version. Les Pi avec localStorage existant gardent leur valeur, le staff peut désactiver via les options de la télécommande.
 - **Politique de rétention des données** : Nettoyage automatique de la DB et limites buffers Pi
   - Jobs cron quotidiens pour nettoyer les tables volumineuses
   - `video_plays`, `sponsor_impressions` : 90 jours

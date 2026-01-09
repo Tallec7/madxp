@@ -179,7 +179,7 @@ const DEFAULT_OPTIONS: LocalOptions = {
   },
 
   overlay: {
-    scoreEnabled: true,
+    scoreEnabled: false, // Désactivé par défaut - le staff du club active quand il y a un match
     position: undefined, // Utilise la position du central par défaut
     useLocalColors: false,
     backgroundColor: undefined,
