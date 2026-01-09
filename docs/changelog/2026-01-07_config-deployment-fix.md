@@ -54,7 +54,9 @@ function mergeSponsors(localSponsors, centralSponsors) {
 
 **Fichier** : `central-dashboard/.../site-debug-tab.component.ts`
 
-- Suppression de la section "Mise à jour sync-agent" qui était en doublon avec celle de l'onglet Paramètres
+- Suppression de la section "Mise à jour sync-agent" qui était en doublon
+
+> **Note** : Le bouton "Mise à jour Sync-Agent" dans l'onglet Paramètres a également été supprimé (v2.21.x) car il ne fonctionnait pas (envoyait `agentFiles: {}` vide). La mise à jour du logiciel se fait via l'onglet Debug → "Mettre à jour le logiciel" (commande `update_software`).
 
 ### Documentation mise à jour
 
