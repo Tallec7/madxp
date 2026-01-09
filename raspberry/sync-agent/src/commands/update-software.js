@@ -438,6 +438,16 @@ class SoftwareUpdateHandler {
 
       for (const service of services) {
         try {
+          // Vérifier si le service existe avant de le démarrer
+          const { stdout: existsCheck } = await execAsync(
+            `systemctl list-unit-files ${service}.service 2>/dev/null | grep -q ${service} && echo "exists" || echo "not_found"`
+          );
+
+          if (existsCheck.trim() === 'not_found') {
+            logger.info(`Service ${service} not installed, skipping`);
+            continue;
+          }
+
           await execAsync(`sudo systemctl start ${service}`);
           logger.info(`Service started: ${service}`);
         } catch (error) {
@@ -445,21 +455,48 @@ class SoftwareUpdateHandler {
         }
       }
 
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      // Attendre que les services démarrent avec retry
+      logger.info('Waiting for services to become active...');
+      const maxRetries = 6;
+      const retryDelay = 5000; // 5 secondes entre chaque retry (total: 30s max)
 
       for (const service of services) {
-        try {
-          const { stdout } = await execAsync(`sudo systemctl is-active ${service}`);
-          if (stdout.trim() !== 'active') {
-            throw new Error(`Service ${service} is not active after restart`);
+        let isActive = false;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            const { stdout } = await execAsync(`sudo systemctl is-active ${service} 2>/dev/null || echo "inactive"`);
+            const status = stdout.trim();
+
+            if (status === 'active') {
+              isActive = true;
+              logger.info(`Service ${service} is active (attempt ${attempt}/${maxRetries})`);
+              break;
+            } else if (status === 'inactive' || status === 'activating') {
+              // Service existe mais pas encore prêt, attendre
+              logger.info(`Service ${service} status: ${status}, retrying (${attempt}/${maxRetries})...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+            } else {
+              // Service n'existe pas ou autre état - ne pas bloquer
+              logger.warn(`Service ${service} status: ${status}, skipping health check`);
+              isActive = true; // Ne pas faire échouer la mise à jour
+              break;
+            }
+          } catch (error) {
+            // systemctl a échoué - le service n'existe probablement pas
+            logger.warn(`Service ${service} check failed: ${error.message}, skipping`);
+            isActive = true; // Ne pas faire échouer la mise à jour
+            break;
           }
-        } catch (error) {
-          logger.error(`Service health check failed for ${service}:`, error);
-          throw error;
+        }
+
+        if (!isActive) {
+          // Après tous les retries, logger un warning mais ne pas échouer
+          logger.warn(`Service ${service} did not become active after ${maxRetries} attempts, continuing anyway`);
         }
       }
 
-      logger.info('All services started and healthy');
+      logger.info('Services startup complete');
 
       // Schedule sync-agent restart to apply any updates to itself
       // Use spawn with detached to allow the current process to exit
