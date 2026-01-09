@@ -898,6 +898,25 @@ export const getSystemInfo = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getHotspotConfig = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'get_hotspot_config', {}, req.user?.id)).commandId,
+      15000
+    );
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Get hotspot config error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors de la récupération de la configuration hotspot' });
+  }
+};
+
 export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

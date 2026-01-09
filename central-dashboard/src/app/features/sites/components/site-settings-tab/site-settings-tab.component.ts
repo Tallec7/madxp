@@ -776,13 +776,13 @@ export class SiteSettingsTabComponent implements OnInit {
       return;
     }
 
-    // Sinon, essayer de récupérer le SSID réel via la commande get_hotspot_config
+    // Sinon, récupérer le SSID réel via l'endpoint dédié
     this.fetchingSsid = true;
-    this.sitesService.sendCommand(this.siteId, 'get_hotspot_config', {}).subscribe({
-      next: (response: any) => {
+    this.sitesService.getHotspotConfig(this.siteId).subscribe({
+      next: (response) => {
         this.fetchingSsid = false;
-        if (response.result?.ssid) {
-          this.realSsid = response.result.ssid;
+        if (response.ssid) {
+          this.realSsid = response.ssid;
           this.logger.info('SSID réel récupéré', { ssid: this.realSsid });
         }
         this.showQrCode = true;

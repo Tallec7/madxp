@@ -92,6 +92,17 @@ export class SitesService {
     return this.api.get(`/sites/${id}/system-info`);
   }
 
+  getHotspotConfig(id: string): Observable<{
+    success: boolean;
+    configured: boolean;
+    ssid?: string;
+    channel?: number;
+    isActive?: boolean;
+    message?: string;
+  }> {
+    return this.api.get(`/sites/${id}/hotspot-config`);
+  }
+
   updateSiteStatus(id: string, status: string): void {
     const sites = this.sitesSubject.value;
     const index = sites.findIndex(s => s.id === id);
@@ -204,23 +215,11 @@ export class SitesService {
   }
 
   // Hotspot WiFi management
-  getHotspotConfig(id: string): Observable<{ success: boolean; commandId?: string; message: string }> {
-    return this.sendCommand(id, 'get_hotspot_config', {});
-  }
-
   updateHotspot(id: string, ssid?: string, password?: string): Observable<{ success: boolean; commandId?: string; message: string }> {
     const params: Record<string, string> = {};
     if (ssid) params['ssid'] = ssid;
     if (password) params['password'] = password;
     return this.sendCommand(id, 'update_hotspot', params);
-  }
-
-  // Remote sync-agent update via update_config command
-  updateSyncAgent(id: string, agentFiles: Record<string, string>): Observable<{ success: boolean; commandId?: string; message: string }> {
-    return this.sendCommand(id, 'update_config', {
-      mode: 'update_agent',
-      agentFiles
-    });
   }
 
   // Network diagnostics
