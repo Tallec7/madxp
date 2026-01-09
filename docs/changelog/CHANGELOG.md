@@ -1,3 +1,9 @@
+## [2.15.4](https://github.com/Tallec7/neopro/compare/v2.15.3...v2.15.4) (2026-01-09)
+
+### Bug Fixes
+
+- **deploy:** add npm install for sync-agent in all deploy scripts ([70dc460](https://github.com/Tallec7/neopro/commit/70dc4605532321d96fbfe8fbc42e035da97a9527))
+
 ## [2.15.3](https://github.com/Tallec7/neopro/compare/v2.15.2...v2.15.3) (2026-01-09)
 
 ### Bug Fixes
