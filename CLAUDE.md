@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.15.4 | **Dernière mise à jour**: 2026-01-09
+**Version**: 2.21.1 | **Dernière mise à jour**: 2026-01-09
 
 ---
 
@@ -1442,6 +1442,33 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 ---
 
 ## Historique Breaking Changes
+
+### v2.21.x (Janvier 2026)
+
+- **Fix déploiement mot de passe télécommande /remote** : Le bouton "Déployer" dans l'onglet Paramètres ne mettait pas à jour le mot de passe sur le Pi
+  - **Bug** : Le dashboard envoyait `{ remotePassword, clubName }` dans `neoProContent`, mais le sync-agent ne traitait pas ces champs
+  - **Symptôme** : Le mot de passe /remote/login ne changeait jamais malgré le message "Configuration déployée"
+  - **Cause** : Le frontend `/remote` lit `config.auth.password`, mais ni `update_config` (mode merge/replace) ni `config-merge.js` ne géraient `remotePassword`
+  - **Fix** : Ajout du mapping `remotePassword` → `auth.password` et `clubName` → `auth.clubName` dans :
+    - `sync-agent/src/commands/index.js` (mode replace)
+    - `sync-agent/src/utils/config-merge.js` (mode merge)
+  - **Migration** : Déployer le nouveau sync-agent sur les Pi (SCP ou update_software)
+- **Suppression du bouton "Mise à jour Sync-Agent"** : Bouton non fonctionnel supprimé de l'onglet Paramètres
+  - **Problème** : Le bouton envoyait `agentFiles: {}` (objet vide), donc ne mettait rien à jour
+  - **Impact** : Le sync-agent redémarrait mais sans modification de fichiers
+  - **Solution** : Utiliser le bouton "Mettre à jour le logiciel" dans l'onglet Debug (commande `update_software`)
+  - **Fichiers supprimés** :
+    - `site-settings-tab.component.ts` : bouton, propriété `updatingSyncAgent`, méthode `updateSyncAgent()`
+    - `sites.service.ts` : méthode `updateSyncAgent()`
+    - `commands/index.js` : mode `update_agent` (code mort)
+  - **Migration** : Aucune (suppression de code mort)
+- **Fix path concatenation dans update-software.js** : Les mises à jour OTA échouaient avec "No such file or directory"
+  - **Bug** : `update-software.js` concaténait `${sourcePath}webapp/*` au lieu de `${sourcePath}/webapp/*`
+  - **Symptôme** : Erreur `cp: cannot stat '/tmp/neopro-update-extractwebapp/*': No such file or directory`
+  - **Cause** : `sourcePath` se terminait par `/` et on ajoutait directement `webapp/*` sans slash
+  - **Fix** : Utilisation de `path.join(sourcePath, 'webapp')` pour tous les composants (webapp, server, sync-agent, admin, scripts)
+  - **Fichier modifié** : `raspberry/sync-agent/src/commands/update-software.js`
+  - **Migration** : Pour les Pi avec l'ancienne version, envoyer le fichier corrigé via SCP ou `cat | ssh` avant de relancer la mise à jour OTA
 
 ### v2.16.x (Janvier 2026)
 
