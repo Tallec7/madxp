@@ -1,3 +1,9 @@
+# [2.23.0](https://github.com/Tallec7/neopro/compare/v2.22.1...v2.23.0) (2026-01-09)
+
+### Features
+
+- **updates:** add upload progress tracking with retry ([490a474](https://github.com/Tallec7/neopro/commit/490a474613f904cf807d2157619186f73e4427de))
+
 ## [2.22.1](https://github.com/Tallec7/neopro/compare/v2.22.0...v2.22.1) (2026-01-09)
 
 ### Bug Fixes
