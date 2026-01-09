@@ -1,3 +1,9 @@
+# [2.19.0](https://github.com/Tallec7/neopro/compare/v2.18.1...v2.19.0) (2026-01-09)
+
+### Features
+
+- **qr-code:** fetch real SSID via get_hotspot_config command ([f40bc4a](https://github.com/Tallec7/neopro/commit/f40bc4a2c59e3b559f31f6e3fb8ccedf8bce27d3))
+
 ## [2.18.1](https://github.com/Tallec7/neopro/compare/v2.18.0...v2.18.1) (2026-01-09)
 
 ### Bug Fixes
