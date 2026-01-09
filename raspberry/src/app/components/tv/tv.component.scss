@@ -23,8 +23,13 @@
   // Par défaut: caché (opacité et z-index gérés par JS)
   opacity: 0;
   z-index: 0;
-  // Transition plus longue pour un fondu doux (évite les sautes)
-  transition: opacity 0.3s ease-in-out;
+  // Transition pour le fondu - désactivée si cause des saccades
+  // transition: opacity 0.3s ease-in-out;
+  // Forcer l'accélération GPU pour éviter les repaints
+  transform: translateZ(0);
+  will-change: opacity;
+  // Optimisation décodage vidéo
+  backface-visibility: hidden;
 
   &.player-a {
     // Player A: sera actif en premier
