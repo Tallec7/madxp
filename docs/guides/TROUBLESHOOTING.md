@@ -1030,6 +1030,33 @@ Les composants Angular s'abonnaient au socket avant que la connexion Socket.IO n
 2. Les événements sont désormais tamponnés dans `eventsSubject`, ce qui garantit la réception par les écrans même si l'abonnement est antérieur à la connexion réseau.
 3. Rafraîchir la page pour réinitialiser les abonnements et vérifier que la progression augmente en direct.
 
+### Déploiement vidéo échoue avec "Video checksum is required"
+
+**Symptômes**
+
+- Dans **Contenu → Historique**, le déploiement affiche « Échoué » avec 0 % de progression.
+- En base de données : `error_message = 'Video checksum is required for deployment'`
+
+**Cause**
+
+Les vidéos uploadées via l'endpoint **bulk upload** (`POST /videos/bulk`) avant la version 2.21.x n'avaient pas de checksum SHA256 calculé. Le déploiement exige ce checksum pour vérifier l'intégrité du fichier après téléchargement.
+
+**Vérification**
+
+```sql
+SELECT id, filename, checksum FROM videos WHERE checksum IS NULL;
+```
+
+**Résolution**
+
+1. **Supprimer** les vidéos concernées (via dashboard ou SQL)
+2. **Ré-uploader** les vidéos — le checksum sera calculé automatiquement
+3. **Relancer** le déploiement
+
+**Prévention**
+
+Mettre à jour `central-server` vers v2.21.x+ où le fix est inclus dans `content.controller.ts`.
+
 ---
 
 ## Diagnostic réseau à distance

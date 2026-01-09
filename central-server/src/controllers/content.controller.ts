@@ -352,11 +352,14 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
         const file_size = file.size;
         const mime_type = file.mimetype;
 
+        // Calculer le checksum SHA256 pour vérification d'intégrité
+        const checksum = calculateChecksum(file.buffer);
+
         const result = await pool.query(
-          `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, metadata, uploaded_by)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-           RETURNING id, filename as name, original_name, file_size as size`,
-          [filename, original_name, category || null, subcategory || null, file_size, mime_type, uploadResult.path, { title: videoTitle }, req.user?.id || null]
+          `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, checksum, metadata, uploaded_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           RETURNING id, filename as name, original_name, file_size as size, checksum`,
+          [filename, original_name, category || null, subcategory || null, file_size, mime_type, uploadResult.path, checksum, { title: videoTitle }, req.user?.id || null]
         );
 
         const video = result.rows[0] as { id: string; name: string; original_name: string; size: number };
