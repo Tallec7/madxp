@@ -1,3 +1,9 @@
+# [2.20.0](https://github.com/Tallec7/neopro/compare/v2.19.0...v2.20.0) (2026-01-09)
+
+### Features
+
+- **qr-code:** add dedicated hotspot-config endpoint for real SSID ([60d15a6](https://github.com/Tallec7/neopro/commit/60d15a654b66c1e8f5f58e650c38f859c9962ebb))
+
 # [2.19.0](https://github.com/Tallec7/neopro/compare/v2.18.1...v2.19.0) (2026-01-09)
 
 ### Features
