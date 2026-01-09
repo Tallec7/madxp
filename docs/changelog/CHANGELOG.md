@@ -1,3 +1,9 @@
+## [2.21.1](https://github.com/Tallec7/neopro/compare/v2.21.0...v2.21.1) (2026-01-09)
+
+### Bug Fixes
+
+- **sync-agent:** deploy remotePassword to auth.password for /remote login ([4f789d7](https://github.com/Tallec7/neopro/commit/4f789d749e0c7874882f29c219bfdecf14431eac))
+
 # [2.21.0](https://github.com/Tallec7/neopro/compare/v2.20.0...v2.21.0) (2026-01-09)
 
 ### Features
