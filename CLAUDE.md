@@ -500,16 +500,25 @@ Les clubs peuvent définir des playlists différentes selon la **phase du match*
 - `central-dashboard/.../site-content-tab.component.ts` - UI de configuration
 - `central-dashboard/.../remote-preview.component.ts` - Prévisualisation
 
-### Double-Buffer Vidéo (Transitions Sans Flash) ⚡ NEW (2026-01-08)
+### Double-Buffer Vidéo (Transitions Sans Flash) ⚡ UPDATED (2026-01-09)
 
-Le composant TV utilise un système **double-buffer** pour éliminer les flash noirs entre les vidéos de la boucle :
+Le composant TV utilise un système **double-buffer** pour éliminer les flash noirs entre les vidéos de la boucle.
+
+**⚠️ IMPORTANT - Optimisation Pi** :
+
+Le préchargement anticipé et l'événement `timeupdate` causent des **saccades** sur Raspberry Pi car le décodeur matériel ne supporte pas bien le décodage de 2 vidéos en parallèle. Solution adoptée :
+
+- **Pas de préchargement pendant la lecture** - une seule vidéo décode à la fois
+- **`timeupdate` désactivé** - l'événement lui-même causait des micro-freezes
+- **Préchargement au `ended`** - on charge la suivante uniquement quand la vidéo se termine
+- Légère pause entre vidéos acceptable (< 1s) en échange d'une lecture fluide
 
 **Principe** :
 
 - Deux éléments `<video>` (playerA et playerB) en position absolue superposés
-- Pendant qu'une vidéo joue sur un player, la suivante est préchargée sur l'autre
-- À la fin d'une vidéo, on lance `play()` sur le player préchargé AVANT de changer l'opacité
-- Transition CSS de 150ms pour un fondu doux
+- Pendant qu'une vidéo joue, **aucune autre ne décode** (évite surcharge GPU)
+- À la fin (`ended`), on charge et joue la suivante sur l'autre player
+- Switch visuel instantané (pas de transition CSS, causait des saccades)
 
 **Architecture** :
 
@@ -518,12 +527,12 @@ Le composant TV utilise un système **double-buffer** pour éliminer les flash n
 │                        TV Component                              │
 │  ┌──────────────┐    ┌──────────────┐                           │
 │  │   Player A   │    │   Player B   │                           │
-│  │  opacity: 1  │    │  opacity: 0  │  ← précharge next video   │
+│  │  opacity: 1  │    │  opacity: 0  │  ← vide pendant lecture   │
 │  │  z-index: 1  │    │  z-index: 0  │                           │
-│  │  [PLAYING]   │    │  [READY]     │                           │
+│  │  [PLAYING]   │    │  [IDLE]      │                           │
 │  └──────────────┘    └──────────────┘                           │
 │         │                    │                                   │
-│         └────── SWITCH ──────┘                                   │
+│      ended ─────── load+play ┘                                   │
 │                   │                                              │
 │         playerA ←→ playerB alternent                            │
 └─────────────────────────────────────────────────────────────────┘
@@ -536,15 +545,21 @@ Le composant TV utilise un système **double-buffer** pour éliminer les flash n
 | `initDoubleBuffer()`        | Initialise les 2 players et leurs event listeners |
 | `setPlayerVisible()`        | Contrôle opacité/z-index via styles inline        |
 | `playOnActivePlayer()`      | Joue une vidéo sur le player visible              |
-| `preloadOnInactivePlayer()` | Précharge la prochaine vidéo sur le player caché  |
-| `switchPlayers()`           | Bascule entre les 2 players sans flash            |
+| `preloadOnInactivePlayer()` | Charge la vidéo suivante (appelé au `ended`)      |
+| `switchPlayers()`           | Bascule entre les 2 players                       |
 | `onVideoEnded()`            | Déclenche le switch à la fin d'une vidéo          |
+
+**Ce qui a été désactivé** (causait des saccades sur Pi) :
+
+- `timeupdate` listener - même throttlé, causait des micro-freezes
+- Préchargement anticipé - décodage parallèle surchargeait le GPU
+- Transition CSS opacity - repaints causaient des saccades
 
 **Fichiers impliqués** :
 
 - `raspberry/src/app/components/tv/tv.component.ts` - Logique double-buffer
 - `raspberry/src/app/components/tv/tv.component.html` - Deux éléments `<video>`
-- `raspberry/src/app/components/tv/tv.component.scss` - CSS avec transition opacity
+- `raspberry/src/app/components/tv/tv.component.scss` - CSS (transition désactivée)
 
 ### Mapping Analytics des Catégories ⚡ NEW (2026-01)
 
