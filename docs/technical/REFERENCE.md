@@ -746,7 +746,13 @@ socket.on('deploy_video', (data) => {
 
 // Mettre à jour la configuration
 socket.on('update_config', (data) => {
-  // data: { configVersionId, configuration }
+  // data: { neoProContent, mode }
+  // neoProContent peut contenir:
+  //   - sponsors, categories, timeCategories, categoryMappings
+  //   - liveScoreEnabled, scoreOverlay
+  //   - remotePassword → stocké dans auth.password (mot de passe /remote)
+  //   - clubName → stocké dans auth.clubName
+  // mode: 'merge' (défaut) ou 'replace'
 });
 
 // Exécuter une commande
