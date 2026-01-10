@@ -519,9 +519,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
           // le composant qui a lancé la commande gère son propre feedback
           break;
         case 'deploy_progress':
-          if (event.data.progress === 100) {
-            this.showNotification('success', 'Déploiement terminé');
-          }
+          // Ne pas afficher de notification globale ici -
+          // le composant site-content-tab gère son propre feedback avec le nom du fichier
           break;
         case 'alert_created':
           this.showNotification('warning', event.data.message);
