@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.22.0 | **Dernière mise à jour**: 2026-01-10
+**Version**: 2.23.2 | **Dernière mise à jour**: 2026-01-10
 
 ---
 
@@ -500,9 +500,9 @@ Les clubs peuvent définir des playlists différentes selon la **phase du match*
 - `central-dashboard/.../site-content-tab.component.ts` - UI de configuration
 - `central-dashboard/.../remote-preview.component.ts` - Prévisualisation
 
-### Double-Buffer Vidéo (Transitions Sans Flash) ⚡ UPDATED (2026-01-09)
+### Double-Buffer Vidéo (Transitions Sans Flash) ⚡ UPDATED (2026-01-10)
 
-Le composant TV utilise un système **double-buffer** pour éliminer les flash noirs entre les vidéos de la boucle.
+Le composant TV utilise un système **double-buffer + freeze-frame + black overlay** pour éliminer les flash entre vidéos.
 
 **⚠️ IMPORTANT - Optimisation Pi** :
 
@@ -513,18 +513,17 @@ Le préchargement anticipé et l'événement `timeupdate` causent des **saccades
 - **Préchargement au `ended`** - on charge la suivante uniquement quand la vidéo se termine
 - Légère pause entre vidéos acceptable (< 1s) en échange d'une lecture fluide
 
-**Principe** :
-
-- Deux éléments `<video>` (playerA et playerB) en position absolue superposés
-- Pendant qu'une vidéo joue, **aucune autre ne décode** (évite surcharge GPU)
-- À la fin (`ended`), on charge et joue la suivante sur l'autre player
-- Switch visuel instantané (pas de transition CSS, causait des saccades)
-
-**Architecture** :
+**Architecture des couches (z-index)** :
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        TV Component                              │
+│                                                                  │
+│  z-index 20: Canvas freeze-frame (capture image actuelle)       │
+│  z-index 10: Player manuel (vidéos déclenchées manuellement)    │
+│  z-index 5:  Black overlay (bloque la boucle pendant transitions)│
+│  z-index 1-2: Players boucle A/B (alternent pour la boucle)     │
+│                                                                  │
 │  ┌──────────────┐    ┌──────────────┐                           │
 │  │   Player A   │    │   Player B   │                           │
 │  │  opacity: 1  │    │  opacity: 0  │  ← vide pendant lecture   │
@@ -538,16 +537,35 @@ Le préchargement anticipé et l'événement `timeupdate` causent des **saccades
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+**Stratégie pour les vidéos manuelles** :
+
+1. Capturer le freeze-frame (z-index 20, image de la vidéo en cours)
+2. Afficher le black overlay (z-index 5, bloque physiquement la boucle)
+3. Charger la vidéo manuelle sur le player manuel (z-index 10)
+4. Attendre `canplaythrough` puis jouer
+5. Après 200ms, cacher le freeze-frame (vidéo manuelle visible)
+6. À la fin : cacher player manuel + black overlay → boucle visible
+
+**Stratégie pour les changements de phase** :
+
+1. Capturer le freeze-frame AVANT de changer quoi que ce soit
+2. Changer la phase et recharger la boucle
+3. Une fois la nouvelle vidéo en lecture, cacher le freeze-frame (150ms délai)
+
 **Méthodes clés** :
 
-| Méthode                     | Rôle                                              |
-| --------------------------- | ------------------------------------------------- |
-| `initDoubleBuffer()`        | Initialise les 2 players et leurs event listeners |
-| `setPlayerVisible()`        | Contrôle opacité/z-index via styles inline        |
-| `playOnActivePlayer()`      | Joue une vidéo sur le player visible              |
-| `preloadOnInactivePlayer()` | Charge la vidéo suivante (appelé au `ended`)      |
-| `switchPlayers()`           | Bascule entre les 2 players                       |
-| `onVideoEnded()`            | Déclenche le switch à la fin d'une vidéo          |
+| Méthode                       | Rôle                                         |
+| ----------------------------- | -------------------------------------------- |
+| `initDoubleBuffer()`          | Initialise les 4 players + canvas + overlay  |
+| `setPlayerVisible()`          | Contrôle opacité/z-index via styles inline   |
+| `playOnActivePlayer()`        | Joue une vidéo sur le player visible         |
+| `preloadOnInactivePlayer()`   | Charge la vidéo suivante (appelé au `ended`) |
+| `switchPlayers()`             | Bascule entre les 2 players                  |
+| `onVideoEnded()`              | Déclenche le switch à la fin d'une vidéo     |
+| `captureAndShowFreezeFrame()` | Capture l'image actuelle sur le canvas       |
+| `hideFreezeFrame()`           | Cache le canvas freeze-frame                 |
+| `showBlackOverlay()`          | Affiche l'overlay noir (bloque la boucle)    |
+| `hideBlackOverlay()`          | Cache l'overlay noir                         |
 
 **Ce qui a été désactivé** (causait des saccades sur Pi) :
 
@@ -557,9 +575,9 @@ Le préchargement anticipé et l'événement `timeupdate` causent des **saccades
 
 **Fichiers impliqués** :
 
-- `raspberry/src/app/components/tv/tv.component.ts` - Logique double-buffer
-- `raspberry/src/app/components/tv/tv.component.html` - Deux éléments `<video>`
-- `raspberry/src/app/components/tv/tv.component.scss` - CSS (transition désactivée)
+- `raspberry/src/app/components/tv/tv.component.ts` - Logique double-buffer + freeze-frame
+- `raspberry/src/app/components/tv/tv.component.html` - 4 vidéos + canvas + overlay
+- `raspberry/src/app/components/tv/tv.component.scss` - CSS (z-index, positions)
 
 ### Mapping Analytics des Catégories ⚡ NEW (2026-01)
 

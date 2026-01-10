@@ -7,9 +7,52 @@
 }
 
 // ============================================================================
-// DOUBLE-BUFFER VIDEO SYSTEM
-// Deux players qui alternent: un joue pendant que l'autre précharge
-// L'opacité est contrôlée via JavaScript (inline style)
+// FREEZE-FRAME CANVAS
+// Canvas utilisé pour capturer l'image actuelle pendant les transitions
+// Élimine les flash blancs lors du changement de source vidéo
+// z-index 5 : entre la boucle (1-2) et les players manuels (10-11)
+// ============================================================================
+
+.freeze-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  background: #000;
+  // Par défaut: COMPLÈTEMENT CACHÉ avec display:none
+  display: none;
+  opacity: 0;
+  z-index: 20; // Au-dessus de tout pour les transitions
+  pointer-events: none;
+}
+
+// ============================================================================
+// BLACK OVERLAY
+// Overlay noir opaque pour bloquer la boucle pendant les transitions manuelles
+// Se positionne entre la boucle (z-index 1-2) et les players manuels (z-index 10)
+// IMPORTANT: Le video element est transparent jusqu'au premier frame,
+// cet overlay garantit qu'on ne voit jamais la boucle en transparence
+// ============================================================================
+
+.black-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  // Par défaut: CACHÉ
+  opacity: 0;
+  z-index: 5; // Entre la boucle (1-2) et les players manuels (10)
+  pointer-events: none;
+}
+
+// ============================================================================
+// DOUBLE-BUFFER VIDEO SYSTEM - BOUCLE
+// Deux players qui alternent pour la boucle automatique
+// z-index 1-2 (en dessous des players manuels)
 // ============================================================================
 
 .double-buffer-player {
@@ -22,22 +65,34 @@
   background: #000;
   // Par défaut: caché (opacité et z-index gérés par JS)
   opacity: 0;
-  z-index: 0;
-  // Transition pour le fondu - désactivée si cause des saccades
-  // transition: opacity 0.3s ease-in-out;
-  // Forcer l'accélération GPU pour éviter les repaints
+  z-index: 1;
+  // Forcer l'accélération GPU
   transform: translateZ(0);
   will-change: opacity;
-  // Optimisation décodage vidéo
   backface-visibility: hidden;
+}
 
-  &.player-a {
-    // Player A: sera actif en premier
-  }
+// ============================================================================
+// PLAYER MANUEL UNIQUE
+// Un seul player pour les vidéos manuelles, AU-DESSUS de la boucle
+// z-index 10 (au-dessus de la boucle, en dessous du canvas freeze-frame)
+// ============================================================================
 
-  &.player-b {
-    // Player B: sera actif en alternance
-  }
+.manual-player {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  // IMPORTANT: background noir pour éviter de voir à travers
+  background: #000 !important;
+  // Par défaut: caché via opacity (géré par JS)
+  opacity: 0;
+  z-index: 10;
+  // Forcer l'accélération GPU
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 // ============================================================================
