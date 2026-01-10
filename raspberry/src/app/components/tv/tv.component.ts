@@ -1048,14 +1048,16 @@ export class TvComponent implements OnInit, OnDestroy {
     this.manualPlayerB = this.manualPlayerBRef.nativeElement;
 
     // Canvas freeze-frame
-    this.freezeCanvas = this.freezeCanvasRef.nativeElement;
-    this.freezeCtx = this.freezeCanvas.getContext('2d');
-    // Définir la taille du canvas (Full HD)
-    this.freezeCanvas.width = 1920;
-    this.freezeCanvas.height = 1080;
+    this.freezeCanvas = this.freezeCanvasRef?.nativeElement;
+    if (this.freezeCanvas) {
+      this.freezeCtx = this.freezeCanvas.getContext('2d');
+      // Définir la taille du canvas (720p pour économiser la mémoire sur Pi)
+      this.freezeCanvas.width = 1280;
+      this.freezeCanvas.height = 720;
+    }
 
     // Black overlay
-    this.blackOverlay = this.blackOverlayRef.nativeElement;
+    this.blackOverlay = this.blackOverlayRef?.nativeElement;
 
     // Configurer les players de boucle
     [this.playerA, this.playerB].forEach((player, i) => {
@@ -1482,8 +1484,8 @@ export class TvComponent implements OnInit, OnDestroy {
    * Retourne true si la capture a réussi
    */
   private captureAndShowFreezeFrame(): boolean {
-    if (!this.freezeCtx) {
-      console.warn('[TV] Freeze canvas context not available');
+    if (!this.freezeCanvas || !this.freezeCtx) {
+      console.warn('[TV] Freeze canvas not available');
       return false;
     }
 
@@ -1522,13 +1524,15 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Cache le canvas freeze-frame
+   * Cache le canvas freeze-frame et libère la mémoire bitmap
    */
   private hideFreezeFrame(): void {
-    if (this.freezeCanvas) {
+    if (this.freezeCanvas && this.freezeCtx) {
       this.freezeCanvas.style.opacity = '0';
       this.freezeCanvas.style.display = 'none'; // Complètement caché
       this.freezeCanvas.style.zIndex = '20';
+      // Libérer la mémoire bitmap (important pour usage intensif sur Pi)
+      this.freezeCtx.clearRect(0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
       console.log('[TV] Freeze frame hidden');
     }
   }

@@ -563,9 +563,15 @@ Le préchargement anticipé et l'événement `timeupdate` causent des **saccades
 | `switchPlayers()`             | Bascule entre les 2 players                  |
 | `onVideoEnded()`              | Déclenche le switch à la fin d'une vidéo     |
 | `captureAndShowFreezeFrame()` | Capture l'image actuelle sur le canvas       |
-| `hideFreezeFrame()`           | Cache le canvas freeze-frame                 |
+| `hideFreezeFrame()`           | Cache le canvas + clearRect (libère mémoire) |
 | `showBlackOverlay()`          | Affiche l'overlay noir (bloque la boucle)    |
 | `hideBlackOverlay()`          | Cache l'overlay noir                         |
+
+**Optimisation mémoire (usage intensif)** :
+
+- Canvas réduit à 720p (1280x720) au lieu de 1080p → économise ~4.5MB
+- `clearRect()` appelé après chaque transition pour libérer la mémoire bitmap
+- Important pour les sessions longues (5h+) avec 3-4 déclenchements manuels/minute
 
 **Ce qui a été désactivé** (causait des saccades sur Pi) :
 
