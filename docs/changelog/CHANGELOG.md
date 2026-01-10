@@ -1,3 +1,9 @@
+## [2.23.2](https://github.com/Tallec7/neopro/compare/v2.23.1...v2.23.2) (2026-01-10)
+
+### Bug Fixes
+
+- **thumbnails:** move thumbnail when video is renamed ([0699329](https://github.com/Tallec7/neopro/commit/0699329d5c99782f0b08000326cf234bdfbbc6ab))
+
 ## [2.23.1](https://github.com/Tallec7/neopro/compare/v2.23.0...v2.23.1) (2026-01-10)
 
 ### Bug Fixes
