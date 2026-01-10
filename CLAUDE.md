@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.22.0 | **Dernière mise à jour**: 2026-01-09
+**Version**: 2.22.0 | **Dernière mise à jour**: 2026-01-10
 
 ---
 
@@ -1444,6 +1444,16 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 ## Historique Breaking Changes
 
 ### v2.22.x (Janvier 2026)
+
+- **Fix cache miniatures après régénération** : Le bouton "Miniatures" de l'admin panel rafraîchit maintenant correctement l'affichage
+  - **Problème** : Après régénération des miniatures, le navigateur gardait les anciennes images en cache (ou les erreurs 404)
+  - **Solution** : Ajout d'un cache-buster (`?t=<timestamp>`) aux URLs des miniatures
+  - **Admin panel** : Utilise l'API synchrone `/api/thumbnails/regenerate-sync`, attend la fin, puis rafraîchit l'affichage
+  - **Remote** : Le bouton "Actualiser" met à jour le cache-buster pour recharger les miniatures
+  - **Fichiers modifiés** :
+    - `raspberry/admin/public/app.js` - Variable `thumbnailCacheBuster`, fonction `regenerateThumbnails()` améliorée
+    - `raspberry/src/app/components/remote/remote.component.ts` - Cache-buster dans `getVideoThumbnailUrl()`
+  - **Migration** : Déployer via OTA ou build + deploy
 
 - **Refactoring Bibliothèque Vidéo** : Amélioration majeure du composant VideoLibrary
   - **Fix doublons** : Déduplication robuste par ID + nom de fichier (case-insensitive)

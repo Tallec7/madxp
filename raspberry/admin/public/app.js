@@ -1873,6 +1873,11 @@ function formatDuration(seconds) {
 }
 
 /**
+ * Cache-buster pour les miniatures (mis à jour après régénération)
+ */
+let thumbnailCacheBuster = Date.now();
+
+/**
  * Générer l'URL de miniature à partir du chemin vidéo
  * Les miniatures sont générées par video-processor.js dans /thumbnails/
  */
@@ -1883,7 +1888,8 @@ function getThumbnailUrl(videoPath) {
     const pathWithoutExt = videoPath.replace(/\.\w+$/, '');
     // Le chemin vidéo commence déjà par "videos/" donc on remplace
     const thumbnailPath = pathWithoutExt.replace(/^videos\//, 'thumbnails/') + '.jpg';
-    return '/' + thumbnailPath;
+    // Ajouter cache-buster pour forcer le rechargement après régénération
+    return '/' + thumbnailPath + '?t=' + thumbnailCacheBuster;
 }
 
 async function uploadVideo() {
@@ -2268,15 +2274,17 @@ function closeVideoPreview() {
 
 /**
  * Régénération des miniatures
+ * Utilise l'API synchrone pour attendre la fin, puis rafraîchit l'affichage
  */
 async function regenerateThumbnails(force = false) {
     const forceRegen = force || confirm('Régénérer uniquement les miniatures manquantes ?\n\nCliquez "Annuler" pour tout régénérer (plus long).');
     const actualForce = force ? true : !forceRegen;
 
-    showNotification('Régénération des miniatures en cours...', 'info');
+    showNotification('Régénération des miniatures en cours... Veuillez patienter.', 'info');
 
     try {
-        const response = await fetch('/api/thumbnails/regenerate', {
+        // Utiliser l'API synchrone pour attendre la fin de la génération
+        const response = await fetch('/api/thumbnails/regenerate-sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ force: actualForce })
@@ -2284,11 +2292,19 @@ async function regenerateThumbnails(force = false) {
 
         const data = await response.json();
         if (data.success) {
-            showNotification('Régénération lancée en arrière-plan', 'success');
+            // Mettre à jour le cache-buster pour forcer le rechargement des images
+            thumbnailCacheBuster = Date.now();
+
+            // Rafraîchir l'affichage des vidéos
+            await refreshVideos();
+
+            const stats = data.stats || {};
+            showNotification(`Miniatures régénérées : ${stats.generated || 0} nouvelles, ${stats.skipped || 0} existantes`, 'success');
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
     } catch (error) {
+        console.error('Erreur régénération miniatures:', error);
         showNotification('Erreur lors de la régénération', 'error');
     }
 }

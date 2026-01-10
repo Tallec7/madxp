@@ -142,6 +142,8 @@ export class RemoteComponent implements OnInit {
 
   // Thumbnails - URL de base (same origin via nginx proxy to avoid CORS/Private Network Access issues)
   private readonly ADMIN_BASE_URL = '';
+  // Cache-buster pour forcer le rechargement des miniatures après actualisation
+  private thumbnailCacheBuster = Date.now();
 
   // Exposer Math pour le template
   public Math = Math;
@@ -431,6 +433,8 @@ export class RemoteComponent implements OnInit {
     this.isReloading = true;
     this.isLoading = true;
     const timestamp = Date.now();
+    // Mettre à jour le cache-buster des miniatures pour forcer leur rechargement
+    this.thumbnailCacheBuster = timestamp;
 
     this.http.get<Configuration>(`/configuration.json?t=${timestamp}`).subscribe({
       next: (config) => {
@@ -919,7 +923,7 @@ export class RemoteComponent implements OnInit {
       .replace(/^videos\//, 'thumbnails/')
       .replace(/\.\w+$/, '.jpg');
 
-    return `${this.ADMIN_BASE_URL}/${thumbnailPath}`;
+    return `${this.ADMIN_BASE_URL}/${thumbnailPath}?t=${this.thumbnailCacheBuster}`;
   }
 
   /**
