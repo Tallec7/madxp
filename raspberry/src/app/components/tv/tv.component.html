@@ -1,6 +1,16 @@
-<!-- Double-buffer vidéo: 2 players qui alternent pour transition sans flash -->
+<!-- Canvas freeze-frame pour transitions sans flash (z-index 20) -->
+<canvas #freezeCanvas class="freeze-canvas"></canvas>
+
+<!-- Overlay noir pour bloquer la boucle pendant les transitions (z-index 5) -->
+<div #blackOverlay class="black-overlay"></div>
+
+<!-- Double-buffer vidéo pour la BOUCLE (z-index 1-2) -->
 <video #playerA class="double-buffer-player player-a" playsinline muted></video>
 <video #playerB class="double-buffer-player player-b" playsinline muted></video>
+
+<!-- Player vidéo MANUEL (z-index 10, au-dessus de la boucle et de l'overlay noir) -->
+<video #manualPlayerA class="manual-player manual-player-a" playsinline muted></video>
+<video #manualPlayerB class="manual-player manual-player-b" playsinline muted></video>
 
 <!-- Legacy Video.js player (gardé pour compatibilité mais caché) -->
 <video

@@ -96,22 +96,45 @@ export class TvComponent implements OnInit, OnDestroy {
 
   @ViewChild('target', { static: true }) target: ElementRef;
 
-  // Double-buffer video system
+  // Double-buffer pour la BOUCLE (z-index 1-2)
   @ViewChild('playerA', { static: true }) playerARef: ElementRef<HTMLVideoElement>;
   @ViewChild('playerB', { static: true }) playerBRef: ElementRef<HTMLVideoElement>;
+
+  // Double-buffer pour les vidéos MANUELLES (z-index 10-11, au-dessus de la boucle)
+  @ViewChild('manualPlayerA', { static: true }) manualPlayerARef: ElementRef<HTMLVideoElement>;
+  @ViewChild('manualPlayerB', { static: true }) manualPlayerBRef: ElementRef<HTMLVideoElement>;
+
+  // Canvas freeze-frame pour transitions sans flash (z-index 20)
+  @ViewChild('freezeCanvas', { static: true }) freezeCanvasRef: ElementRef<HTMLCanvasElement>;
+
+  // Black overlay pour bloquer la boucle pendant les transitions (z-index 5)
+  @ViewChild('blackOverlay', { static: true }) blackOverlayRef: ElementRef<HTMLDivElement>;
 
   // État de la boucle
   public isLoopMode = true;
   private currentLoopIndex = 0;
   private playerA: HTMLVideoElement;
   private playerB: HTMLVideoElement;
-  private activePlayer: 'A' | 'B' = 'A'; // Quel player est actuellement visible
+  private activePlayer: 'A' | 'B' = 'A'; // Quel player de boucle est visible
   private isStartingLoop = false;
-  private pendingSwitch = false; // Évite les switchs multiples
-  private preloadedIndex: number | null = null; // Index de la vidéo préchargée
-  private preloadReady = false; // Le player inactif est-il prêt ?
-  private switchTriggered = false; // Pour éviter de déclencher le switch plusieurs fois
-  private lastTimeUpdateCheck = 0; // Throttle timeupdate events
+  private pendingSwitch = false;
+  private preloadedIndex: number | null = null;
+  private preloadReady = false;
+  private switchTriggered = false;
+  private lastTimeUpdateCheck = 0;
+
+  // État des players manuels
+  private manualPlayerA: HTMLVideoElement;
+  private manualPlayerB: HTMLVideoElement;
+  private activeManualPlayer: 'A' | 'B' = 'A'; // Quel player manuel est visible
+  private isManualMode = false; // Est-on en train de jouer une vidéo manuelle ?
+
+  // Canvas freeze-frame
+  private freezeCanvas: HTMLCanvasElement;
+  private freezeCtx: CanvasRenderingContext2D | null = null;
+
+  // Black overlay pour bloquer la boucle
+  private blackOverlay: HTMLDivElement;
 
   public player: Player;
 
@@ -514,27 +537,107 @@ export class TvComponent implements OnInit, OnDestroy {
   private play(video: Video) {
     console.log('tv player : play manual video', video.path);
 
-    // Arrêter la boucle pour passer en mode manuel
-    this.stopSeamlessLoop();
-
-    // Tracker le début de la vidéo manuelle
-    this.analyticsService.trackVideoStart(video, 'manual');
-
     // Si c'est une vidéo de la boucle courante déclenchée manuellement, tracker l'impression
     const isSponsor = this.currentLoopVideos.some(s => s.path === video.path);
-    if (isSponsor) {
-      this.sponsorAnalytics.trackSponsorStart(video, 'manual', 0);
-    }
 
-    // Utiliser le player actif pour les vidéos manuelles
-    const currentPlayer = this.getActivePlayer();
-    currentPlayer.src = video.path;
-    currentPlayer.load();
+    // =======================================================================
+    // STRATÉGIE: CANVAS FREEZE-FRAME + BLACK OVERLAY + PLAYER MANUEL
+    // 1. Capturer le frame actuel sur le canvas (z-index 20, masque tout)
+    // 2. Afficher le black overlay (z-index 5, bloque la boucle physiquement)
+    // 3. Rendre le player manuel visible (z-index 10, entre overlay et canvas)
+    // 4. Charger la vidéo et la jouer
+    // 5. Attendre 200ms APRÈS play() pour que le frame soit vraiment affiché
+    // 6. Cacher le freeze-frame (la vidéo manuelle est maintenant visible)
+    // Note: le black overlay reste visible pendant toute la lecture manuelle
+    // pour garantir qu'on ne voit JAMAIS la boucle en transparence
+    // =======================================================================
+
+    const targetPlayer = this.manualPlayerA;
+
+    // ÉTAPE 1: Capturer et afficher le freeze-frame IMMÉDIATEMENT
+    this.captureAndShowFreezeFrame();
+
+    // ÉTAPE 2: Afficher le black overlay pour bloquer la boucle
+    this.showBlackOverlay();
+
+    // ÉTAPE 3: Rendre le player manuel opaque (sous le canvas mais au-dessus du black overlay)
+    targetPlayer.style.opacity = '1';
+    targetPlayer.style.zIndex = '10';
+
+    // ÉTAPE 4: Configurer la source (le canvas masque tout)
+    targetPlayer.src = video.path;
+    targetPlayer.load();
+
+    let switchDone = false;
+
+    // ÉTAPE 5: Quand la vidéo est prête, la jouer puis attendre avant de cacher le canvas
+    const doSwitch = () => {
+      if (switchDone) return;
+      switchDone = true;
+
+      targetPlayer.play().then(() => {
+        // IMPORTANT: Attendre 200ms APRÈS play() pour que le décodeur
+        // ait vraiment affiché le premier frame sur le Pi
+        setTimeout(() => {
+          // Cacher le freeze-frame (la vidéo manuelle est visible maintenant)
+          this.hideFreezeFrame();
+          // NOTE: On garde le black overlay visible pendant toute la lecture
+          // pour éviter que la boucle transparaisse si la vidéo a des zones transparentes
+
+          this.isManualMode = true;
+          this.activeManualPlayer = 'A';
+
+          // Tracker
+          this.analyticsService.trackVideoStart(video, 'manual');
+          if (isSponsor) {
+            this.sponsorAnalytics.trackSponsorStart(video, 'manual', targetPlayer.duration || 0);
+          }
+
+          console.log('tv player : manual video playing, freeze frame hidden');
+        }, 200); // 200ms de délai pour le décodeur Pi (augmenté pour plus de sécurité)
+      }).catch(err => {
+        console.error('tv player : error playing manual video', err);
+        this.hideFreezeFrame();
+        this.hideBlackOverlay();
+      });
+    };
+
+    // Attendre canplaythrough (vidéo entièrement buffered)
+    const onReady = () => {
+      targetPlayer.removeEventListener('canplaythrough', onReady);
+      targetPlayer.removeEventListener('canplay', onReadyFallback);
+      clearTimeout(fallbackTimeout);
+      console.log('tv player : canplaythrough received');
+      doSwitch();
+    };
+
+    // Fallback après canplay + délai
+    const onReadyFallback = () => {
+      setTimeout(() => {
+        if (!switchDone) {
+          console.log('tv player : using canplay fallback');
+          targetPlayer.removeEventListener('canplaythrough', onReady);
+          doSwitch();
+        }
+      }, 500); // 500ms après canplay
+    };
+
+    targetPlayer.addEventListener('canplaythrough', onReady, { once: true });
+    targetPlayer.addEventListener('canplay', onReadyFallback, { once: true });
+
+    const fallbackTimeout = setTimeout(() => {
+      if (!switchDone) {
+        console.warn('tv player : manual video timeout, forcing switch');
+        targetPlayer.removeEventListener('canplaythrough', onReady);
+        targetPlayer.removeEventListener('canplay', onReadyFallback);
+        doSwitch();
+      }
+    }, 5000);
 
     // Listener pour la fin de la vidéo manuelle
     const onManualEnded = () => {
       console.log('tv player : manual video ended', video.path);
-      currentPlayer.removeEventListener('ended', onManualEnded);
+      targetPlayer.removeEventListener('ended', onManualEnded);
 
       // Tracker la fin
       this.analyticsService.trackVideoEnd(true);
@@ -542,13 +645,20 @@ export class TvComponent implements OnInit, OnDestroy {
         this.sponsorAnalytics.trackSponsorEnd(true);
       }
 
+      // Cacher le player manuel et le black overlay - la boucle est visible en dessous
+      targetPlayer.style.opacity = '0';
+      targetPlayer.pause();
+      targetPlayer.src = '';
+      this.hideBlackOverlay();
+
+      // Sortir du mode manuel
+      this.isManualMode = false;
       this.lastTriggerType = 'auto';
-      // Redémarrer la boucle
-      this.restartSeamlessLoop();
+
+      console.log('tv player : returning to loop');
     };
 
-    currentPlayer.addEventListener('ended', onManualEnded, { once: true });
-    currentPlayer.play();
+    targetPlayer.addEventListener('ended', onManualEnded, { once: true });
   }
 
   private sponsors() {
@@ -579,9 +689,24 @@ export class TvComponent implements OnInit, OnDestroy {
   /**
    * Change la phase active et recharge la boucle correspondante.
    * Met également à jour le contexte analytics.
+   * Utilise freeze-frame + black overlay pour une transition sans flash.
    */
   public switchToPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
     console.log('[TV] Switching to phase:', phase);
+
+    // Si même phase, ne rien faire
+    if (phase === this.activePhase) {
+      console.log('[TV] Already in phase', phase, '- skipping');
+      return;
+    }
+
+    // ÉTAPE 1: Capturer le freeze-frame AVANT de changer quoi que ce soit
+    const freezeSuccess = this.captureAndShowFreezeFrame();
+    if (!freezeSuccess) {
+      // Fallback: afficher le black overlay si le freeze-frame échoue
+      this.showBlackOverlay();
+    }
+
     this.activePhase = phase;
 
     // Mapper la phase vers la période analytics
@@ -597,10 +722,20 @@ export class TvComponent implements OnInit, OnDestroy {
     // Recharger la boucle avec les vidéos de la phase
     this.lastTriggerType = 'auto';
     this.sponsors();
+
+    // Le freeze-frame sera caché automatiquement quand la nouvelle vidéo joue
+    // via startSeamlessLoop -> playOnActivePlayer
   }
 
   private reloadConfiguration(config: Configuration) {
     console.log('tv: updating configuration and playlist');
+
+    // ÉTAPE 1: Capturer le freeze-frame AVANT de changer quoi que ce soit
+    const freezeSuccess = this.captureAndShowFreezeFrame();
+    if (!freezeSuccess) {
+      this.showBlackOverlay();
+    }
+
     this.configuration = config;
 
     // Mettre à jour la configuration dans l'analytics service
@@ -612,6 +747,7 @@ export class TvComponent implements OnInit, OnDestroy {
     this.updatePeriod('loop');
 
     // Lancer la nouvelle boucle (sponsors() gère maintenant la playlist selon la phase)
+    // Le freeze-frame sera caché automatiquement par playOnActivePlayer
     this.lastTriggerType = 'auto';
     this.sponsors();
   }
@@ -900,35 +1036,79 @@ export class TvComponent implements OnInit, OnDestroy {
   // ===========================================================================
 
   /**
-   * Initialise les deux players du double-buffer
+   * Initialise les 4 players (2 pour boucle, 2 pour manuel) et le canvas freeze-frame
    */
   private initDoubleBuffer(): void {
+    // Players de boucle
     this.playerA = this.playerARef.nativeElement;
     this.playerB = this.playerBRef.nativeElement;
 
-    // Configurer les deux players
+    // Players manuels
+    this.manualPlayerA = this.manualPlayerARef.nativeElement;
+    this.manualPlayerB = this.manualPlayerBRef.nativeElement;
+
+    // Canvas freeze-frame
+    this.freezeCanvas = this.freezeCanvasRef?.nativeElement;
+    if (this.freezeCanvas) {
+      this.freezeCtx = this.freezeCanvas.getContext('2d');
+      // Définir la taille du canvas (720p pour économiser la mémoire sur Pi)
+      this.freezeCanvas.width = 1280;
+      this.freezeCanvas.height = 720;
+    }
+
+    // Black overlay
+    this.blackOverlay = this.blackOverlayRef?.nativeElement;
+
+    // Configurer les players de boucle
     [this.playerA, this.playerB].forEach((player, i) => {
       player.muted = true;
       player.playsInline = true;
       player.preload = 'auto';
-      console.log(`[TV] Player ${i === 0 ? 'A' : 'B'} initialized`);
+      console.log(`[TV] Loop player ${i === 0 ? 'A' : 'B'} initialized`);
     });
 
-    // Player A est visible au départ
+    // Configurer les players manuels
+    [this.manualPlayerA, this.manualPlayerB].forEach((player, i) => {
+      player.muted = true;
+      player.playsInline = true;
+      player.preload = 'auto';
+      // Cachés par défaut
+      this.setManualPlayerVisible(player, false);
+      console.log(`[TV] Manual player ${i === 0 ? 'A' : 'B'} initialized`);
+    });
+
+    // Player A de boucle est visible au départ
     this.setPlayerVisible(this.playerA, true);
     this.setPlayerVisible(this.playerB, false);
     this.activePlayer = 'A';
 
-    // DÉSACTIVÉ: timeupdate cause des saccades sur Pi
-    // On utilise uniquement 'ended' - accepte une micro-pause entre vidéos
-    // this.playerA.addEventListener('timeupdate', () => this.onTimeUpdate('A'));
-    // this.playerB.addEventListener('timeupdate', () => this.onTimeUpdate('B'));
-
-    // Utiliser ended pour déclencher le switch
+    // Ended listeners pour la boucle
     this.playerA.addEventListener('ended', () => this.onVideoEnded('A'));
     this.playerB.addEventListener('ended', () => this.onVideoEnded('B'));
 
-    console.log('[TV] Double-buffer initialized');
+    console.log('[TV] Double-buffer initialized (4 players)');
+  }
+
+  /**
+   * Rend un player manuel visible ou invisible
+   */
+  private setManualPlayerVisible(player: HTMLVideoElement, visible: boolean): void {
+    player.style.opacity = visible ? '1' : '0';
+    player.style.zIndex = visible ? '11' : '10';
+  }
+
+  /**
+   * Retourne le player manuel actif
+   */
+  private getActiveManualPlayer(): HTMLVideoElement {
+    return this.activeManualPlayer === 'A' ? this.manualPlayerA : this.manualPlayerB;
+  }
+
+  /**
+   * Retourne le player manuel inactif
+   */
+  private getInactiveManualPlayer(): HTMLVideoElement {
+    return this.activeManualPlayer === 'A' ? this.manualPlayerB : this.manualPlayerA;
   }
 
   /**
@@ -1035,6 +1215,7 @@ export class TvComponent implements OnInit, OnDestroy {
 
   /**
    * Joue une vidéo sur le player actif
+   * Cache le freeze-frame une fois que la vidéo est en lecture
    */
   private playOnActivePlayer(index: number): void {
     const loopVideos = this.currentLoopVideos;
@@ -1063,9 +1244,18 @@ export class TvComponent implements OnInit, OnDestroy {
         );
 
         console.log(`[TV] Now playing video ${videoIndex} on ${this.activePlayer}`);
+
+        // Cacher le freeze-frame après un court délai pour que le premier frame soit affiché
+        setTimeout(() => {
+          this.hideFreezeFrame();
+          this.hideBlackOverlay();
+        }, 150);
       });
     }).catch(err => {
       console.error('[TV] Error playing video:', err, '- skipping to next');
+      // En cas d'erreur, cacher quand même le freeze-frame
+      this.hideFreezeFrame();
+      this.hideBlackOverlay();
       setTimeout(() => {
         const nextIndex = (videoIndex + 1) % this.currentLoopVideos.length;
         if (nextIndex !== videoIndex) {
@@ -1282,6 +1472,94 @@ export class TvComponent implements OnInit, OnDestroy {
   private restartSeamlessLoop(): void {
     console.log('[TV] Restarting loop');
     this.startSeamlessLoop();
+  }
+
+  // ===========================================================================
+  // CANVAS FREEZE-FRAME SYSTEM
+  // Capture le frame actuel pour masquer les transitions
+  // ===========================================================================
+
+  /**
+   * Capture le frame actuel de la vidéo visible et l'affiche sur le canvas
+   * Retourne true si la capture a réussi
+   */
+  private captureAndShowFreezeFrame(): boolean {
+    if (!this.freezeCanvas || !this.freezeCtx) {
+      console.warn('[TV] Freeze canvas not available');
+      return false;
+    }
+
+    // Déterminer quelle vidéo est actuellement visible
+    let sourceVideo: HTMLVideoElement | null = null;
+
+    if (this.isManualMode) {
+      // En mode manuel, utiliser le player manuel actif
+      sourceVideo = this.getActiveManualPlayer();
+    } else {
+      // En mode boucle, utiliser le player de boucle actif
+      sourceVideo = this.getActivePlayer();
+    }
+
+    // Vérifier que la vidéo a des dimensions valides
+    if (!sourceVideo || sourceVideo.videoWidth === 0 || sourceVideo.videoHeight === 0) {
+      console.warn('[TV] No valid video source for freeze frame');
+      return false;
+    }
+
+    try {
+      // Dessiner le frame actuel sur le canvas
+      this.freezeCtx.drawImage(sourceVideo, 0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
+
+      // Afficher le canvas (au-dessus de tout - z-index 20)
+      this.freezeCanvas.style.display = 'block';
+      this.freezeCanvas.style.opacity = '1';
+      this.freezeCanvas.style.zIndex = '20'; // Au-dessus de tout pour les transitions
+
+      console.log('[TV] Freeze frame captured and displayed');
+      return true;
+    } catch (err) {
+      console.error('[TV] Error capturing freeze frame:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Cache le canvas freeze-frame et libère la mémoire bitmap
+   */
+  private hideFreezeFrame(): void {
+    if (this.freezeCanvas && this.freezeCtx) {
+      this.freezeCanvas.style.opacity = '0';
+      this.freezeCanvas.style.display = 'none'; // Complètement caché
+      this.freezeCanvas.style.zIndex = '20';
+      // Libérer la mémoire bitmap (important pour usage intensif sur Pi)
+      this.freezeCtx.clearRect(0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
+      console.log('[TV] Freeze frame hidden');
+    }
+  }
+
+  // ===========================================================================
+  // BLACK OVERLAY SYSTEM
+  // Overlay noir pour bloquer physiquement la boucle pendant les transitions
+  // ===========================================================================
+
+  /**
+   * Affiche le black overlay pour bloquer la boucle
+   */
+  private showBlackOverlay(): void {
+    if (this.blackOverlay) {
+      this.blackOverlay.style.opacity = '1';
+      console.log('[TV] Black overlay shown');
+    }
+  }
+
+  /**
+   * Cache le black overlay
+   */
+  private hideBlackOverlay(): void {
+    if (this.blackOverlay) {
+      this.blackOverlay.style.opacity = '0';
+      console.log('[TV] Black overlay hidden');
+    }
   }
 
 }
