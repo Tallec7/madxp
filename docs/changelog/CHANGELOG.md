@@ -1,3 +1,10 @@
+## [2.23.1](https://github.com/Tallec7/neopro/compare/v2.23.0...v2.23.1) (2026-01-10)
+
+### Bug Fixes
+
+- **dashboard:** add media-src CSP for FTP video hosting ([8ce7036](https://github.com/Tallec7/neopro/commit/8ce7036896bd64f4668244f80408e5dbb77ecf7a))
+- **thumbnails:** add cache-buster to refresh thumbnails after regeneration ([b00aece](https://github.com/Tallec7/neopro/commit/b00aeceace94be79ff6eb79e8a0b26f7480453f9))
+
 # [2.23.0](https://github.com/Tallec7/neopro/compare/v2.22.1...v2.23.0) (2026-01-09)
 
 ### Features
