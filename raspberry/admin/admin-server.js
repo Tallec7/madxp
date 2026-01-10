@@ -1841,17 +1841,47 @@ app.put('/api/videos/edit', async (req, res) => {
     const destinationPath = path.join(destinationDir, finalFilename);
     const shouldMove = path.resolve(destinationPath) !== path.resolve(sourcePath);
 
+    // Calculer le chemin relatif avant le déplacement (nécessaire pour la miniature)
+    const relativeDestinationPath = path
+      .relative(VIDEOS_DIR, destinationPath)
+      .replace(/\\/g, '/');
+
     if (shouldMove) {
       await fs.rename(sourcePath, destinationPath);
       await cleanupEmptyDirs(path.dirname(sourcePath), VIDEOS_DIR);
+
+      // Renommer/déplacer aussi la miniature si elle existe
+      try {
+        const oldThumbnailPath = path.join(
+          THUMBNAILS_DIR,
+          normalizedOriginal.replace(/\.[^.]+$/, '.jpg')
+        );
+        const newThumbnailPath = path.join(
+          THUMBNAILS_DIR,
+          relativeDestinationPath.replace(/\.[^.]+$/, '.jpg')
+        );
+
+        // Vérifier si l'ancienne miniature existe
+        await fs.access(oldThumbnailPath);
+
+        // Créer le dossier de destination si nécessaire
+        await fs.mkdir(path.dirname(newThumbnailPath), { recursive: true });
+
+        // Déplacer la miniature
+        await fs.rename(oldThumbnailPath, newThumbnailPath);
+        console.log('[admin] Thumbnail moved:', oldThumbnailPath, '->', newThumbnailPath);
+
+        // Nettoyer les dossiers vides dans thumbnails
+        await cleanupEmptyDirs(path.dirname(oldThumbnailPath), THUMBNAILS_DIR);
+      } catch (thumbError) {
+        // La miniature n'existe pas ou erreur - pas bloquant
+        console.log('[admin] No thumbnail to move or error:', thumbError.message);
+      }
     }
 
     const originalConfigPath = ['videos', normalizedOriginal]
       .filter(Boolean)
       .join('/')
-      .replace(/\\/g, '/');
-    const relativeDestinationPath = path
-      .relative(VIDEOS_DIR, destinationPath)
       .replace(/\\/g, '/');
 
     await removeVideoFromConfig(originalConfigPath);

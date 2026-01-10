@@ -1455,6 +1455,13 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
     - `raspberry/src/app/components/remote/remote.component.ts` - Cache-buster dans `getVideoThumbnailUrl()`
   - **Migration** : Déployer via OTA ou build + deploy
 
+- **Fix miniature perdue lors du renommage vidéo** : La miniature est maintenant déplacée/renommée avec la vidéo
+  - **Problème** : Quand on renomme une vidéo via l'admin panel, la miniature restait avec l'ancien nom
+  - **Solution** : L'API `/api/videos/edit` déplace maintenant aussi la miniature correspondante
+  - **Fichiers modifiés** :
+    - `raspberry/admin/admin-server.js` - Ajout de la logique de déplacement de miniature dans `/api/videos/edit`
+  - **Migration** : Déployer via OTA ou build + deploy
+
 - **Refactoring Bibliothèque Vidéo** : Amélioration majeure du composant VideoLibrary
   - **Fix doublons** : Déduplication robuste par ID + nom de fichier (case-insensitive)
     - Ajout de Sets `seenCloudIds` et `seenFilenames` pour tracker les vidéos traitées
