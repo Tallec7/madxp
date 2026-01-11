@@ -1693,6 +1693,8 @@ vcgencmd get_mem gpu
     - `central-dashboard/angular.json`
   - **Migration** : Aucune (fix interne)
 
+### v2.27.x (Janvier 2026)
+
 - **Fix Debug Tab endpoints** : Les fonctionnalités debug retournent maintenant les données réelles du Pi
   - **Problème racine** : `sendCommand()` ne retourne que `{success, commandId, message}`, pas les données
   - **Solution** : Endpoints dédiés utilisant `waitForCommandResult()` pour attendre les résultats
