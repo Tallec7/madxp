@@ -1,3 +1,9 @@
+# [2.25.0](https://github.com/Tallec7/neopro/compare/v2.24.0...v2.25.0) (2026-01-11)
+
+### Features
+
+- **kiosk:** add watchdog to recover from Chromium "Aw, Snap!" crashes ([07ffe1e](https://github.com/Tallec7/neopro/commit/07ffe1ec4b16526ceccc535478e5d0a8ec4ad8c5))
+
 # [2.24.0](https://github.com/Tallec7/neopro/compare/v2.23.2...v2.24.0) (2026-01-11)
 
 ### Features
