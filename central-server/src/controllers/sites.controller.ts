@@ -859,10 +859,13 @@ export const getSiteLogs = async (req: AuthRequest, res: Response) => {
     const lines = parseInt(req.query.lines as string, 10) || 100;
     const service = (req.query.service as string) || 'neopro-app';
 
-    const result = await waitForCommandResult(
-      (await dispatchCommand(id, 'get_logs', { lines, service }, req.user?.id)).commandId,
-      30000
-    );
+    logger.info('Getting logs for site', { siteId: id, service, lines });
+
+    const { commandId } = await dispatchCommand(id, 'get_logs', { lines, service }, req.user?.id);
+    logger.info('Command dispatched', { commandId, siteId: id });
+
+    const result = await waitForCommandResult(commandId, 30000);
+    logger.info('Command result received', { commandId, hasLogs: !!result?.logs, resultKeys: Object.keys(result || {}) });
 
     const logsText = (result?.logs as string) || '';
     res.json({ logs: logsText.split('\n') });
