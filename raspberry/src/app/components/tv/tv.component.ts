@@ -129,6 +129,17 @@ export class TvComponent implements OnInit, OnDestroy {
   private activeManualPlayer: 'A' | 'B' = 'A'; // Quel player manuel est visible
   private isManualMode = false; // Est-on en train de jouer une vidéo manuelle ?
 
+  // Watchdog et récupération d'erreurs
+  private watchdogInterval: ReturnType<typeof setInterval> | null = null;
+  private memoryCleanupInterval: ReturnType<typeof setInterval> | null = null;
+  private lastPlaybackTime = 0;
+  private lastPlaybackCheck = 0;
+  private consecutiveErrors = 0;
+  private videoPlayCount = 0; // Compteur de vidéos jouées pour le cleanup périodique
+  private readonly MAX_CONSECUTIVE_ERRORS = 3;
+  private readonly MEMORY_CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutes
+  private readonly VIDEO_COUNT_BEFORE_CLEANUP = 50; // Cleanup après 50 vidéos
+
   // Canvas freeze-frame
   private freezeCanvas: HTMLCanvasElement;
   private freezeCtx: CanvasRenderingContext2D | null = null;
@@ -521,6 +532,9 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Arrêter le timer local
     this.stopLocalTimer();
+
+    // Arrêter le watchdog
+    this.stopWatchdog();
 
     // Arrêter la boucle seamless
     this.stopSeamlessLoop();
@@ -1086,7 +1100,20 @@ export class TvComponent implements OnInit, OnDestroy {
     this.playerA.addEventListener('ended', () => this.onVideoEnded('A'));
     this.playerB.addEventListener('ended', () => this.onVideoEnded('B'));
 
-    console.log('[TV] Double-buffer initialized (4 players)');
+    // Error handlers pour TOUS les players (critique pour éviter les crashs)
+    this.playerA.addEventListener('error', (e) => this.handleVideoError(this.playerA, 'loop-A', e));
+    this.playerB.addEventListener('error', (e) => this.handleVideoError(this.playerB, 'loop-B', e));
+    this.manualPlayerA.addEventListener('error', (e) => this.handleVideoError(this.manualPlayerA, 'manual-A', e));
+    this.manualPlayerB.addEventListener('error', (e) => this.handleVideoError(this.manualPlayerB, 'manual-B', e));
+
+    // Stall handlers (vidéo bloquée en buffering)
+    this.playerA.addEventListener('stalled', () => this.handleVideoStall(this.playerA, 'loop-A'));
+    this.playerB.addEventListener('stalled', () => this.handleVideoStall(this.playerB, 'loop-B'));
+
+    // Démarrer le watchdog de santé
+    this.startWatchdog();
+
+    console.log('[TV] Double-buffer initialized (4 players) with error recovery');
   }
 
   /**
@@ -1234,6 +1261,9 @@ export class TvComponent implements OnInit, OnDestroy {
       this.ngZone.run(() => {
         this.currentLoopIndex = videoIndex;
         this.lastTriggerType = 'auto';
+
+        // Incrémenter le compteur pour le cleanup mémoire
+        this.incrementVideoPlayCount();
 
         // Tracker
         this.analyticsService.trackVideoStart(video, 'auto');
@@ -1559,6 +1589,372 @@ export class TvComponent implements OnInit, OnDestroy {
     if (this.blackOverlay) {
       this.blackOverlay.style.opacity = '0';
       console.log('[TV] Black overlay hidden');
+    }
+  }
+
+  // ===========================================================================
+  // ERROR RECOVERY SYSTEM
+  // Gestion des erreurs vidéo et récupération automatique
+  // ===========================================================================
+
+  /**
+   * Gère les erreurs de lecture vidéo
+   * Codes d'erreur HTML5:
+   * - 1: MEDIA_ERR_ABORTED
+   * - 2: MEDIA_ERR_NETWORK
+   * - 3: MEDIA_ERR_DECODE (souvent après surchauffe GPU)
+   * - 4: MEDIA_ERR_SRC_NOT_SUPPORTED
+   * - 5: MEDIA_ERR_ENCRYPTED (DRM)
+   */
+  private handleVideoError(player: HTMLVideoElement, which: string, event: Event): void {
+    const error = player.error;
+    const errorCode = error?.code || 0;
+    const errorMessage = error?.message || 'Unknown error';
+    const currentSrc = player.src || 'no source';
+
+    console.error(`[TV] ⚠️ Player ${which} error:`, {
+      code: errorCode,
+      message: errorMessage,
+      src: currentSrc,
+      readyState: player.readyState,
+      networkState: player.networkState
+    });
+
+    // Tracker l'erreur dans les analytics
+    this.analyticsService.trackVideoError(
+      { name: currentSrc.split('/').pop() || 'unknown', path: currentSrc, type: 'video/mp4' },
+      event
+    );
+
+    this.consecutiveErrors++;
+
+    // Si trop d'erreurs consécutives, tenter un reset complet
+    if (this.consecutiveErrors >= this.MAX_CONSECUTIVE_ERRORS) {
+      console.error(`[TV] 🚨 ${this.consecutiveErrors} erreurs consécutives - reset complet de la boucle`);
+      this.performFullReset();
+      return;
+    }
+
+    // Récupération selon le type de player
+    if (which.startsWith('loop-')) {
+      this.recoverFromLoopError(player, which);
+    } else if (which.startsWith('manual-')) {
+      this.recoverFromManualError(player, which);
+    }
+  }
+
+  /**
+   * Récupération d'une erreur sur un player de boucle
+   */
+  private recoverFromLoopError(player: HTMLVideoElement, which: string): void {
+    console.log(`[TV] Recovering from loop error on ${which}`);
+
+    // Nettoyer le player en erreur
+    player.pause();
+    player.removeAttribute('src');
+    player.load(); // Force le reset du decoder
+
+    // Passer à la vidéo suivante après un délai
+    const nextIndex = (this.currentLoopIndex + 1) % this.currentLoopVideos.length;
+
+    // Si on n'a qu'une seule vidéo et qu'elle est en erreur, attendre plus longtemps
+    const delay = this.currentLoopVideos.length === 1 ? 5000 : 1000;
+
+    setTimeout(() => {
+      console.log(`[TV] Skipping to video index ${nextIndex} after error`);
+      this.pendingSwitch = false;
+      this.switchTriggered = false;
+      this.preloadReady = false;
+      this.preloadedIndex = null;
+      this.playOnActivePlayer(nextIndex);
+    }, delay);
+  }
+
+  /**
+   * Récupération d'une erreur sur un player manuel
+   */
+  private recoverFromManualError(player: HTMLVideoElement, which: string): void {
+    console.log(`[TV] Recovering from manual player error on ${which}`);
+
+    // Nettoyer le player manuel
+    player.pause();
+    player.style.opacity = '0';
+    player.removeAttribute('src');
+    player.load();
+
+    // Cacher les overlays et retourner à la boucle
+    this.hideFreezeFrame();
+    this.hideBlackOverlay();
+    this.isManualMode = false;
+    this.lastTriggerType = 'auto';
+
+    // La boucle devrait continuer automatiquement
+    if (!this.isLoopMode) {
+      this.startSeamlessLoop();
+    }
+  }
+
+  /**
+   * Gère les événements 'stalled' (vidéo bloquée en buffering)
+   */
+  private handleVideoStall(player: HTMLVideoElement, which: string): void {
+    console.warn(`[TV] ⏳ Player ${which} stalled (buffering issue)`, {
+      src: player.src,
+      currentTime: player.currentTime,
+      readyState: player.readyState,
+      networkState: player.networkState
+    });
+
+    // Si la vidéo est bloquée depuis plus de 10 secondes, le watchdog interviendra
+    // Ici on log juste pour le diagnostic
+  }
+
+  /**
+   * Reset complet de la boucle vidéo (dernier recours)
+   */
+  private performFullReset(): void {
+    console.log('[TV] 🔄 Performing full video system reset');
+
+    // Arrêter le watchdog temporairement
+    this.stopWatchdog();
+
+    // Reset tous les players
+    [this.playerA, this.playerB, this.manualPlayerA, this.manualPlayerB].forEach(player => {
+      if (player) {
+        player.pause();
+        player.removeAttribute('src');
+        player.load();
+      }
+    });
+
+    // Reset les états
+    this.isLoopMode = false;
+    this.isManualMode = false;
+    this.pendingSwitch = false;
+    this.switchTriggered = false;
+    this.preloadReady = false;
+    this.preloadedIndex = null;
+    this.currentLoopIndex = 0;
+    this.activePlayer = 'A';
+    this.consecutiveErrors = 0;
+
+    // Cacher les overlays
+    this.hideFreezeFrame();
+    this.hideBlackOverlay();
+
+    // Libérer la mémoire du canvas
+    if (this.freezeCtx && this.freezeCanvas) {
+      this.freezeCtx.clearRect(0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
+    }
+
+    // Reset les visibilités
+    this.setPlayerVisible(this.playerA, true);
+    this.setPlayerVisible(this.playerB, false);
+
+    // Attendre un peu pour que le GPU se libère, puis redémarrer
+    setTimeout(() => {
+      console.log('[TV] 🔄 Restarting video loop after full reset');
+      this.startWatchdog();
+      this.startSeamlessLoop();
+    }, 3000); // 3 secondes pour laisser le GPU respirer
+  }
+
+  // ===========================================================================
+  // WATCHDOG SYSTEM
+  // Surveillance continue de la santé de la lecture vidéo
+  // ===========================================================================
+
+  /**
+   * Démarre le watchdog qui vérifie toutes les 10 secondes
+   * que la vidéo progresse normalement
+   */
+  private startWatchdog(): void {
+    if (this.watchdogInterval) {
+      clearInterval(this.watchdogInterval);
+    }
+
+    this.lastPlaybackTime = 0;
+    this.lastPlaybackCheck = Date.now();
+
+    this.watchdogInterval = setInterval(() => {
+      this.checkPlaybackHealth();
+    }, 10000); // Vérifier toutes les 10 secondes
+
+    // Démarrer aussi le cleanup mémoire périodique
+    this.startMemoryCleanupInterval();
+
+    console.log('[TV] 🐕 Watchdog started');
+  }
+
+  /**
+   * Démarre l'intervalle de nettoyage mémoire préventif
+   */
+  private startMemoryCleanupInterval(): void {
+    if (this.memoryCleanupInterval) {
+      clearInterval(this.memoryCleanupInterval);
+    }
+
+    this.memoryCleanupInterval = setInterval(() => {
+      this.performPreventiveMemoryCleanup();
+    }, this.MEMORY_CLEANUP_INTERVAL);
+
+    console.log('[TV] 🧹 Memory cleanup interval started (every 30 min)');
+  }
+
+  /**
+   * Nettoyage préventif de la mémoire pour éviter les memory leaks
+   * sur les longues sessions (5h+)
+   */
+  private performPreventiveMemoryCleanup(): void {
+    console.log('[TV] 🧹 Performing preventive memory cleanup', {
+      videoPlayCount: this.videoPlayCount
+    });
+
+    // Nettoyer le canvas freeze-frame (libère ~4.5MB)
+    if (this.freezeCtx && this.freezeCanvas) {
+      this.freezeCtx.clearRect(0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
+    }
+
+    // Nettoyer le player inactif (libère les buffers vidéo)
+    const inactivePlayer = this.getInactivePlayer();
+    if (inactivePlayer && !this.preloadReady) {
+      // Ne nettoyer que si pas de préchargement en cours
+      const hadSrc = !!inactivePlayer.src;
+      if (hadSrc) {
+        inactivePlayer.removeAttribute('src');
+        inactivePlayer.load();
+        console.log('[TV] 🧹 Cleaned inactive loop player');
+      }
+    }
+
+    // Nettoyer les players manuels s'ils ne sont pas utilisés
+    if (!this.isManualMode) {
+      [this.manualPlayerA, this.manualPlayerB].forEach((player, i) => {
+        if (player && player.src) {
+          player.removeAttribute('src');
+          player.load();
+          console.log(`[TV] 🧹 Cleaned manual player ${i === 0 ? 'A' : 'B'}`);
+        }
+      });
+    }
+
+    // Forcer le garbage collection si disponible (Chrome/V8)
+    if (typeof (window as unknown as { gc?: () => void }).gc === 'function') {
+      (window as unknown as { gc: () => void }).gc();
+      console.log('[TV] 🧹 Forced garbage collection');
+    }
+
+    // Reset le compteur
+    this.videoPlayCount = 0;
+  }
+
+  /**
+   * Incrémente le compteur de vidéos et déclenche un cleanup si nécessaire
+   */
+  private incrementVideoPlayCount(): void {
+    this.videoPlayCount++;
+
+    // Cleanup après un certain nombre de vidéos (indépendamment du timer)
+    if (this.videoPlayCount >= this.VIDEO_COUNT_BEFORE_CLEANUP) {
+      console.log(`[TV] 🧹 Reached ${this.VIDEO_COUNT_BEFORE_CLEANUP} videos, triggering cleanup`);
+      this.performPreventiveMemoryCleanup();
+    }
+  }
+
+  /**
+   * Arrête le watchdog et le cleanup mémoire
+   */
+  private stopWatchdog(): void {
+    if (this.watchdogInterval) {
+      clearInterval(this.watchdogInterval);
+      this.watchdogInterval = null;
+    }
+    if (this.memoryCleanupInterval) {
+      clearInterval(this.memoryCleanupInterval);
+      this.memoryCleanupInterval = null;
+    }
+    console.log('[TV] 🐕 Watchdog stopped');
+  }
+
+  /**
+   * Vérifie la santé de la lecture vidéo
+   */
+  private checkPlaybackHealth(): void {
+    // Ne pas vérifier si on est en mode manuel (l'utilisateur a le contrôle)
+    if (this.isManualMode) {
+      return;
+    }
+
+    // Ne pas vérifier si la boucle n'est pas active
+    if (!this.isLoopMode || this.currentLoopVideos.length === 0) {
+      return;
+    }
+
+    const player = this.getActivePlayer();
+    const now = Date.now();
+    const timeSinceLastCheck = now - this.lastPlaybackCheck;
+
+    // Vérifier si la vidéo progresse
+    const currentTime = player.currentTime || 0;
+    const hasProgressed = currentTime !== this.lastPlaybackTime;
+
+    // Si la vidéo est en pause ET on est en mode boucle, c'est un problème
+    if (player.paused && this.isLoopMode && !this.pendingSwitch) {
+      console.warn('[TV] 🐕 Watchdog: video paused unexpectedly, attempting recovery');
+      this.attemptWatchdogRecovery('paused');
+      return;
+    }
+
+    // Si la vidéo n'a pas progressé depuis 10s (et n'est pas en pause)
+    if (!hasProgressed && !player.paused && !player.ended) {
+      console.warn('[TV] 🐕 Watchdog: video not progressing', {
+        currentTime,
+        lastTime: this.lastPlaybackTime,
+        readyState: player.readyState,
+        networkState: player.networkState,
+        paused: player.paused
+      });
+      this.attemptWatchdogRecovery('stalled');
+      return;
+    }
+
+    // Tout va bien - reset le compteur d'erreurs si la vidéo joue
+    if (hasProgressed) {
+      this.consecutiveErrors = 0;
+    }
+
+    this.lastPlaybackTime = currentTime;
+    this.lastPlaybackCheck = now;
+  }
+
+  /**
+   * Tente une récupération via le watchdog
+   */
+  private attemptWatchdogRecovery(reason: 'paused' | 'stalled'): void {
+    console.log(`[TV] 🐕 Watchdog recovery attempt (reason: ${reason})`);
+
+    const player = this.getActivePlayer();
+
+    // Première tentative: essayer de reprendre la lecture
+    if (reason === 'paused') {
+      player.play().then(() => {
+        console.log('[TV] 🐕 Watchdog: successfully resumed playback');
+        this.consecutiveErrors = 0;
+      }).catch(err => {
+        console.error('[TV] 🐕 Watchdog: failed to resume, trying next video', err);
+        this.recoverFromLoopError(player, `loop-${this.activePlayer}`);
+      });
+      return;
+    }
+
+    // Pour 'stalled': passer à la vidéo suivante
+    if (reason === 'stalled') {
+      this.consecutiveErrors++;
+      if (this.consecutiveErrors >= this.MAX_CONSECUTIVE_ERRORS) {
+        this.performFullReset();
+      } else {
+        this.recoverFromLoopError(player, `loop-${this.activePlayer}`);
+      }
     }
   }
 

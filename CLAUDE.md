@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.23.2 | **Dernière mise à jour**: 2026-01-10
+**Version**: 2.23.2 | **Dernière mise à jour**: 2026-01-11
 
 ---
 
@@ -585,6 +585,70 @@ Le préchargement anticipé et l'événement `timeupdate` causent des **saccades
 - `raspberry/src/app/components/tv/tv.component.html` - 4 vidéos + canvas + overlay
 - `raspberry/src/app/components/tv/tv.component.scss` - CSS (z-index, positions)
 
+### Système de Récupération d'Erreurs Vidéo ⚡ NEW (2026-01-11)
+
+Le composant TV inclut un système robuste de récupération automatique pour éviter les crashs et écrans blancs après de longues sessions.
+
+**Problème résolu** : Après 2h+ de boucle vidéo, le GPU Pi peut surchauffer et déclencher une erreur `MEDIA_ERR_DECODE` (code 5), causant un écran blanc nécessitant un redémarrage manuel.
+
+**Codes d'erreur HTML5 gérés** :
+
+| Code | Nom                         | Cause probable                   | Action                 |
+| ---- | --------------------------- | -------------------------------- | ---------------------- |
+| 1    | MEDIA_ERR_ABORTED           | Lecture interrompue              | Skip vidéo             |
+| 2    | MEDIA_ERR_NETWORK           | Erreur réseau                    | Skip vidéo             |
+| 3    | MEDIA_ERR_DECODE            | Surchauffe GPU, fichier corrompu | Skip + reset si répété |
+| 4    | MEDIA_ERR_SRC_NOT_SUPPORTED | Codec incompatible               | Skip vidéo             |
+| 5    | MEDIA_ERR_ENCRYPTED         | DRM (rare)                       | Skip vidéo             |
+
+**Architecture de récupération** :
+
+```
+Error Handler → consecutiveErrors++ → Recovery Strategy
+                      │
+                      ├── < 3 erreurs : Skip vidéo (1s delay)
+                      └── >= 3 erreurs : Full Reset (3s GPU cooldown)
+
+Watchdog (10s) → checkPlaybackHealth()
+                      │
+                      ├── Vidéo pausée → player.play()
+                      └── Vidéo bloquée → Skip to next
+
+Memory Cleanup (30min OU 50 vidéos)
+  → Clear freeze-frame canvas (~4.5MB)
+  → Clear inactive player buffers
+  → Force GC if available
+```
+
+**Méthodes clés** :
+
+| Méthode                            | Rôle                                            |
+| ---------------------------------- | ----------------------------------------------- |
+| `handleVideoError()`               | Gère les erreurs des 4 players HTML5            |
+| `recoverFromLoopError()`           | Skip vidéo corrompue, passe à la suivante       |
+| `performFullReset()`               | Reset complet après 3 erreurs (pause GPU 3s)    |
+| `startWatchdog()`                  | Démarre la surveillance (toutes les 10s)        |
+| `checkPlaybackHealth()`            | Vérifie que la vidéo progresse                  |
+| `performPreventiveMemoryCleanup()` | Libère mémoire (canvas, buffers) périodiquement |
+
+**Configuration** :
+
+```typescript
+MAX_CONSECUTIVE_ERRORS = 3; // Reset complet après 3 erreurs
+MEMORY_CLEANUP_INTERVAL = 30 * 60 * 1000; // Cleanup toutes les 30 min
+VIDEO_COUNT_BEFORE_CLEANUP = 50; // Cleanup après 50 vidéos
+```
+
+**Diagnostic dans les logs** :
+
+```
+[TV] ⚠️ Player loop-A error: { code: 3, message: "MEDIA_ERR_DECODE", ... }
+[TV] Recovering from loop error on loop-A
+[TV] 🐕 Watchdog: video paused unexpectedly, attempting recovery
+[TV] 🧹 Performing preventive memory cleanup
+[TV] 🔄 Performing full video system reset
+```
+
 ### Mapping Analytics des Catégories ⚡ NEW (2026-01)
 
 Le mapping permet de normaliser les catégories locales vers des **types analytics standardisés** pour le reporting :
@@ -810,6 +874,7 @@ npm run create-admin         # Créer un super_admin
 npm run deploy:raspberry neopro.local    # Déployer sur un Pi
 ./raspberry/scripts/setup-new-club.sh    # Configurer nouveau club
 ./raspberry/scripts/diagnose-pi.sh       # Diagnostic complet
+./raspberry/scripts/fix-hotspot.sh       # Réparer hotspot WiFi (interférences, channel)
 ```
 
 ---
@@ -913,6 +978,39 @@ curl -I http://localhost/generate_204
 **Fallback** : Si un Pi n'a pas le captive portal, utiliser `http://192.168.4.1/remote`
 
 **Documentation complète** : [docs/guides/ANDROID_HOTSPOT_FIX.md](docs/guides/ANDROID_HOTSPOT_FIX.md)
+
+### Hotspot WiFi invisible ou instable ?
+
+**Causes fréquentes** lors d'un déplacement du boîtier :
+
+1. **Interférences sur le channel 6** - Trop de réseaux WiFi sur le même canal
+2. **Alimentation insuffisante** - Port USB de TV au lieu d'un chargeur 5V/3A
+3. **Distance/obstacles** - WiFi 2.4GHz a une portée limitée (~10-15m)
+
+**Script de diagnostic et réparation** :
+
+```bash
+# Sur le Pi (via Ethernet ou écran+clavier)
+cd /home/pi/neopro/scripts
+./fix-hotspot.sh           # Mode diagnostic (affiche les problèmes)
+./fix-hotspot.sh --auto-fix # Mode auto-fix (corrige automatiquement)
+```
+
+**Ce que fait le script** :
+
+- Vérifie l'alimentation (voltage)
+- Scanne les canaux WiFi et trouve le moins encombré (1, 6 ou 11)
+- Vérifie hostapd, dnsmasq, rfkill
+- Change automatiquement de canal si nécessaire
+- Redémarre les services hotspot
+
+**Changer manuellement le channel** :
+
+```bash
+# Passer en channel 1 (moins encombré que 6)
+sudo sed -i 's/channel=6/channel=1/' /etc/hostapd/hostapd.conf
+sudo systemctl restart hostapd
+```
 
 ---
 
@@ -1481,6 +1579,19 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 ---
 
 ## Historique Breaking Changes
+
+### v2.24.x (Janvier 2026)
+
+- **Système de récupération d'erreurs vidéo** : Le composant TV récupère automatiquement des crashs
+  - **Problème** : Après 2h+ de boucle, error code 5 (MEDIA_ERR_DECODE) causait un écran blanc
+  - **Solution** : Error handlers sur les 4 players + watchdog + cleanup mémoire périodique
+  - **Error handlers** : Chaque player HTML5 a maintenant un listener `error` qui skip la vidéo corrompue
+  - **Watchdog** : Vérifie toutes les 10s que la vidéo progresse, tente recovery si bloquée
+  - **Full reset** : Après 3 erreurs consécutives, reset complet avec pause GPU de 3s
+  - **Memory cleanup** : Toutes les 30 min OU après 50 vidéos (canvas, buffers inactifs)
+  - **Fichiers modifiés** :
+    - `raspberry/src/app/components/tv/tv.component.ts` - Error recovery system complet
+  - **Migration** : Déployer via OTA ou build + deploy
 
 ### v2.22.x (Janvier 2026)
 
