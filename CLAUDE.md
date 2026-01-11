@@ -1658,6 +1658,17 @@ vcgencmd get_mem gpu
     - `docs/guides/TROUBLESHOOTING.md` - Section 5 réécrite avec solutions distinctes Pi 4/Pi 5
   - **Migration Pi 5 existants** : Éditer `/etc/systemd/system/neopro-kiosk.service` et ajouter les flags SwiftShader, ou déployer le nouveau `kiosk-watchdog.sh`
 
+- **Fix faux avertissement GPU sur Pi 5 dans le dashboard** : Le health check ignore maintenant la valeur legacy `gpu=4M` sur Pi 5
+  - **Problème** : Le dashboard central affichait "Mémoire GPU insuffisante (4M)" sur Pi 5, alors que ce n'est pas un problème
+  - **Cause** : `vcgencmd get_mem gpu` retourne toujours 4M sur Pi 5 (valeur legacy, pas la mémoire réelle)
+  - **Solution** : Le sync-agent détecte le modèle Pi via `/proc/device-tree/model` et ignore la vérification gpu_mem sur Pi 5
+  - **Affichage Pi 5** : Le dashboard affiche "🎮 GPU (Pi 5)" et "✅ Dynamique (CMA)" au lieu d'un avertissement
+  - **Nouveaux champs** : `is_pi5: boolean`, `gpu_mem_note: string` dans l'objet `gpuInfo`
+  - **Fichiers modifiés** :
+    - `raspberry/sync-agent/src/metrics.js` - Ajout `detectPiModel()`, `is_pi5`, `gpu_mem_note`
+    - `central-dashboard/.../site-debug-tab.component.ts` - Interface `GpuInfo` étendue, template adapté
+  - **Migration** : Déployer la nouvelle version du sync-agent via l'admin panel ou SCP
+
 - **Fix modals "Voir" et "Diff" non visibles dans l'historique des configurations** : Scroll automatique vers le modal
   - **Problème** : En cliquant sur "Voir" ou "Diff" dans l'historique des configurations, rien ne semblait se passer
   - **Cause** : Les modals s'affichaient en bas de la liste d'historique mais hors de la zone visible de l'écran
