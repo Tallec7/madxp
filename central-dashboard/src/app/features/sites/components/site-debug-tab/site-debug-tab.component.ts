@@ -139,8 +139,8 @@ interface BufferInfo {
 interface BufferStatus {
   success: boolean;
   timestamp: string;
-  analytics: BufferInfo;
-  sponsors: BufferInfo;
+  analytics?: BufferInfo;
+  sponsors?: BufferInfo;
 }
 
 // Types pour le hotspot (P2.4)
