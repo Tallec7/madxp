@@ -1507,7 +1507,73 @@ sudo systemctl restart hostapd
 sudo systemctl restart dnsmasq
 ```
 
-### 4. Vidéos ne se chargent pas
+### 4. Le hotspot WiFi est invisible ou instable après déplacement du boîtier
+
+**Symptômes :**
+
+- Le SSID `NEOPRO-XXX` n'apparaît pas dans la liste des réseaux WiFi
+- Le SSID apparaît puis disparaît
+- Connexion impossible ou très lente
+
+**Causes fréquentes :**
+
+1. **Interférences sur le channel 6** - Dans un nouveau lieu (gymnase, salle des fêtes), beaucoup de réseaux WiFi peuvent utiliser le même canal
+2. **Alimentation insuffisante** - Le Pi est branché sur un port USB de TV ou hub non alimenté (voltage < 5V)
+3. **Distance/obstacles** - Le WiFi 2.4GHz a une portée limitée (~10-15m), les murs épais ou structures métalliques bloquent le signal
+
+**Diagnostic et réparation automatique :**
+
+```bash
+# Sur le Pi (via Ethernet ou écran+clavier)
+cd /home/pi/neopro/scripts
+
+# Mode diagnostic (affiche les problèmes sans corriger)
+./fix-hotspot.sh
+
+# Mode auto-fix (corrige automatiquement)
+./fix-hotspot.sh --auto-fix
+```
+
+**Ce que fait le script :**
+
+- Vérifie l'alimentation (détecte sous-voltage)
+- Scanne les canaux WiFi et trouve le moins encombré (1, 6 ou 11)
+- Vérifie hostapd, dnsmasq, rfkill
+- Change automatiquement de canal si nécessaire
+- Redémarre les services hotspot
+
+**Changer manuellement le channel :**
+
+```bash
+# Voir le channel actuel
+grep "^channel=" /etc/hostapd/hostapd.conf
+
+# Passer en channel 1 (souvent moins encombré que 6)
+sudo sed -i 's/channel=6/channel=1/' /etc/hostapd/hostapd.conf
+sudo systemctl restart hostapd
+
+# Ou channel 11
+sudo sed -i 's/channel=.*/channel=11/' /etc/hostapd/hostapd.conf
+sudo systemctl restart hostapd
+```
+
+**Vérifier l'alimentation :**
+
+```bash
+vcgencmd get_throttled
+# 0x0 = OK
+# Autre valeur = problème d'alimentation (utiliser un chargeur 5V/3A)
+```
+
+**Vérifier rfkill (blocage WiFi) :**
+
+```bash
+rfkill list
+# Si "Soft blocked: yes" → débloquer avec :
+sudo rfkill unblock wifi
+```
+
+### 5. Vidéos ne se chargent pas
 
 **Cause :** Chemins incorrects dans configuration.json
 
@@ -1553,4 +1619,4 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 9 janvier 2026
+**Dernière mise à jour :** 11 janvier 2026
