@@ -300,7 +300,7 @@ const commands = {
       if (!await fs.pathExists(scriptPath)) {
         // Fallback: exécuter les diagnostics manuellement
         logger.warn('diagnose-pi.sh not found, running manual diagnostics');
-        return await this.runManualDiagnostics();
+        return await commands.runManualDiagnostics();
       }
 
       // Exécuter le script avec timeout
@@ -320,7 +320,7 @@ const commands = {
 
       // En cas d'erreur du script, tenter les diagnostics manuels
       try {
-        return await this.runManualDiagnostics();
+        return await commands.runManualDiagnostics();
       } catch (manualError) {
         throw error;
       }
@@ -1166,7 +1166,7 @@ const commands = {
       // Vérifier si le script existe
       if (!await fs.pathExists(scriptPath)) {
         logger.warn('fix-hotspot.sh not found, running manual hotspot check');
-        return await this.runManualHotspotDiagnostics();
+        return await commands.runManualHotspotDiagnostics();
       }
 
       // Exécuter le script avec ou sans --auto-fix
@@ -1188,7 +1188,7 @@ const commands = {
 
       // En cas d'erreur, tenter les diagnostics manuels
       try {
-        return await this.runManualHotspotDiagnostics();
+        return await commands.runManualHotspotDiagnostics();
       } catch (manualError) {
         throw error;
       }
