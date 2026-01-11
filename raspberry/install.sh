@@ -679,24 +679,28 @@ configure_services() {
         print_success "Service neopro-admin configuré"
     fi
 
-    # Service kiosque (mode TV)
+    # Service kiosque (mode TV) avec watchdog
     if [ -f "${SERVICE_DIR}/neopro-kiosk.service" ]; then
         cp "${SERVICE_DIR}/neopro-kiosk.service" /etc/systemd/system/
 
-        # Détecter le bon chemin de Chromium (varie selon la version de Raspberry Pi OS)
-        local CHROMIUM_PATH=""
-        if [ -x "/usr/bin/chromium-browser" ]; then
-            CHROMIUM_PATH="/usr/bin/chromium-browser"
-        elif [ -x "/usr/bin/chromium" ]; then
-            CHROMIUM_PATH="/usr/bin/chromium"
+        # Copier le script watchdog qui gère Chromium
+        # Le watchdog détecte automatiquement Pi 4 vs Pi 5 et applique les bons flags GPU
+        local SCRIPT_DIR="./scripts"
+        if [ -f "${SCRIPT_DIR}/kiosk-watchdog.sh" ]; then
+            mkdir -p /home/pi/neopro/scripts
+            cp "${SCRIPT_DIR}/kiosk-watchdog.sh" /home/pi/neopro/scripts/
+            chmod +x /home/pi/neopro/scripts/kiosk-watchdog.sh
+            chown pi:pi /home/pi/neopro/scripts/kiosk-watchdog.sh
+            print_success "Script kiosk-watchdog.sh installé"
         else
-            print_warning "Chromium non trouvé, le mode kiosque ne fonctionnera pas"
+            print_warning "Script kiosk-watchdog.sh non trouvé dans ${SCRIPT_DIR}/"
         fi
 
-        if [ -n "$CHROMIUM_PATH" ]; then
-            sed -i "s|ExecStart=/usr/bin/chromium-browser|ExecStart=${CHROMIUM_PATH}|" /etc/systemd/system/neopro-kiosk.service
-            sed -i "s|ExecStart=/usr/bin/chromium |ExecStart=${CHROMIUM_PATH} |" /etc/systemd/system/neopro-kiosk.service
-            print_success "Service neopro-kiosk configuré (Chromium: ${CHROMIUM_PATH})"
+        # Vérifier que Chromium est installé
+        if [ -x "/usr/bin/chromium" ] || [ -x "/usr/bin/chromium-browser" ]; then
+            print_success "Service neopro-kiosk configuré (watchdog avec détection auto Pi 4/Pi 5)"
+        else
+            print_warning "Chromium non trouvé, le mode kiosque ne fonctionnera pas"
         fi
 
         systemctl enable neopro-kiosk.service

@@ -392,6 +392,7 @@ RUNTIME_SCRIPTS=(
     "raspberry/scripts/generate-thumbnail.sh"
     "raspberry/scripts/generate-all-thumbnails.sh"
     "raspberry/scripts/setup-wifi-client.sh"
+    "raspberry/scripts/kiosk-watchdog.sh"
 )
 mkdir -p ${DEPLOY_DIR}/scripts
 for script_path in "${RUNTIME_SCRIPTS[@]}"; do
