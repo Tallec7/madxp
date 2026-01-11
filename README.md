@@ -355,6 +355,36 @@ npm run deploy:raspberry neopro.local
 3. **HTTPS** : Utiliser un reverse proxy (nginx) avec certificat SSL
 4. **Mots de passe** : Ne jamais utiliser le mot de passe par défaut
 
+### Sécurité Git - Ne jamais commiter de secrets
+
+**Fichiers protégés par `.gitignore`** (ne seront pas commités) :
+
+```
+.env                    # Variables d'environnement
+.env.local              # Variables locales
+*.pem, *.key            # Certificats SSL
+credentials.json        # Service accounts
+cookies.txt             # Tokens d'authentification
+```
+
+**Avant chaque commit, vérifier** :
+
+```bash
+# Voir les fichiers qui seront commités
+git status
+
+# Vérifier qu'aucun secret n'est présent
+git diff --cached | grep -i "password\|secret\|token\|api_key"
+```
+
+**Si un secret a été commité par erreur** :
+
+1. Révoquer immédiatement le secret exposé (changer le mot de passe, JWT_SECRET, etc.)
+2. Nettoyer l'historique Git avec `git-filter-repo`
+3. Force push la version nettoyée
+
+**Documentation complète** : [docs/technical/SECURITY_IMPROVEMENTS.md](docs/technical/SECURITY_IMPROVEMENTS.md)
+
 ### Variables d'environnement
 
 ```bash
