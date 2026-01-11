@@ -203,13 +203,29 @@ touch central-server/src/scripts/migrations/20260110_add_column.sql
 ### 5. Commit de secrets
 
 ```bash
-# Ces fichiers sont dans .gitignore
-.env
-*.pem
-credentials.json
+# Ces fichiers sont dans .gitignore (ne seront JAMAIS commités)
+.env                    # Variables d'environnement
+.env.local              # Variables locales
+*.pem, *.key            # Certificats SSL
+credentials.json        # Service accounts
+cookies.txt             # Tokens d'authentification (cookies exportés)
 
 # ✅ Utiliser .env.example pour documenter les variables
 ```
+
+**Vérification avant commit** :
+
+```bash
+# Vérifier qu'aucun secret n'est stagé
+git diff --cached | grep -i "password\|secret\|token\|api_key"
+
+# Si un secret a été commité par erreur :
+# 1. Révoquer IMMÉDIATEMENT le secret (changer password, JWT_SECRET, etc.)
+# 2. Nettoyer l'historique : git filter-repo --path fichier-secret --invert-paths
+# 3. Force push : git push origin main --force
+```
+
+**Règle d'or** : Si tu vois un fichier contenant des tokens/passwords dans `git status`, **ne le commit pas**. Ajoute-le au `.gitignore` d'abord.
 
 ### 6. Oublier le rate limiting
 

@@ -25,3 +25,7 @@ coverage/
 raspberry/config/templates/*-configuration.json
 !raspberry/config/templates/TEMPLATE-configuration.json
 raspberry/deploy/
+
+# Security - never commit auth tokens
+cookies.txt
+*.cookies
