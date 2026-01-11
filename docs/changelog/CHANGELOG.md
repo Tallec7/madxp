@@ -1,3 +1,9 @@
+# [2.24.0](https://github.com/Tallec7/neopro/compare/v2.23.2...v2.24.0) (2026-01-11)
+
+### Features
+
+- **tv:** add video error recovery system with watchdog ([00a5a16](https://github.com/Tallec7/neopro/commit/00a5a16b7df88cc533b35dcab98599f43a93b2a5))
+
 ## [2.23.2](https://github.com/Tallec7/neopro/compare/v2.23.1...v2.23.2) (2026-01-10)
 
 ### Bug Fixes
