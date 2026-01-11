@@ -1487,6 +1487,42 @@ export const getSiteTimeline = async (req: AuthRequest, res: Response) => {
       ),
     ]);
 
+    // Types pour les résultats de requêtes
+    interface DeploymentRow {
+      id: string;
+      timestamp: string;
+      status: string;
+      video_name: string | null;
+      category: string | null;
+      progress: number | null;
+      error_message: string | null;
+      user_email: string | null;
+    }
+    interface CommandRow {
+      id: string;
+      timestamp: string;
+      command_type: string;
+      status: string;
+      result: unknown;
+      user_email: string | null;
+    }
+    interface ConfigRow {
+      id: string;
+      timestamp: string;
+      comment: string | null;
+      changes_summary: unknown[];
+      user_email: string | null;
+    }
+    interface AlertRow {
+      id: string;
+      timestamp: string;
+      alert_type: string;
+      severity: string;
+      message: string | null;
+      resolved: boolean;
+      resolved_at: string | null;
+    }
+
     // Transformer les résultats en événements uniformes
     const events: Array<{
       id: string;
@@ -1499,7 +1535,7 @@ export const getSiteTimeline = async (req: AuthRequest, res: Response) => {
     }> = [];
 
     // Déploiements
-    for (const row of deploymentsResult.rows) {
+    for (const row of deploymentsResult.rows as unknown as DeploymentRow[]) {
       events.push({
         id: row.id,
         type: 'deployment',
@@ -1511,12 +1547,12 @@ export const getSiteTimeline = async (req: AuthRequest, res: Response) => {
           error: row.error_message,
         },
         status: row.status,
-        user: row.user_email,
+        user: row.user_email || undefined,
       });
     }
 
     // Commandes
-    for (const row of commandsResult.rows) {
+    for (const row of commandsResult.rows as unknown as CommandRow[]) {
       events.push({
         id: row.id,
         type: 'command',
@@ -1526,12 +1562,12 @@ export const getSiteTimeline = async (req: AuthRequest, res: Response) => {
           result: row.result,
         },
         status: row.status,
-        user: row.user_email,
+        user: row.user_email || undefined,
       });
     }
 
     // Configs
-    for (const row of configHistoryResult.rows) {
+    for (const row of configHistoryResult.rows as unknown as ConfigRow[]) {
       const changesCount = Array.isArray(row.changes_summary)
         ? row.changes_summary.length
         : 0;
@@ -1544,12 +1580,12 @@ export const getSiteTimeline = async (req: AuthRequest, res: Response) => {
           changesCount,
         },
         status: 'completed',
-        user: row.user_email,
+        user: row.user_email || undefined,
       });
     }
 
     // Alertes
-    for (const row of alertsResult.rows) {
+    for (const row of alertsResult.rows as unknown as AlertRow[]) {
       events.push({
         id: row.id,
         type: 'alert',
