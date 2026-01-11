@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -13,8 +13,8 @@ import { CommandExecutorComponent } from '../command-executor/command-executor.c
 interface GpuInfo {
   gpu_mem_mb: number | null;
   gpu_mem_warning: boolean;
-  gpu_mem_note: string | null;  // Note explicative pour Pi 5
-  is_pi5: boolean;  // true si Raspberry Pi 5 détecté
+  gpu_mem_note?: string | null;  // Note explicative pour Pi 5 (optionnel pour rétrocompatibilité)
+  is_pi5?: boolean;  // true si Raspberry Pi 5 détecté (optionnel pour rétrocompatibilité)
   temperature: number | null;
   temperature_warning: boolean;
   throttled: string | null;
@@ -537,7 +537,7 @@ interface HotspotResult {
           </div>
 
           <!-- Version viewer modal -->
-          <div class="version-modal" *ngIf="viewingVersion && !viewingDiff">
+          <div class="version-modal" *ngIf="viewingVersion && !viewingDiff" #versionModal>
             <div class="version-modal-header">
               <h5>Version du {{ viewingVersion.deployed_at | date:'dd/MM/yyyy HH:mm' }}</h5>
               <button class="btn-close" (click)="viewingVersion = null">×</button>
@@ -548,7 +548,7 @@ interface HotspotResult {
           </div>
 
           <!-- Diff viewer modal (P1.3) -->
-          <div class="diff-modal" *ngIf="viewingDiff">
+          <div class="diff-modal" *ngIf="viewingDiff" #diffModal>
             <div class="diff-modal-header">
               <h5>Différences</h5>
               <div class="diff-versions">
@@ -2580,11 +2580,17 @@ interface HotspotResult {
     }
   `]
 })
-export class SiteDebugTabComponent implements OnInit {
+export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
   @Input() siteId!: string;
   @Input() isConnected: boolean = false;
   @Input() connectionHealth: ConnectionHealth | null = null;
   @Output() configRestored = new EventEmitter<SiteConfiguration>();
+
+  // ViewChild pour scroll automatique vers les modals
+  @ViewChild('versionModal') versionModalRef?: ElementRef<HTMLElement>;
+  @ViewChild('diffModal') diffModalRef?: ElementRef<HTMLElement>;
+  private shouldScrollToVersionModal = false;
+  private shouldScrollToDiffModal = false;
 
   localVideos: LocalVideo[] = [];
   localStorage: LocalStorage | null = null;
@@ -2680,6 +2686,19 @@ export class SiteDebugTabComponent implements OnInit {
     this.loadDebugInfo();
   }
 
+  ngAfterViewChecked(): void {
+    // Scroll vers le modal de version si demandé
+    if (this.shouldScrollToVersionModal && this.versionModalRef) {
+      this.versionModalRef.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      this.shouldScrollToVersionModal = false;
+    }
+    // Scroll vers le modal de diff si demandé
+    if (this.shouldScrollToDiffModal && this.diffModalRef) {
+      this.diffModalRef.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      this.shouldScrollToDiffModal = false;
+    }
+  }
+
   private loadDebugInfo(): void {
     if (!this.siteId) return;
 
@@ -2772,6 +2791,7 @@ export class SiteDebugTabComponent implements OnInit {
     this.selectedHistoryId = item.id;
     this.viewingVersion = item;
     this.viewingVersionJson = JSON.stringify(item.configuration, null, 2);
+    this.shouldScrollToVersionModal = true;  // Scroll vers le modal après rendu
   }
 
   restoreVersion(item: ConfigHistory): void {
@@ -2996,6 +3016,7 @@ export class SiteDebugTabComponent implements OnInit {
 
     this.loadingDiff = true;
     this.viewingDiff = true;
+    this.shouldScrollToDiffModal = true;  // Scroll vers le modal après rendu
 
     // Trouver les versions sélectionnées pour afficher les dates
     const version1 = this.history.find(h => h.id === this.selectedForCompare[0]);
@@ -3036,6 +3057,7 @@ export class SiteDebugTabComponent implements OnInit {
     const olderVersion = this.history[index + 1];
     this.loadingDiff = true;
     this.viewingDiff = true;
+    this.shouldScrollToDiffModal = true;  // Scroll vers le modal après rendu
 
     this.diffVersionOld = new Date(olderVersion.deployed_at);
     this.diffVersionNew = new Date(item.deployed_at);

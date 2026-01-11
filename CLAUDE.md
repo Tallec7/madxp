@@ -1649,6 +1649,18 @@ vcgencmd get_mem gpu
     - `docs/guides/TROUBLESHOOTING.md` - Section 5 réécrite avec solutions distinctes Pi 4/Pi 5
   - **Migration Pi 5 existants** : Éditer `/etc/systemd/system/neopro-kiosk.service` et ajouter les flags SwiftShader, ou déployer le nouveau `kiosk-watchdog.sh`
 
+- **Fix modals "Voir" et "Diff" non visibles dans l'historique des configurations** : Scroll automatique vers le modal
+  - **Problème** : En cliquant sur "Voir" ou "Diff" dans l'historique des configurations, rien ne semblait se passer
+  - **Cause** : Les modals s'affichaient en bas de la liste d'historique mais hors de la zone visible de l'écran
+  - **Solution** : Ajout d'un scroll automatique (`scrollIntoView`) vers le modal après son ouverture
+  - **Implémentation** :
+    - Ajout de `ViewChild` pour référencer les éléments `#versionModal` et `#diffModal`
+    - Ajout de `AfterViewChecked` pour détecter quand le DOM est mis à jour
+    - Flags `shouldScrollToVersionModal` et `shouldScrollToDiffModal` pour déclencher le scroll
+  - **Fichiers modifiés** :
+    - `central-dashboard/.../site-debug-tab.component.ts` - Scroll automatique vers les modals
+  - **Migration** : Aucune (amélioration UX)
+
 ### v2.26.x (Janvier 2026)
 
 - **Améliorations Debug Tab (P3)** : Refactoring majeur de l'onglet Debug dans le dashboard
