@@ -739,6 +739,44 @@ EOF
 }
 
 ################################################################################
+# Étape 9b: Configuration GPU pour décodage vidéo
+################################################################################
+
+configure_gpu_memory() {
+    print_step "Configuration de la mémoire GPU pour le décodage vidéo..."
+
+    local CONFIG_FILE="/boot/config.txt"
+    # Sur Pi 5, le fichier peut être dans /boot/firmware/
+    if [ -f "/boot/firmware/config.txt" ]; then
+        CONFIG_FILE="/boot/firmware/config.txt"
+    fi
+
+    # Valeur recommandée pour Chromium avec 4 players vidéo H.264
+    local GPU_MEM=256
+
+    # Vérifier si gpu_mem est déjà configuré
+    if grep -q "^gpu_mem=" "${CONFIG_FILE}" 2>/dev/null; then
+        local CURRENT_GPU_MEM=$(grep "^gpu_mem=" "${CONFIG_FILE}" | cut -d= -f2)
+        if [ "${CURRENT_GPU_MEM}" -lt "${GPU_MEM}" ]; then
+            print_warning "gpu_mem actuel (${CURRENT_GPU_MEM}M) trop faible, mise à jour vers ${GPU_MEM}M"
+            sed -i "s/^gpu_mem=.*/gpu_mem=${GPU_MEM}/" "${CONFIG_FILE}"
+            print_success "gpu_mem mis à jour à ${GPU_MEM}M dans ${CONFIG_FILE}"
+        else
+            print_success "gpu_mem déjà configuré à ${CURRENT_GPU_MEM}M (suffisant)"
+        fi
+    else
+        # Ajouter la configuration
+        echo "" >> "${CONFIG_FILE}"
+        echo "# Mémoire GPU pour décodage vidéo Chromium (Neopro)" >> "${CONFIG_FILE}"
+        echo "gpu_mem=${GPU_MEM}" >> "${CONFIG_FILE}"
+        print_success "gpu_mem=${GPU_MEM} ajouté à ${CONFIG_FILE}"
+    fi
+
+    # Note: Le changement ne prend effet qu'après reboot
+    print_warning "Le changement de gpu_mem nécessite un reboot pour être appliqué"
+}
+
+################################################################################
 # Étape 10: Configuration SSH pour accès distant
 ################################################################################
 
@@ -870,6 +908,7 @@ main() {
     configure_nginx
     configure_services
     configure_gui
+    configure_gpu_memory
     configure_ssh
     finalize
     print_elapsed_time
