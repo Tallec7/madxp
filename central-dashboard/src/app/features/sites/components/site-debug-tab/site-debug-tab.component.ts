@@ -216,13 +216,13 @@ interface HotspotResult {
           <span class="expand-icon">{{ showHealthStatus ? '▼' : '▶' }}</span>
           <span class="debug-icon">🩺</span>
           <h4>Santé système</h4>
-          <span class="debug-stats" *ngIf="healthStatus"
+          <span class="debug-stats" *ngIf="healthStatus && healthStatus.healthScore !== undefined"
             [class.health-ok]="healthStatus.healthStatus === 'healthy'"
             [class.health-warning]="healthStatus.healthStatus === 'degraded'"
             [class.health-critical]="healthStatus.healthStatus === 'critical'">
             {{ healthStatus.healthScore }}% - {{ getHealthStatusLabel(healthStatus.healthStatus) }}
           </span>
-          <span class="debug-stats" *ngIf="!healthStatus && !loadingHealthStatus">Non chargé</span>
+          <span class="debug-stats" *ngIf="(!healthStatus || healthStatus.healthScore === undefined) && !loadingHealthStatus">Non chargé</span>
           <span class="debug-stats" *ngIf="loadingHealthStatus">Chargement...</span>
         </div>
 
@@ -242,7 +242,7 @@ interface HotspotResult {
             <span>Récupération des données...</span>
           </div>
 
-          <div *ngIf="healthStatus" class="health-content">
+          <div *ngIf="healthStatus && healthStatus.healthScore !== undefined" class="health-content">
             <!-- Score global -->
             <div class="health-score-card" [class.score-healthy]="healthStatus.healthScore >= 80"
               [class.score-degraded]="healthStatus.healthScore >= 50 && healthStatus.healthScore < 80"
@@ -2836,11 +2836,14 @@ export class SiteDebugTabComponent implements OnInit {
     this.sitesService.sendCommand(this.siteId, 'get_health_status', {}).subscribe({
       next: (response: unknown) => {
         this.loadingHealthStatus = false;
+        this.logger.info('Health status response received', { response });
         // Le résultat peut être dans response.result ou directement dans response
         const result = (response as { result?: HealthStatus })?.result || response as HealthStatus;
-        if (result && result.success !== false) {
+        this.logger.info('Parsed health status result', { result, hasHealthScore: result?.healthScore !== undefined });
+        if (result && result.success !== false && result.healthScore !== undefined) {
           this.healthStatus = result;
         } else {
+          this.logger.warn('Invalid health status response', { result });
           this.notificationService.error('Échec de la récupération de l\'état de santé');
         }
       },
@@ -2889,10 +2892,14 @@ export class SiteDebugTabComponent implements OnInit {
     this.sitesService.sendCommand(this.siteId, 'run_diagnostics', {}).subscribe({
       next: (response: unknown) => {
         this.runningDiagnostics = false;
+        this.logger.info('Diagnostics response received', { response });
         const result = (response as { result?: DiagnosticsResult })?.result || response as DiagnosticsResult;
-        if (result) {
+        if (result && (result.success !== false || result.output || result.checks)) {
           this.diagnosticsResult = result;
           this.notificationService.success('Diagnostic terminé');
+        } else {
+          this.logger.warn('Invalid diagnostics response', { result });
+          this.notificationService.error('Échec du diagnostic');
         }
       },
       error: (error) => {
