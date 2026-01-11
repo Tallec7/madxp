@@ -1661,6 +1661,18 @@ vcgencmd get_mem gpu
     - `central-dashboard/.../site-debug-tab.component.ts` - Scroll automatique vers les modals
   - **Migration** : Aucune (amélioration UX)
 
+- **Fix warnings de build Angular** : Correction des warnings NG8107 et ajustement du budget CSS
+  - **NG8107 (optional chaining inutile)** : 9 occurrences corrigées
+    - `site-content-tab.component.ts` : `config.sponsors?.length` → `config.sponsors.length`
+    - `site-debug-tab.component.ts` : `bufferStatus.analytics?.event_count` → `bufferStatus.analytics.event_count` (et similaires pour sponsors)
+  - **Budget CSS** : Augmenté de 15kb/20kb à 20kb/25kb dans `angular.json`
+    - Les composants `site-content-tab`, `config-editor`, `site-debug-tab` dépassaient le budget
+  - **Fichiers modifiés** :
+    - `central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts`
+    - `central-dashboard/src/app/features/sites/components/site-debug-tab/site-debug-tab.component.ts`
+    - `central-dashboard/angular.json`
+  - **Migration** : Aucune (fix interne)
+
 ### v2.26.x (Janvier 2026)
 
 - **Améliorations Debug Tab (P3)** : Refactoring majeur de l'onglet Debug dans le dashboard
