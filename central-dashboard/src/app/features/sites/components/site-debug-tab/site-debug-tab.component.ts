@@ -807,7 +807,7 @@ interface HotspotResult {
                 <div class="buffer-details" *ngIf="bufferStatus.analytics?.file_exists">
                   <div class="buffer-detail">Taille: {{ formatBytes(bufferStatus.analytics?.file_size_bytes || 0) }}</div>
                   <div class="buffer-detail" *ngIf="bufferStatus.analytics?.oldest_event">
-                    Plus ancien: {{ bufferStatus.analytics.oldest_event | date:'dd/MM HH:mm' }}
+                    Plus ancien: {{ bufferStatus.analytics?.oldest_event | date:'dd/MM HH:mm' }}
                   </div>
                 </div>
               </div>
@@ -820,7 +820,7 @@ interface HotspotResult {
                 <div class="buffer-details" *ngIf="bufferStatus.sponsors?.file_exists">
                   <div class="buffer-detail">Taille: {{ formatBytes(bufferStatus.sponsors?.file_size_bytes || 0) }}</div>
                   <div class="buffer-detail" *ngIf="bufferStatus.sponsors?.oldest_event">
-                    Plus ancien: {{ bufferStatus.sponsors.oldest_event | date:'dd/MM HH:mm' }}
+                    Plus ancien: {{ bufferStatus.sponsors?.oldest_event | date:'dd/MM HH:mm' }}
                   </div>
                 </div>
               </div>
