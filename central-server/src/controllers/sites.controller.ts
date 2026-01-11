@@ -1487,7 +1487,7 @@ export const getSiteTimeline = async (req: AuthRequest, res: Response) => {
          FROM content_deployments cd
          LEFT JOIN videos v ON cd.video_id = v.id
          LEFT JOIN users u ON cd.deployed_by = u.id
-         WHERE cd.site_id = $1
+         WHERE cd.target_id = $1 AND cd.target_type = 'site'
          ORDER BY cd.created_at DESC
          LIMIT $2`,
         [id, maxLimit]
