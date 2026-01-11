@@ -1,3 +1,9 @@
+# [2.26.0](https://github.com/Tallec7/neopro/compare/v2.25.1...v2.26.0) (2026-01-11)
+
+### Features
+
+- **dashboard:** add log throttling to prevent 429 errors ([7cc6a8b](https://github.com/Tallec7/neopro/commit/7cc6a8b46886ebe2079a21fd0aa2f5eb71111ba2))
+
 ## [2.25.1](https://github.com/Tallec7/neopro/compare/v2.25.0...v2.25.1) (2026-01-11)
 
 ### Bug Fixes
