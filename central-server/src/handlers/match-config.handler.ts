@@ -14,6 +14,7 @@
 import { Socket } from 'socket.io';
 import pool from '../config/database';
 import logger from '../config/logger';
+import { auditService } from '../services/audit.service';
 
 export interface MatchConfigPayload {
   sessionId: string;
@@ -106,11 +107,25 @@ export async function handleMatchConfig(socket: Socket, payload: MatchConfigPayl
         siteId,
         session: insertResult.rows[0]
       });
+
+      // Audit: new match started
+      await auditService.logMatchStarted(siteId, sessionId, {
+        matchName,
+        matchDate,
+        audienceEstimate
+      });
     } else {
       logger.info('match-config: session mise à jour', {
         sessionId,
         siteId,
         session: result.rows[0]
+      });
+
+      // Audit: match config updated
+      await auditService.logMatchConfigUpdated(siteId, sessionId, {
+        matchName,
+        matchDate,
+        audienceEstimate
       });
     }
 

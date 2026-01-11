@@ -1648,6 +1648,18 @@ vcgencmd get_mem gpu
     - `central-dashboard/src/app/core/services/logger.service.ts` - Ajout batching + suppression logs console INFO/DEBUG en prod
   - **Migration** : Aucune (amélioration transparente)
 
+- **Audit des événements live match** : Traçabilité complète des matchs et scores
+  - **Nouvelles actions d'audit** : `MATCH_STARTED`, `MATCH_CONFIG_UPDATED`, `MATCH_ENDED`, `SCORE_UPDATED`
+  - **match-config.handler.ts** : Audite création/mise à jour des sessions de match
+  - **score-update.handler.ts** : Audite les changements de score (throttlé à 1 entrée/minute/site)
+  - **Bug fix** : `/api/audit/actions` inclut maintenant `REMOTE_SHELL_EXECUTE`, `REMOTE_SHELL_BLOCKED`
+  - **Fichiers modifiés** :
+    - `central-server/src/services/audit.service.ts` - Nouveaux types + helpers
+    - `central-server/src/handlers/match-config.handler.ts` - Appels audit
+    - `central-server/src/handlers/score-update.handler.ts` - Appels audit (throttlés)
+    - `central-server/src/routes/audit.routes.ts` - Liste complète des actions
+  - **Migration** : Aucune (ajout de fonctionnalité)
+
 ### v2.24.x (Janvier 2026)
 
 - **Configuration gpu_mem automatique** : Le script d'installation configure maintenant `gpu_mem=256` dans `/boot/config.txt`

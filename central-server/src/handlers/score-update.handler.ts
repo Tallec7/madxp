@@ -11,6 +11,12 @@
 
 import { Socket } from 'socket.io';
 import logger from '../config/logger';
+import { auditService } from '../services/audit.service';
+
+// Throttle score audit to avoid flooding audit_logs (one entry per minute max per site)
+const lastScoreAudit: Map<string, { timestamp: number; score: { home: number; away: number } }> =
+  new Map();
+const SCORE_AUDIT_THROTTLE_MS = 60000; // 1 minute
 
 export interface ScoreUpdatePayload {
   homeTeam: string;
@@ -97,6 +103,27 @@ export function handleScoreUpdate(socket: Socket, payload: ScoreUpdatePayload) {
       success: true,
       timestamp: new Date().toISOString()
     });
+
+    // Audit score update (throttled to 1/min per site to avoid log flooding)
+    const now = Date.now();
+    const lastAudit = lastScoreAudit.get(siteId);
+    const currentScore = { home: homeScore, away: awayScore };
+
+    if (
+      !lastAudit ||
+      now - lastAudit.timestamp > SCORE_AUDIT_THROTTLE_MS ||
+      lastAudit.score.home !== homeScore ||
+      lastAudit.score.away !== awayScore
+    ) {
+      // Only audit if score changed or throttle period passed
+      const previousScore = lastAudit?.score;
+      lastScoreAudit.set(siteId, { timestamp: now, score: currentScore });
+
+      // Fire and forget - don't block on audit
+      auditService.logScoreUpdated(siteId, currentScore, previousScore).catch(() => {
+        // Ignore audit errors
+      });
+    }
 
     // Note: Le stockage du score dans sponsor_impressions se fait
     // automatiquement côté Raspberry Pi dans le service sponsor-analytics

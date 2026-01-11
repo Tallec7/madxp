@@ -27,7 +27,12 @@ export type AuditAction =
   | 'GROUP_DELETED'
   | 'SETTINGS_UPDATED'
   | 'REMOTE_SHELL_EXECUTE'
-  | 'REMOTE_SHELL_BLOCKED';
+  | 'REMOTE_SHELL_BLOCKED'
+  // Live match events
+  | 'MATCH_STARTED'
+  | 'MATCH_CONFIG_UPDATED'
+  | 'MATCH_ENDED'
+  | 'SCORE_UPDATED';
 
 interface AuditLogEntry {
   action: AuditAction;
@@ -292,6 +297,74 @@ class AuditService {
       targetType: 'site',
       targetId: siteId,
     }, req);
+  }
+
+  /**
+   * Log match started event
+   * Called when a club staff starts a new match session
+   */
+  async logMatchStarted(
+    siteId: string,
+    sessionId: string,
+    matchConfig: { matchName?: string; matchDate?: string; audienceEstimate?: number }
+  ): Promise<void> {
+    await this.log({
+      action: 'MATCH_STARTED',
+      targetType: 'site',
+      targetId: siteId,
+      details: { sessionId, ...matchConfig },
+    });
+  }
+
+  /**
+   * Log match configuration update
+   * Called when match metadata (name, date, audience) is updated
+   */
+  async logMatchConfigUpdated(
+    siteId: string,
+    sessionId: string,
+    changes: Record<string, unknown>
+  ): Promise<void> {
+    await this.log({
+      action: 'MATCH_CONFIG_UPDATED',
+      targetType: 'site',
+      targetId: siteId,
+      details: { sessionId, changes },
+    });
+  }
+
+  /**
+   * Log match ended event
+   * Called when a match session is ended
+   */
+  async logMatchEnded(
+    siteId: string,
+    sessionId: string,
+    finalScore?: { home: number; away: number }
+  ): Promise<void> {
+    await this.log({
+      action: 'MATCH_ENDED',
+      targetType: 'site',
+      targetId: siteId,
+      details: { sessionId, finalScore },
+    });
+  }
+
+  /**
+   * Log score update event
+   * Called when the score is updated during a match
+   */
+  async logScoreUpdated(
+    siteId: string,
+    score: { home: number; away: number },
+    previousScore?: { home: number; away: number }
+  ): Promise<void> {
+    await this.log({
+      action: 'SCORE_UPDATED',
+      targetType: 'site',
+      targetId: siteId,
+      details: { score, previousScore },
+    });
   }
 }
 
