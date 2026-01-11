@@ -1446,7 +1446,7 @@ export const getSiteTimeline = async (req: AuthRequest, res: Response) => {
            rc.result,
            u.email as user_email
          FROM remote_commands rc
-         LEFT JOIN users u ON rc.created_by = u.id
+         LEFT JOIN users u ON rc.executed_by = u.id
          WHERE rc.site_id = $1
          ORDER BY rc.created_at DESC
          LIMIT $2`,
@@ -1474,10 +1474,10 @@ export const getSiteTimeline = async (req: AuthRequest, res: Response) => {
            'alert' as event_type,
            a.id,
            a.created_at as timestamp,
-           a.type as alert_type,
+           a.alert_type,
            a.severity,
            a.message,
-           a.resolved,
+           a.status = 'resolved' as resolved,
            a.resolved_at
          FROM alerts a
          WHERE a.site_id = $1
