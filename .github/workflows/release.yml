@@ -30,6 +30,10 @@ jobs:
         run: npm ci
 
       - name: Run semantic-release
-        run: npx semantic-release
+        run: |
+          # Disable workflow commands to prevent commit messages from being interpreted
+          echo "::stop-commands::semantic-release-token"
+          npx semantic-release
+          echo "::semantic-release-token::"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
