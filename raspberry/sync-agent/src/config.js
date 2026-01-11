@@ -24,6 +24,12 @@ const DEFAULT_ALLOWED_COMMANDS = [
   'get_hotspot_config',
   'network_diagnostics',
   'remote_shell',
+  // P3 - Commandes debug ajoutées en v2.26
+  'get_health_status',
+  'run_diagnostics',
+  'export_debug_bundle',
+  'get_analytics_buffer_status',
+  'fix_hotspot',
 ];
 
 const buildAllowedCommands = () => {

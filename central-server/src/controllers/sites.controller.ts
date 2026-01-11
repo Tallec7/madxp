@@ -917,6 +917,44 @@ export const getHotspotConfig = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getHealthStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'get_health_status', {}, req.user?.id)).commandId,
+      30000
+    );
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Get health status error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors de la récupération de l\'état de santé' });
+  }
+};
+
+export const runDiagnostics = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'run_diagnostics', {}, req.user?.id)).commandId,
+      60000 // 60 secondes pour les diagnostics complets
+    );
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Run diagnostics error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors de l\'exécution des diagnostics' });
+  }
+};
+
 export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

@@ -103,6 +103,66 @@ export class SitesService {
     return this.api.get(`/sites/${id}/hotspot-config`);
   }
 
+  getHealthStatus(id: string): Observable<{
+    success: boolean;
+    timestamp: string;
+    healthScore: number;
+    healthStatus: 'healthy' | 'degraded' | 'critical';
+    issues: Array<{
+      severity: 'critical' | 'warning';
+      component: string;
+      message: string;
+      fix: string;
+      lastError?: string | null;
+    }>;
+    gpu: {
+      gpu_mem_mb: number | null;
+      gpu_mem_warning: boolean;
+      temperature: number | null;
+      temperature_warning: boolean;
+      throttled: string | null;
+      throttled_flags: string[];
+      voltage_ok: boolean;
+      frequency_capped: boolean;
+      throttling_active: boolean;
+    };
+    services: Array<{
+      name: string;
+      description: string;
+      status: string;
+      active: boolean;
+      failed: boolean;
+      lastError?: string | null;
+    }>;
+    metrics: {
+      cpu: number;
+      memory: number;
+      disk: number;
+      temperature: number;
+      uptime: number;
+      localIp: string | null;
+    } | null;
+    system: {
+      hostname: string;
+      os: string;
+      uptime: number;
+      localIp: string | null;
+    };
+    error?: string;
+  }> {
+    return this.api.get(`/sites/${id}/health-status`);
+  }
+
+  runDiagnostics(id: string): Observable<{
+    success: boolean;
+    timestamp: string;
+    output: string;
+    errors?: string | null;
+    scriptPath?: string;
+  }> {
+    return this.api.get(`/sites/${id}/diagnostics`);
+  }
+
   updateSiteStatus(id: string, status: string): void {
     const sites = this.sitesSubject.value;
     const index = sites.findIndex(s => s.id === id);

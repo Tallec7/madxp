@@ -2837,14 +2837,16 @@ export class SiteDebugTabComponent implements OnInit {
 
     this.loadingHealthStatus = true;
 
-    this.sitesService.sendCommand(this.siteId, 'get_health_status', {}).subscribe({
-      next: (response: unknown) => {
+    this.sitesService.getHealthStatus(this.siteId).subscribe({
+      next: (result) => {
         this.loadingHealthStatus = false;
-        this.logger.info('Health status response received', { response });
-        // Le résultat peut être dans response.result ou directement dans response
-        const result = (response as { result?: HealthStatus })?.result || response as HealthStatus;
-        this.logger.info('Parsed health status result', { result, hasHealthScore: result?.healthScore !== undefined });
-        if (result && result.success !== false && result.healthScore !== undefined) {
+        // Debug détaillé pour diagnostiquer le format de réponse
+        console.log('[DEBUG] Raw health status result:', result);
+        console.log('[DEBUG] Type:', typeof result);
+        console.log('[DEBUG] Keys:', result ? Object.keys(result) : 'null');
+        console.log('[DEBUG] healthScore:', result?.healthScore);
+        this.logger.info('Health status received', { result });
+        if (result && result.healthScore !== undefined) {
           this.healthStatus = result;
         } else {
           this.logger.warn('Invalid health status response', { result });
@@ -2893,12 +2895,11 @@ export class SiteDebugTabComponent implements OnInit {
     this.runningDiagnostics = true;
     this.diagnosticsResult = null;
 
-    this.sitesService.sendCommand(this.siteId, 'run_diagnostics', {}).subscribe({
-      next: (response: unknown) => {
+    this.sitesService.runDiagnostics(this.siteId).subscribe({
+      next: (result) => {
         this.runningDiagnostics = false;
-        this.logger.info('Diagnostics response received', { response });
-        const result = (response as { result?: DiagnosticsResult })?.result || response as DiagnosticsResult;
-        if (result && (result.success !== false || result.output || result.checks)) {
+        this.logger.info('Diagnostics received', { result });
+        if (result && (result.success !== false || result.output)) {
           this.diagnosticsResult = result;
           this.notificationService.success('Diagnostic terminé');
         } else {

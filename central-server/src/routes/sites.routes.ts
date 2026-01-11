@@ -56,6 +56,22 @@ router.get(
   sitesController.getHotspotConfig
 );
 
+router.get(
+  '/:id/health-status',
+  authenticate,
+  requireRole('admin', 'operator'),
+  adminRateLimit,
+  sitesController.getHealthStatus
+);
+
+router.get(
+  '/:id/diagnostics',
+  authenticate,
+  requireRole('admin', 'operator'),
+  adminRateLimit,
+  sitesController.runDiagnostics
+);
+
 router.post(
   '/',
   authenticate,
