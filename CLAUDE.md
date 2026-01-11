@@ -1576,11 +1576,67 @@ ssh pi@neopro.local 'cat /home/pi/neopro/webapp/configuration.json | head -50'
 ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 ```
 
+#### Kiosk/TV (Chromium)
+
+| Symptôme                      | Cause probable              | Solution                                         |
+| ----------------------------- | --------------------------- | ------------------------------------------------ |
+| "Aw, Snap! Error code: 5"     | **gpu_mem trop faible**     | Vérifier `vcgencmd get_mem gpu`, configurer 256M |
+| Crash après 2h de boucle      | Mémoire GPU saturée         | Augmenter gpu_mem, watchdog kiosk actif          |
+| Écran blanc après crash       | Chromium bloqué sur erreur  | Le watchdog devrait récupérer automatiquement    |
+| Crash fréquents (>3 en 5 min) | Vidéo corrompue ou GPU mort | Vérifier les vidéos, température Pi              |
+| "gpu=4M" au lieu de 128M+     | Config `/boot/config.txt`   | Ajouter `gpu_mem=256` et reboot                  |
+
+**Diagnostic GPU** :
+
+```bash
+# Vérifier mémoire GPU allouée (CRITIQUE - doit être 128M minimum, 256M recommandé)
+vcgencmd get_mem gpu
+# Si affiche "gpu=4M" → PROBLÈME, doit être au moins 128M
+
+# Vérifier température
+vcgencmd measure_temp
+# Normal: < 70°C, Alerte: > 80°C
+
+# Vérifier état GPU
+vcgencmd get_throttled
+# 0x0 = OK, autre valeur = throttling actif
+```
+
+**Fix gpu_mem (cause racine la plus fréquente)** :
+
+```bash
+# Sur le Pi, éditer la config boot
+sudo nano /boot/config.txt
+# OU sur Pi 5:
+sudo nano /boot/firmware/config.txt
+
+# Ajouter ou modifier :
+gpu_mem=256
+
+# Sauvegarder et redémarrer
+sudo reboot
+
+# Vérifier après reboot
+vcgencmd get_mem gpu
+# Doit afficher : gpu=256M
+```
+
+**Note** : Le script `install.sh` configure maintenant automatiquement `gpu_mem=256` pour les nouvelles installations.
+
 ---
 
 ## Historique Breaking Changes
 
 ### v2.24.x (Janvier 2026)
+
+- **Configuration gpu_mem automatique** : Le script d'installation configure maintenant `gpu_mem=256` dans `/boot/config.txt`
+  - **Problème** : Raspberry Pi OS Lite met gpu_mem à 4M par défaut, insuffisant pour Chromium avec 4 players vidéo
+  - **Symptôme** : Crash "Aw, Snap! Error code: 5" après 1-2h de boucle vidéo
+  - **Solution** : `install.sh` détecte et configure `gpu_mem=256` automatiquement
+  - **Pi existants** : Exécuter manuellement `echo "gpu_mem=256" | sudo tee -a /boot/config.txt && sudo reboot`
+  - **Fichiers modifiés** :
+    - `raspberry/install.sh` - Ajout fonction `configure_gpu_memory()`
+  - **Migration** : Pour les Pi déjà installés, ajouter `gpu_mem=256` dans `/boot/config.txt` et reboot
 
 - **Watchdog Kiosk pour crashs Chromium "Aw, Snap!"** : Récupération automatique au niveau système
   - **Problème** : Chromium affiche "Aw, Snap! Error code: 5" mais ne quitte pas - le service systemd ne redémarre pas
