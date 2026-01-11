@@ -1,8 +1,9 @@
 # Systemd service pour le mode Kiosque Neopro
 # Lance Chromium en fullscreen sur /tv au démarrage
+# Inclut un watchdog qui détecte et récupère des crashs "Aw, Snap!"
 
 [Unit]
-Description=Neopro Kiosk Mode (TV Display)
+Description=Neopro Kiosk Mode (TV Display) with Watchdog
 After=graphical.target neopro-app.service
 Wants=graphical.target
 
@@ -15,34 +16,16 @@ Environment=XAUTHORITY=/home/pi/.Xauthority
 # Attendre que le serveur soit prêt
 ExecStartPre=/bin/sleep 10
 
-# Lancement de Chromium en mode kiosque
-# Note: Le chemin est déterminé par le script configure_services()
-ExecStart=/usr/bin/chromium-browser \
-  --kiosk \
-  --autoplay-policy=no-user-gesture-required \
-  --noerrdialogs \
-  --disable-infobars \
-  --disable-session-crashed-bubble \
-  --disable-restore-session-state \
-  --disable-features=TranslateUI \
-  --no-first-run \
-  --fast \
-  --fast-start \
-  --disable-component-update \
-  --disable-background-networking \
-  --disable-sync \
-  --disable-translate \
-  --disable-cloud-import \
-  --disable-print-preview \
-  --disable-hang-monitor \
-  --disable-popup-blocking \
-  --enable-features=OverlayScrollbar \
-  --incognito \
-  http://neopro.local/tv
+# Lancement du watchdog qui gère Chromium
+# Le watchdog détecte les crashs "Aw, Snap!" et relance automatiquement
+ExecStart=/home/pi/neopro/scripts/kiosk-watchdog.sh
 
-# Redémarrage automatique
+# Arrêt propre
+ExecStop=/usr/bin/pkill -9 -f chromium
+
+# Redémarrage automatique du watchdog si il crash
 Restart=always
-RestartSec=5
+RestartSec=10
 
 [Install]
 WantedBy=graphical.target

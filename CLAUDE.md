@@ -1582,6 +1582,17 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 
 ### v2.24.x (Janvier 2026)
 
+- **Watchdog Kiosk pour crashs Chromium "Aw, Snap!"** : Récupération automatique au niveau système
+  - **Problème** : Chromium affiche "Aw, Snap! Error code: 5" mais ne quitte pas - le service systemd ne redémarre pas
+  - **Solution** : Script `kiosk-watchdog.sh` qui surveille et relance Chromium
+  - **Détection** : Titre fenêtre via xdotool, logs GPU, pression mémoire
+  - **Actions** : Kill Chromium, vide cache, libère mémoire GPU, relance après délai
+  - **Anti-boucle** : Après 3 crashs en 5 min, attend 60s pour laisser le GPU refroidir
+  - **Fichiers modifiés** :
+    - `raspberry/scripts/kiosk-watchdog.sh` - Script watchdog (nouveau)
+    - `raspberry/config/systemd/neopro-kiosk.service` - Utilise le watchdog
+  - **Migration** : Copier le script + service, puis `sudo systemctl daemon-reload && sudo systemctl restart neopro-kiosk`
+
 - **Système de récupération d'erreurs vidéo** : Le composant TV récupère automatiquement des crashs
   - **Problème** : Après 2h+ de boucle, error code 5 (MEDIA_ERR_DECODE) causait un écran blanc
   - **Solution** : Error handlers sur les 4 players + watchdog + cleanup mémoire périodique
