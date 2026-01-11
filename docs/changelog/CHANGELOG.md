@@ -1,3 +1,9 @@
+## [2.25.1](https://github.com/Tallec7/neopro/compare/v2.25.0...v2.25.1) (2026-01-11)
+
+### Bug Fixes
+
+- **kiosk:** configure gpu_mem=256 for video decoding ([d4eac37](https://github.com/Tallec7/neopro/commit/d4eac37e4f442e8c9da9826da12b8c31b9a362c3))
+
 # [2.25.0](https://github.com/Tallec7/neopro/compare/v2.24.0...v2.25.0) (2026-01-11)
 
 ### Features
