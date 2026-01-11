@@ -301,7 +301,8 @@ interface HotspotResult {
                 <div class="health-metric" [class.metric-warning]="healthStatus.gpu.throttling_active">
                   <span class="metric-label">Throttling</span>
                   <span class="metric-value">
-                    {{ healthStatus.gpu.throttled === '0x0' ? '✅ ' + ('debug.noThrottling' | translate) : healthStatus.gpu.throttled || 'N/A' }}
+                    <span *ngIf="healthStatus.gpu.throttled === '0x0'">✅ {{ 'debug.noThrottling' | translate }}</span>
+                    <span *ngIf="healthStatus.gpu.throttled !== '0x0'">{{ healthStatus.gpu.throttled || 'N/A' }}</span>
                   </span>
                 </div>
               </div>
@@ -668,7 +669,8 @@ interface HotspotResult {
               </select>
               <input type="number" [(ngModel)]="logLines" min="10" max="500" class="log-lines-input" placeholder="Lignes">
               <button class="btn btn-primary btn-sm" (click)="loadLogs()" [disabled]="loadingLogs">
-                {{ loadingLogs ? '⏳ ' + ('debug.loadingLogs' | translate) : '🔄 ' + ('debug.loadLogs' | translate) }}
+                <span *ngIf="loadingLogs">⏳ {{ 'debug.loadingLogs' | translate }}</span>
+                <span *ngIf="!loadingLogs">🔄 {{ 'debug.loadLogs' | translate }}</span>
               </button>
             </div>
 
@@ -739,7 +741,8 @@ interface HotspotResult {
                 <div class="network-card-header">🚪 Passerelle</div>
                 <div class="network-card-value">{{ networkInfo.gateway?.ip || 'N/A' }}</div>
                 <div class="network-card-detail">
-                  {{ networkInfo.gateway?.reachable ? '✅ ' + ('debug.gatewayAccessible' | translate) : '❌ ' + ('debug.gatewayNotAccessible' | translate) }}
+                  <span *ngIf="networkInfo.gateway?.reachable">✅ {{ 'debug.gatewayAccessible' | translate }}</span>
+                  <span *ngIf="!networkInfo.gateway?.reachable">❌ {{ 'debug.gatewayNotAccessible' | translate }}</span>
                 </div>
               </div>
 
@@ -844,7 +847,8 @@ interface HotspotResult {
           <span class="debug-icon">📡</span>
           <h4>Hotspot WiFi</h4>
           <span class="debug-stats" *ngIf="hotspotResult">
-            {{ hotspotResult.success ? '✅ ' + ('debug.hotspotVerified' | translate) : '❌ ' + ('debug.hotspotError' | translate) }}
+            <span *ngIf="hotspotResult.success">✅ {{ 'debug.hotspotVerified' | translate }}</span>
+            <span *ngIf="!hotspotResult.success">❌ {{ 'debug.hotspotError' | translate }}</span>
           </span>
         </div>
 
