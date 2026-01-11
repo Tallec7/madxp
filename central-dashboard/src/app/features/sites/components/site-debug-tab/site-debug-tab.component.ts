@@ -718,10 +718,10 @@ interface HotspotResult {
                 <div class="network-card-header">🌍 Internet</div>
                 <div class="network-card-value">{{ networkInfo.internet?.reachable ? 'Connecté' : 'Non accessible' }}</div>
                 <div class="network-card-detail" *ngIf="networkInfo.internet?.latency_ms">
-                  Latence: {{ networkInfo.internet.latency_ms }}ms
+                  Latence: {{ networkInfo.internet?.latency_ms }}ms
                 </div>
                 <div class="network-card-detail" *ngIf="networkInfo.internet?.packet_loss_percent !== null">
-                  Perte: {{ networkInfo.internet.packet_loss_percent }}%
+                  Perte: {{ networkInfo.internet?.packet_loss_percent }}%
                 </div>
               </div>
 
@@ -730,7 +730,7 @@ interface HotspotResult {
                 <div class="network-card-header">🔗 DNS</div>
                 <div class="network-card-value">{{ networkInfo.dns?.working ? 'Fonctionnel' : 'En échec' }}</div>
                 <div class="network-card-detail" *ngIf="networkInfo.dns?.resolution_ms">
-                  Résolution: {{ networkInfo.dns.resolution_ms }}ms
+                  Résolution: {{ networkInfo.dns?.resolution_ms }}ms
                 </div>
               </div>
 
@@ -748,7 +748,7 @@ interface HotspotResult {
                 <div class="network-card-header">☁️ Serveur Central</div>
                 <div class="network-card-value">{{ networkInfo.central_server?.reachable ? 'Connecté' : 'Non accessible' }}</div>
                 <div class="network-card-detail" *ngIf="networkInfo.central_server?.latency_ms">
-                  Latence: {{ networkInfo.central_server.latency_ms }}ms
+                  Latence: {{ networkInfo.central_server?.latency_ms }}ms
                 </div>
               </div>
             </div>
