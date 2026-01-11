@@ -1573,7 +1573,87 @@ rfkill list
 sudo rfkill unblock wifi
 ```
 
-### 5. Vidéos ne se chargent pas
+### 5. Chromium crash "Aw, Snap! Error code: 5" après 1-2h de boucle vidéo
+
+**Symptômes :**
+
+- L'écran TV affiche "Aw, Snap!" avec le message "Error code: 5"
+- Le bouton "Reload" est affiché mais personne n'est là pour cliquer
+- Nécessite un reboot manuel (débrancher/rebrancher)
+- Après reboot, écran blanc
+
+**Cause racine : Mémoire GPU insuffisante**
+
+Le Raspberry Pi OS Lite alloue par défaut très peu de mémoire au GPU (parfois 4 Mo seulement). Avec 4 players vidéo HTML5 + canvas pour les transitions, le GPU finit par saturer.
+
+**Diagnostic :**
+
+```bash
+ssh pi@neopro.local
+
+# Vérifier la mémoire GPU (CRITIQUE)
+vcgencmd get_mem gpu
+# Si affiche "gpu=4M" ou moins de 128M → C'EST LE PROBLÈME
+
+# Vérifier la température
+vcgencmd measure_temp
+# Normal: < 70°C, Alerte: > 80°C
+
+# Vérifier si throttling actif
+vcgencmd get_throttled
+# 0x0 = OK, autre valeur = throttling (surchauffe ou sous-voltage)
+```
+
+**Solution (cause racine) :**
+
+```bash
+# Éditer la config boot
+# Sur Pi 4 et antérieurs :
+sudo nano /boot/config.txt
+
+# Sur Pi 5 :
+sudo nano /boot/firmware/config.txt
+
+# Ajouter à la fin :
+gpu_mem=256
+
+# Sauvegarder (Ctrl+O, Enter, Ctrl+X) et redémarrer
+sudo reboot
+
+# Vérifier après reboot
+vcgencmd get_mem gpu
+# Doit afficher : gpu=256M
+```
+
+**Solutions complémentaires (filets de sécurité) :**
+
+Depuis la version 2.24+, deux systèmes de récupération automatique sont en place :
+
+1. **Watchdog Kiosk** (`/home/pi/neopro/scripts/kiosk-watchdog.sh`) :
+   - Surveille le titre de la fenêtre Chromium
+   - Détecte "Aw, Snap!", "Error", "Oups" dans le titre
+   - Tue Chromium, vide le cache, libère la mémoire GPU, relance
+   - Anti-boucle : attend 60s après 3 crashs en 5 min
+
+2. **Error Recovery TV** (dans le composant Angular) :
+   - Error handlers sur les 4 players vidéo
+   - Watchdog vérifie que la vidéo progresse toutes les 10s
+   - Full reset après 3 erreurs consécutives
+   - Cleanup mémoire toutes les 30 min ou après 50 vidéos
+
+**Vérifier que le watchdog est actif :**
+
+```bash
+# Statut du service kiosk
+sudo systemctl status neopro-kiosk
+
+# Logs du watchdog
+sudo tail -50 /var/log/neopro-kiosk-watchdog.log
+```
+
+**Note :** Les nouvelles installations (v2.24+) configurent automatiquement `gpu_mem=256` via le script `install.sh`.
+
+### 6. Vidéos ne se chargent pas
 
 **Cause :** Chemins incorrects dans configuration.json
 
@@ -1619,4 +1699,4 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 11 janvier 2026
+**Dernière mise à jour :** 11 janvier 2026 (v2.24 - Chromium crash recovery)
