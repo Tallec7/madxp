@@ -955,6 +955,25 @@ export const runDiagnostics = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getNetworkDiagnostics = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'network_diagnostics', {}, req.user?.id)).commandId,
+      30000 // 30 secondes pour les diagnostics réseau
+    );
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Network diagnostics error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors des diagnostics réseau' });
+  }
+};
+
 export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

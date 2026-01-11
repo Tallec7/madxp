@@ -282,7 +282,62 @@ export class SitesService {
     return this.sendCommand(id, 'update_hotspot', params);
   }
 
-  // Network diagnostics
+  // Network diagnostics - endpoint dédié pour récupérer les données réseau
+  getNetworkDiagnostics(id: string): Observable<{
+    success: boolean;
+    timestamp: string;
+    internet: {
+      reachable: boolean;
+      latency_ms: number | null;
+      packet_loss_percent: number | null;
+      packets_sent: number;
+      packets_received: number;
+    };
+    central_server: {
+      reachable: boolean;
+      latency_ms: number | null;
+      http_latency_ms: number | null;
+      http_status: number | null;
+      url: string;
+      port_443_open: boolean | null;
+      ssl_valid: boolean | null;
+    };
+    dns: {
+      working: boolean;
+      resolution_time_ms: number | null;
+      tested_domain: string | null;
+      resolved_ip: string | null;
+    };
+    gateway: {
+      ip: string | null;
+      reachable: boolean;
+      latency_ms: number | null;
+    };
+    interfaces: Array<{
+      name: string;
+      ip4: string | null;
+      ip6: string | null;
+      mac: string | null;
+      type: string;
+      operstate: string;
+      speed: number | null;
+    }>;
+    wifi: {
+      connected: boolean;
+      ssid: string | null;
+      quality_percent: number | null;
+      signal_dbm: number | null;
+      bitrate_mbps: number | null;
+    } | null;
+    stability: {
+      interface_uptime_seconds: number | null;
+      reconnections_24h: number | null;
+    };
+  }> {
+    return this.api.get(`/sites/${id}/network-diagnostics`);
+  }
+
+  // Deprecated: utilisez getNetworkDiagnostics à la place
   runNetworkDiagnostics(id: string): Observable<{ success: boolean; commandId?: string; message: string }> {
     return this.sendCommand(id, 'network_diagnostics', {});
   }

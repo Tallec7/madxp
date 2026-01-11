@@ -72,6 +72,14 @@ router.get(
   sitesController.runDiagnostics
 );
 
+router.get(
+  '/:id/network-diagnostics',
+  authenticate,
+  requireRole('admin', 'operator'),
+  adminRateLimit,
+  sitesController.getNetworkDiagnostics
+);
+
 router.post(
   '/',
   authenticate,

@@ -97,7 +97,7 @@ interface ConnectionHealth {
   reason: string;
 }
 
-// Types pour les diagnostics réseau (P2.2)
+// Types pour les diagnostics réseau (P2.2) - aligné avec sync-agent network_diagnostics
 interface NetworkDiagnostics {
   success: boolean;
   timestamp: string;
@@ -105,25 +105,48 @@ interface NetworkDiagnostics {
     reachable: boolean;
     latency_ms: number | null;
     packet_loss_percent: number | null;
+    packets_sent?: number;
+    packets_received?: number;
   };
   dns?: {
     working: boolean;
-    resolution_ms: number | null;
+    resolution_time_ms: number | null;
+    tested_domain?: string | null;
+    resolved_ip?: string | null;
   };
   gateway?: {
     ip: string | null;
     reachable: boolean;
+    latency_ms?: number | null;
   };
   central_server?: {
     reachable: boolean;
     latency_ms: number | null;
+    http_latency_ms?: number | null;
+    http_status?: number | null;
+    url?: string;
+    port_443_open?: boolean | null;
+    ssl_valid?: boolean | null;
   };
+  interfaces?: Array<{
+    name: string;
+    ip4: string | null;
+    ip6: string | null;
+    mac: string | null;
+    type: string;
+    operstate: string;
+    speed: number | null;
+  }>;
   wifi?: {
     connected: boolean;
     ssid: string | null;
     quality_percent: number | null;
     signal_dbm: number | null;
     bitrate_mbps: number | null;
+  };
+  stability?: {
+    interface_uptime_seconds: number | null;
+    reconnections_24h: number | null;
   };
 }
 
@@ -731,8 +754,8 @@ interface HotspotResult {
               <div class="network-card" [class.status-ok]="networkInfo.dns?.working" [class.status-fail]="!networkInfo.dns?.working">
                 <div class="network-card-header">🔗 DNS</div>
                 <div class="network-card-value">{{ networkInfo.dns?.working ? 'Fonctionnel' : 'En échec' }}</div>
-                <div class="network-card-detail" *ngIf="networkInfo.dns?.resolution_ms">
-                  Résolution: {{ networkInfo.dns?.resolution_ms }}ms
+                <div class="network-card-detail" *ngIf="networkInfo.dns?.resolution_time_ms">
+                  Résolution: {{ networkInfo.dns?.resolution_time_ms }}ms
                 </div>
               </div>
 
@@ -3133,12 +3156,11 @@ export class SiteDebugTabComponent implements OnInit {
 
     this.loadingNetworkInfo = true;
 
-    this.sitesService.sendCommand(this.siteId, 'network_diagnostics', {}).subscribe({
-      next: (response: unknown) => {
+    this.sitesService.getNetworkDiagnostics(this.siteId).subscribe({
+      next: (result) => {
         this.loadingNetworkInfo = false;
-        const result = (response as { result?: NetworkDiagnostics })?.result || response as NetworkDiagnostics;
         if (result && result.success !== false) {
-          this.networkInfo = result;
+          this.networkInfo = result as NetworkDiagnostics;
         } else {
           this.notificationService.error('Échec des diagnostics réseau');
         }
