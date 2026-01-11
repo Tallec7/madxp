@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.27.0 | **Dernière mise à jour**: 2026-01-11
+**Version**: 2.27.0 | **Dernière mise à jour**: 2026-01-12
 
 ---
 
@@ -245,15 +245,24 @@ POST /api/auth/reset-password
 GET    /api/sites             → liste paginée, filtres: status, sport, region
 GET    /api/sites/:id         → détails + config + metrics
 GET    /api/sites/:id/dashboard → endpoint agrégé (connection + metrics)
-GET    /api/sites/:id/local-content → vidéos locales + stockage ⚡ NEW
+GET    /api/sites/:id/local-content → vidéos locales + stockage
 GET    /api/sites/:id/connection-status → statut connexion temps réel
 GET    /api/sites/:id/metrics → métriques système (CPU, RAM, temp)
 GET    /api/sites/:id/hotspot-config → SSID WiFi réel du boîtier (pour QR code)
+GET    /api/sites/:id/timeline → événements récents (déploiements, commandes, configs, alertes)
 POST   /api/sites             → créer site (génère api_key)
 PUT    /api/sites/:id         → modifier
 DELETE /api/sites/:id         → supprimer
 POST   /api/sites/:id/api-key/regenerate
 POST   /api/sites/:id/command → envoyer commande au Pi
+
+# Debug endpoints (requièrent connexion Pi active)
+GET    /api/sites/:id/health-status → santé système (GPU, services, throttling)
+GET    /api/sites/:id/diagnostics → diagnostic complet (diagnose-pi.sh)
+GET    /api/sites/:id/network-diagnostics → diagnostics réseau détaillés
+GET    /api/sites/:id/logs?service=xxx&lines=100 → logs d'un service
+GET    /api/sites/:id/debug-bundle → export JSON complet pour support technique
+POST   /api/sites/:id/fix-hotspot → diagnostiquer/réparer le hotspot WiFi
 ```
 
 ### Contenu
@@ -1649,6 +1658,17 @@ vcgencmd get_mem gpu
     - `docs/guides/TROUBLESHOOTING.md` - Section 5 réécrite avec solutions distinctes Pi 4/Pi 5
   - **Migration Pi 5 existants** : Éditer `/etc/systemd/system/neopro-kiosk.service` et ajouter les flags SwiftShader, ou déployer le nouveau `kiosk-watchdog.sh`
 
+- **Fix faux avertissement GPU sur Pi 5 dans le dashboard** : Le health check ignore maintenant la valeur legacy `gpu=4M` sur Pi 5
+  - **Problème** : Le dashboard central affichait "Mémoire GPU insuffisante (4M)" sur Pi 5, alors que ce n'est pas un problème
+  - **Cause** : `vcgencmd get_mem gpu` retourne toujours 4M sur Pi 5 (valeur legacy, pas la mémoire réelle)
+  - **Solution** : Le sync-agent détecte le modèle Pi via `/proc/device-tree/model` et ignore la vérification gpu_mem sur Pi 5
+  - **Affichage Pi 5** : Le dashboard affiche "🎮 GPU (Pi 5)" et "✅ Dynamique (CMA)" au lieu d'un avertissement
+  - **Nouveaux champs** : `is_pi5: boolean`, `gpu_mem_note: string` dans l'objet `gpuInfo`
+  - **Fichiers modifiés** :
+    - `raspberry/sync-agent/src/metrics.js` - Ajout `detectPiModel()`, `is_pi5`, `gpu_mem_note`
+    - `central-dashboard/.../site-debug-tab.component.ts` - Interface `GpuInfo` étendue, template adapté
+  - **Migration** : Déployer la nouvelle version du sync-agent via l'admin panel ou SCP
+
 - **Fix modals "Voir" et "Diff" non visibles dans l'historique des configurations** : Scroll automatique vers le modal
   - **Problème** : En cliquant sur "Voir" ou "Diff" dans l'historique des configurations, rien ne semblait se passer
   - **Cause** : Les modals s'affichaient en bas de la liste d'historique mais hors de la zone visible de l'écran
@@ -1672,6 +1692,27 @@ vcgencmd get_mem gpu
     - `central-dashboard/src/app/features/sites/components/site-debug-tab/site-debug-tab.component.ts`
     - `central-dashboard/angular.json`
   - **Migration** : Aucune (fix interne)
+
+### v2.27.x (Janvier 2026)
+
+- **Fix Debug Tab endpoints** : Les fonctionnalités debug retournent maintenant les données réelles du Pi
+  - **Problème racine** : `sendCommand()` ne retourne que `{success, commandId, message}`, pas les données
+  - **Solution** : Endpoints dédiés utilisant `waitForCommandResult()` pour attendre les résultats
+  - **Endpoints créés/corrigés** :
+    - `GET /sites/:id/debug-bundle` - Export rapport complet pour support technique
+    - `POST /sites/:id/fix-hotspot` - Diagnostics et réparation hotspot WiFi
+    - `GET /sites/:id/health-status` - État de santé système (existait déjà)
+    - `GET /sites/:id/diagnostics` - Diagnostics complets via diagnose-pi.sh
+    - `GET /sites/:id/network-diagnostics` - Diagnostics réseau détaillés
+    - `GET /sites/:id/logs` - Récupération des logs de services
+  - **Pattern utilisé** : `dispatchCommand()` + `waitForCommandResult(commandId, timeout)`
+  - **Fix Timeline 500** : Query `content_deployments` corrigée (`target_id` + `target_type` au lieu de `site_id`)
+  - **Fichiers modifiés** :
+    - `central-server/src/controllers/sites.controller.ts` - Ajout `exportDebugBundle`, `fixHotspot`
+    - `central-server/src/routes/sites.routes.ts` - Routes `/debug-bundle`, `/fix-hotspot`
+    - `central-dashboard/src/app/core/services/sites.service.ts` - Méthodes `exportDebugBundle()`, `fixHotspot()`
+    - `central-dashboard/.../site-debug-tab.component.ts` - Utilise les nouveaux endpoints
+  - **Migration** : Aucune (fix backend + rebuild dashboard requis)
 
 ### v2.26.x (Janvier 2026)
 
