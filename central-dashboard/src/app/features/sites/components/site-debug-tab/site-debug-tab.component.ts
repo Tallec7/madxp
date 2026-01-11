@@ -3262,21 +3262,20 @@ export class SiteDebugTabComponent implements OnInit {
     this.exportingBundle = true;
     this.exportError = null;
 
-    this.sitesService.sendCommand(this.siteId, 'export_debug_bundle', {}).subscribe({
-      next: (response: unknown) => {
+    // Utilise le nouvel endpoint dédié qui attend le résultat
+    this.sitesService.exportDebugBundle(this.siteId).subscribe({
+      next: (response) => {
         this.exportingBundle = false;
-        const result = response as { result?: { success: boolean; bundle: Record<string, unknown> } };
-        const data = result?.result;
 
-        if (data?.success && data?.bundle) {
+        if (response?.success && response?.bundle) {
           // Créer et télécharger le fichier JSON
-          const jsonContent = JSON.stringify(data.bundle, null, 2);
+          const jsonContent = JSON.stringify(response.bundle, null, 2);
           const blob = new Blob([jsonContent], { type: 'application/json' });
           const url = URL.createObjectURL(blob);
 
           const link = document.createElement('a');
           link.href = url;
-          const hostname = (data.bundle as { hostname?: string })?.hostname || this.siteId;
+          const hostname = (response.bundle as { hostname?: string })?.hostname || this.siteId;
           const timestamp = new Date().toISOString().slice(0, 10);
           link.download = `neopro-debug-${hostname}-${timestamp}.json`;
           document.body.appendChild(link);

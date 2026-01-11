@@ -88,6 +88,14 @@ router.post(
   sitesController.fixHotspot
 );
 
+router.get(
+  '/:id/debug-bundle',
+  authenticate,
+  requireRole('admin', 'operator'),
+  adminRateLimit,
+  sitesController.exportDebugBundle
+);
+
 router.post(
   '/',
   authenticate,

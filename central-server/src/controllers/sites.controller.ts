@@ -999,6 +999,27 @@ export const fixHotspot = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const exportDebugBundle = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    logger.info('Exporting debug bundle', { siteId: id });
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'export_debug_bundle', {}, req.user?.id)).commandId,
+      60000 // 60 secondes pour collecter toutes les données
+    );
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Export debug bundle error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors de l\'export du bundle de debug' });
+  }
+};
+
 export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

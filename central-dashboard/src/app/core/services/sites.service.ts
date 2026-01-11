@@ -298,6 +298,27 @@ export class SitesService {
     return this.api.post(`/sites/${id}/fix-hotspot`, { autoFix });
   }
 
+  // Export debug bundle - collecte toutes les informations de debug du Pi
+  exportDebugBundle(id: string): Observable<{
+    success: boolean;
+    timestamp: string;
+    bundle: {
+      configuration: Record<string, unknown>;
+      version: string;
+      healthStatus: Record<string, unknown>;
+      services: Array<{ name: string; status: string; active: boolean }>;
+      logs: string[];
+      network: Record<string, unknown>;
+      disk: Record<string, unknown>;
+      buffers: Record<string, unknown>;
+      hotspotConfig: Record<string, unknown>;
+      bootConfig: Record<string, unknown>;
+      videos: Array<{ filename: string; size: number; category: string }>;
+    };
+  }> {
+    return this.api.get(`/sites/${id}/debug-bundle`);
+  }
+
   // Network diagnostics - endpoint dédié pour récupérer les données réseau
   getNetworkDiagnostics(id: string): Observable<{
     success: boolean;
