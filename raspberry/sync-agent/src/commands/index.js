@@ -267,6 +267,260 @@ const commands = {
     }
   },
 
+  /**
+   * Récupère un rapport de santé complet du système
+   * Inclut GPU, température, throttling, état des services
+   * Critique pour diagnostiquer les crashs Chromium et problèmes d'alimentation
+   */
+  async get_health_status() {
+    logger.info('Retrieving health status');
+
+    try {
+      const metricsCollector = require('../metrics');
+      const healthStatus = await metricsCollector.getHealthStatus();
+
+      return healthStatus;
+    } catch (error) {
+      logger.error('Failed to retrieve health status:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Exécute le script de diagnostic complet (diagnose-pi.sh)
+   * Retourne un rapport structuré avec tous les checks
+   */
+  async run_diagnostics() {
+    logger.info('Running comprehensive diagnostics');
+
+    try {
+      const scriptPath = config.paths.root + '/scripts/diagnose-pi.sh';
+
+      // Vérifier si le script existe
+      if (!await fs.pathExists(scriptPath)) {
+        // Fallback: exécuter les diagnostics manuellement
+        logger.warn('diagnose-pi.sh not found, running manual diagnostics');
+        return await this.runManualDiagnostics();
+      }
+
+      // Exécuter le script avec timeout
+      const { stdout, stderr } = await execAsync(`bash ${scriptPath} 2>&1`, {
+        timeout: 60000, // 60 secondes max
+      });
+
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        output: stdout,
+        errors: stderr || null,
+        scriptPath,
+      };
+    } catch (error) {
+      logger.error('Diagnostics failed:', error);
+
+      // En cas d'erreur du script, tenter les diagnostics manuels
+      try {
+        return await this.runManualDiagnostics();
+      } catch (manualError) {
+        throw error;
+      }
+    }
+  },
+
+  /**
+   * Diagnostics manuels si le script n'est pas disponible
+   */
+  async runManualDiagnostics() {
+    const results = {
+      success: true,
+      timestamp: new Date().toISOString(),
+      checks: [],
+    };
+
+    // 1. Services systemd
+    const services = ['neopro-app', 'neopro-sync-agent', 'neopro-kiosk', 'nginx', 'hostapd', 'dnsmasq'];
+    for (const service of services) {
+      try {
+        const { stdout } = await execAsync(`systemctl is-active ${service} 2>/dev/null || echo "inactive"`);
+        const status = stdout.trim();
+        results.checks.push({
+          category: 'Services',
+          name: service,
+          status: status === 'active' ? 'ok' : 'fail',
+          value: status,
+        });
+      } catch {
+        results.checks.push({
+          category: 'Services',
+          name: service,
+          status: 'fail',
+          value: 'error',
+        });
+      }
+    }
+
+    // 2. Ports
+    const ports = [80, 3000, 8080];
+    for (const port of ports) {
+      try {
+        const { stdout } = await execAsync(`ss -tlnp | grep :${port} | head -1`);
+        results.checks.push({
+          category: 'Ports',
+          name: `Port ${port}`,
+          status: stdout.trim() ? 'ok' : 'fail',
+          value: stdout.trim() ? 'LISTEN' : 'NOT LISTENING',
+        });
+      } catch {
+        results.checks.push({
+          category: 'Ports',
+          name: `Port ${port}`,
+          status: 'fail',
+          value: 'NOT LISTENING',
+        });
+      }
+    }
+
+    // 3. Fichiers critiques
+    const files = [
+      '/home/pi/neopro/webapp/index.html',
+      '/home/pi/neopro/webapp/configuration.json',
+      '/home/pi/neopro/sync-agent/src/agent.js',
+    ];
+    for (const file of files) {
+      const exists = await fs.pathExists(file);
+      results.checks.push({
+        category: 'Files',
+        name: file.split('/').pop(),
+        status: exists ? 'ok' : 'fail',
+        value: exists ? 'exists' : 'missing',
+      });
+    }
+
+    // 4. GPU Memory
+    try {
+      const { stdout } = await execAsync('vcgencmd get_mem gpu 2>/dev/null');
+      const match = stdout.match(/gpu=(\d+)M/);
+      if (match) {
+        const gpuMem = parseInt(match[1]);
+        results.checks.push({
+          category: 'System',
+          name: 'GPU Memory',
+          status: gpuMem >= 128 ? 'ok' : 'fail',
+          value: `${gpuMem}M`,
+          warning: gpuMem < 128 ? 'Minimum requis: 128M, recommandé: 256M' : null,
+        });
+      }
+    } catch {
+      results.checks.push({
+        category: 'System',
+        name: 'GPU Memory',
+        status: 'unknown',
+        value: 'vcgencmd not available',
+      });
+    }
+
+    // 5. Température
+    try {
+      const { stdout } = await execAsync('vcgencmd measure_temp 2>/dev/null');
+      const match = stdout.match(/temp=([\d.]+)/);
+      if (match) {
+        const temp = parseFloat(match[1]);
+        results.checks.push({
+          category: 'System',
+          name: 'Temperature',
+          status: temp < 80 ? 'ok' : 'warning',
+          value: `${temp}°C`,
+        });
+      }
+    } catch {
+      // Fallback via systeminformation
+    }
+
+    // 6. Throttling
+    try {
+      const { stdout } = await execAsync('vcgencmd get_throttled 2>/dev/null');
+      const match = stdout.match(/throttled=(0x[0-9a-fA-F]+)/);
+      if (match) {
+        const value = parseInt(match[1], 16);
+        results.checks.push({
+          category: 'System',
+          name: 'Throttling',
+          status: value === 0 ? 'ok' : 'warning',
+          value: match[1],
+          warning: value !== 0 ? 'Throttling détecté (alimentation ou température)' : null,
+        });
+      }
+    } catch {
+      // vcgencmd not available
+    }
+
+    // 7. Espace disque
+    try {
+      const { stdout } = await execAsync("df -h / | tail -1 | awk '{print $5}'");
+      const usage = parseInt(stdout.trim());
+      results.checks.push({
+        category: 'System',
+        name: 'Disk Usage',
+        status: usage < 90 ? 'ok' : 'warning',
+        value: `${usage}%`,
+      });
+    } catch {
+      // Error getting disk usage
+    }
+
+    // 8. Mémoire
+    try {
+      const { stdout } = await execAsync("free -m | grep Mem | awk '{print int($3/$2*100)}'");
+      const usage = parseInt(stdout.trim());
+      results.checks.push({
+        category: 'System',
+        name: 'Memory Usage',
+        status: usage < 90 ? 'ok' : 'warning',
+        value: `${usage}%`,
+      });
+    } catch {
+      // Error getting memory usage
+    }
+
+    // 9. Connectivité Internet
+    try {
+      await execAsync('ping -c 1 -W 2 8.8.8.8');
+      results.checks.push({
+        category: 'Network',
+        name: 'Internet',
+        status: 'ok',
+        value: 'reachable',
+      });
+    } catch {
+      results.checks.push({
+        category: 'Network',
+        name: 'Internet',
+        status: 'fail',
+        value: 'unreachable',
+      });
+    }
+
+    // 10. Résolution DNS
+    try {
+      await execAsync('getent hosts google.com');
+      results.checks.push({
+        category: 'Network',
+        name: 'DNS',
+        status: 'ok',
+        value: 'working',
+      });
+    } catch {
+      results.checks.push({
+        category: 'Network',
+        name: 'DNS',
+        status: 'fail',
+        value: 'not working',
+      });
+    }
+
+    return results;
+  },
+
   async get_config() {
     logger.info('Retrieving site configuration');
 
@@ -799,6 +1053,381 @@ const commands = {
     });
 
     return results;
+  },
+
+  /**
+   * Récupère l'état du buffer analytics (P2.3)
+   * Taille du buffer, dernière vidange, événements en attente
+   */
+  async get_analytics_buffer_status() {
+    logger.info('Retrieving analytics buffer status');
+
+    try {
+      const analyticsFilePath = path.join(
+        process.env.HOME || '/home/pi',
+        'neopro',
+        'data',
+        'analytics_buffer.json'
+      );
+
+      const sponsorFilePath = path.join(
+        process.env.HOME || '/home/pi',
+        'neopro',
+        'data',
+        'sponsor_impressions.json'
+      );
+
+      const result = {
+        success: true,
+        timestamp: new Date().toISOString(),
+        analytics: {
+          file_exists: false,
+          event_count: 0,
+          file_size_bytes: 0,
+          oldest_event: null,
+          newest_event: null,
+        },
+        sponsors: {
+          file_exists: false,
+          event_count: 0,
+          file_size_bytes: 0,
+          oldest_event: null,
+          newest_event: null,
+        },
+      };
+
+      // Analytics buffer
+      if (await fs.pathExists(analyticsFilePath)) {
+        const stats = await fs.stat(analyticsFilePath);
+        result.analytics.file_exists = true;
+        result.analytics.file_size_bytes = stats.size;
+
+        try {
+          const data = JSON.parse(await fs.readFile(analyticsFilePath, 'utf8'));
+          if (Array.isArray(data)) {
+            result.analytics.event_count = data.length;
+            if (data.length > 0) {
+              // Les événements devraient avoir un timestamp
+              const sorted = data.sort((a, b) =>
+                new Date(a.timestamp || a.played_at || 0).getTime() -
+                new Date(b.timestamp || b.played_at || 0).getTime()
+              );
+              result.analytics.oldest_event = sorted[0]?.timestamp || sorted[0]?.played_at || null;
+              result.analytics.newest_event = sorted[sorted.length - 1]?.timestamp || sorted[sorted.length - 1]?.played_at || null;
+            }
+          }
+        } catch (parseError) {
+          logger.warn('Failed to parse analytics buffer:', parseError.message);
+        }
+      }
+
+      // Sponsor impressions buffer
+      if (await fs.pathExists(sponsorFilePath)) {
+        const stats = await fs.stat(sponsorFilePath);
+        result.sponsors.file_exists = true;
+        result.sponsors.file_size_bytes = stats.size;
+
+        try {
+          const data = JSON.parse(await fs.readFile(sponsorFilePath, 'utf8'));
+          if (Array.isArray(data)) {
+            result.sponsors.event_count = data.length;
+            if (data.length > 0) {
+              const sorted = data.sort((a, b) =>
+                new Date(a.timestamp || a.viewed_at || 0).getTime() -
+                new Date(b.timestamp || b.viewed_at || 0).getTime()
+              );
+              result.sponsors.oldest_event = sorted[0]?.timestamp || sorted[0]?.viewed_at || null;
+              result.sponsors.newest_event = sorted[sorted.length - 1]?.timestamp || sorted[sorted.length - 1]?.viewed_at || null;
+            }
+          }
+        } catch (parseError) {
+          logger.warn('Failed to parse sponsor impressions buffer:', parseError.message);
+        }
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('Failed to get analytics buffer status:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Répare le hotspot WiFi (P2.4)
+   * Exécute fix-hotspot.sh --auto-fix pour corriger les problèmes courants
+   */
+  async fix_hotspot(data) {
+    const { autoFix = true } = data || {};
+    logger.info('Running hotspot fix', { autoFix });
+
+    try {
+      const scriptPath = config.paths.root + '/scripts/fix-hotspot.sh';
+
+      // Vérifier si le script existe
+      if (!await fs.pathExists(scriptPath)) {
+        logger.warn('fix-hotspot.sh not found, running manual hotspot check');
+        return await this.runManualHotspotDiagnostics();
+      }
+
+      // Exécuter le script avec ou sans --auto-fix
+      const args = autoFix ? '--auto-fix' : '';
+      const { stdout, stderr } = await execAsync(`sudo bash ${scriptPath} ${args} 2>&1`, {
+        timeout: 120000, // 2 minutes max (le script peut prendre du temps pour scanner les canaux)
+      });
+
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        autoFix,
+        output: stdout,
+        errors: stderr || null,
+        scriptPath,
+      };
+    } catch (error) {
+      logger.error('Hotspot fix failed:', error);
+
+      // En cas d'erreur, tenter les diagnostics manuels
+      try {
+        return await this.runManualHotspotDiagnostics();
+      } catch (manualError) {
+        throw error;
+      }
+    }
+  },
+
+  /**
+   * Diagnostics manuels du hotspot si le script n'est pas disponible
+   */
+  async runManualHotspotDiagnostics() {
+    const results = {
+      success: true,
+      timestamp: new Date().toISOString(),
+      manual: true,
+      checks: [],
+    };
+
+    // 1. Vérifier hostapd
+    try {
+      const { stdout } = await execAsync('systemctl is-active hostapd 2>/dev/null || echo "inactive"');
+      results.checks.push({
+        name: 'hostapd',
+        status: stdout.trim() === 'active' ? 'ok' : 'fail',
+        value: stdout.trim(),
+      });
+    } catch {
+      results.checks.push({ name: 'hostapd', status: 'fail', value: 'error' });
+    }
+
+    // 2. Vérifier dnsmasq
+    try {
+      const { stdout } = await execAsync('systemctl is-active dnsmasq 2>/dev/null || echo "inactive"');
+      results.checks.push({
+        name: 'dnsmasq',
+        status: stdout.trim() === 'active' ? 'ok' : 'fail',
+        value: stdout.trim(),
+      });
+    } catch {
+      results.checks.push({ name: 'dnsmasq', status: 'fail', value: 'error' });
+    }
+
+    // 3. Vérifier wlan0
+    try {
+      const { stdout } = await execAsync('ip addr show wlan0 2>/dev/null | grep "inet " | head -1');
+      const hasIp = stdout.trim().length > 0;
+      results.checks.push({
+        name: 'wlan0 IP',
+        status: hasIp ? 'ok' : 'warning',
+        value: hasIp ? stdout.trim().match(/inet (\d+\.\d+\.\d+\.\d+)/)?.[1] || 'configured' : 'no IP',
+      });
+    } catch {
+      results.checks.push({ name: 'wlan0 IP', status: 'warning', value: 'not configured' });
+    }
+
+    // 4. Lire le SSID configuré
+    try {
+      const { stdout } = await execAsync('grep "^ssid=" /etc/hostapd/hostapd.conf 2>/dev/null || echo ""');
+      const ssid = stdout.trim().replace('ssid=', '');
+      results.checks.push({
+        name: 'SSID',
+        status: ssid ? 'ok' : 'warning',
+        value: ssid || 'not configured',
+      });
+    } catch {
+      results.checks.push({ name: 'SSID', status: 'warning', value: 'unable to read' });
+    }
+
+    // 5. Lire le channel configuré
+    try {
+      const { stdout } = await execAsync('grep "^channel=" /etc/hostapd/hostapd.conf 2>/dev/null || echo ""');
+      const channel = stdout.trim().replace('channel=', '');
+      results.checks.push({
+        name: 'Channel',
+        status: channel ? 'ok' : 'warning',
+        value: channel || 'not configured',
+      });
+    } catch {
+      results.checks.push({ name: 'Channel', status: 'warning', value: 'unable to read' });
+    }
+
+    // 6. Vérifier rfkill
+    try {
+      const { stdout } = await execAsync('rfkill list wifi 2>/dev/null | grep -i "blocked" || echo ""');
+      const blocked = stdout.toLowerCase().includes('yes');
+      results.checks.push({
+        name: 'rfkill',
+        status: blocked ? 'fail' : 'ok',
+        value: blocked ? 'WiFi blocked' : 'WiFi not blocked',
+      });
+    } catch {
+      results.checks.push({ name: 'rfkill', status: 'ok', value: 'check failed (probably ok)' });
+    }
+
+    return results;
+  },
+
+  /**
+   * Export un bundle de debug complet pour le support technique
+   * Collecte: configuration, logs récents, métriques, diagnostics
+   * Retourne un objet JSON (le ZIP sera créé côté dashboard)
+   */
+  async export_debug_bundle() {
+    logger.info('Exporting debug bundle for support');
+    const metricsCollector = require('../metrics');
+
+    const bundle = {
+      timestamp: new Date().toISOString(),
+      hostname: require('os').hostname(),
+      sections: {},
+    };
+
+    // 1. Configuration (sans données sensibles)
+    try {
+      const configPath = config.paths.root + '/webapp/configuration.json';
+      if (await fs.pathExists(configPath)) {
+        const configContent = await fs.readFile(configPath, 'utf8');
+        const cfg = JSON.parse(configContent);
+        // Masquer les données sensibles
+        const sanitizedConfig = { ...cfg };
+        if (sanitizedConfig.apiKey) {
+          sanitizedConfig.apiKey = sanitizedConfig.apiKey.substring(0, 8) + '...';
+        }
+        if (sanitizedConfig.auth?.password) {
+          sanitizedConfig.auth.password = '***';
+        }
+        bundle.sections.configuration = sanitizedConfig;
+      }
+    } catch (error) {
+      bundle.sections.configuration = { error: error.message };
+    }
+
+    // 2. Version info
+    try {
+      const versionPath = config.paths.root + '/VERSION';
+      const releasePath = config.paths.root + '/release.json';
+      if (await fs.pathExists(versionPath)) {
+        bundle.sections.version = (await fs.readFile(versionPath, 'utf8')).trim();
+      }
+      if (await fs.pathExists(releasePath)) {
+        const release = JSON.parse(await fs.readFile(releasePath, 'utf8'));
+        bundle.sections.release = release;
+      }
+    } catch (error) {
+      bundle.sections.version = { error: error.message };
+    }
+
+    // 3. Health status
+    try {
+      bundle.sections.health = await metricsCollector.getHealthStatus();
+    } catch (error) {
+      bundle.sections.health = { error: error.message };
+    }
+
+    // 4. System info
+    try {
+      bundle.sections.systemInfo = await metricsCollector.getSystemInfo();
+    } catch (error) {
+      bundle.sections.systemInfo = { error: error.message };
+    }
+
+    // 5. Services status
+    try {
+      bundle.sections.services = await metricsCollector.getServicesStatus();
+    } catch (error) {
+      bundle.sections.services = { error: error.message };
+    }
+
+    // 6. Logs récents (dernières 100 lignes de chaque service)
+    try {
+      const services = ['neopro-sync-agent', 'neopro-app', 'neopro-kiosk', 'neopro-admin', 'nginx', 'hostapd'];
+      bundle.sections.logs = {};
+
+      for (const service of services) {
+        try {
+          const { stdout } = await execAsync(
+            `sudo journalctl -u ${service} -n 100 --no-pager -q 2>/dev/null || echo "No logs available"`,
+            { timeout: 10000 }
+          );
+          bundle.sections.logs[service] = stdout.trim();
+        } catch {
+          bundle.sections.logs[service] = 'Unable to retrieve logs';
+        }
+      }
+    } catch (error) {
+      bundle.sections.logs = { error: error.message };
+    }
+
+    // 7. Network diagnostics
+    try {
+      const networkResult = await commands.network_diagnostics();
+      bundle.sections.network = networkResult;
+    } catch (error) {
+      bundle.sections.network = { error: error.message };
+    }
+
+    // 8. Disk usage
+    try {
+      const { stdout } = await execAsync('df -h');
+      bundle.sections.diskUsage = stdout.trim();
+    } catch (error) {
+      bundle.sections.diskUsage = { error: error.message };
+    }
+
+    // 9. Buffer status
+    try {
+      bundle.sections.buffers = await commands.get_analytics_buffer_status();
+    } catch (error) {
+      bundle.sections.buffers = { error: error.message };
+    }
+
+    // 10. Hotspot config (sans mot de passe)
+    try {
+      const { stdout } = await execAsync('grep -v "wpa_passphrase" /etc/hostapd/hostapd.conf 2>/dev/null || echo ""');
+      bundle.sections.hotspotConfig = stdout.trim();
+    } catch (error) {
+      bundle.sections.hotspotConfig = { error: error.message };
+    }
+
+    // 11. boot/config.txt (pour gpu_mem)
+    try {
+      const { stdout } = await execAsync('cat /boot/config.txt 2>/dev/null || cat /boot/firmware/config.txt 2>/dev/null || echo ""');
+      bundle.sections.bootConfig = stdout.trim();
+    } catch (error) {
+      bundle.sections.bootConfig = { error: error.message };
+    }
+
+    // 12. Video list summary
+    try {
+      const videosPath = config.paths.root + '/videos';
+      if (await fs.pathExists(videosPath)) {
+        const { stdout } = await execAsync(`find "${videosPath}" -type f \\( -name "*.mp4" -o -name "*.mkv" -o -name "*.mov" \\) | head -50`);
+        bundle.sections.videoFiles = stdout.trim().split('\n').filter(f => f.length > 0);
+      }
+    } catch (error) {
+      bundle.sections.videoFiles = { error: error.message };
+    }
+
+    logger.info('Debug bundle exported successfully', { sections: Object.keys(bundle.sections) });
+    return { success: true, bundle };
   },
 };
 

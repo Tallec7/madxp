@@ -29,6 +29,9 @@ router.get('/:id/connection-status', authenticate, monitoringRateLimit, sitesCon
 // Endpoint agrégé pour dashboard (réduit de 3 requêtes à 1)
 router.get('/:id/dashboard', authenticate, monitoringRateLimit, sitesController.getSiteDashboardData);
 
+// Timeline des événements récents (P3.4 - déploiements, commandes, alertes, configs)
+router.get('/:id/timeline', authenticate, adminRateLimit, sitesController.getSiteTimeline);
+
 router.get(
   '/:id/logs',
   authenticate,

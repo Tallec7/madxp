@@ -1391,3 +1391,197 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Erreur lors de la récupération des données du dashboard' });
   }
 };
+
+/**
+ * Récupère la timeline des événements récents pour un site
+ * Agrège: déploiements, commandes, alertes, changements de config
+ * Utile pour le debugging et le suivi d'activité
+ */
+export const getSiteTimeline = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { limit = 20 } = req.query;
+    const maxLimit = Math.min(parseInt(limit as string, 10), 50);
+
+    // Vérifier que le site existe
+    const siteResult = await query(
+      `SELECT id, site_name FROM sites WHERE id = $1`,
+      [id]
+    );
+
+    if (siteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    // Récupérer les événements de plusieurs sources et les combiner
+    const [deploymentsResult, commandsResult, configHistoryResult, alertsResult] = await Promise.all([
+      // 1. Derniers déploiements vers ce site
+      query(
+        `SELECT
+           'deployment' as event_type,
+           cd.id,
+           cd.created_at as timestamp,
+           cd.status,
+           v.filename as video_name,
+           v.category,
+           cd.progress,
+           cd.error_message,
+           u.email as user_email
+         FROM content_deployments cd
+         LEFT JOIN videos v ON cd.video_id = v.id
+         LEFT JOIN users u ON cd.deployed_by = u.id
+         WHERE cd.site_id = $1
+         ORDER BY cd.created_at DESC
+         LIMIT $2`,
+        [id, maxLimit]
+      ),
+      // 2. Dernières commandes envoyées
+      query(
+        `SELECT
+           'command' as event_type,
+           rc.id,
+           rc.created_at as timestamp,
+           rc.command_type,
+           rc.status,
+           rc.result,
+           u.email as user_email
+         FROM remote_commands rc
+         LEFT JOIN users u ON rc.created_by = u.id
+         WHERE rc.site_id = $1
+         ORDER BY rc.created_at DESC
+         LIMIT $2`,
+        [id, maxLimit]
+      ),
+      // 3. Historique des configurations
+      query(
+        `SELECT
+           'config' as event_type,
+           ch.id,
+           ch.deployed_at as timestamp,
+           ch.comment,
+           ch.changes_summary,
+           u.email as user_email
+         FROM config_history ch
+         LEFT JOIN users u ON ch.deployed_by = u.id
+         WHERE ch.site_id = $1
+         ORDER BY ch.deployed_at DESC
+         LIMIT $2`,
+        [id, maxLimit]
+      ),
+      // 4. Alertes récentes
+      query(
+        `SELECT
+           'alert' as event_type,
+           a.id,
+           a.created_at as timestamp,
+           a.type as alert_type,
+           a.severity,
+           a.message,
+           a.resolved,
+           a.resolved_at
+         FROM alerts a
+         WHERE a.site_id = $1
+         ORDER BY a.created_at DESC
+         LIMIT $2`,
+        [id, maxLimit]
+      ),
+    ]);
+
+    // Transformer les résultats en événements uniformes
+    const events: Array<{
+      id: string;
+      type: string;
+      timestamp: string;
+      title: string;
+      details: Record<string, unknown>;
+      status?: string;
+      user?: string;
+    }> = [];
+
+    // Déploiements
+    for (const row of deploymentsResult.rows) {
+      events.push({
+        id: row.id,
+        type: 'deployment',
+        timestamp: row.timestamp,
+        title: `Déploiement: ${row.video_name || 'Vidéo'}`,
+        details: {
+          category: row.category,
+          progress: row.progress,
+          error: row.error_message,
+        },
+        status: row.status,
+        user: row.user_email,
+      });
+    }
+
+    // Commandes
+    for (const row of commandsResult.rows) {
+      events.push({
+        id: row.id,
+        type: 'command',
+        timestamp: row.timestamp,
+        title: `Commande: ${row.command_type}`,
+        details: {
+          result: row.result,
+        },
+        status: row.status,
+        user: row.user_email,
+      });
+    }
+
+    // Configs
+    for (const row of configHistoryResult.rows) {
+      const changesCount = Array.isArray(row.changes_summary)
+        ? row.changes_summary.length
+        : 0;
+      events.push({
+        id: row.id,
+        type: 'config',
+        timestamp: row.timestamp,
+        title: row.comment || 'Mise à jour configuration',
+        details: {
+          changesCount,
+        },
+        status: 'completed',
+        user: row.user_email,
+      });
+    }
+
+    // Alertes
+    for (const row of alertsResult.rows) {
+      events.push({
+        id: row.id,
+        type: 'alert',
+        timestamp: row.timestamp,
+        title: row.message || `Alerte: ${row.alert_type}`,
+        details: {
+          alertType: row.alert_type,
+          severity: row.severity,
+          resolved: row.resolved,
+          resolvedAt: row.resolved_at,
+        },
+        status: row.resolved ? 'resolved' : 'active',
+      });
+    }
+
+    // Trier par timestamp décroissant et limiter
+    events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const limitedEvents = events.slice(0, maxLimit);
+
+    res.json({
+      siteId: id,
+      siteName: (siteResult.rows[0] as { site_name: string }).site_name,
+      events: limitedEvents,
+      counts: {
+        deployments: deploymentsResult.rowCount,
+        commands: commandsResult.rowCount,
+        configs: configHistoryResult.rowCount,
+        alerts: alertsResult.rowCount,
+      },
+    });
+  } catch (error) {
+    logger.error('Get site timeline error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération de la timeline' });
+  }
+};

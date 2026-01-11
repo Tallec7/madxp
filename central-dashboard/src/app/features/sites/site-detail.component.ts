@@ -310,6 +310,7 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
           <app-site-debug-tab
             [siteId]="siteId"
             [isConnected]="isConnected"
+            [connectionHealth]="connectionHealth"
           ></app-site-debug-tab>
         </div>
       </div>

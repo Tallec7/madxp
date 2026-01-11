@@ -51,6 +51,11 @@ const REALTIME_ONLY_COMMANDS = [
   'get_config',
   'network_diagnostics',
   'get_hotspot_config',
+  'get_health_status',          // Rapport santé système (GPU, services, throttling)
+  'run_diagnostics',            // Diagnostic complet (diagnose-pi.sh)
+  'get_analytics_buffer_status', // État des buffers analytics/sponsors
+  'fix_hotspot',                // Réparation hotspot WiFi (fix-hotspot.sh)
+  'export_debug_bundle',        // Export bundle debug pour support (P3.3)
 ];
 
 class CommandQueueService {

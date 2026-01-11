@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.23.2 | **Dernière mise à jour**: 2026-01-11
+**Version**: 2.26.0 | **Dernière mise à jour**: 2026-01-11
 
 ---
 
@@ -1634,6 +1634,34 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.26.x (Janvier 2026)
+
+- **Améliorations Debug Tab (P3)** : Refactoring majeur de l'onglet Debug dans le dashboard
+  - **P3.1 - Suppression section Sync Info** : Section redondante supprimée (info déjà dans l'onglet État)
+  - **P3.2 - Fusion commandes/terminal** : Les boutons de commandes rapides intégrés dans la section Terminal
+    - Boutons : Get Config, Get Logs, Network Diag, Update Software
+    - Suppression du dropdown séparé
+  - **P3.3 - Export debug bundle** : Export JSON pour le support technique
+    - Nouvelle commande `export_debug_bundle` dans le sync-agent
+    - Collecte : configuration (sanitisée), version, santé système, services, logs (100 lignes), réseau, disque, buffers, hotspot config, boot config, liste vidéos
+    - Téléchargement d'un fichier `debug-bundle-{siteName}-{date}.json`
+  - **P3.4 - Timeline d'activité** : Historique des événements récents par site
+    - Nouvel endpoint `/api/sites/:id/timeline` qui agrège :
+      - `content_deployments` (déploiements vidéo)
+      - `remote_commands` (commandes exécutées)
+      - `config_history` (changements de configuration)
+      - `alerts` (alertes système)
+    - UI avec timeline visuelle, icônes colorées par type, compteurs
+  - **Fichiers modifiés** :
+    - `central-dashboard/.../site-debug-tab/site-debug-tab.component.ts` - Refactoring complet
+    - `central-server/src/controllers/sites.controller.ts` - Ajout `getSiteTimeline`
+    - `central-server/src/routes/sites.routes.ts` - Route timeline
+    - `central-dashboard/src/app/core/services/sites.service.ts` - Méthode `getTimeline()`
+    - `raspberry/sync-agent/src/commands/index.js` - Commande `export_debug_bundle`
+    - `raspberry/sync-agent/src/metrics.js` - Méthodes `getGpuInfo()`, `getServicesStatus()`, `getHealthStatus()`
+    - `central-server/src/services/command-queue.service.ts` - `export_debug_bundle` dans REALTIME_ONLY_COMMANDS
+  - **Migration** : Aucune (amélioration UI)
 
 ### v2.25.x (Janvier 2026)
 

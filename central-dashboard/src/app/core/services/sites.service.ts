@@ -277,4 +277,27 @@ export class SitesService {
   }> {
     return this.api.get('/sites/queue/summary');
   }
+
+  // Timeline des événements récents (P3.4)
+  getTimeline(id: string, limit: number = 20): Observable<{
+    siteId: string;
+    siteName: string;
+    events: Array<{
+      id: string;
+      type: 'deployment' | 'command' | 'config' | 'alert';
+      timestamp: string;
+      title: string;
+      details: Record<string, unknown>;
+      status?: string;
+      user?: string;
+    }>;
+    counts: {
+      deployments: number;
+      commands: number;
+      configs: number;
+      alerts: number;
+    };
+  }> {
+    return this.api.get(`/sites/${id}/timeline?limit=${limit}`);
+  }
 }

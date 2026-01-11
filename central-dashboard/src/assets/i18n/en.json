@@ -349,6 +349,13 @@
     "play": "▶ Play",
     "queued": "📥 Queued",
     "restartsService": "Restarts service",
-    "fullReboot": "Full reboot"
+    "fullReboot": "Full reboot",
+    "noThrottling": "None",
+    "loadingLogs": "Loading...",
+    "loadLogs": "Load",
+    "gatewayAccessible": "Accessible",
+    "gatewayNotAccessible": "Not accessible",
+    "hotspotVerified": "Verified",
+    "hotspotError": "Error"
   }
 }

@@ -349,6 +349,13 @@
     "play": "▶ Lire",
     "queued": "📥 File d'attente",
     "restartsService": "Redémarre le service",
-    "fullReboot": "Reboot complet"
+    "fullReboot": "Reboot complet",
+    "noThrottling": "Aucun",
+    "loadingLogs": "Chargement...",
+    "loadLogs": "Charger",
+    "gatewayAccessible": "Accessible",
+    "gatewayNotAccessible": "Non accessible",
+    "hotspotVerified": "Vérifié",
+    "hotspotError": "Erreur"
   }
 }

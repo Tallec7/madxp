@@ -349,6 +349,13 @@
     "play": "▶ Reproducir",
     "queued": "📥 En cola",
     "restartsService": "Reinicia el servicio",
-    "fullReboot": "Reinicio completo"
+    "fullReboot": "Reinicio completo",
+    "noThrottling": "Ninguno",
+    "loadingLogs": "Cargando...",
+    "loadLogs": "Cargar",
+    "gatewayAccessible": "Accesible",
+    "gatewayNotAccessible": "No accesible",
+    "hotspotVerified": "Verificado",
+    "hotspotError": "Error"
   }
 }
