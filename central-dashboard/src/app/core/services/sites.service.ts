@@ -74,8 +74,8 @@ export class SitesService {
     return this.sendCommand(id, 'reboot', {});
   }
 
-  getLogs(id: string, lines: number = 100): Observable<{ logs: string[] }> {
-    return this.api.get(`/sites/${id}/logs`, { lines });
+  getLogs(id: string, lines: number = 100, service: string = 'neopro-app'): Observable<{ logs: string[] }> {
+    return this.api.get(`/sites/${id}/logs`, { lines, service });
   }
 
   getSystemInfo(id: string): Observable<{

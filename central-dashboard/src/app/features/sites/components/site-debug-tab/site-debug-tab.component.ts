@@ -3126,14 +3126,15 @@ export class SiteDebugTabComponent implements OnInit {
     this.loadingLogs = true;
     this.logsContent = '';
 
-    this.sitesService.sendCommand(this.siteId, 'get_logs', {
-      service: this.selectedLogService,
-      lines: this.logLines
-    }).subscribe({
-      next: (response: unknown) => {
+    this.sitesService.getLogs(this.siteId, this.logLines, this.selectedLogService).subscribe({
+      next: (response) => {
         this.loadingLogs = false;
-        const result = (response as { result?: { logs?: string } })?.result || response as { logs?: string };
-        this.logsContent = result?.logs || 'Aucun log disponible';
+        // L'endpoint retourne { logs: string[] }
+        if (response?.logs && Array.isArray(response.logs)) {
+          this.logsContent = response.logs.join('\n') || 'Aucun log disponible';
+        } else {
+          this.logsContent = 'Aucun log disponible';
+        }
       },
       error: (error) => {
         this.loadingLogs = false;
