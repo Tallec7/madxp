@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.26.0 | **Dernière mise à jour**: 2026-01-11
+**Version**: 2.27.0 | **Dernière mise à jour**: 2026-01-11
 
 ---
 
@@ -1634,6 +1634,20 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.27.x (Janvier 2026)
+
+- **Support Raspberry Pi 5 (SwiftShader)** : Fix des crashs Chromium "Aw, Snap!" sur Pi 5
+  - **Problème** : Le Pi 5 utilise VideoCore VII qui a des problèmes d'incompatibilité avec le décodage vidéo hardware de Chromium
+  - **Symptôme** : Erreurs `SharedImageStub: Unable to create shared image` toutes les 5 secondes dans les logs
+  - **Note** : Sur Pi 5, `vcgencmd get_mem gpu` retourne toujours `gpu=4M` (valeur legacy) - ce n'est pas un problème
+  - **Solution** : Utiliser SwiftShader (rendu logiciel) au lieu de l'accélération GPU hardware
+  - **Flags Chromium Pi 5** : `--disable-gpu-compositing --use-gl=angle --use-angle=swiftshader`
+  - **Détection automatique** : Le script `kiosk-watchdog.sh` détecte le modèle de Pi et applique les bons flags
+  - **Fichiers modifiés** :
+    - `raspberry/scripts/kiosk-watchdog.sh` - Détection Pi 4 vs Pi 5, flags GPU adaptés
+    - `docs/guides/TROUBLESHOOTING.md` - Section 5 réécrite avec solutions distinctes Pi 4/Pi 5
+  - **Migration Pi 5 existants** : Éditer `/etc/systemd/system/neopro-kiosk.service` et ajouter les flags SwiftShader, ou déployer le nouveau `kiosk-watchdog.sh`
 
 ### v2.26.x (Janvier 2026)
 

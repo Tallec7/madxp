@@ -20,6 +20,18 @@ CRASH_WINDOW=300   # Fenêtre de 5 minutes pour compter les crashs
 # Compteur de crashs récents
 crash_times=()
 
+# Détecter le modèle de Raspberry Pi
+detect_pi_model() {
+    local model=$(cat /proc/device-tree/model 2>/dev/null || echo "")
+    if [[ "$model" == *"Raspberry Pi 5"* ]]; then
+        echo "pi5"
+    else
+        echo "pi4"
+    fi
+}
+
+PI_MODEL=$(detect_pi_model)
+
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
@@ -69,41 +81,76 @@ cleanup_chromium() {
     log "✓ Nettoyage terminé"
 }
 
+# Détecte le chemin de Chromium (varie selon la version de Raspberry Pi OS)
+detect_chromium_path() {
+    if [ -x "/usr/bin/chromium" ]; then
+        echo "/usr/bin/chromium"
+    elif [ -x "/usr/bin/chromium-browser" ]; then
+        echo "/usr/bin/chromium-browser"
+    else
+        log "❌ ERREUR: Chromium non trouvé"
+        exit 1
+    fi
+}
+
+CHROMIUM_BIN=$(detect_chromium_path)
+
 # Lancer Chromium en mode kiosk
 start_chromium() {
-    log "🚀 Lancement de Chromium..."
+    log "🚀 Lancement de Chromium (modèle: $PI_MODEL)..."
 
     export DISPLAY=:0
     export XAUTHORITY=/home/pi/.Xauthority
 
-    /usr/bin/chromium-browser \
-        --kiosk \
-        --autoplay-policy=no-user-gesture-required \
-        --noerrdialogs \
-        --disable-infobars \
-        --disable-session-crashed-bubble \
-        --disable-restore-session-state \
-        --disable-features=TranslateUI \
-        --no-first-run \
-        --fast \
-        --fast-start \
-        --disable-component-update \
-        --disable-background-networking \
-        --disable-sync \
-        --disable-translate \
-        --disable-cloud-import \
-        --disable-print-preview \
-        --disable-hang-monitor \
-        --disable-popup-blocking \
-        --enable-features=OverlayScrollbar \
-        --incognito \
-        --disable-gpu-driver-bug-workarounds \
-        --enable-gpu-rasterization \
-        --enable-zero-copy \
-        --ignore-gpu-blocklist \
-        --disable-software-rasterizer \
-        --memory-pressure-off \
-        "$CHROMIUM_URL" &
+    # Flags communs à tous les modèles
+    local common_flags=(
+        --kiosk
+        --autoplay-policy=no-user-gesture-required
+        --noerrdialogs
+        --disable-infobars
+        --disable-session-crashed-bubble
+        --disable-restore-session-state
+        --disable-features=TranslateUI
+        --no-first-run
+        --fast
+        --fast-start
+        --disable-component-update
+        --disable-background-networking
+        --disable-sync
+        --disable-translate
+        --disable-cloud-import
+        --disable-print-preview
+        --disable-hang-monitor
+        --disable-popup-blocking
+        --enable-features=OverlayScrollbar
+        --incognito
+        --memory-pressure-off
+    )
+
+    # Flags spécifiques au modèle
+    local gpu_flags=()
+    if [[ "$PI_MODEL" == "pi5" ]]; then
+        # Pi 5 : VideoCore VII a des problèmes avec le décodage vidéo hardware
+        # Utiliser SwiftShader (rendu logiciel) pour éviter les erreurs SharedImageStub
+        log "📱 Pi 5 détecté: utilisation de SwiftShader pour la compatibilité GPU"
+        gpu_flags=(
+            --disable-gpu-compositing
+            --use-gl=angle
+            --use-angle=swiftshader
+        )
+    else
+        # Pi 4 et antérieurs : utiliser l'accélération GPU hardware
+        log "📱 Pi 4 ou antérieur: utilisation de l'accélération GPU hardware"
+        gpu_flags=(
+            --disable-gpu-driver-bug-workarounds
+            --enable-gpu-rasterization
+            --enable-zero-copy
+            --ignore-gpu-blocklist
+            --disable-software-rasterizer
+        )
+    fi
+
+    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" "$CHROMIUM_URL" &
 
     CHROMIUM_PID=$!
     log "✓ Chromium lancé (PID: $CHROMIUM_PID)"

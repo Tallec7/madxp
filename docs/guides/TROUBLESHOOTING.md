@@ -1582,6 +1582,26 @@ sudo rfkill unblock wifi
 - Nécessite un reboot manuel (débrancher/rebrancher)
 - Après reboot, écran blanc
 
+#### ⚠️ IMPORTANT : Raspberry Pi 5 vs Pi 4
+
+Le problème et la solution diffèrent selon le modèle de Raspberry Pi :
+
+| Modèle                 | GPU           | Problème                                | Solution                              |
+| ---------------------- | ------------- | --------------------------------------- | ------------------------------------- |
+| **Pi 4 et antérieurs** | VideoCore VI  | Mémoire GPU insuffisante                | Configurer `gpu_mem=256`              |
+| **Pi 5**               | VideoCore VII | Incompatibilité décodage vidéo hardware | Utiliser SwiftShader (rendu logiciel) |
+
+**Identifier le modèle :**
+
+```bash
+cat /proc/device-tree/model
+# Exemple: "Raspberry Pi 5 Model B Rev 1.0"
+```
+
+---
+
+#### Solution pour Raspberry Pi 4 (et antérieurs)
+
 **Cause racine : Mémoire GPU insuffisante**
 
 Le Raspberry Pi OS Lite alloue par défaut très peu de mémoire au GPU (parfois 4 Mo seulement). Avec 4 players vidéo HTML5 + canvas pour les transitions, le GPU finit par saturer.
@@ -1589,28 +1609,15 @@ Le Raspberry Pi OS Lite alloue par défaut très peu de mémoire au GPU (parfois
 **Diagnostic :**
 
 ```bash
-ssh pi@neopro.local
-
 # Vérifier la mémoire GPU (CRITIQUE)
 vcgencmd get_mem gpu
 # Si affiche "gpu=4M" ou moins de 128M → C'EST LE PROBLÈME
-
-# Vérifier la température
-vcgencmd measure_temp
-# Normal: < 70°C, Alerte: > 80°C
-
-# Vérifier si throttling actif
-vcgencmd get_throttled
-# 0x0 = OK, autre valeur = throttling (surchauffe ou sous-voltage)
 ```
 
-**Solution (cause racine) :**
+**Solution :**
 
 ```bash
-# COMMANDE RAPIDE (Pi 5) :
-echo "gpu_mem=256" | sudo tee -a /boot/firmware/config.txt && sudo reboot
-
-# COMMANDE RAPIDE (Pi 4 et antérieurs) :
+# Ajouter gpu_mem=256 à la config
 echo "gpu_mem=256" | sudo tee -a /boot/config.txt && sudo reboot
 
 # Vérifier après reboot :
@@ -1618,27 +1625,62 @@ vcgencmd get_mem gpu
 # Doit afficher : gpu=256M
 ```
 
-**Méthode manuelle (si vous préférez éditer) :**
+---
+
+#### Solution pour Raspberry Pi 5
+
+**Cause racine : Incompatibilité GPU VideoCore VII**
+
+Sur le Pi 5, le paramètre `gpu_mem` est **ignoré** car le GPU utilise une mémoire partagée dynamique (CMA). Le problème vient d'une incompatibilité entre Chromium et le décodeur vidéo hardware du VideoCore VII.
+
+**Symptôme spécifique :**
 
 ```bash
-# Sur Pi 4 et antérieurs :
-sudo nano /boot/config.txt
-
-# Sur Pi 5 :
-sudo nano /boot/firmware/config.txt
-
-# Ajouter à la fin :
-gpu_mem=256
-
-# Sauvegarder (Ctrl+O, Enter, Ctrl+X) et redémarrer
-sudo reboot
+# Les logs montrent des erreurs SharedImageStub toutes les 5 secondes
+journalctl -u neopro-kiosk --since "10 minutes ago" | grep -i "sharedimage"
+# Exemple: "SharedImageStub: Unable to create shared image"
 ```
 
-**Solutions complémentaires (filets de sécurité) :**
+**Note :** Sur Pi 5, `vcgencmd get_mem gpu` retourne toujours `gpu=4M` - c'est une valeur legacy, pas un problème.
+
+**Solution : Utiliser SwiftShader (rendu logiciel)**
+
+1. **Éditer le service kiosk :**
+
+```bash
+sudo nano /etc/systemd/system/neopro-kiosk.service
+```
+
+2. **Modifier la ligne ExecStart** pour ajouter ces flags à Chromium :
+
+```
+--disable-gpu-compositing --use-gl=angle --use-angle=swiftshader
+```
+
+3. **Appliquer et redémarrer :**
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart neopro-kiosk
+```
+
+4. **Vérifier que les flags sont actifs :**
+
+```bash
+pgrep -a chromium | grep swiftshader
+# Doit afficher le processus avec --use-angle=swiftshader
+```
+
+**Note :** Depuis la version 2.27+, le script `kiosk-watchdog.sh` détecte automatiquement le modèle de Pi et applique les flags SwiftShader pour le Pi 5.
+
+---
+
+#### Solutions complémentaires (filets de sécurité)
 
 Depuis la version 2.24+, deux systèmes de récupération automatique sont en place :
 
 1. **Watchdog Kiosk** (`/home/pi/neopro/scripts/kiosk-watchdog.sh`) :
+   - Détecte automatiquement Pi 4 vs Pi 5 et applique les bons flags GPU
    - Surveille le titre de la fenêtre Chromium
    - Détecte "Aw, Snap!", "Error", "Oups" dans le titre
    - Tue Chromium, vide le cache, libère la mémoire GPU, relance
@@ -1656,11 +1698,12 @@ Depuis la version 2.24+, deux systèmes de récupération automatique sont en pl
 # Statut du service kiosk
 sudo systemctl status neopro-kiosk
 
-# Logs du watchdog
+# Logs du watchdog (vérifier le modèle détecté)
 sudo tail -50 /var/log/neopro-kiosk-watchdog.log
+# Doit afficher : "Pi 5 détecté: utilisation de SwiftShader" ou "Pi 4 ou antérieur: utilisation de l'accélération GPU hardware"
 ```
 
-**Note :** Les nouvelles installations (v2.24+) configurent automatiquement `gpu_mem=256` via le script `install.sh`.
+**Note :** Les nouvelles installations (v2.24+) configurent automatiquement `gpu_mem=256` pour les Pi 4 et antérieurs via le script `install.sh`.
 
 ### 6. Vidéos ne se chargent pas
 
@@ -1708,4 +1751,4 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 11 janvier 2026 (v2.24 - Chromium crash recovery)
+**Dernière mise à jour :** 11 janvier 2026 (v2.27 - Support Raspberry Pi 5 SwiftShader)
