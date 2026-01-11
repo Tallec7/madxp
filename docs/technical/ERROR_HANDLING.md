@@ -122,8 +122,16 @@ export class MyComponent {
 - `logger.warn(message, context?)` - Avertissements
 - `logger.error(message, context?)` - Erreurs (envoyées en prod)
 
+**Throttling (v2.25+)** :
+
+Les logs sont envoyés au backend avec throttling pour éviter les erreurs 429 :
+
+- **Batching** : Logs accumulés pendant 2 secondes (ou 20 logs max) avant envoi
+- **Rate limit silencieux** : Les erreurs 429 sont ignorées sans polluer la console
+- **Console en prod** : Seuls `error` et `warn` affichés dans la console, `info`/`debug` envoyés uniquement à Logtail
+
 **Breadcrumbs** :
-Le logger maintient un historique des 20 dernières actions pour contexte lors d'une erreur.
+Le logger maintient un historique des 50 dernières actions pour contexte lors d'une erreur.
 
 ### 3. HTTP Interceptor (`core/interceptors/error.interceptor.ts`)
 

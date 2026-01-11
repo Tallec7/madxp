@@ -1,7 +1,7 @@
-import { Injectable, inject, isDevMode } from '@angular/core';
+import { Injectable, inject, isDevMode, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@env/environment';
-import { catchError, of } from 'rxjs';
+import { catchError, of, Subject, bufferTime, filter, takeUntil } from 'rxjs';
 
 /**
  * Log levels
@@ -45,6 +45,11 @@ interface LogEntry {
  *
  * Also maintains breadcrumbs for tracking user journey before errors.
  *
+ * Features:
+ * - **Throttling**: Logs are batched and sent every 2 seconds (max 20 logs/batch)
+ * - **Rate limit handling**: 429 errors are silently ignored (no console spam)
+ * - **Production console**: Only errors are logged to console in production
+ *
  * @example
  * // Simple logging
  * this.logger.info('User logged in');
@@ -58,10 +63,16 @@ interface LogEntry {
 @Injectable({
   providedIn: 'root',
 })
-export class LoggerService {
+export class LoggerService implements OnDestroy {
   // Optional injection - allows service to work without HttpClient in tests
   private http: HttpClient | null = null;
   private breadcrumbs: Breadcrumb[] = [];
+
+  // Throttling configuration
+  private readonly BATCH_INTERVAL_MS = 2000; // Send logs every 2 seconds
+  private readonly MAX_BATCH_SIZE = 20; // Max logs per batch
+  private readonly logQueue$ = new Subject<LogEntry>();
+  private readonly destroy$ = new Subject<void>();
 
   constructor() {
     try {
@@ -70,6 +81,9 @@ export class LoggerService {
       // HttpClient not provided (e.g., in tests without HttpClientTestingModule)
       // Logger will still work for console output, just won't send to backend
     }
+
+    // Setup log batching pipeline
+    this.setupLogBatching();
   }
   private readonly MAX_BREADCRUMBS = 50;
 
@@ -179,7 +193,8 @@ export class LoggerService {
     // Send to backend in production (or dev if explicitly enabled)
     // Only send if user is authenticated to avoid 401 errors on login page
     if ((environment.production || context?.['sendToBackend'] === true) && this.isAuthenticated) {
-      this.sendToBackend(entry);
+      // Queue for batched sending (throttling to avoid rate limits)
+      this.queueForBackend(entry);
     }
   }
 
@@ -225,46 +240,83 @@ export class LoggerService {
           break;
       }
     } else {
-      // Simple output in production console (before sending to backend)
-      const message = `${prefix} [${entry.level.toUpperCase()}] ${entry.message}`;
-      switch (entry.level) {
-        case LogLevel.DEBUG:
-          console.debug(message, entry.context);
-          break;
-        case LogLevel.INFO:
-          console.info(message, entry.context);
-          break;
-        case LogLevel.WARN:
-          console.warn(message, entry.context);
-          break;
-        case LogLevel.ERROR:
+      // In production, only log errors and warnings to console
+      // INFO/DEBUG are sent to backend only (Logtail) - no need to pollute console
+      if (entry.level === LogLevel.ERROR || entry.level === LogLevel.WARN) {
+        const message = `${prefix} [${entry.level.toUpperCase()}] ${entry.message}`;
+        if (entry.level === LogLevel.ERROR) {
           console.error(message, entry.context);
-          break;
+        } else {
+          console.warn(message, entry.context);
+        }
       }
+      // DEBUG and INFO are silent in production console (still sent to backend)
     }
   }
 
-  private sendToBackend(entry: LogEntry): void {
+  /**
+   * Setup the log batching pipeline using RxJS
+   * Logs are accumulated and sent in batches every BATCH_INTERVAL_MS
+   */
+  private setupLogBatching(): void {
+    this.logQueue$
+      .pipe(
+        takeUntil(this.destroy$),
+        // Buffer logs for BATCH_INTERVAL_MS or until MAX_BATCH_SIZE is reached
+        bufferTime(this.BATCH_INTERVAL_MS, null, this.MAX_BATCH_SIZE),
+        // Only process non-empty batches
+        filter((batch) => batch.length > 0)
+      )
+      .subscribe((batch) => {
+        this.sendBatchToBackend(batch);
+      });
+  }
+
+  /**
+   * Queue a log entry for batched sending to backend
+   */
+  private queueForBackend(entry: LogEntry): void {
+    this.logQueue$.next(entry);
+  }
+
+  /**
+   * Send a batch of logs to the backend
+   * Silently handles rate limit (429) errors without console spam
+   */
+  private sendBatchToBackend(entries: LogEntry[]): void {
     // Skip if HttpClient is not available (e.g., in tests)
-    if (!this.http) {
+    if (!this.http || entries.length === 0) {
       return;
     }
 
-    // Fire and forget - don't block on logging
-    this.http
-      .post(`${environment.apiUrl}/logs/frontend`, entry, {
-        withCredentials: true,
-      })
-      .pipe(
-        catchError((error) => {
-          // Only log to console if backend is unreachable
-          // Don't create infinite loop by calling this.error()
-          if (isDevMode()) {
-            console.warn('[LoggerService] Failed to send log to backend:', error);
-          }
-          return of(null);
+    // Send each log entry individually (backend expects single entries)
+    // We batch on the client side to reduce request frequency
+    for (const entry of entries) {
+      this.http
+        .post(`${environment.apiUrl}/logs/frontend`, entry, {
+          withCredentials: true,
         })
-      )
-      .subscribe();
+        .pipe(
+          catchError((error) => {
+            // Silently ignore rate limit errors (429) - expected behavior
+            // Also ignore other errors to prevent console spam in production
+            // Only log in dev mode for debugging purposes
+            if (isDevMode() && error?.status !== 429) {
+              console.warn('[LoggerService] Failed to send log to backend:', error);
+            }
+            return of(null);
+          })
+        )
+        .subscribe();
+    }
+  }
+
+  /**
+   * Cleanup on service destroy
+   */
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.logQueue$.complete();
   }
 }

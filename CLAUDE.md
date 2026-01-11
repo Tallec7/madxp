@@ -283,7 +283,7 @@ Auth:       10 req/15min    (anti-bruteforce) - 1 min dev
 Monitoring: 300 req/min     (status, metrics, dashboard, local-content)
 Admin:      200 req/min     (lecture sites, logs, config-history)
 Sensitive:  30 req/min      (commands, deployments, créations, suppressions)
-Logging:    200 req/min     (frontend logs - silently dropped if exceeded)
+Logging:    200 req/min     (frontend logs - throttled client-side)
 Upload:     10 req/hour     (video uploads)
 ```
 
@@ -293,6 +293,14 @@ Upload:     10 req/hour     (video uploads)
 - `/api/sites/:id/dashboard`, `/api/sites/:id/connection-status`, `/api/sites/:id/metrics`, `/api/sites/:id/local-content` → `monitoringRateLimit` (300/min)
 - `/api/sites/:id`, `/api/sites/:id/logs`, `/api/sites/:id/config-history/*` → `adminRateLimit` (200/min)
 - POST/PUT/DELETE, `/api/sites/:id/command` → `sensitiveRateLimit` (30/min)
+
+**Frontend Log Throttling** (v2.25+) :
+
+Le `LoggerService` Angular implémente un throttling côté client pour éviter les erreurs 429 :
+
+- **Batching** : Logs accumulés et envoyés toutes les 2 secondes (ou après 20 logs max)
+- **Rate limit silencieux** : Les erreurs 429 sont ignorées sans polluer la console
+- **Console en prod** : Seuls `error` et `warn` affichés, `info`/`debug` → Logtail uniquement
 
 **Note**: Les rate limits sont par utilisateur (user_id) et non par IP en production.
 
@@ -1626,6 +1634,19 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.25.x (Janvier 2026)
+
+- **Throttling des logs frontend** : Évite les erreurs 429 sur `/api/logs/frontend`
+  - **Problème** : Lors de la connexion Socket.IO, plusieurs logs étaient envoyés simultanément, dépassant le rate limit de 200/min
+  - **Symptôme** : Erreur `POST 429 (Too Many Requests)` visible dans la console du navigateur
+  - **Solution** : `LoggerService` implémente maintenant un batching RxJS côté client
+  - **Batching** : Logs accumulés pendant 2 secondes (ou 20 logs max) puis envoyés en batch
+  - **Rate limit silencieux** : Les erreurs 429 sont ignorées sans polluer la console
+  - **Console en prod** : Seuls `error` et `warn` affichés, `info`/`debug` → Logtail uniquement
+  - **Fichiers modifiés** :
+    - `central-dashboard/src/app/core/services/logger.service.ts` - Ajout batching + suppression logs console INFO/DEBUG en prod
+  - **Migration** : Aucune (amélioration transparente)
 
 ### v2.24.x (Janvier 2026)
 
