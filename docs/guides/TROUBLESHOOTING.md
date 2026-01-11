@@ -1607,7 +1607,20 @@ vcgencmd get_throttled
 **Solution (cause racine) :**
 
 ```bash
-# Éditer la config boot
+# COMMANDE RAPIDE (Pi 5) :
+echo "gpu_mem=256" | sudo tee -a /boot/firmware/config.txt && sudo reboot
+
+# COMMANDE RAPIDE (Pi 4 et antérieurs) :
+echo "gpu_mem=256" | sudo tee -a /boot/config.txt && sudo reboot
+
+# Vérifier après reboot :
+vcgencmd get_mem gpu
+# Doit afficher : gpu=256M
+```
+
+**Méthode manuelle (si vous préférez éditer) :**
+
+```bash
 # Sur Pi 4 et antérieurs :
 sudo nano /boot/config.txt
 
@@ -1619,10 +1632,6 @@ gpu_mem=256
 
 # Sauvegarder (Ctrl+O, Enter, Ctrl+X) et redémarrer
 sudo reboot
-
-# Vérifier après reboot
-vcgencmd get_mem gpu
-# Doit afficher : gpu=256M
 ```
 
 **Solutions complémentaires (filets de sécurité) :**
