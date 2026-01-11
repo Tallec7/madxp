@@ -81,6 +81,14 @@ router.get(
 );
 
 router.post(
+  '/:id/fix-hotspot',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sensitiveRateLimit,
+  sitesController.fixHotspot
+);
+
+router.post(
   '/',
   authenticate,
   requireRole('admin', 'operator'),

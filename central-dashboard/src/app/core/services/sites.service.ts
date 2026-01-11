@@ -282,6 +282,22 @@ export class SitesService {
     return this.sendCommand(id, 'update_hotspot', params);
   }
 
+  // Fix hotspot - endpoint dédié pour diagnostiquer et réparer le hotspot WiFi
+  fixHotspot(id: string, autoFix: boolean = false): Observable<{
+    success: boolean;
+    timestamp: string;
+    output?: string;
+    errors?: string | null;
+    checks?: Array<{
+      name: string;
+      status: 'ok' | 'fail' | 'warning';
+      message: string;
+    }>;
+    recommendations?: string[];
+  }> {
+    return this.api.post(`/sites/${id}/fix-hotspot`, { autoFix });
+  }
+
   // Network diagnostics - endpoint dédié pour récupérer les données réseau
   getNetworkDiagnostics(id: string): Observable<{
     success: boolean;

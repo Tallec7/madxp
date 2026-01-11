@@ -977,6 +977,28 @@ export const getNetworkDiagnostics = async (req: AuthRequest, res: Response) => 
   }
 };
 
+export const fixHotspot = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { autoFix = false } = req.body;
+
+    logger.info('Fixing hotspot', { siteId: id, autoFix });
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'fix_hotspot', { autoFix }, req.user?.id)).commandId,
+      120000 // 2 minutes pour le scan des canaux WiFi
+    );
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Fix hotspot error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors de la réparation du hotspot' });
+  }
+};
+
 export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

@@ -388,9 +388,9 @@ interface HumanReadableDiff {
                 </div>
               </div>
               <div class="phase-loop-empty" *ngIf="getPhaseLoopVideos(tc.id).length === 0">
-                <span class="loop-hint">→ Utilise la boucle par défaut ({{ config.sponsors?.length ?? 0 }} vidéos)</span>
+                <span class="loop-hint">→ Utilise la boucle par défaut ({{ config.sponsors.length }} vidéos)</span>
               </div>
-              <div class="phase-loop-actions" *ngIf="(config.sponsors?.length ?? 0) > 0 && getPhaseLoopVideos(tc.id).length === 0">
+              <div class="phase-loop-actions" *ngIf="config.sponsors.length > 0 && getPhaseLoopVideos(tc.id).length === 0">
                 <button class="btn btn-sm btn-secondary" (click)="copyDefaultLoopToPhase(tc.id)">
                   Copier la boucle par défaut
                 </button>

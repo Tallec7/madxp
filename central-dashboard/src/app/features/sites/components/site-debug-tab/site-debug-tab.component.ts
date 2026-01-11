@@ -13,6 +13,8 @@ import { CommandExecutorComponent } from '../command-executor/command-executor.c
 interface GpuInfo {
   gpu_mem_mb: number | null;
   gpu_mem_warning: boolean;
+  gpu_mem_note: string | null;  // Note explicative pour Pi 5
+  is_pi5: boolean;  // true si Raspberry Pi 5 détecté
   temperature: number | null;
   temperature_warning: boolean;
   throttled: string | null;
@@ -299,13 +301,19 @@ interface HotspotResult {
 
             <!-- GPU Info -->
             <div class="health-section" *ngIf="healthStatus.gpu">
-              <h5>🎮 GPU</h5>
+              <h5>🎮 GPU {{ healthStatus.gpu.is_pi5 ? '(Pi 5)' : '' }}</h5>
               <div class="health-grid">
                 <div class="health-metric" [class.metric-warning]="healthStatus.gpu.gpu_mem_warning">
                   <span class="metric-label">Mémoire GPU</span>
                   <span class="metric-value">
-                    {{ healthStatus.gpu.gpu_mem_mb !== null ? healthStatus.gpu.gpu_mem_mb + 'M' : 'N/A' }}
-                    <span class="metric-hint" *ngIf="healthStatus.gpu.gpu_mem_warning">⚠️ Min: 128M</span>
+                    <ng-container *ngIf="healthStatus.gpu.is_pi5; else legacyGpuMem">
+                      <!-- Pi 5: mémoire GPU dynamique (CMA), la valeur 4M est un indicateur legacy -->
+                      <span class="metric-ok">✅ Dynamique (CMA)</span>
+                    </ng-container>
+                    <ng-template #legacyGpuMem>
+                      {{ healthStatus.gpu.gpu_mem_mb !== null ? healthStatus.gpu.gpu_mem_mb + 'M' : 'N/A' }}
+                      <span class="metric-hint" *ngIf="healthStatus.gpu.gpu_mem_warning">⚠️ Min: 128M</span>
+                    </ng-template>
                   </span>
                 </div>
                 <div class="health-metric" [class.metric-warning]="healthStatus.gpu.temperature_warning">
@@ -3219,12 +3227,12 @@ export class SiteDebugTabComponent implements OnInit {
     this.fixingHotspot = true;
     this.hotspotResult = null;
 
-    this.sitesService.sendCommand(this.siteId, 'fix_hotspot', { autoFix }).subscribe({
-      next: (response: unknown) => {
+    // Utilise l'endpoint dédié qui attend le résultat complet
+    this.sitesService.fixHotspot(this.siteId, autoFix).subscribe({
+      next: (result) => {
         this.fixingHotspot = false;
-        const result = (response as { result?: HotspotResult })?.result || response as HotspotResult;
         if (result) {
-          this.hotspotResult = result;
+          this.hotspotResult = result as HotspotResult;
           if (result.success) {
             this.notificationService.success(autoFix ? 'Hotspot réparé avec succès' : 'Diagnostic terminé');
           } else {

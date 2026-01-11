@@ -2,11 +2,45 @@ const si = require('systeminformation');
 const os = require('os');
 const { exec } = require('child_process');
 const util = require('util');
+const fs = require('fs');
 const logger = require('./logger');
 
 const execAsync = util.promisify(exec);
 
 class MetricsCollector {
+  constructor() {
+    // Cache du modèle Pi pour éviter de lire le fichier à chaque appel
+    this._piModel = null;
+    this._isPi5 = null;
+  }
+
+  /**
+   * Détecte le modèle de Raspberry Pi
+   * @returns {Promise<{model: string, isPi5: boolean}>}
+   */
+  async detectPiModel() {
+    // Utiliser le cache si disponible
+    if (this._piModel !== null) {
+      return { model: this._piModel, isPi5: this._isPi5 };
+    }
+
+    try {
+      const modelPath = '/proc/device-tree/model';
+      if (fs.existsSync(modelPath)) {
+        const model = fs.readFileSync(modelPath, 'utf8').replace(/\0/g, '').trim();
+        this._piModel = model;
+        this._isPi5 = model.includes('Raspberry Pi 5');
+        logger.info(`Raspberry Pi model detected: ${model} (isPi5: ${this._isPi5})`);
+        return { model: this._piModel, isPi5: this._isPi5 };
+      }
+    } catch (error) {
+      logger.warn('Could not detect Pi model:', error.message);
+    }
+
+    this._piModel = 'unknown';
+    this._isPi5 = false;
+    return { model: this._piModel, isPi5: this._isPi5 };
+  }
   async collectAll() {
     try {
       const [cpu, memory, temperature, disk, localIp] = await Promise.all([
@@ -197,11 +231,20 @@ class MetricsCollector {
   /**
    * Récupère les informations GPU spécifiques au Raspberry Pi via vcgencmd
    * Critique pour diagnostiquer les crashs Chromium (Aw, Snap!)
+   *
+   * NOTE: Sur Pi 5 (VideoCore VII), gpu_mem n'est plus configurable.
+   * Le GPU utilise la mémoire partagée CMA (Contiguous Memory Allocator).
+   * vcgencmd get_mem gpu retourne toujours 4M (valeur legacy) sur Pi 5.
+   * Ce n'est PAS un problème - le Pi 5 gère la mémoire GPU dynamiquement.
    */
   async getGpuInfo() {
+    const { isPi5 } = await this.detectPiModel();
+
     const gpuInfo = {
       gpu_mem_mb: null,
       gpu_mem_warning: false,
+      gpu_mem_note: null,  // Explication pour Pi 5
+      is_pi5: isPi5,
       temperature: null,
       temperature_warning: false,
       throttled: null,
@@ -212,13 +255,23 @@ class MetricsCollector {
     };
 
     try {
-      // GPU Memory (critique - doit être >= 128M, recommandé 256M)
+      // GPU Memory
+      // Sur Pi 5: vcgencmd get_mem gpu retourne toujours 4M (valeur legacy, pas un problème)
+      // Sur Pi 4 et antérieurs: doit être >= 128M, recommandé 256M
       try {
         const { stdout: gpuMemOutput } = await execAsync('vcgencmd get_mem gpu 2>/dev/null');
         const match = gpuMemOutput.match(/gpu=(\d+)M/);
         if (match) {
           gpuInfo.gpu_mem_mb = parseInt(match[1]);
-          gpuInfo.gpu_mem_warning = gpuInfo.gpu_mem_mb < 128;
+
+          if (isPi5) {
+            // Pi 5: la valeur 4M est normale et attendue
+            gpuInfo.gpu_mem_warning = false;
+            gpuInfo.gpu_mem_note = 'Pi 5 uses dynamic shared memory (CMA). The 4M value is a legacy indicator, not actual GPU memory.';
+          } else {
+            // Pi 4 et antérieurs: vérifier que gpu_mem >= 128M
+            gpuInfo.gpu_mem_warning = gpuInfo.gpu_mem_mb < 128;
+          }
         }
       } catch {
         // vcgencmd peut ne pas être disponible (non-Raspberry Pi)
@@ -345,8 +398,10 @@ class MetricsCollector {
       let healthScore = 100;
       const issues = [];
 
-      // GPU Memory (critique)
-      if (gpuInfo.gpu_mem_mb !== null && gpuInfo.gpu_mem_mb < 128) {
+      // GPU Memory (critique sur Pi 4, ignoré sur Pi 5)
+      // Sur Pi 5, vcgencmd get_mem gpu retourne toujours 4M (valeur legacy)
+      // Ce n'est PAS un problème - le Pi 5 utilise la mémoire partagée CMA
+      if (gpuInfo.gpu_mem_mb !== null && gpuInfo.gpu_mem_mb < 128 && !gpuInfo.is_pi5) {
         healthScore -= 30;
         issues.push({
           severity: 'critical',
