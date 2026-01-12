@@ -1693,6 +1693,14 @@ vcgencmd get_mem gpu
     - `central-dashboard/.../site-detail.component.ts` - Passage siteName
     - `central-dashboard/src/app/core/models/index.ts` - `uploadedForSiteId` sur CloudVideo
   - **Migration** : Exécuter `add-config-drafts.sql` pour créer les tables
+  - **Documentation** : [docs/guides/CONFIG_DRAFTS.md](docs/guides/CONFIG_DRAFTS.md)
+
+- **Silencing des 404 sur endpoints /draft** : Les 404 attendus ne polluent plus les logs
+  - **Problème** : L'intercepteur HTTP loggait les 404 sur `/draft` comme des erreurs
+  - **Cause** : Un 404 sur `/draft` est normal (pas de brouillon pour ce site)
+  - **Solution** : Ajout condition `isDraft404` dans `error.interceptor.ts`
+  - **Fichier modifié** : `central-dashboard/src/app/core/interceptors/error.interceptor.ts`
+  - **Migration** : Rebuild et redéployer le dashboard
 
 - **Support Raspberry Pi 5 (SwiftShader)** : Fix des crashs Chromium "Aw, Snap!" sur Pi 5
   - **Problème** : Le Pi 5 utilise VideoCore VII qui a des problèmes d'incompatibilité avec le décodage vidéo hardware de Chromium
