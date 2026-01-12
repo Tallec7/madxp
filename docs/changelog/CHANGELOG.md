@@ -1,3 +1,9 @@
+# [2.28.0](https://github.com/Tallec7/neopro/compare/v2.27.2...v2.28.0) (2026-01-12)
+
+### Features
+
+- **dashboard:** add config drafts system with contextual video upload ([#353](https://github.com/Tallec7/neopro/issues/353)) ([67f3c0a](https://github.com/Tallec7/neopro/commit/67f3c0aae369df67960fa52f97e724d2a25e7e8b))
+
 ## [2.27.2](https://github.com/Tallec7/neopro/compare/v2.27.1...v2.27.2) (2026-01-12)
 
 ### Bug Fixes
