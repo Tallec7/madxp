@@ -4,9 +4,10 @@ Documentation pour installer, configurer et utiliser Neopro.
 
 ## 🚀 Installation
 
+- **[GUIDE_OPERATEUR_INSTALLATION.md](GUIDE_OPERATEUR_INSTALLATION.md)** - **Guide pas-à-pas pour opérateurs terrain** (~30 min) 🆕 v2.28
+- **[../ONLINE_INSTALLATION.md](../ONLINE_INSTALLATION.md)** - Installation en ligne (technique) ✨ v2.0
 - **[INSTALLATION_COMPLETE.md](INSTALLATION_COMPLETE.md)** - Installation complète Raspberry Pi (45 min) ✨ v2.0
 - **[GOLDEN_IMAGE.md](GOLDEN_IMAGE.md)** - Déploiement rapide via image golden (10 min) ✨ v2.0
-- **[../ONLINE_INSTALLATION.md](../ONLINE_INSTALLATION.md)** - Installation en ligne (recommandée) ✨ v2.0
 - **[SSH_SETUP.md](SSH_SETUP.md)** - Configuration SSH et accès distant
 
 ## ⚙️ Configuration
