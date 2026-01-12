@@ -1,3 +1,9 @@
+## [2.27.1](https://github.com/Tallec7/neopro/compare/v2.27.0...v2.27.1) (2026-01-12)
+
+### Bug Fixes
+
+- **release:** restore version to 2.27.0 after history fix ([f72cd82](https://github.com/Tallec7/neopro/commit/f72cd82819210c0d7e841451b6c7130a0c772991))
+
 # 1.0.0 (2026-01-12)
 
 ### Bug Fixes
