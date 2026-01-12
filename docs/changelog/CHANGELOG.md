@@ -1,3 +1,9 @@
+## [2.28.3](https://github.com/Tallec7/neopro/compare/v2.28.2...v2.28.3) (2026-01-12)
+
+### Bug Fixes
+
+- **setup:** download all sync-agent files and scripts ([67e7cf2](https://github.com/Tallec7/neopro/commit/67e7cf2b3d6a82fa4b6eac83a6b7b05dd36a24c5))
+
 ## [2.28.2](https://github.com/Tallec7/neopro/compare/v2.28.1...v2.28.2) (2026-01-12)
 
 ### Bug Fixes
