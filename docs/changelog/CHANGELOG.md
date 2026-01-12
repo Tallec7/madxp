@@ -1,3 +1,9 @@
+## [2.28.6](https://github.com/Tallec7/neopro/compare/v2.28.5...v2.28.6) (2026-01-12)
+
+### Bug Fixes
+
+- **ci:** properly copy versioned archive for GitHub release ([c8a6d9f](https://github.com/Tallec7/neopro/commit/c8a6d9f8dbeeb61ab9f4622b67e3f08a62548f04))
+
 ## [2.28.5](https://github.com/Tallec7/neopro/compare/v2.28.4...v2.28.5) (2026-01-12)
 
 ### Bug Fixes
