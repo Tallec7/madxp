@@ -1,3 +1,9 @@
+## [2.28.8](https://github.com/Tallec7/neopro/compare/v2.28.7...v2.28.8) (2026-01-12)
+
+### Bug Fixes
+
+- **ci:** auto-build and upload release assets after semantic-release ([bbfe6bd](https://github.com/Tallec7/neopro/commit/bbfe6bd03893cf70996f64740f17413302b2ce59))
+
 ## [2.28.7](https://github.com/Tallec7/neopro/compare/v2.28.6...v2.28.7) (2026-01-12)
 
 ### Bug Fixes
