@@ -110,7 +110,7 @@ start_chromium() {
         --disable-infobars
         --disable-session-crashed-bubble
         --disable-restore-session-state
-        --disable-features=TranslateUI
+        --disable-features=TranslateUI,MediaRouter
         --no-first-run
         --fast
         --fast-start
@@ -125,6 +125,8 @@ start_chromium() {
         --enable-features=OverlayScrollbar
         --incognito
         --memory-pressure-off
+        --disable-breakpad
+        --disable-crash-reporter
     )
 
     # Flags spécifiques au modèle

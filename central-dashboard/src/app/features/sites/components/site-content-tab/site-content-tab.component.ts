@@ -6,6 +6,7 @@ import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
 import { SocketService } from '../../../../core/services/socket.service';
+import { DraftService, ConfigDraft, DraftValidationResult, OrchestratedDeploymentProgress } from '../../../../core/services/draft.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import {
   SiteConfiguration,
@@ -17,6 +18,7 @@ import {
 } from '../../../../core/models';
 import { VideoLibraryComponent, VideoItem, VideoDeployState } from '../video-library/video-library.component';
 import { RemotePreviewComponent } from '../remote-preview/remote-preview.component';
+import { VideoUploadZoneComponent, UploadedVideo } from '../video-upload-zone/video-upload-zone.component';
 import { TranslateModule } from '@ngx-translate/core';
 
 interface SponsorVideo {
@@ -42,7 +44,7 @@ interface HumanReadableDiff {
 @Component({
   selector: 'app-site-content-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, VideoLibraryComponent, RemotePreviewComponent, TranslateModule],
+  imports: [CommonModule, FormsModule, VideoLibraryComponent, RemotePreviewComponent, VideoUploadZoneComponent, TranslateModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="content-tab">
@@ -67,6 +69,65 @@ interface HumanReadableDiff {
         </div>
       </div>
 
+      <!-- Zone Upload Contextuelle -->
+      <div class="section">
+        <app-video-upload-zone
+          [siteId]="siteId"
+          [siteName]="siteName"
+          (uploadComplete)="onVideoUploaded($event)"
+          (allUploadsComplete)="onAllVideosUploaded($event)"
+        ></app-video-upload-zone>
+      </div>
+
+      <!-- Indicateur Brouillon -->
+      <div class="draft-indicator" *ngIf="draft || isDirty">
+        <div class="draft-info">
+          <span class="draft-icon">📝</span>
+          <div class="draft-text">
+            <span class="draft-title" *ngIf="isDirty">Modifications non enregistrées</span>
+            <span class="draft-title" *ngIf="draft && !isDirty">Brouillon sauvegardé</span>
+            <span class="draft-time" *ngIf="draft">Dernière modification: {{ draft.updated_at | date:'short' }}</span>
+          </div>
+        </div>
+        <div class="draft-actions">
+          <button class="btn btn-sm btn-secondary" (click)="saveDraft()" [disabled]="!isDirty || savingDraft">
+            {{ savingDraft ? 'Sauvegarde...' : 'Sauvegarder' }}
+          </button>
+          <button class="btn btn-sm btn-outline" (click)="deleteDraft()" *ngIf="draft" [disabled]="savingDraft">
+            Supprimer brouillon
+          </button>
+        </div>
+      </div>
+
+      <!-- Progression Déploiement Orchestré -->
+      <div class="orchestrated-deployment" *ngIf="orchestratedDeployment">
+        <div class="deployment-header">
+          <span class="deployment-icon">🚀</span>
+          <span class="deployment-title">Déploiement en cours</span>
+          <span class="deployment-status" [class]="'status-' + orchestratedDeployment.status">
+            {{ getDeploymentStatusText(orchestratedDeployment.status) }}
+          </span>
+        </div>
+        <div class="deployment-progress">
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="orchestratedDeployment.overallProgress"></div>
+          </div>
+          <span class="progress-text">{{ orchestratedDeployment.overallProgress }}%</span>
+        </div>
+        <div class="deployment-details">
+          <span *ngIf="orchestratedDeployment.totalVideos > 0">
+            Vidéos: {{ orchestratedDeployment.videosCompleted }}/{{ orchestratedDeployment.totalVideos }}
+            <span *ngIf="orchestratedDeployment.videosFailed > 0" class="failed-count">
+              ({{ orchestratedDeployment.videosFailed }} échoué(s))
+            </span>
+          </span>
+          <span *ngIf="orchestratedDeployment.configDeployed">✅ Configuration appliquée</span>
+        </div>
+        <div class="deployment-error" *ngIf="orchestratedDeployment.errorMessage">
+          {{ orchestratedDeployment.errorMessage }}
+        </div>
+      </div>
+
       <!-- Bibliothèque Vidéo -->
       <div class="section">
         <app-video-library
@@ -75,6 +136,7 @@ interface HumanReadableDiff {
           [storage]="localStorage"
           [selectedPath]="selectedVideoPath"
           [deployStates]="videoDeployStates"
+          [siteId]="siteId"
           (videoSelect)="onVideoSelect($event)"
           (videoPreview)="onVideoPreview($event)"
           (videoDeploy)="onVideoDeploy($event)"
@@ -2051,10 +2113,165 @@ interface HumanReadableDiff {
       color: #166534;
       border: 1px solid #bbf7d0;
     }
+
+    /* Draft Indicator */
+    .draft-indicator {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .draft-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .draft-icon {
+      font-size: 1.25rem;
+    }
+
+    .draft-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .draft-title {
+      font-weight: 500;
+      color: #1e40af;
+    }
+
+    .draft-time {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .draft-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    /* Orchestrated Deployment Progress */
+    .orchestrated-deployment {
+      padding: 1rem;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .orchestrated-deployment.has-error {
+      background: #fef2f2;
+      border-color: #fecaca;
+    }
+
+    .deployment-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .deployment-icon {
+      font-size: 1.25rem;
+    }
+
+    .deployment-title {
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .deployment-status {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .deployment-status.status-pending,
+    .deployment-status.status-deploying_videos {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .deployment-status.status-deploying_config {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .deployment-status.status-completed {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .deployment-status.status-partial_failure {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .deployment-status.status-failed {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .deployment-progress {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .deployment-progress .progress-bar {
+      flex: 1;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .deployment-progress .progress-fill {
+      height: 100%;
+      background: #22c55e;
+      transition: width 0.3s ease;
+    }
+
+    .deployment-progress .progress-text {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #166534;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .deployment-details {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.8125rem;
+      color: #475569;
+    }
+
+    .deployment-details .failed-count {
+      color: #dc2626;
+    }
+
+    .deployment-error {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #fee2e2;
+      border-radius: 4px;
+      font-size: 0.8125rem;
+      color: #991b1b;
+    }
   `]
 })
 export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   @Input() siteId!: string;
+  @Input() siteName: string = '';
   @Input() isConnected: boolean = false;
   @Output() configDeployed = new EventEmitter<void>();
 
@@ -2099,6 +2316,16 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   cachedVideoCategories: string[] = [];
   cachedVideosByCategory: Map<string, LocalVideo[]> = new Map();
   cachedTimeCategories: { id: string; name: string; icon: string; description: string }[] = [];
+
+  // Draft management
+  draft: ConfigDraft | null = null;
+  savingDraft: boolean = false;
+  draftValidation: DraftValidationResult | null = null;
+
+  // Orchestrated deployment tracking
+  orchestratedDeployment: OrchestratedDeploymentProgress | null = null;
+  private orchestratedDeploymentId: string | null = null;
+  private orchestratedDeploymentPollSubscription: Subscription | null = null;
 
   /**
    * Propriétés internes à masquer dans le diff (ajoutées automatiquement)
@@ -2454,22 +2681,26 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     private notificationService: NotificationService,
     private logger: LoggerService,
     private socketService: SocketService,
+    private draftService: DraftService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.loadContent();
+    this.loadDraft();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['siteId'] && !changes['siteId'].firstChange) {
       this.loadContent();
+      this.loadDraft();
     }
   }
 
   ngOnDestroy(): void {
     this.refreshPollSubscription?.unsubscribe();
     this.deploySubscription?.unsubscribe();
+    this.orchestratedDeploymentPollSubscription?.unsubscribe();
     if (this.deployTimeoutId) {
       clearTimeout(this.deployTimeoutId);
     }
@@ -3396,5 +3627,179 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       timeCategories: this.config.timeCategories,
       categoryMappings: this.config.categoryMappings
     };
+  }
+
+  // ============================================================================
+  // Draft Management
+  // ============================================================================
+
+  /**
+   * Charge le brouillon du site s'il existe
+   */
+  private loadDraft(): void {
+    if (!this.siteId) return;
+
+    this.draftService.getDraft(this.siteId).subscribe({
+      next: (draft) => {
+        this.draft = draft;
+        // Si un brouillon existe et qu'il est plus récent que la config locale, proposer de l'utiliser
+        if (draft && draft.configuration) {
+          // On garde le brouillon en référence mais on ne l'applique pas automatiquement
+          this.logger.info('Draft loaded for site', { siteId: this.siteId, draftId: draft.id });
+        }
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        // 404 = pas de brouillon, c'est normal
+        if (error.status !== 404) {
+          this.logger.error('Failed to load draft', { error: ErrorExtractor.getMessage(error) });
+        }
+        this.draft = null;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  /**
+   * Sauvegarde la configuration actuelle comme brouillon
+   */
+  saveDraft(): void {
+    if (!this.siteId || this.savingDraft) return;
+
+    this.savingDraft = true;
+    this.cdr.markForCheck();
+
+    const configToSave = this.prepareConfigForDeploy() as any;
+
+    this.draftService.saveDraft(this.siteId, configToSave, 'Brouillon').subscribe({
+      next: (savedDraft) => {
+        this.draft = savedDraft;
+        this.savingDraft = false;
+        this.notificationService.success('Brouillon sauvegardé');
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.savingDraft = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  /**
+   * Supprime le brouillon du site
+   */
+  deleteDraft(): void {
+    if (!this.siteId || !this.draft) return;
+
+    if (!confirm('Supprimer le brouillon ? Cette action est irréversible.')) {
+      return;
+    }
+
+    this.draftService.deleteDraft(this.siteId).subscribe({
+      next: () => {
+        this.draft = null;
+        this.notificationService.success('Brouillon supprimé');
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+      }
+    });
+  }
+
+  // ============================================================================
+  // Video Upload Handlers
+  // ============================================================================
+
+  /**
+   * Appelé quand une vidéo est uploadée avec succès
+   */
+  onVideoUploaded(video: UploadedVideo): void {
+    this.notificationService.success(`Vidéo "${video.filename}" uploadée`);
+    // Rafraîchir la liste des vidéos cloud
+    this.loadContent();
+  }
+
+  /**
+   * Appelé quand tous les uploads sont terminés
+   */
+  onAllVideosUploaded(videos: UploadedVideo[]): void {
+    if (videos.length > 1) {
+      this.notificationService.success(`${videos.length} vidéos uploadées pour ce site`);
+    }
+    this.loadContent();
+  }
+
+  // ============================================================================
+  // Orchestrated Deployment
+  // ============================================================================
+
+  /**
+   * Retourne le texte de statut pour l'affichage
+   */
+  getDeploymentStatusText(status: string): string {
+    const statusTexts: Record<string, string> = {
+      'pending': 'En attente',
+      'deploying_videos': 'Déploiement vidéos',
+      'deploying_config': 'Application config',
+      'completed': 'Terminé',
+      'partial_failure': 'Partiellement échoué',
+      'failed': 'Échec'
+    };
+    return statusTexts[status] || status;
+  }
+
+  /**
+   * Démarre le polling de progression du déploiement orchestré
+   */
+  private startOrchestratedDeploymentPolling(deploymentId: string): void {
+    this.orchestratedDeploymentId = deploymentId;
+    this.orchestratedDeploymentPollSubscription?.unsubscribe();
+
+    // Polling toutes les 2 secondes
+    this.orchestratedDeploymentPollSubscription = interval(2000).subscribe(() => {
+      if (!this.orchestratedDeploymentId) {
+        this.orchestratedDeploymentPollSubscription?.unsubscribe();
+        return;
+      }
+
+      this.draftService.getDeploymentProgress(this.siteId, this.orchestratedDeploymentId).subscribe({
+        next: (progress) => {
+          this.orchestratedDeployment = progress;
+          this.cdr.markForCheck();
+
+          // Arrêter le polling si terminé
+          if (['completed', 'failed', 'partial_failure'].includes(progress.status)) {
+            this.orchestratedDeploymentPollSubscription?.unsubscribe();
+            this.orchestratedDeploymentId = null;
+
+            // Notification finale
+            if (progress.status === 'completed') {
+              this.notificationService.success('Déploiement terminé avec succès !');
+              this.draft = null; // Le brouillon a été déployé
+              this.loadContent(); // Rafraîchir les données
+            } else if (progress.status === 'partial_failure') {
+              this.notificationService.warning(`Déploiement partiel: ${progress.videosFailed} vidéo(s) en échec`);
+            } else {
+              this.notificationService.error(`Échec du déploiement: ${progress.errorMessage || 'Erreur inconnue'}`);
+            }
+
+            // Effacer l'affichage après 10 secondes
+            setTimeout(() => {
+              if (this.orchestratedDeployment?.status === progress.status) {
+                this.orchestratedDeployment = null;
+                this.cdr.markForCheck();
+              }
+            }, 10000);
+          }
+        },
+        error: () => {
+          // Ignorer les erreurs de polling
+        }
+      });
+    });
   }
 }

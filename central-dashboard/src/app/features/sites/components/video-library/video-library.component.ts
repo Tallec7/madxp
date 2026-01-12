@@ -17,6 +17,7 @@ export interface VideoItem {
   owner: 'club' | 'neopro';
   source: 'cloud' | 'local';
   lastModified?: string;
+  uploadedForSiteId?: string | null; // Site for which this video was uploaded
 }
 
 export type VideoDeployStatus = 'idle' | 'deploying' | 'success' | 'error' | 'timeout';
@@ -169,6 +170,7 @@ export type SortDirection = 'asc' | 'desc';
           <span class="col-name video-name" [title]="video.filename">
             {{ video.displayName }}
             <span class="video-subcat" *ngIf="video.subcategory">{{ video.subcategory }}</span>
+            <span class="for-this-site-badge" *ngIf="isUploadedForThisSite(video)" title="Uploadée pour ce site">⭐</span>
           </span>
           <span class="col-category video-category" [title]="video.category || ''">
             {{ video.category || '-' }}
@@ -1037,6 +1039,21 @@ export type SortDirection = 'asc' | 'desc';
       background: #f8fafc;
       border-radius: 0 0 12px 12px;
     }
+
+    /* For this site badge */
+    .for-this-site-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 0.375rem;
+      font-size: 0.75rem;
+      color: #f59e0b;
+      vertical-align: middle;
+    }
+
+    .video-item.for-this-site {
+      background: linear-gradient(90deg, #fffbeb 0%, transparent 20%);
+    }
   `]
 })
 export class VideoLibraryComponent implements OnChanges {
@@ -1045,6 +1062,7 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() storage: LocalStorage | null = null;
   @Input() selectedPath: string = '';
   @Input() deployStates: Map<string, VideoDeployState> = new Map();
+  @Input() siteId: string | null = null; // Current site ID for showing "for this site" badge
 
   @Output() videoSelect = new EventEmitter<VideoItem>();
   @Output() videoPreview = new EventEmitter<VideoItem>();
@@ -1143,7 +1161,8 @@ export class VideoLibraryComponent implements OnChanges {
         isOnPi,
         owner: this.detectOwner(cloud.filename),
         source: 'cloud' as const,
-        lastModified: cloud.updatedAt?.toString()
+        lastModified: cloud.updatedAt?.toString(),
+        uploadedForSiteId: cloud.uploadedForSiteId
       });
     }
 
@@ -1389,5 +1408,12 @@ export class VideoLibraryComponent implements OnChanges {
   isDeploying(video: VideoItem): boolean {
     const state = this.getDeployState(video);
     return state?.status === 'deploying';
+  }
+
+  /**
+   * Check if the video was specifically uploaded for the current site
+   */
+  isUploadedForThisSite(video: VideoItem): boolean {
+    return !!(this.siteId && video.uploadedForSiteId && video.uploadedForSiteId === this.siteId);
   }
 }

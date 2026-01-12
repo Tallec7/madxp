@@ -166,12 +166,17 @@ sites ────────────────────────�
 videos ────────────────────────────────────────────────────────────────
   id, filename, category, subcategory, duration, storage_path
   checksum (SHA256), metadata (JSONB), uploaded_by → users
+  uploaded_for_site_id → sites (upload contextuel)
   │
   └── content_deployments (1:N) ── video → site/group, status, progress
 
 config_history ────────────────────────────────────────────────────────
   site_id, configuration (JSONB), changes_summary (JSONB)
   previous_version_id (self-ref pour diff)
+
+CONFIG DRAFTS ─────────────────────────────────────────────────────────
+  config_drafts           → site_id (UNIQUE), configuration (JSONB), referenced_video_ids
+  orchestrated_deployments → site_id, draft_id, status, videos_completed/failed
 
 ANALYTICS ─────────────────────────────────────────────────────────────
   club_sessions      → session start/end, videos_played count
@@ -270,8 +275,20 @@ POST   /api/sites/:id/fix-hotspot → diagnostiquer/réparer le hotspot WiFi
 ```
 POST   /api/content/upload    → multipart/form-data (vidéo)
 GET    /api/content/videos    → liste vidéos
+GET    /api/content/videos/for-site/:siteId → vidéos priorisées pour un site (uploaded_for_site_id en premier)
 DELETE /api/content/videos/:id
 POST   /api/content/deploy    → { videoId, targetType, targetId }
+```
+
+### Config Drafts (Brouillons de Configuration)
+
+```
+GET    /api/sites/:siteId/draft         → Récupère le brouillon du site (ou null)
+PUT    /api/sites/:siteId/draft         → Crée/met à jour le brouillon { name?, configuration }
+DELETE /api/sites/:siteId/draft         → Supprime le brouillon
+POST   /api/sites/:siteId/draft/validate → Valide le brouillon (liste vidéos manquantes)
+POST   /api/sites/:siteId/draft/deploy  → Déploie (vidéos + config orchestré)
+GET    /api/sites/:siteId/draft/deployment/:id → Progression du déploiement orchestré
 ```
 
 ### Analytics
@@ -317,20 +334,22 @@ Le `LoggerService` Angular implémente un throttling côté client pour éviter 
 
 ## Services Critiques
 
-| Service          | Fichier                     | Rôle                                      |
-| ---------------- | --------------------------- | ----------------------------------------- |
-| **Socket**       | `socket.service.ts`         | Communication temps réel Pi ↔ Cloud       |
-| **CommandQueue** | `command-queue.service.ts`  | File d'attente commandes (offline/online) |
-| **Deployment**   | `deployment.service.ts`     | Orchestration déploiement vidéos          |
-| **FTP Storage**  | `ftp-storage.ts`            | Upload/download vidéos sur FTP Hostinger  |
-| **Supabase**     | `supabase.ts`               | Stockage fallback si FTP non configuré    |
-| **Metrics**      | `metrics.service.ts`        | Export Prometheus                         |
-| **Audit**        | `audit.service.ts`          | Log toutes les actions admin              |
-| **MFA**          | `mfa.service.ts`            | 2FA avec backup codes                     |
-| **Email**        | `email.service.ts`          | Password reset, alertes                   |
-| **Cron**         | `cron-scheduler.service.ts` | Stats quotidiennes, cleanup               |
-| **Logger**       | `logger.service.ts`         | Logs structurés avec correlation ID       |
-| **Errors**       | `error-extractor.ts`        | Extraction messages d'erreur              |
+| Service          | Fichier                              | Rôle                                      |
+| ---------------- | ------------------------------------ | ----------------------------------------- |
+| **Socket**       | `socket.service.ts`                  | Communication temps réel Pi ↔ Cloud       |
+| **CommandQueue** | `command-queue.service.ts`           | File d'attente commandes (offline/online) |
+| **Deployment**   | `deployment.service.ts`              | Orchestration déploiement vidéos          |
+| **Draft**        | `draft.service.ts`                   | Gestion brouillons de configuration       |
+| **Orchestrated** | `orchestrated-deployment.service.ts` | Déploiement vidéos + config orchestré     |
+| **FTP Storage**  | `ftp-storage.ts`                     | Upload/download vidéos sur FTP Hostinger  |
+| **Supabase**     | `supabase.ts`                        | Stockage fallback si FTP non configuré    |
+| **Metrics**      | `metrics.service.ts`                 | Export Prometheus                         |
+| **Audit**        | `audit.service.ts`                   | Log toutes les actions admin              |
+| **MFA**          | `mfa.service.ts`                     | 2FA avec backup codes                     |
+| **Email**        | `email.service.ts`                   | Password reset, alertes                   |
+| **Cron**         | `cron-scheduler.service.ts`          | Stats quotidiennes, cleanup               |
+| **Logger**       | `logger.service.ts`                  | Logs structurés avec correlation ID       |
+| **Errors**       | `error-extractor.ts`                 | Extraction messages d'erreur              |
 
 ### Stockage Vidéo (Double backend) ⚡ IMPORTANT
 
@@ -1128,6 +1147,8 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 | **SiteSettingsTabComponent** | `components/site-settings-tab/`        | Onglet Paramètres : config réseau, hotspot, QR code    |
 | **SiteDebugTabComponent**    | `components/site-debug-tab/`           | Onglet Debug : logs, commandes, diagnostics            |
 | **RemotePreviewComponent**   | `components/remote-preview/`           | Simulation visuelle de la télécommande Pi              |
+| **VideoUploadZoneComponent** | `components/video-upload-zone/`        | Upload contextuel de vidéos pour un site               |
+| **VideoLibraryComponent**    | `components/video-library/`            | Bibliothèque vidéos avec badge site ⭐                 |
 | **VideoSelectorComponent**   | `shared/components/video-selector/`    | Sélecteur de vidéos avec filtres catégorie             |
 | **QrCodeGeneratorComponent** | `shared/components/qr-code-generator/` | Génération QR code télécommande (PNG/print)            |
 | **ConfigEditorComponent**    | `config-editor/`                       | Éditeur complet de configuration JSON                  |
@@ -1645,6 +1666,33 @@ vcgencmd get_mem gpu
 ## Historique Breaking Changes
 
 ### v2.27.x (Janvier 2026)
+
+- **Système de Brouillons de Configuration + Upload Contextuel** : Permet de préparer des configurations à l'avance
+  - **Problème résolu** : Impossible de configurer un site si le Pi est offline ou si les vidéos ne sont pas encore déployées
+  - **Nouvelles fonctionnalités** :
+    - **Config Drafts** : Un brouillon par site (remplace le précédent), stocké en DB
+    - **Upload contextuel** : Zone d'upload dans l'onglet Contenu qui associe automatiquement les vidéos au site
+    - **Déploiement orchestré** : Déploie d'abord les vidéos manquantes (priorité 3), puis la config (priorité 5)
+    - **Badge site** : Les vidéos uploadées pour un site spécifique affichent ⭐ dans la bibliothèque
+  - **Nouvelles tables DB** :
+    - `config_drafts` : Stocke les brouillons (un par site via UNIQUE constraint)
+    - `orchestrated_deployments` : Suivi des déploiements vidéos + config
+    - `videos.uploaded_for_site_id` : Colonne pour le contexte d'upload
+  - **Nouveaux fichiers** :
+    - `central-server/src/services/draft.service.ts` - Service brouillon backend
+    - `central-server/src/services/orchestrated-deployment.service.ts` - Service orchestration
+    - `central-server/src/controllers/drafts.controller.ts` + routes
+    - `central-dashboard/src/app/core/services/draft.service.ts` - Service Angular
+    - `central-dashboard/.../video-upload-zone/` - Composant upload contextuel
+    - `central-server/src/scripts/migrations/add-config-drafts.sql`
+  - **Fichiers modifiés** :
+    - `central-server/src/controllers/content.controller.ts` - Support `site_id` sur upload
+    - `central-server/src/routes/content.routes.ts` - Route `/videos/for-site/:siteId`
+    - `central-dashboard/.../site-content-tab.component.ts` - Intégration brouillon + upload
+    - `central-dashboard/.../video-library.component.ts` - Badge ⭐ pour vidéos du site
+    - `central-dashboard/.../site-detail.component.ts` - Passage siteName
+    - `central-dashboard/src/app/core/models/index.ts` - `uploadedForSiteId` sur CloudVideo
+  - **Migration** : Exécuter `add-config-drafts.sql` pour créer les tables
 
 - **Support Raspberry Pi 5 (SwiftShader)** : Fix des crashs Chromium "Aw, Snap!" sur Pi 5
   - **Problème** : Le Pi 5 utilise VideoCore VII qui a des problèmes d'incompatibilité avec le décodage vidéo hardware de Chromium
