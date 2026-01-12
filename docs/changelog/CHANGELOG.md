@@ -1,3 +1,9 @@
+## [2.27.2](https://github.com/Tallec7/neopro/compare/v2.27.1...v2.27.2) (2026-01-12)
+
+### Bug Fixes
+
+- package ([352c46c](https://github.com/Tallec7/neopro/commit/352c46c14da64e8ad927be333a203dbcaf87f1fc))
+
 ## [2.27.1](https://github.com/Tallec7/neopro/compare/v2.27.0...v2.27.1) (2026-01-12)
 
 ### Bug Fixes
