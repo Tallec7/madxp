@@ -120,33 +120,69 @@ download_installation_files() {
     curl -sSL "$GITHUB_RAW/raspberry/server/server.js" -o server/server.js
 
     print_step "Téléchargement du serveur admin..."
-    mkdir -p admin/public
+    mkdir -p admin/public/fonts
     curl -sSL "$GITHUB_RAW/raspberry/admin/package.json" -o admin/package.json
     curl -sSL "$GITHUB_RAW/raspberry/admin/admin-server.js" -o admin/admin-server.js
-    # Télécharger les fichiers public de l'admin
-    curl -sSL "$GITHUB_RAW/raspberry/admin/public/index.html" -o admin/public/index.html 2>/dev/null || echo "<!DOCTYPE html><html><body><h1>Admin Neopro</h1></body></html>" > admin/public/index.html
+
+    # Télécharger les fichiers public de l'admin (interface complète)
+    curl -sSL "$GITHUB_RAW/raspberry/admin/public/index.html" -o admin/public/index.html 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/admin/public/app.js" -o admin/public/app.js 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/admin/public/styles.css" -o admin/public/styles.css 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/admin/public/manifest.webmanifest" -o admin/public/manifest.webmanifest 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/admin/public/neopro-logo.png" -o admin/public/neopro-logo.png 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/admin/public/neopro-logo-white.png" -o admin/public/neopro-logo-white.png 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/admin/public/favicon.ico" -o admin/public/favicon.ico 2>/dev/null || true
 
     print_step "Téléchargement du sync-agent..."
-    mkdir -p sync-agent/src/tasks sync-agent/src/utils
+    mkdir -p sync-agent/src/tasks sync-agent/src/utils sync-agent/src/commands sync-agent/src/watchers sync-agent/src/services
     curl -sSL "$GITHUB_RAW/raspberry/sync-agent/package.json" -o sync-agent/package.json 2>/dev/null || true
-    # Fichiers principaux du sync-agent
-    for file in logger.js metrics.js index.js; do
+
+    # Fichiers principaux du sync-agent (TOUS les fichiers nécessaires)
+    for file in agent.js analytics.js config.js logger.js metrics.js sponsor-impressions.js; do
         curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/$file" -o "sync-agent/src/$file" 2>/dev/null || true
     done
+
+    # Commands du sync-agent (CRITIQUES pour update_config, deploy_video, etc.)
+    for file in index.js deploy-video.js update-software.js remote-shell.js delete-video.js; do
+        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/commands/$file" -o "sync-agent/src/commands/$file" 2>/dev/null || true
+    done
+
+    # Watchers du sync-agent (surveillance vidéos et config)
+    for file in video-watcher.js config-watcher.js; do
+        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/watchers/$file" -o "sync-agent/src/watchers/$file" 2>/dev/null || true
+    done
+
+    # Services du sync-agent (connexion, queue offline, historique)
+    for file in connection-status.js offline-queue.js sync-history.js; do
+        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/services/$file" -o "sync-agent/src/services/$file" 2>/dev/null || true
+    done
+
     # Tasks du sync-agent
     for file in expiration-checker.js local-backup.js; do
         curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/tasks/$file" -o "sync-agent/src/tasks/$file" 2>/dev/null || true
     done
-    # Utils du sync-agent
-    curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/utils/config-merge.js" -o sync-agent/src/utils/config-merge.js 2>/dev/null || true
+
+    # Utils du sync-agent (TOUS les fichiers)
+    for file in config-merge.js config-validator.js version-info.js; do
+        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/utils/$file" -o "sync-agent/src/utils/$file" 2>/dev/null || true
+    done
 
     print_step "Téléchargement des scripts de gestion..."
     mkdir -p scripts
+    # Scripts essentiels
     curl -sSL "$GITHUB_RAW/raspberry/scripts/setup-new-club.sh" -o scripts/setup-new-club.sh
     curl -sSL "$GITHUB_RAW/raspberry/scripts/setup-wifi-client.sh" -o scripts/setup-wifi-client.sh
     curl -sSL "$GITHUB_RAW/raspberry/scripts/backup-club.sh" -o scripts/backup-club.sh 2>/dev/null || true
     curl -sSL "$GITHUB_RAW/raspberry/scripts/restore-club.sh" -o scripts/restore-club.sh 2>/dev/null || true
     curl -sSL "$GITHUB_RAW/raspberry/scripts/delete-club.sh" -o scripts/delete-club.sh 2>/dev/null || true
+
+    # Scripts de diagnostic et maintenance (ajoutés v2.24+)
+    curl -sSL "$GITHUB_RAW/raspberry/scripts/diagnose-pi.sh" -o scripts/diagnose-pi.sh 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/scripts/fix-hotspot.sh" -o scripts/fix-hotspot.sh 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/scripts/kiosk-watchdog.sh" -o scripts/kiosk-watchdog.sh 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/scripts/generate-thumbnail.sh" -o scripts/generate-thumbnail.sh 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/scripts/generate-all-thumbnails.sh" -o scripts/generate-all-thumbnails.sh 2>/dev/null || true
+
     chmod +x scripts/*.sh 2>/dev/null || true
 
     print_step "Téléchargement de l'application web (build Angular)..."
