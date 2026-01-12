@@ -1,3 +1,9 @@
+## [2.28.2](https://github.com/Tallec7/neopro/compare/v2.28.1...v2.28.2) (2026-01-12)
+
+### Bug Fixes
+
+- **dashboard:** silence expected 404 errors on draft endpoints ([#354](https://github.com/Tallec7/neopro/issues/354)) ([01df62f](https://github.com/Tallec7/neopro/commit/01df62f5bfa28ea15f7b76b2ce47f39dcca55216))
+
 ## [2.28.1](https://github.com/Tallec7/neopro/compare/v2.28.0...v2.28.1) (2026-01-12)
 
 ### Bug Fixes
