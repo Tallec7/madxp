@@ -13,6 +13,9 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+    outputs:
+      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
+      new_release_version: ${{ steps.semantic.outputs.new_release_version }}
 
     steps:
       - name: Checkout
@@ -33,10 +36,101 @@ jobs:
         run: npm ci
 
       - name: Run semantic-release
+        id: semantic
         run: |
           # Disable workflow commands to prevent commit messages from being interpreted
           echo "::stop-commands::semantic-release-token"
           npx semantic-release
           echo "::semantic-release-token::"
+
+          # Check if a new release was created by looking at the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LATEST_TAG" ]; then
+            # Check if this tag was just created (within last 5 minutes)
+            TAG_DATE=$(git log -1 --format=%ct "$LATEST_TAG" 2>/dev/null || echo "0")
+            NOW=$(date +%s)
+            DIFF=$((NOW - TAG_DATE))
+            if [ "$DIFF" -lt 300 ]; then
+              echo "new_release_published=true" >> $GITHUB_OUTPUT
+              echo "new_release_version=${LATEST_TAG#v}" >> $GITHUB_OUTPUT
+              echo "New release detected: $LATEST_TAG"
+            else
+              echo "new_release_published=false" >> $GITHUB_OUTPUT
+              echo "No new release (tag $LATEST_TAG is older than 5 minutes)"
+            fi
+          else
+            echo "new_release_published=false" >> $GITHUB_OUTPUT
+            echo "No tags found"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-upload:
+    name: Build and Upload Release Assets
+    needs: release
+    if: needs.release.outputs.new_release_published == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all tags
+        run: git fetch --tags --force
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Set release version
+        run: |
+          echo "RELEASE_VERSION=v${{ needs.release.outputs.new_release_version }}" >> $GITHUB_ENV
+          echo "BUILD_SOURCE=github-actions" >> $GITHUB_ENV
+
+      - name: Build Raspberry package
+        run: npm run build:raspberry
+
+      - name: Create webapp-only archive
+        run: |
+          cd dist/raspberry/browser
+          tar -czf ../../../neopro-webapp.tar.gz .
+
+      - name: Prepare release archives
+        run: |
+          echo "=== Listing generated archives ==="
+          ls -la raspberry/*.tar.gz || echo "No archives found"
+
+          # Find the versioned archive (not the symlink, not the legacy)
+          VERSIONED_ARCHIVE=$(ls raspberry/neopro-raspberry-v*.tar.gz 2>/dev/null | grep -v legacy | head -1)
+
+          if [ -z "$VERSIONED_ARCHIVE" ]; then
+            echo "ERROR: No versioned archive found!"
+            exit 1
+          fi
+
+          echo "Found versioned archive: $VERSIONED_ARCHIVE"
+
+          # Remove existing symlink and copy the actual file for release
+          rm -f raspberry/neopro-raspberry-deploy.tar.gz
+          cp "$VERSIONED_ARCHIVE" raspberry/neopro-raspberry-deploy.tar.gz
+
+          echo "=== Final archives for release ==="
+          ls -la raspberry/neopro-raspberry-deploy.tar.gz neopro-webapp.tar.gz
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.release.outputs.new_release_version }}
+          files: |
+            raspberry/neopro-raspberry-deploy.tar.gz
+            neopro-webapp.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
