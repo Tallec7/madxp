@@ -70,7 +70,8 @@ jobs:
 
           echo "Found versioned archive: $VERSIONED_ARCHIVE"
 
-          # Copy to the expected name for release (symlinks don't work well in releases)
+          # Remove existing symlink and copy the actual file for release
+          rm -f raspberry/neopro-raspberry-deploy.tar.gz
           cp "$VERSIONED_ARCHIVE" raspberry/neopro-raspberry-deploy.tar.gz
 
           echo "=== Final archives for release ==="
