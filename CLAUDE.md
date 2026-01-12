@@ -1695,12 +1695,16 @@ vcgencmd get_mem gpu
   - **Migration** : Exécuter `add-config-drafts.sql` pour créer les tables
   - **Documentation** : [docs/guides/CONFIG_DRAFTS.md](docs/guides/CONFIG_DRAFTS.md)
 
-- **Silencing des 404 sur endpoints /draft** : Les 404 attendus ne polluent plus les logs
-  - **Problème** : L'intercepteur HTTP loggait les 404 sur `/draft` comme des erreurs
-  - **Cause** : Un 404 sur `/draft` est normal (pas de brouillon pour ce site)
-  - **Solution** : Ajout condition `isDraft404` dans `error.interceptor.ts`
-  - **Fichier modifié** : `central-dashboard/src/app/core/interceptors/error.interceptor.ts`
-  - **Migration** : Rebuild et redéployer le dashboard
+- **Élimination des 404 sur endpoint /draft** : L'endpoint retourne maintenant `{ draft: null }` au lieu d'un 404
+  - **Problème** : Le navigateur affichait une erreur 404 dans la console DevTools lors du chargement d'un site sans brouillon
+  - **Cause** : L'endpoint `GET /sites/:id/draft` retournait un 404 si pas de brouillon
+  - **Solution** : L'endpoint retourne maintenant `{ draft: null }` (HTTP 200), le service Angular extrait le champ `draft`
+  - **Fichiers modifiés** :
+    - `central-server/src/controllers/drafts.controller.ts` - Retourne `{ draft: null }` au lieu de 404
+    - `central-dashboard/src/app/core/services/draft.service.ts` - `getDraft()` retourne `Observable<ConfigDraft | null>`
+    - `central-dashboard/.../site-content-tab.component.ts` - Simplifié, plus de check `error.status !== 404`
+    - `central-dashboard/src/app/core/interceptors/error.interceptor.ts` - Suppression du code `isDraft404` devenu inutile
+  - **Migration** : Rebuild et redéployer le dashboard + API
 
 - **Support Raspberry Pi 5 (SwiftShader)** : Fix des crashs Chromium "Aw, Snap!" sur Pi 5
   - **Problème** : Le Pi 5 utilise VideoCore VII qui a des problèmes d'incompatibilité avec le décodage vidéo hardware de Chromium

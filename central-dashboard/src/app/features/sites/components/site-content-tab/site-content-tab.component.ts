@@ -3650,10 +3650,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         this.cdr.markForCheck();
       },
       error: (error) => {
-        // 404 = pas de brouillon, c'est normal
-        if (error.status !== 404) {
-          this.logger.error('Failed to load draft', { error: ErrorExtractor.getMessage(error) });
-        }
+        this.logger.error('Failed to load draft', { error: ErrorExtractor.getMessage(error) });
         this.draft = null;
         this.cdr.markForCheck();
       }

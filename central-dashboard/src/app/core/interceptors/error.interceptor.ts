@@ -80,11 +80,8 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       // Log failure → 429 → intercept → log failure → 429 → ...
       const isLogEndpoint = req.url.includes('/logs/frontend');
 
-      // Skip logging for draft 404s - expected behavior when no draft exists
-      const isDraft404 = error.status === 404 && req.url.includes('/draft');
-
-      // Log error to backend (but not for logging endpoint itself or expected 404s)
-      if (!isLogEndpoint && !isDraft404) {
+      // Log error to backend (but not for logging endpoint itself)
+      if (!isLogEndpoint) {
         logger.error('HTTP request failed', {
           url: req.url,
           method: req.method,
