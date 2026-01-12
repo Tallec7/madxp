@@ -28,6 +28,23 @@ interface LocalVideo {
   path: string;
 }
 
+interface VideosQueryRow {
+  id: string;
+  filename: string;
+  original_name: string;
+  category: string | null;
+  subcategory: string | null;
+  file_size: number;
+  duration: number | null;
+  mime_type: string | null;
+  storage_path: string;
+  thumbnail_url: string | null;
+  metadata: Record<string, unknown>;
+  uploaded_by: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
 class DraftService {
   /**
    * Récupère le brouillon d'un site (ou null si aucun)
@@ -216,7 +233,7 @@ class DraftService {
       [validation.videosToDeploy]
     );
 
-    return result.rows as Video[];
+    return result.rows.map((row) => this.mapRowToVideo(row));
   }
 
   /**
@@ -226,7 +243,33 @@ class DraftService {
     const result = await query(
       `SELECT id, filename, storage_path FROM videos`
     );
-    return result.rows as CloudVideo[];
+    return result.rows.map((row) => ({
+      id: row.id as string,
+      filename: row.filename as string,
+      storage_path: row.storage_path as string,
+    }));
+  }
+
+  /**
+   * Convertit une row de base de données en Video
+   */
+  private mapRowToVideo(row: Record<string, unknown>): Video {
+    return {
+      id: row.id as string,
+      filename: row.filename as string,
+      original_name: row.original_name as string,
+      category: row.category as string | null,
+      subcategory: row.subcategory as string | null,
+      file_size: row.file_size as number,
+      duration: row.duration as number | null,
+      mime_type: row.mime_type as string | null,
+      storage_path: row.storage_path as string,
+      thumbnail_url: row.thumbnail_url as string | null,
+      metadata: (row.metadata as Record<string, unknown>) || {},
+      uploaded_by: row.uploaded_by as string | null,
+      created_at: row.created_at as Date,
+      updated_at: row.updated_at as Date,
+    };
   }
 
   /**
