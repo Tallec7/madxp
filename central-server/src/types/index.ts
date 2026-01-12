@@ -239,3 +239,126 @@ export interface HeartbeatMessage {
     source?: string | null;
   };
 }
+
+// ============================================================================
+// Config Draft types (système de brouillons de configuration)
+// ============================================================================
+
+export type DraftStatus = 'draft' | 'deploying' | 'deployed' | 'failed';
+
+export interface ConfigDraft {
+  id: string;
+  site_id: string;
+  name: string;
+  configuration: SiteConfiguration;
+  referenced_video_ids: string[];
+  status: DraftStatus;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type OrchestratedDeploymentStatus =
+  | 'pending'
+  | 'deploying_videos'
+  | 'deploying_config'
+  | 'completed'
+  | 'partial_failure'
+  | 'failed';
+
+export interface OrchestratedDeployment {
+  id: string;
+  site_id: string;
+  draft_id: string | null;
+  status: OrchestratedDeploymentStatus;
+  total_videos: number;
+  videos_completed: number;
+  videos_failed: number;
+  config_deployed: boolean;
+  error_message: string | null;
+  failed_video_ids: string[];
+  started_by: string | null;
+  started_at: Date;
+  completed_at: Date | null;
+  configuration_snapshot: SiteConfiguration;
+}
+
+export interface DraftValidationResult {
+  valid: boolean;
+  missingVideos: MissingVideoInfo[];
+  videosToDeploy: string[];  // IDs des vidéos cloud à déployer sur le Pi
+}
+
+export interface MissingVideoInfo {
+  videoId: string | null;
+  filename: string;
+  path: string;
+  isInCloud: boolean;
+  isOnPi: boolean;
+}
+
+// ============================================================================
+// Site Configuration types (structure de configuration.json)
+// ============================================================================
+
+export interface SponsorVideo {
+  name: string;
+  path: string;
+  type?: string;
+  owner?: 'neopro' | 'club';
+  locked?: boolean;
+  expiresAt?: string;
+}
+
+export interface CategoryVideo {
+  name: string;
+  path: string;
+  type?: string;
+}
+
+export interface SubCategory {
+  id: string;
+  name: string;
+  videos: CategoryVideo[];
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  videos: CategoryVideo[];
+  subCategories?: SubCategory[];
+}
+
+export interface TimeCategory {
+  id: string;
+  name: string;
+  icon?: string;
+  loopVideos: SponsorVideo[];
+  categories?: string[];  // IDs des catégories disponibles dans cette phase
+}
+
+export type CategoryMappings = Record<string, 'sponsor' | 'jingle' | 'ambiance' | 'other'>;
+
+export interface SiteConfiguration {
+  sponsors: SponsorVideo[];
+  categories: Category[];
+  timeCategories?: TimeCategory[];
+  categoryMappings?: CategoryMappings;
+  liveScoreEnabled?: boolean;
+  scoreOverlay?: Record<string, unknown>;
+  auth?: {
+    password?: string;
+    clubName?: string;
+    sessionDuration?: number;
+  };
+  settings?: {
+    language?: string;
+    timezone?: string;
+  };
+  siteId?: string;
+  siteName?: string;
+  clubName?: string;
+  apiKey?: string;
+  [key: string]: unknown;  // Pour la flexibilité
+}

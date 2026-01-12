@@ -40,6 +40,7 @@ import schedulesRoutes from './routes/schedules.routes';
 import objectivesRoutes from './routes/objectives.routes';
 import playlistSchedulesRoutes from './routes/playlist-schedules.routes';
 import logsRoutes from './routes/logs.routes';
+import draftsRoutes from './routes/drafts.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 import { correlationMiddleware } from './middleware/correlation';
@@ -305,6 +306,7 @@ app.use('/api/mfa', authRateLimit, mfaRoutes);   // MFA - même restrictions que
 // Monitoring endpoints (connection-status, dashboard, metrics, local-content) use monitoringRateLimit (300/min)
 // Other endpoints use the default rate or sensitiveRateLimit where appropriate
 app.use('/api/sites', sitesRoutes);
+app.use('/api/sites', draftsRoutes);  // Config drafts - sous /api/sites/:siteId/draft
 app.use('/api/groups', apiRateLimit, groupsRoutes);
 app.use('/api', sensitiveRateLimit, contentRoutes); // Upload de vidéos - plus restrictif
 app.use('/api', sensitiveRateLimit, updatesRoutes); // Mises à jour - sensible

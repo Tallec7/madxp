@@ -265,7 +265,15 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Aucun fichier vidéo fourni' });
     }
 
-    const { title, category, subcategory } = req.body;
+    const { title, category, subcategory, site_id } = req.body;
+
+    // Valider site_id si fourni (upload contextuel)
+    if (site_id) {
+      const siteResult = await pool.query('SELECT id FROM sites WHERE id = $1', [site_id]);
+      if (siteResult.rows.length === 0) {
+        return res.status(400).json({ error: 'Site non trouvé' });
+      }
+    }
 
     // Générer un nom de fichier unique basé sur le nom original
     const filename = await generateUniqueFilename(file.originalname);
@@ -274,7 +282,7 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     const checksum = calculateChecksum(file.buffer);
 
     // Upload vers le stockage (FTP Hostinger ou Supabase)
-    logger.info('Uploading video to storage:', { filename, size: file.size, mimetype: file.mimetype });
+    logger.info('Uploading video to storage:', { filename, size: file.size, mimetype: file.mimetype, siteId: site_id });
     const uploadResult = await uploadVideoToStorage(file.buffer, filename, file.mimetype);
 
     if (!uploadResult) {
@@ -290,12 +298,12 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     const file_size = file.size;
     const mime_type = file.mimetype;
 
-    logger.info('Inserting video metadata into database:', { filename, title: videoTitle });
+    logger.info('Inserting video metadata into database:', { filename, title: videoTitle, siteId: site_id });
     const result = await pool.query(
-      `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, checksum, metadata, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING id, filename as name, original_name, category, subcategory, file_size as size, duration, storage_path as url, thumbnail_url, checksum, metadata, created_at, updated_at`,
-      [filename, original_name, category || null, subcategory || null, file_size, mime_type, uploadResult.path, checksum, { title: videoTitle }, req.user?.id || null]
+      `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, checksum, metadata, uploaded_by, uploaded_for_site_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id, filename as name, original_name, category, subcategory, file_size as size, duration, storage_path as url, thumbnail_url, checksum, metadata, uploaded_for_site_id, created_at, updated_at`,
+      [filename, original_name, category || null, subcategory || null, file_size, mime_type, uploadResult.path, checksum, { title: videoTitle }, req.user?.id || null, site_id || null]
     );
 
     // Ajouter le titre et l'URL à la réponse pour l'affichage client
@@ -303,7 +311,7 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     video.title = videoTitle;
     video.url = uploadResult.url;
 
-    logger.info('Video created successfully:', { id: video.id, filename, title: videoTitle, storagePath: uploadResult.path, checksum });
+    logger.info('Video created successfully:', { id: video.id, filename, title: videoTitle, storagePath: uploadResult.path, checksum, siteId: site_id });
     res.status(201).json(video);
   } catch (error) {
     logger.error('Error creating video:', error);
@@ -323,11 +331,20 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Aucun fichier vidéo fourni' });
     }
 
-    const { category, subcategory } = req.body;
+    const { category, subcategory, site_id } = req.body;
+
+    // Valider site_id si fourni (upload contextuel)
+    if (site_id) {
+      const siteResult = await pool.query('SELECT id FROM sites WHERE id = $1', [site_id]);
+      if (siteResult.rows.length === 0) {
+        return res.status(400).json({ error: 'Site non trouvé' });
+      }
+    }
+
     const results: Array<{ id: string; name: string; title: string; size: number; success: true }> = [];
     const errors: Array<{ name: string; error: string }> = [];
 
-    logger.info('Starting bulk video upload:', { count: files.length, category, subcategory });
+    logger.info('Starting bulk video upload:', { count: files.length, category, subcategory, siteId: site_id });
 
     for (const file of files) {
       try {
@@ -356,10 +373,10 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
         const checksum = calculateChecksum(file.buffer);
 
         const result = await pool.query(
-          `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, checksum, metadata, uploaded_by)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, checksum, metadata, uploaded_by, uploaded_for_site_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
            RETURNING id, filename as name, original_name, file_size as size, checksum`,
-          [filename, original_name, category || null, subcategory || null, file_size, mime_type, uploadResult.path, checksum, { title: videoTitle }, req.user?.id || null]
+          [filename, original_name, category || null, subcategory || null, file_size, mime_type, uploadResult.path, checksum, { title: videoTitle }, req.user?.id || null, site_id || null]
         );
 
         const video = result.rows[0] as { id: string; name: string; original_name: string; size: number };
@@ -371,7 +388,7 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
           success: true
         });
 
-        logger.info('Video created (bulk):', { id: video.id, filename, title: videoTitle });
+        logger.info('Video created (bulk):', { id: video.id, filename, title: videoTitle, siteId: site_id });
       } catch (fileError) {
         const errorMessage = fileError instanceof Error ? fileError.message : 'Erreur inconnue';
         errors.push({ name: file.originalname, error: errorMessage });
@@ -639,5 +656,73 @@ export const deleteDeployment = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error('Error deleting deployment:', error);
     res.status(500).json({ error: 'Erreur lors de la suppression du déploiement' });
+  }
+};
+
+/**
+ * GET /api/content/videos/for-site/:siteId
+ * Récupère les vidéos avec priorisation pour un site spécifique.
+ * Les vidéos uploadées pour ce site apparaissent en premier.
+ */
+export const getVideosForSite = async (req: AuthRequest, res: Response) => {
+  try {
+    const { siteId } = req.params;
+    const { category, search } = req.query;
+    const pagination = req.pagination || { page: 1, limit: 50, offset: 0 };
+
+    // Vérifier que le site existe
+    const siteResult = await pool.query('SELECT id FROM sites WHERE id = $1', [siteId]);
+    if (siteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    let whereClause = 'WHERE 1=1';
+    const params: any[] = [siteId];  // $1 = siteId pour le tri
+    let paramIndex = 2;
+
+    if (category) {
+      whereClause += ` AND category = $${paramIndex}`;
+      params.push(category);
+      paramIndex++;
+    }
+
+    if (search) {
+      whereClause += ` AND (original_name ILIKE $${paramIndex} OR filename ILIKE $${paramIndex})`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    // Query avec tri par uploaded_for_site_id (vidéos du site en premier)
+    const dataQuery = `
+      SELECT id, filename, original_name, category, subcategory,
+             file_size, duration, storage_path as url,
+             thumbnail_url, metadata, uploaded_for_site_id,
+             created_at, updated_at,
+             CASE WHEN uploaded_for_site_id = $1 THEN 1 ELSE 0 END as is_for_site
+      FROM videos
+      ${whereClause}
+      ORDER BY is_for_site DESC, created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+    const countQuery = `SELECT COUNT(*) as count FROM videos ${whereClause}`;
+
+    const [dataResult, countResult] = await Promise.all([
+      pool.query(dataQuery, [...params, pagination.limit, pagination.offset]),
+      pool.query(countQuery, params.slice(1)),  // Sans siteId pour le count
+    ]);
+
+    // Ajouter le titre depuis les metadata ou utiliser original_name
+    const videos = dataResult.rows.map(video => ({
+      ...video,
+      title: (video.metadata as { title?: string })?.title || video.original_name || video.filename,
+      isForCurrentSite: video.is_for_site === 1,
+    }));
+
+    const total = parseInt((countResult.rows[0] as any)?.count || '0', 10);
+
+    res.json(formatPaginatedResponse(videos, total, pagination));
+  } catch (error) {
+    logger.error('Error fetching videos for site:', { siteId: req.params.siteId, error });
+    res.status(500).json({ error: 'Erreur lors de la récupération des vidéos' });
   }
 };

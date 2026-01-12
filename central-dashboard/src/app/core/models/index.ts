@@ -179,6 +179,7 @@ export interface CloudVideo {
   duration: number | null;
   checksum: string | null;
   url: string;
+  uploadedForSiteId: string | null; // Site for which this video was uploaded (contextual upload)
   createdAt: Date;
   updatedAt: Date;
 }
