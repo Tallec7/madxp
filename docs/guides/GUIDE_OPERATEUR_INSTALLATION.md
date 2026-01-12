@@ -270,14 +270,23 @@ L'installation de base est faite, mais il faut maintenant configurer le club ave
 
 ### Étape 4.1 - Télécharger le script de configuration
 
-Sur **votre ordinateur** (pas sur le Pi), ouvrez un terminal et tapez :
+Sur **votre ordinateur** (pas sur le Pi), ouvrez un terminal.
+
+**Commande 1** - Télécharger le script :
 
 ```bash
 curl -O https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup-remote-club.sh
+```
+
+**Commande 2** - Rendre exécutable :
+
+```bash
 chmod +x setup-remote-club.sh
 ```
 
 ### Étape 4.2 - Lancer la configuration
+
+**Commande 3** - Lancer le script :
 
 ```bash
 ./setup-remote-club.sh
