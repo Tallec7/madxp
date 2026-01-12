@@ -1,3 +1,9 @@
+## [2.28.1](https://github.com/Tallec7/neopro/compare/v2.28.0...v2.28.1) (2026-01-12)
+
+### Bug Fixes
+
+- **server:** correct TypeScript strict mode type assertions for drafts ([f0c63ff](https://github.com/Tallec7/neopro/commit/f0c63ffd872716c180bd31b77f5fb213cc0af60f))
+
 # [2.28.0](https://github.com/Tallec7/neopro/compare/v2.27.2...v2.28.0) (2026-01-12)
 
 ### Features
