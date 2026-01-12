@@ -1,3 +1,9 @@
+## [2.28.7](https://github.com/Tallec7/neopro/compare/v2.28.6...v2.28.7) (2026-01-12)
+
+### Bug Fixes
+
+- **ci:** remove symlink before copying archive ([4ec9e83](https://github.com/Tallec7/neopro/commit/4ec9e83d95575ee72279cfb6792e6529281958e4))
+
 ## [2.28.6](https://github.com/Tallec7/neopro/compare/v2.28.5...v2.28.6) (2026-01-12)
 
 ### Bug Fixes
