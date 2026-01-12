@@ -158,8 +158,8 @@ class DraftService {
       `SELECT local_config_mirror FROM sites WHERE id = $1`,
       [siteId]
     );
-    const localConfig = siteResult.rows[0]?.local_config_mirror || {};
-    const localVideos: LocalVideo[] = localConfig._localVideos || [];
+    const localConfig = (siteResult.rows[0]?.local_config_mirror || {}) as Record<string, unknown>;
+    const localVideos: LocalVideo[] = (localConfig._localVideos as LocalVideo[]) || [];
     const localFilenames = new Set(localVideos.map((v: LocalVideo) => v.filename.toLowerCase()));
 
     // Récupérer les vidéos cloud

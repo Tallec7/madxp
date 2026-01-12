@@ -117,7 +117,7 @@ class OrchestratedDeploymentService {
       userId
     );
 
-    return this.mapRowToDeployment(result.rows[0]);
+    return this.mapRowToDeployment(result.rows[0] as unknown as OrchestratedDeploymentRow);
   }
 
   /**
@@ -257,7 +257,7 @@ class OrchestratedDeploymentService {
 
     if (result.rows.length === 0) return;
 
-    const deployment = result.rows[0] as OrchestratedDeploymentRow;
+    const deployment = result.rows[0] as unknown as OrchestratedDeploymentRow;
     const totalProcessed = deployment.videos_completed + deployment.videos_failed;
 
     if (totalProcessed >= deployment.total_videos) {
@@ -299,7 +299,7 @@ class OrchestratedDeploymentService {
 
     if (result.rows.length === 0) return;
 
-    const deployment = result.rows[0] as OrchestratedDeploymentRow;
+    const deployment = result.rows[0] as unknown as OrchestratedDeploymentRow;
 
     if (success) {
       // Déterminer le statut final
@@ -378,7 +378,7 @@ class OrchestratedDeploymentService {
       return null;
     }
 
-    const row = result.rows[0];
+    const row = result.rows[0] as unknown as OrchestratedDeploymentRow;
 
     // Calculer la progression globale
     let overallProgress = 0;
@@ -391,11 +391,13 @@ class OrchestratedDeploymentService {
     }
 
     const failedVideos: Array<{ id: string; filename: string }> = [];
-    if (row.failed_video_ids && row.failed_filenames) {
-      for (let i = 0; i < row.failed_video_ids.length; i++) {
+    const failedIds = row.failed_video_ids || [];
+    const failedNames = row.failed_filenames || [];
+    if (failedIds.length > 0) {
+      for (let i = 0; i < failedIds.length; i++) {
         failedVideos.push({
-          id: row.failed_video_ids[i],
-          filename: row.failed_filenames[i] || 'Unknown',
+          id: failedIds[i],
+          filename: failedNames[i] || 'Unknown',
         });
       }
     }
@@ -426,7 +428,7 @@ class OrchestratedDeploymentService {
       return null;
     }
 
-    return this.mapRowToDeployment(result.rows[0]);
+    return this.mapRowToDeployment(result.rows[0] as unknown as OrchestratedDeploymentRow);
   }
 
   /**
@@ -440,13 +442,13 @@ class OrchestratedDeploymentService {
       [siteId]
     );
 
-    return result.rows.map(row => this.mapRowToDeployment(row));
+    return result.rows.map(row => this.mapRowToDeployment(row as unknown as OrchestratedDeploymentRow));
   }
 
   /**
    * Convertit une row de base de données en OrchestratedDeployment
    */
-  private mapRowToDeployment(row: any): OrchestratedDeployment {
+  private mapRowToDeployment(row: OrchestratedDeploymentRow): OrchestratedDeployment {
     return {
       id: row.id,
       site_id: row.site_id,
