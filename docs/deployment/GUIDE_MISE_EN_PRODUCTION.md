@@ -2,11 +2,20 @@
 
 Guide complet et détaillé pour déployer **le serveur central** NeoPro en production. Ce guide est conçu pour les débutants : chaque étape est expliquée en détail.
 
-> 📖 **Note :** Ce guide couvre le déploiement sur **Render.com** (utilisé pour le serveur de démo `server-render/`).
+> 📖 **Note :** Ce guide couvre le déploiement sur **Render.com** (méthode alternative ou pour le serveur de démo).
 >
-> **Pour la production**, le serveur central (`central-server/`) est hébergé sur **Railway** :
+> **Pour la production**, le serveur central (`central-server/`) est hébergé sur **Railway** (recommandé pour le plan Hobby à 5$/mois) :
 >
 > - Voir **[DEPLOY_CENTRAL_SERVER.md](DEPLOY_CENTRAL_SERVER.md)** pour le déploiement Railway (recommandé)
+>
+> **Résumé des hébergements :**
+>
+> | Composant         | Hébergement recommandé | Alternative |
+> | ----------------- | ---------------------- | ----------- |
+> | Central Server    | Railway (5$/mois)      | Render      |
+> | Dashboard Angular | Hostinger (statique)   | Render      |
+> | Base de données   | Supabase (gratuit)     | -           |
+> | Stockage vidéos   | FTP Hostinger          | Supabase    |
 >
 > Pour l'installation des **boîtiers Raspberry Pi** dans les clubs, consultez :
 >
@@ -1425,5 +1434,5 @@ postgresql://postgres.xxxxx:VOTRE_MOT_DE_PASSE@aws-0-eu-west-1.pooler.supabase.c
 
 ---
 
-**Version :** 4.0
-**Dernière mise à jour :** 14 décembre 2025
+**Version :** 4.1
+**Dernière mise à jour :** Janvier 2026

@@ -557,4 +557,117 @@ curl https://neopro-central-production.up.railway.app/api/sites/queue/summary \
 
 ---
 
+## 10. NOUVELLES FONCTIONNALITÉS (v2.27+)
+
+### 10.1 Brouillons de Configuration (Config Drafts)
+
+Depuis la v2.27, vous pouvez **préparer une configuration à l'avance** même si le Pi est hors ligne.
+
+**Avantages :**
+
+- ✅ Configurer un site avant que le Pi soit installé
+- ✅ Valider que toutes les vidéos sont présentes
+- ✅ Déploiement orchestré (vidéos + config en séquence)
+
+**Workflow :**
+
+```
+Dashboard → Sites → [Site] → Onglet Contenu
+│
+├─ 1. Uploader les vidéos (zone d'upload contextuel)
+│     └─ Vidéos automatiquement associées au site (badge ⭐)
+│
+├─ 2. Configurer le brouillon
+│     └─ Sponsors, catégories, phases de match
+│
+├─ 3. Valider le brouillon
+│     └─ Vérification des vidéos manquantes
+│
+└─ 4. Déployer le brouillon
+      ├─ Phase 1 : Envoi des vidéos manquantes
+      └─ Phase 2 : Application de la configuration
+```
+
+**Documentation complète :** [CONFIG_DRAFTS.md](../guides/CONFIG_DRAFTS.md)
+
+### 10.2 Upload Contextuel de Vidéos
+
+Les vidéos uploadées depuis l'onglet **Contenu** d'un site sont automatiquement associées à ce site :
+
+- Apparaissent **en premier** dans les sélecteurs de vidéos
+- Marquées d'un badge **⭐** dans la bibliothèque
+- Endpoint dédié : `GET /api/content/videos/for-site/:siteId`
+
+### 10.3 Timeline d'Activité (Debug Tab)
+
+L'onglet **Debug** affiche maintenant une timeline des événements récents :
+
+- Déploiements de vidéos
+- Commandes exécutées
+- Changements de configuration
+- Alertes système
+
+**Accès :**
+
+```
+Dashboard → Sites → [Site] → Onglet Debug → Section Timeline
+```
+
+### 10.4 Export Debug Bundle
+
+Pour le support technique, vous pouvez exporter un **bundle de diagnostic complet** :
+
+```
+Dashboard → Sites → [Site] → Onglet Debug → "Export Debug Bundle"
+```
+
+**Contenu du bundle (JSON) :**
+
+- Configuration (sanitisée)
+- Version logicielle
+- État de santé système (GPU, services, throttling)
+- Logs récents (100 lignes)
+- Diagnostics réseau
+- État des buffers analytics
+- Liste des vidéos locales
+
+---
+
+## 11. SUPPORT RASPBERRY PI 5
+
+Depuis la v2.27, le **Raspberry Pi 5** est entièrement supporté.
+
+### Différences Pi 4 vs Pi 5
+
+| Aspect         | Pi 4          | Pi 5                   |
+| -------------- | ------------- | ---------------------- |
+| GPU            | VideoCore VI  | VideoCore VII          |
+| Config GPU     | `gpu_mem=256` | SwiftShader (auto)     |
+| `vcgencmd gpu` | Affiche 256M  | Affiche 4M (normal)    |
+| Décodage vidéo | Hardware      | Logiciel (SwiftShader) |
+
+### Vérification après déploiement
+
+```bash
+# Identifier le modèle
+ssh pi@neopro.local 'cat /proc/device-tree/model'
+
+# Pi 4 : vérifier gpu_mem
+ssh pi@neopro.local 'vcgencmd get_mem gpu'
+# Doit afficher : gpu=256M
+
+# Pi 5 : vérifier SwiftShader
+ssh pi@neopro.local 'pgrep -a chromium | grep swiftshader'
+# Doit afficher le processus avec --use-angle=swiftshader
+```
+
+### Problèmes connus Pi 5
+
+Le dashboard peut afficher un faux avertissement "Mémoire GPU insuffisante (4M)" sur Pi 5. C'est normal car `vcgencmd get_mem gpu` retourne une valeur legacy. Le sync-agent v2.27+ détecte le modèle et ignore cette vérification.
+
+---
+
+**Version :** 1.1
+**Dernière mise à jour :** Janvier 2026
+
 **FIN DU MODOP-C12-15**

@@ -69,9 +69,9 @@ Sans image golden, installation manuelle complète :
 
 ### Prérequis
 
-- Raspberry Pi 3B+ ou supérieur
+- Raspberry Pi 3B+, 4, ou **5** (tous supportés depuis v2.27)
 - Carte microSD 32GB minimum
-- Raspberry Pi OS (Bullseye ou Bookworm)
+- Raspberry Pi OS Lite 64-bit (Bullseye ou Bookworm)
 
 ### 1.1 Flasher la carte SD
 
@@ -142,6 +142,10 @@ sudo ./install.sh NANTES VotreMotDePasseWiFi123
 - ✅ Installe l'application (server, admin, **sync-agent**)
 - ✅ Configure les services systemd (neopro-app, neopro-admin, neopro-sync-agent)
 - ✅ Configure nginx
+- ✅ **Détecte le modèle de Pi** et configure le GPU :
+  - Pi 4 et antérieurs : `gpu_mem=256` dans `/boot/config.txt`
+  - Pi 5 : Flags SwiftShader pour Chromium (rendu logiciel)
+- ✅ **Installe le watchdog kiosk** pour récupération automatique des crashs Chromium
 - ✅ Affiche la durée totale d'installation
 
 ### 1.5 Vérification
@@ -518,8 +522,50 @@ La partie longue (install.sh) n'est à faire qu'une fois par Pi physique.
 
 ---
 
+---
+
+## Support Raspberry Pi 5
+
+Depuis la version 2.27+, le **Raspberry Pi 5** est entièrement supporté.
+
+| Modèle       | GPU           | Configuration GPU                        |
+| ------------ | ------------- | ---------------------------------------- |
+| Pi 3B+, Pi 4 | VideoCore VI  | `gpu_mem=256` dans `/boot/config.txt`    |
+| **Pi 5**     | VideoCore VII | SwiftShader (rendu logiciel automatique) |
+
+**Pourquoi SwiftShader sur Pi 5 ?**
+
+Le VideoCore VII du Pi 5 a des incompatibilités avec le décodage vidéo hardware de Chromium, causant des crashs "Aw, Snap!" après 1-2h de boucle vidéo. SwiftShader utilise le CPU pour le rendu, ce qui est stable.
+
+**Vérifier le modèle** :
+
+```bash
+cat /proc/device-tree/model
+# "Raspberry Pi 5 Model B Rev 1.0" ou "Raspberry Pi 4 Model B Rev 1.4"
+```
+
+**Vérifier la configuration GPU** :
+
+```bash
+# Pi 4 : doit afficher 256M
+vcgencmd get_mem gpu
+
+# Pi 5 : affiche toujours 4M (normal, utilise CMA dynamique)
+# Vérifier SwiftShader actif :
+pgrep -a chromium | grep swiftshader
+```
+
+Pour plus de détails sur les crashs Chromium, voir [TROUBLESHOOTING.md](TROUBLESHOOTING.md#5-chromium-crash-aw-snap-error-code-5-après-1-2h-de-boucle-vidéo).
+
+---
+
 **Prochaines étapes :**
 
 - [GOLDEN_IMAGE.md](GOLDEN_IMAGE.md) - Créer une Image Golden
 - [README.md](../README.md) - Utilisation quotidienne
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Dépannage
+
+---
+
+**Version :** 2.0.0
+**Dernière mise à jour :** Janvier 2026
