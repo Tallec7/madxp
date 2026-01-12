@@ -6,7 +6,7 @@
 
 import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
-import { adminRateLimit, sensitiveRateLimit, monitoringRateLimit } from '../middleware/rate-limit';
+import { adminRateLimit, sensitiveRateLimit, monitoringRateLimit } from '../middleware/user-rate-limit';
 import {
   getDraft,
   saveDraft,
