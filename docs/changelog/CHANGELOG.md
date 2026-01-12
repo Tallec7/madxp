@@ -1,3 +1,9 @@
+## [2.28.4](https://github.com/Tallec7/neopro/compare/v2.28.3...v2.28.4) (2026-01-12)
+
+### Bug Fixes
+
+- **draft:** return { draft: null } instead of 404 for missing drafts ([31a9cc7](https://github.com/Tallec7/neopro/commit/31a9cc7a7f7c7f98178e11a29fbb2832768c134f))
+
 ## [2.28.3](https://github.com/Tallec7/neopro/compare/v2.28.2...v2.28.3) (2026-01-12)
 
 ### Bug Fixes
