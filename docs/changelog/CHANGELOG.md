@@ -1,3 +1,9 @@
+## [2.28.5](https://github.com/Tallec7/neopro/compare/v2.28.4...v2.28.5) (2026-01-12)
+
+### Bug Fixes
+
+- **setup:** make WiFi USB key truly optional for installation ([#355](https://github.com/Tallec7/neopro/issues/355)) ([8495a2d](https://github.com/Tallec7/neopro/commit/8495a2ddf0081b76326de4bc3526bb9432094b20))
+
 ## [2.28.4](https://github.com/Tallec7/neopro/compare/v2.28.3...v2.28.4) (2026-01-12)
 
 ### Bug Fixes
