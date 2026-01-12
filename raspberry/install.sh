@@ -138,6 +138,20 @@ detect_wifi_interface() {
     print_step "Interface WiFi détectée: ${WIFI_INTERFACE}"
 }
 
+check_ethernet_connection() {
+    # Vérifie si une connexion Ethernet est active
+    local ETH_IFACE=""
+    for iface in eth0 enp0s3 ens3; do
+        if ip link show "$iface" >/dev/null 2>&1; then
+            if ip addr show "$iface" | grep -q "inet "; then
+                ETH_IFACE="$iface"
+                break
+            fi
+        fi
+    done
+    echo "$ETH_IFACE"
+}
+
 detect_wifi_client_interface() {
     rfkill unblock wifi || true
     local INTERFACES=()
@@ -147,7 +161,20 @@ detect_wifi_client_interface() {
 
     if [ "${#INTERFACES[@]}" -lt 2 ]; then
         WIFI_CLIENT_INTERFACE=""
-        print_warning "Aucune seconde interface WiFi détectée (branchez une clé USB pour l'accès Internet)."
+
+        # Vérifier si Ethernet est connecté
+        local ETH_CONNECTED=$(check_ethernet_connection)
+
+        if [ -n "$ETH_CONNECTED" ]; then
+            print_step "Connexion Internet via Ethernet ($ETH_CONNECTED) - clé WiFi USB non nécessaire."
+        else
+            echo ""
+            print_step "Mode hotspot uniquement (pas de clé WiFi USB détectée)."
+            echo "   ℹ️  C'est normal si vous n'avez pas besoin d'accès Internet sur le Pi."
+            echo "   ℹ️  Pour ajouter une connexion Internet plus tard, branchez une clé WiFi USB"
+            echo "      et utilisez: sudo ${INSTALL_DIR}/scripts/setup-wifi-client.sh SSID PASSWORD"
+            echo ""
+        fi
         return
     fi
 
@@ -166,15 +193,23 @@ detect_wifi_client_interface() {
 }
 
 disable_conflicting_wifi_services() {
+    print_step "Désactivation des services WiFi conflictuels pour le hotspot..."
+    local STOPPED_SERVICES=()
+
     for SERVICE in NetworkManager wpa_supplicant iwd; do
         if service_exists "${SERVICE}"; then
             if systemctl is-active --quiet "${SERVICE}"; then
-                print_warning "Arrêt du service ${SERVICE} pour libérer ${WIFI_INTERFACE}."
                 systemctl stop "${SERVICE}" || true
+                STOPPED_SERVICES+=("${SERVICE}")
             fi
             systemctl disable "${SERVICE}" || true
         fi
     done
+
+    if [ ${#STOPPED_SERVICES[@]} -gt 0 ]; then
+        echo "   ℹ️  Services désactivés: ${STOPPED_SERVICES[*]}"
+        echo "   ℹ️  (Nécessaire pour que ${WIFI_INTERFACE} fonctionne en mode hotspot)"
+    fi
 }
 
 wait_for_interface_ip() {
@@ -392,7 +427,8 @@ EOF
 
 configure_wifi_client_support() {
     if [ -z "${WIFI_CLIENT_INTERFACE}" ]; then
-        print_warning "Mode WiFi client ignoré : aucune seconde interface détectée."
+        # Pas de seconde interface - c'est optionnel, pas d'avertissement nécessaire
+        # Le message a déjà été affiché dans detect_wifi_client_interface()
         return
     fi
 
@@ -848,6 +884,13 @@ print_summary() {
         else
             echo "  • WiFi client (${WIFI_CLIENT_INTERFACE}): à configurer (admin /scripts/setup-wifi-client.sh)"
         fi
+    else
+        local ETH_CONNECTED=$(check_ethernet_connection)
+        if [ -n "$ETH_CONNECTED" ]; then
+            echo "  • Accès Internet: Ethernet ($ETH_CONNECTED)"
+        else
+            echo "  • Accès Internet: Non configuré (hotspot uniquement)"
+        fi
     fi
     echo ""
     echo -e "${YELLOW}Prochaines étapes:${NC}"
@@ -864,7 +907,12 @@ print_summary() {
     echo ""
     echo -e "${RED}IMPORTANT:${NC}"
     echo "  • Changez le mot de passe par défaut: passwd"
-    echo "  • Configurez le WiFi client pour accès distant (optionnel)"
+    if [ -z "${WIFI_CLIENT_INTERFACE}" ]; then
+        local ETH_CONN=$(check_ethernet_connection)
+        if [ -z "$ETH_CONN" ]; then
+            echo "  • Pour ajouter un accès Internet: branchez une clé WiFi USB ou un câble Ethernet"
+        fi
+    fi
     echo ""
 }
 
