@@ -1,3 +1,9 @@
+## [2.28.9](https://github.com/Tallec7/neopro/compare/v2.28.8...v2.28.9) (2026-01-12)
+
+### Bug Fixes
+
+- **raspberry:** move watchdog logs to user-accessible directory ([b7217d0](https://github.com/Tallec7/neopro/commit/b7217d015670098d27c2eec99c452c596c59ff8e))
+
 ## [2.28.8](https://github.com/Tallec7/neopro/compare/v2.28.7...v2.28.8) (2026-01-12)
 
 ### Bug Fixes
