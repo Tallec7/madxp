@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/Tallec7/neopro/compare/v1.0.0...v1.0.1) (2026-01-12)
+
+### Bug Fixes
+
+- **ci:** disable GitHub comments to avoid rate limiting ([0ef892d](https://github.com/Tallec7/neopro/commit/0ef892d73e2ca7b84dfd23e8a7e05b52cb93e4a7))
+
 # 1.0.0 (2026-01-12)
 
 ### Bug Fixes
