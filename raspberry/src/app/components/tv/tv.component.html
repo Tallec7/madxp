@@ -187,3 +187,18 @@
     <span class="breaking-news-text">{{ currentBreakingNews.message }}</span>
   </div>
 </div>
+
+<!-- Watermark Overlay (z-index 1100, au-dessus du score mais sous les animations) -->
+<div
+  class="watermark-overlay"
+  *ngIf="showWatermark && configuration?.watermark?.enabled && configuration?.watermark?.imagePath"
+  [ngStyle]="getWatermarkStyles()"
+  [ngClass]="getWatermarkAnimationClass()"
+>
+  <img
+    [src]="configuration.watermark.imagePath"
+    alt="Watermark"
+    class="watermark-image"
+    (error)="onWatermarkError()"
+  />
+</div>

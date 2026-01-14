@@ -938,3 +938,115 @@
     }
   }
 }
+
+// ============================================================================
+// WATERMARK OVERLAY
+// z-index 1100 : au-dessus du score (1000) mais en dessous des animations (2000)
+// ============================================================================
+
+.watermark-overlay {
+  position: fixed;
+  z-index: 1100;
+  pointer-events: none;
+
+  .watermark-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+}
+
+// Animations d'entrée pour le watermark
+@keyframes watermarkFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes watermarkSlideFromLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes watermarkSlideFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes watermarkSlideFromTop {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes watermarkSlideFromBottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes watermarkZoomIn {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+// Classes d'animation
+.watermark-anim-none {
+  // Pas d'animation
+}
+
+.watermark-anim-fade {
+  animation: watermarkFadeIn 0.5s ease-out;
+}
+
+.watermark-anim-slide-left {
+  animation: watermarkSlideFromLeft 0.5s ease-out;
+}
+
+.watermark-anim-slide-right {
+  animation: watermarkSlideFromRight 0.5s ease-out;
+}
+
+.watermark-anim-slide-top {
+  animation: watermarkSlideFromTop 0.5s ease-out;
+}
+
+.watermark-anim-slide-bottom {
+  animation: watermarkSlideFromBottom 0.5s ease-out;
+}
+
+.watermark-anim-zoom {
+  animation: watermarkZoomIn 0.5s ease-out;
+}
