@@ -1,3 +1,9 @@
+## [2.30.1](https://github.com/Tallec7/neopro/compare/v2.30.0...v2.30.1) (2026-01-15)
+
+### Bug Fixes
+
+- **watermark:** deploy assets to correct webapp path ([#361](https://github.com/Tallec7/neopro/issues/361)) ([eaa433a](https://github.com/Tallec7/neopro/commit/eaa433a5c2a116c17c8bb3a21ad0b03f4a01bae7))
+
 # [2.30.0](https://github.com/Tallec7/neopro/compare/v2.29.0...v2.30.0) (2026-01-15)
 
 ### Features
