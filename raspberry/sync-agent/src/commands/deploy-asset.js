@@ -47,7 +47,8 @@ class AssetDeployHandler {
 
     try {
       // Créer le dossier cible
-      const fullTargetPath = path.join(NEOPRO_ROOT, targetPath);
+      // Les assets doivent être dans webapp/ car nginx sert depuis ce dossier
+      const fullTargetPath = path.join(NEOPRO_ROOT, 'webapp', targetPath);
       const targetDir = path.dirname(fullTargetPath);
       await fs.ensureDir(targetDir);
 
@@ -114,7 +115,7 @@ class AssetDeployHandler {
       return {
         success: true,
         path: targetPath,
-        fullPath: fullTargetPath,
+        fullPath: fullTargetPath,  // /home/pi/neopro/webapp/assets/...
         size: buffer.length,
         checksum: checksum || calculateBufferChecksum(buffer),
       };
