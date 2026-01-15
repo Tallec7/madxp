@@ -51,7 +51,7 @@ export const uploadWatermark = async (req: AuthRequest, res: Response) => {
 
     // Audit
     await auditService.log({
-      action: 'SITE_UPDATE',
+      action: 'SITE_UPDATED',
       userId: req.user?.id || 'system',
       targetType: 'site',
       targetId: siteId,
@@ -143,7 +143,7 @@ export const deployAsset = async (req: AuthRequest, res: Response) => {
 
     // Audit
     await auditService.log({
-      action: 'SITE_UPDATE',
+      action: 'SITE_UPDATED',
       userId: req.user?.id || 'system',
       targetType: 'site',
       targetId: siteId,
