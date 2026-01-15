@@ -1,3 +1,9 @@
+# [2.30.0](https://github.com/Tallec7/neopro/compare/v2.29.0...v2.30.0) (2026-01-15)
+
+### Features
+
+- **watermark:** add fullscreen mode for watermark overlay ([#359](https://github.com/Tallec7/neopro/issues/359)) ([8594a49](https://github.com/Tallec7/neopro/commit/8594a499760f8ab90555688826d5ababb66eddd8))
+
 # [2.29.0](https://github.com/Tallec7/neopro/compare/v2.28.9...v2.29.0) (2026-01-15)
 
 ### Features
