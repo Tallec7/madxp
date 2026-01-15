@@ -975,10 +975,10 @@ export class SiteSettingsTabComponent implements OnInit {
         this.overlayConfig = { ...this.overlayConfig, ...this.site.neoProContent.scoreOverlay };
       }
       // Charger la config watermark existante
-      if (this.site.neoProContent?.watermark) {
+      if (this.site.neoProContent?.['watermark']) {
         this.watermarkConfig = {
           ...this.watermarkConfig,
-          ...this.site.neoProContent.watermark
+          ...(this.site.neoProContent['watermark'] as WatermarkConfig)
         };
       }
     }
