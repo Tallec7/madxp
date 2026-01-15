@@ -1,3 +1,9 @@
+# [2.29.0](https://github.com/Tallec7/neopro/compare/v2.28.9...v2.29.0) (2026-01-15)
+
+### Features
+
+- **watermark:** add configurable watermark overlay system ([#356](https://github.com/Tallec7/neopro/issues/356)) ([04d8785](https://github.com/Tallec7/neopro/commit/04d878592bd68d4b99bd57044b2506352c0703b5))
+
 ## [2.28.9](https://github.com/Tallec7/neopro/compare/v2.28.8...v2.28.9) (2026-01-12)
 
 ### Bug Fixes
