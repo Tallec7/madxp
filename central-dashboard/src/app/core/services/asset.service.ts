@@ -49,13 +49,14 @@ export interface WatermarkSchedule {
 export interface WatermarkConfig {
   enabled: boolean;
   imagePath: string;
-  position: OverlayPosition;
-  offsetX: number;
-  offsetY: number;
+  fullscreen: boolean;    // Mode plein écran (couvre tout l'écran)
+  position: OverlayPosition;  // Ignoré si fullscreen
+  offsetX: number;        // Ignoré si fullscreen
+  offsetY: number;        // Ignoré si fullscreen
   opacity: number;        // 0-100
-  width: number;
-  height: number;         // 0 = auto
-  borderRadius: number;
+  width: number;          // Ignoré si fullscreen
+  height: number;         // 0 = auto, ignoré si fullscreen
+  borderRadius: number;   // Ignoré si fullscreen
   animation: WatermarkAnimation;
   animationDuration: number;
   schedule?: WatermarkSchedule;
@@ -159,14 +160,15 @@ export class AssetService {
    * Crée une configuration watermark par défaut
    * @param imagePath Chemin de l'image sur le Pi
    */
-  createDefaultWatermarkConfig(imagePath: string): WatermarkConfig {
+  createDefaultWatermarkConfig(imagePath: string, fullscreen = true): WatermarkConfig {
     return {
       enabled: true,
       imagePath,
+      fullscreen,
       position: 'bottom-right',
       offsetX: 20,
       offsetY: 20,
-      opacity: 80,
+      opacity: fullscreen ? 100 : 80,
       width: 150,
       height: 0,
       borderRadius: 0,

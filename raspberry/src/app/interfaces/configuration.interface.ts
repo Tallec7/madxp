@@ -54,19 +54,21 @@ export interface WatermarkConfig {
     enabled: boolean;
     /** Chemin local de l'image sur le Pi (ex: 'assets/watermarks/logo.png') */
     imagePath: string;
-    /** Position du watermark (9 positions disponibles) */
+    /** Mode plein écran (l'image couvre tout l'écran) */
+    fullscreen: boolean;
+    /** Position du watermark (9 positions disponibles) - ignoré si fullscreen */
     position: OverlayPosition;
-    /** Distance horizontale du bord (en pixels) */
+    /** Distance horizontale du bord (en pixels) - ignoré si fullscreen */
     offsetX: number;
-    /** Distance verticale du bord (en pixels) */
+    /** Distance verticale du bord (en pixels) - ignoré si fullscreen */
     offsetY: number;
     /** Opacité du watermark (0-100) */
     opacity: number;
-    /** Largeur de l'image (en pixels) */
+    /** Largeur de l'image (en pixels) - ignoré si fullscreen */
     width: number;
-    /** Hauteur de l'image (en pixels, 0 = auto proportionnel) */
+    /** Hauteur de l'image (en pixels, 0 = auto proportionnel) - ignoré si fullscreen */
     height: number;
-    /** Arrondi des coins (en pixels) */
+    /** Arrondi des coins (en pixels) - ignoré si fullscreen */
     borderRadius: number;
     /** Animation d'entrée */
     animation: WatermarkAnimation;

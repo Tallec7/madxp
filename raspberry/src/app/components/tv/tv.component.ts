@@ -1109,6 +1109,20 @@ export class TvComponent implements OnInit, OnDestroy {
     const config = this.configuration?.watermark;
     if (!config) return {};
 
+    // Mode fullscreen : l'image couvre tout l'écran
+    if (config.fullscreen) {
+      return {
+        'opacity': String((config.opacity ?? 100) / 100),
+        'top': '0',
+        'left': '0',
+        'width': '100%',
+        'height': '100%',
+        'object-fit': 'cover',
+        'border-radius': '0',
+      };
+    }
+
+    // Mode positionné : placement personnalisé
     const position = config.position || 'bottom-right';
     const offsetX = (config.offsetX ?? 20) + 'px';
     const offsetY = (config.offsetY ?? 20) + 'px';

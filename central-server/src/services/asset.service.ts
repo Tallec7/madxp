@@ -160,14 +160,15 @@ class AssetService {
   /**
    * Crée une configuration watermark par défaut
    */
-  createDefaultWatermarkConfig(imagePath: string): WatermarkConfig {
+  createDefaultWatermarkConfig(imagePath: string, fullscreen = true): WatermarkConfig {
     return {
       enabled: true,
       imagePath,
+      fullscreen,
       position: 'bottom-right' as OverlayPosition,
       offsetX: 20,
       offsetY: 20,
-      opacity: 80,
+      opacity: fullscreen ? 100 : 80,
       width: 150,
       height: 0, // Auto
       borderRadius: 0,
