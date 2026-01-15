@@ -64,8 +64,9 @@ export const uploadWatermark = async (req: AuthRequest, res: Response) => {
       }
     }, req);
 
-    // Construire le chemin local qui sera utilisé dans la config
-    const localPath = `/home/pi/neopro/${result.uploadResult.storagePath.replace('watermarks/', 'assets/watermarks/')}`;
+    // Construire le chemin relatif pour la webapp Angular
+    // Le chemin doit être relatif à /home/pi/neopro/ car nginx sert depuis ce dossier
+    const localPath = result.uploadResult.storagePath.replace('watermarks/', 'assets/watermarks/');
 
     res.json({
       success: true,
