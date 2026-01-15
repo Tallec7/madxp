@@ -5,6 +5,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
+import { AssetService, WatermarkConfig, OverlayPosition as WmOverlayPosition, WatermarkAnimation, WatermarkScheduleRule } from '../../../../core/services/asset.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import { Site, OverlayPosition } from '../../../../core/models';
 import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-generator/qr-code-generator.component';
@@ -199,6 +200,161 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
               <button class="btn btn-secondary" (click)="showOverlayConfig = false">{{ 'common.cancel' | translate }}</button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Watermark / Logo en surimpression -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <span class="settings-icon">🖼️</span>
+          <h4>Logo en surimpression (Watermark)</h4>
+        </div>
+        <p class="settings-desc">
+          Ajoutez un logo ou une image qui s'affichera en permanence sur la TV (ex: logo du club, sponsor principal).
+        </p>
+
+        <!-- Upload zone -->
+        <div class="watermark-upload" *ngIf="!watermarkConfig.imagePath">
+          <label class="upload-zone" [class.dragging]="isDraggingWatermark">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+              (change)="onWatermarkFileSelected($event)"
+              hidden
+            />
+            <span class="upload-icon">📤</span>
+            <span class="upload-text">Cliquez ou glissez une image ici</span>
+            <span class="upload-hint">PNG, JPEG, GIF, WebP ou SVG (max 5 MB)</span>
+          </label>
+        </div>
+
+        <!-- Current watermark preview -->
+        <div class="watermark-current" *ngIf="watermarkConfig.imagePath">
+          <div class="watermark-preview-box">
+            <img [src]="watermarkPreviewUrl || watermarkConfig.imagePath" alt="Watermark" class="watermark-img"/>
+          </div>
+          <div class="watermark-info">
+            <span class="watermark-path">{{ getWatermarkFilename() }}</span>
+            <div class="watermark-actions">
+              <label class="btn btn-secondary btn-sm">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+                  (change)="onWatermarkFileSelected($event)"
+                  hidden
+                />
+                Changer l'image
+              </label>
+              <button class="btn btn-danger btn-sm" (click)="removeWatermark()">
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Watermark config form -->
+        <div class="watermark-config" *ngIf="watermarkConfig.imagePath">
+          <div class="config-row">
+            <label class="toggle-container">
+              <input type="checkbox" [(ngModel)]="watermarkConfig.enabled"/>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Activer le watermark</span>
+            </label>
+          </div>
+
+          <div class="settings-grid" *ngIf="watermarkConfig.enabled">
+            <div class="form-group">
+              <label>Position</label>
+              <select [(ngModel)]="watermarkConfig.position" class="form-input">
+                <option *ngFor="let pos of positionOptions" [value]="pos.value">{{ pos.label }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Decalage X (px)</label>
+              <input type="number" [(ngModel)]="watermarkConfig.offsetX" min="0" max="500" class="form-input"/>
+            </div>
+            <div class="form-group">
+              <label>Decalage Y (px)</label>
+              <input type="number" [(ngModel)]="watermarkConfig.offsetY" min="0" max="500" class="form-input"/>
+            </div>
+            <div class="form-group">
+              <label>Largeur (px)</label>
+              <input type="number" [(ngModel)]="watermarkConfig.width" min="20" max="800" class="form-input"/>
+            </div>
+            <div class="form-group">
+              <label>Opacite (%)</label>
+              <input type="range" [(ngModel)]="watermarkConfig.opacity" min="10" max="100" class="form-range"/>
+              <span class="range-value">{{ watermarkConfig.opacity }}%</span>
+            </div>
+            <div class="form-group">
+              <label>Arrondi (px)</label>
+              <input type="number" [(ngModel)]="watermarkConfig.borderRadius" min="0" max="50" class="form-input"/>
+            </div>
+            <div class="form-group">
+              <label>Animation</label>
+              <select [(ngModel)]="watermarkConfig.animation" class="form-input">
+                <option *ngFor="let anim of animationOptions" [value]="anim.value">{{ anim.label }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Scheduling -->
+          <div class="watermark-scheduling" *ngIf="watermarkConfig.enabled">
+            <div class="scheduling-header">
+              <label class="toggle-container">
+                <input type="checkbox" [(ngModel)]="watermarkConfig.schedule!.enabled"/>
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">Programmation horaire</span>
+              </label>
+            </div>
+
+            <div class="scheduling-rules" *ngIf="watermarkConfig.schedule?.enabled">
+              <div class="rule-item" *ngFor="let rule of watermarkConfig.schedule!.rules; let i = index">
+                <div class="rule-row">
+                  <div class="form-group">
+                    <label>Debut</label>
+                    <input type="time" [(ngModel)]="rule.startTime" class="form-input"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Fin</label>
+                    <input type="time" [(ngModel)]="rule.endTime" class="form-input"/>
+                  </div>
+                  <button class="btn btn-danger btn-sm btn-icon" (click)="removeScheduleRule(i)">✕</button>
+                </div>
+                <div class="rule-days">
+                  <label *ngFor="let day of daysOfWeekOptions" class="day-checkbox">
+                    <input
+                      type="checkbox"
+                      [checked]="rule.daysOfWeek.includes(day.value)"
+                      (change)="toggleRuleDay(rule, day.value)"
+                    />
+                    <span>{{ day.shortLabel }}</span>
+                  </label>
+                </div>
+              </div>
+              <button class="btn btn-secondary btn-sm" (click)="addScheduleRule()">
+                + Ajouter une plage horaire
+              </button>
+            </div>
+          </div>
+
+          <div class="watermark-save">
+            <button
+              class="btn btn-primary"
+              (click)="saveWatermarkConfig()"
+              [disabled]="savingWatermark"
+            >
+              {{ savingWatermark ? 'Deploiement...' : (isConnected ? 'Deployer le watermark' : 'Deployer (en file)') }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Upload progress -->
+        <div class="upload-progress" *ngIf="uploadingWatermark">
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+          </div>
+          <span class="progress-text">{{ uploadProgressText }}</span>
         </div>
       </div>
 
@@ -530,6 +686,208 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       background: #fef3c7;
       color: #92400e;
     }
+
+    /* Watermark styles */
+    .watermark-upload {
+      margin-bottom: 1rem;
+    }
+
+    .upload-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 2rem;
+      border: 2px dashed #e2e8f0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragging {
+      border-color: #2563eb;
+      background: #f0f9ff;
+    }
+
+    .upload-icon {
+      font-size: 2rem;
+    }
+
+    .upload-text {
+      font-weight: 500;
+      color: #475569;
+    }
+
+    .upload-hint {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .watermark-current {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: #f8fafc;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .watermark-preview-box {
+      width: 80px;
+      height: 80px;
+      background: #1e293b;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .watermark-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .watermark-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .watermark-path {
+      font-size: 0.875rem;
+      color: #475569;
+      font-family: monospace;
+    }
+
+    .watermark-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .watermark-config {
+      padding-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .config-row {
+      margin-bottom: 1rem;
+    }
+
+    .form-range {
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .range-value {
+      font-size: 0.75rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .watermark-scheduling {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .scheduling-header {
+      margin-bottom: 1rem;
+    }
+
+    .scheduling-rules {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .rule-item {
+      padding: 1rem;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+
+    .rule-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .rule-row .form-group {
+      flex: 1;
+    }
+
+    .rule-days {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .day-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
+
+    .day-checkbox input:checked + span {
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    .watermark-save {
+      margin-top: 1.5rem;
+    }
+
+    .upload-progress {
+      margin-top: 1rem;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #2563eb;
+      transition: width 0.3s;
+    }
+
+    .progress-text {
+      display: block;
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: #64748b;
+      text-align: center;
+    }
+
+    .btn-danger {
+      background: #fef2f2;
+      color: #dc2626;
+    }
+
+    .btn-danger:hover {
+      background: #fee2e2;
+    }
+
+    .btn-icon {
+      padding: 0.25rem 0.5rem;
+      line-height: 1;
+    }
   `]
 })
 export class SiteSettingsTabComponent implements OnInit {
@@ -570,17 +928,58 @@ export class SiteSettingsTabComponent implements OnInit {
   fetchingSsid: boolean = false;
   realSsid: string | null = null;
 
+  // Watermark
+  watermarkConfig: WatermarkConfig = {
+    enabled: false,
+    imagePath: '',
+    position: 'bottom-right' as WmOverlayPosition,
+    offsetX: 20,
+    offsetY: 20,
+    opacity: 80,
+    width: 150,
+    height: 0,
+    borderRadius: 0,
+    animation: 'fade' as WatermarkAnimation,
+    animationDuration: 500,
+    schedule: { enabled: false, rules: [] }
+  };
+  watermarkPreviewUrl: string | null = null;
+  selectedWatermarkFile: File | null = null;
+  isDraggingWatermark: boolean = false;
+  uploadingWatermark: boolean = false;
+  uploadProgress: number = 0;
+  uploadProgressText: string = '';
+  savingWatermark: boolean = false;
+
+  // Options pour les selects
+  positionOptions: { value: WmOverlayPosition; label: string }[] = [];
+  animationOptions: { value: WatermarkAnimation; label: string }[] = [];
+  daysOfWeekOptions: { value: number; label: string; shortLabel: string }[] = [];
+
   constructor(
     private sitesService: SitesService,
     private notificationService: NotificationService,
-    private logger: LoggerService
+    private logger: LoggerService,
+    private assetService: AssetService
   ) {}
 
   ngOnInit(): void {
+    // Initialiser les options pour les selects
+    this.positionOptions = this.assetService.getPositionOptions();
+    this.animationOptions = this.assetService.getAnimationOptions();
+    this.daysOfWeekOptions = this.assetService.getDaysOfWeekOptions();
+
     if (this.site) {
       this.clubName = this.site.club_name || '';
       if (this.site.neoProContent?.scoreOverlay) {
         this.overlayConfig = { ...this.overlayConfig, ...this.site.neoProContent.scoreOverlay };
+      }
+      // Charger la config watermark existante
+      if (this.site.neoProContent?.watermark) {
+        this.watermarkConfig = {
+          ...this.watermarkConfig,
+          ...this.site.neoProContent.watermark
+        };
       }
     }
   }
@@ -794,5 +1193,152 @@ export class SiteSettingsTabComponent implements OnInit {
         this.showQrCode = true;
       }
     });
+  }
+
+  // ============================================================================
+  // Watermark methods
+  // ============================================================================
+
+  onWatermarkFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+
+    // Valider le fichier
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type)) {
+      this.notificationService.error('Format non supporté. Utilisez PNG, JPEG, GIF, WebP ou SVG.');
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024; // 5 MB
+    if (file.size > maxSize) {
+      this.notificationService.error('Fichier trop volumineux (max 5 MB)');
+      return;
+    }
+
+    this.selectedWatermarkFile = file;
+
+    // Créer un aperçu local
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.watermarkPreviewUrl = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+
+    // Uploader le fichier
+    this.uploadWatermarkFile(file);
+  }
+
+  private uploadWatermarkFile(file: File): void {
+    this.uploadingWatermark = true;
+    this.uploadProgress = 0;
+    this.uploadProgressText = 'Uploading...';
+
+    this.assetService.uploadWatermark(this.siteId, file).subscribe({
+      next: (response) => {
+        this.uploadingWatermark = false;
+        this.uploadProgress = 100;
+        this.uploadProgressText = 'Upload completed!';
+
+        // Appliquer la config suggérée
+        this.watermarkConfig = {
+          ...this.watermarkConfig,
+          ...response.suggestedConfig,
+          imagePath: response.localPath
+        };
+
+        this.notificationService.success(
+          response.deployment.sent
+            ? 'Image uploadée et déployée!'
+            : 'Image uploadée, en attente de connexion du site'
+        );
+
+        this.logger.info('Watermark uploaded', {
+          siteId: this.siteId,
+          localPath: response.localPath,
+          checksum: response.checksum
+        });
+      },
+      error: (error) => {
+        this.uploadingWatermark = false;
+        this.uploadProgress = 0;
+        this.uploadProgressText = '';
+        this.watermarkPreviewUrl = null;
+        this.selectedWatermarkFile = null;
+
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur upload: ${message}`);
+      }
+    });
+  }
+
+  removeWatermark(): void {
+    if (!confirm('Supprimer le watermark?')) return;
+
+    this.watermarkConfig = {
+      ...this.watermarkConfig,
+      enabled: false,
+      imagePath: ''
+    };
+    this.watermarkPreviewUrl = null;
+    this.selectedWatermarkFile = null;
+
+    // Déployer la config sans watermark
+    this.saveWatermarkConfig();
+  }
+
+  getWatermarkFilename(): string {
+    if (!this.watermarkConfig.imagePath) return '';
+    const parts = this.watermarkConfig.imagePath.split('/');
+    return parts[parts.length - 1] || '';
+  }
+
+  saveWatermarkConfig(): void {
+    this.savingWatermark = true;
+
+    this.sitesService.sendCommand(this.siteId, 'update_config', {
+      neoProContent: { watermark: this.watermarkConfig },
+      mode: 'merge'
+    }).subscribe({
+      next: (response: { queued?: boolean }) => {
+        this.savingWatermark = false;
+        this.notificationService.success(
+          response.queued
+            ? 'Configuration mise en file d\'attente'
+            : 'Configuration du watermark déployée!'
+        );
+      },
+      error: (error) => {
+        this.savingWatermark = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+      }
+    });
+  }
+
+  // Scheduling methods
+  addScheduleRule(): void {
+    if (!this.watermarkConfig.schedule) {
+      this.watermarkConfig.schedule = { enabled: true, rules: [] };
+    }
+    this.watermarkConfig.schedule.rules.push(this.assetService.createDefaultScheduleRule());
+  }
+
+  removeScheduleRule(index: number): void {
+    if (this.watermarkConfig.schedule?.rules) {
+      this.watermarkConfig.schedule.rules.splice(index, 1);
+    }
+  }
+
+  toggleRuleDay(rule: WatermarkScheduleRule, day: number): void {
+    const idx = rule.daysOfWeek.indexOf(day);
+    if (idx >= 0) {
+      rule.daysOfWeek.splice(idx, 1);
+    } else {
+      rule.daysOfWeek.push(day);
+      rule.daysOfWeek.sort((a, b) => a - b);
+    }
   }
 }

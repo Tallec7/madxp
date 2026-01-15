@@ -15,6 +15,68 @@ export type OverlayPosition =
     | 'bottom-left' | 'bottom-center' | 'bottom-right';
 
 /**
+ * Types d'animation d'entrée pour le watermark
+ */
+export type WatermarkAnimation = 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-top' | 'slide-bottom' | 'zoom';
+
+/**
+ * Règle de planification du watermark
+ */
+export interface WatermarkScheduleRule {
+    /** Identifiant unique de la règle */
+    id: string;
+    /** Heure de début (format HH:mm) */
+    startTime: string;
+    /** Heure de fin (format HH:mm) */
+    endTime: string;
+    /** Jours de la semaine actifs (0=Dimanche, 1=Lundi, ..., 6=Samedi) */
+    daysOfWeek: number[];
+    /** Phases de match où le watermark est visible */
+    matchPhases: ('all' | 'neutral' | 'before' | 'during' | 'after')[];
+}
+
+/**
+ * Configuration du scheduling horaire du watermark
+ */
+export interface WatermarkSchedule {
+    /** Activer le scheduling (si false, watermark toujours visible) */
+    enabled: boolean;
+    /** Liste des règles de planification */
+    rules: WatermarkScheduleRule[];
+}
+
+/**
+ * Configuration du watermark affiché sur la TV.
+ * Permet d'afficher un logo/image en surimpression permanente.
+ */
+export interface WatermarkConfig {
+    /** Activer l'affichage du watermark */
+    enabled: boolean;
+    /** Chemin local de l'image sur le Pi (ex: 'assets/watermarks/logo.png') */
+    imagePath: string;
+    /** Position du watermark (9 positions disponibles) */
+    position: OverlayPosition;
+    /** Distance horizontale du bord (en pixels) */
+    offsetX: number;
+    /** Distance verticale du bord (en pixels) */
+    offsetY: number;
+    /** Opacité du watermark (0-100) */
+    opacity: number;
+    /** Largeur de l'image (en pixels) */
+    width: number;
+    /** Hauteur de l'image (en pixels, 0 = auto proportionnel) */
+    height: number;
+    /** Arrondi des coins (en pixels) */
+    borderRadius: number;
+    /** Animation d'entrée */
+    animation: WatermarkAnimation;
+    /** Durée de l'animation (en millisecondes) */
+    animationDuration: number;
+    /** Configuration du scheduling horaire (optionnel) */
+    schedule?: WatermarkSchedule;
+}
+
+/**
  * Configuration de l'overlay du score affiché sur la TV.
  * Permet de personnaliser la position, les couleurs et les tailles.
  */
@@ -111,4 +173,9 @@ export interface Configuration {
      * Modifiable depuis le Central Dashboard.
      */
     scoreOverlay?: ScoreOverlayConfig;
+    /**
+     * Configuration du watermark (logo en surimpression).
+     * Modifiable depuis le Central Dashboard.
+     */
+    watermark?: WatermarkConfig;
 }

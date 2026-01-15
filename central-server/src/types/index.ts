@@ -347,6 +347,7 @@ export interface SiteConfiguration {
   categoryMappings?: CategoryMappings;
   liveScoreEnabled?: boolean;
   scoreOverlay?: Record<string, unknown>;
+  watermark?: WatermarkConfig;
   auth?: {
     password?: string;
     clubName?: string;
@@ -361,4 +362,76 @@ export interface SiteConfiguration {
   clubName?: string;
   apiKey?: string;
   [key: string]: unknown;  // Pour la flexibilité
+}
+
+// ============================================================================
+// Watermark Configuration types (logo en surimpression)
+// ============================================================================
+
+export type OverlayPosition =
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+  | 'center-left'
+  | 'center'
+  | 'center-right'
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right';
+
+export type WatermarkAnimation =
+  | 'none'
+  | 'fade'
+  | 'slide-left'
+  | 'slide-right'
+  | 'slide-top'
+  | 'slide-bottom'
+  | 'zoom';
+
+export interface WatermarkScheduleRule {
+  id: string;
+  startTime: string;      // Format HH:mm
+  endTime: string;        // Format HH:mm
+  daysOfWeek: number[];   // 0=Dimanche, 1=Lundi, ..., 6=Samedi
+  matchPhases: ('all' | 'neutral' | 'before' | 'during' | 'after')[];
+}
+
+export interface WatermarkSchedule {
+  enabled: boolean;
+  rules: WatermarkScheduleRule[];
+}
+
+export interface WatermarkConfig {
+  enabled: boolean;
+  imagePath: string;      // Chemin local sur le Pi: /home/pi/neopro/assets/watermarks/logo.png
+  position: OverlayPosition;
+  offsetX: number;        // Offset horizontal en pixels
+  offsetY: number;        // Offset vertical en pixels
+  opacity: number;        // 0-100
+  width: number;          // Largeur en pixels
+  height: number;         // Hauteur en pixels (0 = auto)
+  borderRadius: number;   // Arrondi des coins en pixels
+  animation: WatermarkAnimation;
+  animationDuration: number;  // Durée de l'animation en ms
+  schedule?: WatermarkSchedule;
+}
+
+// ============================================================================
+// Asset Deployment types (déploiement d'images watermark, logos, etc.)
+// ============================================================================
+
+export interface AssetDeploymentRequest {
+  assetUrl: string;       // URL de téléchargement (CDN/FTP)
+  filename: string;       // Nom du fichier
+  targetPath: string;     // Chemin relatif de destination sur le Pi
+  checksum?: string;      // SHA256 pour vérification d'intégrité
+  assetType: 'watermark' | 'logo' | 'image';
+}
+
+export interface AssetDeploymentResult {
+  success: boolean;
+  path: string;
+  fullPath: string;
+  size: number;
+  checksum: string;
 }

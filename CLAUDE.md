@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.27.0 | **Dernière mise à jour**: 2026-01-12
+**Version**: 2.28.0 | **Dernière mise à jour**: 2026-01-14
 
 ---
 
@@ -300,6 +300,14 @@ GET /api/analytics/daily-stats        → agrégation journalière
 GET /api/advertiser-analytics/...     → stats annonceurs
 ```
 
+### Assets (Watermarks, Logos)
+
+```
+POST   /api/assets/watermark/:siteId    → Upload et déploie un watermark (multipart/form-data)
+POST   /api/assets/watermark/validate   → Valide une configuration watermark
+POST   /api/assets/deploy/:siteId       → Déploie un asset existant vers un site
+```
+
 ### Rate Limiting
 
 Les rate limits sont appliqués **par route** pour éviter les conflits :
@@ -341,6 +349,7 @@ Le `LoggerService` Angular implémente un throttling côté client pour éviter 
 | **Deployment**   | `deployment.service.ts`              | Orchestration déploiement vidéos          |
 | **Draft**        | `draft.service.ts`                   | Gestion brouillons de configuration       |
 | **Orchestrated** | `orchestrated-deployment.service.ts` | Déploiement vidéos + config orchestré     |
+| **Asset**        | `asset.service.ts`                   | Gestion watermarks et logos (upload/deploy) |
 | **FTP Storage**  | `ftp-storage.ts`                     | Upload/download vidéos sur FTP Hostinger  |
 | **Supabase**     | `supabase.ts`                        | Stockage fallback si FTP non configuré    |
 | **Metrics**      | `metrics.service.ts`                 | Export Prometheus                         |
@@ -1664,6 +1673,35 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.28.x (Janvier 2026)
+
+- **Système de Watermark** : Ajout d'une image de watermark configurable sur l'overlay TV
+  - **Fonctionnalités** :
+    - Upload d'image (PNG/JPG/WEBP/GIF/SVG) vers le cloud (FTP ou Supabase)
+    - Déploiement automatique vers le Pi via commande `deploy_asset`
+    - 9 positions possibles : top-left, top-center, top-right, center-left, center, center-right, bottom-left, bottom-center, bottom-right
+    - 6 animations : none, fade, slide-left, slide-right, slide-top, slide-bottom, zoom
+    - Configuration complète : opacité (0-100%), taille, offset X/Y, border-radius, durée animation
+    - Scheduling : activation par plages horaires et jours de la semaine, phases de match
+  - **Architecture z-index TV** : watermark (1100) > score overlay (1000) < goal animations (2000)
+  - **Nouveaux fichiers** :
+    - `central-server/src/services/asset.service.ts` - Upload et déploiement assets
+    - `central-server/src/controllers/assets.controller.ts` - Endpoints API
+    - `central-server/src/routes/assets.routes.ts` - Routes `/api/assets/*`
+    - `central-dashboard/src/app/core/services/asset.service.ts` - Service Angular
+    - `raspberry/sync-agent/src/commands/deploy-asset.js` - Commande de déploiement
+  - **Fichiers modifiés** :
+    - `raspberry/src/app/interfaces/configuration.interface.ts` - Types WatermarkConfig
+    - `raspberry/src/app/components/tv/tv.component.ts` - Logique affichage watermark
+    - `raspberry/src/app/components/tv/tv.component.html` - Overlay watermark
+    - `raspberry/src/app/components/tv/tv.component.scss` - Styles et animations
+    - `raspberry/sync-agent/src/commands/index.js` - Commande `deploy_asset`
+    - `raspberry/sync-agent/src/utils/config-merge.js` - Support merge watermark
+    - `central-server/src/types/index.ts` - Types WatermarkConfig
+    - `central-server/src/server.ts` - Route assets
+    - `central-dashboard/.../site-settings-tab.component.ts` - UI configuration watermark
+  - **Migration** : Déployer sync-agent et webapp sur les Pi existants
 
 ### v2.27.x (Janvier 2026)
 

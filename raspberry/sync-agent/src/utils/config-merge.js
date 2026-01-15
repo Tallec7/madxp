@@ -62,6 +62,12 @@ function mergeConfigurations(localConfig, neoProContent) {
     logger.info(`[config-merge] scoreOverlay mis à jour: ${JSON.stringify(neoProContent.scoreOverlay)}`);
   }
 
+  // Mettre à jour watermark (configuration du watermark/logo en surimpression)
+  if (neoProContent.watermark !== undefined) {
+    result.watermark = neoProContent.watermark;
+    logger.info(`[config-merge] watermark mis à jour: enabled=${neoProContent.watermark?.enabled}`);
+  }
+
   // ========================================================================
   // AUTHENTIFICATION TÉLÉCOMMANDE (remotePassword, clubName)
   // Ces champs sont stockés dans la section "auth" pour /remote/login
