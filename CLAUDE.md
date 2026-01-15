@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.28.0 | **Dernière mise à jour**: 2026-01-14
+**Version**: 2.28.0 | **Dernière mise à jour**: 2026-01-16
 
 ---
 
@@ -1680,7 +1680,8 @@ vcgencmd get_mem gpu
   - **Fonctionnalités** :
     - Upload d'image (PNG/JPG/WEBP/GIF/SVG) vers le cloud (FTP ou Supabase)
     - Déploiement automatique vers le Pi via commande `deploy_asset`
-    - 9 positions possibles : top-left, top-center, top-right, center-left, center, center-right, bottom-left, bottom-center, bottom-right
+    - **Mode fullscreen** (par défaut) : l'image couvre tout l'écran avec `object-fit: cover`
+    - **Mode positionné** : 9 positions possibles (top-left, top-center, etc.) avec taille personnalisée
     - 6 animations : none, fade, slide-left, slide-right, slide-top, slide-bottom, zoom
     - Configuration complète : opacité (0-100%), taille, offset X/Y, border-radius, durée animation
     - Scheduling : activation par plages horaires et jours de la semaine, phases de match

@@ -404,13 +404,14 @@ export interface WatermarkSchedule {
 export interface WatermarkConfig {
   enabled: boolean;
   imagePath: string;      // Chemin local sur le Pi: /home/pi/neopro/assets/watermarks/logo.png
-  position: OverlayPosition;
-  offsetX: number;        // Offset horizontal en pixels
-  offsetY: number;        // Offset vertical en pixels
+  fullscreen: boolean;    // Mode plein écran (couvre tout l'écran)
+  position: OverlayPosition;  // Ignoré si fullscreen
+  offsetX: number;        // Offset horizontal en pixels - ignoré si fullscreen
+  offsetY: number;        // Offset vertical en pixels - ignoré si fullscreen
   opacity: number;        // 0-100
-  width: number;          // Largeur en pixels
-  height: number;         // Hauteur en pixels (0 = auto)
-  borderRadius: number;   // Arrondi des coins en pixels
+  width: number;          // Largeur en pixels - ignoré si fullscreen
+  height: number;         // Hauteur en pixels (0 = auto) - ignoré si fullscreen
+  borderRadius: number;   // Arrondi des coins en pixels - ignoré si fullscreen
   animation: WatermarkAnimation;
   animationDuration: number;  // Durée de l'animation en ms
   schedule?: WatermarkSchedule;

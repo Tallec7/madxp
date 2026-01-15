@@ -262,34 +262,45 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
             </label>
           </div>
 
+          <div class="config-row" *ngIf="watermarkConfig.enabled">
+            <label class="toggle-container">
+              <input type="checkbox" [(ngModel)]="watermarkConfig.fullscreen"/>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Plein ecran (couvre toute la TV)</span>
+            </label>
+          </div>
+
           <div class="settings-grid" *ngIf="watermarkConfig.enabled">
-            <div class="form-group">
+            <!-- Options de position (masquees en mode fullscreen) -->
+            <div class="form-group" *ngIf="!watermarkConfig.fullscreen">
               <label>Position</label>
               <select [(ngModel)]="watermarkConfig.position" class="form-input">
                 <option *ngFor="let pos of positionOptions" [value]="pos.value">{{ pos.label }}</option>
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" *ngIf="!watermarkConfig.fullscreen">
               <label>Decalage X (px)</label>
               <input type="number" [(ngModel)]="watermarkConfig.offsetX" min="0" max="500" class="form-input"/>
             </div>
-            <div class="form-group">
+            <div class="form-group" *ngIf="!watermarkConfig.fullscreen">
               <label>Decalage Y (px)</label>
               <input type="number" [(ngModel)]="watermarkConfig.offsetY" min="0" max="500" class="form-input"/>
             </div>
-            <div class="form-group">
+            <div class="form-group" *ngIf="!watermarkConfig.fullscreen">
               <label>Largeur (px)</label>
               <input type="number" [(ngModel)]="watermarkConfig.width" min="20" max="800" class="form-input"/>
             </div>
+            <!-- Opacite toujours visible -->
             <div class="form-group">
               <label>Opacite (%)</label>
               <input type="range" [(ngModel)]="watermarkConfig.opacity" min="10" max="100" class="form-range"/>
               <span class="range-value">{{ watermarkConfig.opacity }}%</span>
             </div>
-            <div class="form-group">
+            <div class="form-group" *ngIf="!watermarkConfig.fullscreen">
               <label>Arrondi (px)</label>
               <input type="number" [(ngModel)]="watermarkConfig.borderRadius" min="0" max="50" class="form-input"/>
             </div>
+            <!-- Animation toujours visible -->
             <div class="form-group">
               <label>Animation</label>
               <select [(ngModel)]="watermarkConfig.animation" class="form-input">
@@ -932,10 +943,11 @@ export class SiteSettingsTabComponent implements OnInit {
   watermarkConfig: WatermarkConfig = {
     enabled: false,
     imagePath: '',
+    fullscreen: true,
     position: 'bottom-right' as WmOverlayPosition,
     offsetX: 20,
     offsetY: 20,
-    opacity: 80,
+    opacity: 100,
     width: 150,
     height: 0,
     borderRadius: 0,
