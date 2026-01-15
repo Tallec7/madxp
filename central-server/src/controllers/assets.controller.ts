@@ -50,18 +50,19 @@ export const uploadWatermark = async (req: AuthRequest, res: Response) => {
     );
 
     // Audit
-    await auditService.log(
-      'SITE_UPDATE',
-      req.user?.id || 'system',
-      'Watermark uploaded and deployed',
-      {
-        siteId,
+    await auditService.log({
+      action: 'SITE_UPDATE',
+      userId: req.user?.id || 'system',
+      targetType: 'site',
+      targetId: siteId,
+      details: {
+        type: 'watermark_upload',
         filename: file.originalname,
         size: file.size,
         sent: result.deployResult.sent,
         queued: result.deployResult.queued,
       }
-    );
+    }, req);
 
     // Construire le chemin local qui sera utilisé dans la config
     const localPath = `/home/pi/neopro/${result.uploadResult.storagePath.replace('watermarks/', 'assets/watermarks/')}`;
@@ -141,19 +142,20 @@ export const deployAsset = async (req: AuthRequest, res: Response) => {
     );
 
     // Audit
-    await auditService.log(
-      'SITE_UPDATE',
-      req.user?.id || 'system',
-      'Asset deployed to site',
-      {
-        siteId,
+    await auditService.log({
+      action: 'SITE_UPDATE',
+      userId: req.user?.id || 'system',
+      targetType: 'site',
+      targetId: siteId,
+      details: {
+        type: 'asset_deploy',
         filename,
         targetPath,
         assetType,
         sent: result.sent,
         queued: result.queued,
       }
-    );
+    }, req);
 
     res.json({
       success: true,

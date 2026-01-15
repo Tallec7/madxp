@@ -4,8 +4,6 @@ import { isFtpConfigured, getFtpPublicUrl, uploadFileToFtp } from '../config/ftp
 import { uploadFile, getPublicUrl } from '../config/supabase';
 import crypto from 'crypto';
 import {
-  AssetDeploymentRequest,
-  AssetDeploymentResult,
   WatermarkConfig,
   OverlayPosition,
   WatermarkAnimation,
@@ -88,7 +86,7 @@ class AssetService {
     checksum: string,
     assetType: 'watermark' | 'logo' | 'image'
   ): Promise<{ sent: boolean; queued: boolean; commandId?: string }> {
-    const commandData: AssetDeploymentRequest = {
+    const commandData = {
       assetUrl,
       filename,
       targetPath,
@@ -106,7 +104,7 @@ class AssetService {
     const result = await commandQueueService.sendOrQueue(
       siteId,
       'deploy_asset',
-      commandData,
+      commandData as Record<string, unknown>,
       {
         priority: 4, // Priorité légèrement inférieure aux vidéos
         description: `Déploiement ${assetType}: ${filename}`,
