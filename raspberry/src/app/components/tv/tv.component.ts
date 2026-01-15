@@ -1064,7 +1064,8 @@ export class TvComponent implements OnInit, OnDestroy {
    */
   private checkWatermarkVisibility(): void {
     const config = this.configuration?.watermark;
-    if (!config?.enabled) {
+
+    if (!config?.enabled || !config.imagePath) {
       this.showWatermark = false;
       return;
     }

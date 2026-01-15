@@ -119,12 +119,14 @@ neopro/
 | ------------------------------------------- | --------------------------------------------------- |
 | `/home/pi/neopro/videos/`                   | **Vidéos** (mp4, mkv, mov) organisées par catégorie |
 | `/home/pi/neopro/webapp/`                   | Application Angular (frontend TV/Remote)            |
+| `/home/pi/neopro/webapp/assets/watermarks/` | Images watermark déployées depuis le dashboard      |
 | `/home/pi/neopro/webapp/configuration.json` | Configuration du site (sponsors, catégories, etc.)  |
 | `/home/pi/neopro/sync-agent/`               | Agent de synchronisation avec le cloud              |
 | `/home/pi/neopro/server/`                   | Serveur Socket.IO local                             |
 | `/home/pi/neopro/scripts/`                  | Scripts de diagnostic et setup                      |
 
 **⚠️ ATTENTION** : Les vidéos sont dans `/home/pi/neopro/videos/`, PAS dans `/home/pi/neopro/webapp/videos/`
+**⚠️ ATTENTION** : Les assets (watermarks) doivent être dans `/home/pi/neopro/webapp/assets/` car nginx sert depuis `webapp/`
 
 ---
 
@@ -342,23 +344,23 @@ Le `LoggerService` Angular implémente un throttling côté client pour éviter 
 
 ## Services Critiques
 
-| Service          | Fichier                              | Rôle                                      |
-| ---------------- | ------------------------------------ | ----------------------------------------- |
-| **Socket**       | `socket.service.ts`                  | Communication temps réel Pi ↔ Cloud       |
-| **CommandQueue** | `command-queue.service.ts`           | File d'attente commandes (offline/online) |
-| **Deployment**   | `deployment.service.ts`              | Orchestration déploiement vidéos          |
-| **Draft**        | `draft.service.ts`                   | Gestion brouillons de configuration       |
-| **Orchestrated** | `orchestrated-deployment.service.ts` | Déploiement vidéos + config orchestré     |
+| Service          | Fichier                              | Rôle                                        |
+| ---------------- | ------------------------------------ | ------------------------------------------- |
+| **Socket**       | `socket.service.ts`                  | Communication temps réel Pi ↔ Cloud         |
+| **CommandQueue** | `command-queue.service.ts`           | File d'attente commandes (offline/online)   |
+| **Deployment**   | `deployment.service.ts`              | Orchestration déploiement vidéos            |
+| **Draft**        | `draft.service.ts`                   | Gestion brouillons de configuration         |
+| **Orchestrated** | `orchestrated-deployment.service.ts` | Déploiement vidéos + config orchestré       |
 | **Asset**        | `asset.service.ts`                   | Gestion watermarks et logos (upload/deploy) |
-| **FTP Storage**  | `ftp-storage.ts`                     | Upload/download vidéos sur FTP Hostinger  |
-| **Supabase**     | `supabase.ts`                        | Stockage fallback si FTP non configuré    |
-| **Metrics**      | `metrics.service.ts`                 | Export Prometheus                         |
-| **Audit**        | `audit.service.ts`                   | Log toutes les actions admin              |
-| **MFA**          | `mfa.service.ts`                     | 2FA avec backup codes                     |
-| **Email**        | `email.service.ts`                   | Password reset, alertes                   |
-| **Cron**         | `cron-scheduler.service.ts`          | Stats quotidiennes, cleanup               |
-| **Logger**       | `logger.service.ts`                  | Logs structurés avec correlation ID       |
-| **Errors**       | `error-extractor.ts`                 | Extraction messages d'erreur              |
+| **FTP Storage**  | `ftp-storage.ts`                     | Upload/download vidéos sur FTP Hostinger    |
+| **Supabase**     | `supabase.ts`                        | Stockage fallback si FTP non configuré      |
+| **Metrics**      | `metrics.service.ts`                 | Export Prometheus                           |
+| **Audit**        | `audit.service.ts`                   | Log toutes les actions admin                |
+| **MFA**          | `mfa.service.ts`                     | 2FA avec backup codes                       |
+| **Email**        | `email.service.ts`                   | Password reset, alertes                     |
+| **Cron**         | `cron-scheduler.service.ts`          | Stats quotidiennes, cleanup                 |
+| **Logger**       | `logger.service.ts`                  | Logs structurés avec correlation ID         |
+| **Errors**       | `error-extractor.ts`                 | Extraction messages d'erreur                |
 
 ### Stockage Vidéo (Double backend) ⚡ IMPORTANT
 
@@ -1703,6 +1705,18 @@ vcgencmd get_mem gpu
     - `central-server/src/server.ts` - Route assets
     - `central-dashboard/.../site-settings-tab.component.ts` - UI configuration watermark
   - **Migration** : Déployer sync-agent et webapp sur les Pi existants
+
+- **Fix chemin déploiement watermark** : Les assets sont maintenant déployés dans `webapp/assets/` au lieu de `assets/`
+  - **Problème** : Le watermark ne s'affichait pas car nginx sert depuis `/home/pi/neopro/webapp/`
+  - **Cause** : `deploy-asset.js` écrivait dans `/home/pi/neopro/assets/` (hors du dossier servi par nginx)
+  - **Solution** : Le chemin cible est maintenant `/home/pi/neopro/webapp/assets/...`
+  - **Fichier modifié** : `raspberry/sync-agent/src/commands/deploy-asset.js`
+  - **Migration Pi existants** : Déplacer manuellement les assets ou redéployer via le dashboard
+    ```bash
+    sudo mkdir -p /home/pi/neopro/webapp/assets/watermarks
+    sudo cp /home/pi/neopro/assets/watermarks/* /home/pi/neopro/webapp/assets/watermarks/
+    sudo chown -R pi:pi /home/pi/neopro/webapp/assets
+    ```
 
 ### v2.27.x (Janvier 2026)
 
