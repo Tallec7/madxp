@@ -1738,12 +1738,13 @@ vcgencmd get_mem gpu
   - **Migration** : Redéployer le serveur central. Les vidéos existantes sur Supabase fonctionneront à nouveau.
 
 - **Fix table "groups" mot réservé PostgreSQL** : Les requêtes sur la table `groups` utilisent maintenant des guillemets
-  - **Problème** : Erreur 500 sur `/api/videos/:id/deployments` car `groups` est un mot réservé SQL
-  - **Cause** : Les requêtes SQL utilisaient `groups` sans guillemets, ce qui causait des erreurs de parsing
-  - **Solution** : Ajout de guillemets doubles `"groups"` dans toutes les requêtes concernées
+  - **Problème** : Erreur 500 sur `/api/videos/:id/deployments` (et autres endpoints utilisant la table `groups`)
+  - **Cause** : `groups` est un mot réservé SQL dans PostgreSQL. Les requêtes sans guillemets causaient des erreurs de parsing
+  - **Solution** : Ajout de guillemets doubles `"groups"` dans toutes les requêtes concernées (11 occurrences)
   - **Fichiers modifiés** :
-    - `central-server/src/controllers/content.controller.ts` - Query `getVideoDeployments`
-    - `central-server/src/controllers/groups.controller.ts` - Toutes les requêtes CRUD
+    - `central-server/src/controllers/content.controller.ts` - 3 requêtes (`getVideoDeployments`, `getDeployments`, `getDeployment`)
+    - `central-server/src/controllers/groups.controller.ts` - 6 requêtes (SELECT, INSERT, UPDATE, DELETE)
+    - `central-server/src/controllers/updates.controller.ts` - 2 requêtes (`getUpdateDeployments`, `getUpdateDeployment`)
   - **Migration** : Redéployer le serveur central
 
 ### v2.27.x (Janvier 2026)
