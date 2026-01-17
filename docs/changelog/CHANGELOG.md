@@ -1,3 +1,9 @@
+## [2.30.3](https://github.com/Tallec7/neopro/compare/v2.30.2...v2.30.3) (2026-01-17)
+
+### Bug Fixes
+
+- **api:** remove dependency on missing groups table ([#364](https://github.com/Tallec7/neopro/issues/364)) ([7e05e71](https://github.com/Tallec7/neopro/commit/7e05e7165c7b2ac592991f7dc7c2b5a2c1555ebd))
+
 ## [2.30.2](https://github.com/Tallec7/neopro/compare/v2.30.1...v2.30.2) (2026-01-17)
 
 ### Bug Fixes
