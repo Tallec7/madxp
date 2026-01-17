@@ -19,12 +19,14 @@
 
 Installation, configuration et utilisation de Neopro.
 
-- [Installation en ligne (RECOMMANDÉE)](ONLINE_INSTALLATION.md) - Setup remote (~22 min)
+- **[Guide Opérateur Installation](guides/GUIDE_OPERATEUR_INSTALLATION.md)** - **Pas-à-pas pour terrain** (~30 min) 🆕 v2.28
+- [Installation en ligne (technique)](ONLINE_INSTALLATION.md) - Setup remote (~22 min) ✨ v2.0
 - [Configuration d'un nouveau club](../raspberry/scripts/CLUB-SETUP-README.md) - Remote vs Local
-- [Installation complète Raspberry Pi](guides/INSTALLATION_COMPLETE.md) - 3 méthodes comparées
-- [Déploiement rapide via Golden Image](guides/GOLDEN_IMAGE.md) (10 min)
+- [Installation complète Raspberry Pi](guides/INSTALLATION_COMPLETE.md) - 3 méthodes comparées ✨ v2.0
+- [Déploiement rapide via Golden Image](guides/GOLDEN_IMAGE.md) (10 min) ✨ v2.0
+- [Brouillons de Configuration](guides/CONFIG_DRAFTS.md) - Préparer les configs à l'avance 🆕 v2.27
 - [Guide utilisateur complet](guides/GUIDE_UTILISATEUR.md) (21K)
-- [Troubleshooting et diagnostic](guides/TROUBLESHOOTING.md) (30K)
+- [Troubleshooting et diagnostic](guides/TROUBLESHOOTING.md) (53K) - Support Pi 5 🆕
 - [Configuration](guides/CONFIGURATION.md)
 
 ### 🔧 [Documentation Technique](technical/)
@@ -139,6 +141,7 @@ neopro/
 
 ### Nouveau Raspberry Pi ?
 
+→ **[guides/GUIDE_OPERATEUR_INSTALLATION.md](guides/GUIDE_OPERATEUR_INSTALLATION.md)** (guide terrain pas-à-pas) 🆕
 → **[guides/INSTALLATION_COMPLETE.md](guides/INSTALLATION_COMPLETE.md)** (installation complète)
 → **[guides/GOLDEN_IMAGE.md](guides/GOLDEN_IMAGE.md)** (déploiement rapide)
 
@@ -198,6 +201,6 @@ neopro/
 
 ---
 
-**Dernière mise à jour** : 8 janvier 2026 - Fix bug espace disque update-software, mise à jour stack
+**Dernière mise à jour** : 12 janvier 2026 - Mise à jour docs installation (Pi 5, gpu_mem, Config Drafts)
 
-**Version** : 2.13.1
+**Version** : 2.27.0

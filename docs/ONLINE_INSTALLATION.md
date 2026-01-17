@@ -136,6 +136,8 @@ Les deux fonctionnent parfaitement et sont gratuites. Utilisez **Option 1** (Git
    - ✅ WiFi hotspot : `NEOPRO-[CLUB_NAME]`
    - ✅ (Optionnel) WiFi client configuré automatiquement si une clé USB et un SSID ont été fournis
    - ✅ Application accessible sur `http://neopro.local`
+   - ✅ Mémoire GPU configurée automatiquement (`gpu_mem=256` pour Pi 4, CMA dynamique pour Pi 5)
+   - ✅ Watchdog kiosk pour récupération automatique des crashs Chromium
 
 5. **Configurer le club (depuis votre PC) :**
 
@@ -337,6 +339,25 @@ L'installation sur le Raspberry Pi ne communique pas avec Render pendant le proc
 
 ---
 
+## 🍓 Support Raspberry Pi 5
+
+Depuis la version 2.27+, le Pi 5 est entièrement supporté :
+
+- **Détection automatique** : Le script `install.sh` détecte le modèle de Pi
+- **Pi 4 et antérieurs** : Configuration `gpu_mem=256` dans `/boot/config.txt`
+- **Pi 5** : Utilisation de SwiftShader (rendu logiciel) car le VideoCore VII a des incompatibilités avec le décodage vidéo hardware de Chromium
+
+**Note** : Sur Pi 5, `vcgencmd get_mem gpu` retourne toujours `gpu=4M` - c'est normal (valeur legacy), le GPU utilise une mémoire partagée dynamique (CMA).
+
+**Vérifier le modèle installé** :
+
+```bash
+ssh pi@neopro.local 'cat /proc/device-tree/model'
+# Exemple: "Raspberry Pi 5 Model B Rev 1.0"
+```
+
+---
+
 ## 🆘 Dépannage
 
 ### Le script ne se télécharge pas
@@ -364,6 +385,20 @@ curl -sSL https://tallec7.github.io/neopro/install/setup.sh > /tmp/setup.sh
 sudo bash -x /tmp/setup.sh CLUB_NAME PASSWORD 2>&1 | tee install.log
 ```
 
+### Chromium affiche "Aw, Snap!" après quelques heures
+
+C'est un problème de mémoire GPU. Voir la section [Support Raspberry Pi 5](#-support-raspberry-pi-5) et le guide complet [TROUBLESHOOTING.md](guides/TROUBLESHOOTING.md#5-chromium-crash-aw-snap-error-code-5-après-1-2h-de-boucle-vidéo).
+
+**Solution rapide** :
+
+```bash
+# Pour Pi 4 et antérieurs
+ssh pi@neopro.local 'echo "gpu_mem=256" | sudo tee -a /boot/config.txt && sudo reboot'
+
+# Pour Pi 5 - vérifier que SwiftShader est actif
+ssh pi@neopro.local 'pgrep -a chromium | grep swiftshader'
+```
+
 ### Tester le script sans l'exécuter
 
 ```bash
@@ -388,6 +423,6 @@ curl -sSL https://tallec7.github.io/neopro/install/setup.sh | less
 
 ---
 
-**Version :** 1.0.0
-**Date :** Décembre 2024
+**Version :** 2.0.0
+**Date :** Janvier 2026
 **Auteur :** Neopro / Kalon Partners

@@ -21,10 +21,12 @@ TOTAL: ~45 min                 TOTAL: ~10 min
 
 ### Prérequis
 
-- Un Raspberry Pi 3B+ ou supérieur
+- Un Raspberry Pi 3B+, 4, ou **5** (tous supportés depuis v2.27)
 - Une carte SD 32GB minimum
 - Un lecteur de carte SD pour Mac
 - Connexion Internet (pour l'installation initiale)
+
+> **Note Pi 5** : Les images Golden créées sur Pi 4 fonctionnent sur Pi 5, mais le script `install.sh` doit être relancé pour configurer SwiftShader. Pour une compatibilité maximale, créez des images séparées pour Pi 4 et Pi 5.
 
 ### 🚀 Méthode AUTOMATISÉE (Recommandée)
 
@@ -401,4 +403,36 @@ ssh pi@192.168.4.1
 
 ---
 
-**Dernière mise à jour :** 7 décembre 2025
+## Support Raspberry Pi 5
+
+Le Pi 5 nécessite une configuration GPU différente du Pi 4 :
+
+| Modèle       | Configuration GPU                       |
+| ------------ | --------------------------------------- |
+| Pi 3B+, Pi 4 | `gpu_mem=256` dans `/boot/config.txt`   |
+| **Pi 5**     | Flags SwiftShader dans le service kiosk |
+
+**Recommandation** : Créez des images Golden séparées pour chaque génération de Pi :
+
+```
+neopro-golden-pi4-v2.27.img.gz    # Pour Pi 3B+, Pi 4
+neopro-golden-pi5-v2.27.img.gz    # Pour Pi 5
+```
+
+Si vous utilisez une image Pi 4 sur un Pi 5, le watchdog kiosk détectera automatiquement le modèle et appliquera les flags SwiftShader au prochain redémarrage du service.
+
+**Vérifier après le premier boot** :
+
+```bash
+# Vérifier le modèle
+cat /proc/device-tree/model
+
+# Pi 5 : vérifier que SwiftShader est actif
+pgrep -a chromium | grep swiftshader
+# Doit afficher le processus avec --use-angle=swiftshader
+```
+
+---
+
+**Version :** 2.0.0
+**Dernière mise à jour :** Janvier 2026

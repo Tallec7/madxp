@@ -13,6 +13,9 @@ import { orchestratedDeploymentService } from '../services/orchestrated-deployme
 /**
  * GET /api/sites/:siteId/draft
  * Récupère le brouillon d'un site
+ *
+ * Retourne { draft: null } si aucun brouillon n'existe (au lieu d'un 404)
+ * pour éviter les erreurs 404 dans la console du navigateur.
  */
 export const getDraft = async (req: AuthRequest, res: Response) => {
   try {
@@ -20,13 +23,9 @@ export const getDraft = async (req: AuthRequest, res: Response) => {
 
     const draft = await draftService.getDraft(siteId);
 
-    if (!draft) {
-      return res.status(404).json({
-        error: 'Aucun brouillon trouvé pour ce site',
-      });
-    }
-
-    res.json(draft);
+    // Retourner { draft: null } au lieu d'un 404 pour éviter
+    // les erreurs dans la console du navigateur
+    res.json({ draft: draft || null });
   } catch (error) {
     logger.error('Get draft error:', { error, siteId: req.params.siteId });
     res.status(500).json({ error: 'Erreur serveur interne' });

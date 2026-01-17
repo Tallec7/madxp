@@ -2,7 +2,8 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.27.0 | **Dernière mise à jour**: 2026-01-12
+**Version**: 2.28.0 | **Dernière mise à jour**: 2026-01-16
+**Version**: 2.28.0 | **Dernière mise à jour**: 2026-01-17
 
 ---
 
@@ -119,12 +120,14 @@ neopro/
 | ------------------------------------------- | --------------------------------------------------- |
 | `/home/pi/neopro/videos/`                   | **Vidéos** (mp4, mkv, mov) organisées par catégorie |
 | `/home/pi/neopro/webapp/`                   | Application Angular (frontend TV/Remote)            |
+| `/home/pi/neopro/webapp/assets/watermarks/` | Images watermark déployées depuis le dashboard      |
 | `/home/pi/neopro/webapp/configuration.json` | Configuration du site (sponsors, catégories, etc.)  |
 | `/home/pi/neopro/sync-agent/`               | Agent de synchronisation avec le cloud              |
 | `/home/pi/neopro/server/`                   | Serveur Socket.IO local                             |
 | `/home/pi/neopro/scripts/`                  | Scripts de diagnostic et setup                      |
 
 **⚠️ ATTENTION** : Les vidéos sont dans `/home/pi/neopro/videos/`, PAS dans `/home/pi/neopro/webapp/videos/`
+**⚠️ ATTENTION** : Les assets (watermarks) doivent être dans `/home/pi/neopro/webapp/assets/` car nginx sert depuis `webapp/`
 
 ---
 
@@ -300,6 +303,14 @@ GET /api/analytics/daily-stats        → agrégation journalière
 GET /api/advertiser-analytics/...     → stats annonceurs
 ```
 
+### Assets (Watermarks, Logos)
+
+```
+POST   /api/assets/watermark/:siteId    → Upload et déploie un watermark (multipart/form-data)
+POST   /api/assets/watermark/validate   → Valide une configuration watermark
+POST   /api/assets/deploy/:siteId       → Déploie un asset existant vers un site
+```
+
 ### Rate Limiting
 
 Les rate limits sont appliqués **par route** pour éviter les conflits :
@@ -334,22 +345,23 @@ Le `LoggerService` Angular implémente un throttling côté client pour éviter 
 
 ## Services Critiques
 
-| Service          | Fichier                              | Rôle                                      |
-| ---------------- | ------------------------------------ | ----------------------------------------- |
-| **Socket**       | `socket.service.ts`                  | Communication temps réel Pi ↔ Cloud       |
-| **CommandQueue** | `command-queue.service.ts`           | File d'attente commandes (offline/online) |
-| **Deployment**   | `deployment.service.ts`              | Orchestration déploiement vidéos          |
-| **Draft**        | `draft.service.ts`                   | Gestion brouillons de configuration       |
-| **Orchestrated** | `orchestrated-deployment.service.ts` | Déploiement vidéos + config orchestré     |
-| **FTP Storage**  | `ftp-storage.ts`                     | Upload/download vidéos sur FTP Hostinger  |
-| **Supabase**     | `supabase.ts`                        | Stockage fallback si FTP non configuré    |
-| **Metrics**      | `metrics.service.ts`                 | Export Prometheus                         |
-| **Audit**        | `audit.service.ts`                   | Log toutes les actions admin              |
-| **MFA**          | `mfa.service.ts`                     | 2FA avec backup codes                     |
-| **Email**        | `email.service.ts`                   | Password reset, alertes                   |
-| **Cron**         | `cron-scheduler.service.ts`          | Stats quotidiennes, cleanup               |
-| **Logger**       | `logger.service.ts`                  | Logs structurés avec correlation ID       |
-| **Errors**       | `error-extractor.ts`                 | Extraction messages d'erreur              |
+| Service          | Fichier                              | Rôle                                        |
+| ---------------- | ------------------------------------ | ------------------------------------------- |
+| **Socket**       | `socket.service.ts`                  | Communication temps réel Pi ↔ Cloud         |
+| **CommandQueue** | `command-queue.service.ts`           | File d'attente commandes (offline/online)   |
+| **Deployment**   | `deployment.service.ts`              | Orchestration déploiement vidéos            |
+| **Draft**        | `draft.service.ts`                   | Gestion brouillons de configuration         |
+| **Orchestrated** | `orchestrated-deployment.service.ts` | Déploiement vidéos + config orchestré       |
+| **Asset**        | `asset.service.ts`                   | Gestion watermarks et logos (upload/deploy) |
+| **FTP Storage**  | `ftp-storage.ts`                     | Upload/download vidéos sur FTP Hostinger    |
+| **Supabase**     | `supabase.ts`                        | Stockage fallback si FTP non configuré      |
+| **Metrics**      | `metrics.service.ts`                 | Export Prometheus                           |
+| **Audit**        | `audit.service.ts`                   | Log toutes les actions admin                |
+| **MFA**          | `mfa.service.ts`                     | 2FA avec backup codes                       |
+| **Email**        | `email.service.ts`                   | Password reset, alertes                     |
+| **Cron**         | `cron-scheduler.service.ts`          | Stats quotidiennes, cleanup                 |
+| **Logger**       | `logger.service.ts`                  | Logs structurés avec correlation ID         |
+| **Errors**       | `error-extractor.ts`                 | Extraction messages d'erreur                |
 
 ### Stockage Vidéo (Double backend) ⚡ IMPORTANT
 
@@ -1665,6 +1677,128 @@ vcgencmd get_mem gpu
 
 ## Historique Breaking Changes
 
+### v2.28.x (Janvier 2026)
+
+- **Système de Watermark** : Ajout d'une image de watermark configurable sur l'overlay TV
+  - **Fonctionnalités** :
+    - Upload d'image (PNG/JPG/WEBP/GIF/SVG) vers le cloud (FTP ou Supabase)
+    - Déploiement automatique vers le Pi via commande `deploy_asset`
+    - **Mode fullscreen** (par défaut) : l'image couvre tout l'écran avec `object-fit: cover`
+    - **Mode positionné** : 9 positions possibles (top-left, top-center, etc.) avec taille personnalisée
+    - 6 animations : none, fade, slide-left, slide-right, slide-top, slide-bottom, zoom
+    - Configuration complète : opacité (0-100%), taille, offset X/Y, border-radius, durée animation
+    - Scheduling : activation par plages horaires et jours de la semaine, phases de match
+  - **Architecture z-index TV** : watermark (1100) > score overlay (1000) < goal animations (2000)
+  - **Nouveaux fichiers** :
+    - `central-server/src/services/asset.service.ts` - Upload et déploiement assets
+    - `central-server/src/controllers/assets.controller.ts` - Endpoints API
+    - `central-server/src/routes/assets.routes.ts` - Routes `/api/assets/*`
+    - `central-dashboard/src/app/core/services/asset.service.ts` - Service Angular
+    - `raspberry/sync-agent/src/commands/deploy-asset.js` - Commande de déploiement
+  - **Fichiers modifiés** :
+    - `raspberry/src/app/interfaces/configuration.interface.ts` - Types WatermarkConfig
+    - `raspberry/src/app/components/tv/tv.component.ts` - Logique affichage watermark
+    - `raspberry/src/app/components/tv/tv.component.html` - Overlay watermark
+    - `raspberry/src/app/components/tv/tv.component.scss` - Styles et animations
+    - `raspberry/sync-agent/src/commands/index.js` - Commande `deploy_asset`
+    - `raspberry/sync-agent/src/utils/config-merge.js` - Support merge watermark
+    - `central-server/src/types/index.ts` - Types WatermarkConfig
+    - `central-server/src/server.ts` - Route assets
+    - `central-dashboard/.../site-settings-tab.component.ts` - UI configuration watermark
+  - **Migration** : Déployer sync-agent et webapp sur les Pi existants
+
+- **Fix chemin déploiement watermark** : Les assets sont maintenant déployés dans `webapp/assets/` au lieu de `assets/`
+  - **Problème** : Le watermark ne s'affichait pas car nginx sert depuis `/home/pi/neopro/webapp/`
+  - **Cause** : `deploy-asset.js` écrivait dans `/home/pi/neopro/assets/` (hors du dossier servi par nginx)
+  - **Solution** : Le chemin cible est maintenant `/home/pi/neopro/webapp/assets/...`
+  - **Fichier modifié** : `raspberry/sync-agent/src/commands/deploy-asset.js`
+  - **Migration Pi existants** : Déplacer manuellement les assets ou redéployer via le dashboard
+    ```bash
+    sudo mkdir -p /home/pi/neopro/webapp/assets/watermarks
+    sudo cp /home/pi/neopro/assets/watermarks/* /home/pi/neopro/webapp/assets/watermarks/
+    sudo chown -R pi:pi /home/pi/neopro/webapp/assets
+    ```
+
+- **Fix watermark non persisté dans le dashboard** : La config watermark reste maintenant visible après déploiement
+  - **Problème** : Après déploiement du watermark, le dashboard n'affichait plus la configuration
+  - **Cause** : Le composant `site-settings-tab` cherchait la config dans `site.neoProContent.watermark` (inexistant côté serveur) au lieu de `site.local_config_mirror.watermark` (synchronisé par le Pi)
+  - **Solution** :
+    - Lecture depuis `local_config_mirror.watermark` au lieu de `neoProContent.watermark`
+    - Ajout de `OnChanges` pour recharger la config quand le site est mis à jour (après `sync_local_state`)
+    - Même correction appliquée pour `scoreOverlay`
+  - **Fichier modifié** : `central-dashboard/.../site-settings-tab.component.ts`
+  - **Migration** : Rebuild et redéployer le dashboard
+
+- **Fix URLs vidéos incorrectes (FTP vs Supabase)** : L'endpoint `/api/sites/:id/local-content` génère maintenant les URLs correctes selon le backend de stockage
+  - **Problème** : Le dashboard affichait des erreurs 404 sur les vidéos car les URLs étaient générées pour FTP même quand les vidéos étaient sur Supabase
+  - **Cause** : `getSiteLocalContent()` utilisait toujours `getFtpPublicUrl()` sans détecter le backend réel
+  - **Solution** : Ajout de la fonction `getVideoDownloadUrl()` qui détecte automatiquement le backend :
+    - Si `storage_path` ne contient pas `/` → FTP (ex: `video.mp4`)
+    - Si `storage_path` contient `/` → Supabase (ex: `uploads/video.mp4`)
+  - **Fichier modifié** : `central-server/src/controllers/sites.controller.ts`
+  - **Migration** : Redéployer le serveur central. Les vidéos existantes sur Supabase fonctionneront à nouveau.
+
+- **Fix table "groups" manquante en production** : Suppression de la dépendance à la table `groups` dans les requêtes de déploiement
+  - **Problème** : Erreur 500 sur `/api/videos/:id/deployments` même après ajout des guillemets
+  - **Cause** : La table `groups` n'existe pas en production (fonctionnalité non utilisée). Les LEFT JOIN échouaient silencieusement
+  - **Solution** : Suppression complète des jointures sur `groups` - affiche "Groupe" comme fallback si `target_type != 'site'`
+  - **Fichiers modifiés** :
+    - `central-server/src/controllers/content.controller.ts` - 3 requêtes (`getVideoDeployments`, `getDeployments`, `getDeployment`)
+    - `central-server/src/controllers/updates.controller.ts` - 2 requêtes (`getUpdateDeployments`, `getUpdateDeployment`)
+  - **Note** : Les requêtes CRUD de `groups.controller.ts` gardent les guillemets pour quand la fonctionnalité sera activée
+  - **Migration** : Redéployer le serveur central
+
+- **Fix erreur 422 aperçu watermark dans le dashboard** : L'aperçu du watermark utilise maintenant l'URL cloud au lieu du chemin local
+  - **Problème** : Erreur HTTP 422 dans la console lors de l'affichage de l'aperçu du watermark dans l'onglet Paramètres
+  - **Cause** : Le dashboard essayait de charger l'image depuis `imagePath` (chemin local du Pi comme `assets/watermarks/logo.png`) qui n'existe pas sur Hostinger
+  - **Solution** : Ajout d'un champ `cloudUrl` à l'interface `WatermarkConfig` pour stocker l'URL cloud (FTP ou Supabase) de l'image
+  - **Priorité des URLs pour l'aperçu** :
+    1. `watermarkPreviewUrl` - Preview Base64 lors de l'upload
+    2. `watermarkConfig.cloudUrl` - URL cloud (FTP ou Supabase)
+    3. `watermarkConfig.imagePath` - Chemin local (fallback)
+  - **Fichiers modifiés** :
+    - `central-server/src/types/index.ts` - Ajout `cloudUrl?: string` à `WatermarkConfig`
+    - `central-server/src/services/asset.service.ts` - `createDefaultWatermarkConfig()` accepte `cloudUrl`
+    - `central-server/src/controllers/assets.controller.ts` - Passe `cloudUrl` dans `suggestedConfig`
+    - `central-dashboard/src/app/core/services/asset.service.ts` - Ajout `cloudUrl` à l'interface
+    - `central-dashboard/.../site-settings-tab.component.ts` - Utilise `cloudUrl` pour l'aperçu
+  - **Migration** : Redéployer le serveur central et le dashboard. Les Pi n'ont pas besoin de mise à jour.
+
+- **WiFi Scanner avec BSSID Lock (anti-roaming)** : Nouvelle interface dans l'admin panel pour configurer le WiFi USB
+  - **Problème** : En 2.4 GHz avec plusieurs APs du même SSID (répéteurs, mesh), le Pi fait du roaming instable
+  - **Solution** : Scanner WiFi dans `:8080` qui permet de fixer le BSSID d'un point d'accès spécifique
+  - **Fonctionnalités** :
+    - Scan des réseaux WiFi avec `iwlist wlan1 scan`
+    - Affichage groupé par SSID avec tous les APs (BSSID, channel, signal)
+    - Connexion avec option "Fixer ce point d'accès" qui ajoute `bssid=XX:XX:XX:XX:XX:XX` dans wpa_supplicant
+    - Affichage de l'état de connexion actuel (IP, signal, BSSID fixé ou non)
+  - **Nouveaux endpoints API** :
+    - `GET /api/wifi/scan` - Scanne les réseaux disponibles
+    - `POST /api/wifi/connect` - Connecte avec option `lockBssid`
+    - `GET /api/wifi/current` - État de connexion actuel
+  - **Fichiers modifiés** :
+    - `raspberry/admin/admin-server.js` - 3 nouveaux endpoints
+    - `raspberry/admin/public/app.js` - Fonctions JS (scanWifiNetworks, connectToWifi, etc.)
+    - `raspberry/admin/public/index.html` - UI scanner WiFi dans l'onglet Réseau
+    - `raspberry/admin/public/styles.css` - Styles pour le scanner
+  - **Migration** : Déployer le dossier `admin/` sur les Pi existants
+
+- **CORS Private Network Access** : Fix des erreurs CORS sur les requêtes depuis le hotspot
+  - **Problème** : Chrome bloque les requêtes vers IPs privées (192.168.x.x) depuis des origines publiques
+  - **Solution** : Ajout du header `Access-Control-Allow-Private-Network: true`
+  - **Fichier modifié** : `raspberry/server/server.js`
+  - **Migration** : Déployer `server/server.js` sur les Pi existants
+
+- **Hotspot Info dans le dashboard central** : Le sync-agent remonte maintenant les infos du hotspot
+  - **Données remontées** : SSID, channel, nombre de clients connectés, état actif/inactif
+  - **Affichage** : Onglet Debug > section "Hotspot WiFi" avec icônes et couleurs
+  - **Fichiers modifiés** :
+    - `raspberry/sync-agent/src/agent.js` - Collecte hotspotInfo dans sync_local_state
+    - `central-server/src/services/socket.service.ts` - Stocke \_hotspotInfo dans local_config_mirror
+    - `central-server/src/controllers/sites.controller.ts` - Retourne hotspotInfo via /local-content
+    - `central-dashboard/.../site-debug-tab.component.ts` - Affichage dans l'UI
+  - **Migration** : Déployer sync-agent sur les Pi, redéployer le serveur central et le dashboard
+
 ### v2.27.x (Janvier 2026)
 
 - **Système de Brouillons de Configuration + Upload Contextuel** : Permet de préparer des configurations à l'avance
@@ -1693,6 +1827,18 @@ vcgencmd get_mem gpu
     - `central-dashboard/.../site-detail.component.ts` - Passage siteName
     - `central-dashboard/src/app/core/models/index.ts` - `uploadedForSiteId` sur CloudVideo
   - **Migration** : Exécuter `add-config-drafts.sql` pour créer les tables
+  - **Documentation** : [docs/guides/CONFIG_DRAFTS.md](docs/guides/CONFIG_DRAFTS.md)
+
+- **Élimination des 404 sur endpoint /draft** : L'endpoint retourne maintenant `{ draft: null }` au lieu d'un 404
+  - **Problème** : Le navigateur affichait une erreur 404 dans la console DevTools lors du chargement d'un site sans brouillon
+  - **Cause** : L'endpoint `GET /sites/:id/draft` retournait un 404 si pas de brouillon
+  - **Solution** : L'endpoint retourne maintenant `{ draft: null }` (HTTP 200), le service Angular extrait le champ `draft`
+  - **Fichiers modifiés** :
+    - `central-server/src/controllers/drafts.controller.ts` - Retourne `{ draft: null }` au lieu de 404
+    - `central-dashboard/src/app/core/services/draft.service.ts` - `getDraft()` retourne `Observable<ConfigDraft | null>`
+    - `central-dashboard/.../site-content-tab.component.ts` - Simplifié, plus de check `error.status !== 404`
+    - `central-dashboard/src/app/core/interceptors/error.interceptor.ts` - Suppression du code `isDraft404` devenu inutile
+  - **Migration** : Rebuild et redéployer le dashboard + API
 
 - **Support Raspberry Pi 5 (SwiftShader)** : Fix des crashs Chromium "Aw, Snap!" sur Pi 5
   - **Problème** : Le Pi 5 utilise VideoCore VII qui a des problèmes d'incompatibilité avec le décodage vidéo hardware de Chromium

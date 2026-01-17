@@ -9,7 +9,8 @@ import { auditService } from '../services/audit.service';
 import { formatPaginatedResponse, PaginationParams } from '../middleware/pagination';
 import { commandQueueService } from '../services/command-queue.service';
 import { isAdmin } from '../middleware/auth';
-import { getFtpPublicUrl } from '../config/ftp-storage';
+import { getFtpPublicUrl, isFtpConfigured } from '../config/ftp-storage';
+import { getPublicUrl } from '../config/supabase';
 import { validateShellCommand, getAllowedCommandsForRole } from '../middleware/remote-shell-security';
 
 class HttpError extends Error {
@@ -19,6 +20,23 @@ class HttpError extends Error {
 }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Génère l'URL publique pour une vidéo.
+ * Détecte automatiquement si le fichier est sur FTP ou Supabase
+ * en fonction du format du storage_path.
+ */
+function getVideoDownloadUrl(storagePath: string): string {
+  // Si le path est juste un filename (pas de /) → c'est un fichier FTP
+  const isFtpPath = !storagePath.includes('/');
+
+  if (isFtpPath && isFtpConfigured()) {
+    return getFtpPublicUrl(storagePath);
+  }
+
+  // Sinon c'est un chemin Supabase (ex: uploads/filename.mp4)
+  return getPublicUrl(storagePath);
+}
 
 const BCRYPT_ROUNDS = 10;
 
@@ -1202,7 +1220,7 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       size: v.file_size,
       duration: v.duration,
       checksum: v.checksum,
-      url: v.storage_path ? getFtpPublicUrl(v.storage_path) : null,
+      url: v.storage_path ? getVideoDownloadUrl(v.storage_path) : null,
       createdAt: v.created_at,
       updatedAt: v.updated_at
     }));
@@ -1219,21 +1237,23 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
         localVideos: [],
         cloudVideos,
         localStorage: null,
-        lastVideoSync: null
+        lastVideoSync: null,
+        hotspotInfo: null
       });
     }
 
     // Type the config as any to access dynamic properties
     const config = site.local_config_mirror as Record<string, unknown>;
 
-    // Extraire les vidéos et le stockage depuis la config enrichie
+    // Extraire les vidéos, le stockage et les infos hotspot depuis la config enrichie
     const localVideos = (config._localVideos as Array<unknown>) || [];
     const localStorage = config._localStorage || null;
     const lastVideoSync = (config._lastVideoSync as string) || null;
+    const hotspotInfo = config._hotspotInfo || null;
 
     // Retourner la config sans les champs internes (_prefixés)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { _localVideos, _localStorage, _lastVideoSync, ...cleanConfig } = config;
+    const { _localVideos, _localStorage, _lastVideoSync, _hotspotSsid, _hotspotInfo, ...cleanConfig } = config;
 
     res.json({
       siteId: id,
@@ -1246,7 +1266,8 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       localVideos,
       cloudVideos,
       localStorage,
-      lastVideoSync
+      lastVideoSync,
+      hotspotInfo
     });
   } catch (error) {
     logger.error('Get site local content error:', error);

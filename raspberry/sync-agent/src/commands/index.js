@@ -2,6 +2,7 @@ const deployVideo = require('./deploy-video');
 const deleteVideo = require('./delete-video');
 const updateSoftware = require('./update-software');
 const remoteShell = require('./remote-shell');
+const deployAsset = require('./deploy-asset');
 const { exec } = require('child_process');
 const util = require('util');
 const fs = require('fs-extra');
@@ -16,6 +17,7 @@ const commands = {
   delete_video: deleteVideo,
   update_software: updateSoftware,
   remote_shell: remoteShell,
+  deploy_asset: deployAsset,
 
   /**
    * Met à jour la configuration avec merge intelligent
@@ -94,6 +96,9 @@ const commands = {
         }
         if (contentToApply.scoreOverlay !== undefined) {
           finalConfig.scoreOverlay = contentToApply.scoreOverlay;
+        }
+        if (contentToApply.watermark !== undefined) {
+          finalConfig.watermark = contentToApply.watermark;
         }
 
         // Gérer remotePassword et clubName pour l'authentification /remote

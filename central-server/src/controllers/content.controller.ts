@@ -210,21 +210,21 @@ export const getVideoDeployments = async (req: AuthRequest, res: Response) => {
     }
 
     // Récupérer tous les déploiements pour cette vidéo
+    // Note: On évite la jointure sur "groups" car la table peut ne pas exister en production
     const result = await pool.query(
       `SELECT cd.id, cd.video_id, cd.target_type, cd.target_id, cd.status, cd.progress,
               cd.error_message as error, cd.completed_at, cd.created_at, cd.started_at,
               CASE
                 WHEN cd.target_type = 'site' THEN s.site_name
-                WHEN cd.target_type = 'group' THEN g.name
+                ELSE 'Groupe'
               END as target_name,
               CASE
                 WHEN cd.target_type = 'site' THEN s.club_name
                 ELSE NULL
               END as club_name,
-              u.first_name || ' ' || u.last_name as deployed_by_name
+              COALESCE(u.first_name || ' ' || u.last_name, 'Système') as deployed_by_name
        FROM content_deployments cd
        LEFT JOIN sites s ON cd.target_type = 'site' AND cd.target_id = s.id
-       LEFT JOIN groups g ON cd.target_type = 'group' AND cd.target_id = g.id
        LEFT JOIN users u ON cd.deployed_by = u.id
        WHERE cd.video_id = $1
        ORDER BY cd.created_at DESC`,
@@ -495,12 +495,11 @@ export const getDeployments = async (req: AuthRequest, res: Response) => {
               v.filename, v.original_name, v.metadata,
               CASE
                 WHEN cd.target_type = 'site' THEN s.site_name
-                WHEN cd.target_type = 'group' THEN g.name
+                ELSE 'Groupe'
               END as target_name
        FROM content_deployments cd
        LEFT JOIN videos v ON cd.video_id = v.id
        LEFT JOIN sites s ON cd.target_type = 'site' AND cd.target_id = s.id
-       LEFT JOIN groups g ON cd.target_type = 'group' AND cd.target_id = g.id
        ORDER BY cd.created_at DESC`
     );
 
@@ -528,12 +527,11 @@ export const getDeployment = async (req: AuthRequest, res: Response) => {
               v.filename as video_name,
               CASE
                 WHEN cd.target_type = 'site' THEN s.site_name
-                WHEN cd.target_type = 'group' THEN g.name
+                ELSE 'Groupe'
               END as target_name
        FROM content_deployments cd
        LEFT JOIN videos v ON cd.video_id = v.id
        LEFT JOIN sites s ON cd.target_type = 'site' AND cd.target_id = s.id
-       LEFT JOIN groups g ON cd.target_type = 'group' AND cd.target_id = g.id
        WHERE cd.id = $1`,
       [id]
     );

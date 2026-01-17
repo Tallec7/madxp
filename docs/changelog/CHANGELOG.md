@@ -1,3 +1,118 @@
+# [2.31.0](https://github.com/Tallec7/neopro/compare/v2.30.6...v2.31.0) (2026-01-17)
+
+### Features
+
+- **admin:** WiFi scanner with BSSID lock and hotspot monitoring ([#370](https://github.com/Tallec7/neopro/issues/370)) ([fea99b9](https://github.com/Tallec7/neopro/commit/fea99b9f58589b9135abff49d1d5a9c9cf96e55d))
+
+## [2.30.6](https://github.com/Tallec7/neopro/compare/v2.30.5...v2.30.6) (2026-01-17)
+
+### Bug Fixes
+
+- **watermark:** use cloud URL for dashboard preview instead of local path ([#369](https://github.com/Tallec7/neopro/issues/369)) ([eec259c](https://github.com/Tallec7/neopro/commit/eec259cdb4ce024b3bf9a5a34173142ec4369573))
+
+## [2.30.5](https://github.com/Tallec7/neopro/compare/v2.30.4...v2.30.5) (2026-01-17)
+
+### Bug Fixes
+
+- **setup:** make WiFi USB key truly optional for installation ([#367](https://github.com/Tallec7/neopro/issues/367)) ([3115407](https://github.com/Tallec7/neopro/commit/3115407d408b111962eaa87ffe6001a0eeeb5faf))
+
+## [2.30.4](https://github.com/Tallec7/neopro/compare/v2.30.3...v2.30.4) (2026-01-17)
+
+### Bug Fixes
+
+- **watermark:** persist watermark config in dashboard after deployment ([#365](https://github.com/Tallec7/neopro/issues/365)) ([485d068](https://github.com/Tallec7/neopro/commit/485d068782421223117a0ca3c3855acf5e35b2ce))
+
+## [2.30.3](https://github.com/Tallec7/neopro/compare/v2.30.2...v2.30.3) (2026-01-17)
+
+### Bug Fixes
+
+- **api:** remove dependency on missing groups table ([#364](https://github.com/Tallec7/neopro/issues/364)) ([7e05e71](https://github.com/Tallec7/neopro/commit/7e05e7165c7b2ac592991f7dc7c2b5a2c1555ebd))
+
+## [2.30.2](https://github.com/Tallec7/neopro/compare/v2.30.1...v2.30.2) (2026-01-17)
+
+### Bug Fixes
+
+- **api:** correct video URL generation and SQL reserved word issues ([#363](https://github.com/Tallec7/neopro/issues/363)) ([a8ebade](https://github.com/Tallec7/neopro/commit/a8ebade827a30e08c8a8dd6521e1d1b818f0f93e))
+- **watermark:** persist watermark config in dashboard after deployment ([#362](https://github.com/Tallec7/neopro/issues/362)) ([0cc8d05](https://github.com/Tallec7/neopro/commit/0cc8d053fcca768b21d3f96888282e9b9adf0a3e))
+
+## [2.30.1](https://github.com/Tallec7/neopro/compare/v2.30.0...v2.30.1) (2026-01-15)
+
+### Bug Fixes
+
+- **watermark:** deploy assets to correct webapp path ([#361](https://github.com/Tallec7/neopro/issues/361)) ([eaa433a](https://github.com/Tallec7/neopro/commit/eaa433a5c2a116c17c8bb3a21ad0b03f4a01bae7))
+
+# [2.30.0](https://github.com/Tallec7/neopro/compare/v2.29.0...v2.30.0) (2026-01-15)
+
+### Features
+
+- **watermark:** add fullscreen mode for watermark overlay ([#359](https://github.com/Tallec7/neopro/issues/359)) ([8594a49](https://github.com/Tallec7/neopro/commit/8594a499760f8ab90555688826d5ababb66eddd8))
+
+# [2.29.0](https://github.com/Tallec7/neopro/compare/v2.28.9...v2.29.0) (2026-01-15)
+
+### Features
+
+- **watermark:** add configurable watermark overlay system ([#356](https://github.com/Tallec7/neopro/issues/356)) ([04d8785](https://github.com/Tallec7/neopro/commit/04d878592bd68d4b99bd57044b2506352c0703b5))
+
+## [2.28.9](https://github.com/Tallec7/neopro/compare/v2.28.8...v2.28.9) (2026-01-12)
+
+### Bug Fixes
+
+- **raspberry:** move watchdog logs to user-accessible directory ([b7217d0](https://github.com/Tallec7/neopro/commit/b7217d015670098d27c2eec99c452c596c59ff8e))
+
+## [2.28.8](https://github.com/Tallec7/neopro/compare/v2.28.7...v2.28.8) (2026-01-12)
+
+### Bug Fixes
+
+- **ci:** auto-build and upload release assets after semantic-release ([bbfe6bd](https://github.com/Tallec7/neopro/commit/bbfe6bd03893cf70996f64740f17413302b2ce59))
+
+## [2.28.7](https://github.com/Tallec7/neopro/compare/v2.28.6...v2.28.7) (2026-01-12)
+
+### Bug Fixes
+
+- **ci:** remove symlink before copying archive ([4ec9e83](https://github.com/Tallec7/neopro/commit/4ec9e83d95575ee72279cfb6792e6529281958e4))
+
+## [2.28.6](https://github.com/Tallec7/neopro/compare/v2.28.5...v2.28.6) (2026-01-12)
+
+### Bug Fixes
+
+- **ci:** properly copy versioned archive for GitHub release ([c8a6d9f](https://github.com/Tallec7/neopro/commit/c8a6d9f8dbeeb61ab9f4622b67e3f08a62548f04))
+
+## [2.28.5](https://github.com/Tallec7/neopro/compare/v2.28.4...v2.28.5) (2026-01-12)
+
+### Bug Fixes
+
+- **setup:** make WiFi USB key truly optional for installation ([#355](https://github.com/Tallec7/neopro/issues/355)) ([8495a2d](https://github.com/Tallec7/neopro/commit/8495a2ddf0081b76326de4bc3526bb9432094b20))
+
+## [2.28.4](https://github.com/Tallec7/neopro/compare/v2.28.3...v2.28.4) (2026-01-12)
+
+### Bug Fixes
+
+- **draft:** return { draft: null } instead of 404 for missing drafts ([31a9cc7](https://github.com/Tallec7/neopro/commit/31a9cc7a7f7c7f98178e11a29fbb2832768c134f))
+
+## [2.28.3](https://github.com/Tallec7/neopro/compare/v2.28.2...v2.28.3) (2026-01-12)
+
+### Bug Fixes
+
+- **setup:** download all sync-agent files and scripts ([67e7cf2](https://github.com/Tallec7/neopro/commit/67e7cf2b3d6a82fa4b6eac83a6b7b05dd36a24c5))
+
+## [2.28.2](https://github.com/Tallec7/neopro/compare/v2.28.1...v2.28.2) (2026-01-12)
+
+### Bug Fixes
+
+- **dashboard:** silence expected 404 errors on draft endpoints ([#354](https://github.com/Tallec7/neopro/issues/354)) ([01df62f](https://github.com/Tallec7/neopro/commit/01df62f5bfa28ea15f7b76b2ce47f39dcca55216))
+
+## [2.28.1](https://github.com/Tallec7/neopro/compare/v2.28.0...v2.28.1) (2026-01-12)
+
+### Bug Fixes
+
+- **server:** correct TypeScript strict mode type assertions for drafts ([f0c63ff](https://github.com/Tallec7/neopro/commit/f0c63ffd872716c180bd31b77f5fb213cc0af60f))
+
+# [2.28.0](https://github.com/Tallec7/neopro/compare/v2.27.2...v2.28.0) (2026-01-12)
+
+### Features
+
+- **dashboard:** add config drafts system with contextual video upload ([#353](https://github.com/Tallec7/neopro/issues/353)) ([67f3c0a](https://github.com/Tallec7/neopro/commit/67f3c0aae369df67960fa52f97e724d2a25e7e8b))
+
 ## [2.27.2](https://github.com/Tallec7/neopro/compare/v2.27.1...v2.27.2) (2026-01-12)
 
 ### Bug Fixes

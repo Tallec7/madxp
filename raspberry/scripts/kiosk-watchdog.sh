@@ -11,8 +11,12 @@
 ################################################################################
 
 CHROMIUM_URL="http://neopro.local/tv"
-LOG_FILE="/var/log/neopro-kiosk-watchdog.log"
+LOG_DIR="/home/pi/neopro/logs"
+LOG_FILE="$LOG_DIR/kiosk-watchdog.log"
 CHECK_INTERVAL=30  # Vérifier toutes les 30 secondes
+
+# Créer le dossier de logs si nécessaire
+mkdir -p "$LOG_DIR" 2>/dev/null || true
 MEMORY_THRESHOLD=85  # Redémarrer si mémoire > 85%
 MAX_CRASH_COUNT=3  # Après 3 crashs rapides, attendre plus longtemps
 CRASH_WINDOW=300   # Fenêtre de 5 minutes pour compter les crashs
@@ -74,9 +78,8 @@ cleanup_chromium() {
     rm -rf /home/pi/.cache/chromium/Default/Code\ Cache/* 2>/dev/null || true
     rm -rf /home/pi/.config/chromium/Default/GPUCache/* 2>/dev/null || true
 
-    # Libérer la mémoire GPU
+    # Synchroniser les écritures disque
     sync
-    echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
     log "✓ Nettoyage terminé"
 }

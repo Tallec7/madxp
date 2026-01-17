@@ -248,17 +248,41 @@ class NeoproSyncAgent {
         videoState = this.videoWatcher.getStorageStats();
       }
 
-      // Récupérer le SSID du hotspot
-      let hotspotSsid = null;
+      // Récupérer les infos du hotspot (SSID, canal, clients connectés)
+      let hotspotInfo = { ssid: null, channel: null, clients: 0, isActive: false };
       try {
         const hostapdPath = '/etc/hostapd/hostapd.conf';
         if (await fs.pathExists(hostapdPath)) {
           const hostapdContent = await fs.readFile(hostapdPath, 'utf8');
           const ssidMatch = hostapdContent.match(/^ssid=(.*)$/m);
-          hotspotSsid = ssidMatch ? ssidMatch[1] : null;
+          const channelMatch = hostapdContent.match(/^channel=(\d+)$/m);
+          hotspotInfo.ssid = ssidMatch ? ssidMatch[1] : null;
+          hotspotInfo.channel = channelMatch ? parseInt(channelMatch[1], 10) : null;
+        }
+
+        // Vérifier si hostapd est actif
+        try {
+          const { execSync } = require('child_process');
+          const status = execSync('systemctl is-active hostapd', { encoding: 'utf8' }).trim();
+          hotspotInfo.isActive = status === 'active';
+        } catch {
+          hotspotInfo.isActive = false;
+        }
+
+        // Compter les clients connectés au hotspot
+        if (hotspotInfo.isActive) {
+          try {
+            const { execSync } = require('child_process');
+            const stationDump = execSync('iw dev wlan0 station dump 2>/dev/null', { encoding: 'utf8' });
+            // Chaque client connecté a une ligne "Station XX:XX:XX:XX:XX:XX"
+            const clientMatches = stationDump.match(/Station [0-9a-f:]+/gi);
+            hotspotInfo.clients = clientMatches ? clientMatches.length : 0;
+          } catch {
+            hotspotInfo.clients = 0;
+          }
         }
       } catch (err) {
-        logger.warn('Could not read hotspot SSID', { error: err.message });
+        logger.warn('Could not read hotspot info', { error: err.message });
       }
 
       // Envoyer l'état local au central
@@ -268,7 +292,8 @@ class NeoproSyncAgent {
         config: localConfig,
         videos: videoState.videos,
         storage: videoState.storage,
-        hotspotSsid,
+        hotspotSsid: hotspotInfo.ssid, // Rétrocompatibilité
+        hotspotInfo, // Nouvelles infos complètes
         timestamp: new Date().toISOString(),
       });
 

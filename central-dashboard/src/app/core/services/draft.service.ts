@@ -5,7 +5,7 @@
  */
 
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { ApiService } from './api.service';
 
 // ============================================================================
@@ -141,9 +141,12 @@ export class DraftService {
 
   /**
    * Récupère le brouillon d'un site
+   * Retourne null si aucun brouillon n'existe
    */
-  getDraft(siteId: string): Observable<ConfigDraft> {
-    return this.api.get<ConfigDraft>(`/sites/${siteId}/draft`);
+  getDraft(siteId: string): Observable<ConfigDraft | null> {
+    return this.api.get<{ draft: ConfigDraft | null }>(`/sites/${siteId}/draft`).pipe(
+      map(response => response.draft)
+    );
   }
 
   /**
