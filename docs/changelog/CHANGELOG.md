@@ -1,3 +1,9 @@
+# [2.31.0](https://github.com/Tallec7/neopro/compare/v2.30.6...v2.31.0) (2026-01-17)
+
+### Features
+
+- **admin:** WiFi scanner with BSSID lock and hotspot monitoring ([#370](https://github.com/Tallec7/neopro/issues/370)) ([fea99b9](https://github.com/Tallec7/neopro/commit/fea99b9f58589b9135abff49d1d5a9c9cf96e55d))
+
 ## [2.30.6](https://github.com/Tallec7/neopro/compare/v2.30.5...v2.30.6) (2026-01-17)
 
 ### Bug Fixes
