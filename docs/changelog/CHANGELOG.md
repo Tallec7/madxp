@@ -1,3 +1,40 @@
+## [2.30.5](https://github.com/Tallec7/neopro/compare/v2.30.4...v2.30.5) (2026-01-17)
+
+### Bug Fixes
+
+- **setup:** make WiFi USB key truly optional for installation ([#367](https://github.com/Tallec7/neopro/issues/367)) ([3115407](https://github.com/Tallec7/neopro/commit/3115407d408b111962eaa87ffe6001a0eeeb5faf))
+
+## [2.30.4](https://github.com/Tallec7/neopro/compare/v2.30.3...v2.30.4) (2026-01-17)
+
+### Bug Fixes
+
+- **watermark:** persist watermark config in dashboard after deployment ([#365](https://github.com/Tallec7/neopro/issues/365)) ([485d068](https://github.com/Tallec7/neopro/commit/485d068782421223117a0ca3c3855acf5e35b2ce))
+
+## [2.30.3](https://github.com/Tallec7/neopro/compare/v2.30.2...v2.30.3) (2026-01-17)
+
+### Bug Fixes
+
+- **api:** remove dependency on missing groups table ([#364](https://github.com/Tallec7/neopro/issues/364)) ([7e05e71](https://github.com/Tallec7/neopro/commit/7e05e7165c7b2ac592991f7dc7c2b5a2c1555ebd))
+
+## [2.30.2](https://github.com/Tallec7/neopro/compare/v2.30.1...v2.30.2) (2026-01-17)
+
+### Bug Fixes
+
+- **api:** correct video URL generation and SQL reserved word issues ([#363](https://github.com/Tallec7/neopro/issues/363)) ([a8ebade](https://github.com/Tallec7/neopro/commit/a8ebade827a30e08c8a8dd6521e1d1b818f0f93e))
+- **watermark:** persist watermark config in dashboard after deployment ([#362](https://github.com/Tallec7/neopro/issues/362)) ([0cc8d05](https://github.com/Tallec7/neopro/commit/0cc8d053fcca768b21d3f96888282e9b9adf0a3e))
+
+## [2.30.1](https://github.com/Tallec7/neopro/compare/v2.30.0...v2.30.1) (2026-01-15)
+
+### Bug Fixes
+
+- **watermark:** deploy assets to correct webapp path ([#361](https://github.com/Tallec7/neopro/issues/361)) ([eaa433a](https://github.com/Tallec7/neopro/commit/eaa433a5c2a116c17c8bb3a21ad0b03f4a01bae7))
+
+# [2.30.0](https://github.com/Tallec7/neopro/compare/v2.29.0...v2.30.0) (2026-01-15)
+
+### Features
+
+- **watermark:** add fullscreen mode for watermark overlay ([#359](https://github.com/Tallec7/neopro/issues/359)) ([8594a49](https://github.com/Tallec7/neopro/commit/8594a499760f8ab90555688826d5ababb66eddd8))
+
 # [2.29.0](https://github.com/Tallec7/neopro/compare/v2.28.9...v2.29.0) (2026-01-15)
 
 ### Features

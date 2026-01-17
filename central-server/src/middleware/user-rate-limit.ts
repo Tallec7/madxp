@@ -61,11 +61,11 @@ export const createUserRateLimit = (
  * Rate limiters préconfigurés pour différents endpoints
  */
 
-// Auth endpoints - très restrictif en prod, plus permissif en dev
+// Auth endpoints - restrictif en prod, plus permissif en dev
 const isDev = process.env.NODE_ENV !== 'production';
 export const authRateLimit = createUserRateLimit(
   isDev ? 60 * 1000 : 15 * 60 * 1000, // 1 minute en dev, 15 minutes en prod
-  isDev ? 100 : 10, // 100 en dev, 10 en prod
+  isDev ? 100 : 30, // 100 en dev, 30 en prod
   {
     message: { error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' },
   }

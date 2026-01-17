@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -901,7 +901,7 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
     }
   `]
 })
-export class SiteSettingsTabComponent implements OnInit {
+export class SiteSettingsTabComponent implements OnInit, OnChanges {
   @Input() siteId!: string;
   @Input() site!: Site | null;
   @Input() isConnected: boolean = false;
@@ -983,15 +983,54 @@ export class SiteSettingsTabComponent implements OnInit {
 
     if (this.site) {
       this.clubName = this.site.club_name || '';
-      if (this.site.neoProContent?.scoreOverlay) {
-        this.overlayConfig = { ...this.overlayConfig, ...this.site.neoProContent.scoreOverlay };
+
+      // Charger la config scoreOverlay depuis local_config_mirror (synchronisé par le Pi)
+      const mirrorScoreOverlay = this.site.local_config_mirror?.['scoreOverlay'];
+      if (mirrorScoreOverlay) {
+        this.overlayConfig = { ...this.overlayConfig, ...mirrorScoreOverlay };
       }
-      // Charger la config watermark existante
-      if (this.site.neoProContent?.['watermark']) {
+
+      // Charger la config watermark existante depuis local_config_mirror (synchronisé par le Pi)
+      // Note: La config est stockée dans local_config_mirror.watermark après déploiement via update_config
+      const mirrorWatermark = this.site.local_config_mirror?.['watermark'] as WatermarkConfig | undefined;
+      if (mirrorWatermark) {
         this.watermarkConfig = {
           ...this.watermarkConfig,
-          ...(this.site.neoProContent['watermark'] as WatermarkConfig)
+          ...mirrorWatermark
         };
+        this.logger.info('Watermark config loaded from local_config_mirror', {
+          enabled: mirrorWatermark.enabled,
+          imagePath: mirrorWatermark.imagePath
+        });
+      }
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Recharger la config watermark quand le site est mis à jour (ex: après sync_local_state)
+    if (changes['site'] && changes['site'].currentValue && !changes['site'].firstChange) {
+      const site = changes['site'].currentValue as Site;
+
+      // Recharger scoreOverlay
+      const mirrorScoreOverlay = site.local_config_mirror?.['scoreOverlay'];
+      if (mirrorScoreOverlay) {
+        this.overlayConfig = { ...this.overlayConfig, ...mirrorScoreOverlay };
+      }
+
+      // Recharger watermark config
+      const mirrorWatermark = site.local_config_mirror?.['watermark'] as WatermarkConfig | undefined;
+      if (mirrorWatermark) {
+        // Ne pas écraser si on est en train d'éditer (fichier sélectionné mais pas encore déployé)
+        if (!this.selectedWatermarkFile) {
+          this.watermarkConfig = {
+            ...this.watermarkConfig,
+            ...mirrorWatermark
+          };
+          this.logger.info('Watermark config reloaded from site update', {
+            enabled: mirrorWatermark.enabled,
+            imagePath: mirrorWatermark.imagePath
+          });
+        }
       }
     }
   }
