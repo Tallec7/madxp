@@ -749,6 +749,22 @@ configure_services() {
         print_success "Service neopro-sync-agent configuré"
     fi
 
+    # Service hotspot-optimizer (auto-select best WiFi channel at boot)
+    if [ -f "${SERVICE_DIR}/neopro-hotspot-optimizer.service" ]; then
+        cp "${SERVICE_DIR}/neopro-hotspot-optimizer.service" /etc/systemd/system/
+
+        # Copier le script hotspot-optimizer
+        local SCRIPT_DIR="./scripts"
+        if [ -f "${SCRIPT_DIR}/hotspot-optimizer.sh" ]; then
+            cp "${SCRIPT_DIR}/hotspot-optimizer.sh" /home/pi/neopro/scripts/
+            chmod +x /home/pi/neopro/scripts/hotspot-optimizer.sh
+            chown pi:pi /home/pi/neopro/scripts/hotspot-optimizer.sh
+        fi
+
+        systemctl enable neopro-hotspot-optimizer.service
+        print_success "Service neopro-hotspot-optimizer configuré"
+    fi
+
     # Rechargement systemd
     systemctl daemon-reload
 

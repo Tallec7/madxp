@@ -2,8 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.28.0 | **Dernière mise à jour**: 2026-01-16
-**Version**: 2.28.0 | **Dernière mise à jour**: 2026-01-17
+**Version**: 2.28.0 | **Dernière mise à jour**: 2026-01-18
 
 ---
 
@@ -1798,6 +1797,23 @@ vcgencmd get_mem gpu
     - `central-server/src/controllers/sites.controller.ts` - Retourne hotspotInfo via /local-content
     - `central-dashboard/.../site-debug-tab.component.ts` - Affichage dans l'UI
   - **Migration** : Déployer sync-agent sur les Pi, redéployer le serveur central et le dashboard
+
+- **Hotspot Channel Optimizer (auto-fix au boot)** : Le Pi sélectionne automatiquement le meilleur canal WiFi au démarrage
+  - **Problème résolu** : Hotspot invisible après déplacement du boîtier dans un environnement WiFi saturé (canal 6 encombré)
+  - **Fonctionnement** :
+    - Au boot, scanne les canaux 1, 6, 11 (non-overlapping 2.4GHz)
+    - Si le canal actuel a >= 3 réseaux, switch vers le canal le moins encombré
+    - Redémarre hostapd pour appliquer le nouveau canal
+    - Log dans `/var/log/neopro-hotspot-optimizer.log`
+  - **Nouveaux fichiers** :
+    - `raspberry/scripts/hotspot-optimizer.sh` - Script de scan et optimisation
+    - `raspberry/config/systemd/neopro-hotspot-optimizer.service` - Service oneshot au boot
+  - **Fichiers modifiés** :
+    - `raspberry/install.sh` - Installation du service
+  - **Migration** :
+    - Nouvelles installations : automatique via `install.sh`
+    - Pi existants : copier le script et le service, puis `systemctl enable neopro-hotspot-optimizer`
+  - **Vérification** : `cat /var/log/neopro-hotspot-optimizer.log`
 
 ### v2.27.x (Janvier 2026)
 
