@@ -2892,16 +2892,234 @@ app.get('/api/network', async (req, res) => {
         }));
     }
 
-    // WiFi info
-    const wifiResult = await execCommand('iwconfig wlan0 2>/dev/null');
-    const ssidMatch = wifiResult.output.match(/ESSID:"([^"]+)"/);
-    const currentSSID = ssidMatch ? ssidMatch[1] : null;
+    // WiFi info for wlan1 (USB dongle) - the client WiFi
+    let wlan1Info = { ssid: null, bssid: null, signal: null, quality: null };
+    try {
+      const wifiResult = await execCommand('iwconfig wlan1 2>/dev/null');
+      const ssidMatch = wifiResult.output.match(/ESSID:"([^"]+)"/);
+      const bssidMatch = wifiResult.output.match(/Access Point: ([0-9A-Fa-f:]+)/);
+      const qualityMatch = wifiResult.output.match(/Link Quality=(\d+)\/(\d+)/);
+      const signalMatch = wifiResult.output.match(/Signal level=(-?\d+) dBm/);
+
+      wlan1Info.ssid = ssidMatch ? ssidMatch[1] : null;
+      wlan1Info.bssid = bssidMatch ? bssidMatch[1] : null;
+      if (qualityMatch) {
+        wlan1Info.quality = Math.round((parseInt(qualityMatch[1]) / parseInt(qualityMatch[2])) * 100);
+      }
+      wlan1Info.signal = signalMatch ? parseInt(signalMatch[1]) : null;
+    } catch {
+      // wlan1 might not exist
+    }
+
+    // WiFi info for wlan0 (hotspot)
+    let wlan0Info = { ssid: null, mode: null };
+    try {
+      const wifiResult = await execCommand('iwconfig wlan0 2>/dev/null');
+      const ssidMatch = wifiResult.output.match(/ESSID:"([^"]+)"/);
+      const modeMatch = wifiResult.output.match(/Mode:(\w+)/);
+      wlan0Info.ssid = ssidMatch ? ssidMatch[1] : null;
+      wlan0Info.mode = modeMatch ? modeMatch[1] : null;
+    } catch {
+      // wlan0 might not exist
+    }
 
     res.json({
       interfaces: networkInfo,
-      wifi: {
-        currentSSID: currentSSID
+      wlan0: wlan0Info,
+      wlan1: wlan1Info
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Scanner les réseaux WiFi disponibles
+app.get('/api/wifi/scan', async (req, res) => {
+  try {
+    // Scan using wlan1 (USB dongle) - need sudo for scan
+    const result = await execCommand('sudo iwlist wlan1 scan 2>/dev/null');
+
+    if (!result.success) {
+      return res.status(500).json({ error: 'Scan WiFi échoué', details: result.error });
+    }
+
+    // Parse scan results
+    const networks = [];
+    const cells = result.output.split(/Cell \d+ - /);
+
+    for (const cell of cells) {
+      if (!cell.trim()) continue;
+
+      const bssidMatch = cell.match(/Address: ([0-9A-Fa-f:]+)/);
+      const ssidMatch = cell.match(/ESSID:"([^"]*)"/);
+      const channelMatch = cell.match(/Channel:(\d+)/);
+      const signalMatch = cell.match(/Signal level=(-?\d+) dBm/);
+      const qualityMatch = cell.match(/Quality=(\d+)\/(\d+)/);
+      const encryptionMatch = cell.match(/Encryption key:(on|off)/);
+      const wpaMatch = cell.match(/WPA2?/);
+
+      if (ssidMatch && ssidMatch[1]) {
+        let quality = null;
+        if (qualityMatch) {
+          quality = Math.round((parseInt(qualityMatch[1]) / parseInt(qualityMatch[2])) * 100);
+        }
+
+        networks.push({
+          ssid: ssidMatch[1],
+          bssid: bssidMatch ? bssidMatch[1] : null,
+          channel: channelMatch ? parseInt(channelMatch[1]) : null,
+          signal: signalMatch ? parseInt(signalMatch[1]) : null,
+          quality: quality,
+          encrypted: encryptionMatch ? encryptionMatch[1] === 'on' : false,
+          security: wpaMatch ? 'WPA2' : (encryptionMatch && encryptionMatch[1] === 'on' ? 'WEP' : 'Open')
+        });
       }
+    }
+
+    // Sort by signal strength (best first)
+    networks.sort((a, b) => (b.signal || -100) - (a.signal || -100));
+
+    // Get current connection info
+    let currentBssid = null;
+    try {
+      const iwResult = await execCommand('iwconfig wlan1 2>/dev/null');
+      const bssidMatch = iwResult.output.match(/Access Point: ([0-9A-Fa-f:]+)/);
+      currentBssid = bssidMatch ? bssidMatch[1] : null;
+    } catch {
+      // Ignore
+    }
+
+    res.json({
+      networks,
+      currentBssid,
+      scannedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Connexion WiFi avec option BSSID (anti-roaming)
+app.post('/api/wifi/connect', async (req, res) => {
+  const { ssid, password, bssid, lockBssid } = req.body;
+
+  if (!ssid || !password) {
+    return res.status(400).json({ error: 'SSID et mot de passe requis' });
+  }
+
+  try {
+    // Read current wpa_supplicant.conf
+    const wpaConfPath = '/etc/wpa_supplicant/wpa_supplicant.conf';
+    let wpaConf = '';
+
+    try {
+      wpaConf = await execCommand(`sudo cat ${wpaConfPath}`);
+      wpaConf = wpaConf.output || '';
+    } catch {
+      // Start with default header
+      wpaConf = `ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=FR
+`;
+    }
+
+    // Remove existing network block for this SSID (if any)
+    const networkRegex = new RegExp(`network=\\{[^}]*ssid="${ssid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^}]*\\}`, 'g');
+    wpaConf = wpaConf.replace(networkRegex, '');
+
+    // Remove extra blank lines
+    wpaConf = wpaConf.replace(/\n{3,}/g, '\n\n').trim();
+
+    // Build new network block
+    let networkBlock = `
+
+network={
+    ssid="${ssid}"
+    psk="${password}"
+    key_mgmt=WPA-PSK`;
+
+    // Add BSSID if lockBssid is enabled
+    if (lockBssid && bssid) {
+      networkBlock += `
+    bssid=${bssid}`;
+    }
+
+    networkBlock += `
+    priority=1
+}
+`;
+
+    // Write updated config
+    const newConf = wpaConf + networkBlock;
+    const tempFile = '/tmp/wpa_supplicant_new.conf';
+
+    await fs.writeFile(tempFile, newConf);
+    await execCommand(`sudo cp ${tempFile} ${wpaConfPath}`);
+    await execCommand(`sudo chmod 600 ${wpaConfPath}`);
+
+    // Reconfigure wlan1
+    const reconfigResult = await execCommand('sudo wpa_cli -i wlan1 reconfigure');
+
+    // Wait a bit for connection
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Check connection status
+    const statusResult = await execCommand('iwconfig wlan1 2>/dev/null');
+    const connected = statusResult.output.includes(`ESSID:"${ssid}"`);
+
+    res.json({
+      success: true,
+      connected,
+      message: connected
+        ? `Connecté à ${ssid}` + (lockBssid && bssid ? ` (BSSID fixé: ${bssid})` : '')
+        : `Configuration enregistrée pour ${ssid}. La connexion peut prendre quelques secondes.`,
+      bssidLocked: lockBssid && bssid ? bssid : null
+    });
+  } catch (error) {
+    console.error('[WiFi] Connection error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Obtenir la config WiFi actuelle
+app.get('/api/wifi/current', async (req, res) => {
+  try {
+    // Check wlan1 connection
+    const iwResult = await execCommand('iwconfig wlan1 2>/dev/null');
+
+    const ssidMatch = iwResult.output.match(/ESSID:"([^"]+)"/);
+    const bssidMatch = iwResult.output.match(/Access Point: ([0-9A-Fa-f:]+)/);
+    const qualityMatch = iwResult.output.match(/Link Quality=(\d+)\/(\d+)/);
+    const signalMatch = iwResult.output.match(/Signal level=(-?\d+) dBm/);
+
+    // Check if BSSID is locked in config
+    let bssidLocked = null;
+    try {
+      const wpaConf = await execCommand('sudo cat /etc/wpa_supplicant/wpa_supplicant.conf');
+      const bssidInConf = wpaConf.output.match(/bssid=([0-9A-Fa-f:]+)/i);
+      bssidLocked = bssidInConf ? bssidInConf[1] : null;
+    } catch {
+      // Ignore
+    }
+
+    // Get IP address
+    let ipAddress = null;
+    try {
+      const ipResult = await execCommand('ip -4 addr show wlan1 | grep inet');
+      const ipMatch = ipResult.output.match(/inet (\d+\.\d+\.\d+\.\d+)/);
+      ipAddress = ipMatch ? ipMatch[1] : null;
+    } catch {
+      // Ignore
+    }
+
+    res.json({
+      connected: !!ssidMatch,
+      ssid: ssidMatch ? ssidMatch[1] : null,
+      bssid: bssidMatch ? bssidMatch[1] : null,
+      bssidLocked,
+      quality: qualityMatch ? Math.round((parseInt(qualityMatch[1]) / parseInt(qualityMatch[2])) * 100) : null,
+      signal: signalMatch ? parseInt(signalMatch[1]) : null,
+      ipAddress
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

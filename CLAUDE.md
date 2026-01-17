@@ -1764,6 +1764,41 @@ vcgencmd get_mem gpu
     - `central-dashboard/.../site-settings-tab.component.ts` - Utilise `cloudUrl` pour l'aperçu
   - **Migration** : Redéployer le serveur central et le dashboard. Les Pi n'ont pas besoin de mise à jour.
 
+- **WiFi Scanner avec BSSID Lock (anti-roaming)** : Nouvelle interface dans l'admin panel pour configurer le WiFi USB
+  - **Problème** : En 2.4 GHz avec plusieurs APs du même SSID (répéteurs, mesh), le Pi fait du roaming instable
+  - **Solution** : Scanner WiFi dans `:8080` qui permet de fixer le BSSID d'un point d'accès spécifique
+  - **Fonctionnalités** :
+    - Scan des réseaux WiFi avec `iwlist wlan1 scan`
+    - Affichage groupé par SSID avec tous les APs (BSSID, channel, signal)
+    - Connexion avec option "Fixer ce point d'accès" qui ajoute `bssid=XX:XX:XX:XX:XX:XX` dans wpa_supplicant
+    - Affichage de l'état de connexion actuel (IP, signal, BSSID fixé ou non)
+  - **Nouveaux endpoints API** :
+    - `GET /api/wifi/scan` - Scanne les réseaux disponibles
+    - `POST /api/wifi/connect` - Connecte avec option `lockBssid`
+    - `GET /api/wifi/current` - État de connexion actuel
+  - **Fichiers modifiés** :
+    - `raspberry/admin/admin-server.js` - 3 nouveaux endpoints
+    - `raspberry/admin/public/app.js` - Fonctions JS (scanWifiNetworks, connectToWifi, etc.)
+    - `raspberry/admin/public/index.html` - UI scanner WiFi dans l'onglet Réseau
+    - `raspberry/admin/public/styles.css` - Styles pour le scanner
+  - **Migration** : Déployer le dossier `admin/` sur les Pi existants
+
+- **CORS Private Network Access** : Fix des erreurs CORS sur les requêtes depuis le hotspot
+  - **Problème** : Chrome bloque les requêtes vers IPs privées (192.168.x.x) depuis des origines publiques
+  - **Solution** : Ajout du header `Access-Control-Allow-Private-Network: true`
+  - **Fichier modifié** : `raspberry/server/server.js`
+  - **Migration** : Déployer `server/server.js` sur les Pi existants
+
+- **Hotspot Info dans le dashboard central** : Le sync-agent remonte maintenant les infos du hotspot
+  - **Données remontées** : SSID, channel, nombre de clients connectés, état actif/inactif
+  - **Affichage** : Onglet Debug > section "Hotspot WiFi" avec icônes et couleurs
+  - **Fichiers modifiés** :
+    - `raspberry/sync-agent/src/agent.js` - Collecte hotspotInfo dans sync_local_state
+    - `central-server/src/services/socket.service.ts` - Stocke \_hotspotInfo dans local_config_mirror
+    - `central-server/src/controllers/sites.controller.ts` - Retourne hotspotInfo via /local-content
+    - `central-dashboard/.../site-debug-tab.component.ts` - Affichage dans l'UI
+  - **Migration** : Déployer sync-agent sur les Pi, redéployer le serveur central et le dashboard
+
 ### v2.27.x (Janvier 2026)
 
 - **Système de Brouillons de Configuration + Upload Contextuel** : Permet de préparer des configurations à l'avance

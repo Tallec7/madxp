@@ -223,6 +223,7 @@ export class SitesService {
     cloudVideos: CloudVideo[];
     localStorage: LocalStorage | null;
     lastVideoSync: string | null;
+    hotspotInfo: { ssid: string | null; channel: number | null; clients: number; isActive: boolean } | null;
   }> {
     return this.api.get(`/sites/${id}/local-content`);
   }
