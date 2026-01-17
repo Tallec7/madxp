@@ -66,7 +66,12 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
               role="alert"
               *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
             >
-              {{ 'auth.passwordRequired' | translate }}
+              <ng-container *ngIf="loginForm.get('password')?.errors?.['required']">
+                {{ 'auth.passwordRequired' | translate }}
+              </ng-container>
+              <ng-container *ngIf="loginForm.get('password')?.errors?.['minlength']">
+                Le mot de passe doit contenir au moins 6 caractères
+              </ng-container>
             </span>
           </div>
 
@@ -349,7 +354,7 @@ export class LoginComponent implements OnInit {
 
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', Validators.required]
+      password: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
 
@@ -381,6 +386,27 @@ export class LoginComponent implements OnInit {
       },
       error: (error) => {
         this.loading = false;
+
+        // Check for validation errors with details
+        if (ErrorExtractor.isValidationError(error)) {
+          const details = error.error?.details;
+          if (Array.isArray(details) && details.length > 0) {
+            // Build user-friendly message from validation details
+            const fieldMessages = details.map((d: { field: string; message: string }) => {
+              if (d.field === 'password' && d.message.includes('at least 6')) {
+                return 'Le mot de passe doit contenir au moins 6 caractères';
+              }
+              if (d.field === 'email') {
+                return 'Adresse email invalide';
+              }
+              return d.message;
+            });
+            this.errorMessage = fieldMessages.join('. ');
+            this.logger.warn('Login validation failed', { email, details });
+            return;
+          }
+        }
+
         const message = ErrorExtractor.getMessage(error);
         this.logger.warn('Login failed', { email, error: message });
         this.errorMessage = message || this.translationService.instant('auth.loginError');
