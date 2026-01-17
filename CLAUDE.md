@@ -1747,6 +1747,22 @@ vcgencmd get_mem gpu
   - **Note** : Les requêtes CRUD de `groups.controller.ts` gardent les guillemets pour quand la fonctionnalité sera activée
   - **Migration** : Redéployer le serveur central
 
+- **Fix erreur 422 aperçu watermark dans le dashboard** : L'aperçu du watermark utilise maintenant l'URL cloud au lieu du chemin local
+  - **Problème** : Erreur HTTP 422 dans la console lors de l'affichage de l'aperçu du watermark dans l'onglet Paramètres
+  - **Cause** : Le dashboard essayait de charger l'image depuis `imagePath` (chemin local du Pi comme `assets/watermarks/logo.png`) qui n'existe pas sur Hostinger
+  - **Solution** : Ajout d'un champ `cloudUrl` à l'interface `WatermarkConfig` pour stocker l'URL cloud (FTP ou Supabase) de l'image
+  - **Priorité des URLs pour l'aperçu** :
+    1. `watermarkPreviewUrl` - Preview Base64 lors de l'upload
+    2. `watermarkConfig.cloudUrl` - URL cloud (FTP ou Supabase)
+    3. `watermarkConfig.imagePath` - Chemin local (fallback)
+  - **Fichiers modifiés** :
+    - `central-server/src/types/index.ts` - Ajout `cloudUrl?: string` à `WatermarkConfig`
+    - `central-server/src/services/asset.service.ts` - `createDefaultWatermarkConfig()` accepte `cloudUrl`
+    - `central-server/src/controllers/assets.controller.ts` - Passe `cloudUrl` dans `suggestedConfig`
+    - `central-dashboard/src/app/core/services/asset.service.ts` - Ajout `cloudUrl` à l'interface
+    - `central-dashboard/.../site-settings-tab.component.ts` - Utilise `cloudUrl` pour l'aperçu
+  - **Migration** : Redéployer le serveur central et le dashboard. Les Pi n'ont pas besoin de mise à jour.
+
 ### v2.27.x (Janvier 2026)
 
 - **Système de Brouillons de Configuration + Upload Contextuel** : Permet de préparer des configurations à l'avance

@@ -49,6 +49,7 @@ export interface WatermarkSchedule {
 export interface WatermarkConfig {
   enabled: boolean;
   imagePath: string;
+  cloudUrl?: string;      // URL cloud (FTP ou Supabase) pour l'aperçu dans le dashboard
   fullscreen: boolean;    // Mode plein écran (couvre tout l'écran)
   position: OverlayPosition;  // Ignoré si fullscreen
   offsetX: number;        // Ignoré si fullscreen

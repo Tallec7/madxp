@@ -231,7 +231,7 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
         <!-- Current watermark preview -->
         <div class="watermark-current" *ngIf="watermarkConfig.imagePath">
           <div class="watermark-preview-box">
-            <img [src]="watermarkPreviewUrl || watermarkConfig.imagePath" alt="Watermark" class="watermark-img"/>
+            <img [src]="watermarkPreviewUrl || watermarkConfig.cloudUrl || watermarkConfig.imagePath" alt="Watermark" class="watermark-img"/>
           </div>
           <div class="watermark-info">
             <span class="watermark-path">{{ getWatermarkFilename() }}</span>

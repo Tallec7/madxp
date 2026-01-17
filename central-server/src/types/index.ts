@@ -403,7 +403,8 @@ export interface WatermarkSchedule {
 
 export interface WatermarkConfig {
   enabled: boolean;
-  imagePath: string;      // Chemin local sur le Pi: /home/pi/neopro/assets/watermarks/logo.png
+  imagePath: string;      // Chemin local sur le Pi: /home/pi/neopro/webapp/assets/watermarks/logo.png
+  cloudUrl?: string;      // URL cloud (FTP ou Supabase) pour l'aperçu dans le dashboard
   fullscreen: boolean;    // Mode plein écran (couvre tout l'écran)
   position: OverlayPosition;  // Ignoré si fullscreen
   offsetX: number;        // Offset horizontal en pixels - ignoré si fullscreen
