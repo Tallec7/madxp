@@ -1,3 +1,9 @@
+## [2.30.4](https://github.com/Tallec7/neopro/compare/v2.30.3...v2.30.4) (2026-01-17)
+
+### Bug Fixes
+
+- **watermark:** persist watermark config in dashboard after deployment ([#365](https://github.com/Tallec7/neopro/issues/365)) ([485d068](https://github.com/Tallec7/neopro/commit/485d068782421223117a0ca3c3855acf5e35b2ce))
+
 ## [2.30.3](https://github.com/Tallec7/neopro/compare/v2.30.2...v2.30.3) (2026-01-17)
 
 ### Bug Fixes
