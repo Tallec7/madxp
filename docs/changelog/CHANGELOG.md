@@ -1,3 +1,9 @@
+## [2.30.6](https://github.com/Tallec7/neopro/compare/v2.30.5...v2.30.6) (2026-01-17)
+
+### Bug Fixes
+
+- **watermark:** use cloud URL for dashboard preview instead of local path ([#369](https://github.com/Tallec7/neopro/issues/369)) ([eec259c](https://github.com/Tallec7/neopro/commit/eec259cdb4ce024b3bf9a5a34173142ec4369573))
+
 ## [2.30.5](https://github.com/Tallec7/neopro/compare/v2.30.4...v2.30.5) (2026-01-17)
 
 ### Bug Fixes
