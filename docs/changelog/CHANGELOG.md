@@ -1,3 +1,27 @@
+## [2.30.6](https://github.com/Tallec7/neopro/compare/v2.30.5...v2.30.6) (2026-01-17)
+
+### Bug Fixes
+
+- **watermark:** use cloud URL for dashboard preview instead of local path ([#369](https://github.com/Tallec7/neopro/issues/369)) ([eec259c](https://github.com/Tallec7/neopro/commit/eec259cdb4ce024b3bf9a5a34173142ec4369573))
+
+## [2.30.5](https://github.com/Tallec7/neopro/compare/v2.30.4...v2.30.5) (2026-01-17)
+
+### Bug Fixes
+
+- **setup:** make WiFi USB key truly optional for installation ([#367](https://github.com/Tallec7/neopro/issues/367)) ([3115407](https://github.com/Tallec7/neopro/commit/3115407d408b111962eaa87ffe6001a0eeeb5faf))
+
+## [2.30.4](https://github.com/Tallec7/neopro/compare/v2.30.3...v2.30.4) (2026-01-17)
+
+### Bug Fixes
+
+- **watermark:** persist watermark config in dashboard after deployment ([#365](https://github.com/Tallec7/neopro/issues/365)) ([485d068](https://github.com/Tallec7/neopro/commit/485d068782421223117a0ca3c3855acf5e35b2ce))
+
+## [2.30.3](https://github.com/Tallec7/neopro/compare/v2.30.2...v2.30.3) (2026-01-17)
+
+### Bug Fixes
+
+- **api:** remove dependency on missing groups table ([#364](https://github.com/Tallec7/neopro/issues/364)) ([7e05e71](https://github.com/Tallec7/neopro/commit/7e05e7165c7b2ac592991f7dc7c2b5a2c1555ebd))
+
 ## [2.30.2](https://github.com/Tallec7/neopro/compare/v2.30.1...v2.30.2) (2026-01-17)
 
 ### Bug Fixes
