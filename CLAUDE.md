@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.28.0 | **Dernière mise à jour**: 2026-01-16
+**Version**: 2.28.0 | **Dernière mise à jour**: 2026-01-17
 
 ---
 
@@ -1727,6 +1727,25 @@ vcgencmd get_mem gpu
     - Même correction appliquée pour `scoreOverlay`
   - **Fichier modifié** : `central-dashboard/.../site-settings-tab.component.ts`
   - **Migration** : Rebuild et redéployer le dashboard
+
+- **Fix URLs vidéos incorrectes (FTP vs Supabase)** : L'endpoint `/api/sites/:id/local-content` génère maintenant les URLs correctes selon le backend de stockage
+  - **Problème** : Le dashboard affichait des erreurs 404 sur les vidéos car les URLs étaient générées pour FTP même quand les vidéos étaient sur Supabase
+  - **Cause** : `getSiteLocalContent()` utilisait toujours `getFtpPublicUrl()` sans détecter le backend réel
+  - **Solution** : Ajout de la fonction `getVideoDownloadUrl()` qui détecte automatiquement le backend :
+    - Si `storage_path` ne contient pas `/` → FTP (ex: `video.mp4`)
+    - Si `storage_path` contient `/` → Supabase (ex: `uploads/video.mp4`)
+  - **Fichier modifié** : `central-server/src/controllers/sites.controller.ts`
+  - **Migration** : Redéployer le serveur central. Les vidéos existantes sur Supabase fonctionneront à nouveau.
+
+- **Fix table "groups" manquante en production** : Suppression de la dépendance à la table `groups` dans les requêtes de déploiement
+  - **Problème** : Erreur 500 sur `/api/videos/:id/deployments` même après ajout des guillemets
+  - **Cause** : La table `groups` n'existe pas en production (fonctionnalité non utilisée). Les LEFT JOIN échouaient silencieusement
+  - **Solution** : Suppression complète des jointures sur `groups` - affiche "Groupe" comme fallback si `target_type != 'site'`
+  - **Fichiers modifiés** :
+    - `central-server/src/controllers/content.controller.ts` - 3 requêtes (`getVideoDeployments`, `getDeployments`, `getDeployment`)
+    - `central-server/src/controllers/updates.controller.ts` - 2 requêtes (`getUpdateDeployments`, `getUpdateDeployment`)
+  - **Note** : Les requêtes CRUD de `groups.controller.ts` gardent les guillemets pour quand la fonctionnalité sera activée
+  - **Migration** : Redéployer le serveur central
 
 ### v2.27.x (Janvier 2026)
 

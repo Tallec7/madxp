@@ -1,3 +1,16 @@
+## [2.30.3](https://github.com/Tallec7/neopro/compare/v2.30.2...v2.30.3) (2026-01-17)
+
+### Bug Fixes
+
+- **api:** remove dependency on missing groups table ([#364](https://github.com/Tallec7/neopro/issues/364)) ([7e05e71](https://github.com/Tallec7/neopro/commit/7e05e7165c7b2ac592991f7dc7c2b5a2c1555ebd))
+
+## [2.30.2](https://github.com/Tallec7/neopro/compare/v2.30.1...v2.30.2) (2026-01-17)
+
+### Bug Fixes
+
+- **api:** correct video URL generation and SQL reserved word issues ([#363](https://github.com/Tallec7/neopro/issues/363)) ([a8ebade](https://github.com/Tallec7/neopro/commit/a8ebade827a30e08c8a8dd6521e1d1b818f0f93e))
+- **watermark:** persist watermark config in dashboard after deployment ([#362](https://github.com/Tallec7/neopro/issues/362)) ([0cc8d05](https://github.com/Tallec7/neopro/commit/0cc8d053fcca768b21d3f96888282e9b9adf0a3e))
+
 ## [2.30.1](https://github.com/Tallec7/neopro/compare/v2.30.0...v2.30.1) (2026-01-15)
 
 ### Bug Fixes
