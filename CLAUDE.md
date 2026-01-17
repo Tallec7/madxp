@@ -1718,6 +1718,16 @@ vcgencmd get_mem gpu
     sudo chown -R pi:pi /home/pi/neopro/webapp/assets
     ```
 
+- **Fix watermark non persisté dans le dashboard** : La config watermark reste maintenant visible après déploiement
+  - **Problème** : Après déploiement du watermark, le dashboard n'affichait plus la configuration
+  - **Cause** : Le composant `site-settings-tab` cherchait la config dans `site.neoProContent.watermark` (inexistant côté serveur) au lieu de `site.local_config_mirror.watermark` (synchronisé par le Pi)
+  - **Solution** :
+    - Lecture depuis `local_config_mirror.watermark` au lieu de `neoProContent.watermark`
+    - Ajout de `OnChanges` pour recharger la config quand le site est mis à jour (après `sync_local_state`)
+    - Même correction appliquée pour `scoreOverlay`
+  - **Fichier modifié** : `central-dashboard/.../site-settings-tab.component.ts`
+  - **Migration** : Rebuild et redéployer le dashboard
+
 ### v2.27.x (Janvier 2026)
 
 - **Système de Brouillons de Configuration + Upload Contextuel** : Permet de préparer des configurations à l'avance
