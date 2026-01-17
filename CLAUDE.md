@@ -2,6 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
+**Version**: 2.28.0 | **Dernière mise à jour**: 2026-01-16
 **Version**: 2.28.0 | **Dernière mise à jour**: 2026-01-17
 
 ---
