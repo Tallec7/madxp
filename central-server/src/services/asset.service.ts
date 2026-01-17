@@ -159,11 +159,15 @@ class AssetService {
 
   /**
    * Crée une configuration watermark par défaut
+   * @param imagePath Chemin local sur le Pi (relatif à /home/pi/neopro/webapp/)
+   * @param cloudUrl URL cloud (FTP ou Supabase) pour l'aperçu dans le dashboard
+   * @param fullscreen Mode plein écran par défaut
    */
-  createDefaultWatermarkConfig(imagePath: string, fullscreen = true): WatermarkConfig {
+  createDefaultWatermarkConfig(imagePath: string, cloudUrl?: string, fullscreen = true): WatermarkConfig {
     return {
       enabled: true,
       imagePath,
+      cloudUrl,
       fullscreen,
       position: 'bottom-right' as OverlayPosition,
       offsetX: 20,

@@ -82,7 +82,8 @@ export const uploadWatermark = async (req: AuthRequest, res: Response) => {
         commandId: result.deployResult.commandId,
       },
       // Retourner une config par défaut pour faciliter l'intégration frontend
-      suggestedConfig: assetService.createDefaultWatermarkConfig(localPath),
+      // cloudUrl inclus pour que le dashboard puisse afficher l'aperçu
+      suggestedConfig: assetService.createDefaultWatermarkConfig(localPath, result.uploadResult.url),
     });
   } catch (error) {
     logger.error('Error uploading watermark', { error, siteId: req.params.siteId });
