@@ -877,13 +877,45 @@ interface HotspotResult {
           <span class="expand-icon">{{ showHotspotFix ? '▼' : '▶' }}</span>
           <span class="debug-icon">📡</span>
           <h4>Hotspot WiFi</h4>
-          <span class="debug-stats" *ngIf="hotspotResult">
+          <span class="debug-stats" *ngIf="hotspotInfo">
+            <span *ngIf="hotspotInfo.isActive" class="status-badge status-online">● Actif</span>
+            <span *ngIf="!hotspotInfo.isActive" class="status-badge status-offline">● Inactif</span>
+            <span *ngIf="hotspotInfo.clients > 0" class="client-count">👥 {{ hotspotInfo.clients }}</span>
+          </span>
+          <span class="debug-stats" *ngIf="!hotspotInfo && hotspotResult">
             <span *ngIf="hotspotResult.success">✅ {{ 'debug.hotspotVerified' | translate }}</span>
             <span *ngIf="!hotspotResult.success">❌ {{ 'debug.hotspotError' | translate }}</span>
           </span>
         </div>
 
         <div class="debug-content" *ngIf="showHotspotFix">
+          <!-- Infos hotspot temps réel depuis local_config_mirror -->
+          <div *ngIf="hotspotInfo" class="hotspot-live-info">
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">SSID</span>
+                <span class="info-value">{{ hotspotInfo.ssid || 'N/A' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Canal</span>
+                <span class="info-value" [class.channel-crowded]="hotspotInfo.channel === 1 || hotspotInfo.channel === 6">
+                  {{ hotspotInfo.channel || 'N/A' }}
+                  <span *ngIf="hotspotInfo.channel === 1 || hotspotInfo.channel === 6" class="channel-warning" title="Canal potentiellement encombré">⚠️</span>
+                </span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">État</span>
+                <span class="info-value" [class.text-success]="hotspotInfo.isActive" [class.text-danger]="!hotspotInfo.isActive">
+                  {{ hotspotInfo.isActive ? '✅' : '❌' }} {{ (hotspotInfo.isActive ? 'sites.status.active' : 'sites.status.inactive') | translate }}
+                </span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Clients connectés</span>
+                <span class="info-value">👥 {{ hotspotInfo.clients || 0 }}</span>
+              </div>
+            </div>
+          </div>
+
           <div *ngIf="!isConnected" class="offline-warning">
             ⚠️ Le boîtier doit être connecté pour gérer le hotspot.
           </div>
@@ -2319,6 +2351,79 @@ interface HotspotResult {
       margin-top: 1rem;
     }
 
+    /* Hotspot live info */
+    .hotspot-live-info {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border: 1px solid #e2e8f0;
+    }
+
+    .hotspot-live-info .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    .hotspot-live-info .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .hotspot-live-info .info-label {
+      font-size: 0.6875rem;
+      font-weight: 500;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+
+    .hotspot-live-info .info-value {
+      font-size: 0.875rem;
+      color: #1e293b;
+      font-weight: 500;
+    }
+
+    .hotspot-live-info .channel-warning {
+      margin-left: 0.25rem;
+      cursor: help;
+    }
+
+    .client-count {
+      margin-left: 0.5rem;
+      background: #dbeafe;
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+    }
+
+    .status-badge {
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .status-online {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-offline {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .text-success {
+      color: #16a34a;
+    }
+
+    .text-danger {
+      color: #dc2626;
+    }
+
     /* Quick commands (P3.2) */
     .quick-commands {
       margin-bottom: 1rem;
@@ -2657,6 +2762,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
   showHotspotFix: boolean = false;
   hotspotResult: HotspotResult | null = null;
   fixingHotspot: boolean = false;
+  hotspotInfo: { ssid: string | null; channel: number | null; clients: number; isActive: boolean } | null = null;
 
   // Export (P3.3)
   showExport: boolean = false;
@@ -2709,6 +2815,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
         this.lastVideoSync = response.lastVideoSync || null;
         this.lastConfigSync = response.lastSync ? new Date(response.lastSync).toISOString() : null;
         this.configHash = response.configHash || null;
+        this.hotspotInfo = response.hotspotInfo || null;
 
         if (response.configuration) {
           this.configJson = JSON.stringify(response.configuration, null, 2);

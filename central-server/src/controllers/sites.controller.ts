@@ -1237,21 +1237,23 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
         localVideos: [],
         cloudVideos,
         localStorage: null,
-        lastVideoSync: null
+        lastVideoSync: null,
+        hotspotInfo: null
       });
     }
 
     // Type the config as any to access dynamic properties
     const config = site.local_config_mirror as Record<string, unknown>;
 
-    // Extraire les vidéos et le stockage depuis la config enrichie
+    // Extraire les vidéos, le stockage et les infos hotspot depuis la config enrichie
     const localVideos = (config._localVideos as Array<unknown>) || [];
     const localStorage = config._localStorage || null;
     const lastVideoSync = (config._lastVideoSync as string) || null;
+    const hotspotInfo = config._hotspotInfo || null;
 
     // Retourner la config sans les champs internes (_prefixés)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { _localVideos, _localStorage, _lastVideoSync, ...cleanConfig } = config;
+    const { _localVideos, _localStorage, _lastVideoSync, _hotspotSsid, _hotspotInfo, ...cleanConfig } = config;
 
     res.json({
       siteId: id,
@@ -1264,7 +1266,8 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       localVideos,
       cloudVideos,
       localStorage,
-      lastVideoSync
+      lastVideoSync,
+      hotspotInfo
     });
   } catch (error) {
     logger.error('Get site local content error:', error);

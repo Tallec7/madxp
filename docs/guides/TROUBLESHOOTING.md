@@ -1507,7 +1507,60 @@ sudo systemctl restart hostapd
 sudo systemctl restart dnsmasq
 ```
 
-### 4. Le hotspot WiFi est invisible ou instable après déplacement du boîtier
+### 4. WiFi USB roaming entre points d'accès (connexion instable)
+
+**Symptômes :**
+
+- La clé USB WiFi (wlan1) se déconnecte et reconnecte fréquemment
+- Le Pi change d'AP (BSSID) alors que le SSID reste le même
+- Connexion internet intermittente malgré plusieurs APs à proximité
+- Logs sync-agent montrent des reconnexions fréquentes
+
+**Cause :**
+
+Quand un club a plusieurs points d'accès avec le même SSID (ex: répéteurs, mesh), le Pi fait du "roaming" entre les APs. En 2.4 GHz, ce roaming peut être instable et causer des déconnexions.
+
+**Solution : Fixer le BSSID via l'admin panel**
+
+Depuis la version 2.28+, l'admin panel (:8080) permet de fixer le point d'accès WiFi :
+
+1. Accéder à `http://neopro.local:8080` ou `http://192.168.4.1:8080`
+2. Onglet **Réseau**
+3. Section **Réseaux WiFi disponibles** → Cliquer **Scanner**
+4. L'interface affiche tous les APs, groupés par SSID
+   - Si un SSID a plusieurs APs, ils sont listés avec leur BSSID, canal et signal
+5. Cliquer **Connecter** sur l'AP avec le meilleur signal
+6. Cocher **🔒 Fixer ce point d'accès (évite le roaming)** (coché par défaut)
+7. Entrer le mot de passe WiFi et valider
+
+**Vérification :**
+
+```bash
+# Voir si le BSSID est fixé dans wpa_supplicant
+ssh pi@neopro.local 'grep -A5 "network={" /etc/wpa_supplicant/wpa_supplicant-wlan1.conf'
+
+# Exemple avec BSSID fixé :
+# network={
+#     ssid="MonWiFi"
+#     psk="xxx"
+#     bssid=AA:BB:CC:DD:EE:FF
+# }
+```
+
+**Diagnostic depuis le dashboard central :**
+
+Dans l'onglet Debug d'un site, la section "Hotspot WiFi" affiche :
+
+- SSID du hotspot
+- Channel utilisé
+- Nombre de clients connectés
+- État actif/inactif
+
+**Note :** Cette solution ne fonctionne que si le Pi reste à proximité de l'AP sélectionné. Si le Pi est déplacé, il faudra refixer un nouveau BSSID.
+
+---
+
+### 5. Le hotspot WiFi est invisible ou instable après déplacement du boîtier
 
 **Symptômes :**
 
@@ -1573,7 +1626,7 @@ rfkill list
 sudo rfkill unblock wifi
 ```
 
-### 5. Chromium crash "Aw, Snap! Error code: 5" après 1-2h de boucle vidéo
+### 6. Chromium crash "Aw, Snap! Error code: 5" après 1-2h de boucle vidéo
 
 **Symptômes :**
 
@@ -1705,7 +1758,7 @@ sudo tail -50 /var/log/neopro-kiosk-watchdog.log
 
 **Note :** Les nouvelles installations (v2.24+) configurent automatiquement `gpu_mem=256` pour les Pi 4 et antérieurs via le script `install.sh`.
 
-### 6. Vidéos ne se chargent pas
+### 7. Vidéos ne se chargent pas
 
 **Cause :** Chemins incorrects dans configuration.json
 
@@ -1751,4 +1804,4 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 11 janvier 2026 (v2.27 - Support Raspberry Pi 5 SwiftShader)
+**Dernière mise à jour :** 17 janvier 2026 (v2.28 - WiFi scanner avec BSSID lock, CORS Private Network Access)

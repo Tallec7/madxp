@@ -356,34 +356,80 @@
         <div id="tab-network" class="tab-content" role="tabpanel" aria-labelledby="nav-network">
           <h2>Configuration réseau</h2>
 
-          <!-- WiFi Client Config -->
+          <!-- Current WiFi Connection -->
           <div class="card">
             <div class="card-header">
-              <h3>📡 WiFi Client (Accès distant)</h3>
+              <h3>📶 Connexion WiFi actuelle (clé USB)</h3>
+              <button class="btn btn-secondary" onclick="refreshWifiCurrent()">
+                🔄 Actualiser
+              </button>
+            </div>
+            <div class="card-body">
+              <div id="wifi-current-info">
+                <p class="info-text">Chargement...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- WiFi Scanner -->
+          <div class="card">
+            <div class="card-header">
+              <h3>📡 Réseaux WiFi disponibles</h3>
+              <button class="btn btn-primary" onclick="scanWifiNetworks()" id="scan-btn">
+                🔍 Scanner
+              </button>
             </div>
             <div class="card-body">
               <p class="info-text">
-                Configurez le Raspberry Pi pour se connecter au WiFi local du club. Cela permet
-                l'accès SSH distant pour les mises à jour.
+                Sélectionnez un réseau pour connecter le boîtier au WiFi du club.
+                <strong>Astuce :</strong> Si plusieurs points d'accès ont le même nom (SSID),
+                activez "Fixer le point d'accès" pour éviter les déconnexions.
               </p>
-              <form id="wifi-form">
+              <div id="wifi-networks-list">
+                <p class="info-text">
+                  Cliquez sur "Scanner" pour afficher les réseaux disponibles.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- WiFi Connection Form (hidden by default) -->
+          <div class="card" id="wifi-connect-card" style="display: none">
+            <div class="card-header">
+              <h3>🔐 Connexion au réseau</h3>
+              <button class="btn btn-secondary" onclick="cancelWifiConnect()">✕ Annuler</button>
+            </div>
+            <div class="card-body">
+              <form id="wifi-connect-form">
                 <div class="form-group">
-                  <label for="wifi-ssid">SSID du WiFi</label>
-                  <input type="text" id="wifi-ssid" name="ssid" required />
+                  <label>SSID</label>
+                  <input type="text" id="wifi-connect-ssid" readonly />
                 </div>
                 <div class="form-group">
-                  <label for="wifi-password">Mot de passe</label>
-                  <input type="password" id="wifi-password" name="password" required />
+                  <label>Point d'accès (BSSID)</label>
+                  <input type="text" id="wifi-connect-bssid" readonly />
                 </div>
-                <button type="submit" class="btn btn-primary">💾 Configurer</button>
+                <div class="form-group">
+                  <label for="wifi-connect-password">Mot de passe</label>
+                  <input type="password" id="wifi-connect-password" name="password" required />
+                </div>
+                <div class="form-group checkbox-group">
+                  <label>
+                    <input type="checkbox" id="wifi-lock-bssid" checked />
+                    <span>🔒 Fixer ce point d'accès (évite le roaming entre APs du même nom)</span>
+                  </label>
+                </div>
+                <button type="submit" class="btn btn-primary" id="wifi-connect-btn">
+                  📶 Se connecter
+                </button>
               </form>
             </div>
           </div>
 
-          <!-- Network Info -->
+          <!-- Network Interfaces Info -->
           <div class="card">
             <div class="card-header">
-              <h3>🌐 Informations réseau</h3>
+              <h3>🌐 Interfaces réseau</h3>
               <button class="btn btn-secondary" onclick="refreshNetwork()">🔄 Actualiser</button>
             </div>
             <div class="card-body">
