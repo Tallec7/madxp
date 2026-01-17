@@ -9,7 +9,7 @@ export const getGroups = async (req: AuthRequest, res: Response) => {
     const result = await query(`
       SELECT g.*,
         (SELECT COUNT(*) FROM site_groups WHERE group_id = g.id) as site_count
-      FROM groups g
+      FROM "groups" g
       ORDER BY created_at DESC
     `);
 
@@ -27,7 +27,7 @@ export const getGroup = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const groupResult = await query('SELECT * FROM groups WHERE id = $1', [id]);
+    const groupResult = await query('SELECT * FROM "groups" WHERE id = $1', [id]);
 
     if (groupResult.rows.length === 0) {
       return res.status(404).json({ error: 'Groupe non trouvé' });
@@ -57,7 +57,7 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
     const id = uuidv4();
 
     const result = await query(
-      `INSERT INTO groups (id, name, description, type, filters)
+      `INSERT INTO "groups" (id, name, description, type, filters)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [
@@ -116,7 +116,7 @@ export const updateGroup = async (req: AuthRequest, res: Response) => {
     }
 
     params.push(id);
-    const sqlQuery = `UPDATE groups SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${paramIndex} RETURNING *`;
+    const sqlQuery = `UPDATE "groups" SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${paramIndex} RETURNING *`;
 
     const result = await query(sqlQuery, params);
 
@@ -137,7 +137,7 @@ export const deleteGroup = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await query('DELETE FROM groups WHERE id = $1 RETURNING name', [id]);
+    const result = await query('DELETE FROM "groups" WHERE id = $1 RETURNING name', [id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Groupe non trouvé' });
@@ -161,7 +161,7 @@ export const addSitesToGroup = async (req: AuthRequest, res: Response) => {
 
     await client.query('BEGIN');
 
-    const groupCheck = await client.query('SELECT id FROM groups WHERE id = $1', [id]);
+    const groupCheck = await client.query('SELECT id FROM "groups" WHERE id = $1', [id]);
     if (groupCheck.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Groupe non trouvé' });

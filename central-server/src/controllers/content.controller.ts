@@ -224,7 +224,7 @@ export const getVideoDeployments = async (req: AuthRequest, res: Response) => {
               u.first_name || ' ' || u.last_name as deployed_by_name
        FROM content_deployments cd
        LEFT JOIN sites s ON cd.target_type = 'site' AND cd.target_id = s.id
-       LEFT JOIN groups g ON cd.target_type = 'group' AND cd.target_id = g.id
+       LEFT JOIN "groups" g ON cd.target_type = 'group' AND cd.target_id = g.id
        LEFT JOIN users u ON cd.deployed_by = u.id
        WHERE cd.video_id = $1
        ORDER BY cd.created_at DESC`,
@@ -500,7 +500,7 @@ export const getDeployments = async (req: AuthRequest, res: Response) => {
        FROM content_deployments cd
        LEFT JOIN videos v ON cd.video_id = v.id
        LEFT JOIN sites s ON cd.target_type = 'site' AND cd.target_id = s.id
-       LEFT JOIN groups g ON cd.target_type = 'group' AND cd.target_id = g.id
+       LEFT JOIN "groups" g ON cd.target_type = 'group' AND cd.target_id = g.id
        ORDER BY cd.created_at DESC`
     );
 
@@ -533,7 +533,7 @@ export const getDeployment = async (req: AuthRequest, res: Response) => {
        FROM content_deployments cd
        LEFT JOIN videos v ON cd.video_id = v.id
        LEFT JOIN sites s ON cd.target_type = 'site' AND cd.target_id = s.id
-       LEFT JOIN groups g ON cd.target_type = 'group' AND cd.target_id = g.id
+       LEFT JOIN "groups" g ON cd.target_type = 'group' AND cd.target_id = g.id
        WHERE cd.id = $1`,
       [id]
     );
