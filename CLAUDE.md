@@ -1737,14 +1737,14 @@ vcgencmd get_mem gpu
   - **Fichier modifié** : `central-server/src/controllers/sites.controller.ts`
   - **Migration** : Redéployer le serveur central. Les vidéos existantes sur Supabase fonctionneront à nouveau.
 
-- **Fix table "groups" mot réservé PostgreSQL** : Les requêtes sur la table `groups` utilisent maintenant des guillemets
-  - **Problème** : Erreur 500 sur `/api/videos/:id/deployments` (et autres endpoints utilisant la table `groups`)
-  - **Cause** : `groups` est un mot réservé SQL dans PostgreSQL. Les requêtes sans guillemets causaient des erreurs de parsing
-  - **Solution** : Ajout de guillemets doubles `"groups"` dans toutes les requêtes concernées (11 occurrences)
+- **Fix table "groups" manquante en production** : Suppression de la dépendance à la table `groups` dans les requêtes de déploiement
+  - **Problème** : Erreur 500 sur `/api/videos/:id/deployments` même après ajout des guillemets
+  - **Cause** : La table `groups` n'existe pas en production (fonctionnalité non utilisée). Les LEFT JOIN échouaient silencieusement
+  - **Solution** : Suppression complète des jointures sur `groups` - affiche "Groupe" comme fallback si `target_type != 'site'`
   - **Fichiers modifiés** :
     - `central-server/src/controllers/content.controller.ts` - 3 requêtes (`getVideoDeployments`, `getDeployments`, `getDeployment`)
-    - `central-server/src/controllers/groups.controller.ts` - 6 requêtes (SELECT, INSERT, UPDATE, DELETE)
     - `central-server/src/controllers/updates.controller.ts` - 2 requêtes (`getUpdateDeployments`, `getUpdateDeployment`)
+  - **Note** : Les requêtes CRUD de `groups.controller.ts` gardent les guillemets pour quand la fonctionnalité sera activée
   - **Migration** : Redéployer le serveur central
 
 ### v2.27.x (Janvier 2026)

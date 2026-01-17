@@ -26,12 +26,16 @@ const corsOrigins = [
 app.use((req, res, next) => {
 	const origin = req.headers.origin;
 
-	// Always set CORS headers if origin is in allowed list
-	if (corsOrigins.includes(origin)) {
+	// Accept any origin - the Pi is on a local network and may have dynamic IPs
+	// depending on the club's network configuration (DHCP, different subnets, etc.)
+	if (origin) {
 		res.header('Access-Control-Allow-Origin', origin);
 		res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
 		res.header('Access-Control-Allow-Headers', 'Content-Type');
 		res.header('Access-Control-Allow-Credentials', 'true');
+		// Required for Chrome Private Network Access (PNA) - allows requests from
+		// public networks to private IPs (e.g., phone on club WiFi → Pi on same network)
+		res.header('Access-Control-Allow-Private-Network', 'true');
 	}
 
 	// Handle preflight requests
@@ -44,17 +48,12 @@ app.use((req, res, next) => {
 
 const server = http.createServer(app);
 
-// Configuration CORS pour permettre les connexions depuis votre site Apache
+// Configuration CORS pour Socket.IO
+// Accept any origin - the Pi may be accessed via different IPs depending on the
+// club's network (hotspot 192.168.4.1, DHCP IP, etc.)
 const io = socketIO(server, {
 	cors: {
-		origin: [
-			"https://neopro.kalonpartners.bzh", // Site démo production
-			"http://localhost:4200", // Dev local
-			"http://neopro.local", // Raspberry Pi (mDNS)
-			"http://neopro.local:4200", // Raspberry Pi avec port
-			"http://192.168.4.1", // Raspberry Pi Hotspot (IP fixe)
-			"http://192.168.4.1:4200" // Raspberry Pi Hotspot avec port
-		],
+		origin: true, // Accept any origin
 		methods: ["GET", "POST"],
 		credentials: true
 	}
