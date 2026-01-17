@@ -224,7 +224,7 @@ export const getUpdateDeployments = async (req: AuthRequest, res: Response) => {
        FROM update_deployments ud
        LEFT JOIN software_updates su ON ud.update_id = su.id
        LEFT JOIN sites s ON ud.target_type = 'site' AND ud.target_id = s.id
-       LEFT JOIN groups g ON ud.target_type = 'group' AND ud.target_id = g.id
+       LEFT JOIN "groups" g ON ud.target_type = 'group' AND ud.target_id = g.id
        ORDER BY ud.created_at DESC`
     );
 
@@ -255,7 +255,7 @@ export const getUpdateDeployment = async (req: AuthRequest, res: Response) => {
        FROM update_deployments ud
        LEFT JOIN software_updates su ON ud.update_id = su.id
        LEFT JOIN sites s ON ud.target_type = 'site' AND ud.target_id = s.id
-       LEFT JOIN groups g ON ud.target_type = 'group' AND ud.target_id = g.id
+       LEFT JOIN "groups" g ON ud.target_type = 'group' AND ud.target_id = g.id
        WHERE ud.id = $1`,
       [id]
     );
