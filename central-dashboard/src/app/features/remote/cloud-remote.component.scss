@@ -81,6 +81,51 @@ $desktop-min: 769px;
   white-space: nowrap;
 }
 
+// Dark mode mixins - réutilisables pour réduire la duplication
+@mixin dark-bg-tertiary {
+  .dark-mode & {
+    background: $bg-dark-tertiary;
+  }
+}
+
+@mixin dark-bg-secondary {
+  .dark-mode & {
+    background: $bg-dark-secondary;
+  }
+}
+
+@mixin dark-text {
+  .dark-mode & {
+    color: $text-dark-primary;
+  }
+}
+
+@mixin dark-text-secondary {
+  .dark-mode & {
+    color: $text-dark-secondary;
+  }
+}
+
+@mixin dark-card {
+  .dark-mode & {
+    background: $bg-dark-tertiary;
+    color: $text-dark-secondary;
+  }
+}
+
+@mixin hover-light {
+  &:hover {
+    background: color.adjust($bg-light, $lightness: -5%);
+    @include dark-bg-tertiary-hover;
+  }
+}
+
+@mixin dark-bg-tertiary-hover {
+  .dark-mode & {
+    background: color.adjust($bg-dark-tertiary, $lightness: 5%);
+  }
+}
+
 // ============================================================================
 // Cloud-specific Styles (Loading, Error, Offline states)
 // ============================================================================
