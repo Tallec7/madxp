@@ -295,8 +295,63 @@ export class SitesService {
       message: string;
     }>;
     recommendations?: string[];
+    // Nouveau format JSON du script fix-hotspot.sh
+    diagnostic?: {
+      currentChannel: number;
+      recommendedChannel: number;
+      ssid: string;
+      hostapdActive: boolean;
+      dnsmasqActive: boolean;
+      powerOk: boolean;
+      throttledValue: string;
+    };
+    fix?: {
+      channelChanged: boolean;
+      needsReboot: boolean;
+      oldChannel: string;
+      newChannel: string;
+    };
+    message?: string;
   }> {
     return this.api.post(`/sites/${id}/fix-hotspot`, { autoFix });
+  }
+
+  // Get WiFi BSSID status - détecte l'environnement mesh et le verrouillage BSSID
+  getWifiBssidStatus(id: string): Observable<{
+    success: boolean;
+    connected: boolean;
+    ssid: string | null;
+    bssid: string | null;
+    bssidLocked: string | null;
+    isMeshEnvironment: boolean;
+    meshApCount: number;
+    signal: number | null;
+    ipAddress: string | null;
+    timestamp: string;
+  }> {
+    return this.api.get(`/sites/${id}/wifi-bssid-status`);
+  }
+
+  // Remove BSSID lock - supprime le verrouillage pour permettre le roaming
+  removeBssidLock(id: string): Observable<{
+    success: boolean;
+    message: string;
+    modified: boolean;
+    configPath?: string;
+    timestamp: string;
+  }> {
+    return this.api.delete(`/sites/${id}/bssid-lock`);
+  }
+
+  // Optimize for mesh - configure wpa_supplicant pour les environnements mesh
+  optimizeForMesh(id: string): Observable<{
+    success: boolean;
+    message: string;
+    modified: boolean;
+    configPath?: string;
+    timestamp: string;
+  }> {
+    return this.api.post(`/sites/${id}/optimize-mesh`, {});
   }
 
   // Export debug bundle - collecte toutes les informations de debug du Pi

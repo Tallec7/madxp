@@ -1550,6 +1550,10 @@ async function deleteConfigVideo(videoPath, categoryId, subcategoryId) {
  * Network & WiFi
  */
 
+// Track if we're in a mesh environment (multiple APs with same SSID)
+let isMeshEnvironment = false;
+let meshApCount = 0;
+
 // Load current WiFi connection status
 async function loadWifiCurrent() {
     const container = document.getElementById('wifi-current-info');
@@ -1560,6 +1564,16 @@ async function loadWifiCurrent() {
         if (data.connected) {
             const signalBars = getSignalBars(data.quality);
             const lockIcon = data.bssidLocked ? '🔒' : '';
+
+            // Check if BSSID lock is problematic in mesh environment
+            const bssidLockWarning = data.bssidLocked && isMeshEnvironment ? `
+                <div class="mesh-warning">
+                    <p>⚠️ <strong>Attention :</strong> Verrouillage BSSID actif en environnement mesh (${meshApCount} APs détectés)</p>
+                    <p class="info-text">En mesh WiFi, le verrouillage BSSID peut causer des déconnexions si l'AP verrouillé devient inaccessible.</p>
+                    <button class="btn btn-warning btn-sm" onclick="removeBssidLock()">🔓 Supprimer le verrouillage BSSID</button>
+                </div>
+            ` : '';
+
             container.innerHTML = `
                 <div class="wifi-current-status connected">
                     <div class="wifi-status-row">
@@ -1571,8 +1585,11 @@ async function loadWifiCurrent() {
                         <p><strong>IP:</strong> ${data.ipAddress || 'En attente...'}</p>
                         <p><strong>Signal:</strong> ${data.signal} dBm (${data.quality}%)</p>
                         <p><strong>Point d'accès:</strong> ${data.bssid} ${lockIcon}</p>
-                        ${data.bssidLocked ? `<p class="bssid-locked">🔒 BSSID fixé: ${data.bssidLocked}</p>` : '<p class="bssid-unlocked">⚠️ Roaming activé (peut changer d\'AP)</p>'}
+                        ${data.bssidLocked
+                            ? `<p class="bssid-locked">🔒 BSSID fixé: ${data.bssidLocked}</p>`
+                            : '<p class="bssid-unlocked">🔄 Roaming activé (bascule automatique entre APs)</p>'}
                     </div>
+                    ${bssidLockWarning}
                 </div>
             `;
         } else {
@@ -1586,6 +1603,30 @@ async function loadWifiCurrent() {
     } catch (error) {
         console.error('Error loading WiFi current:', error);
         container.innerHTML = `<p class="error">Erreur: ${error.message}</p>`;
+    }
+}
+
+// Remove BSSID lock from wpa_supplicant configuration
+async function removeBssidLock() {
+    if (!confirm('Supprimer le verrouillage BSSID ?\n\nLe dongle WiFi pourra basculer automatiquement entre les différents points d\'accès du réseau mesh.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/wifi/bssid-lock', {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Verrouillage BSSID supprimé. Le dongle peut maintenant changer d\'AP automatiquement.', 'success');
+            loadWifiCurrent();
+        } else {
+            showNotification('Erreur: ' + data.error, 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur: ' + error.message, 'error');
     }
 }
 
@@ -1620,6 +1661,15 @@ async function scanWifiNetworks() {
             networksBySSID[net.ssid].push(net);
         });
 
+        // Detect mesh environment: check if the currently connected SSID has multiple APs
+        if (data.currentSsid && networksBySSID[data.currentSsid]) {
+            meshApCount = networksBySSID[data.currentSsid].length;
+            isMeshEnvironment = meshApCount > 1;
+
+            // Update the WiFi status display to show mesh warning if needed
+            loadWifiCurrent();
+        }
+
         let html = '<div class="wifi-networks">';
 
         for (const [ssid, aps] of Object.entries(networksBySSID)) {
@@ -1631,8 +1681,15 @@ async function scanWifiNetworks() {
                 <span class="wifi-signal">${getSignalBars(bestAP.quality)}</span>
                 <span class="wifi-ssid">${ssid}</span>
                 <span class="wifi-security">${bestAP.encrypted ? '🔒 ' + bestAP.security : '🔓 Open'}</span>
-                ${hasMultipleAPs ? `<span class="wifi-ap-count">📡 ${aps.length} APs</span>` : ''}
+                ${hasMultipleAPs ? `<span class="wifi-ap-count">📡 ${aps.length} APs (Mesh)</span>` : ''}
             </div>`;
+
+            // Show mesh warning if multiple APs
+            if (hasMultipleAPs) {
+                html += `<div class="mesh-info-banner">
+                    <span>ℹ️ Réseau mesh détecté - Le verrouillage BSSID n'est pas recommandé</span>
+                </div>`;
+            }
 
             // Show individual APs
             html += '<div class="wifi-aps-list">';
@@ -1647,7 +1704,7 @@ async function scanWifiNetworks() {
                             <span class="wifi-ap-signal">${ap.signal} dBm</span>
                             ${isCurrent ? '<span class="wifi-current-badge">● Connecté</span>' : ''}
                         </div>
-                        <button class="btn btn-sm btn-primary" onclick="selectWifiNetwork('${ap.ssid}', '${ap.bssid}', ${ap.quality})">
+                        <button class="btn btn-sm btn-primary" onclick="selectWifiNetwork('${ap.ssid}', '${ap.bssid}', ${ap.quality}, ${hasMultipleAPs})">
                             ${isCurrent ? '🔄 Reconnecter' : '📶 Connecter'}
                         </button>
                     </div>
@@ -1669,12 +1726,30 @@ async function scanWifiNetworks() {
 }
 
 // Select a network to connect
-function selectWifiNetwork(ssid, bssid, quality) {
+function selectWifiNetwork(ssid, bssid, quality, isMesh = false) {
     document.getElementById('wifi-connect-ssid').value = ssid;
     document.getElementById('wifi-connect-bssid').value = bssid;
     document.getElementById('wifi-connect-password').value = '';
     document.getElementById('wifi-connect-card').style.display = 'block';
     document.getElementById('wifi-connect-password').focus();
+
+    // Handle BSSID lock checkbox based on mesh detection
+    const lockCheckbox = document.getElementById('wifi-lock-bssid');
+    const meshWarning = document.getElementById('wifi-mesh-warning');
+
+    if (isMesh) {
+        // In mesh environment: uncheck by default and show warning
+        lockCheckbox.checked = false;
+        if (meshWarning) {
+            meshWarning.style.display = 'block';
+        }
+    } else {
+        // Single AP: check by default (old behavior)
+        lockCheckbox.checked = true;
+        if (meshWarning) {
+            meshWarning.style.display = 'none';
+        }
+    }
 
     // Scroll to the form
     document.getElementById('wifi-connect-card').scrollIntoView({ behavior: 'smooth' });
@@ -3909,3 +3984,4 @@ window.scanWifiNetworks = scanWifiNetworks;
 window.selectWifiNetwork = selectWifiNetwork;
 window.cancelWifiConnect = cancelWifiConnect;
 window.connectToWifi = connectToWifi;
+window.removeBssidLock = removeBssidLock;
