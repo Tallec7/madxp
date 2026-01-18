@@ -301,6 +301,11 @@ _(Ajouter ici toute information utile découverte au fil du temps)_
 
 - Le réseau NLFH semble avoir 3+ répéteurs couvrant une grande surface
 - Signal parfois faible selon l'emplacement du Pi
+- ...
+
+---
+
+**Dernière mise à jour :** 18 janvier 2026
 - **Isolation client activée** - Voir section dédiée ci-dessus
 
 ---
