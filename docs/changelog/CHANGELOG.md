@@ -1,3 +1,9 @@
+# [2.38.0](https://github.com/Tallec7/neopro/compare/v2.37.2...v2.38.0) (2026-01-18)
+
+### Features
+
+- **dashboard:** display real hotspot config (SSID, password, channel) in settings tab ([d4db165](https://github.com/Tallec7/neopro/commit/d4db1655ed808cf68f48154d18180e41e62929b8))
+
 ## [2.37.2](https://github.com/Tallec7/neopro/compare/v2.37.1...v2.37.2) (2026-01-18)
 
 ### Bug Fixes
