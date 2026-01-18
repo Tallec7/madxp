@@ -213,6 +213,15 @@ sudo wpa_cli -i wlan1 reconfigure
 | **Checkbox désactivée** | Admin Panel             | En mesh, "Fixer ce point d'accès" est décoché par défaut |
 | **Diagnostic distant**  | Dashboard Debug tab     | Boutons pour voir l'état et corriger                     |
 
+### Ce qui est automatisé (v2.34+)
+
+| Fonctionnalité               | Où                     | Comportement                                                    |
+| ---------------------------- | ---------------------- | --------------------------------------------------------------- |
+| **⛔ Blocage BSSID lock**    | Admin Panel + Serveur  | Checkbox désactivé ET validation serveur refuse la requête      |
+| **🐕 Hotspot Watchdog**      | Service systemd        | Surveillance hotspot 30s, récupération auto (max 3 tentatives)  |
+| **📡 Détection profil**      | Sync-Agent → Dashboard | Type de réseau (simple/mesh), BSSID lock, nombre d'APs remontés |
+| **⚠️ Avertissement central** | Dashboard Debug tab    | Warning si BSSID lock détecté en mesh                           |
+
 ---
 
 ## Checklist nouveau client
@@ -299,4 +308,18 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (v2.33)
+## Études et recherches
+
+- **Analyse industrie** : [NETWORK_CHALLENGES_INDUSTRY_ANALYSIS.md](../research/NETWORK_CHALLENGES_INDUSTRY_ANALYSIS.md)
+  - Comparaison avec PiSignage, Screenly, BrightSign, ScreenCloud, Yodeck
+  - Bugs documentés du driver brcmfmac Raspberry Pi
+  - Conclusion : Neopro n'est pas seul, mais peut se différencier par la gestion automatique
+
+- **Vision produit** : [NEOPRO_NETWORK_RESILIENCE_VISION.md](../research/NEOPRO_NETWORK_RESILIENCE_VISION.md)
+  - 4 profils réseau : simple, mesh, mesh_isolated, enterprise
+  - Architecture de résilience à 4 couches
+  - Roadmap d'implémentation
+
+---
+
+**Dernière mise à jour :** 18 janvier 2026 (v2.34 - Hotspot Watchdog, Blocage BSSID en mesh)

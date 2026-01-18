@@ -393,6 +393,9 @@ RUNTIME_SCRIPTS=(
     "raspberry/scripts/generate-all-thumbnails.sh"
     "raspberry/scripts/setup-wifi-client.sh"
     "raspberry/scripts/kiosk-watchdog.sh"
+    "raspberry/scripts/hotspot-watchdog.sh"
+    "raspberry/scripts/hotspot-optimizer.sh"
+    "raspberry/scripts/fix-hotspot.sh"
 )
 mkdir -p ${DEPLOY_DIR}/scripts
 for script_path in "${RUNTIME_SCRIPTS[@]}"; do
@@ -404,6 +407,22 @@ for script_path in "${RUNTIME_SCRIPTS[@]}"; do
     fi
 done
 print_success "Scripts runtime copiés"
+
+# Copier les fichiers de configuration systemd
+print_step "Copie des fichiers systemd..."
+mkdir -p ${DEPLOY_DIR}/config/systemd
+SYSTEMD_FILES=(
+    "raspberry/config/systemd/neopro-hotspot-watchdog.service"
+    "raspberry/config/systemd/neopro-hotspot-optimizer.service"
+)
+for svc_path in "${SYSTEMD_FILES[@]}"; do
+    if [ -f "${svc_path}" ]; then
+        cp "${svc_path}" ${DEPLOY_DIR}/config/systemd/
+    else
+        print_warning "Service systemd manquant: ${svc_path}"
+    fi
+done
+print_success "Fichiers systemd copiés"
 
 create_version_metadata
 
@@ -540,7 +559,8 @@ echo "  ├── sync-agent/      Agent de synchronisation cloud"
 echo "  │   └── node_modules/ ✓ Dépendances incluses"
 echo "  ├── admin/           Interface admin locale (port 8080)"
 echo "  │   └── node_modules/ ✓ Dépendances incluses"
-echo "  ├── scripts/         Scripts runtime (backup, compress, etc.)"
+echo "  ├── scripts/         Scripts runtime (watchdog, backup, etc.)"
+echo "  ├── config/systemd/  Services systemd (hotspot-watchdog, etc.)"
 echo "  ├── VERSION          Numéro de version"
 echo "  └── release.json     Métadonnées du build"
 echo ""

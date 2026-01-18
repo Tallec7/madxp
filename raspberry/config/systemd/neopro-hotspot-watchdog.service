@@ -1,0 +1,29 @@
+[Unit]
+Description=Neopro Hotspot Watchdog Service
+Documentation=https://github.com/neopro/docs/guides/MESH_WIFI_ENVIRONMENTS.md
+After=network.target hostapd.service dnsmasq.service
+Wants=hostapd.service dnsmasq.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/home/pi/neopro/scripts/hotspot-watchdog.sh --daemon
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=neopro-hotspot-watchdog
+
+# Resource limits
+MemoryMax=50M
+CPUQuota=5%
+
+# Security hardening
+NoNewPrivileges=false
+ProtectSystem=false
+ProtectHome=false
+
+[Install]
+WantedBy=multi-user.target

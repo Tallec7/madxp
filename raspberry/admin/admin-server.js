@@ -3066,6 +3066,25 @@ app.post('/api/wifi/connect', async (req, res) => {
   }
 
   try {
+    // SAFETY: Detect mesh environment and block BSSID lock
+    if (lockBssid) {
+      try {
+        const scanResult = await execCommand('sudo iwlist wlan1 scan 2>/dev/null');
+        const sameSSIDCount = (scanResult.output.match(new RegExp(`ESSID:"${ssid}"`, 'g')) || []).length;
+
+        if (sameSSIDCount > 1) {
+          console.log(`[WiFi] BLOCKED: BSSID lock requested for mesh network "${ssid}" (${sameSSIDCount} APs detected)`);
+          return res.status(400).json({
+            error: `Verrouillage BSSID interdit: ${sameSSIDCount} points d'accès détectés pour "${ssid}". En environnement mesh, le verrouillage causerait des déconnexions.`,
+            meshDetected: true,
+            apCount: sameSSIDCount
+          });
+        }
+      } catch (scanError) {
+        console.log('[WiFi] Could not verify mesh status, allowing BSSID lock:', scanError.message);
+      }
+    }
+
     // Read current wpa_supplicant.conf
     const wpaConfPath = '/etc/wpa_supplicant/wpa_supplicant.conf';
     let wpaConf = '';

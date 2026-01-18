@@ -103,6 +103,12 @@ ping -c 3 8.8.8.8
 - Warning si BSSID lock en environnement mesh
 - Bouton suppression BSSID dans dashboard
 
+**Corrections apportées (v2.34) :**
+
+- ⛔ **BSSID lock complètement bloqué en environnement mesh** - Le checkbox est désactivé ET la validation côté serveur refuse la requête
+- 🐕 **Hotspot Watchdog** - Service systemd surveillant la santé du hotspot (hostapd, dnsmasq, rfkill) avec récupération automatique
+- 📡 Détection automatique du type de réseau (simple vs mesh) basée sur le nombre d'APs avec le même SSID
+
 **Leçons apprises :**
 
 - ⚠️ Ne JAMAIS déployer de mise à jour critique sur NLF sans test préalable
@@ -364,4 +370,50 @@ _(Ajouter ici toute information utile découverte au fil du temps)_
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (après-midi)
+---
+
+## Nouveautés v2.34 - Résilience Réseau
+
+### Hotspot Watchdog
+
+Service de surveillance du hotspot WiFi actif par défaut.
+
+**Fonctionnement :**
+
+- Vérifie toutes les 30 secondes : hostapd, mode AP, dnsmasq, rfkill, IP
+- Récupération automatique (max 3 tentatives, cooldown 5 min)
+- Logs dans `/var/log/neopro-hotspot-watchdog.log`
+
+**Commandes :**
+
+```bash
+# Voir le statut
+/home/pi/neopro/scripts/hotspot-watchdog.sh --status
+
+# Voir les logs
+tail -f /var/log/neopro-hotspot-watchdog.log
+
+# Redémarrer le service
+sudo systemctl restart neopro-hotspot-watchdog
+```
+
+### Blocage BSSID Lock en Mesh
+
+**Admin Panel (`:8080`)** :
+
+- Détection automatique de l'environnement mesh (scan des APs)
+- Checkbox "Verrouiller BSSID" désactivé si mesh détecté
+- Message d'erreur explicite si contournement tenté
+
+**Dashboard Central** :
+
+- Avertissement visuel dans l'onglet Debug
+- Recommandation de supprimer le BSSID lock si détecté en mesh
+
+### Étude Industrie
+
+Voir `/docs/research/NETWORK_CHALLENGES_INDUSTRY_ANALYSIS.md` pour l'analyse complète des problèmes réseau dans l'industrie du digital signage. Conclusion : Neopro n'est pas seul avec ces défis, mais peut se différencier par une meilleure gestion automatique.
+
+---
+
+**Dernière mise à jour :** 18 janvier 2026 (soir)

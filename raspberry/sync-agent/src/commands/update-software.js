@@ -408,6 +408,33 @@ class SoftwareUpdateHandler {
         }
       }
 
+      // Installer les nouveaux services systemd si présents dans l'archive
+      const systemdConfigDir = path.join(rootDir, 'config', 'systemd');
+      if (await fs.pathExists(systemdConfigDir)) {
+        logger.info('Installing systemd services...');
+        try {
+          const serviceFiles = await fs.readdir(systemdConfigDir);
+          for (const serviceFile of serviceFiles) {
+            if (serviceFile.endsWith('.service')) {
+              const srcPath = path.join(systemdConfigDir, serviceFile);
+              const destPath = `/etc/systemd/system/${serviceFile}`;
+
+              // Copier le fichier service
+              await execAsync(`sudo cp ${srcPath} ${destPath}`);
+              logger.info(`Installed systemd service: ${serviceFile}`);
+
+              // Activer le service (mais ne pas démarrer - sera fait au reboot ou manuellement)
+              const serviceName = serviceFile.replace('.service', '');
+              await execAsync(`sudo systemctl daemon-reload`);
+              await execAsync(`sudo systemctl enable ${serviceName} 2>/dev/null || true`);
+            }
+          }
+          logger.info('Systemd services installed and enabled');
+        } catch (e) {
+          logger.warn('Failed to install some systemd services', { error: e.message });
+        }
+      }
+
       // Écrire les fichiers de version avec la version fournie par le dashboard central
       if (version) {
         await this.writeVersionMetadata(version);

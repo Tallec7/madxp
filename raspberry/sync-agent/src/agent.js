@@ -285,6 +285,61 @@ class NeoproSyncAgent {
         logger.warn('Could not read hotspot info', { error: err.message });
       }
 
+      // Détecter le profil réseau (simple, mesh, mesh_isolated, enterprise)
+      let networkProfile = { type: 'unknown', apCount: 0, currentSsid: null, bssidLocked: false };
+      try {
+        const { execSync } = require('child_process');
+
+        // Récupérer le SSID actuel de wlan1
+        try {
+          const iwconfig = execSync('iwconfig wlan1 2>/dev/null', { encoding: 'utf8' });
+          const ssidMatch = iwconfig.match(/ESSID:"([^"]+)"/);
+          networkProfile.currentSsid = ssidMatch ? ssidMatch[1] : null;
+        } catch {
+          // wlan1 non connecté ou pas disponible
+        }
+
+        // Vérifier si BSSID lock est actif
+        try {
+          const wpaConf = execSync('sudo cat /etc/wpa_supplicant/wpa_supplicant.conf 2>/dev/null || cat /etc/wpa_supplicant/wpa_supplicant-wlan1.conf 2>/dev/null', { encoding: 'utf8' });
+          networkProfile.bssidLocked = wpaConf.includes('bssid=');
+        } catch {
+          networkProfile.bssidLocked = false;
+        }
+
+        // Scanner les APs pour détecter le mesh (même SSID, plusieurs BSSIDs)
+        if (networkProfile.currentSsid) {
+          try {
+            const scanResult = execSync('sudo iwlist wlan1 scan 2>/dev/null', { encoding: 'utf8', timeout: 15000 });
+            const ssidRegex = new RegExp(`ESSID:"${networkProfile.currentSsid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g');
+            const matches = scanResult.match(ssidRegex);
+            networkProfile.apCount = matches ? matches.length : 1;
+
+            // Déterminer le type de réseau
+            if (networkProfile.apCount > 1) {
+              networkProfile.type = 'mesh';
+              // Note: mesh_isolated nécessite un test de connectivité (trop coûteux ici)
+            } else {
+              networkProfile.type = 'simple';
+            }
+          } catch (scanErr) {
+            // Scan échoué, supposer simple
+            networkProfile.type = 'simple';
+            networkProfile.apCount = 1;
+          }
+        }
+
+        // Avertissement si BSSID lock en mesh
+        if (networkProfile.type === 'mesh' && networkProfile.bssidLocked) {
+          logger.warn('⚠️ BSSID lock detected in mesh environment - this may cause connectivity issues', {
+            ssid: networkProfile.currentSsid,
+            apCount: networkProfile.apCount
+          });
+        }
+      } catch (err) {
+        logger.warn('Could not detect network profile', { error: err.message });
+      }
+
       // Envoyer l'état local au central
       this.socket.emit('sync_local_state', {
         siteId: config.site.id,
@@ -294,6 +349,7 @@ class NeoproSyncAgent {
         storage: videoState.storage,
         hotspotSsid: hotspotInfo.ssid, // Rétrocompatibilité
         hotspotInfo, // Nouvelles infos complètes
+        networkProfile, // Profil réseau détecté
         timestamp: new Date().toISOString(),
       });
 

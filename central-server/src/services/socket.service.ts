@@ -916,7 +916,7 @@ class SocketService {
    */
   private async handleSyncLocalState(siteId: string, state: any) {
     try {
-      const { configHash, config, videos, storage, hotspotSsid, hotspotInfo, timestamp } = state;
+      const { configHash, config, videos, storage, hotspotSsid, hotspotInfo, networkProfile, timestamp } = state;
 
       logger.info('Received local state sync', {
         siteId,
@@ -926,16 +926,29 @@ class SocketService {
         hotspotSsid: hotspotSsid || hotspotInfo?.ssid || null,
         hotspotChannel: hotspotInfo?.channel || null,
         hotspotClients: hotspotInfo?.clients || 0,
+        networkType: networkProfile?.type || 'unknown',
+        networkApCount: networkProfile?.apCount || 0,
+        bssidLocked: networkProfile?.bssidLocked || false,
         timestamp,
       });
 
-      // Enrichir la config avec les vidéos, le stockage et les infos hotspot pour accès facile
+      // Avertir si BSSID lock en mesh (problème potentiel)
+      if (networkProfile?.type === 'mesh' && networkProfile?.bssidLocked) {
+        logger.warn('⚠️ Site has BSSID lock in mesh environment - connectivity issues may occur', {
+          siteId,
+          ssid: networkProfile.currentSsid,
+          apCount: networkProfile.apCount,
+        });
+      }
+
+      // Enrichir la config avec les vidéos, le stockage, les infos hotspot et le profil réseau
       const enrichedConfig = {
         ...config,
         _localVideos: videos || [],
         _localStorage: storage || null,
         _hotspotSsid: hotspotSsid || hotspotInfo?.ssid || null,
         _hotspotInfo: hotspotInfo || null, // Infos complètes (ssid, channel, clients, isActive)
+        _networkProfile: networkProfile || null, // Profil réseau (type, apCount, bssidLocked)
         _lastVideoSync: timestamp,
       };
 

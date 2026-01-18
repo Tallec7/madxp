@@ -1737,15 +1737,27 @@ function selectWifiNetwork(ssid, bssid, quality, isMesh = false) {
     const lockCheckbox = document.getElementById('wifi-lock-bssid');
     const meshWarning = document.getElementById('wifi-mesh-warning');
 
+    // Store mesh status for later validation
+    window._currentNetworkIsMesh = isMesh;
+
     if (isMesh) {
-        // In mesh environment: uncheck by default and show warning
+        // In mesh environment: BLOCK BSSID lock completely
         lockCheckbox.checked = false;
+        lockCheckbox.disabled = true;
         if (meshWarning) {
             meshWarning.style.display = 'block';
+            meshWarning.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>⛔ Verrouillage BSSID interdit</strong><br>
+                    <small>Réseau mesh détecté (plusieurs APs avec le même SSID).
+                    Le verrouillage BSSID causerait des déconnexions si l'AP verrouillé devient inaccessible.</small>
+                </div>
+            `;
         }
     } else {
-        // Single AP: check by default (old behavior)
-        lockCheckbox.checked = true;
+        // Single AP: allow BSSID lock (user choice)
+        lockCheckbox.disabled = false;
+        lockCheckbox.checked = false; // Default unchecked, let user decide
         if (meshWarning) {
             meshWarning.style.display = 'none';
         }
@@ -1766,7 +1778,13 @@ async function connectToWifi(event) {
     const ssid = document.getElementById('wifi-connect-ssid').value;
     const bssid = document.getElementById('wifi-connect-bssid').value;
     const password = document.getElementById('wifi-connect-password').value;
-    const lockBssid = document.getElementById('wifi-lock-bssid').checked;
+    let lockBssid = document.getElementById('wifi-lock-bssid').checked;
+
+    // SAFETY: Block BSSID lock in mesh environments even if checkbox was manipulated
+    if (lockBssid && window._currentNetworkIsMesh) {
+        showNotification('⛔ Verrouillage BSSID interdit en environnement mesh', 'error');
+        return;
+    }
 
     const btn = document.getElementById('wifi-connect-btn');
     btn.disabled = true;

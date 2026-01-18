@@ -1786,6 +1786,44 @@ vcgencmd get_mem gpu
 
 ## Historique Breaking Changes
 
+### v2.34.x (Janvier 2026)
+
+- **Hotspot Watchdog** : Service de surveillance et récupération automatique du hotspot WiFi
+  - **Problème résolu** : Hotspot qui disparaît de la liste WiFi, délais longs, mot de passe redemandé
+  - **Solution** : Service systemd `neopro-hotspot-watchdog` qui vérifie toutes les 30s :
+    - hostapd actif
+    - wlan0 en mode AP
+    - dnsmasq actif
+    - WiFi non bloqué par rfkill
+    - IP 192.168.4.1 configurée
+  - **Récupération automatique** : Max 3 tentatives avec cooldown 5 min
+  - **Logs** : `/var/log/neopro-hotspot-watchdog.log`
+  - **Nouveaux fichiers** :
+    - `raspberry/scripts/hotspot-watchdog.sh` - Script de surveillance
+    - `raspberry/config/systemd/neopro-hotspot-watchdog.service` - Service systemd
+  - **Migration Pi existants** :
+    ```bash
+    scp raspberry/scripts/hotspot-watchdog.sh pi@neopro.local:/home/pi/neopro/scripts/
+    scp raspberry/config/systemd/neopro-hotspot-watchdog.service pi@neopro.local:/tmp/
+    ssh pi@neopro.local 'sudo mv /tmp/neopro-hotspot-watchdog.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now neopro-hotspot-watchdog'
+    ```
+
+- **Blocage BSSID lock en environnement mesh** : Protection complète contre le verrouillage BSSID en mesh
+  - **Problème résolu** : BSSID lock causait des déconnexions quand l'AP verrouillé devenait inaccessible en mesh
+  - **Solution multi-couches** :
+    - Admin panel : Checkbox désactivé + message explicite si mesh détecté
+    - Backend : Validation côté serveur qui refuse la requête même si frontend contourné
+    - Détection : Scan des APs avec même SSID pour détecter le mesh
+  - **Fichiers modifiés** :
+    - `raspberry/admin/public/app.js` - UI bloquée + validation
+    - `raspberry/admin/admin-server.js` - Validation côté serveur
+  - **Migration** : Déployer admin-server.js et app.js sur les Pi
+
+- **Documentation Résilience Réseau** : Analyse industrie et vision produit
+  - `docs/research/NETWORK_CHALLENGES_INDUSTRY_ANALYSIS.md` - Étude des problèmes réseau chez les concurrents
+  - `docs/research/NEOPRO_NETWORK_RESILIENCE_VISION.md` - Vision produit "Network-Resilient Digital Signage"
+  - **Conclusion** : Neopro n'est pas seul avec ces problèmes (tous les concurrents Pi ont des soucis similaires), mais peut se différencier par une meilleure gestion automatique
+
 ### v2.33.x (Janvier 2026)
 
 - **Remote Cloud (Télécommande via Internet)** : Nouvelle fonctionnalité permettant de contrôler un site depuis n'importe quel réseau
@@ -2565,32 +2603,36 @@ SMTP_PORT=1025
 
 ## Glossaire Métier
 
-| Terme               | Définition                                                  |
-| ------------------- | ----------------------------------------------------------- |
-| **Site**            | Un club sportif équipé d'un Raspberry Pi + TV               |
-| **Boîtier**         | Le Raspberry Pi physique installé dans un club              |
-| **Flotte**          | L'ensemble des boîtiers gérés (50+)                         |
-| **Déploiement**     | Envoi d'une vidéo du cloud vers un ou plusieurs Pi          |
-| **Heartbeat**       | Signal envoyé toutes les 30s par le Pi au cloud             |
-| **Sync**            | Synchronisation bidirectionnelle Pi ↔ Cloud                 |
-| **Config mirror**   | Copie de la config locale stockée dans le cloud             |
-| **VideoWatcher**    | Surveillance du dossier vidéos sur le Pi                    |
-| **LocalVideo**      | Métadonnées d'une vidéo présente sur le boîtier             |
-| **Advertiser**      | Annonceur qui diffuse des pubs sur les TV                   |
-| **Agency**          | Agence gérant plusieurs annonceurs                          |
-| **Operator**        | Utilisateur gérant un sous-ensemble de clubs                |
-| **Golden image**    | Image SD pré-configurée pour clonage rapide                 |
-| **Canary**          | Déploiement progressif (10% → 50% → 100%)                   |
-| **Phase de match**  | Moment du match (neutral/before/during/after)               |
-| **TimeCategory**    | Configuration d'une phase avec ses vidéos et catégories     |
-| **LoopVideo**       | Vidéo dans une boucle de phase                              |
-| **CategoryMapping** | Association catégorie locale → type analytics               |
-| **RemotePreview**   | Simulation visuelle de la télécommande Pi dans le dashboard |
-| **wlan0**           | WiFi intégré du Pi → Hotspot pour /remote et admin :8080    |
-| **wlan1**           | Dongle USB WiFi → Connexion Internet du lieu vers le cloud  |
-| **Mesh WiFi**       | Réseau avec plusieurs APs partageant le même SSID           |
-| **BSSID lock**      | Verrouillage sur une borne spécifique (dangereux en mesh)   |
-| **bgscan**          | Scan background pour roaming contrôlé en environnement mesh |
+| Terme                | Définition                                                  |
+| -------------------- | ----------------------------------------------------------- |
+| **Site**             | Un club sportif équipé d'un Raspberry Pi + TV               |
+| **Boîtier**          | Le Raspberry Pi physique installé dans un club              |
+| **Flotte**           | L'ensemble des boîtiers gérés (50+)                         |
+| **Déploiement**      | Envoi d'une vidéo du cloud vers un ou plusieurs Pi          |
+| **Heartbeat**        | Signal envoyé toutes les 30s par le Pi au cloud             |
+| **Sync**             | Synchronisation bidirectionnelle Pi ↔ Cloud                 |
+| **Config mirror**    | Copie de la config locale stockée dans le cloud             |
+| **VideoWatcher**     | Surveillance du dossier vidéos sur le Pi                    |
+| **LocalVideo**       | Métadonnées d'une vidéo présente sur le boîtier             |
+| **Advertiser**       | Annonceur qui diffuse des pubs sur les TV                   |
+| **Agency**           | Agence gérant plusieurs annonceurs                          |
+| **Operator**         | Utilisateur gérant un sous-ensemble de clubs                |
+| **Golden image**     | Image SD pré-configurée pour clonage rapide                 |
+| **Canary**           | Déploiement progressif (10% → 50% → 100%)                   |
+| **Phase de match**   | Moment du match (neutral/before/during/after)               |
+| **TimeCategory**     | Configuration d'une phase avec ses vidéos et catégories     |
+| **LoopVideo**        | Vidéo dans une boucle de phase                              |
+| **CategoryMapping**  | Association catégorie locale → type analytics               |
+| **RemotePreview**    | Simulation visuelle de la télécommande Pi dans le dashboard |
+| **wlan0**            | WiFi intégré du Pi → Hotspot pour /remote et admin :8080    |
+| **wlan1**            | Dongle USB WiFi → Connexion Internet du lieu vers le cloud  |
+| **Mesh WiFi**        | Réseau avec plusieurs APs partageant le même SSID           |
+| **BSSID lock**       | Verrouillage sur une borne spécifique (⛔ INTERDIT en mesh) |
+| **bgscan**           | Scan background pour roaming contrôlé en environnement mesh |
+| **Hotspot Watchdog** | Service surveillant la santé du hotspot (hostapd, dnsmasq)  |
+| **Network Profile**  | Type de réseau : simple, mesh, mesh_isolated, enterprise    |
+| **AP Isolation**     | Sécurité mesh empêchant les clients de communiquer          |
+| **brcmfmac**         | Driver WiFi Raspberry Pi (bugs documentés avec Virtual AP)  |
 
 ---
 

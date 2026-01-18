@@ -10,6 +10,8 @@
 6. [Problèmes de synchronisation](#problèmes-de-synchronisation)
 7. [Diagnostic réseau à distance](#diagnostic-réseau-à-distance)
 8. [Diagnostic complet](#diagnostic-complet)
+9. [Hotspot Watchdog (v2.34+)](#hotspot-watchdog-v234)
+10. [Blocage BSSID Lock en Mesh (v2.34+)](#blocage-bssid-lock-en-mesh-v234)
 
 ---
 
@@ -2047,4 +2049,68 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (v2.33 - Fix neopro.local iOS, fix hotspot repair sans perte wlan1, guide environnements mesh WiFi)
+## Hotspot Watchdog (v2.34+)
+
+Depuis la version 2.34, un service de surveillance du hotspot est actif par défaut.
+
+### Fonctionnement
+
+Le watchdog vérifie toutes les 30 secondes :
+
+- hostapd actif
+- wlan0 en mode AP
+- dnsmasq actif
+- WiFi non bloqué par rfkill
+- IP 192.168.4.1 configurée
+
+En cas de problème, il tente une récupération automatique (max 3 tentatives, cooldown 5 min).
+
+### Commandes utiles
+
+```bash
+# Voir le statut actuel
+/home/pi/neopro/scripts/hotspot-watchdog.sh --status
+
+# Voir les logs du watchdog
+tail -f /var/log/neopro-hotspot-watchdog.log
+
+# Redémarrer le service
+sudo systemctl restart neopro-hotspot-watchdog
+
+# Vérifier que le service est actif
+sudo systemctl status neopro-hotspot-watchdog
+```
+
+### Désactiver le watchdog (déconseillé)
+
+```bash
+sudo systemctl stop neopro-hotspot-watchdog
+sudo systemctl disable neopro-hotspot-watchdog
+```
+
+---
+
+## Blocage BSSID Lock en Mesh (v2.34+)
+
+Depuis la version 2.34, le verrouillage BSSID est **bloqué automatiquement** en environnement mesh.
+
+### Comment ça fonctionne
+
+1. **Admin Panel (`:8080`)** : Le checkbox "Verrouiller BSSID" est désactivé si plusieurs APs avec le même SSID sont détectés
+2. **Validation serveur** : Même si le frontend est contourné, le backend refuse la requête
+3. **Dashboard central** : Un avertissement apparaît si un BSSID lock est détecté en mesh
+
+### Supprimer un BSSID lock existant
+
+```bash
+# Via admin panel
+http://neopro.local:8080 → Onglet Réseau → Bouton "Supprimer le verrouillage"
+
+# Ou manuellement
+sudo sed -i '/bssid=/d' /etc/wpa_supplicant/wpa_supplicant.conf
+sudo wpa_cli -i wlan1 reconfigure
+```
+
+---
+
+**Dernière mise à jour :** 18 janvier 2026 (v2.34 - Hotspot Watchdog, Blocage BSSID en mesh, Détection profil réseau)
