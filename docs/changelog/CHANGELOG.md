@@ -1,3 +1,9 @@
+## [2.37.1](https://github.com/Tallec7/neopro/compare/v2.37.0...v2.37.1) (2026-01-18)
+
+### Bug Fixes
+
+- **cloud-remote:** replace deprecated SCSS darken/lighten with color.adjust ([4875e71](https://github.com/Tallec7/neopro/commit/4875e71c03784fd1c8123896f9081bba15c98175))
+
 # [2.37.0](https://github.com/Tallec7/neopro/compare/v2.36.0...v2.37.0) (2026-01-18)
 
 ### Features
