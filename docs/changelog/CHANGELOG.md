@@ -1,3 +1,9 @@
+# [2.37.0](https://github.com/Tallec7/neopro/compare/v2.36.0...v2.37.0) (2026-01-18)
+
+### Features
+
+- **network:** Phase 4 - NetworkWatchdog auto-recovery and proactive alerts ([39993c5](https://github.com/Tallec7/neopro/commit/39993c53b46750129c18e4235875513299c823a0))
+
 # [2.36.0](https://github.com/Tallec7/neopro/compare/v2.35.1...v2.36.0) (2026-01-18)
 
 ### Features
