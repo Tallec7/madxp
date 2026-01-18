@@ -9,7 +9,7 @@
  */
 
 import { Router } from 'express';
-import { authenticateJWT } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 import { sensitiveRateLimit } from '../middleware/user-rate-limit';
 import {
   getRemoteState,
@@ -26,7 +26,7 @@ const router = Router();
  * GET /api/remote/:siteId/state
  * Récupère l'état actuel du site (connexion, config, vidéos)
  */
-router.get('/:siteId/state', authenticateJWT, sensitiveRateLimit, getRemoteState);
+router.get('/:siteId/state', authenticate, sensitiveRateLimit, getRemoteState);
 
 /**
  * POST /api/remote/:siteId/command
@@ -44,12 +44,12 @@ router.get('/:siteId/state', authenticateJWT, sensitiveRateLimit, getRemoteState
  * - breaking-news: { message, duration?, position? }
  * - match-config: { sessionId, matchDate, matchName, audienceEstimate }
  */
-router.post('/:siteId/command', authenticateJWT, sensitiveRateLimit, sendRemoteCommand);
+router.post('/:siteId/command', authenticate, sensitiveRateLimit, sendRemoteCommand);
 
 /**
  * GET /api/remote/:siteId/videos
  * Liste les vidéos disponibles sur le site pour la télécommande
  */
-router.get('/:siteId/videos', authenticateJWT, sensitiveRateLimit, getRemoteVideos);
+router.get('/:siteId/videos', authenticate, sensitiveRateLimit, getRemoteVideos);
 
 export default router;

@@ -70,7 +70,8 @@ export async function getRemoteState(req: AuthRequest, res: Response) {
     }
 
     const site = siteResult.rows[0];
-    const localConfig = site.local_config_mirror || {};
+    // Cast localConfig pour accéder aux propriétés (type JSONB en DB)
+    const localConfig = (site.local_config_mirror || {}) as Record<string, unknown>;
 
     // Vérifier si le site est connecté
     const isConnected = socketService.isConnected(siteId);
@@ -86,15 +87,15 @@ export async function getRemoteState(req: AuthRequest, res: Response) {
       lastSeenAt: site.last_seen_at,
       // Configuration locale (miroir)
       config: {
-        sponsors: localConfig.sponsors || [],
-        categories: localConfig.categories || [],
-        timeCategories: localConfig.timeCategories || [],
-        liveScoreEnabled: localConfig.liveScoreEnabled ?? false,
+        sponsors: (localConfig.sponsors as unknown[]) || [],
+        categories: (localConfig.categories as unknown[]) || [],
+        timeCategories: (localConfig.timeCategories as unknown[]) || [],
+        liveScoreEnabled: (localConfig.liveScoreEnabled as boolean) ?? false,
         scoreOverlay: localConfig.scoreOverlay || null,
         watermark: localConfig.watermark || null,
       },
       // Vidéos locales
-      localVideos: localConfig._localVideos || [],
+      localVideos: (localConfig._localVideos as unknown[]) || [],
     });
   } catch (error) {
     logger.error('Error getting remote state:', { error, siteId: req.params.siteId });
@@ -251,8 +252,8 @@ export async function sendRemoteCommand(req: AuthRequest, res: Response) {
     auditService.log({
       userId,
       action: 'CLOUD_REMOTE_COMMAND',
-      resourceType: 'site',
-      resourceId: siteId,
+      targetType: 'site',
+      targetId: siteId,
       details: { commandType: type, eventName },
     }).catch(() => { /* ignore */ });
 
@@ -298,9 +299,17 @@ export async function getRemoteVideos(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    const localConfig = siteResult.rows[0].local_config_mirror || {};
-    const localVideos = localConfig._localVideos || [];
-    const categories = localConfig.categories || [];
+    // Cast localConfig pour accéder aux propriétés (type JSONB en DB)
+    const localConfig = (siteResult.rows[0].local_config_mirror || {}) as Record<string, unknown>;
+    const localVideos = (localConfig._localVideos as Array<{
+      filename: string;
+      path: string;
+      category: string;
+      subcategory: string | null;
+      size: number;
+      duration: number | null;
+    }>) || [];
+    const categories = (localConfig.categories as unknown[]) || [];
 
     // Organiser les vidéos par catégorie
     const videosByCategory: Record<string, Array<{
