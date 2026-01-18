@@ -12,9 +12,9 @@ jest.mock('../config/logger', () => ({
   debug: jest.fn(),
 }));
 
-// Mock AdminStateStore
+// Mock AdminStateStore - must be initialized BEFORE import
 const mockStore = {
-  load: jest.fn(),
+  load: jest.fn().mockImplementation((defaultState) => ({ ...defaultState })),
   persist: jest.fn(),
   reset: jest.fn(),
 };
@@ -58,6 +58,8 @@ describe('AdminOpsService', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    // Stop cleanup interval to prevent memory leaks
+    adminOpsService.stopCleanup();
   });
 
   describe('ALLOWED_ACTIONS', () => {

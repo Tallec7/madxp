@@ -185,10 +185,16 @@ ANALYTICS ───────────────────────�
   video_plays        → video_filename, played_at, trigger_type (auto/manual)
   club_daily_stats   → agrégation journalière (pré-calculée par cron)
 
-ADVERTISERS ───────────────────────────────────────────────────────────
+ADVERTISERS & AGENCIES ────────────────────────────────────────────────
   advertisers        → name, status, contact info
   advertiser_videos  → advertiser ↔ video (M:N)
   advertiser_sites   → quels sites affichent quelles pubs
+  advertiser_impressions → tracking des impressions pubs
+  advertiser_daily_stats → agrégation journalière par annonceur
+
+AGENCIES ──────────────────────────────────────────────────────────────
+  agencies           → name, status, contact_email, company_name
+  agency_sites       → agency ↔ site (M:N) - sites accessibles par l'agence
 ```
 
 ### Row-Level Security (Multi-tenant)
@@ -205,7 +211,7 @@ Des jobs de cleanup automatiques tournent quotidiennement à 3h du matin pour g�
 | Table                           | Rétention            | Justification                                                            |
 | ------------------------------- | -------------------- | ------------------------------------------------------------------------ |
 | `video_plays`                   | **90 jours**         | Données granulaires, `club_daily_stats` conserve l'historique long terme |
-| `sponsor_impressions`           | **90 jours**         | Idem, `sponsor_daily_stats` conserve l'agrégation                        |
+| `advertiser_impressions`        | **90 jours**         | Idem, `advertiser_daily_stats` conserve l'agrégation                     |
 | `metrics`                       | **7 jours**          | Debug court terme uniquement (CPU, RAM, temp)                            |
 | `config_history`                | **20 versions/site** | Rollback réaliste, pas besoin de 6 mois                                  |
 | `remote_commands`               | **30 jours**         | Historique des commandes pour debug                                      |
@@ -216,7 +222,7 @@ Des jobs de cleanup automatiques tournent quotidiennement à 3h du matin pour g�
 **Tables préservées indéfiniment** (agrégations) :
 
 - `club_daily_stats` - Stats journalières par site
-- `sponsor_daily_stats` - Stats journalières par sponsor
+- `advertiser_daily_stats` - Stats journalières par annonceur
 
 **Buffers locaux Pi** (limite 50K événements) :
 
@@ -361,6 +367,37 @@ Le `LoggerService` Angular implémente un throttling côté client pour éviter 
 | **Cron**         | `cron-scheduler.service.ts`          | Stats quotidiennes, cleanup                 |
 | **Logger**       | `logger.service.ts`                  | Logs structurés avec correlation ID         |
 | **Errors**       | `error-extractor.ts`                 | Extraction messages d'erreur                |
+
+### Services Angular Raspberry Pi (Extraits v2.33+) ⚡ NEW
+
+Ces services ont été extraits de `tv.component.ts` pour réduire sa complexité :
+
+| Service           | Fichier                           | Rôle                                               |
+| ----------------- | --------------------------------- | -------------------------------------------------- |
+| **DoubleBuffer**  | `double-buffer-video.service.ts`  | Transitions vidéo sans flash (2 players alternés)  |
+| **ErrorRecovery** | `video-error-recovery.service.ts` | Récupération crashs GPU, watchdog, cleanup mémoire |
+| **Watermark**     | `watermark.service.ts`            | Affichage et scheduling du watermark TV            |
+
+**Fichiers** :
+
+- `raspberry/src/app/services/double-buffer-video.service.ts`
+- `raspberry/src/app/services/video-error-recovery.service.ts`
+- `raspberry/src/app/services/watermark.service.ts`
+
+### Modules Sync-Agent Extraits (v2.33+) ⚡ NEW
+
+Le fichier `commands/index.js` (1440 → ~650 lignes) a été refactoré en modules :
+
+| Module            | Fichier                  | Rôle                                             |
+| ----------------- | ------------------------ | ------------------------------------------------ |
+| **update-config** | `update-config.js`       | Mise à jour configuration avec merge intelligent |
+| **diagnostics**   | `diagnostics.js`         | Diagnostics système (CPU, GPU, services)         |
+| **hotspot**       | `hotspot.js`             | Gestion et réparation du hotspot WiFi            |
+| **network-diag**  | `network-diagnostics.js` | Diagnostics réseau (ping, DNS, traceroute)       |
+| **debug-bundle**  | `debug-bundle.js`        | Export bundle de debug pour support technique    |
+| **analytics-buf** | `analytics-buffer.js`    | Gestion du buffer analytics                      |
+
+**Fichiers** : `raspberry/sync-agent/src/commands/`
 
 ### Stockage Vidéo (Double backend) ⚡ IMPORTANT
 
@@ -1124,17 +1161,22 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 
 ### Backend
 
-| Fichier                                          | Description                      |
-| ------------------------------------------------ | -------------------------------- |
-| `central-server/src/server.ts`                   | Point d'entrée, middleware order |
-| `central-server/src/routes/*.ts`                 | Tous les endpoints               |
-| `central-server/src/types/index.ts`              | Interfaces TypeScript            |
-| `central-server/src/middleware/auth.ts`          | JWT + cookie auth                |
-| `central-server/src/middleware/correlation.ts`   | Correlation ID middleware        |
-| `central-server/src/middleware/errors.ts`        | Classes d'erreurs standardisées  |
-| `central-server/src/middleware/error-handler.ts` | Gestionnaire d'erreurs global    |
-| `central-server/src/services/socket.service.ts`  | Protocole WebSocket              |
-| `central-server/src/scripts/full-schema.sql`     | Schéma DB complet                |
+| Fichier                                                               | Description                        |
+| --------------------------------------------------------------------- | ---------------------------------- |
+| `central-server/src/server.ts`                                        | Point d'entrée, middleware order   |
+| `central-server/src/routes/*.ts`                                      | Tous les endpoints                 |
+| `central-server/src/types/index.ts`                                   | Interfaces TypeScript              |
+| `central-server/src/middleware/auth.ts`                               | JWT + cookie auth                  |
+| `central-server/src/middleware/correlation.ts`                        | Correlation ID middleware          |
+| `central-server/src/middleware/errors.ts`                             | Classes d'erreurs standardisées    |
+| `central-server/src/middleware/error-handler.ts`                      | Gestionnaire d'erreurs global      |
+| `central-server/src/services/socket.service.ts`                       | Protocole WebSocket                |
+| `central-server/src/services/socket.service.test.ts`                  | Tests Socket.IO (980 lignes)       |
+| `central-server/src/services/draft.service.test.ts`                   | Tests brouillons ⚡ NEW            |
+| `central-server/src/services/command-queue.service.test.ts`           | Tests file de commandes ⚡ NEW     |
+| `central-server/src/services/asset.service.test.ts`                   | Tests watermarks ⚡ NEW            |
+| `central-server/src/services/orchestrated-deployment.service.test.ts` | Tests déploiement orchestré ⚡ NEW |
+| `central-server/src/scripts/full-schema.sql`                          | Schéma DB complet                  |
 
 ### Frontend Dashboard
 
@@ -1712,6 +1754,44 @@ vcgencmd get_mem gpu
   - **Solution** : Ajout de la fonction `isPrivateIP()` qui accepte toutes les plages privées (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
   - **Fichier modifié** : `raspberry/admin/public/app.js`
   - **Migration** : `scp raspberry/admin/public/app.js pi@neopro.local:/home/pi/neopro/admin/public/`
+
+- **Fix configuration ESLint monorepo** : Résolution du conflit entre ESLint 8 (central-server) et ESLint 9 (root)
+  - **Problème** : `npm run lint` dans central-server échouait avec "Cannot read properties of undefined (reading 'allowShortCircuit')"
+  - **Cause** : Le root utilise ESLint 9 flat config (`eslint.config.js`) qui s'appliquait aussi à central-server (ESLint 8 legacy)
+  - **Solution** :
+    - Ajout `ignores: ["central-server/**", "node_modules/**"]` dans `/eslint.config.js` (root)
+    - Modification du script lint dans `central-server/package.json` : `ESLINT_USE_FLAT_CONFIG=false eslint src/**/*.ts`
+    - Ajout `ignorePatterns: ["**/*.test.ts", "**/__tests__/**"]` et `"jest": true` dans `central-server/.eslintrc.json`
+  - **État actuel** : ESLint fonctionne avec 40 erreurs (unused vars) et 114 warnings (any types) - à nettoyer progressivement
+  - **Migration** : Aucune (fix configuration interne)
+
+- **Synchronisation full-schema.sql avec Supabase** : Alignement du schéma de référence avec la DB de production
+  - Tables renommées : `sponsor_impressions` → `advertiser_impressions`, `sponsor_daily_stats` → `advertiser_daily_stats`
+  - Tables ajoutées : `agencies`, `advertiser_sites`, `agency_sites`
+  - Vues analytics ajoutées (12) : `club_analytics_summary`, `top_videos_by_site`, `advertiser_analytics_summary`, `advertiser_performance_by_site`, `advertiser_stats_summary`, `top_advertiser_videos`, `advertiser_accessible_sites`, `agency_accessible_sites`, `agency_stats_summary`, etc.
+  - **Migration** : Aucune (schéma de référence uniquement, DB de prod déjà à jour)
+
+- **Correction tests unitaires** : 912 tests passent maintenant (37 suites)
+  - **socket.service.test.ts** : Fix des mocks Socket.IO (ajout `connected: true`, `lastPongReceived`)
+  - **integration.test.ts** : Fix des tests d'intégration API (checksum vidéo, SHA256 api_key)
+  - **config-history.controller.test.ts**, **content.controller.test.ts** : Corrections mineures
+  - **audit.routes.test.ts**, **admin-ops.service.test.ts** : Mocks corrigés
+  - **Migration** : Aucune (amélioration tests)
+
+- **Refactoring P2/P3 - Extraction services et tests** : Amélioration de la maintenabilité et couverture de tests
+  - **tv.component.ts** : Extraction de 3 services Angular (~114 lignes déplacées)
+    - `double-buffer-video.service.ts` - Gestion des transitions vidéo sans flash
+    - `video-error-recovery.service.ts` - Watchdog, récupération crashs GPU, cleanup mémoire
+    - `watermark.service.ts` - Affichage et scheduling du watermark
+  - **sync-agent/commands/index.js** : Refactoring de 1440 → ~650 lignes
+    - Extraction en 6 modules : `update-config.js`, `diagnostics.js`, `hotspot.js`, `network-diagnostics.js`, `debug-bundle.js`, `analytics-buffer.js`
+  - **Nouveaux fichiers de tests** (central-server) :
+    - `draft.service.test.ts` - Tests brouillons configuration
+    - `command-queue.service.test.ts` - Tests file de commandes
+    - `asset.service.test.ts` - Tests watermarks (upload, deploy, validation)
+    - `orchestrated-deployment.service.test.ts` - Tests déploiement orchestré
+  - **Pre-commit hook** : `.husky/commit-msg` pour validation Conventional Commits
+  - **Migration** : Aucune (amélioration interne, rétrocompatible)
 
 ### v2.28.x (Janvier 2026)
 
