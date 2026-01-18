@@ -477,26 +477,26 @@ Service d'encapsulation des opérations réseau risquées avec comportement adap
 
 Service de surveillance et auto-recovery réseau complet :
 
-| Méthode                     | Rôle                                                  |
-| --------------------------- | ----------------------------------------------------- |
-| `start()`                   | Démarre les 3 boucles de surveillance                 |
-| `stop()`                    | Arrête toutes les surveillances                       |
-| `getStatus()`               | Retourne l'état actuel (hotspot, internet, cloud)     |
-| `checkHotspotHealth()`      | Vérifie hostapd, dnsmasq, AP mode, rfkill, IP         |
-| `checkInternetHealth()`     | Vérifie IP wlan1, gateway, ping 8.8.8.8               |
-| `attemptHotspotRecovery()`  | Tente la récupération du hotspot (max 3 tentatives)   |
-| `attemptInternetRecovery()` | Tente la récupération internet (wpa_cli + dhclient)   |
-| `saveRollbackPoint()`       | Sauvegarde la config avant une opération risquée      |
-| `executeRollback()`         | Restaure la config et notifie le central              |
-| `confirmOperation()`        | Annule le rollback si l'opération a réussi            |
+| Méthode                     | Rôle                                                |
+| --------------------------- | --------------------------------------------------- |
+| `start()`                   | Démarre les 3 boucles de surveillance               |
+| `stop()`                    | Arrête toutes les surveillances                     |
+| `getStatus()`               | Retourne l'état actuel (hotspot, internet, cloud)   |
+| `checkHotspotHealth()`      | Vérifie hostapd, dnsmasq, AP mode, rfkill, IP       |
+| `checkInternetHealth()`     | Vérifie IP wlan1, gateway, ping 8.8.8.8             |
+| `attemptHotspotRecovery()`  | Tente la récupération du hotspot (max 3 tentatives) |
+| `attemptInternetRecovery()` | Tente la récupération internet (wpa_cli + dhclient) |
+| `saveRollbackPoint()`       | Sauvegarde la config avant une opération risquée    |
+| `executeRollback()`         | Restaure la config et notifie le central            |
+| `confirmOperation()`        | Annule le rollback si l'opération a réussi          |
 
 **Intervalles de surveillance** :
 
-| Type    | Intervalle | Actions si problème               |
-| ------- | ---------- | --------------------------------- |
-| Hotspot | 30s        | rfkill unblock, restart hostapd   |
-| Internet| 60s        | wpa_cli reconfigure, dhclient     |
-| Cloud   | 30s        | Détection zombie, force reconnect |
+| Type     | Intervalle | Actions si problème               |
+| -------- | ---------- | --------------------------------- |
+| Hotspot  | 30s        | rfkill unblock, restart hostapd   |
+| Internet | 60s        | wpa_cli reconfigure, dhclient     |
+| Cloud    | 30s        | Détection zombie, force reconnect |
 
 **Fichier** : `raspberry/sync-agent/src/services/network-watchdog.js`
 
@@ -504,23 +504,23 @@ Service de surveillance et auto-recovery réseau complet :
 
 Service d'alertes proactives côté serveur :
 
-| Méthode                | Rôle                                              |
-| ---------------------- | ------------------------------------------------- |
-| `start()`              | Démarre le cron (toutes les 4 heures)             |
-| `stop()`               | Arrête le cron                                    |
-| `checkNetworkRisks()`  | Évalue tous les sites et génère un rapport        |
-| `getCurrentRisks()`    | Retourne le rapport des risques actuels           |
-| `getNetworkRiskStats()`| Statistiques agrégées (profils, isolation, etc.)  |
+| Méthode                 | Rôle                                             |
+| ----------------------- | ------------------------------------------------ |
+| `start()`               | Démarre le cron (toutes les 4 heures)            |
+| `stop()`                | Arrête le cron                                   |
+| `checkNetworkRisks()`   | Évalue tous les sites et génère un rapport       |
+| `getCurrentRisks()`     | Retourne le rapport des risques actuels          |
+| `getNetworkRiskStats()` | Statistiques agrégées (profils, isolation, etc.) |
 
 **Critères d'alerte** :
 
-| Risque                | Sévérité  | Condition                           |
-| --------------------- | --------- | ----------------------------------- |
-| `bssid_lock_in_mesh`  | critical  | BSSID lock en environnement mesh    |
-| `client_isolation`    | warning   | Isolation client détectée           |
-| `low_stability`       | warning/critical | Score stabilité < 50 (ou < 25) |
-| `mesh_offline_extended` | critical | Offline > 24h en mesh              |
-| `multiple_warnings`   | warning   | 3+ warnings réseau                  |
+| Risque                  | Sévérité         | Condition                        |
+| ----------------------- | ---------------- | -------------------------------- |
+| `bssid_lock_in_mesh`    | critical         | BSSID lock en environnement mesh |
+| `client_isolation`      | warning          | Isolation client détectée        |
+| `low_stability`         | warning/critical | Score stabilité < 50 (ou < 25)   |
+| `mesh_offline_extended` | critical         | Offline > 24h en mesh            |
+| `multiple_warnings`     | warning          | 3+ warnings réseau               |
 
 **Fichier** : `central-server/src/services/network-alerts.service.ts`
 
@@ -1372,6 +1372,44 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 | **QrCodeGeneratorComponent** | `shared/components/qr-code-generator/`      | Génération QR code télécommande (local/cloud)          |
 | **ConfigEditorComponent**    | `config-editor/`                            | Éditeur complet de configuration JSON                  |
 | **CloudRemoteComponent**     | `features/remote/cloud-remote.component.ts` | Télécommande cloud ⚡ NEW                              |
+
+### Synchronisation Remote Pi ↔ Cloud Remote ⚠️ IMPORTANT
+
+Le `CloudRemoteComponent` (dashboard) est une copie quasi-identique du `RemoteComponent` (Pi) pour assurer une expérience utilisateur cohérente. **La synchronisation n'est PAS automatique.**
+
+**Fichiers concernés** :
+
+| Composant  | Pi (source)                                                 | Dashboard (copie)                                                       |
+| ---------- | ----------------------------------------------------------- | ----------------------------------------------------------------------- |
+| TypeScript | `raspberry/src/app/components/remote/remote.component.ts`   | `central-dashboard/src/app/features/remote/cloud-remote.component.ts`   |
+| HTML       | `raspberry/src/app/components/remote/remote.component.html` | `central-dashboard/src/app/features/remote/cloud-remote.component.html` |
+| SCSS       | `raspberry/src/app/components/remote/remote.component.scss` | `central-dashboard/src/app/features/remote/cloud-remote.component.scss` |
+
+**Lors de modifications sur le Remote Pi** :
+
+1. **Évaluer l'impact** : Le changement affecte-t-il l'UI (HTML/SCSS) ou la logique métier (TS) ?
+2. **Reporter manuellement** sur les fichiers `cloud-remote.*` correspondants
+3. **Adapter les appels service** :
+   - Pi : `LocalBroadcastService` (Socket.IO local)
+   - Cloud : `RemoteService` (HTTP API vers le central-server)
+4. **Tester le build** : `cd central-dashboard && npm run build`
+
+**Différences structurelles** :
+
+| Aspect        | Remote Pi                     | Cloud Remote                        |
+| ------------- | ----------------------------- | ----------------------------------- |
+| Communication | `LocalBroadcastService` (WS)  | `RemoteService` (HTTP)              |
+| Auth          | `auth.password` local         | JWT dashboard (via route guard)     |
+| Config        | `configuration.json` lu local | `/api/sites/:id/local-content` HTTP |
+| États         | Toujours connecté             | Loading/Error/Offline states        |
+| Route         | `/remote`                     | `/remote/:siteId`                   |
+
+**Quand synchroniser** :
+
+- ✅ Nouveaux boutons/actions dans la télécommande
+- ✅ Changements de layout ou styles
+- ✅ Nouvelles phases de match
+- ❌ Changements spécifiques au Pi (login local, hotspot)
 
 ### Raspberry Pi
 
