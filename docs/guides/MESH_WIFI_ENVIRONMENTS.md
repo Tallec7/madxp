@@ -222,6 +222,26 @@ sudo wpa_cli -i wlan1 reconfigure
 | **📡 Détection profil**      | Sync-Agent → Dashboard | Type de réseau (simple/mesh), BSSID lock, nombre d'APs remontés |
 | **⚠️ Avertissement central** | Dashboard Debug tab    | Warning si BSSID lock détecté en mesh                           |
 
+### Ce qui est automatisé (v2.35+)
+
+| Fonctionnalité                    | Où               | Comportement                                                       |
+| --------------------------------- | ---------------- | ------------------------------------------------------------------ |
+| **🔍 NetworkDetector complet**    | Sync-Agent       | Détection mesh, isolation client, stabilité, enterprise (802.1X)   |
+| **🏷️ Badge profil réseau**        | Dashboard Header | Simple (vert), Mesh (jaune), Mesh Isolé (rouge), Enterprise (bleu) |
+| **📊 Colonne network_profile**    | DB sites         | Stockage JSONB pour analytics et requêtes                          |
+| **⚡ Détection périodique**       | Sync-Agent       | Au boot (30s délai) puis toutes les heures                         |
+| **🔒 Détection isolation client** | NetworkDetector  | Test ARP + ping broadcast pour détecter l'isolation                |
+| **📈 Score de stabilité**         | NetworkDetector  | 0-100 basé sur les déconnexions/heure (seuil: 3)                   |
+
+**Types de profils détectés :**
+
+| Type            | Conditions                       | Comportement recommandé               |
+| --------------- | -------------------------------- | ------------------------------------- |
+| `simple`        | 1 AP, pas d'isolation            | BSSID lock autorisé                   |
+| `mesh`          | >1 AP même SSID, pas d'isolation | BSSID lock bloqué, bgscan activé      |
+| `mesh_isolated` | >1 AP, isolation client détectée | Remote Cloud recommandé, SSH Ethernet |
+| `enterprise`    | 802.1X détecté                   | Configuration IT requise              |
+
 ---
 
 ## Checklist nouveau client

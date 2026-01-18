@@ -109,6 +109,13 @@ ping -c 3 8.8.8.8
 - 🐕 **Hotspot Watchdog** - Service systemd surveillant la santé du hotspot (hostapd, dnsmasq, rfkill) avec récupération automatique
 - 📡 Détection automatique du type de réseau (simple vs mesh) basée sur le nombre d'APs avec le même SSID
 
+**Corrections apportées (v2.35) :**
+
+- 🔍 **NetworkDetector complet** - Détection mesh, isolation client (ARP/broadcast), stabilité (déconnexions/heure), enterprise (802.1X)
+- 🏷️ **Badge profil réseau** - Affichage visuel dans le dashboard : Simple (vert), Mesh (jaune), Mesh Isolé (rouge), Enterprise (bleu)
+- 📊 **Stockage profil en DB** - Colonne `network_profile` JSONB pour analytics et requêtes
+- ⚡ **Détection périodique** - Au boot (30s délai) puis toutes les heures
+
 **Leçons apprises :**
 
 - ⚠️ Ne JAMAIS déployer de mise à jour critique sur NLF sans test préalable
@@ -416,4 +423,4 @@ Voir `/docs/research/NETWORK_CHALLENGES_INDUSTRY_ANALYSIS.md` pour l'analyse com
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (soir)
+**Dernière mise à jour :** 18 janvier 2026 (v2.35 - NetworkDetector)
