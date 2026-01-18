@@ -19,6 +19,7 @@ const connectionStatus = require('./services/connection-status');
 const localBackup = require('./tasks/local-backup');
 const { networkDetector } = require('./services/network-detector');
 const { safeNetworkOperations } = require('./services/safe-network-operations');
+const networkWatchdog = require('./services/network-watchdog');
 
 class NeoproSyncAgent {
   constructor() {
@@ -146,6 +147,9 @@ class NeoproSyncAgent {
 
     // Démarrer la détection périodique du profil réseau
     this.startNetworkProfileDetection();
+
+    // Démarrer le watchdog réseau (Phase 4 - auto-recovery)
+    this.startNetworkWatchdog();
 
     // Traiter les commandes en attente dans la queue offline
     this.processOfflineQueue();
@@ -613,6 +617,30 @@ class NeoproSyncAgent {
     }, NETWORK_PROFILE_INTERVAL);
   }
 
+  /**
+   * Démarre le watchdog réseau pour la surveillance et l'auto-recovery
+   * Phase 4 de Network Resilience
+   */
+  startNetworkWatchdog() {
+    logger.info('Starting network watchdog (Phase 4)');
+
+    // Injecter la référence au socket
+    networkWatchdog.setSocketRef(this.socket);
+
+    // Démarrer le watchdog
+    networkWatchdog.start();
+
+    // Écouter les événements pong du serveur pour mettre à jour le timestamp
+    this.socket.on('pong', () => {
+      networkWatchdog.updateLastPong();
+    });
+
+    // Écouter également pong_response si utilisé
+    this.socket.on('pong_response', () => {
+      networkWatchdog.updateLastPong();
+    });
+  }
+
   startHeartbeat() {
     logger.info('Starting heartbeat', { interval: config.monitoring.heartbeatInterval });
 
@@ -796,6 +824,9 @@ class NeoproSyncAgent {
       clearInterval(this.networkProfileInterval);
     }
 
+    // Arrêter le watchdog réseau
+    networkWatchdog.stop();
+
     // Arrêter la surveillance de la configuration
     if (this.configWatcher) {
       this.configWatcher.stop();
@@ -834,4 +865,5 @@ module.exports = {
   offlineQueue,
   connectionStatus,
   networkDetector,
+  networkWatchdog,
 };

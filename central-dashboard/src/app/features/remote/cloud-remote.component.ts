@@ -1,985 +1,213 @@
 /**
  * Cloud Remote Component
  *
- * Télécommande cloud pour contrôler un site Neopro à distance.
- * Fonctionne sur n'importe quel réseau, même avec isolation client.
+ * Télécommande cloud identique à /remote sur le Raspberry Pi.
+ * Accessible via https://dashboard.neopro.tv/remote/{siteId}
+ *
+ * Différences avec le Pi:
+ * - Utilise RemoteService (HTTP API) au lieu de LocalBroadcastService
+ * - Pas de mode démo (club selector)
+ * - Configuration chargée depuis le cloud au lieu de local
  *
  * Date: 2026-01-18
  */
 
-import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, interval, takeUntil } from 'rxjs';
-import { RemoteService, RemoteState, ScoreData, VideoData } from '../../core/services/remote.service';
+import { RemoteService, RemoteState } from '../../core/services/remote.service';
 
-interface VideoItem {
+// Types locaux (identiques au Pi)
+type SportType = 'football' | 'basketball' | 'handball' | 'volleyball' | 'rugby' | 'hockey';
+type OverlayPosition =
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'middle-left' | 'middle-center' | 'middle-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+
+interface Category {
+  id: string;
+  name: string;
+  videos?: Video[];
+  subCategories?: Category[];
+}
+
+interface Video {
   name: string;
   path: string;
-  category?: string;
+  type?: string;
+  categoryId?: string;
 }
 
 interface TimeCategory {
   id: string;
   name: string;
-  icon: string;
-  description: string;
+  icon?: string;
+  color?: string;
+  description?: string;
+  categoryIds?: string[];
+  loopVideos?: Video[];
 }
 
-interface Category {
+interface Configuration {
+  remote?: { title?: string };
+  categories: Category[];
+  sponsors: Video[];
+  timeCategories?: TimeCategory[];
+  liveScoreEnabled?: boolean;
+}
+
+interface TeamConfig {
+  name: string;
+  shortName?: string;
+  logo?: string;
+}
+
+interface GoalAnimationConfig {
+  enabled: boolean;
+  style: 'popup' | 'fullscreen' | 'slide';
+  duration: number;
+  soundEnabled: boolean;
+  soundUrl?: string;
+}
+
+interface OverlayPreset {
   id: string;
   name: string;
-  videos?: Array<{ name: string; path: string }>;
-  subCategories?: Array<{
-    id: string;
-    name: string;
-    videos?: Array<{ name: string; path: string }>;
-  }>;
+  sport: SportType;
+  position: OverlayPosition;
+  template: 'sportif' | 'elegant' | 'minimal';
+  backgroundColor?: string;
+  scoreColor?: string;
+  teamNameColor?: string;
+  createdAt: number;
 }
 
-type ViewType = 'home' | 'time-categories' | 'category-videos' | 'all-videos' | 'score';
+interface LocalOptions {
+  sport: SportType;
+  match: {
+    homeTeam: TeamConfig;
+    awayTeam: TeamConfig;
+    period: string;
+    periodIndex: number;
+  };
+  overlay: {
+    scoreEnabled: boolean;
+    position?: OverlayPosition;
+    useLocalColors: boolean;
+    backgroundColor?: string;
+    scoreColor?: string;
+    teamNameColor?: string;
+  };
+  goalAnimation: GoalAnimationConfig;
+  timer: {
+    enabled: boolean;
+    periodDuration: number;
+    countDown: boolean;
+    integratedWithScore: boolean;
+  };
+  breakingNews: {
+    enabled: boolean;
+    position: 'top' | 'bottom';
+    defaultDuration: number;
+    displayMode: 'scroll' | 'truncate' | 'multiline';
+    quickMessages: string[];
+  };
+  template: 'sportif' | 'elegant' | 'minimal';
+  presets: OverlayPreset[];
+}
+
+// Constantes (identiques au Pi)
+const SPORT_PERIOD_DURATIONS: Record<SportType, number> = {
+  football: 45,
+  basketball: 10,
+  handball: 30,
+  volleyball: 25,
+  rugby: 40,
+  hockey: 20,
+};
+
+const SPORT_PERIODS: Record<SportType, string[]> = {
+  football: ['1ère mi-temps', '2ème mi-temps', 'Prolongations', 'Tirs au but'],
+  basketball: ['1er quart', '2ème quart', '3ème quart', '4ème quart', 'Prolongation'],
+  handball: ['1ère mi-temps', '2ème mi-temps', 'Prolongations'],
+  volleyball: ['Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5'],
+  rugby: ['1ère mi-temps', '2ème mi-temps', 'Prolongations'],
+  hockey: ['1ère période', '2ème période', '3ème période', 'Prolongation', 'Tirs au but'],
+};
+
+const SPORT_LABELS: Record<SportType, string> = {
+  football: 'Football',
+  basketball: 'Basketball',
+  handball: 'Handball',
+  volleyball: 'Volleyball',
+  rugby: 'Rugby',
+  hockey: 'Hockey',
+};
+
+const DEFAULT_GOAL_SOUNDS: Record<SportType, string> = {
+  football: '/assets/sounds/goal-football.mp3',
+  basketball: '/assets/sounds/buzzer-basketball.mp3',
+  handball: '/assets/sounds/goal-handball.mp3',
+  volleyball: '/assets/sounds/point-volleyball.mp3',
+  rugby: '/assets/sounds/try-rugby.mp3',
+  hockey: '/assets/sounds/goal-hockey.mp3',
+};
+
+const DEFAULT_OPTIONS: LocalOptions = {
+  sport: 'football',
+  match: {
+    homeTeam: { name: 'DOMICILE', shortName: 'DOM', logo: undefined },
+    awayTeam: { name: 'EXTÉRIEUR', shortName: 'EXT', logo: undefined },
+    period: '1ère mi-temps',
+    periodIndex: 0,
+  },
+  overlay: {
+    scoreEnabled: false,
+    position: undefined,
+    useLocalColors: false,
+    backgroundColor: undefined,
+    scoreColor: undefined,
+    teamNameColor: undefined,
+  },
+  goalAnimation: {
+    enabled: true,
+    style: 'popup',
+    duration: 4,
+    soundEnabled: true,
+    soundUrl: DEFAULT_GOAL_SOUNDS.football,
+  },
+  timer: {
+    enabled: false,
+    periodDuration: 45,
+    countDown: true,
+    integratedWithScore: true,
+  },
+  breakingNews: {
+    enabled: false,
+    position: 'bottom',
+    defaultDuration: 10,
+    displayMode: 'scroll',
+    quickMessages: [
+      'Mi-temps ! Rendez-vous à la buvette',
+      'Changement de joueur',
+      'Temps mort',
+      'Applaudissez vos joueurs !',
+    ],
+  },
+  template: 'sportif',
+  presets: [],
+};
+
+type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos' | 'options';
 
 @Component({
   selector: 'app-cloud-remote',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <div class="cloud-remote" [class.dark]="isDarkMode">
-      <!-- Header -->
-      <header class="remote-header">
-        <div class="header-left">
-          <h1 class="header-title">{{ state()?.clubName || 'Chargement...' }}</h1>
-          <span class="header-subtitle" [class.connected]="state()?.isConnected" [class.offline]="!state()?.isConnected">
-            {{ state()?.isConnected ? 'Connecté' : 'Hors ligne' }}
-          </span>
-        </div>
-        <div class="header-right">
-          <select class="phase-select" [(ngModel)]="selectedPhase" (ngModelChange)="onPhaseChange($event)">
-            <option value="neutral">🔄 Boucle</option>
-            <option value="before">🚩 Avant</option>
-            <option value="during">▶️ Match</option>
-            <option value="after">🏆 Après</option>
-          </select>
-          <button class="icon-btn" (click)="toggleDarkMode()" [title]="isDarkMode ? 'Mode clair' : 'Mode sombre'">
-            {{ isDarkMode ? '☀️' : '🌙' }}
-          </button>
-        </div>
-      </header>
-
-      <!-- Loading -->
-      <div class="loading" *ngIf="isLoading()">
-        <div class="spinner"></div>
-        <span>Chargement...</span>
-      </div>
-
-      <!-- Error -->
-      <div class="error-state" *ngIf="error()">
-        <span class="error-icon">⚠️</span>
-        <span class="error-text">{{ error() }}</span>
-        <button class="retry-btn" (click)="loadState()">Réessayer</button>
-      </div>
-
-      <!-- Offline Warning -->
-      <div class="offline-banner" *ngIf="state() && !state()?.isConnected">
-        <span class="offline-icon">📡</span>
-        <div class="offline-text">
-          <strong>Site hors ligne</strong>
-          <span>Les commandes ne seront pas reçues. Utilisez la télécommande locale (hotspot).</span>
-        </div>
-      </div>
-
-      <!-- Content -->
-      <main class="remote-content" *ngIf="state() && !isLoading() && !error()">
-
-        <!-- Home View -->
-        <div class="view-home" *ngIf="currentView === 'home'">
-
-          <!-- Quick Actions -->
-          <section class="section">
-            <div class="section-title">⚡ Actions rapides</div>
-            <div class="quick-actions">
-              <button class="action-btn primary" (click)="playSponsors()" [disabled]="!state()?.isConnected">
-                <span class="btn-icon">🔄</span>
-                <span class="btn-label">Lancer boucle</span>
-              </button>
-              <button class="action-btn" (click)="currentView = 'score'" [disabled]="!state()?.isConnected">
-                <span class="btn-icon">🏆</span>
-                <span class="btn-label">Score</span>
-              </button>
-              <button class="action-btn" (click)="currentView = 'all-videos'">
-                <span class="btn-icon">🎬</span>
-                <span class="btn-label">Vidéos</span>
-              </button>
-            </div>
-          </section>
-
-          <!-- Current Loop Info -->
-          <section class="section" *ngIf="currentLoopCount() > 0">
-            <div class="loop-banner">
-              <div class="loop-info">
-                <span class="loop-badge">🔄 En boucle ({{ currentLoopCount() }} vidéo{{ currentLoopCount() > 1 ? 's' : '' }})</span>
-                <span class="loop-phase">{{ getPhaseLabel(selectedPhase) }}</span>
-              </div>
-            </div>
-          </section>
-
-          <!-- Recent Videos -->
-          <section class="section" *ngIf="recentVideos.length > 0">
-            <div class="section-title">🕐 Récemment lancées</div>
-            <div class="recent-scroll">
-              <button
-                class="recent-card"
-                *ngFor="let video of recentVideos"
-                [class.playing]="playingVideoPath === video.path"
-                (click)="playVideo(video)"
-                [disabled]="!state()?.isConnected"
-              >
-                <div class="recent-thumb">
-                  <span *ngIf="playingVideoPath !== video.path">▶</span>
-                  <span *ngIf="playingVideoPath === video.path" class="playing-indicator">●</span>
-                </div>
-                <span class="recent-name">{{ video.name }}</span>
-              </button>
-            </div>
-          </section>
-
-          <!-- Time Categories -->
-          <section class="section">
-            <div class="section-title">📚 Organisation par temps</div>
-            <div class="time-grid">
-              <button
-                class="time-card"
-                *ngFor="let tc of timeCategories()"
-                [class]="'time-card-' + tc.id"
-                (click)="selectTimeCategory(tc)"
-              >
-                <div class="time-header">
-                  <span class="time-icon">{{ tc.icon }}</span>
-                  <span class="time-arrow">›</span>
-                </div>
-                <div class="time-name">{{ tc.name }}</div>
-                <div class="time-desc">{{ tc.description }}</div>
-                <div class="time-stats">{{ getCategoriesForTime(tc.id).length }} catégories</div>
-              </button>
-            </div>
-          </section>
-        </div>
-
-        <!-- Score View -->
-        <div class="view-score" *ngIf="currentView === 'score'">
-          <div class="view-header">
-            <button class="back-btn" (click)="currentView = 'home'">‹</button>
-            <span class="view-title">Score en direct</span>
-          </div>
-
-          <div class="score-panel">
-            <div class="team-row">
-              <input
-                type="text"
-                class="team-input"
-                [(ngModel)]="score.homeTeam"
-                placeholder="Home team"
-              />
-              <div class="score-controls">
-                <button class="score-btn minus" (click)="decrementScore('home')" [disabled]="score.homeScore <= 0">−</button>
-                <span class="score-value">{{ score.homeScore }}</span>
-                <button class="score-btn plus" (click)="incrementScore('home')">+</button>
-              </div>
-            </div>
-
-            <div class="vs-divider">VS</div>
-
-            <div class="team-row">
-              <input
-                type="text"
-                class="team-input"
-                [(ngModel)]="score.awayTeam"
-                placeholder="Away team"
-              />
-              <div class="score-controls">
-                <button class="score-btn minus" (click)="decrementScore('away')" [disabled]="score.awayScore <= 0">−</button>
-                <span class="score-value">{{ score.awayScore }}</span>
-                <button class="score-btn plus" (click)="incrementScore('away')">+</button>
-              </div>
-            </div>
-
-            <div class="score-actions">
-              <button class="action-btn primary" (click)="sendScore()" [disabled]="!state()?.isConnected || isSendingScore">
-                {{ isSendingScore ? 'Envoi...' : 'Envoyer le score' }}
-              </button>
-              <button class="action-btn secondary" (click)="resetScore()" [disabled]="!state()?.isConnected">
-                Remettre à 0
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Time Categories View -->
-        <div class="view-categories" *ngIf="currentView === 'time-categories'">
-          <div class="view-header">
-            <button class="back-btn" (click)="currentView = 'home'">‹</button>
-            <span class="view-title">{{ selectedTimeCategory?.name }}</span>
-          </div>
-          <div class="categories-list">
-            <button
-              class="category-card"
-              *ngFor="let cat of getCategoriesForTime(selectedTimeCategory?.id || '')"
-              (click)="selectCategory(cat)"
-            >
-              <span class="cat-icon">📁</span>
-              <div class="cat-info">
-                <span class="cat-name">{{ cat.name }}</span>
-                <span class="cat-count">{{ getVideoCountForCategory(cat) }} vidéos</span>
-              </div>
-              <span class="cat-arrow">›</span>
-            </button>
-            <div class="empty-state" *ngIf="getCategoriesForTime(selectedTimeCategory?.id || '').length === 0">
-              <span class="empty-icon">📂</span>
-              <span class="empty-text">Aucune catégorie</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Category Videos View -->
-        <div class="view-videos" *ngIf="currentView === 'category-videos'">
-          <div class="view-header">
-            <button class="back-btn" (click)="currentView = 'time-categories'">‹</button>
-            <span class="view-title">{{ selectedCategory?.name }}</span>
-          </div>
-          <div class="videos-list">
-            <button
-              class="video-card"
-              *ngFor="let video of getVideosForCategory(selectedCategory)"
-              [class.playing]="playingVideoPath === video.path"
-              (click)="playVideo(video)"
-              [disabled]="!state()?.isConnected"
-            >
-              <div class="video-thumb">
-                <span *ngIf="playingVideoPath !== video.path">▶</span>
-                <span *ngIf="playingVideoPath === video.path" class="playing-indicator">●</span>
-              </div>
-              <div class="video-info">
-                <span class="video-name">{{ video.name }}</span>
-              </div>
-              <span class="video-play" *ngIf="playingVideoPath !== video.path">▶</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- All Videos View -->
-        <div class="view-all-videos" *ngIf="currentView === 'all-videos'">
-          <div class="view-header">
-            <button class="back-btn" (click)="currentView = 'home'">‹</button>
-            <span class="view-title">Toutes les vidéos ({{ allVideos().length }})</span>
-          </div>
-
-          <!-- Search -->
-          <div class="search-box">
-            <input
-              type="text"
-              class="search-input"
-              [(ngModel)]="searchQuery"
-              placeholder="🔍 Search video..."
-            />
-          </div>
-
-          <div class="videos-list">
-            <button
-              class="video-card"
-              *ngFor="let video of filteredVideos()"
-              [class.playing]="playingVideoPath === video.path"
-              (click)="playVideo(video)"
-              [disabled]="!state()?.isConnected"
-            >
-              <div class="video-thumb">
-                <span *ngIf="playingVideoPath !== video.path">▶</span>
-                <span *ngIf="playingVideoPath === video.path" class="playing-indicator">●</span>
-              </div>
-              <div class="video-info">
-                <span class="video-name">{{ video.name }}</span>
-                <span class="video-cat">{{ video.category || 'Sans catégorie' }}</span>
-              </div>
-              <span class="video-play" *ngIf="playingVideoPath !== video.path">▶</span>
-            </button>
-            <div class="empty-state" *ngIf="filteredVideos().length === 0">
-              <span class="empty-icon">🎬</span>
-              <span class="empty-text">Aucune vidéo trouvée</span>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      <!-- Toast -->
-      <div class="toast" *ngIf="showToast" [class.success]="toastType === 'success'" [class.error]="toastType === 'error'">
-        {{ toastMessage }}
-      </div>
-    </div>
-  `,
-  styles: [`
-    .cloud-remote {
-      min-height: 100vh;
-      background: #f8fafc;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-
-    .cloud-remote.dark {
-      background: #0f172a;
-      color: white;
-    }
-
-    /* Header */
-    .remote-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem;
-      background: white;
-      border-bottom: 1px solid #e2e8f0;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .dark .remote-header {
-      background: #1e293b;
-      border-color: #334155;
-    }
-
-    .header-title {
-      margin: 0;
-      font-size: 1.125rem;
-      font-weight: 600;
-    }
-
-    .header-subtitle {
-      font-size: 0.75rem;
-      padding: 0.125rem 0.5rem;
-      border-radius: 9999px;
-      background: #fecaca;
-      color: #dc2626;
-    }
-
-    .header-subtitle.connected {
-      background: #bbf7d0;
-      color: #16a34a;
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .phase-select {
-      padding: 0.5rem;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-      background: white;
-      font-size: 0.875rem;
-      cursor: pointer;
-    }
-
-    .dark .phase-select {
-      background: #334155;
-      border-color: #475569;
-      color: white;
-    }
-
-    .icon-btn {
-      width: 36px;
-      height: 36px;
-      border: none;
-      border-radius: 8px;
-      background: #f1f5f9;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-
-    .dark .icon-btn {
-      background: #334155;
-    }
-
-    /* Loading & Error */
-    .loading, .error-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 3rem;
-      gap: 1rem;
-    }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid #e2e8f0;
-      border-top-color: #3b82f6;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .error-icon { font-size: 2rem; }
-    .error-text { color: #dc2626; }
-
-    .retry-btn {
-      padding: 0.5rem 1rem;
-      background: #3b82f6;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
-    /* Offline Banner */
-    .offline-banner {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem 1rem;
-      background: #fef3c7;
-      border-bottom: 1px solid #fcd34d;
-    }
-
-    .offline-icon { font-size: 1.25rem; }
-
-    .offline-text {
-      display: flex;
-      flex-direction: column;
-      font-size: 0.875rem;
-    }
-
-    .offline-text strong {
-      color: #92400e;
-    }
-
-    .offline-text span {
-      color: #a16207;
-      font-size: 0.75rem;
-    }
-
-    /* Content */
-    .remote-content {
-      padding: 1rem;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-
-    .section {
-      margin-bottom: 1.5rem;
-    }
-
-    .section-title {
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #64748b;
-      margin-bottom: 0.75rem;
-    }
-
-    .dark .section-title {
-      color: #94a3b8;
-    }
-
-    /* Quick Actions */
-    .quick-actions {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.75rem;
-    }
-
-    .action-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 1rem;
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .dark .action-btn {
-      background: #1e293b;
-      border-color: #334155;
-    }
-
-    .action-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    .action-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .action-btn.primary {
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      border-color: transparent;
-      color: white;
-    }
-
-    .action-btn.secondary {
-      background: #f1f5f9;
-    }
-
-    .dark .action-btn.secondary {
-      background: #334155;
-    }
-
-    .btn-icon { font-size: 1.5rem; }
-    .btn-label { font-size: 0.75rem; font-weight: 500; }
-
-    /* Loop Banner */
-    .loop-banner {
-      background: linear-gradient(135deg, #1e40af, #3b82f6);
-      border-radius: 12px;
-      padding: 1rem;
-      color: white;
-    }
-
-    .loop-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .loop-badge {
-      font-size: 0.75rem;
-      opacity: 0.9;
-    }
-
-    .loop-phase {
-      font-size: 0.75rem;
-      padding: 0.25rem 0.75rem;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 9999px;
-    }
-
-    /* Recent Videos */
-    .recent-scroll {
-      display: flex;
-      gap: 0.75rem;
-      overflow-x: auto;
-      padding-bottom: 0.5rem;
-    }
-
-    .recent-card {
-      flex-shrink: 0;
-      width: 80px;
-      padding: 0.75rem;
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      text-align: center;
-      cursor: pointer;
-    }
-
-    .dark .recent-card {
-      background: #1e293b;
-      border-color: #334155;
-    }
-
-    .recent-card.playing {
-      background: #3b82f6;
-      border-color: #3b82f6;
-      color: white;
-    }
-
-    .recent-thumb {
-      width: 100%;
-      height: 40px;
-      background: #f1f5f9;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 0.5rem;
-      font-size: 0.875rem;
-      color: #64748b;
-    }
-
-    .dark .recent-thumb {
-      background: #334155;
-    }
-
-    .recent-card.playing .recent-thumb {
-      background: rgba(255, 255, 255, 0.2);
-    }
-
-    .playing-indicator {
-      color: #22c55e;
-      animation: pulse 1s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    .recent-name {
-      font-size: 0.625rem;
-      display: block;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    /* Time Categories Grid */
-    .time-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .time-card {
-      width: 100%;
-      padding: 1rem;
-      background: white;
-      border: none;
-      border-radius: 12px;
-      text-align: left;
-      cursor: pointer;
-      transition: transform 0.15s;
-    }
-
-    .dark .time-card {
-      background: #1e293b;
-    }
-
-    .time-card:hover {
-      transform: scale(1.02);
-    }
-
-    .time-card-before { border-left: 4px solid #f59e0b; }
-    .time-card-during { border-left: 4px solid #22c55e; }
-    .time-card-after { border-left: 4px solid #3b82f6; }
-
-    .time-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.5rem;
-    }
-
-    .time-icon { font-size: 1.25rem; }
-    .time-arrow { color: #94a3b8; }
-
-    .time-name {
-      font-weight: 600;
-      margin-bottom: 0.25rem;
-    }
-
-    .time-desc {
-      font-size: 0.75rem;
-      color: #64748b;
-      margin-bottom: 0.5rem;
-    }
-
-    .dark .time-desc {
-      color: #94a3b8;
-    }
-
-    .time-stats {
-      font-size: 0.75rem;
-      color: #94a3b8;
-    }
-
-    /* View Header */
-    .view-header {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-      padding-bottom: 0.75rem;
-      border-bottom: 1px solid #e2e8f0;
-    }
-
-    .dark .view-header {
-      border-color: #334155;
-    }
-
-    .back-btn {
-      width: 32px;
-      height: 32px;
-      background: #f1f5f9;
-      border: none;
-      border-radius: 8px;
-      font-size: 1.25rem;
-      cursor: pointer;
-    }
-
-    .dark .back-btn {
-      background: #334155;
-      color: white;
-    }
-
-    .view-title {
-      font-weight: 600;
-    }
-
-    /* Score Panel */
-    .score-panel {
-      background: white;
-      border-radius: 16px;
-      padding: 1.5rem;
-    }
-
-    .dark .score-panel {
-      background: #1e293b;
-    }
-
-    .team-row {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-    }
-
-    .team-input {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      font-size: 1rem;
-      text-align: center;
-    }
-
-    .dark .team-input {
-      background: #334155;
-      border-color: #475569;
-      color: white;
-    }
-
-    .score-controls {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 1rem;
-    }
-
-    .score-btn {
-      width: 48px;
-      height: 48px;
-      border: none;
-      border-radius: 50%;
-      font-size: 1.5rem;
-      cursor: pointer;
-      transition: transform 0.1s;
-    }
-
-    .score-btn:active:not(:disabled) {
-      transform: scale(0.95);
-    }
-
-    .score-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .score-btn.minus {
-      background: #fee2e2;
-      color: #dc2626;
-    }
-
-    .score-btn.plus {
-      background: #dcfce7;
-      color: #16a34a;
-    }
-
-    .score-value {
-      font-size: 2.5rem;
-      font-weight: 700;
-      min-width: 60px;
-      text-align: center;
-    }
-
-    .vs-divider {
-      text-align: center;
-      font-size: 0.875rem;
-      color: #94a3b8;
-      margin: 0.5rem 0;
-    }
-
-    .score-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      margin-top: 1.5rem;
-    }
-
-    .score-actions .action-btn {
-      flex-direction: row;
-      justify-content: center;
-      padding: 1rem;
-    }
-
-    /* Categories & Videos Lists */
-    .categories-list, .videos-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .category-card, .video-card {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.875rem;
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      cursor: pointer;
-      text-align: left;
-    }
-
-    .dark .category-card, .dark .video-card {
-      background: #1e293b;
-      border-color: #334155;
-    }
-
-    .video-card:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .cat-icon { font-size: 1.25rem; }
-
-    .cat-info, .video-info {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .cat-name, .video-name {
-      font-weight: 500;
-    }
-
-    .cat-count, .video-cat {
-      font-size: 0.75rem;
-      color: #64748b;
-    }
-
-    .dark .cat-count, .dark .video-cat {
-      color: #94a3b8;
-    }
-
-    .cat-arrow { color: #94a3b8; }
-
-    .video-thumb {
-      width: 48px;
-      height: 36px;
-      background: #f1f5f9;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-      color: #64748b;
-    }
-
-    .dark .video-thumb {
-      background: #334155;
-    }
-
-    .video-card.playing {
-      background: #3b82f6;
-      border-color: #3b82f6;
-      color: white;
-    }
-
-    .video-card.playing .video-thumb {
-      background: rgba(255, 255, 255, 0.2);
-    }
-
-    .video-card.playing .video-cat {
-      color: rgba(255, 255, 255, 0.8);
-    }
-
-    .video-play {
-      width: 28px;
-      height: 28px;
-      background: #3b82f6;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.625rem;
-      color: white;
-    }
-
-    /* Search */
-    .search-box {
-      margin-bottom: 1rem;
-    }
-
-    .search-input {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      font-size: 0.875rem;
-    }
-
-    .dark .search-input {
-      background: #1e293b;
-      border-color: #334155;
-      color: white;
-    }
-
-    /* Empty State */
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 2rem;
-      color: #64748b;
-    }
-
-    .empty-icon { font-size: 2rem; opacity: 0.5; }
-    .empty-text { font-size: 0.875rem; }
-
-    /* Toast */
-    .toast {
-      position: fixed;
-      bottom: 1rem;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 0.75rem 1.5rem;
-      background: #1e293b;
-      color: white;
-      border-radius: 9999px;
-      font-size: 0.875rem;
-      z-index: 1000;
-      animation: slideUp 0.3s ease-out;
-    }
-
-    .toast.success {
-      background: #16a34a;
-    }
-
-    .toast.error {
-      background: #dc2626;
-    }
-
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translate(-50%, 20px);
-      }
-      to {
-        opacity: 1;
-        transform: translate(-50%, 0);
-      }
-    }
-  `]
+  templateUrl: './cloud-remote.component.html',
+  styleUrl: './cloud-remote.component.scss'
 })
 export class CloudRemoteComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -987,314 +215,1328 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   private readonly remoteService = inject(RemoteService);
   private readonly destroy$ = new Subject<void>();
 
-  // State
-  state = signal<RemoteState | null>(null);
-  isLoading = signal(true);
-  error = signal<string | null>(null);
+  public siteId: string = '';
+  public siteName: string = '';
+  public clubName: string = '';
+  public isConnected = false;
+  public connectionError: string | null = null;
 
-  // UI State
-  currentView: ViewType = 'home';
-  selectedPhase = 'neutral';
-  selectedTimeCategory: TimeCategory | null = null;
-  selectedCategory: Category | null = null;
-  playingVideoPath: string | null = null;
-  isDarkMode = false;
-  searchQuery = '';
+  public configuration!: Configuration;
 
-  // Score
-  score: ScoreData = {
+  // Options locales (stockées dans localStorage du navigateur)
+  public localOptions: LocalOptions = this.loadLocalOptions();
+  public currentView: ViewType = 'home';
+  public breadcrumb: string[] = ['Télécommande'];
+  public isReloading = false;
+
+  public selectedTimeCategory: TimeCategory | null = null;
+  public selectedCategory: Category | null = null;
+  public selectedSubCategory: Category | null = null;
+
+  // Recherche
+  public searchQuery = '';
+  public searchResults: Video[] = [];
+  public isSearching = false;
+
+  // Affluence et match info
+  public showMatchModal = false;
+  public matchInfo = {
+    date: new Date().toISOString().split('T')[0],
+    matchName: '',
+    audienceEstimate: 150
+  };
+  public currentSessionId: string | null = null;
+
+  // Score en live + Options avancées
+  public liveScoreEnabled = false;
+  public isScorePanelExpanded = false;
+  public currentScore = {
     homeTeam: 'DOMICILE',
     awayTeam: 'EXTÉRIEUR',
     homeScore: 0,
     awayScore: 0
   };
-  isSendingScore = false;
 
-  // Recent videos
-  recentVideos: VideoItem[] = [];
+  // Phase active de la boucle vidéo
+  public activePhase: 'neutral' | 'before' | 'during' | 'after' = 'neutral';
+  public readonly matchPhases: ('before' | 'during' | 'after')[] = ['before', 'during', 'after'];
+  public isPhaseDropdownOpen = false;
 
-  // Toast
-  showToast = false;
-  toastMessage = '';
-  toastType: 'success' | 'error' = 'success';
+  // Toast notification
+  public showToast = false;
+  public toastMessage = '';
+  public toastType: 'success' | 'info' = 'success';
+  private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  // Computed
-  timeCategories = computed(() => {
-    const config = this.state()?.config;
-    if (config?.timeCategories?.length) {
-      return config.timeCategories.map(tc => ({
-        id: tc.id,
-        name: tc.name,
-        icon: tc.icon || this.getDefaultIcon(tc.id),
-        description: tc.description || ''
-      }));
+  // Video en cours de lecture
+  public playingVideoPath: string | null = null;
+
+  // Vidéos récemment lancées
+  public recentVideos: Video[] = [];
+  private readonly MAX_RECENT_VIDEOS = 5;
+
+  // Loading state
+  public isLoading = true;
+
+  // Dark mode
+  public isDarkMode = false;
+
+  // Menu header
+  public isHeaderMenuOpen = false;
+
+  // Sports et Périodes
+  public readonly sportTypes: SportType[] = ['football', 'basketball', 'handball', 'volleyball', 'rugby', 'hockey'];
+  public readonly sportLabels = SPORT_LABELS;
+  public readonly sportPeriods = SPORT_PERIODS;
+  public readonly sportPeriodDurations = SPORT_PERIOD_DURATIONS;
+
+  // Positions overlay (9 positions)
+  public readonly overlayPositions: { value: OverlayPosition; label: string }[] = [
+    { value: 'top-left', label: 'Haut gauche' },
+    { value: 'top-center', label: 'Haut centre' },
+    { value: 'top-right', label: 'Haut droite' },
+    { value: 'middle-left', label: 'Milieu gauche' },
+    { value: 'middle-center', label: 'Centre' },
+    { value: 'middle-right', label: 'Milieu droite' },
+    { value: 'bottom-left', label: 'Bas gauche' },
+    { value: 'bottom-center', label: 'Bas centre' },
+    { value: 'bottom-right', label: 'Bas droite' },
+  ];
+
+  // Styles d'animation de but
+  public readonly goalAnimationStyles: { value: 'popup' | 'fullscreen' | 'slide'; label: string }[] = [
+    { value: 'popup', label: 'Popup central' },
+    { value: 'fullscreen', label: 'Plein écran' },
+    { value: 'slide', label: 'Bandeau glissant' },
+  ];
+
+  // Présets
+  public showPresetModal = false;
+  public newPresetName = '';
+
+  // Swipe gesture tracking
+  private touchStartX = 0;
+  private touchStartY = 0;
+  private readonly SWIPE_THRESHOLD = 50;
+
+  // Exposer Math pour le template
+  public Math = Math;
+
+  // Organisation par temps de match
+  private readonly defaultTimeCategories: TimeCategory[] = [
+    {
+      id: 'before',
+      name: 'Avant-match',
+      icon: '🏁',
+      color: 'from-blue-500 to-blue-600',
+      description: 'Échauffement & présentation',
+      categoryIds: []
+    },
+    {
+      id: 'during',
+      name: 'Match',
+      icon: '▶️',
+      color: 'from-green-500 to-green-600',
+      description: 'Live & animations',
+      categoryIds: []
+    },
+    {
+      id: 'after',
+      name: 'Après-match',
+      icon: '🏆',
+      color: 'from-purple-500 to-purple-600',
+      description: 'Résultats & remerciements',
+      categoryIds: []
     }
-    return [
-      { id: 'before', name: 'Avant-match', icon: '🚩', description: 'Échauffement, accueil' },
-      { id: 'during', name: 'Match', icon: '▶️', description: 'Pendant le match' },
-      { id: 'after', name: 'Après-match', icon: '🏆', description: 'Célébrations, résumé' }
-    ];
-  });
+  ];
 
-  allVideos = computed(() => {
-    const st = this.state();
-    if (!st) return [];
+  public timeCategories: TimeCategory[] = [];
 
-    const videos: VideoItem[] = [];
+  // Breaking News
+  public showBreakingNewsPanel = false;
+  public breakingNewsMessage = '';
 
-    // From categories
-    st.config.categories?.forEach(cat => {
-      cat.videos?.forEach(v => videos.push({ ...v, category: cat.name }));
-      cat.subCategories?.forEach(sc => {
-        sc.videos?.forEach(v => videos.push({ ...v, category: sc.name }));
-      });
-    });
+  // Timer / Chronomètre
+  public timerCurrentTime = 0;
+  public timerIsRunning = false;
+  private timerInterval: ReturnType<typeof setInterval> | null = null;
 
-    // From sponsors
-    st.config.sponsors?.forEach(s => videos.push({ name: s.name, path: s.path, category: 'Sponsors' }));
+  // Durées disponibles
+  public readonly halfDurations = [15, 20, 25, 30, 35, 40, 45];
+  public readonly newsDurations = [5, 10, 15, 20, 30];
 
-    // From local videos
-    const paths = new Set(videos.map(v => v.path));
-    st.localVideos?.forEach(lv => {
-      if (!paths.has(lv.path)) {
-        videos.push({ name: lv.filename, path: lv.path, category: lv.category || 'Local' });
+  ngOnInit(): void {
+    // Charger le dark mode depuis localStorage
+    this.isDarkMode = localStorage.getItem('darkMode') === 'true';
+    this.applyDarkMode();
+
+    // Charger les vidéos récentes depuis localStorage
+    this.loadRecentVideos();
+
+    // Initialiser le timer
+    this.initializeTimer();
+
+    // Récupérer le siteId depuis la route
+    this.siteId = this.route.snapshot.paramMap.get('siteId') || '';
+
+    if (this.siteId) {
+      this.loadSiteState();
+      // Polling pour garder l'état synchronisé (toutes les 30 secondes)
+      interval(30000)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(() => this.refreshState());
+    } else {
+      this.connectionError = 'Site ID manquant dans l\'URL';
+      this.isLoading = false;
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+    }
+  }
+
+  // ============================================================================
+  // CHARGEMENT ET CONNEXION
+  // ============================================================================
+
+  private loadSiteState(): void {
+    this.isLoading = true;
+    this.connectionError = null;
+
+    this.remoteService.getState(this.siteId).subscribe({
+      next: (state: RemoteState) => {
+        this.siteName = state.siteName;
+        this.clubName = state.clubName;
+        this.isConnected = state.isConnected && state.connectionHealth?.isHealthy;
+
+        if (!this.isConnected) {
+          this.connectionError = 'Le boîtier n\'est pas connecté au cloud. Vérifiez sa connexion Internet.';
+        }
+
+        // Construire la configuration
+        this.configuration = {
+          remote: { title: state.siteName },
+          categories: state.config?.categories || [],
+          sponsors: state.config?.sponsors || [],
+          timeCategories: state.config?.timeCategories || [],
+          liveScoreEnabled: state.config?.liveScoreEnabled || false,
+        };
+
+        this.initializeWithConfiguration(this.configuration);
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('[CloudRemote] Error loading state:', err);
+        this.connectionError = err.error?.error || 'Impossible de charger l\'état du site';
+        this.isLoading = false;
       }
     });
+  }
 
-    return videos;
-  });
+  public retryConnection(): void {
+    this.loadSiteState();
+  }
 
-  filteredVideos = computed(() => {
-    const query = this.searchQuery.toLowerCase().trim();
-    if (!query) return this.allVideos();
-    return this.allVideos().filter(v =>
-      v.name.toLowerCase().includes(query) ||
-      v.category?.toLowerCase().includes(query)
-    );
-  });
+  private refreshState(): void {
+    if (!this.siteId) return;
 
-  currentLoopCount = computed(() => {
-    const st = this.state();
-    if (!st) return 0;
+    this.remoteService.getState(this.siteId).subscribe({
+      next: (state: RemoteState) => {
+        this.isConnected = state.isConnected && state.connectionHealth?.isHealthy;
 
-    if (this.selectedPhase === 'neutral') {
-      return st.config.sponsors?.length ?? 0;
-    }
+        if (!this.isConnected && !this.connectionError) {
+          this.displayToast('Connexion perdue avec le boîtier', 'info');
+        } else if (this.isConnected && this.connectionError) {
+          this.displayToast('Connexion rétablie', 'success');
+          this.connectionError = null;
+        }
+      },
+      error: () => {
+        // Silencieux pour le polling
+      }
+    });
+  }
 
-    const tc = st.config.timeCategories?.find(t => t.id === this.selectedPhase);
-    if (tc?.loopVideos?.length) {
-      return tc.loopVideos.length;
-    }
+  private initializeWithConfiguration(config: Configuration): void {
+    this.configuration = config;
+    this.timeCategories = config.timeCategories?.length
+      ? config.timeCategories
+      : this.defaultTimeCategories;
+    this.liveScoreEnabled = config.liveScoreEnabled ?? false;
+  }
 
-    return st.config.sponsors?.length ?? 0;
-  });
+  // ============================================================================
+  // NAVIGATION
+  // ============================================================================
 
-  ngOnInit() {
-    const siteId = this.route.snapshot.paramMap.get('siteId');
-    if (!siteId) {
-      this.error.set('ID du site manquant');
-      this.isLoading.set(false);
+  public handleBack(): void {
+    if (this.isSearching) {
+      this.clearSearch();
       return;
     }
 
-    // Dark mode from localStorage
-    this.isDarkMode = localStorage.getItem('remote-dark-mode') === 'true';
+    if (this.currentView === 'all-videos' || this.currentView === 'options') {
+      this.currentView = 'home';
+      this.breadcrumb = ['Télécommande'];
+      return;
+    }
 
-    // Load state
-    this.loadState();
+    this.breadcrumb.pop();
 
-    // Refresh every 30s
-    interval(30000)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => this.loadState(true));
-  }
-
-  ngOnDestroy() {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  loadState(silent = false) {
-    const siteId = this.route.snapshot.paramMap.get('siteId');
-    if (!siteId) return;
-
-    if (!silent) this.isLoading.set(true);
-
-    this.remoteService.getState(siteId).subscribe({
-      next: (state) => {
-        this.state.set(state);
-        this.isLoading.set(false);
-        this.error.set(null);
-      },
-      error: (err) => {
-        console.error('Failed to load state:', err);
-        this.error.set(err.error?.error || 'Erreur de chargement');
-        this.isLoading.set(false);
-      }
-    });
-  }
-
-  // Actions
-  onPhaseChange(phase: string) {
-    const siteId = this.route.snapshot.paramMap.get('siteId');
-    if (!siteId || !this.state()?.isConnected) return;
-
-    this.remoteService.changePhase(siteId, phase as any).subscribe({
-      next: () => this.displayToast(`Phase: ${this.getPhaseLabel(phase)}`, 'success'),
-      error: () => this.displayToast('Erreur lors du changement de phase', 'error')
-    });
-  }
-
-  playSponsors() {
-    const siteId = this.route.snapshot.paramMap.get('siteId');
-    if (!siteId) return;
-
-    this.remoteService.playSponsors(siteId).subscribe({
-      next: () => this.displayToast('Boucle lancée', 'success'),
-      error: () => this.displayToast('Erreur', 'error')
-    });
-  }
-
-  playVideo(video: VideoItem) {
-    const siteId = this.route.snapshot.paramMap.get('siteId');
-    if (!siteId) return;
-
-    this.playingVideoPath = video.path;
-
-    this.remoteService.playVideo(siteId, { name: video.name, path: video.path }).subscribe({
-      next: () => {
-        this.displayToast(`${video.name} lancée`, 'success');
-        this.addToRecent(video);
-        setTimeout(() => this.playingVideoPath = null, 3000);
-      },
-      error: () => {
-        this.displayToast('Erreur', 'error');
-        this.playingVideoPath = null;
-      }
-    });
-  }
-
-  sendScore() {
-    const siteId = this.route.snapshot.paramMap.get('siteId');
-    if (!siteId) return;
-
-    this.isSendingScore = true;
-
-    this.remoteService.updateScore(siteId, this.score).subscribe({
-      next: () => {
-        this.displayToast('Score envoyé', 'success');
-        this.isSendingScore = false;
-      },
-      error: () => {
-        this.displayToast('Erreur', 'error');
-        this.isSendingScore = false;
-      }
-    });
-  }
-
-  resetScore() {
-    const siteId = this.route.snapshot.paramMap.get('siteId');
-    if (!siteId) return;
-
-    this.score.homeScore = 0;
-    this.score.awayScore = 0;
-
-    this.remoteService.resetScore(siteId).subscribe({
-      next: () => this.displayToast('Score remis à zéro', 'success'),
-      error: () => this.displayToast('Erreur', 'error')
-    });
-  }
-
-  incrementScore(team: 'home' | 'away') {
-    if (team === 'home') {
-      this.score.homeScore++;
-    } else {
-      this.score.awayScore++;
+    if (this.breadcrumb.length === 1) {
+      this.currentView = 'home';
+      this.selectedTimeCategory = null;
+      this.selectedCategory = null;
+      this.selectedSubCategory = null;
+    } else if (this.breadcrumb.length === 2) {
+      this.currentView = 'time-categories';
+      this.selectedCategory = null;
+      this.selectedSubCategory = null;
+    } else if (this.breadcrumb.length === 3) {
+      this.currentView = 'subcategories';
+      this.selectedSubCategory = null;
     }
   }
 
-  decrementScore(team: 'home' | 'away') {
-    if (team === 'home' && this.score.homeScore > 0) {
-      this.score.homeScore--;
-    } else if (team === 'away' && this.score.awayScore > 0) {
-      this.score.awayScore--;
-    }
-  }
-
-  // Navigation
-  selectTimeCategory(tc: TimeCategory) {
-    this.selectedTimeCategory = tc;
+  public selectTimeCategory(timeCategory: TimeCategory): void {
+    this.selectedTimeCategory = timeCategory;
+    this.breadcrumb.push(timeCategory.name);
     this.currentView = 'time-categories';
   }
 
-  selectCategory(cat: Category) {
-    this.selectedCategory = cat;
-    this.currentView = 'category-videos';
+  public selectCategory(category: Category): void {
+    this.selectedCategory = category;
+    this.breadcrumb.push(category.name);
+
+    if (category.subCategories && category.subCategories.length > 0) {
+      this.currentView = 'subcategories';
+    } else {
+      this.currentView = 'videos';
+    }
   }
 
-  toggleDarkMode() {
-    this.isDarkMode = !this.isDarkMode;
-    localStorage.setItem('remote-dark-mode', String(this.isDarkMode));
+  public selectSubCategory(subCategory: Category): void {
+    this.selectedSubCategory = subCategory;
+    this.breadcrumb.push(subCategory.name);
+    this.currentView = 'videos';
   }
 
-  // Helpers
-  getPhaseLabel(phase: string): string {
+  // ============================================================================
+  // ACTIONS VIDÉO (via HTTP API)
+  // ============================================================================
+
+  public launchSponsors(): void {
+    console.log('[CloudRemote] Launch sponsors');
+
+    this.remoteService.playSponsors(this.siteId).subscribe({
+      next: () => {
+        this.displayToast('Boucle sponsors lancée', 'success');
+      },
+      error: (err) => {
+        console.error('[CloudRemote] Error launching sponsors:', err);
+        this.displayToast('Erreur: ' + (err.error?.error || 'Échec de la commande'), 'info');
+      }
+    });
+  }
+
+  public launchVideo(video: Video): void {
+    console.log('[CloudRemote] Launch video:', video);
+
+    this.remoteService.playVideo(this.siteId, {
+      name: video.name,
+      path: video.path,
+      categoryId: video.categoryId
+    }).subscribe({
+      next: () => {
+        this.addToRecentVideos(video);
+        this.playingVideoPath = video.path;
+        this.displayToast(`${video.name} lancée sur l'écran`, 'success');
+
+        setTimeout(() => {
+          this.playingVideoPath = null;
+        }, 3000);
+      },
+      error: (err) => {
+        console.error('[CloudRemote] Error launching video:', err);
+        this.displayToast('Erreur: ' + (err.error?.error || 'Échec de la commande'), 'info');
+      }
+    });
+  }
+
+  // ============================================================================
+  // TOAST
+  // ============================================================================
+
+  private displayToast(message: string, type: 'success' | 'info' = 'success'): void {
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
+
+    this.toastMessage = message;
+    this.toastType = type;
+    this.showToast = true;
+
+    this.toastTimeout = setTimeout(() => {
+      this.showToast = false;
+    }, 3000);
+  }
+
+  // ============================================================================
+  // HELPERS
+  // ============================================================================
+
+  public getVideoCategoryName(video: Video): string {
+    if (!video.categoryId) return '';
+
+    const findCategory = (categories: Category[]): string => {
+      for (const cat of categories) {
+        if (cat.id === video.categoryId) return cat.name;
+        if (cat.subCategories) {
+          const found = findCategory(cat.subCategories);
+          if (found) return found;
+        }
+      }
+      return '';
+    };
+
+    return findCategory(this.configuration?.categories || []);
+  }
+
+  public getCategoriesForTimeCategory(timeCategory: TimeCategory): Category[] {
+    const filteredCategories = this.configuration.categories.filter(cat =>
+      timeCategory.categoryIds?.includes(cat.id)
+    );
+    return this.sortByName(filteredCategories);
+  }
+
+  public getVideosCount(category: Category): number {
+    let count = category.videos?.length || 0;
+    if (category.subCategories) {
+      count += category.subCategories.reduce((sum, sub) => {
+        return sum + this.getVideosCount(sub);
+      }, 0);
+    }
+    return count;
+  }
+
+  public getSubCategoriesCount(category: Category): number {
+    return category.subCategories?.length || 0;
+  }
+
+  public getSubCategoriesForDisplay(category: Category): Category[] {
+    return this.sortByName(category.subCategories ?? []);
+  }
+
+  public getCurrentVideos(): Video[] {
+    const videos = this.selectedSubCategory?.videos ?? this.selectedCategory?.videos ?? [];
+    return this.sortByName(videos);
+  }
+
+  public getTotalVideosForTimeCategory(timeCategory: TimeCategory): number {
+    const categories = this.getCategoriesForTimeCategory(timeCategory);
+    return categories.reduce((sum, cat) => sum + this.getVideosCount(cat), 0);
+  }
+
+  public getTotalCategoriesForTimeCategory(timeCategory: TimeCategory): number {
+    return this.getCategoriesForTimeCategory(timeCategory).length;
+  }
+
+  private sortByName<T extends { name: string }>(items: T[] = []): T[] {
+    return [...items].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }
+
+  public reloadConfiguration(): void {
+    if (this.isReloading) return;
+
+    this.isReloading = true;
+    this.isLoading = true;
+
+    this.remoteService.getState(this.siteId).subscribe({
+      next: (state: RemoteState) => {
+        this.configuration = {
+          remote: { title: state.siteName },
+          categories: state.config?.categories || [],
+          sponsors: state.config?.sponsors || [],
+          timeCategories: state.config?.timeCategories || [],
+          liveScoreEnabled: state.config?.liveScoreEnabled || false,
+        };
+
+        const enrichedConfig = this.enrichVideosWithCategoryId(this.configuration);
+        this.initializeWithConfiguration(enrichedConfig);
+
+        this.currentView = 'home';
+        this.breadcrumb = ['Télécommande'];
+        this.selectedTimeCategory = null;
+        this.selectedCategory = null;
+        this.selectedSubCategory = null;
+        this.isReloading = false;
+        this.isLoading = false;
+        this.displayToast('Configuration mise à jour', 'success');
+      },
+      error: (err) => {
+        console.error('[CloudRemote] Error reloading configuration:', err);
+        this.isReloading = false;
+        this.isLoading = false;
+        this.displayToast('Erreur de chargement', 'info');
+      }
+    });
+  }
+
+  private enrichVideosWithCategoryId(config: Configuration): Configuration {
+    const enrichCategory = (category: Category): Category => ({
+      ...category,
+      videos: category.videos?.map(video => ({
+        ...video,
+        categoryId: category.id
+      })),
+      subCategories: category.subCategories?.map(sub => enrichCategory(sub))
+    });
+
+    return {
+      ...config,
+      categories: config.categories?.map(cat => enrichCategory(cat)) || []
+    };
+  }
+
+  // ============================================================================
+  // RECHERCHE
+  // ============================================================================
+
+  public onSearch(): void {
+    if (!this.searchQuery.trim()) {
+      this.clearSearch();
+      return;
+    }
+
+    this.isSearching = true;
+    const query = this.searchQuery.toLowerCase().trim();
+    const filtered = this.getAllVideos().filter(video =>
+      video.name.toLowerCase().includes(query)
+    );
+    this.searchResults = this.sortByName(filtered);
+  }
+
+  public clearSearch(): void {
+    this.searchQuery = '';
+    this.searchResults = [];
+    this.isSearching = false;
+  }
+
+  public getAllVideos(): Video[] {
+    const videos: Video[] = [];
+
+    const extractVideos = (category: Category) => {
+      if (category.videos) {
+        videos.push(...category.videos);
+      }
+      if (category.subCategories) {
+        category.subCategories.forEach(sub => extractVideos(sub));
+      }
+    };
+
+    this.configuration?.categories?.forEach(cat => extractVideos(cat));
+    return this.sortByName(videos);
+  }
+
+  public showAllVideos(): void {
+    this.currentView = 'all-videos';
+    this.breadcrumb = ['Télécommande', 'Toutes les vidéos'];
+  }
+
+  public getTotalVideosCount(): number {
+    return this.getAllVideos().length;
+  }
+
+  // ============================================================================
+  // AFFLUENCE / MATCH INFO
+  // ============================================================================
+
+  public openMatchModal(): void {
+    this.showMatchModal = true;
+  }
+
+  public closeMatchModal(): void {
+    this.showMatchModal = false;
+  }
+
+  public saveMatchInfo(): void {
+    console.log('[CloudRemote] Match info saved:', this.matchInfo);
+
+    this.currentSessionId = this.generateUUID();
+
+    this.remoteService.configureMatch(this.siteId, {
+      sessionId: this.currentSessionId,
+      matchDate: this.matchInfo.date,
+      matchName: this.matchInfo.matchName,
+      audienceEstimate: this.matchInfo.audienceEstimate
+    }).subscribe({
+      next: () => {
+        this.updateTeamNamesFromMatch();
+        this.showMatchModal = false;
+        this.displayToast('Configuration du match enregistrée', 'success');
+      },
+      error: (err) => {
+        console.error('[CloudRemote] Error saving match info:', err);
+        this.displayToast('Erreur lors de l\'enregistrement', 'info');
+      }
+    });
+  }
+
+  public incrementAudience(): void {
+    this.matchInfo.audienceEstimate += 10;
+  }
+
+  public decrementAudience(): void {
+    if (this.matchInfo.audienceEstimate >= 10) {
+      this.matchInfo.audienceEstimate -= 10;
+    }
+  }
+
+  private generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  // ============================================================================
+  // SCORE EN LIVE
+  // ============================================================================
+
+  public incrementHomeScore(): void {
+    this.currentScore.homeScore++;
+    this.broadcastScore();
+  }
+
+  public decrementHomeScore(): void {
+    if (this.currentScore.homeScore > 0) {
+      this.currentScore.homeScore--;
+      this.broadcastScore();
+    }
+  }
+
+  public incrementAwayScore(): void {
+    this.currentScore.awayScore++;
+    this.broadcastScore();
+  }
+
+  public decrementAwayScore(): void {
+    if (this.currentScore.awayScore > 0) {
+      this.currentScore.awayScore--;
+      this.broadcastScore();
+    }
+  }
+
+  public updateTeamNamesFromMatch(): void {
+    if (this.matchInfo.matchName && this.matchInfo.matchName.toLowerCase().includes('vs')) {
+      const teams = this.matchInfo.matchName.split(/vs/i).map(t => t.trim());
+      this.currentScore.homeTeam = teams[0] || 'DOMICILE';
+      this.currentScore.awayTeam = teams[1] || 'EXTÉRIEUR';
+      this.broadcastScore();
+    }
+  }
+
+  public broadcastScore(): void {
+    const scoreData = {
+      homeTeam: this.currentScore.homeTeam,
+      awayTeam: this.currentScore.awayTeam,
+      homeScore: this.currentScore.homeScore,
+      awayScore: this.currentScore.awayScore,
+      period: this.localOptions.match.period
+    };
+
+    this.remoteService.updateScore(this.siteId, scoreData).subscribe({
+      next: () => {
+        // Score envoyé silencieusement
+      },
+      error: (err) => {
+        console.error('[CloudRemote] Error updating score:', err);
+      }
+    });
+  }
+
+  public resetScore(): void {
+    this.currentScore.homeScore = 0;
+    this.currentScore.awayScore = 0;
+
+    this.remoteService.resetScore(this.siteId).subscribe({
+      next: () => {
+        this.displayToast('Score réinitialisé', 'success');
+      },
+      error: (err) => {
+        console.error('[CloudRemote] Error resetting score:', err);
+      }
+    });
+  }
+
+  public toggleScorePanel(): void {
+    this.isScorePanelExpanded = !this.isScorePanelExpanded;
+  }
+
+  // ============================================================================
+  // PHASE DE BOUCLE VIDÉO
+  // ============================================================================
+
+  public switchPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
+    this.activePhase = phase;
+    console.log('[CloudRemote] Switching to phase:', phase);
+
+    this.remoteService.changePhase(this.siteId, phase).subscribe({
+      next: () => {
+        this.displayToast(`Phase: ${this.getPhaseLabel(phase)}`, 'success');
+      },
+      error: (err) => {
+        console.error('[CloudRemote] Error changing phase:', err);
+        this.displayToast('Erreur lors du changement de phase', 'info');
+      }
+    });
+  }
+
+  public togglePhaseDropdown(): void {
+    this.isPhaseDropdownOpen = !this.isPhaseDropdownOpen;
+  }
+
+  public selectPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
+    this.switchPhase(phase);
+    this.isPhaseDropdownOpen = false;
+  }
+
+  public getPhaseLabel(phase: 'neutral' | 'before' | 'during' | 'after'): string {
     const labels: Record<string, string> = {
-      'neutral': 'Boucle standard',
+      'neutral': 'Boucle par défaut',
       'before': 'Avant-match',
-      'during': 'Pendant le match',
+      'during': 'Match',
       'after': 'Après-match'
     };
     return labels[phase] || phase;
   }
 
-  getDefaultIcon(id: string): string {
-    const icons: Record<string, string> = { 'before': '🚩', 'during': '▶️', 'after': '🏆' };
-    return icons[id] || '📁';
+  public getPhaseIcon(phase: 'neutral' | 'before' | 'during' | 'after'): string {
+    const icons: Record<string, string> = {
+      'neutral': '🔄',
+      'before': '🏁',
+      'during': '▶️',
+      'after': '🏆'
+    };
+    return icons[phase] || '🔄';
   }
 
-  getCategoriesForTime(timeId: string): Category[] {
-    const config = this.state()?.config;
-    if (!config?.categories) return [];
+  public hasLoopForPhase(phase: 'neutral' | 'before' | 'during' | 'after'): boolean {
+    if (phase === 'neutral') {
+      return (this.configuration?.sponsors?.length || 0) > 0;
+    }
+    const timeCategory = this.timeCategories.find(tc => tc.id === phase);
+    return (timeCategory?.loopVideos?.length || 0) > 0;
+  }
 
-    const tc = config.timeCategories?.find(t => t.id === timeId);
-    if (tc?.categoryIds?.length) {
-      return config.categories.filter(c => tc.categoryIds!.includes(c.id));
+  public getLoopVideoCount(phase: 'neutral' | 'before' | 'during' | 'after'): number {
+    if (phase === 'neutral') {
+      return this.configuration?.sponsors?.length || 0;
+    }
+    const timeCategory = this.timeCategories.find(tc => tc.id === phase);
+    if (timeCategory?.loopVideos?.length) {
+      return timeCategory.loopVideos.length;
+    }
+    return this.configuration?.sponsors?.length || 0;
+  }
+
+  // ============================================================================
+  // DARK MODE
+  // ============================================================================
+
+  public toggleDarkMode(): void {
+    this.isDarkMode = !this.isDarkMode;
+    localStorage.setItem('darkMode', String(this.isDarkMode));
+    this.applyDarkMode();
+  }
+
+  private applyDarkMode(): void {
+    if (this.isDarkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }
+
+  public toggleHeaderMenu(): void {
+    this.isHeaderMenuOpen = !this.isHeaderMenuOpen;
+  }
+
+  public closeHeaderMenu(): void {
+    this.isHeaderMenuOpen = false;
+  }
+
+  // ============================================================================
+  // VIDÉOS RÉCENTES
+  // ============================================================================
+
+  private loadRecentVideos(): void {
+    try {
+      const stored = localStorage.getItem('cloudRemoteRecentVideos');
+      if (stored) {
+        this.recentVideos = JSON.parse(stored);
+      }
+    } catch {
+      this.recentVideos = [];
+    }
+  }
+
+  private addToRecentVideos(video: Video): void {
+    this.recentVideos = this.recentVideos.filter(v => v.path !== video.path);
+    this.recentVideos.unshift(video);
+    this.recentVideos = this.recentVideos.slice(0, this.MAX_RECENT_VIDEOS);
+    localStorage.setItem('cloudRemoteRecentVideos', JSON.stringify(this.recentVideos));
+  }
+
+  // ============================================================================
+  // SWIPE GESTURES
+  // ============================================================================
+
+  public onTouchStart(event: TouchEvent): void {
+    this.touchStartX = event.touches[0].clientX;
+    this.touchStartY = event.touches[0].clientY;
+  }
+
+  public onTouchEnd(event: TouchEvent): void {
+    const touchEndX = event.changedTouches[0].clientX;
+    const touchEndY = event.changedTouches[0].clientY;
+
+    const deltaX = touchEndX - this.touchStartX;
+    const deltaY = touchEndY - this.touchStartY;
+
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > this.SWIPE_THRESHOLD) {
+      if (deltaX > 0) {
+        this.onSwipeRight();
+      }
+    }
+  }
+
+  private onSwipeRight(): void {
+    if (this.currentView === 'home' && !this.isSearching) {
+      return;
+    }
+    this.handleBack();
+  }
+
+  // ============================================================================
+  // THUMBNAILS (pas disponibles en cloud - fallback)
+  // ============================================================================
+
+  public getVideoThumbnailUrl(_video: Video): string | null {
+    // En mode cloud, pas de thumbnails disponibles
+    return null;
+  }
+
+  public onThumbnailError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img) {
+      img.style.display = 'none';
+      const parent = img.parentElement;
+      if (parent) {
+        parent.classList.add('thumbnail-error');
+      }
+    }
+  }
+
+  // ============================================================================
+  // OPTIONS LOCALES
+  // ============================================================================
+
+  public openOptions(): void {
+    if (!this.liveScoreEnabled) {
+      this.displayToast('Options non disponibles', 'info');
+      this.closeHeaderMenu();
+      return;
+    }
+    this.currentView = 'options';
+    this.breadcrumb = ['Télécommande', 'Options'];
+    this.closeHeaderMenu();
+  }
+
+  public updateOverlayOption(key: keyof LocalOptions['overlay'], value: boolean): void {
+    this.localOptions.overlay[key] = value as never;
+    this.saveLocalOptions();
+    this.broadcastOptions();
+  }
+
+  public updateTimerOption<K extends keyof LocalOptions['timer']>(
+    key: K,
+    value: LocalOptions['timer'][K]
+  ): void {
+    this.localOptions.timer[key] = value;
+    this.saveLocalOptions();
+    this.broadcastOptions();
+
+    if (key === 'countDown' || key === 'periodDuration' || key === 'integratedWithScore') {
+      this.initializeTimer();
+    }
+  }
+
+  public updateBreakingNewsOption<K extends keyof LocalOptions['breakingNews']>(
+    key: K,
+    value: LocalOptions['breakingNews'][K]
+  ): void {
+    this.localOptions.breakingNews[key] = value;
+    this.saveLocalOptions();
+    this.broadcastOptions();
+  }
+
+  public setTemplate(template: LocalOptions['template']): void {
+    this.localOptions.template = template;
+    this.saveLocalOptions();
+    this.broadcastOptions();
+  }
+
+  public addQuickMessage(message: string): void {
+    if (message.trim() && !this.localOptions.breakingNews.quickMessages.includes(message.trim())) {
+      this.localOptions.breakingNews.quickMessages.push(message.trim());
+      this.saveLocalOptions();
+    }
+  }
+
+  public removeQuickMessage(index: number): void {
+    this.localOptions.breakingNews.quickMessages.splice(index, 1);
+    this.saveLocalOptions();
+  }
+
+  public resetOptions(): void {
+    this.localOptions = JSON.parse(JSON.stringify(DEFAULT_OPTIONS));
+    this.saveLocalOptions();
+    this.broadcastOptions();
+    this.displayToast('Options réinitialisées', 'success');
+  }
+
+  private broadcastOptions(): void {
+    // Les options sont stockées localement uniquement
+    // En cloud, on pourrait les envoyer au serveur pour persistance
+    console.log('[CloudRemote] Options updated:', this.localOptions);
+  }
+
+  // ============================================================================
+  // SPORT & PÉRIODES
+  // ============================================================================
+
+  public setSport(sport: SportType): void {
+    const periods = SPORT_PERIODS[sport];
+    const periodDuration = SPORT_PERIOD_DURATIONS[sport];
+
+    this.localOptions.sport = sport;
+    this.localOptions.match.period = periods[0];
+    this.localOptions.match.periodIndex = 0;
+    this.localOptions.timer.periodDuration = periodDuration;
+    this.localOptions.goalAnimation.soundUrl = DEFAULT_GOAL_SOUNDS[sport];
+
+    this.saveLocalOptions();
+    this.broadcastOptions();
+    this.displayToast(`Sport: ${SPORT_LABELS[sport]}`, 'success');
+  }
+
+  public setPeriod(periodIndex: number): void {
+    const periods = this.getAvailablePeriods();
+    if (periodIndex >= 0 && periodIndex < periods.length) {
+      this.localOptions.match.period = periods[periodIndex];
+      this.localOptions.match.periodIndex = periodIndex;
+      this.saveLocalOptions();
+      this.broadcastScore();
+      this.displayToast(`Période: ${this.localOptions.match.period}`, 'success');
+    }
+  }
+
+  public nextPeriod(): void {
+    const periods = this.getAvailablePeriods();
+    const nextIndex = (this.localOptions.match.periodIndex + 1) % periods.length;
+    this.setPeriod(nextIndex);
+  }
+
+  public getAvailablePeriods(): string[] {
+    return SPORT_PERIODS[this.localOptions.sport] || SPORT_PERIODS.football;
+  }
+
+  // ============================================================================
+  // ÉQUIPES & LOGOS
+  // ============================================================================
+
+  public updateHomeTeamName(name: string): void {
+    this.localOptions.match.homeTeam.name = name;
+    this.currentScore.homeTeam = name;
+    this.saveLocalOptions();
+    this.broadcastScore();
+  }
+
+  public updateAwayTeamName(name: string): void {
+    this.localOptions.match.awayTeam.name = name;
+    this.currentScore.awayTeam = name;
+    this.saveLocalOptions();
+    this.broadcastScore();
+  }
+
+  public onLogoUpload(event: Event, team: 'home' | 'away'): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    if (!file.type.startsWith('image/')) {
+      this.displayToast('Veuillez sélectionner une image', 'info');
+      return;
     }
 
-    // Fallback: divide categories
-    const cats = config.categories;
-    const third = Math.ceil(cats.length / 3);
-    if (timeId === 'before') return cats.slice(0, third);
-    if (timeId === 'during') return cats.slice(third, third * 2);
-    return cats.slice(third * 2);
+    if (file.size > 500 * 1024) {
+      this.displayToast('Image trop volumineuse (max 500KB)', 'info');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      if (team === 'home') {
+        this.localOptions.match.homeTeam.logo = base64;
+      } else {
+        this.localOptions.match.awayTeam.logo = base64;
+      }
+      this.saveLocalOptions();
+      this.broadcastScore();
+      this.displayToast('Logo mis à jour', 'success');
+    };
+    reader.readAsDataURL(file);
   }
 
-  getVideoCountForCategory(cat: Category | null): number {
-    if (!cat) return 0;
-    let count = cat.videos?.length || 0;
-    cat.subCategories?.forEach(sc => count += sc.videos?.length || 0);
-    return count;
+  public clearTeamLogo(team: 'home' | 'away'): void {
+    if (team === 'home') {
+      this.localOptions.match.homeTeam.logo = undefined;
+    } else {
+      this.localOptions.match.awayTeam.logo = undefined;
+    }
+    this.saveLocalOptions();
+    this.broadcastScore();
+    this.displayToast('Logo supprimé', 'success');
   }
 
-  getVideosForCategory(cat: Category | null): VideoItem[] {
-    if (!cat) return [];
-    const videos: VideoItem[] = [];
-    cat.videos?.forEach(v => videos.push({ ...v, category: cat.name }));
-    cat.subCategories?.forEach(sc => {
-      sc.videos?.forEach(v => videos.push({ ...v, category: sc.name }));
+  public startNewMatch(): void {
+    this.localOptions.match = {
+      homeTeam: { name: 'DOMICILE', shortName: 'DOM', logo: undefined },
+      awayTeam: { name: 'EXTÉRIEUR', shortName: 'EXT', logo: undefined },
+      period: SPORT_PERIODS[this.localOptions.sport][0],
+      periodIndex: 0,
+    };
+    this.currentScore = {
+      homeTeam: this.localOptions.match.homeTeam.name,
+      awayTeam: this.localOptions.match.awayTeam.name,
+      homeScore: 0,
+      awayScore: 0
+    };
+    this.resetTimer();
+    this.saveLocalOptions();
+    this.broadcastScore();
+    this.displayToast('Nouveau match préparé', 'success');
+  }
+
+  // ============================================================================
+  // ANIMATION DE BUT
+  // ============================================================================
+
+  public updateGoalAnimationOption<K extends keyof LocalOptions['goalAnimation']>(
+    key: K,
+    value: LocalOptions['goalAnimation'][K]
+  ): void {
+    this.localOptions.goalAnimation[key] = value;
+    this.saveLocalOptions();
+    this.broadcastOptions();
+  }
+
+  // ============================================================================
+  // POSITION OVERLAY
+  // ============================================================================
+
+  public setOverlayPosition(position: OverlayPosition | undefined): void {
+    this.localOptions.overlay.position = position;
+    this.saveLocalOptions();
+    this.broadcastOptions();
+  }
+
+  public toggleLocalColors(useLocal: boolean): void {
+    this.localOptions.overlay.useLocalColors = useLocal;
+    this.saveLocalOptions();
+    this.broadcastOptions();
+  }
+
+  public setLocalColor(colorType: 'backgroundColor' | 'scoreColor' | 'teamNameColor', color: string): void {
+    this.localOptions.overlay[colorType] = color;
+    this.saveLocalOptions();
+    this.broadcastOptions();
+  }
+
+  // ============================================================================
+  // PRESETS
+  // ============================================================================
+
+  public openPresetModal(): void {
+    this.showPresetModal = true;
+    this.newPresetName = '';
+  }
+
+  public closePresetModal(): void {
+    this.showPresetModal = false;
+    this.newPresetName = '';
+  }
+
+  public savePreset(): void {
+    if (!this.newPresetName.trim()) {
+      this.displayToast('Veuillez entrer un nom', 'info');
+      return;
+    }
+
+    const preset: OverlayPreset = {
+      id: 'preset_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
+      name: this.newPresetName.trim(),
+      sport: this.localOptions.sport,
+      position: this.localOptions.overlay.position || 'top-right',
+      template: this.localOptions.template,
+      backgroundColor: this.localOptions.overlay.backgroundColor,
+      scoreColor: this.localOptions.overlay.scoreColor,
+      teamNameColor: this.localOptions.overlay.teamNameColor,
+      createdAt: Date.now(),
+    };
+
+    this.localOptions.presets.push(preset);
+    this.saveLocalOptions();
+    this.closePresetModal();
+    this.displayToast('Preset sauvegardé', 'success');
+  }
+
+  public applyPreset(presetId: string): void {
+    const preset = this.localOptions.presets.find(p => p.id === presetId);
+    if (!preset) return;
+
+    this.localOptions.sport = preset.sport;
+    this.localOptions.template = preset.template;
+    this.localOptions.overlay.position = preset.position;
+    this.localOptions.overlay.useLocalColors = !!(preset.backgroundColor || preset.scoreColor || preset.teamNameColor);
+    this.localOptions.overlay.backgroundColor = preset.backgroundColor;
+    this.localOptions.overlay.scoreColor = preset.scoreColor;
+    this.localOptions.overlay.teamNameColor = preset.teamNameColor;
+
+    const periods = SPORT_PERIODS[preset.sport];
+    this.localOptions.match.period = periods[0];
+    this.localOptions.match.periodIndex = 0;
+    this.localOptions.timer.periodDuration = SPORT_PERIOD_DURATIONS[preset.sport];
+
+    this.saveLocalOptions();
+    this.broadcastOptions();
+    this.displayToast('Preset appliqué', 'success');
+  }
+
+  public deletePreset(presetId: string): void {
+    this.localOptions.presets = this.localOptions.presets.filter(p => p.id !== presetId);
+    this.saveLocalOptions();
+    this.displayToast('Preset supprimé', 'success');
+  }
+
+  public getPresets(): OverlayPreset[] {
+    return [...this.localOptions.presets];
+  }
+
+  // ============================================================================
+  // BREAKING NEWS
+  // ============================================================================
+
+  public toggleBreakingNewsPanel(): void {
+    if (!this.localOptions.breakingNews.enabled) {
+      this.displayToast('Activez les annonces dans les Options', 'info');
+      return;
+    }
+    this.showBreakingNewsPanel = !this.showBreakingNewsPanel;
+  }
+
+  public sendBreakingNews(message?: string): void {
+    const text = message || this.breakingNewsMessage.trim();
+    if (!text) return;
+
+    const news = {
+      message: text,
+      duration: this.localOptions.breakingNews.defaultDuration,
+      position: this.localOptions.breakingNews.position
+    };
+
+    this.remoteService.showBreakingNews(this.siteId, news).subscribe({
+      next: () => {
+        this.breakingNewsMessage = '';
+        this.showBreakingNewsPanel = false;
+        this.displayToast('Annonce envoyée', 'success');
+      },
+      error: (err) => {
+        console.error('[CloudRemote] Error sending breaking news:', err);
+        this.displayToast('Erreur lors de l\'envoi', 'info');
+      }
     });
-    return videos;
   }
 
-  private addToRecent(video: VideoItem) {
-    this.recentVideos = [video, ...this.recentVideos.filter(v => v.path !== video.path)].slice(0, 5);
+  public sendQuickNews(message: string): void {
+    this.sendBreakingNews(message);
   }
 
-  private displayToast(message: string, type: 'success' | 'error') {
-    this.toastMessage = message;
-    this.toastType = type;
-    this.showToast = true;
-    setTimeout(() => this.showToast = false, 3000);
+  // ============================================================================
+  // TIMER CONTROLS
+  // ============================================================================
+
+  public toggleTimer(): void {
+    if (this.timerIsRunning) {
+      this.pauseTimer();
+    } else {
+      this.startTimer();
+    }
+  }
+
+  public startTimer(): void {
+    if (this.timerIsRunning) return;
+
+    this.timerIsRunning = true;
+
+    this.remoteService.updateTimer(this.siteId, {
+      action: 'start',
+      time: this.timerCurrentTime
+    }).subscribe();
+
+    this.timerInterval = setInterval(() => {
+      if (this.localOptions.timer.countDown) {
+        if (this.timerCurrentTime > 0) {
+          this.timerCurrentTime--;
+        } else {
+          this.pauseTimer();
+          this.displayToast('Mi-temps terminée !', 'info');
+        }
+      } else {
+        const maxTime = this.localOptions.timer.periodDuration * 60;
+        if (this.timerCurrentTime < maxTime) {
+          this.timerCurrentTime++;
+        } else {
+          this.pauseTimer();
+          this.displayToast('Mi-temps terminée !', 'info');
+        }
+      }
+
+      if (this.timerCurrentTime % 5 === 0) {
+        this.syncTimer();
+      }
+    }, 1000);
+
+    this.displayToast('Chronomètre démarré', 'success');
+  }
+
+  public pauseTimer(): void {
+    if (!this.timerIsRunning) return;
+
+    this.timerIsRunning = false;
+
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+
+    this.remoteService.updateTimer(this.siteId, {
+      action: 'pause',
+      time: this.timerCurrentTime
+    }).subscribe();
+
+    this.displayToast('Chronomètre en pause', 'info');
+  }
+
+  public resetTimer(): void {
+    this.pauseTimer();
+
+    if (this.localOptions.timer.countDown) {
+      this.timerCurrentTime = this.localOptions.timer.periodDuration * 60;
+    } else {
+      this.timerCurrentTime = 0;
+    }
+
+    this.remoteService.updateTimer(this.siteId, {
+      action: 'reset',
+      time: this.timerCurrentTime
+    }).subscribe();
+
+    this.displayToast('Chronomètre réinitialisé', 'success');
+  }
+
+  private syncTimer(): void {
+    this.remoteService.updateTimer(this.siteId, {
+      action: 'sync',
+      time: this.timerCurrentTime
+    }).subscribe();
+  }
+
+  public formatTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  public getDisplayTime(): string {
+    return this.formatTime(this.timerCurrentTime);
+  }
+
+  private initializeTimer(): void {
+    if (this.localOptions.timer.countDown) {
+      this.timerCurrentTime = this.localOptions.timer.periodDuration * 60;
+    } else {
+      this.timerCurrentTime = 0;
+    }
+  }
+
+  // ============================================================================
+  // LOCAL OPTIONS STORAGE
+  // ============================================================================
+
+  private loadLocalOptions(): LocalOptions {
+    try {
+      const stored = localStorage.getItem('cloudRemoteOptions');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return this.deepMerge(DEFAULT_OPTIONS, parsed);
+      }
+    } catch (error) {
+      console.warn('[CloudRemote] Failed to load options from storage:', error);
+    }
+    return JSON.parse(JSON.stringify(DEFAULT_OPTIONS));
+  }
+
+  private saveLocalOptions(): void {
+    try {
+      localStorage.setItem('cloudRemoteOptions', JSON.stringify(this.localOptions));
+    } catch (error) {
+      console.error('[CloudRemote] Failed to save options to storage:', error);
+    }
+  }
+
+  private deepMerge<T extends object>(target: T, source: Partial<T>): T {
+    const result = { ...target };
+    for (const key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        const sourceValue = source[key];
+        const targetValue = target[key];
+        if (
+          sourceValue !== null &&
+          typeof sourceValue === 'object' &&
+          !Array.isArray(sourceValue) &&
+          targetValue !== null &&
+          typeof targetValue === 'object' &&
+          !Array.isArray(targetValue)
+        ) {
+          (result as Record<string, unknown>)[key] = this.deepMerge(
+            targetValue as object,
+            sourceValue as object
+          );
+        } else if (sourceValue !== undefined) {
+          (result as Record<string, unknown>)[key] = sourceValue;
+        }
+      }
+    }
+    return result;
   }
 }

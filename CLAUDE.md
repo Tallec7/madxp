@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.33.0 | **Dernière mise à jour**: 2026-01-18
+**Version**: 2.37.0 | **Dernière mise à jour**: 2026-01-18
 
 ---
 
@@ -472,6 +472,57 @@ Service d'encapsulation des opérations réseau risquées avec comportement adap
 | configure_bgscan  | ✅      | ✅     | ✅         | ✅         |
 
 **Fichier** : `raspberry/sync-agent/src/services/safe-network-operations.js`
+
+### Service NetworkWatchdog (v2.37+) ⚡ NEW
+
+Service de surveillance et auto-recovery réseau complet :
+
+| Méthode                     | Rôle                                                  |
+| --------------------------- | ----------------------------------------------------- |
+| `start()`                   | Démarre les 3 boucles de surveillance                 |
+| `stop()`                    | Arrête toutes les surveillances                       |
+| `getStatus()`               | Retourne l'état actuel (hotspot, internet, cloud)     |
+| `checkHotspotHealth()`      | Vérifie hostapd, dnsmasq, AP mode, rfkill, IP         |
+| `checkInternetHealth()`     | Vérifie IP wlan1, gateway, ping 8.8.8.8               |
+| `attemptHotspotRecovery()`  | Tente la récupération du hotspot (max 3 tentatives)   |
+| `attemptInternetRecovery()` | Tente la récupération internet (wpa_cli + dhclient)   |
+| `saveRollbackPoint()`       | Sauvegarde la config avant une opération risquée      |
+| `executeRollback()`         | Restaure la config et notifie le central              |
+| `confirmOperation()`        | Annule le rollback si l'opération a réussi            |
+
+**Intervalles de surveillance** :
+
+| Type    | Intervalle | Actions si problème               |
+| ------- | ---------- | --------------------------------- |
+| Hotspot | 30s        | rfkill unblock, restart hostapd   |
+| Internet| 60s        | wpa_cli reconfigure, dhclient     |
+| Cloud   | 30s        | Détection zombie, force reconnect |
+
+**Fichier** : `raspberry/sync-agent/src/services/network-watchdog.js`
+
+### Service NetworkAlerts (v2.37+) ⚡ NEW
+
+Service d'alertes proactives côté serveur :
+
+| Méthode                | Rôle                                              |
+| ---------------------- | ------------------------------------------------- |
+| `start()`              | Démarre le cron (toutes les 4 heures)             |
+| `stop()`               | Arrête le cron                                    |
+| `checkNetworkRisks()`  | Évalue tous les sites et génère un rapport        |
+| `getCurrentRisks()`    | Retourne le rapport des risques actuels           |
+| `getNetworkRiskStats()`| Statistiques agrégées (profils, isolation, etc.)  |
+
+**Critères d'alerte** :
+
+| Risque                | Sévérité  | Condition                           |
+| --------------------- | --------- | ----------------------------------- |
+| `bssid_lock_in_mesh`  | critical  | BSSID lock en environnement mesh    |
+| `client_isolation`    | warning   | Isolation client détectée           |
+| `low_stability`       | warning/critical | Score stabilité < 50 (ou < 25) |
+| `mesh_offline_extended` | critical | Offline > 24h en mesh              |
+| `multiple_warnings`   | warning   | 3+ warnings réseau                  |
+
+**Fichier** : `central-server/src/services/network-alerts.service.ts`
 
 ### Modules Sync-Agent Extraits (v2.33+) ⚡ NEW
 
@@ -1834,6 +1885,46 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.37.x (Janvier 2026)
+
+- **NetworkWatchdog Service** : Surveillance et auto-recovery réseau complet (Phase 4 - Network Resilience)
+  - **Surveillance hotspot (wlan0)** toutes les 30s :
+    - Vérification hostapd, dnsmasq, mode AP, rfkill, IP 192.168.4.1
+    - Auto-recovery si problème détecté (max 3 tentatives)
+  - **Surveillance internet (wlan1)** toutes les 60s :
+    - Vérification IP valide (pas APIPA 169.254.x.x)
+    - Ping gateway et 8.8.8.8
+    - Auto-recovery via wpa_cli reconfigure + dhclient
+  - **Surveillance cloud (Socket.IO)** toutes les 30s :
+    - Détection connexions zombies (flag connected mais socket morte)
+    - Force reconnexion si zombie détecté
+  - **Rollback automatique** :
+    - Sauvegarde la config avant opérations risquées
+    - Si perte connexion après 30s → rollback et notification centrale
+  - **Alertes envoyées au central** si recovery échoue après 3 tentatives
+  - **Nouveaux fichiers** :
+    - `raspberry/sync-agent/src/services/network-watchdog.js`
+  - **Fichiers modifiés** :
+    - `raspberry/sync-agent/src/agent.js` - Intégration watchdog
+    - `central-server/src/services/socket.service.ts` - Handlers network_alert, network_rollback
+  - **Migration** : Déployer le nouveau sync-agent
+
+- **Network Alerts Service** : Alertes proactives pour sites à risque
+  - Check automatique toutes les 4 heures
+  - Critères d'alerte :
+    - Sites mesh avec BSSID lock (bloquant le roaming)
+    - Sites mesh_isolated (isolation client)
+    - Sites avec score de stabilité < 50
+    - Sites enterprise sans config IT
+    - Sites offline > 24h en environnement mesh
+  - Création d'alertes en DB (évite les doublons sur 24h)
+  - Statistiques agrégées disponibles via `getNetworkRiskStats()`
+  - **Nouveaux fichiers** :
+    - `central-server/src/services/network-alerts.service.ts`
+  - **Fichiers modifiés** :
+    - `central-server/src/server.ts` - Démarrage du service
+  - **Migration** : Redéployer le serveur central
 
 ### v2.36.x (Janvier 2026)
 

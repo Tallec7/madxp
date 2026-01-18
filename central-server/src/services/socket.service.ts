@@ -591,6 +591,8 @@ class SocketService {
       'score-update': (payload: any) => handleScoreUpdate(socket, payload),
       'score-reset': () => handleScoreReset(socket),
       pong_check: () => this.lastPongReceived.set(siteId, Date.now()),
+      network_alert: (alert: any) => this.handleNetworkAlert(siteId, alert),
+      network_rollback: (rollback: any) => this.handleNetworkRollback(siteId, rollback),
     };
 
     // Register all handlers
@@ -603,6 +605,8 @@ class SocketService {
     socket.on('score-update', handlers['score-update']);
     socket.on('score-reset', handlers['score-reset']);
     socket.on('pong_check', handlers.pong_check);
+    socket.on('network_alert', handlers.network_alert);
+    socket.on('network_rollback', handlers.network_rollback);
 
     // Store handlers reference for cleanup on disconnect
     (socket as any)._neoHandlers = handlers;
@@ -676,6 +680,8 @@ class SocketService {
       socket.off('score-update', handlers['score-update']);
       socket.off('score-reset', handlers['score-reset']);
       socket.off('pong_check', handlers.pong_check);
+      socket.off('network_alert', handlers.network_alert);
+      socket.off('network_rollback', handlers.network_rollback);
       delete (socket as any)._neoHandlers;
     }
 
@@ -980,6 +986,107 @@ class SocketService {
       await this.triggerPendingConfigSync(siteId);
     } catch (error) {
       logger.error('Error handling sync_local_state:', error);
+    }
+  }
+
+  /**
+   * Handle network_alert events from the NetworkWatchdog
+   * Phase 4 - Network Resilience: Auto-recovery failure alerts
+   */
+  private async handleNetworkAlert(siteId: string, alert: any) {
+    try {
+      const { type, severity, issues, recoveryAttempts, timestamp } = alert;
+
+      logger.warn('Network alert received from site', {
+        siteId,
+        alertType: type,
+        severity,
+        issues,
+        recoveryAttempts,
+      });
+
+      // Store alert in database
+      await query(
+        `INSERT INTO alerts (site_id, type, severity, message, data, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          siteId,
+          `network_${type}`,
+          severity,
+          `Network issue: ${issues?.join(', ') || 'unknown'}`,
+          JSON.stringify({ issues, recoveryAttempts, watchdogTimestamp: timestamp }),
+          new Date(),
+        ]
+      );
+
+      // Emit to dashboard for real-time display
+      if (this.io) {
+        this.io.to('dashboard').emit('network_alert', {
+          siteId,
+          type,
+          severity,
+          issues,
+          recoveryAttempts,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // If critical, also log at error level
+      if (severity === 'critical') {
+        logger.error('CRITICAL network failure', {
+          siteId,
+          type,
+          issues,
+          recoveryAttempts,
+        });
+      }
+    } catch (error) {
+      logger.error('Error handling network_alert:', { siteId, error });
+    }
+  }
+
+  /**
+   * Handle network_rollback events from the NetworkWatchdog
+   * Phase 4 - Network Resilience: Automatic rollback after connection loss
+   */
+  private async handleNetworkRollback(siteId: string, rollback: any) {
+    try {
+      const { operation, reason, timestamp } = rollback;
+
+      logger.warn('Network rollback executed on site', {
+        siteId,
+        operation,
+        reason,
+        rollbackTimestamp: timestamp,
+      });
+
+      // Store rollback event in database
+      await query(
+        `INSERT INTO alerts (site_id, type, severity, message, data, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          siteId,
+          'network_rollback',
+          'warning',
+          `Configuration rolled back after ${operation}: ${reason}`,
+          JSON.stringify({ operation, reason, rollbackTimestamp: timestamp }),
+          new Date(),
+        ]
+      );
+
+      // Emit to dashboard
+      if (this.io) {
+        this.io.to('dashboard').emit('network_rollback', {
+          siteId,
+          operation,
+          reason,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      logger.info('Rollback event stored', { siteId, operation });
+    } catch (error) {
+      logger.error('Error handling network_rollback:', { siteId, error });
     }
   }
 

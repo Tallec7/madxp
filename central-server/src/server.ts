@@ -18,6 +18,7 @@ import healthService from './services/health.service';
 import schedulerService from './services/scheduler.service';
 import cronSchedulerService from './services/cron-scheduler.service';
 import memoryManagerService from './services/memory-manager.service';
+import networkAlertsService from './services/network-alerts.service';
 import { adminOpsService } from './services/admin-ops.service';
 import { alertingService } from './services/alerting.service';
 
@@ -366,6 +367,10 @@ const startServer = async () => {
     // Demarrer le cron scheduler pour les taches recurrentes (rapports, cleanup)
     await cronSchedulerService.start();
     logger.info('Cron scheduler started');
+
+    // Demarrer le service d'alertes reseau (Phase 4 - Network Resilience)
+    networkAlertsService.start();
+    logger.info('Network alerts service started');
 
     // Start memory manager with cleanup callbacks
     memoryManagerService.registerCleanupCallback(() => {

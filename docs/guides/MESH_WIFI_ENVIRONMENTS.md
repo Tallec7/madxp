@@ -264,6 +264,29 @@ sudo wpa_cli -i wlan1 reconfigure
 | `restart_hostapd`   | ✅ Direct  | ❌ Bloqué | ❌ Bloqué  | ❌ Bloqué  |
 | `configure_bgscan`  | ✅ Direct  | ✅ Direct | ✅ Direct  | ✅ Direct  |
 
+### Ce qui est automatisé (v2.37+)
+
+| Fonctionnalité                          | Où                      | Comportement                                                                        |
+| --------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------- |
+| **🐕 NetworkWatchdog**                  | Sync-Agent              | Surveillance continue hotspot (30s) et internet (60s) avec auto-recovery           |
+| **🔄 Auto-recovery hotspot**            | NetworkWatchdog         | rfkill unblock → IP config → restart hostapd → restart dnsmasq (max 3 tentatives)  |
+| **🌐 Auto-recovery internet**           | NetworkWatchdog         | wpa_cli reconfigure → dhclient (max 3 tentatives)                                  |
+| **↩️ Rollback automatique**             | NetworkWatchdog         | Si perte connexion 30s après changement config → restaure config précédente        |
+| **📢 Alertes proactives**               | Central Server          | Check toutes les 4h : BSSID lock mesh, isolation, stabilité faible, offline > 24h  |
+| **🔔 network_alert events**             | Socket.IO               | Pi envoie alerte si recovery échoue après 3 tentatives → stocké en DB + dashboard  |
+| **📊 Statistiques risques réseau**      | NetworkAlertsService    | Agrégation profils, isolation, stabilité moyenne pour analytics                    |
+
+**Critères d'alertes proactives** :
+
+| Risque                    | Sévérité    | Condition                                  |
+| ------------------------- | ----------- | ------------------------------------------ |
+| `bssid_lock_in_mesh`      | 🔴 critical | BSSID lock activé en mesh                  |
+| `client_isolation`        | 🟡 warning  | Isolation client détectée                  |
+| `low_stability`           | 🟡/🔴       | Score stabilité < 50 (critical si < 25)    |
+| `enterprise_unconfigured` | 🟡 warning  | Réseau 802.1X détecté                      |
+| `mesh_offline_extended`   | 🔴 critical | Offline > 24h en environnement mesh        |
+| `multiple_warnings`       | 🟡 warning  | 3+ warnings dans le profil réseau          |
+
 ---
 
 ## Checklist nouveau client
@@ -364,4 +387,4 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (v2.36 - SafeNetworkOperations, Auto-optimize, Alertes contextuelles)
+**Dernière mise à jour :** 18 janvier 2026 (v2.37 - NetworkWatchdog, Auto-recovery, Alertes proactives)
