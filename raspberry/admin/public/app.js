@@ -5,9 +5,19 @@
 // ============================================================================
 // MODE DEMO - Données mockées pour fonctionnement sans backend
 // ============================================================================
+// Detect if we're running on a real Pi or in demo mode
+// Real Pi: neopro.local, 192.168.4.1 (hotspot), localhost, or any private IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+const isPrivateIP = (hostname) => {
+    // Check for private IP ranges
+    if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
+    if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
+    if (/^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
+    return false;
+};
+
 const DEMO_MODE = !window.location.hostname.includes('neopro.local') &&
-                  !window.location.hostname.includes('192.168.4.1') &&
-                  !window.location.hostname.includes('localhost');
+                  !window.location.hostname.includes('localhost') &&
+                  !isPrivateIP(window.location.hostname);
 
 const DEMO_DATA = {
     system: {

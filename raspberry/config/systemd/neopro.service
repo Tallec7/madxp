@@ -1,7 +1,8 @@
-# Configuration Avahi mDNS pour Neopro
-# Permet la résolution du nom neopro.local → IP du Raspberry Pi
-
 <?xml version="1.0" standalone='no'?>
+<!--
+  Configuration Avahi mDNS pour Neopro
+  Permet la résolution du nom neopro.local → IP du Raspberry Pi
+-->
 <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
 <service-group>
   <name replace-wildcards="yes">Neopro %h</name>

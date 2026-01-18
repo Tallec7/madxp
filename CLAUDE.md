@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.28.0 | **Dernière mise à jour**: 2026-01-18
+**Version**: 2.33.0 | **Dernière mise à jour**: 2026-01-18
 
 ---
 
@@ -1675,6 +1675,43 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.33.x (Janvier 2026)
+
+- **Fix mDNS Avahi (neopro.local)** : Le fichier de service Avahi contenait des commentaires `#` invalides en XML
+  - **Problème** : `neopro.local` ne se résolvait pas correctement lors du changement de réseau/lieu
+  - **Cause** : `/etc/avahi/services/neopro.service` commençait par `# commentaire` au lieu de `<!-- commentaire -->`
+  - **Symptôme** : Erreur dans les logs avahi : `XML_ParseBuffer() failed at line 1: not well-formed (invalid token)`
+  - **Solution** : Remplacement des commentaires `#` par des commentaires XML `<!-- -->`
+  - **Fichier corrigé** : `raspberry/config/systemd/neopro.service`
+  - **Migration Pi existants** :
+    ```bash
+    sudo tee /etc/avahi/services/neopro.service > /dev/null << 'EOF'
+    <?xml version="1.0" standalone='no'?>
+    <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+    <service-group>
+      <name replace-wildcards="yes">Neopro %h</name>
+      <service>
+        <type>_http._tcp</type>
+        <port>80</port>
+        <txt-record>path=/</txt-record>
+      </service>
+      <service>
+        <type>_neopro._tcp</type>
+        <port>3000</port>
+        <txt-record>version=1.0</txt-record>
+      </service>
+    </service-group>
+    EOF
+    sudo systemctl restart avahi-daemon
+    ```
+
+- **Fix mode démo admin panel** : Le mode démo s'activait sur toutes les IPs privées sauf `192.168.4.1`
+  - **Problème** : En accédant à l'admin panel via `192.168.1.x` (Ethernet), le mode démo s'activait
+  - **Cause** : La détection ne reconnaissait que `neopro.local`, `192.168.4.1` et `localhost`
+  - **Solution** : Ajout de la fonction `isPrivateIP()` qui accepte toutes les plages privées (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+  - **Fichier modifié** : `raspberry/admin/public/app.js`
+  - **Migration** : `scp raspberry/admin/public/app.js pi@neopro.local:/home/pi/neopro/admin/public/`
 
 ### v2.28.x (Janvier 2026)
 
