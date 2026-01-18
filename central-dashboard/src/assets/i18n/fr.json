@@ -356,6 +356,16 @@
     "gatewayAccessible": "Accessible",
     "gatewayNotAccessible": "Non accessible",
     "hotspotVerified": "Vérifié",
-    "hotspotError": "Erreur"
+    "hotspotError": "Erreur",
+    "rebootNow": "🔄 Redémarrer maintenant",
+    "rebooting": "⏳ Redémarrage...",
+    "later": "Plus tard",
+    "activeStatus": "✅ Actif",
+    "inactiveStatus": "❌ Inactif",
+    "powerOk": "✅ OK",
+    "powerProblem": "❌ Problème",
+    "currentChannel": "Canal actuel",
+    "recommendedChannel": "Canal recommandé",
+    "power": "Alimentation"
   }
 }

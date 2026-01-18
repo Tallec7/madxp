@@ -2,13 +2,18 @@
 -- NEOPRO Central - Schéma complet de la base de données
 -- =============================================================================
 -- Ce fichier consolide tous les scripts SQL pour initialiser une nouvelle BDD
--- Généré le: 2025-12-10
+-- Mis à jour le: 2026-01-18
 --
--- Ordre d'origine des scripts:
---   1. init-db.sql
---   2. analytics-tables.sql
---   3. config-history-table.sql
---   4. add-local-config-mirror.sql
+-- Tables incluses:
+--   - Core: users, sites, groups, site_groups
+--   - Content: videos, content_deployments
+--   - Updates: software_updates, update_deployments
+--   - Operations: remote_commands, metrics, alerts, pending_commands
+--   - Config: config_history, config_drafts, orchestrated_deployments
+--   - Analytics: club_sessions, video_plays, club_daily_stats
+--   - Auth: password_reset_tokens, audit_logs
+--   - Scheduling: recurring_schedules, recurring_schedule_executions
+--   - Advertisers: advertisers, agencies, advertiser_impressions, advertiser_daily_stats
 -- =============================================================================
 
 -- Extension pour UUID
@@ -518,6 +523,432 @@ COMMENT ON COLUMN config_history.changes_summary IS 'Résumé des changements: [
 COMMENT ON COLUMN sites.local_config_mirror IS 'Miroir de la configuration.json locale du Pi';
 COMMENT ON COLUMN sites.local_config_hash IS 'Hash SHA256 (16 premiers caractères) de la configuration locale';
 COMMENT ON COLUMN sites.last_config_sync IS 'Date de dernière synchronisation de la configuration locale';
+
+-- =============================================================================
+-- TABLES ADDITIONNELLES (ajoutées post-v2.20)
+-- =============================================================================
+
+-- Colonne uploaded_for_site_id pour upload contextuel
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS uploaded_for_site_id UUID REFERENCES sites(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_videos_uploaded_for_site ON videos(uploaded_for_site_id) WHERE uploaded_for_site_id IS NOT NULL;
+
+-- Colonne orchestrated_deployment_id pour content_deployments
+ALTER TABLE content_deployments ADD COLUMN IF NOT EXISTS orchestrated_deployment_id UUID;
+
+-- Table pending_commands (file d'attente pour sites offline)
+CREATE TABLE IF NOT EXISTS pending_commands (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  command_type VARCHAR(100) NOT NULL,
+  command_data JSONB NOT NULL DEFAULT '{}',
+  priority INTEGER DEFAULT 5,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  expires_at TIMESTAMP,
+  attempts INTEGER DEFAULT 0,
+  last_attempt_at TIMESTAMP,
+  max_attempts INTEGER DEFAULT 3,
+  description TEXT,
+  CONSTRAINT check_priority CHECK (priority >= 1 AND priority <= 10)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_commands_site ON pending_commands(site_id);
+CREATE INDEX IF NOT EXISTS idx_pending_commands_priority ON pending_commands(site_id, priority ASC, created_at ASC);
+
+-- Ajouter pending_command_id à remote_commands
+ALTER TABLE remote_commands ADD COLUMN IF NOT EXISTS pending_command_id UUID REFERENCES pending_commands(id) ON DELETE SET NULL;
+
+-- Table config_drafts (brouillons de configuration)
+CREATE TABLE IF NOT EXISTS config_drafts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  site_id UUID NOT NULL UNIQUE REFERENCES sites(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL DEFAULT 'Brouillon',
+  configuration JSONB NOT NULL,
+  referenced_video_ids UUID[] DEFAULT '{}',
+  status VARCHAR(50) DEFAULT 'draft',
+  created_by UUID REFERENCES users(id),
+  updated_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT check_draft_status CHECK (status IN ('draft', 'deploying', 'deployed', 'failed'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_config_drafts_site ON config_drafts(site_id);
+CREATE INDEX IF NOT EXISTS idx_config_drafts_status ON config_drafts(status);
+
+-- Table orchestrated_deployments (déploiements vidéos + config orchestrés)
+CREATE TABLE IF NOT EXISTS orchestrated_deployments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  draft_id UUID REFERENCES config_drafts(id) ON DELETE SET NULL,
+  status VARCHAR(50) DEFAULT 'pending',
+  total_videos INTEGER DEFAULT 0,
+  videos_completed INTEGER DEFAULT 0,
+  videos_failed INTEGER DEFAULT 0,
+  config_deployed BOOLEAN DEFAULT FALSE,
+  error_message TEXT,
+  failed_video_ids UUID[] DEFAULT '{}',
+  started_by UUID REFERENCES users(id),
+  started_at TIMESTAMPTZ DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+  configuration_snapshot JSONB,
+  CONSTRAINT check_orch_status CHECK (status IN ('pending', 'deploying_videos', 'deploying_config', 'completed', 'partial_failure', 'failed'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_orch_deployments_site ON orchestrated_deployments(site_id);
+CREATE INDEX IF NOT EXISTS idx_orch_deployments_status ON orchestrated_deployments(status);
+
+-- Ajouter la FK orchestrated_deployment_id
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_content_deployments_orchestrated'
+  ) THEN
+    ALTER TABLE content_deployments
+      ADD CONSTRAINT fk_content_deployments_orchestrated
+      FOREIGN KEY (orchestrated_deployment_id) REFERENCES orchestrated_deployments(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- Table password_reset_tokens
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token VARCHAR(255) NOT NULL UNIQUE,
+  expires_at TIMESTAMP NOT NULL,
+  used_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens(user_id);
+
+-- Table audit_logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  action VARCHAR(100) NOT NULL,
+  entity_type VARCHAR(100),
+  entity_id UUID,
+  details JSONB DEFAULT '{}',
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
+
+-- Table recurring_schedules (tâches planifiées)
+CREATE TABLE IF NOT EXISTS recurring_schedules (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL UNIQUE,
+  description TEXT,
+  task_type VARCHAR(100) NOT NULL,
+  frequency VARCHAR(50) NOT NULL,
+  hour INTEGER DEFAULT 0,
+  minute INTEGER DEFAULT 0,
+  day_of_week INTEGER,
+  day_of_month INTEGER,
+  task_config JSONB DEFAULT '{}',
+  is_active BOOLEAN DEFAULT TRUE,
+  last_run_at TIMESTAMP,
+  next_run_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT check_frequency CHECK (frequency IN ('hourly', 'daily', 'weekly', 'monthly'))
+);
+
+-- Table recurring_schedule_executions
+CREATE TABLE IF NOT EXISTS recurring_schedule_executions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  schedule_id UUID REFERENCES recurring_schedules(id) ON DELETE CASCADE,
+  started_at TIMESTAMP NOT NULL,
+  completed_at TIMESTAMP,
+  status VARCHAR(50) DEFAULT 'running',
+  result JSONB,
+  error_message TEXT,
+  CONSTRAINT check_exec_status CHECK (status IN ('running', 'completed', 'failed'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_schedule_executions_schedule ON recurring_schedule_executions(schedule_id);
+CREATE INDEX IF NOT EXISTS idx_schedule_executions_started ON recurring_schedule_executions(started_at DESC);
+
+-- Table advertisers (anciennement sponsors)
+CREATE TABLE IF NOT EXISTS advertisers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL,
+  contact_email VARCHAR(255),
+  contact_phone VARCHAR(50),
+  company_name VARCHAR(255),
+  status VARCHAR(50) DEFAULT 'active',
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT check_advertiser_status CHECK (status IN ('active', 'inactive', 'pending'))
+);
+
+-- Table agencies (agences gérant plusieurs annonceurs)
+CREATE TABLE IF NOT EXISTS agencies (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL,
+  contact_email VARCHAR(255),
+  contact_phone VARCHAR(50),
+  company_name VARCHAR(255),
+  status VARCHAR(50) DEFAULT 'active',
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT check_agency_status CHECK (status IN ('active', 'inactive', 'pending'))
+);
+
+-- Ajouter agency_id aux advertisers (une agence peut gérer plusieurs annonceurs)
+ALTER TABLE advertisers ADD COLUMN IF NOT EXISTS agency_id UUID REFERENCES agencies(id) ON DELETE SET NULL;
+
+-- Ajouter advertiser_id et agency_id aux users pour les comptes annonceurs/agences
+ALTER TABLE users ADD COLUMN IF NOT EXISTS advertiser_id UUID REFERENCES advertisers(id) ON DELETE SET NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS agency_id UUID REFERENCES agencies(id) ON DELETE SET NULL;
+
+-- Mettre à jour la contrainte de rôle pour inclure les nouveaux rôles
+ALTER TABLE users DROP CONSTRAINT IF EXISTS check_role;
+ALTER TABLE users ADD CONSTRAINT check_role CHECK (role IN ('super_admin', 'admin', 'operator', 'viewer', 'advertiser', 'agency'));
+
+-- Table advertiser_videos (liaison advertisers <-> videos)
+CREATE TABLE IF NOT EXISTS advertiser_videos (
+  advertiser_id UUID REFERENCES advertisers(id) ON DELETE CASCADE,
+  video_id UUID REFERENCES videos(id) ON DELETE CASCADE,
+  added_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (advertiser_id, video_id)
+);
+
+-- Table advertiser_sites (liaison advertisers <-> sites)
+CREATE TABLE IF NOT EXISTS advertiser_sites (
+  advertiser_id UUID REFERENCES advertisers(id) ON DELETE CASCADE,
+  site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
+  assigned_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (advertiser_id, site_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_advertiser_sites_advertiser ON advertiser_sites(advertiser_id);
+CREATE INDEX IF NOT EXISTS idx_advertiser_sites_site ON advertiser_sites(site_id);
+
+-- Table agency_sites (liaison agencies <-> sites)
+CREATE TABLE IF NOT EXISTS agency_sites (
+  agency_id UUID REFERENCES agencies(id) ON DELETE CASCADE,
+  site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
+  assigned_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (agency_id, site_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_agency_sites_agency ON agency_sites(agency_id);
+CREATE INDEX IF NOT EXISTS idx_agency_sites_site ON agency_sites(site_id);
+
+-- Table advertiser_impressions (tracking des affichages pubs)
+CREATE TABLE IF NOT EXISTS advertiser_impressions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
+  advertiser_id UUID REFERENCES advertisers(id) ON DELETE SET NULL,
+  video_id UUID REFERENCES videos(id) ON DELETE SET NULL,
+  video_filename VARCHAR(255),
+  played_at TIMESTAMP NOT NULL,
+  duration_played INTEGER,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_advertiser_impressions_site ON advertiser_impressions(site_id, played_at DESC);
+CREATE INDEX IF NOT EXISTS idx_advertiser_impressions_advertiser ON advertiser_impressions(advertiser_id);
+CREATE INDEX IF NOT EXISTS idx_advertiser_impressions_played_at ON advertiser_impressions(played_at);
+
+-- Table advertiser_daily_stats (agrégation quotidienne des impressions)
+CREATE TABLE IF NOT EXISTS advertiser_daily_stats (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  date DATE NOT NULL,
+  advertiser_id UUID REFERENCES advertisers(id) ON DELETE CASCADE,
+  site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
+  impressions_count INTEGER DEFAULT 0,
+  total_duration INTEGER DEFAULT 0,
+  unique_videos INTEGER DEFAULT 0,
+  calculated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(date, advertiser_id, site_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_advertiser_daily_stats_date ON advertiser_daily_stats(date);
+CREATE INDEX IF NOT EXISTS idx_advertiser_daily_stats_advertiser ON advertiser_daily_stats(advertiser_id);
+
+-- Ajouter video_id et sponsor_id aux tables analytics
+ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS video_id UUID REFERENCES videos(id) ON DELETE SET NULL;
+ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS sponsor_id UUID REFERENCES advertisers(id) ON DELETE SET NULL;
+ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS analytics_category VARCHAR(50);
+
+-- Vue pending_commands_summary
+CREATE OR REPLACE VIEW pending_commands_summary AS
+SELECT
+  s.id AS site_id,
+  s.club_name,
+  s.status AS site_status,
+  COUNT(pc.id) AS pending_count,
+  MIN(pc.priority) AS highest_priority,
+  MIN(pc.created_at) AS oldest_command,
+  MAX(pc.created_at) AS newest_command,
+  ARRAY_AGG(DISTINCT pc.command_type) AS command_types
+FROM sites s
+LEFT JOIN pending_commands pc ON pc.site_id = s.id
+GROUP BY s.id, s.club_name, s.status;
+
+-- Trigger pour updated_at sur config_drafts
+CREATE OR REPLACE FUNCTION update_config_drafts_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_update_config_drafts_updated_at ON config_drafts;
+CREATE TRIGGER trigger_update_config_drafts_updated_at
+  BEFORE UPDATE ON config_drafts
+  FOR EACH ROW
+  EXECUTE FUNCTION update_config_drafts_updated_at();
+
+-- =============================================================================
+-- VUES ANALYTICS (créées séparément pour le reporting)
+-- =============================================================================
+
+-- Vue club_analytics_summary (stats agrégées par site)
+CREATE OR REPLACE VIEW club_analytics_summary AS
+SELECT
+  s.id AS site_id,
+  s.site_name,
+  s.club_name,
+  s.status,
+  COUNT(DISTINCT cs.id) AS total_sessions,
+  COALESCE(SUM(vp.id IS NOT NULL::int), 0) AS total_video_plays,
+  MAX(cs.start_time) AS last_session
+FROM sites s
+LEFT JOIN club_sessions cs ON cs.site_id = s.id
+LEFT JOIN video_plays vp ON vp.site_id = s.id
+GROUP BY s.id, s.site_name, s.club_name, s.status;
+
+-- Vue top_videos_by_site (vidéos les plus jouées par site)
+CREATE OR REPLACE VIEW top_videos_by_site AS
+SELECT
+  site_id,
+  video_filename,
+  COUNT(*) AS play_count,
+  SUM(duration_watched) AS total_duration
+FROM video_plays
+WHERE played_at > NOW() - INTERVAL '30 days'
+GROUP BY site_id, video_filename
+ORDER BY play_count DESC;
+
+-- Vue advertiser_analytics_summary (stats agrégées par annonceur)
+CREATE OR REPLACE VIEW advertiser_analytics_summary AS
+SELECT
+  a.id AS advertiser_id,
+  a.name AS advertiser_name,
+  COUNT(DISTINCT ai.site_id) AS sites_reached,
+  COUNT(ai.id) AS total_impressions,
+  COALESCE(SUM(ai.duration_played), 0) AS total_duration
+FROM advertisers a
+LEFT JOIN advertiser_impressions ai ON ai.advertiser_id = a.id
+GROUP BY a.id, a.name;
+
+-- Vue advertiser_performance_by_site (performance par site pour un annonceur)
+CREATE OR REPLACE VIEW advertiser_performance_by_site AS
+SELECT
+  ai.advertiser_id,
+  ai.site_id,
+  s.site_name,
+  s.club_name,
+  COUNT(ai.id) AS impressions_count,
+  COALESCE(SUM(ai.duration_played), 0) AS total_duration
+FROM advertiser_impressions ai
+JOIN sites s ON s.id = ai.site_id
+GROUP BY ai.advertiser_id, ai.site_id, s.site_name, s.club_name;
+
+-- Vue advertiser_stats_summary (résumé stats annonceurs)
+CREATE OR REPLACE VIEW advertiser_stats_summary AS
+SELECT
+  a.id AS advertiser_id,
+  a.name,
+  a.status,
+  COUNT(DISTINCT av.video_id) AS video_count,
+  COUNT(DISTINCT ai.site_id) AS sites_count,
+  COUNT(ai.id) AS total_impressions
+FROM advertisers a
+LEFT JOIN advertiser_videos av ON av.advertiser_id = a.id
+LEFT JOIN advertiser_impressions ai ON ai.advertiser_id = a.id
+GROUP BY a.id, a.name, a.status;
+
+-- Vue top_advertiser_videos (vidéos sponsors les plus jouées)
+CREATE OR REPLACE VIEW top_advertiser_videos AS
+SELECT
+  ai.advertiser_id,
+  a.name AS advertiser_name,
+  ai.video_filename,
+  COUNT(*) AS play_count,
+  SUM(ai.duration_played) AS total_duration
+FROM advertiser_impressions ai
+JOIN advertisers a ON a.id = ai.advertiser_id
+WHERE ai.played_at > NOW() - INTERVAL '30 days'
+GROUP BY ai.advertiser_id, a.name, ai.video_filename
+ORDER BY play_count DESC;
+
+-- Vue advertiser_accessible_sites (sites accessibles par annonceur)
+CREATE OR REPLACE VIEW advertiser_accessible_sites AS
+SELECT
+  a.id AS advertiser_id,
+  a.name AS advertiser_name,
+  s.id AS site_id,
+  s.site_name,
+  s.club_name,
+  s.status
+FROM advertisers a
+JOIN advertiser_sites asites ON asites.advertiser_id = a.id
+JOIN sites s ON s.id = asites.site_id;
+
+-- Vue agency_accessible_sites (sites accessibles par agence)
+CREATE OR REPLACE VIEW agency_accessible_sites AS
+SELECT
+  ag.id AS agency_id,
+  ag.name AS agency_name,
+  s.id AS site_id,
+  s.site_name,
+  s.club_name,
+  s.status
+FROM agencies ag
+JOIN agency_sites agsites ON agsites.agency_id = ag.id
+JOIN sites s ON s.id = agsites.site_id;
+
+-- Vue agency_stats_summary (résumé stats agences)
+CREATE OR REPLACE VIEW agency_stats_summary AS
+SELECT
+  ag.id AS agency_id,
+  ag.name,
+  ag.status,
+  COUNT(DISTINCT a.id) AS advertiser_count,
+  COUNT(DISTINCT agsites.site_id) AS sites_count
+FROM agencies ag
+LEFT JOIN advertisers a ON a.agency_id = ag.id
+LEFT JOIN agency_sites agsites ON agsites.agency_id = ag.id
+GROUP BY ag.id, ag.name, ag.status;
+
+-- =============================================================================
+-- COMMENTAIRES
+-- =============================================================================
+
+-- Commentaires pour les tables principales
+COMMENT ON TABLE pending_commands IS 'File d''attente des commandes pour sites offline';
+COMMENT ON TABLE config_drafts IS 'Brouillons de configuration (1 par site)';
+COMMENT ON TABLE orchestrated_deployments IS 'Déploiements orchestrés (vidéos puis config)';
+COMMENT ON TABLE audit_logs IS 'Logs d''audit des actions admin';
+COMMENT ON TABLE advertisers IS 'Annonceurs (sponsors) avec contrats publicitaires';
+COMMENT ON TABLE agencies IS 'Agences gérant plusieurs annonceurs';
+COMMENT ON TABLE advertiser_impressions IS 'Tracking des impressions publicitaires';
+COMMENT ON TABLE advertiser_sites IS 'Liaison annonceurs <-> sites autorisés';
+COMMENT ON TABLE agency_sites IS 'Liaison agences <-> sites autorisés';
 
 -- =============================================================================
 -- FIN

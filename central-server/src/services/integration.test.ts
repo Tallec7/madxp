@@ -57,6 +57,7 @@ describe('Integration Tests - Video Deployment Flow', () => {
     socketService.cleanup();
     (socketService as any).connectedSites = new Map();
     (socketService as any).pendingCommands = new Map();
+    (socketService as any).lastPongReceived = new Map();
     (socketService as any).io = null;
   });
 
@@ -69,10 +70,12 @@ describe('Integration Tests - Video Deployment Flow', () => {
       // Simuler un site connecté
       const mockSocket = {
         id: 'socket-001',
+        connected: true,
         emit: mockEmit,
         data: { siteId: testSiteId },
       };
       (socketService as any).connectedSites.set(testSiteId, mockSocket);
+      (socketService as any).lastPongReceived.set(testSiteId, Date.now());
 
       // Mock de la base de données
       mockQuery
@@ -227,10 +230,13 @@ describe('Integration Tests - Video Deployment Flow', () => {
     it('should track pending commands', () => {
       const mockSocket = {
         id: 'socket-002',
+        connected: true,
         emit: jest.fn().mockReturnValue(true),
         data: { siteId: testSiteId },
       };
       (socketService as any).connectedSites.set(testSiteId, mockSocket);
+      // Set recent pong to avoid stale connection check
+      (socketService as any).lastPongReceived.set(testSiteId, Date.now());
 
       const command = {
         id: uuidv4(),
@@ -275,16 +281,21 @@ describe('Integration Tests - Video Deployment Flow', () => {
       // Simuler deux sites connectés
       const mockSocket1 = {
         id: 'socket-1',
+        connected: true,
         emit: jest.fn().mockReturnValue(true),
         data: { siteId: site1Id },
       };
       const mockSocket2 = {
         id: 'socket-2',
+        connected: true,
         emit: jest.fn().mockReturnValue(true),
         data: { siteId: site2Id },
       };
       (socketService as any).connectedSites.set(site1Id, mockSocket1);
       (socketService as any).connectedSites.set(site2Id, mockSocket2);
+      // Set recent pong for both sites
+      (socketService as any).lastPongReceived.set(site1Id, Date.now());
+      (socketService as any).lastPongReceived.set(site2Id, Date.now());
 
       const command = {
         id: uuidv4(),
@@ -384,6 +395,7 @@ describe('Integration Tests - Command Handling', () => {
     socketService.cleanup();
     (socketService as any).connectedSites = new Map();
     (socketService as any).pendingCommands = new Map();
+    (socketService as any).lastPongReceived = new Map();
   });
 
   afterAll(() => {
@@ -396,10 +408,13 @@ describe('Integration Tests - Command Handling', () => {
     beforeEach(() => {
       const mockSocket = {
         id: 'socket-cmd',
+        connected: true,
         emit: jest.fn().mockReturnValue(true),
         data: { siteId: testSiteId },
       };
       (socketService as any).connectedSites.set(testSiteId, mockSocket);
+      // Set recent pong to avoid stale connection check
+      (socketService as any).lastPongReceived.set(testSiteId, Date.now());
     });
 
     it('should handle deploy_video command', () => {

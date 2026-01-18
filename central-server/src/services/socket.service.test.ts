@@ -20,11 +20,11 @@ jest.mock('../config/database', () => ({
   query: mockQuery,
 }));
 
-// Mock bcrypt for API key verification
-const mockBcryptCompare = jest.fn();
-jest.mock('bcryptjs', () => ({
-  compare: (...args: any[]) => mockBcryptCompare(...args),
-}));
+// Mock crypto for API key verification (SHA256)
+import { createHash } from 'crypto';
+const hashApiKey = (apiKey: string): string => {
+  return createHash('sha256').update(apiKey).digest('hex');
+};
 
 const mockLogger = {
   info: jest.fn(),
@@ -62,6 +62,7 @@ const createMockSocket = (overrides: Partial<Socket> = {}): Partial<Socket> => {
 
   return {
     id: 'socket-123',
+    connected: true, // Required for sendCommand to work
     handshake: {
       headers: { 'x-forwarded-for': '203.0.113.1' },
       address: '127.0.0.1',
@@ -97,9 +98,8 @@ describe('SocketService', () => {
     // Reset internal state
     (socketService as any).connectedSites = new Map();
     (socketService as any).pendingCommands = new Map();
+    (socketService as any).lastPongReceived = new Map();
     (socketService as any).io = null;
-    // Default bcrypt mock: return true for matching keys
-    mockBcryptCompare.mockResolvedValue(true);
   });
 
   afterAll(() => {
@@ -118,15 +118,20 @@ describe('SocketService', () => {
   });
 
   describe('authenticateAgent (private)', () => {
+    // API key in plain text
+    const validApiKey = 'valid-api-key-32chars-hex-string';
+    // Hash SHA256 of the API key (what's stored in DB)
+    const validApiKeyHash = hashApiKey(validApiKey);
+
     const validSocketData: SocketData = {
       siteId: 'site-uuid-123',
-      apiKey: 'valid-api-key-32chars-hex-string',
+      apiKey: validApiKey,
     };
 
     const mockSiteRow = {
       id: 'site-uuid-123',
       site_name: 'Test Site',
-      api_key: 'valid-api-key-32chars-hex-string',
+      api_key: validApiKeyHash, // DB stores the hash, not plain text
     };
 
     it('should authenticate agent with valid credentials', async () => {
@@ -186,13 +191,12 @@ describe('SocketService', () => {
         apiKey: 'wrong-api-key-different-length!',
       };
 
+      // DB has the hash of a different key
       mockQuery.mockResolvedValueOnce({
-        rows: [{ ...mockSiteRow, api_key: '$2a$12$hashedapikey' }],
+        rows: [{ ...mockSiteRow }], // mockSiteRow has hash of validApiKey
       });
 
-      // bcrypt.compare returns false for invalid key
-      mockBcryptCompare.mockResolvedValueOnce(false);
-
+      // The wrong key will produce a different hash, so verification fails
       await expect(
         (socketService as any).authenticateAgent(mockSocket, wrongKeyData)
       ).rejects.toThrow('Clé API invalide');
@@ -512,7 +516,10 @@ describe('SocketService', () => {
     });
 
     it('should emit command_completed event', async () => {
-      const mockIo = { emit: jest.fn() };
+      // Setup mock for io with to().emit() chain
+      const mockEmit = jest.fn();
+      const mockTo = jest.fn().mockReturnValue({ emit: mockEmit });
+      const mockIo = { to: mockTo, emit: jest.fn() };
       (socketService as any).io = mockIo;
 
       mockQuery
@@ -527,11 +534,13 @@ describe('SocketService', () => {
 
       await (socketService as any).handleCommandResult('site-uuid-123', successResult);
 
-      expect(mockIo.emit).toHaveBeenCalledWith('command_completed', {
+      // Should have emitted to 'dashboard' room
+      expect(mockTo).toHaveBeenCalledWith('dashboard');
+      expect(mockEmit).toHaveBeenCalledWith('command_completed', expect.objectContaining({
         siteId: 'site-uuid-123',
         commandId: 'cmd-uuid-123',
         status: 'success',
-      });
+      }));
     });
   });
 
@@ -566,10 +575,11 @@ describe('SocketService', () => {
 
       await (socketService as any).handleSyncLocalState('site-uuid-123', syncState);
 
+      // The service enriches config with _localVideos, _localStorage, etc.
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE sites'),
         expect.arrayContaining([
-          JSON.stringify(syncState.config),
+          expect.stringContaining('"categories"'),
           'abc123def456',
           'site-uuid-123',
         ])
@@ -577,19 +587,24 @@ describe('SocketService', () => {
     });
 
     it('should emit site_config_updated event', async () => {
-      const mockIo = { emit: jest.fn() };
+      // Setup mock for io with to().emit() chain
+      const mockEmit = jest.fn();
+      const mockTo = jest.fn().mockReturnValue({ emit: mockEmit });
+      const mockIo = { to: mockTo, emit: jest.fn() };
       (socketService as any).io = mockIo;
 
       mockQuery.mockResolvedValueOnce({ rows: [] });
 
       await (socketService as any).handleSyncLocalState('site-uuid-123', syncState);
 
-      expect(mockIo.emit).toHaveBeenCalledWith('site_config_updated', {
+      // Should have emitted to 'dashboard' room
+      expect(mockTo).toHaveBeenCalledWith('dashboard');
+      expect(mockEmit).toHaveBeenCalledWith('site_config_updated', expect.objectContaining({
         siteId: 'site-uuid-123',
         configHash: 'abc123def456',
         categoriesCount: 1,
         timestamp: '2025-12-11T10:00:00Z',
-      });
+      }));
     });
   });
 
@@ -671,7 +686,10 @@ describe('SocketService', () => {
     });
 
     it('should emit deploy_progress event', async () => {
-      const mockIo = { emit: jest.fn() };
+      // Setup mock for io with to().emit() chain
+      const mockEmit = jest.fn();
+      const mockTo = jest.fn().mockReturnValue({ emit: mockEmit });
+      const mockIo = { to: mockTo, emit: jest.fn() };
       (socketService as any).io = mockIo;
 
       const progress = {
@@ -683,7 +701,9 @@ describe('SocketService', () => {
 
       await (socketService as any).handleDeployProgress('site-uuid-123', progress);
 
-      expect(mockIo.emit).toHaveBeenCalledWith('deploy_progress', expect.objectContaining({
+      // Should have emitted to 'dashboard' room
+      expect(mockTo).toHaveBeenCalledWith('dashboard');
+      expect(mockEmit).toHaveBeenCalledWith('deploy_progress', expect.objectContaining({
         siteId: 'site-uuid-123',
         deploymentId: 'deploy-uuid-123',
         progress: 50,
@@ -695,6 +715,8 @@ describe('SocketService', () => {
     it('should send command to connected site', () => {
       const mockSocket = createMockSocket();
       (socketService as any).connectedSites.set('site-uuid-123', mockSocket);
+      // Set recent pong to avoid stale connection check
+      (socketService as any).lastPongReceived.set('site-uuid-123', Date.now());
 
       const command = {
         id: 'cmd-uuid-123',
@@ -719,7 +741,7 @@ describe('SocketService', () => {
 
       expect(result).toBe(false);
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Cannot send command: site not connected',
+        'Cannot send command: site not in connectedSites map',
         expect.any(Object)
       );
     });
@@ -732,6 +754,9 @@ describe('SocketService', () => {
 
       (socketService as any).connectedSites.set('site-1', mockSocket1);
       (socketService as any).connectedSites.set('site-2', mockSocket2);
+      // Set recent pong for both sites
+      (socketService as any).lastPongReceived.set('site-1', Date.now());
+      (socketService as any).lastPongReceived.set('site-2', Date.now());
 
       const command = {
         id: 'cmd-uuid-123',
@@ -750,6 +775,8 @@ describe('SocketService', () => {
     it('should track failures for disconnected sites', () => {
       const mockSocket = createMockSocket();
       (socketService as any).connectedSites.set('site-1', mockSocket);
+      // Set recent pong for connected site
+      (socketService as any).lastPongReceived.set('site-1', Date.now());
 
       const command = {
         id: 'cmd-uuid-123',
@@ -811,26 +838,25 @@ describe('SocketService', () => {
   });
 
   describe('Security', () => {
-    it('should use timing-safe comparison for API keys', async () => {
-      // This is tested implicitly by the authentication tests
-      // bcrypt.compare is timing-safe by design to prevent timing attacks
+    it('should use SHA256 hash comparison for API keys', async () => {
+      // API keys are verified using SHA256 hash comparison
 
       const mockSocket = createMockSocket();
+      const testApiKey = 'valid-key-exactly-32-characters!';
       const validData = {
         siteId: 'site-uuid-123',
-        apiKey: 'valid-key-exactly-32-characters!',
+        apiKey: testApiKey,
       };
 
+      // DB stores the wrong hash (hash of a different key)
+      const wrongKeyHash = hashApiKey('completely-different-api-key!!!');
       mockQuery.mockResolvedValueOnce({
         rows: [{
           id: 'site-uuid-123',
           site_name: 'Test',
-          api_key: '$2a$12$hashedapikey',
+          api_key: wrongKeyHash,
         }],
       });
-
-      // bcrypt.compare returns false for invalid key (timing-safe)
-      mockBcryptCompare.mockResolvedValueOnce(false);
 
       // Different keys should fail securely
       await expect(
@@ -843,6 +869,8 @@ describe('SocketService', () => {
     it('should track pending commands when sent', () => {
       const mockSocket = createMockSocket();
       (socketService as any).connectedSites.set('site-123', mockSocket);
+      // Set recent pong to avoid stale connection check
+      (socketService as any).lastPongReceived.set('site-123', Date.now());
 
       const command = {
         id: 'cmd-uuid-123',
@@ -864,6 +892,8 @@ describe('SocketService', () => {
     it('should use default timeout for unknown command types', () => {
       const mockSocket = createMockSocket();
       (socketService as any).connectedSites.set('site-123', mockSocket);
+      // Set recent pong to avoid stale connection check
+      (socketService as any).lastPongReceived.set('site-123', Date.now());
 
       const command = {
         id: 'cmd-uuid-456',
@@ -914,8 +944,10 @@ describe('SocketService', () => {
         timeoutMs: 15000, // 15 second timeout (expired)
       });
 
-      // Setup mock for io emit
-      const mockIo = { emit: jest.fn() };
+      // Setup mock for io with to().emit() chain
+      const mockEmit = jest.fn();
+      const mockTo = jest.fn().mockReturnValue({ emit: mockEmit });
+      const mockIo = { to: mockTo, emit: jest.fn() };
       (socketService as any).io = mockIo;
 
       mockQuery.mockResolvedValueOnce({ rows: [] }); // UPDATE query
@@ -929,8 +961,9 @@ describe('SocketService', () => {
         expect.arrayContaining(['cmd-timed-out'])
       );
 
-      // Should have emitted timeout event
-      expect(mockIo.emit).toHaveBeenCalledWith('command_timeout', {
+      // Should have emitted timeout event to 'dashboard' room
+      expect(mockTo).toHaveBeenCalledWith('dashboard');
+      expect(mockEmit).toHaveBeenCalledWith('command_timeout', {
         siteId: 'site-123',
         commandId: 'cmd-timed-out',
         type: 'get_config',

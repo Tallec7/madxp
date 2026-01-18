@@ -2732,6 +2732,60 @@ app.post('/api/services/:service/restart', async (req, res) => {
   }
 });
 
+// API: Diagnostic et réparation du hotspot WiFi
+app.post('/api/hotspot/fix', async (req, res) => {
+  const { autoFix = false } = req.body || {};
+
+  const scriptPath = `${NEOPRO_DIR}/scripts/fix-hotspot.sh`;
+
+  // Vérifier si le script existe
+  const scriptExists = await fs.pathExists(scriptPath);
+  if (!scriptExists) {
+    return res.status(404).json({
+      success: false,
+      error: 'Script fix-hotspot.sh non trouvé'
+    });
+  }
+
+  try {
+    // Construire les arguments
+    const args = ['--json'];
+    if (autoFix) {
+      args.push('--auto-fix');
+    }
+    // Note: on ne passe pas --reboot-now ici car on veut afficher le modal de confirmation
+
+    const cmd = `sudo bash ${scriptPath} ${args.join(' ')} 2>&1`;
+
+    const result = await execCommand(cmd, 120000); // 2 minutes timeout
+
+    if (result.success && result.stdout) {
+      try {
+        const jsonResult = JSON.parse(result.stdout.trim());
+        return res.json(jsonResult);
+      } catch (parseError) {
+        // Retourner la sortie brute si ce n'est pas du JSON
+        return res.json({
+          success: true,
+          output: result.stdout,
+          manual: true
+        });
+      }
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: result.stderr || 'Erreur lors de l\'exécution du script',
+        output: result.stdout
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // API: Redémarrer le système
 app.post('/api/system/reboot', async (req, res) => {
   res.json({ success: true, message: 'Redémarrage du système dans 5 secondes...' });

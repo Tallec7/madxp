@@ -236,24 +236,37 @@ describe('Audit Routes', () => {
 
     it('should return all expected actions', async () => {
       const expectedActions = [
+        // User actions
         'USER_LOGIN',
         'USER_LOGOUT',
         'USER_CREATED',
         'USER_UPDATED',
         'USER_DELETED',
+        // Site actions
         'SITE_CREATED',
         'SITE_UPDATED',
         'SITE_DELETED',
         'API_KEY_REGENERATED',
+        // Video actions
         'VIDEO_UPLOADED',
         'VIDEO_DELETED',
         'VIDEO_DEPLOYED',
+        // Config actions
         'CONFIG_PUSHED',
         'COMMAND_SENT',
+        'SETTINGS_UPDATED',
+        // Group actions
         'GROUP_CREATED',
         'GROUP_UPDATED',
         'GROUP_DELETED',
-        'SETTINGS_UPDATED',
+        // Remote shell actions
+        'REMOTE_SHELL_EXECUTE',
+        'REMOTE_SHELL_BLOCKED',
+        // Live match actions
+        'MATCH_STARTED',
+        'MATCH_CONFIG_UPDATED',
+        'MATCH_ENDED',
+        'SCORE_UPDATED',
       ];
 
       const response = await request(app)
