@@ -96,6 +96,7 @@ export class SitesService {
     success: boolean;
     configured: boolean;
     ssid?: string;
+    password?: string;
     channel?: number;
     isActive?: boolean;
     message?: string;

@@ -269,7 +269,7 @@ GET    /api/sites/:id/dashboard → endpoint agrégé (connection + metrics)
 GET    /api/sites/:id/local-content → vidéos locales + stockage
 GET    /api/sites/:id/connection-status → statut connexion temps réel
 GET    /api/sites/:id/metrics → métriques système (CPU, RAM, temp)
-GET    /api/sites/:id/hotspot-config → SSID WiFi réel du boîtier (pour QR code)
+GET    /api/sites/:id/hotspot-config → Config hotspot complète (SSID, mot de passe, canal, statut)
 GET    /api/sites/:id/timeline → événements récents (déploiements, commandes, configs, alertes)
 POST   /api/sites             → créer site (génère api_key)
 PUT    /api/sites/:id         → modifier
@@ -1964,6 +1964,17 @@ vcgencmd get_mem gpu
     - `central-server/src/server.ts` - Démarrage du service
   - **Migration** : Redéployer le serveur central
 
+- **Fix commandes WiFi BSSID non autorisées** : Les commandes `get_wifi_bssid_status`, `remove_bssid_lock`, `optimize_for_mesh` retournaient une erreur 500
+  - **Problème** : L'endpoint `/api/sites/:id/wifi-bssid-status` échouait avec `"Command type 'get_wifi_bssid_status' is not allowed"`
+  - **Cause** : Les commandes n'étaient pas dans la liste `DEFAULT_ALLOWED_COMMANDS` du sync-agent
+  - **Solution** : Ajout des 4 commandes manquantes à `raspberry/sync-agent/src/config.js` :
+    - `get_wifi_bssid_status`
+    - `remove_bssid_lock`
+    - `optimize_for_mesh`
+    - `deploy_asset`
+  - **Fichier modifié** : `raspberry/sync-agent/src/config.js`
+  - **Migration** : Déployer le nouveau sync-agent ou copier `config.js` via SCP + restart service
+
 ### v2.36.x (Janvier 2026)
 
 - **SafeNetworkOperations Service** : Encapsulation des opérations réseau risquées avec sécurité basée sur le profil
@@ -2320,15 +2331,17 @@ vcgencmd get_mem gpu
   - **Fichier modifié** : `raspberry/server/server.js`
   - **Migration** : Déployer `server/server.js` sur les Pi existants
 
-- **Hotspot Info dans le dashboard central** : Le sync-agent remonte maintenant les infos du hotspot
-  - **Données remontées** : SSID, channel, nombre de clients connectés, état actif/inactif
-  - **Affichage** : Onglet Debug > section "Hotspot WiFi" avec icônes et couleurs
+- **Hotspot Info dans le dashboard central** : Le sync-agent remonte maintenant les infos complètes du hotspot
+  - **Données remontées** : SSID, mot de passe, channel, nombre de clients connectés, état actif/inactif
+  - **Affichage** : Onglet Paramètres > section "Hotspot WiFi" avec données réelles du Pi
   - **Fichiers modifiés** :
-    - `raspberry/sync-agent/src/agent.js` - Collecte hotspotInfo dans sync_local_state
+    - `raspberry/sync-agent/src/agent.js` - Collecte hotspotInfo (incluant password) dans sync_local_state
+    - `raspberry/sync-agent/src/commands/hotspot.js` - getHotspotConfig() retourne aussi le password
     - `central-server/src/services/socket.service.ts` - Stocke \_hotspotInfo dans local_config_mirror
-    - `central-server/src/controllers/sites.controller.ts` - Retourne hotspotInfo via /local-content
-    - `central-dashboard/.../site-debug-tab.component.ts` - Affichage dans l'UI
-  - **Migration** : Déployer sync-agent sur les Pi, redéployer le serveur central et le dashboard
+    - `central-dashboard/.../site-settings-tab.component.ts` - Affichage avec bouton actualiser et show/hide password
+    - `central-dashboard/src/app/core/services/sites.service.ts` - Interface getHotspotConfig avec password
+    - `central-dashboard/src/app/core/models/index.ts` - Type \_hotspotInfo avec password
+  - **Migration** : Déployer sync-agent sur les Pi, redéployer le dashboard
 
 - **Hotspot Channel Optimizer (auto-fix au boot)** : Le Pi sélectionne automatiquement le meilleur canal WiFi au démarrage
   - **Problème résolu** : Hotspot invisible après déplacement du boîtier dans un environnement WiFi saturé (canal 6 encombré)

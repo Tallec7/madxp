@@ -30,6 +30,11 @@ const DEFAULT_ALLOWED_COMMANDS = [
   'export_debug_bundle',
   'get_analytics_buffer_status',
   'fix_hotspot',
+  // Network resilience - v2.37
+  'get_wifi_bssid_status',
+  'remove_bssid_lock',
+  'optimize_for_mesh',
+  'deploy_asset',
 ];
 
 const buildAllowedCommands = () => {

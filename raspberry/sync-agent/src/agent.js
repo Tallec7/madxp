@@ -258,16 +258,18 @@ class NeoproSyncAgent {
         videoState = this.videoWatcher.getStorageStats();
       }
 
-      // Récupérer les infos du hotspot (SSID, canal, clients connectés)
-      let hotspotInfo = { ssid: null, channel: null, clients: 0, isActive: false };
+      // Récupérer les infos du hotspot (SSID, canal, mot de passe, clients connectés)
+      let hotspotInfo = { ssid: null, channel: null, password: null, clients: 0, isActive: false };
       try {
         const hostapdPath = '/etc/hostapd/hostapd.conf';
         if (await fs.pathExists(hostapdPath)) {
           const hostapdContent = await fs.readFile(hostapdPath, 'utf8');
           const ssidMatch = hostapdContent.match(/^ssid=(.*)$/m);
           const channelMatch = hostapdContent.match(/^channel=(\d+)$/m);
+          const passwordMatch = hostapdContent.match(/^wpa_passphrase=(.*)$/m);
           hotspotInfo.ssid = ssidMatch ? ssidMatch[1] : null;
           hotspotInfo.channel = channelMatch ? parseInt(channelMatch[1], 10) : null;
+          hotspotInfo.password = passwordMatch ? passwordMatch[1] : null;
         }
 
         // Vérifier si hostapd est actif

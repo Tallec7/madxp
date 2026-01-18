@@ -99,7 +99,7 @@ async function updateHotspot(data) {
 }
 
 /**
- * Récupère la configuration actuelle du hotspot (SSID uniquement, pas le mot de passe)
+ * Récupère la configuration actuelle du hotspot (SSID, mot de passe, canal)
  */
 async function getHotspotConfig() {
   logger.info('Retrieving hotspot configuration');
@@ -121,6 +121,10 @@ async function getHotspotConfig() {
     const ssidMatch = hostapdContent.match(/^ssid=(.*)$/m);
     const ssid = ssidMatch ? ssidMatch[1] : null;
 
+    // Extraire le mot de passe
+    const passwordMatch = hostapdContent.match(/^wpa_passphrase=(.*)$/m);
+    const password = passwordMatch ? passwordMatch[1] : null;
+
     // Extraire le channel
     const channelMatch = hostapdContent.match(/^channel=(.*)$/m);
     const channel = channelMatch ? parseInt(channelMatch[1]) : null;
@@ -138,6 +142,7 @@ async function getHotspotConfig() {
       success: true,
       configured: true,
       ssid,
+      password,
       channel,
       isActive,
     };

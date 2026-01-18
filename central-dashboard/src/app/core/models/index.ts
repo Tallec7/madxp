@@ -107,6 +107,13 @@ export interface Site {
       free: number;
     };
     _hotspotSsid?: string;
+    _hotspotInfo?: {
+      ssid: string | null;
+      channel: number | null;
+      password: string | null;
+      clients: number;
+      isActive: boolean;
+    };
     _lastVideoSync?: string;
     _networkProfile?: NetworkProfile;
     [key: string]: unknown;

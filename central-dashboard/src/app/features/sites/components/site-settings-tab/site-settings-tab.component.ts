@@ -83,18 +83,72 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
         <div class="settings-header">
           <span class="settings-icon">📶</span>
           <h4>Hotspot WiFi</h4>
+          <button
+            class="btn-icon-sm refresh-btn"
+            (click)="fetchHotspotConfig()"
+            [disabled]="fetchingHotspotConfig || !isConnected"
+            title="Actualiser depuis le boîtier"
+          >
+            {{ fetchingHotspotConfig ? '⏳' : '🔄' }}
+          </button>
         </div>
         <p class="settings-desc">Configuration du réseau WiFi du boîtier</p>
+
+        <!-- Affichage des valeurs actuelles -->
+        <div class="current-hotspot-info" *ngIf="currentHotspotSsid">
+          <div class="info-row">
+            <span class="info-label">SSID actuel :</span>
+            <code class="info-value">{{ currentHotspotSsid }}</code>
+            <span class="info-badge" [class.online]="currentHotspotActive" [class.offline]="!currentHotspotActive">
+              {{ currentHotspotActive ? ('✓ ' + ('status.active' | translate)) : ('○ ' + ('status.inactive' | translate)) }}
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Mot de passe :</span>
+            <ng-container *ngIf="currentHotspotPassword; else noPassword">
+              <code class="info-value password-value">{{ showCurrentPassword ? currentHotspotPassword : '••••••••' }}</code>
+              <button class="btn-icon" (click)="toggleShowPassword()" type="button" [title]="showCurrentPassword ? 'Masquer' : 'Afficher'">
+                {{ showCurrentPassword ? '🙈' : '👁️' }}
+              </button>
+            </ng-container>
+            <ng-template #noPassword>
+              <span class="info-value info-muted">Cliquez 🔄 pour charger</span>
+            </ng-template>
+          </div>
+          <div class="info-row" *ngIf="currentHotspotChannel">
+            <span class="info-label">Canal :</span>
+            <span class="info-value">{{ currentHotspotChannel }}</span>
+          </div>
+          <div class="info-row" *ngIf="currentHotspotClients !== null">
+            <span class="info-label">Clients connectés :</span>
+            <span class="info-value">{{ currentHotspotClients }}</span>
+          </div>
+        </div>
+        <div class="no-hotspot-info" *ngIf="!currentHotspotSsid && isConnected && !fetchingHotspotConfig">
+          <button class="btn btn-secondary btn-sm" (click)="fetchHotspotConfig()" [disabled]="fetchingHotspotConfig">
+            🔄 Charger les informations
+          </button>
+        </div>
+        <div class="no-hotspot-info" *ngIf="!currentHotspotSsid && fetchingHotspotConfig">
+          <span class="loading-hint">⏳ Chargement des informations hotspot...</span>
+        </div>
+        <div class="no-hotspot-info" *ngIf="!currentHotspotSsid && !isConnected">
+          <span class="offline-hint">Site hors ligne - informations hotspot non disponibles</span>
+        </div>
+
+        <hr class="settings-divider" *ngIf="currentHotspotSsid" />
+        <h5 class="subsection-title" *ngIf="currentHotspotSsid">Modifier la configuration</h5>
+
         <div class="settings-grid">
           <div class="form-group">
             <label>SSID (nom du réseau)</label>
-            <input type="text" [(ngModel)]="hotspotSsid" placeholder="NEOPRO-MonClub" maxlength="32" class="form-input"/>
-            <small class="form-hint">Max 32 caractères</small>
+            <input type="text" [(ngModel)]="hotspotSsid" [placeholder]="currentHotspotSsid || 'NEOPRO-MonClub'" maxlength="32" class="form-input"/>
+            <small class="form-hint">Max 32 caractères. Laissez vide pour conserver l'actuel.</small>
           </div>
           <div class="form-group">
             <label>Mot de passe WiFi</label>
-            <input type="text" [(ngModel)]="hotspotPassword" placeholder="••••••••" minlength="8" maxlength="63" class="form-input"/>
-            <small class="form-hint">8-63 caractères (WPA2)</small>
+            <input type="password" [(ngModel)]="hotspotPassword" placeholder="••••••••" minlength="8" maxlength="63" class="form-input"/>
+            <small class="form-hint">8-63 caractères (WPA2). Laissez vide pour conserver l'actuel.</small>
           </div>
         </div>
         <button
@@ -422,6 +476,28 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       font-size: 1.25rem;
     }
 
+    .settings-header .btn-icon-sm {
+      margin-left: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      opacity: 0.7;
+      transition: all 0.2s;
+    }
+
+    .settings-header .btn-icon-sm:hover:not(:disabled) {
+      opacity: 1;
+      background: #f1f5f9;
+    }
+
+    .settings-header .btn-icon-sm:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
     .settings-desc {
       margin: 0 0 1rem 0;
       font-size: 0.875rem;
@@ -472,6 +548,118 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       background: #fef3c7;
       padding: 0.5rem 0.75rem;
       border-radius: 6px;
+    }
+
+    /* Current hotspot info display */
+    .current-hotspot-info {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .current-hotspot-info .info-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .current-hotspot-info .info-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .current-hotspot-info .info-label {
+      font-size: 0.8125rem;
+      color: #64748b;
+      min-width: 120px;
+    }
+
+    .current-hotspot-info .info-value {
+      font-size: 0.875rem;
+      color: #1e293b;
+      font-weight: 500;
+    }
+
+    .current-hotspot-info code.info-value {
+      background: #e2e8f0;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    .current-hotspot-info .info-badge {
+      font-size: 0.75rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .current-hotspot-info .info-badge.online {
+      background: #dcfce7;
+      color: #16a34a;
+    }
+
+    .current-hotspot-info .info-badge.offline {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .current-hotspot-info .password-value {
+      font-family: monospace;
+      letter-spacing: 1px;
+    }
+
+    .current-hotspot-info .info-muted {
+      color: #94a3b8;
+      font-style: italic;
+      font-size: 0.8125rem;
+    }
+
+    .current-hotspot-info .btn-icon {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.25rem;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    .current-hotspot-info .btn-icon:hover {
+      opacity: 1;
+    }
+
+    .no-hotspot-info {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .no-hotspot-info .loading-hint {
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+
+    .no-hotspot-info .offline-hint {
+      color: #94a3b8;
+      font-size: 0.875rem;
+      font-style: italic;
+    }
+
+    .settings-divider {
+      border: none;
+      border-top: 1px solid #e2e8f0;
+      margin: 1rem 0;
+    }
+
+    .subsection-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #475569;
+      margin: 0 0 1rem 0;
     }
 
     /* Premium toggle */
@@ -985,6 +1173,14 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   hotspotSsid: string = '';
   hotspotPassword: string = '';
   updatingHotspot: boolean = false;
+  // Current hotspot info from Pi (read-only display)
+  currentHotspotSsid: string | null = null;
+  currentHotspotPassword: string | null = null;
+  currentHotspotChannel: number | null = null;
+  currentHotspotClients: number | null = null;
+  currentHotspotActive: boolean = false;
+  showCurrentPassword: boolean = false;
+  fetchingHotspotConfig: boolean = false;
 
   // Premium
   savingLiveScore: boolean = false;
@@ -1053,6 +1249,9 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     if (this.site) {
       this.clubName = this.site.club_name || '';
 
+      // Charger les infos hotspot depuis local_config_mirror (synchronisé par le Pi)
+      this.loadHotspotInfo(this.site);
+
       // Charger la config scoreOverlay depuis local_config_mirror (synchronisé par le Pi)
       const mirrorScoreOverlay = this.site.local_config_mirror?.['scoreOverlay'];
       if (mirrorScoreOverlay) {
@@ -1076,9 +1275,12 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    // Recharger la config watermark quand le site est mis à jour (ex: après sync_local_state)
+    // Recharger les données quand le site est mis à jour (ex: après sync_local_state)
     if (changes['site'] && changes['site'].currentValue && !changes['site'].firstChange) {
       const site = changes['site'].currentValue as Site;
+
+      // Recharger les infos hotspot
+      this.loadHotspotInfo(site);
 
       // Recharger scoreOverlay
       const mirrorScoreOverlay = site.local_config_mirror?.['scoreOverlay'];
@@ -1102,6 +1304,65 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
         }
       }
     }
+  }
+
+  /**
+   * Load hotspot info from local_config_mirror (synced from Pi)
+   */
+  private loadHotspotInfo(site: Site): void {
+    // Try _hotspotInfo first (complete info)
+    const hotspotInfo = site.local_config_mirror?._hotspotInfo;
+    if (hotspotInfo) {
+      this.currentHotspotSsid = hotspotInfo.ssid || null;
+      this.currentHotspotPassword = hotspotInfo.password || null;
+      this.currentHotspotChannel = hotspotInfo.channel || null;
+      this.currentHotspotClients = hotspotInfo.clients ?? null;
+      this.currentHotspotActive = hotspotInfo.isActive || false;
+      return;
+    }
+
+    // Fallback to _hotspotSsid (backward compatibility)
+    const ssid = site.local_config_mirror?._hotspotSsid;
+    if (ssid) {
+      this.currentHotspotSsid = ssid;
+      this.currentHotspotPassword = null;
+      this.currentHotspotChannel = null;
+      this.currentHotspotClients = null;
+      this.currentHotspotActive = true; // Assume active if we have SSID
+    }
+  }
+
+  toggleShowPassword(): void {
+    this.showCurrentPassword = !this.showCurrentPassword;
+  }
+
+  /**
+   * Fetch hotspot config from Pi via API (includes password)
+   */
+  fetchHotspotConfig(): void {
+    if (!this.siteId || !this.isConnected) return;
+
+    this.fetchingHotspotConfig = true;
+    this.sitesService.getHotspotConfig(this.siteId).subscribe({
+      next: (response) => {
+        this.fetchingHotspotConfig = false;
+        if (response.configured) {
+          this.currentHotspotSsid = response.ssid || null;
+          this.currentHotspotPassword = response.password || null;
+          this.currentHotspotChannel = response.channel || null;
+          this.currentHotspotActive = response.isActive || false;
+          this.logger.info('Hotspot config fetched from Pi', {
+            ssid: this.currentHotspotSsid,
+            hasPassword: !!this.currentHotspotPassword
+          });
+        }
+      },
+      error: (error) => {
+        this.fetchingHotspotConfig = false;
+        this.logger.warn('Failed to fetch hotspot config', { error });
+        this.notificationService.error('Impossible de récupérer la configuration hotspot');
+      }
+    });
   }
 
   saveClubAuth(): void {
