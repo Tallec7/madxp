@@ -424,6 +424,30 @@ Ces services ont été extraits de `tv.component.ts` pour réduire sa complexit�
 - `raspberry/src/app/services/video-error-recovery.service.ts`
 - `raspberry/src/app/services/watermark.service.ts`
 
+### Service NetworkDetector (v2.35+) ⚡ NEW
+
+Service de détection automatique du profil réseau sur le Pi :
+
+| Méthode                      | Rôle                                            |
+| ---------------------------- | ----------------------------------------------- |
+| `detect()`                   | Détection complète (mesh, isolation, stabilité) |
+| `getSimplifiedProfile`       | Profil minimal pour sync_local_state            |
+| `getFullProfile()`           | Profil complet pour debug bundle                |
+| `shouldBlockBssidLock`       | True si BSSID lock dangereux (mesh, enterprise) |
+| `shouldRecommendRemoteCloud` | True si isolation détectée                      |
+| `shouldDeferHostapdRestart`  | True si restart risqué (mesh, enterprise)       |
+
+**Profils détectés** :
+
+| Type            | Conditions                       | Comportement              |
+| --------------- | -------------------------------- | ------------------------- |
+| `simple`        | 1 AP, pas d'isolation            | BSSID lock autorisé       |
+| `mesh`          | >1 AP même SSID, pas d'isolation | BSSID lock bloqué, bgscan |
+| `mesh_isolated` | >1 AP, isolation client détectée | Remote Cloud recommandé   |
+| `enterprise`    | 802.1X détecté                   | Configuration IT requise  |
+
+**Fichier** : `raspberry/sync-agent/src/services/network-detector.js`
+
 ### Modules Sync-Agent Extraits (v2.33+) ⚡ NEW
 
 Le fichier `commands/index.js` (1440 → ~650 lignes) a été refactoré en modules :
@@ -1785,6 +1809,48 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.35.x (Janvier 2026)
+
+- **NetworkDetector Service** : Détection automatique et classification du profil réseau
+  - **Profils détectés** : `simple`, `mesh`, `mesh_isolated`, `enterprise`, `unknown`
+  - **Données collectées** :
+    - Nombre d'APs avec même SSID (mesh detection)
+    - Test isolation client (ARP, ping broadcast)
+    - Score de stabilité (déconnexions/heure)
+    - État du BSSID lock
+    - Warnings contextuels
+  - **Fréquence** : Au boot (après 30s) + toutes les heures
+  - **Fichiers** :
+    - `raspberry/sync-agent/src/services/network-detector.js` - Service complet
+    - `raspberry/sync-agent/src/agent.js` - Intégration et scheduling
+  - **Migration** : Déployer le nouveau sync-agent
+
+- **Migration DB network_profile** : Nouvelle colonne pour stocker le profil réseau
+  - Colonne `network_profile` (JSONB) sur la table `sites`
+  - Colonne `network_profile_updated_at` (TIMESTAMP)
+  - Vue `network_profile_summary` pour analytics
+  - Index pour requêtes par type de profil
+  - **Fichiers** :
+    - `central-server/src/scripts/migrations/add-network-profile.sql`
+  - **Migration** : Exécuter la migration SQL
+
+- **Badge profil réseau dans le dashboard** : Affichage visuel du type de réseau
+  - Badge coloré dans l'en-tête du site-detail
+  - Couleurs : Simple (vert), Mesh (jaune), Mesh Isolé (rouge), Enterprise (bleu)
+  - Tooltip avec détails et recommandations
+  - Animation pulsante si warning (ex: BSSID lock en mesh)
+  - **Fichiers** :
+    - `central-dashboard/.../site-detail.component.ts` - Badge + méthodes
+    - `central-dashboard/src/app/core/models/index.ts` - Interface `NetworkProfile`
+  - **Migration** : Rebuild dashboard
+
+- **Profil réseau dans sync_local_state** : Remontée automatique vers le cloud
+  - Le profil simplifié est envoyé avec chaque `sync_local_state`
+  - Stocké dans `local_config_mirror._networkProfile` ET `sites.network_profile`
+  - Warning logger si BSSID lock détecté en mesh
+  - **Fichiers modifiés** :
+    - `central-server/src/services/socket.service.ts` - Stockage dans DB
 
 ### v2.34.x (Janvier 2026)
 

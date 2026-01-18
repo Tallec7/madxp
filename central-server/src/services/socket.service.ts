@@ -953,13 +953,16 @@ class SocketService {
       };
 
       // Stocker le miroir de la configuration locale (enrichi avec vidéos)
+      // Et le profil réseau dans la colonne dédiée pour queries/analytics
       await query(
         `UPDATE sites
          SET local_config_mirror = $1,
              local_config_hash = $2,
-             last_config_sync = NOW()
+             last_config_sync = NOW(),
+             network_profile = COALESCE($4::jsonb, network_profile),
+             network_profile_updated_at = CASE WHEN $4 IS NOT NULL THEN NOW() ELSE network_profile_updated_at END
          WHERE id = $3`,
-        [JSON.stringify(enrichedConfig), configHash, siteId]
+        [JSON.stringify(enrichedConfig), configHash, siteId, networkProfile ? JSON.stringify(networkProfile) : null]
       );
 
       // Émettre au dashboard pour mise à jour en temps réel

@@ -17,6 +17,7 @@ const syncHistory = require('./services/sync-history');
 const offlineQueue = require('./services/offline-queue');
 const connectionStatus = require('./services/connection-status');
 const localBackup = require('./tasks/local-backup');
+const { networkDetector } = require('./services/network-detector');
 
 class NeoproSyncAgent {
   constructor() {
@@ -30,6 +31,7 @@ class NeoproSyncAgent {
     this.configWatcher = null;
     this.videoWatcher = null;
     this.lastSuccessfulHeartbeat = null;
+    this.networkProfileInterval = null;
   }
 
   async start() {
@@ -140,6 +142,9 @@ class NeoproSyncAgent {
 
     // Démarrer le health check périodique de la connexion
     this.startConnectionHealthCheck();
+
+    // Démarrer la détection périodique du profil réseau
+    this.startNetworkProfileDetection();
 
     // Traiter les commandes en attente dans la queue offline
     this.processOfflineQueue();
@@ -285,60 +290,16 @@ class NeoproSyncAgent {
         logger.warn('Could not read hotspot info', { error: err.message });
       }
 
-      // Détecter le profil réseau (simple, mesh, mesh_isolated, enterprise)
-      let networkProfile = { type: 'unknown', apCount: 0, currentSsid: null, bssidLocked: false };
-      try {
-        const { execSync } = require('child_process');
-
-        // Récupérer le SSID actuel de wlan1
-        try {
-          const iwconfig = execSync('iwconfig wlan1 2>/dev/null', { encoding: 'utf8' });
-          const ssidMatch = iwconfig.match(/ESSID:"([^"]+)"/);
-          networkProfile.currentSsid = ssidMatch ? ssidMatch[1] : null;
-        } catch {
-          // wlan1 non connecté ou pas disponible
-        }
-
-        // Vérifier si BSSID lock est actif
-        try {
-          const wpaConf = execSync('sudo cat /etc/wpa_supplicant/wpa_supplicant.conf 2>/dev/null || cat /etc/wpa_supplicant/wpa_supplicant-wlan1.conf 2>/dev/null', { encoding: 'utf8' });
-          networkProfile.bssidLocked = wpaConf.includes('bssid=');
-        } catch {
-          networkProfile.bssidLocked = false;
-        }
-
-        // Scanner les APs pour détecter le mesh (même SSID, plusieurs BSSIDs)
-        if (networkProfile.currentSsid) {
-          try {
-            const scanResult = execSync('sudo iwlist wlan1 scan 2>/dev/null', { encoding: 'utf8', timeout: 15000 });
-            const ssidRegex = new RegExp(`ESSID:"${networkProfile.currentSsid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g');
-            const matches = scanResult.match(ssidRegex);
-            networkProfile.apCount = matches ? matches.length : 1;
-
-            // Déterminer le type de réseau
-            if (networkProfile.apCount > 1) {
-              networkProfile.type = 'mesh';
-              // Note: mesh_isolated nécessite un test de connectivité (trop coûteux ici)
-            } else {
-              networkProfile.type = 'simple';
-            }
-          } catch (scanErr) {
-            // Scan échoué, supposer simple
-            networkProfile.type = 'simple';
-            networkProfile.apCount = 1;
-          }
-        }
-
-        // Avertissement si BSSID lock en mesh
-        if (networkProfile.type === 'mesh' && networkProfile.bssidLocked) {
-          logger.warn('⚠️ BSSID lock detected in mesh environment - this may cause connectivity issues', {
-            ssid: networkProfile.currentSsid,
-            apCount: networkProfile.apCount
-          });
-        }
-      } catch (err) {
-        logger.warn('Could not detect network profile', { error: err.message });
-      }
+      // Utiliser le profil réseau du NetworkDetector (détection complète avec isolation, stabilité, etc.)
+      const networkProfile = networkDetector.getSimplifiedProfile() || {
+        type: 'unknown',
+        apCount: 0,
+        bssidLocked: false,
+        hasIsolation: false,
+        stabilityScore: 0,
+        warningCount: 0,
+        detectedAt: null
+      };
 
       // Envoyer l'état local au central
       this.socket.emit('sync_local_state', {
@@ -429,6 +390,9 @@ class NeoproSyncAgent {
       clearInterval(this.connectionHealthCheckInterval);
       this.connectionHealthCheckInterval = null;
     }
+
+    // Note: On ne clear pas networkProfileInterval car la détection doit continuer
+    // même en offline pour avoir des données fraîches à la reconnexion
 
     // Reset le timestamp du dernier heartbeat réussi
     this.lastSuccessfulHeartbeat = null;
@@ -588,6 +552,55 @@ class NeoproSyncAgent {
         lastSuccessfulHeartbeat: this.lastSuccessfulHeartbeat,
       });
     }, HEALTH_CHECK_INTERVAL);
+  }
+
+  /**
+   * Démarre la détection périodique du profil réseau
+   * Exécute une détection complète au démarrage puis toutes les heures
+   */
+  startNetworkProfileDetection() {
+    const NETWORK_PROFILE_INTERVAL = 60 * 60 * 1000; // 1 heure
+
+    logger.info('Starting network profile detection', { interval: NETWORK_PROFILE_INTERVAL });
+
+    // Première détection au démarrage (avec délai pour laisser le réseau se stabiliser)
+    setTimeout(async () => {
+      try {
+        const profile = await networkDetector.detect();
+        logger.info('Initial network profile detected', {
+          type: profile.type,
+          apCount: profile.meshInfo?.apCount || 0,
+          hasIsolation: profile.isolationInfo?.hasIsolation || false,
+          warnings: profile.warnings?.length || 0
+        });
+
+        // Sync l'état local après la détection pour envoyer le profil au central
+        if (this.connected) {
+          await this.syncLocalState();
+        }
+      } catch (error) {
+        logger.error('Failed to detect initial network profile', { error: error.message });
+      }
+    }, 30000); // 30 secondes après le démarrage
+
+    // Puis toutes les heures
+    this.networkProfileInterval = setInterval(async () => {
+      try {
+        const profile = await networkDetector.detect();
+        logger.info('Periodic network profile update', {
+          type: profile.type,
+          apCount: profile.meshInfo?.apCount || 0,
+          stabilityScore: profile.stabilityInfo?.score || 0
+        });
+
+        // Sync l'état local après la détection pour envoyer le nouveau profil
+        if (this.connected) {
+          await this.syncLocalState();
+        }
+      } catch (error) {
+        logger.error('Failed to update network profile', { error: error.message });
+      }
+    }, NETWORK_PROFILE_INTERVAL);
   }
 
   startHeartbeat() {
@@ -769,6 +782,10 @@ class NeoproSyncAgent {
       clearInterval(this.connectionHealthCheckInterval);
     }
 
+    if (this.networkProfileInterval) {
+      clearInterval(this.networkProfileInterval);
+    }
+
     // Arrêter la surveillance de la configuration
     if (this.configWatcher) {
       this.configWatcher.stop();
@@ -806,4 +823,5 @@ module.exports = {
   agent,
   offlineQueue,
   connectionStatus,
+  networkDetector,
 };

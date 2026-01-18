@@ -36,12 +36,18 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
       <div class="page-header">
         <button class="btn btn-secondary" routerLink="/sites">← Retour</button>
         <h1>{{ site.club_name }}</h1>
-        <app-connection-indicator
-          [siteId]="siteId"
-          [showText]="true"
-          [showDetails]="true"
-          [externalStatus]="connectionStatus"
-        ></app-connection-indicator>
+        <div class="header-badges">
+          <!-- Badge profil réseau -->
+          <span class="network-badge" [ngClass]="getNetworkBadgeClass()" [title]="getNetworkBadgeTooltip()">
+            {{ getNetworkBadgeIcon() }} {{ getNetworkBadgeLabel() }}
+          </span>
+          <app-connection-indicator
+            [siteId]="siteId"
+            [showText]="true"
+            [showDetails]="true"
+            [externalStatus]="connectionStatus"
+          ></app-connection-indicator>
+        </div>
         <button class="btn btn-primary" [routerLink]="['/sites', siteId, 'analytics']">
           📊 Analytics
         </button>
@@ -431,6 +437,64 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
       flex: 1;
       margin: 0;
       font-size: 1.75rem;
+    }
+
+    .header-badges {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* Network Profile Badge */
+    .network-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      white-space: nowrap;
+      cursor: help;
+    }
+
+    .network-simple {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+
+    .network-mesh {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+    }
+
+    .network-mesh-isolated {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+
+    .network-enterprise {
+      background: #e0e7ff;
+      color: #3730a3;
+      border: 1px solid #a5b4fc;
+    }
+
+    .network-unknown {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+
+    .network-warning {
+      animation: pulse-warning 2s infinite;
+    }
+
+    @keyframes pulse-warning {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
     }
 
     /* Tabs Navigation */
@@ -1218,5 +1282,124 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       default:
         return '';
     }
+  }
+
+  // === Network Profile Badge ===
+
+  /**
+   * Récupère le profil réseau du site (depuis local_config_mirror ou network_profile)
+   */
+  private getNetworkProfile(): { type: string; apCount: number; bssidLocked: boolean; hasIsolation: boolean } | null {
+    if (!this.site) return null;
+
+    // Priorité: network_profile (colonne dédiée) > local_config_mirror._networkProfile
+    const profile = (this.site as any).network_profile ||
+                   (this.site.local_config_mirror as any)?._networkProfile;
+
+    if (!profile) return null;
+
+    return {
+      type: profile.type || 'unknown',
+      apCount: profile.apCount || 0,
+      bssidLocked: profile.bssidLocked || profile.locked || false,
+      hasIsolation: profile.hasIsolation || false
+    };
+  }
+
+  /**
+   * Retourne l'icône du badge selon le type de réseau
+   */
+  getNetworkBadgeIcon(): string {
+    const profile = this.getNetworkProfile();
+    if (!profile) return '📡';
+
+    switch (profile.type) {
+      case 'simple':
+        return '📶';
+      case 'mesh':
+        return '🔀';
+      case 'mesh_isolated':
+        return '🔒';
+      case 'enterprise':
+        return '🏢';
+      default:
+        return '📡';
+    }
+  }
+
+  /**
+   * Retourne le label du badge selon le type de réseau
+   */
+  getNetworkBadgeLabel(): string {
+    const profile = this.getNetworkProfile();
+    if (!profile) return 'Inconnu';
+
+    switch (profile.type) {
+      case 'simple':
+        return 'Simple';
+      case 'mesh':
+        return `Mesh (${profile.apCount} APs)`;
+      case 'mesh_isolated':
+        return 'Mesh Isolé';
+      case 'enterprise':
+        return 'Enterprise';
+      default:
+        return 'Inconnu';
+    }
+  }
+
+  /**
+   * Retourne la classe CSS du badge selon le type et l'état du réseau
+   */
+  getNetworkBadgeClass(): string {
+    const profile = this.getNetworkProfile();
+    if (!profile) return 'network-unknown';
+
+    const classes = [`network-${profile.type.replace('_', '-')}`];
+
+    // Ajouter warning si BSSID lock en mesh
+    if (profile.bssidLocked && (profile.type === 'mesh' || profile.type === 'mesh_isolated')) {
+      classes.push('network-warning');
+    }
+
+    return classes.join(' ');
+  }
+
+  /**
+   * Retourne le tooltip du badge avec les détails du réseau
+   */
+  getNetworkBadgeTooltip(): string {
+    const profile = this.getNetworkProfile();
+    if (!profile) return 'Profil réseau non détecté';
+
+    const lines: string[] = [];
+
+    switch (profile.type) {
+      case 'simple':
+        lines.push('Réseau simple (1 AP)');
+        lines.push('✅ Configuration optimale');
+        break;
+      case 'mesh':
+        lines.push(`Réseau mesh (${profile.apCount} points d'accès)`);
+        if (profile.bssidLocked) {
+          lines.push('⚠️ BSSID verrouillé - déconseillé en mesh');
+        } else {
+          lines.push('✅ Roaming activé');
+        }
+        break;
+      case 'mesh_isolated':
+        lines.push(`Réseau mesh avec isolation client (${profile.apCount} APs)`);
+        lines.push('⚠️ Remote Cloud recommandé');
+        lines.push('⚠️ SSH via Ethernet uniquement');
+        break;
+      case 'enterprise':
+        lines.push('Réseau enterprise (802.1X)');
+        lines.push('Configuration IT requise');
+        break;
+      default:
+        lines.push('Type de réseau inconnu');
+    }
+
+    return lines.join('\n');
   }
 }

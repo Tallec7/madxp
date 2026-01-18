@@ -108,8 +108,36 @@ export interface Site {
     };
     _hotspotSsid?: string;
     _lastVideoSync?: string;
+    _networkProfile?: NetworkProfile;
     [key: string]: unknown;
   };
+  /**
+   * Profil réseau détecté par le Pi
+   * Stocké dans une colonne dédiée pour faciliter les requêtes
+   */
+  network_profile?: NetworkProfile;
+  network_profile_updated_at?: Date;
+}
+
+/**
+ * Profil réseau détecté par le NetworkDetector du Pi
+ * Permet d'adapter le comportement selon l'environnement
+ */
+export interface NetworkProfile {
+  /** Type de réseau: simple | mesh | mesh_isolated | enterprise | unknown */
+  type: 'simple' | 'mesh' | 'mesh_isolated' | 'enterprise' | 'unknown';
+  /** Nombre de points d'accès détectés avec le même SSID */
+  apCount: number;
+  /** BSSID verrouillé dans wpa_supplicant (dangereux en mesh) */
+  bssidLocked: boolean;
+  /** Isolation client détectée (pas de visibilité des autres clients) */
+  hasIsolation?: boolean;
+  /** Score de stabilité (0-100) basé sur les déconnexions récentes */
+  stabilityScore?: number;
+  /** Nombre de warnings actifs */
+  warningCount?: number;
+  /** Date de la dernière détection */
+  detectedAt?: string;
 }
 
 export interface GroupMetadata {
