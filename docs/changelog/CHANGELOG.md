@@ -1,3 +1,9 @@
+## [2.39.2](https://github.com/Tallec7/neopro/compare/v2.39.1...v2.39.2) (2026-01-18)
+
+### Bug Fixes
+
+- **remote:** relay cloud remote events to local server for video playback ([43b2e08](https://github.com/Tallec7/neopro/commit/43b2e08028dea3b5fff949b281a46dd0db7bce83))
+
 ## [2.39.1](https://github.com/Tallec7/neopro/compare/v2.39.0...v2.39.1) (2026-01-18)
 
 ### Bug Fixes
