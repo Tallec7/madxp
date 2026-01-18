@@ -10,6 +10,9 @@ import { AnalyticsService } from '../../services/analytics.service';
 import { SponsorAnalyticsService } from '../../services/sponsor-analytics.service';
 import { LocalBroadcastService, ScoreUpdateEvent, PhaseChangeEvent, OptionsUpdateEvent, BreakingNewsEvent, TimerUpdateEvent } from '../../services/local-broadcast.service';
 import { LocalOptionsService, LocalOptions, GoalAnimationConfig, TeamConfig } from '../../services/local-options.service';
+import { DoubleBufferVideoService, DoubleBufferCallbacks } from '../../services/double-buffer-video.service';
+import { VideoErrorRecoveryService, ErrorRecoveryCallbacks } from '../../services/video-error-recovery.service';
+import { WatermarkService } from '../../services/watermark.service';
 import { Video } from '../../interfaces/video.interface';
 import { Configuration, OverlayPosition, SportType, WatermarkScheduleRule } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
@@ -44,6 +47,11 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly localOptionsService = inject(LocalOptionsService);
   private readonly http = inject(HttpClient);
   private readonly ngZone = inject(NgZone);
+
+  // Services extraits (P2 refactoring)
+  private readonly doubleBufferService = inject(DoubleBufferVideoService);
+  private readonly errorRecoveryService = inject(VideoErrorRecoveryService);
+  private readonly watermarkService = inject(WatermarkService);
 
   private localBroadcastSubscriptions: Subscription[] = [];
 
@@ -88,9 +96,10 @@ export class TvComponent implements OnInit, OnDestroy {
   public currentBreakingNews: BreakingNewsEvent | null = null;
   private breakingNewsTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  // Watermark
-  public showWatermark = false;
-  private watermarkScheduleInterval: ReturnType<typeof setInterval> | null = null;
+  // Watermark - délégué au WatermarkService
+  public get showWatermark(): boolean {
+    return this.watermarkService.showWatermark;
+  }
 
   // Timer / Chronomètre
   public timerCurrentTime = 0;
@@ -177,8 +186,8 @@ export class TvComponent implements OnInit, OnDestroy {
     // Lancer la boucle vidéo
     this.startSeamlessLoop();
 
-    // Initialiser le watermark
-    this.initWatermark();
+    // Initialiser le watermark (délégué au service)
+    this.watermarkService.init(this.configuration);
 
     // Legacy Video.js (gardé pour compatibilité mais non utilisé)
     const options = {
@@ -546,11 +555,8 @@ export class TvComponent implements OnInit, OnDestroy {
     // Arrêter la boucle seamless
     this.stopSeamlessLoop();
 
-    // Arrêter le scheduling watermark
-    if (this.watermarkScheduleInterval) {
-      clearInterval(this.watermarkScheduleInterval);
-      this.watermarkScheduleInterval = null;
-    }
+    // Nettoyer le service watermark
+    this.watermarkService.destroy();
 
     // Se désabonner des événements BroadcastChannel
     this.localBroadcastSubscriptions.forEach(sub => sub.unsubscribe());
@@ -751,7 +757,7 @@ export class TvComponent implements OnInit, OnDestroy {
     this.sponsors();
 
     // Vérifier la visibilité du watermark (peut dépendre de la phase)
-    this.checkWatermarkVisibility();
+    this.watermarkService.setActivePhase(phase);
 
     // Le freeze-frame sera caché automatiquement quand la nouvelle vidéo joue
     // via startSeamlessLoop -> playOnActivePlayer
@@ -782,7 +788,7 @@ export class TvComponent implements OnInit, OnDestroy {
     this.sponsors();
 
     // Réinitialiser le watermark avec la nouvelle configuration
-    this.initWatermark();
+    this.watermarkService.setConfiguration(config);
   }
 
   /**
@@ -1042,147 +1048,28 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   // ============================================================================
-  // WATERMARK
+  // WATERMARK - Délégué au WatermarkService (P2 refactoring)
   // ============================================================================
 
   /**
-   * Initialise le watermark et démarre le scheduling si configuré
-   */
-  private initWatermark(): void {
-    this.checkWatermarkVisibility();
-
-    // Si scheduling actif, vérifier toutes les minutes
-    if (this.configuration?.watermark?.schedule?.enabled) {
-      this.watermarkScheduleInterval = setInterval(() => {
-        this.checkWatermarkVisibility();
-      }, 60000);
-    }
-  }
-
-  /**
-   * Vérifie si le watermark doit être affiché selon le scheduling
-   */
-  private checkWatermarkVisibility(): void {
-    const config = this.configuration?.watermark;
-
-    if (!config?.enabled || !config.imagePath) {
-      this.showWatermark = false;
-      return;
-    }
-
-    // Si pas de scheduling, toujours visible
-    if (!config.schedule?.enabled || !config.schedule.rules?.length) {
-      this.showWatermark = true;
-      return;
-    }
-
-    // Évaluer les règles de scheduling
-    this.showWatermark = this.isWatermarkVisibleNow(config.schedule.rules);
-  }
-
-  /**
-   * Évalue les règles de scheduling pour déterminer si le watermark doit être visible
-   */
-  private isWatermarkVisibleNow(rules: WatermarkScheduleRule[]): boolean {
-    const now = new Date();
-    const currentDay = now.getDay();
-    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-    for (const rule of rules) {
-      // Vérifier le jour de la semaine
-      if (!rule.daysOfWeek.includes(currentDay)) continue;
-
-      // Vérifier l'heure
-      if (currentTime < rule.startTime || currentTime > rule.endTime) continue;
-
-      // Vérifier la phase de match
-      if (!rule.matchPhases.includes('all') && !rule.matchPhases.includes(this.activePhase as any)) continue;
-
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Calcule les styles dynamiques du watermark (position, taille, opacité)
+   * Calcule les styles dynamiques du watermark (délégué au service)
    */
   public getWatermarkStyles(): Record<string, string> {
-    const config = this.configuration?.watermark;
-    if (!config) return {};
-
-    // Mode fullscreen : l'image couvre tout l'écran
-    if (config.fullscreen) {
-      return {
-        'opacity': String((config.opacity ?? 100) / 100),
-        'top': '0',
-        'left': '0',
-        'width': '100%',
-        'height': '100%',
-        'object-fit': 'cover',
-        'border-radius': '0',
-      };
-    }
-
-    // Mode positionné : placement personnalisé
-    const position = config.position || 'bottom-right';
-    const offsetX = (config.offsetX ?? 20) + 'px';
-    const offsetY = (config.offsetY ?? 20) + 'px';
-
-    const styles: Record<string, string> = {
-      'opacity': String((config.opacity ?? 100) / 100),
-      'width': (config.width ?? 150) + 'px',
-      'border-radius': (config.borderRadius ?? 0) + 'px',
-    };
-
-    // Hauteur (0 = auto)
-    if (config.height && config.height > 0) {
-      styles['height'] = config.height + 'px';
-    }
-
-    // Position verticale (top/middle/bottom)
-    if (position.includes('top')) {
-      styles['top'] = offsetY;
-      styles['bottom'] = 'auto';
-    } else if (position.includes('bottom')) {
-      styles['bottom'] = offsetY;
-      styles['top'] = 'auto';
-    } else {
-      // middle
-      styles['top'] = '50%';
-      styles['transform'] = 'translateY(-50%)';
-    }
-
-    // Position horizontale (left/center/right)
-    if (position.includes('right')) {
-      styles['right'] = offsetX;
-      styles['left'] = 'auto';
-    } else if (position.includes('left')) {
-      styles['left'] = offsetX;
-      styles['right'] = 'auto';
-    } else {
-      // center
-      styles['left'] = '50%';
-      const existingTransform = styles['transform'] || '';
-      styles['transform'] = existingTransform ? 'translate(-50%, -50%)' : 'translateX(-50%)';
-    }
-
-    return styles;
+    return this.watermarkService.getStyles();
   }
 
   /**
-   * Retourne la classe d'animation du watermark
+   * Retourne la classe d'animation du watermark (délégué au service)
    */
   public getWatermarkAnimationClass(): string {
-    const anim = this.configuration?.watermark?.animation || 'none';
-    return `watermark-anim-${anim}`;
+    return this.watermarkService.getAnimationClass();
   }
 
   /**
-   * Gère les erreurs de chargement de l'image watermark
+   * Gère les erreurs de chargement de l'image watermark (délégué au service)
    */
   public onWatermarkError(): void {
-    console.warn('[TV] Watermark image failed to load');
-    this.showWatermark = false;
+    this.watermarkService.onImageError();
   }
 
   /**

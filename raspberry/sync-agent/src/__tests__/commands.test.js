@@ -417,6 +417,209 @@ wpa_passphrase=testpassword
     });
   });
 
+  describe('fix_hotspot', () => {
+    it('should run diagnostic without autoFix', async () => {
+      // Script exists
+      fs.pathExists.mockResolvedValue(true);
+
+      // Mock exec to return JSON output
+      const jsonOutput = JSON.stringify({
+        success: true,
+        diagnostic: {
+          currentChannel: 6,
+          recommendedChannel: 6,
+          ssid: 'NEOPRO-TEST',
+          hostapdActive: true,
+          dnsmasqActive: true,
+          powerOk: true,
+          throttledValue: '0x0'
+        },
+        fix: {
+          channelChanged: false,
+          needsReboot: false,
+          oldChannel: '',
+          newChannel: ''
+        },
+        message: 'Diagnostic terminé.'
+      });
+
+      exec.mockImplementation((cmd, opts, callback) => {
+        if (typeof opts === 'function') {
+          callback = opts;
+        }
+        if (callback) {
+          callback(null, { stdout: jsonOutput, stderr: '' });
+        }
+        return { stdout: jsonOutput, stderr: '' };
+      });
+
+      const result = await commands.fix_hotspot({ autoFix: false });
+
+      expect(result.success).toBe(true);
+      expect(result.diagnostic).toBeDefined();
+      expect(result.diagnostic.currentChannel).toBe(6);
+      expect(result.fix.channelChanged).toBe(false);
+      expect(result.timestamp).toBeDefined();
+    });
+
+    it('should run auto-fix and report channel change', async () => {
+      fs.pathExists.mockResolvedValue(true);
+
+      const jsonOutput = JSON.stringify({
+        success: true,
+        diagnostic: {
+          currentChannel: 1,
+          recommendedChannel: 1,
+          ssid: 'NEOPRO-TEST',
+          hostapdActive: true,
+          dnsmasqActive: true,
+          powerOk: true,
+          throttledValue: '0x0'
+        },
+        fix: {
+          channelChanged: true,
+          needsReboot: true,
+          oldChannel: '6',
+          newChannel: '1'
+        },
+        message: 'Canal changé de 6 à 1. Redémarrage requis pour appliquer.'
+      });
+
+      exec.mockImplementation((cmd, opts, callback) => {
+        if (typeof opts === 'function') {
+          callback = opts;
+        }
+        // Verify --auto-fix is passed
+        expect(cmd).toContain('--auto-fix');
+        expect(cmd).toContain('--json');
+        if (callback) {
+          callback(null, { stdout: jsonOutput, stderr: '' });
+        }
+        return { stdout: jsonOutput, stderr: '' };
+      });
+
+      const result = await commands.fix_hotspot({ autoFix: true });
+
+      expect(result.success).toBe(true);
+      expect(result.fix.channelChanged).toBe(true);
+      expect(result.fix.needsReboot).toBe(true);
+      expect(result.fix.oldChannel).toBe('6');
+      expect(result.fix.newChannel).toBe('1');
+      expect(result.autoFix).toBe(true);
+    });
+
+    it('should fallback to manual diagnostics if script not found', async () => {
+      fs.pathExists.mockResolvedValue(false);
+
+      // Mock exec for manual diagnostic commands
+      exec.mockImplementation((cmd, opts, callback) => {
+        if (typeof opts === 'function') {
+          callback = opts;
+        }
+        let stdout = '';
+        if (cmd.includes('is-active hostapd')) {
+          stdout = 'active';
+        } else if (cmd.includes('is-active dnsmasq')) {
+          stdout = 'active';
+        } else if (cmd.includes('ip addr show wlan0')) {
+          stdout = 'inet 192.168.4.1/24';
+        } else if (cmd.includes('grep') && cmd.includes('ssid=')) {
+          stdout = 'ssid=NEOPRO-MANUAL';
+        } else if (cmd.includes('grep') && cmd.includes('channel=')) {
+          stdout = 'channel=6';
+        } else if (cmd.includes('rfkill')) {
+          stdout = '';
+        }
+        if (callback) {
+          callback(null, { stdout, stderr: '' });
+        }
+        return { stdout, stderr: '' };
+      });
+
+      const result = await commands.fix_hotspot({ autoFix: false });
+
+      expect(result.success).toBe(true);
+      expect(result.manual).toBe(true);
+      expect(result.checks).toBeDefined();
+      expect(Array.isArray(result.checks)).toBe(true);
+    });
+
+    it('should handle script execution errors gracefully', async () => {
+      fs.pathExists.mockResolvedValue(true);
+
+      // First call (script) fails, fallback to manual
+      let callCount = 0;
+      exec.mockImplementation((cmd, opts, callback) => {
+        if (typeof opts === 'function') {
+          callback = opts;
+        }
+        callCount++;
+        if (callCount === 1) {
+          // Script fails
+          const error = new Error('Script failed');
+          if (callback) {
+            callback(error, { stdout: '', stderr: 'Error' });
+          }
+          throw error;
+        }
+        // Manual diagnostics
+        if (callback) {
+          callback(null, { stdout: 'active', stderr: '' });
+        }
+        return { stdout: 'active', stderr: '' };
+      });
+
+      const result = await commands.fix_hotspot({ autoFix: false });
+
+      // Should fallback to manual diagnostics
+      expect(result.success).toBe(true);
+      expect(result.manual).toBe(true);
+    });
+
+    it('should pass --reboot-now flag when rebootNow is true', async () => {
+      fs.pathExists.mockResolvedValue(true);
+
+      const jsonOutput = JSON.stringify({
+        success: true,
+        diagnostic: { currentChannel: 1 },
+        fix: { channelChanged: true, needsReboot: true }
+      });
+
+      exec.mockImplementation((cmd, opts, callback) => {
+        if (typeof opts === 'function') {
+          callback = opts;
+        }
+        // Verify both flags are passed
+        expect(cmd).toContain('--auto-fix');
+        expect(cmd).toContain('--reboot-now');
+        if (callback) {
+          callback(null, { stdout: jsonOutput, stderr: '' });
+        }
+        return { stdout: jsonOutput, stderr: '' };
+      });
+
+      const result = await commands.fix_hotspot({ autoFix: true, rebootNow: true });
+
+      expect(result.rebootRequested).toBe(true);
+    });
+  });
+
+  describe('reboot command', () => {
+    it('should initiate system reboot', async () => {
+      exec.mockImplementation((cmd, callback) => {
+        if (callback) {
+          callback(null, { stdout: '', stderr: '' });
+        }
+        return { stdout: '', stderr: '' };
+      });
+
+      const result = await commands.reboot();
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('Rebooting');
+    });
+  });
+
   describe('Module exports', () => {
     it('should export all required commands', () => {
       expect(commands.deploy_video).toBeDefined();
@@ -430,6 +633,8 @@ wpa_passphrase=testpassword
       expect(commands.get_config).toBeDefined();
       expect(commands.update_hotspot).toBeDefined();
       expect(commands.get_hotspot_config).toBeDefined();
+      expect(commands.fix_hotspot).toBeDefined();
+      expect(commands.runManualHotspotDiagnostics).toBeDefined();
     });
   });
 });

@@ -175,6 +175,23 @@ interface HotspotCheck {
   value: string;
 }
 
+interface HotspotDiagnostic {
+  currentChannel: number;
+  recommendedChannel: number;
+  ssid: string;
+  hostapdActive: boolean;
+  dnsmasqActive: boolean;
+  powerOk: boolean;
+  throttledValue: string;
+}
+
+interface HotspotFix {
+  channelChanged: boolean;
+  needsReboot: boolean;
+  oldChannel: string;
+  newChannel: string;
+}
+
 interface HotspotResult {
   success: boolean;
   timestamp: string;
@@ -182,6 +199,10 @@ interface HotspotResult {
   output?: string;
   checks?: HotspotCheck[];
   manual?: boolean;
+  // Nouveau format JSON du script
+  diagnostic?: HotspotDiagnostic;
+  fix?: HotspotFix;
+  message?: string;
 }
 
 @Component({
@@ -940,8 +961,81 @@ interface HotspotResult {
               <span>Cette opération peut prendre jusqu'à 2 minutes (scan des canaux WiFi)...</span>
             </div>
 
-            <div *ngIf="hotspotResult && !fixingHotspot" class="hotspot-result">
-              <!-- Résultat structuré -->
+            <!-- Modal de confirmation de reboot -->
+            <div *ngIf="showRebootConfirmModal" class="modal-overlay">
+              <div class="modal-content reboot-modal">
+                <h3>⚠️ Redémarrage nécessaire</h3>
+                <p>
+                  Le canal WiFi a été changé de <strong>{{ hotspotResult?.fix?.oldChannel }}</strong>
+                  à <strong>{{ hotspotResult?.fix?.newChannel }}</strong>.
+                </p>
+                <p>
+                  Pour appliquer ce changement, le boîtier doit redémarrer
+                  (~1 minute d'interruption).
+                </p>
+                <p class="reboot-warning">
+                  ⚠️ La TV et la télécommande seront indisponibles pendant le redémarrage.
+                </p>
+                <div class="modal-actions">
+                  <button class="btn btn-secondary" (click)="cancelReboot()">
+                    {{ 'debug.later' | translate }}
+                  </button>
+                  <button class="btn btn-danger" (click)="confirmReboot()" [disabled]="rebooting">
+                    {{ rebooting ? ('debug.rebooting' | translate) : ('debug.rebootNow' | translate) }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="hotspotResult && !fixingHotspot && !showRebootConfirmModal" class="hotspot-result">
+              <!-- Nouveau format JSON du script -->
+              <div *ngIf="hotspotResult.diagnostic" class="hotspot-diagnostic">
+                <div class="diagnostic-grid">
+                  <div class="diagnostic-item">
+                    <span class="diagnostic-label">{{ 'debug.currentChannel' | translate }}</span>
+                    <span class="diagnostic-value">{{ hotspotResult.diagnostic.currentChannel }}</span>
+                  </div>
+                  <div class="diagnostic-item" *ngIf="hotspotResult.diagnostic.recommendedChannel !== hotspotResult.diagnostic.currentChannel">
+                    <span class="diagnostic-label">{{ 'debug.recommendedChannel' | translate }}</span>
+                    <span class="diagnostic-value recommended">{{ hotspotResult.diagnostic.recommendedChannel }}</span>
+                  </div>
+                  <div class="diagnostic-item">
+                    <span class="diagnostic-label">SSID</span>
+                    <span class="diagnostic-value">{{ hotspotResult.diagnostic.ssid }}</span>
+                  </div>
+                  <div class="diagnostic-item">
+                    <span class="diagnostic-label">hostapd</span>
+                    <span class="diagnostic-value" [class.text-success]="hotspotResult.diagnostic.hostapdActive" [class.text-danger]="!hotspotResult.diagnostic.hostapdActive">
+                      {{ hotspotResult.diagnostic.hostapdActive ? ('debug.activeStatus' | translate) : ('debug.inactiveStatus' | translate) }}
+                    </span>
+                  </div>
+                  <div class="diagnostic-item">
+                    <span class="diagnostic-label">dnsmasq</span>
+                    <span class="diagnostic-value" [class.text-success]="hotspotResult.diagnostic.dnsmasqActive" [class.text-danger]="!hotspotResult.diagnostic.dnsmasqActive">
+                      {{ hotspotResult.diagnostic.dnsmasqActive ? ('debug.activeStatus' | translate) : ('debug.inactiveStatus' | translate) }}
+                    </span>
+                  </div>
+                  <div class="diagnostic-item">
+                    <span class="diagnostic-label">{{ 'debug.power' | translate }}</span>
+                    <span class="diagnostic-value" [class.text-success]="hotspotResult.diagnostic.powerOk" [class.text-danger]="!hotspotResult.diagnostic.powerOk">
+                      {{ hotspotResult.diagnostic.powerOk ? ('debug.powerOk' | translate) : ('debug.powerProblem' | translate) }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Message si canal changé mais en attente de reboot -->
+                <div *ngIf="hotspotResult.fix?.channelChanged && hotspotResult.fix?.needsReboot" class="pending-reboot-info">
+                  <p>✅ Canal changé de {{ hotspotResult.fix.oldChannel }} à {{ hotspotResult.fix.newChannel }}.</p>
+                  <p>ℹ️ Le changement sera appliqué au prochain redémarrage du boîtier.</p>
+                </div>
+
+                <!-- Message du script -->
+                <div *ngIf="hotspotResult.message" class="diagnostic-message">
+                  {{ hotspotResult.message }}
+                </div>
+              </div>
+
+              <!-- Ancien format : résultat structuré (checks) -->
               <div *ngIf="hotspotResult.checks" class="hotspot-checks">
                 <div *ngFor="let check of hotspotResult.checks" class="hotspot-check"
                   [class.check-ok]="check.status === 'ok'"
@@ -953,8 +1047,8 @@ interface HotspotResult {
                 </div>
               </div>
 
-              <!-- Sortie brute si script exécuté -->
-              <div *ngIf="hotspotResult.output" class="hotspot-output">
+              <!-- Sortie brute si script exécuté (fallback) -->
+              <div *ngIf="hotspotResult.output && !hotspotResult.diagnostic" class="hotspot-output">
                 <pre class="output-viewer">{{ hotspotResult.output }}</pre>
               </div>
             </div>
@@ -2424,6 +2518,136 @@ interface HotspotResult {
       color: #dc2626;
     }
 
+    /* Modal de confirmation reboot */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      max-width: 450px;
+      width: 90%;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .reboot-modal h3 {
+      margin: 0 0 1rem 0;
+      font-size: 1.125rem;
+      color: #f59e0b;
+    }
+
+    .reboot-modal p {
+      margin: 0 0 0.75rem 0;
+      font-size: 0.875rem;
+      color: #475569;
+    }
+
+    .reboot-warning {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 6px;
+      padding: 0.75rem;
+      color: #92400e;
+      font-weight: 500;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+
+    .btn-danger {
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
+
+    .btn-danger:disabled {
+      background: #f87171;
+      cursor: not-allowed;
+    }
+
+    /* Diagnostic grid */
+    .diagnostic-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .diagnostic-item {
+      background: #f8fafc;
+      padding: 0.75rem;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .diagnostic-label {
+      display: block;
+      font-size: 0.6875rem;
+      color: #64748b;
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+
+    .diagnostic-value {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .diagnostic-value.recommended {
+      color: #16a34a;
+    }
+
+    .pending-reboot-info {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .pending-reboot-info p {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.8125rem;
+      color: #166534;
+    }
+
+    .pending-reboot-info p:last-child {
+      margin-bottom: 0;
+    }
+
+    .diagnostic-message {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: #f1f5f9;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      color: #475569;
+    }
+
     /* Quick commands (P3.2) */
     .quick-commands {
       margin-bottom: 1rem;
@@ -2763,6 +2987,8 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
   hotspotResult: HotspotResult | null = null;
   fixingHotspot: boolean = false;
   hotspotInfo: { ssid: string | null; channel: number | null; clients: number; isActive: boolean } | null = null;
+  showRebootConfirmModal: boolean = false;
+  rebooting: boolean = false;
 
   // Export (P3.3)
   showExport: boolean = false;
@@ -3355,6 +3581,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
 
     this.fixingHotspot = true;
     this.hotspotResult = null;
+    this.showRebootConfirmModal = false;
 
     // Utilise l'endpoint dédié qui attend le résultat complet
     this.sitesService.fixHotspot(this.siteId, autoFix).subscribe({
@@ -3362,7 +3589,12 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
         this.fixingHotspot = false;
         if (result) {
           this.hotspotResult = result as HotspotResult;
-          if (result.success) {
+
+          // Si le canal a été changé et qu'un reboot est nécessaire, afficher le modal de confirmation
+          if (autoFix && result.fix?.channelChanged && result.fix?.needsReboot) {
+            this.showRebootConfirmModal = true;
+            this.notificationService.info('Canal WiFi modifié - redémarrage nécessaire pour appliquer');
+          } else if (result.success) {
             this.notificationService.success(autoFix ? 'Hotspot réparé avec succès' : 'Diagnostic terminé');
           } else {
             this.notificationService.warning('Des problèmes ont été détectés');
@@ -3374,6 +3606,36 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
         const message = ErrorExtractor.getMessage(error);
         this.notificationService.error(`Erreur: ${message}`);
         this.logger.error('Failed to fix hotspot', { error: message, siteId: this.siteId });
+      }
+    });
+  }
+
+  cancelReboot(): void {
+    this.showRebootConfirmModal = false;
+    this.notificationService.info('Le changement de canal sera appliqué au prochain redémarrage du boîtier');
+  }
+
+  confirmReboot(): void {
+    if (!this.isConnected) {
+      this.notificationService.warning('Le boîtier doit être connecté pour redémarrer');
+      return;
+    }
+
+    this.rebooting = true;
+
+    // Envoie la commande de reboot via le service
+    this.sitesService.sendCommand(this.siteId, 'reboot', {}).subscribe({
+      next: () => {
+        this.rebooting = false;
+        this.showRebootConfirmModal = false;
+        this.notificationService.success('Redémarrage en cours... Le boîtier sera de nouveau en ligne dans ~1 minute');
+        this.logger.info('Reboot command sent after hotspot fix', { siteId: this.siteId });
+      },
+      error: (error) => {
+        this.rebooting = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur lors du redémarrage: ${message}`);
+        this.logger.error('Failed to reboot after hotspot fix', { error: message, siteId: this.siteId });
       }
     });
   }
