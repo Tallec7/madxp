@@ -205,6 +205,20 @@ interface HotspotResult {
   message?: string;
 }
 
+// Types pour WiFi BSSID / Mesh detection
+interface WifiBssidStatus {
+  success: boolean;
+  connected: boolean;
+  ssid: string | null;
+  bssid: string | null;
+  bssidLocked: string | null;
+  isMeshEnvironment: boolean;
+  meshApCount: number;
+  signal: number | null;
+  ipAddress: string | null;
+  timestamp: string;
+}
+
 @Component({
   selector: 'app-site-debug-tab',
   standalone: true,
@@ -1025,7 +1039,7 @@ interface HotspotResult {
 
                 <!-- Message si canal changé mais en attente de reboot -->
                 <div *ngIf="hotspotResult.fix?.channelChanged && hotspotResult.fix?.needsReboot" class="pending-reboot-info">
-                  <p>✅ Canal changé de {{ hotspotResult.fix.oldChannel }} à {{ hotspotResult.fix.newChannel }}.</p>
+                  <p>✅ Canal changé de {{ hotspotResult.fix?.oldChannel }} à {{ hotspotResult.fix?.newChannel }}.</p>
                   <p>ℹ️ Le changement sera appliqué au prochain redémarrage du boîtier.</p>
                 </div>
 
@@ -1051,6 +1065,114 @@ interface HotspotResult {
               <div *ngIf="hotspotResult.output && !hotspotResult.diagnostic" class="hotspot-output">
                 <pre class="output-viewer">{{ hotspotResult.output }}</pre>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WiFi Client (wlan1) - Mesh Detection -->
+      <div class="debug-card">
+        <div class="debug-header" (click)="toggleWifiBssid()">
+          <span class="expand-icon">{{ showWifiBssid ? '▼' : '▶' }}</span>
+          <span class="debug-icon">📶</span>
+          <h4>{{ 'debug.wifiClient' | translate }}</h4>
+          <span class="debug-stats" *ngIf="wifiBssidStatus">
+            <span *ngIf="wifiBssidStatus.connected" class="status-badge status-online">● {{ 'debug.wifiConnected' | translate }}</span>
+            <span *ngIf="!wifiBssidStatus.connected" class="status-badge status-offline">● {{ 'debug.wifiDisconnected' | translate }}</span>
+            <span *ngIf="wifiBssidStatus.isMeshEnvironment" class="mesh-badge">🔀 {{ 'debug.meshDetected' | translate }} ({{ wifiBssidStatus.meshApCount }} APs)</span>
+            <span *ngIf="wifiBssidStatus.bssidLocked" class="bssid-lock-badge">🔒 {{ 'debug.bssidLocked' | translate }}</span>
+          </span>
+          <span class="debug-stats" *ngIf="!wifiBssidStatus && !loadingWifiBssid">{{ 'debug.notLoaded' | translate }}</span>
+          <span class="debug-stats" *ngIf="loadingWifiBssid">{{ 'common.loading' | translate }}</span>
+        </div>
+
+        <div class="debug-content" *ngIf="showWifiBssid">
+          <div *ngIf="!isConnected" class="offline-warning">
+            ⚠️ {{ 'debug.wifiOfflineWarning' | translate }}
+          </div>
+
+          <div *ngIf="isConnected && !wifiBssidStatus && !loadingWifiBssid" class="wifi-actions">
+            <button class="btn btn-primary btn-sm" (click)="loadWifiBssidStatus()">
+              🔄 {{ 'debug.loadWifiStatus' | translate }}
+            </button>
+          </div>
+
+          <div *ngIf="loadingWifiBssid" class="loading-inline">
+            <div class="spinner-small"></div>
+            <span>{{ 'debug.loadingWifi' | translate }}</span>
+          </div>
+
+          <div *ngIf="wifiBssidStatus" class="wifi-bssid-content">
+            <!-- Avertissement mesh avec BSSID lock -->
+            <div *ngIf="wifiBssidStatus.isMeshEnvironment && wifiBssidStatus.bssidLocked" class="mesh-warning-banner">
+              <div class="warning-icon">⚠️</div>
+              <div class="warning-content">
+                <strong>{{ 'debug.meshWarningTitle' | translate }}</strong>
+                <p>
+                  {{ wifiBssidStatus.meshApCount }} {{ 'debug.meshWarningText' | translate }} "{{ wifiBssidStatus.ssid }}".
+                  {{ 'debug.meshWarningText2' | translate }}
+                </p>
+                <div class="warning-actions">
+                  <button class="btn btn-warning btn-sm" (click)="removeBssidLock()" [disabled]="removingBssidLock">
+                    {{ removingBssidLock ? ('⏳ ' + ('debug.removingBssidLock' | translate)) : ('🔓 ' + ('debug.removeBssidLock' | translate)) }}
+                  </button>
+                  <button class="btn btn-secondary btn-sm" (click)="optimizeForMesh()" [disabled]="optimizingMesh">
+                    {{ optimizingMesh ? ('⏳ ' + ('debug.optimizingMesh' | translate)) : ('🔧 ' + ('debug.optimizeForMesh' | translate)) }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Info mesh sans verrouillage -->
+            <div *ngIf="wifiBssidStatus.isMeshEnvironment && !wifiBssidStatus.bssidLocked" class="mesh-info-banner">
+              <div class="info-icon">ℹ️</div>
+              <div class="info-content">
+                <strong>{{ 'debug.meshInfoTitle' | translate }}</strong>
+                <p>{{ wifiBssidStatus.meshApCount }} {{ 'debug.meshInfoText' | translate }} "{{ wifiBssidStatus.ssid }}". {{ 'debug.roamingActive' | translate }}</p>
+              </div>
+            </div>
+
+            <!-- Détails WiFi -->
+            <div class="wifi-info-grid">
+              <div class="info-item">
+                <span class="info-label">SSID</span>
+                <span class="info-value">{{ wifiBssidStatus.ssid || ('debug.notAvailable' | translate) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">BSSID ({{ 'debug.accessPoint' | translate }})</span>
+                <span class="info-value">{{ wifiBssidStatus.bssid || ('debug.notAvailable' | translate) }}</span>
+              </div>
+              <div class="info-item" *ngIf="wifiBssidStatus.bssidLocked">
+                <span class="info-label">{{ 'debug.lockedBssid' | translate }}</span>
+                <span class="info-value bssid-locked">🔒 {{ wifiBssidStatus.bssidLocked }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ 'debug.signal' | translate }}</span>
+                <span class="info-value" [class.signal-good]="wifiBssidStatus.signal && wifiBssidStatus.signal > -60"
+                  [class.signal-medium]="wifiBssidStatus.signal && wifiBssidStatus.signal <= -60 && wifiBssidStatus.signal > -75"
+                  [class.signal-weak]="wifiBssidStatus.signal && wifiBssidStatus.signal <= -75">
+                  {{ wifiBssidStatus.signal ? wifiBssidStatus.signal + ' dBm' : ('debug.notAvailable' | translate) }}
+                  {{ wifiBssidStatus.signal && wifiBssidStatus.signal > -60 ? '📶' : '' }}
+                  {{ wifiBssidStatus.signal && wifiBssidStatus.signal <= -60 && wifiBssidStatus.signal > -75 ? '📶' : '' }}
+                  {{ wifiBssidStatus.signal && wifiBssidStatus.signal <= -75 ? '📶' : '' }}
+                </span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ 'debug.ipAddress' | translate }}</span>
+                <span class="info-value">{{ wifiBssidStatus.ipAddress || ('debug.notAvailable' | translate) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">{{ 'debug.environment' | translate }}</span>
+                <span class="info-value">
+                  {{ wifiBssidStatus.isMeshEnvironment ? ('🔀 ' + ('debug.meshDetected' | translate) + ' (' + wifiBssidStatus.meshApCount + ' APs)') : ('📡 ' + ('debug.standard' | translate)) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="wifi-refresh">
+              <button class="btn btn-secondary btn-sm" (click)="loadWifiBssidStatus()" [disabled]="loadingWifiBssid">
+                🔄 {{ 'debug.refresh' | translate }}
+              </button>
             </div>
           </div>
         </div>
@@ -2693,6 +2815,141 @@ interface HotspotResult {
       overflow: auto;
     }
 
+    /* WiFi BSSID / Mesh Detection */
+    .wifi-bssid-content {
+      padding-top: 1rem;
+    }
+
+    .wifi-actions {
+      padding-top: 1rem;
+    }
+
+    .mesh-warning-banner {
+      display: flex;
+      gap: 0.75rem;
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .mesh-warning-banner .warning-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .mesh-warning-banner .warning-content strong {
+      color: #92400e;
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .mesh-warning-banner .warning-content p {
+      font-size: 0.8125rem;
+      color: #78350f;
+      margin: 0 0 0.75rem 0;
+    }
+
+    .mesh-warning-banner .warning-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .mesh-info-banner {
+      display: flex;
+      gap: 0.75rem;
+      background: rgba(0, 123, 255, 0.1);
+      border-left: 3px solid #3b82f6;
+      border-radius: 4px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .mesh-info-banner .info-icon {
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .mesh-info-banner .info-content strong {
+      color: #1e40af;
+      display: block;
+      margin-bottom: 0.125rem;
+    }
+
+    .mesh-info-banner .info-content p {
+      font-size: 0.8125rem;
+      color: #3b82f6;
+      margin: 0;
+    }
+
+    .wifi-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .wifi-info-grid .info-item {
+      background: #f8fafc;
+      padding: 0.75rem;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .wifi-info-grid .info-label {
+      display: block;
+      font-size: 0.6875rem;
+      color: #64748b;
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+
+    .wifi-info-grid .info-value {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #1e293b;
+    }
+
+    .wifi-info-grid .info-value.bssid-locked {
+      color: #dc2626;
+    }
+
+    .wifi-info-grid .info-value.signal-good {
+      color: #16a34a;
+    }
+
+    .wifi-info-grid .info-value.signal-medium {
+      color: #ca8a04;
+    }
+
+    .wifi-info-grid .info-value.signal-weak {
+      color: #dc2626;
+    }
+
+    .wifi-refresh {
+      margin-top: 0.75rem;
+    }
+
+    .mesh-badge {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      margin-left: 0.5rem;
+    }
+
+    .bssid-lock-badge {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      margin-left: 0.5rem;
+    }
+
     /* P3.3 - Export */
     .export-section {
       padding-top: 1rem;
@@ -2989,6 +3246,13 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
   hotspotInfo: { ssid: string | null; channel: number | null; clients: number; isActive: boolean } | null = null;
   showRebootConfirmModal: boolean = false;
   rebooting: boolean = false;
+
+  // WiFi BSSID / Mesh detection
+  showWifiBssid: boolean = false;
+  wifiBssidStatus: WifiBssidStatus | null = null;
+  loadingWifiBssid: boolean = false;
+  removingBssidLock: boolean = false;
+  optimizingMesh: boolean = false;
 
   // Export (P3.3)
   showExport: boolean = false;
@@ -3686,6 +3950,83 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
         this.exportError = message;
         this.notificationService.error(`Erreur: ${message}`);
         this.logger.error('Failed to export debug bundle', { error: message, siteId: this.siteId });
+      }
+    });
+  }
+
+  // ============================================
+  // WiFi BSSID / Mesh Detection Methods
+  // ============================================
+
+  toggleWifiBssid(): void {
+    this.showWifiBssid = !this.showWifiBssid;
+    if (this.showWifiBssid && !this.wifiBssidStatus && this.isConnected) {
+      this.loadWifiBssidStatus();
+    }
+  }
+
+  loadWifiBssidStatus(): void {
+    if (!this.siteId || !this.isConnected) return;
+
+    this.loadingWifiBssid = true;
+    this.sitesService.getWifiBssidStatus(this.siteId).subscribe({
+      next: (response) => {
+        this.loadingWifiBssid = false;
+        this.wifiBssidStatus = response;
+      },
+      error: (error) => {
+        this.loadingWifiBssid = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+        this.logger.error('Failed to load WiFi BSSID status', { error: message, siteId: this.siteId });
+      }
+    });
+  }
+
+  removeBssidLock(): void {
+    if (!this.siteId || !this.isConnected) return;
+
+    this.removingBssidLock = true;
+    this.sitesService.removeBssidLock(this.siteId).subscribe({
+      next: (response) => {
+        this.removingBssidLock = false;
+        if (response.success) {
+          this.notificationService.success('Verrouillage BSSID supprimé. Le roaming est maintenant actif.');
+          // Recharger le status
+          this.loadWifiBssidStatus();
+        } else {
+          this.notificationService.warning(response.message || 'Aucune modification nécessaire');
+        }
+      },
+      error: (error) => {
+        this.removingBssidLock = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+        this.logger.error('Failed to remove BSSID lock', { error: message, siteId: this.siteId });
+      }
+    });
+  }
+
+  optimizeForMesh(): void {
+    if (!this.siteId || !this.isConnected) return;
+
+    this.optimizingMesh = true;
+    this.sitesService.optimizeForMesh(this.siteId).subscribe({
+      next: (response) => {
+        this.optimizingMesh = false;
+        if (response.success) {
+          this.notificationService.success('Configuration WiFi optimisée pour environnement mesh.');
+          // Recharger le status
+          this.loadWifiBssidStatus();
+        } else {
+          this.notificationService.warning(response.message || 'Aucune modification nécessaire');
+        }
+      },
+      error: (error) => {
+        this.optimizingMesh = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+        this.logger.error('Failed to optimize for mesh', { error: message, siteId: this.siteId });
       }
     });
   }

@@ -3035,10 +3035,13 @@ app.get('/api/wifi/scan', async (req, res) => {
 
     // Get current connection info
     let currentBssid = null;
+    let currentSsid = null;
     try {
       const iwResult = await execCommand('iwconfig wlan1 2>/dev/null');
       const bssidMatch = iwResult.output.match(/Access Point: ([0-9A-Fa-f:]+)/);
+      const ssidMatch = iwResult.output.match(/ESSID:"([^"]+)"/);
       currentBssid = bssidMatch ? bssidMatch[1] : null;
+      currentSsid = ssidMatch ? ssidMatch[1] : null;
     } catch {
       // Ignore
     }
@@ -3046,6 +3049,7 @@ app.get('/api/wifi/scan', async (req, res) => {
     res.json({
       networks,
       currentBssid,
+      currentSsid,
       scannedAt: new Date().toISOString()
     });
   } catch (error) {
@@ -3176,6 +3180,67 @@ app.get('/api/wifi/current', async (req, res) => {
       ipAddress
     });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Supprimer le verrouillage BSSID (pour environnements mesh)
+app.delete('/api/wifi/bssid-lock', async (req, res) => {
+  try {
+    // Check both possible config file locations
+    const wpaConfPaths = [
+      '/etc/wpa_supplicant/wpa_supplicant-wlan1.conf',
+      '/etc/wpa_supplicant/wpa_supplicant.conf'
+    ];
+
+    let configPath = null;
+    let wpaConf = '';
+
+    // Find which config file exists and has bssid=
+    for (const path of wpaConfPaths) {
+      try {
+        const result = await execCommand(`sudo cat ${path} 2>/dev/null`);
+        if (result.success && result.output.includes('bssid=')) {
+          configPath = path;
+          wpaConf = result.output;
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    if (!configPath) {
+      return res.json({
+        success: true,
+        message: 'Aucun verrouillage BSSID trouvé',
+        modified: false
+      });
+    }
+
+    // Remove bssid= line from config
+    const newConf = wpaConf
+      .split('\n')
+      .filter(line => !line.trim().startsWith('bssid='))
+      .join('\n');
+
+    // Write back the config
+    const tmpPath = '/tmp/wpa_supplicant_nobssid.conf';
+    await fs.writeFile(tmpPath, newConf);
+    await execCommand(`sudo cp ${tmpPath} ${configPath}`);
+    await execCommand(`sudo chmod 600 ${configPath}`);
+
+    // Reconfigure wpa_supplicant to apply change
+    await execCommand('sudo wpa_cli -i wlan1 reconfigure 2>/dev/null');
+
+    res.json({
+      success: true,
+      message: 'Verrouillage BSSID supprimé. Le dongle peut maintenant basculer entre les APs.',
+      modified: true,
+      configPath
+    });
+  } catch (error) {
+    console.error('Error removing BSSID lock:', error);
     res.status(500).json({ error: error.message });
   }
 });

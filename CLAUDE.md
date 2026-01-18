@@ -22,6 +22,14 @@
 3. **Tests** : Couvrir les cas critiques (auth, paiement, déploiement)
 4. **Rétrocompatibilité** : Ne pas casser les Pi déjà déployés
 
+### Clients Critiques ⚠️
+
+| Client  | Doc                                        | Particularité      | Attention                                      |
+| ------- | ------------------------------------------ | ------------------ | ---------------------------------------------- |
+| **NLF** | [docs/clients/NLF.md](docs/clients/NLF.md) | Mesh WiFi (3+ APs) | Ne JAMAIS lock BSSID, tester avant déploiement |
+
+> **Avant toute intervention sur un client critique**, lire sa fiche dédiée dans `docs/clients/`.
+
 ### Ce que Claude doit faire
 
 - Utiliser les requêtes SQL paramétrées (`$1`, `$2`...)
@@ -1242,13 +1250,14 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 
 ### Documentation
 
-| Fichier                            | Description              |
-| ---------------------------------- | ------------------------ |
-| `docs/REFERENCE.md`                | Doc technique complète   |
-| `docs/TROUBLESHOOTING.md`          | Dépannage                |
-| `docs/INSTALLATION_COMPLETE.md`    | Setup Pi de A à Z        |
-| `docs/technical/ERROR_HANDLING.md` | Système d'error handling |
-| `docs/guides/QR_CODE_REMOTE.md`    | QR code télécommande     |
+| Fichier                                 | Description                      |
+| --------------------------------------- | -------------------------------- |
+| `docs/REFERENCE.md`                     | Doc technique complète           |
+| `docs/TROUBLESHOOTING.md`               | Dépannage                        |
+| `docs/INSTALLATION_COMPLETE.md`         | Setup Pi de A à Z                |
+| `docs/technical/ERROR_HANDLING.md`      | Système d'error handling         |
+| `docs/guides/QR_CODE_REMOTE.md`         | QR code télécommande             |
+| `docs/guides/MESH_WIFI_ENVIRONMENTS.md` | Guide WiFi mesh (cas NLF) ⚡ NEW |
 
 ---
 
@@ -2528,6 +2537,11 @@ SMTP_PORT=1025
 | **LoopVideo**       | Vidéo dans une boucle de phase                              |
 | **CategoryMapping** | Association catégorie locale → type analytics               |
 | **RemotePreview**   | Simulation visuelle de la télécommande Pi dans le dashboard |
+| **wlan0**           | WiFi intégré du Pi → Hotspot pour /remote et admin :8080    |
+| **wlan1**           | Dongle USB WiFi → Connexion Internet du lieu vers le cloud  |
+| **Mesh WiFi**       | Réseau avec plusieurs APs partageant le même SSID           |
+| **BSSID lock**      | Verrouillage sur une borne spécifique (dangereux en mesh)   |
+| **bgscan**          | Scan background pour roaming contrôlé en environnement mesh |
 
 ---
 
