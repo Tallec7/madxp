@@ -1017,6 +1017,69 @@ export const fixHotspot = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getWifiBssidStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    logger.info('Getting WiFi BSSID status', { siteId: id });
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'get_wifi_bssid_status', {}, req.user?.id)).commandId,
+      30000 // 30 secondes pour le scan
+    );
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Get WiFi BSSID status error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors de la récupération du statut WiFi BSSID' });
+  }
+};
+
+export const removeBssidLock = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    logger.info('Removing BSSID lock', { siteId: id });
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'remove_bssid_lock', {}, req.user?.id)).commandId,
+      30000
+    );
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Remove BSSID lock error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors de la suppression du verrouillage BSSID' });
+  }
+};
+
+export const optimizeForMesh = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    logger.info('Optimizing for mesh WiFi', { siteId: id });
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'optimize_for_mesh', {}, req.user?.id)).commandId,
+      30000
+    );
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Optimize for mesh error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors de l\'optimisation pour mesh' });
+  }
+};
+
 export const exportDebugBundle = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

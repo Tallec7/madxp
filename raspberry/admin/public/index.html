@@ -419,6 +419,18 @@
                     <span>🔒 Fixer ce point d'accès (évite le roaming entre APs du même nom)</span>
                   </label>
                 </div>
+                <div id="wifi-mesh-warning" class="mesh-warning" style="display: none">
+                  <p>⚠️ <strong>Réseau mesh détecté</strong></p>
+                  <p>
+                    Ce réseau a plusieurs points d'accès. Le verrouillage BSSID n'est
+                    <strong>pas recommandé</strong> car il peut causer des déconnexions si l'AP
+                    verrouillé devient inaccessible.
+                  </p>
+                  <p>
+                    Laissez la case décochée pour permettre au dongle WiFi de basculer
+                    automatiquement vers l'AP avec le meilleur signal.
+                  </p>
+                </div>
                 <button type="submit" class="btn btn-primary" id="wifi-connect-btn">
                   📶 Se connecter
                 </button>

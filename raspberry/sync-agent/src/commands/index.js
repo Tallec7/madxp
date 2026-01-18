@@ -29,6 +29,11 @@ const {
 const networkDiagnostics = require('./network-diagnostics');
 const exportDebugBundle = require('./debug-bundle');
 const { getAnalyticsBufferStatus } = require('./analytics-buffer');
+const {
+  getWifiBssidStatus,
+  removeBssidLock,
+  optimizeForMesh,
+} = require('./wifi-bssid');
 
 // === Dépendances ===
 const { exec } = require('child_process');
@@ -289,6 +294,30 @@ const commands = {
       logger.error('Failed to fix permissions:', { error: error.message });
       throw error;
     }
+  },
+
+  // === Commandes WiFi BSSID (mesh management) ===
+
+  /**
+   * Obtient le statut BSSID et détecte l'environnement mesh
+   */
+  async get_wifi_bssid_status() {
+    return await getWifiBssidStatus();
+  },
+
+  /**
+   * Supprime le verrouillage BSSID pour permettre le roaming en environnement mesh
+   */
+  async remove_bssid_lock() {
+    return await removeBssidLock();
+  },
+
+  /**
+   * Optimise la configuration wpa_supplicant pour les environnements mesh
+   * Ajoute bgscan et supprime le BSSID lock
+   */
+  async optimize_for_mesh() {
+    return await optimizeForMesh();
   },
 };
 

@@ -2586,6 +2586,37 @@ body {
   color: var(--warning);
 }
 
+/* Mesh WiFi Warning */
+.mesh-warning {
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid var(--warning);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 12px;
+}
+
+.mesh-warning p {
+  margin: 4px 0;
+  font-size: 13px;
+}
+
+.mesh-warning p:first-child {
+  margin-bottom: 8px;
+}
+
+.mesh-warning .btn {
+  margin-top: 10px;
+}
+
+.mesh-info-banner {
+  background: rgba(0, 123, 255, 0.1);
+  border-left: 3px solid var(--primary);
+  padding: 8px 12px;
+  margin: 4px 0 8px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 /* WiFi Networks List */
 .wifi-networks {
   display: flex;

@@ -1301,6 +1301,14 @@ class SocketService {
   }
 
   /**
+   * Retourne l'instance Socket.IO pour le broadcast depuis les contrôleurs
+   * Utilisé par le remote cloud controller pour envoyer des commandes aux sites
+   */
+  getIO(): SocketIOServer | null {
+    return this.io;
+  }
+
+  /**
    * Retourne des informations de debug sur l'état des connexions
    */
   getDebugInfo(): {

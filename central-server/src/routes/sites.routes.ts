@@ -88,6 +88,31 @@ router.post(
   sitesController.fixHotspot
 );
 
+// WiFi BSSID Management (for mesh environments)
+router.get(
+  '/:id/wifi-bssid-status',
+  authenticate,
+  requireRole('admin', 'operator'),
+  adminRateLimit,
+  sitesController.getWifiBssidStatus
+);
+
+router.delete(
+  '/:id/bssid-lock',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sensitiveRateLimit,
+  sitesController.removeBssidLock
+);
+
+router.post(
+  '/:id/optimize-mesh',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sensitiveRateLimit,
+  sitesController.optimizeForMesh
+);
+
 router.get(
   '/:id/debug-bundle',
   authenticate,

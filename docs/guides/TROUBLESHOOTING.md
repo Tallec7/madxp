@@ -166,7 +166,80 @@ cat /etc/hosts | grep neopro
 sudo sed -i '' '/neopro.local/d' /etc/hosts
 ```
 
-#### 4. Android refuse de se connecter au hotspot WiFi
+#### 4. neopro.local ne fonctionne pas sur iPhone (mais fonctionne sur Mac)
+
+**Symptômes :**
+
+- Mac connecté au hotspot → `http://neopro.local/remote` ✅ fonctionne
+- iPhone connecté au même hotspot → `http://neopro.local/remote` ❌ ne fonctionne pas
+- iPhone → `http://192.168.4.1/remote` ✅ fonctionne
+
+**Cause :**
+
+Deux problèmes peuvent causer ce comportement :
+
+1. **Avahi (mDNS) n'écoute pas sur l'interface hotspot (wlan0)** - Par défaut, Avahi peut ne publier `neopro.local` que sur wlan1 (interface cliente), pas sur wlan0 (hotspot). Le Mac résout via son cache Bonjour plus robuste, l'iPhone non.
+
+2. **dnsmasq ne répond pas pour neopro.local** - iOS utilise le DNS classique en priorité, pas seulement mDNS. Si dnsmasq n'est pas configuré pour répondre à `neopro.local`, iOS ne peut pas résoudre.
+
+**Diagnostic :**
+
+```bash
+ssh pi@192.168.4.1
+
+# Vérifier si Avahi écoute sur wlan0
+sudo journalctl -u avahi-daemon -n 30 | grep wlan0
+# Si aucune ligne → Avahi n'écoute pas sur wlan0
+
+# Vérifier si dnsmasq répond pour neopro.local
+grep "neopro.local" /etc/dnsmasq.conf
+# Si rien → dnsmasq ne répond pas pour neopro.local
+```
+
+**Solution 1 : Configurer Avahi pour écouter sur wlan0**
+
+```bash
+# Ajouter allow-interfaces dans avahi-daemon.conf
+sudo sed -i 's/^#allow-interfaces=.*/allow-interfaces=wlan0,wlan1/' /etc/avahi/avahi-daemon.conf
+
+# Si la ligne n'existe pas, l'ajouter après [server]
+grep -q "allow-interfaces" /etc/avahi/avahi-daemon.conf || \
+  sudo sed -i '/^\[server\]/a allow-interfaces=wlan0,wlan1' /etc/avahi/avahi-daemon.conf
+
+# Redémarrer avahi
+sudo systemctl restart avahi-daemon
+
+# Vérifier
+sudo journalctl -u avahi-daemon -n 20 | grep wlan0
+# Doit afficher : "Joining mDNS multicast group on interface wlan0.IPv4"
+```
+
+**Solution 2 : Ajouter neopro.local dans dnsmasq**
+
+```bash
+# Ajouter la résolution DNS classique
+echo "address=/neopro.local/192.168.4.1" | sudo tee -a /etc/dnsmasq.conf
+
+# Redémarrer dnsmasq
+sudo systemctl restart dnsmasq
+
+# Vérifier
+grep neopro /etc/dnsmasq.conf
+# Doit afficher : address=/neopro.local/192.168.4.1
+```
+
+**Après les corrections :**
+
+1. Sur l'iPhone, **déconnectez puis reconnectez** le WiFi (pour récupérer la nouvelle config DNS)
+2. Essayez `http://neopro.local/remote` dans Safari
+
+**Workaround si ça ne marche toujours pas :**
+
+Utiliser l'IP directe : `http://192.168.4.1/remote`
+
+---
+
+#### 5. Android refuse de se connecter au hotspot WiFi
 
 **Symptômes :**
 
@@ -1712,6 +1785,90 @@ rfkill list
 sudo rfkill unblock wifi
 ```
 
+### 5b. Connexion wlan1 instable en environnement mesh WiFi (répéteurs)
+
+**Symptômes :**
+
+- Le site passe fréquemment Hors Ligne puis revient En Ligne
+- Déconnexions après reboot ou changement de canal hotspot
+- Le lieu utilise des répéteurs WiFi ou un réseau mesh (plusieurs APs avec le même SSID)
+
+**Diagnostic :**
+
+```bash
+# Voir les réseaux WiFi disponibles (plusieurs APs avec le même SSID = mesh)
+sudo iwlist wlan1 scan | grep -E "ESSID|Address|Channel|Signal"
+
+# Si vous voyez plusieurs lignes avec le même SSID mais des BSSID différents → environnement mesh
+# Exemple :
+#   Cell 01 - Address: 34:3A:20:15:02:40  ESSID:"NLFH"  Channel:1   Signal:-58 dBm
+#   Cell 02 - Address: 34:3A:20:16:B3:E0  ESSID:"NLFH"  Channel:6   Signal:-72 dBm
+#   Cell 03 - Address: 34:8A:12:30:0B:00  ESSID:"NLFH"  Channel:11  Signal:-64 dBm
+```
+
+**⚠️ IMPORTANT : Ne JAMAIS verrouiller le BSSID en environnement mesh**
+
+En mesh WiFi, le dongle USB doit pouvoir choisir automatiquement le meilleur point d'accès selon le signal. Un verrouillage BSSID (`bssid=XX:XX:XX:XX:XX:XX` dans wpa_supplicant) empêche ce roaming et peut causer des déconnexions si l'AP verrouillé devient inaccessible.
+
+**Vérifier si un BSSID est verrouillé :**
+
+```bash
+grep "bssid=" /etc/wpa_supplicant/wpa_supplicant-wlan1.conf
+# Si une ligne bssid= existe → SUPPRIMER
+sudo sed -i '/bssid=/d' /etc/wpa_supplicant/wpa_supplicant-wlan1.conf
+sudo wpa_cli -i wlan1 reconfigure
+```
+
+**Solution : Optimiser wpa_supplicant pour environnement mesh**
+
+La config par défaut peut causer des scans WiFi agressifs qui perturbent la connexion. Ajouter `bgscan` pour un roaming contrôlé :
+
+```bash
+# Backup
+sudo cp /etc/wpa_supplicant/wpa_supplicant-wlan1.conf /etc/wpa_supplicant/wpa_supplicant-wlan1.conf.backup
+
+# Éditer la config
+sudo nano /etc/wpa_supplicant/wpa_supplicant-wlan1.conf
+```
+
+**Config optimisée pour mesh :**
+
+```
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=FR
+
+network={
+    ssid="NOM_DU_RESEAU"
+    psk=MOT_DE_PASSE_OU_HASH
+    priority=10
+    id_str="club_wifi"
+    bgscan="simple:30:-70:300"
+    scan_ssid=0
+}
+```
+
+**Explication des paramètres :**
+
+| Paramètre     | Valeur              | Effet                                                                                      |
+| ------------- | ------------------- | ------------------------------------------------------------------------------------------ |
+| `bgscan`      | `simple:30:-70:300` | Scan en background : toutes les 300s si signal > -70dBm, toutes les 30s si signal < -70dBm |
+| `scan_ssid=0` | Désactivé           | Pas de probe actif (optimisation si le SSID n'est pas caché)                               |
+
+**Appliquer sans reboot :**
+
+```bash
+sudo wpa_cli -i wlan1 reconfigure
+# Vérifier la connexion
+iwconfig wlan1 | grep -E "ESSID|Signal"
+```
+
+**Si le signal est faible (< -75 dBm) :**
+
+1. **Améliorer le dongle USB** : Utiliser un dongle avec antenne externe (gain 5dBi+) comme le TP-Link Archer T2U Plus ou similaire avec chipset Realtek RTL8812AU
+2. **Rapprocher le Pi** d'un des points d'accès mesh si possible
+3. **Envisager l'Ethernet** si disponible dans le lieu (solution la plus fiable)
+
 ### 6. Chromium crash "Aw, Snap! Error code: 5" après 1-2h de boucle vidéo
 
 **Symptômes :**
@@ -1890,4 +2047,4 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (v2.33 - Fix hotspot repair sans perte wlan1, modal confirmation reboot)
+**Dernière mise à jour :** 18 janvier 2026 (v2.33 - Fix neopro.local iOS, fix hotspot repair sans perte wlan1, guide environnements mesh WiFi)
