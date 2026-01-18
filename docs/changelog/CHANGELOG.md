@@ -1,3 +1,9 @@
+# [2.39.0](https://github.com/Tallec7/neopro/compare/v2.38.0...v2.39.0) (2026-01-18)
+
+### Features
+
+- **network:** add Ethernet support to NetworkDetector and NetworkWatchdog ([207f952](https://github.com/Tallec7/neopro/commit/207f952765320c046de184cd6b3c0056a74ab32c))
+
 # [2.38.0](https://github.com/Tallec7/neopro/compare/v2.37.2...v2.38.0) (2026-01-18)
 
 ### Features
