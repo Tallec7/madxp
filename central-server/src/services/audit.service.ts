@@ -32,7 +32,9 @@ export type AuditAction =
   | 'MATCH_STARTED'
   | 'MATCH_CONFIG_UPDATED'
   | 'MATCH_ENDED'
-  | 'SCORE_UPDATED';
+  | 'SCORE_UPDATED'
+  // Cloud remote
+  | 'CLOUD_REMOTE_COMMAND';
 
 interface AuditLogEntry {
   action: AuditAction;

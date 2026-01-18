@@ -50,12 +50,13 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
         <p class="settings-desc">
           Generez un QR code a imprimer et afficher pres de la TV. Les utilisateurs pourront scanner pour acceder directement a la telecommande.
         </p>
-        <div class="qr-preview-row">
-          <div class="qr-info">
-            <div class="qr-detail">
-              <span class="qr-label">URL :</span>
-              <code>http://neopro.local/remote</code>
+        <div class="qr-modes-info">
+          <div class="qr-mode-card">
+            <div class="mode-header">
+              <span class="mode-icon">📶</span>
+              <span class="mode-title">Mode Local (Hotspot)</span>
             </div>
+            <p class="mode-desc">Necessite d'etre connecte au WiFi du boitier</p>
             <div class="qr-detail">
               <span class="qr-label">WiFi :</span>
               <code>{{ getWifiSsid() }}</code>
@@ -63,10 +64,18 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
               <span class="ssid-source ssid-generated" *ngIf="!realSsid">(genere)</span>
             </div>
           </div>
-          <button class="btn btn-primary" (click)="openQrCode()" [disabled]="fetchingSsid">
-            {{ fetchingSsid ? 'Chargement...' : 'Generer le QR Code' }}
-          </button>
+          <div class="qr-mode-card cloud-mode">
+            <div class="mode-header">
+              <span class="mode-icon">☁️</span>
+              <span class="mode-title">Mode Cloud</span>
+              <span class="mode-badge">Nouveau</span>
+            </div>
+            <p class="mode-desc">Fonctionne depuis n'importe quel reseau avec Internet. Ideal pour les reseaux avec isolation client (mesh WiFi).</p>
+          </div>
         </div>
+        <button class="btn btn-primary" (click)="openQrCode()" [disabled]="fetchingSsid">
+          {{ fetchingSsid ? 'Chargement...' : 'Generer le QR Code' }}
+        </button>
       </div>
 
       <!-- Configuration Hotspot WiFi -->
@@ -376,6 +385,7 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       *ngIf="showQrCode"
       [clubName]="site?.club_name || site?.site_name || 'Club'"
       [wifiSsid]="getWifiSsid()"
+      [siteId]="site?.id || ''"
       [visible]="showQrCode"
       (visibleChange)="showQrCode = $event"
     ></app-qr-code-generator>
@@ -696,6 +706,64 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
     .ssid-source.ssid-generated {
       background: #fef3c7;
       color: #92400e;
+    }
+
+    /* QR modes info */
+    .qr-modes-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .qr-mode-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+
+    .qr-mode-card.cloud-mode {
+      background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+      border-color: #c7d2fe;
+    }
+
+    .mode-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .mode-icon {
+      font-size: 1.125rem;
+    }
+
+    .mode-title {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      color: #1e293b;
+    }
+
+    .mode-badge {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+      font-size: 0.625rem;
+      font-weight: 600;
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .mode-desc {
+      font-size: 0.8125rem;
+      color: #64748b;
+      margin: 0 0 0.75rem 0;
+      line-height: 1.4;
+    }
+
+    .qr-mode-card .qr-detail {
+      margin-top: 0.5rem;
     }
 
     /* Watermark styles */

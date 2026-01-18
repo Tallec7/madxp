@@ -166,7 +166,80 @@ cat /etc/hosts | grep neopro
 sudo sed -i '' '/neopro.local/d' /etc/hosts
 ```
 
-#### 4. Android refuse de se connecter au hotspot WiFi
+#### 4. neopro.local ne fonctionne pas sur iPhone (mais fonctionne sur Mac)
+
+**Symptômes :**
+
+- Mac connecté au hotspot → `http://neopro.local/remote` ✅ fonctionne
+- iPhone connecté au même hotspot → `http://neopro.local/remote` ❌ ne fonctionne pas
+- iPhone → `http://192.168.4.1/remote` ✅ fonctionne
+
+**Cause :**
+
+Deux problèmes peuvent causer ce comportement :
+
+1. **Avahi (mDNS) n'écoute pas sur l'interface hotspot (wlan0)** - Par défaut, Avahi peut ne publier `neopro.local` que sur wlan1 (interface cliente), pas sur wlan0 (hotspot). Le Mac résout via son cache Bonjour plus robuste, l'iPhone non.
+
+2. **dnsmasq ne répond pas pour neopro.local** - iOS utilise le DNS classique en priorité, pas seulement mDNS. Si dnsmasq n'est pas configuré pour répondre à `neopro.local`, iOS ne peut pas résoudre.
+
+**Diagnostic :**
+
+```bash
+ssh pi@192.168.4.1
+
+# Vérifier si Avahi écoute sur wlan0
+sudo journalctl -u avahi-daemon -n 30 | grep wlan0
+# Si aucune ligne → Avahi n'écoute pas sur wlan0
+
+# Vérifier si dnsmasq répond pour neopro.local
+grep "neopro.local" /etc/dnsmasq.conf
+# Si rien → dnsmasq ne répond pas pour neopro.local
+```
+
+**Solution 1 : Configurer Avahi pour écouter sur wlan0**
+
+```bash
+# Ajouter allow-interfaces dans avahi-daemon.conf
+sudo sed -i 's/^#allow-interfaces=.*/allow-interfaces=wlan0,wlan1/' /etc/avahi/avahi-daemon.conf
+
+# Si la ligne n'existe pas, l'ajouter après [server]
+grep -q "allow-interfaces" /etc/avahi/avahi-daemon.conf || \
+  sudo sed -i '/^\[server\]/a allow-interfaces=wlan0,wlan1' /etc/avahi/avahi-daemon.conf
+
+# Redémarrer avahi
+sudo systemctl restart avahi-daemon
+
+# Vérifier
+sudo journalctl -u avahi-daemon -n 20 | grep wlan0
+# Doit afficher : "Joining mDNS multicast group on interface wlan0.IPv4"
+```
+
+**Solution 2 : Ajouter neopro.local dans dnsmasq**
+
+```bash
+# Ajouter la résolution DNS classique
+echo "address=/neopro.local/192.168.4.1" | sudo tee -a /etc/dnsmasq.conf
+
+# Redémarrer dnsmasq
+sudo systemctl restart dnsmasq
+
+# Vérifier
+grep neopro /etc/dnsmasq.conf
+# Doit afficher : address=/neopro.local/192.168.4.1
+```
+
+**Après les corrections :**
+
+1. Sur l'iPhone, **déconnectez puis reconnectez** le WiFi (pour récupérer la nouvelle config DNS)
+2. Essayez `http://neopro.local/remote` dans Safari
+
+**Workaround si ça ne marche toujours pas :**
+
+Utiliser l'IP directe : `http://192.168.4.1/remote`
+
+---
+
+#### 5. Android refuse de se connecter au hotspot WiFi
 
 **Symptômes :**
 
@@ -1974,4 +2047,4 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (v2.33 - Fix hotspot repair sans perte wlan1, guide environnements mesh WiFi)
+**Dernière mise à jour :** 18 janvier 2026 (v2.33 - Fix neopro.local iOS, fix hotspot repair sans perte wlan1, guide environnements mesh WiFi)
