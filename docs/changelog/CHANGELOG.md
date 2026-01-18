@@ -1,3 +1,9 @@
+# [2.36.0](https://github.com/Tallec7/neopro/compare/v2.35.1...v2.36.0) (2026-01-18)
+
+### Features
+
+- **network:** Phase 3 - SafeNetworkOperations and adaptive behavior ([05d5f84](https://github.com/Tallec7/neopro/commit/05d5f844c44439f8be009551a171cf4246341aad))
+
 ## [2.35.1](https://github.com/Tallec7/neopro/compare/v2.35.0...v2.35.1) (2026-01-18)
 
 ### Bug Fixes
