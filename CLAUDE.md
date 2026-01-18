@@ -1927,6 +1927,19 @@ vcgencmd get_mem gpu
 
 ### v2.38.x (Janvier 2026)
 
+- **Fix CSS Cloud Remote** : Le composant Cloud Remote n'affichait aucun style (UI cassée)
+  - **Problème** : Deux bugs combinés empêchaient le chargement des styles
+    1. Typo dans le décorateur : `styleUrl` au lieu de `styleUrls` (Angular 17+ requiert un tableau)
+    2. Le fichier SCSS avait des noms de classes différents du HTML (ex: `.back-btn` vs `.back-button`)
+  - **Cause racine** : Le HTML avait été copié depuis le Remote Pi mais le SCSS avait été réécrit avec des noms différents
+  - **Solution** :
+    - Fix du décorateur : `styleUrls: ['./cloud-remote.component.scss']`
+    - Remplacement complet du SCSS avec les styles du Remote Pi + styles cloud-specific
+  - **Fichiers modifiés** :
+    - `central-dashboard/src/app/features/remote/cloud-remote.component.ts` - Fix styleUrls
+    - `central-dashboard/src/app/features/remote/cloud-remote.component.scss` - Styles complets (~2500 lignes)
+  - **Migration** : Rebuild du dashboard (`npm run build`)
+
 - **Support connexion Ethernet** : NetworkDetector et NetworkWatchdog gèrent maintenant les connexions câblées
   - **Problème résolu** : Pi connecté en Ethernet (eth0) affichait "Inconnu" et le watchdog spammait des erreurs wlan1
   - **NetworkDetector** :

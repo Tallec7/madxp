@@ -207,7 +207,7 @@ type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-v
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './cloud-remote.component.html',
-  styleUrl: './cloud-remote.component.scss'
+  styleUrls: ['./cloud-remote.component.scss']
 })
 export class CloudRemoteComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
