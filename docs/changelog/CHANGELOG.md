@@ -1,3 +1,9 @@
+# [2.32.0](https://github.com/Tallec7/neopro/compare/v2.31.0...v2.32.0) (2026-01-18)
+
+### Features
+
+- **hotspot:** add automatic channel optimizer at boot ([#372](https://github.com/Tallec7/neopro/issues/372)) ([f6f9ad0](https://github.com/Tallec7/neopro/commit/f6f9ad0585bbdd42c03cba827ef52b736d8b5a48))
+
 # [2.31.0](https://github.com/Tallec7/neopro/compare/v2.30.6...v2.31.0) (2026-01-17)
 
 ### Features
