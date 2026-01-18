@@ -1,4 +1,4 @@
-# Client : NLF (Nord Ligue de Football)
+# Client : NLF (Nantes Loire Féminin Handball)
 
 > ⚠️ **CLIENT CRITIQUE** - Plus gros client, environnement mesh WiFi complexe
 
@@ -6,9 +6,10 @@
 
 | Champ            | Valeur                       |
 | ---------------- | ---------------------------- |
-| **Nom**          | NLF - Nord Ligue de Football |
-| **Site ID**      | _(à compléter)_              |
-| **Type de lieu** | Gymnase / Siège fédération   |
+| **Nom**          | NLF - Nantes Loire Féminin |
+| **Site ID**      | _c994620c-2016-40f3-9399-2d0345f69274
+_              |
+| **Type de lieu** | Gymnase   |
 | **Réseau WiFi**  | NLFH (mesh, 3+ APs)          |
 | **Contact**      | _(à compléter)_              |
 | **Priorité**     | 🔴 Haute - Plus gros client  |
