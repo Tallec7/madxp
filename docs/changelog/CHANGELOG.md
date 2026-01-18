@@ -1,3 +1,10 @@
+## [2.39.1](https://github.com/Tallec7/neopro/compare/v2.39.0...v2.39.1) (2026-01-18)
+
+### Bug Fixes
+
+- **build:** resolve Angular build warnings ([19e3617](https://github.com/Tallec7/neopro/commit/19e3617d29a72ead351273bec0ff1c0021bc5a21))
+- **dashboard:** restore CSS styles for Cloud Remote component ([9bcb379](https://github.com/Tallec7/neopro/commit/9bcb3790dc5d705f4f718488b7d6081c05d2acea))
+
 # [2.39.0](https://github.com/Tallec7/neopro/compare/v2.38.0...v2.39.0) (2026-01-18)
 
 ### Features
