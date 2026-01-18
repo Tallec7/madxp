@@ -22,6 +22,12 @@ export const routes: Routes = [
     path: 'legal/:page',
     loadComponent: () => import('./features/legal/legal.component').then(m => m.LegalComponent)
   },
+  // Télécommande cloud (accessible avec authentification, hors layout)
+  {
+    path: 'remote/:siteId',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/remote/cloud-remote.component').then(m => m.CloudRemoteComponent)
+  },
   {
     path: '',
     canActivate: [authGuard],

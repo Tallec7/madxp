@@ -324,6 +324,38 @@ POST   /api/assets/watermark/validate   → Valide une configuration watermark
 POST   /api/assets/deploy/:siteId       → Déploie un asset existant vers un site
 ```
 
+### Remote Cloud (Télécommande via Internet) ⚡ NEW (v2.33)
+
+Permet de contrôler un site à distance depuis n'importe quel réseau (utile pour les réseaux mesh avec isolation client).
+
+```
+GET  /api/remote/:siteId/state    → État du site (config, vidéos locales, connexion)
+POST /api/remote/:siteId/command  → Envoyer une commande (score, phase, vidéo...)
+GET  /api/remote/:siteId/videos   → Liste des vidéos organisées par catégorie
+```
+
+**Commandes supportées** (POST `/command` avec `{ type, data }`) :
+
+| Type            | Data                                              | Description            |
+| --------------- | ------------------------------------------------- | ---------------------- |
+| `score-update`  | `{homeTeam, awayTeam, homeScore, awayScore}`      | Mise à jour du score   |
+| `score-reset`   | `{}`                                              | Reset du score à 0-0   |
+| `phase-change`  | `{phase: 'neutral'\|'before'\|'during'\|'after'}` | Changement de phase    |
+| `play-video`    | `{video: {name, path, categoryId}}`               | Lecture d'une vidéo    |
+| `play-sponsors` | `{}`                                              | Retour à la boucle     |
+| `timer-update`  | `{action: 'start'\|'pause'\|'reset'\|'sync'}`     | Contrôle du timer      |
+| `breaking-news` | `{message, duration?, position?}`                 | Message défilant       |
+| `match-config`  | `{sessionId, matchDate, matchName}`               | Configuration du match |
+
+**Accès** : `https://dashboard.neopro.tv/remote/{siteId}` (authentification requise)
+
+**Fichiers** :
+
+- `central-server/src/controllers/remote.controller.ts`
+- `central-server/src/routes/remote.routes.ts`
+- `central-dashboard/src/app/features/remote/cloud-remote.component.ts`
+- `central-dashboard/src/app/core/services/remote.service.ts`
+
 ### Rate Limiting
 
 Les rate limits sont appliqués **par route** pour éviter les conflits :
@@ -1208,6 +1240,8 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 | `central-server/src/services/command-queue.service.test.ts`           | Tests file de commandes ⚡ NEW     |
 | `central-server/src/services/asset.service.test.ts`                   | Tests watermarks ⚡ NEW            |
 | `central-server/src/services/orchestrated-deployment.service.test.ts` | Tests déploiement orchestré ⚡ NEW |
+| `central-server/src/controllers/remote.controller.ts`                 | Télécommande cloud ⚡ NEW          |
+| `central-server/src/routes/remote.routes.ts`                          | Routes remote cloud ⚡ NEW         |
 | `central-server/src/scripts/full-schema.sql`                          | Schéma DB complet                  |
 
 ### Frontend Dashboard
@@ -1226,17 +1260,18 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 
 ### Composants Site Detail (Refactoring 2026)
 
-| Composant                    | Fichier                                | Description                                            |
-| ---------------------------- | -------------------------------------- | ------------------------------------------------------ |
-| **SiteContentTabComponent**  | `components/site-content-tab/`         | Onglet Contenu : boucles par phase, catégories, vidéos |
-| **SiteSettingsTabComponent** | `components/site-settings-tab/`        | Onglet Paramètres : config réseau, hotspot, QR code    |
-| **SiteDebugTabComponent**    | `components/site-debug-tab/`           | Onglet Debug : logs, commandes, diagnostics            |
-| **RemotePreviewComponent**   | `components/remote-preview/`           | Simulation visuelle de la télécommande Pi              |
-| **VideoUploadZoneComponent** | `components/video-upload-zone/`        | Upload contextuel de vidéos pour un site               |
-| **VideoLibraryComponent**    | `components/video-library/`            | Bibliothèque vidéos avec badge site ⭐                 |
-| **VideoSelectorComponent**   | `shared/components/video-selector/`    | Sélecteur de vidéos avec filtres catégorie             |
-| **QrCodeGeneratorComponent** | `shared/components/qr-code-generator/` | Génération QR code télécommande (PNG/print)            |
-| **ConfigEditorComponent**    | `config-editor/`                       | Éditeur complet de configuration JSON                  |
+| Composant                    | Fichier                                     | Description                                            |
+| ---------------------------- | ------------------------------------------- | ------------------------------------------------------ |
+| **SiteContentTabComponent**  | `components/site-content-tab/`              | Onglet Contenu : boucles par phase, catégories, vidéos |
+| **SiteSettingsTabComponent** | `components/site-settings-tab/`             | Onglet Paramètres : config réseau, hotspot, QR code    |
+| **SiteDebugTabComponent**    | `components/site-debug-tab/`                | Onglet Debug : logs, commandes, diagnostics            |
+| **RemotePreviewComponent**   | `components/remote-preview/`                | Simulation visuelle de la télécommande Pi              |
+| **VideoUploadZoneComponent** | `components/video-upload-zone/`             | Upload contextuel de vidéos pour un site               |
+| **VideoLibraryComponent**    | `components/video-library/`                 | Bibliothèque vidéos avec badge site ⭐                 |
+| **VideoSelectorComponent**   | `shared/components/video-selector/`         | Sélecteur de vidéos avec filtres catégorie             |
+| **QrCodeGeneratorComponent** | `shared/components/qr-code-generator/`      | Génération QR code télécommande (local/cloud)          |
+| **ConfigEditorComponent**    | `config-editor/`                            | Éditeur complet de configuration JSON                  |
+| **CloudRemoteComponent**     | `features/remote/cloud-remote.component.ts` | Télécommande cloud ⚡ NEW                              |
 
 ### Raspberry Pi
 
@@ -1752,6 +1787,20 @@ vcgencmd get_mem gpu
 ## Historique Breaking Changes
 
 ### v2.33.x (Janvier 2026)
+
+- **Remote Cloud (Télécommande via Internet)** : Nouvelle fonctionnalité permettant de contrôler un site depuis n'importe quel réseau
+  - **Problème résolu** : Les réseaux mesh WiFi avec isolation client empêchaient l'accès à `/remote`
+  - **Solution** : Télécommande accessible via `https://dashboard.neopro.tv/remote/{siteId}`
+  - **Architecture** : Téléphone → Internet → Central Server → Socket.IO → Pi
+  - **Latence** : 100-300ms (acceptable pour une télécommande)
+  - **Nouveaux fichiers** :
+    - `central-server/src/controllers/remote.controller.ts` - Backend controller
+    - `central-server/src/routes/remote.routes.ts` - Routes API
+    - `central-dashboard/src/app/features/remote/cloud-remote.component.ts` - UI complète
+    - `central-dashboard/src/app/core/services/remote.service.ts` - Service Angular
+  - **QR Code mis à jour** : Le générateur offre maintenant un choix Local (Hotspot) / Cloud
+  - **Documentation** : `docs/clients/NLF.md` mis à jour avec les détails techniques
+  - **Migration** : Aucune (nouvelle fonctionnalité)
 
 - **Fix mDNS Avahi (neopro.local)** : Le fichier de service Avahi contenait des commentaires `#` invalides en XML
   - **Problème** : `neopro.local` ne se résolvait pas correctement lors du changement de réseau/lieu

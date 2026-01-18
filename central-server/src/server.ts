@@ -42,6 +42,7 @@ import playlistSchedulesRoutes from './routes/playlist-schedules.routes';
 import logsRoutes from './routes/logs.routes';
 import draftsRoutes from './routes/drafts.routes';
 import assetsRoutes from './routes/assets.routes';
+import remoteRoutes from './routes/remote.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 import { correlationMiddleware } from './middleware/correlation';
@@ -325,6 +326,7 @@ app.use('/api/objectives', apiRateLimit, objectivesRoutes); // Objectifs clubs
 app.use('/api/playlist-schedules', apiRateLimit, playlistSchedulesRoutes); // Programmation playlists
 app.use('/api/logs', loggingRateLimit, logsRoutes); // Frontend log ingestion - permissive rate limit
 app.use('/api/assets', sensitiveRateLimit, assetsRoutes); // Assets (watermarks, logos) - sensible
+app.use('/api/remote', remoteRoutes); // Remote cloud - rate limits per-route
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler
 // Uses standardized error format with correlation ID

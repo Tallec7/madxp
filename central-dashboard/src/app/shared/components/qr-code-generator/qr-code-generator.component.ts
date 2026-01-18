@@ -1,15 +1,40 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import * as QRCode from 'qrcode';
+import { environment } from '../../../../environments/environment';
+
+export type QrCodeMode = 'local' | 'cloud';
 
 @Component({
   selector: 'app-qr-code-generator',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="qr-modal-backdrop" (click)="close()">
       <div class="qr-modal" (click)="$event.stopPropagation()">
         <button class="close-btn" (click)="close()">&times;</button>
+
+        <!-- Mode selector -->
+        <div class="mode-selector">
+          <button
+            class="mode-btn"
+            [class.active]="mode === 'local'"
+            (click)="setMode('local')"
+            title="Nécessite d'être connecté au hotspot WiFi du boîtier">
+            <span class="mode-icon">📶</span>
+            <span class="mode-label">Local (Hotspot)</span>
+          </button>
+          <button
+            class="mode-btn"
+            [class.active]="mode === 'cloud'"
+            (click)="setMode('cloud')"
+            [disabled]="!siteId"
+            title="Fonctionne depuis n'importe quel réseau avec Internet">
+            <span class="mode-icon">☁️</span>
+            <span class="mode-label">Cloud</span>
+          </button>
+        </div>
 
         <div class="qr-content" #printArea>
           <h2 class="club-name">{{ clubName }}</h2>
@@ -19,7 +44,8 @@ import * as QRCode from 'qrcode';
 
           <p class="scan-text">Scannez pour la remote</p>
 
-          <div class="instructions">
+          <!-- Instructions locales -->
+          <div class="instructions" *ngIf="mode === 'local'">
             <div class="step">
               <span class="step-number">1</span>
               <span>Connectez-vous au WiFi</span>
@@ -28,6 +54,31 @@ import * as QRCode from 'qrcode';
             <div class="step">
               <span class="step-number">2</span>
               <span>Scannez ce QR code</span>
+            </div>
+          </div>
+
+          <!-- Instructions cloud -->
+          <div class="instructions cloud-instructions" *ngIf="mode === 'cloud'">
+            <div class="cloud-badge">
+              <span class="cloud-icon">☁️</span>
+              <span>Mode Cloud</span>
+            </div>
+            <p class="cloud-info">
+              Fonctionne depuis n'importe quel réseau WiFi avec Internet.
+              <br>
+              <small>Idéal pour les réseaux avec isolation client (mesh WiFi).</small>
+            </p>
+            <div class="step">
+              <span class="step-number">1</span>
+              <span>Connectez-vous à un WiFi avec Internet</span>
+            </div>
+            <div class="step">
+              <span class="step-number">2</span>
+              <span>Scannez ce QR code</span>
+            </div>
+            <div class="step">
+              <span class="step-number">3</span>
+              <span>Connectez-vous avec votre compte Neopro</span>
             </div>
           </div>
 
@@ -211,6 +262,94 @@ import * as QRCode from 'qrcode';
       background: #e2e8f0;
     }
 
+    /* Mode selector */
+    .mode-selector {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      padding: 0.25rem;
+      background: #f1f5f9;
+      border-radius: 10px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.625rem 0.75rem;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #64748b;
+      font-size: 0.8125rem;
+      font-weight: 500;
+    }
+
+    .mode-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .mode-btn.active {
+      background: white;
+      color: #1e293b;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .mode-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .mode-icon {
+      font-size: 1rem;
+    }
+
+    .mode-label {
+      white-space: nowrap;
+    }
+
+    /* Cloud instructions */
+    .cloud-instructions {
+      text-align: center;
+    }
+
+    .cloud-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+      padding: 0.375rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    .cloud-icon {
+      font-size: 0.875rem;
+    }
+
+    .cloud-info {
+      margin: 0 0 1rem 0;
+      font-size: 0.8125rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    .cloud-info small {
+      color: #94a3b8;
+    }
+
+    .cloud-instructions .step {
+      justify-content: flex-start;
+      text-align: left;
+    }
+
     @media print {
       .qr-modal-backdrop {
         position: static;
@@ -223,7 +362,8 @@ import * as QRCode from 'qrcode';
       }
 
       .close-btn,
-      .actions {
+      .actions,
+      .mode-selector {
         display: none !important;
       }
 
@@ -237,23 +377,59 @@ import * as QRCode from 'qrcode';
 export class QrCodeGeneratorComponent implements OnInit, OnChanges {
   @Input() clubName: string = '';
   @Input() wifiSsid: string = '';
+  @Input() siteId: string = '';  // Required for cloud mode
   @Input() visible: boolean = false;
+  @Input() defaultMode: QrCodeMode = 'local';  // Allow parent to set default mode
   @Output() visibleChange = new EventEmitter<boolean>();
 
   @ViewChild('qrCanvas', { static: false }) qrCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('printArea', { static: false }) printArea!: ElementRef<HTMLDivElement>;
 
-  private readonly remoteUrl = 'http://neopro.local/remote';
+  mode: QrCodeMode = 'local';
+
+  private readonly localRemoteUrl = 'http://neopro.local/remote';
   private readonly logoUrl = 'assets/neopro-logo.png';
 
+  /**
+   * Returns the URL for the current mode
+   */
+  get remoteUrl(): string {
+    if (this.mode === 'cloud' && this.siteId) {
+      // Use dashboard URL for cloud mode
+      const baseUrl = environment.production
+        ? 'https://dashboard.neopro.tv'
+        : window.location.origin;
+      return `${baseUrl}/remote/${this.siteId}`;
+    }
+    return this.localRemoteUrl;
+  }
+
   ngOnInit(): void {
+    this.mode = this.defaultMode;
     this.generateQrCode();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['visible'] && this.visible) {
+      // Reset to default mode when opening
+      this.mode = this.defaultMode;
       setTimeout(() => this.generateQrCode(), 0);
     }
+    if (changes['defaultMode'] && !changes['defaultMode'].firstChange) {
+      this.mode = this.defaultMode;
+      this.generateQrCode();
+    }
+  }
+
+  /**
+   * Switch between local and cloud mode
+   */
+  setMode(newMode: QrCodeMode): void {
+    if (newMode === 'cloud' && !this.siteId) {
+      return; // Cannot switch to cloud without siteId
+    }
+    this.mode = newMode;
+    this.generateQrCode();
   }
 
   private async generateQrCode(): Promise<void> {
@@ -283,9 +459,9 @@ export class QrCodeGeneratorComponent implements OnInit, OnChanges {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Dimensions A6 landscape @ 150 DPI (approx 624x436)
+    // Dimensions - cloud mode needs more height for 3 steps
     const width = 624;
-    const height = 500;
+    const height = this.mode === 'cloud' ? 540 : 500;
     canvas.width = width;
     canvas.height = height;
 
@@ -337,66 +513,129 @@ export class QrCodeGeneratorComponent implements OnInit, OnChanges {
     ctx.font = 'bold 18px Arial, sans-serif';
     ctx.fillText('Scannez pour la telecommande', width / 2, 320);
 
-    // Instructions background
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(80, 340, width - 160, 100);
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(80, 340, width - 160, 100);
+    if (this.mode === 'cloud') {
+      // Cloud mode badge
+      const badgeText = '☁️ Mode Cloud';
+      ctx.font = 'bold 12px Arial, sans-serif';
+      const badgeWidth = ctx.measureText(badgeText).width + 20;
+      const badgeX = width / 2 - badgeWidth / 2;
 
-    // Step 1
-    ctx.fillStyle = '#475569';
-    ctx.font = '14px Arial, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('1. Connectez-vous au WiFi', 110, 370);
+      // Badge background (gradient-like with solid color)
+      ctx.fillStyle = '#6366f1';
+      this.roundRect(ctx, badgeX, 330, badgeWidth, 24, 12);
+      ctx.fill();
 
-    // WiFi name
-    ctx.fillStyle = '#1e293b';
-    ctx.font = 'bold 16px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(`"${this.wifiSsid}"`, width / 2, 395);
-
-    // Step 2
-    ctx.fillStyle = '#475569';
-    ctx.font = '14px Arial, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('2. Scannez ce QR code', 110, 425);
-
-    // Logo
-    try {
-      const logoImg = new Image();
-      await new Promise<void>((resolve, reject) => {
-        logoImg.onload = () => {
-          // Dessiner le logo centré, hauteur 28px
-          const logoHeight = 28;
-          const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
-          ctx.drawImage(logoImg, width / 2 - logoWidth / 2, 458, logoWidth, logoHeight);
-          resolve();
-        };
-        logoImg.onerror = () => {
-          // Fallback: texte si le logo ne charge pas
-          ctx.fillStyle = '#2563eb';
-          ctx.font = 'bold 14px Arial, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('NEOPRO', width / 2, 475);
-          resolve();
-        };
-        logoImg.src = this.logoUrl;
-      });
-    } catch {
-      // Fallback texte
-      ctx.fillStyle = '#2563eb';
-      ctx.font = 'bold 14px Arial, sans-serif';
+      // Badge text
+      ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
-      ctx.fillText('NEOPRO', width / 2, 475);
+      ctx.fillText(badgeText, width / 2, 346);
+
+      // Instructions background (taller for 3 steps)
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(80, 360, width - 160, 120);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(80, 360, width - 160, 120);
+
+      // Step 1
+      ctx.fillStyle = '#475569';
+      ctx.font = '14px Arial, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('1. Connectez-vous a un WiFi avec Internet', 110, 388);
+
+      // Step 2
+      ctx.fillText('2. Scannez ce QR code', 110, 418);
+
+      // Step 3
+      ctx.fillText('3. Connectez-vous avec votre compte Neopro', 110, 448);
+
+      // Logo position adjusted
+      await this.drawLogo(ctx, width, 495);
+    } else {
+      // Local mode - original layout
+      // Instructions background
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(80, 340, width - 160, 100);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(80, 340, width - 160, 100);
+
+      // Step 1
+      ctx.fillStyle = '#475569';
+      ctx.font = '14px Arial, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('1. Connectez-vous au WiFi', 110, 370);
+
+      // WiFi name
+      ctx.fillStyle = '#1e293b';
+      ctx.font = 'bold 16px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`"${this.wifiSsid}"`, width / 2, 395);
+
+      // Step 2
+      ctx.fillStyle = '#475569';
+      ctx.font = '14px Arial, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('2. Scannez ce QR code', 110, 425);
+
+      // Logo
+      await this.drawLogo(ctx, width, 458);
     }
 
     // Download
     const link = document.createElement('a');
     const safeName = this.clubName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-    link.download = `qr-remote-${safeName}.png`;
+    const modePrefix = this.mode === 'cloud' ? 'cloud-' : '';
+    link.download = `qr-${modePrefix}remote-${safeName}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
+  }
+
+  /**
+   * Helper to draw rounded rectangle
+   */
+  private roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  /**
+   * Helper to draw logo
+   */
+  private async drawLogo(ctx: CanvasRenderingContext2D, width: number, yPos: number): Promise<void> {
+    try {
+      const logoImg = new Image();
+      await new Promise<void>((resolve) => {
+        logoImg.onload = () => {
+          const logoHeight = 28;
+          const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
+          ctx.drawImage(logoImg, width / 2 - logoWidth / 2, yPos, logoWidth, logoHeight);
+          resolve();
+        };
+        logoImg.onerror = () => {
+          ctx.fillStyle = '#2563eb';
+          ctx.font = 'bold 14px Arial, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('NEOPRO', width / 2, yPos + 17);
+          resolve();
+        };
+        logoImg.src = this.logoUrl;
+      });
+    } catch {
+      ctx.fillStyle = '#2563eb';
+      ctx.font = 'bold 14px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('NEOPRO', width / 2, yPos + 17);
+    }
   }
 
   print(): void {

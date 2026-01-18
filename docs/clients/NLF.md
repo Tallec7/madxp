@@ -186,6 +186,115 @@ ping -c 3 8.8.8.8
 
 ---
 
+## Isolation Client WiFi
+
+### Problème identifié (18 janvier 2026)
+
+Le réseau NLFH a l'**isolation client** (AP Isolation) activée. Cela signifie que les appareils connectés au même SSID ne peuvent pas communiquer entre eux.
+
+**Conséquences :**
+
+| Depuis                       | Action        | Fonctionne ? |
+| ---------------------------- | ------------- | ------------ |
+| MacBook sur NLFH             | SSH vers Pi   | ❌ Non       |
+| MacBook sur NLFH             | Admin `:8080` | ❌ Non       |
+| Téléphone sur NLFH           | `/remote`     | ❌ Non       |
+| Téléphone sur **hotspot Pi** | `/remote`     | ✅ Oui       |
+| Ethernet                     | SSH vers Pi   | ✅ Oui       |
+
+**Pour le staff NLF :** Obligation de se connecter au **hotspot du Pi** pour utiliser la télécommande. Le QR code affiché pointe vers le hotspot.
+
+**Pour la maintenance :** Utiliser le hotspot ou un câble Ethernet.
+
+### Solution : Remote via Cloud ✅ IMPLÉMENTÉ (v2.33)
+
+La télécommande "cloud" permet de contrôler le Pi depuis n'importe quel réseau, sans avoir besoin du hotspot.
+
+**Architecture :**
+
+```
+Téléphone (NLFH) → Internet → Central Server → WebSocket → Pi
+```
+
+**Latence :** 100-300ms (acceptable pour une télécommande)
+
+**Avantages :**
+
+- ✅ Fonctionne sur réseaux avec isolation client
+- ✅ Fonctionne depuis n'importe où (debug à distance)
+- ✅ Pas besoin de changer de WiFi
+- ✅ Authentification via compte Neopro
+
+**Comment utiliser :**
+
+1. **Via QR Code** : Dashboard → Site → Paramètres → QR Code → Mode Cloud
+2. **URL directe** : `https://dashboard.neopro.tv/remote/{siteId}`
+
+**Pré-requis :**
+
+- Pi connecté au cloud (status "Online")
+- Utilisateur authentifié avec accès au site
+
+---
+
+## Remote Cloud - Documentation technique
+
+### Contexte
+
+Les réseaux professionnels (mesh, entreprise) activent souvent l'isolation client pour la sécurité. Cela empêche l'accès à `/remote` depuis le WiFi du lieu.
+
+### Solution implémentée (v2.33)
+
+Télécommande cloud accessible via `https://dashboard.neopro.tv/remote/{siteId}`.
+
+### Endpoints API
+
+```
+GET  /api/remote/:siteId/state    → État du site (config, vidéos, connexion)
+POST /api/remote/:siteId/command  → Envoyer une commande (score, phase, vidéo...)
+GET  /api/remote/:siteId/videos   → Liste des vidéos disponibles
+```
+
+### Composants
+
+1. **`CloudRemoteComponent`** (`central-dashboard/src/app/features/remote/`)
+   - UI responsive avec mode sombre
+   - Vues : accueil, score, vidéos par catégorie
+   - Commandes supportées : score, phase, play-video, play-sponsors, timer, breaking-news
+
+2. **`remote.controller.ts`** (`central-server/src/controllers/`)
+   - Vérifie les permissions utilisateur
+   - Broadcast via Socket.IO vers le Pi
+
+3. **`remote.service.ts`** (`central-dashboard/src/app/core/services/`)
+   - Service Angular avec types stricts
+
+4. **`QrCodeGeneratorComponent`** - Mode local/cloud avec toggle
+
+### Commandes supportées
+
+| Type            | Payload                                      | Description                 |
+| --------------- | -------------------------------------------- | --------------------------- | -------- | --------- | ------------------- |
+| `score-update`  | `{homeTeam, awayTeam, homeScore, awayScore}` | Mise à jour du score        |
+| `score-reset`   | `{}`                                         | Reset du score              |
+| `phase-change`  | `{phase: 'neutral'                           | 'before'                    | 'during' | 'after'}` | Changement de phase |
+| `play-video`    | `{video: {name, path}}`                      | Lecture d'une vidéo         |
+| `play-sponsors` | `{}`                                         | Retour à la boucle sponsors |
+| `timer-update`  | `{action: 'start'                            | 'pause'                     | 'reset'  | 'sync'}`  | Contrôle timer      |
+| `breaking-news` | `{message, duration?, position?}`            | Message défilant            |
+| `match-config`  | `{sessionId, matchDate, matchName}`          | Config match                |
+
+### Limites
+
+- ❌ Pi offline → télécommande cloud indisponible (fallback : hotspot local)
+- ⚡ Latence ~200ms vs ~50ms en local
+
+### Statut
+
+✅ **IMPLÉMENTÉ** - Janvier 2026
+
+---
+
 ## Notes diverses
 
 _(Ajouter ici toute information utile découverte au fil du temps)_
@@ -197,3 +306,66 @@ _(Ajouter ici toute information utile découverte au fil du temps)_
 ---
 
 **Dernière mise à jour :** 18 janvier 2026
+- **Isolation client activée** - Voir section dédiée ci-dessus
+
+---
+
+## Incident : neopro.local inaccessible sur iPhone (18 janvier 2026)
+
+### Symptôme
+
+- Mac connecté au hotspot → `http://neopro.local/remote` ✅ fonctionne
+- iPhone connecté au hotspot → `http://neopro.local/remote` ❌ ne fonctionne pas
+- iPhone → `http://192.168.4.1/remote` ✅ fonctionne
+
+### Diagnostic
+
+1. **Avahi (mDNS) n'écoutait pas sur wlan0 (hotspot)**
+   - Avahi publiait `neopro.local` uniquement sur wlan1 (interface cliente)
+   - Les appareils connectés au hotspot (wlan0) ne recevaient pas les annonces mDNS
+   - Le Mac résolvait via son cache Bonjour, l'iPhone non
+
+2. **dnsmasq ne répondait pas pour neopro.local**
+   - iOS utilise DNS classique, pas seulement mDNS
+   - `neopro.local` n'était pas configuré dans dnsmasq
+
+### Corrections appliquées
+
+**1. Configurer Avahi pour écouter sur wlan0 :**
+
+```bash
+sudo sed -i 's/^#allow-interfaces=.*/allow-interfaces=wlan0,wlan1/' /etc/avahi/avahi-daemon.conf
+sudo systemctl restart avahi-daemon
+```
+
+**2. Ajouter neopro.local dans dnsmasq :**
+
+```bash
+echo "address=/neopro.local/192.168.4.1" | sudo tee -a /etc/dnsmasq.conf
+sudo systemctl restart dnsmasq
+```
+
+### Vérification
+
+```bash
+# Vérifier Avahi sur wlan0
+sudo journalctl -u avahi-daemon -n 20 | grep wlan0
+# Doit afficher : "Joining mDNS multicast group on interface wlan0.IPv4"
+
+# Vérifier dnsmasq
+grep neopro /etc/dnsmasq.conf
+# Doit afficher : address=/neopro.local/192.168.4.1
+```
+
+### Statut
+
+⏳ **EN ATTENTE DE VALIDATION** - Corrections appliquées, à tester lors de la prochaine visite.
+
+### Workaround en attendant
+
+- Utiliser `http://192.168.4.1/remote` (IP directe)
+- Ou utiliser la télécommande cloud : `https://dashboard.neopro.tv/remote/{siteId}`
+
+---
+
+**Dernière mise à jour :** 18 janvier 2026 (après-midi)
