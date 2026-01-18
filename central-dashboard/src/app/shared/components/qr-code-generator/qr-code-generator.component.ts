@@ -395,11 +395,8 @@ export class QrCodeGeneratorComponent implements OnInit, OnChanges {
    */
   get remoteUrl(): string {
     if (this.mode === 'cloud' && this.siteId) {
-      // Use dashboard URL for cloud mode
-      const baseUrl = environment.production
-        ? 'https://dashboard.neopro.tv'
-        : window.location.origin;
-      return `${baseUrl}/remote/${this.siteId}`;
+      // Use dashboard URL from environment for cloud mode
+      return `${environment.dashboardUrl}/remote/${this.siteId}`;
     }
     return this.localRemoteUrl;
   }
