@@ -1,3 +1,9 @@
+# [2.34.0](https://github.com/Tallec7/neopro/compare/v2.33.1...v2.34.0) (2026-01-18)
+
+### Features
+
+- **network:** add hotspot watchdog and mesh BSSID lock protection ([c520d1c](https://github.com/Tallec7/neopro/commit/c520d1c5ac00ca2bbcd429c49f0c7f50c625c37b))
+
 ## [2.33.1](https://github.com/Tallec7/neopro/compare/v2.33.0...v2.33.1) (2026-01-18)
 
 ### Bug Fixes
