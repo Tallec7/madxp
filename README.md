@@ -540,6 +540,6 @@ sudo systemctl restart neopro-app
 
 ---
 
-**Version :** 2.21.2
+**Version :** 2.37.0
 **Licence :** MIT
-**Dernière mise à jour :** 9 janvier 2026
+**Dernière mise à jour :** 18 janvier 2026

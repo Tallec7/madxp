@@ -423,4 +423,63 @@ Voir `/docs/research/NETWORK_CHALLENGES_INDUSTRY_ANALYSIS.md` pour l'analyse com
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (v2.35 - NetworkDetector)
+## Nouveautés v2.37 - Phase 4 Résilience Réseau
+
+### NetworkWatchdog (Surveillance Continue)
+
+Service de surveillance réseau complet au niveau du sync-agent.
+
+**Fonctionnement :**
+
+- Surveillance hotspot (wlan0) toutes les 30 secondes
+- Surveillance Internet (wlan1) toutes les 60 secondes
+- Surveillance connexion cloud toutes les 30 secondes
+- Récupération automatique (max 3 tentatives, cooldown 5 min entre cycles)
+- Rollback automatique après changement de config réseau
+
+**Séquence de récupération hotspot :**
+
+1. rfkill unblock wifi
+2. Configuration IP (192.168.4.1)
+3. Restart hostapd
+4. Restart dnsmasq
+
+**Séquence de récupération Internet :**
+
+1. wpa_cli reconfigure
+2. dhclient wlan1
+
+### Rollback Automatique
+
+Si connexion cloud perdue 30 secondes après un changement de configuration :
+
+- La configuration précédente est restaurée automatiquement
+- Un événement `network_rollback` est envoyé au serveur
+- Le rollback est logué pour analyse
+
+### Alertes Proactives (Central Server)
+
+Job cron toutes les 4 heures vérifiant les sites à risque :
+
+| Risque                    | Sévérité    | Action                     |
+| ------------------------- | ----------- | -------------------------- |
+| `bssid_lock_in_mesh`      | 🔴 critical | Alerte créée en DB         |
+| `client_isolation`        | 🟡 warning  | Notifié au dashboard       |
+| `low_stability`           | 🟡/🔴       | Critical si score < 25     |
+| `enterprise_unconfigured` | 🟡 warning  | Configuration IT requise   |
+| `mesh_offline_extended`   | 🔴 critical | Offline > 24h en mesh      |
+| `multiple_warnings`       | 🟡 warning  | 3+ warnings dans le profil |
+
+**Commandes :**
+
+```bash
+# Voir le statut du watchdog
+/home/pi/neopro/sync-agent/src/services/network-watchdog.js --status
+
+# Voir les logs sync-agent
+sudo journalctl -u neopro-sync-agent -n 100 | grep -i "watchdog\|recovery\|rollback"
+```
+
+---
+
+**Dernière mise à jour :** 18 janvier 2026 (v2.37 - NetworkWatchdog, Auto-recovery, Alertes proactives)
