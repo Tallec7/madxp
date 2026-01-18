@@ -1,3 +1,9 @@
+# [2.35.0](https://github.com/Tallec7/neopro/compare/v2.34.0...v2.35.0) (2026-01-18)
+
+### Features
+
+- **network:** add NetworkDetector service and profile badge (Phase 2) ([8f71b0e](https://github.com/Tallec7/neopro/commit/8f71b0e079dfbd2b7ef07d2852ef7a0537dfa61a))
+
 # [2.34.0](https://github.com/Tallec7/neopro/compare/v2.33.1...v2.34.0) (2026-01-18)
 
 ### Features
