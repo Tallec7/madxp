@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.37.0 | **Dernière mise à jour**: 2026-01-18
+**Version**: 2.38.0 | **Dernière mise à jour**: 2026-01-18
 
 ---
 
@@ -439,12 +439,13 @@ Service de détection automatique du profil réseau sur le Pi :
 
 **Profils détectés** :
 
-| Type            | Conditions                       | Comportement              |
-| --------------- | -------------------------------- | ------------------------- |
-| `simple`        | 1 AP, pas d'isolation            | BSSID lock autorisé       |
-| `mesh`          | >1 AP même SSID, pas d'isolation | BSSID lock bloqué, bgscan |
-| `mesh_isolated` | >1 AP, isolation client détectée | Remote Cloud recommandé   |
-| `enterprise`    | 802.1X détecté                   | Configuration IT requise  |
+| Type            | Conditions                       | Comportement                |
+| --------------- | -------------------------------- | --------------------------- |
+| `simple`        | 1 AP, pas d'isolation            | BSSID lock autorisé         |
+| `mesh`          | >1 AP même SSID, pas d'isolation | BSSID lock bloqué, bgscan   |
+| `mesh_isolated` | >1 AP, isolation client détectée | Remote Cloud recommandé     |
+| `enterprise`    | 802.1X détecté                   | Configuration IT requise    |
+| `ethernet`      | eth0 UP avec IP et route défaut  | Connexion stable, score 100 |
 
 **Fichier** : `raspberry/sync-agent/src/services/network-detector.js`
 
@@ -1924,6 +1925,32 @@ vcgencmd get_mem gpu
 
 ## Historique Breaking Changes
 
+### v2.38.x (Janvier 2026)
+
+- **Support connexion Ethernet** : NetworkDetector et NetworkWatchdog gèrent maintenant les connexions câblées
+  - **Problème résolu** : Pi connecté en Ethernet (eth0) affichait "Inconnu" et le watchdog spammait des erreurs wlan1
+  - **NetworkDetector** :
+    - Nouveau profil `ethernet` ajouté aux types détectés
+    - Détection automatique si `eth0` UP avec IP valide et route par défaut
+    - Profil ethernet = score stabilité 100, pas de warnings
+  - **NetworkWatchdog** :
+    - Vérifie d'abord si Ethernet fonctionne avant de surveiller wlan1
+    - Si Ethernet OK, pas de tentative de recovery WiFi (évite le spam de logs)
+    - Nouveau champ `connectionType` ('ethernet' | 'wifi') dans l'état
+  - **Dashboard** :
+    - Badge "🔌 Ethernet" avec style bleu clair
+    - Tooltip : "Connexion Ethernet (câble) - ✅ Connexion stable et fiable"
+  - **Fichiers modifiés** :
+    - `raspberry/sync-agent/src/services/network-detector.js` - Support eth0
+    - `raspberry/sync-agent/src/services/network-watchdog.js` - Priorité Ethernet
+    - `central-dashboard/.../site-detail.component.ts` - Badge Ethernet
+  - **Migration** : Déployer le nouveau sync-agent
+    ```bash
+    scp raspberry/sync-agent/src/services/network-detector.js pi@neopro.local:/home/pi/neopro/sync-agent/src/services/
+    scp raspberry/sync-agent/src/services/network-watchdog.js pi@neopro.local:/home/pi/neopro/sync-agent/src/services/
+    ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
+    ```
+
 ### v2.37.x (Janvier 2026)
 
 - **NetworkWatchdog Service** : Surveillance et auto-recovery réseau complet (Phase 4 - Network Resilience)
@@ -2031,7 +2058,7 @@ vcgencmd get_mem gpu
 ### v2.35.x (Janvier 2026)
 
 - **NetworkDetector Service** : Détection automatique et classification du profil réseau
-  - **Profils détectés** : `simple`, `mesh`, `mesh_isolated`, `enterprise`, `unknown`
+  - **Profils détectés** : `simple`, `mesh`, `mesh_isolated`, `enterprise`, `ethernet`, `unknown`
   - **Données collectées** :
     - Nombre d'APs avec même SSID (mesh detection)
     - Test isolation client (ARP, ping broadcast)
@@ -2889,36 +2916,36 @@ SMTP_PORT=1025
 
 ## Glossaire Métier
 
-| Terme                | Définition                                                  |
-| -------------------- | ----------------------------------------------------------- |
-| **Site**             | Un club sportif équipé d'un Raspberry Pi + TV               |
-| **Boîtier**          | Le Raspberry Pi physique installé dans un club              |
-| **Flotte**           | L'ensemble des boîtiers gérés (50+)                         |
-| **Déploiement**      | Envoi d'une vidéo du cloud vers un ou plusieurs Pi          |
-| **Heartbeat**        | Signal envoyé toutes les 30s par le Pi au cloud             |
-| **Sync**             | Synchronisation bidirectionnelle Pi ↔ Cloud                 |
-| **Config mirror**    | Copie de la config locale stockée dans le cloud             |
-| **VideoWatcher**     | Surveillance du dossier vidéos sur le Pi                    |
-| **LocalVideo**       | Métadonnées d'une vidéo présente sur le boîtier             |
-| **Advertiser**       | Annonceur qui diffuse des pubs sur les TV                   |
-| **Agency**           | Agence gérant plusieurs annonceurs                          |
-| **Operator**         | Utilisateur gérant un sous-ensemble de clubs                |
-| **Golden image**     | Image SD pré-configurée pour clonage rapide                 |
-| **Canary**           | Déploiement progressif (10% → 50% → 100%)                   |
-| **Phase de match**   | Moment du match (neutral/before/during/after)               |
-| **TimeCategory**     | Configuration d'une phase avec ses vidéos et catégories     |
-| **LoopVideo**        | Vidéo dans une boucle de phase                              |
-| **CategoryMapping**  | Association catégorie locale → type analytics               |
-| **RemotePreview**    | Simulation visuelle de la télécommande Pi dans le dashboard |
-| **wlan0**            | WiFi intégré du Pi → Hotspot pour /remote et admin :8080    |
-| **wlan1**            | Dongle USB WiFi → Connexion Internet du lieu vers le cloud  |
-| **Mesh WiFi**        | Réseau avec plusieurs APs partageant le même SSID           |
-| **BSSID lock**       | Verrouillage sur une borne spécifique (⛔ INTERDIT en mesh) |
-| **bgscan**           | Scan background pour roaming contrôlé en environnement mesh |
-| **Hotspot Watchdog** | Service surveillant la santé du hotspot (hostapd, dnsmasq)  |
-| **Network Profile**  | Type de réseau : simple, mesh, mesh_isolated, enterprise    |
-| **AP Isolation**     | Sécurité mesh empêchant les clients de communiquer          |
-| **brcmfmac**         | Driver WiFi Raspberry Pi (bugs documentés avec Virtual AP)  |
+| Terme                | Définition                                                         |
+| -------------------- | ------------------------------------------------------------------ |
+| **Site**             | Un club sportif équipé d'un Raspberry Pi + TV                      |
+| **Boîtier**          | Le Raspberry Pi physique installé dans un club                     |
+| **Flotte**           | L'ensemble des boîtiers gérés (50+)                                |
+| **Déploiement**      | Envoi d'une vidéo du cloud vers un ou plusieurs Pi                 |
+| **Heartbeat**        | Signal envoyé toutes les 30s par le Pi au cloud                    |
+| **Sync**             | Synchronisation bidirectionnelle Pi ↔ Cloud                        |
+| **Config mirror**    | Copie de la config locale stockée dans le cloud                    |
+| **VideoWatcher**     | Surveillance du dossier vidéos sur le Pi                           |
+| **LocalVideo**       | Métadonnées d'une vidéo présente sur le boîtier                    |
+| **Advertiser**       | Annonceur qui diffuse des pubs sur les TV                          |
+| **Agency**           | Agence gérant plusieurs annonceurs                                 |
+| **Operator**         | Utilisateur gérant un sous-ensemble de clubs                       |
+| **Golden image**     | Image SD pré-configurée pour clonage rapide                        |
+| **Canary**           | Déploiement progressif (10% → 50% → 100%)                          |
+| **Phase de match**   | Moment du match (neutral/before/during/after)                      |
+| **TimeCategory**     | Configuration d'une phase avec ses vidéos et catégories            |
+| **LoopVideo**        | Vidéo dans une boucle de phase                                     |
+| **CategoryMapping**  | Association catégorie locale → type analytics                      |
+| **RemotePreview**    | Simulation visuelle de la télécommande Pi dans le dashboard        |
+| **wlan0**            | WiFi intégré du Pi → Hotspot pour /remote et admin :8080           |
+| **wlan1**            | Dongle USB WiFi → Connexion Internet du lieu vers le cloud         |
+| **Mesh WiFi**        | Réseau avec plusieurs APs partageant le même SSID                  |
+| **BSSID lock**       | Verrouillage sur une borne spécifique (⛔ INTERDIT en mesh)        |
+| **bgscan**           | Scan background pour roaming contrôlé en environnement mesh        |
+| **Hotspot Watchdog** | Service surveillant la santé du hotspot (hostapd, dnsmasq)         |
+| **Network Profile**  | Type de réseau : simple, mesh, mesh_isolated, enterprise, ethernet |
+| **AP Isolation**     | Sécurité mesh empêchant les clients de communiquer                 |
+| **brcmfmac**         | Driver WiFi Raspberry Pi (bugs documentés avec Virtual AP)         |
 
 ---
 

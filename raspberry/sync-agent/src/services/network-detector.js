@@ -18,6 +18,7 @@ const PROFILE_TYPES = {
   MESH: 'mesh',
   MESH_ISOLATED: 'mesh_isolated',
   ENTERPRISE: 'enterprise',
+  ETHERNET: 'ethernet',
   UNKNOWN: 'unknown'
 };
 
@@ -51,6 +52,38 @@ class NetworkDetector {
     } catch (error) {
       return { success: false, error: error.message, output: error.stdout || '' };
     }
+  }
+
+  /**
+   * Check if connected via Ethernet (eth0)
+   */
+  async checkEthernetConnection() {
+    // Check if eth0 is UP and has a valid IP
+    const result = await this.execWithTimeout('ip addr show eth0 2>/dev/null');
+    if (!result.success) {
+      return { connected: false };
+    }
+
+    const output = result.output;
+    const hasValidIp = output.match(/inet (\d+\.\d+\.\d+\.\d+)/) &&
+                       !output.includes('169.254.'); // Exclude APIPA
+    const isUp = output.includes('state UP');
+
+    if (!hasValidIp || !isUp) {
+      return { connected: false };
+    }
+
+    // Check if default route goes through eth0
+    const routeResult = await this.execWithTimeout('ip route | grep default');
+    const usesEthernet = routeResult.success && routeResult.output.includes('dev eth0');
+
+    const ipMatch = output.match(/inet (\d+\.\d+\.\d+\.\d+)/);
+
+    return {
+      connected: usesEthernet,
+      interface: 'eth0',
+      ipAddress: ipMatch ? ipMatch[1] : null
+    };
   }
 
   /**
@@ -334,16 +367,63 @@ class NetworkDetector {
     try {
       logger.info('Starting network profile detection');
 
-      // Get current connection info
+      // First, check if connected via Ethernet
+      const ethernetConnection = await this.checkEthernetConnection();
+      if (ethernetConnection.connected) {
+        logger.info('Connected via Ethernet, returning ethernet profile', {
+          ipAddress: ethernetConnection.ipAddress
+        });
+
+        const profile = {
+          type: PROFILE_TYPES.ETHERNET,
+          connected: true,
+          connectionType: 'ethernet',
+          currentConnection: {
+            interface: 'eth0',
+            ipAddress: ethernetConnection.ipAddress
+          },
+          meshInfo: {
+            isMesh: false,
+            apCount: 0,
+            aps: [],
+            hasEnterprise: false
+          },
+          bssidInfo: {
+            locked: false,
+            lockedBssid: null
+          },
+          isolationInfo: {
+            hasIsolation: false,
+            gatewayReachable: true,
+            visibleClients: 0
+          },
+          stabilityInfo: {
+            disconnectsLastHour: 0,
+            isStable: true,
+            score: 100
+          },
+          warnings: [],
+          detectedAt: new Date().toISOString(),
+          detectionDurationMs: Date.now() - startTime
+        };
+
+        this.lastProfile = profile;
+        this.lastDetectionTime = new Date();
+        this.detectionInProgress = false;
+
+        return profile;
+      }
+
+      // Get current WiFi connection info
       const connection = await this.getCurrentConnection();
 
       if (!connection.connected) {
-        logger.warn('Not connected to WiFi, cannot detect network profile');
+        logger.warn('Not connected to WiFi or Ethernet, cannot detect network profile');
         this.detectionInProgress = false;
         return {
           type: PROFILE_TYPES.UNKNOWN,
           connected: false,
-          error: 'Not connected to WiFi',
+          error: 'Not connected to WiFi or Ethernet',
           detectedAt: new Date().toISOString()
         };
       }

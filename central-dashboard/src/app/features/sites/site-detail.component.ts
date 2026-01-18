@@ -503,6 +503,12 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
       border: 1px solid #cbd5e1;
     }
 
+    .network-ethernet {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #7dd3fc;
+    }
+
     .network-warning {
       animation: pulse-warning 2s infinite;
     }
@@ -1440,6 +1446,8 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         return '🔒';
       case 'enterprise':
         return '🏢';
+      case 'ethernet':
+        return '🔌';
       default:
         return '📡';
     }
@@ -1461,6 +1469,8 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         return 'Mesh Isolé';
       case 'enterprise':
         return 'Enterprise';
+      case 'ethernet':
+        return 'Ethernet';
       default:
         return 'Inconnu';
     }
@@ -1513,6 +1523,10 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
       case 'enterprise':
         lines.push('Réseau enterprise (802.1X)');
         lines.push('Configuration IT requise');
+        break;
+      case 'ethernet':
+        lines.push('Connexion Ethernet (câble)');
+        lines.push('✅ Connexion stable et fiable');
         break;
       default:
         lines.push('Type de réseau inconnu');

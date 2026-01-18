@@ -53,6 +53,7 @@ const state = {
     issues: [],
     ipAddress: null,
     gateway: null,
+    connectionType: null, // 'ethernet' or 'wifi'
   },
   cloud: {
     healthy: true,
@@ -180,8 +181,37 @@ async function checkHotspotHealth() {
 }
 
 // =============================================================================
-// CHECKS INTERNET (wlan1)
+// CHECKS INTERNET (eth0 or wlan1)
 // =============================================================================
+
+/**
+ * Check if connected via Ethernet (eth0)
+ */
+async function checkEthernetConnection() {
+  try {
+    const { stdout } = await execAsync('ip addr show eth0 2>/dev/null');
+    const hasValidIp = stdout.match(/inet (\d+\.\d+\.\d+\.\d+)/) &&
+                       !stdout.includes('169.254.');
+    const isUp = stdout.includes('state UP');
+
+    if (!hasValidIp || !isUp) {
+      return { connected: false };
+    }
+
+    // Check if default route goes through eth0
+    const routeResult = await execAsync('ip route | grep default');
+    const usesEthernet = routeResult.stdout.includes('dev eth0');
+
+    const ipMatch = stdout.match(/inet (\d+\.\d+\.\d+\.\d+)/);
+
+    return {
+      connected: usesEthernet,
+      ipAddress: ipMatch ? ipMatch[1] : null
+    };
+  } catch {
+    return { connected: false };
+  }
+}
 
 /**
  * Récupère l'adresse IP de wlan1
@@ -231,11 +261,32 @@ async function ping(host, timeout = 3) {
 
 /**
  * Check complet de la connexion internet
+ * Priorité : Ethernet (eth0) > WiFi (wlan1)
  */
 async function checkInternetHealth() {
   const issues = [];
 
-  // Vérifier l'IP
+  // First, check if connected via Ethernet
+  const ethernet = await checkEthernetConnection();
+  if (ethernet.connected) {
+    // Ethernet is working, just verify internet connectivity
+    const gateway = await getGateway();
+    const internetOk = await ping('8.8.8.8');
+
+    if (!internetOk) {
+      issues.push('Internet inaccessible via Ethernet');
+    }
+
+    return {
+      healthy: issues.length === 0,
+      issues,
+      ipAddress: ethernet.ipAddress,
+      gateway,
+      connectionType: 'ethernet',
+    };
+  }
+
+  // No Ethernet, check WiFi (wlan1)
   const ip = await getInternetIp();
   if (!ip) {
     issues.push('Pas d\'IP valide sur wlan1');
@@ -259,6 +310,7 @@ async function checkInternetHealth() {
     issues,
     ipAddress: ip,
     gateway,
+    connectionType: 'wifi',
   };
 }
 
@@ -614,8 +666,18 @@ async function internetWatchLoop() {
     state.internet.issues = health.issues;
     state.internet.ipAddress = health.ipAddress;
     state.internet.gateway = health.gateway;
+    state.internet.connectionType = health.connectionType;
 
     if (!health.healthy) {
+      // If using Ethernet, don't try WiFi recovery
+      if (health.connectionType === 'ethernet') {
+        logger.warn('NetworkWatchdog: Problèmes internet via Ethernet', {
+          issues: health.issues,
+        });
+        // Ethernet issues are usually physical (cable unplugged) - no auto recovery
+        return;
+      }
+
       logger.warn('NetworkWatchdog: Problèmes internet détectés', {
         issues: health.issues,
       });
@@ -746,6 +808,7 @@ function getStatus() {
       issues: state.internet.issues,
       ipAddress: state.internet.ipAddress,
       gateway: state.internet.gateway,
+      connectionType: state.internet.connectionType,
       recoveryAttempts: state.internet.recoveryAttempts,
     },
     cloud: {
