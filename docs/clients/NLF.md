@@ -332,7 +332,7 @@ GET  /api/remote/:siteId/videos   → Liste des vidéos disponibles
 **1. Configurer Avahi pour écouter sur wlan0 :**
 
 ```bash
-sudo sed -i 's/^#allow-interfaces=.*/allow-interfaces=wlan0,wlan1/' /etc/avahi/avahi-daemon.conf
+sudo sed -i 's/^#allow-interfaces=.*/allow-interfaces=eth0,wlan0,wlan1/' /etc/avahi/avahi-daemon.conf
 sudo systemctl restart avahi-daemon
 ```
 

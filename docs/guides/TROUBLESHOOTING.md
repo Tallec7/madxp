@@ -202,11 +202,11 @@ grep "neopro.local" /etc/dnsmasq.conf
 
 ```bash
 # Ajouter allow-interfaces dans avahi-daemon.conf
-sudo sed -i 's/^#allow-interfaces=.*/allow-interfaces=wlan0,wlan1/' /etc/avahi/avahi-daemon.conf
+sudo sed -i 's/^#allow-interfaces=.*/allow-interfaces=eth0,wlan0,wlan1/' /etc/avahi/avahi-daemon.conf
 
 # Si la ligne n'existe pas, l'ajouter après [server]
 grep -q "allow-interfaces" /etc/avahi/avahi-daemon.conf || \
-  sudo sed -i '/^\[server\]/a allow-interfaces=wlan0,wlan1' /etc/avahi/avahi-daemon.conf
+  sudo sed -i '/^\[server\]/a allow-interfaces=eth0,wlan0,wlan1' /etc/avahi/avahi-daemon.conf
 
 # Redémarrer avahi
 sudo systemctl restart avahi-daemon

@@ -41,7 +41,17 @@ echo -e "${GREEN}✓ /etc/hosts mis à jour${NC}"
 sudo hostnamectl set-hostname neopro
 echo -e "${GREEN}✓ Hostname appliqué avec hostnamectl${NC}"
 
-# 4. Redémarrer avahi-daemon
+# 4. Configurer Avahi pour écouter sur toutes les interfaces
+if grep -q "^#allow-interfaces" /etc/avahi/avahi-daemon.conf; then
+    sudo sed -i 's/^#allow-interfaces=.*/allow-interfaces=eth0,wlan0,wlan1/' /etc/avahi/avahi-daemon.conf
+elif grep -q "^allow-interfaces" /etc/avahi/avahi-daemon.conf; then
+    sudo sed -i 's/^allow-interfaces=.*/allow-interfaces=eth0,wlan0,wlan1/' /etc/avahi/avahi-daemon.conf
+else
+    sudo sed -i '/^\[server\]/a allow-interfaces=eth0,wlan0,wlan1' /etc/avahi/avahi-daemon.conf
+fi
+echo -e "${GREEN}✓ Avahi configuré pour eth0,wlan0,wlan1${NC}"
+
+# 5. Redémarrer avahi-daemon
 sudo systemctl restart avahi-daemon
 echo -e "${GREEN}✓ avahi-daemon redémarré${NC}"
 

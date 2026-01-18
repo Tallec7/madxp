@@ -180,6 +180,9 @@ verify_build_integrity() {
         "sync-agent/src/watchers/video-watcher.js"
         "sync-agent/src/watchers/config-watcher.js"
         "sync-agent/src/services/connection-status.js"
+        "sync-agent/src/services/network-detector.js"
+        "sync-agent/src/services/network-watchdog.js"
+        "sync-agent/src/services/safe-network-operations.js"
         "sync-agent/package.json"
     )
 

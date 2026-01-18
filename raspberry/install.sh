@@ -487,8 +487,18 @@ configure_wifi_client_support() {
 configure_mdns() {
     print_step "Configuration mDNS (neopro.local)..."
 
-    # Configuration Avahi
+    # Configuration Avahi service file
     cp ./config/systemd/neopro.service /etc/avahi/services/neopro.service
+
+    # Configurer Avahi pour écouter sur toutes les interfaces (eth0, wlan0, wlan1)
+    # Nécessaire pour que neopro.local soit accessible via Ethernet ET WiFi/Hotspot
+    if grep -q "^#allow-interfaces" /etc/avahi/avahi-daemon.conf; then
+        sed -i 's/^#allow-interfaces=.*/allow-interfaces=eth0,wlan0,wlan1/' /etc/avahi/avahi-daemon.conf
+    elif grep -q "^allow-interfaces" /etc/avahi/avahi-daemon.conf; then
+        sed -i 's/^allow-interfaces=.*/allow-interfaces=eth0,wlan0,wlan1/' /etc/avahi/avahi-daemon.conf
+    else
+        sed -i '/^\[server\]/a allow-interfaces=eth0,wlan0,wlan1' /etc/avahi/avahi-daemon.conf
+    fi
 
     # Changement du hostname
     hostnamectl set-hostname neopro
