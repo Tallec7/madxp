@@ -1574,7 +1574,26 @@ Dans l'onglet Debug d'un site, la section "Hotspot WiFi" affiche :
 2. **Alimentation insuffisante** - Le Pi est branché sur un port USB de TV ou hub non alimenté (voltage < 5V)
 3. **Distance/obstacles** - Le WiFi 2.4GHz a une portée limitée (~10-15m), les murs épais ou structures métalliques bloquent le signal
 
-**Diagnostic et réparation automatique :**
+**Solution automatique (v2.28+) :**
+
+Depuis la version 2.28, le Pi **optimise automatiquement le canal WiFi au démarrage** :
+
+- Au boot, scanne les canaux 1, 6, 11 (non-overlapping 2.4GHz)
+- Si le canal actuel a >= 3 réseaux voisins, switch vers le canal le moins encombré
+- Redémarre hostapd pour appliquer le nouveau canal
+- Log dans `/var/log/neopro-hotspot-optimizer.log`
+
+**Vérifier si l'optimizer a changé le canal :**
+
+```bash
+cat /var/log/neopro-hotspot-optimizer.log
+# Exemple de sortie :
+# [2026-01-18 10:30:00] Channel 6 is congested (>= 3 networks)
+# [2026-01-18 10:30:01] Switching from channel 6 to 1
+# [2026-01-18 10:30:02] SUCCESS: Hotspot now on channel 1
+```
+
+**Diagnostic et réparation manuelle :**
 
 ```bash
 # Sur le Pi (via Ethernet ou écran+clavier)
@@ -1804,4 +1823,4 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 17 janvier 2026 (v2.28 - WiFi scanner avec BSSID lock, CORS Private Network Access)
+**Dernière mise à jour :** 18 janvier 2026 (v2.28 - WiFi scanner avec BSSID lock, CORS Private Network Access, Hotspot Channel Optimizer)

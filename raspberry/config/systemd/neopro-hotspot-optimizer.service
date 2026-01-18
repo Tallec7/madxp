@@ -1,0 +1,15 @@
+[Unit]
+Description=Neopro Hotspot Channel Optimizer
+Documentation=https://github.com/Tallec7/neopro
+After=network.target hostapd.service
+Wants=hostapd.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/pi/neopro/scripts/hotspot-optimizer.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
