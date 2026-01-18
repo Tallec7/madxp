@@ -324,7 +324,7 @@ POST   /api/assets/watermark/validate   → Valide une configuration watermark
 POST   /api/assets/deploy/:siteId       → Déploie un asset existant vers un site
 ```
 
-### Remote Cloud (Télécommande via Internet) ⚡ NEW (v2.33)
+### Remote Cloud (Télécommande via Internet) ⚡ UPDATED (v2.39)
 
 Permet de contrôler un site à distance depuis n'importe quel réseau (utile pour les réseaux mesh avec isolation client).
 
@@ -349,10 +349,36 @@ GET  /api/remote/:siteId/videos   → Liste des vidéos organisées par catégor
 
 **Accès** : `https://dashboard.neopro.tv/remote/{siteId}` (authentification requise)
 
+**Architecture du relay (v2.39+)** :
+
+```
+Dashboard Cloud Remote → HTTP API → Central Server
+→ Socket.IO emit vers room siteId (événements: score-update, phase-change, cloud-remote-action, etc.)
+→ Sync-Agent (sur le Pi) reçoit l'événement
+→ Sync-Agent.relayToLocalServer() se connecte à localhost:3000
+→ Serveur local broadcast vers TV/Remote
+→ TV reçoit l'action et exécute (joue vidéo, met à jour score, etc.)
+```
+
+**Événements Socket.IO relayés** :
+
+| Événement central     | Événement local relayé | Description                      |
+| --------------------- | ---------------------- | -------------------------------- |
+| `score-update`        | `score-update`         | Mise à jour score                |
+| `score-reset`         | `score-reset`          | Reset score                      |
+| `phase-change`        | `phase-change`         | Changement phase match           |
+| `timer-update`        | `timer-update`         | Contrôle chronomètre             |
+| `breaking-news`       | `breaking-news`        | Message défilant                 |
+| `match-info-updated`  | `match-info-updated`   | Config match                     |
+| `options-update`      | `options-update`       | Options overlay                  |
+| `cloud-remote-action` | `command`              | Lecture vidéo/sponsors (→action) |
+
 **Fichiers** :
 
-- `central-server/src/controllers/remote.controller.ts`
+- `central-server/src/controllers/remote.controller.ts` - API HTTP et émission Socket.IO
 - `central-server/src/routes/remote.routes.ts`
+- `raspberry/sync-agent/src/agent.js` - Méthode `relayToLocalServer()` pour le relay
+- `raspberry/server/server.js` - Serveur local qui broadcast aux clients TV/Remote
 - `central-dashboard/src/app/features/remote/cloud-remote.component.ts`
 - `central-dashboard/src/app/core/services/remote.service.ts`
 
@@ -1924,6 +1950,25 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.39.x (Janvier 2026)
+
+- **Fix Cloud Remote play-video non fonctionnel** : La lecture de vidéo depuis le Cloud Remote ne fonctionnait pas
+  - **Problème** : Les commandes `play-video` et `play-sponsors` envoyées depuis le Cloud Remote n'arrivaient jamais à la TV
+  - **Cause racine** : Le central-server envoyait les événements vers la room Socket.IO du site, mais le sync-agent ne les relayait pas vers le serveur local (port 3000)
+  - **Solution** :
+    - Ajout de listeners dans le sync-agent pour tous les événements cloud remote (`score-update`, `phase-change`, `cloud-remote-action`, etc.)
+    - Nouvelle méthode `relayToLocalServer()` qui se connecte au serveur local et relaie l'événement
+    - Nouvel événement `cloud-remote-action` (au lieu de `command`) pour différencier les commandes télécommande des commandes système (deploy_video, update_config)
+  - **Fichiers modifiés** :
+    - `central-server/src/controllers/remote.controller.ts` - Utilise `cloud-remote-action` pour play-video/play-sponsors
+    - `raspberry/sync-agent/src/agent.js` - Listeners cloud remote + méthode `relayToLocalServer()`
+  - **Migration Pi existants** :
+    ```bash
+    scp raspberry/sync-agent/src/agent.js pi@neopro.local:/home/pi/neopro/sync-agent/src/
+    ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
+    ```
+  - **Migration serveur** : Redéployer le central-server sur Railway
 
 ### v2.38.x (Janvier 2026)
 

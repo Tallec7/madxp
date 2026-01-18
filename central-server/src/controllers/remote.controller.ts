@@ -188,7 +188,7 @@ export async function sendRemoteCommand(req: AuthRequest, res: Response) {
         break;
 
       case 'play-video':
-        eventName = 'command';
+        eventName = 'cloud-remote-action';
         payload = {
           type: 'video',
           data: data.video || null,
@@ -197,7 +197,7 @@ export async function sendRemoteCommand(req: AuthRequest, res: Response) {
         break;
 
       case 'play-sponsors':
-        eventName = 'command';
+        eventName = 'cloud-remote-action';
         payload = {
           type: 'sponsors',
           timestamp,

@@ -88,6 +88,23 @@ class NeoproSyncAgent {
     this.socket.on('command', (cmd) => this.handleCommand(cmd));
     // Health check - Respond to server pings to prove connection is alive
     this.socket.on('ping_check', () => this.handlePingCheck());
+
+    // =========================================================================
+    // CLOUD REMOTE RELAY
+    // Relay events from central server (cloud remote) to local server
+    // These events are sent by the cloud remote controller and need to be
+    // forwarded to the local Socket.IO server (port 3000) for TV/Remote
+    // =========================================================================
+    this.socket.on('score-update', (data) => this.relayToLocalServer('score-update', data));
+    this.socket.on('score-reset', (data) => this.relayToLocalServer('score-reset', data));
+    this.socket.on('phase-change', (data) => this.relayToLocalServer('phase-change', data));
+    this.socket.on('timer-update', (data) => this.relayToLocalServer('timer-update', data));
+    this.socket.on('breaking-news', (data) => this.relayToLocalServer('breaking-news', data));
+    this.socket.on('match-info-updated', (data) => this.relayToLocalServer('match-info-updated', data));
+    this.socket.on('options-update', (data) => this.relayToLocalServer('options-update', data));
+    // Cloud remote action (play video, play sponsors) - relayed as 'command' to local server
+    // The local server converts 'command' to 'action' for the TV component
+    this.socket.on('cloud-remote-action', (data) => this.relayToLocalServer('command', data));
   }
 
   handlePingCheck() {
@@ -108,6 +125,47 @@ class NeoproSyncAgent {
         connectionStatus.setConnected(false, 'ping_check_socket_dead');
       }
     }
+  }
+
+  /**
+   * Relay an event from the central server (cloud remote) to the local Socket.IO server
+   * This enables cloud remote control when the user cannot access the local hotspot
+   * (e.g., mesh WiFi with client isolation)
+   * @param {string} eventName - Name of the event to relay
+   * @param {object} data - Event payload
+   */
+  relayToLocalServer(eventName, data) {
+    logger.info('☁️ Cloud remote event received, relaying to local server', { eventName, data });
+
+    const localSocket = io('http://localhost:3000', {
+      timeout: 5000,
+      reconnection: false,
+    });
+
+    localSocket.on('connect', () => {
+      logger.debug('Connected to local server for relay', { eventName });
+      localSocket.emit(eventName, data);
+
+      // Disconnect after a short delay to allow the event to be processed
+      setTimeout(() => {
+        localSocket.disconnect();
+        logger.debug('Disconnected from local server after relay', { eventName });
+      }, 500);
+    });
+
+    localSocket.on('connect_error', (err) => {
+      logger.warn('Failed to relay event to local server', {
+        eventName,
+        error: err.message,
+      });
+    });
+
+    localSocket.on('error', (err) => {
+      logger.warn('Local server relay error', {
+        eventName,
+        error: err.message,
+      });
+    });
   }
 
   handleConnect() {
