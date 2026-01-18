@@ -1071,13 +1071,34 @@ curl -I http://localhost/generate_204
 2. **Alimentation insuffisante** - Port USB de TV au lieu d'un chargeur 5V/3A
 3. **Distance/obstacles** - WiFi 2.4GHz a une portée limitée (~10-15m)
 
-**Script de diagnostic et réparation** :
+**Diagnostic et réparation depuis le dashboard central** :
+
+1. Aller dans l'onglet **Debug** du site
+2. Section **Hotspot WiFi** → Cliquer **Réparer automatiquement**
+3. Si un changement de canal est nécessaire, un modal de confirmation apparaît
+4. Choisir **Redémarrer maintenant** (applique immédiatement) ou **Plus tard** (appliqué au prochain reboot)
+
+**Diagnostic et réparation depuis l'admin panel (:8080)** :
+
+1. Accéder à `http://neopro.local:8080` ou `http://192.168.4.1:8080`
+2. Onglet **Réseau** → Section **Diagnostic Hotspot WiFi**
+3. Cliquer **🔍 Diagnostiquer** pour voir l'état actuel
+4. Cliquer **🔧 Réparer automatiquement** pour corriger
+
+**Script de diagnostic et réparation (via SSH)** :
 
 ```bash
-# Sur le Pi (via Ethernet ou écran+clavier)
-cd /home/pi/neopro/scripts
-./fix-hotspot.sh           # Mode diagnostic (affiche les problèmes)
-./fix-hotspot.sh --auto-fix # Mode auto-fix (corrige automatiquement)
+# Mode diagnostic (affiche les problèmes)
+./fix-hotspot.sh
+
+# Mode auto-fix (prépare le changement de canal)
+./fix-hotspot.sh --auto-fix
+
+# Mode JSON (pour intégration dashboard/admin)
+./fix-hotspot.sh --json --auto-fix
+
+# Redémarrer immédiatement après correction
+./fix-hotspot.sh --auto-fix --reboot-now
 ```
 
 **Ce que fait le script** :
@@ -1085,15 +1106,18 @@ cd /home/pi/neopro/scripts
 - Vérifie l'alimentation (voltage)
 - Scanne les canaux WiFi et trouve le moins encombré (1, 6 ou 11)
 - Vérifie hostapd, dnsmasq, rfkill
-- Change automatiquement de canal si nécessaire
-- Redémarre les services hotspot
+- Change le canal dans la config **sans redémarrer hostapd** (préserve wlan1)
+- Le changement sera effectif au prochain reboot
+
+**⚠️ IMPORTANT** : Le script ne redémarre plus automatiquement hostapd car cela coupe la connexion WiFi cliente (wlan1). Un reboot est requis pour appliquer le changement de canal.
 
 **Changer manuellement le channel** :
 
 ```bash
 # Passer en channel 1 (moins encombré que 6)
 sudo sed -i 's/channel=6/channel=1/' /etc/hostapd/hostapd.conf
-sudo systemctl restart hostapd
+# Le changement sera appliqué au prochain reboot
+sudo reboot
 ```
 
 ---
@@ -1792,6 +1816,28 @@ vcgencmd get_mem gpu
     - `orchestrated-deployment.service.test.ts` - Tests déploiement orchestré
   - **Pre-commit hook** : `.husky/commit-msg` pour validation Conventional Commits
   - **Migration** : Aucune (amélioration interne, rétrocompatible)
+
+- **Fix hotspot repair sans perte de connexion wlan1** : Correction du bug de perte de connexion Internet lors de la réparation automatique du hotspot
+  - **Problème** : Lancer "Réparer automatiquement" depuis le dashboard central ou l'admin panel causait une perte de la connexion WiFi cliente (wlan1), rendant le Pi inaccessible à distance
+  - **Cause** : Le script `fix-hotspot.sh` redémarrait immédiatement `hostapd` après un changement de canal, ce qui perturbait le driver `wlan1` (dongle USB WiFi)
+  - **Solution** :
+    - `fix-hotspot.sh` : Le canal est modifié dans `/etc/hostapd/hostapd.conf` SANS redémarrer hostapd
+    - Le changement sera effectif au prochain reboot du Pi
+    - Nouvelle option `--reboot-now` pour redémarrer immédiatement si souhaité
+    - Output JSON amélioré avec `channelChanged`, `needsReboot`, `oldChannel`, `newChannel`
+  - **UX Dashboard/Admin** :
+    - Si un changement de canal est détecté, un modal de confirmation apparaît
+    - L'utilisateur peut choisir "Redémarrer maintenant" ou "Plus tard"
+    - Message explicatif que le changement sera appliqué au prochain reboot
+  - **Fichiers modifiés** :
+    - `raspberry/scripts/fix-hotspot.sh` - Ne redémarre plus hostapd, output JSON amélioré
+    - `raspberry/sync-agent/src/commands/hotspot.js` - Parsing JSON, fonction `rebootPi()`
+    - `central-dashboard/.../site-debug-tab.component.ts` - Modal de confirmation reboot
+    - `raspberry/admin/public/index.html` - Section diagnostic hotspot et modal
+    - `raspberry/admin/public/app.js` - Fonctions diagnostic et reboot
+    - `raspberry/admin/admin-server.js` - Endpoint `/api/hotspot/fix`
+  - **Tests** : 5 nouveaux tests unitaires pour `fix_hotspot` dans `commands.test.js`
+  - **Migration** : Déployer sync-agent et scripts sur les Pi existants
 
 ### v2.28.x (Janvier 2026)
 
