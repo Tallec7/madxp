@@ -387,6 +387,7 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       [wifiSsid]="getWifiSsid()"
       [siteId]="site?.id || ''"
       [visible]="showQrCode"
+      [defaultMode]="getQrCodeDefaultMode()"
       (visibleChange)="showQrCode = $event"
     ></app-qr-code-generator>
   `,
@@ -1312,6 +1313,18 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
         this.showQrCode = true;
       }
     });
+  }
+
+  /**
+   * Determine QR code default mode based on network profile
+   * Returns 'cloud' for mesh_isolated sites, 'local' otherwise
+   */
+  getQrCodeDefaultMode(): 'local' | 'cloud' {
+    const networkProfile = this.site?.network_profile;
+    if (networkProfile?.type === 'mesh_isolated') {
+      return 'cloud';
+    }
+    return 'local';
   }
 
   // ============================================================================

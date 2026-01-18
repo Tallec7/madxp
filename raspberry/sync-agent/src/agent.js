@@ -18,6 +18,7 @@ const offlineQueue = require('./services/offline-queue');
 const connectionStatus = require('./services/connection-status');
 const localBackup = require('./tasks/local-backup');
 const { networkDetector } = require('./services/network-detector');
+const { safeNetworkOperations } = require('./services/safe-network-operations');
 
 class NeoproSyncAgent {
   constructor() {
@@ -573,6 +574,15 @@ class NeoproSyncAgent {
           hasIsolation: profile.isolationInfo?.hasIsolation || false,
           warnings: profile.warnings?.length || 0
         });
+
+        // Auto-optimize based on detected profile (remove BSSID lock, configure bgscan)
+        const optimizeResult = await safeNetworkOperations.autoOptimize();
+        if (optimizeResult.success && optimizeResult.actions?.length > 0) {
+          logger.info('Network auto-optimization completed', {
+            actions: optimizeResult.actions.length,
+            details: optimizeResult.actions
+          });
+        }
 
         // Sync l'état local après la détection pour envoyer le profil au central
         if (this.connected) {

@@ -242,6 +242,28 @@ sudo wpa_cli -i wlan1 reconfigure
 | `mesh_isolated` | >1 AP, isolation client détectée | Remote Cloud recommandé, SSH Ethernet |
 | `enterprise`    | 802.1X détecté                   | Configuration IT requise              |
 
+### Ce qui est automatisé (v2.36+)
+
+| Fonctionnalité                     | Où                     | Comportement                                                           |
+| ---------------------------------- | ---------------------- | ---------------------------------------------------------------------- |
+| **🛡️ SafeNetworkOperations**       | Sync-Agent             | Encapsule les opérations risquées, bloque celles dangereuses en mesh   |
+| **⏳ Defer hostapd restart**       | Hotspot commands       | En mesh, les changements de config nécessitent un reboot (pas restart) |
+| **☁️ QR Code Cloud par défaut**    | Dashboard Settings tab | Si mesh_isolated, le QR s'ouvre en mode Cloud automatiquement          |
+| **⚠️ Bannière d'alerte réseau**    | Dashboard Site Detail  | Warning contextuel pour sites mesh/isolated/enterprise                 |
+| **🔧 Auto-configuration bgscan**   | Sync-Agent (boot)      | Si mesh détecté et bgscan absent → configure automatiquement           |
+| **🔓 Auto-suppression BSSID lock** | Sync-Agent (boot)      | Si mesh et BSSID lock → supprime automatiquement                       |
+
+**Matrice des opérations sécurisées (SafeNetworkOperations)** :
+
+| Opération           | Simple     | Mesh      | Mesh Isolé | Enterprise |
+| ------------------- | ---------- | --------- | ---------- | ---------- |
+| `set_bssid_lock`    | ✅ Direct  | ❌ Bloqué | ❌ Bloqué  | ❌ Bloqué  |
+| `remove_bssid_lock` | ✅ Direct  | ✅ Direct | ✅ Direct  | ✅ Direct  |
+| `update_hotspot_*`  | ✅ Restart | ⚠️ Reboot | ⚠️ Reboot  | ⚠️ Reboot  |
+| `fix_hotspot`       | ✅ Direct  | ⚠️ Reboot | ⚠️ Reboot  | ⚠️ Reboot  |
+| `restart_hostapd`   | ✅ Direct  | ❌ Bloqué | ❌ Bloqué  | ❌ Bloqué  |
+| `configure_bgscan`  | ✅ Direct  | ✅ Direct | ✅ Direct  | ✅ Direct  |
+
 ---
 
 ## Checklist nouveau client
@@ -342,4 +364,4 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (v2.34 - Hotspot Watchdog, Blocage BSSID en mesh)
+**Dernière mise à jour :** 18 janvier 2026 (v2.36 - SafeNetworkOperations, Auto-optimize, Alertes contextuelles)

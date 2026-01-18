@@ -448,6 +448,31 @@ Service de détection automatique du profil réseau sur le Pi :
 
 **Fichier** : `raspberry/sync-agent/src/services/network-detector.js`
 
+### Service SafeNetworkOperations (v2.36+) ⚡ NEW
+
+Service d'encapsulation des opérations réseau risquées avec comportement adaptatif :
+
+| Méthode              | Rôle                                                  |
+| -------------------- | ----------------------------------------------------- |
+| `checkOperation()`   | Vérifie si une opération est autorisée pour le profil |
+| `executeOperation()` | Exécute une opération avec la méthode appropriée      |
+| `autoOptimize()`     | Optimise automatiquement la config (bgscan, BSSID)    |
+| `getPendingStatus()` | Retourne les opérations en attente de reboot          |
+| `executeReboot()`    | Déclenche un reboot (pour appliquer les changements)  |
+
+**Matrice de sécurité** :
+
+| Opération         | Simple  | Mesh   | Mesh Isolé | Enterprise |
+| ----------------- | ------- | ------ | ---------- | ---------- |
+| set_bssid_lock    | ✅      | ❌     | ❌         | ❌         |
+| remove_bssid_lock | ✅      | ✅     | ✅         | ✅         |
+| update*hotspot*\* | restart | reboot | reboot     | reboot     |
+| fix_hotspot       | direct  | reboot | reboot     | reboot     |
+| restart_hostapd   | ✅      | ❌     | ❌         | ❌         |
+| configure_bgscan  | ✅      | ✅     | ✅         | ✅         |
+
+**Fichier** : `raspberry/sync-agent/src/services/safe-network-operations.js`
+
 ### Modules Sync-Agent Extraits (v2.33+) ⚡ NEW
 
 Le fichier `commands/index.js` (1440 → ~650 lignes) a été refactoré en modules :
@@ -1809,6 +1834,59 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.36.x (Janvier 2026)
+
+- **SafeNetworkOperations Service** : Encapsulation des opérations réseau risquées avec sécurité basée sur le profil
+  - **Matrice de sécurité** : Chaque opération a un comportement différent selon le profil réseau
+  - **Opérations gérées** :
+    - `set_bssid_lock` : ✅ Simple, ❌ Mesh/Isolated/Enterprise
+    - `remove_bssid_lock` : ✅ Tous les profils
+    - `update_hotspot_*` : ✅ Simple (restart), ⚠️ Mesh (defer reboot)
+    - `fix_hotspot` : ✅ Simple (direct), ⚠️ Mesh (defer reboot)
+    - `restart_hostapd` : ✅ Simple, ❌ Mesh/Isolated/Enterprise
+    - `configure_bgscan` : ✅ Tous les profils
+  - **Méthodes d'exécution** :
+    - `direct` : Exécute immédiatement sans restart de service
+    - `restart` : Exécute et redémarre hostapd (simple networks only)
+    - `defer_reboot` : Sauvegarde la config, reboot requis pour appliquer
+  - **Auto-optimization** : Au boot, le service applique automatiquement :
+    - Suppression du BSSID lock si détecté en mesh
+    - Configuration bgscan si mesh et pas encore configuré
+  - **Fichiers** :
+    - `raspberry/sync-agent/src/services/safe-network-operations.js` - Service complet
+    - `raspberry/sync-agent/src/commands/hotspot.js` - Utilise SafeNetworkOperations
+  - **Migration** : Déployer le nouveau sync-agent
+
+- **QR Code Cloud par défaut pour sites mesh_isolated** : Amélioration UX pour réseaux avec isolation client
+  - Le générateur QR Code s'ouvre en mode "Cloud" par défaut si le site est `mesh_isolated`
+  - Mode local toujours accessible pour les autres profils
+  - Ajout de la méthode `getQrCodeDefaultMode()` dans site-settings-tab
+  - **Fichiers modifiés** :
+    - `central-dashboard/.../site-settings-tab.component.ts`
+  - **Migration** : Rebuild dashboard
+
+- **Bannière d'alerte contextuelle réseau** : Avertissement visuel pour les sites à risque
+  - S'affiche automatiquement pour :
+    - Sites mesh avec BSSID verrouillé (warning jaune)
+    - Sites mesh_isolated (danger rouge)
+    - Sites enterprise (info bleu)
+  - Contient un message explicatif et un bouton d'action contextuel
+  - Peut être fermée par l'utilisateur (dismiss)
+  - Actions :
+    - Mesh + BSSID lock → "Supprimer le verrou" (switch to debug tab)
+    - Mesh isolated → "Ouvrir Remote Cloud" (new window)
+  - **Fichiers modifiés** :
+    - `central-dashboard/.../site-detail.component.ts` - Template, styles, méthodes
+  - **Migration** : Rebuild dashboard
+
+- **Auto-configuration bgscan au boot** : Optimisation automatique du roaming en mesh
+  - Au démarrage, si profil mesh détecté et bgscan non configuré → configure automatiquement
+  - Valeur par défaut : `simple:30:-70:300` (scan rapide si signal < -70dBm)
+  - Intégré dans `safeNetworkOperations.autoOptimize()`
+  - **Fichiers modifiés** :
+    - `raspberry/sync-agent/src/agent.js` - Appel autoOptimize après détection profil
+  - **Migration** : Déployer le nouveau sync-agent
 
 ### v2.35.x (Janvier 2026)
 

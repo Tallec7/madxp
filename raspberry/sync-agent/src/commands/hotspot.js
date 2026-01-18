@@ -3,12 +3,16 @@ const util = require('util');
 const fs = require('fs-extra');
 const logger = require('../logger');
 const { config } = require('../config');
+const { safeNetworkOperations, OPERATIONS } = require('../services/safe-network-operations');
 
 const execAsync = util.promisify(exec);
 
 /**
  * Met à jour la configuration du hotspot WiFi (SSID et mot de passe)
- * Modifie /etc/hostapd/hostapd.conf et redémarre le service hostapd
+ * Utilise SafeNetworkOperations pour adapter le comportement au profil réseau.
+ *
+ * En environnement mesh : Les changements sont sauvegardés mais un reboot est requis
+ * En environnement simple : Les changements sont appliqués immédiatement
  *
  * @param {Object} data - { ssid?, password? }
  */
@@ -31,68 +35,65 @@ async function updateHotspot(data) {
     throw new Error('SSID must be 32 characters or less');
   }
 
-  const hostapdPath = '/etc/hostapd/hostapd.conf';
-  const backupPath = '/etc/hostapd/hostapd.conf.backup';
+  const results = {
+    success: true,
+    ssidUpdated: false,
+    passwordUpdated: false,
+    needsReboot: false,
+    message: '',
+  };
 
   try {
-    // Vérifier que hostapd.conf existe
-    if (!await fs.pathExists(hostapdPath)) {
-      throw new Error('hostapd.conf not found - hotspot not configured on this device');
-    }
-
-    // Lire la configuration actuelle
-    let hostapdContent = await fs.readFile(hostapdPath, 'utf8');
-
-    // Créer un backup
-    await execAsync(`sudo cp ${hostapdPath} ${backupPath}`);
-    logger.info('Backup created', { path: backupPath });
-
-    // Modifier le SSID si fourni
+    // Update SSID using safe operations
     if (ssid) {
-      hostapdContent = hostapdContent.replace(/^ssid=.*/m, `ssid=${ssid}`);
-      logger.info('SSID updated', { ssid });
+      const ssidResult = await safeNetworkOperations.executeOperation(
+        OPERATIONS.UPDATE_HOTSPOT_SSID,
+        { ssid }
+      );
+
+      if (!ssidResult.success && !ssidResult.blocked) {
+        throw new Error(ssidResult.error || 'Failed to update SSID');
+      }
+
+      results.ssidUpdated = true;
+      if (ssidResult.needsReboot) {
+        results.needsReboot = true;
+      }
     }
 
-    // Modifier le mot de passe si fourni
+    // Update password using safe operations
     if (password) {
-      hostapdContent = hostapdContent.replace(/^wpa_passphrase=.*/m, `wpa_passphrase=${password}`);
-      logger.info('WiFi password updated');
+      const passwordResult = await safeNetworkOperations.executeOperation(
+        OPERATIONS.UPDATE_HOTSPOT_PASSWORD,
+        { password }
+      );
+
+      if (!passwordResult.success && !passwordResult.blocked) {
+        throw new Error(passwordResult.error || 'Failed to update password');
+      }
+
+      results.passwordUpdated = true;
+      if (passwordResult.needsReboot) {
+        results.needsReboot = true;
+      }
     }
 
-    // Écrire la nouvelle configuration (via sudo car fichier root)
-    const tempPath = '/tmp/hostapd.conf.tmp';
-    await fs.writeFile(tempPath, hostapdContent);
-    await execAsync(`sudo mv ${tempPath} ${hostapdPath}`);
-    await execAsync(`sudo chmod 600 ${hostapdPath}`);
-
-    // Redémarrer hostapd pour appliquer les changements
-    logger.info('Restarting hostapd service...');
-    await execAsync('sudo systemctl restart hostapd');
-
-    // Attendre que le service soit actif
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    const { stdout } = await execAsync('sudo systemctl is-active hostapd');
-    const isActive = stdout.trim() === 'active';
-
-    if (!isActive) {
-      // Restaurer le backup si le service ne démarre pas
-      logger.error('hostapd failed to start, restoring backup');
-      await execAsync(`sudo cp ${backupPath} ${hostapdPath}`);
-      await execAsync('sudo systemctl restart hostapd');
-      throw new Error('Failed to restart hostapd with new configuration - backup restored');
+    // Build result message
+    if (results.needsReboot) {
+      results.message = 'Configuration saved. Reboot required to apply changes safely (mesh environment detected).';
+    } else {
+      results.message = 'Hotspot configuration updated and applied.';
     }
 
-    logger.info('Hotspot configuration updated successfully');
+    logger.info('Hotspot configuration updated', {
+      ssidUpdated: results.ssidUpdated,
+      passwordUpdated: results.passwordUpdated,
+      needsReboot: results.needsReboot,
+    });
 
-    return {
-      success: true,
-      message: 'Hotspot configuration updated',
-      ssidUpdated: !!ssid,
-      passwordUpdated: !!password,
-    };
+    return results;
   } catch (error) {
-    logger.error('Hotspot update failed:', error);
+    logger.error('Hotspot update failed', { error: error.message });
     throw error;
   }
 }
@@ -148,73 +149,63 @@ async function getHotspotConfig() {
 
 /**
  * Répare le hotspot WiFi
- * Exécute fix-hotspot.sh avec les options appropriées
+ * Utilise SafeNetworkOperations pour adapter le comportement au profil réseau.
  *
  * @param {Object} data - { autoFix?, rebootNow? }
  *   - autoFix: Si true, applique les corrections (change le canal dans la config)
  *   - rebootNow: Si true ET autoFix, redémarre le Pi après avoir changé la config
  *
- * IMPORTANT: Le changement de canal n'est PAS appliqué immédiatement car redémarrer
- * hostapd coupe la connexion WiFi cliente (wlan1). Le changement sera effectif
- * au prochain reboot du Pi.
+ * IMPORTANT: En environnement mesh, le changement de canal n'est PAS appliqué
+ * immédiatement car redémarrer hostapd coupe la connexion WiFi cliente (wlan1).
+ * Le changement sera effectif au prochain reboot du Pi.
  */
 async function fixHotspot(data) {
   const { autoFix = false, rebootNow = false } = data || {};
   logger.info('Running hotspot fix', { autoFix, rebootNow });
 
   try {
-    const scriptPath = config.paths.root + '/scripts/fix-hotspot.sh';
+    // Use SafeNetworkOperations for profile-aware behavior
+    const result = await safeNetworkOperations.executeOperation(
+      OPERATIONS.FIX_HOTSPOT,
+      { autoFix, rebootNow }
+    );
 
-    // Vérifier si le script existe
-    if (!await fs.pathExists(scriptPath)) {
-      logger.warn('fix-hotspot.sh not found, running manual hotspot check');
-      return await runManualHotspotDiagnostics();
-    }
-
-    // Construire les arguments
-    const args = ['--json'];
-    if (autoFix) {
-      args.push('--auto-fix');
-    }
-    if (autoFix && rebootNow) {
-      args.push('--reboot-now');
-    }
-
-    const { stdout, stderr } = await execAsync(`sudo bash ${scriptPath} ${args.join(' ')} 2>&1`, {
-      timeout: 120000, // 2 minutes max
-    });
-
-    // Parser le JSON retourné par le script
-    let result;
-    try {
-      result = JSON.parse(stdout.trim());
-    } catch (parseError) {
-      logger.warn('Failed to parse JSON output, returning raw output', { stdout });
+    // If operation was blocked (shouldn't happen for fix_hotspot)
+    if (result.blocked) {
       return {
-        success: true,
+        success: false,
+        blocked: true,
+        reason: result.reason,
         timestamp: new Date().toISOString(),
-        autoFix,
-        rebootNow,
-        output: stdout,
-        errors: stderr || null,
-        scriptPath,
       };
     }
 
-    // Ajouter des métadonnées
+    // Add metadata
     result.timestamp = new Date().toISOString();
     result.autoFix = autoFix;
-    result.rebootRequested = autoFix && rebootNow;
+
+    // If needs reboot and user requested it
+    if (result.needsReboot && rebootNow) {
+      logger.info('Reboot requested after fix_hotspot');
+      // Schedule reboot
+      setTimeout(() => {
+        execAsync('sudo reboot').catch(e => logger.error('Reboot failed', { error: e.message }));
+      }, 2000);
+      result.rebootInitiated = true;
+      result.message = 'Configuration saved and reboot initiated.';
+    } else if (result.needsReboot) {
+      result.message = 'Configuration saved. Reboot required to apply changes safely.';
+    }
 
     logger.info('Hotspot fix completed', {
-      channelChanged: result.fix?.channelChanged,
-      needsReboot: result.fix?.needsReboot,
-      rebootRequested: result.rebootRequested,
+      needsReboot: result.needsReboot,
+      rebootInitiated: result.rebootInitiated,
+      channelChanged: result.channelChanged,
     });
 
     return result;
   } catch (error) {
-    logger.error('Hotspot fix failed:', error);
+    logger.error('Hotspot fix failed', { error: error.message });
 
     // En cas d'erreur, tenter les diagnostics manuels
     try {

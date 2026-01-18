@@ -53,6 +53,21 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
         </button>
       </div>
 
+      <!-- Network Alert Banner -->
+      <div class="network-alert" *ngIf="showNetworkAlert()" [ngClass]="getNetworkAlertClass()">
+        <div class="alert-icon">{{ getNetworkAlertIcon() }}</div>
+        <div class="alert-content">
+          <strong>{{ getNetworkAlertTitle() }}</strong>
+          <p>{{ getNetworkAlertMessage() }}</p>
+        </div>
+        <div class="alert-actions" *ngIf="getNetworkAlertAction()">
+          <button class="btn btn-sm" (click)="handleNetworkAlertAction()">
+            {{ getNetworkAlertActionLabel() }}
+          </button>
+        </div>
+        <button class="alert-dismiss" (click)="dismissNetworkAlert()">×</button>
+      </div>
+
       <!-- Tabs Navigation -->
       <div class="tabs-nav">
         <button
@@ -495,6 +510,109 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
     @keyframes pulse-warning {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.7; }
+    }
+
+    /* Network Alert Banner */
+    .network-alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .alert-warning {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+    }
+
+    .alert-danger {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+    }
+
+    .alert-info {
+      background: #eff6ff;
+      border: 1px solid #93c5fd;
+    }
+
+    .alert-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+      margin-top: 0.125rem;
+    }
+
+    .alert-content {
+      flex: 1;
+    }
+
+    .alert-content strong {
+      display: block;
+      font-size: 0.9375rem;
+      margin-bottom: 0.375rem;
+    }
+
+    .alert-warning .alert-content strong { color: #92400e; }
+    .alert-danger .alert-content strong { color: #991b1b; }
+    .alert-info .alert-content strong { color: #1e40af; }
+
+    .alert-content p {
+      margin: 0;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      color: #64748b;
+    }
+
+    .alert-actions {
+      flex-shrink: 0;
+    }
+
+    .alert-actions .btn-sm {
+      padding: 0.5rem 1rem;
+      font-size: 0.8125rem;
+      border-radius: 8px;
+      background: white;
+      border: 1px solid #e2e8f0;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .alert-warning .alert-actions .btn-sm {
+      border-color: #fcd34d;
+      color: #92400e;
+    }
+
+    .alert-warning .alert-actions .btn-sm:hover {
+      background: #fef3c7;
+    }
+
+    .alert-danger .alert-actions .btn-sm {
+      border-color: #fca5a5;
+      color: #991b1b;
+    }
+
+    .alert-danger .alert-actions .btn-sm:hover {
+      background: #fee2e2;
+    }
+
+    .alert-dismiss {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: none;
+      border: none;
+      font-size: 1.25rem;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 0.25rem;
+      line-height: 1;
+    }
+
+    .alert-dismiss:hover {
+      color: #475569;
     }
 
     /* Tabs Navigation */
@@ -1401,5 +1519,152 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     }
 
     return lines.join('\n');
+  }
+
+  // ============================================================================
+  // Network Alert Banner Methods
+  // ============================================================================
+
+  private networkAlertDismissed: boolean = false;
+
+  /**
+   * Determine if we should show the network alert banner
+   */
+  showNetworkAlert(): boolean {
+    if (this.networkAlertDismissed) return false;
+
+    const profile = this.getNetworkProfile();
+    if (!profile) return false;
+
+    // Show alert for mesh with BSSID locked, mesh_isolated, or enterprise
+    if (profile.type === 'mesh' && profile.bssidLocked) return true;
+    if (profile.type === 'mesh_isolated') return true;
+    if (profile.type === 'enterprise') return true;
+
+    return false;
+  }
+
+  /**
+   * Get the CSS class for the alert banner
+   */
+  getNetworkAlertClass(): string {
+    const profile = this.getNetworkProfile();
+    if (!profile) return 'alert-info';
+
+    if (profile.type === 'mesh' && profile.bssidLocked) return 'alert-warning';
+    if (profile.type === 'mesh_isolated') return 'alert-danger';
+    if (profile.type === 'enterprise') return 'alert-info';
+
+    return 'alert-info';
+  }
+
+  /**
+   * Get the icon for the alert banner
+   */
+  getNetworkAlertIcon(): string {
+    const profile = this.getNetworkProfile();
+    if (!profile) return 'ℹ️';
+
+    if (profile.type === 'mesh' && profile.bssidLocked) return '⚠️';
+    if (profile.type === 'mesh_isolated') return '🔒';
+    if (profile.type === 'enterprise') return '🏢';
+
+    return 'ℹ️';
+  }
+
+  /**
+   * Get the title for the alert banner
+   */
+  getNetworkAlertTitle(): string {
+    const profile = this.getNetworkProfile();
+    if (!profile) return '';
+
+    if (profile.type === 'mesh' && profile.bssidLocked) {
+      return 'BSSID verrouillé dans un environnement mesh';
+    }
+    if (profile.type === 'mesh_isolated') {
+      return 'Réseau mesh avec isolation client détecté';
+    }
+    if (profile.type === 'enterprise') {
+      return 'Réseau enterprise détecté (802.1X)';
+    }
+
+    return '';
+  }
+
+  /**
+   * Get the message for the alert banner
+   */
+  getNetworkAlertMessage(): string {
+    const profile = this.getNetworkProfile();
+    if (!profile) return '';
+
+    if (profile.type === 'mesh' && profile.bssidLocked) {
+      return `Ce site est dans un environnement mesh WiFi avec ${profile.apCount} points d'accès, mais le BSSID est verrouillé. ` +
+             `Cela peut causer des déconnexions si le point d'accès verrouillé devient inaccessible. ` +
+             `Supprimez le verrouillage BSSID pour activer le roaming automatique.`;
+    }
+    if (profile.type === 'mesh_isolated') {
+      return `Ce site est dans un réseau mesh avec isolation client. Les appareils ne peuvent pas communiquer directement. ` +
+             `Utilisez la télécommande Cloud au lieu du hotspot local. Pour la maintenance SSH, utilisez un câble Ethernet.`;
+    }
+    if (profile.type === 'enterprise') {
+      return `Ce site est dans un réseau enterprise avec authentification 802.1X. ` +
+             `La configuration WiFi nécessite la coordination avec l'équipe IT du lieu.`;
+    }
+
+    return '';
+  }
+
+  /**
+   * Get the action type for the alert (if any)
+   */
+  getNetworkAlertAction(): string | null {
+    const profile = this.getNetworkProfile();
+    if (!profile) return null;
+
+    if (profile.type === 'mesh' && profile.bssidLocked) {
+      return 'remove_bssid_lock';
+    }
+    if (profile.type === 'mesh_isolated') {
+      return 'open_cloud_remote';
+    }
+
+    return null;
+  }
+
+  /**
+   * Get the action button label
+   */
+  getNetworkAlertActionLabel(): string {
+    const action = this.getNetworkAlertAction();
+    if (action === 'remove_bssid_lock') return 'Supprimer le verrou BSSID';
+    if (action === 'open_cloud_remote') return 'Ouvrir Remote Cloud';
+    return '';
+  }
+
+  /**
+   * Handle the alert action button click
+   */
+  handleNetworkAlertAction(): void {
+    const action = this.getNetworkAlertAction();
+
+    if (action === 'remove_bssid_lock') {
+      // Switch to debug tab where the user can remove the lock
+      this.activeTab = 'debug';
+      this.notificationService.info('Utilisez la section "WiFi Client" pour supprimer le verrouillage BSSID.');
+    }
+
+    if (action === 'open_cloud_remote') {
+      // Open cloud remote in a new tab
+      window.open(`/remote/${this.siteId}`, '_blank');
+    }
+  }
+
+  /**
+   * Dismiss the network alert
+   */
+  dismissNetworkAlert(): void {
+    this.networkAlertDismissed = true;
   }
 }
