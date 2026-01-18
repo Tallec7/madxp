@@ -1,3 +1,9 @@
+## [2.37.2](https://github.com/Tallec7/neopro/compare/v2.37.1...v2.37.2) (2026-01-18)
+
+### Bug Fixes
+
+- **cloud-remote:** add SCSS mixins for dark-mode patterns ([e5a6062](https://github.com/Tallec7/neopro/commit/e5a60627ce6af4447aeb82572d14942b1aa0c240))
+
 ## [2.37.1](https://github.com/Tallec7/neopro/compare/v2.37.0...v2.37.1) (2026-01-18)
 
 ### Bug Fixes
