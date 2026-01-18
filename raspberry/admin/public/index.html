@@ -426,6 +426,68 @@
             </div>
           </div>
 
+          <!-- Hotspot Diagnostic -->
+          <div class="card">
+            <div class="card-header">
+              <h3>📶 Diagnostic Hotspot WiFi</h3>
+            </div>
+            <div class="card-body">
+              <p class="hint-text">
+                Si le réseau WiFi du boîtier (NEOPRO-xxx) n'apparaît pas ou est instable, utilisez
+                ces outils pour diagnostiquer et corriger le problème.
+              </p>
+              <div class="hotspot-actions">
+                <button
+                  class="btn btn-warning"
+                  onclick="runHotspotDiagnostic(false)"
+                  id="hotspot-diag-btn"
+                >
+                  🔍 Diagnostiquer
+                </button>
+                <button
+                  class="btn btn-primary"
+                  onclick="runHotspotDiagnostic(true)"
+                  id="hotspot-fix-btn"
+                >
+                  🔧 Réparer automatiquement
+                </button>
+              </div>
+              <div id="hotspot-loading" style="display: none" class="loading-indicator">
+                <span class="spinner"></span>
+                <span
+                  >Cette opération peut prendre jusqu'à 2 minutes (scan des canaux WiFi)...</span
+                >
+              </div>
+              <div id="hotspot-result" style="display: none">
+                <!-- Diagnostic results will appear here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Reboot Confirmation Modal -->
+          <div id="reboot-modal" class="modal-overlay" style="display: none">
+            <div class="modal-content">
+              <h3>⚠️ Redémarrage nécessaire</h3>
+              <p id="reboot-modal-message">
+                Le canal WiFi a été modifié. Pour appliquer ce changement, le boîtier doit
+                redémarrer (~1 minute d'interruption).
+              </p>
+              <p class="warning-text">
+                ⚠️ La TV et la télécommande seront indisponibles pendant le redémarrage.
+              </p>
+              <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="cancelHotspotReboot()">Plus tard</button>
+                <button
+                  class="btn btn-danger"
+                  onclick="confirmHotspotReboot()"
+                  id="reboot-confirm-btn"
+                >
+                  🔄 Redémarrer maintenant
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Network Interfaces Info -->
           <div class="card">
             <div class="card-header">

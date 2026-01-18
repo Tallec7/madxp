@@ -1622,7 +1622,7 @@ Dans l'onglet Debug d'un site, la section "Hotspot WiFi" affiche :
 2. **Alimentation insuffisante** - Le Pi est branché sur un port USB de TV ou hub non alimenté (voltage < 5V)
 3. **Distance/obstacles** - Le WiFi 2.4GHz a une portée limitée (~10-15m), les murs épais ou structures métalliques bloquent le signal
 
-**Solution automatique (v2.28+) :**
+**Solution automatique au boot (v2.28+) :**
 
 Depuis la version 2.28, le Pi **optimise automatiquement le canal WiFi au démarrage** :
 
@@ -1641,7 +1641,21 @@ cat /var/log/neopro-hotspot-optimizer.log
 # [2026-01-18 10:30:02] SUCCESS: Hotspot now on channel 1
 ```
 
-**Diagnostic et réparation manuelle :**
+**Diagnostic et réparation depuis le dashboard central (v2.33+) :**
+
+1. Aller dans l'onglet **Debug** du site
+2. Section **Hotspot WiFi** → Cliquer **Réparer automatiquement**
+3. Si un changement de canal est nécessaire, un modal de confirmation apparaît
+4. Choisir **Redémarrer maintenant** (applique immédiatement) ou **Plus tard** (appliqué au prochain reboot)
+
+**Diagnostic et réparation depuis l'admin panel (:8080) :**
+
+1. Accéder à `http://neopro.local:8080` ou `http://192.168.4.1:8080`
+2. Onglet **Réseau** → Section **Diagnostic Hotspot WiFi**
+3. Cliquer **🔍 Diagnostiquer** pour voir l'état actuel
+4. Cliquer **🔧 Réparer automatiquement** pour corriger
+
+**Diagnostic et réparation via SSH :**
 
 ```bash
 # Sur le Pi (via Ethernet ou écran+clavier)
@@ -1650,8 +1664,14 @@ cd /home/pi/neopro/scripts
 # Mode diagnostic (affiche les problèmes sans corriger)
 ./fix-hotspot.sh
 
-# Mode auto-fix (corrige automatiquement)
+# Mode auto-fix (prépare le changement de canal - reboot requis)
 ./fix-hotspot.sh --auto-fix
+
+# Mode JSON pour intégration dashboard/admin
+./fix-hotspot.sh --json --auto-fix
+
+# Redémarrer immédiatement après correction
+./fix-hotspot.sh --auto-fix --reboot-now
 ```
 
 **Ce que fait le script :**
@@ -1659,8 +1679,10 @@ cd /home/pi/neopro/scripts
 - Vérifie l'alimentation (détecte sous-voltage)
 - Scanne les canaux WiFi et trouve le moins encombré (1, 6 ou 11)
 - Vérifie hostapd, dnsmasq, rfkill
-- Change automatiquement de canal si nécessaire
-- Redémarre les services hotspot
+- Change le canal dans la config **sans redémarrer hostapd** (préserve wlan1)
+- Le changement sera effectif au prochain reboot du Pi
+
+**⚠️ IMPORTANT (v2.33+)** : Le script ne redémarre plus automatiquement hostapd car cela coupe la connexion WiFi cliente (wlan1). Un reboot est requis pour appliquer le changement de canal. Cela permet de garder l'accès à distance au Pi.
 
 **Changer manuellement le channel :**
 
@@ -1670,11 +1692,8 @@ grep "^channel=" /etc/hostapd/hostapd.conf
 
 # Passer en channel 1 (souvent moins encombré que 6)
 sudo sed -i 's/channel=6/channel=1/' /etc/hostapd/hostapd.conf
-sudo systemctl restart hostapd
-
-# Ou channel 11
-sudo sed -i 's/channel=.*/channel=11/' /etc/hostapd/hostapd.conf
-sudo systemctl restart hostapd
+# Le changement sera appliqué au prochain reboot
+sudo reboot
 ```
 
 **Vérifier l'alimentation :**
@@ -1871,4 +1890,4 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (v2.28 - WiFi scanner avec BSSID lock, CORS Private Network Access, Hotspot Channel Optimizer)
+**Dernière mise à jour :** 18 janvier 2026 (v2.33 - Fix hotspot repair sans perte wlan1, modal confirmation reboot)

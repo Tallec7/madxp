@@ -1,0 +1,109 @@
+#!/bin/sh
+# Commit-msg hook for NEOPRO
+# Validates that commit messages follow Conventional Commits format
+#
+# Format: <type>(<scope>): <description>
+#
+# Types:
+#   feat     - New feature (minor release)
+#   fix      - Bug fix (patch release)
+#   docs     - Documentation only
+#   style    - Code style (formatting, semicolons, etc.)
+#   refactor - Code change that neither fixes a bug nor adds a feature
+#   perf     - Performance improvement
+#   test     - Adding or correcting tests
+#   build    - Build system or external dependencies
+#   ci       - CI configuration files and scripts
+#   chore    - Other changes that don't modify src or test files
+#   revert   - Reverts a previous commit
+#
+# Scope (optional): sites, auth, pi, central, dashboard, sync-agent, etc.
+#
+# Examples:
+#   feat(sites): add bulk delete endpoint
+#   fix(auth): handle expired tokens correctly
+#   docs(readme): update deployment instructions
+#   chore(release): 2.33.0
+
+# Get the commit message
+commit_msg=$(cat "$1")
+
+# Skip merge commits
+if echo "$commit_msg" | grep -qE "^Merge "; then
+  exit 0
+fi
+
+# Skip revert commits (auto-generated)
+if echo "$commit_msg" | grep -qE "^Revert "; then
+  exit 0
+fi
+
+# Skip version bump commits from semantic-release
+if echo "$commit_msg" | grep -qE "^chore\(release\): [0-9]+\.[0-9]+\.[0-9]+"; then
+  exit 0
+fi
+
+# Pattern for Conventional Commits
+# Type: required, from the list above
+# Scope: optional, in parentheses
+# Breaking: optional ! after type/scope
+# Description: required, lowercase start, no period at end
+pattern="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9-]+\))?(!)?: .{1,100}$"
+
+# Validate the first line (subject)
+first_line=$(echo "$commit_msg" | head -n1)
+
+if ! echo "$first_line" | grep -qE "$pattern"; then
+  echo ""
+  echo "❌ ERROR: Commit message does not follow Conventional Commits format!"
+  echo ""
+  echo "Your message: $first_line"
+  echo ""
+  echo "Expected format: <type>(<scope>): <description>"
+  echo ""
+  echo "Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+  echo ""
+  echo "Examples:"
+  echo "  feat(sites): add bulk delete endpoint"
+  echo "  fix(auth): handle expired tokens correctly"
+  echo "  docs: update README with new instructions"
+  echo "  chore(deps): update dependencies"
+  echo ""
+  echo "For breaking changes, add ! after the type/scope:"
+  echo "  feat(api)!: redesign authentication flow"
+  echo ""
+  echo "See: https://www.conventionalcommits.org/en/v1.0.0/"
+  echo ""
+  exit 1
+fi
+
+# Check that description starts with lowercase (unless it's an acronym or proper noun)
+description=$(echo "$first_line" | sed 's/^[a-z]*(\?[a-z0-9-]*)\?!*: //')
+first_char=$(echo "$description" | cut -c1)
+
+# Allow uppercase for acronyms (API, URL, SQL, etc.) or version numbers
+if echo "$first_char" | grep -qE "^[A-Z]$"; then
+  # Check if it's likely an acronym (followed by more uppercase or a number)
+  second_char=$(echo "$description" | cut -c2)
+  if ! echo "$second_char" | grep -qE "^[A-Z0-9]$"; then
+    echo ""
+    echo "⚠️  WARNING: Description should start with lowercase letter"
+    echo "Your description: $description"
+    echo ""
+    echo "Use: fix(auth): handle expired tokens"
+    echo "Not: fix(auth): Handle expired tokens"
+    echo ""
+    # This is a warning, not an error - don't exit
+  fi
+fi
+
+# Check that description doesn't end with a period
+if echo "$first_line" | grep -qE "\.$"; then
+  echo ""
+  echo "⚠️  WARNING: Description should not end with a period"
+  echo "Your message: $first_line"
+  echo ""
+  # This is a warning, not an error - don't exit
+fi
+
+exit 0

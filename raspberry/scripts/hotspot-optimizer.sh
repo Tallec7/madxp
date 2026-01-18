@@ -103,6 +103,13 @@ main() {
             log "Switching from channel $current_channel to $best_channel"
             set_channel "$best_channel"
 
+            # Check if wlan1 (WiFi client) is connected before restarting
+            wlan1_was_connected=false
+            if iwconfig wlan1 2>/dev/null | grep -q "ESSID:\""; then
+                wlan1_was_connected=true
+                log "Note: wlan1 is connected, will restore after restart"
+            fi
+
             # Restart hostapd to apply new channel
             log "Restarting hostapd..."
             systemctl restart hostapd
@@ -113,6 +120,25 @@ main() {
                 log "ERROR: hostapd failed to restart, reverting to channel $current_channel"
                 set_channel "$current_channel"
                 systemctl restart hostapd
+            fi
+
+            # Restore wlan1 connection if it was active and got disconnected
+            if [ "$wlan1_was_connected" = true ]; then
+                sleep 2
+                if ! iwconfig wlan1 2>/dev/null | grep -q "ESSID:\""; then
+                    log "Restoring wlan1 connection..."
+                    if systemctl is-active --quiet wpa_supplicant@wlan1; then
+                        systemctl restart wpa_supplicant@wlan1
+                    else
+                        wpa_cli -i wlan1 reconfigure 2>/dev/null
+                    fi
+                    sleep 5
+                    if iwconfig wlan1 2>/dev/null | grep -q "ESSID:\""; then
+                        log "wlan1 reconnected successfully"
+                    else
+                        log "WARNING: wlan1 may need manual reconnection"
+                    fi
+                fi
             fi
         else
             log "Current channel $current_channel is already the best option"

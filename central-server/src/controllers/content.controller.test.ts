@@ -17,6 +17,14 @@ jest.mock('../config/database', () => {
 // Mock supabase
 jest.mock('../config/supabase');
 
+// Mock FTP storage - priority storage backend
+jest.mock('../config/ftp-storage', () => ({
+  isFtpConfigured: jest.fn().mockReturnValue(true),
+  uploadFileToFtp: jest.fn(),
+  deleteFileFromFtp: jest.fn(),
+  getFtpPublicUrl: jest.fn().mockReturnValue('https://cdn.example.com/test.mp4'),
+}));
+
 // Mock deployment service
 jest.mock('../services/deployment.service');
 
@@ -35,6 +43,7 @@ import {
 } from './content.controller';
 import pool from '../config/database';
 import { uploadFile, deleteFile } from '../config/supabase';
+import { uploadFileToFtp, isFtpConfigured } from '../config/ftp-storage';
 import deploymentService from '../services/deployment.service';
 import { AuthRequest } from '../types';
 
@@ -165,24 +174,28 @@ describe('Content Controller', () => {
         });
         const res = createMockResponse();
 
-        (uploadFile as jest.Mock).mockResolvedValueOnce({
-          path: 'videos/uuid.mp4',
-          url: 'https://storage.example.com/videos/uuid.mp4',
+        // Mock FTP upload (priority backend)
+        (uploadFileToFtp as jest.Mock).mockResolvedValueOnce({
+          path: 'test-video.mp4',
+          url: 'https://cdn.example.com/test-video.mp4',
         });
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({
-          rows: [{
-            id: 'video-123',
-            name: 'uuid.mp4',
-            original_name: 'test-video.mp4',
-            category: 'sponsors',
-            size: 1024,
-          }],
-        });
+        // Mock generateUniqueFilename query (check if filename exists)
+        (pool.query as jest.Mock)
+          .mockResolvedValueOnce({ rows: [] }) // filename doesn't exist yet
+          .mockResolvedValueOnce({
+            rows: [{
+              id: 'video-123',
+              name: 'test-video.mp4',
+              original_name: 'test-video.mp4',
+              category: 'sponsors',
+              size: 1024,
+            }],
+          });
 
         await createVideo(req, res);
 
-        expect(uploadFile).toHaveBeenCalledWith(mockFile.buffer, expect.any(String), 'video/mp4');
+        expect(uploadFileToFtp).toHaveBeenCalledWith(mockFile.buffer, expect.any(String), 'video/mp4');
         expect(res.status).toHaveBeenCalledWith(201);
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
           id: 'video-123',
@@ -211,7 +224,11 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ file: mockFile as Express.Multer.File });
         const res = createMockResponse();
 
-        (uploadFile as jest.Mock).mockResolvedValueOnce(null);
+        // Mock generateUniqueFilename query
+        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+
+        // Mock FTP upload failure
+        (uploadFileToFtp as jest.Mock).mockResolvedValueOnce(null);
 
         await createVideo(req, res);
 
@@ -230,8 +247,12 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ file: mockFile as Express.Multer.File });
         const res = createMockResponse();
 
-        (uploadFile as jest.Mock).mockResolvedValueOnce({ path: 'test', url: 'http://test' });
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        // Mock generateUniqueFilename query first
+        (pool.query as jest.Mock)
+          .mockResolvedValueOnce({ rows: [] }) // filename check
+          .mockRejectedValueOnce(new Error('DB Error')); // INSERT fails
+
+        (uploadFileToFtp as jest.Mock).mockResolvedValueOnce({ path: 'test.mp4', url: 'http://test' });
 
         await createVideo(req, res);
 

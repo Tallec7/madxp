@@ -4,10 +4,12 @@
 # Script de diagnostic et réparation du hotspot WiFi Neopro
 #
 # Ce script analyse les interférences WiFi, vérifie l'alimentation,
-# et peut automatiquement changer de canal pour résoudre les problèmes.
+# et peut préparer un changement de canal (appliqué au prochain reboot).
 #
-# Usage: ./fix-hotspot.sh [--auto-fix]
-#   --auto-fix : Applique automatiquement les corrections recommandées
+# Usage: ./fix-hotspot.sh [OPTIONS]
+#   --auto-fix     : Prépare les corrections (canal changé dans config, reboot requis)
+#   --json         : Output en JSON (pour intégration dashboard/admin)
+#   --reboot-now   : Redémarre immédiatement après avoir appliqué les corrections
 ################################################################################
 
 # Couleurs
@@ -19,9 +21,29 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 AUTO_FIX=false
-if [ "$1" = "--auto-fix" ]; then
-    AUTO_FIX=true
-fi
+JSON_OUTPUT=false
+REBOOT_NOW=false
+
+for arg in "$@"; do
+    case $arg in
+        --auto-fix)
+            AUTO_FIX=true
+            ;;
+        --json)
+            JSON_OUTPUT=true
+            ;;
+        --reboot-now)
+            REBOOT_NOW=true
+            ;;
+    esac
+done
+
+# Variables pour le résultat JSON
+JSON_RESULT=""
+CHANNEL_CHANGED=false
+NEEDS_REBOOT=false
+OLD_CHANNEL=""
+NEW_CHANNEL=""
 
 print_header() {
     echo -e "${BLUE}"
@@ -299,23 +321,46 @@ apply_fixes() {
     print_section "5. Corrections"
 
     local FIXES_APPLIED=false
+    local RFKILL_FIXED=false
 
-    # Fix rfkill si bloqué
+    # Fix rfkill si bloqué (peut être appliqué immédiatement, sans risque)
     if rfkill list wifi 2>/dev/null | grep -q "Soft blocked: yes"; then
         print_info "Déblocage WiFi (rfkill)..."
         sudo rfkill unblock wifi
+        RFKILL_FIXED=true
         FIXES_APPLIED=true
         sleep 1
     fi
 
     # Changer de canal si recommandé
+    # IMPORTANT: On ne redémarre PAS hostapd car ça coupe wlan1 (connexion Internet)
+    # Le changement sera appliqué au prochain reboot du Pi
     if [ -n "$RECOMMENDED_CHANNEL" ]; then
         local CURRENT=$(grep "^channel=" /etc/hostapd/hostapd.conf 2>/dev/null | cut -d= -f2)
         if [ "$RECOMMENDED_CHANNEL" != "$CURRENT" ]; then
             if [ "$AUTO_FIX" = true ]; then
-                print_info "Changement de canal : $CURRENT → $RECOMMENDED_CHANNEL"
+                print_info "Préparation du changement de canal : $CURRENT → $RECOMMENDED_CHANNEL"
                 sudo sed -i "s/^channel=.*/channel=$RECOMMENDED_CHANNEL/" /etc/hostapd/hostapd.conf
+
+                # Sauvegarder pour le JSON
+                OLD_CHANNEL="$CURRENT"
+                NEW_CHANNEL="$RECOMMENDED_CHANNEL"
+                CHANNEL_CHANGED=true
+                NEEDS_REBOOT=true
                 FIXES_APPLIED=true
+
+                print_success "Configuration mise à jour (canal $CURRENT → $RECOMMENDED_CHANNEL)"
+                print_warning "⚠️  REDÉMARRAGE REQUIS pour appliquer le changement"
+                print_info "Le changement sera effectif au prochain redémarrage du boîtier"
+
+                # Si --reboot-now est passé, programmer le reboot
+                if [ "$REBOOT_NOW" = true ]; then
+                    print_warning "Redémarrage du boîtier dans 5 secondes..."
+                    echo ""
+                    print_warning "⚠️  La TV et la télécommande seront indisponibles pendant ~1 minute"
+                    sleep 5
+                    sudo reboot
+                fi
             else
                 echo ""
                 print_warning "Changement de canal recommandé : $CURRENT → $RECOMMENDED_CHANNEL"
@@ -324,24 +369,39 @@ apply_fixes() {
                 echo
                 if [[ $REPLY =~ ^[Oo]$ ]]; then
                     sudo sed -i "s/^channel=.*/channel=$RECOMMENDED_CHANNEL/" /etc/hostapd/hostapd.conf
+                    OLD_CHANNEL="$CURRENT"
+                    NEW_CHANNEL="$RECOMMENDED_CHANNEL"
+                    CHANNEL_CHANGED=true
+                    NEEDS_REBOOT=true
                     FIXES_APPLIED=true
+
+                    print_success "Configuration mise à jour"
+                    echo ""
+                    read -p "Redémarrer maintenant pour appliquer ? (o/N) " -n 1 -r
+                    echo
+                    if [[ $REPLY =~ ^[Oo]$ ]]; then
+                        print_warning "Redémarrage dans 3 secondes..."
+                        sleep 3
+                        sudo reboot
+                    else
+                        print_info "Le changement sera appliqué au prochain redémarrage"
+                    fi
                 fi
             fi
         fi
     fi
 
-    # Redémarrer les services si des corrections ont été appliquées
+    # Résumé
     if [ "$FIXES_APPLIED" = true ]; then
-        print_info "Redémarrage des services hotspot..."
-        sudo systemctl restart hostapd
-        sudo systemctl restart dnsmasq
-        sleep 3
-
-        # Vérifier que ça fonctionne
-        if systemctl is-active --quiet hostapd && systemctl is-active --quiet dnsmasq; then
-            print_success "Services redémarrés avec succès"
-        else
-            print_error "Erreur au redémarrage des services"
+        if [ "$RFKILL_FIXED" = true ] && [ "$CHANNEL_CHANGED" = false ]; then
+            # Seul rfkill a été corrigé, on peut redémarrer les services sans risque
+            print_info "Redémarrage des services hotspot..."
+            sudo systemctl restart hostapd
+            sudo systemctl restart dnsmasq
+            sleep 2
+            if systemctl is-active --quiet hostapd && systemctl is-active --quiet dnsmasq; then
+                print_success "Services hotspot redémarrés avec succès"
+            fi
         fi
     else
         print_info "Aucune correction nécessaire"
@@ -401,9 +461,73 @@ print_summary() {
 }
 
 ################################################################################
+# OUTPUT JSON (pour intégration dashboard/admin)
+################################################################################
+output_json() {
+    local CURRENT_CHANNEL=$(grep "^channel=" /etc/hostapd/hostapd.conf 2>/dev/null | cut -d= -f2)
+    local SSID=$(grep "^ssid=" /etc/hostapd/hostapd.conf 2>/dev/null | cut -d= -f2)
+    local HOSTAPD_ACTIVE=$(systemctl is-active --quiet hostapd && echo "true" || echo "false")
+    local DNSMASQ_ACTIVE=$(systemctl is-active --quiet dnsmasq && echo "true" || echo "false")
+    local THROTTLED=$(vcgencmd get_throttled 2>/dev/null | cut -d= -f2)
+    local POWER_OK="true"
+    if [ "$THROTTLED" != "0x0" ] && [ -n "$THROTTLED" ]; then
+        POWER_OK="false"
+    fi
+
+    cat << EOF
+{
+  "success": true,
+  "diagnostic": {
+    "currentChannel": $CURRENT_CHANNEL,
+    "recommendedChannel": ${RECOMMENDED_CHANNEL:-$CURRENT_CHANNEL},
+    "ssid": "$SSID",
+    "hostapdActive": $HOSTAPD_ACTIVE,
+    "dnsmasqActive": $DNSMASQ_ACTIVE,
+    "powerOk": $POWER_OK,
+    "throttledValue": "$THROTTLED"
+  },
+  "fix": {
+    "channelChanged": $CHANNEL_CHANGED,
+    "needsReboot": $NEEDS_REBOOT,
+    "oldChannel": "${OLD_CHANNEL:-}",
+    "newChannel": "${NEW_CHANNEL:-}"
+  },
+  "message": "$([ "$CHANNEL_CHANGED" = true ] && echo "Canal changé de $OLD_CHANNEL à $NEW_CHANNEL. Redémarrage requis pour appliquer." || echo "Diagnostic terminé.")"
+}
+EOF
+}
+
+################################################################################
 # EXÉCUTION
 ################################################################################
 
+# Mode JSON : pas d'affichage texte
+if [ "$JSON_OUTPUT" = true ]; then
+    # Exécuter les vérifications silencieusement
+    exec 3>&1 4>&2
+    exec 1>/dev/null 2>&1
+
+    check_power
+    POWER_OK=$?
+
+    scan_wifi_channels
+    CHANNEL_OK=$?
+
+    check_hotspot_services
+    SERVICES_OK=$?
+
+    # Appliquer les corrections si demandé
+    if [ "$AUTO_FIX" = true ]; then
+        apply_fixes
+    fi
+
+    # Restaurer stdout et afficher JSON
+    exec 1>&3 2>&4
+    output_json
+    exit 0
+fi
+
+# Mode normal (texte)
 print_header
 
 # Vérifications

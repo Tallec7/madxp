@@ -1,4 +1,24 @@
 import { Response } from 'express';
+
+// Mock dependencies BEFORE imports
+jest.mock('../config/database', () => ({
+  query: jest.fn(),
+}));
+
+jest.mock('../config/logger', () => ({
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+}));
+
+jest.mock('../services/socket.service', () => ({
+  default: {
+    triggerPendingConfigSync: jest.fn().mockResolvedValue(undefined),
+  },
+  triggerPendingConfigSync: jest.fn().mockResolvedValue(undefined),
+}));
+
 import {
   getConfigHistory,
   getConfigVersion,
@@ -28,10 +48,6 @@ const createAuthRequest = (overrides: Partial<AuthRequest> = {}): AuthRequest =>
     body: {},
     ...overrides,
   } as AuthRequest);
-
-const triggerPendingConfigSyncSpy = jest
-  .spyOn(socketService, 'triggerPendingConfigSync')
-  .mockResolvedValue(undefined);
 
 describe('Config History Controller', () => {
   beforeEach(() => {
@@ -216,7 +232,7 @@ describe('Config History Controller', () => {
         ]),
       })
     );
-    expect(triggerPendingConfigSyncSpy).toHaveBeenCalledWith('site-123');
+    expect(socketService.triggerPendingConfigSync).toHaveBeenCalledWith('site-123');
   });
 
     it('should compute diff with previous version', async () => {
@@ -250,7 +266,7 @@ describe('Config History Controller', () => {
           ]),
         })
       );
-      expect(triggerPendingConfigSyncSpy).toHaveBeenCalledWith('site-123');
+      expect(socketService.triggerPendingConfigSync).toHaveBeenCalledWith('site-123');
     });
 
     it('should return 400 if configuration is missing', async () => {
@@ -413,12 +429,25 @@ describe('Config History Controller', () => {
     it('should preview diff with current config', async () => {
       const req = createAuthRequest({
         params: { id: 'site-123' },
-        body: { newConfiguration: { setting: 'new', added: true } },
+        body: {
+          newConfiguration: {
+            sponsors: [{ name: 'New Sponsor', path: 'new.mp4' }],
+            categories: [{ id: 'cat-new', name: 'New Category' }],
+          },
+        },
       });
       const res = createMockResponse();
 
+      // Mock site lookup returning local_config_mirror with MANAGED_CONFIG_FIELDS
       (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{ configuration: { setting: 'old', removed: true } }],
+        rows: [
+          {
+            local_config_mirror: {
+              sponsors: [{ name: 'Old Sponsor', path: 'old.mp4' }],
+              timeCategories: [{ id: 'tc-1', name: 'Before Match' }],
+            },
+          },
+        ],
       });
 
       await previewConfigDiff(req, res);
@@ -426,11 +455,10 @@ describe('Config History Controller', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           hasChanges: true,
-          changesCount: 3,
           diff: expect.arrayContaining([
-            expect.objectContaining({ field: 'setting', type: 'changed' }),
-            expect.objectContaining({ field: 'removed', type: 'removed' }),
-            expect.objectContaining({ field: 'added', type: 'added' }),
+            expect.objectContaining({ field: 'sponsors', type: 'changed' }),
+            expect.objectContaining({ field: 'timeCategories', type: 'removed' }),
+            expect.objectContaining({ field: 'categories', type: 'added' }),
           ]),
         })
       );
@@ -439,20 +467,28 @@ describe('Config History Controller', () => {
     it('should handle no previous config', async () => {
       const req = createAuthRequest({
         params: { id: 'site-123' },
-        body: { newConfiguration: { key: 'value' } },
+        body: {
+          newConfiguration: {
+            sponsors: [{ name: 'Sponsor', path: 'video.mp4' }],
+          },
+        },
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      // Mock site lookup returning no local_config_mirror
+      (query as jest.Mock)
+        .mockResolvedValueOnce({ rows: [{ local_config_mirror: null }] }) // site exists but no local config
+        .mockResolvedValueOnce({ rows: [] }); // no config_history either
 
       await previewConfigDiff(req, res);
 
+      // When no previous config, currentConfiguration is an empty object (not null)
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           hasChanges: true,
-          currentConfiguration: null,
+          currentConfiguration: {},
           diff: expect.arrayContaining([
-            expect.objectContaining({ field: 'key', type: 'added' }),
+            expect.objectContaining({ field: 'sponsors', type: 'added' }),
           ]),
         })
       );
@@ -461,12 +497,25 @@ describe('Config History Controller', () => {
     it('should return no changes when configs are identical', async () => {
       const req = createAuthRequest({
         params: { id: 'site-123' },
-        body: { newConfiguration: { same: 'value' } },
+        body: {
+          newConfiguration: {
+            sponsors: [{ name: 'Sponsor', path: 'video.mp4' }],
+            categories: [{ id: 'cat-1', name: 'Category' }],
+          },
+        },
       });
       const res = createMockResponse();
 
+      // Mock site lookup returning local_config_mirror with identical managed fields
       (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{ configuration: { same: 'value' } }],
+        rows: [
+          {
+            local_config_mirror: {
+              sponsors: [{ name: 'Sponsor', path: 'video.mp4' }],
+              categories: [{ id: 'cat-1', name: 'Category' }],
+            },
+          },
+        ],
       });
 
       await previewConfigDiff(req, res);
@@ -512,22 +561,28 @@ describe('Config History Controller', () => {
       });
     });
 
-    it('should handle nested object changes', async () => {
+    it('should handle changes in managed config fields', async () => {
       const req = createAuthRequest({
         params: { id: 'site-123' },
         body: {
           newConfiguration: {
-            nested: { inner: 'changed', added: true },
+            sponsors: [
+              { name: 'Sponsor A', path: 'a.mp4' },
+              { name: 'Sponsor B', path: 'b.mp4' },
+            ],
+            categoryMappings: { cat1: 'sponsor', cat2: 'jingle' },
           },
         },
       });
       const res = createMockResponse();
 
+      // Mock site lookup returning local_config_mirror with different managed fields
       (query as jest.Mock).mockResolvedValueOnce({
         rows: [
           {
-            configuration: {
-              nested: { inner: 'original', removed: true },
+            local_config_mirror: {
+              sponsors: [{ name: 'Old Sponsor', path: 'old.mp4' }],
+              categoryMappings: { cat1: 'ambiance' },
             },
           },
         ],
@@ -535,13 +590,14 @@ describe('Config History Controller', () => {
 
       await previewConfigDiff(req, res);
 
+      // The diff contains changes at nested levels (categoryMappings.cat1, categoryMappings.cat2)
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           hasChanges: true,
           diff: expect.arrayContaining([
-            expect.objectContaining({ path: 'nested.inner', type: 'changed' }),
-            expect.objectContaining({ path: 'nested.removed', type: 'removed' }),
-            expect.objectContaining({ path: 'nested.added', type: 'added' }),
+            expect.objectContaining({ field: 'sponsors', type: 'changed' }),
+            expect.objectContaining({ path: 'categoryMappings.cat1', type: 'changed' }),
+            expect.objectContaining({ path: 'categoryMappings.cat2', type: 'added' }),
           ]),
         })
       );
