@@ -1,3 +1,9 @@
+## [2.33.1](https://github.com/Tallec7/neopro/compare/v2.33.0...v2.33.1) (2026-01-18)
+
+### Bug Fixes
+
+- **remote:** fix TypeScript errors in remote controller ([#382](https://github.com/Tallec7/neopro/issues/382)) ([d194de7](https://github.com/Tallec7/neopro/commit/d194de7d2494c8fab5a7e3351bbb711e7a96e05f))
+
 # [2.33.0](https://github.com/Tallec7/neopro/compare/v2.32.3...v2.33.0) (2026-01-18)
 
 ### Features
