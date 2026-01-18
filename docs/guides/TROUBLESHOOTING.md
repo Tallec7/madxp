@@ -94,7 +94,7 @@ sudo systemctl restart dnsmasq
 
 #### 3. Problème mDNS (neopro.local ne fonctionne pas)
 
-**Solution temporaire :** Utiliser l'IP directe `192.168.4.1`
+**Solution temporaire :** Utiliser l'IP directe `192.168.4.1` (hotspot) ou l'IP Ethernet
 
 ```bash
 # Accès direct par IP
@@ -102,7 +102,7 @@ http://192.168.4.1/login
 http://192.168.4.1:8080
 ```
 
-**Solution permanente :**
+**Diagnostic sur le Pi :**
 
 ```bash
 ssh pi@192.168.4.1
@@ -110,12 +110,60 @@ ssh pi@192.168.4.1
 # Vérifier avahi
 sudo systemctl status avahi-daemon
 
-# Redémarrer avahi
-sudo systemctl restart avahi-daemon
+# Vérifier les erreurs dans les logs (IMPORTANT)
+sudo journalctl -u avahi-daemon -n 30 --no-pager | grep -i error
+```
 
-# Vérifier le hostname
-hostname -f
-# Devrait afficher : neopro.local
+**Bug connu (versions < 2.33)** : Le fichier `/etc/avahi/services/neopro.service` contenait des commentaires `#` invalides en XML, ce qui empêchait avahi de charger la configuration mDNS.
+
+**Symptôme dans les logs** :
+
+```
+XML_ParseBuffer() failed at line 1: not well-formed (invalid token)
+Failed to load service group file /services/neopro.service, ignoring.
+```
+
+**Solution (obligatoire pour les Pi installés avant v2.33)** :
+
+```bash
+sudo tee /etc/avahi/services/neopro.service > /dev/null << 'EOF'
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">Neopro %h</name>
+  <service>
+    <type>_http._tcp</type>
+    <port>80</port>
+    <txt-record>path=/</txt-record>
+  </service>
+  <service>
+    <type>_neopro._tcp</type>
+    <port>3000</port>
+    <txt-record>version=1.0</txt-record>
+  </service>
+</service-group>
+EOF
+sudo systemctl restart avahi-daemon
+```
+
+**Vérifier que le fix a fonctionné** :
+
+```bash
+sudo journalctl -u avahi-daemon -n 10 --no-pager | grep neopro
+# Doit afficher : Loading service file /services/neopro.service.
+# Sans erreur XML
+```
+
+**Sur votre Mac/PC** (si le problème persiste après le fix sur le Pi) :
+
+```bash
+# Vider le cache DNS
+sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+
+# Vérifier les anciennes entrées dans /etc/hosts
+cat /etc/hosts | grep neopro
+# Si une ancienne IP apparaît, la supprimer :
+sudo sed -i '' '/neopro.local/d' /etc/hosts
 ```
 
 #### 4. Android refuse de se connecter au hotspot WiFi
