@@ -1,3 +1,9 @@
+## [2.32.3](https://github.com/Tallec7/neopro/compare/v2.32.2...v2.32.3) (2026-01-18)
+
+### Bug Fixes
+
+- **admin:** fix mDNS avahi service and admin demo mode detection ([#378](https://github.com/Tallec7/neopro/issues/378)) ([5cabd65](https://github.com/Tallec7/neopro/commit/5cabd65d7effc881f62ff35c5c0554e142f40cda))
+
 ## [2.32.2](https://github.com/Tallec7/neopro/compare/v2.32.1...v2.32.2) (2026-01-18)
 
 ### Bug Fixes
