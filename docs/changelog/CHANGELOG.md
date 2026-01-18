@@ -1,3 +1,9 @@
+## [2.35.1](https://github.com/Tallec7/neopro/compare/v2.35.0...v2.35.1) (2026-01-18)
+
+### Bug Fixes
+
+- **qr-code:** use correct dashboard URL from environment ([72243b2](https://github.com/Tallec7/neopro/commit/72243b2ab7f8156b8fb577aac9f0ae0634120f95))
+
 # [2.35.0](https://github.com/Tallec7/neopro/compare/v2.34.0...v2.35.0) (2026-01-18)
 
 ### Features
