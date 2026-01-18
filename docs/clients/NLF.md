@@ -295,21 +295,6 @@ GET  /api/remote/:siteId/videos   → Liste des vidéos disponibles
 
 ---
 
-## Notes diverses
-
-_(Ajouter ici toute information utile découverte au fil du temps)_
-
-- Le réseau NLFH semble avoir 3+ répéteurs couvrant une grande surface
-- Signal parfois faible selon l'emplacement du Pi
-- ...
-
----
-
-**Dernière mise à jour :** 18 janvier 2026
-- **Isolation client activée** - Voir section dédiée ci-dessus
-
----
-
 ## Incident : neopro.local inaccessible sur iPhone (18 janvier 2026)
 
 ### Symptôme
@@ -365,6 +350,17 @@ grep neopro /etc/dnsmasq.conf
 
 - Utiliser `http://192.168.4.1/remote` (IP directe)
 - Ou utiliser la télécommande cloud : `https://dashboard.neopro.tv/remote/{siteId}`
+
+---
+
+## Notes diverses
+
+_(Ajouter ici toute information utile découverte au fil du temps)_
+
+- Le réseau NLFH semble avoir 3+ répéteurs couvrant une grande surface
+- Signal parfois faible selon l'emplacement du Pi
+- **Isolation client activée** - Voir section dédiée ci-dessus
+- ...
 
 ---
 
