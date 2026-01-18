@@ -1,3 +1,9 @@
+# [2.33.0](https://github.com/Tallec7/neopro/compare/v2.32.3...v2.33.0) (2026-01-18)
+
+### Features
+
+- **remote:** add cloud-based remote control for mesh WiFi environments ([#379](https://github.com/Tallec7/neopro/issues/379)) ([159a250](https://github.com/Tallec7/neopro/commit/159a250ea8e6a6f7873f8ab44bffb2cf5cd1565e))
+
 ## [2.32.3](https://github.com/Tallec7/neopro/compare/v2.32.2...v2.32.3) (2026-01-18)
 
 ### Bug Fixes
