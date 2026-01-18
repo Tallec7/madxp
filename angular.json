@@ -198,7 +198,8 @@
                 "output": "/"
               }
             ],
-            "styles": ["central-dashboard/src/styles.scss"]
+            "styles": ["central-dashboard/src/styles.scss"],
+            "allowedCommonJsDependencies": ["qrcode"]
           },
           "configurations": {
             "production": {

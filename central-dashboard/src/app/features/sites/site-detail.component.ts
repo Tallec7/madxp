@@ -311,7 +311,7 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
         <div *ngIf="activeTab === 'content'" class="tab-panel">
           <app-site-content-tab
             [siteId]="siteId"
-            [siteName]="site?.site_name || site?.club_name || ''"
+            [siteName]="site.site_name || site.club_name || ''"
             [isConnected]="isConnected"
             (configDeployed)="onConfigDeployed()"
           ></app-site-content-tab>
