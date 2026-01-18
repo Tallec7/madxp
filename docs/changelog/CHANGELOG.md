@@ -1,3 +1,9 @@
+## [2.32.2](https://github.com/Tallec7/neopro/compare/v2.32.1...v2.32.2) (2026-01-18)
+
+### Bug Fixes
+
+- **central-server:** ESLint, tests, schema sync + hotspot wlan1 fix documentation ([#377](https://github.com/Tallec7/neopro/issues/377)) ([9ab1df7](https://github.com/Tallec7/neopro/commit/9ab1df7e030775171eea3ee9d8f1ccab2cddfcaa))
+
 ## [2.32.1](https://github.com/Tallec7/neopro/compare/v2.32.0...v2.32.1) (2026-01-18)
 
 ### Bug Fixes
