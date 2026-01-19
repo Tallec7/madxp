@@ -1,3 +1,9 @@
+## [2.40.3](https://github.com/Tallec7/neopro/compare/v2.40.2...v2.40.3) (2026-01-19)
+
+### Bug Fixes
+
+- **setup:** add missing files to online installation script ([f77dd70](https://github.com/Tallec7/neopro/commit/f77dd70f7653b1878e98efea0e4129e5aeec639b))
+
 ## [2.40.2](https://github.com/Tallec7/neopro/compare/v2.40.1...v2.40.2) (2026-01-19)
 
 ### Bug Fixes
