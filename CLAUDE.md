@@ -324,15 +324,23 @@ POST   /api/assets/watermark/validate   → Valide une configuration watermark
 POST   /api/assets/deploy/:siteId       → Déploie un asset existant vers un site
 ```
 
-### Remote Cloud (Télécommande via Internet) ⚡ UPDATED (v2.39)
+### Remote Cloud (Télécommande via Internet) ⚡ UPDATED (v2.41)
 
 Permet de contrôler un site à distance depuis n'importe quel réseau (utile pour les réseaux mesh avec isolation client).
+
+**⚠️ IMPORTANT** : Ces routes sont **PUBLIQUES** (pas d'authentification requise) car elles sont utilisées par les utilisateurs qui scannent le QR code depuis leur téléphone (staff du club, bénévoles, etc.)
 
 ```
 GET  /api/remote/:siteId/state    → État du site (config, vidéos locales, connexion)
 POST /api/remote/:siteId/command  → Envoyer une commande (score, phase, vidéo...)
 GET  /api/remote/:siteId/videos   → Liste des vidéos organisées par catégorie
 ```
+
+**Sécurité** (sans JWT) :
+
+- L'UUID du site est difficile à deviner
+- Rate limiting : 30 req/min par IP
+- Le site doit être online pour recevoir les commandes
 
 **Commandes supportées** (POST `/command` avec `{ type, data }`) :
 
@@ -347,7 +355,7 @@ GET  /api/remote/:siteId/videos   → Liste des vidéos organisées par catégor
 | `breaking-news` | `{message, duration?, position?}`                 | Message défilant       |
 | `match-config`  | `{sessionId, matchDate, matchName}`               | Configuration du match |
 
-**Accès** : `https://dashboard.neopro.tv/remote/{siteId}` (authentification requise)
+**Accès** : `https://neopro-admin.kalonpartners.bzh/remote/{siteId}` (accès public via QR code)
 
 **Architecture du relay (v2.39+)** :
 
@@ -2005,6 +2013,46 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.41.x (Janvier 2026)
+
+- **Cloud Remote accessible publiquement** : L'accès à `/remote/:siteId` ne requiert plus d'authentification
+  - **Problème résolu** : Le QR Code Cloud Remote redirigeait vers la page de login au lieu de la télécommande
+  - **Solution** :
+    - Suppression du `authGuard` sur la route Angular `/remote/:siteId`
+    - Suppression du middleware `authenticate` sur les routes API `/api/remote/*`
+    - Conservation du `sensitiveRateLimit` (30 req/min par IP) pour la sécurité
+  - **Sécurité** (sans JWT) :
+    - L'UUID du site est difficile à deviner (128 bits d'entropie)
+    - Rate limiting : 30 req/min par IP
+    - Le site doit être online pour recevoir les commandes
+  - **Fichiers modifiés** :
+    - `central-dashboard/src/app/app.routes.ts` - Route `/remote/:siteId` sans authGuard
+    - `central-server/src/routes/remote.routes.ts` - Routes sans middleware authenticate
+  - **Migration** : Redéployer le dashboard et le central-server
+
+- **Fix configuration Hotspot pour Pi en Ethernet** : Les modifications hotspot s'appliquent immédiatement sur les Pi connectés en Ethernet
+  - **Problème** : La modification du SSID/password du hotspot via le dashboard ne prenait pas effet sur les Pi en Ethernet
+  - **Cause racine** : Le profil `ETHERNET` manquait dans la `SAFETY_MATRIX` de `SafeNetworkOperations`
+  - **Symptôme** : Le Pi tombait en fallback `UNKNOWN` → méthode `defer_reboot` au lieu de `restart`
+  - **Solution** : Ajout du profil `ETHERNET` avec `method: 'restart'` pour toutes les opérations hotspot
+  - **Fichier modifié** :
+    - `raspberry/sync-agent/src/services/safe-network-operations.js` - Ajout `ETHERNET` dans `SAFETY_MATRIX`
+  - **Migration Pi existants** :
+    ```bash
+    scp raspberry/sync-agent/src/services/safe-network-operations.js pi@neopro.local:/home/pi/neopro/sync-agent/src/services/
+    ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
+    ```
+
+- **Fix affichage SSID dans QR Code** : Le générateur QR Code affiche maintenant le bon SSID
+  - **Problème** : Le QR Code affichait un ancien SSID (ex: `NEOPRO-NLF`) différent de celui affiché dans la section Hotspot (ex: `NEOPRO-NARH`)
+  - **Cause racine** : `getWifiSsid()` lisait `_hotspotSsid` (ancien format) au lieu de `_hotspotInfo.ssid` (nouveau format)
+  - **Solution** :
+    - Priorité de lecture : `currentHotspotSsid` (API) → `_hotspotInfo.ssid` → `_hotspotSsid` → génération depuis clubName
+    - Reset du cache `realSsid` dans `ngOnChanges` lors du changement de site
+  - **Fichier modifié** :
+    - `central-dashboard/src/app/features/sites/components/site-settings-tab/site-settings-tab.component.ts`
+  - **Migration** : Rebuild et redéployer le dashboard
 
 ### v2.40.x (Janvier 2026)
 
