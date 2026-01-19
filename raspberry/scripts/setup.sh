@@ -113,6 +113,11 @@ download_installation_files() {
     curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-admin.service" -o config/systemd/neopro-admin.service
     curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-kiosk.service" -o config/systemd/neopro-kiosk.service 2>/dev/null || true
     curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-sync-agent.service" -o config/systemd/neopro-sync-agent.service 2>/dev/null || true
+    # Services ajoutés v2.28+ (watchdogs réseau)
+    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-hotspot-watchdog.service" -o config/systemd/neopro-hotspot-watchdog.service 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-hotspot-optimizer.service" -o config/systemd/neopro-hotspot-optimizer.service 2>/dev/null || true
+    # Service ajouté v2.40+ (guardian sync-agent)
+    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-sync-guardian.service" -o config/systemd/neopro-sync-guardian.service 2>/dev/null || true
 
     print_step "Téléchargement du serveur Node.js..."
     mkdir -p server
@@ -143,7 +148,12 @@ download_installation_files() {
     done
 
     # Commands du sync-agent (CRITIQUES pour update_config, deploy_video, etc.)
+    # Fichiers principaux
     for file in index.js deploy-video.js update-software.js remote-shell.js delete-video.js; do
+        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/commands/$file" -o "sync-agent/src/commands/$file" 2>/dev/null || true
+    done
+    # Modules extraits v2.33+ (refactoring commands/index.js)
+    for file in update-config.js diagnostics.js hotspot.js network-diagnostics.js debug-bundle.js analytics-buffer.js deploy-asset.js; do
         curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/commands/$file" -o "sync-agent/src/commands/$file" 2>/dev/null || true
     done
 
@@ -152,8 +162,8 @@ download_installation_files() {
         curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/watchers/$file" -o "sync-agent/src/watchers/$file" 2>/dev/null || true
     done
 
-    # Services du sync-agent (connexion, queue offline, historique)
-    for file in connection-status.js offline-queue.js sync-history.js; do
+    # Services du sync-agent (connexion, queue offline, historique, réseau)
+    for file in connection-status.js offline-queue.js sync-history.js network-detector.js network-watchdog.js safe-network-operations.js; do
         curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/services/$file" -o "sync-agent/src/services/$file" 2>/dev/null || true
     done
 
@@ -182,6 +192,11 @@ download_installation_files() {
     curl -sSL "$GITHUB_RAW/raspberry/scripts/kiosk-watchdog.sh" -o scripts/kiosk-watchdog.sh 2>/dev/null || true
     curl -sSL "$GITHUB_RAW/raspberry/scripts/generate-thumbnail.sh" -o scripts/generate-thumbnail.sh 2>/dev/null || true
     curl -sSL "$GITHUB_RAW/raspberry/scripts/generate-all-thumbnails.sh" -o scripts/generate-all-thumbnails.sh 2>/dev/null || true
+    # Scripts watchdogs réseau (ajoutés v2.28+)
+    curl -sSL "$GITHUB_RAW/raspberry/scripts/hotspot-watchdog.sh" -o scripts/hotspot-watchdog.sh 2>/dev/null || true
+    curl -sSL "$GITHUB_RAW/raspberry/scripts/hotspot-optimizer.sh" -o scripts/hotspot-optimizer.sh 2>/dev/null || true
+    # Script guardian sync-agent (ajouté v2.40+)
+    curl -sSL "$GITHUB_RAW/raspberry/scripts/sync-agent-guardian.sh" -o scripts/sync-agent-guardian.sh 2>/dev/null || true
 
     chmod +x scripts/*.sh 2>/dev/null || true
 
