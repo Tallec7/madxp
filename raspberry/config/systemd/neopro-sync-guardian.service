@@ -1,0 +1,35 @@
+[Unit]
+Description=Neopro Sync-Agent Guardian (Watchdog)
+Documentation=https://github.com/Tallec7/neopro
+After=network-online.target neopro-sync-agent.service
+Wants=network-online.target
+
+# Ce service doit démarrer APRÈS le sync-agent mais ne doit PAS dépendre de lui
+# pour pouvoir le surveiller et le restaurer s'il crashe
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+# Le guardian doit tourner en root pour pouvoir :
+# - Redémarrer les services systemd
+# - Modifier les fichiers dans /home/pi/neopro
+
+ExecStart=/home/pi/neopro/scripts/sync-agent-guardian.sh start
+
+# Restart policy - le guardian lui-même doit être ultra résilient
+Restart=always
+RestartSec=10
+
+# Limites de ressources (le guardian est très léger)
+MemoryMax=50M
+CPUQuota=5%
+
+# Logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=neopro-sync-guardian
+
+[Install]
+WantedBy=multi-user.target

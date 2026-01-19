@@ -775,6 +775,24 @@ configure_services() {
         print_success "Service neopro-hotspot-optimizer configuré"
     fi
 
+    # Service sync-agent-guardian (watchdog pour maintenir la connexion cloud)
+    if [ -f "${SERVICE_DIR}/neopro-sync-guardian.service" ]; then
+        cp "${SERVICE_DIR}/neopro-sync-guardian.service" /etc/systemd/system/
+
+        # Copier le script guardian
+        local SCRIPT_DIR="./scripts"
+        if [ -f "${SCRIPT_DIR}/sync-agent-guardian.sh" ]; then
+            cp "${SCRIPT_DIR}/sync-agent-guardian.sh" /home/pi/neopro/scripts/
+            chmod +x /home/pi/neopro/scripts/sync-agent-guardian.sh
+        fi
+
+        systemctl enable neopro-sync-guardian.service
+        print_success "Service neopro-sync-guardian configuré"
+
+        # Créer la version golden initiale après que tout soit installé
+        print_info "La version 'golden' du sync-agent sera créée au premier démarrage stable"
+    fi
+
     # Rechargement systemd
     systemctl daemon-reload
 

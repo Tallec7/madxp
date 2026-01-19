@@ -31,6 +31,7 @@ const OPERATIONS = {
 const SAFETY_MATRIX = {
   [OPERATIONS.SET_BSSID_LOCK]: {
     [PROFILE_TYPES.SIMPLE]: { allowed: true, method: 'direct' },
+    [PROFILE_TYPES.ETHERNET]: { allowed: true, method: 'direct' },
     [PROFILE_TYPES.MESH]: { allowed: false, reason: 'BSSID lock is dangerous in mesh environments' },
     [PROFILE_TYPES.MESH_ISOLATED]: { allowed: false, reason: 'BSSID lock is dangerous in mesh environments' },
     [PROFILE_TYPES.ENTERPRISE]: { allowed: false, reason: 'BSSID lock is not recommended in enterprise networks' },
@@ -38,6 +39,7 @@ const SAFETY_MATRIX = {
   },
   [OPERATIONS.REMOVE_BSSID_LOCK]: {
     [PROFILE_TYPES.SIMPLE]: { allowed: true, method: 'direct' },
+    [PROFILE_TYPES.ETHERNET]: { allowed: true, method: 'direct' },
     [PROFILE_TYPES.MESH]: { allowed: true, method: 'direct' },
     [PROFILE_TYPES.MESH_ISOLATED]: { allowed: true, method: 'direct' },
     [PROFILE_TYPES.ENTERPRISE]: { allowed: true, method: 'direct' },
@@ -45,6 +47,7 @@ const SAFETY_MATRIX = {
   },
   [OPERATIONS.UPDATE_HOTSPOT_SSID]: {
     [PROFILE_TYPES.SIMPLE]: { allowed: true, method: 'restart' },
+    [PROFILE_TYPES.ETHERNET]: { allowed: true, method: 'restart' },
     [PROFILE_TYPES.MESH]: { allowed: true, method: 'defer_reboot', reason: 'Reboot required to avoid wlan1 disruption' },
     [PROFILE_TYPES.MESH_ISOLATED]: { allowed: true, method: 'defer_reboot', reason: 'Reboot required to avoid wlan1 disruption' },
     [PROFILE_TYPES.ENTERPRISE]: { allowed: true, method: 'defer_reboot', reason: 'Reboot required to avoid wlan1 disruption' },
@@ -52,6 +55,7 @@ const SAFETY_MATRIX = {
   },
   [OPERATIONS.UPDATE_HOTSPOT_PASSWORD]: {
     [PROFILE_TYPES.SIMPLE]: { allowed: true, method: 'restart' },
+    [PROFILE_TYPES.ETHERNET]: { allowed: true, method: 'restart' },
     [PROFILE_TYPES.MESH]: { allowed: true, method: 'defer_reboot', reason: 'Reboot required to avoid wlan1 disruption' },
     [PROFILE_TYPES.MESH_ISOLATED]: { allowed: true, method: 'defer_reboot', reason: 'Reboot required to avoid wlan1 disruption' },
     [PROFILE_TYPES.ENTERPRISE]: { allowed: true, method: 'defer_reboot', reason: 'Reboot required to avoid wlan1 disruption' },
@@ -59,6 +63,7 @@ const SAFETY_MATRIX = {
   },
   [OPERATIONS.UPDATE_HOTSPOT_CHANNEL]: {
     [PROFILE_TYPES.SIMPLE]: { allowed: true, method: 'restart' },
+    [PROFILE_TYPES.ETHERNET]: { allowed: true, method: 'restart' },
     [PROFILE_TYPES.MESH]: { allowed: true, method: 'defer_reboot', reason: 'Reboot required to avoid wlan1 disruption' },
     [PROFILE_TYPES.MESH_ISOLATED]: { allowed: true, method: 'defer_reboot', reason: 'Reboot required to avoid wlan1 disruption' },
     [PROFILE_TYPES.ENTERPRISE]: { allowed: true, method: 'defer_reboot', reason: 'Reboot required to avoid wlan1 disruption' },
@@ -66,6 +71,7 @@ const SAFETY_MATRIX = {
   },
   [OPERATIONS.FIX_HOTSPOT]: {
     [PROFILE_TYPES.SIMPLE]: { allowed: true, method: 'direct' },
+    [PROFILE_TYPES.ETHERNET]: { allowed: true, method: 'direct' },
     [PROFILE_TYPES.MESH]: { allowed: true, method: 'defer_reboot', reason: 'Reboot required to apply channel change safely' },
     [PROFILE_TYPES.MESH_ISOLATED]: { allowed: true, method: 'defer_reboot', reason: 'Reboot required to apply channel change safely' },
     [PROFILE_TYPES.ENTERPRISE]: { allowed: true, method: 'defer_reboot', reason: 'Reboot required to apply channel change safely' },
@@ -73,6 +79,7 @@ const SAFETY_MATRIX = {
   },
   [OPERATIONS.RESTART_HOSTAPD]: {
     [PROFILE_TYPES.SIMPLE]: { allowed: true, method: 'direct' },
+    [PROFILE_TYPES.ETHERNET]: { allowed: true, method: 'direct' },
     [PROFILE_TYPES.MESH]: { allowed: false, reason: 'Restarting hostapd can disrupt wlan1 in mesh environments' },
     [PROFILE_TYPES.MESH_ISOLATED]: { allowed: false, reason: 'Restarting hostapd can disrupt wlan1 in mesh environments' },
     [PROFILE_TYPES.ENTERPRISE]: { allowed: false, reason: 'Restarting hostapd can disrupt wlan1 in mesh environments' },
@@ -80,6 +87,7 @@ const SAFETY_MATRIX = {
   },
   [OPERATIONS.CONFIGURE_BGSCAN]: {
     [PROFILE_TYPES.SIMPLE]: { allowed: true, method: 'direct' },
+    [PROFILE_TYPES.ETHERNET]: { allowed: true, method: 'direct' },
     [PROFILE_TYPES.MESH]: { allowed: true, method: 'direct' },
     [PROFILE_TYPES.MESH_ISOLATED]: { allowed: true, method: 'direct' },
     [PROFILE_TYPES.ENTERPRISE]: { allowed: true, method: 'direct' },

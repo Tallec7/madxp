@@ -490,14 +490,37 @@ find /home/pi/neopro -name "*.js" -path "*sync*" | head -20
 
 ```bash
 # Statut des services
-sudo systemctl status neopro-app         # Serveur Socket.IO local (port 3000)
-sudo systemctl status neopro-admin       # Interface admin (port 8080)
-sudo systemctl status neopro-sync-agent  # Sync-agent (connexion cloud)
-sudo systemctl status neopro-kiosk       # Mode kiosk (Chromium)
+sudo systemctl status neopro-app            # Serveur Socket.IO local (port 3000)
+sudo systemctl status neopro-admin          # Interface admin (port 8080)
+sudo systemctl status neopro-sync-agent     # Sync-agent (connexion cloud)
+sudo systemctl status neopro-kiosk          # Mode kiosk (Chromium)
+sudo systemctl status neopro-sync-guardian  # Watchdog sync-agent (auto-recovery)
 
 # Redémarrer un service
 sudo systemctl restart neopro-app
 ```
+
+### Sync-Agent Guardian (Watchdog)
+
+Le guardian surveille le sync-agent et le restaure automatiquement en cas de crash :
+
+```bash
+# Voir le statut du guardian
+/home/pi/neopro/scripts/sync-agent-guardian.sh status
+
+# Créer manuellement un snapshot "golden"
+/home/pi/neopro/scripts/sync-agent-guardian.sh create-golden
+
+# Restaurer manuellement depuis la version golden
+/home/pi/neopro/scripts/sync-agent-guardian.sh restore
+```
+
+**Fonctionnement :**
+
+- Vérifie toutes les 30s si le sync-agent tourne
+- Si 3+ crashs en 5 minutes → restaure depuis la version "golden"
+- Détecte les fichiers corrompus (HTML au lieu de JS après un curl foireux)
+- Logs : `/var/log/neopro-sync-guardian.log`
 
 ---
 
@@ -540,6 +563,6 @@ sudo systemctl restart neopro-app
 
 ---
 
-**Version :** 2.37.0
+**Version :** 2.40.0
 **Licence :** MIT
-**Dernière mise à jour :** 18 janvier 2026
+**Dernière mise à jour :** 19 janvier 2026

@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.38.0 | **Dernière mise à jour**: 2026-01-18
+**Version**: 2.41.0 | **Dernière mise à jour**: 2026-01-19
 
 ---
 
@@ -550,6 +550,61 @@ Service d'alertes proactives côté serveur :
 | `multiple_warnings`     | warning          | 3+ warnings réseau               |
 
 **Fichier** : `central-server/src/services/network-alerts.service.ts`
+
+### Service Sync-Agent Guardian (v2.40+) ⚡ NEW
+
+Watchdog système **indépendant** qui maintient la connexion cloud même si le sync-agent crashe :
+
+| Commande        | Rôle                                                 |
+| --------------- | ---------------------------------------------------- |
+| `start`         | Démarre la boucle de surveillance (toutes les 30s)   |
+| `create-golden` | Crée un snapshot "golden" depuis la version actuelle |
+| `restore`       | Restaure manuellement depuis la version golden       |
+| `status`        | Affiche l'état actuel (sync-agent, crashs, golden)   |
+
+**Fonctionnement** :
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    Raspberry Pi                      │
+│                                                      │
+│  ┌──────────────────┐    ┌──────────────────────┐  │
+│  │  sync-agent      │    │  sync-agent-guardian │  │
+│  │  (peut crasher)  │    │  (script bash ultra  │  │
+│  │                  │◄───│   minimal ~200 lignes)│  │
+│  │  - Socket.IO     │    │                      │  │
+│  │  - Commandes     │    │  - Vérifie /30s      │  │
+│  └──────────────────┘    │  - 3 crashs/5min →   │  │
+│                          │    restore golden    │  │
+│                          └──────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
+
+**Protection contre les fichiers corrompus** :
+
+- Détecte si `agent.js` contient du HTML au lieu de JS (curl foireux)
+- Restaure automatiquement depuis `sync-agent-golden/`
+- Garde les 5 derniers backups des versions crashées pour debug
+
+**Fichiers** :
+
+- `raspberry/scripts/sync-agent-guardian.sh` - Script de surveillance
+- `raspberry/config/systemd/neopro-sync-guardian.service` - Service systemd
+- `/home/pi/neopro/sync-agent-golden/` - Copie de sauvegarde "golden"
+- `/var/log/neopro-sync-guardian.log` - Logs du guardian
+
+**Usage manuel** (sur le Pi) :
+
+```bash
+# Voir le statut
+/home/pi/neopro/scripts/sync-agent-guardian.sh status
+
+# Forcer la création d'un golden
+/home/pi/neopro/scripts/sync-agent-guardian.sh create-golden
+
+# Restaurer manuellement
+/home/pi/neopro/scripts/sync-agent-guardian.sh restore
+```
 
 ### Modules Sync-Agent Extraits (v2.33+) ⚡ NEW
 
@@ -1950,6 +2005,35 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.40.x (Janvier 2026)
+
+- **Sync-Agent Guardian** : Watchdog système indépendant pour maintenir la connexion cloud
+  - **Problème résolu** : Un fichier JS corrompu (curl foireux, update partielle) crashait le sync-agent en boucle, rendant le Pi inaccessible à distance
+  - **Solution** : Script bash ultra minimal (~200 lignes) qui surveille le sync-agent et le restaure automatiquement
+  - **Fonctionnement** :
+    - Vérifie toutes les 30s si le sync-agent tourne
+    - Si 3+ crashs en 5 minutes → restaure depuis la version "golden"
+    - Détecte les fichiers corrompus (HTML au lieu de JS)
+    - Crée automatiquement un snapshot "golden" quand le sync-agent est stable
+  - **Nouveaux fichiers** :
+    - `raspberry/scripts/sync-agent-guardian.sh` - Script de surveillance
+    - `raspberry/config/systemd/neopro-sync-guardian.service` - Service systemd
+  - **Fichiers modifiés** :
+    - `raspberry/install.sh` - Installation automatique du guardian
+  - **Migration Pi existants** :
+
+    ```bash
+    # Copier les fichiers
+    scp raspberry/scripts/sync-agent-guardian.sh pi@neopro.local:/home/pi/neopro/scripts/
+    scp raspberry/config/systemd/neopro-sync-guardian.service pi@neopro.local:/tmp/
+
+    # Installer le service
+    ssh pi@neopro.local 'chmod +x /home/pi/neopro/scripts/sync-agent-guardian.sh && sudo mv /tmp/neopro-sync-guardian.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now neopro-sync-guardian'
+
+    # Créer le snapshot golden initial
+    ssh pi@neopro.local '/home/pi/neopro/scripts/sync-agent-guardian.sh create-golden'
+    ```
 
 ### v2.39.x (Janvier 2026)
 

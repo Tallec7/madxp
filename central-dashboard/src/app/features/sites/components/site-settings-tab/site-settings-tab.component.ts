@@ -1279,6 +1279,9 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     if (changes['site'] && changes['site'].currentValue && !changes['site'].firstChange) {
       const site = changes['site'].currentValue as Site;
 
+      // Réinitialiser le cache SSID pour forcer la relecture depuis les nouvelles données
+      this.realSsid = null;
+
       // Recharger les infos hotspot
       this.loadHotspotInfo(site);
 
@@ -1525,19 +1528,32 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   }
 
   getWifiSsid(): string {
-    // Utiliser le vrai SSID si déjà récupéré
+    // Utiliser le vrai SSID si déjà récupéré via fetch
     if (this.realSsid) {
       return this.realSsid;
     }
 
-    // Utiliser le vrai SSID depuis local_config_mirror si disponible
+    // Utiliser currentHotspotSsid (depuis _hotspotInfo, nouveau format)
+    if (this.currentHotspotSsid) {
+      this.realSsid = this.currentHotspotSsid;
+      return this.currentHotspotSsid;
+    }
+
+    // Fallback: utiliser _hotspotSsid depuis local_config_mirror (ancien format)
     const mirrorSsid = this.site?.local_config_mirror?._hotspotSsid;
     if (mirrorSsid) {
       this.realSsid = mirrorSsid;
       return mirrorSsid;
     }
 
-    // Fallback: générer un SSID depuis le nom du club
+    // Fallback: utiliser _hotspotInfo.ssid directement (si pas encore chargé dans currentHotspotSsid)
+    const hotspotInfoSsid = this.site?.local_config_mirror?._hotspotInfo?.ssid;
+    if (hotspotInfoSsid) {
+      this.realSsid = hotspotInfoSsid;
+      return hotspotInfoSsid;
+    }
+
+    // Dernier fallback: générer un SSID depuis le nom du club
     const name = this.site?.club_name || this.site?.site_name || 'CLUB';
     const sanitized = name
       .toUpperCase()
