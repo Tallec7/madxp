@@ -2054,6 +2054,20 @@ vcgencmd get_mem gpu
     - `central-dashboard/src/app/features/sites/components/site-settings-tab/site-settings-tab.component.ts`
   - **Migration** : Rebuild et redéployer le dashboard
 
+- **Fix déduplication requêtes auth (rate limit 429)** : Les guards Angular ne déclenchent plus de requêtes `/api/auth/me` multiples
+  - **Problème** : Au chargement de page, plusieurs guards (`authGuard` + `roleGuard`) appelaient `checkAuthentication()` simultanément, générant 2+ requêtes HTTP identiques
+  - **Symptôme** : Erreur 429 "Too Many Requests" déconnectant l'utilisateur alors qu'il était authentifié
+  - **Cause racine** : Le flag `authCheckInProgress` était vérifié/mis à jour de manière asynchrone, permettant aux appels concurrents de passer
+  - **Solution** :
+    - Utilisation de `shareReplay(1)` pour partager l'Observable de la requête en cours entre tous les souscripteurs
+    - Nouvelle propriété `authCheckRequest$` qui stocke la requête partagée
+    - `finalize()` pour nettoyer la référence quand tous les souscripteurs sont terminés
+    - Gestion spéciale du rate limit 429 : ne pas déconnecter l'utilisateur, permettre un retry
+  - **Fichier modifié** :
+    - `central-dashboard/src/app/core/services/auth.service.ts` - Refactoring de `checkAuthentication()` avec `shareReplay`
+  - **Résultat** : 1 seule requête `/api/auth/me` au lieu de 2+ par chargement de page
+  - **Migration** : Rebuild et redéployer le dashboard
+
 ### v2.40.x (Janvier 2026)
 
 - **Sync-Agent Guardian** : Watchdog système indépendant pour maintenir la connexion cloud

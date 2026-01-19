@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap, catchError, of, map, interval, Subscription } from 'rxjs';
+import { BehaviorSubject, Observable, tap, catchError, of, map, interval, Subscription, shareReplay, finalize } from 'rxjs';
 import { ApiService } from './api.service';
 import { LoggerService } from './logger.service';
 import { ErrorExtractor } from '../utils/error-extractor';
@@ -29,7 +29,10 @@ export class AuthService {
   public currentUser$ = this.currentUserSubject.asObservable();
 
   private authChecked = false;
-  private authCheckInProgress = false;
+
+  // Observable partagé pour éviter les requêtes multiples simultanées
+  // Utilise shareReplay pour que tous les guards partagent la même requête en cours
+  private authCheckRequest$: Observable<boolean> | null = null;
 
   // Token en memoire UNIQUEMENT pour les SSE (EventSource)
   // Ne pas utiliser pour l'authentification principale (utiliser les cookies)
@@ -42,34 +45,8 @@ export class AuthService {
    * Verifie l'etat d'authentification au demarrage via l'API
    */
   checkAuthStatus(): void {
-    if (this.authCheckInProgress) return;
-    this.authCheckInProgress = true;
-
-    this.api.get<User & { token?: string }>('/auth/me').subscribe({
-      next: (response) => {
-        // Stocker le token AVANT d'émettre l'utilisateur
-        // pour que LayoutComponent puisse établir la connexion Socket.IO
-        if (response.token) {
-          this.sseToken = response.token;
-        }
-        this.currentUserSubject.next(response);
-        this.authChecked = true;
-        this.authCheckInProgress = false;
-        // Enable backend logging now that user is authenticated
-        this.logger.setAuthenticated(true);
-        // Démarrer la vérification périodique si ce n'est pas déjà fait
-        this.startPeriodicAuthCheck();
-      },
-      error: () => {
-        this.currentUserSubject.next(null);
-        this.authChecked = true;
-        this.authCheckInProgress = false;
-        // Disable backend logging when not authenticated
-        this.logger.setAuthenticated(false);
-        // Arrêter la vérification périodique si déconnecté
-        this.stopPeriodicAuthCheck();
-      }
-    });
+    // Utilise checkAuthentication() pour bénéficier de la déduplication
+    this.checkAuthentication().subscribe();
   }
 
   /**
@@ -197,6 +174,10 @@ export class AuthService {
 
   /**
    * Verifie l'authentification de maniere asynchrone (utile pour les guards)
+   *
+   * IMPORTANT: Cette méthode utilise shareReplay pour dédupliquer les requêtes.
+   * Si plusieurs guards appellent cette méthode simultanément (ex: authGuard + roleGuard),
+   * une seule requête HTTP sera effectuée et le résultat sera partagé.
    */
   checkAuthentication(): Observable<boolean> {
     // Si on a déjà un utilisateur en mémoire, retourner true immédiatement
@@ -206,22 +187,24 @@ export class AuthService {
       return of(true);
     }
 
-    // Si déjà vérifié et pas d'utilisateur, retourner false
-    // SAUF si c'est un retry après un échec temporaire
-    if (this.authChecked && !this.authCheckInProgress) {
+    // Si déjà vérifié et pas de requête en cours, retourner false
+    if (this.authChecked && !this.authCheckRequest$) {
       return of(false);
     }
 
-    // Éviter les appels multiples simultanés
-    if (this.authCheckInProgress) {
-      // Retourner false temporairement, le guard réessayera
-      return of(false);
+    // Si une requête est déjà en cours, retourner le même Observable partagé
+    // Tous les guards recevront le même résultat
+    if (this.authCheckRequest$) {
+      this.logger.debug('checkAuthentication: sharing in-flight request');
+      return this.authCheckRequest$;
     }
 
-    this.authCheckInProgress = true;
+    this.logger.debug('checkAuthentication: initiating new request');
 
-    // Sinon, verifier via l'API
-    return this.api.get<User & { token?: string }>('/auth/me').pipe(
+    // Créer une nouvelle requête partagée via shareReplay(1)
+    // - shareReplay(1) garantit que tous les souscripteurs reçoivent la même valeur
+    // - finalize() nettoie la référence quand tous les souscripteurs sont terminés
+    this.authCheckRequest$ = this.api.get<User & { token?: string }>('/auth/me').pipe(
       map(response => {
         this.logger.debug('checkAuthentication: user authenticated', { email: response.email });
         // Stocker le token AVANT d'émettre l'utilisateur
@@ -231,7 +214,6 @@ export class AuthService {
         }
         this.currentUserSubject.next(response);
         this.authChecked = true;
-        this.authCheckInProgress = false;
         // Enable backend logging now that user is authenticated
         this.logger.setAuthenticated(true);
         // Démarrer la vérification périodique après refresh réussi
@@ -239,17 +221,34 @@ export class AuthService {
         return true;
       }),
       catchError((err) => {
-        this.logger.warn('checkAuthentication: failed, redirecting to login', { error: ErrorExtractor.getMessage(err) });
+        const errorMessage = ErrorExtractor.getMessage(err);
+        // Ne pas logger comme un échec si c'est un rate limit (429)
+        // L'utilisateur est peut-être toujours authentifié
+        if (errorMessage.includes('429') || errorMessage.includes('Trop de requêtes')) {
+          this.logger.warn('checkAuthentication: rate limited, will retry later', { error: errorMessage });
+          // Ne pas marquer comme vérifié pour permettre un retry
+          // Ne pas effacer l'utilisateur actuel
+          return of(false);
+        }
+
+        this.logger.warn('checkAuthentication: failed, redirecting to login', { error: errorMessage });
         this.currentUserSubject.next(null);
         this.sseToken = null;
         this.authChecked = true;
-        this.authCheckInProgress = false;
         // Disable backend logging when not authenticated
         this.logger.setAuthenticated(false);
         this.stopPeriodicAuthCheck();
         return of(false);
+      }),
+      // shareReplay(1) permet de partager le résultat avec tous les souscripteurs
+      shareReplay(1),
+      // finalize() nettoie la référence quand l'Observable se termine
+      finalize(() => {
+        this.authCheckRequest$ = null;
       })
     );
+
+    return this.authCheckRequest$;
   }
 
   getCurrentUser(): User | null {
