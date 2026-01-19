@@ -1,3 +1,9 @@
+## [2.40.4](https://github.com/Tallec7/neopro/compare/v2.40.3...v2.40.4) (2026-01-19)
+
+### Bug Fixes
+
+- **auth:** deduplicate concurrent /api/auth/me requests using shareReplay ([16ebaf4](https://github.com/Tallec7/neopro/commit/16ebaf4c245b276a5498e7c347ae2dfa05e62035))
+
 ## [2.40.3](https://github.com/Tallec7/neopro/compare/v2.40.2...v2.40.3) (2026-01-19)
 
 ### Bug Fixes
