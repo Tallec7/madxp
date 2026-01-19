@@ -399,6 +399,7 @@ RUNTIME_SCRIPTS=(
     "raspberry/scripts/hotspot-watchdog.sh"
     "raspberry/scripts/hotspot-optimizer.sh"
     "raspberry/scripts/fix-hotspot.sh"
+    "raspberry/scripts/sync-agent-guardian.sh"
 )
 mkdir -p ${DEPLOY_DIR}/scripts
 for script_path in "${RUNTIME_SCRIPTS[@]}"; do
@@ -417,6 +418,7 @@ mkdir -p ${DEPLOY_DIR}/config/systemd
 SYSTEMD_FILES=(
     "raspberry/config/systemd/neopro-hotspot-watchdog.service"
     "raspberry/config/systemd/neopro-hotspot-optimizer.service"
+    "raspberry/config/systemd/neopro-sync-guardian.service"
 )
 for svc_path in "${SYSTEMD_FILES[@]}"; do
     if [ -f "${svc_path}" ]; then
