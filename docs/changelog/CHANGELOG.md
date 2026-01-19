@@ -1,3 +1,9 @@
+# [2.40.0](https://github.com/Tallec7/neopro/compare/v2.39.2...v2.40.0) (2026-01-19)
+
+### Features
+
+- **raspberry:** add Sync-Agent Guardian watchdog for auto-recovery ([8feaa3e](https://github.com/Tallec7/neopro/commit/8feaa3ea0b5f44be70cfb120560f1c0839ee7d50))
+
 ## [2.39.2](https://github.com/Tallec7/neopro/compare/v2.39.1...v2.39.2) (2026-01-18)
 
 ### Bug Fixes
