@@ -1,3 +1,9 @@
+# [2.41.0](https://github.com/Tallec7/neopro/compare/v2.40.4...v2.41.0) (2026-01-19)
+
+### Features
+
+- **upload:** add upload verification to prevent race conditions ([2d7e900](https://github.com/Tallec7/neopro/commit/2d7e90059e5bf78ef1f625ee247af0e31c1f84a8))
+
 ## [2.40.4](https://github.com/Tallec7/neopro/compare/v2.40.3...v2.40.4) (2026-01-19)
 
 ### Bug Fixes
