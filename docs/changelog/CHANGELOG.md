@@ -1,3 +1,9 @@
+## [2.40.2](https://github.com/Tallec7/neopro/compare/v2.40.1...v2.40.2) (2026-01-19)
+
+### Bug Fixes
+
+- **build:** include sync-agent guardian files in raspberry build ([1780e34](https://github.com/Tallec7/neopro/commit/1780e348e7203ab77e6d17e57d755bbb7e0ee27a))
+
 ## [2.40.1](https://github.com/Tallec7/neopro/compare/v2.40.0...v2.40.1) (2026-01-19)
 
 ### Bug Fixes
