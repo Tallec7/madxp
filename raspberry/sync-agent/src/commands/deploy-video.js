@@ -137,10 +137,22 @@ class VideoDeployHandler {
 
       if (downloadedChecksum !== checksum) {
         // Supprimer le fichier corrompu
+        const fileStats = await fs.stat(targetPath);
         await fs.remove(targetPath);
-        const error = new Error(`Checksum mismatch: expected ${checksum}, got ${downloadedChecksum}`);
+
+        const error = new Error(
+          `Checksum incorrect (fichier téléchargé: ${Math.round(fileStats.size / 1024)}KB). ` +
+          `Cela peut se produire si le fichier source était encore en cours d'upload. ` +
+          `Veuillez patienter et relancer le déploiement.`
+        );
         error.code = 'CHECKSUM_MISMATCH';
-        logger.error('Video corrupted during transfer', { expected: checksum, actual: downloadedChecksum });
+        error.expectedChecksum = checksum;
+        error.actualChecksum = downloadedChecksum;
+        logger.error('Video corrupted during transfer', {
+          expected: checksum,
+          actual: downloadedChecksum,
+          fileSize: fileStats.size,
+        });
         throw error;
       }
       logger.info('Checksum verified successfully', { checksum: downloadedChecksum });
@@ -242,9 +254,38 @@ class VideoDeployHandler {
         resumedFrom: startByte,
       });
     } catch (error) {
-      logger.error('Download failed:', error);
+      const errorMsg = error.message || '';
+      logger.error('Download failed', { error: errorMsg, url, targetPath });
+
+      // Détecter les erreurs typiques de téléchargement incomplet
+      const isIncompleteDownload =
+        errorMsg.includes('socket hang up') ||
+        errorMsg.includes('ECONNRESET') ||
+        errorMsg.includes('network timeout') ||
+        errorMsg.includes('read ETIMEDOUT') ||
+        (error.response && error.response.status >= 500);
+
+      // Vérifier la taille du fichier partiel pour le diagnostic
+      let partialSizeInfo = '';
+      if (await fs.pathExists(tempPath)) {
+        try {
+          const stats = await fs.stat(tempPath);
+          partialSizeInfo = ` (téléchargement partiel: ${Math.round(stats.size / 1024)}KB)`;
+        } catch {
+          // Ignorer
+        }
+      }
+
+      if (isIncompleteDownload) {
+        throw new Error(
+          `Téléchargement interrompu${partialSizeInfo}. ` +
+          `Le fichier source peut être incomplet ou en cours d'upload. ` +
+          `Veuillez patienter et relancer le déploiement.`
+        );
+      }
+
       // Ne pas supprimer le fichier temporaire pour permettre la reprise
-      throw new Error(`Failed to download video: ${error.message}`);
+      throw new Error(`Échec du téléchargement vidéo${partialSizeInfo}: ${errorMsg}`);
     }
   }
 

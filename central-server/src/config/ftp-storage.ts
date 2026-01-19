@@ -230,3 +230,229 @@ export const testFtpConnection = async (): Promise<boolean> => {
     client.close();
   }
 };
+
+/**
+ * Vérifie qu'un fichier existe sur le FTP et retourne sa taille
+ * Utilisé pour vérifier que l'upload est terminé avant déploiement
+ */
+export const verifyFtpFileExists = async (
+  filename: string,
+  config: 'video' | 'update' = 'video'
+): Promise<{ exists: boolean; size: number | null; error?: string }> => {
+  const ftpCfg = config === 'update' ? ftpUpdateConfig : ftpConfig;
+  const isConfigured = config === 'update' ? isFtpUpdateConfigured() : isFtpConfigured();
+
+  if (!isConfigured) {
+    return { exists: false, size: null, error: 'FTP not configured' };
+  }
+
+  const client = new ftp.Client();
+  client.ftp.verbose = process.env.NODE_ENV === 'development';
+
+  try {
+    await client.access({
+      host: ftpCfg.host,
+      port: ftpCfg.port,
+      user: ftpCfg.user,
+      password: ftpCfg.password,
+      secure: ftpCfg.secure,
+    });
+
+    // Lister les fichiers pour trouver celui qu'on cherche
+    const list = await client.list();
+    const file = list.find(f => f.name === filename);
+
+    if (!file) {
+      return { exists: false, size: null, error: 'File not found on FTP' };
+    }
+
+    logger.info('FTP file verification successful:', {
+      filename,
+      size: file.size,
+      modifiedAt: file.modifiedAt,
+    });
+
+    return { exists: true, size: file.size };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown FTP error';
+    logger.error('FTP file verification failed:', { filename, error: errorMessage });
+    return { exists: false, size: null, error: errorMessage };
+  } finally {
+    client.close();
+  }
+};
+
+/**
+ * Upload un fichier vers FTP avec vérification post-upload
+ * Retry automatique si la vérification échoue
+ */
+export const uploadFileToFtpWithVerification = async (
+  fileBuffer: Buffer,
+  filename: string,
+  contentType: string,
+  maxRetries: number = 3
+): Promise<{
+  path: string;
+  url: string;
+  verified: boolean;
+  actualSize: number | null;
+} | null> => {
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    attempt++;
+
+    // Upload le fichier
+    const uploadResult = await uploadFileToFtp(fileBuffer, filename, contentType);
+
+    if (!uploadResult) {
+      logger.warn('FTP upload failed, retrying...', { filename, attempt, maxRetries });
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      return null;
+    }
+
+    // Vérifier que le fichier est bien présent et a la bonne taille
+    const verification = await verifyFtpFileExists(filename, 'video');
+
+    if (!verification.exists) {
+      logger.warn('FTP verification failed: file not found after upload', {
+        filename,
+        attempt,
+        maxRetries,
+      });
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      return {
+        ...uploadResult,
+        verified: false,
+        actualSize: null,
+      };
+    }
+
+    // Vérifier la taille
+    if (verification.size !== null && verification.size !== fileBuffer.length) {
+      logger.warn('FTP verification failed: size mismatch', {
+        filename,
+        expected: fileBuffer.length,
+        actual: verification.size,
+        attempt,
+        maxRetries,
+      });
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      return {
+        ...uploadResult,
+        verified: false,
+        actualSize: verification.size,
+      };
+    }
+
+    logger.info('FTP upload with verification successful', {
+      filename,
+      size: verification.size,
+      attempts: attempt,
+    });
+
+    return {
+      ...uploadResult,
+      verified: true,
+      actualSize: verification.size,
+    };
+  }
+
+  return null;
+};
+
+/**
+ * Upload une mise à jour vers FTP avec vérification post-upload
+ */
+export const uploadUpdateToFtpWithVerification = async (
+  fileBuffer: Buffer,
+  filename: string,
+  contentType: string,
+  maxRetries: number = 3
+): Promise<{
+  path: string;
+  url: string;
+  verified: boolean;
+  actualSize: number | null;
+} | null> => {
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    attempt++;
+
+    // Upload le fichier
+    const uploadResult = await uploadUpdateToFtp(fileBuffer, filename, contentType);
+
+    if (!uploadResult) {
+      logger.warn('FTP update upload failed, retrying...', { filename, attempt, maxRetries });
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      return null;
+    }
+
+    // Vérifier que le fichier est bien présent et a la bonne taille
+    const verification = await verifyFtpFileExists(filename, 'update');
+
+    if (!verification.exists) {
+      logger.warn('FTP update verification failed: file not found after upload', {
+        filename,
+        attempt,
+        maxRetries,
+      });
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      return {
+        ...uploadResult,
+        verified: false,
+        actualSize: null,
+      };
+    }
+
+    // Vérifier la taille
+    if (verification.size !== null && verification.size !== fileBuffer.length) {
+      logger.warn('FTP update verification failed: size mismatch', {
+        filename,
+        expected: fileBuffer.length,
+        actual: verification.size,
+        attempt,
+        maxRetries,
+      });
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      return {
+        ...uploadResult,
+        verified: false,
+        actualSize: verification.size,
+      };
+    }
+
+    logger.info('FTP update upload with verification successful', {
+      filename,
+      size: verification.size,
+      attempts: attempt,
+    });
+
+    return {
+      ...uploadResult,
+      verified: true,
+      actualSize: verification.size,
+    };
+  }
+
+  return null;
+};

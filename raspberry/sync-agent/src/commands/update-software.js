@@ -257,8 +257,36 @@ class SoftwareUpdateHandler {
           logger.warn('Tar extraction warnings', { stderr });
         }
       } catch (tarError) {
-        logger.error('Tar extraction failed', { error: tarError.message });
-        throw new Error(`Failed to extract update package: ${tarError.message}`);
+        const errorMsg = tarError.message || '';
+        logger.error('Tar extraction failed', { error: errorMsg, packagePath });
+
+        // Vérifier la taille du fichier téléchargé pour diagnostic
+        let fileSizeInfo = '';
+        try {
+          const stats = await fs.stat(packagePath);
+          fileSizeInfo = ` (fichier téléchargé: ${Math.round(stats.size / 1024)}KB)`;
+        } catch {
+          fileSizeInfo = ' (impossible de vérifier la taille du fichier)';
+        }
+
+        // Détecter les erreurs typiques d'archive corrompue ou incomplète
+        const isCorruptedArchive =
+          errorMsg.includes('unexpected EOF') ||
+          errorMsg.includes('gzip: stdin: unexpected end of file') ||
+          errorMsg.includes('Unexpected EOF in archive') ||
+          errorMsg.includes('not in gzip format') ||
+          errorMsg.includes('invalid compressed data') ||
+          errorMsg.includes('truncated');
+
+        if (isCorruptedArchive) {
+          throw new Error(
+            `Archive corrompue ou téléchargement incomplet${fileSizeInfo}. ` +
+            `Cela peut se produire si le déploiement a été lancé avant la fin de l'upload sur le serveur. ` +
+            `Veuillez patienter quelques instants et relancer le déploiement.`
+          );
+        }
+
+        throw new Error(`Échec de l'extraction du package de mise à jour${fileSizeInfo}: ${errorMsg}`);
       }
 
       // Détecter le format de l'archive (nouveau ou legacy avec préfixe deploy/)

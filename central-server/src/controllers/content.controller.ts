@@ -7,26 +7,48 @@ import pool from '../config/database';
 import { AuthRequest } from '../types';
 import deploymentService from '../services/deployment.service';
 import { uploadFile, deleteFile } from '../config/supabase';
-import { uploadFileToFtp, deleteFileFromFtp, isFtpConfigured, getFtpPublicUrl } from '../config/ftp-storage';
+import { uploadFileToFtp, deleteFileFromFtp, isFtpConfigured, getFtpPublicUrl, uploadFileToFtpWithVerification } from '../config/ftp-storage';
 import { formatPaginatedResponse } from '../middleware/pagination';
+import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';
 
 /**
  * Upload une vidéo vers le stockage (FTP Hostinger en priorité, sinon Supabase)
+ * Avec vérification post-upload pour éviter les race conditions
  */
 async function uploadVideoToStorage(
   fileBuffer: Buffer,
   filename: string,
   contentType: string
-): Promise<{ path: string; url: string } | null> {
-  // Utiliser FTP Hostinger si configuré
+): Promise<{ path: string; url: string; verified: boolean; actualSize: number | null } | null> {
+  // Utiliser FTP Hostinger si configuré - avec vérification
   if (isFtpConfigured()) {
-    logger.info('Using FTP storage (Hostinger)');
-    return uploadFileToFtp(fileBuffer, filename, contentType);
+    logger.info('Using FTP storage (Hostinger) with verification');
+    const result = await uploadFileToFtpWithVerification(fileBuffer, filename, contentType);
+    if (result) {
+      return {
+        path: result.path,
+        url: result.url,
+        verified: result.verified,
+        actualSize: result.actualSize,
+      };
+    }
+    return null;
   }
 
-  // Fallback vers Supabase
+  // Fallback vers Supabase (vérification HTTP après upload)
   logger.info('Using Supabase storage (FTP not configured)');
-  return uploadFile(fileBuffer, filename, contentType);
+  const result = await uploadFile(fileBuffer, filename, contentType);
+  if (result) {
+    // Pour Supabase, on considère l'upload vérifié immédiatement
+    // car Supabase gère l'intégrité en interne
+    return {
+      path: result.path,
+      url: result.url,
+      verified: true,
+      actualSize: fileBuffer.length,
+    };
+  }
+  return null;
 }
 
 /**
@@ -281,8 +303,8 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     // Calculer le checksum SHA256 pour vérification d'intégrité
     const checksum = calculateChecksum(file.buffer);
 
-    // Upload vers le stockage (FTP Hostinger ou Supabase)
-    logger.info('Uploading video to storage:', { filename, size: file.size, mimetype: file.mimetype, siteId: site_id });
+    // Upload vers le stockage (FTP Hostinger ou Supabase) avec vérification
+    logger.info('Uploading video to storage with verification:', { filename, size: file.size, mimetype: file.mimetype, siteId: site_id });
     const uploadResult = await uploadVideoToStorage(file.buffer, filename, file.mimetype);
 
     if (!uploadResult) {
@@ -292,18 +314,28 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Déterminer le statut d'upload basé sur la vérification
+    const uploadStatus: UploadStatus = uploadResult.verified ? 'ready' : 'failed';
+
     // Utiliser le titre fourni ou le nom original du fichier
     const videoTitle = title || file.originalname;
     const original_name = file.originalname;
     const file_size = file.size;
     const mime_type = file.mimetype;
 
-    logger.info('Inserting video metadata into database:', { filename, title: videoTitle, siteId: site_id });
+    logger.info('Inserting video metadata into database:', { filename, title: videoTitle, siteId: site_id, uploadStatus, verified: uploadResult.verified });
     const result = await pool.query(
-      `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, checksum, metadata, uploaded_by, uploaded_for_site_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING id, filename as name, original_name, category, subcategory, file_size as size, duration, storage_path as url, thumbnail_url, checksum, metadata, uploaded_for_site_id, created_at, updated_at`,
-      [filename, original_name, category || null, subcategory || null, file_size, mime_type, uploadResult.path, checksum, { title: videoTitle }, req.user?.id || null, site_id || null]
+      `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, checksum, metadata, uploaded_by, uploaded_for_site_id, upload_status, upload_verified_at, upload_verified_size)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       RETURNING id, filename as name, original_name, category, subcategory, file_size as size, duration, storage_path as url, thumbnail_url, checksum, metadata, uploaded_for_site_id, upload_status, created_at, updated_at`,
+      [
+        filename, original_name, category || null, subcategory || null,
+        file_size, mime_type, uploadResult.path, checksum, { title: videoTitle },
+        req.user?.id || null, site_id || null,
+        uploadStatus,
+        uploadResult.verified ? new Date() : null,
+        uploadResult.actualSize
+      ]
     );
 
     // Ajouter le titre et l'URL à la réponse pour l'affichage client
@@ -311,7 +343,26 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     video.title = videoTitle;
     video.url = uploadResult.url;
 
-    logger.info('Video created successfully:', { id: video.id, filename, title: videoTitle, storagePath: uploadResult.path, checksum, siteId: site_id });
+    // Logger avec info de vérification
+    if (!uploadResult.verified) {
+      logger.warn('Video uploaded but verification failed:', {
+        id: video.id,
+        filename,
+        expectedSize: file_size,
+        actualSize: uploadResult.actualSize,
+      });
+    }
+
+    logger.info('Video created successfully:', {
+      id: video.id,
+      filename,
+      title: videoTitle,
+      storagePath: uploadResult.path,
+      checksum,
+      siteId: site_id,
+      uploadStatus,
+      verified: uploadResult.verified,
+    });
     res.status(201).json(video);
   } catch (error) {
     logger.error('Error creating video:', error);
@@ -550,6 +601,26 @@ export const getDeployment = async (req: AuthRequest, res: Response) => {
 export const createDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { video_id, target_type, target_id, scheduled_at } = req.body;
+
+    // === GATE: Vérifier que la vidéo est prête pour le déploiement ===
+    const videoReadiness = await uploadVerificationService.isVideoReadyForDeployment(video_id);
+
+    if (!videoReadiness.ready) {
+      const errorMessage = uploadVerificationService.getDeploymentBlockedMessage(videoReadiness.status);
+      logger.warn('Deployment blocked: video not ready', {
+        video_id,
+        upload_status: videoReadiness.status,
+        error: videoReadiness.error,
+      });
+
+      return res.status(409).json({
+        error: 'Video not ready for deployment',
+        upload_status: videoReadiness.status,
+        message: errorMessage,
+        details: videoReadiness.error,
+        retry_after_seconds: videoReadiness.status === 'uploading' ? 30 : 10,
+      });
+    }
 
     // Si scheduled_at est fourni, le deploiement sera planifie
     const isScheduled = !!scheduled_at;

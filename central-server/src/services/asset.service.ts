@@ -1,6 +1,6 @@
 import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
-import { isFtpConfigured, getFtpPublicUrl, uploadFileToFtp } from '../config/ftp-storage';
+import { isFtpConfigured, getFtpPublicUrl, uploadFileToFtp, verifyFtpFileExists } from '../config/ftp-storage';
 import { uploadFile, getPublicUrl } from '../config/supabase';
 import crypto from 'crypto';
 import {
@@ -35,20 +35,21 @@ class AssetService {
 
   /**
    * Upload un asset vers le stockage cloud (FTP ou Supabase)
-   * @returns URL publique de l'asset uploadé
+   * Avec vérification post-upload pour s'assurer que le fichier est accessible
+   * @returns URL publique de l'asset uploadé avec statut de vérification
    */
   async uploadAsset(
     buffer: Buffer,
     filename: string,
     assetType: 'watermark' | 'logo' | 'image'
-  ): Promise<{ url: string; storagePath: string; checksum: string }> {
+  ): Promise<{ url: string; storagePath: string; checksum: string; verified: boolean }> {
     const sanitizedFilename = this.sanitizeFilename(filename);
     const checksum = this.calculateChecksum(buffer);
 
     // Déterminer le chemin de stockage selon le type
     const storageFolder = assetType === 'watermark' ? 'watermarks' : 'assets';
 
-    logger.info('Uploading asset to cloud storage', {
+    logger.info('Uploading asset to cloud storage with verification', {
       filename: sanitizedFilename,
       assetType,
       size: buffer.length,
@@ -62,17 +63,31 @@ class AssetService {
       await uploadFileToFtp(buffer, ftpPath, mimeType);
       const url = getFtpPublicUrl(ftpPath);
 
-      logger.info('Asset uploaded to FTP', { url, storagePath: ftpPath });
-      return { url, storagePath: ftpPath, checksum };
+      // Vérifier que le fichier a été uploadé correctement
+      const verification = await verifyFtpFileExists(ftpPath, 'video'); // 'video' pour le config FTP principal
+      const verified = verification.exists && verification.size === buffer.length;
+
+      if (!verified) {
+        logger.warn('Asset upload verification failed', {
+          ftpPath,
+          expectedSize: buffer.length,
+          actualSize: verification.size,
+          exists: verification.exists,
+          error: verification.error,
+        });
+      }
+
+      logger.info('Asset uploaded to FTP', { url, storagePath: ftpPath, verified });
+      return { url, storagePath: ftpPath, checksum, verified };
     }
 
-    // Fallback vers Supabase
+    // Fallback vers Supabase (considéré vérifié car Supabase gère l'intégrité)
     const supabasePath = `${storageFolder}/${sanitizedFilename}`;
     await uploadFile(buffer, supabasePath, this.getMimeType(filename));
     const url = getPublicUrl(supabasePath);
 
-    logger.info('Asset uploaded to Supabase', { url, storagePath: supabasePath });
-    return { url, storagePath: supabasePath, checksum };
+    logger.info('Asset uploaded to Supabase', { url, storagePath: supabasePath, verified: true });
+    return { url, storagePath: supabasePath, checksum, verified: true };
   }
 
   /**

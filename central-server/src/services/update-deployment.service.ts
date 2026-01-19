@@ -9,6 +9,7 @@ import socketService from './socket.service';
 import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
 import { getPublicUrl } from '../config/supabase';
+import { uploadVerificationService } from './upload-verification.service';
 
 interface UpdateDeploymentRow {
   id: string;
@@ -47,7 +48,7 @@ class UpdateDeploymentService {
       // Récupérer les infos du déploiement
       const deploymentResult = await query<UpdateDeploymentRow>(
         `SELECT ud.*, su.version, su.description, su.is_critical, su.changelog,
-                su.package_url, su.package_size, su.checksum
+                su.package_url, su.package_size, su.checksum, su.upload_status
          FROM update_deployments ud
          JOIN software_updates su ON ud.update_id = su.id
          WHERE ud.id = $1`,
@@ -58,14 +59,31 @@ class UpdateDeploymentService {
         throw new Error(`Déploiement de mise à jour non trouvé: ${deploymentId}`);
       }
 
-      const deployment = deploymentResult.rows[0] as UpdateDeploymentRow & SoftwareUpdateRow;
+      const deployment = deploymentResult.rows[0] as UpdateDeploymentRow & SoftwareUpdateRow & { upload_status: string };
       logger.info('Deployment info retrieved', {
         deploymentId,
         version: deployment.version,
         targetType: deployment.target_type,
         targetId: deployment.target_id,
-        packageUrl: deployment.package_url
+        packageUrl: deployment.package_url,
+        uploadStatus: deployment.upload_status,
       });
+
+      // === DOUBLE-CHECK: Vérifier que l'upload est prêt avant de continuer ===
+      // Cette vérification est une sécurité supplémentaire au cas où le contrôleur
+      // n'aurait pas fait la vérification (ex: retry automatique, appel direct)
+      if (deployment.upload_status !== 'ready') {
+        const errorMessage = uploadVerificationService.getDeploymentBlockedMessage(
+          deployment.upload_status as 'uploading' | 'verifying' | 'ready' | 'failed' | null
+        );
+        logger.error('Update deployment blocked in service: upload not ready', {
+          deploymentId,
+          updateId: deployment.update_id,
+          uploadStatus: deployment.upload_status,
+        });
+        await this.failDeployment(deploymentId, `Upload non vérifié: ${errorMessage}`);
+        return;
+      }
 
       // Récupérer les sites cibles
       const targets = await this.getTargetSites(deployment.target_type, deployment.target_id);

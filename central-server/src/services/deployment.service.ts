@@ -4,6 +4,7 @@ import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
 import { deleteFile, getPublicUrl } from '../config/supabase';
 import { isFtpConfigured, getFtpPublicUrl } from '../config/ftp-storage';
+import { uploadVerificationService } from './upload-verification.service';
 
 /**
  * Génère l'URL publique pour télécharger une vidéo.
@@ -70,6 +71,7 @@ class DeploymentService {
       const deploymentResult = await query(
         `SELECT cd.*,
                 v.filename, v.original_name, v.category, v.subcategory, v.duration, v.storage_path, v.checksum, v.metadata,
+                v.upload_status,
                 av.advertiser_id,
                 COALESCE(v.metadata->>'analytics_category',
                   CASE
@@ -88,7 +90,23 @@ class DeploymentService {
         throw new Error(`Déploiement non trouvé: ${deploymentId}`);
       }
 
-      const deployment = deploymentResult.rows[0] as unknown as DeploymentRow;
+      const deployment = deploymentResult.rows[0] as unknown as DeploymentRow & { upload_status: string };
+
+      // === DOUBLE-CHECK: Vérifier que l'upload est prêt avant de continuer ===
+      // Cette vérification est une sécurité supplémentaire au cas où le contrôleur
+      // n'aurait pas fait la vérification (ex: déploiement planifié, retry automatique)
+      if (deployment.upload_status !== 'ready') {
+        const errorMessage = uploadVerificationService.getDeploymentBlockedMessage(
+          deployment.upload_status as 'uploading' | 'verifying' | 'ready' | 'failed' | null
+        );
+        logger.error('Deployment blocked in service: video upload not ready', {
+          deploymentId,
+          videoId: deployment.video_id,
+          uploadStatus: deployment.upload_status,
+        });
+        await this.failDeployment(deploymentId, `Upload non vérifié: ${errorMessage}`);
+        return;
+      }
 
       // Récupérer les sites cibles
       const targets = await this.getTargetSites(deployment.target_type, deployment.target_id);

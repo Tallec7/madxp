@@ -5,8 +5,9 @@ import logger from '../config/logger';
 import pool from '../config/database';
 import { AuthRequest } from '../types';
 import { UPDATE_BUCKET, uploadFile } from '../config/supabase';
-import { isFtpUpdateConfigured, uploadUpdateToFtp } from '../config/ftp-storage';
+import { isFtpUpdateConfigured, uploadUpdateToFtp, uploadUpdateToFtpWithVerification } from '../config/ftp-storage';
 import { updateDeploymentService } from '../services/update-deployment.service';
+import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';
 
 type DatabaseError = Error & { code?: string; message?: string };
 
@@ -85,23 +86,32 @@ export const createUpdate = async (req: AuthRequest, res: Response) => {
     const filename = `update-${version}-${Date.now()}-${file.originalname}`;
     const checksum = crypto.createHash('sha256').update(file.buffer).digest('hex');
 
-    // Utiliser FTP Hostinger en priorité, fallback sur Supabase
-    let uploadResult: { path: string; url: string } | null = null;
+    // Utiliser FTP Hostinger en priorité (avec vérification), fallback sur Supabase
+    let uploadResult: { path: string; url: string; verified?: boolean; actualSize?: number | null } | null = null;
     let storageType = 'unknown';
+    let uploadVerified = false;
 
     if (isFtpUpdateConfigured()) {
-      logger.info('Using FTP storage for update package (Hostinger)');
-      uploadResult = await uploadUpdateToFtp(file.buffer, filename, file.mimetype);
-      if (uploadResult) {
+      logger.info('Using FTP storage for update package (Hostinger) with verification');
+      const ftpResult = await uploadUpdateToFtpWithVerification(file.buffer, filename, file.mimetype);
+      if (ftpResult) {
+        uploadResult = ftpResult;
         storageType = 'FTP';
+        uploadVerified = ftpResult.verified;
       }
     }
 
     if (!uploadResult) {
       logger.info('Using Supabase storage for update package (FTP not configured or failed)');
-      uploadResult = await uploadFile(file.buffer, filename, file.mimetype, UPDATE_BUCKET);
-      if (uploadResult) {
+      const supabaseResult = await uploadFile(file.buffer, filename, file.mimetype, UPDATE_BUCKET);
+      if (supabaseResult) {
+        uploadResult = {
+          ...supabaseResult,
+          verified: true, // Supabase gère l'intégrité
+          actualSize: file.size,
+        };
         storageType = 'Supabase';
+        uploadVerified = true;
       }
     }
 
@@ -111,12 +121,21 @@ export const createUpdate = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    logger.info('Update package uploaded successfully:', { filename, storageType, url: uploadResult.url });
+    // Déterminer le statut d'upload
+    const uploadStatus: UploadStatus = uploadVerified ? 'ready' : 'failed';
+
+    logger.info('Update package uploaded:', {
+      filename,
+      storageType,
+      url: uploadResult.url,
+      verified: uploadVerified,
+      uploadStatus,
+    });
 
     const result = await pool.query(
-      `INSERT INTO software_updates (version, description, is_critical, changelog, package_url, package_size, checksum, uploaded_by)
-       VALUES ($1, $2, COALESCE($3, false), $4, $5, $6, $7, $8)
-       RETURNING id, version, description, is_critical, changelog as release_notes, package_url as file_url, package_size as file_size, checksum, created_at`,
+      `INSERT INTO software_updates (version, description, is_critical, changelog, package_url, package_size, checksum, uploaded_by, upload_status, upload_verified_at, upload_verified_size)
+       VALUES ($1, $2, COALESCE($3, false), $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id, version, description, is_critical, changelog as release_notes, package_url as file_url, package_size as file_size, checksum, upload_status, created_at`,
       [
         version,
         description,
@@ -125,11 +144,23 @@ export const createUpdate = async (req: AuthRequest, res: Response) => {
         uploadResult.url,
         file.size,
         checksum,
-        req.user?.id || null
+        req.user?.id || null,
+        uploadStatus,
+        uploadVerified ? new Date() : null,
+        uploadResult.actualSize || null,
       ]
     );
 
-    logger.info('Update created:', { id: result.rows[0].id, version });
+    if (!uploadVerified) {
+      logger.warn('Update uploaded but verification failed:', {
+        id: result.rows[0].id,
+        version,
+        expectedSize: file.size,
+        actualSize: uploadResult.actualSize,
+      });
+    }
+
+    logger.info('Update created:', { id: result.rows[0].id, version, uploadStatus });
     res.status(201).json(result.rows[0]);
   } catch (error) {
     if (isTableMissingError(error, 'software_updates')) {
@@ -276,6 +307,26 @@ export const getUpdateDeployment = async (req: AuthRequest, res: Response) => {
 export const createUpdateDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { update_id, target_type, target_id } = req.body;
+
+    // === GATE: Vérifier que la mise à jour est prête pour le déploiement ===
+    const updateReadiness = await uploadVerificationService.isUpdateReadyForDeployment(update_id);
+
+    if (!updateReadiness.ready) {
+      const errorMessage = uploadVerificationService.getDeploymentBlockedMessage(updateReadiness.status);
+      logger.warn('Update deployment blocked: update not ready', {
+        update_id,
+        upload_status: updateReadiness.status,
+        error: updateReadiness.error,
+      });
+
+      return res.status(409).json({
+        error: 'Update not ready for deployment',
+        upload_status: updateReadiness.status,
+        message: errorMessage,
+        details: updateReadiness.error,
+        retry_after_seconds: updateReadiness.status === 'uploading' ? 30 : 10,
+      });
+    }
 
     const result = await pool.query(
       `INSERT INTO update_deployments (update_id, target_type, target_id, status, progress, deployed_by)

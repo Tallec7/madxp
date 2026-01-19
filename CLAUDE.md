@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.41.0 | **Dernière mise à jour**: 2026-01-19
+**Version**: 2.41.1 | **Dernière mise à jour**: 2026-01-19
 
 ---
 
@@ -429,6 +429,7 @@ Le `LoggerService` Angular implémente un throttling côté client pour éviter 
 | **Socket**       | `socket.service.ts`                  | Communication temps réel Pi ↔ Cloud         |
 | **CommandQueue** | `command-queue.service.ts`           | File d'attente commandes (offline/online)   |
 | **Deployment**   | `deployment.service.ts`              | Orchestration déploiement vidéos            |
+| **UploadVerify** | `upload-verification.service.ts`     | Vérification upload avant déploiement       |
 | **Draft**        | `draft.service.ts`                   | Gestion brouillons de configuration         |
 | **Orchestrated** | `orchestrated-deployment.service.ts` | Déploiement vidéos + config orchestré       |
 | **Asset**        | `asset.service.ts`                   | Gestion watermarks et logos (upload/deploy) |
@@ -2067,6 +2068,51 @@ vcgencmd get_mem gpu
     - `central-dashboard/src/app/core/services/auth.service.ts` - Refactoring de `checkAuthentication()` avec `shareReplay`
   - **Résultat** : 1 seule requête `/api/auth/me` au lieu de 2+ par chargement de page
   - **Migration** : Rebuild et redéployer le dashboard
+
+- **Système de vérification d'upload avant déploiement** : Prévention des race conditions entre upload FTP et déploiement Pi
+  - **Problème résolu** : Lors de déploiements simultanés vers plusieurs sites, les Pi tentaient de télécharger les fichiers avant la fin de l'upload FTP, causant des erreurs `tar: unexpected EOF` ou `Checksum mismatch`
+  - **Solution** : Machine d'état `upload_status` avec vérification obligatoire avant tout déploiement
+  - **Architecture** :
+    ```
+    Upload FTP → Vérifier (LIST + taille) → UPDATE status='ready' → Déploiement autorisé
+                                                   ↓
+                             Si status != 'ready' → HTTP 409 "Video not ready for deployment"
+    ```
+  - **Nouvelles colonnes DB** (videos + software_updates) :
+    - `upload_status` : 'uploading' | 'verifying' | 'ready' | 'failed'
+    - `upload_verified_at` : Timestamp de vérification
+    - `upload_verified_size` : Taille réelle du fichier sur FTP
+    - `upload_error_message` : Message d'erreur si échec
+  - **Pattern GATE** : Vérification au niveau contrôleur, retourne HTTP 409 si pas prêt
+  - **Pattern DOUBLE-CHECK** : Vérification supplémentaire au niveau service (backup)
+  - **Nouveaux fichiers** :
+    - `central-server/src/services/upload-verification.service.ts` - Service de vérification
+    - `central-server/src/scripts/migrations/add-upload-verification.sql` - Migration DB
+  - **Fichiers modifiés** :
+    - `central-server/src/config/ftp-storage.ts` - `verifyFtpFileExists()`, `uploadFileToFtpWithVerification()`
+    - `central-server/src/controllers/content.controller.ts` - GATE sur createDeployment
+    - `central-server/src/controllers/updates.controller.ts` - GATE sur createUpdateDeployment
+    - `central-server/src/services/deployment.service.ts` - DOUBLE-CHECK dans startDeployment
+    - `central-server/src/services/update-deployment.service.ts` - DOUBLE-CHECK dans startDeployment
+    - `central-server/src/services/asset.service.ts` - Vérification dans uploadAsset
+    - `raspberry/sync-agent/src/commands/update-software.js` - Messages d'erreur améliorés pour archives corrompues
+    - `raspberry/sync-agent/src/commands/deploy-video.js` - Messages d'erreur améliorés pour téléchargements incomplets
+  - **Messages d'erreur améliorés côté Pi** :
+    - Archive corrompue : "Archive corrompue ou téléchargement incomplet. Cela peut se produire si le déploiement a été lancé avant la fin de l'upload sur le serveur."
+    - Checksum mismatch : "Checksum incorrect. Cela peut se produire si le fichier source était encore en cours d'upload."
+  - **Migration** :
+
+    ```bash
+    # 1. Exécuter la migration SQL sur Supabase (dashboard SQL Editor)
+    # Copier le contenu de add-upload-verification.sql
+
+    # 2. Redéployer le central-server (Railway)
+
+    # 3. Mettre à jour sync-agent sur les Pi
+    scp raspberry/sync-agent/src/commands/update-software.js pi@neopro.local:/home/pi/neopro/sync-agent/src/commands/
+    scp raspberry/sync-agent/src/commands/deploy-video.js pi@neopro.local:/home/pi/neopro/sync-agent/src/commands/
+    ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
+    ```
 
 ### v2.40.x (Janvier 2026)
 
