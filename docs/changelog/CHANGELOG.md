@@ -1,3 +1,9 @@
+## [2.40.1](https://github.com/Tallec7/neopro/compare/v2.40.0...v2.40.1) (2026-01-19)
+
+### Bug Fixes
+
+- **remote:** make Cloud Remote publicly accessible via QR code ([0f303b1](https://github.com/Tallec7/neopro/commit/0f303b1394597d9c1dc412da921f104bc616c6d2))
+
 # [2.40.0](https://github.com/Tallec7/neopro/compare/v2.39.2...v2.40.0) (2026-01-19)
 
 ### Features
