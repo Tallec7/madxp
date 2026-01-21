@@ -1,3 +1,9 @@
+# [2.42.0](https://github.com/Tallec7/neopro/compare/v2.41.1...v2.42.0) (2026-01-21)
+
+### Features
+
+- **dashboard:** amélioration UX bibliothèque vidéo et déploiements ([80c090d](https://github.com/Tallec7/neopro/commit/80c090d92babf3a05ac3057fec76c6893c9fc422))
+
 ## [2.41.1](https://github.com/Tallec7/neopro/compare/v2.41.0...v2.41.1) (2026-01-21)
 
 ### Bug Fixes
