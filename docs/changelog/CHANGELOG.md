@@ -1,3 +1,9 @@
+## [2.42.2](https://github.com/Tallec7/neopro/compare/v2.42.1...v2.42.2) (2026-01-21)
+
+### Bug Fixes
+
+- **dashboard:** prevent video dropdown flickering with cached groups ([a040b44](https://github.com/Tallec7/neopro/commit/a040b44cfa9bc4c54d332d4ac8b91edd63b1c0da))
+
 ## [2.42.1](https://github.com/Tallec7/neopro/compare/v2.42.0...v2.42.1) (2026-01-21)
 
 ### Bug Fixes
