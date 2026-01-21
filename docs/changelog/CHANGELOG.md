@@ -1,3 +1,9 @@
+## [2.42.1](https://github.com/Tallec7/neopro/compare/v2.42.0...v2.42.1) (2026-01-21)
+
+### Bug Fixes
+
+- **dashboard:** corriger URL endpoint pending deployments ([c9cfe0a](https://github.com/Tallec7/neopro/commit/c9cfe0a4c6bbc2fb437f37f87697c4c3a90fa257))
+
 # [2.42.0](https://github.com/Tallec7/neopro/compare/v2.41.1...v2.42.0) (2026-01-21)
 
 ### Features
