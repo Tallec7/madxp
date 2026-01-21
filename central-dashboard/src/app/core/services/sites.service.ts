@@ -512,7 +512,7 @@ export class SitesService {
 
   // Pending deployments management
   getPendingDeployments(siteId: string): Observable<PendingDeployment[]> {
-    return this.api.get<PendingDeployment[]>('/content/deployments').pipe(
+    return this.api.get<PendingDeployment[]>('/deployments').pipe(
       map(deployments => deployments.filter(d =>
         d.target_type === 'site' &&
         d.target_id === siteId &&
@@ -522,7 +522,7 @@ export class SitesService {
   }
 
   cancelDeployment(deploymentId: string): Observable<void> {
-    return this.api.delete(`/content/deployments/${deploymentId}`);
+    return this.api.delete(`/deployments/${deploymentId}`);
   }
 }
 
