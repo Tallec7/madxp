@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.41.2 | **Dernière mise à jour**: 2026-01-21
+**Version**: 2.41.3 | **Dernière mise à jour**: 2026-01-21
 
 ---
 
@@ -1451,18 +1451,18 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 
 ### Composants Site Detail (Refactoring 2026)
 
-| Composant                    | Fichier                                     | Description                                            |
-| ---------------------------- | ------------------------------------------- | ------------------------------------------------------ |
-| **SiteContentTabComponent**  | `components/site-content-tab/`              | Onglet Contenu : boucles par phase, catégories, vidéos |
-| **SiteSettingsTabComponent** | `components/site-settings-tab/`             | Onglet Paramètres : config réseau, hotspot, QR code    |
-| **SiteDebugTabComponent**    | `components/site-debug-tab/`                | Onglet Debug : logs, commandes, diagnostics            |
-| **RemotePreviewComponent**   | `components/remote-preview/`                | Simulation visuelle de la télécommande Pi              |
-| **VideoUploadZoneComponent** | `components/video-upload-zone/`             | Upload contextuel de vidéos pour un site               |
-| **VideoLibraryComponent**    | `components/video-library/`                 | Bibliothèque vidéos avec badge site ⭐                 |
-| **VideoSelectorComponent**   | `shared/components/video-selector/`         | Sélecteur de vidéos avec filtres catégorie             |
-| **QrCodeGeneratorComponent** | `shared/components/qr-code-generator/`      | Génération QR code télécommande (local/cloud)          |
-| **ConfigEditorComponent**    | `config-editor/`                            | Éditeur complet de configuration JSON                  |
-| **CloudRemoteComponent**     | `features/remote/cloud-remote.component.ts` | Télécommande cloud ⚡ NEW                              |
+| Composant                    | Fichier                                     | Description                                                   |
+| ---------------------------- | ------------------------------------------- | ------------------------------------------------------------- |
+| **SiteContentTabComponent**  | `components/site-content-tab/`              | Onglet Contenu : boucles, catégories, déploiements en attente |
+| **SiteSettingsTabComponent** | `components/site-settings-tab/`             | Onglet Paramètres : config réseau, hotspot, QR code           |
+| **SiteDebugTabComponent**    | `components/site-debug-tab/`                | Onglet Debug : logs, commandes, diagnostics                   |
+| **RemotePreviewComponent**   | `components/remote-preview/`                | Simulation visuelle de la télécommande Pi                     |
+| **VideoUploadZoneComponent** | `components/video-upload-zone/`             | Upload contextuel de vidéos pour un site                      |
+| **VideoLibraryComponent**    | `components/video-library/`                 | Bibliothèque vidéos avec filtre "Pertinentes" et badge ⭐     |
+| **VideoSelectorComponent**   | `shared/components/video-selector/`         | Sélecteur de vidéos avec filtres catégorie                    |
+| **QrCodeGeneratorComponent** | `shared/components/qr-code-generator/`      | Génération QR code télécommande (local/cloud)                 |
+| **ConfigEditorComponent**    | `config-editor/`                            | Éditeur complet de configuration JSON                         |
+| **CloudRemoteComponent**     | `features/remote/cloud-remote.component.ts` | Télécommande cloud ⚡ NEW                                     |
 
 ### Synchronisation Remote Pi ↔ Cloud Remote ⚠️ IMPORTANT
 
@@ -2016,6 +2016,23 @@ vcgencmd get_mem gpu
 ## Historique Breaking Changes
 
 ### v2.41.x (Janvier 2026)
+
+- **Amélioration UX Bibliothèque Vidéo** : Meilleur filtrage et gestion des déploiements
+  - **Dropdowns enrichis** : Fusion Cloud + Local avec icônes de priorité
+    - ⭐ Vidéos uploadées spécifiquement pour ce site (`uploadedForSiteId`)
+    - ✅ Vidéos présentes sur le Pi
+    - ☁️ Vidéos cloud uniquement
+  - **Filtre "Pertinentes" par défaut** : Affiche uniquement les vidéos pertinentes pour le site
+    - Déjà sur le Pi (local)
+    - Utilisées dans la configuration actuelle (boucles, catégories)
+    - Uploadées spécifiquement pour ce site
+    - Avec un déploiement en cours vers ce site
+  - **Section déploiements en attente** : Liste des déploiements `pending`/`in_progress` avec bouton Annuler
+  - **Fichiers modifiés** :
+    - `central-dashboard/.../video-library.component.ts` - Filtre `relevant`, méthode `isVideoRelevant()`, nouveaux inputs
+    - `central-dashboard/.../site-content-tab.component.ts` - Section pending deployments, `rebuildConfigVideoPaths()`, styles CSS
+    - `central-dashboard/src/app/core/services/sites.service.ts` - Interface `PendingDeployment`, méthodes API
+  - **Migration** : Rebuild et redéployer le dashboard
 
 - **Cloud Remote accessible publiquement** : L'accès à `/remote/:siteId` ne requiert plus d'authentification
   - **Problème résolu** : Le QR Code Cloud Remote redirigeait vers la page de login au lieu de la télécommande

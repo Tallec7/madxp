@@ -509,4 +509,36 @@ export class SitesService {
   }> {
     return this.api.get(`/sites/${id}/timeline?limit=${limit}`);
   }
+
+  // Pending deployments management
+  getPendingDeployments(siteId: string): Observable<PendingDeployment[]> {
+    return this.api.get<PendingDeployment[]>('/content/deployments').pipe(
+      map(deployments => deployments.filter(d =>
+        d.target_type === 'site' &&
+        d.target_id === siteId &&
+        (d.status === 'pending' || d.status === 'in_progress')
+      ))
+    );
+  }
+
+  cancelDeployment(deploymentId: string): Observable<void> {
+    return this.api.delete(`/content/deployments/${deploymentId}`);
+  }
+}
+
+export interface PendingDeployment {
+  id: string;
+  video_id: string;
+  target_type: 'site' | 'group';
+  target_id: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
+  progress: number;
+  error: string | null;
+  created_at: string;
+  started_at: string | null;
+  deployed_at: string | null;
+  filename: string;
+  original_name: string | null;
+  video_title: string;
+  target_name: string;
 }

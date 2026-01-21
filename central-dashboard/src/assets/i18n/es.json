@@ -196,7 +196,12 @@
     "searchVideo": "Buscar un vídeo...",
     "launchDeployment": "Lanzar despliegue",
     "deploymentInProgress": "Despliegue en curso...",
-    "startDeployment": "Lanzar despliegue"
+    "startDeployment": "Lanzar despliegue",
+    "pendingDeployments": "Despliegues pendientes",
+    "statusPending": "Pendiente",
+    "statusInProgress": "En progreso",
+    "cancelDeployment": "Cancelar este despliegue",
+    "cancellingDeployment": "Cancelando..."
   },
   "updates": {
     "title": "Gestión de actualizaciones",

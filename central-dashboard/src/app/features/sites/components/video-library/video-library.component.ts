@@ -46,6 +46,7 @@ export type SortDirection = 'asc' | 'desc';
         </h4>
         <div class="library-stats">
           <span class="stat">{{ filteredVideos.length }} vidéo(s)</span>
+          <span class="stat relevant" *ngIf="statsRelevant > 0" title="Vidéos pertinentes pour ce site">🎯 {{ statsRelevant }}</span>
           <span class="stat on-pi" *ngIf="statsOnPi > 0">✅ {{ statsOnPi }}</span>
           <span class="stat to-deploy" *ngIf="statsToDeploy > 0">⏳ {{ statsToDeploy }}</span>
           <span class="stat" *ngIf="totalSize && totalSize > 0 && !isNaN(totalSize)">{{ formatBytes(totalSize) }}</span>
@@ -80,6 +81,7 @@ export type SortDirection = 'asc' | 'desc';
           class="search-input"
         />
         <select [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()" class="filter-select">
+          <option value="relevant">🎯 Pertinentes</option>
           <option value="all">Tous les statuts</option>
           <option value="on_pi">✅ Sur le Pi</option>
           <option value="to_deploy">⏳ À déployer</option>
@@ -349,6 +351,11 @@ export type SortDirection = 'asc' | 'desc';
       background: white;
       padding: 0.25rem 0.75rem;
       border-radius: 999px;
+    }
+
+    .stat.relevant {
+      background: #e0e7ff;
+      color: #3730a3;
     }
 
     .stat.on-pi {
@@ -1063,6 +1070,8 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() selectedPath: string = '';
   @Input() deployStates: Map<string, VideoDeployState> = new Map();
   @Input() siteId: string | null = null; // Current site ID for showing "for this site" badge
+  @Input() configVideoPaths: Set<string> = new Set(); // Paths of videos used in current config
+  @Input() pendingDeploymentVideoIds: Set<string> = new Set(); // IDs of videos with pending deployments
 
   @Output() videoSelect = new EventEmitter<VideoItem>();
   @Output() videoPreview = new EventEmitter<VideoItem>();
@@ -1078,13 +1087,14 @@ export class VideoLibraryComponent implements OnChanges {
   totalDuration: number = 0;
   statsOnPi: number = 0;
   statsToDeploy: number = 0;
+  statsRelevant: number = 0; // Count of videos relevant to this site
   storagePercent: number = 0;
 
   // Expose isNaN to template
   isNaN = isNaN;
 
   searchQuery: string = '';
-  statusFilter: 'all' | 'on_pi' | 'to_deploy' = 'all';
+  statusFilter: 'relevant' | 'all' | 'on_pi' | 'to_deploy' = 'relevant'; // Default to relevant
   ownerFilter: 'all' | 'club' | 'neopro' = 'all';
   categoryFilter: string = 'all';
 
@@ -1196,6 +1206,30 @@ export class VideoLibraryComponent implements OnChanges {
     this.totalDuration = this.allVideos.reduce((sum, v) => sum + (v.duration || 0), 0);
     this.statsOnPi = this.allVideos.filter(v => v.isOnPi).length;
     this.statsToDeploy = this.allVideos.filter(v => !v.isOnPi).length;
+    this.statsRelevant = this.allVideos.filter(v => this.isVideoRelevant(v)).length;
+  }
+
+  /**
+   * Determine if a video is "relevant" to this site:
+   * - Already on the Pi (local)
+   * - Used in the current configuration (in any category/phase loop)
+   * - Specifically uploaded for this site (uploadedForSiteId matches)
+   * - Has a pending deployment to this site
+   */
+  isVideoRelevant(video: VideoItem): boolean {
+    // Already on the Pi
+    if (video.isOnPi) return true;
+
+    // Used in current configuration
+    if (video.path && this.configVideoPaths.has(video.path)) return true;
+
+    // Specifically uploaded for this site
+    if (this.siteId && video.uploadedForSiteId === this.siteId) return true;
+
+    // Has pending deployment to this site
+    if (video.id && this.pendingDeploymentVideoIds.has(video.id)) return true;
+
+    return false;
   }
 
   private detectOwner(pathOrFilename: string): 'club' | 'neopro' {
@@ -1230,7 +1264,9 @@ export class VideoLibraryComponent implements OnChanges {
       );
     }
 
-    if (this.statusFilter === 'on_pi') {
+    if (this.statusFilter === 'relevant') {
+      filtered = filtered.filter(v => this.isVideoRelevant(v));
+    } else if (this.statusFilter === 'on_pi') {
       filtered = filtered.filter(v => v.isOnPi);
     } else if (this.statusFilter === 'to_deploy') {
       filtered = filtered.filter(v => !v.isOnPi);

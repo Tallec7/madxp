@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit, OnChanges, OnDestroy, S
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { interval, Subscription, filter, take } from 'rxjs';
-import { SitesService } from '../../../../core/services/sites.service';
+import { SitesService, PendingDeployment } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
 import { SocketService } from '../../../../core/services/socket.service';
@@ -28,6 +28,24 @@ interface SponsorVideo {
   owner?: 'club' | 'neopro';
   locked?: boolean;
 }
+
+/**
+ * Interface unifiée pour les vidéos dans les dropdowns
+ * Fusionne LocalVideo + CloudVideo avec indicateurs de statut
+ */
+interface UnifiedVideoOption {
+  path: string;           // Chemin unique (clé de sélection)
+  filename: string;       // Nom du fichier
+  displayName: string;    // Nom affiché (title ou filename)
+  category: string | null;
+  isOnPi: boolean;        // ✅ Déjà sur le Pi
+  isForThisSite: boolean; // ⭐ Uploadée spécifiquement pour ce site
+  isCloud: boolean;       // ☁️ Disponible dans le cloud
+  source: 'local' | 'cloud' | 'both';
+  cloudId?: string;       // ID cloud pour le déploiement
+}
+
+type VideoOptionGroup = 'forThisSite' | 'onPi' | 'cloud';
 
 /**
  * Interface pour les items de diff avec labels lisibles
@@ -128,6 +146,37 @@ interface HumanReadableDiff {
         </div>
       </div>
 
+      <!-- Déploiements en attente -->
+      <div class="pending-deployments" *ngIf="pendingDeployments.length > 0">
+        <div class="pending-header">
+          <span class="pending-icon">⏳</span>
+          <span class="pending-title">{{ 'content.pendingDeployments' | translate }} ({{ pendingDeployments.length }})</span>
+          <button class="btn btn-sm btn-outline" (click)="refreshPendingDeployments()" [disabled]="loadingPendingDeployments">
+            {{ loadingPendingDeployments ? '⏳' : '🔄' }}
+          </button>
+        </div>
+        <div class="pending-list">
+          <div class="pending-item" *ngFor="let deployment of pendingDeployments">
+            <span class="pending-video">{{ deployment.video_title || deployment.filename }}</span>
+            <span class="pending-status" [class]="'status-' + deployment.status">
+              {{ deployment.status === 'pending' ? ('⏳ ' + ('content.statusPending' | translate)) : ('🚀 ' + ('content.statusInProgress' | translate)) }}
+            </span>
+            <span class="pending-progress" *ngIf="deployment.status === 'in_progress'">
+              {{ deployment.progress }}%
+            </span>
+            <span class="pending-date">{{ deployment.created_at | date:'short' }}</span>
+            <button
+              class="btn btn-sm btn-danger-outline"
+              (click)="cancelPendingDeployment(deployment)"
+              [disabled]="cancellingDeploymentId === deployment.id"
+              [title]="'content.cancelDeployment' | translate"
+            >
+              {{ cancellingDeploymentId === deployment.id ? '⏳' : '✕' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Bibliothèque Vidéo -->
       <div class="section">
         <app-video-library
@@ -137,6 +186,8 @@ interface HumanReadableDiff {
           [selectedPath]="selectedVideoPath"
           [deployStates]="videoDeployStates"
           [siteId]="siteId"
+          [configVideoPaths]="configVideoPaths"
+          [pendingDeploymentVideoIds]="pendingDeploymentVideoIds"
           (videoSelect)="onVideoSelect($event)"
           (videoPreview)="onVideoPreview($event)"
           (videoDeploy)="onVideoDeploy($event)"
@@ -182,24 +233,16 @@ interface HumanReadableDiff {
                 (ngModelChange)="markDirty()"
                 class="video-select"
                 [class.input-error]="!sponsor.path"
-                *ngIf="localVideos.length > 0"
+                [class.has-cloud-video]="isCloudVideoPath(sponsor.path)"
               >
                 <option value="">-- Sélectionner --</option>
-                <optgroup *ngFor="let cat of getVideoCategories()" [label]="cat || 'Sans catégorie'">
-                  <option *ngFor="let v of getVideosByCategory(cat)" [value]="v.path">
-                    {{ v.filename }}
+                <optgroup *ngFor="let group of getVideoOptionGroups()" [label]="group.icon + ' ' + group.label">
+                  <option *ngFor="let v of group.videos" [value]="v.path">
+                    {{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}
                   </option>
                 </optgroup>
               </select>
-              <input
-                type="text"
-                [(ngModel)]="sponsor.path"
-                (ngModelChange)="markDirty()"
-                placeholder="Chemin vidéo"
-                class="sponsor-path-input"
-                [class.input-error]="!sponsor.path"
-                *ngIf="localVideos.length === 0"
-              />
+              <span class="cloud-hint" *ngIf="isCloudVideoPath(sponsor.path)">⏳ Sera déployée</span>
               <span class="error-hint" *ngIf="!sponsor.path">Vidéo requise</span>
             </div>
             <div class="sponsor-owner">
@@ -272,21 +315,13 @@ interface HumanReadableDiff {
                       [(ngModel)]="video.path"
                       (ngModelChange)="markDirty()"
                       class="video-select-compact"
-                      *ngIf="localVideos.length > 0"
+                      [class.has-cloud-video]="isCloudVideoPath(video.path)"
                     >
                       <option value="">-- Sélectionner --</option>
-                      <optgroup *ngFor="let c of getVideoCategories()" [label]="c || 'Sans catégorie'">
-                        <option *ngFor="let v of getVideosByCategory(c)" [value]="v.path">{{ v.filename }}</option>
+                      <optgroup *ngFor="let group of getVideoOptionGroups()" [label]="group.icon + ' ' + group.label">
+                        <option *ngFor="let v of group.videos" [value]="v.path">{{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}</option>
                       </optgroup>
                     </select>
-                    <input
-                      type="text"
-                      [(ngModel)]="video.path"
-                      (ngModelChange)="markDirty()"
-                      placeholder="Chemin vidéo"
-                      class="video-input-compact"
-                      *ngIf="localVideos.length === 0"
-                    />
                     <input
                       type="text"
                       [(ngModel)]="video.name"
@@ -294,6 +329,7 @@ interface HumanReadableDiff {
                       placeholder="Nom affiché"
                       class="video-name-compact"
                     />
+                    <span class="cloud-badge" *ngIf="isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
                     <button class="btn-remove-tiny" (click)="removeVideoFromCategory(catIndex, vidIndex)">×</button>
                   </div>
                 </div>
@@ -327,21 +363,13 @@ interface HumanReadableDiff {
                           [(ngModel)]="video.path"
                           (ngModelChange)="markDirty()"
                           class="video-select-compact"
-                          *ngIf="localVideos.length > 0"
+                          [class.has-cloud-video]="isCloudVideoPath(video.path)"
                         >
                           <option value="">-- Sélectionner --</option>
-                          <optgroup *ngFor="let c of getVideoCategories()" [label]="c || 'Sans catégorie'">
-                            <option *ngFor="let v of getVideosByCategory(c)" [value]="v.path">{{ v.filename }}</option>
+                          <optgroup *ngFor="let group of getVideoOptionGroups()" [label]="group.icon + ' ' + group.label">
+                            <option *ngFor="let v of group.videos" [value]="v.path">{{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}</option>
                           </optgroup>
                         </select>
-                        <input
-                          type="text"
-                          [(ngModel)]="video.path"
-                          (ngModelChange)="markDirty()"
-                          placeholder="Chemin vidéo"
-                          class="video-input-compact"
-                          *ngIf="localVideos.length === 0"
-                        />
                         <input
                           type="text"
                           [(ngModel)]="video.name"
@@ -349,6 +377,7 @@ interface HumanReadableDiff {
                           placeholder="Nom affiché"
                           class="video-name-compact"
                         />
+                        <span class="cloud-badge" *ngIf="isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
                         <button class="btn-remove-tiny" (click)="removeVideoFromSubcategory(catIndex, subIndex, vidIndex)">×</button>
                       </div>
                     </div>
@@ -438,14 +467,16 @@ interface HumanReadableDiff {
                     class="loop-video-select"
                     [ngModel]="video.path"
                     (ngModelChange)="updatePhaseLoopVideo(tc.id, vidIndex, 'path', $event)"
+                    [class.has-cloud-video]="isCloudVideoPath(video.path)"
                   >
                     <option value="">-- Sélectionner --</option>
-                    <optgroup *ngFor="let cat of getVideoCategories()" [label]="cat || 'Sans catégorie'">
-                      <option *ngFor="let v of getVideosByCategory(cat)" [value]="v.path">
-                        {{ v.filename }}
+                    <optgroup *ngFor="let group of getVideoOptionGroups()" [label]="group.icon + ' ' + group.label">
+                      <option *ngFor="let v of group.videos" [value]="v.path">
+                        {{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}
                       </option>
                     </optgroup>
                   </select>
+                  <span class="cloud-badge" *ngIf="isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
                   <button class="btn-remove-tiny" (click)="removePhaseLoopVideo(tc.id, vidIndex)">×</button>
                 </div>
               </div>
@@ -903,6 +934,25 @@ interface HumanReadableDiff {
       border: 1px solid #e2e8f0;
       border-radius: 4px;
       font-size: 0.8125rem;
+    }
+
+    .video-select.has-cloud-video {
+      border-color: #f59e0b;
+      background: #fffbeb;
+    }
+
+    .cloud-hint {
+      font-size: 0.6875rem;
+      color: #92400e;
+      background: #fef3c7;
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .cloud-badge {
+      font-size: 0.75rem;
+      color: #92400e;
     }
 
     .sponsor-owner {
@@ -2267,6 +2317,109 @@ interface HumanReadableDiff {
       font-size: 0.8125rem;
       color: #991b1b;
     }
+
+    /* Pending Deployments Section */
+    .pending-deployments {
+      padding: 1rem;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .pending-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .pending-icon {
+      font-size: 1.25rem;
+    }
+
+    .pending-title {
+      font-weight: 600;
+      flex: 1;
+      color: #92400e;
+    }
+
+    .pending-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .pending-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      background: white;
+      border-radius: 6px;
+      border: 1px solid #fde68a;
+    }
+
+    .pending-video {
+      flex: 1;
+      font-weight: 500;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pending-status {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .pending-status.status-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .pending-status.status-in_progress {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .pending-progress {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #1e40af;
+      min-width: 35px;
+      text-align: right;
+    }
+
+    .pending-date {
+      font-size: 0.75rem;
+      color: #64748b;
+      min-width: 90px;
+    }
+
+    .btn-danger-outline {
+      padding: 0.25rem 0.5rem;
+      background: transparent;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-danger-outline:hover:not(:disabled) {
+      background: #fee2e2;
+      border-color: #dc2626;
+    }
+
+    .btn-danger-outline:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   `]
 })
 export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
@@ -2316,6 +2469,33 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   cachedVideoCategories: string[] = [];
   cachedVideosByCategory: Map<string, LocalVideo[]> = new Map();
   cachedTimeCategories: { id: string; name: string; icon: string; description: string }[] = [];
+
+  // Unified video options for dropdowns (Cloud + Local merged)
+  unifiedVideoOptions: UnifiedVideoOption[] = [];
+  videoSearchQuery: string = '';
+  groupedVideoOptions: Map<VideoOptionGroup, UnifiedVideoOption[]> = new Map();
+
+  // Video relevance tracking for filtered view in video-library
+  configVideoPaths: Set<string> = new Set();
+
+  /**
+   * Getter qui calcule les IDs des vidéos avec déploiement en cours
+   * Dérivé de videoDeployStates pour rester toujours synchronisé
+   */
+  get pendingDeploymentVideoIds(): Set<string> {
+    const ids = new Set<string>();
+    for (const [videoId, state] of this.videoDeployStates.entries()) {
+      if (state.status === 'deploying') {
+        ids.add(videoId);
+      }
+    }
+    return ids;
+  }
+
+  // Pending deployments tracking
+  pendingDeployments: PendingDeployment[] = [];
+  loadingPendingDeployments: boolean = false;
+  cancellingDeploymentId: string | null = null;
 
   // Draft management
   draft: ConfigDraft | null = null;
@@ -2836,6 +3016,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         this.expandedCategories = (this.config.categories || []).map(() => false);
         this.rebuildVideoCache();
         this.rebuildTimeCategoriesCache();
+        this.refreshPendingDeployments(); // Load pending deployments
         this.cdr.markForCheck();
       },
       error: (error) => {
@@ -2917,6 +3098,8 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   markDirty(): void {
     this.isDirty = JSON.stringify(this.config) !== this.originalConfig;
+    // Recalculate config video paths when config changes
+    this.rebuildConfigVideoPaths();
   }
 
   onVideoSelect(video: VideoItem): void {
@@ -3254,6 +3437,198 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
     this.cachedVideoCategories = Array.from(cats).sort();
     this.cachedVideosByCategory = byCategory;
+
+    // Build unified video options (Cloud + Local merged)
+    this.rebuildUnifiedVideoOptions();
+
+    // Recalculate video paths used in config (for filtered video library view)
+    this.rebuildConfigVideoPaths();
+  }
+
+  /**
+   * Construit la liste unifiée des vidéos pour les dropdowns
+   * Fusionne localVideos + cloudVideos avec déduplication et indicateurs de statut
+   */
+  private rebuildUnifiedVideoOptions(): void {
+    const optionsMap = new Map<string, UnifiedVideoOption>();
+
+    // 1. D'abord, ajouter les vidéos locales (sur le Pi)
+    for (const local of this.localVideos) {
+      const key = local.filename.toLowerCase();
+      optionsMap.set(key, {
+        path: local.path,
+        filename: local.filename,
+        displayName: local.filename,
+        category: local.category,
+        isOnPi: true,
+        isForThisSite: false, // Sera mis à jour si trouvé dans cloud
+        isCloud: false,
+        source: 'local'
+      });
+    }
+
+    // 2. Ensuite, ajouter/enrichir avec les vidéos cloud
+    for (const cloud of this.cloudVideos) {
+      const key = cloud.filename.toLowerCase();
+      const existing = optionsMap.get(key);
+
+      if (existing) {
+        // La vidéo existe localement ET dans le cloud
+        existing.isCloud = true;
+        existing.isForThisSite = cloud.uploadedForSiteId === this.siteId;
+        existing.cloudId = cloud.id;
+        existing.source = 'both';
+        existing.displayName = cloud.title || cloud.originalName || cloud.filename;
+      } else {
+        // Vidéo uniquement dans le cloud
+        // Utiliser l'URL cloud comme path (sera transformé en path local lors du déploiement)
+        const localPath = `videos/${cloud.category || 'UPLOADS'}/${cloud.filename}`;
+        optionsMap.set(key, {
+          path: localPath,
+          filename: cloud.filename,
+          displayName: cloud.title || cloud.originalName || cloud.filename,
+          category: cloud.category,
+          isOnPi: false,
+          isForThisSite: cloud.uploadedForSiteId === this.siteId,
+          isCloud: true,
+          source: 'cloud',
+          cloudId: cloud.id
+        });
+      }
+    }
+
+    // 3. Convertir en array et trier
+    this.unifiedVideoOptions = Array.from(optionsMap.values())
+      .sort((a, b) => a.displayName.localeCompare(b.displayName, 'fr', { numeric: true }));
+
+    // 4. Grouper par priorité
+    this.groupedVideoOptions = new Map();
+    this.groupedVideoOptions.set('forThisSite', []);
+    this.groupedVideoOptions.set('onPi', []);
+    this.groupedVideoOptions.set('cloud', []);
+
+    for (const opt of this.unifiedVideoOptions) {
+      if (opt.isForThisSite && !opt.isOnPi) {
+        this.groupedVideoOptions.get('forThisSite')!.push(opt);
+      } else if (opt.isOnPi) {
+        this.groupedVideoOptions.get('onPi')!.push(opt);
+      } else {
+        this.groupedVideoOptions.get('cloud')!.push(opt);
+      }
+    }
+  }
+
+  /**
+   * Retourne les groupes de vidéos pour le dropdown
+   */
+  getVideoOptionGroups(): { key: VideoOptionGroup; label: string; icon: string; videos: UnifiedVideoOption[] }[] {
+    const groups: { key: VideoOptionGroup; label: string; icon: string; videos: UnifiedVideoOption[] }[] = [];
+
+    const forThisSite = this.groupedVideoOptions.get('forThisSite') || [];
+    const onPi = this.groupedVideoOptions.get('onPi') || [];
+    const cloud = this.groupedVideoOptions.get('cloud') || [];
+
+    if (forThisSite.length > 0) {
+      groups.push({ key: 'forThisSite', label: 'Pour ce site', icon: '⭐', videos: forThisSite });
+    }
+    if (onPi.length > 0) {
+      groups.push({ key: 'onPi', label: 'Sur le Pi', icon: '✅', videos: onPi });
+    }
+    if (cloud.length > 0) {
+      groups.push({ key: 'cloud', label: 'Cloud (à déployer)', icon: '☁️', videos: cloud });
+    }
+
+    return groups;
+  }
+
+  /**
+   * Filtre les options de vidéos selon la recherche
+   */
+  getFilteredVideoOptions(searchQuery: string = ''): UnifiedVideoOption[] {
+    if (!searchQuery.trim()) {
+      return this.unifiedVideoOptions;
+    }
+    const query = searchQuery.toLowerCase();
+    return this.unifiedVideoOptions.filter(v =>
+      v.displayName.toLowerCase().includes(query) ||
+      v.filename.toLowerCase().includes(query)
+    );
+  }
+
+  /**
+   * Retourne le label d'affichage pour une option de vidéo
+   */
+  getVideoOptionLabel(video: UnifiedVideoOption): string {
+    let label = video.displayName;
+    if (!video.isOnPi) {
+      label += ' ⏳';
+    }
+    return label;
+  }
+
+  /**
+   * Vérifie si un chemin correspond à une vidéo cloud non déployée
+   */
+  isCloudVideoPath(path: string): boolean {
+    const video = this.unifiedVideoOptions.find(v => v.path === path);
+    return video ? !video.isOnPi : false;
+  }
+
+  /**
+   * Reconstruit l'ensemble des chemins vidéo utilisés dans la configuration actuelle
+   * Utilisé pour filtrer la bibliothèque vidéo par pertinence
+   */
+  private rebuildConfigVideoPaths(): void {
+    const paths = new Set<string>();
+
+    // 1. Vidéos de la boucle par défaut (sponsors)
+    if (this.config.sponsors) {
+      for (const sponsor of this.config.sponsors) {
+        if (sponsor.path) {
+          paths.add(sponsor.path);
+        }
+      }
+    }
+
+    // 2. Vidéos des catégories
+    if (this.config.categories) {
+      for (const cat of this.config.categories) {
+        if (cat.videos) {
+          for (const video of cat.videos) {
+            if (video.path) {
+              paths.add(video.path);
+            }
+          }
+        }
+        // Sous-catégories
+        if (cat.subCategories) {
+          for (const subcat of cat.subCategories) {
+            if (subcat.videos) {
+              for (const video of subcat.videos) {
+                if (video.path) {
+                  paths.add(video.path);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Vidéos des phases de match (timeCategories)
+    if (this.config.timeCategories) {
+      for (const tc of this.config.timeCategories) {
+        if (tc.loopVideos) {
+          for (const video of tc.loopVideos) {
+            if (video.path) {
+              paths.add(video.path);
+            }
+          }
+        }
+      }
+    }
+
+    this.configVideoPaths = paths;
   }
 
   getVideoCategories(): string[] {
@@ -3797,6 +4172,61 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
           // Ignorer les erreurs de polling
         }
       });
+    });
+  }
+
+  // ============================================================================
+  // Pending Deployments Management
+  // ============================================================================
+
+  /**
+   * Charge la liste des déploiements en attente pour ce site
+   */
+  refreshPendingDeployments(): void {
+    if (!this.siteId) return;
+
+    this.loadingPendingDeployments = true;
+    this.cdr.markForCheck();
+
+    this.sitesService.getPendingDeployments(this.siteId).subscribe({
+      next: (deployments) => {
+        this.pendingDeployments = deployments;
+        this.loadingPendingDeployments = false;
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.loadingPendingDeployments = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Failed to load pending deployments', { error: message, siteId: this.siteId });
+        // Ne pas afficher de notification - ce n'est pas critique
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  /**
+   * Annule un déploiement en attente
+   */
+  cancelPendingDeployment(deployment: PendingDeployment): void {
+    if (this.cancellingDeploymentId) return;
+
+    this.cancellingDeploymentId = deployment.id;
+    this.cdr.markForCheck();
+
+    this.sitesService.cancelDeployment(deployment.id).subscribe({
+      next: () => {
+        this.cancellingDeploymentId = null;
+        this.notificationService.success(`Déploiement de "${deployment.video_title || deployment.filename}" annulé`);
+        // Retirer le déploiement de la liste localement
+        this.pendingDeployments = this.pendingDeployments.filter(d => d.id !== deployment.id);
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.cancellingDeploymentId = null;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+        this.cdr.markForCheck();
+      }
     });
   }
 }

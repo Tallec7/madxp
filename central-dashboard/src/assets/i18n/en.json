@@ -196,7 +196,12 @@
     "searchVideo": "Search a video...",
     "launchDeployment": "Launch deployment",
     "deploymentInProgress": "Deployment in progress...",
-    "startDeployment": "Start deployment"
+    "startDeployment": "Start deployment",
+    "pendingDeployments": "Pending deployments",
+    "statusPending": "Pending",
+    "statusInProgress": "In progress",
+    "cancelDeployment": "Cancel this deployment",
+    "cancellingDeployment": "Cancelling..."
   },
   "updates": {
     "title": "Updates Management",
