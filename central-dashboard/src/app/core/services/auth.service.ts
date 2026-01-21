@@ -63,15 +63,21 @@ export class AuthService {
     this.authCheckInterval$ = interval(300000).subscribe(() => {
       // Vérifier silencieusement sans bloquer l'UI
       this.logger.debug('Periodic auth check');
-      this.api.get<User>('/auth/me').subscribe({
-        next: (user) => {
-          this.logger.debug('Periodic check: still authenticated', { email: user.email });
-          this.currentUserSubject.next(user);
-        },
-        error: (err) => {
-          // Token expiré ou invalide - déconnecter et rediriger
-          this.logger.warn('Periodic check: session expired', { error: ErrorExtractor.getMessage(err) });
-          this.handleSessionExpired();
+
+      // Utiliser checkAuthentication() pour bénéficier de la déduplication
+      // et de la gestion correcte des erreurs 429
+      this.checkAuthentication().subscribe({
+        next: (isAuthenticated) => {
+          if (!isAuthenticated) {
+            // Session expirée - géré par checkAuthentication()
+            // Mais on peut aussi avoir un rate limit 429, dans ce cas
+            // checkAuthentication retourne false sans déconnecter
+            // On vérifie si on a toujours un user en mémoire
+            if (!this.currentUserSubject.value) {
+              this.logger.warn('Periodic check: session expired');
+              this.handleSessionExpired();
+            }
+          }
         }
       });
     });

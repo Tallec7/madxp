@@ -2,17 +2,20 @@ import { Router } from 'express';
 import * as authController from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth';
 import { validate, schemas } from '../middleware/validation';
-import { authRateLimit, apiRateLimit } from '../middleware/user-rate-limit';
+import { authRateLimit, apiRateLimit, monitoringRateLimit } from '../middleware/user-rate-limit';
 
 const router = Router();
 
 // Login has its own strict rate limit (anti-bruteforce)
 router.post('/login', authRateLimit, validate(schemas.login), authController.login);
 
-// Logout and me use standard API rate limit (not bruteforce targets)
+// Logout uses standard API rate limit
 router.post('/logout', apiRateLimit, authenticate, authController.logout);
 
-router.get('/me', apiRateLimit, authenticate, authController.me);
+// /me uses monitoringRateLimit (300/min) instead of apiRateLimit (100/min)
+// because it's called frequently by multiple components (guards, polling, etc.)
+// and is not a security-sensitive operation (just reads current user)
+router.get('/me', monitoringRateLimit, authenticate, authController.me);
 
 router.post('/change-password', apiRateLimit, authenticate, authController.changePassword);
 

@@ -236,8 +236,8 @@ interface HumanReadableDiff {
                 [class.has-cloud-video]="isCloudVideoPath(sponsor.path)"
               >
                 <option value="">-- Sélectionner --</option>
-                <optgroup *ngFor="let group of getVideoOptionGroups()" [label]="group.icon + ' ' + group.label">
-                  <option *ngFor="let v of group.videos" [value]="v.path">
+                <optgroup *ngFor="let group of videoOptionGroups; trackBy: trackByGroupKey" [label]="group.icon + ' ' + group.label">
+                  <option *ngFor="let v of group.videos; trackBy: trackByVideoPath" [value]="v.path">
                     {{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}
                   </option>
                 </optgroup>
@@ -318,8 +318,8 @@ interface HumanReadableDiff {
                       [class.has-cloud-video]="isCloudVideoPath(video.path)"
                     >
                       <option value="">-- Sélectionner --</option>
-                      <optgroup *ngFor="let group of getVideoOptionGroups()" [label]="group.icon + ' ' + group.label">
-                        <option *ngFor="let v of group.videos" [value]="v.path">{{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}</option>
+                      <optgroup *ngFor="let group of videoOptionGroups; trackBy: trackByGroupKey" [label]="group.icon + ' ' + group.label">
+                        <option *ngFor="let v of group.videos; trackBy: trackByVideoPath" [value]="v.path">{{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}</option>
                       </optgroup>
                     </select>
                     <input
@@ -366,8 +366,8 @@ interface HumanReadableDiff {
                           [class.has-cloud-video]="isCloudVideoPath(video.path)"
                         >
                           <option value="">-- Sélectionner --</option>
-                          <optgroup *ngFor="let group of getVideoOptionGroups()" [label]="group.icon + ' ' + group.label">
-                            <option *ngFor="let v of group.videos" [value]="v.path">{{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}</option>
+                          <optgroup *ngFor="let group of videoOptionGroups; trackBy: trackByGroupKey" [label]="group.icon + ' ' + group.label">
+                            <option *ngFor="let v of group.videos; trackBy: trackByVideoPath" [value]="v.path">{{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}</option>
                           </optgroup>
                         </select>
                         <input
@@ -470,8 +470,8 @@ interface HumanReadableDiff {
                     [class.has-cloud-video]="isCloudVideoPath(video.path)"
                   >
                     <option value="">-- Sélectionner --</option>
-                    <optgroup *ngFor="let group of getVideoOptionGroups()" [label]="group.icon + ' ' + group.label">
-                      <option *ngFor="let v of group.videos" [value]="v.path">
+                    <optgroup *ngFor="let group of videoOptionGroups; trackBy: trackByGroupKey" [label]="group.icon + ' ' + group.label">
+                      <option *ngFor="let v of group.videos; trackBy: trackByVideoPath" [value]="v.path">
                         {{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}
                       </option>
                     </optgroup>
@@ -2474,6 +2474,8 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   unifiedVideoOptions: UnifiedVideoOption[] = [];
   videoSearchQuery: string = '';
   groupedVideoOptions: Map<VideoOptionGroup, UnifiedVideoOption[]> = new Map();
+  // Cached array for template - prevents flickering by avoiding method calls in template
+  videoOptionGroups: { key: VideoOptionGroup; label: string; icon: string; videos: UnifiedVideoOption[] }[] = [];
 
   // Video relevance tracking for filtered view in video-library
   configVideoPaths: Set<string> = new Set();
@@ -3516,10 +3518,52 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         this.groupedVideoOptions.get('cloud')!.push(opt);
       }
     }
+
+    // 5. Update cached array for template (prevents flickering)
+    this.updateVideoOptionGroupsCache();
+  }
+
+  /**
+   * Met à jour le cache des groupes de vidéos pour le template
+   * Appelé après updateUnifiedVideoOptions() pour éviter les appels de méthode dans le template
+   */
+  private updateVideoOptionGroupsCache(): void {
+    const groups: { key: VideoOptionGroup; label: string; icon: string; videos: UnifiedVideoOption[] }[] = [];
+
+    const forThisSite = this.groupedVideoOptions.get('forThisSite') || [];
+    const onPi = this.groupedVideoOptions.get('onPi') || [];
+    const cloud = this.groupedVideoOptions.get('cloud') || [];
+
+    if (forThisSite.length > 0) {
+      groups.push({ key: 'forThisSite', label: 'Pour ce site', icon: '⭐', videos: forThisSite });
+    }
+    if (onPi.length > 0) {
+      groups.push({ key: 'onPi', label: 'Sur le Pi', icon: '✅', videos: onPi });
+    }
+    if (cloud.length > 0) {
+      groups.push({ key: 'cloud', label: 'Cloud (à déployer)', icon: '☁️', videos: cloud });
+    }
+
+    this.videoOptionGroups = groups;
+  }
+
+  /**
+   * TrackBy function for video option groups (prevents DOM re-creation)
+   */
+  trackByGroupKey(index: number, group: { key: VideoOptionGroup }): string {
+    return group.key;
+  }
+
+  /**
+   * TrackBy function for video options (prevents DOM re-creation)
+   */
+  trackByVideoPath(index: number, video: UnifiedVideoOption): string {
+    return video.path;
   }
 
   /**
    * Retourne les groupes de vidéos pour le dropdown
+   * @deprecated Use videoOptionGroups property instead to avoid template method calls
    */
   getVideoOptionGroups(): { key: VideoOptionGroup; label: string; icon: string; videos: UnifiedVideoOption[] }[] {
     const groups: { key: VideoOptionGroup; label: string; icon: string; videos: UnifiedVideoOption[] }[] = [];
