@@ -1,3 +1,9 @@
+## [2.41.1](https://github.com/Tallec7/neopro/compare/v2.41.0...v2.41.1) (2026-01-21)
+
+### Bug Fixes
+
+- **content:** fix video deployments 500 error and enable video preview ([853219e](https://github.com/Tallec7/neopro/commit/853219e9ec1f02c9ec34d6dcb125e3bb1f9d5806))
+
 # [2.41.0](https://github.com/Tallec7/neopro/compare/v2.40.4...v2.41.0) (2026-01-19)
 
 ### Features
