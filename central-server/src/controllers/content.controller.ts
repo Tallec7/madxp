@@ -6,10 +6,27 @@ import logger from '../config/logger';
 import pool from '../config/database';
 import { AuthRequest } from '../types';
 import deploymentService from '../services/deployment.service';
-import { uploadFile, deleteFile } from '../config/supabase';
+import { uploadFile, deleteFile, getPublicUrl } from '../config/supabase';
 import { uploadFileToFtp, deleteFileFromFtp, isFtpConfigured, getFtpPublicUrl, uploadFileToFtpWithVerification } from '../config/ftp-storage';
 import { formatPaginatedResponse } from '../middleware/pagination';
 import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';
+
+/**
+ * Génère l'URL publique accessible pour une vidéo en fonction de son backend de stockage
+ * @param storagePath - Le chemin stocké en DB (filename.mp4 pour FTP, uploads/filename.mp4 pour Supabase)
+ * @returns L'URL complète accessible depuis un navigateur
+ */
+function getVideoDownloadUrl(storagePath: string): string {
+  // Si le path est juste un filename (pas de /) → c'est un fichier FTP
+  const isFtpPath = !storagePath.includes('/');
+
+  if (isFtpPath && isFtpConfigured()) {
+    return getFtpPublicUrl(storagePath);
+  }
+
+  // Sinon c'est un chemin Supabase (ex: uploads/filename.mp4)
+  return getPublicUrl(storagePath);
+}
 
 /**
  * Upload une vidéo vers le stockage (FTP Hostinger en priorité, sinon Supabase)
@@ -173,10 +190,11 @@ export const getVideos = async (req: AuthRequest, res: Response) => {
       pool.query(countQuery, params),
     ]);
 
-    // Ajouter le titre depuis les metadata ou utiliser original_name
+    // Ajouter le titre et transformer l'URL en URL publique accessible
     const videos = dataResult.rows.map(video => ({
       ...video,
-      title: (video.metadata as { title?: string })?.title || video.original_name || video.filename
+      title: (video.metadata as { title?: string })?.title || video.original_name || video.filename,
+      url: video.url ? getVideoDownloadUrl(video.url as string) : null
     }));
 
     const total = parseInt((countResult.rows[0] as any)?.count || '0', 10);
@@ -207,6 +225,7 @@ export const getVideo = async (req: AuthRequest, res: Response) => {
 
     const video = result.rows[0];
     video.title = (video.metadata as { title?: string })?.title || video.original_name || video.filename;
+    video.url = video.url ? getVideoDownloadUrl(video.url as string) : null;
 
     res.json(video);
   } catch (error) {
@@ -244,7 +263,7 @@ export const getVideoDeployments = async (req: AuthRequest, res: Response) => {
                 WHEN cd.target_type = 'site' THEN s.club_name
                 ELSE NULL
               END as club_name,
-              COALESCE(u.first_name || ' ' || u.last_name, 'Système') as deployed_by_name
+              COALESCE(u.full_name, 'Système') as deployed_by_name
        FROM content_deployments cd
        LEFT JOIN sites s ON cd.target_type = 'site' AND cd.target_id = s.id
        LEFT JOIN users u ON cd.deployed_by = u.id
@@ -780,10 +799,11 @@ export const getVideosForSite = async (req: AuthRequest, res: Response) => {
       pool.query(countQuery, params.slice(1)),  // Sans siteId pour le count
     ]);
 
-    // Ajouter le titre depuis les metadata ou utiliser original_name
+    // Ajouter le titre et transformer l'URL en URL publique accessible
     const videos = dataResult.rows.map(video => ({
       ...video,
       title: (video.metadata as { title?: string })?.title || video.original_name || video.filename,
+      url: video.url ? getVideoDownloadUrl(video.url as string) : null,
       isForCurrentSite: video.is_for_site === 1,
     }));
 

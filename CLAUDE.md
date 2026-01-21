@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.41.1 | **Dernière mise à jour**: 2026-01-19
+**Version**: 2.41.2 | **Dernière mise à jour**: 2026-01-21
 
 ---
 
@@ -2113,6 +2113,27 @@ vcgencmd get_mem gpu
     scp raspberry/sync-agent/src/commands/deploy-video.js pi@neopro.local:/home/pi/neopro/sync-agent/src/commands/
     ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
     ```
+
+- **Fix erreur 500 sur historique déploiements vidéo** : L'icône 📋 (historique) dans la bibliothèque vidéo retournait une erreur 500
+  - **Problème** : Erreur SQL `column u.first_name does not exist` sur l'endpoint `/api/videos/:id/deployments`
+  - **Cause racine** : La requête SQL utilisait `u.first_name || ' ' || u.last_name` mais la table `users` n'a qu'une colonne `full_name`
+  - **Solution** : Remplacé par `COALESCE(u.full_name, 'Système') as deployed_by_name`
+  - **Fichier modifié** :
+    - `central-server/src/controllers/content.controller.ts` - Fonction `getVideoDeployments()`
+  - **Migration** : Redéployer le central-server
+
+- **Prévisualisation vidéo dans le dashboard** : Les vidéos peuvent maintenant être lues directement depuis la bibliothèque vidéo
+  - **Problème** : Le modal de prévisualisation existait mais les URLs étaient incorrectes (chemins de stockage au lieu d'URLs publiques)
+  - **Cause racine** : L'API retournait `storage_path` (ex: `video.mp4`) au lieu de l'URL complète FTP/Supabase
+  - **Solution** :
+    - Ajout de la fonction `getVideoDownloadUrl()` qui détecte le backend de stockage (FTP vs Supabase)
+    - Transformation automatique des URLs dans `getVideos()`, `getVideo()` et `getVideosForSite()`
+  - **Détection du backend** :
+    - Si `storage_path` ne contient pas `/` → FTP (Hostinger)
+    - Si `storage_path` contient `/` → Supabase
+  - **Fichier modifié** :
+    - `central-server/src/controllers/content.controller.ts` - Ajout `getVideoDownloadUrl()` et transformation URLs
+  - **Migration** : Redéployer le central-server
 
 ### v2.40.x (Janvier 2026)
 
