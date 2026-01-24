@@ -1,3 +1,9 @@
+## [2.45.7](https://github.com/Tallec7/neopro/compare/v2.45.6...v2.45.7) (2026-01-24)
+
+### Bug Fixes
+
+- **image-to-video:** fix ffmpeg arguments order for image loop ([89fec81](https://github.com/Tallec7/neopro/commit/89fec81b7f6f3a5f2a0664b0ae1d098e9a105e7d))
+
 ## [2.45.6](https://github.com/Tallec7/neopro/compare/v2.45.5...v2.45.6) (2026-01-24)
 
 ### Bug Fixes
