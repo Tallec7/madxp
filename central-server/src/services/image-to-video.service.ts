@@ -115,27 +115,27 @@ class ImageToVideoService {
       const args = [
         '-y', // Overwrite output
         '-loop', '1', // Loop l'image (option d'entrée)
-        '-framerate', '25', // FPS d'entrée pour l'image en boucle
+        '-framerate', '1', // FPS d'entrée bas pour économiser la mémoire
+        '-t', duration.toString(), // Durée d'entrée (important pour -loop 1)
         '-i', inputPath, // Input
         // Options de sortie après -i
         '-c:v', codec, // Codec vidéo
-        '-t', duration.toString(), // Durée de sortie
         '-r', '25', // FPS de sortie
         '-pix_fmt', 'yuv420p', // Format pixel compatible
       ];
 
       // Ajouter les options spécifiques au codec
       if (codec === 'libx264') {
-        args.push('-preset', 'medium'); // Bon compromis vitesse/qualité
-        args.push('-crf', '23'); // Qualité (23 = défaut, bon compromis taille/qualité)
+        args.push('-preset', 'ultrafast'); // Plus rapide, moins de mémoire
+        args.push('-crf', '28'); // Qualité acceptable, fichier plus petit
       } else {
         // Pour mpeg4 ou autres codecs
-        args.push('-q:v', '5'); // Qualité
+        args.push('-q:v', '8'); // Qualité
       }
 
-      // Options communes de sortie
+      // Options communes de sortie - scale réduit pour économiser mémoire
       args.push(
-        '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2', // Scale to 1080p with padding
+        '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2', // Scale to 720p
         '-movflags', '+faststart', // Streaming-friendly
         outputPath,
       );
@@ -145,17 +145,28 @@ class ImageToVideoService {
       const ffmpeg = spawn('ffmpeg', args);
 
       let stderr = '';
+      let stdout = '';
+
+      ffmpeg.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
 
       ffmpeg.stderr.on('data', (data) => {
         stderr += data.toString();
       });
 
-      ffmpeg.on('close', (code) => {
+      ffmpeg.on('close', (code, signal) => {
         if (code === 0) {
           resolve();
         } else {
-          logger.error('ffmpeg failed', { code, stderr: stderr.slice(-1000) });
-          reject(new Error(`ffmpeg exited with code ${code}: ${stderr.slice(-500)}`));
+          // Log les 2000 premiers caractères pour voir l'erreur réelle (pas la fin)
+          logger.error('ffmpeg failed', {
+            code,
+            signal,
+            stderrStart: stderr.slice(0, 2000),
+            stderrEnd: stderr.slice(-500),
+          });
+          reject(new Error(`ffmpeg exited with code ${code} (signal: ${signal}): ${stderr.slice(0, 1000)}`));
         }
       });
 
