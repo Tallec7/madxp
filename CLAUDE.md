@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.42.2 | **Dernière mise à jour**: 2026-01-24
+**Version**: 2.43.0 | **Dernière mise à jour**: 2026-01-24
 
 ---
 
@@ -2014,6 +2014,21 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.43.x (Janvier 2026)
+
+- **Fix faux positif alimentation dans diagnostic hotspot** : Le script `fix-hotspot.sh` n'alerte plus sur les événements thermiques passés
+  - **Problème** : Le diagnostic hotspot affichait "❌ Problème" d'alimentation alors que la santé système affichait "✅ OK" pour le même Pi
+  - **Cause racine** : `fix-hotspot.sh` considérait **tout flag de throttling** (y compris les flags historiques de température) comme un problème d'alimentation
+  - **Exemple** : `0x80000` (limite température soft passée) était signalé comme problème d'alimentation alors que ce n'en est pas un
+  - **Solution** : Ne vérifier que les bits de sous-voltage réels (bit 0 et bit 16) pour déterminer s'il y a un problème d'alimentation
+    - `powerOk = !(throttled & 0x10001)` (aligné avec `metrics.js`)
+    - Les autres flags (température, fréquence) sont affichés à titre informatif mais ne déclenchent pas d'erreur d'alimentation
+  - **Fichier modifié** : `raspberry/scripts/fix-hotspot.sh` - Fonctions `check_power()`, `output_json()`, `print_summary()`
+  - **Migration Pi existants** :
+    ```bash
+    scp raspberry/scripts/fix-hotspot.sh pi@neopro.local:/home/pi/neopro/scripts/
+    ```
 
 ### v2.42.x (Janvier 2026)
 

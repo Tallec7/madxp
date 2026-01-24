@@ -1775,8 +1775,13 @@ sudo reboot
 
 ```bash
 vcgencmd get_throttled
-# 0x0 = OK
-# Autre valeur = problème d'alimentation (utiliser un chargeur 5V/3A)
+# 0x0 = OK (aucun événement)
+# Problèmes d'alimentation réels (bits 0 et 16) :
+#   - 0x1 ou 0x10001 = Sous-voltage actuel ou passé → changer d'alimentation 5V/3A
+# Événements thermiques (informatifs, pas un problème d'alimentation) :
+#   - 0x80000 = Limite température soft passée (historique)
+#   - 0x40000 = Throttling thermique passé (historique)
+#   - 0x20000 = Bridage fréquence passé (historique)
 ```
 
 **Vérifier rfkill (blocage WiFi) :**

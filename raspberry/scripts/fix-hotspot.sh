@@ -86,43 +86,76 @@ check_power() {
         return 1
     fi
 
-    if [ "$THROTTLED" = "0x0" ]; then
-        print_success "Alimentation OK (aucun problème détecté)"
-        return 0
-    else
-        print_error "Problème d'alimentation détecté !"
+    # Convertir en décimal pour les opérations bitwise
+    local THROTTLED_DEC=$((THROTTLED))
+
+    # Vérifier uniquement les bits d'alimentation (sous-voltage)
+    # Bit 0 (0x1): Under-voltage actuellement détecté
+    # Bit 16 (0x10000): Under-voltage s'est produit depuis le boot
+    local POWER_ISSUE=$(( THROTTLED_DEC & 0x10001 ))
+
+    # Afficher tous les flags pour information
+    local HAS_ANY_FLAG=false
+
+    if [ "$THROTTLED" != "0x0" ]; then
+        echo "Flags throttling détectés ($THROTTLED) :"
         echo ""
 
-        # Décoder les flags
-        if (( THROTTLED & 0x1 )); then
-            print_error "  → Sous-voltage détecté (alimentation trop faible)"
+        # Flags actuels (critiques)
+        if (( THROTTLED_DEC & 0x1 )); then
+            print_error "  → Sous-voltage ACTIF (alimentation trop faible)"
+            HAS_ANY_FLAG=true
         fi
-        if (( THROTTLED & 0x2 )); then
-            print_error "  → Fréquence CPU bridée"
+        if (( THROTTLED_DEC & 0x2 )); then
+            print_warning "  → Fréquence CPU bridée (actif)"
+            HAS_ANY_FLAG=true
         fi
-        if (( THROTTLED & 0x4 )); then
-            print_error "  → CPU en throttling (surchauffe)"
+        if (( THROTTLED_DEC & 0x4 )); then
+            print_warning "  → CPU en throttling thermique (actif)"
+            HAS_ANY_FLAG=true
         fi
-        if (( THROTTLED & 0x8 )); then
-            print_error "  → Limite de température atteinte"
+        if (( THROTTLED_DEC & 0x8 )); then
+            print_warning "  → Limite de température soft atteinte (actif)"
+            HAS_ANY_FLAG=true
         fi
-        if (( THROTTLED & 0x10000 )); then
+
+        # Flags historiques (informatifs)
+        if (( THROTTLED_DEC & 0x10000 )); then
             print_warning "  → Sous-voltage passé (historique)"
+            HAS_ANY_FLAG=true
         fi
-        if (( THROTTLED & 0x20000 )); then
-            print_warning "  → Bridage fréquence passé (historique)"
+        if (( THROTTLED_DEC & 0x20000 )); then
+            print_info "  → Bridage fréquence passé (historique)"
+            HAS_ANY_FLAG=true
         fi
-        if (( THROTTLED & 0x40000 )); then
-            print_warning "  → Throttling passé (historique)"
+        if (( THROTTLED_DEC & 0x40000 )); then
+            print_info "  → Throttling thermique passé (historique)"
+            HAS_ANY_FLAG=true
         fi
-        if (( THROTTLED & 0x80000 )); then
-            print_warning "  → Limite température passée (historique)"
+        if (( THROTTLED_DEC & 0x80000 )); then
+            print_info "  → Limite température soft passée (historique)"
+            HAS_ANY_FLAG=true
         fi
-
         echo ""
+    fi
+
+    # Verdict final basé uniquement sur les problèmes d'alimentation
+    if [ "$POWER_ISSUE" -ne 0 ]; then
+        print_error "Problème d'alimentation détecté !"
         print_info "SOLUTION : Utiliser un chargeur 5V/3A officiel Raspberry Pi"
         print_info "           Éviter les ports USB de TV ou hubs non alimentés"
         return 1
+    elif [ "$THROTTLED" = "0x0" ]; then
+        print_success "Alimentation OK (aucun problème détecté)"
+        return 0
+    else
+        # Des flags de température/throttling mais pas de problème d'alimentation
+        print_success "Alimentation OK"
+        if [ "$HAS_ANY_FLAG" = true ]; then
+            print_info "Note : Des événements thermiques ont été détectés (voir ci-dessus)"
+            print_info "       Cela n'affecte pas le hotspot WiFi"
+        fi
+        return 0
     fi
 }
 
@@ -418,12 +451,16 @@ print_summary() {
 
     local HAS_ISSUES=false
 
-    # Alimentation
+    # Alimentation - vérifier uniquement les bits de sous-voltage (0x1 et 0x10000)
     local THROTTLED=$(vcgencmd get_throttled 2>/dev/null | cut -d= -f2)
-    if [ "$THROTTLED" != "0x0" ] && [ -n "$THROTTLED" ]; then
-        print_error "Alimentation : PROBLÈME DÉTECTÉ"
-        echo "  → Utiliser un chargeur 5V/3A officiel"
-        HAS_ISSUES=true
+    if [ -n "$THROTTLED" ]; then
+        local THROTTLED_DEC=$((THROTTLED))
+        local POWER_ISSUE=$(( THROTTLED_DEC & 0x10001 ))
+        if [ "$POWER_ISSUE" -ne 0 ]; then
+            print_error "Alimentation : PROBLÈME DÉTECTÉ"
+            echo "  → Utiliser un chargeur 5V/3A officiel"
+            HAS_ISSUES=true
+        fi
     fi
 
     # Services
@@ -470,8 +507,13 @@ output_json() {
     local DNSMASQ_ACTIVE=$(systemctl is-active --quiet dnsmasq && echo "true" || echo "false")
     local THROTTLED=$(vcgencmd get_throttled 2>/dev/null | cut -d= -f2)
     local POWER_OK="true"
-    if [ "$THROTTLED" != "0x0" ] && [ -n "$THROTTLED" ]; then
-        POWER_OK="false"
+    # Vérifier uniquement les bits d'alimentation (sous-voltage) : bit 0 et bit 16
+    if [ -n "$THROTTLED" ]; then
+        local THROTTLED_DEC=$((THROTTLED))
+        local POWER_ISSUE=$(( THROTTLED_DEC & 0x10001 ))
+        if [ "$POWER_ISSUE" -ne 0 ]; then
+            POWER_OK="false"
+        fi
     fi
 
     cat << EOF
