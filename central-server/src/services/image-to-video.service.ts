@@ -47,15 +47,19 @@ class ImageToVideoService {
       // Écrire l'image dans un fichier temporaire
       await fs.promises.writeFile(inputPath, imageBuffer);
 
+      // Déterminer le meilleur codec disponible
+      const codec = await this.getBestCodec();
+
       logger.info('Starting image to video conversion', {
         inputPath,
         outputPath,
         duration,
         imageSize: imageBuffer.length,
+        codec,
       });
 
       // Exécuter ffmpeg
-      await this.runFfmpeg(inputPath, outputPath, duration);
+      await this.runFfmpeg(inputPath, outputPath, duration, codec);
 
       // Lire le fichier vidéo généré
       const videoBuffer = await fs.promises.readFile(outputPath);
@@ -84,30 +88,55 @@ class ImageToVideoService {
   }
 
   /**
+   * Détermine le meilleur codec vidéo disponible
+   * Préfère libx264, fallback sur libx265, puis sur le codec natif
+   */
+  async getBestCodec(): Promise<string> {
+    const hasX264 = await this.hasLibx264();
+    if (hasX264) {
+      return 'libx264';
+    }
+    logger.warn('libx264 not available, using mpeg4 codec as fallback');
+    return 'mpeg4';
+  }
+
+  /**
    * Exécute ffmpeg pour convertir l'image en vidéo
    */
   private runFfmpeg(
     inputPath: string,
     outputPath: string,
-    duration: number
+    duration: number,
+    codec: string = 'libx264'
   ): Promise<void> {
     return new Promise((resolve, reject) => {
-      // Arguments ffmpeg optimisés pour Raspberry Pi
+      // Arguments de base
       const args = [
         '-y', // Overwrite output
         '-loop', '1', // Loop l'image
         '-i', inputPath, // Input
-        '-c:v', 'libx264', // Codec H.264
+        '-c:v', codec, // Codec vidéo (libx264 ou fallback)
         '-t', duration.toString(), // Durée
         '-pix_fmt', 'yuv420p', // Format pixel compatible
-        '-preset', 'medium', // Bon compromis vitesse/qualité
-        '-crf', '18', // Qualité (plus bas = meilleur)
+      ];
+
+      // Ajouter les options spécifiques à libx264
+      if (codec === 'libx264') {
+        args.push('-preset', 'medium'); // Bon compromis vitesse/qualité
+        args.push('-crf', '18'); // Qualité (plus bas = meilleur)
+      } else {
+        // Pour mpeg4 ou autres codecs
+        args.push('-q:v', '5'); // Qualité (échelle différente)
+      }
+
+      // Options communes
+      args.push(
         '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2', // Scale to 1080p with padding
         '-movflags', '+faststart', // Streaming-friendly
         outputPath,
-      ];
+      );
 
-      logger.debug('Running ffmpeg', { args: args.join(' ') });
+      logger.info('Running ffmpeg', { codec, args: args.join(' ') });
 
       const ffmpeg = spawn('ffmpeg', args);
 
@@ -121,7 +150,7 @@ class ImageToVideoService {
         if (code === 0) {
           resolve();
         } else {
-          logger.error('ffmpeg failed', { code, stderr });
+          logger.error('ffmpeg failed', { code, stderr: stderr.slice(-1000) });
           reject(new Error(`ffmpeg exited with code ${code}: ${stderr.slice(-500)}`));
         }
       });
@@ -155,6 +184,28 @@ class ImageToVideoService {
 
       ffmpeg.on('close', (code) => {
         resolve(code === 0);
+      });
+
+      ffmpeg.on('error', () => {
+        resolve(false);
+      });
+    });
+  }
+
+  /**
+   * Vérifie si l'encodeur libx264 est disponible
+   */
+  async hasLibx264(): Promise<boolean> {
+    return new Promise((resolve) => {
+      const ffmpeg = spawn('ffmpeg', ['-encoders']);
+      let output = '';
+
+      ffmpeg.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      ffmpeg.on('close', () => {
+        resolve(output.includes('libx264'));
       });
 
       ffmpeg.on('error', () => {
