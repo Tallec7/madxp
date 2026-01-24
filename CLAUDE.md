@@ -294,6 +294,7 @@ GET    /api/content/videos    → liste vidéos
 GET    /api/content/videos/for-site/:siteId → vidéos priorisées pour un site (uploaded_for_site_id en premier)
 DELETE /api/content/videos/:id
 POST   /api/content/deploy    → { videoId, targetType, targetId }
+POST   /api/content/image-to-video → multipart/form-data (image) + { duration: 5-60 } → convertit image en vidéo MP4
 ```
 
 ### Config Drafts (Brouillons de Configuration)
@@ -442,6 +443,7 @@ Le `LoggerService` Angular implémente un throttling côté client pour éviter 
 | **Cron**         | `cron-scheduler.service.ts`          | Stats quotidiennes, cleanup                 |
 | **Logger**       | `logger.service.ts`                  | Logs structurés avec correlation ID         |
 | **Errors**       | `error-extractor.ts`                 | Extraction messages d'erreur                |
+| **ImageToVideo** | `image-to-video.service.ts`          | Conversion image → vidéo MP4 via ffmpeg     |
 
 ### Services Angular Raspberry Pi (Extraits v2.33+) ⚡ NEW
 
@@ -2016,6 +2018,18 @@ vcgencmd get_mem gpu
 ## Historique Breaking Changes
 
 ### v2.43.x (Janvier 2026)
+
+- **Prévisualisation vidéo dans Gestion du contenu** : Ajout du bouton 👁️ pour lire les vidéos cloud directement depuis `/content`
+  - **Problème** : La page "Gestion du contenu" ne permettait pas de prévisualiser les vidéos avant déploiement
+  - **Solution** : Ajout d'un bouton preview et d'un modal avec player vidéo HTML5
+  - **Fonctionnalités** :
+    - Bouton 👁️ visible si la vidéo a une URL cloud (`video.url`)
+    - Modal avec player vidéo (`controls`, `autoplay`)
+    - Affichage du titre, taille et durée
+    - Bouton "Déployer cette vidéo" directement depuis le modal
+  - **Interface Video étendue** : Ajout du champ optionnel `url?: string`
+  - **Fichier modifié** : `central-dashboard/src/app/features/content/content-management.component.ts`
+  - **Migration** : Rebuild et redéployer le dashboard
 
 - **Nettoyage console logs dashboard** : Suppression de 65+ console.log/warn/error inutiles pour une console production propre
   - **Problème** : La console du navigateur était polluée par des logs de debug, actions utilisateur, et erreurs redondantes

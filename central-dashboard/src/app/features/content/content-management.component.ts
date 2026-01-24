@@ -19,6 +19,7 @@ interface Video {
   file_size: number;
   duration?: number;
   created_at: Date;
+  url?: string;
 }
 
 interface Deployment {
@@ -95,9 +96,14 @@ interface VideoDeploymentHistory {
               class="search-input"
             />
           </div>
-          <button class="btn btn-primary" (click)="showUploadModal = true">
-            + Ajouter une vidéo
-          </button>
+          <div class="header-actions">
+            <button class="btn btn-secondary" (click)="showImageModal = true">
+              + Ajouter une image
+            </button>
+            <button class="btn btn-primary" (click)="showUploadModal = true">
+              + Ajouter une vidéo
+            </button>
+          </div>
         </div>
 
         <div class="videos-grid" *ngIf="filteredVideos().length > 0 else noVideos">
@@ -117,6 +123,9 @@ interface VideoDeploymentHistory {
               <div class="video-filename">{{ video.filename }}</div>
             </div>
             <div class="video-actions">
+              <button class="btn btn-sm btn-secondary" (click)="previewVideo(video)" title="Prévisualiser" *ngIf="video.url">
+                👁️
+              </button>
               <button class="btn btn-sm btn-secondary" (click)="showVideoHistory(video)" title="Historique des déploiements">
                 📋
               </button>
@@ -461,6 +470,133 @@ interface VideoDeploymentHistory {
             <button class="btn btn-secondary" (click)="closeHistoryModal()">Fermer</button>
             <button class="btn btn-primary" (click)="deployVideoFromHistory()" *ngIf="selectedVideoForHistory">
               🚀 Déployer cette vidéo
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Video Preview Modal -->
+      <div class="modal video-preview-modal" *ngIf="previewingVideo" (click)="closePreview()">
+        <div class="modal-content modal-video" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div class="preview-title-info">
+              <h2>{{ previewingVideo.title }}</h2>
+              <span class="preview-meta">{{ formatFileSize(previewingVideo.file_size) }} <span *ngIf="previewingVideo.duration">• {{ formatDuration(previewingVideo.duration) }}</span></span>
+            </div>
+            <button class="modal-close" (click)="closePreview()">×</button>
+          </div>
+          <div class="modal-body video-preview-body">
+            <video
+              *ngIf="previewingVideo.url"
+              [src]="previewingVideo.url"
+              controls
+              autoplay
+              class="preview-video-player">
+              Votre navigateur ne supporte pas la lecture vidéo.
+            </video>
+            <div *ngIf="!previewingVideo.url" class="preview-unavailable">
+              URL de prévisualisation non disponible
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closePreview()">Fermer</button>
+            <button class="btn btn-primary" (click)="deployFromPreview()">
+              🚀 Déployer cette vidéo
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Image to Video Modal -->
+      <div class="modal" *ngIf="showImageModal" (click)="closeImageModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>Convertir une image en vidéo</h2>
+            <button class="modal-close" (click)="closeImageModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group" *ngIf="!imageForm.file">
+              <label>Image *</label>
+              <div
+                class="drop-zone"
+                [class.drag-over]="isImageDragOver"
+                (dragover)="onImageDragOver($event)"
+                (dragleave)="onImageDragLeave($event)"
+                (drop)="onImageDrop($event)"
+                (click)="imageFileInput.click()"
+              >
+                <div class="drop-zone-content">
+                  <span class="drop-zone-icon">🖼️</span>
+                  <p>Glissez-déposez une image ici</p>
+                  <p class="drop-zone-hint">Formats acceptés : JPG, PNG, WEBP</p>
+                </div>
+                <input
+                  #imageFileInput
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  (change)="onImageSelected($event)"
+                  style="display: none"
+                >
+              </div>
+            </div>
+
+            <!-- Image Preview -->
+            <div class="image-preview" *ngIf="imageForm.file">
+              <div class="image-preview-header">
+                <span class="file-name">🖼️ {{ imageForm.file.name }}</span>
+                <span class="file-size">{{ formatFileSize(imageForm.file.size) }}</span>
+                <button class="btn-icon btn-danger" (click)="clearImageFile()">✕</button>
+              </div>
+              <img *ngIf="imagePreviewUrl" [src]="imagePreviewUrl" alt="Preview" class="preview-image">
+            </div>
+
+            <div class="form-group" *ngIf="imageForm.file">
+              <label>Durée d'affichage</label>
+              <div class="duration-options">
+                <label class="radio-option" *ngFor="let opt of durationOptions">
+                  <input
+                    type="radio"
+                    name="duration"
+                    [value]="opt.value"
+                    [(ngModel)]="imageForm.duration"
+                  >
+                  <span class="radio-label">{{ opt.label }}</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Conversion Progress -->
+            <div class="upload-progress" *ngIf="isConvertingImage">
+              <div class="progress-bar">
+                <div class="progress-fill progress-in_progress" [style.width.%]="imageConversionProgress"></div>
+              </div>
+              <div class="progress-label">
+                <span>Conversion en cours...</span>
+                <span>{{ imageConversionProgress }}%</span>
+              </div>
+            </div>
+
+            <!-- Conversion Result -->
+            <div class="conversion-result" *ngIf="imageConversionResult">
+              <div class="result-success" *ngIf="imageConversionResult.success">
+                ✅ {{ imageConversionResult.message }}
+              </div>
+              <div class="result-error" *ngIf="!imageConversionResult.success">
+                ❌ {{ imageConversionResult.message }}
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeImageModal()">
+              {{ imageConversionResult ? 'Fermer' : 'Annuler' }}
+            </button>
+            <button
+              class="btn btn-primary"
+              (click)="convertImageToVideo()"
+              [disabled]="!imageForm.file || isConvertingImage"
+              *ngIf="!imageConversionResult"
+            >
+              🚀 Créer la vidéo
             </button>
           </div>
         </div>
@@ -1312,6 +1448,155 @@ interface VideoDeploymentHistory {
         grid-template-columns: repeat(2, 1fr);
       }
     }
+
+    /* Header actions */
+    .header-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    /* Image to Video Modal */
+    .image-preview {
+      margin-top: 1rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 1rem;
+    }
+
+    .image-preview-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .image-preview-header .file-name {
+      flex: 1;
+      color: #0f172a;
+      font-weight: 500;
+    }
+
+    .image-preview-header .file-size {
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+
+    .preview-image {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 8px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .duration-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .radio-option:hover {
+      border-color: #cbd5e1;
+    }
+
+    .radio-option input[type="radio"] {
+      margin: 0;
+    }
+
+    .radio-option input[type="radio"]:checked + .radio-label {
+      color: #2563eb;
+      font-weight: 500;
+    }
+
+    .radio-option:has(input:checked) {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+
+    .radio-label {
+      font-size: 0.875rem;
+      color: #334155;
+    }
+
+    .conversion-result {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      border-radius: 8px;
+    }
+
+    .conversion-result .result-success {
+      background: #dcfce7;
+      color: #166534;
+      padding: 0.75rem;
+      border-radius: 6px;
+    }
+
+    .conversion-result .result-error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 0.75rem;
+      border-radius: 6px;
+    }
+
+    /* Video Preview Modal */
+    .video-preview-modal .modal-video {
+      max-width: 900px;
+      width: 95%;
+    }
+
+    .preview-title-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .preview-title-info h2 {
+      margin: 0;
+      font-size: 1.125rem;
+      color: #0f172a;
+    }
+
+    .preview-meta {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+
+    .video-preview-body {
+      padding: 0 !important;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 300px;
+    }
+
+    .preview-video-player {
+      width: 100%;
+      max-height: 70vh;
+      display: block;
+    }
+
+    .preview-unavailable {
+      color: #94a3b8;
+      text-align: center;
+      padding: 3rem;
+    }
   `]
 })
 export class ContentManagementComponent implements OnInit, OnDestroy {
@@ -1325,20 +1610,39 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   videoSearch = '';
   showUploadModal = false;
   showHistoryModal = false;
+  showImageModal = false;
   uploadProgress = 0;
   isUploading = false;
   isDeploying = false;
   isLoadingHistory = false;
   isDragOver = false;
+  isImageDragOver = false;
+  isConvertingImage = false;
+  imageConversionProgress = 0;
+  imagePreviewUrl: string | null = null;
+  imageConversionResult: { success: boolean; message: string } | null = null;
   uploadResults: Array<{ name: string; success: boolean; error?: string }> = [];
   selectedVideoForHistory: Video | null = null;
   videoHistory: VideoDeploymentHistory | null = null;
+  previewingVideo: Video | null = null;
 
   uploadForm = {
     title: '',
     file: null as File | null,
     files: [] as File[]
   };
+
+  imageForm = {
+    file: null as File | null,
+    duration: 10
+  };
+
+  durationOptions = [
+    { value: 5, label: '5 secondes' },
+    { value: 10, label: '10 secondes' },
+    { value: 15, label: '15 secondes' },
+    { value: 30, label: '30 secondes' },
+  ];
 
   deployForm = {
     videoIds: [] as string[],
@@ -1648,6 +1952,22 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     }
   }
 
+  previewVideo(video: Video): void {
+    this.previewingVideo = video;
+  }
+
+  closePreview(): void {
+    this.previewingVideo = null;
+  }
+
+  deployFromPreview(): void {
+    if (this.previewingVideo) {
+      const video = this.previewingVideo;
+      this.closePreview();
+      this.deployVideo(video);
+    }
+  }
+
   deployVideo(video: Video): void {
     if (!this.deployForm.videoIds.includes(video.id)) {
       this.deployForm.videoIds = [...this.deployForm.videoIds, video.id];
@@ -1737,5 +2057,119 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
       failed: 'Échoué'
     };
     return labels[status] || status;
+  }
+
+  // === Image to Video Methods ===
+
+  closeImageModal(): void {
+    if (this.isConvertingImage) return;
+    this.showImageModal = false;
+    this.imageForm = { file: null, duration: 10 };
+    this.imagePreviewUrl = null;
+    this.imageConversionProgress = 0;
+    this.imageConversionResult = null;
+  }
+
+  onImageDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isImageDragOver = true;
+  }
+
+  onImageDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isImageDragOver = false;
+  }
+
+  onImageDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isImageDragOver = false;
+
+    const files = Array.from(event.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'));
+    if (files.length > 0) {
+      this.setImageFile(files[0]);
+    }
+  }
+
+  onImageSelected(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (file) {
+      this.setImageFile(file);
+    }
+  }
+
+  setImageFile(file: File): void {
+    // Validate mime type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      this.notificationService.error('Format non supporté. Utilisez JPG, PNG ou WEBP.');
+      return;
+    }
+
+    this.imageForm.file = file;
+
+    // Create preview URL
+    if (this.imagePreviewUrl) {
+      URL.revokeObjectURL(this.imagePreviewUrl);
+    }
+    this.imagePreviewUrl = URL.createObjectURL(file);
+  }
+
+  clearImageFile(): void {
+    this.imageForm.file = null;
+    if (this.imagePreviewUrl) {
+      URL.revokeObjectURL(this.imagePreviewUrl);
+      this.imagePreviewUrl = null;
+    }
+  }
+
+  convertImageToVideo(): void {
+    if (!this.imageForm.file || this.isConvertingImage) return;
+
+    this.isConvertingImage = true;
+    this.imageConversionProgress = 10;
+    this.imageConversionResult = null;
+
+    const formData = new FormData();
+    formData.append('image', this.imageForm.file);
+    formData.append('duration', this.imageForm.duration.toString());
+
+    // Simulate progress since we can't track actual ffmpeg progress
+    const progressInterval = setInterval(() => {
+      if (this.imageConversionProgress < 90) {
+        this.imageConversionProgress += 10;
+      }
+    }, 500);
+
+    this.apiService.upload<{ success: boolean; message: string; video?: Video }>('/image-to-video', formData).subscribe({
+      next: (response) => {
+        clearInterval(progressInterval);
+        this.imageConversionProgress = 100;
+        this.isConvertingImage = false;
+        this.imageConversionResult = {
+          success: true,
+          message: response.message || `Vidéo créée avec succès !`
+        };
+        this.notificationService.success(response.message || 'Image convertie en vidéo !');
+        this.loadVideos();
+      },
+      error: (error) => {
+        clearInterval(progressInterval);
+        this.isConvertingImage = false;
+        this.imageConversionProgress = 0;
+        const message = ErrorExtractor.getMessage(error);
+        this.imageConversionResult = {
+          success: false,
+          message: message
+        };
+        this.logger.error('Image to video conversion failed', { error: message });
+        this.notificationService.error(`Erreur: ${message}`, {
+          correlationId: ErrorExtractor.getCorrelationId(error)
+        });
+      }
+    });
   }
 }
