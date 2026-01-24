@@ -1,3 +1,9 @@
+## [2.44.1](https://github.com/Tallec7/neopro/compare/v2.44.0...v2.44.1) (2026-01-24)
+
+### Bug Fixes
+
+- **deploy:** add ffmpeg to Railway nixpacks configuration ([d3d4680](https://github.com/Tallec7/neopro/commit/d3d46806bf9c604e7d2f7dc279f67110102ea5bb))
+
 # [2.44.0](https://github.com/Tallec7/neopro/compare/v2.43.0...v2.44.0) (2026-01-24)
 
 ### Features
