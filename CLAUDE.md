@@ -2039,6 +2039,26 @@ vcgencmd get_mem gpu
 
 ### v2.43.x (Janvier 2026)
 
+- **Fix boucle infinie ffprobe (CPU 88% / Température 84°C)** : Le VideoWatcher lançait des dizaines de processus ffprobe en parallèle
+  - **Problème** : Le Pi surchauffait (84°C) avec CPU à 88%, causant du throttling. `top` montrait 8+ instances ffprobe simultanées.
+  - **Cause racine** : `processDurationQueue()` appelait `onChange()` après chaque extraction, ce qui déclenchait `scanVideos()` → `getDurationForFile()` pour toutes les vidéos, remettant les fichiers sans cache dans la queue. `setImmediate()` lançait des processus parallèles avant que `isExtractingDurations` soit remis à `false`.
+  - **Solution** :
+    - Suppression de l'appel `onChange()` dans `processDurationQueue()` (les durées sont envoyées au prochain sync régulier, toutes les 30s)
+    - Remplacement de `setImmediate()` par `setTimeout(1000)` avec flag `_durationProcessScheduled` anti-doublon
+    - Ajout `MAX_QUEUE_SIZE = 50` pour limiter la taille de la queue
+    - Ajout `MAX_BATCH_SIZE = 10` pour limiter les extractions par cycle
+    - Augmentation des pauses : 500ms entre fichiers, 5s entre batches
+  - **Fichier modifié** : `raspberry/sync-agent/src/watchers/video-watcher.js`
+  - **Migration Pi existants** :
+    ```bash
+    # Tuer les ffprobe en cours
+    ssh pi@<IP> 'sudo pkill -9 ffprobe'
+    # Copier le fix
+    scp raspberry/sync-agent/src/watchers/video-watcher.js pi@<IP>:/home/pi/neopro/sync-agent/src/watchers/
+    # Redémarrer
+    ssh pi@<IP> 'sudo systemctl restart neopro-sync-agent'
+    ```
+
 - **Fix conversion image-to-video** : Correction d'un bug CSP empêchant l'aperçu des images
   - **Problème** : L'image sélectionnée ne s'affichait pas dans la prévisualisation avant conversion
   - **Cause** : La directive `img-src` de la CSP n'incluait pas `blob:`, protocole utilisé par `URL.createObjectURL()`

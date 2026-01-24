@@ -37,6 +37,7 @@ class VideoWatcher {
     this.durationCache = new Map(); // filename -> { duration, size, mtime }
     this.durationQueue = []; // Files pending duration extraction
     this.isExtractingDurations = false;
+    this._durationProcessScheduled = false; // Prevents multiple setTimeout scheduling
     this.ffprobeAvailable = null; // Will be checked on start
   }
 
@@ -246,11 +247,20 @@ class VideoWatcher {
     }
 
     // Ajouter à la queue d'extraction si pas déjà présent et ffprobe disponible
-    if (this.ffprobeAvailable && !this.durationQueue.find((q) => q.path === fullPath)) {
+    // Limite la taille de la queue pour éviter l'explosion mémoire
+    const MAX_QUEUE_SIZE = 50;
+    if (this.ffprobeAvailable &&
+        this.durationQueue.length < MAX_QUEUE_SIZE &&
+        !this.durationQueue.some((q) => q.path === fullPath)) {
       this.durationQueue.push({ path: fullPath, stat });
-      // Lancer le processing si pas déjà en cours
-      if (!this.isExtractingDurations) {
-        setImmediate(() => this.processDurationQueue());
+
+      // Lancer le processing si pas déjà en cours, avec un délai pour éviter les boucles
+      if (!this.isExtractingDurations && !this._durationProcessScheduled) {
+        this._durationProcessScheduled = true;
+        setTimeout(() => {
+          this._durationProcessScheduled = false;
+          this.processDurationQueue();
+        }, 1000); // Délai de 1s avant de commencer
       }
     }
 
@@ -259,6 +269,8 @@ class VideoWatcher {
 
   /**
    * Traite la queue des durées à extraire
+   * IMPORTANT: Ne pas appeler onChange() ici pour éviter les boucles infinies
+   * Les durées seront envoyées au prochain sync_local_state régulier
    */
   async processDurationQueue() {
     if (this.isExtractingDurations || this.durationQueue.length === 0) {
@@ -266,10 +278,13 @@ class VideoWatcher {
     }
 
     this.isExtractingDurations = true;
-    let needsSync = false;
+    let extractedCount = 0;
+    const MAX_BATCH_SIZE = 10; // Limite le nombre d'extractions par batch
+    let processedInBatch = 0;
 
-    while (this.durationQueue.length > 0) {
+    while (this.durationQueue.length > 0 && processedInBatch < MAX_BATCH_SIZE) {
       const item = this.durationQueue.shift();
+      processedInBatch++;
 
       try {
         // Vérifier que le fichier existe encore
@@ -286,15 +301,15 @@ class VideoWatcher {
             mtime: item.stat.mtime.toISOString(),
           });
 
-          needsSync = true;
+          extractedCount++;
           logger.debug('[video-watcher] Extracted duration', {
             file: path.basename(item.path),
             duration: `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`,
           });
         }
 
-        // Petite pause entre les fichiers pour ne pas surcharger le CPU
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        // Pause plus longue entre les fichiers pour ne pas surcharger le CPU
+        await new Promise((resolve) => setTimeout(resolve, 500));
       } catch (error) {
         logger.warn('[video-watcher] Error extracting duration', {
           file: item.path,
@@ -303,16 +318,23 @@ class VideoWatcher {
       }
     }
 
+    // Sauvegarder le cache si des durées ont été extraites
+    if (extractedCount > 0) {
+      this.saveDurationCache();
+      logger.info('[video-watcher] Duration extraction batch complete', {
+        extracted: extractedCount,
+        remaining: this.durationQueue.length,
+      });
+    }
+
     this.isExtractingDurations = false;
 
-    // Sauvegarder le cache et notifier si des durées ont été extraites
-    if (needsSync) {
-      this.saveDurationCache();
-      // Notifier le changement pour que les nouvelles durées soient envoyées
-      if (this.onChange) {
-        await this.onChange();
-      }
+    // S'il reste des fichiers dans la queue, planifier le prochain batch après un délai
+    if (this.durationQueue.length > 0) {
+      setTimeout(() => this.processDurationQueue(), 5000); // 5s entre les batches
     }
+    // NOTE: On ne notifie PAS onChange() ici pour éviter les boucles infinies
+    // Les durées seront envoyées au prochain sync_local_state régulier (toutes les 30s)
   }
 
   /**
