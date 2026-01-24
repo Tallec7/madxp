@@ -1,3 +1,9 @@
+## [2.45.6](https://github.com/Tallec7/neopro/compare/v2.45.5...v2.45.6) (2026-01-24)
+
+### Bug Fixes
+
+- **image-to-video:** correct API path to /image-to-video ([fc00a82](https://github.com/Tallec7/neopro/commit/fc00a82d211011f773b739caf55bdd210310930c))
+
 ## [2.45.5](https://github.com/Tallec7/neopro/compare/v2.45.4...v2.45.5) (2026-01-24)
 
 ### Bug Fixes
