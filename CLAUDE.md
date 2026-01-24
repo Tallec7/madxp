@@ -2094,6 +2094,21 @@ vcgencmd get_mem gpu
     scp raspberry/scripts/fix-hotspot.sh pi@neopro.local:/home/pi/neopro/scripts/
     ```
 
+- **Fix erreur 422 aperçu watermark dans le dashboard** : L'aperçu du watermark utilise maintenant une méthode robuste au lieu de fallback sur le chemin local
+  - **Problème** : Erreur HTTP 422 dans la console lors de l'affichage de l'aperçu du watermark dans l'onglet Paramètres
+  - **Cause racine** : Le template utilisait `imagePath` (chemin local du Pi comme `assets/watermarks/logo.png`) comme fallback, qui n'existe pas sur le serveur dashboard
+  - **Solution** : Nouvelle méthode `getWatermarkPreviewUrl()` avec priorité stricte :
+    1. `watermarkPreviewUrl` - Preview Base64 lors de l'upload
+    2. `watermarkConfig.cloudUrl` - URL cloud (FTP ou Supabase)
+    3. Placeholder SVG si aucune URL cloud disponible (anciens watermarks)
+  - **Ajouts** :
+    - Méthode `getWatermarkPreviewUrl()` - Retourne l'URL correcte ou un placeholder
+    - Méthode `onWatermarkImageError()` - Gère les erreurs de chargement (URL expirée)
+    - Placeholder SVG inline avec message "Aperçu non disponible" ou "Erreur de chargement"
+  - **Note** : Le watermark fonctionne toujours sur la TV du Pi, seul l'aperçu dans le dashboard était affecté
+  - **Fichier modifié** : `central-dashboard/src/app/features/sites/components/site-settings-tab/site-settings-tab.component.ts`
+  - **Migration** : Rebuild et redéployer le dashboard. Pour avoir un aperçu des anciens watermarks, ré-uploader l'image.
+
 ### v2.42.x (Janvier 2026)
 
 - **Alignement statut connexion liste/détail** : Les deux vues affichent maintenant le même statut de connexion
