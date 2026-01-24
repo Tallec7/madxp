@@ -877,6 +877,12 @@ class SocketService {
         await this.clearPendingConfig(siteId, configVersionId);
       }
 
+      // Lever le blocage config_update_pending_until quand la commande est terminée
+      if (commandRecord?.command_type === 'update_config') {
+        await query(`UPDATE sites SET config_update_pending_until = NULL WHERE id = $1`, [siteId]);
+        logger.info('Config update pending lock cleared after command result', { siteId, status: result.status });
+      }
+
       if (commandRecord?.command_type === 'update_software' && updateDeploymentId) {
         const updateService = await getUpdateDeploymentService();
         if (result.status === 'success') {
@@ -947,6 +953,14 @@ class SocketService {
         });
       }
 
+      // Vérifier si une mise à jour de config est en attente (évite d'écraser une config fraîchement déployée)
+      const pendingCheck = await query<{ config_update_pending_until: Date | null }>(
+        `SELECT config_update_pending_until FROM sites WHERE id = $1`,
+        [siteId]
+      );
+      const pendingUntil = pendingCheck.rows[0]?.config_update_pending_until;
+      const isConfigUpdatePending = pendingUntil && new Date(pendingUntil) > new Date();
+
       // Enrichir la config avec les vidéos, le stockage, les infos hotspot et le profil réseau
       const enrichedConfig = {
         ...config,
@@ -958,18 +972,65 @@ class SocketService {
         _lastVideoSync: timestamp,
       };
 
-      // Stocker le miroir de la configuration locale (enrichi avec vidéos)
-      // Et le profil réseau dans la colonne dédiée pour queries/analytics
-      await query(
-        `UPDATE sites
-         SET local_config_mirror = $1,
-             local_config_hash = $2,
-             last_config_sync = NOW(),
-             network_profile = COALESCE($4::jsonb, network_profile),
-             network_profile_updated_at = CASE WHEN $4 IS NOT NULL THEN NOW() ELSE network_profile_updated_at END
-         WHERE id = $3`,
-        [JSON.stringify(enrichedConfig), configHash, siteId, networkProfile ? JSON.stringify(networkProfile) : null]
-      );
+      if (isConfigUpdatePending) {
+        // Une mise à jour de config est en cours - ne pas écraser la config principale
+        // Mais toujours mettre à jour les métadonnées (_localVideos, _localStorage, etc.)
+        logger.info('Config update pending - updating only metadata fields, preserving deployed config', {
+          siteId,
+          pendingUntil,
+          videosCount: videos?.length || 0,
+        });
+
+        // Mettre à jour uniquement les champs de métadonnées sans toucher à la config principale
+        await query(
+          `UPDATE sites
+           SET local_config_mirror = jsonb_set(
+                 jsonb_set(
+                   jsonb_set(
+                     jsonb_set(
+                       jsonb_set(
+                         jsonb_set(
+                           COALESCE(local_config_mirror, '{}'::jsonb),
+                           '{_localVideos}', $1::jsonb
+                         ),
+                         '{_localStorage}', $2::jsonb
+                       ),
+                       '{_hotspotSsid}', $3::jsonb
+                     ),
+                     '{_hotspotInfo}', $4::jsonb
+                   ),
+                   '{_networkProfile}', $5::jsonb
+                 ),
+                 '{_lastVideoSync}', $6::jsonb
+               ),
+               last_config_sync = NOW(),
+               network_profile = COALESCE($8::jsonb, network_profile),
+               network_profile_updated_at = CASE WHEN $8 IS NOT NULL THEN NOW() ELSE network_profile_updated_at END
+           WHERE id = $7`,
+          [
+            JSON.stringify(videos || []),
+            JSON.stringify(storage || null),
+            JSON.stringify(hotspotSsid || hotspotInfo?.ssid || null),
+            JSON.stringify(hotspotInfo || null),
+            JSON.stringify(networkProfile || null),
+            JSON.stringify(timestamp),
+            siteId,
+            networkProfile ? JSON.stringify(networkProfile) : null,
+          ]
+        );
+      } else {
+        // Pas de mise à jour en attente - stocker normalement
+        await query(
+          `UPDATE sites
+           SET local_config_mirror = $1,
+               local_config_hash = $2,
+               last_config_sync = NOW(),
+               network_profile = COALESCE($4::jsonb, network_profile),
+               network_profile_updated_at = CASE WHEN $4 IS NOT NULL THEN NOW() ELSE network_profile_updated_at END
+           WHERE id = $3`,
+          [JSON.stringify(enrichedConfig), configHash, siteId, networkProfile ? JSON.stringify(networkProfile) : null]
+        );
+      }
 
       // Émettre au dashboard pour mise à jour en temps réel
       if (this.io) {
@@ -982,7 +1043,7 @@ class SocketService {
         });
       }
 
-      logger.info('Local state stored', { siteId, configHash, videosCount: videos?.length || 0 });
+      logger.info('Local state stored', { siteId, configHash, videosCount: videos?.length || 0, configUpdatePending: isConfigUpdatePending });
       await this.triggerPendingConfigSync(siteId);
     } catch (error) {
       logger.error('Error handling sync_local_state:', error);

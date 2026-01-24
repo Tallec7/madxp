@@ -634,6 +634,16 @@ const dispatchCommand = async (
     [commandId, siteId, command, data ? JSON.stringify(data) : null, executedBy]
   );
 
+  // Pour les commandes update_config, bloquer les sync_local_state pendant 60s
+  // pour éviter qu'ils n'écrasent la config fraîchement déployée
+  if (command === 'update_config') {
+    await query(
+      `UPDATE sites SET config_update_pending_until = NOW() + INTERVAL '60 seconds' WHERE id = $1`,
+      [siteId]
+    );
+    logger.info('Config update pending lock set for 60s', { siteId, commandId });
+  }
+
   const sent = socketService.sendCommand(siteId, {
     id: commandId,
     type: command,
@@ -645,6 +655,10 @@ const dispatchCommand = async (
       `UPDATE remote_commands SET status = 'failed', error_message = 'Échec envoi' WHERE id = $1`,
       [commandId]
     );
+    // Si l'envoi échoue, lever le blocage
+    if (command === 'update_config') {
+      await query(`UPDATE sites SET config_update_pending_until = NULL WHERE id = $1`, [siteId]);
+    }
     throw new HttpError(503, 'Échec de l\'envoi de la commande');
   }
 

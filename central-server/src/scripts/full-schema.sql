@@ -58,6 +58,8 @@ CREATE TABLE IF NOT EXISTS sites (
   local_config_hash VARCHAR(64),
   last_config_sync TIMESTAMPTZ,
   pending_config_version_id UUID,
+  -- Blocage temporaire des sync_local_state après déploiement config
+  config_update_pending_until TIMESTAMPTZ DEFAULT NULL,
   CONSTRAINT check_status CHECK (status IN ('online', 'offline', 'maintenance', 'error'))
 );
 

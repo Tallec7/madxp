@@ -156,6 +156,16 @@ class CommandQueueService {
         [commandId, siteId, commandType, JSON.stringify(commandData), options.userId || null]
       );
 
+      // Pour les commandes update_config, bloquer les sync_local_state pendant 60s
+      // pour éviter qu'ils n'écrasent la config fraîchement déployée
+      if (commandType === 'update_config') {
+        await query(
+          `UPDATE sites SET config_update_pending_until = NOW() + INTERVAL '60 seconds' WHERE id = $1`,
+          [siteId]
+        );
+        logger.info('Config update pending lock set for 60s', { siteId, commandId });
+      }
+
       const sent = socketService.sendCommand(siteId, {
         id: commandId,
         type: commandType,
@@ -174,6 +184,11 @@ class CommandQueueService {
           commandId,
           message: 'Commande envoyée au site.',
         };
+      }
+
+      // Si l'envoi échoue, lever le blocage
+      if (commandType === 'update_config') {
+        await query(`UPDATE sites SET config_update_pending_until = NULL WHERE id = $1`, [siteId]);
       }
 
       // L'envoi a échoué malgré isConnected=true (connexion zombie détectée)
@@ -295,6 +310,15 @@ class CommandQueueService {
           [remoteCommandId, siteId, cmd.command_type, JSON.stringify(cmd.command_data), cmd.created_by, cmd.id]
         );
 
+        // Pour les commandes update_config, bloquer les sync_local_state pendant 60s
+        if (cmd.command_type === 'update_config') {
+          await query(
+            `UPDATE sites SET config_update_pending_until = NOW() + INTERVAL '60 seconds' WHERE id = $1`,
+            [siteId]
+          );
+          logger.info('Config update pending lock set for 60s (from queue)', { siteId, remoteCommandId });
+        }
+
         // Envoyer la commande
         const sent = socketService.sendCommand(siteId, {
           id: remoteCommandId,
@@ -318,6 +342,10 @@ class CommandQueueService {
             commandType: cmd.command_type,
           });
         } else {
+          // Si l'envoi échoue, lever le blocage
+          if (cmd.command_type === 'update_config') {
+            await query(`UPDATE sites SET config_update_pending_until = NULL WHERE id = $1`, [siteId]);
+          }
           failed++;
           logger.warn('Failed to send pending command', {
             pendingCommandId: cmd.id,

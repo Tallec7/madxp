@@ -834,6 +834,18 @@ function canDeleteVideo(video, category) {
 - **Strict** : Non, l'ordre est imposé par NEOPRO
 - **Souple** : Oui, l'opérateur peut réorganiser mais pas modifier le contenu
 
+### Q: Pourquoi mes modifications de config réapparaissent après un refresh ?
+
+**R**: Ce problème a été résolu en v2.42.x. Il s'agissait d'une **race condition** :
+
+1. Vous déployez une config (ex: suppression de 2 vidéos)
+2. Le Pi reçoit la commande et met à jour `configuration.json`
+3. Mais immédiatement après, le Pi envoie son `sync_local_state` avec l'ancienne config
+4. Le cloud stocke cette ancienne config dans `local_config_mirror`
+5. Quand vous rafraîchissez, vous voyez l'ancienne config
+
+**Solution implémentée** : Blocage temporaire de 60 secondes après envoi d'une commande `update_config`. Pendant ce temps, le cloud ne met à jour que les métadonnées (`_localVideos`, etc.) sans écraser la config principale.
+
 ---
 
 ## Historique des Versions
@@ -845,6 +857,7 @@ function canDeleteVideo(video, category) {
 | 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos       |
 | 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix   |
 | 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support) |
+| 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config  |
 
 ---
 

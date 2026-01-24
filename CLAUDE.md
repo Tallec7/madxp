@@ -2015,6 +2015,30 @@ vcgencmd get_mem gpu
 
 ## Historique Breaking Changes
 
+### v2.42.x (Janvier 2026)
+
+- **Fix vidéos réapparaissant après suppression et déploiement** : Correction de la race condition sync_local_state
+  - **Problème** : Quand on supprimait des vidéos d'une boucle et déployait, les vidéos réapparaissaient après refresh
+  - **Cause racine** : Le Pi envoyait son `sync_local_state` (avec l'ancienne config) avant que la commande `update_config` soit traitée. Le cloud stockait cette ancienne config dans `local_config_mirror`, écrasant la nouvelle.
+  - **Solution** : Nouveau mécanisme de blocage temporaire (60s) après envoi d'une commande `update_config`
+    - Colonne `config_update_pending_until` sur la table `sites`
+    - Pendant le blocage, `handleSyncLocalState` met à jour uniquement les métadonnées (`_localVideos`, `_localStorage`, etc.) sans écraser la config principale
+    - Le blocage est levé quand la commande est terminée (succès ou échec)
+  - **Fichiers modifiés** :
+    - `central-server/src/services/socket.service.ts` - Vérification du blocage dans `handleSyncLocalState`, levée du blocage dans `handleCommandResult`
+    - `central-server/src/controllers/sites.controller.ts` - Activation du blocage dans `dispatchCommand`
+    - `central-server/src/services/command-queue.service.ts` - Activation du blocage dans `sendOrQueue` et `processPendingCommands`
+    - `central-server/src/scripts/full-schema.sql` - Nouvelle colonne
+    - `central-server/src/scripts/migrations/fix-config-sync-race-condition.sql` - Migration
+  - **Migration** :
+
+    ```bash
+    # Exécuter la migration SQL sur Supabase (dashboard SQL Editor)
+    # Copier le contenu de fix-config-sync-race-condition.sql
+
+    # Redéployer le central-server (Railway)
+    ```
+
 ### v2.41.x (Janvier 2026)
 
 - **Amélioration UX Bibliothèque Vidéo** : Meilleur filtrage et gestion des déploiements
