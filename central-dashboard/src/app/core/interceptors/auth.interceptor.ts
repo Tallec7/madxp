@@ -40,9 +40,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         // 1. C'est une vraie 401 (pas une erreur réseau status 0)
         // 2. Ce n'est pas déjà une requête sur /auth/login ou /auth/me
         // 3. Ce n'est pas l'endpoint de logs (401 attendu si non authentifié)
+        // 4. Ce n'est pas l'endpoint remote (public, pas d'auth requise)
         const isAuthEndpoint = req.url.includes('/auth/login') || req.url.includes('/auth/me');
         const isLogEndpoint = req.url.includes('/logs/frontend');
-        const isRealUnauthorized = error.status === 401 && !isAuthEndpoint && !isLogEndpoint;
+        const isRemoteEndpoint = req.url.includes('/api/remote/');
+        const isRealUnauthorized = error.status === 401 && !isAuthEndpoint && !isLogEndpoint && !isRemoteEndpoint;
 
         if (isRealUnauthorized) {
           const router = injector.get(Router);

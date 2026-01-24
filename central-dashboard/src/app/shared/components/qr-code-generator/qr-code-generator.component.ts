@@ -469,10 +469,12 @@ export class QrCodeGeneratorComponent implements OnInit, OnChanges {
 
   /**
    * Open cloud remote in a new tab
+   * Uses relative URL to ensure cookies are shared (same origin)
    */
   openCloudRemote(): void {
     if (this.mode === 'cloud' && this.siteId) {
-      window.open(this.remoteUrl, '_blank');
+      // Use relative URL instead of absolute to keep same origin (cookies work)
+      window.open(`/remote/${this.siteId}`, '_blank');
     }
   }
 
