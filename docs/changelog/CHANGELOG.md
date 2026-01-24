@@ -1,3 +1,9 @@
+# [2.45.0](https://github.com/Tallec7/neopro/compare/v2.44.1...v2.45.0) (2026-01-24)
+
+### Features
+
+- **dashboard:** add direct access button to cloud remote in QR code generator ([79fb4c7](https://github.com/Tallec7/neopro/commit/79fb4c7acae924333c661a2f58c43d933d4b7d16))
+
 ## [2.44.1](https://github.com/Tallec7/neopro/compare/v2.44.0...v2.44.1) (2026-01-24)
 
 ### Bug Fixes
