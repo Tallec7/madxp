@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as contentController from '../controllers/content.controller';
 import { authenticate, requireRole } from '../middleware/auth';
-import { uploadVideo } from '../middleware/upload';
+import { uploadVideo, uploadImage } from '../middleware/upload';
 import { paginationMiddleware } from '../middleware/pagination';
 
 const router = Router();
@@ -15,6 +15,9 @@ router.post('/videos', authenticate, requireRole('admin', 'operator'), uploadVid
 router.post('/videos/bulk', authenticate, requireRole('admin', 'operator'), uploadVideo.array('videos', 20), contentController.createVideos);
 router.put('/videos/:id', authenticate, requireRole('admin', 'operator'), contentController.updateVideo);
 router.delete('/videos/:id', authenticate, requireRole('admin'), contentController.deleteVideo);
+
+// Image to video conversion
+router.post('/image-to-video', authenticate, requireRole('admin', 'operator'), uploadImage.single('image'), contentController.convertImageToVideo);
 
 // Deployment routes
 router.get('/deployments', authenticate, contentController.getDeployments);

@@ -10,6 +10,7 @@ import { uploadFile, deleteFile, getPublicUrl } from '../config/supabase';
 import { uploadFileToFtp, deleteFileFromFtp, isFtpConfigured, getFtpPublicUrl, uploadFileToFtpWithVerification } from '../config/ftp-storage';
 import { formatPaginatedResponse } from '../middleware/pagination';
 import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';
+import { imageToVideoService } from '../services/image-to-video.service';
 
 /**
  * Génère l'URL publique accessible pour une vidéo en fonction de son backend de stockage
@@ -813,5 +814,131 @@ export const getVideosForSite = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error('Error fetching videos for site:', { siteId: req.params.siteId, error });
     res.status(500).json({ error: 'Erreur lors de la récupération des vidéos' });
+  }
+};
+
+/**
+ * POST /api/content/image-to-video
+ * Convertit une image en vidéo MP4 avec une durée spécifiée
+ */
+export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
+  try {
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: 'Aucune image fournie' });
+    }
+
+    // Récupérer les paramètres
+    const duration = parseInt(req.body.duration as string, 10) || 10;
+    const { site_id } = req.body;
+
+    // Valider la durée (entre 1 et 60 secondes)
+    if (duration < 1 || duration > 60) {
+      return res.status(400).json({ error: 'La durée doit être entre 1 et 60 secondes' });
+    }
+
+    // Valider site_id si fourni
+    if (site_id) {
+      const siteResult = await pool.query('SELECT id FROM sites WHERE id = $1', [site_id]);
+      if (siteResult.rows.length === 0) {
+        return res.status(400).json({ error: 'Site non trouvé' });
+      }
+    }
+
+    // Vérifier si ffmpeg est disponible
+    const ffmpegAvailable = await imageToVideoService.isAvailable();
+    if (!ffmpegAvailable) {
+      logger.error('ffmpeg is not available on this system');
+      return res.status(503).json({
+        error: 'Le service de conversion n\'est pas disponible. ffmpeg n\'est pas installé sur le serveur.'
+      });
+    }
+
+    logger.info('Starting image to video conversion', {
+      originalFilename: file.originalname,
+      duration,
+      imageSize: file.size,
+      siteId: site_id,
+    });
+
+    // Convertir l'image en vidéo
+    const result = await imageToVideoService.convert(file.buffer, file.originalname, {
+      duration,
+    });
+
+    // Générer un nom de fichier unique
+    const filename = await generateUniqueFilename(result.filename);
+
+    // Calculer le checksum
+    const checksum = calculateChecksum(result.buffer);
+
+    // Upload vers le stockage
+    const uploadResult = await uploadVideoToStorage(result.buffer, filename, result.mimetype);
+
+    if (!uploadResult) {
+      logger.error('Failed to upload converted video to storage');
+      return res.status(500).json({
+        error: 'Erreur lors de l\'upload de la vidéo convertie'
+      });
+    }
+
+    // Déterminer le statut d'upload
+    const uploadStatus: UploadStatus = uploadResult.verified ? 'ready' : 'failed';
+
+    // Utiliser le nom original de l'image comme titre
+    const imageBaseName = path.basename(file.originalname, path.extname(file.originalname));
+    const videoTitle = imageBaseName;
+
+    // Insérer en base de données
+    const dbResult = await pool.query(
+      `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, duration, storage_path, checksum, metadata, uploaded_by, uploaded_for_site_id, upload_status, upload_verified_at, upload_verified_size)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+       RETURNING id, filename as name, original_name, category, subcategory, file_size as size, duration, storage_path as url, thumbnail_url, checksum, metadata, uploaded_for_site_id, upload_status, created_at, updated_at`,
+      [
+        filename,
+        result.filename,  // original_name = nom généré depuis l'image
+        null,  // category
+        null,  // subcategory
+        result.size,
+        result.mimetype,
+        duration,  // durée de la vidéo
+        uploadResult.path,
+        checksum,
+        { title: videoTitle, convertedFromImage: true, originalImage: file.originalname },
+        req.user?.id || null,
+        site_id || null,
+        uploadStatus,
+        uploadResult.verified ? new Date() : null,
+        uploadResult.actualSize
+      ]
+    );
+
+    const video = dbResult.rows[0];
+    video.title = videoTitle;
+    video.url = uploadResult.url;
+
+    logger.info('Image converted to video successfully', {
+      id: video.id,
+      filename,
+      title: videoTitle,
+      originalImage: file.originalname,
+      duration,
+      videoSize: result.size,
+      siteId: site_id,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Image convertie en vidéo de ${duration} secondes`,
+      video,
+    });
+  } catch (error) {
+    logger.error('Error converting image to video:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    res.status(500).json({
+      error: 'Erreur lors de la conversion de l\'image en vidéo',
+      details: errorMessage
+    });
   }
 };
