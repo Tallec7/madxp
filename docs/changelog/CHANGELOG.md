@@ -1,3 +1,9 @@
+## [2.45.2](https://github.com/Tallec7/neopro/compare/v2.45.1...v2.45.2) (2026-01-24)
+
+### Bug Fixes
+
+- **api:** make cloud remote endpoints truly public (no auth required) ([ae1b37a](https://github.com/Tallec7/neopro/commit/ae1b37a4c79b0672699f704718a2d7c2b16f268a))
+
 ## [2.45.1](https://github.com/Tallec7/neopro/compare/v2.45.0...v2.45.1) (2026-01-24)
 
 ### Bug Fixes
