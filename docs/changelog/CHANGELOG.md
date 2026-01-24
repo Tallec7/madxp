@@ -1,3 +1,9 @@
+## [2.45.3](https://github.com/Tallec7/neopro/compare/v2.45.2...v2.45.3) (2026-01-24)
+
+### Bug Fixes
+
+- **image-to-video:** add codec detection with fallback ([b427aec](https://github.com/Tallec7/neopro/commit/b427aec85100cf84d17959e8313c2008ffd4e0dc))
+
 ## [2.45.2](https://github.com/Tallec7/neopro/compare/v2.45.1...v2.45.2) (2026-01-24)
 
 ### Bug Fixes
