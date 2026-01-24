@@ -1,3 +1,9 @@
+## [2.45.8](https://github.com/Tallec7/neopro/compare/v2.45.7...v2.45.8) (2026-01-24)
+
+### Bug Fixes
+
+- **image-to-video:** install ffmpeg in Docker image for Railway ([14e6d2d](https://github.com/Tallec7/neopro/commit/14e6d2d812c2d8a2177d07efcf93db9951711cdf))
+
 ## [2.45.7](https://github.com/Tallec7/neopro/compare/v2.45.6...v2.45.7) (2026-01-24)
 
 ### Bug Fixes
