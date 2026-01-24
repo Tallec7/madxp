@@ -409,10 +409,25 @@ if (isConnectedNow) {
 
 **Affichage dans le dashboard :**
 
-- **Liste des sites** : Appelle `/api/sites/connection-status` toutes les 30s (vérifie connexions Socket.IO temps réel)
-- **Page détail** : Utilise les données du endpoint `/api/sites/:id/dashboard` (polling 30s) qui inclut le statut de connexion
+- **Liste des sites** : Appelle `/api/sites/connection-status` toutes les 30s (vérifie connexions Socket.IO temps réel + santé)
+- **Page détail** : Utilise les données du endpoint `/api/sites/:id/dashboard` (polling 30s) qui inclut le statut de connexion + santé
 
-Les deux vues utilisent la même logique basée sur `socketService.getConnectedSites()` pour garantir une cohérence du statut affiché.
+Les deux vues utilisent la même logique basée sur `socketService.getConnectionHealth()` pour garantir une cohérence du statut affiché.
+
+**Statuts de connexion (v2.42+) :**
+
+| Statut                 | Couleur   | Conditions                                                          |
+| ---------------------- | --------- | ------------------------------------------------------------------- |
+| **Connecté**           | 🟢 Vert   | Socket connecté ET `isHealthy = true` (pong < 60s)                  |
+| **Connexion instable** | 🟠 Orange | Socket connecté MAIS `isHealthy = false` (pong stale, zombie, etc.) |
+| **Hors ligne**         | ⚪ Gris   | Socket non connecté ET dernier heartbeat > 5 min                    |
+
+**Raisons d'instabilité (`health.reason`) :**
+
+- `pong_stale` : Dernier pong reçu > 60 secondes
+- `socket_disconnected` : Socket dans la map mais `socket.connected = false`
+- `no_pong_received` : Jamais reçu de pong depuis la connexion
+- `not_in_map` : Socket non enregistré dans la map
 
 > **Note (v2.6.1)** : Le composant `connection-indicator` peut recevoir les données via l'input `[externalStatus]` pour éviter le double polling quand le parent gère déjà le rafraîchissement.
 

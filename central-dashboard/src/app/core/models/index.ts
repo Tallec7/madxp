@@ -340,6 +340,11 @@ export interface SiteConnectionSummary {
   lastSeenAt: Date | null;
   secondsSinceLastSeen: number | null;
   localIp: string | null;
+  /** État de santé de la connexion (optionnel, présent si connecté) */
+  health?: {
+    isHealthy: boolean;
+    reason: string;
+  };
 }
 
 export interface AllSitesConnectionStatus {

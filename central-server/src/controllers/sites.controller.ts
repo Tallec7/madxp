@@ -511,10 +511,18 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
         ? Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000)
         : null;
 
-      // Un site est "online" si connecté via Socket.IO OU si heartbeat récent
+      // Vérifier la santé de la connexion (détecte les connexions zombie)
+      const connectionHealth = isConnectedNow ? socketService.getConnectionHealth(site.id) : null;
+      const isHealthy = connectionHealth?.isHealthy ?? false;
+
+      // Un site est "online" si connecté via Socket.IO ET en bonne santé, OU si heartbeat récent
       let displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
-      if (isConnectedNow) {
+      if (isConnectedNow && isHealthy) {
+        // Connecté et en bonne santé = online
         displayStatus = 'online';
+      } else if (isConnectedNow && !isHealthy) {
+        // Connecté mais connexion instable (zombie, pong stale, etc.)
+        displayStatus = 'warning';
       } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < ONLINE_THRESHOLD_SECONDS) {
         // Heartbeat reçu récemment = online
         displayStatus = 'online';
@@ -535,6 +543,11 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
         lastSeenAt,
         secondsSinceLastSeen,
         localIp: site.local_ip,
+        // Ajouter les infos de santé pour le debug
+        health: connectionHealth ? {
+          isHealthy: connectionHealth.isHealthy,
+          reason: connectionHealth.reason,
+        } : undefined,
       };
     });
 

@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.41.3 | **Dernière mise à jour**: 2026-01-21
+**Version**: 2.42.2 | **Dernière mise à jour**: 2026-01-24
 
 ---
 
@@ -2016,6 +2016,22 @@ vcgencmd get_mem gpu
 ## Historique Breaking Changes
 
 ### v2.42.x (Janvier 2026)
+
+- **Alignement statut connexion liste/détail** : Les deux vues affichent maintenant le même statut de connexion
+  - **Problème** : La liste des sites affichait "Connecté" (vert) alors que la page de détail affichait "Connexion instable" (orange) pour le même site
+  - **Cause racine** : L'endpoint `/api/sites/connection-status` (liste) ne vérifiait pas la santé de la connexion (`isHealthy`), contrairement à `/api/sites/:id/dashboard` (détail)
+  - **Solution** : Ajout de la vérification `getConnectionHealth()` dans `getAllSitesConnectionStatus`
+    - Si `isConnectedNow && isHealthy` → `displayStatus = 'online'`
+    - Si `isConnectedNow && !isHealthy` → `displayStatus = 'warning'` (connexion instable)
+  - **Définition "Connexion instable"** : Le Pi semble connecté mais présente des signes de problème :
+    - `pong_stale` : Dernier pong reçu > 60 secondes
+    - `socket_disconnected` : Socket dans la map mais `socket.connected = false`
+    - `no_pong_received` : Jamais reçu de pong depuis la connexion
+    - `not_in_map` : Socket non enregistré
+  - **Fichiers modifiés** :
+    - `central-server/src/controllers/sites.controller.ts` - Vérification health dans `getAllSitesConnectionStatus`
+    - `central-dashboard/src/app/core/models/index.ts` - Ajout champ `health` à `SiteConnectionSummary`
+  - **Migration** : Redéployer le central-server et le dashboard
 
 - **Fix vidéos réapparaissant après suppression et déploiement** : Correction de la race condition sync_local_state
   - **Problème** : Quand on supprimait des vidéos d'une boucle et déployait, les vidéos réapparaissaient après refresh
