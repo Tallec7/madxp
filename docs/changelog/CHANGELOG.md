@@ -1,3 +1,9 @@
+## [2.45.4](https://github.com/Tallec7/neopro/compare/v2.45.3...v2.45.4) (2026-01-24)
+
+### Bug Fixes
+
+- **image-to-video:** fix CSP and API endpoint for image conversion ([6cc3f35](https://github.com/Tallec7/neopro/commit/6cc3f3562645f8d1feaa8fd67136f42ec1d066c6))
+
 ## [2.45.3](https://github.com/Tallec7/neopro/compare/v2.45.2...v2.45.3) (2026-01-24)
 
 ### Bug Fixes
