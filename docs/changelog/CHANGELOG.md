@@ -1,3 +1,9 @@
+## [2.42.4](https://github.com/Tallec7/neopro/compare/v2.42.3...v2.42.4) (2026-01-24)
+
+### Bug Fixes
+
+- **dashboard:** align connection status between list and detail views ([680fe19](https://github.com/Tallec7/neopro/commit/680fe196238bde9337afc2d7fad14742eb51d02d))
+
 ## [2.42.3](https://github.com/Tallec7/neopro/compare/v2.42.2...v2.42.3) (2026-01-24)
 
 ### Bug Fixes
