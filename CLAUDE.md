@@ -1462,7 +1462,7 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 | **VideoUploadZoneComponent** | `components/video-upload-zone/`             | Upload contextuel de vidéos pour un site                      |
 | **VideoLibraryComponent**    | `components/video-library/`                 | Bibliothèque vidéos avec filtre "Pertinentes" et badge ⭐     |
 | **VideoSelectorComponent**   | `shared/components/video-selector/`         | Sélecteur de vidéos avec filtres catégorie                    |
-| **QrCodeGeneratorComponent** | `shared/components/qr-code-generator/`      | Génération QR code télécommande (local/cloud)                 |
+| **QrCodeGeneratorComponent** | `shared/components/qr-code-generator/`      | Génération QR code télécommande (local/cloud) + accès direct  |
 | **ConfigEditorComponent**    | `config-editor/`                            | Éditeur complet de configuration JSON                         |
 | **CloudRemoteComponent**     | `features/remote/cloud-remote.component.ts` | Télécommande cloud ⚡ NEW                                     |
 
@@ -2018,6 +2018,13 @@ vcgencmd get_mem gpu
 ## Historique Breaking Changes
 
 ### v2.43.x (Janvier 2026)
+
+- **Bouton accès direct Cloud Remote dans QR Code Generator** : Ajout d'un bouton "Ouvrir" pour accéder directement à la télécommande cloud
+  - **Amélioration UX** : Les administrateurs peuvent accéder à la télécommande cloud sans scanner le QR code
+  - **Fonctionnalité** : Bouton "↗️ Ouvrir" visible uniquement en mode Cloud, ouvre la remote dans un nouvel onglet
+  - **Style** : Dégradé violet/bleu assorti au badge "Mode Cloud"
+  - **Fichier modifié** : `central-dashboard/src/app/shared/components/qr-code-generator/qr-code-generator.component.ts`
+  - **Migration** : Rebuild et redéployer le dashboard
 
 - **Prévisualisation vidéo dans Gestion du contenu** : Ajout du bouton 👁️ pour lire les vidéos cloud directement depuis `/content`
   - **Problème** : La page "Gestion du contenu" ne permettait pas de prévisualiser les vidéos avant déploiement

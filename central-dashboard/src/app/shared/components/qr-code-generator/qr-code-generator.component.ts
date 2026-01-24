@@ -92,6 +92,13 @@ export type QrCodeMode = 'local' | 'cloud';
           <button class="btn btn-secondary" (click)="print()">
             Imprimer
           </button>
+          <button
+            *ngIf="mode === 'cloud' && siteId"
+            class="btn btn-cloud"
+            (click)="openCloudRemote()"
+            title="Ouvrir la telecommande cloud dans un nouvel onglet">
+            ↗️ Ouvrir
+          </button>
         </div>
       </div>
     </div>
@@ -260,6 +267,15 @@ export type QrCodeMode = 'local' | 'cloud';
 
     .btn-secondary:hover {
       background: #e2e8f0;
+    }
+
+    .btn-cloud {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+    }
+
+    .btn-cloud:hover {
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
     }
 
     /* Mode selector */
@@ -449,6 +465,15 @@ export class QrCodeGeneratorComponent implements OnInit, OnChanges {
   close(): void {
     this.visible = false;
     this.visibleChange.emit(false);
+  }
+
+  /**
+   * Open cloud remote in a new tab
+   */
+  openCloudRemote(): void {
+    if (this.mode === 'cloud' && this.siteId) {
+      window.open(this.remoteUrl, '_blank');
+    }
   }
 
   async downloadPng(): Promise<void> {
