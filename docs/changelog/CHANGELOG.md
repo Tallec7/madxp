@@ -1,3 +1,9 @@
+# [2.43.0](https://github.com/Tallec7/neopro/compare/v2.42.5...v2.43.0) (2026-01-24)
+
+### Features
+
+- **content:** add video preview in content management page ([35a1c64](https://github.com/Tallec7/neopro/commit/35a1c64bf78e92e6f3c8f63de58c8dee186b1d96))
+
 ## [2.42.5](https://github.com/Tallec7/neopro/compare/v2.42.4...v2.42.5) (2026-01-24)
 
 ### Bug Fixes
