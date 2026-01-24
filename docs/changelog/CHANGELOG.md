@@ -1,3 +1,9 @@
+## [2.45.1](https://github.com/Tallec7/neopro/compare/v2.45.0...v2.45.1) (2026-01-24)
+
+### Bug Fixes
+
+- **dashboard:** fix cloud remote redirect to login on open button ([cc99aba](https://github.com/Tallec7/neopro/commit/cc99aba3fc7420e649174e8c3e6336f8232b1715))
+
 # [2.45.0](https://github.com/Tallec7/neopro/compare/v2.44.1...v2.45.0) (2026-01-24)
 
 ### Features
