@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.43.0 | **Dernière mise à jour**: 2026-01-24
+**Version**: 2.46.0 | **Dernière mise à jour**: 2026-01-24
 
 ---
 
@@ -426,25 +426,25 @@ Le `LoggerService` Angular implémente un throttling côté client pour éviter 
 
 ## Services Critiques
 
-| Service          | Fichier                              | Rôle                                        |
-| ---------------- | ------------------------------------ | ------------------------------------------- |
-| **Socket**       | `socket.service.ts`                  | Communication temps réel Pi ↔ Cloud         |
-| **CommandQueue** | `command-queue.service.ts`           | File d'attente commandes (offline/online)   |
-| **Deployment**   | `deployment.service.ts`              | Orchestration déploiement vidéos            |
-| **UploadVerify** | `upload-verification.service.ts`     | Vérification upload avant déploiement       |
-| **Draft**        | `draft.service.ts`                   | Gestion brouillons de configuration         |
-| **Orchestrated** | `orchestrated-deployment.service.ts` | Déploiement vidéos + config orchestré       |
-| **Asset**        | `asset.service.ts`                   | Gestion watermarks et logos (upload/deploy) |
-| **FTP Storage**  | `ftp-storage.ts`                     | Upload/download vidéos sur FTP Hostinger    |
-| **Supabase**     | `supabase.ts`                        | Stockage fallback si FTP non configuré      |
-| **Metrics**      | `metrics.service.ts`                 | Export Prometheus                           |
-| **Audit**        | `audit.service.ts`                   | Log toutes les actions admin                |
-| **MFA**          | `mfa.service.ts`                     | 2FA avec backup codes                       |
-| **Email**        | `email.service.ts`                   | Password reset, alertes                     |
-| **Cron**         | `cron-scheduler.service.ts`          | Stats quotidiennes, cleanup                 |
-| **Logger**       | `logger.service.ts`                  | Logs structurés avec correlation ID         |
-| **Errors**       | `error-extractor.ts`                 | Extraction messages d'erreur                |
-| **ImageToVideo** | `image-to-video.service.ts`          | Conversion image → vidéo MP4 via ffmpeg     |
+| Service          | Fichier                              | Rôle                                                      |
+| ---------------- | ------------------------------------ | --------------------------------------------------------- |
+| **Socket**       | `socket.service.ts`                  | Communication temps réel Pi ↔ Cloud                       |
+| **CommandQueue** | `command-queue.service.ts`           | File d'attente commandes (offline/online)                 |
+| **Deployment**   | `deployment.service.ts`              | Orchestration déploiement vidéos                          |
+| **UploadVerify** | `upload-verification.service.ts`     | Vérification upload avant déploiement                     |
+| **Draft**        | `draft.service.ts`                   | Gestion brouillons de configuration                       |
+| **Orchestrated** | `orchestrated-deployment.service.ts` | Déploiement vidéos + config orchestré                     |
+| **Asset**        | `asset.service.ts`                   | Gestion watermarks et logos (upload/deploy)               |
+| **FTP Storage**  | `ftp-storage.ts`                     | Upload/download vidéos sur FTP Hostinger                  |
+| **Supabase**     | `supabase.ts`                        | Stockage fallback si FTP non configuré                    |
+| **Metrics**      | `metrics.service.ts`                 | Export Prometheus                                         |
+| **Audit**        | `audit.service.ts`                   | Log toutes les actions admin                              |
+| **MFA**          | `mfa.service.ts`                     | 2FA avec backup codes                                     |
+| **Email**        | `email.service.ts`                   | Password reset, alertes                                   |
+| **Cron**         | `cron-scheduler.service.ts`          | Stats quotidiennes, cleanup                               |
+| **Logger**       | `logger.service.ts`                  | Logs structurés avec correlation ID                       |
+| **Errors**       | `error-extractor.ts`                 | Extraction messages d'erreur                              |
+| **ImageToVideo** | `image-to-video.service.ts`          | Conversion image → vidéo MP4 via ffmpeg (720p, ultrafast) |
 
 ### Services Angular Raspberry Pi (Extraits v2.33+) ⚡ NEW
 
@@ -2017,6 +2017,25 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.46.x (Janvier 2026)
+
+- **Fix conversion image-to-video sur Railway** : La fonctionnalité de conversion image→vidéo fonctionne maintenant sur Railway
+  - **Problème** : La conversion échouait avec "ffmpeg exited with code null" (OOM kill)
+  - **Causes identifiées** :
+    1. ffmpeg n'était pas installé dans le Dockerfile (uniquement dans nixpacks.toml)
+    2. Le package `ffmpeg` d'Alpine n'inclut pas libx264 par défaut (licence GPL)
+    3. Les paramètres d'encodage consommaient trop de mémoire pour Railway Hobby plan
+  - **Solutions appliquées** :
+    - Ajout de ffmpeg dans le Dockerfile avec le repo `edge/community` pour libx264
+    - Réduction résolution : 1080p → 720p
+    - Preset `ultrafast` au lieu de `medium` (plus rapide, moins de mémoire)
+    - Framerate d'entrée 1fps au lieu de 25fps (réduit le buffer)
+    - CRF 28 au lieu de 23 (fichier plus petit)
+  - **Fichiers modifiés** :
+    - `central-server/Dockerfile` - Installation ffmpeg avec libx264
+    - `central-server/src/services/image-to-video.service.ts` - Paramètres optimisés pour mémoire limitée
+  - **Migration** : Redéployer le central-server sur Railway (rebuild automatique)
 
 ### v2.43.x (Janvier 2026)
 
