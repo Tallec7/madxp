@@ -1,3 +1,9 @@
+## [2.45.11](https://github.com/Tallec7/neopro/compare/v2.45.10...v2.45.11) (2026-01-24)
+
+### Bug Fixes
+
+- **image-to-video:** reduce memory usage for Railway Hobby plan ([0d96507](https://github.com/Tallec7/neopro/commit/0d96507640a0da56c2d99483c203e416b06ec4ce))
+
 ## [2.45.10](https://github.com/Tallec7/neopro/compare/v2.45.9...v2.45.10) (2026-01-24)
 
 ### Bug Fixes
