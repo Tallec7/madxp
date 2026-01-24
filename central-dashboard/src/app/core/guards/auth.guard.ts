@@ -14,24 +14,19 @@ export const authGuard: CanActivateFn = (route, state) => {
 
   // Si déjà authentifié en mémoire, autoriser immédiatement
   if (authService.isAuthenticated()) {
-    console.log('[GUARD] User already authenticated in memory');
     return true;
   }
 
-  console.log('[GUARD] Checking authentication via API...');
   // Sinon, vérifier via l'API (pour les cas où le cookie existe mais le state est vide)
   return authService.checkAuthentication().pipe(
     map(isAuthenticated => {
-      console.log('[GUARD] checkAuthentication result:', isAuthenticated);
       if (isAuthenticated) {
         return true;
       }
-      console.log('[GUARD] Not authenticated, redirecting to login');
       router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
       return false;
     }),
-    catchError((err) => {
-      console.error('[GUARD] checkAuthentication error:', err);
+    catchError(() => {
       router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
       return of(false);
     })

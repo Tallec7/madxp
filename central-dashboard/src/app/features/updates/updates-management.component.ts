@@ -1217,9 +1217,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
       next: (updates) => {
         this.updates = updates;
       },
-      error: (error) => {
-        console.error('Error loading updates:', error);
-      }
+      error: () => { /* Silencieux - erreur gérée par l'intercepteur */ }
     });
   }
 
@@ -1228,9 +1226,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
       next: (deployments) => {
         this.deployments = deployments;
       },
-      error: (error) => {
-        console.error('Error loading deployments:', error);
-      }
+      error: () => { /* Silencieux - erreur gérée par l'intercepteur */ }
     });
   }
 

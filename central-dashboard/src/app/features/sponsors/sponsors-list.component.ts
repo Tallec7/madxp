@@ -549,9 +549,8 @@ export class SponsorsListComponent implements OnInit {
           this.sponsors = response.data.advertisers || [];
           this.filteredSponsors = this.sponsors;
         },
-        error: (error) => {
+        error: () => {
           this.notification.error('Erreur lors du chargement des sponsors');
-          console.error('Error loading sponsors:', error);
         },
         complete: () => {
           this.loading = false;
@@ -633,9 +632,8 @@ export class SponsorsListComponent implements OnInit {
         this.closeModal();
         this.loadSponsors();
       },
-      error: (error) => {
+      error: () => {
         this.notification.error('Erreur lors de l\'enregistrement');
-        console.error('Error saving sponsor:', error);
         this.saving = false;
       },
       complete: () => {

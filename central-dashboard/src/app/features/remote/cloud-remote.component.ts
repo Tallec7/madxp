@@ -430,7 +430,6 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       },
       error: (err) => {
-        console.error('[CloudRemote] Error loading state:', err);
         this.connectionError = err.error?.error || 'Impossible de charger l\'état du site';
         this.isLoading = false;
       }
@@ -530,22 +529,17 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   // ============================================================================
 
   public launchSponsors(): void {
-    console.log('[CloudRemote] Launch sponsors');
-
     this.remoteService.playSponsors(this.siteId).subscribe({
       next: () => {
         this.displayToast('Boucle sponsors lancée', 'success');
       },
       error: (err) => {
-        console.error('[CloudRemote] Error launching sponsors:', err);
         this.displayToast('Erreur: ' + (err.error?.error || 'Échec de la commande'), 'info');
       }
     });
   }
 
   public launchVideo(video: Video): void {
-    console.log('[CloudRemote] Launch video:', video);
-
     this.remoteService.playVideo(this.siteId, {
       name: video.name,
       path: video.path,
@@ -561,7 +555,6 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         }, 3000);
       },
       error: (err) => {
-        console.error('[CloudRemote] Error launching video:', err);
         this.displayToast('Erreur: ' + (err.error?.error || 'Échec de la commande'), 'info');
       }
     });
@@ -679,8 +672,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         this.displayToast('Configuration mise à jour', 'success');
       },
-      error: (err) => {
-        console.error('[CloudRemote] Error reloading configuration:', err);
+      error: () => {
         this.isReloading = false;
         this.isLoading = false;
         this.displayToast('Erreur de chargement', 'info');
@@ -766,8 +758,6 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   public saveMatchInfo(): void {
-    console.log('[CloudRemote] Match info saved:', this.matchInfo);
-
     this.currentSessionId = this.generateUUID();
 
     this.remoteService.configureMatch(this.siteId, {
@@ -781,8 +771,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         this.showMatchModal = false;
         this.displayToast('Configuration du match enregistrée', 'success');
       },
-      error: (err) => {
-        console.error('[CloudRemote] Error saving match info:', err);
+      error: () => {
         this.displayToast('Erreur lors de l\'enregistrement', 'info');
       }
     });
@@ -856,8 +845,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
       next: () => {
         // Score envoyé silencieusement
       },
-      error: (err) => {
-        console.error('[CloudRemote] Error updating score:', err);
+      error: () => {
+        // Silencieux - le score sera renvoyé au prochain update
       }
     });
   }
@@ -870,8 +859,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
       next: () => {
         this.displayToast('Score réinitialisé', 'success');
       },
-      error: (err) => {
-        console.error('[CloudRemote] Error resetting score:', err);
+      error: () => {
+        this.displayToast('Erreur lors de la réinitialisation', 'info');
       }
     });
   }
@@ -886,14 +875,12 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   public switchPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
     this.activePhase = phase;
-    console.log('[CloudRemote] Switching to phase:', phase);
 
     this.remoteService.changePhase(this.siteId, phase).subscribe({
       next: () => {
         this.displayToast(`Phase: ${this.getPhaseLabel(phase)}`, 'success');
       },
-      error: (err) => {
-        console.error('[CloudRemote] Error changing phase:', err);
+      error: () => {
         this.displayToast('Erreur lors du changement de phase', 'info');
       }
     });
@@ -1116,7 +1103,6 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   private broadcastOptions(): void {
     // Les options sont stockées localement uniquement
     // En cloud, on pourrait les envoyer au serveur pour persistance
-    console.log('[CloudRemote] Options updated:', this.localOptions);
   }
 
   // ============================================================================
@@ -1370,8 +1356,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         this.showBreakingNewsPanel = false;
         this.displayToast('Annonce envoyée', 'success');
       },
-      error: (err) => {
-        console.error('[CloudRemote] Error sending breaking news:', err);
+      error: () => {
         this.displayToast('Erreur lors de l\'envoi', 'info');
       }
     });
@@ -1500,8 +1485,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         const parsed = JSON.parse(stored);
         return this.deepMerge(DEFAULT_OPTIONS, parsed);
       }
-    } catch (error) {
-      console.warn('[CloudRemote] Failed to load options from storage:', error);
+    } catch {
+      // Options par défaut si le localStorage est corrompu
     }
     return JSON.parse(JSON.stringify(DEFAULT_OPTIONS));
   }
@@ -1509,8 +1494,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   private saveLocalOptions(): void {
     try {
       localStorage.setItem('cloudRemoteOptions', JSON.stringify(this.localOptions));
-    } catch (error) {
-      console.error('[CloudRemote] Failed to save options to storage:', error);
+    } catch {
+      // Silencieux - localStorage peut être désactivé
     }
   }
 

@@ -800,7 +800,6 @@ export class SponsorVideosComponent implements OnInit {
 
     } catch (err: any) {
       this.error = err.message || 'Erreur lors du chargement';
-      console.error('Error loading data:', err);
     } finally {
       this.loading = false;
     }
@@ -891,7 +890,6 @@ export class SponsorVideosComponent implements OnInit {
 
     } catch (err: any) {
       alert(err.message || 'Erreur lors de l\'ajout');
-      console.error('Error adding videos:', err);
     } finally {
       this.adding = false;
     }
@@ -922,7 +920,6 @@ export class SponsorVideosComponent implements OnInit {
 
     } catch (err: any) {
       alert(err.message || 'Erreur lors de la suppression');
-      console.error('Error removing video:', err);
     } finally {
       this.removingId = null;
     }
@@ -965,7 +962,6 @@ export class SponsorVideosComponent implements OnInit {
 
     } catch (err: any) {
       alert(err.message || 'Erreur lors de la sauvegarde');
-      console.error('Error updating priority:', err);
     } finally {
       this.updatingPriority = false;
     }
@@ -1029,7 +1025,6 @@ export class SponsorVideosComponent implements OnInit {
 
     } catch (err: any) {
       alert(err.message || 'Erreur lors de la réorganisation');
-      console.error('Error saving order:', err);
       await this.loadSponsorVideos(); // Reload to restore correct state
     }
   }

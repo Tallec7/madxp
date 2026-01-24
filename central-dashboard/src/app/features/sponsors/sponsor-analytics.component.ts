@@ -703,9 +703,8 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
           setTimeout(() => this.renderCharts(), 100);
         }
       },
-      error: (err) => {
+      error: () => {
         this.error = 'Erreur lors du chargement des analytics';
-        console.error('Error loading sponsor data:', err);
         this.loading = false;
       },
       complete: () => {
@@ -982,9 +981,8 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
       },
-      error: (err) => {
+      error: () => {
         alert('Erreur lors de l\'export');
-        console.error('Export error:', err);
       },
       complete: () => {
         this.exporting = false;
@@ -1010,9 +1008,8 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
       },
-      error: (err) => {
+      error: () => {
         alert('Erreur lors de la génération du PDF');
-        console.error('PDF error:', err);
       },
       complete: () => {
         this.generatingPDF = false;

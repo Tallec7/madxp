@@ -484,7 +484,6 @@ export class CommandExecutorComponent implements OnInit, OnDestroy {
         )
       )
       .subscribe(event => {
-        console.log('Received command result via WebSocket:', event);
         this.executing = false;
         this.pendingCommandId = null;
 
@@ -510,8 +509,7 @@ export class CommandExecutorComponent implements OnInit, OnDestroy {
           event.commandId === this.pendingCommandId
         )
       )
-      .subscribe(event => {
-        console.log('Command timeout via WebSocket:', event);
+      .subscribe(() => {
         this.executing = false;
         this.pendingCommandId = null;
         this.error = 'La commande a expiré (timeout)';
@@ -557,7 +555,6 @@ export class CommandExecutorComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('Remote shell response:', response);
           const res = response as {
             success?: boolean;
             commandId?: string;
@@ -570,7 +567,6 @@ export class CommandExecutorComponent implements OnInit, OnDestroy {
           // Le résultat sera reçu via WebSocket
           if (res.commandId && res.status === 'pending') {
             this.pendingCommandId = res.commandId;
-            console.log('Command sent, waiting for result via WebSocket. CommandId:', res.commandId);
             // Ne pas désactiver executing, on attend le WebSocket
             return;
           }
@@ -585,11 +581,9 @@ export class CommandExecutorComponent implements OnInit, OnDestroy {
             this.addToHistory(this.command.trim(), false);
           } else {
             this.error = 'Réponse inattendue du serveur';
-            console.warn('Unexpected response format:', response);
           }
         },
         error: (err) => {
-          console.error('Remote shell error:', err);
           this.executing = false;
           this.pendingCommandId = null;
 

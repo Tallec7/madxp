@@ -472,9 +472,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           error: this.stats?.error || 0,
         };
       },
-      error: (error) => {
-        console.error('Error loading connection status:', error);
-      }
+      error: () => { /* Silencieux - erreur gérée par l'intercepteur */ }
     });
   }
 

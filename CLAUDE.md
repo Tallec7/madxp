@@ -2017,6 +2017,29 @@ vcgencmd get_mem gpu
 
 ### v2.43.x (Janvier 2026)
 
+- **Nettoyage console logs dashboard** : Suppression de 65+ console.log/warn/error inutiles pour une console production propre
+  - **Problème** : La console du navigateur était polluée par des logs de debug, actions utilisateur, et erreurs redondantes
+  - **Solution** : Audit complet et suppression des logs non nécessaires, conservation des logs critiques uniquement
+  - **Fichiers modifiés** (18 fichiers) :
+    - `site-debug-tab.component.ts` - 4 DEBUG logs supprimés
+    - `auth.guard.ts` - 5 logs de debug auth supprimés
+    - `cache.service.ts` - 6 logs cache HIT/MISS/invalidate supprimés
+    - `cloud-remote.component.ts` - 15 logs actions/erreurs supprimés
+    - `command-executor.component.ts` - 5 logs WebSocket supprimés
+    - `auth.interceptor.ts` - 2 logs 401 debug supprimés
+    - `connection-indicator.component.ts` - 1 log réseau verbeux supprimé
+    - `agency-dashboard.component.ts`, `sponsor-dashboard.component.ts`, `analytics-categories.component.ts`, `updates-management.component.ts`, `dashboard.component.ts`, `config-editor.component.ts`, `sponsor-videos.component.ts`, `sponsor-analytics.component.ts`, `sponsors-list.component.ts`, `sponsor-detail.component.ts` - console.error redondants supprimés (NotificationService gère déjà le feedback utilisateur)
+  - **Fichier supprimé** : `config-editor.component.ts.backup` - fichier backup avec nombreux logs de debug
+  - **Logs conservés** (15 logs justifiés dans 6 fichiers) :
+    - `main.ts` : 1 (erreur bootstrap critique)
+    - `qr-code-generator.component.ts` : 2 (erreurs QR code)
+    - `global-error.handler.ts` : 1 (gestionnaire d'erreurs global)
+    - `logger.service.ts` : 9 (le service de logging lui-même)
+    - `command-executor.component.ts` : 1 (erreur clipboard)
+    - `socket.service.spec.ts` : 1 (test)
+  - **Pattern appliqué** : `catch(error) { console.error(...) }` → `catch() { ... }` quand l'erreur n'était utilisée que pour le log
+  - **Migration** : Rebuild et redéployer le dashboard
+
 - **Fix faux positif alimentation dans diagnostic hotspot** : Le script `fix-hotspot.sh` n'alerte plus sur les événements thermiques passés
   - **Problème** : Le diagnostic hotspot affichait "❌ Problème" d'alimentation alors que la santé système affichait "✅ OK" pour le même Pi
   - **Cause racine** : `fix-hotspot.sh` considérait **tout flag de throttling** (y compris les flags historiques de température) comme un problème d'alimentation

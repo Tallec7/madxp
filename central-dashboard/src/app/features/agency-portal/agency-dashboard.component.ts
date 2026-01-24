@@ -415,14 +415,14 @@ export class AgencyDashboardComponent implements OnInit {
   loadDashboard(): void {
     this.agencyService.getDashboard().subscribe({
       next: (response) => this.dashboard = response.data,
-      error: (err) => console.error('Error loading dashboard:', err)
+      error: () => { /* Silencieux - erreur gérée par l'intercepteur */ }
     });
   }
 
   loadSites(): void {
     this.agencyService.getSites().subscribe({
       next: (response) => this.sites = response.data.sites,
-      error: (err) => console.error('Error loading sites:', err)
+      error: () => { /* Silencieux - erreur gérée par l'intercepteur */ }
     });
   }
 

@@ -3488,11 +3488,6 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
     this.sitesService.getHealthStatus(this.siteId).subscribe({
       next: (result) => {
         this.loadingHealthStatus = false;
-        // Debug détaillé pour diagnostiquer le format de réponse
-        console.log('[DEBUG] Raw health status result:', result);
-        console.log('[DEBUG] Type:', typeof result);
-        console.log('[DEBUG] Keys:', result ? Object.keys(result) : 'null');
-        console.log('[DEBUG] healthScore:', result?.healthScore);
         this.logger.info('Health status received', { result });
         if (result && result.healthScore !== undefined) {
           this.healthStatus = result;

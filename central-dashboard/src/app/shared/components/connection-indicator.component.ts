@@ -148,12 +148,9 @@ export class ConnectionIndicatorComponent implements OnInit, OnDestroy {
           // Reset error count on success
           this.errorCount = 0;
         }),
-        catchError((error) => {
+        catchError(() => {
           this.errorCount++;
-          // Only log first few errors to avoid spam
-          if (this.errorCount <= 3) {
-            console.warn(`[ConnectionIndicator] Failed to get status for site ${this.siteId}:`, error?.message || error);
-          }
+          // Silencieux - erreur réseau attendue si site offline
           return of(null);
         })
       ))

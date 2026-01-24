@@ -590,8 +590,7 @@ export class AnalyticsCategoriesComponent implements OnInit {
         this.categories = categories;
         this.loading = false;
       },
-      error: (error) => {
-        console.error('Error loading categories:', error);
+      error: () => {
         this.notificationService.error('Erreur lors du chargement des catégories');
         this.loading = false;
       }
@@ -647,8 +646,7 @@ export class AnalyticsCategoriesComponent implements OnInit {
           this.closeModal();
           this.saving = false;
         },
-        error: (error) => {
-          console.error('Error updating category:', error);
+        error: () => {
           this.notificationService.error('Erreur lors de la mise à jour');
           this.saving = false;
         }
@@ -668,7 +666,6 @@ export class AnalyticsCategoriesComponent implements OnInit {
           this.saving = false;
         },
         error: (error) => {
-          console.error('Error creating category:', error);
           this.notificationService.error(error.error?.error || 'Erreur lors de la création');
           this.saving = false;
         }
@@ -688,8 +685,7 @@ export class AnalyticsCategoriesComponent implements OnInit {
           this.notificationService.success('Catégorie supprimée');
           this.loadCategories();
         },
-        error: (error) => {
-          console.error('Error deleting category:', error);
+        error: () => {
           this.notificationService.error('Erreur lors de la suppression');
         }
       });

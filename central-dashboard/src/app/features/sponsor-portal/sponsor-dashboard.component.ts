@@ -386,21 +386,21 @@ export class SponsorDashboardComponent implements OnInit {
         this.dashboard = response.data;
         this.maxImpressions = Math.max(...(response.data.trends?.map(t => t.impressions) || [1]));
       },
-      error: (err) => console.error('Error loading dashboard:', err)
+      error: () => { /* Silencieux - erreur gérée par l'intercepteur */ }
     });
   }
 
   loadSites(): void {
     this.sponsorService.getSites().subscribe({
       next: (response) => this.sites = response.data.sites,
-      error: (err) => console.error('Error loading sites:', err)
+      error: () => { /* Silencieux - erreur gérée par l'intercepteur */ }
     });
   }
 
   loadVideos(): void {
     this.sponsorService.getVideos().subscribe({
       next: (response) => this.videos = response.data.videos,
-      error: (err) => console.error('Error loading videos:', err)
+      error: () => { /* Silencieux - erreur gérée par l'intercepteur */ }
     });
   }
 

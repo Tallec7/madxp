@@ -1152,8 +1152,8 @@ export class SponsorDetailComponent implements OnInit {
               next: (videoResponse) => {
                 this.sponsorVideos = videoResponse.data.videos || [];
               },
-              error: (err) => {
-                console.error('Error loading videos:', err);
+              error: () => {
+                // Silencieux - les vidéos ne sont pas critiques
               }
             });
 
@@ -1163,18 +1163,17 @@ export class SponsorDetailComponent implements OnInit {
               next: (statsResponse) => {
                 this.quickStats = statsResponse.data.summary;
               },
-              error: (err) => {
-                console.error('Error loading stats:', err);
+              error: () => {
+                // Silencieux - les stats ne sont pas critiques
               },
               complete: () => {
                 this.loading = false;
               }
             });
         },
-        error: (err) => {
+        error: () => {
           this.error = 'Sponsor non trouvé';
           this.notification.error('Erreur lors du chargement des données');
-          console.error('Error loading sponsor data:', err);
           this.loading = false;
         }
       });
@@ -1210,9 +1209,8 @@ export class SponsorDetailComponent implements OnInit {
           this.notification.success('Sponsor modifié avec succès');
           this.closeEditModal();
         },
-        error: (err) => {
+        error: () => {
           this.notification.error('Erreur lors de la sauvegarde');
-          console.error('Error saving sponsor:', err);
           this.saving = false;
         },
         complete: () => {
@@ -1239,9 +1237,8 @@ export class SponsorDetailComponent implements OnInit {
           this.notification.success('Sponsor supprimé avec succès');
           this.router.navigate(['/advertisers']);
         },
-        error: (err) => {
+        error: () => {
           this.notification.error('Erreur lors de la suppression');
-          console.error('Error deleting sponsor:', err);
         },
         complete: () => {
           this.deleting = false;
@@ -1277,8 +1274,7 @@ export class SponsorDetailComponent implements OnInit {
           this.availableVideos = allVideos.filter(v => !associatedIds.has(v.id));
           this.filterAvailableVideos();
         },
-        error: (err) => {
-          console.error('Error loading available videos:', err);
+        error: () => {
           this.notification.error('Erreur lors du chargement des vidéos');
         },
         complete: () => {
@@ -1327,8 +1323,7 @@ export class SponsorDetailComponent implements OnInit {
             }
           });
       },
-      error: (err) => {
-        console.error('Error adding videos:', err);
+      error: () => {
         this.notification.error('Erreur lors de l\'ajout des vidéos');
       },
       complete: () => {
@@ -1373,7 +1368,6 @@ export class SponsorDetailComponent implements OnInit {
 
     } catch (err: any) {
       alert(err.message || 'Erreur lors de la suppression');
-      console.error('Error removing video:', err);
     } finally {
       this.removingVideo = null;
     }

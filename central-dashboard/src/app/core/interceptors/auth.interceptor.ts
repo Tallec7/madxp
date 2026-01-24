@@ -44,22 +44,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         const isLogEndpoint = req.url.includes('/logs/frontend');
         const isRealUnauthorized = error.status === 401 && !isAuthEndpoint && !isLogEndpoint;
 
-        // DEBUG: Log pour comprendre les déconnexions
-        if (error.status === 401) {
-          console.warn('[AUTH] 401 Unauthorized detected', {
-            url: req.url,
-            isAuthEndpoint,
-            willRedirect: isRealUnauthorized,
-            errorMessage: error.error?.error || error.message
-          });
-        }
-
         if (isRealUnauthorized) {
           const router = injector.get(Router);
           // Éviter les redirections multiples
           const currentUrl = router.url;
           if (currentUrl !== '/login') {
-            console.warn('[AUTH] Redirecting to login due to 401');
             router.navigate(['/login']);
           }
         }

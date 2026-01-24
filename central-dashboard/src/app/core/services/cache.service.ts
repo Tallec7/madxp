@@ -31,16 +31,12 @@ export class CacheService {
 
     // Vérifier si le cache est valide
     if (cached && now - cached.timestamp < cacheTTL) {
-      console.debug(`[CacheService] Cache HIT for key: ${key}`);
       return cached.data;
     }
 
-    console.debug(`[CacheService] Cache MISS for key: ${key}`);
-
     // Fetch et mettre en cache
     const data$ = fetcher().pipe(
-      shareReplay(1), // Partager le résultat entre tous les abonnés
-      tap(() => console.debug(`[CacheService] Cached data for key: ${key}`))
+      shareReplay(1) // Partager le résultat entre tous les abonnés
     );
 
     this.cache.set(key, {
@@ -55,7 +51,6 @@ export class CacheService {
    * Invalide une entrée du cache
    */
   invalidate(key: string): void {
-    console.debug(`[CacheService] Invalidating cache for key: ${key}`);
     this.cache.delete(key);
   }
 
@@ -72,7 +67,6 @@ export class CacheService {
     });
 
     keysToDelete.forEach((key) => {
-      console.debug(`[CacheService] Invalidating cache for key (pattern): ${key}`);
       this.cache.delete(key);
     });
   }
@@ -81,7 +75,6 @@ export class CacheService {
    * Vide complètement le cache
    */
   clear(): void {
-    console.debug('[CacheService] Clearing entire cache');
     this.cache.clear();
   }
 

@@ -2371,8 +2371,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
           this.loadFromLocalContent();
         }
       },
-      error: (error) => {
-        console.error('[ConfigEditor] getConfiguration error:', error);
+      error: () => {
         clearTimeout(timeoutId);
         // Fallback sur local_content en cas d'erreur
         this.loadFromLocalContent();
@@ -2400,8 +2399,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
           this.notificationService.info('Aucune configuration connue. Vous pouvez en créer une nouvelle.');
         }
       },
-      error: (error) => {
-        console.error('[ConfigEditor] getLocalContent error:', error);
+      error: () => {
         this.resetToEmptyConfig('getLocalContent error');
         this.notificationService.warning('Impossible de charger la configuration. Vous pouvez en créer une nouvelle.');
       }
@@ -3073,9 +3071,9 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
         this.analyticsCategories = categories;
         this.loadingAnalyticsCategories = false;
       },
-      error: (error) => {
+      error: () => {
         this.loadingAnalyticsCategories = false;
-        console.error('Failed to load analytics categories:', error);
+        // Silencieux - fallback sur catégories par défaut
       }
     });
   }
