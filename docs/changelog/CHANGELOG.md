@@ -1,3 +1,9 @@
+## [2.45.12](https://github.com/Tallec7/neopro/compare/v2.45.11...v2.45.12) (2026-01-24)
+
+### Bug Fixes
+
+- **video-watcher:** prevent ffprobe infinite loop causing CPU 88% and 84°C ([d886207](https://github.com/Tallec7/neopro/commit/d886207d6cbfc92fe01315948da021f498c83c90))
+
 ## [2.45.11](https://github.com/Tallec7/neopro/compare/v2.45.10...v2.45.11) (2026-01-24)
 
 ### Bug Fixes
