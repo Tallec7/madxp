@@ -1,3 +1,9 @@
+# [2.44.0](https://github.com/Tallec7/neopro/compare/v2.43.0...v2.44.0) (2026-01-24)
+
+### Features
+
+- **content:** add image to video conversion using ffmpeg ([2b7969d](https://github.com/Tallec7/neopro/commit/2b7969d846df6319841b10901999e3cb6b3673e7))
+
 # [2.43.0](https://github.com/Tallec7/neopro/compare/v2.42.5...v2.43.0) (2026-01-24)
 
 ### Features
