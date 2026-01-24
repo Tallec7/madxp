@@ -47,6 +47,9 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# Install ffmpeg for image-to-video conversion
+RUN apk add --no-cache ffmpeg
+
 # Add non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 neopro
