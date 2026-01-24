@@ -294,7 +294,7 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
         <!-- Current watermark preview -->
         <div class="watermark-current" *ngIf="watermarkConfig.imagePath">
           <div class="watermark-preview-box">
-            <img [src]="watermarkPreviewUrl || watermarkConfig.cloudUrl || watermarkConfig.imagePath" alt="Watermark" class="watermark-img"/>
+            <img [src]="getWatermarkPreviewUrl()" alt="Watermark" class="watermark-img" (error)="onWatermarkImageError($event)"/>
           </div>
           <div class="watermark-info">
             <span class="watermark-path">{{ getWatermarkFilename() }}</span>
@@ -1702,6 +1702,53 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     if (!this.watermarkConfig.imagePath) return '';
     const parts = this.watermarkConfig.imagePath.split('/');
     return parts[parts.length - 1] || '';
+  }
+
+  /**
+   * Returns the URL to use for watermark preview in the dashboard.
+   * Priority:
+   * 1. watermarkPreviewUrl - Base64 preview during upload
+   * 2. watermarkConfig.cloudUrl - Cloud URL (FTP or Supabase)
+   * 3. Fallback to a placeholder image if only local path exists
+   *
+   * We NEVER use imagePath directly as it's a local Pi path that doesn't exist on the dashboard.
+   */
+  getWatermarkPreviewUrl(): string {
+    // Priority 1: Local preview during upload
+    if (this.watermarkPreviewUrl) {
+      return this.watermarkPreviewUrl;
+    }
+
+    // Priority 2: Cloud URL (from FTP or Supabase)
+    if (this.watermarkConfig.cloudUrl) {
+      return this.watermarkConfig.cloudUrl;
+    }
+
+    // Priority 3: No cloud URL available - show placeholder
+    // This happens for watermarks uploaded before cloudUrl was added
+    // The image exists on the Pi but we can't preview it in the dashboard
+    return 'data:image/svg+xml,' + encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+        <rect fill="#1e293b" width="80" height="80"/>
+        <text x="40" y="35" text-anchor="middle" fill="#64748b" font-size="24">🖼️</text>
+        <text x="40" y="55" text-anchor="middle" fill="#64748b" font-size="8">Aperçu non disponible</text>
+      </svg>`
+    );
+  }
+
+  /**
+   * Handle image load errors (e.g., if cloudUrl is expired or invalid)
+   */
+  onWatermarkImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    // Replace with placeholder on error
+    img.src = 'data:image/svg+xml,' + encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+        <rect fill="#1e293b" width="80" height="80"/>
+        <text x="40" y="35" text-anchor="middle" fill="#ef4444" font-size="20">⚠️</text>
+        <text x="40" y="55" text-anchor="middle" fill="#64748b" font-size="8">Erreur de chargement</text>
+      </svg>`
+    );
   }
 
   saveWatermarkConfig(): void {

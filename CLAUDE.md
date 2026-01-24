@@ -325,7 +325,7 @@ POST   /api/assets/watermark/validate   → Valide une configuration watermark
 POST   /api/assets/deploy/:siteId       → Déploie un asset existant vers un site
 ```
 
-### Remote Cloud (Télécommande via Internet) ⚡ UPDATED (v2.41)
+### Remote Cloud (Télécommande via Internet) ⚡ UPDATED (v2.45)
 
 Permet de contrôler un site à distance depuis n'importe quel réseau (utile pour les réseaux mesh avec isolation client).
 
@@ -410,6 +410,7 @@ Upload:     10 req/hour     (video uploads)
 - `/api/sites/:id/dashboard`, `/api/sites/:id/connection-status`, `/api/sites/:id/metrics`, `/api/sites/:id/local-content` → `monitoringRateLimit` (300/min)
 - `/api/sites/:id`, `/api/sites/:id/logs`, `/api/sites/:id/config-history/*` → `adminRateLimit` (200/min)
 - POST/PUT/DELETE, `/api/sites/:id/command` → `sensitiveRateLimit` (30/min)
+- `/api/remote/*` → `sensitiveRateLimit` (30/min) - **PUBLIC (pas d'auth JWT)** - par IP
 
 **Frontend Log Throttling** (v2.25+) :
 
@@ -2023,8 +2024,27 @@ vcgencmd get_mem gpu
   - **Amélioration UX** : Les administrateurs peuvent accéder à la télécommande cloud sans scanner le QR code
   - **Fonctionnalité** : Bouton "↗️ Ouvrir" visible uniquement en mode Cloud, ouvre la remote dans un nouvel onglet
   - **Style** : Dégradé violet/bleu assorti au badge "Mode Cloud"
+  - **URL relative** : Utilise `/remote/:siteId` au lieu de l'URL absolue pour préserver les cookies de session
   - **Fichier modifié** : `central-dashboard/src/app/shared/components/qr-code-generator/qr-code-generator.component.ts`
   - **Migration** : Rebuild et redéployer le dashboard
+
+- **Fix Cloud Remote vraiment public (sans authentification)** : Les endpoints `/api/remote/*` ne requièrent plus d'authentification JWT
+  - **Problème** : Le scan du QR code Cloud Remote redigeait vers la page de login
+  - **Cause racine** : Le contrôleur `remote.controller.ts` vérifiait `req.user` et retournait 401 si non authentifié, malgré la documentation indiquant des routes publiques
+  - **Solution** :
+    - Suppression des vérifications d'authentification dans les 3 endpoints (`getRemoteState`, `sendRemoteCommand`, `getRemoteVideos`)
+    - Suppression de la fonction `verifyUserAccessToSite`
+    - Type `Request` au lieu de `AuthRequest`
+    - Log de l'IP au lieu du userId pour le tracking des commandes
+  - **Sécurité maintenue** :
+    - UUID du site (128 bits d'entropie, difficile à deviner)
+    - Rate limiting (30 req/min par IP via `sensitiveRateLimit`)
+    - Le site doit être online pour recevoir les commandes
+  - **Intercepteur Angular** : Exclusion de `/api/remote/` de la redirection vers login en cas de 401
+  - **Fichiers modifiés** :
+    - `central-server/src/controllers/remote.controller.ts` - Endpoints publics
+    - `central-dashboard/src/app/core/interceptors/auth.interceptor.ts` - Exclusion remote
+  - **Migration** : Redéployer le central-server (Railway) et le dashboard
 
 - **Prévisualisation vidéo dans Gestion du contenu** : Ajout du bouton 👁️ pour lire les vidéos cloud directement depuis `/content`
   - **Problème** : La page "Gestion du contenu" ne permettait pas de prévisualiser les vidéos avant déploiement
