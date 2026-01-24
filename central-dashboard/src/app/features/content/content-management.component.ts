@@ -2144,7 +2144,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
       }
     }, 500);
 
-    this.apiService.upload<{ success: boolean; message: string; video?: Video }>('/content/image-to-video', formData).subscribe({
+    this.apiService.upload<{ success: boolean; message: string; video?: Video }>('/image-to-video', formData).subscribe({
       next: (response) => {
         clearInterval(progressInterval);
         this.imageConversionProgress = 100;
