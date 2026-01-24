@@ -48,8 +48,8 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 # Install ffmpeg with full codec support for image-to-video conversion
-# ffmpeg-libs provides image decoders (png, jpeg, webp, etc.)
-RUN apk add --no-cache ffmpeg ffmpeg-libs
+# libx264 is required for H.264 encoding, available in community repo
+RUN apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community ffmpeg libx264-dev
 
 # Add non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
