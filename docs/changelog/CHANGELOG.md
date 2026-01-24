@@ -1,3 +1,9 @@
+## [2.45.10](https://github.com/Tallec7/neopro/compare/v2.45.9...v2.45.10) (2026-01-24)
+
+### Bug Fixes
+
+- **image-to-video:** use edge/community repo for libx264 support ([28113e1](https://github.com/Tallec7/neopro/commit/28113e10573dcb6c4353329f47834b65f0aac2ae))
+
 ## [2.45.9](https://github.com/Tallec7/neopro/compare/v2.45.8...v2.45.9) (2026-01-24)
 
 ### Bug Fixes
