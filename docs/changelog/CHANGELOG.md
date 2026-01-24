@@ -1,3 +1,9 @@
+## [2.45.9](https://github.com/Tallec7/neopro/compare/v2.45.8...v2.45.9) (2026-01-24)
+
+### Bug Fixes
+
+- **image-to-video:** add ffmpeg-libs for image decoder support ([bb32e99](https://github.com/Tallec7/neopro/commit/bb32e99d38b4da38fcfdf3e47bba4ed2f26254cf))
+
 ## [2.45.8](https://github.com/Tallec7/neopro/compare/v2.45.7...v2.45.8) (2026-01-24)
 
 ### Bug Fixes
