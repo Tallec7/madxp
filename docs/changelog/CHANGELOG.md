@@ -1,3 +1,9 @@
+## [2.42.5](https://github.com/Tallec7/neopro/compare/v2.42.4...v2.42.5) (2026-01-24)
+
+### Bug Fixes
+
+- **hotspot:** correct power status false positive in diagnostic ([e56973e](https://github.com/Tallec7/neopro/commit/e56973ea068a359310a6365a20c56e27b4a5d2f6))
+
 ## [2.42.4](https://github.com/Tallec7/neopro/compare/v2.42.3...v2.42.4) (2026-01-24)
 
 ### Bug Fixes
