@@ -6,57 +6,32 @@
  *
  * Les commandes sont relayées via Socket.IO vers le Pi connecté.
  *
+ * IMPORTANT: Ces endpoints sont PUBLICS (pas d'authentification JWT requise)
+ * car ils sont utilisés par les utilisateurs qui scannent le QR code
+ * depuis leur téléphone (staff du club, bénévoles, etc.)
+ *
+ * La sécurité repose sur:
+ * - L'UUID du site (128 bits d'entropie, difficile à deviner)
+ * - Le rate limiting (30 req/min par IP)
+ * - Le fait que le site doit être online pour recevoir les commandes
+ *
  * Date: 2026-01-18
  */
 
-import { Response } from 'express';
-import { AuthRequest } from '../types';
+import { Request, Response } from 'express';
 import { query } from '../config/database';
 import socketService from '../services/socket.service';
-import { auditService } from '../services/audit.service';
 import logger from '../config/logger';
-
-/**
- * Vérifie que l'utilisateur a accès au site
- */
-async function verifyUserAccessToSite(userId: string, userRole: string, siteId: string): Promise<boolean> {
-  // Super admin et admin ont accès à tous les sites
-  if (userRole === 'super_admin' || userRole === 'admin') {
-    return true;
-  }
-
-  // Operator: vérifier l'assignation au site
-  if (userRole === 'operator') {
-    const result = await query(
-      `SELECT 1 FROM user_site_assignments WHERE user_id = $1 AND site_id = $2`,
-      [userId, siteId]
-    );
-    return result.rows.length > 0;
-  }
-
-  // Autres rôles n'ont pas accès
-  return false;
-}
 
 /**
  * GET /api/remote/:siteId/state
  * Récupère l'état actuel du site (vidéo en cours, phase, score, config)
+ *
+ * PUBLIC: Pas d'authentification requise (accès via QR code)
  */
-export async function getRemoteState(req: AuthRequest, res: Response) {
+export async function getRemoteState(req: Request, res: Response) {
   try {
     const { siteId } = req.params;
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
-
-    if (!userId || !userRole) {
-      return res.status(401).json({ error: 'Non authentifié' });
-    }
-
-    // Vérifier l'accès au site
-    const hasAccess = await verifyUserAccessToSite(userId, userRole, siteId);
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'Accès non autorisé à ce site' });
-    }
 
     // Récupérer les infos du site
     const siteResult = await query(
@@ -106,23 +81,13 @@ export async function getRemoteState(req: AuthRequest, res: Response) {
 /**
  * POST /api/remote/:siteId/command
  * Envoie une commande au site (score, phase, vidéo, etc.)
+ *
+ * PUBLIC: Pas d'authentification requise (accès via QR code)
  */
-export async function sendRemoteCommand(req: AuthRequest, res: Response) {
+export async function sendRemoteCommand(req: Request, res: Response) {
   try {
     const { siteId } = req.params;
     const { type, data } = req.body;
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
-
-    if (!userId || !userRole) {
-      return res.status(401).json({ error: 'Non authentifié' });
-    }
-
-    // Vérifier l'accès au site
-    const hasAccess = await verifyUserAccessToSite(userId, userRole, siteId);
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'Accès non autorisé à ce site' });
-    }
 
     // Valider le type de commande
     const validCommands = [
@@ -243,19 +208,10 @@ export async function sendRemoteCommand(req: AuthRequest, res: Response) {
 
     logger.info('Cloud remote command sent', {
       siteId,
-      userId,
       commandType: type,
       eventName,
+      ip: req.ip,
     });
-
-    // Audit (fire and forget)
-    auditService.log({
-      userId,
-      action: 'CLOUD_REMOTE_COMMAND',
-      targetType: 'site',
-      targetId: siteId,
-      details: { commandType: type, eventName },
-    }).catch(() => { /* ignore */ });
 
     res.json({
       success: true,
@@ -272,22 +228,12 @@ export async function sendRemoteCommand(req: AuthRequest, res: Response) {
 /**
  * GET /api/remote/:siteId/videos
  * Liste les vidéos disponibles sur le site (pour la télécommande cloud)
+ *
+ * PUBLIC: Pas d'authentification requise (accès via QR code)
  */
-export async function getRemoteVideos(req: AuthRequest, res: Response) {
+export async function getRemoteVideos(req: Request, res: Response) {
   try {
     const { siteId } = req.params;
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
-
-    if (!userId || !userRole) {
-      return res.status(401).json({ error: 'Non authentifié' });
-    }
-
-    // Vérifier l'accès au site
-    const hasAccess = await verifyUserAccessToSite(userId, userRole, siteId);
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'Accès non autorisé à ce site' });
-    }
 
     // Récupérer les vidéos locales depuis le miroir de config
     const siteResult = await query(
