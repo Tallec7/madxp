@@ -2020,16 +2020,11 @@ vcgencmd get_mem gpu
 
 ### v2.43.x (Janvier 2026)
 
-- **Fix conversion image-to-video** : Correction de deux bugs empêchant la conversion d'images en vidéos
-  - **Problème 1 - CSP bloquait les aperçus** : L'image sélectionnée ne s'affichait pas dans la prévisualisation
-    - **Cause** : La directive `img-src` de la CSP n'incluait pas `blob:`, protocole utilisé par `URL.createObjectURL()`
-    - **Solution** : Ajout de `blob:` dans `img-src` de `index.html`
-  - **Problème 2 - Erreur 500 sur l'endpoint** : La conversion échouait avec "Internal Server Error"
-    - **Cause** : Le frontend appelait `/api/image-to-video` mais la route backend est `/api/content/image-to-video`
-    - **Solution** : Correction du chemin dans `content-management.component.ts`
-  - **Fichiers modifiés** :
-    - `central-dashboard/src/index.html` - CSP img-src avec blob:
-    - `central-dashboard/src/app/features/content/content-management.component.ts` - Chemin API corrigé
+- **Fix conversion image-to-video** : Correction d'un bug CSP empêchant l'aperçu des images
+  - **Problème** : L'image sélectionnée ne s'affichait pas dans la prévisualisation avant conversion
+  - **Cause** : La directive `img-src` de la CSP n'incluait pas `blob:`, protocole utilisé par `URL.createObjectURL()`
+  - **Solution** : Ajout de `blob:` dans `img-src` de `index.html`
+  - **Fichier modifié** : `central-dashboard/src/index.html` - CSP img-src avec blob:
   - **Migration** : Rebuild et redéployer le dashboard
 
 - **Bouton accès direct Cloud Remote dans QR Code Generator** : Ajout d'un bouton "Ouvrir" pour accéder directement à la télécommande cloud
