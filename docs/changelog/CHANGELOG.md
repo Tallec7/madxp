@@ -1,3 +1,9 @@
+## [2.42.3](https://github.com/Tallec7/neopro/compare/v2.42.2...v2.42.3) (2026-01-24)
+
+### Bug Fixes
+
+- **sync:** prevent config overwrite after deployment via sync_local_state race condition ([ad72180](https://github.com/Tallec7/neopro/commit/ad72180e04ceb4c76c003f0eb58bff629fe80996))
+
 ## [2.42.2](https://github.com/Tallec7/neopro/compare/v2.42.1...v2.42.2) (2026-01-21)
 
 ### Bug Fixes
