@@ -818,7 +818,7 @@ export const getVideosForSite = async (req: AuthRequest, res: Response) => {
 };
 
 /**
- * POST /api/content/image-to-video
+ * POST /api/image-to-video
  * Convertit une image en vidéo MP4 avec une durée spécifiée
  */
 export const convertImageToVideo = async (req: AuthRequest, res: Response) => {

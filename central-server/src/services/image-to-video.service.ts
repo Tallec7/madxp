@@ -110,26 +110,30 @@ class ImageToVideoService {
     codec: string = 'libx264'
   ): Promise<void> {
     return new Promise((resolve, reject) => {
-      // Arguments de base
+      // Arguments ffmpeg - ordre important !
+      // Options d'entrée AVANT -i, options de sortie APRÈS -i
       const args = [
         '-y', // Overwrite output
-        '-loop', '1', // Loop l'image
+        '-loop', '1', // Loop l'image (option d'entrée)
+        '-framerate', '25', // FPS d'entrée pour l'image en boucle
         '-i', inputPath, // Input
-        '-c:v', codec, // Codec vidéo (libx264 ou fallback)
-        '-t', duration.toString(), // Durée
+        // Options de sortie après -i
+        '-c:v', codec, // Codec vidéo
+        '-t', duration.toString(), // Durée de sortie
+        '-r', '25', // FPS de sortie
         '-pix_fmt', 'yuv420p', // Format pixel compatible
       ];
 
-      // Ajouter les options spécifiques à libx264
+      // Ajouter les options spécifiques au codec
       if (codec === 'libx264') {
         args.push('-preset', 'medium'); // Bon compromis vitesse/qualité
-        args.push('-crf', '18'); // Qualité (plus bas = meilleur)
+        args.push('-crf', '23'); // Qualité (23 = défaut, bon compromis taille/qualité)
       } else {
         // Pour mpeg4 ou autres codecs
-        args.push('-q:v', '5'); // Qualité (échelle différente)
+        args.push('-q:v', '5'); // Qualité
       }
 
-      // Options communes
+      // Options communes de sortie
       args.push(
         '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2', // Scale to 1080p with padding
         '-movflags', '+faststart', // Streaming-friendly
