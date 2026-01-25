@@ -1,3 +1,9 @@
+## [2.48.1](https://github.com/Tallec7/neopro/compare/v2.48.0...v2.48.1) (2026-01-25)
+
+### Bug Fixes
+
+- **subscriptions:** apply consistent design matching dashboard style ([629bb63](https://github.com/Tallec7/neopro/commit/629bb63c554655df75bcfc7e0e066daaf89884ae)), closes [#2563eb](https://github.com/Tallec7/neopro/issues/2563eb)
+
 # [2.48.0](https://github.com/Tallec7/neopro/compare/v2.47.0...v2.48.0) (2026-01-25)
 
 ### Features
