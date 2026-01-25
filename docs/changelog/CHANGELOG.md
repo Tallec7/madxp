@@ -1,3 +1,9 @@
+# [2.46.0](https://github.com/Tallec7/neopro/compare/v2.45.12...v2.46.0) (2026-01-25)
+
+### Features
+
+- **subscriptions:** implement complete subscription/licensing system ([94d23bf](https://github.com/Tallec7/neopro/commit/94d23bff1a22fd7a91890c12f80e821ded6401de))
+
 ## [2.45.12](https://github.com/Tallec7/neopro/compare/v2.45.11...v2.45.12) (2026-01-24)
 
 ### Bug Fixes
