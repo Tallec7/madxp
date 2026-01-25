@@ -547,6 +547,7 @@ export interface LicenseStatusResponse {
  */
 export type SubscriptionAction =
   | 'activated'       // Première activation
+  | 'created'         // Configuration initiale
   | 'renewed'         // Renouvellement (prolongation)
   | 'suspended'       // Suspension manuelle
   | 'reactivated'     // Réactivation après suspension

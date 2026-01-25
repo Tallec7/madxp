@@ -19,6 +19,7 @@ import {
   SuspendSiteRequest,
   ReactivateSiteRequest,
   ChangePlanRequest,
+  UpdateSubscriptionRequest,
 } from '../models';
 
 @Injectable({
@@ -137,6 +138,20 @@ export class SubscriptionService {
   ): Observable<{ success: boolean; message: string }> {
     return this.http.put<{ success: boolean; message: string }>(
       `${this.apiUrl}/sites/${siteId}/subscription/plan`,
+      data
+    );
+  }
+
+  /**
+   * Configure l'abonnement d'un site (date début, date fin, plan)
+   * Permet de tout mettre à jour en une seule opération
+   */
+  updateSubscription(
+    siteId: string,
+    data: UpdateSubscriptionRequest
+  ): Observable<{ success: boolean; message: string }> {
+    return this.http.put<{ success: boolean; message: string }>(
+      `${this.apiUrl}/sites/${siteId}/subscription`,
       data
     );
   }

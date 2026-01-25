@@ -297,3 +297,89 @@ export const getLicenseStatus = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Erreur lors du calcul du statut de licence' });
   }
 };
+
+/**
+ * PUT /api/sites/:id/subscription
+ * Configure l'abonnement d'un site (date début, date fin, plan)
+ * Permet de tout mettre à jour en une seule opération
+ */
+export const updateSubscription = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { subscription_start, subscription_end, subscription_plan, note } = req.body as {
+      subscription_start?: string;
+      subscription_end?: string;
+      subscription_plan?: SubscriptionPlan;
+      note?: string;
+    };
+
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Utilisateur non authentifié' });
+    }
+
+    // Valider les dates si fournies
+    let startDate: Date | null | undefined;
+    let endDate: Date | null | undefined;
+
+    if (subscription_start !== undefined) {
+      if (subscription_start === null || subscription_start === '') {
+        startDate = null;
+      } else {
+        startDate = new Date(subscription_start);
+        if (isNaN(startDate.getTime())) {
+          return res.status(400).json({ error: 'Format de date de début invalide' });
+        }
+      }
+    }
+
+    if (subscription_end !== undefined) {
+      if (subscription_end === null || subscription_end === '') {
+        endDate = null;
+      } else {
+        endDate = new Date(subscription_end);
+        if (isNaN(endDate.getTime())) {
+          return res.status(400).json({ error: 'Format de date de fin invalide' });
+        }
+      }
+    }
+
+    // Valider le plan si fourni
+    if (subscription_plan !== undefined && subscription_plan !== null) {
+      const validPlans: SubscriptionPlan[] = ['trial', 'standard', 'premium'];
+      if (!validPlans.includes(subscription_plan)) {
+        return res.status(400).json({ error: 'Plan invalide' });
+      }
+    }
+
+    // Vérifier qu'au moins un champ est fourni
+    if (startDate === undefined && endDate === undefined && subscription_plan === undefined) {
+      return res.status(400).json({ error: 'Au moins un champ à mettre à jour est requis' });
+    }
+
+    await subscriptionService.updateSubscription(
+      id,
+      {
+        subscriptionStart: startDate,
+        subscriptionEnd: endDate,
+        subscriptionPlan: subscription_plan,
+      },
+      note || null,
+      userId
+    );
+
+    // Audit
+    auditService.log({
+      action: 'SUBSCRIPTION_UPDATED',
+      userId,
+      targetType: 'site',
+      targetId: id,
+      details: { subscription_start, subscription_end, subscription_plan, note },
+    });
+
+    res.json({ success: true, message: 'Abonnement mis à jour avec succès' });
+  } catch (error) {
+    logger.error('Error updating subscription', { error, siteId: req.params.id });
+    res.status(500).json({ error: 'Erreur lors de la mise à jour de l\'abonnement' });
+  }
+};

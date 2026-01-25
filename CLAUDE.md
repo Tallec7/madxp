@@ -338,7 +338,8 @@ GET    /api/subscriptions/reasons     → Liste des motifs de suspension
 GET    /api/sites/:id/subscription              → Détails abonnement d'un site
 GET    /api/sites/:id/subscription/history      → Historique des changements
 GET    /api/sites/:id/subscription/license-status → Statut de licence calculé (debug)
-PUT    /api/sites/:id/subscription/extend       → Prolonger l'abonnement
+PUT    /api/sites/:id/subscription              → Configurer l'abonnement (date début, fin, plan)
+PUT    /api/sites/:id/subscription/extend       → Prolonger l'abonnement (date fin uniquement)
 POST   /api/sites/:id/subscription/suspend      → Suspendre le site
 POST   /api/sites/:id/subscription/reactivate   → Réactiver le site
 PUT    /api/sites/:id/subscription/plan         → Changer le plan (super_admin)
@@ -2089,13 +2090,30 @@ vcgencmd get_mem gpu
   - **Événements Socket.IO** :
     - `license_status` : Envoyé au Pi après chaque `sync_local_state`
   - **Migration** :
+
     ```bash
     # Exécuter la migration SQL
     psql $DATABASE_URL -f central-server/src/scripts/migrations/add-subscription-system.sql
 
     # Redéployer central-server, dashboard, et sync-agent sur les Pi
     ```
+
   - **Documentation** : Voir le plan complet dans `.claude/plans/linked-spinning-narwhal.md`
+
+- **Modal "Configurer l'abonnement"** : Permet de définir date début, date fin et plan en une seule opération
+  - **Problème résolu** : Le modal "Prolonger" ne permettait que de modifier la date de fin
+  - **Nouvel endpoint** : `PUT /api/sites/:id/subscription` avec `subscription_start`, `subscription_end`, `subscription_plan`, `note`
+  - **Interface** : Bouton ⚙️ remplace 📅, formulaire avec plan (dropdown), dates (pickers), raccourcis (+1/3/6/12 mois)
+  - **Fichiers modifiés** :
+    - `central-server/src/services/subscription.service.ts` - Méthode `updateSubscription()`
+    - `central-server/src/controllers/subscription.controller.ts` - Contrôleur `updateSubscription`
+    - `central-server/src/routes/subscription.routes.ts` - Route `PUT /`
+    - `central-server/src/services/audit.service.ts` - Action `SUBSCRIPTION_UPDATED`
+    - `central-server/src/types/index.ts` - Action `created` dans `SubscriptionAction`
+    - `central-dashboard/.../subscription.service.ts` - Méthode `updateSubscription()`
+    - `central-dashboard/.../subscriptions-management.component.ts` - Modal et formulaire
+    - `central-dashboard/src/app/core/models/index.ts` - Interface `UpdateSubscriptionRequest`
+  - **Migration** : Aucune (ajout de fonctionnalité)
 
 ### v2.46.x (Janvier 2026)
 
@@ -3493,11 +3511,11 @@ SMTP_PORT=1025
 | **Network Profile**  | Type de réseau : simple, mesh, mesh_isolated, enterprise, ethernet |
 | **AP Isolation**     | Sécurité mesh empêchant les clients de communiquer                 |
 | **brcmfmac**         | Driver WiFi Raspberry Pi (bugs documentés avec Virtual AP)         |
-| **LicenseStatus**    | État licence : VALID, WARNING, GRACE_PERIOD, BLOCKED                |
-| **LicenseCache**     | Cache local de la licence (7 jours de validité)                     |
-| **GracePeriod**      | Délai de grâce après expiration (7 jours sans blocage)              |
-| **SuspensionReason** | Motif de suspension (impayé, abus, maintenance, etc.)               |
-| **Auto-unblock**     | Déblocage automatique quand l'abonnement est renouvelé              |
+| **LicenseStatus**    | État licence : VALID, WARNING, GRACE_PERIOD, BLOCKED               |
+| **LicenseCache**     | Cache local de la licence (7 jours de validité)                    |
+| **GracePeriod**      | Délai de grâce après expiration (7 jours sans blocage)             |
+| **SuspensionReason** | Motif de suspension (impayé, abus, maintenance, etc.)              |
+| **Auto-unblock**     | Déblocage automatique quand l'abonnement est renouvelé             |
 
 ---
 

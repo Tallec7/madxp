@@ -10,6 +10,7 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subject, forkJoin, interval } from 'rxjs';
 import { takeUntil, startWith, switchMap } from 'rxjs/operators';
+import { TranslateModule } from '@ngx-translate/core';
 
 import { SubscriptionService } from '../../core/services/subscription.service';
 import { SitesService } from '../../core/services/sites.service';
@@ -27,7 +28,7 @@ import {
 @Component({
   selector: 'app-subscriptions-management',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, SubscriptionBadgeComponent],
+  imports: [CommonModule, RouterModule, FormsModule, TranslateModule, SubscriptionBadgeComponent],
   template: `
     <div class="subscriptions-page">
       <!-- Header -->
@@ -191,8 +192,8 @@ import {
                   <span class="text-muted" *ngIf="!site.last_seen_at">Jamais</span>
                 </td>
                 <td class="actions-cell">
-                  <button class="btn btn-sm btn-primary" (click)="openExtendModal(site)" title="Prolonger">
-                    📅
+                  <button class="btn btn-sm btn-primary" (click)="openConfigModal(site)" title="Configurer">
+                    ⚙️
                   </button>
                   <button
                     class="btn btn-sm btn-warning"
@@ -251,7 +252,7 @@ import {
               type="text"
               [(ngModel)]="searchQuery"
               (input)="applyFilters()"
-              placeholder="Rechercher un site..."
+              placeholder="{{ 'common.searchPlaceholder' | translate }}"
               class="search-input"
             />
           </div>
@@ -318,8 +319,8 @@ import {
                   </span>
                 </td>
                 <td class="actions-cell">
-                  <button class="btn btn-sm btn-primary" (click)="openExtendModal(site)" title="Prolonger">
-                    📅
+                  <button class="btn btn-sm btn-primary" (click)="openConfigModal(site)" title="Configurer">
+                    ⚙️
                   </button>
                   <button
                     class="btn btn-sm btn-warning"
@@ -423,37 +424,47 @@ import {
         </ng-template>
       </div>
 
-      <!-- Modal: Prolonger -->
-      <div class="modal-overlay" *ngIf="showExtendModal" (click)="closeModals()">
+      <!-- Modal: Configurer l'abonnement -->
+      <div class="modal-overlay" *ngIf="showConfigModal" (click)="closeModals()">
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h3>Prolonger l'abonnement</h3>
+            <h3>Configurer l'abonnement</h3>
             <button class="modal-close" (click)="closeModals()">×</button>
           </div>
           <div class="modal-body">
             <p class="modal-site-name">{{ selectedSite?.club_name || selectedSite?.site_name }}</p>
 
             <div class="form-group">
-              <label>Nouvelle date d'expiration</label>
-              <input type="date" [(ngModel)]="extendForm.newEndDate" class="form-control" />
+              <label>Plan</label>
+              <select [(ngModel)]="configForm.plan" class="form-control">
+                <option value="trial">Essai</option>
+                <option value="standard">Standard</option>
+                <option value="premium">Premium</option>
+              </select>
             </div>
 
             <div class="form-group">
-              <label>Raccourcis</label>
+              <label>Date de début</label>
+              <input type="date" [(ngModel)]="configForm.startDate" class="form-control" />
+            </div>
+
+            <div class="form-group">
+              <label>Date de fin</label>
+              <input type="date" [(ngModel)]="configForm.endDate" class="form-control" />
               <div class="date-shortcuts">
-                <button class="btn btn-outline" (click)="setExtendDate(1)">+1 mois</button>
-                <button class="btn btn-outline" (click)="setExtendDate(3)">+3 mois</button>
-                <button class="btn btn-outline" (click)="setExtendDate(6)">+6 mois</button>
-                <button class="btn btn-outline" (click)="setExtendDate(12)">+1 an</button>
+                <button class="btn btn-outline btn-sm" (click)="setConfigEndDate(1)">+1 mois</button>
+                <button class="btn btn-outline btn-sm" (click)="setConfigEndDate(3)">+3 mois</button>
+                <button class="btn btn-outline btn-sm" (click)="setConfigEndDate(6)">+6 mois</button>
+                <button class="btn btn-outline btn-sm" (click)="setConfigEndDate(12)">+1 an</button>
               </div>
             </div>
 
             <div class="form-group">
               <label>Note (optionnel)</label>
               <textarea
-                [(ngModel)]="extendForm.note"
+                [(ngModel)]="configForm.note"
                 class="form-control"
-                placeholder="Raison de la prolongation..."
+                placeholder="Raison de la modification..."
                 rows="3"
               ></textarea>
             </div>
@@ -462,10 +473,10 @@ import {
             <button class="btn btn-secondary" (click)="closeModals()">Annuler</button>
             <button
               class="btn btn-primary"
-              (click)="submitExtend()"
-              [disabled]="!extendForm.newEndDate || submitting"
+              (click)="submitConfig()"
+              [disabled]="submitting"
             >
-              {{ submitting ? 'Prolongation...' : 'Prolonger' }}
+              {{ submitting ? 'Enregistrement...' : 'Enregistrer' }}
             </button>
           </div>
         </div>
@@ -1262,14 +1273,16 @@ export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
   sortDirection: 'asc' | 'desc' = 'asc';
 
   // Modals
-  showExtendModal = false;
+  showConfigModal = false;
   showSuspendModal = false;
   showReactivateModal = false;
   selectedSite: Site | SiteAtRisk | null = null;
 
   // Forms
-  extendForm = {
-    newEndDate: '',
+  configForm = {
+    plan: 'standard' as 'trial' | 'standard' | 'premium',
+    startDate: '',
+    endDate: '',
     note: ''
   };
 
@@ -1484,15 +1497,20 @@ export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
   }
 
   // Modals
-  openExtendModal(site: Site | SiteAtRisk): void {
+  openConfigModal(site: Site | SiteAtRisk): void {
     this.selectedSite = site;
-    this.extendForm = {
-      newEndDate: site.subscription_end
-        ? new Date(site.subscription_end).toISOString().split('T')[0]
+    const siteAny = site as any;
+    this.configForm = {
+      plan: (siteAny.subscription_plan || 'standard') as 'trial' | 'standard' | 'premium',
+      startDate: siteAny.subscription_start
+        ? new Date(siteAny.subscription_start).toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0],
+      endDate: site.subscription_end
+        ? new Date(site.subscription_end).toISOString().split('T')[0]
+        : '',
       note: ''
     };
-    this.showExtendModal = true;
+    this.showConfigModal = true;
   }
 
   openSuspendModal(site: Site | SiteAtRisk): void {
@@ -1512,17 +1530,17 @@ export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
   }
 
   closeModals(): void {
-    this.showExtendModal = false;
+    this.showConfigModal = false;
     this.showSuspendModal = false;
     this.showReactivateModal = false;
     this.selectedSite = null;
   }
 
   // Date shortcuts
-  setExtendDate(months: number): void {
-    const date = new Date(this.extendForm.newEndDate || new Date());
-    date.setMonth(date.getMonth() + months);
-    this.extendForm.newEndDate = date.toISOString().split('T')[0];
+  setConfigEndDate(months: number): void {
+    const baseDate = this.configForm.endDate ? new Date(this.configForm.endDate) : new Date();
+    baseDate.setMonth(baseDate.getMonth() + months);
+    this.configForm.endDate = baseDate.toISOString().split('T')[0];
   }
 
   setReactivateDate(months: number): void {
@@ -1532,22 +1550,25 @@ export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
   }
 
   // Submit actions
-  submitExtend(): void {
-    if (!this.selectedSite || !this.extendForm.newEndDate) return;
+  submitConfig(): void {
+    if (!this.selectedSite) return;
 
     this.submitting = true;
-    this.subscriptionService.extendSubscription(this.selectedSite.id, {
-      new_end_date: this.extendForm.newEndDate,
-      note: this.extendForm.note || undefined
+    this.subscriptionService.updateSubscription(this.selectedSite.id, {
+      subscription_start: this.configForm.startDate || null,
+      subscription_end: this.configForm.endDate || null,
+      subscription_plan: this.configForm.plan,
+      note: this.configForm.note || undefined
     }).subscribe({
       next: () => {
-        this.notificationService.success('Abonnement prolongé avec succès');
+        this.notificationService.success('Abonnement mis à jour avec succès');
         this.closeModals();
         this.refreshData();
+        this.allSites = []; // Force reload
         this.submitting = false;
       },
       error: () => {
-        this.notificationService.error('Erreur lors de la prolongation');
+        this.notificationService.error('Erreur lors de la mise à jour');
         this.submitting = false;
       }
     });

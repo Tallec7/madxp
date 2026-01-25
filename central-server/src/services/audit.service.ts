@@ -37,6 +37,7 @@ export type AuditAction =
   | 'CLOUD_REMOTE_COMMAND'
   // Subscription management
   | 'SUBSCRIPTION_EXTENDED'
+  | 'SUBSCRIPTION_UPDATED'
   | 'SITE_SUSPENDED'
   | 'SITE_REACTIVATED'
   | 'SUBSCRIPTION_PLAN_CHANGED'

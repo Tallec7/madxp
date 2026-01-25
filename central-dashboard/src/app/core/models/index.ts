@@ -487,9 +487,7 @@ export interface SubscriptionStats {
     standard: number;
     premium: number;
   };
-  by_suspension_reason: {
-    [key in SuspensionReason]?: number;
-  };
+  by_suspension_reason: Partial<Record<SuspensionReason, number>>;
 }
 
 /**
@@ -548,6 +546,13 @@ export interface ReactivateSiteRequest {
 
 export interface ChangePlanRequest {
   plan: SubscriptionPlan;
+  note?: string;
+}
+
+export interface UpdateSubscriptionRequest {
+  subscription_start?: string | null;
+  subscription_end?: string | null;
+  subscription_plan?: SubscriptionPlan | null;
   note?: string;
 }
 

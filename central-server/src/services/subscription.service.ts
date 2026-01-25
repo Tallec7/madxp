@@ -499,6 +499,101 @@ class SubscriptionService {
     });
   }
 
+  /**
+   * Configure l'abonnement d'un site (date début, date fin, plan)
+   * Permet de tout mettre à jour en une seule opération
+   */
+  async updateSubscription(
+    siteId: string,
+    updates: {
+      subscriptionStart?: Date | null;
+      subscriptionEnd?: Date | null;
+      subscriptionPlan?: SubscriptionPlan | null;
+    },
+    note: string | null,
+    performedBy: string
+  ): Promise<void> {
+    // Récupérer l'état actuel
+    const result = await query(
+      'SELECT subscription_start, subscription_end, subscription_plan FROM sites WHERE id = $1',
+      [siteId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error('Site not found');
+    }
+
+    const current = result.rows[0];
+    const previousStartDate = current.subscription_start as string | null;
+    const previousEndDate = current.subscription_end as string | null;
+    const previousPlan = current.subscription_plan as string | null;
+
+    // Construire la requête de mise à jour dynamiquement
+    const setClauses: string[] = ['updated_at = NOW()'];
+    const values: (string | null)[] = [];
+    let paramIndex = 1;
+
+    if (updates.subscriptionStart !== undefined) {
+      setClauses.push(`subscription_start = $${paramIndex}`);
+      values.push(updates.subscriptionStart ? updates.subscriptionStart.toISOString().split('T')[0] : null);
+      paramIndex++;
+    }
+
+    if (updates.subscriptionEnd !== undefined) {
+      setClauses.push(`subscription_end = $${paramIndex}`);
+      values.push(updates.subscriptionEnd ? updates.subscriptionEnd.toISOString().split('T')[0] : null);
+      paramIndex++;
+    }
+
+    if (updates.subscriptionPlan !== undefined) {
+      setClauses.push(`subscription_plan = $${paramIndex}`);
+      values.push(updates.subscriptionPlan);
+      paramIndex++;
+    }
+
+    values.push(siteId);
+
+    await query(
+      `UPDATE sites SET ${setClauses.join(', ')} WHERE id = $${paramIndex}`,
+      values
+    );
+
+    // Déterminer l'action pour l'historique
+    let action: SubscriptionAction = 'renewed';
+    if (updates.subscriptionPlan && updates.subscriptionPlan !== previousPlan) {
+      action = 'plan_changed';
+    }
+    if (!previousEndDate && updates.subscriptionEnd) {
+      action = 'created';
+    }
+
+    // Enregistrer dans l'historique
+    await this.recordHistory(siteId, action, {
+      previousEndDate: previousEndDate ?? undefined,
+      newEndDate: updates.subscriptionEnd?.toISOString().split('T')[0] ?? undefined,
+      previousPlan: previousPlan ?? undefined,
+      newPlan: updates.subscriptionPlan ?? undefined,
+      note: note ?? undefined,
+      performedBy,
+    });
+
+    logger.info('Subscription updated', {
+      siteId,
+      changes: {
+        startDate: updates.subscriptionStart !== undefined
+          ? { from: previousStartDate, to: updates.subscriptionStart?.toISOString().split('T')[0] }
+          : undefined,
+        endDate: updates.subscriptionEnd !== undefined
+          ? { from: previousEndDate, to: updates.subscriptionEnd?.toISOString().split('T')[0] }
+          : undefined,
+        plan: updates.subscriptionPlan !== undefined
+          ? { from: previousPlan, to: updates.subscriptionPlan }
+          : undefined,
+      },
+      performedBy,
+    });
+  }
+
   // --------------------------------------------------------------------------
   // History Management
   // --------------------------------------------------------------------------

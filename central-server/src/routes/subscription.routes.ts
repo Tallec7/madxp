@@ -18,6 +18,7 @@ import {
   reactivateSite,
   changePlan,
   getLicenseStatus,
+  updateSubscription,
 } from '../controllers/subscription.controller';
 
 const router = Router();
@@ -153,4 +154,16 @@ siteSubscriptionRouter.put(
   requireRole('super_admin', 'superadmin'),
   sensitiveRateLimit,
   changePlan
+);
+
+/**
+ * PUT /api/sites/:id/subscription
+ * Configurer l'abonnement (date début, date fin, plan)
+ * Permet de tout mettre à jour en une seule opération
+ */
+siteSubscriptionRouter.put(
+  '/',
+  requireRole('super_admin', 'superadmin', 'admin'),
+  sensitiveRateLimit,
+  updateSubscription
 );
