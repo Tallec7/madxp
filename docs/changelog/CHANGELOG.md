@@ -1,3 +1,9 @@
+# [2.47.0](https://github.com/Tallec7/neopro/compare/v2.46.1...v2.47.0) (2026-01-25)
+
+### Features
+
+- **subscriptions:** add unified subscription configuration modal ([6635d06](https://github.com/Tallec7/neopro/commit/6635d064b723d573dc00a2d5cf64e2a20a84fff5))
+
 ## [2.46.1](https://github.com/Tallec7/neopro/compare/v2.46.0...v2.46.1) (2026-01-25)
 
 ### Bug Fixes
