@@ -1,3 +1,9 @@
+## [2.46.1](https://github.com/Tallec7/neopro/compare/v2.46.0...v2.46.1) (2026-01-25)
+
+### Bug Fixes
+
+- **subscriptions:** remove build warnings ([f33cb22](https://github.com/Tallec7/neopro/commit/f33cb22fabefe5883f6128c525ef8cc620dba326))
+
 # [2.46.0](https://github.com/Tallec7/neopro/compare/v2.45.12...v2.46.0) (2026-01-25)
 
 ### Features
