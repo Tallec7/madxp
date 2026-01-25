@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.47.0 | **Dernière mise à jour**: 2026-01-25
+**Version**: 2.48.0 | **Dernière mise à jour**: 2026-01-25
 
 ---
 
@@ -1497,7 +1497,7 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 | **QrCodeGeneratorComponent** | `shared/components/qr-code-generator/`      | Génération QR code télécommande (local/cloud) + accès direct  |
 | **ConfigEditorComponent**    | `config-editor/`                            | Éditeur complet de configuration JSON                         |
 | **CloudRemoteComponent**     | `features/remote/cloud-remote.component.ts` | Télécommande cloud ⚡ NEW                                     |
-| **SubscriptionsManagement**  | `features/subscriptions/`                   | Page gestion abonnements ⚡ v2.47                             |
+| **SubscriptionsManagement**  | `features/subscriptions/`                   | Page gestion abonnements (design cohérent dashboard) ⚡ v2.47 |
 
 ### Synchronisation Remote Pi ↔ Cloud Remote ⚠️ IMPORTANT
 
@@ -2099,6 +2099,18 @@ vcgencmd get_mem gpu
     ```
 
   - **Documentation** : Voir le plan complet dans `.claude/plans/linked-spinning-narwhal.md`
+
+- **Design cohérent page Abonnements** : Refonte du design de la page `/subscriptions` pour être cohérent avec le dashboard
+  - **Problème résolu** : Le design gradient/glassmorphism (violet #667eea → #764ba2) n'était pas cohérent avec le style flat du dashboard
+  - **Changements appliqués** :
+    - Couleur primaire : bleu `#2563eb` (aligné sur `site-detail.component.ts`)
+    - Tabs : style underline avec `border-bottom` au lieu de pills
+    - Cards : fond blanc, `border-radius: 12px`, ombre subtile `0 1px 3px rgba(0,0,0,0.1)`
+    - Boutons : flat, sans gradients ni effets glow
+    - Modals : standards, sans glassmorphism ni backdrop-filter
+  - **Design system respecté** : Mêmes patterns que `site-detail`, `sites-list`, `content-management`
+  - **Fichier modifié** : `central-dashboard/.../subscriptions-management.component.ts` - CSS inline refactorisé
+  - **Migration** : Rebuild et redéployer le dashboard
 
 - **Modal "Configurer l'abonnement"** : Permet de définir date début, date fin et plan en une seule opération
   - **Problème résolu** : Le modal "Prolonger" ne permettait que de modifier la date de fin
