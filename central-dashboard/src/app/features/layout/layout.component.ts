@@ -91,6 +91,10 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
 
           <div class="nav-section" *ngIf="isAdmin()" role="group" [attr.aria-label]="'nav.administration' | translate">
             <div class="nav-section-title" id="admin-section">{{ 'nav.administration' | translate }}</div>
+            <a routerLink="/subscriptions" routerLinkActive="active" class="nav-item" aria-describedby="admin-section">
+              <span class="icon" aria-hidden="true">💳</span>
+              <span>Abonnements</span>
+            </a>
             <a routerLink="/admin/users" routerLinkActive="active" class="nav-item" aria-describedby="admin-section" [attr.aria-label]="'nav.users' | translate">
               <span class="icon" aria-hidden="true">👤</span>
               <span>{{ 'nav.users' | translate }}</span>

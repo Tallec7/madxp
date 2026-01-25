@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as sitesController from '../controllers/sites.controller';
 import * as configHistoryController from '../controllers/config-history.controller';
+import { siteSubscriptionRouter } from './subscription.routes';
 import { authenticate, requireRole } from '../middleware/auth';
 import { validate, schemas } from '../middleware/validation';
 import { paginationMiddleware } from '../middleware/pagination';
@@ -239,5 +240,9 @@ router.delete(
   sensitiveRateLimit,
   sitesController.clearPendingCommands
 );
+
+// Subscription management routes for specific site
+// Routes: GET /, GET /history, GET /license-status, PUT /extend, POST /suspend, POST /reactivate, PUT /plan
+router.use('/:id/subscription', siteSubscriptionRouter);
 
 export default router;

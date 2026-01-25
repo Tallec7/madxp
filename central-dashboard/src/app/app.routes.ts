@@ -152,6 +152,13 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['admin', 'super_admin'] },
         loadComponent: () => import('./features/admin/users/users-management.component').then(m => m.UsersManagementComponent)
+      },
+      // Admin: Gestion des abonnements
+      {
+        path: 'subscriptions',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'super_admin'] },
+        loadComponent: () => import('./features/subscriptions/subscriptions-management.component').then(m => m.SubscriptionsManagementComponent)
       }
     ]
   },

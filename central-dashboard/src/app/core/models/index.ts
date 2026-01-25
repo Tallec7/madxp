@@ -124,6 +124,22 @@ export interface Site {
    */
   network_profile?: NetworkProfile;
   network_profile_updated_at?: Date;
+
+  // === Subscription fields ===
+  /** Date de début d'abonnement */
+  subscription_start?: string | null;
+  /** Date de fin d'abonnement */
+  subscription_end?: string | null;
+  /** Plan d'abonnement (trial, standard, premium) */
+  subscription_plan?: 'trial' | 'standard' | 'premium';
+  /** Site suspendu manuellement */
+  suspended?: boolean;
+  /** Motif de suspension */
+  suspension_reason?: string | null;
+  /** Date de suspension */
+  suspension_date?: string | null;
+  /** Note de suspension */
+  suspension_note?: string | null;
 }
 
 /**
@@ -369,6 +385,170 @@ export interface AnalyticsCategory {
   color?: string;
   is_default: boolean;
   created_at?: string;
+}
+
+// ============================================================================
+// Subscription System Types
+// ============================================================================
+
+/**
+ * Plans d'abonnement disponibles
+ */
+export type SubscriptionPlan = 'trial' | 'standard' | 'premium';
+
+/**
+ * Motifs de suspension
+ */
+export type SuspensionReason =
+  | 'unpaid'
+  | 'expired'
+  | 'abuse'
+  | 'maintenance'
+  | 'request'
+  | 'hardware'
+  | 'trial_ended'
+  | 'connection';
+
+/**
+ * Statuts de licence possibles
+ */
+export type LicenseStatus = 'VALID' | 'WARNING' | 'GRACE_PERIOD' | 'CONNECTION_WARNING' | 'BLOCKED';
+
+/**
+ * Statut d'affichage de l'abonnement (pour badge)
+ */
+export type SubscriptionDisplayStatus =
+  | 'active'           // Actif et valide
+  | 'expiring_soon'    // Expire dans moins de 30 jours
+  | 'grace_period'     // En période de grâce (7 jours après expiration)
+  | 'suspended'        // Suspendu manuellement
+  | 'blocked'          // Bloqué (expiré ou suspendu depuis longtemps)
+  | 'trial'            // En période d'essai
+  | 'unknown';         // État inconnu
+
+/**
+ * Informations d'abonnement d'un site
+ */
+export interface SiteSubscription {
+  subscription_start: string | null;
+  subscription_end: string | null;
+  subscription_plan: SubscriptionPlan;
+  suspended: boolean;
+  suspension_reason: SuspensionReason | null;
+  suspension_date: string | null;
+  suspension_note: string | null;
+}
+
+/**
+ * Statut de licence complet envoyé au Pi
+ */
+export interface LicenseStatusResponse {
+  status: LicenseStatus;
+  reason?: SuspensionReason | 'expiring_soon' | 'expired' | 'connection_required';
+  subscription_end?: string;
+  days_left?: number;
+  days_expired?: number;
+  days_since_check?: number;
+  can_auto_unblock?: boolean;
+  message_tv?: string;
+  message_remote?: string;
+  cache_valid_until: string;
+}
+
+/**
+ * Entrée d'historique d'abonnement
+ */
+export interface SubscriptionHistoryEntry {
+  id: string;
+  site_id: string;
+  action: 'activated' | 'renewed' | 'suspended' | 'reactivated' | 'expired' | 'plan_changed';
+  reason?: SuspensionReason;
+  previous_end_date?: string;
+  new_end_date?: string;
+  note?: string;
+  performed_by?: string;
+  performed_by_name?: string;
+  created_at: string;
+}
+
+/**
+ * Statistiques globales des abonnements
+ */
+export interface SubscriptionStats {
+  total_sites: number;
+  active_sites: number;
+  trial_sites: number;
+  suspended_sites: number;
+  expiring_soon: number;
+  expired_grace: number;
+  grace_period: number;
+  by_plan: {
+    trial: number;
+    standard: number;
+    premium: number;
+  };
+  by_suspension_reason: {
+    [key in SuspensionReason]?: number;
+  };
+}
+
+/**
+ * Site à risque (pour la page de gestion)
+ */
+export interface SiteAtRisk {
+  id: string;
+  site_name: string;
+  club_name: string;
+  subscription_end: string | null;
+  subscription_plan: SubscriptionPlan;
+  suspended: boolean;
+  suspension_reason: SuspensionReason | null;
+  suspension_note?: string | null;
+  days_until_expiration: number | null;
+  risk_level: 'warning' | 'critical';
+  risk_reason?: string;
+  last_seen_at: string | null;
+  location?: {
+    city?: string;
+    region?: string;
+    country?: string;
+  } | null;
+}
+
+/**
+ * Motif de suspension avec labels
+ */
+export interface SuspensionReasonInfo {
+  code: SuspensionReason;
+  label: string;
+  description: string;
+  auto_unblock: boolean;
+  message_remote: string;
+  message_tv: string;
+  severity: 'warning' | 'error';
+}
+
+/**
+ * Requêtes pour les actions d'abonnement
+ */
+export interface ExtendSubscriptionRequest {
+  new_end_date: string;
+  note?: string;
+}
+
+export interface SuspendSiteRequest {
+  reason: SuspensionReason;
+  note?: string;
+}
+
+export interface ReactivateSiteRequest {
+  new_end_date?: string;
+  note?: string;
+}
+
+export interface ChangePlanRequest {
+  plan: SubscriptionPlan;
+  note?: string;
 }
 
 // Re-export site config models

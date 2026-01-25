@@ -1,6 +1,6 @@
 {
   "name": "neopro-sync-agent",
-  "version": "v2.42.0",
+  "version": "v2.45.12",
   "description": "Agent de synchronisation NEOPRO pour Raspberry Pi",
   "main": "src/agent.js",
   "scripts": {

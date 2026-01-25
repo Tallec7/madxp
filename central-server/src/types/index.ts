@@ -437,3 +437,192 @@ export interface AssetDeploymentResult {
   size: number;
   checksum: string;
 }
+
+// ============================================================================
+// Subscription & License types (système d'abonnement)
+// ============================================================================
+
+/**
+ * Types de plans d'abonnement
+ * - trial: Période d'essai gratuite (ex: 30 jours)
+ * - standard: Abonnement de base
+ * - premium: Abonnement avec fonctionnalités avancées
+ */
+export type SubscriptionPlan = 'trial' | 'standard' | 'premium';
+
+/**
+ * Motifs de suspension d'un site
+ * - unpaid: Facture impayée (auto-déblocage possible)
+ * - expired: Abonnement expiré > 7 jours (auto-déblocage possible)
+ * - abuse: Utilisation abusive / non-respect CGU (déblocage manuel requis)
+ * - maintenance: Maintenance technique Neopro (auto-déblocage)
+ * - request: Suspendu à la demande du client (déblocage manuel requis)
+ * - hardware: Problème matériel nécessitant intervention (déblocage manuel requis)
+ * - trial_ended: Fin de période d'essai (auto-déblocage si souscription)
+ * - connection: Boîtier non connecté > 14 jours (auto-déblocage à la connexion)
+ */
+export type SuspensionReason =
+  | 'unpaid'
+  | 'expired'
+  | 'abuse'
+  | 'maintenance'
+  | 'request'
+  | 'hardware'
+  | 'trial_ended'
+  | 'connection';
+
+/**
+ * Statut de licence calculé
+ * - VALID: Abonnement actif, tout fonctionne normalement
+ * - WARNING: Abonnement expire bientôt (< 30 jours) - bandeau d'info sur /remote
+ * - GRACE_PERIOD: Abonnement expiré mais dans la période de grâce (7 jours)
+ * - CONNECTION_WARNING: Cache licence expire bientôt, connexion Internet requise
+ * - BLOCKED: Service bloqué (expiration > 7j, suspension, ou cache expiré > 14j)
+ */
+export type LicenseStatus =
+  | 'VALID'
+  | 'WARNING'
+  | 'GRACE_PERIOD'
+  | 'CONNECTION_WARNING'
+  | 'BLOCKED';
+
+/**
+ * Données d'abonnement d'un site (colonnes ajoutées à la table sites)
+ */
+export interface SiteSubscription {
+  subscription_start: string | null;
+  subscription_end: string | null;
+  subscription_plan: SubscriptionPlan;
+  suspended: boolean;
+  suspension_reason: SuspensionReason | null;
+  suspension_date: string | null;
+  suspension_note: string | null;
+}
+
+/**
+ * Type minimal pour le calcul du statut de licence
+ * Utilisé par computeLicenseStatus et checkAutoUnblock
+ * Contient uniquement les champs nécessaires au calcul, pas tout le site
+ */
+export interface SiteSubscriptionInfo extends SiteSubscription {
+  id: string;
+  last_seen_at: string | null;
+  site_name?: string; // Optionnel, utilisé pour le logging
+}
+
+/**
+ * Motif de suspension avec métadonnées (table subscription_suspension_reasons)
+ */
+export interface SuspensionReasonInfo {
+  code: SuspensionReason;
+  label: string;
+  description: string;
+  auto_unblock: boolean;
+  message_remote: string;
+  message_tv: string;
+  severity: 'warning' | 'error';
+}
+
+/**
+ * Statut de licence complet envoyé au Pi via Socket.IO
+ * Le Pi stocke cette réponse dans license_cache.json
+ */
+export interface LicenseStatusResponse {
+  status: LicenseStatus;
+  reason?: SuspensionReason | 'expiring_soon' | 'expired' | 'connection_required';
+  subscription_end?: string;
+  subscription_plan?: SubscriptionPlan;
+  days_left?: number;           // Jours restants avant expiration (positif)
+  days_expired?: number;        // Jours depuis expiration (positif, si expiré)
+  days_since_check?: number;    // Jours depuis dernière vérification serveur
+  can_auto_unblock?: boolean;   // Si true, le Pi peut se débloquer automatiquement
+  message_tv?: string;          // Message à afficher sur /tv (neutre, public)
+  message_remote?: string;      // Message à afficher sur /remote (explicite, staff)
+  cache_valid_until: string;    // Date jusqu'à laquelle le cache est valide (ISO 8601)
+  server_timestamp: string;     // Timestamp du serveur (ISO 8601)
+}
+
+/**
+ * Actions possibles dans l'historique des abonnements
+ */
+export type SubscriptionAction =
+  | 'activated'       // Première activation
+  | 'renewed'         // Renouvellement (prolongation)
+  | 'suspended'       // Suspension manuelle
+  | 'reactivated'     // Réactivation après suspension
+  | 'expired'         // Passage en état expiré (automatique)
+  | 'plan_changed';   // Changement de plan
+
+/**
+ * Entrée dans l'historique des abonnements
+ */
+export interface SubscriptionHistoryEntry {
+  id: string;
+  site_id: string;
+  action: SubscriptionAction;
+  reason?: SuspensionReason;
+  previous_end_date?: string;
+  new_end_date?: string;
+  previous_plan?: SubscriptionPlan;
+  new_plan?: SubscriptionPlan;
+  note?: string;
+  performed_by?: string;
+  performed_by_name?: string;   // Nom de l'utilisateur (jointure)
+  created_at: string;
+}
+
+/**
+ * Statistiques globales des abonnements (vue subscription_stats)
+ */
+export interface SubscriptionStats {
+  active_count: number;         // Abonnements actifs (> date actuelle, non suspendus)
+  expiring_soon_count: number;  // Expirent dans < 30 jours
+  grace_period_count: number;   // En période de grâce (expirés < 7 jours)
+  blocked_count: number;        // Bloqués (expirés > 7 jours ou suspendus)
+  suspended_count: number;      // Suspendus manuellement
+  trial_count: number;          // Plans trial
+  standard_count: number;       // Plans standard
+  premium_count: number;        // Plans premium
+  total_count: number;          // Total des sites
+}
+
+/**
+ * Requête pour prolonger un abonnement
+ */
+export interface ExtendSubscriptionRequest {
+  new_end_date: string;         // Nouvelle date de fin (ISO 8601)
+  note?: string;                // Note interne
+}
+
+/**
+ * Requête pour suspendre un site
+ */
+export interface SuspendSiteRequest {
+  reason: SuspensionReason;     // Motif de suspension
+  note?: string;                // Note interne
+  notify_contact?: boolean;     // Envoyer un email au contact du site
+}
+
+/**
+ * Requête pour réactiver un site
+ */
+export interface ReactivateSiteRequest {
+  new_end_date?: string;        // Optionnel: nouvelle date de fin
+  note?: string;                // Note interne
+  notify_contact?: boolean;     // Envoyer un email au contact du site
+}
+
+/**
+ * Site avec informations d'abonnement (pour les vues dashboard et calcul licence)
+ * Note: last_seen_at est redéfini comme string | null pour compatibilité avec les données DB
+ */
+export interface SiteWithSubscription extends Omit<Site, 'last_seen_at' | 'created_at' | 'updated_at'>, SiteSubscription {
+  // Redéfinition des champs Date en string pour compatibilité avec les données SQL brutes
+  last_seen_at: string | null;
+  created_at?: string;
+  updated_at?: string;
+  // Champs calculés
+  subscription_status?: 'active' | 'expiring_soon' | 'expiring_urgent' | 'grace_period' | 'blocked' | 'suspended' | 'no_subscription';
+  days_until_expiry?: number;
+  suspension_label?: string;
+}

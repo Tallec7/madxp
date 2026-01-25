@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.46.0 | **Dernière mise à jour**: 2026-01-24
+**Version**: 2.47.0 | **Dernière mise à jour**: 2026-01-25
 
 ---
 
@@ -203,6 +203,15 @@ ADVERTISERS & AGENCIES ───────────────────
 AGENCIES ──────────────────────────────────────────────────────────────
   agencies           → name, status, contact_email, company_name
   agency_sites       → agency ↔ site (M:N) - sites accessibles par l'agence
+
+SUBSCRIPTIONS (v2.47+) ────────────────────────────────────────────────
+  sites (colonnes ajoutées):
+    subscription_start, subscription_end, subscription_plan
+    suspended, suspension_reason, suspension_date, suspension_note
+  subscription_suspension_reasons → code, label, auto_unblock, message_tv, message_remote
+  subscription_history → site_id, action, reason, previous_end_date, new_end_date, note
+  Vue subscription_status_summary → sites enrichis avec statut calculé
+  Vue subscription_stats → compteurs globaux par statut/plan
 ```
 
 ### Row-Level Security (Multi-tenant)
@@ -315,6 +324,24 @@ GET /api/analytics/overview           → stats globales
 GET /api/analytics/sites/:id          → stats par site
 GET /api/analytics/daily-stats        → agrégation journalière
 GET /api/advertiser-analytics/...     → stats annonceurs
+```
+
+### Subscriptions (v2.47+)
+
+```
+# Routes globales
+GET    /api/subscriptions/stats       → Statistiques globales (actifs, à risque, etc.)
+GET    /api/subscriptions/at-risk     → Sites à risque (expirent bientôt, suspendus)
+GET    /api/subscriptions/reasons     → Liste des motifs de suspension
+
+# Routes par site (montées sur /api/sites/:id/subscription)
+GET    /api/sites/:id/subscription              → Détails abonnement d'un site
+GET    /api/sites/:id/subscription/history      → Historique des changements
+GET    /api/sites/:id/subscription/license-status → Statut de licence calculé (debug)
+PUT    /api/sites/:id/subscription/extend       → Prolonger l'abonnement
+POST   /api/sites/:id/subscription/suspend      → Suspendre le site
+POST   /api/sites/:id/subscription/reactivate   → Réactiver le site
+PUT    /api/sites/:id/subscription/plan         → Changer le plan (super_admin)
 ```
 
 ### Assets (Watermarks, Logos)
@@ -1436,6 +1463,9 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 | `central-server/src/services/orchestrated-deployment.service.test.ts` | Tests déploiement orchestré ⚡ NEW |
 | `central-server/src/controllers/remote.controller.ts`                 | Télécommande cloud ⚡ NEW          |
 | `central-server/src/routes/remote.routes.ts`                          | Routes remote cloud ⚡ NEW         |
+| `central-server/src/services/subscription.service.ts`                 | Gestion abonnements ⚡ v2.47       |
+| `central-server/src/controllers/subscription.controller.ts`           | API abonnements ⚡ v2.47           |
+| `central-server/src/routes/subscription.routes.ts`                    | Routes abonnements ⚡ v2.47        |
 | `central-server/src/scripts/full-schema.sql`                          | Schéma DB complet                  |
 
 ### Frontend Dashboard
@@ -1466,6 +1496,7 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 | **QrCodeGeneratorComponent** | `shared/components/qr-code-generator/`      | Génération QR code télécommande (local/cloud) + accès direct  |
 | **ConfigEditorComponent**    | `config-editor/`                            | Éditeur complet de configuration JSON                         |
 | **CloudRemoteComponent**     | `features/remote/cloud-remote.component.ts` | Télécommande cloud ⚡ NEW                                     |
+| **SubscriptionsManagement**  | `features/subscriptions/`                   | Page gestion abonnements ⚡ v2.47                             |
 
 ### Synchronisation Remote Pi ↔ Cloud Remote ⚠️ IMPORTANT
 
@@ -1513,6 +1544,10 @@ Le `CloudRemoteComponent` (dashboard) est une copie quasi-identique du `RemoteCo
 | `raspberry/frontend/src/app/components/remote.component.ts` | Télécommande                 |
 | `raspberry/sync-agent/src/agent.js`                         | Agent de synchronisation     |
 | `raspberry/sync-agent/src/watchers/video-watcher.js`        | Surveillance vidéos ⚡       |
+| `raspberry/sync-agent/src/license-cache.js`                 | Cache licence local ⚡ v2.47 |
+| `raspberry/src/app/services/license.service.ts`             | Service licence ⚡ v2.47     |
+| `raspberry/src/app/components/license-block/`               | Écran blocage TV ⚡ v2.47    |
+| `raspberry/src/app/components/license-banner/`              | Bannière remote ⚡ v2.47     |
 | `raspberry/scripts/setup-new-club.sh`                       | Setup nouveau club           |
 
 ### Documentation
@@ -2017,6 +2052,50 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.47.x (Janvier 2026)
+
+- **Système d'Abonnement Complet** : Gestion des licences, expiration et blocage des sites
+  - **Fonctionnalités** :
+    - Date d'expiration par site avec statuts (active, expiring_soon, grace_period, blocked, suspended)
+    - Suspension manuelle avec motifs (impayé, abus, maintenance, demande client, etc.)
+    - Cache licence sur le Pi (validité 7 jours) avec grace period de 7 jours
+    - Blocage `/tv` et `/remote` après expiration ou suspension
+    - Auto-déblocage quand l'abonnement est renouvelé
+    - Interface de gestion complète dans le dashboard
+  - **Nouvelles tables DB** :
+    - `subscription_suspension_reasons` : Motifs de suspension avec messages TV/Remote
+    - `subscription_history` : Historique des changements d'abonnement
+    - Vue `subscription_status_summary` pour les requêtes agrégées
+    - Vue `subscription_stats` pour les statistiques globales
+  - **Nouvelles colonnes sur `sites`** :
+    - `subscription_start`, `subscription_end`, `subscription_plan`
+    - `suspended`, `suspension_reason`, `suspension_date`, `suspension_note`
+  - **Nouveaux fichiers** :
+    - `central-server/src/services/subscription.service.ts` - Calcul licence, prolongation, suspension
+    - `central-server/src/controllers/subscription.controller.ts` - API REST
+    - `central-server/src/routes/subscription.routes.ts` - Routes `/api/subscriptions/*`
+    - `central-dashboard/.../subscriptions-management.component.ts` - Page `/subscriptions`
+    - `raspberry/sync-agent/src/license-cache.js` - Cache licence local
+    - `raspberry/src/app/services/license.service.ts` - Service Angular licence
+    - `raspberry/src/app/components/license-block/` - Écran de blocage TV
+    - `raspberry/src/app/components/license-banner/` - Bannière d'avertissement Remote
+  - **Nouveaux types TypeScript** :
+    - `SubscriptionPlan` : 'trial' | 'standard' | 'premium'
+    - `SuspensionReason` : 'unpaid' | 'expired' | 'abuse' | etc.
+    - `LicenseStatus` : 'VALID' | 'WARNING' | 'GRACE_PERIOD' | 'CONNECTION_WARNING' | 'BLOCKED'
+    - `SiteSubscriptionInfo` : Type minimal pour le calcul de licence
+    - `SiteWithSubscription` : Site avec toutes les infos d'abonnement
+  - **Événements Socket.IO** :
+    - `license_status` : Envoyé au Pi après chaque `sync_local_state`
+  - **Migration** :
+    ```bash
+    # Exécuter la migration SQL
+    psql $DATABASE_URL -f central-server/src/scripts/migrations/add-subscription-system.sql
+
+    # Redéployer central-server, dashboard, et sync-agent sur les Pi
+    ```
+  - **Documentation** : Voir le plan complet dans `.claude/plans/linked-spinning-narwhal.md`
 
 ### v2.46.x (Janvier 2026)
 
@@ -3414,6 +3493,11 @@ SMTP_PORT=1025
 | **Network Profile**  | Type de réseau : simple, mesh, mesh_isolated, enterprise, ethernet |
 | **AP Isolation**     | Sécurité mesh empêchant les clients de communiquer                 |
 | **brcmfmac**         | Driver WiFi Raspberry Pi (bugs documentés avec Virtual AP)         |
+| **LicenseStatus**    | État licence : VALID, WARNING, GRACE_PERIOD, BLOCKED                |
+| **LicenseCache**     | Cache local de la licence (7 jours de validité)                     |
+| **GracePeriod**      | Délai de grâce après expiration (7 jours sans blocage)              |
+| **SuspensionReason** | Motif de suspension (impayé, abus, maintenance, etc.)               |
+| **Auto-unblock**     | Déblocage automatique quand l'abonnement est renouvelé              |
 
 ---
 

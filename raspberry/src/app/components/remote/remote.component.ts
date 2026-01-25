@@ -1,8 +1,9 @@
-import { Component, inject, NgZone, OnInit } from '@angular/core';
+import { Component, inject, NgZone, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 import { Configuration, TimeCategory, SportType, OverlayPosition } from '../../interfaces/configuration.interface';
 import { Category } from '../../interfaces/category.interface';
 import { Video } from '../../interfaces/video.interface';
@@ -19,18 +20,21 @@ import {
   SPORT_PERIODS,
   SPORT_PERIOD_DURATIONS
 } from '../../services/local-options.service';
+import { LicenseService, LicenseState } from '../../services/license.service';
 import { ClubSelectorComponent } from '../club-selector/club-selector.component';
+import { LicenseBannerComponent } from '../license-banner/license-banner.component';
+import { LicenseBlockRemoteComponent } from '../license-block-remote/license-block-remote.component';
 
 type ViewType = 'club-selector' | 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos' | 'options';
 
 @Component({
   selector: 'app-remote',
   standalone: true,
-  imports: [CommonModule, FormsModule, ClubSelectorComponent],
+  imports: [CommonModule, FormsModule, ClubSelectorComponent, LicenseBannerComponent, LicenseBlockRemoteComponent],
   templateUrl: './remote.component.html',
   styleUrl: './remote.component.scss'
 })
-export class RemoteComponent implements OnInit {
+export class RemoteComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
@@ -39,7 +43,16 @@ export class RemoteComponent implements OnInit {
   private readonly demoConfigService = inject(DemoConfigService);
   private readonly localBroadcast = inject(LocalBroadcastService);
   private readonly localOptionsService = inject(LocalOptionsService);
+  private readonly licenseService = inject(LicenseService);
   private readonly ngZone = inject(NgZone);
+
+  // Souscriptions
+  private subscriptions: Subscription[] = [];
+
+  // État de la licence
+  public licenseState: LicenseState | null = null;
+  public isLicenseBlocked = false;
+  public hasLicenseWarning = false;
 
   public configuration!: Configuration;
 
@@ -179,6 +192,22 @@ export class RemoteComponent implements OnInit {
   public timeCategories: TimeCategory[] = [];
 
   public ngOnInit(): void {
+    // S'abonner aux mises à jour du statut de licence
+    this.subscriptions.push(
+      this.licenseService.state$.subscribe((state) => {
+        this.ngZone.run(() => {
+          this.licenseState = state;
+          this.isLicenseBlocked = state.status === 'BLOCKED';
+          this.hasLicenseWarning = this.licenseService.hasWarning();
+        });
+      })
+    );
+
+    // Vérifier l'état initial de la licence
+    this.licenseState = this.licenseService.getCurrentState();
+    this.isLicenseBlocked = this.licenseService.isBlocked();
+    this.hasLicenseWarning = this.licenseService.hasWarning();
+
     this.isDemoMode = this.demoConfigService.isDemoMode();
 
     // Charger le dark mode depuis localStorage
@@ -1507,5 +1536,12 @@ export class RemoteComponent implements OnInit {
     } else {
       this.timerCurrentTime = 0;
     }
+  }
+
+  /**
+   * Nettoyage à la destruction du composant
+   */
+  public ngOnDestroy(): void {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 }

@@ -8,13 +8,14 @@ import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
-import { Site, SiteConnectionSummary } from '../../core/models';
+import { Site, SiteConnectionSummary, SubscriptionDisplayStatus } from '../../core/models';
 import { formatVersion } from './utils/version';
+import { SubscriptionBadgeComponent } from '../../shared/components/subscription-badge/subscription-badge.component';
 
 @Component({
   selector: 'app-sites-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TranslateModule],
+  imports: [CommonModule, FormsModule, RouterModule, TranslateModule, SubscriptionBadgeComponent],
   template: `
     <div class="page-container">
       <div class="page-header">
@@ -44,6 +45,15 @@ import { formatVersion } from './utils/version';
           <option value="Normandie">Normandie</option>
           <option value="Île-de-France">Île-de-France</option>
         </select>
+        <select [(ngModel)]="subscriptionFilter" (ngModelChange)="applyFilters()">
+          <option value="">Tous les abonnements</option>
+          <option value="active">✓ Actifs</option>
+          <option value="expiring_soon">⏳ Expire bientôt</option>
+          <option value="grace_period">⚠️ Période de grâce</option>
+          <option value="suspended">⏸ Suspendus</option>
+          <option value="blocked">🚫 Bloqués</option>
+          <option value="trial">🎁 Essai</option>
+        </select>
         <button class="btn btn-secondary" (click)="clearFilters()" *ngIf="hasActiveFilters()">
           Effacer les filtres
         </button>
@@ -53,9 +63,18 @@ import { formatVersion } from './utils/version';
         <div *ngFor="let site of sites$ | async" class="site-card card">
           <div class="site-header">
             <h3>{{ site.club_name }}</h3>
-            <span class="badge" [class]="'badge-' + getRealTimeStatusBadge(site)">
-              {{ getRealTimeStatusText(site) }}
-            </span>
+            <div class="site-badges">
+              <span class="badge" [class]="'badge-' + getRealTimeStatusBadge(site)">
+                {{ getRealTimeStatusText(site) }}
+              </span>
+              <app-subscription-badge
+                [subscriptionEnd]="site.subscription_end ?? null"
+                [plan]="site.subscription_plan ?? 'standard'"
+                [suspended]="site.suspended ?? false"
+                [suspensionReason]="site.suspension_reason ?? null"
+                [showText]="false"
+              ></app-subscription-badge>
+            </div>
           </div>
 
           <p class="site-name">{{ site.site_name }}</p>
@@ -270,6 +289,15 @@ import { formatVersion } from './utils/version';
       font-size: 1.125rem;
       color: #0f172a;
       font-weight: 600;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .site-badges {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-shrink: 0;
     }
 
     .site-name {
@@ -481,6 +509,7 @@ export class SitesListComponent implements OnInit, OnDestroy {
   searchTerm = '';
   statusFilter = '';
   regionFilter = '';
+  subscriptionFilter = '';
   showCreateModal = false;
   showEditModal = false;
 
@@ -552,6 +581,7 @@ export class SitesListComponent implements OnInit, OnDestroy {
     if (this.searchTerm) filters['search'] = this.searchTerm;
     if (this.statusFilter) filters['status'] = this.statusFilter;
     if (this.regionFilter) filters['region'] = this.regionFilter;
+    if (this.subscriptionFilter) filters['subscription'] = this.subscriptionFilter;
 
     this.sitesService.loadSites(filters).subscribe();
   }
@@ -560,11 +590,50 @@ export class SitesListComponent implements OnInit, OnDestroy {
     this.searchTerm = '';
     this.statusFilter = '';
     this.regionFilter = '';
+    this.subscriptionFilter = '';
     this.loadSites();
   }
 
   hasActiveFilters(): boolean {
-    return !!(this.searchTerm || this.statusFilter || this.regionFilter);
+    return !!(this.searchTerm || this.statusFilter || this.regionFilter || this.subscriptionFilter);
+  }
+
+  /**
+   * Calcule le statut d'abonnement d'affichage pour un site
+   */
+  getSubscriptionDisplayStatus(site: Site): SubscriptionDisplayStatus {
+    // Site suspendu
+    if (site.suspended) {
+      return 'suspended';
+    }
+
+    // Pas de date de fin = actif indéfiniment (legacy)
+    if (!site.subscription_end) {
+      return 'active';
+    }
+
+    const endDate = new Date(site.subscription_end);
+    const now = new Date();
+    const diffMs = endDate.getTime() - now.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    // Trial
+    if (site.subscription_plan === 'trial') {
+      if (diffDays < 0) return 'blocked';
+      if (diffDays <= 7) return 'expiring_soon';
+      return 'trial';
+    }
+
+    // Expiré depuis plus de 7 jours = bloqué
+    if (diffDays < -7) return 'blocked';
+
+    // Période de grâce (expiré depuis moins de 7 jours)
+    if (diffDays < 0) return 'grace_period';
+
+    // Expire dans moins de 30 jours
+    if (diffDays <= 30) return 'expiring_soon';
+
+    return 'active';
   }
 
   getStatusBadge(status: string): string {

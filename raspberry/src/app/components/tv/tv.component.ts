@@ -13,6 +13,8 @@ import { LocalOptionsService, LocalOptions, GoalAnimationConfig, TeamConfig } fr
 import { DoubleBufferVideoService, DoubleBufferCallbacks } from '../../services/double-buffer-video.service';
 import { VideoErrorRecoveryService, ErrorRecoveryCallbacks } from '../../services/video-error-recovery.service';
 import { WatermarkService } from '../../services/watermark.service';
+import { LicenseService, LicenseState } from '../../services/license.service';
+import { LicenseBlockComponent } from '../license-block/license-block.component';
 import { Video } from '../../interfaces/video.interface';
 import { Configuration, OverlayPosition, SportType, WatermarkScheduleRule } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
@@ -36,7 +38,7 @@ interface PlayerWithPlaylist extends Player {
   selector: 'app-tv',
   templateUrl: './tv.component.html',
   styleUrl: './tv.component.scss',
-  imports: [CommonModule],
+  imports: [CommonModule, LicenseBlockComponent],
   encapsulation: ViewEncapsulation.None // Désactiver l'encapsulation pour le double-buffer
 })
 export class TvComponent implements OnInit, OnDestroy {
@@ -52,8 +54,13 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly doubleBufferService = inject(DoubleBufferVideoService);
   private readonly errorRecoveryService = inject(VideoErrorRecoveryService);
   private readonly watermarkService = inject(WatermarkService);
+  private readonly licenseService = inject(LicenseService);
 
   private localBroadcastSubscriptions: Subscription[] = [];
+
+  // License status - bloque l'affichage si la licence n'est pas valide
+  public licenseState: LicenseState | null = null;
+  public isLicenseBlocked = false;
 
   // Options locales (provenant de Remote)
   public localOptions: LocalOptions = this.localOptionsService.getOptions();
@@ -163,6 +170,26 @@ export class TvComponent implements OnInit, OnDestroy {
   public player: Player;
 
   public ngOnInit() {
+    // S'abonner aux mises à jour du statut de licence
+    this.localBroadcastSubscriptions.push(
+      this.licenseService.state$.subscribe((state) => {
+        this.licenseState = state;
+        this.isLicenseBlocked = state.status === 'BLOCKED';
+
+        // Si bloqué, arrêter la lecture vidéo
+        if (this.isLicenseBlocked) {
+          this.stopAllPlayers();
+        }
+      })
+    );
+
+    // Si la licence est déjà bloquée au démarrage, ne pas initialiser la boucle vidéo
+    if (this.licenseService.isBlocked()) {
+      this.isLicenseBlocked = true;
+      this.licenseState = this.licenseService.getCurrentState();
+      return; // Ne pas initialiser la boucle vidéo
+    }
+
     // Charger les options locales et s'abonner aux changements
     this.localOptions = this.localOptionsService.getOptions();
     this.localBroadcastSubscriptions.push(
@@ -1544,6 +1571,27 @@ export class TvComponent implements OnInit, OnDestroy {
     this.playerA?.pause();
     this.playerB?.pause();
     console.log('[TV] Loop stopped, switching to manual mode');
+  }
+
+  /**
+   * Arrête tous les players (utilisé lors du blocage licence)
+   */
+  private stopAllPlayers(): void {
+    this.isLoopMode = false;
+    this.isManualMode = false;
+
+    // Arrêter les players de la boucle
+    this.playerA?.pause();
+    this.playerB?.pause();
+
+    // Arrêter les players manuels
+    this.manualPlayerA?.pause();
+    this.manualPlayerB?.pause();
+
+    // Arrêter le watchdog
+    this.stopWatchdog();
+
+    console.log('[TV] All players stopped due to license block');
   }
 
   /**

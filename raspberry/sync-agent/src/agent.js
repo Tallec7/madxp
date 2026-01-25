@@ -20,6 +20,7 @@ const localBackup = require('./tasks/local-backup');
 const { networkDetector } = require('./services/network-detector');
 const { safeNetworkOperations } = require('./services/safe-network-operations');
 const networkWatchdog = require('./services/network-watchdog');
+const licenseCache = require('./license-cache');
 
 class NeoproSyncAgent {
   constructor() {
@@ -105,6 +106,66 @@ class NeoproSyncAgent {
     // Cloud remote action (play video, play sponsors) - relayed as 'command' to local server
     // The local server converts 'command' to 'action' for the TV component
     this.socket.on('cloud-remote-action', (data) => this.relayToLocalServer('command', data));
+
+    // =========================================================================
+    // LICENSE STATUS
+    // Receive license status from server and cache it locally
+    // This enables offline operation with periodic validation
+    // =========================================================================
+    this.socket.on('license_status', (status) => this.handleLicenseStatus(status));
+  }
+
+  /**
+   * Handle license status received from server
+   * @param {Object} status - License status from server
+   */
+  handleLicenseStatus(status) {
+    logger.info('📜 License status received from server', {
+      status: status.status,
+      reason: status.reason,
+      daysLeft: status.days_left,
+      daysExpired: status.days_expired
+    });
+
+    // Sauvegarder dans le cache local
+    licenseCache.save(status);
+
+    // Notifier l'application Angular locale du changement de statut
+    this.notifyLocalApp('license_update', status);
+
+    // Si le statut est bloqué, logger un warning
+    if (status.status === 'BLOCKED') {
+      logger.warn('⚠️ Site is BLOCKED', {
+        reason: status.reason,
+        messageTv: status.message_tv,
+        canAutoUnblock: status.can_auto_unblock
+      });
+    }
+  }
+
+  /**
+   * Notify the local Angular app of an event via the local Socket.IO server
+   * @param {string} eventName - Name of the event
+   * @param {Object} data - Event data
+   */
+  notifyLocalApp(eventName, data) {
+    const localSocket = io('http://localhost:3000', {
+      timeout: 5000,
+      reconnection: false,
+    });
+
+    localSocket.on('connect', () => {
+      logger.debug('Connected to local server for notification', { eventName });
+      localSocket.emit(eventName, data);
+
+      setTimeout(() => {
+        localSocket.disconnect();
+      }, 500);
+    });
+
+    localSocket.on('connect_error', (error) => {
+      logger.debug('Could not connect to local server for notification', { eventName, error: error.message });
+    });
   }
 
   handlePingCheck() {

@@ -81,6 +81,82 @@ app.get('/api/site-info', (req, res) => {
 });
 
 // ============================================================================
+// LICENSE STATUS ENDPOINT
+// Returns the cached license status from the sync-agent
+// ============================================================================
+const LICENSE_CACHE_PATH = path.join(
+	process.env.HOME || '/home/pi',
+	'neopro',
+	'data',
+	'license_cache.json'
+);
+
+app.get('/api/license-status', (req, res) => {
+	try {
+		if (!fs.existsSync(LICENSE_CACHE_PATH)) {
+			// No cache yet - first connection or cache cleared
+			return res.json({
+				status: 'CONNECTION_WARNING',
+				reason: 'no_cache',
+				message_remote: 'Veuillez connecter le boîtier à Internet pour activer la licence.',
+				needs_connection: true
+			});
+		}
+
+		const cacheData = JSON.parse(fs.readFileSync(LICENSE_CACHE_PATH, 'utf8'));
+
+		// Calculate days since last check
+		if (cacheData.last_server_check) {
+			const lastCheck = new Date(cacheData.last_server_check);
+			const now = new Date();
+			const daysSinceCheck = Math.floor((now - lastCheck) / (1000 * 60 * 60 * 24));
+
+			const CACHE_TTL_DAYS = 7;
+			const GRACE_PERIOD_DAYS = 7;
+
+			// Check if cache has expired (> 14 days)
+			if (daysSinceCheck > CACHE_TTL_DAYS + GRACE_PERIOD_DAYS) {
+				return res.json({
+					status: 'BLOCKED',
+					reason: 'connection_required',
+					days_since_check: daysSinceCheck,
+					message_tv: 'Connexion Internet requise',
+					message_remote: `Le boîtier n'a pas contacté le serveur depuis ${daysSinceCheck} jours. Veuillez le connecter à Internet.`,
+					can_auto_unblock: true,
+					needs_connection: true
+				});
+			}
+
+			// Check if in grace period (7-14 days)
+			if (daysSinceCheck > CACHE_TTL_DAYS) {
+				const daysLeft = CACHE_TTL_DAYS + GRACE_PERIOD_DAYS - daysSinceCheck;
+				return res.json({
+					status: 'GRACE_PERIOD',
+					reason: 'connection_grace',
+					days_since_check: daysSinceCheck,
+					days_until_block: daysLeft,
+					message_remote: `Connexion requise dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''} pour valider la licence.`,
+					can_auto_unblock: true,
+					needs_connection: true
+				});
+			}
+
+			cacheData.days_since_check = daysSinceCheck;
+		}
+
+		res.json(cacheData);
+	} catch (error) {
+		console.error('[License] Error reading cache:', error.message);
+		res.status(500).json({
+			status: 'CONNECTION_WARNING',
+			reason: 'cache_error',
+			message_remote: 'Erreur lors de la lecture du statut de licence.',
+			needs_connection: true
+		});
+	}
+});
+
+// ============================================================================
 // ANALYTICS ENDPOINT
 // Reçoit les analytics de l'app Angular et les sauvegarde pour le sync-agent
 // ============================================================================
@@ -411,6 +487,25 @@ io.on('connection', (socket) => {
 		} catch (error) {
 			console.error('[Config] Error reading configuration:', error.message);
 		}
+	});
+
+	// ========================================================================
+	// LICENSE STATUS - Gestion du statut de licence
+	// Les événements sont envoyés par le sync-agent depuis le serveur central
+	// ========================================================================
+
+	// Mise à jour du statut de licence (warning, grace period, etc.)
+	socket.on('license_update', (status) => {
+		console.log('[License] Status update received:', status?.status, status?.reason);
+		// Broadcast à tous les clients (TV et Remote)
+		io.emit('license_update', status);
+	});
+
+	// Blocage de licence (site suspendu ou connexion requise)
+	socket.on('license_blocked', (status) => {
+		console.log('[License] BLOCKED received:', status?.status, status?.reason);
+		// Broadcast à tous les clients (TV et Remote)
+		io.emit('license_blocked', status);
 	});
 
 	socket.on('disconnect', () => {

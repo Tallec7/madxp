@@ -13,6 +13,15 @@ import { handleMatchConfig } from '../handlers/match-config.handler';
 import { handleScoreUpdate, handleScoreReset } from '../handlers/score-update.handler';
 
 // Import différé pour éviter les dépendances circulaires
+let subscriptionService: typeof import('./subscription.service').subscriptionService | null = null;
+const getSubscriptionService = async () => {
+  if (!subscriptionService) {
+    const module = await import('./subscription.service');
+    subscriptionService = module.subscriptionService;
+  }
+  return subscriptionService;
+};
+
 let deploymentService: { processPendingDeploymentsForSite: (siteId: string) => Promise<void> } | null = null;
 const getDeploymentService = async () => {
   if (!deploymentService) {
@@ -1045,8 +1054,105 @@ class SocketService {
 
       logger.info('Local state stored', { siteId, configHash, videosCount: videos?.length || 0, configUpdatePending: isConfigUpdatePending });
       await this.triggerPendingConfigSync(siteId);
+
+      // === Subscription System: Envoyer le statut de licence au Pi ===
+      await this.sendLicenseStatus(siteId);
     } catch (error) {
       logger.error('Error handling sync_local_state:', error);
+    }
+  }
+
+  /**
+   * Envoie le statut de licence au Pi connecté
+   * Appelé après chaque sync_local_state pour que le Pi ait toujours un statut frais
+   */
+  private async sendLicenseStatus(siteId: string) {
+    try {
+      const socket = this.connectedSites.get(siteId);
+      if (!socket || !socket.connected) {
+        return; // Pas de connexion active
+      }
+
+      // Récupérer les données du site pour calculer le statut
+      const siteResult = await query<{
+        id: string;
+        subscription_start: Date | null;
+        subscription_end: Date | null;
+        subscription_plan: string;
+        suspended: boolean;
+        suspension_reason: string | null;
+        suspension_date: Date | null;
+        last_seen_at: Date | null;
+      }>(
+        `SELECT id, subscription_start, subscription_end, subscription_plan,
+                suspended, suspension_reason, suspension_date, last_seen_at
+         FROM sites WHERE id = $1`,
+        [siteId]
+      );
+
+      if (siteResult.rows.length === 0) {
+        return;
+      }
+
+      const site = siteResult.rows[0];
+
+      // Calculer le statut de licence via le service subscription
+      const subService = await getSubscriptionService();
+      const licenseStatus = await subService.computeLicenseStatus({
+        id: site.id,
+        subscription_start: site.subscription_start?.toISOString() || null,
+        subscription_end: site.subscription_end?.toISOString() || null,
+        subscription_plan: site.subscription_plan as 'trial' | 'standard' | 'premium',
+        suspended: site.suspended,
+        suspension_reason: site.suspension_reason as any,
+        suspension_date: site.suspension_date?.toISOString() || null,
+        suspension_note: null,
+        last_seen_at: site.last_seen_at?.toISOString() || null,
+      });
+
+      // Envoyer au Pi
+      socket.emit('license_status', licenseStatus);
+
+      logger.info('License status sent to site', {
+        siteId,
+        status: licenseStatus.status,
+        reason: licenseStatus.reason,
+        daysLeft: licenseStatus.days_left,
+      });
+
+      // Vérifier si le site peut être auto-débloqué
+      if (site.suspended && licenseStatus.can_auto_unblock) {
+        const autoUnblocked = await subService.checkAutoUnblock({
+          id: site.id,
+          subscription_start: site.subscription_start?.toISOString() || null,
+          subscription_end: site.subscription_end?.toISOString() || null,
+          subscription_plan: site.subscription_plan as 'trial' | 'standard' | 'premium',
+          suspended: site.suspended,
+          suspension_reason: site.suspension_reason as any,
+          suspension_date: site.suspension_date?.toISOString() || null,
+          suspension_note: null,
+          last_seen_at: site.last_seen_at?.toISOString() || null,
+        });
+
+        if (autoUnblocked) {
+          logger.info('Site auto-unblocked after connection', { siteId, reason: site.suspension_reason });
+          // Renvoyer le statut mis à jour
+          const newStatus = await subService.computeLicenseStatus({
+            id: site.id,
+            subscription_start: site.subscription_start?.toISOString() || null,
+            subscription_end: site.subscription_end?.toISOString() || null,
+            subscription_plan: site.subscription_plan as 'trial' | 'standard' | 'premium',
+            suspended: false, // Débloqué
+            suspension_reason: null,
+            suspension_date: null,
+            suspension_note: null,
+            last_seen_at: new Date().toISOString(),
+          });
+          socket.emit('license_status', newStatus);
+        }
+      }
+    } catch (error) {
+      logger.error('Error sending license status:', { siteId, error });
     }
   }
 

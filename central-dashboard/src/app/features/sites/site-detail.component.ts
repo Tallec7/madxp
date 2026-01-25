@@ -14,8 +14,9 @@ import { ConnectionIndicatorComponent } from '../../shared/components/connection
 import { SiteContentTabComponent } from './components/site-content-tab/site-content-tab.component';
 import { SiteSettingsTabComponent } from './components/site-settings-tab/site-settings-tab.component';
 import { SiteDebugTabComponent } from './components/site-debug-tab/site-debug-tab.component';
+import { SiteSubscriptionTabComponent } from './components/site-subscription-tab/site-subscription-tab.component';
 
-type TabId = 'status' | 'content' | 'settings' | 'debug';
+type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
 
 @Component({
   selector: 'app-site-detail',
@@ -28,7 +29,8 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
     ConnectionIndicatorComponent,
     SiteContentTabComponent,
     SiteSettingsTabComponent,
-    SiteDebugTabComponent
+    SiteDebugTabComponent,
+    SiteSubscriptionTabComponent
   ],
   template: `
     <div class="page-container" *ngIf="site; else loading">
@@ -93,6 +95,14 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
         >
           <span class="tab-icon">⚙️</span>
           <span class="tab-label">Paramètres</span>
+        </button>
+        <button
+          class="tab-btn"
+          [class.active]="activeTab === 'subscription'"
+          (click)="activeTab = 'subscription'"
+        >
+          <span class="tab-icon">💳</span>
+          <span class="tab-label">Abonnement</span>
         </button>
         <button
           class="tab-btn"
@@ -325,6 +335,14 @@ type TabId = 'status' | 'content' | 'settings' | 'debug';
             [isConnected]="isConnected"
             (siteUpdated)="onSiteUpdated($event)"
           ></app-site-settings-tab>
+        </div>
+
+        <!-- TAB: Abonnement -->
+        <div *ngIf="activeTab === 'subscription'" class="tab-panel">
+          <app-site-subscription-tab
+            [site]="site"
+            (subscriptionChanged)="loadSite()"
+          ></app-site-subscription-tab>
         </div>
 
         <!-- TAB: Debug -->

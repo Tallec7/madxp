@@ -70,7 +70,7 @@ export const verifyApiKey = (apiKey: string, hash: string): boolean => {
 
 export const getSites = async (req: AuthRequest, res: Response) => {
   try {
-    const { status, sport, region, search } = req.query;
+    const { status, sport, region, search, subscription } = req.query;
     const pagination = req.pagination || { page: 1, limit: 20, offset: 0 };
     const userRole = req.user?.role || 'viewer';
     const userAgencyId = req.user?.agency_id;
@@ -136,6 +136,36 @@ export const getSites = async (req: AuthRequest, res: Response) => {
       whereClause += ` AND (s.site_name ILIKE $${paramIndex} OR s.club_name ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
       paramIndex++;
+    }
+
+    // Filtre par statut d'abonnement
+    if (subscription) {
+      switch (subscription) {
+        case 'active':
+          // Actif: pas suspendu ET (pas de date de fin OU date de fin > aujourd'hui + 30 jours)
+          whereClause += ` AND s.suspended = false AND (s.subscription_end IS NULL OR s.subscription_end > NOW() + INTERVAL '30 days')`;
+          break;
+        case 'expiring_soon':
+          // Expire bientôt: pas suspendu ET date de fin dans les 30 prochains jours
+          whereClause += ` AND s.suspended = false AND s.subscription_end IS NOT NULL AND s.subscription_end <= NOW() + INTERVAL '30 days' AND s.subscription_end > NOW()`;
+          break;
+        case 'grace_period':
+          // Période de grâce: pas suspendu ET expiré depuis moins de 7 jours
+          whereClause += ` AND s.suspended = false AND s.subscription_end IS NOT NULL AND s.subscription_end <= NOW() AND s.subscription_end > NOW() - INTERVAL '7 days'`;
+          break;
+        case 'suspended':
+          // Suspendu manuellement
+          whereClause += ` AND s.suspended = true`;
+          break;
+        case 'blocked':
+          // Bloqué: expiré depuis plus de 7 jours (non suspendu manuellement)
+          whereClause += ` AND s.suspended = false AND s.subscription_end IS NOT NULL AND s.subscription_end <= NOW() - INTERVAL '7 days'`;
+          break;
+        case 'trial':
+          // En période d'essai
+          whereClause += ` AND s.subscription_plan = 'trial' AND (s.subscription_end IS NULL OR s.subscription_end > NOW())`;
+          break;
+      }
     }
 
     // Requêtes paginée et count en parallèle

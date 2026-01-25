@@ -34,7 +34,13 @@ export type AuditAction =
   | 'MATCH_ENDED'
   | 'SCORE_UPDATED'
   // Cloud remote
-  | 'CLOUD_REMOTE_COMMAND';
+  | 'CLOUD_REMOTE_COMMAND'
+  // Subscription management
+  | 'SUBSCRIPTION_EXTENDED'
+  | 'SITE_SUSPENDED'
+  | 'SITE_REACTIVATED'
+  | 'SUBSCRIPTION_PLAN_CHANGED'
+  | 'SUBSCRIPTION_AUTO_UNBLOCKED';
 
 interface AuditLogEntry {
   action: AuditAction;
