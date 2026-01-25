@@ -1,3 +1,9 @@
+# [2.48.0](https://github.com/Tallec7/neopro/compare/v2.47.0...v2.48.0) (2026-01-25)
+
+### Features
+
+- **subscriptions:** apply premium design with gradients and glassmorphism ([c0c8666](https://github.com/Tallec7/neopro/commit/c0c866660bfad396bf0b002d687e4872f8969d80)), closes [#667eea](https://github.com/Tallec7/neopro/issues/667eea) [#764ba2](https://github.com/Tallec7/neopro/issues/764ba2)
+
 # [2.47.0](https://github.com/Tallec7/neopro/compare/v2.46.1...v2.47.0) (2026-01-25)
 
 ### Features
