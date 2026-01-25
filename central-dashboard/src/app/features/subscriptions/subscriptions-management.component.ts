@@ -165,10 +165,10 @@ import {
                 </td>
                 <td>
                   <app-subscription-badge
-                    [subscriptionEnd]="site.subscription_end ?? null"
-                    [plan]="site.subscription_plan ?? 'standard'"
-                    [suspended]="site.suspended ?? false"
-                    [suspensionReason]="site.suspension_reason ?? null"
+                    [subscriptionEnd]="site.subscription_end"
+                    [plan]="site.subscription_plan"
+                    [suspended]="site.suspended"
+                    [suspensionReason]="site.suspension_reason"
                     [showText]="true"
                   ></app-subscription-badge>
                 </td>
