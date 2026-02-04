@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate, authenticateSiteApiKey } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
+import { piAnalyticsRateLimit } from '../middleware/user-rate-limit';
 import {
   listAdvertisers,
   getAdvertiser,
@@ -130,8 +131,10 @@ router.get(
 // Body: { impressions: AdvertiserImpression[] }
 // Note: Les impressions sont envoyées par le sync-agent du Raspberry,
 // authentifié par l'API key du site (pas un token utilisateur JWT)
+// Rate limit dédié: 500 req/min (plus permissif car Pi de confiance)
 router.post(
   '/impressions',
+  piAnalyticsRateLimit,
   authenticateSiteApiKey,
   recordImpressions
 );

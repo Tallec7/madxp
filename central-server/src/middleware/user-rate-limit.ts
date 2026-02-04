@@ -130,6 +130,23 @@ export const loggingRateLimit = createUserRateLimit(
   }
 );
 
+// Pi Analytics - très permissif (500 requêtes / minute)
+// Les Pi sont des appareils de confiance authentifiés par API key
+// Avec 100 Pi et backlog, on peut avoir des pics de trafic importants
+// 500 req/min permet ~5 Pi en mode backlog (24 req/min chacun) + trafic normal
+export const piAnalyticsRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 500,
+  keyGenerator: (req: Request): string => {
+    // Clé basée sur l'IP car les Pi s'authentifient par API key, pas JWT
+    return req.ip || 'unknown';
+  },
+  handler: limitHandler,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de requêtes analytics. Réduisez la fréquence d\'envoi.' },
+});
+
 /**
  * Rate limiter dynamique basé sur le rôle utilisateur
  * Les admins ont des limites plus élevées
@@ -165,5 +182,6 @@ export default {
   adminRateLimit,
   monitoringRateLimit,
   loggingRateLimit,
+  piAnalyticsRateLimit,
   roleBasedRateLimit,
 };
