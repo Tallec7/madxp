@@ -1,3 +1,38 @@
+# [3.0.0](https://github.com/Tallec7/neopro/compare/v2.50.1...v3.0.0) (2026-02-04)
+
+### Features
+
+- **dashboard:** remove analytics pages - simplify UI ([473c141](https://github.com/Tallec7/neopro/commit/473c141f179b90477a513c3bd5e5fd8704d1d057))
+
+### BREAKING CHANGES
+
+- **dashboard:** Analytics dashboard pages have been removed
+
+The analytics pages displayed misleading and inconsistent metrics:
+
+- "Temps de diffusion" was sum of video durations × plays (not actual screen time)
+- "Taux de complétion" was always 100% (bug: video_duration = duration_played)
+- "Disponibilité" measured cloud connection, not TV usage
+- Data spikes occurred when offline Pi buffers were flushed
+
+Pages removed:
+
+- /analytics (overview)
+- /analytics/comparison (multi-site comparison)
+- /analytics/realtime (realtime dashboard)
+- /sites/:id/analytics (club analytics)
+- /admin/analytics-categories (categories management)
+- /advertisers/:id/analytics (advertiser analytics)
+
+What remains (essential):
+
+- Connection status (online/offline/warning) in site-detail
+- System metrics (CPU, RAM, temperature, disk) in Status tab
+- System alerts
+- Backend analytics API (preserved for future use if needed)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+
 ## [2.50.1](https://github.com/Tallec7/neopro/compare/v2.50.0...v2.50.1) (2026-02-04)
 
 ### Bug Fixes
