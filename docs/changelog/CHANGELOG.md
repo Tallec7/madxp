@@ -1,3 +1,9 @@
+## [2.49.1](https://github.com/Tallec7/neopro/compare/v2.49.0...v2.49.1) (2026-02-04)
+
+### Bug Fixes
+
+- **analytics:** add batching for sponsor impressions upload ([bab9fcf](https://github.com/Tallec7/neopro/commit/bab9fcfdaf1a03c808eaaa3bc8318077e6090f08))
+
 # [2.49.0](https://github.com/Tallec7/neopro/compare/v2.48.1...v2.49.0) (2026-02-04)
 
 ### Features
