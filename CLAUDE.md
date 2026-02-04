@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.48.0 | **Dernière mise à jour**: 2026-01-25
+**Version**: 2.48.1 | **Dernière mise à jour**: 2026-02-04
 
 ---
 
@@ -424,12 +424,13 @@ Dashboard Cloud Remote → HTTP API → Central Server
 Les rate limits sont appliqués **par route** pour éviter les conflits :
 
 ```
-Auth:       10 req/15min    (anti-bruteforce) - 1 min dev
-Monitoring: 300 req/min     (status, metrics, dashboard, local-content)
-Admin:      200 req/min     (lecture sites, logs, config-history)
-Sensitive:  30 req/min      (commands, deployments, créations, suppressions)
-Logging:    200 req/min     (frontend logs - throttled client-side)
-Upload:     10 req/hour     (video uploads)
+Auth:         10 req/15min    (anti-bruteforce) - 1 min dev
+Monitoring:   300 req/min     (status, metrics, dashboard, local-content)
+Admin:        200 req/min     (lecture sites, logs, config-history)
+Sensitive:    30 req/min      (commands, deployments, créations, suppressions)
+Logging:      200 req/min     (frontend logs - throttled client-side)
+Upload:       10 req/hour     (video uploads)
+Pi Analytics: 500 req/min     (impressions sponsors depuis les Pi - par IP)
 ```
 
 **Architecture rate limiting** :
@@ -439,6 +440,7 @@ Upload:     10 req/hour     (video uploads)
 - `/api/sites/:id`, `/api/sites/:id/logs`, `/api/sites/:id/config-history/*` → `adminRateLimit` (200/min)
 - POST/PUT/DELETE, `/api/sites/:id/command` → `sensitiveRateLimit` (30/min)
 - `/api/remote/*` → `sensitiveRateLimit` (30/min) - **PUBLIC (pas d'auth JWT)** - par IP
+- `/api/analytics/impressions` → `piAnalyticsRateLimit` (500/min) - **Par IP** - permet backlog de ~5 Pi simultanément
 
 **Frontend Log Throttling** (v2.25+) :
 
@@ -2053,6 +2055,21 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.48.x (Février 2026)
+
+- **Fix envoi massif impressions sponsors** : Correction du bug qui empêchait les analytics de remonter
+  - **Problème** : Le Pi NLF avait 50K impressions bloquées, l'envoi en une fois causait HTTP 500 puis rate limit 429
+  - **Cause racine** : Pas de batching côté Pi + rate limit trop restrictif côté serveur (100 req/min partagé)
+  - **Solution** :
+    - Ajout du batching dans `sponsor-impressions.js` : `BATCH_SIZE=200`, `BATCH_DELAY=2500ms`
+    - Nouveau rate limit dédié `piAnalyticsRateLimit` (500 req/min) pour `/api/analytics/impressions`
+  - **Scalabilité 100 Pi** : Avec ces paramètres, ~20 Pi peuvent vider un backlog simultanément
+  - **Fichiers modifiés** :
+    - `raspberry/sync-agent/src/sponsor-impressions.js` - Batching avec délai entre envois
+    - `central-server/src/middleware/user-rate-limit.ts` - Nouveau `piAnalyticsRateLimit`
+    - `central-server/src/routes/advertiser-analytics.routes.ts` - Application du rate limit dédié
+  - **Migration** : Redéployer le central-server sur Railway, copier `sponsor-impressions.js` sur les Pi avec backlog
 
 ### v2.47.x (Janvier 2026)
 

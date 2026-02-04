@@ -32,6 +32,12 @@ const MAX_BUFFER_SIZE = 50000;
 // Seuil pour déclencher un auto-flush (envoyer les données au serveur)
 const AUTO_FLUSH_THRESHOLD = 100;
 
+// Configuration des batches pour éviter les erreurs serveur (limite 500/batch côté central)
+// Note: Le serveur a un rate limit de ~30 req/min sur /api/analytics/impressions
+const BATCH_SIZE = 200; // Nombre d'impressions par batch (serveur supporte 500)
+const BATCH_TIMEOUT = 15000; // 15 secondes par batch
+const BATCH_DELAY = 2500; // 2.5s entre chaque batch (24 req/min = sous le rate limit de 30/min)
+
 class SponsorImpressionsCollector {
   constructor() {
     this.buffer = [];
@@ -150,8 +156,28 @@ class SponsorImpressionsCollector {
   }
 
   /**
+   * Envoyer un batch d'impressions au serveur
+   * @private
+   */
+  async sendBatch(url, apiKey, batch) {
+    const response = await axios.post(
+      url,
+      { impressions: batch },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        timeout: BATCH_TIMEOUT,
+      }
+    );
+    return response.data;
+  }
+
+  /**
    * Envoyer les impressions au serveur central via HTTP.
    * Authentification par API key du site (Bearer token).
+   * Utilise des batches pour éviter les erreurs serveur avec de gros volumes.
    *
    * @param {string} serverUrl - URL du serveur central
    * @param {string} siteId - ID du site (pour logging, l'auth utilise l'API key)
@@ -165,81 +191,117 @@ class SponsorImpressionsCollector {
       return { sent: 0 };
     }
 
-    try {
-      const baseUrl = serverUrl?.replace(/\/$/, '');
-      if (!baseUrl) {
-        throw new Error('Central server URL is not configured');
-      }
-
-      // Récupérer l'API key du site pour l'authentification
-      const apiKey = config.site?.apiKey;
-      if (!apiKey) {
-        throw new Error('Site API key is not configured (SITE_API_KEY)');
-      }
-
-      // Note: Le site_id n'est plus nécessaire dans le payload,
-      // il est extrait automatiquement de l'API key par le central.
-      // On le garde pour compatibilité mais le central utilise l'auth.
-      const impressionsToSend = impressions.map(imp => ({
-        ...imp,
-        site_id: imp.site_id || siteId  // Conservé pour rétrocompatibilité
-      }));
-
-      const url = `${baseUrl}/api/analytics/impressions`;
-      const response = await axios.post(
-        url,
-        {
-          impressions: impressionsToSend,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`  // Auth par API key du site
-          },
-          timeout: 15000,  // 15 secondes pour les gros batches
-        }
-      );
-
-      const result = response.data;
-
-      // Vider le buffer local après envoi réussi
-      this.buffer = [];
-      this.saveBuffer();
-      this.lastSendTime = new Date().toISOString();
-
-      logger.info('[SponsorImpressions] Sent to server', {
-        sent: impressions.length,
-        recorded: result.recorded || 0,
-        skipped: result.skipped || 0,
-      });
-
-      return {
-        sent: impressions.length,
-        recorded: result.recorded || 0,
-        skipped: result.skipped || 0
-      };
-    } catch (error) {
-      // Analyser le type d'erreur pour un meilleur logging
-      let message;
-      let isAuthError = false;
-
-      if (error.response) {
-        const status = error.response.status;
-        message = `HTTP ${status}: ${error.response.data?.message || error.response.data?.error || error.response.statusText}`;
-        isAuthError = status === 401 || status === 403;
-      } else {
-        message = error.message;
-      }
-
-      if (isAuthError) {
-        logger.error('[SponsorImpressions] Authentication failed - check SITE_API_KEY', { error: message });
-      } else {
-        logger.error('[SponsorImpressions] Failed to send to server', { error: message });
-      }
-
-      // Garder les impressions dans le buffer pour réessayer plus tard
-      return { sent: 0, error: message };
+    const baseUrl = serverUrl?.replace(/\/$/, '');
+    if (!baseUrl) {
+      logger.error('[SponsorImpressions] Central server URL is not configured');
+      return { sent: 0, error: 'Central server URL is not configured' };
     }
+
+    // Récupérer l'API key du site pour l'authentification
+    const apiKey = config.site?.apiKey;
+    if (!apiKey) {
+      logger.error('[SponsorImpressions] Site API key is not configured (SITE_API_KEY)');
+      return { sent: 0, error: 'Site API key is not configured (SITE_API_KEY)' };
+    }
+
+    const url = `${baseUrl}/api/analytics/impressions`;
+    let totalSent = 0;
+    let totalRecorded = 0;
+    let totalSkipped = 0;
+    let lastError = null;
+
+    // Préparer les impressions avec site_id
+    const impressionsToSend = impressions.map(imp => ({
+      ...imp,
+      site_id: imp.site_id || siteId  // Conservé pour rétrocompatibilité
+    }));
+
+    // Diviser en batches
+    const batches = [];
+    for (let i = 0; i < impressionsToSend.length; i += BATCH_SIZE) {
+      batches.push(impressionsToSend.slice(i, i + BATCH_SIZE));
+    }
+
+    logger.info('[SponsorImpressions] Sending impressions in batches', {
+      totalImpressions: impressions.length,
+      batchCount: batches.length,
+      batchSize: BATCH_SIZE,
+    });
+
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+
+      try {
+        const result = await this.sendBatch(url, apiKey, batch);
+        totalSent += batch.length;
+        totalRecorded += result.recorded || 0;
+        totalSkipped += result.skipped || 0;
+
+        logger.debug('[SponsorImpressions] Batch sent successfully', {
+          batch: i + 1,
+          of: batches.length,
+          sent: batch.length,
+          recorded: result.recorded || 0,
+        });
+
+        // Mettre à jour le buffer après chaque batch réussi
+        // Supprimer les impressions envoyées
+        this.buffer = impressions.slice(totalSent);
+        this.saveBuffer();
+
+        // Petite pause entre les batches pour ne pas surcharger le serveur
+        if (i < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+        }
+      } catch (error) {
+        // Analyser le type d'erreur pour un meilleur logging
+        let message;
+        let isAuthError = false;
+
+        if (error.response) {
+          const status = error.response.status;
+          message = `HTTP ${status}: ${error.response.data?.message || error.response.data?.error || error.response.statusText}`;
+          isAuthError = status === 401 || status === 403;
+        } else {
+          message = error.message;
+        }
+
+        logger.warn('[SponsorImpressions] Batch send failed, stopping', {
+          batch: i + 1,
+          of: batches.length,
+          error: message,
+          sentSoFar: totalSent,
+          isAuthError,
+        });
+
+        lastError = message;
+        break; // Arrêter l'envoi, on réessaiera les impressions restantes plus tard
+      }
+    }
+
+    this.lastSendTime = new Date().toISOString();
+
+    if (totalSent > 0) {
+      logger.info('[SponsorImpressions] Sent to server', {
+        sent: totalSent,
+        recorded: totalRecorded,
+        skipped: totalSkipped,
+        remaining: this.buffer.length,
+      });
+    }
+
+    if (lastError && totalSent === 0) {
+      logger.error('[SponsorImpressions] Failed to send to server', { error: lastError });
+      return { sent: 0, error: lastError };
+    }
+
+    return {
+      sent: totalSent,
+      recorded: totalRecorded,
+      skipped: totalSkipped,
+      remaining: this.buffer.length,
+      error: lastError,
+    };
   }
 
   /**
