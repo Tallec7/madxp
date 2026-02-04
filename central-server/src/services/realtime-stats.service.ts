@@ -149,10 +149,10 @@ class RealtimeStatsService {
 
     const row = result.rows[0];
     return {
-      total: parseInt(row.total) || 0,
-      online: parseInt(row.online) || 0,
-      offline: parseInt(row.offline) || 0,
-      warning: parseInt(row.warning) || 0,
+      total: parseInt(String(row.total)) || 0,
+      online: parseInt(String(row.online)) || 0,
+      offline: parseInt(String(row.offline)) || 0,
+      warning: parseInt(String(row.warning)) || 0,
     };
   }
 
@@ -189,10 +189,10 @@ class RealtimeStatsService {
     `);
 
     return {
-      videos_last_hour: parseInt(videosLastHourResult.rows[0]?.count) || 0,
-      videos_last_minute: parseInt(videosLastMinuteResult.rows[0]?.count) || 0,
-      impressions_last_hour: parseInt(impressionsResult.rows[0]?.count) || 0,
-      active_sessions: parseInt(activeSessionsResult.rows[0]?.count) || 0,
+      videos_last_hour: parseInt(String(videosLastHourResult.rows[0]?.count)) || 0,
+      videos_last_minute: parseInt(String(videosLastMinuteResult.rows[0]?.count)) || 0,
+      impressions_last_hour: parseInt(String(impressionsResult.rows[0]?.count)) || 0,
+      active_sessions: parseInt(String(activeSessionsResult.rows[0]?.count)) || 0,
     };
   }
 
@@ -218,9 +218,9 @@ class RealtimeStatsService {
 
     const row = result.rows[0];
     return {
-      video_name: row.video_name || 'Inconnu',
-      category: row.category || 'Autre',
-      plays_last_hour: parseInt(row.plays) || 0,
+      video_name: String(row.video_name || 'Inconnu'),
+      category: String(row.category || 'Autre'),
+      plays_last_hour: parseInt(String(row.plays)) || 0,
     };
   }
 
@@ -248,10 +248,10 @@ class RealtimeStatsService {
 
     const metrics = metricsResult.rows[0];
     return {
-      avg_cpu: parseFloat(metrics?.avg_cpu) || 0,
-      avg_memory: parseFloat(metrics?.avg_memory) || 0,
-      avg_temperature: parseFloat(metrics?.avg_temperature) || 0,
-      sites_with_alerts: parseInt(alertsResult.rows[0]?.count) || 0,
+      avg_cpu: parseFloat(String(metrics?.avg_cpu)) || 0,
+      avg_memory: parseFloat(String(metrics?.avg_memory)) || 0,
+      avg_temperature: parseFloat(String(metrics?.avg_temperature)) || 0,
+      sites_with_alerts: parseInt(String(alertsResult.rows[0]?.count)) || 0,
     };
   }
 

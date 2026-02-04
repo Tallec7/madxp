@@ -67,9 +67,6 @@ import { SubscriptionBadgeComponent } from '../../shared/components/subscription
               <span class="badge" [class]="'badge-' + getRealTimeStatusBadge(site)">
                 {{ getRealTimeStatusText(site) }}
               </span>
-              <span class="badge badge-usage" [class]="getUsageBadgeClass(site)" [title]="getUsageTooltip(site)">
-                {{ getUsageLabel(site) }}
-              </span>
               <app-subscription-badge
                 [subscriptionEnd]="site.subscription_end ?? null"
                 [plan]="site.subscription_plan ?? 'standard'"
@@ -732,42 +729,24 @@ export class SitesListComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Retourne le label d'usage basé sur l'activité des 30 derniers jours
+   * Retourne le label d'usage (désactivé - analytics supprimées)
    */
-  getUsageLabel(site: Site): string {
-    const days = site.usage_30d?.days_active || 0;
-    if (days >= 25) return 'Très actif';
-    if (days >= 15) return 'Actif';
-    if (days >= 5) return 'Peu actif';
-    return 'En veille';
+  getUsageLabel(_site: Site): string {
+    return '';
   }
 
   /**
-   * Retourne la classe CSS pour le badge usage
+   * Retourne la classe CSS pour le badge usage (désactivé - analytics supprimées)
    */
-  getUsageBadgeClass(site: Site): string {
-    const days = site.usage_30d?.days_active || 0;
-    if (days >= 25) return 'usage-high';
-    if (days >= 15) return 'usage-medium';
-    if (days >= 5) return 'usage-low';
+  getUsageBadgeClass(_site: Site): string {
     return 'usage-none';
   }
 
   /**
-   * Retourne le tooltip avec les détails d'usage
+   * Retourne le tooltip avec les détails d'usage (désactivé - analytics supprimées)
    */
-  getUsageTooltip(site: Site): string {
-    const usage = site.usage_30d;
-    if (!usage) return 'Aucune donnée d\'usage sur les 30 derniers jours';
-
-    const days = usage.days_active || 0;
-    const videos = usage.total_videos || 0;
-
-    if (days === 0) {
-      return 'Aucune lecture de vidéo sur les 30 derniers jours (pas de match ?)';
-    }
-
-    return `${days} jours avec lectures sur 30j (${videos} vidéos)`;
+  getUsageTooltip(_site: Site): string {
+    return '';
   }
 
   formatLastSeen(date: Date | null): string {

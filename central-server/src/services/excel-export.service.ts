@@ -704,7 +704,13 @@ class ExcelExportService {
       ORDER BY date`,
       [siteId, startDate, endDate]
     );
-    return result.rows;
+    return result.rows.map(row => ({
+      date: String(row.date),
+      videos_played: Number(row.videos_played) || 0,
+      screen_time_seconds: Number(row.screen_time_seconds) || 0,
+      unique_videos: Number(row.unique_videos) || 0,
+      avg_completion_rate: Number(row.avg_completion_rate) || 0,
+    }));
   }
 
   private async getCategoryStats(siteId: string, startDate: string, endDate: string): Promise<CategoryStats[]> {
@@ -720,12 +726,12 @@ class ExcelExportService {
       [siteId, startDate, endDate]
     );
 
-    const total = result.rows.reduce((sum, r) => sum + parseInt(r.total_plays), 0);
+    const total = result.rows.reduce((sum, r) => sum + parseInt(String(r.total_plays)), 0);
     return result.rows.map((r) => ({
-      category: r.category,
-      total_plays: parseInt(r.total_plays),
-      total_screen_time: parseInt(r.total_screen_time) || 0,
-      percentage: total > 0 ? (parseInt(r.total_plays) / total) * 100 : 0,
+      category: String(r.category),
+      total_plays: parseInt(String(r.total_plays)),
+      total_screen_time: parseInt(String(r.total_screen_time)) || 0,
+      percentage: total > 0 ? (parseInt(String(r.total_plays)) / total) * 100 : 0,
     }));
   }
 
@@ -792,7 +798,15 @@ class ExcelExportService {
       ORDER BY total_videos DESC`,
       [advertiserId, startDate, endDate]
     );
-    return result.rows;
+    return result.rows.map(row => ({
+      site_id: String(row.site_id),
+      site_name: String(row.site_name || ''),
+      club_name: String(row.club_name || ''),
+      total_videos: Number(row.total_videos) || 0,
+      total_screen_time: Number(row.total_screen_time) || 0,
+      days_active: Number(row.days_active) || 0,
+      avg_daily_videos: Number(row.avg_daily_videos) || 0,
+    }));
   }
 
   private async getAdvertiserVideoStats(advertiserId: string, startDate: string, endDate: string): Promise<any[]> {
@@ -832,7 +846,15 @@ class ExcelExportService {
       ORDER BY total_videos DESC`,
       [startDate, endDate]
     );
-    return result.rows;
+    return result.rows.map(row => ({
+      site_id: String(row.site_id),
+      site_name: String(row.site_name || ''),
+      club_name: String(row.club_name || ''),
+      total_videos: Number(row.total_videos) || 0,
+      total_screen_time: Number(row.total_screen_time) || 0,
+      days_active: Number(row.days_active) || 0,
+      avg_daily_videos: Number(row.avg_daily_videos) || 0,
+    }));
   }
 
   private async getGlobalStats(startDate: string, endDate: string): Promise<any> {
@@ -868,7 +890,15 @@ class ExcelExportService {
       LIMIT 10`,
       [startDate, endDate]
     );
-    return result.rows;
+    return result.rows.map(row => ({
+      site_id: String(row.site_id),
+      site_name: String(row.site_name || ''),
+      club_name: String(row.club_name || ''),
+      total_videos: Number(row.total_videos) || 0,
+      total_screen_time: Number(row.total_screen_time) || 0,
+      days_active: Number(row.days_active) || 0,
+      avg_daily_videos: Number(row.avg_daily_videos) || 0,
+    }));
   }
 
   // ============================================================================
