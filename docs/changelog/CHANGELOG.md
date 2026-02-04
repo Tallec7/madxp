@@ -1,3 +1,9 @@
+## [2.50.1](https://github.com/Tallec7/neopro/compare/v2.50.0...v2.50.1) (2026-02-04)
+
+### Bug Fixes
+
+- **central-server:** fix TypeScript errors for Railway build ([2c4b9ee](https://github.com/Tallec7/neopro/commit/2c4b9ee73ebdfcc3dcfe620e051ed041db292688))
+
 # [2.50.0](https://github.com/Tallec7/neopro/compare/v2.49.1...v2.50.0) (2026-02-04)
 
 ### Features
