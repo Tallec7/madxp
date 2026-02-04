@@ -1,3 +1,9 @@
+# [2.49.0](https://github.com/Tallec7/neopro/compare/v2.48.1...v2.49.0) (2026-02-04)
+
+### Features
+
+- **rate-limit:** add piAnalyticsRateLimit 500 req/min for Pi analytics ([e44fea3](https://github.com/Tallec7/neopro/commit/e44fea318dc1d3d7993393d996447041f3b17bad))
+
 ## [2.48.1](https://github.com/Tallec7/neopro/compare/v2.48.0...v2.48.1) (2026-01-25)
 
 ### Bug Fixes
