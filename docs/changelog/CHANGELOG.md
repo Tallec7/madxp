@@ -1,3 +1,9 @@
+# [2.50.0](https://github.com/Tallec7/neopro/compare/v2.49.1...v2.50.0) (2026-02-04)
+
+### Features
+
+- **analytics:** add realtime dashboard and Excel export ([ecb08c0](https://github.com/Tallec7/neopro/commit/ecb08c0669ff310e6416765bdf410cdc2107dfc5))
+
 ## [2.49.1](https://github.com/Tallec7/neopro/compare/v2.49.0...v2.49.1) (2026-02-04)
 
 ### Bug Fixes
