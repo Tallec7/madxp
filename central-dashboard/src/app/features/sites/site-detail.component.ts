@@ -50,9 +50,6 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
             [externalStatus]="connectionStatus"
           ></app-connection-indicator>
         </div>
-        <button class="btn btn-primary" [routerLink]="['/sites', siteId, 'analytics']">
-          📊 Analytics
-        </button>
       </div>
 
       <!-- Network Alert Banner -->

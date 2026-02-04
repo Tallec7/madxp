@@ -84,10 +84,6 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
             <span class="icon" aria-hidden="true">🔄</span>
             <span>{{ 'nav.updates' | translate }}</span>
           </a>
-          <a routerLink="/analytics" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()" [attr.aria-label]="'nav.analytics' | translate">
-            <span class="icon" aria-hidden="true">📈</span>
-            <span>{{ 'nav.analytics' | translate }}</span>
-          </a>
 
           <div class="nav-section" *ngIf="isAdmin()" role="group" [attr.aria-label]="'nav.administration' | translate">
             <div class="nav-section-title" id="admin-section">{{ 'nav.administration' | translate }}</div>
@@ -102,10 +98,6 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
             <a routerLink="/admin/agencies" routerLinkActive="active" class="nav-item" aria-describedby="admin-section" [attr.aria-label]="'nav.agencies' | translate">
               <span class="icon" aria-hidden="true">🏢</span>
               <span>{{ 'nav.agencies' | translate }}</span>
-            </a>
-            <a routerLink="/admin/analytics-categories" routerLinkActive="active" class="nav-item" aria-describedby="admin-section" [attr.aria-label]="'nav.analyticsCategories' | translate">
-              <span class="icon" aria-hidden="true">🏷️</span>
-              <span>{{ 'nav.analyticsCategories' | translate }}</span>
             </a>
             <a routerLink="/admin/local" routerLinkActive="active" class="nav-item" aria-describedby="admin-section" [attr.aria-label]="'nav.localConsole' | translate">
               <span class="icon" aria-hidden="true">🛠️</span>

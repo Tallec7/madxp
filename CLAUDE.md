@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.49.0 | **Dernière mise à jour**: 2026-02-04
+**Version**: 2.50.0 | **Dernière mise à jour**: 2026-02-04
 
 ---
 
@@ -78,9 +78,9 @@
 
 | Rôle        | Actions                                   |
 | ----------- | ----------------------------------------- |
-| Super Admin | Tout (users, sites, content, analytics)   |
+| Super Admin | Tout (users, sites, content, abonnements) |
 | Operator    | Gère ses clubs assignés, upload vidéos    |
-| Advertiser  | Upload pubs, voit ses stats d'impressions |
+| Advertiser  | Upload pubs, gère ses vidéos              |
 | Agency      | Gère plusieurs advertisers                |
 | Club Staff  | Utilise la télécommande locale            |
 
@@ -317,17 +317,16 @@ POST   /api/sites/:siteId/draft/deploy  → Déploie (vidéos + config orchestr�
 GET    /api/sites/:siteId/draft/deployment/:id → Progression du déploiement orchestré
 ```
 
-### Analytics
+### Analytics (Backend uniquement - UI supprimée v2.50)
+
+> **Note** : Les pages analytics du dashboard ont été supprimées en v2.50 car les métriques étaient incohérentes.
+> Les endpoints API restent disponibles pour usage programmatique si nécessaire.
 
 ```
-GET /api/analytics/overview           → stats globales
-GET /api/analytics/sites/:id          → stats par site
-GET /api/analytics/daily-stats        → agrégation journalière
-GET /api/analytics/realtime           → stats temps réel (Socket.IO broadcast)
-GET /api/analytics/comparison         → comparaison multi-sites (?site_ids=uuid1,uuid2&days=30)
-GET /api/analytics/clubs/:siteId/export/excel → export Excel club
-GET /api/analytics/overview/export/excel      → export Excel global multi-sites
-GET /api/advertiser-analytics/advertisers/:id/export/excel → export Excel annonceur
+GET /api/analytics/overview           → stats globales (backend only)
+GET /api/analytics/sites/:id          → stats par site (backend only)
+GET /api/analytics/daily-stats        → agrégation journalière (backend only)
+POST /api/analytics/video-plays       → réception analytics depuis les Pi
 ```
 
 ### Subscriptions (v2.47+)
@@ -2059,6 +2058,36 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.50.x (Février 2026)
+
+- **Suppression des pages Analytics Dashboard** : Simplification majeure de l'interface
+  - **Raison** : Les métriques affichées étaient incohérentes et potentiellement trompeuses
+    - "Temps de diffusion" = somme des durées vidéo × lectures (pas le temps écran réel)
+    - "Taux de complétion" = toujours 100% (bug : `video_duration = duration_played`)
+    - "Disponibilité" = mesure la connexion cloud, pas l'usage TV
+    - Spikes de données lors du vidage de buffers accumulés (Pi offline)
+  - **Pages supprimées** :
+    - `/analytics` (vue d'ensemble)
+    - `/analytics/comparison` (comparaison multi-sites)
+    - `/analytics/realtime` (dashboard temps réel)
+    - `/sites/:id/analytics` (analytics par club)
+    - `/admin/analytics-categories` (catégories analytics)
+    - `/advertisers/:id/analytics` (analytics annonceur)
+  - **Fichiers supprimés** :
+    - `central-dashboard/src/app/features/analytics/` (tout le dossier)
+    - `central-dashboard/src/app/features/admin/analytics-categories/`
+  - **Fichiers modifiés** :
+    - `app.routes.ts` - Routes supprimées
+    - `layout.component.ts` - Liens navigation supprimés
+    - `site-detail.component.ts` - Bouton Analytics supprimé
+    - `sites-list.component.ts` - Badge usage supprimé
+  - **Ce qui reste** (essentiel) :
+    - Statut connexion (online/offline/warning) dans site-detail
+    - Métriques système (CPU, RAM, température, disque) dans l'onglet État
+    - Alertes système
+    - API backend analytics conservée (pour réutilisation future si besoin)
+  - **Migration** : Rebuild et redéployer le dashboard
 
 ### v2.49.x (Février 2026)
 

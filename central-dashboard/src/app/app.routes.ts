@@ -50,10 +50,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/sites/site-detail.component').then(m => m.SiteDetailComponent)
       },
       {
-        path: 'sites/:id/analytics',
-        loadComponent: () => import('./features/analytics/club-analytics.component').then(m => m.ClubAnalyticsComponent)
-      },
-      {
         path: 'groups',
         loadComponent: () => import('./features/groups/groups-list.component').then(m => m.GroupsListComponent)
       },
@@ -74,30 +70,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/updates/updates-management.component').then(m => m.UpdatesManagementComponent)
       },
       {
-        path: 'analytics',
-        canActivate: [roleGuard],
-        data: { roles: ['super_admin', 'admin', 'operator'] },
-        loadComponent: () => import('./features/analytics/analytics-overview.component').then(m => m.AnalyticsOverviewComponent)
-      },
-      {
-        path: 'analytics/comparison',
-        canActivate: [roleGuard],
-        data: { roles: ['super_admin', 'admin', 'operator'] },
-        loadComponent: () => import('./features/analytics/analytics-comparison.component').then(m => m.AnalyticsComparisonComponent)
-      },
-      {
-        path: 'analytics/realtime',
-        canActivate: [roleGuard],
-        data: { roles: ['super_admin', 'admin', 'operator'] },
-        loadComponent: () => import('./features/analytics/realtime-dashboard.component').then(m => m.RealtimeDashboardComponent)
-      },
-      {
-        path: 'admin/analytics-categories',
-        canActivate: [roleGuard],
-        data: { roles: ['super_admin', 'admin'] },
-        loadComponent: () => import('./features/admin/analytics-categories/analytics-categories.component').then(m => m.AnalyticsCategoriesComponent)
-      },
-      {
         path: 'admin/local',
         canActivate: [roleGuard],
         data: { roles: ['super_admin', 'admin'] },
@@ -111,10 +83,6 @@ export const routes: Routes = [
       {
         path: 'advertisers/:id',
         loadComponent: () => import('./features/sponsors/sponsor-detail.component').then(m => m.SponsorDetailComponent)
-      },
-      {
-        path: 'advertisers/:id/analytics',
-        loadComponent: () => import('./features/sponsors/sponsor-analytics.component').then(m => m.SponsorAnalyticsComponent)
       },
       {
         path: 'advertisers/:id/videos',
