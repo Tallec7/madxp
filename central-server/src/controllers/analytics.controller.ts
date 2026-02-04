@@ -1311,3 +1311,257 @@ export const generateClubPdfReport = async (req: AuthRequest, res: Response) => 
     res.status(500).json({ error: 'Erreur lors de la génération du rapport PDF' });
   }
 };
+
+// ============================================================================
+// MULTI-SITE COMPARISON
+// ============================================================================
+
+interface ComparisonSiteRow extends QueryRow {
+  id: string;
+  site_name: string;
+  club_name: string;
+  days_active: string;
+  total_videos: string;
+  total_screen_time: string;
+  avg_completion: string;
+}
+
+/**
+ * GET /api/analytics/comparison?site_ids=uuid1,uuid2&days=30
+ * Compare l'activité de plusieurs sites sur une période
+ */
+export const getMultiSiteComparison = async (req: AuthRequest, res: Response) => {
+  try {
+    const { site_ids, days = '30' } = req.query;
+
+    if (!site_ids || typeof site_ids !== 'string') {
+      return res.status(400).json({ error: 'site_ids parameter is required' });
+    }
+
+    const siteIds = site_ids.split(',').filter(id => id.trim());
+
+    if (siteIds.length === 0) {
+      return res.status(400).json({ error: 'At least one site_id is required' });
+    }
+
+    if (siteIds.length > 10) {
+      return res.status(400).json({ error: 'Maximum 10 sites can be compared at once' });
+    }
+
+    // Validate UUIDs
+    for (const id of siteIds) {
+      if (!validateUuid(id.trim())) {
+        return res.status(400).json({ error: `Invalid site_id format: ${id}` });
+      }
+    }
+
+    const daysNum = parseInt(days as string) || 30;
+
+    // Query comparison data
+    const result = await query<ComparisonSiteRow>(`
+      SELECT
+        s.id,
+        s.site_name,
+        s.club_name,
+        COUNT(DISTINCT cds.date)::integer as days_active,
+        COALESCE(SUM(cds.videos_played), 0)::integer as total_videos,
+        COALESCE(SUM(cds.screen_time_seconds), 0)::integer as total_screen_time,
+        COALESCE(AVG(cds.completion_rate), 0)::numeric(5,1) as avg_completion
+      FROM sites s
+      LEFT JOIN club_daily_stats cds ON cds.site_id = s.id
+        AND cds.date > CURRENT_DATE - $2::interval
+      WHERE s.id = ANY($1::uuid[])
+      GROUP BY s.id, s.site_name, s.club_name
+      ORDER BY total_videos DESC
+    `, [siteIds, `${daysNum} days`]);
+
+    // Calculate totals
+    const totals = {
+      total_sites: result.rows.length,
+      total_videos: result.rows.reduce((sum, r) => sum + parseInt(r.total_videos), 0),
+      total_screen_time: result.rows.reduce((sum, r) => sum + parseInt(r.total_screen_time), 0),
+      avg_days_active: result.rows.length > 0
+        ? Math.round(result.rows.reduce((sum, r) => sum + parseInt(r.days_active), 0) / result.rows.length)
+        : 0,
+    };
+
+    res.json({
+      success: true,
+      data: {
+        period_days: daysNum,
+        totals,
+        sites: result.rows.map(site => ({
+          id: site.id,
+          site_name: site.site_name,
+          club_name: site.club_name,
+          days_active: parseInt(site.days_active),
+          total_videos: parseInt(site.total_videos),
+          total_screen_time: parseInt(site.total_screen_time),
+          total_screen_time_formatted: formatDuration(parseInt(site.total_screen_time)),
+          avg_completion: parseFloat(site.avg_completion as unknown as string) || 0,
+        })),
+      },
+    });
+
+  } catch (error) {
+    logger.error('Multi-site comparison error:', error);
+    res.status(500).json({ error: 'Erreur lors de la comparaison des sites' });
+  }
+};
+
+/**
+ * GET /api/analytics/realtime
+ * Retourne les statistiques en temps réel pour le dashboard live
+ */
+export const getRealtimeStats = async (req: AuthRequest, res: Response) => {
+  try {
+    const { realtimeStatsService } = await import('../services/realtime-stats.service');
+    const stats = await realtimeStatsService.getStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    logger.error('Realtime stats error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des stats temps réel' });
+  }
+};
+
+// ============================================================================
+// EXCEL EXPORT
+// ============================================================================
+
+/**
+ * GET /api/analytics/clubs/:siteId/export/excel
+ * Export Excel avancé pour un club
+ */
+export const exportClubExcel = async (req: AuthRequest, res: Response) => {
+  try {
+    const { siteId } = req.params;
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ error: 'Paramètres from et to requis (format YYYY-MM-DD)' });
+    }
+
+    // Vérifier que le site existe
+    const siteResult = await query<SiteRow>('SELECT id, site_name, club_name FROM sites WHERE id = $1', [siteId]);
+    if (siteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    const site = siteResult.rows[0];
+
+    // Import dynamique du service Excel
+    const { excelExportService } = await import('../services/excel-export.service');
+
+    logger.info('Generating club Excel export', { siteId, from, to, requestedBy: req.user?.email });
+
+    const buffer = await excelExportService.generateClubExport({
+      siteId,
+      startDate: String(from),
+      endDate: String(to),
+      type: 'club',
+    });
+
+    const filename = `analytics-${site.club_name || site.site_name}-${from}-${to}.xlsx`
+      .replace(/[^a-zA-Z0-9\-_.]/g, '_');
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+
+    res.send(buffer);
+
+    logger.info('Club Excel export generated', { siteId, from, to, size: buffer.length });
+  } catch (error) {
+    logger.error('Export club Excel error:', error);
+    res.status(500).json({ error: 'Erreur lors de la génération de l\'export Excel' });
+  }
+};
+
+/**
+ * GET /api/analytics/advertisers/:advertiserId/export/excel
+ * Export Excel avancé pour un annonceur
+ */
+export const exportAdvertiserExcel = async (req: AuthRequest, res: Response) => {
+  try {
+    const { advertiserId } = req.params;
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ error: 'Paramètres from et to requis (format YYYY-MM-DD)' });
+    }
+
+    // Vérifier que l'annonceur existe
+    interface AdvertiserRow extends QueryRow {
+      id: string;
+      name: string;
+    }
+    const advertiserResult = await query<AdvertiserRow>('SELECT id, name FROM advertisers WHERE id = $1', [advertiserId]);
+    if (advertiserResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Annonceur non trouvé' });
+    }
+
+    const advertiser = advertiserResult.rows[0];
+
+    const { excelExportService } = await import('../services/excel-export.service');
+
+    logger.info('Generating advertiser Excel export', { advertiserId, from, to, requestedBy: req.user?.email });
+
+    const buffer = await excelExportService.generateAdvertiserExport({
+      advertiserId,
+      startDate: String(from),
+      endDate: String(to),
+      type: 'advertiser',
+    });
+
+    const filename = `analytics-${advertiser.name}-${from}-${to}.xlsx`
+      .replace(/[^a-zA-Z0-9\-_.]/g, '_');
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+
+    res.send(buffer);
+
+    logger.info('Advertiser Excel export generated', { advertiserId, from, to, size: buffer.length });
+  } catch (error) {
+    logger.error('Export advertiser Excel error:', error);
+    res.status(500).json({ error: 'Erreur lors de la génération de l\'export Excel' });
+  }
+};
+
+/**
+ * GET /api/analytics/overview/export/excel
+ * Export Excel overview multi-sites
+ */
+export const exportOverviewExcel = async (req: AuthRequest, res: Response) => {
+  try {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ error: 'Paramètres from et to requis (format YYYY-MM-DD)' });
+    }
+
+    const { excelExportService } = await import('../services/excel-export.service');
+
+    logger.info('Generating overview Excel export', { from, to, requestedBy: req.user?.email });
+
+    const buffer = await excelExportService.generateOverviewExport({
+      startDate: String(from),
+      endDate: String(to),
+      type: 'overview',
+    });
+
+    const filename = `analytics-global-${from}-${to}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+
+    res.send(buffer);
+
+    logger.info('Overview Excel export generated', { from, to, size: buffer.length });
+  } catch (error) {
+    logger.error('Export overview Excel error:', error);
+    res.status(500).json({ error: 'Erreur lors de la génération de l\'export Excel global' });
+  }
+};

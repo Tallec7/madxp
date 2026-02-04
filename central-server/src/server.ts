@@ -21,6 +21,7 @@ import memoryManagerService from './services/memory-manager.service';
 import networkAlertsService from './services/network-alerts.service';
 import { adminOpsService } from './services/admin-ops.service';
 import { alertingService } from './services/alerting.service';
+import { realtimeStatsService } from './services/realtime-stats.service';
 
 import authRoutes from './routes/auth.routes';
 import mfaRoutes from './routes/mfa.routes';
@@ -45,6 +46,7 @@ import draftsRoutes from './routes/drafts.routes';
 import assetsRoutes from './routes/assets.routes';
 import remoteRoutes from './routes/remote.routes';
 import subscriptionRoutes from './routes/subscription.routes';
+import billingRoutes from './routes/billing.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 import { correlationMiddleware } from './middleware/correlation';
@@ -330,6 +332,7 @@ app.use('/api/logs', loggingRateLimit, logsRoutes); // Frontend log ingestion - 
 app.use('/api/assets', sensitiveRateLimit, assetsRoutes); // Assets (watermarks, logos) - sensible
 app.use('/api/remote', remoteRoutes); // Remote cloud - rate limits per-route
 app.use('/api/subscriptions', subscriptionRoutes); // Subscription management - rate limits per-route
+app.use('/api/billing', billingRoutes); // Billing export - admin only
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler
 // Uses standardized error format with correlation ID
@@ -373,6 +376,14 @@ const startServer = async () => {
     // Demarrer le service d'alertes reseau (Phase 4 - Network Resilience)
     networkAlertsService.start();
     logger.info('Network alerts service started');
+
+    // Initialiser et démarrer le service de stats temps réel
+    const io = socketService.getIO();
+    if (io) {
+      realtimeStatsService.initialize(io);
+      realtimeStatsService.start();
+      logger.info('Realtime stats service started');
+    }
 
     // Start memory manager with cleanup callbacks
     memoryManagerService.registerCleanupCallback(() => {

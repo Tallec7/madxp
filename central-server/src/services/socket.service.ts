@@ -1708,6 +1708,13 @@ class SocketService {
   isRedisConnected(): boolean {
     return this.redisClient !== null && this.redisClient.isOpen;
   }
+
+  /**
+   * Retourne l'instance Socket.IO pour les services externes
+   */
+  getIO(): SocketIOServer | null {
+    return this.io;
+  }
 }
 
 export default new SocketService();

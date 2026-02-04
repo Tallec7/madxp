@@ -80,6 +80,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/analytics/analytics-overview.component').then(m => m.AnalyticsOverviewComponent)
       },
       {
+        path: 'analytics/comparison',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'operator'] },
+        loadComponent: () => import('./features/analytics/analytics-comparison.component').then(m => m.AnalyticsComparisonComponent)
+      },
+      {
+        path: 'analytics/realtime',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'operator'] },
+        loadComponent: () => import('./features/analytics/realtime-dashboard.component').then(m => m.RealtimeDashboardComponent)
+      },
+      {
         path: 'admin/analytics-categories',
         canActivate: [roleGuard],
         data: { roles: ['super_admin', 'admin'] },

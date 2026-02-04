@@ -67,6 +67,9 @@ import { SubscriptionBadgeComponent } from '../../shared/components/subscription
               <span class="badge" [class]="'badge-' + getRealTimeStatusBadge(site)">
                 {{ getRealTimeStatusText(site) }}
               </span>
+              <span class="badge badge-usage" [class]="getUsageBadgeClass(site)" [title]="getUsageTooltip(site)">
+                {{ getUsageLabel(site) }}
+              </span>
               <app-subscription-badge
                 [subscriptionEnd]="site.subscription_end ?? null"
                 [plan]="site.subscription_plan ?? 'standard'"
@@ -298,6 +301,35 @@ import { SubscriptionBadgeComponent } from '../../shared/components/subscription
       gap: 6px;
       align-items: center;
       flex-shrink: 0;
+    }
+
+    /* Badge usage 30j */
+    .badge-usage {
+      font-size: 0.6875rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+      cursor: help;
+    }
+
+    .badge-usage.usage-high {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-usage.usage-medium {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-usage.usage-low {
+      background: #fed7aa;
+      color: #c2410c;
+    }
+
+    .badge-usage.usage-none {
+      background: #f1f5f9;
+      color: #64748b;
     }
 
     .site-name {
@@ -697,6 +729,45 @@ export class SitesListComponent implements OnInit, OnDestroy {
       unknown: 'Inconnu'
     };
     return texts[status];
+  }
+
+  /**
+   * Retourne le label d'usage basé sur l'activité des 30 derniers jours
+   */
+  getUsageLabel(site: Site): string {
+    const days = site.usage_30d?.days_active || 0;
+    if (days >= 25) return 'Très actif';
+    if (days >= 15) return 'Actif';
+    if (days >= 5) return 'Peu actif';
+    return 'En veille';
+  }
+
+  /**
+   * Retourne la classe CSS pour le badge usage
+   */
+  getUsageBadgeClass(site: Site): string {
+    const days = site.usage_30d?.days_active || 0;
+    if (days >= 25) return 'usage-high';
+    if (days >= 15) return 'usage-medium';
+    if (days >= 5) return 'usage-low';
+    return 'usage-none';
+  }
+
+  /**
+   * Retourne le tooltip avec les détails d'usage
+   */
+  getUsageTooltip(site: Site): string {
+    const usage = site.usage_30d;
+    if (!usage) return 'Aucune donnée d\'usage sur les 30 derniers jours';
+
+    const days = usage.days_active || 0;
+    const videos = usage.total_videos || 0;
+
+    if (days === 0) {
+      return 'Aucune lecture de vidéo sur les 30 derniers jours (pas de match ?)';
+    }
+
+    return `${days} jours avec lectures sur 30j (${videos} vidéos)`;
   }
 
   formatLastSeen(date: Date | null): string {

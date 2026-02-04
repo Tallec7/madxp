@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.48.1 | **Dernière mise à jour**: 2026-02-04
+**Version**: 2.49.0 | **Dernière mise à jour**: 2026-02-04
 
 ---
 
@@ -323,7 +323,11 @@ GET    /api/sites/:siteId/draft/deployment/:id → Progression du déploiement o
 GET /api/analytics/overview           → stats globales
 GET /api/analytics/sites/:id          → stats par site
 GET /api/analytics/daily-stats        → agrégation journalière
-GET /api/advertiser-analytics/...     → stats annonceurs
+GET /api/analytics/realtime           → stats temps réel (Socket.IO broadcast)
+GET /api/analytics/comparison         → comparaison multi-sites (?site_ids=uuid1,uuid2&days=30)
+GET /api/analytics/clubs/:siteId/export/excel → export Excel club
+GET /api/analytics/overview/export/excel      → export Excel global multi-sites
+GET /api/advertiser-analytics/advertisers/:id/export/excel → export Excel annonceur
 ```
 
 ### Subscriptions (v2.47+)
@@ -2055,6 +2059,55 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v2.49.x (Février 2026)
+
+- **Dashboard Temps Réel** : Statistiques live de la flotte avec Socket.IO
+  - **Fonctionnalités** :
+    - Cartes sites (online, offline, warning) mises à jour toutes les 10s
+    - Compteur lectures vidéo par minute et par heure
+    - Impressions annonceurs en temps réel
+    - Top contenu de l'heure en cours
+    - Indicateurs santé flotte (CPU, RAM, température moyens)
+    - Tendances (hausse/baisse) comparées à l'heure précédente
+  - **Backend** : Service `realtime-stats.service.ts` avec broadcast Socket.IO sur room `admin-dashboard`
+  - **Frontend** : Composant `realtime-dashboard.component.ts` accessible via `/analytics/realtime`
+  - **Fichiers** :
+    - `central-server/src/services/realtime-stats.service.ts`
+    - `central-dashboard/src/app/features/analytics/realtime-dashboard.component.ts`
+
+- **Export Excel Avancé** : Exports multi-feuilles avec mise en forme conditionnelle
+  - **Fonctionnalités** :
+    - Export club : Résumé, Évolution journalière, Catégories, Top Vidéos
+    - Export annonceur : Résumé, Performance par site, Performance par vidéo, Évolution
+    - Export global : Vue d'ensemble, Tous les sites, Top Performers
+    - Mise en forme conditionnelle (couleurs selon seuils)
+    - Médailles 🥇🥈🥉 pour les classements
+    - Filtres automatiques sur les tableaux
+  - **Routes API** :
+    - `GET /api/analytics/clubs/:siteId/export/excel`
+    - `GET /api/analytics/advertisers/:advertiserId/export/excel`
+    - `GET /api/analytics/overview/export/excel`
+  - **Fichiers** :
+    - `central-server/src/services/excel-export.service.ts`
+  - **Dépendance** : `npm install exceljs` dans central-server
+
+- **Vue Comparative Multi-Sites** : Comparaison d'activité entre plusieurs clubs
+  - **Fonctionnalités** :
+    - Sélection de 2-10 sites à comparer
+    - Graphique comparatif (vidéos jouées, jours actifs)
+    - Tableau récapitulatif avec totaux
+  - **Route API** : `GET /api/analytics/comparison?site_ids=uuid1,uuid2&days=30`
+  - **Frontend** : `/analytics/comparison`
+
+- **Amélioration UX badges liste sites** : Labels plus clairs pour l'activité
+  - **Changements** :
+    - "Inactif" → "En veille" (couleur gris neutre au lieu de rouge)
+    - "Faible" → "Peu actif"
+    - "Moyen" → "Actif"
+    - "Actif" → "Très actif"
+  - **Tooltip amélioré** : "Aucune lecture sur les 30 derniers jours (pas de match ?)"
+  - **Impact** : Évite la confusion entre connexion (Connecté) et usage (En veille)
 
 ### v2.48.x (Février 2026)
 

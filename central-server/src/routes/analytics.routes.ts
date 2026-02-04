@@ -46,6 +46,9 @@ router.get('/clubs/:siteId/export', authenticate, analyticsController.exportClub
 // GET /api/analytics/clubs/:siteId/report/pdf - Générer rapport PDF
 router.get('/clubs/:siteId/report/pdf', authenticate, analyticsController.generateClubPdfReport);
 
+// GET /api/analytics/clubs/:siteId/export/excel - Export Excel avancé club
+router.get('/clubs/:siteId/export/excel', authenticate, analyticsController.exportClubExcel);
+
 // POST /api/analytics/calculate-daily-stats - Calcul stats quotidiennes (cron/admin)
 router.post(
   '/calculate-daily-stats',
@@ -56,6 +59,15 @@ router.post(
 
 // GET /api/analytics/overview - Vue d'ensemble tous sites (admin)
 router.get('/overview', authenticate, requireRole('admin', 'operator'), analyticsController.getAnalyticsOverview);
+
+// GET /api/analytics/overview/export/excel - Export Excel global multi-sites
+router.get('/overview/export/excel', authenticate, requireRole('admin', 'operator'), analyticsController.exportOverviewExcel);
+
+// GET /api/analytics/comparison - Comparaison multi-sites (admin/operator)
+router.get('/comparison', authenticate, requireRole('admin', 'operator'), analyticsController.getMultiSiteComparison);
+
+// GET /api/analytics/realtime - Stats temps réel pour dashboard live
+router.get('/realtime', authenticate, requireRole('admin', 'operator'), analyticsController.getRealtimeStats);
 
 // ============================================================================
 // Analytics Categories Management

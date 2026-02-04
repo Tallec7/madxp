@@ -118,6 +118,15 @@ router.get(
   generateAdvertiserPdfReport
 );
 
+// Export Excel avancé pour un annonceur
+// Query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD
+import * as analyticsController from '../controllers/analytics.controller';
+router.get(
+  '/advertisers/:advertiserId/export/excel',
+  authenticate,
+  analyticsController.exportAdvertiserExcel
+);
+
 // Générer un rapport PDF pour un club
 // Query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD
 router.get(
