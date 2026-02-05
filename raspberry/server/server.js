@@ -340,6 +340,101 @@ app.get('/api/sync/sponsor-impressions/stats', (req, res) => {
 });
 
 // ============================================================================
+// HDMI-CEC STATUS ENDPOINT
+// Retourne l'état de la TV via HDMI-CEC (allumée, veille, déconnectée)
+// Utilisé par AnalyticsService pour ne tracker que si la TV est allumée
+// ============================================================================
+const { exec } = require('child_process');
+const util = require('util');
+const execAsync = util.promisify(exec);
+
+// Cache pour éviter de spammer cec-client
+let hdmiCecCache = {
+	status: null,
+	lastCheck: 0,
+	CACHE_TTL: 10000 // 10 secondes
+};
+
+app.get('/api/hdmi-status', async (req, res) => {
+	try {
+		const now = Date.now();
+
+		// Retourner le cache si récent
+		if (hdmiCecCache.status && (now - hdmiCecCache.lastCheck) < hdmiCecCache.CACHE_TTL) {
+			return res.json(hdmiCecCache.status);
+		}
+
+		const cecStatus = {
+			tv_power: null,
+			tv_connected: false,
+			devices_found: 0,
+			cec_available: false,
+			last_check_at: new Date().toISOString(),
+			error: null,
+		};
+
+		// Vérifier si cec-client est installé
+		try {
+			await execAsync('which cec-client', { timeout: 2000 });
+			cecStatus.cec_available = true;
+		} catch {
+			cecStatus.cec_available = false;
+			cecStatus.error = 'cec-client not installed';
+			hdmiCecCache.status = cecStatus;
+			hdmiCecCache.lastCheck = now;
+			return res.json(cecStatus);
+		}
+
+		// Récupérer l'état de la TV (device 0 = TV)
+		try {
+			const { stdout } = await execAsync(
+				'echo "pow 0" | timeout 5 cec-client -s -d 1 2>/dev/null',
+				{ timeout: 8000 }
+			);
+
+			// Parser la réponse
+			if (stdout.includes('power status: on')) {
+				cecStatus.tv_power = 'on';
+				cecStatus.tv_connected = true;
+			} else if (stdout.includes('power status: standby')) {
+				cecStatus.tv_power = 'standby';
+				cecStatus.tv_connected = true;
+			} else if (stdout.includes('power status: in transition')) {
+				cecStatus.tv_power = 'transitioning';
+				cecStatus.tv_connected = true;
+			} else if (stdout.includes('power status:')) {
+				cecStatus.tv_power = 'unknown';
+				cecStatus.tv_connected = true;
+			} else {
+				cecStatus.tv_power = null;
+				cecStatus.tv_connected = false;
+				cecStatus.error = 'TV not responding to CEC';
+			}
+
+			// Compter les appareils CEC détectés
+			const devicesMatch = stdout.match(/device #(\d+):/g);
+			if (devicesMatch) {
+				cecStatus.devices_found = devicesMatch.length;
+			}
+
+		} catch (cecError) {
+			cecStatus.error = cecError.message;
+			cecStatus.tv_connected = false;
+			console.warn('[HDMI-CEC] Check failed:', cecError.message);
+		}
+
+		// Mettre en cache
+		hdmiCecCache.status = cecStatus;
+		hdmiCecCache.lastCheck = now;
+
+		res.json(cecStatus);
+	} catch (error) {
+		console.error('[HDMI-CEC] Error:', error);
+		res.status(500).json({ error: error.message });
+	}
+});
+
+// ============================================================================
 // PERSISTANCE DU SCORE EN MÉMOIRE
 // Le score est conservé côté serveur pour éviter le reset au refresh
 // ============================================================================

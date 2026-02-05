@@ -783,6 +783,10 @@ CREATE INDEX IF NOT EXISTS idx_advertiser_daily_stats_advertiser ON advertiser_d
 ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS video_id UUID REFERENCES videos(id) ON DELETE SET NULL;
 ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS sponsor_id UUID REFERENCES advertisers(id) ON DELETE SET NULL;
 ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS analytics_category VARCHAR(50);
+-- tv_status: HDMI-CEC status - 'on' (visible), 'standby' (TV off), 'disconnected', 'unknown'
+-- Only 'on' and 'unknown' should be counted in stats (videos actually visible)
+ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS tv_status VARCHAR(20) DEFAULT 'unknown';
+CREATE INDEX IF NOT EXISTS idx_video_plays_tv_status ON video_plays(tv_status);
 
 -- Vue pending_commands_summary
 CREATE OR REPLACE VIEW pending_commands_summary AS

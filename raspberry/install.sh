@@ -329,8 +329,12 @@ install_dependencies() {
         unclutter \
         xdotool \
         x11-xserver-utils \
-        chromium
+        chromium \
+        cec-utils \
+        ffmpeg
 
+    # cec-utils: Permet de détecter si la TV est allumée via HDMI-CEC (pour analytics fiables)
+    # ffmpeg: Permet d'extraire la durée des vidéos (ffprobe)
     print_success "Dépendances installées"
 }
 

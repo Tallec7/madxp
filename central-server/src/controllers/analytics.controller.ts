@@ -454,9 +454,13 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
             ? play.sponsor_id
             : null;
 
+        // Validate tv_status (on, standby, disconnected, unknown)
+        const validTvStatuses = ['on', 'standby', 'disconnected', 'unknown'];
+        const tvStatus = validTvStatuses.includes(play.tv_status) ? play.tv_status : 'unknown';
+
         await query(
-          `INSERT INTO video_plays (site_id, session_id, video_filename, category, played_at, duration_played, video_duration, completed, trigger_type, video_id, sponsor_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          `INSERT INTO video_plays (site_id, session_id, video_filename, category, played_at, duration_played, video_duration, completed, trigger_type, video_id, sponsor_id, tv_status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
           [
             site_id,
             sessionId,
@@ -469,6 +473,7 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
             play.trigger_type || 'auto',
             videoId,
             sponsorId,
+            tvStatus,
           ]
         );
         insertedCount++;

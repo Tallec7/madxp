@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Video } from '../interfaces/video.interface';
 import { Configuration } from '../interfaces/configuration.interface';
 import { environment } from '../../environments/environment';
+import { HdmiStatusService } from './hdmi-status.service';
 
 /**
  * Interface pour un événement de lecture vidéo
@@ -20,6 +21,14 @@ export interface VideoPlayEvent {
   video_id?: string;
   /** UUID du sponsor associé (si applicable) */
   sponsor_id?: string;
+  /**
+   * État de la TV au moment de la lecture
+   * - 'on' : TV allumée, vidéo visible
+   * - 'standby' : TV en veille, vidéo NON visible (à exclure des stats)
+   * - 'disconnected' : TV débranchée ou éteinte, vidéo NON visible (à exclure des stats)
+   * - 'unknown' : CEC non disponible, on ne peut pas savoir
+   */
+  tv_status?: 'on' | 'standby' | 'disconnected' | 'unknown';
 }
 
 /**
@@ -29,12 +38,14 @@ export interface VideoPlayEvent {
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
   private readonly http = inject(HttpClient);
+  private readonly hdmiStatus = inject(HdmiStatusService);
 
   private buffer: VideoPlayEvent[] = [];
   private currentSession: string | null = null;
   private currentVideoStart: Date | null = null;
   private currentVideo: Video | null = null;
   private currentTriggerType: 'auto' | 'manual' = 'auto';
+  private currentTvStatus: 'on' | 'standby' | 'disconnected' | 'unknown' = 'unknown';
   private isSending = false;
 
   // Configuration courante avec le mapping des catégories
@@ -99,6 +110,7 @@ export class AnalyticsService {
 
   /**
    * Tracker le début d'une lecture vidéo
+   * Capture également l'état de la TV via HDMI-CEC
    */
   public trackVideoStart(video: Video, triggerType: 'auto' | 'manual' = 'auto'): void {
     // Si une vidéo était en cours, la terminer comme incomplète
@@ -110,9 +122,13 @@ export class AnalyticsService {
     this.currentVideoStart = new Date();
     this.currentTriggerType = triggerType;
 
+    // Capturer l'état de la TV au moment du démarrage
+    this.currentTvStatus = this.hdmiStatus.getTvStatusForAnalytics();
+
     console.log('[Analytics] Video started:', {
       filename: this.getFilename(video.path),
       triggerType,
+      tvStatus: this.currentTvStatus,
       session: this.currentSession,
     });
   }
@@ -140,7 +156,23 @@ export class AnalyticsService {
       // Métadonnées pour le tracking (depuis la configuration déployée)
       video_id: this.currentVideo.video_id,
       sponsor_id: this.currentVideo.sponsor_id,
+      // État de la TV au moment de la lecture
+      tv_status: this.currentTvStatus,
     };
+
+    // NE PAS tracker si la TV est éteinte ou en veille (sauf si CEC non disponible)
+    // Cela évite de gonfler les stats avec des vidéos non visibles
+    if (this.currentTvStatus === 'standby' || this.currentTvStatus === 'disconnected') {
+      console.log('[Analytics] Skipping event - TV not on:', {
+        filename: event.video_filename,
+        tvStatus: this.currentTvStatus,
+      });
+      // Reset
+      this.currentVideo = null;
+      this.currentVideoStart = null;
+      this.currentTvStatus = 'unknown';
+      return;
+    }
 
     this.buffer.push(event);
 
@@ -151,12 +183,14 @@ export class AnalyticsService {
       sponsor_id: event.sponsor_id,
       duration: durationPlayed,
       completed,
+      tvStatus: event.tv_status,
       bufferSize: this.buffer.length,
     });
 
     // Reset
     this.currentVideo = null;
     this.currentVideoStart = null;
+    this.currentTvStatus = 'unknown';
 
     // Flush si le buffer est plein
     if (this.buffer.length >= this.MAX_BUFFER_SIZE) {

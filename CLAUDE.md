@@ -2096,6 +2096,32 @@ vcgencmd get_mem gpu
 
 ### v3.0.0 (Février 2026)
 
+- **Détection HDMI-CEC pour analytics fiables** : Les lectures vidéo ne sont trackées que si la TV est réellement allumée
+  - **Problème résolu** : Avant, le Pi enregistrait toutes les lectures même si la TV était éteinte/en veille, gonflant artificiellement les stats (ex: 1200h/jour, 3000 vidéos alors que la TV était débranchée)
+  - **Solution** : Utilisation de HDMI-CEC pour détecter l'état de la TV (`on`, `standby`, `disconnected`, `unknown`)
+  - **Comportement** :
+    - `tv_status = 'on'` : Vidéo trackée (comptée dans les stats)
+    - `tv_status = 'standby'` : Vidéo ignorée (TV en veille)
+    - `tv_status = 'disconnected'` : Vidéo ignorée (HDMI débranché)
+    - `tv_status = 'unknown'` : Vidéo trackée (CEC non disponible, on ne peut pas savoir)
+  - **Nouveaux fichiers** :
+    - `raspberry/src/app/services/hdmi-status.service.ts` - Service Angular pour surveiller l'état HDMI
+    - `central-server/src/scripts/migrations/add-tv-status-analytics.sql` - Migration DB
+  - **Fichiers modifiés** :
+    - `raspberry/server/server.js` - Nouvel endpoint `/api/hdmi-status` utilisant `cec-client`
+    - `raspberry/src/app/services/analytics.service.ts` - Capture `tv_status` et filtre les lectures
+    - `central-server/src/controllers/analytics.controller.ts` - Accepte le champ `tv_status`
+    - `central-server/src/scripts/full-schema.sql` - Colonne `tv_status` sur `video_plays`
+  - **Prérequis Pi** : `cec-client` doit être installé (`sudo apt install cec-utils`)
+  - **Migration** :
+
+    ```bash
+    # Exécuter la migration SQL sur Supabase
+    # Copier le contenu de add-tv-status-analytics.sql
+
+    # Redéployer le central-server, le dashboard, et le sync-agent sur les Pi
+    ```
+
 - **Option fond flou automatique pour conversion image → vidéo** : Les images portrait s'affichent maintenant avec un fond esthétique
   - **Fonctionnalité** : Nouvelle option "✨ Fond flou automatique" dans le modal de conversion image
   - **Prévisualisation live** : L'aperçu montre en temps réel l'effet du fond flou avant conversion
