@@ -15,6 +15,10 @@ export interface SponsorDashboard {
     total_impressions_30d: number;
     total_screen_time_30d: number;
     avg_completion_rate: number;
+    // Nouvelles métriques reach
+    total_reach_30d: number;
+    matches_with_ads_30d: number;
+    avg_audience_per_match: number;
   };
   trends: Array<{
     date: string;

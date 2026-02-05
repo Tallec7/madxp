@@ -62,6 +62,45 @@ import { SponsorPortalService, SponsorDashboard, SponsorSite, SponsorVideo } fro
         </div>
       </div>
 
+      <!-- Nouvelles métriques Reach -->
+      <div class="reach-section" *ngIf="hasReachData()">
+        <h2 class="section-title">📊 Portée & Audience</h2>
+        <div class="reach-grid">
+          <div class="reach-card">
+            <div class="reach-icon">👥</div>
+            <div class="reach-content">
+              <div class="reach-value">{{ formatNumber(dashboard?.stats?.total_reach_30d) }}</div>
+              <div class="reach-label">Spectateurs exposés</div>
+              <div class="reach-hint">Audience totale des matchs où vos vidéos ont été diffusées</div>
+            </div>
+          </div>
+          <div class="reach-card">
+            <div class="reach-icon">🏟️</div>
+            <div class="reach-content">
+              <div class="reach-value">{{ dashboard?.stats?.matches_with_ads_30d || 0 }}</div>
+              <div class="reach-label">Matchs avec diffusion</div>
+              <div class="reach-hint">Nombre de matchs où vos publicités ont été vues</div>
+            </div>
+          </div>
+          <div class="reach-card">
+            <div class="reach-icon">📈</div>
+            <div class="reach-content">
+              <div class="reach-value">{{ dashboard?.stats?.avg_audience_per_match || 0 }}</div>
+              <div class="reach-label">Audience moyenne / match</div>
+              <div class="reach-hint">Nombre moyen de spectateurs par match</div>
+            </div>
+          </div>
+          <div class="reach-card highlight">
+            <div class="reach-icon">💰</div>
+            <div class="reach-content">
+              <div class="reach-value">{{ calculateCPM() }}</div>
+              <div class="reach-label">CPM estimé</div>
+              <div class="reach-hint">Coût pour 1000 impressions (contactez-nous pour plus de détails)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="content-grid">
         <div class="card">
           <div class="card-header">
@@ -364,6 +403,78 @@ import { SponsorPortalService, SponsorDashboard, SponsorSite, SponsorVideo } fro
     .badge-active { background: #dcfce7; color: #166534; }
     .badge-inactive { background: #f1f5f9; color: #475569; }
     .badge-paused { background: #fef3c7; color: #92400e; }
+
+    /* Section Reach */
+    .reach-section {
+      margin-bottom: 2rem;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #0f172a;
+      margin-bottom: 1rem;
+    }
+
+    .reach-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+
+    .reach-card {
+      display: flex;
+      gap: 1rem;
+      padding: 1.5rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+    }
+
+    .reach-card.highlight {
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border-color: #0ea5e9;
+    }
+
+    .reach-icon {
+      font-size: 2rem;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f1f5f9;
+      border-radius: 12px;
+    }
+
+    .reach-card.highlight .reach-icon {
+      background: white;
+    }
+
+    .reach-content {
+      flex: 1;
+    }
+
+    .reach-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .reach-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #475569;
+      margin-top: 0.25rem;
+    }
+
+    .reach-hint {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 0.375rem;
+      line-height: 1.4;
+    }
   `]
 })
 export class SponsorDashboardComponent implements OnInit {
@@ -426,5 +537,25 @@ export class SponsorDashboardComponent implements OnInit {
 
   getTrendHeight(impressions: number): number {
     return (impressions / this.maxImpressions) * 100;
+  }
+
+  calculateCPM(): string {
+    // Le CPM (Coût Pour Mille) nécessite un budget configuré
+    // Pour l'instant, on affiche un message indiquant que c'est à configurer
+    // Dans une future version, on pourrait ajouter un champ budget à l'annonceur
+    const impressions = this.dashboard?.stats?.total_impressions_30d || 0;
+    const reach = this.dashboard?.stats?.total_reach_30d || 0;
+
+    if (impressions === 0) {
+      return 'N/A';
+    }
+
+    // Estimation basée sur un tarif indicatif (à remplacer par le vrai budget)
+    // On pourrait montrer "Contactez-nous" si pas de budget configuré
+    return 'Contactez-nous';
+  }
+
+  hasReachData(): boolean {
+    return (this.dashboard?.stats?.total_reach_30d ?? 0) > 0;
   }
 }

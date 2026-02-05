@@ -41,6 +41,15 @@ interface HealthIssue {
   lastError?: string | null;
 }
 
+interface HdmiCecStatus {
+  tv_power: 'on' | 'standby' | 'transitioning' | 'unknown' | null;
+  tv_connected: boolean;
+  devices_found: number;
+  cec_available: boolean;
+  last_check_at: string | null;
+  error: string | null;
+}
+
 interface HealthStatus {
   success: boolean;
   timestamp: string;
@@ -57,6 +66,7 @@ interface HealthStatus {
     uptime: number;
     localIp: string | null;
   } | null;
+  hdmiCecStatus?: HdmiCecStatus;
   system: {
     hostname: string;
     os: string;
@@ -374,6 +384,41 @@ interface WifiBssidStatus {
               </div>
               <div class="throttle-flags" *ngIf="healthStatus.gpu.throttled_flags && healthStatus.gpu.throttled_flags.length > 0">
                 <span class="flag-item" *ngFor="let flag of healthStatus.gpu.throttled_flags">{{ flag }}</span>
+              </div>
+            </div>
+
+            <!-- HDMI-CEC TV Status -->
+            <div class="health-section" *ngIf="healthStatus.hdmiCecStatus">
+              <h5>📺 État TV (HDMI-CEC)</h5>
+              <div class="health-grid">
+                <div class="health-metric" [class.metric-warning]="healthStatus.hdmiCecStatus.tv_power === 'standby'" [class.metric-ok]="healthStatus.hdmiCecStatus.tv_power === 'on'">
+                  <span class="metric-label">Alimentation TV</span>
+                  <span class="metric-value">
+                    {{ getTvPowerLabel(healthStatus.hdmiCecStatus.tv_power) }}
+                  </span>
+                </div>
+                <div class="health-metric" [class.metric-ok]="healthStatus.hdmiCecStatus.tv_connected" [class.metric-warning]="!healthStatus.hdmiCecStatus.tv_connected">
+                  <span class="metric-label">Connexion HDMI</span>
+                  <span class="metric-value">
+                    {{ healthStatus.hdmiCecStatus.tv_connected ? '✅ Connected' : '❌ Not detected' }}
+                  </span>
+                </div>
+                <div class="health-metric" [class.metric-ok]="healthStatus.hdmiCecStatus.cec_available">
+                  <span class="metric-label">CEC disponible</span>
+                  <span class="metric-value">
+                    {{ healthStatus.hdmiCecStatus.cec_available ? '✅ Yes' : '❌ No' }}
+                  </span>
+                </div>
+                <div class="health-metric">
+                  <span class="metric-label">Périphériques CEC</span>
+                  <span class="metric-value">{{ healthStatus.hdmiCecStatus.devices_found }}</span>
+                </div>
+              </div>
+              <div class="cec-last-check" *ngIf="healthStatus.hdmiCecStatus.last_check_at">
+                <span class="metric-hint">Dernière vérification: {{ healthStatus.hdmiCecStatus.last_check_at | date:'HH:mm:ss' }}</span>
+              </div>
+              <div class="cec-error" *ngIf="healthStatus.hdmiCecStatus.error">
+                <span class="metric-hint metric-warning">⚠️ {{ healthStatus.hdmiCecStatus.error }}</span>
               </div>
             </div>
 
@@ -1996,6 +2041,23 @@ interface WifiBssidStatus {
       color: #92400e;
     }
 
+    /* HDMI-CEC */
+    .health-metric.metric-ok {
+      background: #dcfce7;
+    }
+
+    .cec-last-check {
+      margin-top: 0.5rem;
+      text-align: right;
+    }
+
+    .cec-error {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #fef3c7;
+      border-radius: 4px;
+    }
+
     /* Services grid */
     .services-grid {
       display: grid;
@@ -3523,6 +3585,16 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
     if (days > 0) return `${days}j ${hours}h`;
     if (hours > 0) return `${hours}h ${mins}m`;
     return `${mins}m`;
+  }
+
+  getTvPowerLabel(power: string | null): string {
+    switch (power) {
+      case 'on': return '✅ Allumée';
+      case 'standby': return '🔴 En veille';
+      case 'transitioning': return '⏳ Transition...';
+      case 'unknown': return '❓ Inconnu';
+      default: return '❓ Non détecté';
+    }
   }
 
   // ============================================

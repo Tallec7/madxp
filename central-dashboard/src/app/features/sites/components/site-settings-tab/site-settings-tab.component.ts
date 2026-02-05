@@ -6,6 +6,7 @@ import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
 import { AssetService, WatermarkConfig, OverlayPosition as WmOverlayPosition, WatermarkAnimation, WatermarkScheduleRule } from '../../../../core/services/asset.service';
+import { ReportsService, GeneratedReport } from '../../../../core/services/reports.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import { Site, OverlayPosition } from '../../../../core/models';
 import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-generator/qr-code-generator.component';
@@ -429,6 +430,49 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
             <div class="progress-fill" [style.width.%]="uploadProgress"></div>
           </div>
           <span class="progress-text">{{ uploadProgressText }}</span>
+        </div>
+      </div>
+
+      <!-- Rapports PDF -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <span class="settings-icon">📊</span>
+          <h4>Rapports mensuels</h4>
+        </div>
+        <p class="settings-desc">
+          Téléchargez les rapports d'activité générés automatiquement chaque mois.
+        </p>
+
+        <div class="reports-list" *ngIf="clubReports.length > 0">
+          <div class="report-item" *ngFor="let report of clubReports">
+            <div class="report-info">
+              <span class="report-period">{{ report.period_label }}</span>
+              <span class="report-meta">{{ formatReportDate(report.completed_at) }} • {{ formatFileSize(report.file_size_bytes) }}</span>
+            </div>
+            <a [href]="report.storage_url" target="_blank" class="btn btn-sm btn-secondary" *ngIf="report.storage_url">
+              📥 Télécharger
+            </a>
+          </div>
+        </div>
+
+        <div class="reports-empty" *ngIf="clubReports.length === 0 && !loadingReports">
+          <span class="empty-icon">📋</span>
+          <p>Aucun rapport disponible pour l'instant.</p>
+          <p class="empty-hint">Les rapports sont générés automatiquement le 1er de chaque mois.</p>
+        </div>
+
+        <div class="reports-loading" *ngIf="loadingReports">
+          <span class="loading-spinner"></span>
+          Chargement des rapports...
+        </div>
+
+        <div class="reports-actions" *ngIf="!loadingReports">
+          <button class="btn btn-secondary btn-sm" (click)="loadClubReports()" [disabled]="loadingReports">
+            🔄 Actualiser
+          </button>
+          <button class="btn btn-primary btn-sm" (click)="generateReport()" [disabled]="generatingReport">
+            {{ generatingReport ? 'Génération...' : '➕ Générer un rapport' }}
+          </button>
         </div>
       </div>
 
@@ -1156,6 +1200,91 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       padding: 0.25rem 0.5rem;
       line-height: 1;
     }
+
+    /* Rapports PDF */
+    .reports-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .report-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .report-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .report-period {
+      font-weight: 500;
+      color: #1e293b;
+    }
+
+    .report-meta {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .reports-empty {
+      text-align: center;
+      padding: 2rem;
+      color: #64748b;
+    }
+
+    .reports-empty .empty-icon {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    .reports-empty .empty-hint {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 0.25rem;
+    }
+
+    .reports-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 2rem;
+      color: #64748b;
+    }
+
+    .loading-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .reports-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .btn-sm {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.875rem;
+    }
   `]
 })
 export class SiteSettingsTabComponent implements OnInit, OnChanges {
@@ -1233,11 +1362,17 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   animationOptions: { value: WatermarkAnimation; label: string }[] = [];
   daysOfWeekOptions: { value: number; label: string; shortLabel: string }[] = [];
 
+  // Rapports
+  clubReports: GeneratedReport[] = [];
+  loadingReports: boolean = false;
+  generatingReport: boolean = false;
+
   constructor(
     private sitesService: SitesService,
     private notificationService: NotificationService,
     private logger: LoggerService,
-    private assetService: AssetService
+    private assetService: AssetService,
+    private reportsService: ReportsService
   ) {}
 
   ngOnInit(): void {
@@ -1271,6 +1406,9 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
           imagePath: mirrorWatermark.imagePath
         });
       }
+
+      // Charger les rapports du club
+      this.loadClubReports();
     }
   }
 
@@ -1796,5 +1934,68 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
       rule.daysOfWeek.push(day);
       rule.daysOfWeek.sort((a, b) => a - b);
     }
+  }
+
+  // ========== Rapports PDF ==========
+
+  loadClubReports(): void {
+    if (!this.siteId) return;
+
+    this.loadingReports = true;
+    this.reportsService.getClubReports(this.siteId, 12).subscribe({
+      next: (reports) => {
+        this.clubReports = reports;
+        this.loadingReports = false;
+      },
+      error: (error) => {
+        this.loadingReports = false;
+        // Ne pas afficher d'erreur si simplement pas de rapports
+        if (error.status !== 404) {
+          this.logger.warn('Erreur chargement rapports', { error: ErrorExtractor.getMessage(error) });
+        }
+      }
+    });
+  }
+
+  generateReport(): void {
+    if (!this.siteId) return;
+
+    // Calculer la période du mois précédent
+    const now = new Date();
+    const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const periodStart = firstDayLastMonth.toISOString().split('T')[0];
+    const periodEnd = lastDayLastMonth.toISOString().split('T')[0];
+
+    this.generatingReport = true;
+    this.reportsService.generateReport({
+      type: 'club',
+      entityId: this.siteId,
+      periodStart,
+      periodEnd
+    }).subscribe({
+      next: (result) => {
+        this.generatingReport = false;
+        this.notificationService.success('Rapport généré avec succès!');
+        // Recharger la liste des rapports
+        this.loadClubReports();
+      },
+      error: (error) => {
+        this.generatingReport = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur génération: ${message}`);
+      }
+    });
+  }
+
+  formatReportDate(dateString: string | null): string {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  formatFileSize(bytes: number | null): string {
+    return this.reportsService.formatFileSize(bytes);
   }
 }

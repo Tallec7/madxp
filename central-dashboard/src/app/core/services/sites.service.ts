@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, BehaviorSubject, tap, map } from 'rxjs';
 import { ApiService } from './api.service';
 import { CacheService } from './cache.service';
-import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus, LocalVideo, LocalStorage, CloudVideo } from '../models';
+import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus, LocalVideo, LocalStorage, CloudVideo, FleetHealthData, MatchHistoryData } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -236,6 +236,22 @@ export class SitesService {
 
   getAllConnectionStatus(): Observable<AllSitesConnectionStatus> {
     return this.api.get('/sites/connection-status');
+  }
+
+  /**
+   * Get fleet health data for the admin dashboard
+   * Aggregates connection status, metrics, versions, and at-risk sites
+   */
+  getFleetHealthData(): Observable<FleetHealthData> {
+    return this.api.get('/sites/fleet-health');
+  }
+
+  /**
+   * Get match history for a specific site
+   * Returns recent matches with audience estimates, videos played, and duration
+   */
+  getMatchHistory(siteId: string, limit: number = 20): Observable<MatchHistoryData> {
+    return this.api.get(`/sites/${siteId}/match-history`, { limit });
   }
 
   /**

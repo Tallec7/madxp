@@ -22,6 +22,13 @@ interface AdvertiserDashboardStats {
   avg_completion_rate: number;
 }
 
+interface ReachStatsRow {
+  [key: string]: unknown;
+  total_reach: string;
+  matches_with_ads: string;
+  avg_audience_per_match: string;
+}
+
 interface AdvertiserSiteRow {
   [key: string]: unknown;
   site_id: string;
@@ -135,6 +142,26 @@ export const getAdvertiserDashboard = async (req: AuthRequest, res: Response): P
       [advertiserId]
     );
 
+    // Calcul du reach (audience exposée aux vidéos de l'annonceur)
+    // On croise les impressions avec les sessions de match qui ont un audience_estimate
+    const reachResult = await query(
+      `SELECT
+        COALESCE(SUM(DISTINCT cs.audience_estimate), 0) as total_reach,
+        COUNT(DISTINCT cs.id) as matches_with_ads,
+        ROUND(AVG(cs.audience_estimate)::numeric, 0) as avg_audience_per_match
+       FROM advertiser_impressions ai
+       JOIN advertiser_videos av ON av.video_id = ai.video_id
+       JOIN club_sessions cs ON cs.site_id = ai.site_id
+         AND ai.played_at >= cs.started_at
+         AND (cs.ended_at IS NULL OR ai.played_at <= cs.ended_at)
+         AND cs.audience_estimate IS NOT NULL
+       WHERE av.advertiser_id = $1
+         AND ai.played_at >= CURRENT_DATE - INTERVAL '30 days'`,
+      [advertiserId]
+    );
+
+    const reachStats = reachResult.rows[0] as unknown as ReachStatsRow;
+
     res.json({
       success: true,
       data: {
@@ -150,6 +177,10 @@ export const getAdvertiserDashboard = async (req: AuthRequest, res: Response): P
           total_impressions_30d: parseInt(String(stats.total_impressions_30d)) || 0,
           total_screen_time_30d: parseInt(String(stats.total_screen_time_30d)) || 0,
           avg_completion_rate: parseFloat(String(stats.avg_completion_rate)) || 0,
+          // Nouvelles métriques reach
+          total_reach_30d: parseInt(String(reachStats?.total_reach)) || 0,
+          matches_with_ads_30d: parseInt(String(reachStats?.matches_with_ads)) || 0,
+          avg_audience_per_match: parseInt(String(reachStats?.avg_audience_per_match)) || 0,
         },
         trends: trendsResult.rows.map(r => ({
           date: r.date,

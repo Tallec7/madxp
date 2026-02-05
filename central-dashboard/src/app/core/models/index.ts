@@ -376,6 +376,102 @@ export interface AllSitesConnectionStatus {
 }
 
 /**
+ * Site data for fleet health dashboard
+ */
+export interface FleetHealthSite {
+  id: string;
+  siteName: string;
+  clubName: string;
+  displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
+  lastSeenAt: Date | null;
+  secondsSinceLastSeen: number | null;
+  localIp: string | null;
+  softwareVersion: string | null;
+  location: {
+    city?: string;
+    region?: string;
+    lat?: number;
+    lng?: number;
+  } | null;
+  metrics: {
+    cpu_percent: number | null;
+    memory_percent: number | null;
+    temperature: number | null;
+    disk_percent: number | null;
+  };
+}
+
+/**
+ * Fleet health data response from API
+ */
+export interface FleetHealthData {
+  sites: FleetHealthSite[];
+  stats: {
+    total: number;
+    online: number;
+    warning: number;
+    offline: number;
+    unknown: number;
+  };
+  health: {
+    avg_cpu: number;
+    avg_memory: number;
+    avg_temperature: number;
+    sites_high_temp: number;
+    sites_low_disk: number;
+  };
+  versionDistribution: {
+    version: string;
+    count: number;
+    percentage: number;
+  }[];
+  sitesByRegion: {
+    name: string;
+    total: number;
+    online: number;
+  }[];
+  atRiskSites: FleetHealthSite[];
+  timestamp: string;
+}
+
+// ============================================================================
+// Match History Types
+// ============================================================================
+
+/**
+ * A single match/session with audience data
+ */
+export interface Match {
+  id: string;
+  matchDate: Date;
+  matchName: string;
+  audienceEstimate: number | null;
+  startedAt: Date;
+  endedAt: Date | null;
+  durationMinutes: number | null;
+  videosPlayed: number;
+  manualTriggers: number;
+  autoPlays: number;
+}
+
+/**
+ * Match history response from API
+ */
+export interface MatchHistoryData {
+  siteId: string;
+  siteName: string;
+  clubName: string;
+  matches: Match[];
+  stats: {
+    totalMatches: number;
+    totalAudience: number;
+    avgAudience: number;
+    totalVideos: number;
+    totalDurationHours: number;
+  };
+}
+
+/**
  * Catégorie analytics pour le tracking des vidéos
  */
 export interface AnalyticsCategory {
