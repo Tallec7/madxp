@@ -1,3 +1,9 @@
+## [3.5.14](https://github.com/Tallec7/neopro/compare/v3.5.13...v3.5.14) (2026-02-05)
+
+### Bug Fixes
+
+- **analytics:** cast SQL result types to string for parseFloat/parseInt ([bd2f259](https://github.com/Tallec7/neopro/commit/bd2f2590a8f63a86f5b9d9818a975d05b8a10789))
+
 ## [3.5.13](https://github.com/Tallec7/neopro/compare/v3.5.12...v3.5.13) (2026-02-05)
 
 ### Bug Fixes
