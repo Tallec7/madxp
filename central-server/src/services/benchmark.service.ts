@@ -76,7 +76,9 @@ class BenchmarkService {
     }
 
     const site = siteResult.rows[0];
-    const sports = site.sports as string[] || [];
+    // sports is JSONB array, parse if needed
+    const sportsRaw = site.sports;
+    const sports: string[] = Array.isArray(sportsRaw) ? sportsRaw : [];
     const region = (site.location as { region?: string })?.region;
 
     // 2. Déterminer les segments de comparaison
@@ -214,7 +216,8 @@ class BenchmarkService {
     let paramIndex = 4;
 
     if (segments.sport) {
-      conditions.push(`$${paramIndex}::text = ANY(s.sports)`);
+      // sports is JSONB array, use ? operator to check if element exists
+      conditions.push(`s.sports ? $${paramIndex}`);
       params.push(segments.sport);
       paramIndex++;
     }
@@ -310,10 +313,10 @@ class BenchmarkService {
     bySport: Record<string, { count: number; avgSessions: number; avgVideos: number }>;
     byRegion: Record<string, { count: number; avgSessions: number; avgVideos: number }>;
   }> {
-    // Par sport
+    // Par sport - sports is JSONB array, use jsonb_array_elements_text
     const sportResult = await query(`
       SELECT
-        unnest(s.sports) as sport,
+        sport,
         COUNT(DISTINCT s.id) as site_count,
         COALESCE(AVG((
           SELECT COUNT(*)
@@ -330,10 +333,11 @@ class BenchmarkService {
             AND vp.played_at <= $2::date
         )), 0) as avg_videos
       FROM sites s
+      CROSS JOIN LATERAL jsonb_array_elements_text(s.sports) AS sport
       WHERE s.status != 'archived'
         AND s.sports IS NOT NULL
-        AND array_length(s.sports, 1) > 0
-      GROUP BY unnest(s.sports)
+        AND jsonb_array_length(s.sports) > 0
+      GROUP BY sport
       ORDER BY site_count DESC
     `, [period.start, period.end]);
 
