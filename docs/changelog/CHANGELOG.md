@@ -1,3 +1,9 @@
+## [3.5.12](https://github.com/Tallec7/neopro/compare/v3.5.11...v3.5.12) (2026-02-05)
+
+### Bug Fixes
+
+- **proofs:** gracefully handle missing proof_of_broadcasts table ([c93db75](https://github.com/Tallec7/neopro/commit/c93db75685b26f76d9fccc97ca0dbd93bea29452))
+
 ## [3.5.11](https://github.com/Tallec7/neopro/compare/v3.5.10...v3.5.11) (2026-02-05)
 
 ### Bug Fixes
