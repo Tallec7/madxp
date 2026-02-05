@@ -1,3 +1,9 @@
+## [3.5.8](https://github.com/Tallec7/neopro/compare/v3.5.7...v3.5.8) (2026-02-05)
+
+### Bug Fixes
+
+- **alerts:** use correct column names (alert_type, status) from alerts table ([ea793d8](https://github.com/Tallec7/neopro/commit/ea793d82d9bee339f92d8d7e33789bfe328941d8))
+
 ## [3.5.7](https://github.com/Tallec7/neopro/compare/v3.5.6...v3.5.7) (2026-02-05)
 
 ### Bug Fixes
