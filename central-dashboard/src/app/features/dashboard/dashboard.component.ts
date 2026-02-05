@@ -552,7 +552,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadStats();
     this.loadRecentSites();
     this.loadConnectionStatus();
-    this.loadPredictiveAlerts();
+    // TODO: Réactiver quand le backend sera stable
+    // this.loadPredictiveAlerts();
     // Rafraîchir les statuts de connexion toutes les 60 secondes (reduced from 30s to avoid rate limiting)
     this.refreshSubscription = interval(60000).subscribe(() => {
       this.loadConnectionStatus();

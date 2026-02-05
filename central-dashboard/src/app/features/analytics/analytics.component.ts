@@ -693,68 +693,28 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   loadData(): void {
     this.loading = true;
 
-    forkJoin({
-      connectionStatus: this.http.get<{ data: SiteStatus[] }>(`${environment.apiUrl}/sites/connection-status`),
-      fleetHealth: this.http.get<{ data: { sites: SiteStatus[], stats: { total: number, online: number, offline: number, warning: number }, health: { avg_cpu: number, avg_memory: number, avg_temperature: number, avg_disk: number } } }>(`${environment.apiUrl}/sites/fleet-health`)
-    }).subscribe({
-      next: (results) => {
-        // Process fleet health data
-        const fleetData = results.fleetHealth.data;
+    // TODO: Réactiver fleet-health quand le backend sera stable
+    // Pour l'instant, utiliser uniquement connection-status
+    this.http.get<{ data: SiteStatus[] }>(`${environment.apiUrl}/sites/connection-status`).subscribe({
+      next: (result) => {
+        this.allSites = result.data || [];
+        this.stats.total = this.allSites.length;
+        this.stats.online = this.allSites.filter(s => s.status === 'online').length;
+        this.stats.offline = this.allSites.filter(s => s.status === 'offline').length;
+        this.stats.warning = this.allSites.filter(s => s.status === 'warning').length;
 
-        this.stats = {
-          total: fleetData.stats.total,
-          online: fleetData.stats.online,
-          offline: fleetData.stats.offline,
-          warning: fleetData.stats.warning,
-          avgCpu: fleetData.health.avg_cpu || 0,
-          avgMemory: fleetData.health.avg_memory || 0,
-          avgTemperature: fleetData.health.avg_temperature || 0,
-          avgDisk: fleetData.health.avg_disk || 0
-        };
-
-        this.allSites = fleetData.sites || [];
-
-        // Filter problem sites (offline, warning, or resource issues)
         this.problemSites = this.allSites.filter(site =>
-          site.status === 'offline' ||
-          site.status === 'warning' ||
-          (site.temperature && site.temperature > 75) ||
-          (site.cpu && site.cpu > 80) ||
-          (site.disk && site.disk > 90)
+          site.status === 'offline' || site.status === 'warning'
         ).slice(0, 10);
 
-        // Filter online sites
         this.onlineSites = this.allSites.filter(site => site.status === 'online');
 
-        // Generate recent activity from sites data
         this.generateRecentActivity();
-
         this.lastUpdate = new Date();
         this.loading = false;
       },
-      error: (_err) => {
-        // Fallback to just connection status
-        this.http.get<{ data: SiteStatus[] }>(`${environment.apiUrl}/sites/connection-status`).subscribe({
-          next: (result) => {
-            this.allSites = result.data || [];
-            this.stats.total = this.allSites.length;
-            this.stats.online = this.allSites.filter(s => s.status === 'online').length;
-            this.stats.offline = this.allSites.filter(s => s.status === 'offline').length;
-            this.stats.warning = this.allSites.filter(s => s.status === 'warning').length;
-
-            this.problemSites = this.allSites.filter(site =>
-              site.status === 'offline' || site.status === 'warning'
-            ).slice(0, 10);
-
-            this.onlineSites = this.allSites.filter(site => site.status === 'online');
-
-            this.lastUpdate = new Date();
-            this.loading = false;
-          },
-          error: () => {
-            this.loading = false;
-          }
-        });
+      error: () => {
+        this.loading = false;
       }
     });
   }
