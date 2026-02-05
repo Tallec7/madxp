@@ -1,3 +1,9 @@
+## [3.5.6](https://github.com/Tallec7/neopro/compare/v3.5.5...v3.5.6) (2026-02-05)
+
+### Bug Fixes
+
+- **dashboard:** disable broken endpoints to restore functionality ([88a7626](https://github.com/Tallec7/neopro/commit/88a76266741dd390c633d49de1127217e0cc06a2))
+
 ## [3.5.5](https://github.com/Tallec7/neopro/compare/v3.5.4...v3.5.5) (2026-02-05)
 
 ### Bug Fixes
