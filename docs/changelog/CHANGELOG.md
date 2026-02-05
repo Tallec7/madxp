@@ -1,3 +1,9 @@
+## [3.5.11](https://github.com/Tallec7/neopro/compare/v3.5.10...v3.5.11) (2026-02-05)
+
+### Bug Fixes
+
+- **alerts:** remove threshold_id references (column doesn't exist in production) ([cf5d3b0](https://github.com/Tallec7/neopro/commit/cf5d3b0c7016e587df5d371de9bf61ce76019ef8))
+
 ## [3.5.10](https://github.com/Tallec7/neopro/compare/v3.5.9...v3.5.10) (2026-02-05)
 
 ### Bug Fixes
