@@ -540,14 +540,32 @@ interface VideoDeploymentHistory {
               </div>
             </div>
 
-            <!-- Image Preview -->
+            <!-- Image Preview avec prévisualisation du rendu final -->
             <div class="image-preview" *ngIf="imageForm.file">
               <div class="image-preview-header">
                 <span class="file-name">🖼️ {{ imageForm.file.name }}</span>
                 <span class="file-size">{{ formatFileSize(imageForm.file.size) }}</span>
                 <button class="btn-icon btn-danger" (click)="clearImageFile()">✕</button>
               </div>
-              <img *ngIf="imagePreviewUrl" [src]="imagePreviewUrl" alt="Preview" class="preview-image">
+
+              <!-- Prévisualisation du rendu final (16:9) -->
+              <div class="preview-container-16-9" *ngIf="imagePreviewUrl">
+                <!-- Fond flou (visible uniquement si option activée) -->
+                <img
+                  *ngIf="imageForm.blurBackground"
+                  [src]="imagePreviewUrl"
+                  alt="Background blur"
+                  class="preview-blur-background"
+                >
+                <!-- Image principale centrée -->
+                <img
+                  [src]="imagePreviewUrl"
+                  alt="Preview"
+                  class="preview-image-centered"
+                  [class.with-blur-bg]="imageForm.blurBackground"
+                >
+              </div>
+              <p class="preview-hint">Aperçu du rendu TV (format 16:9)</p>
             </div>
 
             <div class="form-group" *ngIf="imageForm.file">
@@ -563,6 +581,23 @@ interface VideoDeploymentHistory {
                   <span class="radio-label">{{ opt.label }}</span>
                 </label>
               </div>
+            </div>
+
+            <!-- Option fond flou -->
+            <div class="form-group blur-option" *ngIf="imageForm.file">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="imageForm.blurBackground"
+                >
+                <span class="checkbox-text">
+                  ✨ Fond flou automatique
+                </span>
+              </label>
+              <p class="option-hint">
+                Active un effet de fond flou esthétique pour les images portrait.
+                L'image sera superposée sur une version floue d'elle-même.
+              </p>
             </div>
 
             <!-- Conversion Progress -->
@@ -1484,6 +1519,88 @@ interface VideoDeploymentHistory {
       font-size: 0.875rem;
     }
 
+    /* Prévisualisation 16:9 avec effet blur optionnel */
+    .preview-container-16-9 {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #1a1a1a;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .preview-blur-background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: blur(25px);
+      transform: scale(1.1); /* Évite les bords blancs du blur */
+      z-index: 1;
+    }
+
+    .preview-image-centered {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      z-index: 2;
+    }
+
+    .preview-image-centered.with-blur-bg {
+      /* Légère ombre pour décoller l'image du fond flou */
+      filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
+    }
+
+    .preview-hint {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin: 0.5rem 0 0 0;
+    }
+
+    /* Option fond flou */
+    .blur-option {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border-radius: 10px;
+      border: 1px solid #bae6fd;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #2563eb;
+    }
+
+    .checkbox-text {
+      color: #0f172a;
+      font-size: 0.9375rem;
+    }
+
+    .option-hint {
+      margin: 0.5rem 0 0 1.75rem;
+      font-size: 0.8125rem;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    /* Legacy - pour ancienne prévisualisation */
     .preview-image {
       max-width: 100%;
       max-height: 200px;
@@ -1634,7 +1751,8 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   imageForm = {
     file: null as File | null,
-    duration: 10
+    duration: 10,
+    blurBackground: false
   };
 
   durationOptions = [
@@ -2064,7 +2182,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   closeImageModal(): void {
     if (this.isConvertingImage) return;
     this.showImageModal = false;
-    this.imageForm = { file: null, duration: 10 };
+    this.imageForm = { file: null, duration: 10, blurBackground: false };
     this.imagePreviewUrl = null;
     this.imageConversionProgress = 0;
     this.imageConversionResult = null;
@@ -2136,6 +2254,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     const formData = new FormData();
     formData.append('image', this.imageForm.file);
     formData.append('duration', this.imageForm.duration.toString());
+    formData.append('blurBackground', this.imageForm.blurBackground.toString());
 
     // Simulate progress since we can't track actual ffmpeg progress
     const progressInterval = setInterval(() => {

@@ -832,6 +832,7 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
     // Récupérer les paramètres
     const duration = parseInt(req.body.duration as string, 10) || 10;
     const { site_id } = req.body;
+    const blurBackground = req.body.blurBackground === 'true' || req.body.blurBackground === true;
 
     // Valider la durée (entre 1 et 60 secondes)
     if (duration < 1 || duration > 60) {
@@ -860,11 +861,13 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
       duration,
       imageSize: file.size,
       siteId: site_id,
+      blurBackground,
     });
 
     // Convertir l'image en vidéo
     const result = await imageToVideoService.convert(file.buffer, file.originalname, {
       duration,
+      blurBackground,
     });
 
     // Générer un nom de fichier unique

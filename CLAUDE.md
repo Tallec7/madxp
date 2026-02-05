@@ -303,7 +303,7 @@ GET    /api/content/videos    → liste vidéos
 GET    /api/content/videos/for-site/:siteId → vidéos priorisées pour un site (uploaded_for_site_id en premier)
 DELETE /api/content/videos/:id
 POST   /api/content/deploy    → { videoId, targetType, targetId }
-POST   /api/content/image-to-video → multipart/form-data (image) + { duration: 5-60 } → convertit image en vidéo MP4
+POST   /api/content/image-to-video → multipart/form-data (image) + { duration: 5-60, blurBackground?: boolean } → convertit image en vidéo MP4
 ```
 
 ### Config Drafts (Brouillons de Configuration)
@@ -459,25 +459,25 @@ Le `LoggerService` Angular implémente un throttling côté client pour éviter 
 
 ## Services Critiques
 
-| Service          | Fichier                              | Rôle                                                      |
-| ---------------- | ------------------------------------ | --------------------------------------------------------- |
-| **Socket**       | `socket.service.ts`                  | Communication temps réel Pi ↔ Cloud                       |
-| **CommandQueue** | `command-queue.service.ts`           | File d'attente commandes (offline/online)                 |
-| **Deployment**   | `deployment.service.ts`              | Orchestration déploiement vidéos                          |
-| **UploadVerify** | `upload-verification.service.ts`     | Vérification upload avant déploiement                     |
-| **Draft**        | `draft.service.ts`                   | Gestion brouillons de configuration                       |
-| **Orchestrated** | `orchestrated-deployment.service.ts` | Déploiement vidéos + config orchestré                     |
-| **Asset**        | `asset.service.ts`                   | Gestion watermarks et logos (upload/deploy)               |
-| **FTP Storage**  | `ftp-storage.ts`                     | Upload/download vidéos sur FTP Hostinger                  |
-| **Supabase**     | `supabase.ts`                        | Stockage fallback si FTP non configuré                    |
-| **Metrics**      | `metrics.service.ts`                 | Export Prometheus                                         |
-| **Audit**        | `audit.service.ts`                   | Log toutes les actions admin                              |
-| **MFA**          | `mfa.service.ts`                     | 2FA avec backup codes                                     |
-| **Email**        | `email.service.ts`                   | Password reset, alertes                                   |
-| **Cron**         | `cron-scheduler.service.ts`          | Stats quotidiennes, cleanup                               |
-| **Logger**       | `logger.service.ts`                  | Logs structurés avec correlation ID                       |
-| **Errors**       | `error-extractor.ts`                 | Extraction messages d'erreur                              |
-| **ImageToVideo** | `image-to-video.service.ts`          | Conversion image → vidéo MP4 via ffmpeg (720p, ultrafast) |
+| Service          | Fichier                              | Rôle                                                                        |
+| ---------------- | ------------------------------------ | --------------------------------------------------------------------------- |
+| **Socket**       | `socket.service.ts`                  | Communication temps réel Pi ↔ Cloud                                         |
+| **CommandQueue** | `command-queue.service.ts`           | File d'attente commandes (offline/online)                                   |
+| **Deployment**   | `deployment.service.ts`              | Orchestration déploiement vidéos                                            |
+| **UploadVerify** | `upload-verification.service.ts`     | Vérification upload avant déploiement                                       |
+| **Draft**        | `draft.service.ts`                   | Gestion brouillons de configuration                                         |
+| **Orchestrated** | `orchestrated-deployment.service.ts` | Déploiement vidéos + config orchestré                                       |
+| **Asset**        | `asset.service.ts`                   | Gestion watermarks et logos (upload/deploy)                                 |
+| **FTP Storage**  | `ftp-storage.ts`                     | Upload/download vidéos sur FTP Hostinger                                    |
+| **Supabase**     | `supabase.ts`                        | Stockage fallback si FTP non configuré                                      |
+| **Metrics**      | `metrics.service.ts`                 | Export Prometheus                                                           |
+| **Audit**        | `audit.service.ts`                   | Log toutes les actions admin                                                |
+| **MFA**          | `mfa.service.ts`                     | 2FA avec backup codes                                                       |
+| **Email**        | `email.service.ts`                   | Password reset, alertes                                                     |
+| **Cron**         | `cron-scheduler.service.ts`          | Stats quotidiennes, cleanup                                                 |
+| **Logger**       | `logger.service.ts`                  | Logs structurés avec correlation ID                                         |
+| **Errors**       | `error-extractor.ts`                 | Extraction messages d'erreur                                                |
+| **ImageToVideo** | `image-to-video.service.ts`          | Conversion image → vidéo MP4 via ffmpeg (720p, ultrafast, option fond flou) |
 
 ### Services Angular Raspberry Pi (Extraits v2.33+) ⚡ NEW
 
@@ -2064,6 +2064,17 @@ vcgencmd get_mem gpu
 ## Historique Breaking Changes
 
 ### v3.0.0 (Février 2026)
+
+- **Option fond flou automatique pour conversion image → vidéo** : Les images portrait s'affichent maintenant avec un fond esthétique
+  - **Fonctionnalité** : Nouvelle option "✨ Fond flou automatique" dans le modal de conversion image
+  - **Prévisualisation live** : L'aperçu montre en temps réel l'effet du fond flou avant conversion
+  - **Rendu** : L'image est superposée sur une version floue d'elle-même (effet blur 25px)
+  - **Paramètre API** : `blurBackground: boolean` ajouté à `POST /api/content/image-to-video`
+  - **Fichiers modifiés** :
+    - `central-server/src/services/image-to-video.service.ts` - Option `blurBackground` + filtre ffmpeg `filter_complex`
+    - `central-server/src/controllers/content.controller.ts` - Récupération paramètre `blurBackground`
+    - `central-dashboard/.../content-management.component.ts` - Checkbox + prévisualisation CSS avec effet blur
+  - **Migration** : Rebuild et redéployer le dashboard et le central-server
 
 - **Suppression des pages Analytics Dashboard** : Simplification majeure de l'interface (BREAKING CHANGE)
   - **Raison** : Les métriques affichées étaient incohérentes et potentiellement trompeuses

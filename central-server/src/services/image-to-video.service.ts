@@ -8,6 +8,7 @@ import logger from '../config/logger';
 export interface ImageToVideoOptions {
   duration: number; // seconds
   outputFormat?: 'mp4';
+  blurBackground?: boolean; // Si true, utilise une version floutée de l'image comme fond (effet esthétique)
 }
 
 export interface ImageToVideoResult {
@@ -34,7 +35,7 @@ class ImageToVideoService {
     originalFilename: string,
     options: ImageToVideoOptions
   ): Promise<ImageToVideoResult> {
-    const { duration } = options;
+    const { duration, blurBackground = false } = options;
 
     // Créer des fichiers temporaires
     const tempDir = os.tmpdir();
@@ -56,10 +57,11 @@ class ImageToVideoService {
         duration,
         imageSize: imageBuffer.length,
         codec,
+        blurBackground,
       });
 
       // Exécuter ffmpeg
-      await this.runFfmpeg(inputPath, outputPath, duration, codec);
+      await this.runFfmpeg(inputPath, outputPath, duration, codec, blurBackground);
 
       // Lire le fichier vidéo généré
       const videoBuffer = await fs.promises.readFile(outputPath);
@@ -102,12 +104,14 @@ class ImageToVideoService {
 
   /**
    * Exécute ffmpeg pour convertir l'image en vidéo
+   * @param blurBackground - Si true, utilise une version floutée de l'image comme fond au lieu de bandes noires
    */
   private runFfmpeg(
     inputPath: string,
     outputPath: string,
     duration: number,
-    codec: string = 'libx264'
+    codec: string = 'libx264',
+    blurBackground: boolean = false
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       // Arguments ffmpeg - ordre important !
@@ -133,14 +137,27 @@ class ImageToVideoService {
         args.push('-q:v', '8'); // Qualité
       }
 
-      // Options communes de sortie - scale réduit pour économiser mémoire
+      // Filtre vidéo selon l'option blurBackground
+      let videoFilter: string;
+      if (blurBackground) {
+        // Filtre avec fond flou esthétique :
+        // 1. [0:v] scale=-1:720 → Image originale redimensionnée (hauteur 720, largeur proportionnelle)
+        // 2. [bg] scale=1280:720, boxblur=25:25 → Fond : image étirée à 1280x720 + flou intense
+        // 3. overlay → Superpose l'image nette centrée sur le fond flou
+        videoFilter = '[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,boxblur=25:25[bg];[0:v]scale=-1:720:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2';
+      } else {
+        // Filtre standard : redimensionne et ajoute des bandes noires si nécessaire
+        videoFilter = 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2';
+      }
+
+      // Options communes de sortie
       args.push(
-        '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2', // Scale to 720p
+        '-filter_complex', videoFilter,
         '-movflags', '+faststart', // Streaming-friendly
         outputPath,
       );
 
-      logger.info('Running ffmpeg', { codec, args: args.join(' ') });
+      logger.info('Running ffmpeg', { codec, blurBackground, args: args.join(' ') });
 
       const ffmpeg = spawn('ffmpeg', args);
 
