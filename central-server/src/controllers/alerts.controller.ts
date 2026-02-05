@@ -38,10 +38,11 @@ export const listAlerts = async (req: AuthRequest, res: Response) => {
     let paramIndex = 1;
 
     // Filter by predictive type (metric starts with specific patterns)
+    // Note: column is alert_type, not type
     if (type === 'predictive') {
       conditions.push(`(
-        a.type LIKE '%[PRÉD]%'
-        OR a.type IN (
+        a.alert_type LIKE '%[PRÉD]%'
+        OR a.alert_type IN (
           'days_since_last_video',
           'disk_growth_rate',
           'disconnections_24h',
@@ -53,14 +54,15 @@ export const listAlerts = async (req: AuthRequest, res: Response) => {
         )
       )`);
     } else if (type) {
-      conditions.push(`a.type = $${paramIndex++}`);
+      conditions.push(`a.alert_type = $${paramIndex++}`);
       params.push(String(type));
     }
 
+    // Note: column is status, not is_active
     if (active === 'true') {
-      conditions.push(`a.is_active = true`);
+      conditions.push(`a.status = 'active'`);
     } else if (active === 'false') {
-      conditions.push(`a.is_active = false`);
+      conditions.push(`a.status IN ('acknowledged', 'resolved')`);
     }
 
     if (severity) {
@@ -76,20 +78,20 @@ export const listAlerts = async (req: AuthRequest, res: Response) => {
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     // Get alerts with site name
+    // Note: column is alert_type not type, status not is_active, no updated_at column
     const result = await query(`
       SELECT
         a.id,
         a.site_id,
         s.site_name,
         s.club_name,
-        a.type,
+        a.alert_type as type,
         a.severity,
         a.message,
         a.metadata,
         a.created_at,
-        a.updated_at,
         a.resolved_at,
-        a.is_active
+        a.status
       FROM alerts a
       LEFT JOIN sites s ON s.id = a.site_id
       ${whereClause}
@@ -120,9 +122,8 @@ export const listAlerts = async (req: AuthRequest, res: Response) => {
         message: row.message,
         metadata: row.metadata,
         created_at: row.created_at,
-        updated_at: row.updated_at,
         resolved_at: row.resolved_at,
-        is_active: row.is_active,
+        is_active: row.status === 'active',
       })),
       pagination: {
         total,
@@ -141,24 +142,24 @@ export const listAlerts = async (req: AuthRequest, res: Response) => {
  */
 export const getAlertStats = async (_req: AuthRequest, res: Response) => {
   try {
-    // Count by severity
+    // Count by severity (use status = 'active' instead of is_active)
     const severityResult = await query(`
       SELECT
         severity,
         COUNT(*) as count
       FROM alerts
-      WHERE is_active = true
+      WHERE status = 'active'
       GROUP BY severity
     `);
 
-    // Count by type (top 10)
+    // Count by type (top 10) - use alert_type instead of type
     const typeResult = await query(`
       SELECT
-        type,
+        alert_type as type,
         COUNT(*) as count
       FROM alerts
-      WHERE is_active = true
-      GROUP BY type
+      WHERE status = 'active'
+      GROUP BY alert_type
       ORDER BY count DESC
       LIMIT 10
     `);
@@ -172,7 +173,7 @@ export const getAlertStats = async (_req: AuthRequest, res: Response) => {
         COUNT(*) as alert_count
       FROM alerts a
       LEFT JOIN sites s ON s.id = a.site_id
-      WHERE a.is_active = true
+      WHERE a.status = 'active'
       GROUP BY a.site_id, s.site_name, s.club_name
       ORDER BY alert_count DESC
       LIMIT 10
@@ -228,17 +229,16 @@ export const getAlertStats = async (_req: AuthRequest, res: Response) => {
 export const resolveAlert = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
+    // Note: no resolved_by column in the table, using status instead of is_active
 
     const result = await query(`
       UPDATE alerts
       SET
-        is_active = false,
-        resolved_at = NOW(),
-        resolved_by = $2
+        status = 'resolved',
+        resolved_at = NOW()
       WHERE id = $1
       RETURNING *
-    `, [id, userId]);
+    `, [id]);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Alert not found' });
@@ -265,16 +265,15 @@ export const resolveAlert = async (req: AuthRequest, res: Response) => {
 export const resolveSiteAlerts = async (req: AuthRequest, res: Response) => {
   try {
     const { siteId } = req.params;
-    const userId = req.user?.id;
+    // Note: no resolved_by column, using status instead of is_active
 
     const result = await query(`
       UPDATE alerts
       SET
-        is_active = false,
-        resolved_at = NOW(),
-        resolved_by = $2
-      WHERE site_id = $1 AND is_active = true
-    `, [siteId, userId]);
+        status = 'resolved',
+        resolved_at = NOW()
+      WHERE site_id = $1 AND status = 'active'
+    `, [siteId]);
 
     logger.info('[Alerts] Site alerts resolved', {
       siteId,
