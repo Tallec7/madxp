@@ -42,10 +42,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
       {
-        path: 'fleet-health',
+        path: 'analytics',
         canActivate: [roleGuard],
-        data: { roles: ['super_admin', 'admin'] },
-        loadComponent: () => import('./features/fleet-health/fleet-health.component').then(m => m.FleetHealthComponent)
+        data: { roles: ['super_admin', 'admin', 'operator'] },
+        loadComponent: () => import('./features/analytics/analytics.component').then(m => m.AnalyticsComponent)
       },
       {
         path: 'sites',

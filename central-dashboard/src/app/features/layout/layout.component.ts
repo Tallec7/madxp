@@ -47,12 +47,12 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
 
         <nav class="sidebar-nav" [attr.aria-label]="'nav.dashboard' | translate">
           <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" [attr.aria-label]="'nav.dashboard' | translate">
-            <span class="icon" aria-hidden="true">📊</span>
+            <span class="icon" aria-hidden="true">🏠</span>
             <span>{{ 'nav.dashboard' | translate }}</span>
           </a>
-          <a routerLink="/fleet-health" routerLinkActive="active" class="nav-item" *ngIf="isAdmin()">
-            <span class="icon" aria-hidden="true">🏥</span>
-            <span>Santé Flotte</span>
+          <a routerLink="/analytics" routerLinkActive="active" class="nav-item">
+            <span class="icon" aria-hidden="true">📈</span>
+            <span>Analytics</span>
           </a>
           <a routerLink="/sites" routerLinkActive="active" class="nav-item" [attr.aria-label]="'nav.sites' | translate">
             <span class="icon" aria-hidden="true">🖥️</span>
