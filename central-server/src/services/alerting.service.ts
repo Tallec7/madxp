@@ -52,8 +52,9 @@ interface MetricSnapshot {
   timestamp: Date;
 }
 
-// Seuils par défaut
+// Seuils par défaut (incluant alertes prédictives)
 const DEFAULT_THRESHOLDS: Omit<AlertThreshold, 'id'>[] = [
+  // === Alertes Réactives (existantes) ===
   {
     name: 'CPU élevé',
     metric: 'cpu_usage',
@@ -124,6 +125,104 @@ const DEFAULT_THRESHOLDS: Omit<AlertThreshold, 'id'>[] = [
     enabled: true,
     cooldownMinutes: 5,
     escalateAfterMinutes: 30,
+    notifyChannels: ['email'],
+  },
+
+  // === Alertes Prédictives (nouvelles) ===
+  {
+    name: '[PRÉD] Inactivité prolongée',
+    metric: 'days_since_last_video',
+    condition: 'gt',
+    warningValue: 7,   // Warning après 7 jours sans vidéo jouée
+    criticalValue: 14, // Critical après 14 jours
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 1440, // 1 jour
+    escalateAfterMinutes: 4320, // 3 jours
+    notifyChannels: ['email'],
+  },
+  {
+    name: '[PRÉD] Espace disque en baisse',
+    metric: 'disk_growth_rate',
+    condition: 'gt',
+    warningValue: 5,  // +5% par jour = plein dans ~20 jours
+    criticalValue: 10, // +10% par jour = plein dans ~10 jours
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 1440,
+    escalateAfterMinutes: 2880,
+    notifyChannels: ['email'],
+  },
+  {
+    name: '[PRÉD] Déconnexions fréquentes',
+    metric: 'disconnections_24h',
+    condition: 'gt',
+    warningValue: 5,   // >5 déconnexions/jour
+    criticalValue: 10, // >10 déconnexions/jour
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 360, // 6 heures
+    escalateAfterMinutes: 720,
+    notifyChannels: ['email'],
+  },
+  {
+    name: '[PRÉD] Signal WiFi dégradé',
+    metric: 'wifi_signal_quality',
+    condition: 'lt',
+    warningValue: 50,  // <50% de qualité
+    criticalValue: 25, // <25% de qualité
+    duration: 3600, // 1 heure continue
+    enabled: true,
+    cooldownMinutes: 720, // 12 heures
+    escalateAfterMinutes: 1440,
+    notifyChannels: ['email'],
+  },
+  {
+    name: '[PRÉD] Erreurs vidéo récurrentes',
+    metric: 'video_errors_24h',
+    condition: 'gt',
+    warningValue: 5,   // >5 erreurs vidéo/jour
+    criticalValue: 15, // >15 erreurs vidéo/jour
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 360,
+    escalateAfterMinutes: 720,
+    notifyChannels: ['email'],
+  },
+  {
+    name: '[PRÉD] Température en hausse',
+    metric: 'temperature_trend',
+    condition: 'gt',
+    warningValue: 5,  // +5°C sur la dernière heure
+    criticalValue: 10, // +10°C sur la dernière heure
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 60,
+    escalateAfterMinutes: 120,
+    notifyChannels: ['email'],
+  },
+  {
+    name: '[PRÉD] Hotspot instable',
+    metric: 'hotspot_restarts_24h',
+    condition: 'gt',
+    warningValue: 2,  // >2 redémarrages hostapd/jour
+    criticalValue: 5, // >5 redémarrages/jour
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 720,
+    escalateAfterMinutes: 1440,
+    notifyChannels: ['email'],
+  },
+  {
+    name: '[PRÉD] Abonnement expire bientôt',
+    metric: 'days_until_subscription_end',
+    condition: 'lt',
+    warningValue: 30, // <30 jours avant expiration
+    criticalValue: 7,  // <7 jours avant expiration
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 1440, // 1 jour
+    escalateAfterMinutes: 4320,
     notifyChannels: ['email'],
   },
 ];

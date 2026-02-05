@@ -11,6 +11,7 @@
 import cron, { ScheduledTask } from 'node-cron';
 import { query } from '../config/database';
 import emailService from './email.service';
+import { generateMonthlyReports } from './monthly-reports.service';
 import logger from '../config/logger';
 
 interface RecurringSchedule {
@@ -18,7 +19,7 @@ interface RecurringSchedule {
   id: string;
   name: string;
   description: string | null;
-  task_type: 'report' | 'cleanup' | 'aggregation' | 'backup' | 'objective_check';
+  task_type: 'report' | 'cleanup' | 'aggregation' | 'backup' | 'objective_check' | 'pdf_report';
   cron_expression: string | null;
   frequency: 'daily' | 'weekly' | 'monthly' | null;
   day_of_week: number | null;
@@ -199,6 +200,9 @@ class CronSchedulerService {
           break;
         case 'backup':
           result = await this.executeBackupTask(schedule);
+          break;
+        case 'pdf_report':
+          result = await this.executePdfReportTask(schedule);
           break;
         default:
           result = { success: false, message: `Unknown task type: ${schedule.task_type}` };
@@ -557,6 +561,40 @@ class CronSchedulerService {
     };
   }
 
+  /**
+   * Exécute la génération des rapports PDF mensuels
+   */
+  private async executePdfReportTask(schedule: RecurringSchedule): Promise<ExecutionResult> {
+    const config = schedule.task_config as {
+      report_types?: ('club' | 'advertiser')[];
+    };
+
+    logger.info('[CronScheduler] Starting PDF report generation');
+
+    try {
+      const result = await generateMonthlyReports();
+
+      return {
+        success: result.failed === 0,
+        message: `Generated ${result.success}/${result.total} PDF reports (${result.failed} failed)`,
+        details: {
+          total: result.total,
+          success: result.success,
+          failed: result.failed,
+          reportTypes: config.report_types || ['club', 'advertiser'],
+        },
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[CronScheduler] PDF report generation failed', { error: errorMessage });
+
+      return {
+        success: false,
+        message: `PDF report generation failed: ${errorMessage}`,
+      };
+    }
+  }
+
   // =============== Execution Tracking ===============
 
   /**
@@ -709,6 +747,9 @@ class CronSchedulerService {
           break;
         case 'backup':
           result = await this.executeBackupTask(schedule);
+          break;
+        case 'pdf_report':
+          result = await this.executePdfReportTask(schedule);
           break;
         default:
           result = { success: false, message: `Unknown task type: ${schedule.task_type}` };
