@@ -317,7 +317,7 @@ class AlertingService {
 
     const result = await query<{ id: string; [key: string]: unknown }>(
       `INSERT INTO ${this.tableName}
-       (site_id, type, severity, status, message, metadata, threshold_id)
+       (site_id, alert_type, severity, status, message, metadata, threshold_id)
        VALUES ($1, $2, $3, 'active', $4, $5, $6)
        RETURNING id`,
       [
@@ -383,7 +383,7 @@ class AlertingService {
     const result = await query(
       `UPDATE ${this.tableName}
        SET status = 'resolved', resolved_at = NOW()
-       WHERE site_id = $1 AND type = $2 AND status IN ('active', 'acknowledged')
+       WHERE site_id = $1 AND alert_type = $2 AND status IN ('active', 'acknowledged')
        RETURNING id`,
       [siteId, type]
     );
@@ -420,7 +420,7 @@ class AlertingService {
       params.push(filters.severity);
     }
     if (filters?.type) {
-      sql += ` AND type = $${paramIndex++}`;
+      sql += ` AND alert_type = $${paramIndex++}`;
       params.push(filters.type);
     }
 
@@ -942,13 +942,13 @@ class AlertingService {
           [row.id, escalatedAt]
         );
 
-        logger.warn('Alert escalated', { alertId: row.id, type: row.type });
+        logger.warn('Alert escalated', { alertId: row.id, type: row.alert_type });
 
         // Notifier les superviseurs
         await this.notifySupervisors({
           alertId: row.id as string,
           siteId: row.site_id as string,
-          type: row.type as string,
+          type: row.alert_type as string,
           severity: row.severity as string,
           message: row.message as string,
           createdAt: new Date(row.created_at as string),
@@ -964,12 +964,12 @@ class AlertingService {
     if (this.tableChecked) return;
 
     try {
-      // Table des alertes
+      // Table des alertes - alignée sur full-schema.sql (alert_type au lieu de type)
       await query(`
         CREATE TABLE IF NOT EXISTS ${this.tableName} (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
-          type VARCHAR(100) NOT NULL,
+          alert_type VARCHAR(100) NOT NULL,
           severity VARCHAR(20) NOT NULL,
           status VARCHAR(20) DEFAULT 'active',
           message TEXT,

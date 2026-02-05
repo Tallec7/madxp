@@ -258,7 +258,7 @@ class NetworkAlertsService {
       const existing = await query(
         `SELECT id FROM alerts
          WHERE site_id = $1
-           AND type = $2
+           AND alert_type = $2
            AND created_at > NOW() - INTERVAL '24 hours'
          LIMIT 1`,
         [siteId, `network_risk_${riskType}`]
@@ -270,8 +270,9 @@ class NetworkAlertsService {
       }
 
       // Créer la nouvelle alerte
+      // Note: using alert_type (not type), metadata (not data) to match full-schema.sql
       await query(
-        `INSERT INTO alerts (site_id, type, severity, message, data, created_at)
+        `INSERT INTO alerts (site_id, alert_type, severity, message, metadata, created_at)
          VALUES ($1, $2, $3, $4, $5, NOW())`,
         [
           siteId,

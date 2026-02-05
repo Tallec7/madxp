@@ -1173,8 +1173,9 @@ class SocketService {
       });
 
       // Store alert in database
+      // Note: using alert_type (not type), metadata (not data) to match full-schema.sql
       await query(
-        `INSERT INTO alerts (site_id, type, severity, message, data, created_at)
+        `INSERT INTO alerts (site_id, alert_type, severity, message, metadata, created_at)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [
           siteId,
@@ -1228,8 +1229,9 @@ class SocketService {
       });
 
       // Store rollback event in database
+      // Note: using alert_type (not type), metadata (not data) to match full-schema.sql
       await query(
-        `INSERT INTO alerts (site_id, type, severity, message, data, created_at)
+        `INSERT INTO alerts (site_id, alert_type, severity, message, metadata, created_at)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [
           siteId,

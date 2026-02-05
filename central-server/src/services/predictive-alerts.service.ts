@@ -134,7 +134,7 @@ class PredictiveAlertsService {
       WITH last_metrics AS (
         SELECT DISTINCT ON (site_id)
           site_id,
-          disk_usage_percent,
+          disk_usage,
           temperature,
           recorded_at
         FROM metrics
@@ -143,7 +143,7 @@ class PredictiveAlertsService {
       previous_metrics AS (
         SELECT DISTINCT ON (site_id)
           site_id,
-          disk_usage_percent,
+          disk_usage,
           temperature,
           recorded_at
         FROM metrics
@@ -175,7 +175,7 @@ class PredictiveAlertsService {
           site_id,
           COUNT(*) as count
         FROM alerts
-        WHERE type LIKE '%video%error%'
+        WHERE alert_type LIKE '%video%error%'
           AND created_at > NOW() - INTERVAL '24 hours'
         GROUP BY site_id
       ),
@@ -192,8 +192,8 @@ class PredictiveAlertsService {
         s.id as site_id,
         s.site_name,
         lvp.last_play as last_video_play,
-        lm.disk_usage_percent as disk_usage,
-        pm.disk_usage_percent as previous_disk_usage,
+        lm.disk_usage as disk_usage,
+        pm.disk_usage as previous_disk_usage,
         COALESCE(dc.count, 0)::int as disconnections_24h,
         CASE
           WHEN s.local_config_mirror->>'_networkProfile' IS NOT NULL
