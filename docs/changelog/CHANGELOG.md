@@ -1,3 +1,9 @@
+# [3.3.0](https://github.com/Tallec7/neopro/compare/v3.2.1...v3.3.0) (2026-02-05)
+
+### Features
+
+- **proof:** add proof of broadcast and monthly reports endpoints ([a10b63a](https://github.com/Tallec7/neopro/commit/a10b63a41630bff0f6346c9cfa708991891e447e))
+
 ## [3.2.1](https://github.com/Tallec7/neopro/compare/v3.2.0...v3.2.1) (2026-02-05)
 
 ### Bug Fixes
