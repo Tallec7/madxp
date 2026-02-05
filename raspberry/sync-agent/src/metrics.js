@@ -382,16 +382,84 @@ class MetricsCollector {
   }
 
   /**
+   * Récupère l'état de la TV via HDMI-CEC
+   * Permet de savoir si la TV est allumée, en veille, ou déconnectée
+   */
+  async getHdmiCecStatus() {
+    const cecStatus = {
+      tv_power: null,        // 'on' | 'standby' | 'unknown' | null
+      tv_connected: false,
+      devices_found: 0,
+      cec_available: false,
+      last_check_at: null,
+      error: null,
+    };
+
+    try {
+      // Vérifier si cec-client est installé
+      try {
+        await execAsync('which cec-client', { timeout: 2000 });
+        cecStatus.cec_available = true;
+      } catch {
+        cecStatus.cec_available = false;
+        cecStatus.error = 'cec-client not installed';
+        return cecStatus;
+      }
+
+      // Récupérer l'état de la TV (device 0 = TV)
+      const { stdout } = await execAsync(
+        'echo "pow 0" | timeout 5 cec-client -s -d 1 2>/dev/null',
+        { timeout: 8000 }
+      );
+
+      cecStatus.last_check_at = new Date().toISOString();
+
+      // Parser la réponse
+      if (stdout.includes('power status: on')) {
+        cecStatus.tv_power = 'on';
+        cecStatus.tv_connected = true;
+      } else if (stdout.includes('power status: standby')) {
+        cecStatus.tv_power = 'standby';
+        cecStatus.tv_connected = true;
+      } else if (stdout.includes('power status: in transition')) {
+        cecStatus.tv_power = 'transitioning';
+        cecStatus.tv_connected = true;
+      } else if (stdout.includes('power status:')) {
+        cecStatus.tv_power = 'unknown';
+        cecStatus.tv_connected = true;
+      } else {
+        cecStatus.tv_power = null;
+        cecStatus.tv_connected = false;
+        cecStatus.error = 'TV not responding to CEC';
+      }
+
+      // Compter les appareils CEC détectés
+      const devicesMatch = stdout.match(/device #(\d+):/g);
+      if (devicesMatch) {
+        cecStatus.devices_found = devicesMatch.length;
+      }
+
+    } catch (error) {
+      cecStatus.error = error.message;
+      cecStatus.tv_connected = false;
+      logger.warn('HDMI-CEC check failed:', error.message);
+    }
+
+    return cecStatus;
+  }
+
+  /**
    * Récupère un rapport de santé complet du système
    * Utilisé par la commande get_health_status
    */
   async getHealthStatus() {
     try {
-      const [metrics, gpuInfo, services, systemInfo] = await Promise.all([
+      const [metrics, gpuInfo, services, systemInfo, hdmiCecStatus] = await Promise.all([
         this.collectAll(),
         this.getGpuInfo(),
         this.getServicesStatus(),
         this.getSystemInfo(),
+        this.getHdmiCecStatus(),
       ]);
 
       // Calculer un score de santé global
@@ -470,6 +538,23 @@ class MetricsCollector {
         });
       }
 
+      // HDMI-CEC / TV Status
+      if (hdmiCecStatus.cec_available && !hdmiCecStatus.tv_connected) {
+        issues.push({
+          severity: 'warning',
+          component: 'HDMI-CEC',
+          message: 'TV non détectée via HDMI-CEC',
+          fix: 'Vérifier le câble HDMI et que la TV supporte CEC',
+        });
+      } else if (hdmiCecStatus.tv_power === 'standby') {
+        issues.push({
+          severity: 'warning',
+          component: 'HDMI-CEC',
+          message: 'TV en veille',
+          fix: 'La TV est en veille - les vidéos ne sont pas visibles',
+        });
+      }
+
       return {
         success: true,
         timestamp: new Date().toISOString(),
@@ -479,6 +564,7 @@ class MetricsCollector {
         gpu: gpuInfo,
         services,
         metrics,
+        hdmiCecStatus,
         system: {
           hostname: systemInfo?.hostname,
           os: systemInfo?.os,

@@ -34,6 +34,7 @@ const {
   removeBssidLock,
   optimizeForMesh,
 } = require('./wifi-bssid');
+const captureProof = require('./capture-proof');
 
 // === Dépendances ===
 const { exec } = require('child_process');
@@ -82,6 +83,14 @@ const commands = {
 
   // === Analytics (module: analytics-buffer.js) ===
   get_analytics_buffer_status: getAnalyticsBufferStatus,
+
+  // === Proof of Broadcast (module: capture-proof.js) ===
+  capture_proof: captureProof,
+
+  // === WiFi BSSID (module: wifi-bssid.js) ===
+  get_wifi_bssid_status: getWifiBssidStatus,
+  remove_bssid_lock: removeBssidLock,
+  optimize_for_mesh: optimizeForMesh,
 
   // === Commandes simples (inline) ===
 
