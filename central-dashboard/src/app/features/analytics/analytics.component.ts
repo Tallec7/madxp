@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subscription, interval, forkJoin } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { CacheService } from '../../core/services/cache.service';
 
 interface SiteStatus {
   id: string;
@@ -657,6 +658,7 @@ interface RecentActivity {
 })
 export class AnalyticsComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
+  private cache = inject(CacheService);
   private refreshSubscription?: Subscription;
 
   Math = Math; // Expose Math to template
@@ -712,14 +714,28 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     }
 
     // Récupérer les statuts de connexion ET les métriques moyennes en parallèle
+    // Utilise le cache pour éviter les requêtes redondantes (TTL 30s)
     forkJoin({
-      connectionStatus: this.http.get<ConnectionStatusResponse>(`${environment.apiUrl}/sites/connection-status`),
-      fleetMetrics: this.http.get<{
+      connectionStatus: this.cache.get<ConnectionStatusResponse>(
+        'analytics:connection-status',
+        () => this.http.get<ConnectionStatusResponse>(`${environment.apiUrl}/sites/connection-status`),
+        30000 // 30 secondes de cache
+      ),
+      fleetMetrics: this.cache.get<{
         avgCpu?: number;
         avgMemory?: number;
         avgTemperature?: number;
         avgDisk?: number;
-      }>(`${environment.apiUrl}/sites/fleet-metrics`)
+      }>(
+        'analytics:fleet-metrics',
+        () => this.http.get<{
+          avgCpu?: number;
+          avgMemory?: number;
+          avgTemperature?: number;
+          avgDisk?: number;
+        }>(`${environment.apiUrl}/sites/fleet-metrics`),
+        30000 // 30 secondes de cache
+      )
     }).subscribe({
       next: ({ connectionStatus, fleetMetrics }) => {
         // Mapper les données de l'API vers le format attendu par le composant

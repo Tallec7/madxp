@@ -8,9 +8,11 @@ import { Response } from 'express';
 import { AuthRequest } from '../types';
 import { benchmarkService } from '../services/benchmark.service';
 import logger from '../config/logger';
+import { memoryCache } from '../services/memory-cache.service';
 
 /**
  * Calcule le benchmark pour un site
+ * Résultat cachée pendant 60 secondes (les benchmarks changent lentement)
  */
 export const getSiteBenchmark = async (req: AuthRequest, res: Response) => {
   try {
@@ -29,6 +31,13 @@ export const getSiteBenchmark = async (req: AuthRequest, res: Response) => {
       ? String(startDate)
       : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+    // Check cache first (60 seconds TTL)
+    const cacheKey = `benchmark:site:${siteId}:${start}:${end}:${sport || ''}:${region || ''}:${sizeCategory || ''}`;
+    const cached = memoryCache.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const benchmark = await benchmarkService.calculateBenchmark(
       siteId,
       { start, end },
@@ -39,10 +48,15 @@ export const getSiteBenchmark = async (req: AuthRequest, res: Response) => {
       }
     );
 
-    return res.json({
+    const response = {
       success: true,
       data: benchmark,
-    });
+    };
+
+    // Cache for 60 seconds
+    memoryCache.set(cacheKey, response, 60000);
+
+    return res.json(response);
   } catch (error) {
     logger.error('Error calculating benchmark:', error);
     return res.status(500).json({ error: 'Failed to calculate benchmark' });

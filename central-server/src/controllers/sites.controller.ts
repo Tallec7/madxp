@@ -12,6 +12,7 @@ import { isAdmin } from '../middleware/auth';
 import { getFtpPublicUrl, isFtpConfigured } from '../config/ftp-storage';
 import { getPublicUrl } from '../config/supabase';
 import { validateShellCommand, getAllowedCommandsForRole } from '../middleware/remote-shell-security';
+import { memoryCache } from '../services/memory-cache.service';
 
 class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -497,19 +498,39 @@ export const getSiteStats = async (req: AuthRequest, res: Response) => {
 
 export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Response) => {
   try {
-    // Récupérer tous les sites avec leur dernier heartbeat depuis la table metrics
-    const sitesResult = await query(`
-      SELECT
-        s.id,
-        s.site_name,
-        s.club_name,
-        s.status,
-        s.last_seen_at,
-        s.local_ip,
-        (SELECT recorded_at FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as last_metric_at
-      FROM sites s
-      ORDER BY s.site_name
-    `);
+    // Utiliser le cache pour éviter les requêtes DB répétitives (TTL 10s)
+    // Cache court car les données de connexion changent fréquemment
+    const cacheKey = 'connection-status:all-sites';
+    const cachedSites = memoryCache.get<Array<{
+      id: string;
+      site_name: string;
+      club_name: string;
+      status: string;
+      last_seen_at: Date | null;
+      local_ip: string | null;
+      last_metric_at: Date | null;
+    }>>(cacheKey);
+
+    let sitesResult;
+    if (cachedSites) {
+      sitesResult = { rows: cachedSites };
+    } else {
+      // Récupérer tous les sites avec leur dernier heartbeat depuis la table metrics
+      sitesResult = await query(`
+        SELECT
+          s.id,
+          s.site_name,
+          s.club_name,
+          s.status,
+          s.last_seen_at,
+          s.local_ip,
+          (SELECT recorded_at FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as last_metric_at
+        FROM sites s
+        ORDER BY s.site_name
+      `);
+      // Cache for 10 seconds
+      memoryCache.set(cacheKey, sitesResult.rows, 10000);
+    }
 
     const socketService = (await import('../services/socket.service')).default;
     const connectedSiteIds = new Set(socketService.getConnectedSites());
@@ -2092,6 +2113,21 @@ export const getFleetHealthData = async (req: AuthRequest, res: Response) => {
  */
 export const getFleetMetrics = async (req: AuthRequest, res: Response) => {
   try {
+    // Cache fleet metrics for 30 seconds (data changes slowly)
+    const cacheKey = 'fleet-metrics:global';
+    const cached = memoryCache.get<{
+      avgCpu: number;
+      avgMemory: number;
+      avgTemperature: number;
+      avgDisk: number;
+      sitesWithMetrics: number;
+      timestamp: string;
+    }>(cacheKey);
+
+    if (cached) {
+      return res.json(cached);
+    }
+
     // Get average metrics from the last hour for sites that have recent data
     const result = await query(`
       SELECT
@@ -2106,14 +2142,19 @@ export const getFleetMetrics = async (req: AuthRequest, res: Response) => {
 
     const metrics = result.rows[0] || {};
 
-    res.json({
+    const response = {
       avgCpu: Math.round((parseFloat(String(metrics.avg_cpu)) || 0) * 10) / 10,
       avgMemory: Math.round((parseFloat(String(metrics.avg_memory)) || 0) * 10) / 10,
       avgTemperature: Math.round((parseFloat(String(metrics.avg_temperature)) || 0) * 10) / 10,
       avgDisk: Math.round((parseFloat(String(metrics.avg_disk)) || 0) * 10) / 10,
       sitesWithMetrics: parseInt(String(metrics.sites_with_metrics), 10) || 0,
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    // Cache for 30 seconds
+    memoryCache.set(cacheKey, response, 30000);
+
+    res.json(response);
   } catch (error) {
     logger.error('Get fleet metrics error:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des métriques de la flotte' });

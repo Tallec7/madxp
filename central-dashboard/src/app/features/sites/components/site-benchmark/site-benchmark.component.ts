@@ -4,10 +4,11 @@
  * Affiche le benchmark anonymisé pour un site donné
  */
 
-import { Component, Input, OnInit, OnChanges, inject } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
+import { CacheService } from '../../../../core/services/cache.service';
 
 interface BenchmarkStat {
   metric: string;
@@ -40,7 +41,7 @@ interface BenchmarkResult {
     <div class="benchmark-container">
       <div class="benchmark-header">
         <h4>🏆 Benchmark anonymisé</h4>
-        <button class="btn btn-sm btn-secondary" (click)="loadBenchmark()" [disabled]="loading">
+        <button class="btn btn-sm btn-secondary" (click)="forceRefresh()" [disabled]="loading">
           {{ loading ? '...' : '↻ Actualiser' }}
         </button>
       </div>
@@ -257,6 +258,8 @@ export class SiteBenchmarkComponent implements OnInit, OnChanges {
   @Input() siteId!: string;
 
   private readonly http = inject(HttpClient);
+  private readonly cache = inject(CacheService);
+  private lastLoadedSiteId: string | null = null;
 
   benchmark: BenchmarkResult | null = null;
   loading = false;
@@ -266,20 +269,27 @@ export class SiteBenchmarkComponent implements OnInit, OnChanges {
     this.loadBenchmark();
   }
 
-  ngOnChanges(): void {
-    if (this.siteId) {
+  ngOnChanges(changes: SimpleChanges): void {
+    // Ne recharger que si le siteId a vraiment changé
+    if (changes['siteId'] && this.siteId && this.siteId !== this.lastLoadedSiteId) {
       this.loadBenchmark();
     }
   }
 
   loadBenchmark(): void {
-    if (!this.siteId) return;
+    if (!this.siteId || this.siteId === this.lastLoadedSiteId) return;
 
     this.loading = true;
     this.error = null;
+    this.lastLoadedSiteId = this.siteId;
 
-    this.http.get<{ success: boolean; data: BenchmarkResult }>(
-      `${environment.apiUrl}/benchmark/sites/${this.siteId}`
+    // Utilise le cache pour éviter les requêtes redondantes (TTL 60s pour le benchmark)
+    this.cache.get<{ success: boolean; data: BenchmarkResult }>(
+      `benchmark:site:${this.siteId}`,
+      () => this.http.get<{ success: boolean; data: BenchmarkResult }>(
+        `${environment.apiUrl}/benchmark/sites/${this.siteId}`
+      ),
+      60000 // 60 secondes de cache pour le benchmark
     ).subscribe({
       next: (response) => {
         this.benchmark = response.data;
@@ -288,8 +298,17 @@ export class SiteBenchmarkComponent implements OnInit, OnChanges {
       error: (_err) => {
         this.error = 'Impossible de charger le benchmark';
         this.loading = false;
+        // Reset lastLoadedSiteId pour permettre un retry
+        this.lastLoadedSiteId = null;
       }
     });
+  }
+
+  forceRefresh(): void {
+    // Invalider le cache et recharger
+    this.cache.invalidate(`benchmark:site:${this.siteId}`);
+    this.lastLoadedSiteId = null;
+    this.loadBenchmark();
   }
 
   getTotalSampleSize(): number {
