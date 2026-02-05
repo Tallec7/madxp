@@ -1,3 +1,9 @@
+## [3.6.1](https://github.com/Tallec7/neopro/compare/v3.6.0...v3.6.1) (2026-02-05)
+
+### Bug Fixes
+
+- **reports:** correct SQL queries for pdf-report.service ([40d5f31](https://github.com/Tallec7/neopro/commit/40d5f314fbf6d31021fc13e620c48b48768b53cb))
+
 # [3.6.0](https://github.com/Tallec7/neopro/compare/v3.5.15...v3.6.0) (2026-02-05)
 
 ### Features
