@@ -4,7 +4,7 @@
  * Onglet de gestion de l'abonnement dans site-detail
  * Affiche le statut, permet de prolonger, suspendre, réactiver
  */
-import { Component, Input, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Site, SiteSubscription, SubscriptionHistoryEntry, LicenseStatusResponse, SuspensionReason, SubscriptionPlan } from '../../../../core/models';
@@ -728,6 +728,7 @@ import { SubscriptionBadgeComponent } from '../../../../shared/components/subscr
 })
 export class SiteSubscriptionTabComponent implements OnInit, OnChanges {
   @Input() site: Site | null = null;
+  @Output() subscriptionChanged = new EventEmitter<void>();
 
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly notificationService = inject(NotificationService);
@@ -821,7 +822,7 @@ export class SiteSubscriptionTabComponent implements OnInit, OnChanges {
         this.loadHistory();
         this.extending = false;
         // Trigger parent refresh
-        window.dispatchEvent(new CustomEvent('subscription-updated', { detail: { siteId: this.site!.id } }));
+        this.subscriptionChanged.emit();
       },
       error: (error) => {
         this.notificationService.error('Erreur lors de la prolongation: ' + ErrorExtractor.getMessage(error));
@@ -844,7 +845,7 @@ export class SiteSubscriptionTabComponent implements OnInit, OnChanges {
         this.suspendForm = { reason: '', note: '' };
         this.loadHistory();
         this.suspending = false;
-        window.dispatchEvent(new CustomEvent('subscription-updated', { detail: { siteId: this.site!.id } }));
+        this.subscriptionChanged.emit();
       },
       error: (error) => {
         this.notificationService.error('Erreur lors de la suspension: ' + ErrorExtractor.getMessage(error));
@@ -867,7 +868,7 @@ export class SiteSubscriptionTabComponent implements OnInit, OnChanges {
         this.reactivateForm = { newEndDate: '', note: '' };
         this.loadHistory();
         this.reactivating = false;
-        window.dispatchEvent(new CustomEvent('subscription-updated', { detail: { siteId: this.site!.id } }));
+        this.subscriptionChanged.emit();
       },
       error: (error) => {
         this.notificationService.error('Erreur lors de la réactivation: ' + ErrorExtractor.getMessage(error));
@@ -890,7 +891,7 @@ export class SiteSubscriptionTabComponent implements OnInit, OnChanges {
         this.changePlanForm.note = '';
         this.loadHistory();
         this.changingPlan = false;
-        window.dispatchEvent(new CustomEvent('subscription-updated', { detail: { siteId: this.site!.id } }));
+        this.subscriptionChanged.emit();
       },
       error: (error) => {
         this.notificationService.error('Erreur lors du changement de plan: ' + ErrorExtractor.getMessage(error));

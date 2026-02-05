@@ -2147,6 +2147,26 @@ vcgencmd get_mem gpu
   - **Tooltip amélioré** : "Aucune lecture sur les 30 derniers jours (pas de match ?)"
   - **Impact** : Évite la confusion entre connexion (Connecté) et usage (En veille)
 
+- **Fix rafraîchissement après suspension/réactivation** : L'interface se met maintenant à jour correctement
+  - **Problème** : L'en-tête affichait "Abonnement Actif" même après suspension car le parent ne rechargait pas les données
+  - **Cause** : Le composant `site-subscription-tab` utilisait `window.dispatchEvent()` au lieu d'un `@Output()` Angular
+  - **Solution** : Ajout de `@Output() subscriptionChanged = new EventEmitter<void>()` et remplacement des 4 `window.dispatchEvent()` par `this.subscriptionChanged.emit()`
+  - **Fichier modifié** : `central-dashboard/.../site-subscription-tab.component.ts`
+  - **Migration** : Rebuild et redéployer le dashboard
+
+- **Correction valeurs auto_unblock des motifs de suspension** : Les motifs "maintenance", "abuse", etc. ne débloquent plus automatiquement
+  - **Problème** : Un site suspendu pour "Maintenance" était automatiquement réactivé au prochain heartbeat car `auto_unblock = true`
+  - **Solution** : Correction en base de données des valeurs `auto_unblock`
+  - **Motifs avec auto_unblock = true** (déblocage automatique si abonnement renouvelé) :
+    - `unpaid`, `expired`, `trial_ended`
+  - **Motifs avec auto_unblock = false** (réactivation manuelle requise) :
+    - `maintenance`, `abuse`, `request`, `hardware`, `connection`
+  - **Migration SQL** :
+    ```sql
+    UPDATE subscription_suspension_reasons SET auto_unblock = false
+    WHERE code IN ('maintenance', 'abuse', 'request', 'hardware', 'connection');
+    ```
+
 - **Alertes Prédictives (Phase 3.1)** : Système d'alertes proactives détectant les problèmes AVANT qu'ils surviennent
   - **Métriques prédictives évaluées** (8 au total) :
     - `days_since_last_video` : Détecte l'inactivité prolongée des clubs (warning > 7j, critical > 14j)
@@ -3694,8 +3714,21 @@ SMTP_PORT=1025
 | **LicenseStatus**    | État licence : VALID, WARNING, GRACE_PERIOD, BLOCKED               |
 | **LicenseCache**     | Cache local de la licence (7 jours de validité)                    |
 | **GracePeriod**      | Délai de grâce après expiration (7 jours sans blocage)             |
-| **SuspensionReason** | Motif de suspension (impayé, abus, maintenance, etc.)              |
-| **Auto-unblock**     | Déblocage automatique quand l'abonnement est renouvelé             |
+| **SuspensionReason** | Motif de suspension (voir tableau ci-dessous)                      |
+| **Auto-unblock**     | Déblocage automatique si abonnement renouvelé (certains motifs)    |
+
+### Motifs de suspension et auto-déblocage
+
+| Motif         | Label               | auto_unblock | Comportement                           |
+| ------------- | ------------------- | ------------ | -------------------------------------- |
+| `unpaid`      | Impayé              | ✅ true      | Déblocage auto si abonnement renouvelé |
+| `expired`     | Abonnement expiré   | ✅ true      | Déblocage auto si abonnement renouvelé |
+| `trial_ended` | Fin période d'essai | ✅ true      | Déblocage auto si plan payant souscrit |
+| `maintenance` | Maintenance         | ❌ false     | Réactivation manuelle requise          |
+| `abuse`       | Utilisation abusive | ❌ false     | Réactivation manuelle requise          |
+| `request`     | Demande client      | ❌ false     | Réactivation manuelle requise          |
+| `hardware`    | Problème matériel   | ❌ false     | Réactivation manuelle requise          |
+| `connection`  | Connexion requise   | ❌ false     | Réactivation manuelle requise          |
 
 ---
 
