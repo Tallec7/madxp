@@ -750,14 +750,33 @@ export class TvComponent implements OnInit, OnDestroy {
    * Change la phase active et recharge la boucle correspondante.
    * Met également à jour le contexte analytics.
    * Utilise freeze-frame + black overlay pour une transition sans flash.
+   *
+   * Si une vidéo manuelle est en cours, elle sera coupée et on revient à la boucle.
+   * Si on clique sur la même phase, on relance quand même la boucle (utile pour
+   * couper une vidéo manuelle et revenir à la boucle).
    */
   public switchToPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
-    console.log('[TV] Switching to phase:', phase);
+    console.log('[TV] Switching to phase:', phase, 'isManualMode:', this.isManualMode);
 
-    // Si même phase, ne rien faire
-    if (phase === this.activePhase) {
-      console.log('[TV] Already in phase', phase, '- skipping');
-      return;
+    // Si une vidéo manuelle est en cours, on la coupe pour revenir à la boucle
+    // même si c'est la même phase
+    if (this.isManualMode) {
+      console.log('[TV] Cutting manual video to return to loop');
+      this.stopManualVideoAndReturnToLoop();
+    }
+
+    // Si même phase ET pas de vidéo manuelle qui vient d'être coupée, ne rien faire
+    // (la boucle tourne déjà)
+    if (phase === this.activePhase && !this.isManualMode) {
+      // Vérifier si la boucle est bien en cours, sinon la relancer
+      if (this.isLoopMode && !this.pendingSwitch) {
+        const activePlayer = this.getActivePlayer();
+        if (!activePlayer.paused) {
+          console.log('[TV] Already in phase', phase, 'and loop is running - skipping');
+          return;
+        }
+      }
+      console.log('[TV] Same phase but loop not running, restarting');
     }
 
     // ÉTAPE 1: Capturer le freeze-frame AVANT de changer quoi que ce soit
@@ -1571,6 +1590,35 @@ export class TvComponent implements OnInit, OnDestroy {
     this.playerA?.pause();
     this.playerB?.pause();
     console.log('[TV] Loop stopped, switching to manual mode');
+  }
+
+  /**
+   * Arrête la vidéo manuelle en cours et prépare le retour à la boucle.
+   * Appelé quand l'utilisateur clique sur une phase pour couper une vidéo
+   * et revenir à la boucle de sponsors.
+   */
+  private stopManualVideoAndReturnToLoop(): void {
+    console.log('[TV] Stopping manual video to return to loop');
+
+    // Arrêter les deux players manuels (au cas où)
+    [this.manualPlayerA, this.manualPlayerB].forEach(player => {
+      if (player) {
+        player.pause();
+        player.style.opacity = '0';
+        player.removeAttribute('src');
+        player.load();
+      }
+    });
+
+    // Tracker la fin de la vidéo manuelle (interrompue)
+    this.analyticsService.trackVideoEnd(false); // false = pas complétée
+
+    // Cacher le black overlay (sera réaffiché si nécessaire par switchToPhase)
+    this.hideBlackOverlay();
+
+    // Sortir du mode manuel
+    this.isManualMode = false;
+    this.lastTriggerType = 'auto';
   }
 
   /**

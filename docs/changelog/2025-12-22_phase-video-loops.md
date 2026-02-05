@@ -39,6 +39,14 @@ Le dropdown affiche 4 options :
 
 Chaque option indique le nombre de vidéos configurées. Une flèche (⟵) indique que la phase utilise la boucle par défaut (pas de loopVideos personnalisé).
 
+### Couper une vidéo manuelle (v3.0.1)
+
+Cliquer sur **n'importe quelle boucle** (y compris la phase actuelle) **coupe immédiatement** une vidéo manuelle en cours pour revenir à la boucle de sponsors. Cela permet à l'opérateur de :
+
+- Lancer une vidéo de 30s, puis la couper après 5s en cliquant sur "Boucle par défaut"
+- Revenir à la boucle à tout moment sans attendre la fin de la vidéo manuelle
+- Changer de phase en cours de lecture manuelle (ex: passer de "Match" à "Après-match")
+
 ### Config Editor (Dashboard Central)
 
 Une nouvelle section "Boucles Vidéo par Phase" permet de :

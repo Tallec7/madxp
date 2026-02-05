@@ -899,24 +899,28 @@ Le préchargement anticipé et l'événement `timeupdate` causent des **saccades
 
 **Stratégie pour les changements de phase** :
 
-1. Capturer le freeze-frame AVANT de changer quoi que ce soit
-2. Changer la phase et recharger la boucle
-3. Une fois la nouvelle vidéo en lecture, cacher le freeze-frame (150ms délai)
+1. Si une vidéo manuelle est en cours → la couper immédiatement (`stopManualVideoAndReturnToLoop`)
+2. Capturer le freeze-frame AVANT de changer quoi que ce soit
+3. Changer la phase et recharger la boucle
+4. Une fois la nouvelle vidéo en lecture, cacher le freeze-frame (150ms délai)
+
+**Note importante** : Cliquer sur une boucle (même la phase actuelle) coupe toujours une vidéo manuelle en cours. Cela permet à l'utilisateur de revenir à la boucle de sponsors à tout moment.
 
 **Méthodes clés** :
 
-| Méthode                       | Rôle                                         |
-| ----------------------------- | -------------------------------------------- |
-| `initDoubleBuffer()`          | Initialise les 4 players + canvas + overlay  |
-| `setPlayerVisible()`          | Contrôle opacité/z-index via styles inline   |
-| `playOnActivePlayer()`        | Joue une vidéo sur le player visible         |
-| `preloadOnInactivePlayer()`   | Charge la vidéo suivante (appelé au `ended`) |
-| `switchPlayers()`             | Bascule entre les 2 players                  |
-| `onVideoEnded()`              | Déclenche le switch à la fin d'une vidéo     |
-| `captureAndShowFreezeFrame()` | Capture l'image actuelle sur le canvas       |
-| `hideFreezeFrame()`           | Cache le canvas + clearRect (libère mémoire) |
-| `showBlackOverlay()`          | Affiche l'overlay noir (bloque la boucle)    |
-| `hideBlackOverlay()`          | Cache l'overlay noir                         |
+| Méthode                            | Rôle                                             |
+| ---------------------------------- | ------------------------------------------------ |
+| `initDoubleBuffer()`               | Initialise les 4 players + canvas + overlay      |
+| `setPlayerVisible()`               | Contrôle opacité/z-index via styles inline       |
+| `playOnActivePlayer()`             | Joue une vidéo sur le player visible             |
+| `preloadOnInactivePlayer()`        | Charge la vidéo suivante (appelé au `ended`)     |
+| `switchPlayers()`                  | Bascule entre les 2 players                      |
+| `onVideoEnded()`                   | Déclenche le switch à la fin d'une vidéo         |
+| `captureAndShowFreezeFrame()`      | Capture l'image actuelle sur le canvas           |
+| `hideFreezeFrame()`                | Cache le canvas + clearRect (libère mémoire)     |
+| `showBlackOverlay()`               | Affiche l'overlay noir (bloque la boucle)        |
+| `hideBlackOverlay()`               | Cache l'overlay noir                             |
+| `stopManualVideoAndReturnToLoop()` | Coupe la vidéo manuelle pour revenir à la boucle |
 
 **Optimisation mémoire (usage intensif)** :
 
