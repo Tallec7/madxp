@@ -1,3 +1,9 @@
+## [3.5.15](https://github.com/Tallec7/neopro/compare/v3.5.14...v3.5.15) (2026-02-05)
+
+### Performance Improvements
+
+- add multi-layer caching to prevent 429 rate limit errors ([96a52d5](https://github.com/Tallec7/neopro/commit/96a52d589124ced434e58658661572bc954c727f))
+
 ## [3.5.14](https://github.com/Tallec7/neopro/compare/v3.5.13...v3.5.14) (2026-02-05)
 
 ### Bug Fixes
