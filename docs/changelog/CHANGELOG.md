@@ -1,3 +1,9 @@
+## [3.5.5](https://github.com/Tallec7/neopro/compare/v3.5.4...v3.5.5) (2026-02-05)
+
+### Bug Fixes
+
+- **sync-agent:** safe loading of capture-proof module + reduce rate limits ([b92a08f](https://github.com/Tallec7/neopro/commit/b92a08f16cec7dacb21156a9b600fc26ee256bbb))
+
 ## [3.5.4](https://github.com/Tallec7/neopro/compare/v3.5.3...v3.5.4) (2026-02-05)
 
 ### Bug Fixes
