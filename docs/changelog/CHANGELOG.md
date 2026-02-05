@@ -1,3 +1,9 @@
+## [3.5.2](https://github.com/Tallec7/neopro/compare/v3.5.1...v3.5.2) (2026-02-05)
+
+### Bug Fixes
+
+- **dashboard:** restore analytics pages and fix connection status display ([a5953eb](https://github.com/Tallec7/neopro/commit/a5953eb31ecb3cc5f4316e077f81e2c9a79c9cb6))
+
 ## [3.5.1](https://github.com/Tallec7/neopro/compare/v3.5.0...v3.5.1) (2026-02-05)
 
 ### Bug Fixes
