@@ -236,7 +236,7 @@ class RealtimeStatsService {
         AVG(memory_usage) as avg_memory,
         AVG(temperature) as avg_temperature
       FROM metrics
-      WHERE created_at >= NOW() - INTERVAL '5 minutes'
+      WHERE recorded_at >= NOW() - INTERVAL '5 minutes'
     `);
 
     // Sites avec alertes non résolues
