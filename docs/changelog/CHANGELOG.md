@@ -1,3 +1,9 @@
+# [3.2.0](https://github.com/Tallec7/neopro/compare/v3.1.0...v3.2.0) (2026-02-05)
+
+### Features
+
+- **analytics:** add predictive alerts and anonymous benchmarks (Phase 3.1 & 3.2) ([e754ed4](https://github.com/Tallec7/neopro/commit/e754ed413111bc4df353ea1acba1ecedc753911a))
+
 # [3.1.0](https://github.com/Tallec7/neopro/compare/v3.0.2...v3.1.0) (2026-02-05)
 
 ### Features
