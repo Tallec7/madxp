@@ -2107,11 +2107,11 @@ export const getFleetMetrics = async (req: AuthRequest, res: Response) => {
     const metrics = result.rows[0] || {};
 
     res.json({
-      avgCpu: Math.round((parseFloat(metrics.avg_cpu) || 0) * 10) / 10,
-      avgMemory: Math.round((parseFloat(metrics.avg_memory) || 0) * 10) / 10,
-      avgTemperature: Math.round((parseFloat(metrics.avg_temperature) || 0) * 10) / 10,
-      avgDisk: Math.round((parseFloat(metrics.avg_disk) || 0) * 10) / 10,
-      sitesWithMetrics: parseInt(metrics.sites_with_metrics) || 0,
+      avgCpu: Math.round((parseFloat(String(metrics.avg_cpu)) || 0) * 10) / 10,
+      avgMemory: Math.round((parseFloat(String(metrics.avg_memory)) || 0) * 10) / 10,
+      avgTemperature: Math.round((parseFloat(String(metrics.avg_temperature)) || 0) * 10) / 10,
+      avgDisk: Math.round((parseFloat(String(metrics.avg_disk)) || 0) * 10) / 10,
+      sitesWithMetrics: parseInt(String(metrics.sites_with_metrics), 10) || 0,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
