@@ -1,3 +1,9 @@
+## [3.0.2](https://github.com/Tallec7/neopro/compare/v3.0.1...v3.0.2) (2026-02-05)
+
+### Bug Fixes
+
+- **tv:** allow cutting manual video by clicking on any loop phase ([1937ddb](https://github.com/Tallec7/neopro/commit/1937ddb8ba2e71415a12986cb556f62f65bbff9a))
+
 ## [3.0.1](https://github.com/Tallec7/neopro/compare/v3.0.0...v3.0.1) (2026-02-05)
 
 ### Bug Fixes
