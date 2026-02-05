@@ -315,10 +315,12 @@ class AlertingService {
   async createAlert(alert: Omit<Alert, 'id' | 'status' | 'createdAt'>): Promise<string> {
     await this.ensureTables();
 
+    // NOTE: threshold_id n'existe pas dans la table alerts en production
+    // On l'omet de l'INSERT pour éviter les erreurs
     const result = await query<{ id: string; [key: string]: unknown }>(
       `INSERT INTO ${this.tableName}
-       (site_id, alert_type, severity, status, message, metadata, threshold_id)
-       VALUES ($1, $2, $3, 'active', $4, $5, $6)
+       (site_id, alert_type, severity, status, message, metadata)
+       VALUES ($1, $2, $3, 'active', $4, $5)
        RETURNING id`,
       [
         alert.siteId || null,
@@ -326,7 +328,6 @@ class AlertingService {
         alert.severity,
         alert.message,
         JSON.stringify(alert.metadata),
-        alert.thresholdId || null,
       ]
     );
 
@@ -925,6 +926,12 @@ class AlertingService {
   }
 
   private async checkEscalations(): Promise<void> {
+    // DÉSACTIVÉ: La table alerts en production n'a pas de colonne threshold_id
+    // Cette fonctionnalité d'escalade nécessite une migration DB pour être activée
+    // Pour l'instant, on skip silencieusement pour éviter les erreurs toutes les minutes
+    return;
+
+    /*
     try {
       // Récupérer les alertes actives qui doivent être escaladées
       const result = await query(`
@@ -958,6 +965,7 @@ class AlertingService {
     } catch (error) {
       logger.error('Error checking escalations:', error);
     }
+    */
   }
 
   private async ensureTables(): Promise<void> {
