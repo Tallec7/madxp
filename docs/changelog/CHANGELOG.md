@@ -1,3 +1,15 @@
+# [3.4.0](https://github.com/Tallec7/neopro/compare/v3.3.0...v3.4.0) (2026-02-05)
+
+### Features
+
+- **alerting:** add predictive alert thresholds and cron improvements ([457c04b](https://github.com/Tallec7/neopro/commit/457c04b8dbb1741795302781467f114a5cae55a0))
+- **dashboard:** add routes, models and UI improvements ([5408e79](https://github.com/Tallec7/neopro/commit/5408e7905aedeeec1ae45e7e2a9b46961e7e47ec))
+- **fleet:** add fleet health dashboard component ([18950f7](https://github.com/Tallec7/neopro/commit/18950f77519346fbdd6f624378bdb652ce727140))
+- **proof:** add dashboard service and Pi capture command ([fe83c4c](https://github.com/Tallec7/neopro/commit/fe83c4c6e6be125f5365f1ad528e4a2fe6b43fc2))
+- **reports:** add dashboard service for monthly reports ([18ac125](https://github.com/Tallec7/neopro/commit/18ac125f317c5dc5670a9fb202f04897e67c9e03))
+- **sites:** add proof capture and enhanced metrics endpoints ([7b5f938](https://github.com/Tallec7/neopro/commit/7b5f93815ec31dca96a38468de923dd1a8634320))
+- **sync-agent:** add proof capture and enhanced metrics collection ([82f6b2d](https://github.com/Tallec7/neopro/commit/82f6b2d52a2f26c1e69a7b3a7182bc08d48e4ef4))
+
 # [3.3.0](https://github.com/Tallec7/neopro/compare/v3.2.1...v3.3.0) (2026-02-05)
 
 ### Features
