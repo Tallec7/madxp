@@ -1935,12 +1935,16 @@ export const getFleetHealthData = async (req: AuthRequest, res: Response) => {
         : null;
 
       const connectionHealth = isConnectedNow ? socketService.getConnectionHealth(site.id) : null;
-      const isHealthy = connectionHealth?.isHealthy ?? false;
+
+      // Vérifier si c'est une vraie connexion zombie (socket morte mais flag actif)
+      const isZombie = connectionHealth && !connectionHealth.socketConnected && connectionHealth.inMap;
 
       let displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
-      if (isConnectedNow && isHealthy) {
+      if (isConnectedNow && !isZombie) {
+        // Connecté avec socket active = online
         displayStatus = 'online';
-      } else if (isConnectedNow && !isHealthy) {
+      } else if (isConnectedNow && isZombie) {
+        // Connexion zombie = warning
         displayStatus = 'warning';
       } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < ONLINE_THRESHOLD_SECONDS) {
         displayStatus = 'online';
