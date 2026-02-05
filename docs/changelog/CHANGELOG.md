@@ -1,3 +1,9 @@
+## [3.5.13](https://github.com/Tallec7/neopro/compare/v3.5.12...v3.5.13) (2026-02-05)
+
+### Bug Fixes
+
+- **analytics:** add fleet-metrics endpoint and fix analytics page data loading ([3e910b2](https://github.com/Tallec7/neopro/commit/3e910b2ac0cd37804f44b163cf608dc6e5430c77))
+
 ## [3.5.12](https://github.com/Tallec7/neopro/compare/v3.5.11...v3.5.12) (2026-02-05)
 
 ### Bug Fixes
