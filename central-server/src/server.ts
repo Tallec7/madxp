@@ -382,6 +382,10 @@ const startServer = async () => {
     await cronSchedulerService.start();
     logger.info('Cron scheduler started');
 
+    // Initialiser le service d'alerting (crée les tables et charge les seuils par défaut)
+    await alertingService.initialize();
+    logger.info('Alerting service initialized');
+
     // Demarrer le service d'alertes reseau (Phase 4 - Network Resilience)
     networkAlertsService.start();
     logger.info('Network alerts service started');
@@ -424,6 +428,7 @@ process.on('SIGTERM', async () => {
   cronSchedulerService.stop();
   memoryManagerService.stop();
   predictiveAlertsService.stop();
+  alertingService.cleanup();
   adminOpsService.stopCleanup();
   httpServer.close(async () => {
     logger.info('HTTP server closed');

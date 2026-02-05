@@ -2227,6 +2227,18 @@ vcgencmd get_mem gpu
     - `central-dashboard/.../site-benchmark/site-benchmark.component.ts`
   - **Migration** : Redéployer le central-server et le dashboard
 
+- **Fix alertes prédictives non créées** : Le service d'alerting n'était pas initialisé au démarrage
+  - **Problème** : Aucune alerte prédictive n'apparaissait dans le dashboard malgré le code en place
+  - **Cause racine** : `alertingService.initialize()` n'était jamais appelé dans `server.ts`
+    - La table `alert_thresholds` restait vide (seuils par défaut non chargés)
+    - `predictiveAlertsService` appelait `alertingService.evaluateMetric()` qui ne trouvait aucun seuil → aucune alerte créée
+  - **Solution** : Ajout de `await alertingService.initialize()` au démarrage du serveur
+    - Crée la table `alert_thresholds` si inexistante
+    - Charge les 14 seuils par défaut (6 réactifs + 8 prédictifs)
+    - Démarre le check périodique d'escalade
+  - **Fichier modifié** : `central-server/src/server.ts`
+  - **Migration** : Redéployer le central-server sur Railway
+
 ### v2.48.x (Février 2026)
 
 - **Fix envoi massif impressions sponsors** : Correction du bug qui empêchait les analytics de remonter

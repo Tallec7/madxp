@@ -42,7 +42,21 @@ Dashboard affiche l'alerte
 Support/Ops réagit (ce MODOP)
 ```
 
-### 3.2 Seuils par défaut
+### 3.2 Initialisation du service
+
+**Important** : Le service d'alerting doit être initialisé au démarrage du serveur via :
+
+```typescript
+await alertingService.initialize();
+```
+
+Cette initialisation (dans `server.ts`) :
+
+- Crée la table `alert_thresholds` si inexistante
+- Charge les 14 seuils par défaut (6 réactifs + 8 prédictifs)
+- Démarre le check périodique d'escalade
+
+### 3.3 Seuils par défaut
 
 Définis dans `central-server/src/services/alerting.service.ts:50-123`
 
@@ -61,7 +75,7 @@ Définis dans `central-server/src/services/alerting.service.ts:50-123`
 - **Cooldown** : Temps avant nouvelle alerte sur même métrique (évite le spam)
 - **Escalade** : Temps avant escalade vers superviseur
 
-### 3.3 Canaux de notification
+### 3.4 Canaux de notification
 
 | Canal       | Configuration                  | Utilisation                     |
 | ----------- | ------------------------------ | ------------------------------- |
