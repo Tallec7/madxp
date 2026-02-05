@@ -693,15 +693,55 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   loadData(): void {
     this.loading = true;
 
-    // TODO: Réactiver fleet-health quand le backend sera stable
-    // Pour l'instant, utiliser uniquement connection-status
-    this.http.get<{ data: SiteStatus[] }>(`${environment.apiUrl}/sites/connection-status`).subscribe({
-      next: (result) => {
-        this.allSites = result.data || [];
-        this.stats.total = this.allSites.length;
-        this.stats.online = this.allSites.filter(s => s.status === 'online').length;
-        this.stats.offline = this.allSites.filter(s => s.status === 'offline').length;
-        this.stats.warning = this.allSites.filter(s => s.status === 'warning').length;
+    // L'API retourne { sites: [...], stats: {...} }
+    interface ConnectionStatusResponse {
+      sites: Array<{
+        siteId: string;
+        siteName: string;
+        clubName: string;
+        displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
+        lastSeenAt: string | null;
+      }>;
+      stats: {
+        total: number;
+        online: number;
+        offline: number;
+        warning: number;
+        unknown: number;
+      };
+    }
+
+    // Récupérer les statuts de connexion ET les métriques moyennes en parallèle
+    forkJoin({
+      connectionStatus: this.http.get<ConnectionStatusResponse>(`${environment.apiUrl}/sites/connection-status`),
+      fleetMetrics: this.http.get<{
+        avgCpu?: number;
+        avgMemory?: number;
+        avgTemperature?: number;
+        avgDisk?: number;
+      }>(`${environment.apiUrl}/sites/fleet-metrics`)
+    }).subscribe({
+      next: ({ connectionStatus, fleetMetrics }) => {
+        // Mapper les données de l'API vers le format attendu par le composant
+        this.allSites = (connectionStatus.sites || []).map(s => ({
+          id: s.siteId,
+          site_name: s.siteName,
+          club_name: s.clubName,
+          status: s.displayStatus === 'unknown' ? 'offline' : s.displayStatus,
+          last_seen_at: s.lastSeenAt,
+        }));
+
+        // Utiliser les stats pré-calculées par l'API
+        this.stats.total = connectionStatus.stats?.total || this.allSites.length;
+        this.stats.online = connectionStatus.stats?.online || this.allSites.filter(s => s.status === 'online').length;
+        this.stats.offline = connectionStatus.stats?.offline || this.allSites.filter(s => s.status === 'offline').length;
+        this.stats.warning = connectionStatus.stats?.warning || this.allSites.filter(s => s.status === 'warning').length;
+
+        // Métriques moyennes de la flotte
+        this.stats.avgCpu = fleetMetrics?.avgCpu || 0;
+        this.stats.avgMemory = fleetMetrics?.avgMemory || 0;
+        this.stats.avgTemperature = fleetMetrics?.avgTemperature || 0;
+        this.stats.avgDisk = fleetMetrics?.avgDisk || 0;
 
         this.problemSites = this.allSites.filter(site =>
           site.status === 'offline' || site.status === 'warning'
@@ -713,7 +753,8 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         this.lastUpdate = new Date();
         this.loading = false;
       },
-      error: () => {
+      error: (err) => {
+        console.error('Failed to load analytics data:', err);
         this.loading = false;
       }
     });

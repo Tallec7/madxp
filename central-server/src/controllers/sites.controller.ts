@@ -2086,6 +2086,41 @@ export const getFleetHealthData = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * Get fleet-wide average metrics
+ * GET /api/sites/fleet-metrics
+ * Returns average CPU, memory, temperature, disk usage across all online sites
+ */
+export const getFleetMetrics = async (req: AuthRequest, res: Response) => {
+  try {
+    // Get average metrics from the last hour for sites that have recent data
+    const result = await query(`
+      SELECT
+        COALESCE(AVG(m.cpu_usage), 0) as avg_cpu,
+        COALESCE(AVG(m.memory_usage), 0) as avg_memory,
+        COALESCE(AVG(m.temperature), 0) as avg_temperature,
+        COALESCE(AVG(m.disk_usage), 0) as avg_disk,
+        COUNT(DISTINCT m.site_id) as sites_with_metrics
+      FROM metrics m
+      WHERE m.recorded_at > NOW() - INTERVAL '1 hour'
+    `);
+
+    const metrics = result.rows[0] || {};
+
+    res.json({
+      avgCpu: Math.round((parseFloat(metrics.avg_cpu) || 0) * 10) / 10,
+      avgMemory: Math.round((parseFloat(metrics.avg_memory) || 0) * 10) / 10,
+      avgTemperature: Math.round((parseFloat(metrics.avg_temperature) || 0) * 10) / 10,
+      avgDisk: Math.round((parseFloat(metrics.avg_disk) || 0) * 10) / 10,
+      sitesWithMetrics: parseInt(metrics.sites_with_metrics) || 0,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    logger.error('Get fleet metrics error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des métriques de la flotte' });
+  }
+};
+
+/**
  * Get match history for a specific site
  * Returns recent matches with audience estimates, videos played, and duration
  */

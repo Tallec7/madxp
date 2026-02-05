@@ -18,6 +18,9 @@ router.get('/connection-status', authenticate, monitoringRateLimit, sitesControl
 // Fleet health data (aggregated view for admin dashboard)
 router.get('/fleet-health', authenticate, requireRole('admin'), adminRateLimit, sitesController.getFleetHealthData);
 
+// Fleet metrics (aggregated metrics for analytics dashboard)
+router.get('/fleet-metrics', authenticate, monitoringRateLimit, sitesController.getFleetMetrics);
+
 // Route de debug pour voir l'état des connexions WebSocket (admin only)
 router.get('/debug/connections', authenticate, requireRole('admin'), adminRateLimit, sitesController.getConnectionsDebug);
 
