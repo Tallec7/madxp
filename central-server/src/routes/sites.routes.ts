@@ -15,6 +15,9 @@ router.get('/stats', authenticate, adminRateLimit, sitesController.getSiteStats)
 
 router.get('/connection-status', authenticate, monitoringRateLimit, sitesController.getAllSitesConnectionStatus);
 
+// Fleet health data (aggregated view for admin dashboard)
+router.get('/fleet-health', authenticate, requireRole('admin'), adminRateLimit, sitesController.getFleetHealthData);
+
 // Route de debug pour voir l'état des connexions WebSocket (admin only)
 router.get('/debug/connections', authenticate, requireRole('admin'), adminRateLimit, sitesController.getConnectionsDebug);
 
@@ -32,6 +35,9 @@ router.get('/:id/dashboard', authenticate, monitoringRateLimit, sitesController.
 
 // Timeline des événements récents (P3.4 - déploiements, commandes, alertes, configs)
 router.get('/:id/timeline', authenticate, adminRateLimit, sitesController.getSiteTimeline);
+
+// Match history for clubs (Phase 1.2 - audience, videos played per match)
+router.get('/:id/match-history', authenticate, monitoringRateLimit, sitesController.getSiteMatchHistory);
 
 router.get(
   '/:id/logs',
