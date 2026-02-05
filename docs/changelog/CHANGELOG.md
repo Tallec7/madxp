@@ -1,3 +1,9 @@
+## [3.7.1](https://github.com/Tallec7/neopro/compare/v3.7.0...v3.7.1) (2026-02-05)
+
+### Bug Fixes
+
+- **build:** add Python and canvas dependencies to nixpacks config ([bad4125](https://github.com/Tallec7/neopro/commit/bad4125d7631ae08e86610186a1f94441e38b5b3))
+
 # [3.7.0](https://github.com/Tallec7/neopro/compare/v3.6.1...v3.7.0) (2026-02-05)
 
 ### Features
