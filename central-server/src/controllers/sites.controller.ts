@@ -545,13 +545,18 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
       const connectionHealth = isConnectedNow ? socketService.getConnectionHealth(site.id) : null;
       const isHealthy = connectionHealth?.isHealthy ?? false;
 
-      // Un site est "online" si connecté via Socket.IO ET en bonne santé, OU si heartbeat récent
+      // Vérifier si c'est une vraie connexion zombie (socket morte mais flag actif)
+      // Une connexion avec pong légèrement stale n'est PAS une zombie
+      const isZombie = connectionHealth && !connectionHealth.socketConnected && connectionHealth.inMap;
+
+      // Un site est "online" si connecté via Socket.IO, OU si heartbeat récent
+      // On ne marque "warning" que pour les vraies connexions zombies
       let displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
-      if (isConnectedNow && isHealthy) {
-        // Connecté et en bonne santé = online
+      if (isConnectedNow && !isZombie) {
+        // Connecté avec socket active = online (même si pong légèrement stale)
         displayStatus = 'online';
-      } else if (isConnectedNow && !isHealthy) {
-        // Connecté mais connexion instable (zombie, pong stale, etc.)
+      } else if (isConnectedNow && isZombie) {
+        // Connexion zombie : socket dans la map mais déconnectée = warning
         displayStatus = 'warning';
       } else if (secondsSinceLastSeen !== null && secondsSinceLastSeen < ONLINE_THRESHOLD_SECONDS) {
         // Heartbeat reçu récemment = online

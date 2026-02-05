@@ -48,6 +48,24 @@ export const routes: Routes = [
         loadComponent: () => import('./features/analytics/analytics.component').then(m => m.AnalyticsComponent)
       },
       {
+        path: 'analytics/comparison',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin'] },
+        loadComponent: () => import('./features/analytics/analytics-comparison.component').then(m => m.AnalyticsComparisonComponent)
+      },
+      {
+        path: 'analytics/realtime',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin'] },
+        loadComponent: () => import('./features/analytics/realtime-dashboard.component').then(m => m.RealtimeDashboardComponent)
+      },
+      {
+        path: 'sites/:id/analytics',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'operator'] },
+        loadComponent: () => import('./features/analytics/club-analytics.component').then(m => m.ClubAnalyticsComponent)
+      },
+      {
         path: 'sites',
         loadComponent: () => import('./features/sites/sites-list.component').then(m => m.SitesListComponent)
       },
@@ -138,6 +156,13 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['admin', 'super_admin'] },
         loadComponent: () => import('./features/admin/users/users-management.component').then(m => m.UsersManagementComponent)
+      },
+      // Admin: Catégories analytics
+      {
+        path: 'admin/analytics-categories',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'super_admin'] },
+        loadComponent: () => import('./features/admin/analytics-categories/analytics-categories.component').then(m => m.AnalyticsCategoriesComponent)
       },
       // Admin: Gestion des abonnements
       {

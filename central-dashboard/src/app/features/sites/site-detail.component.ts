@@ -41,6 +41,9 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
       <div class="page-header">
         <button class="btn btn-secondary" routerLink="/sites">← Retour</button>
         <h1>{{ site.club_name }}</h1>
+        <button class="btn btn-primary btn-analytics" [routerLink]="['/sites', siteId, 'analytics']">
+          📊 Analytics
+        </button>
         <div class="header-badges">
           <!-- Badge profil réseau -->
           <span class="network-badge" [ngClass]="getNetworkBadgeClass()" [title]="getNetworkBadgeTooltip()">

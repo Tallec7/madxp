@@ -1634,9 +1634,11 @@ class SocketService {
     const lastPongAgeMs = lastPong ? now - lastPong : null;
 
     // Critères de santé
+    // Le seuil doit être >= 2x l'intervalle de heartbeat (30s) + marge
+    // 90s permet 3 heartbeats manqués avant de considérer la connexion comme stale
     const inMap = !!socket;
     const socketConnected = socket?.connected ?? false;
-    const pongFresh = lastPongAgeMs !== null && lastPongAgeMs < 60000;
+    const pongFresh = lastPongAgeMs !== null && lastPongAgeMs < 90000;
 
     let isHealthy = false;
     let reason = 'unknown';
