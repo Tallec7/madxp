@@ -1,3 +1,9 @@
+# [3.7.0](https://github.com/Tallec7/neopro/compare/v3.6.1...v3.7.0) (2026-02-05)
+
+### Features
+
+- **dashboard:** add sites map view and audience in PDF reports + remove proof of broadcast ([c43797d](https://github.com/Tallec7/neopro/commit/c43797d198737908d7624bb1a1daf921be78d6fc))
+
 ## [3.6.1](https://github.com/Tallec7/neopro/compare/v3.6.0...v3.6.1) (2026-02-05)
 
 ### Bug Fixes
