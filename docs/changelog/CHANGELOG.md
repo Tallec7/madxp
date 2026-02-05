@@ -1,3 +1,9 @@
+## [3.5.7](https://github.com/Tallec7/neopro/compare/v3.5.6...v3.5.7) (2026-02-05)
+
+### Bug Fixes
+
+- **db:** use correct column names from metrics table (cpu_usage, memory_usage, disk_usage) ([4c0e870](https://github.com/Tallec7/neopro/commit/4c0e87089ed146a00de6e48797e585b2d81aed47))
+
 ## [3.5.6](https://github.com/Tallec7/neopro/compare/v3.5.5...v3.5.6) (2026-02-05)
 
 ### Bug Fixes
