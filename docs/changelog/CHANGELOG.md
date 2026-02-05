@@ -1,3 +1,9 @@
+## [3.2.1](https://github.com/Tallec7/neopro/compare/v3.2.0...v3.2.1) (2026-02-05)
+
+### Bug Fixes
+
+- **subscriptions:** fix UI refresh after suspend/reactivate + correct auto_unblock values ([a9b36f9](https://github.com/Tallec7/neopro/commit/a9b36f97d786ddbf5d15a182d5a90b697f2ef9e5))
+
 # [3.2.0](https://github.com/Tallec7/neopro/compare/v3.1.0...v3.2.0) (2026-02-05)
 
 ### Features
