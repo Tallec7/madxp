@@ -1,3 +1,9 @@
+# [3.1.0](https://github.com/Tallec7/neopro/compare/v3.0.2...v3.1.0) (2026-02-05)
+
+### Features
+
+- **content:** add blur background option for image-to-video conversion ([24097ac](https://github.com/Tallec7/neopro/commit/24097acb16b19ad65b2e06f96c3fcced239bf37c))
+
 ## [3.0.2](https://github.com/Tallec7/neopro/compare/v3.0.1...v3.0.2) (2026-02-05)
 
 ### Bug Fixes
