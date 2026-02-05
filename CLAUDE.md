@@ -1538,6 +1538,7 @@ BREAKING CHANGE: JWT format changed          # → v3.0.0
 | **ConfigEditorComponent**    | `config-editor/`                            | Éditeur complet de configuration JSON                         |
 | **CloudRemoteComponent**     | `features/remote/cloud-remote.component.ts` | Télécommande cloud ⚡ NEW                                     |
 | **SubscriptionsManagement**  | `features/subscriptions/`                   | Page gestion abonnements (design cohérent dashboard) ⚡ v2.47 |
+| **SitesMapComponent**        | `components/sites-map/`                     | Carte géographique des sites avec Leaflet ⚡ v3.0             |
 
 ### Synchronisation Remote Pi ↔ Cloud Remote ⚠️ IMPORTANT
 
@@ -2264,6 +2265,47 @@ vcgencmd get_mem gpu
     - Démarre le check périodique d'escalade
   - **Fichier modifié** : `central-server/src/server.ts`
   - **Migration** : Redéployer le central-server sur Railway
+
+- **Carte géographique des sites** : Visualisation des sites sur une carte interactive Leaflet
+  - **Fonctionnalité** : Vue carte alternative à la liste des sites avec toggle grille/carte
+  - **Marqueurs colorés** : Vert (online), Rouge (offline), Orange (warning/connexion instable)
+  - **Popups** : Affichent nom du club, sport, dernière vue, lien vers le détail
+  - **Légende** : Aide à comprendre les différents statuts de connexion
+  - **Liste des sites sans coordonnées** : Affichés en bas avec suggestion de compléter les informations
+  - **Nouveaux fichiers** :
+    - `central-dashboard/src/app/features/sites/components/sites-map/sites-map.component.ts`
+  - **Fichiers modifiés** :
+    - `central-dashboard/src/styles.css` - Import CSS Leaflet
+    - `central-dashboard/.../sites-list.component.ts` - Toggle grille/carte, intégration SitesMapComponent
+  - **Migration** : Rebuild et redéployer le dashboard
+
+- **Estimation audience dans les rapports PDF** : L'audience estimée des matchs est maintenant incluse dans les rapports de club
+  - **Données affichées** :
+    - Audience totale (somme des estimations de tous les matchs)
+    - Audience moyenne par session
+  - **Source** : Colonne `audience_estimate` de la table `club_sessions`, saisie via la télécommande
+  - **Intégration** :
+    - Nouvelle KPI "👥 Audience estimée" dans la section KPI du rapport PDF
+    - Mention dans la section "Points forts" si l'audience est significative
+  - **Fichiers modifiés** :
+    - `central-server/src/services/pdf-report.service.ts` - Query SQL étendue, KPI et highlights
+  - **Migration** : Redéployer le central-server
+
+- **Suppression des captures d'écran automatiques (Proof of Broadcast)** : Fonctionnalité retirée car inutile
+  - **Raison** : La fonctionnalité n'apportait pas de valeur ajoutée aux utilisateurs
+  - **Fichiers supprimés** :
+    - `central-server/src/services/proof.service.ts`
+    - `central-server/src/routes/proof.routes.ts`
+    - `central-server/src/controllers/proof.controller.ts`
+    - `central-dashboard/src/app/core/services/proof.service.ts`
+    - `raspberry/sync-agent/src/commands/capture-proof.js`
+  - **Fichiers modifiés** :
+    - `central-server/src/server.ts` - Suppression route `/api/proofs`
+    - `central-dashboard/.../site-detail.component.ts` - Suppression section "Preuves de Diffusion", modal, méthodes et styles associés
+    - `raspberry/sync-agent/src/commands/index.js` - Suppression commande `capture_proof`
+    - `raspberry/sync-agent/src/config.js` - Suppression de la liste des commandes autorisées
+  - **Migration** : Rebuild dashboard et server, redéployer sync-agent sur les Pi
+  - **Note** : La table `proof_of_broadcasts` en DB reste mais n'est plus utilisée
 
 ### v2.48.x (Février 2026)
 

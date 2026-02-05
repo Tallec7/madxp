@@ -242,7 +242,9 @@ export async function generateClubReport(
         COALESCE(SUM(manual_triggers), 0) as total_manual_triggers,
         COALESCE(SUM(auto_plays), 0) as total_auto_plays,
         COALESCE(SUM(duration_seconds), 0) as total_screen_time_seconds,
-        COUNT(DISTINCT DATE(started_at)) as active_days
+        COUNT(DISTINCT DATE(started_at)) as active_days,
+        COALESCE(SUM(audience_estimate), 0) as total_audience,
+        COALESCE(AVG(audience_estimate), 0) as avg_audience_per_session
        FROM club_sessions
        WHERE site_id = $1
          AND started_at >= $2::date
@@ -361,6 +363,10 @@ export async function generateClubReport(
         total_videos: parseInt(usage.total_videos as string) || 0,
         total_manual_triggers: parseInt(usage.total_manual_triggers as string) || 0,
         total_auto_plays: parseInt(usage.total_auto_plays as string) || 0,
+      },
+      audience: {
+        total: parseInt(usage.total_audience as string) || 0,
+        average_per_session: Math.round(parseFloat(usage.avg_audience_per_session as string) || 0),
       },
       health: {
         current: currentHealth,
@@ -1075,17 +1081,21 @@ async function generateClubPdf(data: any, options: PdfReportOptions): Promise<Bu
 
       yPosition += kpiHeight + 30;
 
-      // KPI 4-6
+      // KPI 4-6: Sessions, Audience, Ratio
       drawKPIBox(doc, 50, yPosition, kpiWidth, kpiHeight,
         'SESSIONS',
         formatNumber(data.usage.sessions_count),
         COLORS
       );
 
+      // Audience estimée (jauge saisie par le club)
+      const audienceTotal = data.audience?.total || 0;
+      const audienceAvg = data.audience?.average_per_session || 0;
       drawKPIBox(doc, 50 + kpiWidth + gap, yPosition, kpiWidth, kpiHeight,
-        'TRIGGERS MANUELS',
-        formatNumber(data.usage.total_manual_triggers),
-        COLORS
+        'AUDIENCE ESTIMÉE',
+        formatNumber(audienceTotal),
+        COLORS,
+        audienceAvg > 0 ? `~${audienceAvg}/session` : undefined
       );
 
       const totalTriggers = data.usage.total_manual_triggers + data.usage.total_auto_plays;
@@ -1111,6 +1121,11 @@ async function generateClubPdf(data: any, options: PdfReportOptions): Promise<Bu
       yPosition += 30;
 
       const highlights = [];
+
+      // Audience estimée (donnée saisie par le club)
+      if (data.audience?.total > 0) {
+        highlights.push(`👥 Audience cumulée estimée : ${formatNumber(data.audience.total)} spectateurs (~${data.audience.average_per_session}/session)`);
+      }
 
       if (data.summary.active_days > 20) {
         highlights.push(`✅ Excellent taux d'utilisation : ${data.summary.active_days} jours actifs sur la période`);
@@ -1477,7 +1492,8 @@ function drawKPIBox(
   height: number,
   label: string,
   value: string,
-  colors: any
+  colors: any,
+  subtitle?: string
 ): void {
   // Fond
   doc
@@ -1497,6 +1513,15 @@ function drawKPIBox(
     .fillColor(colors.primary)
     .font('Helvetica-Bold')
     .text(value, x + 10, y + 40, { width: width - 20, align: 'left' });
+
+  // Sous-titre optionnel
+  if (subtitle) {
+    doc
+      .fontSize(9)
+      .fillColor('#9ca3af')
+      .font('Helvetica')
+      .text(subtitle, x + 10, y + 72, { width: width - 20, align: 'left' });
+  }
 }
 
 /**

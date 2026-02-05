@@ -35,8 +35,6 @@ const DEFAULT_ALLOWED_COMMANDS = [
   'remove_bssid_lock',
   'optimize_for_mesh',
   'deploy_asset',
-  // Proof of broadcast - v2.50
-  'capture_proof',
 ];
 
 const buildAllowedCommands = () => {

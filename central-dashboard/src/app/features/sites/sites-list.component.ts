@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -11,16 +11,35 @@ import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, SiteConnectionSummary, SubscriptionDisplayStatus } from '../../core/models';
 import { formatVersion } from './utils/version';
 import { SubscriptionBadgeComponent } from '../../shared/components/subscription-badge/subscription-badge.component';
+import { SitesMapComponent } from './components/sites-map/sites-map.component';
 
 @Component({
   selector: 'app-sites-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TranslateModule, SubscriptionBadgeComponent],
+  imports: [CommonModule, FormsModule, RouterModule, TranslateModule, SubscriptionBadgeComponent, SitesMapComponent],
   template: `
     <div class="page-container">
       <div class="page-header">
         <h1>Sites ({{ (sites$ | async)?.length || 0 }})</h1>
-        <button class="btn btn-primary" (click)="showCreateModal = true">+ Nouveau site</button>
+        <div class="header-actions">
+          <div class="view-toggle">
+            <button
+              class="toggle-btn"
+              [class.active]="viewMode === 'grid'"
+              (click)="viewMode = 'grid'"
+              title="Vue grille">
+              ▦
+            </button>
+            <button
+              class="toggle-btn"
+              [class.active]="viewMode === 'map'"
+              (click)="viewMode = 'map'; refreshMap()"
+              title="Vue carte">
+              🗺️
+            </button>
+          </div>
+          <button class="btn btn-primary" (click)="showCreateModal = true">+ Nouveau site</button>
+        </div>
       </div>
 
       <div class="filters">
@@ -59,7 +78,17 @@ import { SubscriptionBadgeComponent } from '../../shared/components/subscription
         </button>
       </div>
 
-      <div class="sites-grid" *ngIf="(sites$ | async)?.length else emptyState">
+      <ng-container *ngIf="(sites$ | async) as sitesList">
+        <!-- Map View -->
+        <app-sites-map
+          *ngIf="viewMode === 'map'"
+          #sitesMap
+          [sites]="sitesList"
+          [connectionStatus]="connectionStatusMap">
+        </app-sites-map>
+
+        <!-- Grid View -->
+        <div class="sites-grid" *ngIf="viewMode === 'grid' && sitesList.length > 0">
         <div *ngFor="let site of sites$ | async" class="site-card card">
           <div class="site-header">
             <h3>{{ site.club_name }}</h3>
@@ -125,15 +154,15 @@ import { SubscriptionBadgeComponent } from '../../shared/components/subscription
         </div>
       </div>
 
-      <ng-template #emptyState>
-        <div class="empty-state card">
+        <!-- Empty State for Grid -->
+        <div class="empty-state card" *ngIf="viewMode === 'grid' && sitesList.length === 0">
           <div class="empty-icon">🖥️</div>
           <h3>Aucun site trouvé</h3>
           <p *ngIf="hasActiveFilters()">Aucun site ne correspond à vos critères de recherche.</p>
           <p *ngIf="!hasActiveFilters()">Commencez par ajouter votre premier site.</p>
           <button class="btn btn-primary" (click)="showCreateModal = true">+ Ajouter un site</button>
         </div>
-      </ng-template>
+      </ng-container>
 
       <!-- Modal Create Site -->
       <div class="modal" *ngIf="showCreateModal" (click)="showCreateModal = false">
@@ -230,6 +259,40 @@ import { SubscriptionBadgeComponent } from '../../shared/components/subscription
       margin: 0;
       font-size: 2rem;
       color: #0f172a;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .view-toggle {
+      display: flex;
+      background: #f1f5f9;
+      border-radius: 8px;
+      padding: 4px;
+    }
+
+    .toggle-btn {
+      background: none;
+      border: none;
+      padding: 0.5rem 0.75rem;
+      font-size: 1rem;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+      color: #64748b;
+    }
+
+    .toggle-btn:hover {
+      color: #0f172a;
+    }
+
+    .toggle-btn.active {
+      background: white;
+      color: #2563eb;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .filters {
@@ -529,6 +592,8 @@ import { SubscriptionBadgeComponent } from '../../shared/components/subscription
   `]
 })
 export class SitesListComponent implements OnInit, OnDestroy {
+  @ViewChild('sitesMap') sitesMap?: SitesMapComponent;
+
   private readonly sitesService = inject(SitesService);
   private readonly notificationService = inject(NotificationService);
   private readonly logger = inject(LoggerService);
@@ -541,9 +606,10 @@ export class SitesListComponent implements OnInit, OnDestroy {
   subscriptionFilter = '';
   showCreateModal = false;
   showEditModal = false;
+  viewMode: 'grid' | 'map' = 'grid';
 
   // Map des statuts de connexion temps réel (siteId -> status)
-  private connectionStatusMap = new Map<string, SiteConnectionSummary>();
+  connectionStatusMap = new Map<string, SiteConnectionSummary>();
   private connectionStatusSubscription?: Subscription;
   private refreshSubscription?: Subscription;
 
@@ -869,5 +935,12 @@ export class SitesListComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  refreshMap(): void {
+    // Wait for the map component to be rendered
+    setTimeout(() => {
+      this.sitesMap?.refreshMarkers();
+    }, 100);
   }
 }
