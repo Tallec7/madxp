@@ -1,3 +1,9 @@
+## [3.0.1](https://github.com/Tallec7/neopro/compare/v3.0.0...v3.0.1) (2026-02-05)
+
+### Bug Fixes
+
+- **deps:** add exceljs dependency for Excel export ([66a6e50](https://github.com/Tallec7/neopro/commit/66a6e50a6074b3b44e181fde2b8713e197884123))
+
 # [3.0.0](https://github.com/Tallec7/neopro/compare/v2.50.1...v3.0.0) (2026-02-04)
 
 ### Features
