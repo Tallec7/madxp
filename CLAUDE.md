@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 2.50.0 | **Dernière mise à jour**: 2026-02-04
+**Version**: 3.0.0 | **Dernière mise à jour**: 2026-02-05
 
 ---
 
@@ -2059,9 +2059,9 @@ vcgencmd get_mem gpu
 
 ## Historique Breaking Changes
 
-### v2.50.x (Février 2026)
+### v3.0.0 (Février 2026)
 
-- **Suppression des pages Analytics Dashboard** : Simplification majeure de l'interface
+- **Suppression des pages Analytics Dashboard** : Simplification majeure de l'interface (BREAKING CHANGE)
   - **Raison** : Les métriques affichées étaient incohérentes et potentiellement trompeuses
     - "Temps de diffusion" = somme des durées vidéo × lectures (pas le temps écran réel)
     - "Taux de complétion" = toujours 100% (bug : `video_duration = duration_played`)
@@ -2081,57 +2081,20 @@ vcgencmd get_mem gpu
     - `app.routes.ts` - Routes supprimées
     - `layout.component.ts` - Liens navigation supprimés
     - `site-detail.component.ts` - Bouton Analytics supprimé
-    - `sites-list.component.ts` - Badge usage supprimé
+    - `sites-list.component.ts` - Badge usage renommé "En veille" (gris) au lieu de "Inactif" (rouge)
   - **Ce qui reste** (essentiel) :
     - Statut connexion (online/offline/warning) dans site-detail
     - Métriques système (CPU, RAM, température, disque) dans l'onglet État
     - Alertes système
-    - API backend analytics conservée (pour réutilisation future si besoin)
+    - **Services backend conservés** (pour billing et futurs besoins) :
+      - `realtime-stats.service.ts` - Stats temps réel via Socket.IO
+      - `excel-export.service.ts` - Export Excel multi-feuilles
+      - `billing.service.ts` - Données de facturation par mois
   - **Migration** : Rebuild et redéployer le dashboard
-
-### v2.49.x (Février 2026)
-
-- **Dashboard Temps Réel** : Statistiques live de la flotte avec Socket.IO
-  - **Fonctionnalités** :
-    - Cartes sites (online, offline, warning) mises à jour toutes les 10s
-    - Compteur lectures vidéo par minute et par heure
-    - Impressions annonceurs en temps réel
-    - Top contenu de l'heure en cours
-    - Indicateurs santé flotte (CPU, RAM, température moyens)
-    - Tendances (hausse/baisse) comparées à l'heure précédente
-  - **Backend** : Service `realtime-stats.service.ts` avec broadcast Socket.IO sur room `admin-dashboard`
-  - **Frontend** : Composant `realtime-dashboard.component.ts` accessible via `/analytics/realtime`
-  - **Fichiers** :
-    - `central-server/src/services/realtime-stats.service.ts`
-    - `central-dashboard/src/app/features/analytics/realtime-dashboard.component.ts`
-
-- **Export Excel Avancé** : Exports multi-feuilles avec mise en forme conditionnelle
-  - **Fonctionnalités** :
-    - Export club : Résumé, Évolution journalière, Catégories, Top Vidéos
-    - Export annonceur : Résumé, Performance par site, Performance par vidéo, Évolution
-    - Export global : Vue d'ensemble, Tous les sites, Top Performers
-    - Mise en forme conditionnelle (couleurs selon seuils)
-    - Médailles 🥇🥈🥉 pour les classements
-    - Filtres automatiques sur les tableaux
-  - **Routes API** :
-    - `GET /api/analytics/clubs/:siteId/export/excel`
-    - `GET /api/analytics/advertisers/:advertiserId/export/excel`
-    - `GET /api/analytics/overview/export/excel`
-  - **Fichiers** :
-    - `central-server/src/services/excel-export.service.ts`
-  - **Dépendance** : `npm install exceljs` dans central-server
-
-- **Vue Comparative Multi-Sites** : Comparaison d'activité entre plusieurs clubs
-  - **Fonctionnalités** :
-    - Sélection de 2-10 sites à comparer
-    - Graphique comparatif (vidéos jouées, jours actifs)
-    - Tableau récapitulatif avec totaux
-  - **Route API** : `GET /api/analytics/comparison?site_ids=uuid1,uuid2&days=30`
-  - **Frontend** : `/analytics/comparison`
 
 - **Amélioration UX badges liste sites** : Labels plus clairs pour l'activité
   - **Changements** :
-    - "Inactif" → "En veille" (couleur gris neutre au lieu de rouge)
+    - "Inactif" → "En veille" (couleur gris neutre `#f1f5f9` au lieu de rouge `#fee2e2`)
     - "Faible" → "Peu actif"
     - "Moyen" → "Actif"
     - "Actif" → "Très actif"
