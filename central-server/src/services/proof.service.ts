@@ -32,6 +32,36 @@ export interface ProofWithSiteInfo extends ProofOfBroadcast {
 class ProofService {
   private readonly STORAGE_FOLDER = 'screenshots';
   private readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  private tableExists: boolean | null = null;
+
+  /**
+   * Vérifie si la table proof_of_broadcasts existe
+   * Cache le résultat pour éviter des requêtes répétées
+   */
+  private async checkTableExists(): Promise<boolean> {
+    if (this.tableExists !== null) {
+      return this.tableExists;
+    }
+
+    try {
+      const result = await query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = 'proof_of_broadcasts'
+        ) as exists
+      `);
+      this.tableExists = result.rows[0]?.exists === true;
+      if (!this.tableExists) {
+        logger.warn('[ProofService] Table proof_of_broadcasts does not exist - feature disabled');
+      }
+      return this.tableExists;
+    } catch (error) {
+      logger.error('[ProofService] Error checking table existence:', error);
+      this.tableExists = false;
+      return false;
+    }
+  }
 
   /**
    * Upload une capture d'écran vers le cloud storage
@@ -126,6 +156,11 @@ class ProofService {
     limit: number = 20,
     offset: number = 0
   ): Promise<{ proofs: ProofOfBroadcast[]; total: number }> {
+    // Vérifier si la table existe
+    if (!(await this.checkTableExists())) {
+      return { proofs: [], total: 0 };
+    }
+
     const countResult = await query(
       'SELECT COUNT(*) as count FROM proof_of_broadcasts WHERE site_id = $1',
       [siteId]
@@ -151,6 +186,11 @@ class ProofService {
    * Récupère une preuve par ID
    */
   async getProofById(proofId: string): Promise<ProofWithSiteInfo | null> {
+    // Vérifier si la table existe
+    if (!(await this.checkTableExists())) {
+      return null;
+    }
+
     const result = await query(
       `SELECT p.*, s.site_name, s.club_name
        FROM proof_of_broadcasts p
@@ -166,6 +206,11 @@ class ProofService {
    * Supprime les anciennes preuves (rétention 90 jours par défaut)
    */
   async cleanupOldProofs(retentionDays: number = 90): Promise<number> {
+    // Vérifier si la table existe
+    if (!(await this.checkTableExists())) {
+      return 0;
+    }
+
     const result = await query(
       `DELETE FROM proof_of_broadcasts
        WHERE timestamp_captured < NOW() - INTERVAL '1 day' * $1
@@ -193,16 +238,27 @@ class ProofService {
     proofs_last_7_days: number;
     proofs_last_30_days: number;
   }>> {
-    const result = await query('SELECT * FROM proof_stats_by_site ORDER BY last_proof_at DESC NULLS LAST');
-    return result.rows as unknown as Array<{
-      site_id: string;
-      site_name: string;
-      club_name: string;
-      total_proofs: number;
-      last_proof_at: Date | null;
-      proofs_last_7_days: number;
-      proofs_last_30_days: number;
-    }>;
+    // Vérifier si la table existe
+    if (!(await this.checkTableExists())) {
+      return [];
+    }
+
+    try {
+      const result = await query('SELECT * FROM proof_stats_by_site ORDER BY last_proof_at DESC NULLS LAST');
+      return result.rows as unknown as Array<{
+        site_id: string;
+        site_name: string;
+        club_name: string;
+        total_proofs: number;
+        last_proof_at: Date | null;
+        proofs_last_7_days: number;
+        proofs_last_30_days: number;
+      }>;
+    } catch (error) {
+      // La vue peut ne pas exister non plus
+      logger.warn('[ProofService] proof_stats_by_site view does not exist');
+      return [];
+    }
   }
 
   private getExtension(filename: string): string {
