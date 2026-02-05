@@ -1889,10 +1889,10 @@ export const getFleetHealthData = async (req: AuthRequest, res: Response) => {
         s.software_version,
         s.location,
         (SELECT recorded_at FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as last_metric_at,
-        (SELECT cpu_percent FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as cpu_percent,
-        (SELECT memory_percent FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as memory_percent,
+        (SELECT cpu_usage FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as cpu_percent,
+        (SELECT memory_usage FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as memory_percent,
         (SELECT temperature FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as temperature,
-        (SELECT disk_percent FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as disk_percent
+        (SELECT disk_usage FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as disk_percent
       FROM sites s
       ORDER BY s.site_name
     `);

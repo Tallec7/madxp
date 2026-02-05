@@ -229,10 +229,11 @@ class RealtimeStatsService {
    */
   private async getHealthStats(): Promise<RealtimeStats['health']> {
     // Moyennes des métriques récentes (dernières 5 minutes)
+    // Note: Les colonnes sont cpu_usage, memory_usage (pas cpu_percent, memory_percent)
     const metricsResult = await query(`
       SELECT
-        AVG(cpu_percent) as avg_cpu,
-        AVG(memory_percent) as avg_memory,
+        AVG(cpu_usage) as avg_cpu,
+        AVG(memory_usage) as avg_memory,
         AVG(temperature) as avg_temperature
       FROM metrics
       WHERE created_at >= NOW() - INTERVAL '5 minutes'

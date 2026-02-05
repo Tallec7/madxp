@@ -209,16 +209,17 @@ export async function generateClubReport(
     const site = siteResult.rows[0];
 
     // 2. Récupérer les métriques de santé actuelles
+    // Note: Les colonnes sont cpu_usage, memory_usage, disk_usage (pas cpu_percent, etc.)
     const healthResult = await query(
       `SELECT
-        cpu_percent,
-        memory_percent,
+        cpu_usage as cpu_percent,
+        memory_usage as memory_percent,
         temperature,
-        disk_used_percent,
-        uptime_seconds
+        disk_usage as disk_used_percent,
+        uptime as uptime_seconds
        FROM metrics
        WHERE site_id = $1
-       ORDER BY created_at DESC
+       ORDER BY recorded_at DESC
        LIMIT 1`,
       [siteId]
     );
