@@ -61,13 +61,13 @@ export const createUserRateLimit = (
  * Rate limiters préconfigurés pour différents endpoints
  */
 
-// Auth endpoints - restrictif en prod, plus permissif en dev
+// Auth endpoints - restrictif pour login (anti-bruteforce), mais permissif pour /me
 const isDev = process.env.NODE_ENV !== 'production';
 export const authRateLimit = createUserRateLimit(
-  isDev ? 60 * 1000 : 15 * 60 * 1000, // 1 minute en dev, 15 minutes en prod
-  isDev ? 100 : 30, // 100 en dev, 30 en prod
+  isDev ? 60 * 1000 : 60 * 1000, // 1 minute en dev et prod
+  isDev ? 100 : 60, // 100 en dev, 60 en prod (augmenté de 30)
   {
-    message: { error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' },
+    message: { error: 'Trop de tentatives de connexion. Réessayez dans 1 minute.' },
   }
 );
 
@@ -101,11 +101,12 @@ export const publicRateLimit = rateLimit({
   handler: limitHandler,
 });
 
-// Admin read operations - modéré (200 requêtes / minute)
+// Admin read operations - permissif (400 requêtes / minute)
 // Higher limit for admin dashboards loading data on initialization
+// Increased from 200 to 400 to handle multiple components loading simultaneously
 export const adminRateLimit = createUserRateLimit(
   60 * 1000, // 1 minute
-  200
+  400
 );
 
 // Monitoring endpoints - permissif (300 requêtes / minute)

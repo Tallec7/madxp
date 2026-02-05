@@ -682,8 +682,8 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadData();
-    // Refresh every 30 seconds
-    this.refreshSubscription = interval(30000).subscribe(() => this.loadData());
+    // Refresh every 60 seconds (reduced from 30s to avoid rate limiting)
+    this.refreshSubscription = interval(60000).subscribe(() => this.loadData());
   }
 
   ngOnDestroy(): void {

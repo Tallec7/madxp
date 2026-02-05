@@ -34,7 +34,16 @@ const {
   removeBssidLock,
   optimizeForMesh,
 } = require('./wifi-bssid');
-const captureProof = require('./capture-proof');
+
+// Chargement sécurisé de capture-proof (module optionnel)
+// En cas d'erreur, le sync-agent continue de fonctionner
+let captureProof = null;
+try {
+  captureProof = require('./capture-proof');
+} catch (error) {
+  // Le module sera chargé plus tard si nécessaire, ou signalera une erreur à l'appel
+  console.error('[commands] Warning: capture-proof module failed to load:', error.message);
+}
 
 // === Dépendances ===
 const { exec } = require('child_process');
@@ -85,7 +94,10 @@ const commands = {
   get_analytics_buffer_status: getAnalyticsBufferStatus,
 
   // === Proof of Broadcast (module: capture-proof.js) ===
-  capture_proof: captureProof,
+  capture_proof: captureProof || (async () => {
+    // Fallback si le module n'a pas pu être chargé
+    throw new Error('capture_proof module not available - please update sync-agent');
+  }),
 
   // === WiFi BSSID (module: wifi-bssid.js) ===
   get_wifi_bssid_status: getWifiBssidStatus,

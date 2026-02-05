@@ -553,8 +553,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadRecentSites();
     this.loadConnectionStatus();
     this.loadPredictiveAlerts();
-    // Rafraîchir les statuts de connexion toutes les 30 secondes
-    this.refreshSubscription = interval(30000).subscribe(() => {
+    // Rafraîchir les statuts de connexion toutes les 60 secondes (reduced from 30s to avoid rate limiting)
+    this.refreshSubscription = interval(60000).subscribe(() => {
       this.loadConnectionStatus();
     });
   }

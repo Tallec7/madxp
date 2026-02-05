@@ -575,8 +575,8 @@ export class SitesListComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadSites();
     this.loadConnectionStatus();
-    // Rafraîchir les statuts de connexion toutes les 30 secondes
-    this.refreshSubscription = interval(30000).subscribe(() => {
+    // Rafraîchir les statuts de connexion toutes les 60 secondes (reduced from 30s to avoid rate limiting)
+    this.refreshSubscription = interval(60000).subscribe(() => {
       this.loadConnectionStatus();
     });
   }
