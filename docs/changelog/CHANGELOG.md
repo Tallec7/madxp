@@ -1,3 +1,9 @@
+# [3.5.0](https://github.com/Tallec7/neopro/compare/v3.4.1...v3.5.0) (2026-02-05)
+
+### Features
+
+- **analytics:** replace Fleet Health with new Analytics page ([063e428](https://github.com/Tallec7/neopro/commit/063e42819de1591e4fe70e8a502828a55622c7be))
+
 ## [3.4.1](https://github.com/Tallec7/neopro/compare/v3.4.0...v3.4.1) (2026-02-05)
 
 ### Bug Fixes
