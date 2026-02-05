@@ -1,3 +1,9 @@
+## [3.5.4](https://github.com/Tallec7/neopro/compare/v3.5.3...v3.5.4) (2026-02-05)
+
+### Bug Fixes
+
+- **sync-agent:** correct logger require path in capture-proof.js ([cd99d17](https://github.com/Tallec7/neopro/commit/cd99d17d289210266ee1137c4aead1ee38585e7a))
+
 ## [3.5.3](https://github.com/Tallec7/neopro/compare/v3.5.2...v3.5.3) (2026-02-05)
 
 ### Bug Fixes
