@@ -1,3 +1,9 @@
+## [3.4.1](https://github.com/Tallec7/neopro/compare/v3.4.0...v3.4.1) (2026-02-05)
+
+### Bug Fixes
+
+- **alerting:** initialize alertingService at server startup ([0352af8](https://github.com/Tallec7/neopro/commit/0352af8758c459d02b62c28e7a81239aba621790))
+
 # [3.4.0](https://github.com/Tallec7/neopro/compare/v3.3.0...v3.4.0) (2026-02-05)
 
 ### Features
