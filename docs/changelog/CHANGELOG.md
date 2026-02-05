@@ -1,3 +1,9 @@
+# [3.6.0](https://github.com/Tallec7/neopro/compare/v3.5.15...v3.6.0) (2026-02-05)
+
+### Features
+
+- **analytics:** add HDMI-CEC TV status detection to filter real video plays ([344ab95](https://github.com/Tallec7/neopro/commit/344ab95b6f24ac64c7c5b8ce9c96f2af89290869))
+
 ## [3.5.15](https://github.com/Tallec7/neopro/compare/v3.5.14...v3.5.15) (2026-02-05)
 
 ### Performance Improvements
