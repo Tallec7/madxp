@@ -11,7 +11,7 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const axios = require('axios');
 const FormData = require('form-data');
-const logger = require('../utils/logger');
+const logger = require('../logger');
 const config = require('../config');
 
 const execAsync = promisify(exec);
