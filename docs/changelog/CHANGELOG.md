@@ -1,3 +1,9 @@
+## [3.5.10](https://github.com/Tallec7/neopro/compare/v3.5.9...v3.5.10) (2026-02-05)
+
+### Bug Fixes
+
+- **db:** align all services with production schema (alerts, metrics) ([d1acc78](https://github.com/Tallec7/neopro/commit/d1acc7844e5ee6e904c0455858c5219fa598649b))
+
 ## [3.5.9](https://github.com/Tallec7/neopro/compare/v3.5.8...v3.5.9) (2026-02-05)
 
 ### Bug Fixes
