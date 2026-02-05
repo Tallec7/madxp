@@ -1,3 +1,9 @@
+## [3.5.1](https://github.com/Tallec7/neopro/compare/v3.5.0...v3.5.1) (2026-02-05)
+
+### Bug Fixes
+
+- **benchmark:** use JSONB operators for sports column queries ([833074b](https://github.com/Tallec7/neopro/commit/833074bb7e18bce92b5197c11309b9bd9d40dad5))
+
 # [3.5.0](https://github.com/Tallec7/neopro/compare/v3.4.1...v3.5.0) (2026-02-05)
 
 ### Features
