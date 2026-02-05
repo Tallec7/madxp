@@ -1,3 +1,9 @@
+## [3.5.9](https://github.com/Tallec7/neopro/compare/v3.5.8...v3.5.9) (2026-02-05)
+
+### Bug Fixes
+
+- **metrics:** use recorded_at column (not created_at) in realtime-stats ([3a0af83](https://github.com/Tallec7/neopro/commit/3a0af831998cb58279c43a984b9b29ec205344b6))
+
 ## [3.5.8](https://github.com/Tallec7/neopro/compare/v3.5.7...v3.5.8) (2026-02-05)
 
 ### Bug Fixes
