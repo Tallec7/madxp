@@ -1,3 +1,9 @@
+## [3.5.3](https://github.com/Tallec7/neopro/compare/v3.5.2...v3.5.3) (2026-02-05)
+
+### Bug Fixes
+
+- **sites:** apply zombie detection fix to getFleetHealthData endpoint ([4f9d4c1](https://github.com/Tallec7/neopro/commit/4f9d4c1f0ff2ca5f337deb527267da7e5450de33))
+
 ## [3.5.2](https://github.com/Tallec7/neopro/compare/v3.5.1...v3.5.2) (2026-02-05)
 
 ### Bug Fixes
