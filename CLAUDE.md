@@ -348,6 +348,35 @@ POST   /api/sites/:id/subscription/reactivate   → Réactiver le site
 PUT    /api/sites/:id/subscription/plan         → Changer le plan (super_admin)
 ```
 
+### Alerts (v3.0+) ⚡ NEW
+
+```
+GET    /api/alerts                      → Liste des alertes (filtres: type, active, severity, siteId)
+GET    /api/alerts/stats                → Statistiques alertes (admin only)
+POST   /api/alerts/:id/resolve          → Résoudre une alerte
+POST   /api/alerts/sites/:siteId/resolve → Résoudre toutes les alertes d'un site
+```
+
+### Benchmark (v3.0+) ⚡ NEW
+
+Permet aux clubs de se comparer anonymement à leurs pairs (même sport, région, taille).
+
+```
+GET    /api/benchmark/global            → Résumé global par sport/région (admin only)
+GET    /api/benchmark/compare           → Comparer 2-10 sites (admin only)
+GET    /api/benchmark/sites/:siteId     → Benchmark pour un site (operator+)
+```
+
+**Métriques comparées** :
+
+- Sessions par mois
+- Vidéos jouées par session
+- Durée moyenne des sessions
+- Taux de disponibilité (uptime)
+- Total vidéos jouées
+
+**Segmentation** : Par sport, région, catégorie de taille (petit/moyen/grand).
+
 ### Assets (Watermarks, Logos)
 
 ```
@@ -459,25 +488,27 @@ Le `LoggerService` Angular implémente un throttling côté client pour éviter 
 
 ## Services Critiques
 
-| Service          | Fichier                              | Rôle                                                                        |
-| ---------------- | ------------------------------------ | --------------------------------------------------------------------------- |
-| **Socket**       | `socket.service.ts`                  | Communication temps réel Pi ↔ Cloud                                         |
-| **CommandQueue** | `command-queue.service.ts`           | File d'attente commandes (offline/online)                                   |
-| **Deployment**   | `deployment.service.ts`              | Orchestration déploiement vidéos                                            |
-| **UploadVerify** | `upload-verification.service.ts`     | Vérification upload avant déploiement                                       |
-| **Draft**        | `draft.service.ts`                   | Gestion brouillons de configuration                                         |
-| **Orchestrated** | `orchestrated-deployment.service.ts` | Déploiement vidéos + config orchestré                                       |
-| **Asset**        | `asset.service.ts`                   | Gestion watermarks et logos (upload/deploy)                                 |
-| **FTP Storage**  | `ftp-storage.ts`                     | Upload/download vidéos sur FTP Hostinger                                    |
-| **Supabase**     | `supabase.ts`                        | Stockage fallback si FTP non configuré                                      |
-| **Metrics**      | `metrics.service.ts`                 | Export Prometheus                                                           |
-| **Audit**        | `audit.service.ts`                   | Log toutes les actions admin                                                |
-| **MFA**          | `mfa.service.ts`                     | 2FA avec backup codes                                                       |
-| **Email**        | `email.service.ts`                   | Password reset, alertes                                                     |
-| **Cron**         | `cron-scheduler.service.ts`          | Stats quotidiennes, cleanup                                                 |
-| **Logger**       | `logger.service.ts`                  | Logs structurés avec correlation ID                                         |
-| **Errors**       | `error-extractor.ts`                 | Extraction messages d'erreur                                                |
-| **ImageToVideo** | `image-to-video.service.ts`          | Conversion image → vidéo MP4 via ffmpeg (720p, ultrafast, option fond flou) |
+| Service              | Fichier                              | Rôle                                                                        |
+| -------------------- | ------------------------------------ | --------------------------------------------------------------------------- |
+| **Socket**           | `socket.service.ts`                  | Communication temps réel Pi ↔ Cloud                                         |
+| **CommandQueue**     | `command-queue.service.ts`           | File d'attente commandes (offline/online)                                   |
+| **Deployment**       | `deployment.service.ts`              | Orchestration déploiement vidéos                                            |
+| **UploadVerify**     | `upload-verification.service.ts`     | Vérification upload avant déploiement                                       |
+| **Draft**            | `draft.service.ts`                   | Gestion brouillons de configuration                                         |
+| **Orchestrated**     | `orchestrated-deployment.service.ts` | Déploiement vidéos + config orchestré                                       |
+| **Asset**            | `asset.service.ts`                   | Gestion watermarks et logos (upload/deploy)                                 |
+| **FTP Storage**      | `ftp-storage.ts`                     | Upload/download vidéos sur FTP Hostinger                                    |
+| **Supabase**         | `supabase.ts`                        | Stockage fallback si FTP non configuré                                      |
+| **Metrics**          | `metrics.service.ts`                 | Export Prometheus                                                           |
+| **Audit**            | `audit.service.ts`                   | Log toutes les actions admin                                                |
+| **MFA**              | `mfa.service.ts`                     | 2FA avec backup codes                                                       |
+| **Email**            | `email.service.ts`                   | Password reset, alertes                                                     |
+| **Cron**             | `cron-scheduler.service.ts`          | Stats quotidiennes, cleanup                                                 |
+| **Logger**           | `logger.service.ts`                  | Logs structurés avec correlation ID                                         |
+| **Errors**           | `error-extractor.ts`                 | Extraction messages d'erreur                                                |
+| **ImageToVideo**     | `image-to-video.service.ts`          | Conversion image → vidéo MP4 via ffmpeg (720p, ultrafast, option fond flou) |
+| **PredictiveAlerts** | `predictive-alerts.service.ts`       | Détection proactive de problèmes (8 métriques) ⚡ v3.0                      |
+| **Benchmark**        | `benchmark.service.ts`               | Benchmarks anonymisés entre clubs similaires ⚡ v3.0                        |
 
 ### Services Angular Raspberry Pi (Extraits v2.33+) ⚡ NEW
 
@@ -2115,6 +2146,66 @@ vcgencmd get_mem gpu
     - "Actif" → "Très actif"
   - **Tooltip amélioré** : "Aucune lecture sur les 30 derniers jours (pas de match ?)"
   - **Impact** : Évite la confusion entre connexion (Connecté) et usage (En veille)
+
+- **Alertes Prédictives (Phase 3.1)** : Système d'alertes proactives détectant les problèmes AVANT qu'ils surviennent
+  - **Métriques prédictives évaluées** (8 au total) :
+    - `days_since_last_video` : Détecte l'inactivité prolongée des clubs (warning > 7j, critical > 14j)
+    - `disk_growth_rate` : Prédit quand le disque sera plein (warning > 5%/h, critical > 10%/h)
+    - `disconnections_24h` : Identifie les connexions instables (warning > 5, critical > 10)
+    - `wifi_signal_quality` : Détecte la dégradation du signal (warning < 50%, critical < 25%)
+    - `video_errors_24h` : Identifie les problèmes de lecture (warning > 5, critical > 15)
+    - `temperature_trend` : Détecte les surchauffes progressives (warning > 5°C/h, critical > 10°C/h)
+    - `hotspot_restarts_24h` : Identifie les problèmes de hotspot (warning > 2, critical > 5)
+    - `days_until_subscription_end` : Alerte sur les abonnements expirant (warning < 30j, critical < 7j)
+  - **Architecture** :
+    - Service `predictive-alerts.service.ts` exécute des vérifications toutes les heures
+    - Requête SQL complexe agrège les données depuis `metrics`, `video_plays`, `remote_commands`, `alerts`
+    - Utilise `alertingService.evaluateMetric()` pour générer les alertes
+  - **Endpoints API** :
+    - `GET /api/alerts?type=predictive&active=true` : Liste les alertes prédictives actives
+    - `GET /api/alerts/stats` : Statistiques des alertes (par sévérité, type, site)
+    - `POST /api/alerts/:id/resolve` : Résout une alerte
+    - `GET /api/admin/predictive-alerts/status` : Statut du service
+    - `POST /api/admin/predictive-alerts/run` : Déclenche une vérification immédiate
+  - **UI Dashboard** :
+    - Section "🔮 Alertes prédictives" sur le dashboard principal avec liste des alertes actives
+    - Badges colorés (🟡 warning, 🔴 critical) avec temps relatif
+  - **Nouveaux fichiers** :
+    - `central-server/src/services/predictive-alerts.service.ts`
+    - `central-server/src/controllers/alerts.controller.ts`
+    - `central-server/src/routes/alerts.routes.ts`
+  - **Migration** : Redéployer le central-server et le dashboard
+
+- **Benchmark Anonymisé (Phase 3.2)** : Comparaison des performances entre clubs similaires
+  - **Principe** : Permet aux clubs de se comparer sans révéler l'identité des autres
+  - **Métriques comparées** :
+    - Sessions par mois
+    - Vidéos jouées par session
+    - Durée moyenne des sessions
+    - Disponibilité (uptime)
+    - Total vidéos jouées
+  - **Segmentation** :
+    - Par sport (football, basketball, handball, etc.)
+    - Par région
+    - Par taille de club (small < 5 sessions/mois, medium 5-15, large > 15)
+  - **Statistiques fournies** :
+    - Valeur du club
+    - Percentile (position relative)
+    - Moyenne, médiane, min, max de la distribution
+    - Taille de l'échantillon (minimum 3 clubs pour un benchmark significatif)
+  - **Endpoints API** :
+    - `GET /api/benchmark/sites/:siteId` : Benchmark pour un site
+    - `GET /api/benchmark/global` : Résumé global (admin)
+    - `GET /api/benchmark/compare?siteIds=...` : Comparaison multi-sites (admin)
+  - **UI Dashboard** :
+    - Composant `SiteBenchmarkComponent` dans l'onglet État du site-detail
+    - Visualisation avec barres de progression colorées et percentiles
+  - **Nouveaux fichiers** :
+    - `central-server/src/services/benchmark.service.ts`
+    - `central-server/src/controllers/benchmark.controller.ts`
+    - `central-server/src/routes/benchmark.routes.ts`
+    - `central-dashboard/.../site-benchmark/site-benchmark.component.ts`
+  - **Migration** : Redéployer le central-server et le dashboard
 
 ### v2.48.x (Février 2026)
 

@@ -6,8 +6,9 @@ import { TranslateModule } from '@ngx-translate/core';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggerService } from '../../core/services/logger.service';
+import { ProofService, ProofOfBroadcast } from '../../core/services/proof.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
-import { Site, Metrics, SiteConnectionStatus, ConnectionHealth } from '../../core/models';
+import { Site, Metrics, SiteConnectionStatus, ConnectionHealth, MatchHistoryData, Match } from '../../core/models';
 import { formatVersion } from './utils/version';
 import { Subscription, interval } from 'rxjs';
 import { ConnectionIndicatorComponent } from '../../shared/components/connection-indicator.component';
@@ -15,6 +16,7 @@ import { SiteContentTabComponent } from './components/site-content-tab/site-cont
 import { SiteSettingsTabComponent } from './components/site-settings-tab/site-settings-tab.component';
 import { SiteDebugTabComponent } from './components/site-debug-tab/site-debug-tab.component';
 import { SiteSubscriptionTabComponent } from './components/site-subscription-tab/site-subscription-tab.component';
+import { SiteBenchmarkComponent } from './components/site-benchmark/site-benchmark.component';
 
 type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
 
@@ -30,7 +32,8 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
     SiteContentTabComponent,
     SiteSettingsTabComponent,
     SiteDebugTabComponent,
-    SiteSubscriptionTabComponent
+    SiteSubscriptionTabComponent,
+    SiteBenchmarkComponent
   ],
   template: `
     <div class="page-container" *ngIf="site; else loading">
@@ -312,6 +315,119 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
               <p class="no-data">Aucun historique disponible</p>
             </ng-template>
           </div>
+
+          <!-- Historique des matchs -->
+          <div class="card">
+            <div class="card-header-flex">
+              <h3>🏆 Historique des matchs</h3>
+              <button class="btn btn-sm btn-secondary" (click)="loadMatchHistory()" [disabled]="matchHistoryLoading">
+                {{ matchHistoryLoading ? 'Chargement...' : '🔄 Actualiser' }}
+              </button>
+            </div>
+
+            <div *ngIf="matchHistoryLoading" class="loading-inline">
+              <div class="spinner-small"></div>
+              <span>Chargement...</span>
+            </div>
+
+            <div *ngIf="!matchHistoryLoading && matchHistory">
+              <!-- Stats agrégées -->
+              <div class="match-stats-grid" *ngIf="matchHistory.stats.totalMatches > 0">
+                <div class="match-stat">
+                  <div class="match-stat-value">{{ matchHistory.stats.totalMatches }}</div>
+                  <div class="match-stat-label">Matchs</div>
+                </div>
+                <div class="match-stat">
+                  <div class="match-stat-value">{{ matchHistory.stats.totalAudience | number }}</div>
+                  <div class="match-stat-label">Spectateurs total</div>
+                </div>
+                <div class="match-stat">
+                  <div class="match-stat-value">{{ matchHistory.stats.avgAudience }}</div>
+                  <div class="match-stat-label">Moyenne / match</div>
+                </div>
+                <div class="match-stat">
+                  <div class="match-stat-value">{{ matchHistory.stats.totalVideos }}</div>
+                  <div class="match-stat-label">Vidéos diffusées</div>
+                </div>
+              </div>
+
+              <!-- Liste des matchs -->
+              <div class="matches-list" *ngIf="matchHistory.matches.length > 0; else noMatches">
+                <div class="match-item" *ngFor="let match of matchHistory.matches">
+                  <div class="match-date">{{ formatMatchDate(match.matchDate) }}</div>
+                  <div class="match-details">
+                    <div class="match-name">{{ match.matchName }}</div>
+                    <div class="match-meta">
+                      <span class="match-badge" *ngIf="match.audienceEstimate">
+                        👥 {{ match.audienceEstimate }} spectateurs
+                      </span>
+                      <span class="match-badge">
+                        📺 {{ match.videosPlayed }} vidéos
+                      </span>
+                      <span class="match-badge" *ngIf="match.durationMinutes">
+                        ⏱️ {{ match.durationMinutes }} min
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <ng-template #noMatches>
+                <p class="no-data">Aucun match enregistré. Les matchs apparaîtront ici quand vous configurerez un match depuis la télécommande.</p>
+              </ng-template>
+            </div>
+
+            <div *ngIf="!matchHistoryLoading && !matchHistory">
+              <p class="no-data">Impossible de charger l'historique des matchs</p>
+            </div>
+          </div>
+
+          <!-- Section Preuves de Diffusion -->
+          <div class="card">
+            <div class="card-header">
+              <h2>📸 Preuves de Diffusion</h2>
+              <div class="card-actions">
+                <button
+                  class="btn btn-primary btn-sm"
+                  (click)="captureProof()"
+                  [disabled]="!isConnected || capturingProof"
+                  [title]="!isConnected ? 'Site must be connected' : 'Capture screen now'"
+                >
+                  {{ capturingProof ? '⏳ Capture...' : '📷 Capturer' }}
+                </button>
+                <button class="btn btn-sm btn-secondary" (click)="loadProofs()" [disabled]="proofsLoading">
+                  {{ proofsLoading ? 'Chargement...' : '🔄 Actualiser' }}
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="proofsLoading" class="loading-inline">
+              <span class="spinner-sm"></span>
+              Chargement des preuves...
+            </div>
+
+            <div *ngIf="!proofsLoading && proofs.length > 0" class="proofs-grid">
+              <div class="proof-item" *ngFor="let proof of proofs" (click)="openProofModal(proof)">
+                <img [src]="proof.screenshot_url" [alt]="'Capture du ' + formatProofDate(proof.timestamp_captured)" class="proof-thumbnail" loading="lazy">
+                <div class="proof-info">
+                  <span class="proof-date">{{ formatProofDate(proof.timestamp_captured) }}</span>
+                  <span class="proof-badge" [ngClass]="'badge-' + proof.triggered_by">
+                    {{ proof.triggered_by === 'manual' ? 'Manuel' : proof.triggered_by === 'scheduled' ? 'Auto' : 'Commande' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="!proofsLoading && proofs.length === 0">
+              <p class="no-data">
+                Aucune capture d'écran. Cliquez sur "Capturer" pour créer une preuve de diffusion.
+              </p>
+            </div>
+          </div>
+
+          <!-- Benchmark anonymisé -->
+          <div class="card">
+            <app-site-benchmark [siteId]="siteId"></app-site-benchmark>
+          </div>
         </div>
 
         <!-- TAB: Contenu -->
@@ -437,6 +553,39 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="showSystemInfoModal = false">Fermer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Proof Modal -->
+      <div class="modal" *ngIf="selectedProof" (click)="closeProofModal()">
+        <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>📸 Preuve de diffusion</h2>
+            <button class="modal-close" (click)="closeProofModal()">×</button>
+          </div>
+          <div class="modal-body proof-modal-body">
+            <img [src]="selectedProof.screenshot_url" [alt]="'Capture'" class="proof-fullsize">
+            <div class="proof-meta">
+              <div class="meta-item">
+                <span class="meta-label">Date:</span>
+                <span class="meta-value">{{ formatProofDate(selectedProof.timestamp_captured) }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Type:</span>
+                <span class="meta-value">{{ selectedProof.triggered_by === 'manual' ? 'Capture manuelle' : selectedProof.triggered_by === 'scheduled' ? 'Capture automatique' : 'Commande' }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Checksum:</span>
+                <span class="meta-value monospace">{{ selectedProof.checksum.substring(0, 16) }}...</span>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <a [href]="selectedProof.screenshot_url" target="_blank" class="btn btn-primary">
+              ⬇️ Télécharger
+            </a>
+            <button class="btn btn-secondary" (click)="closeProofModal()">Fermer</button>
           </div>
         </div>
       </div>
@@ -1096,6 +1245,217 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
       background: #e2e8f0;
     }
 
+    .btn-sm {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.8125rem;
+    }
+
+    /* Match History */
+    .card-header-flex {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .card-header-flex h3 {
+      margin: 0;
+    }
+
+    .match-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border-radius: 10px;
+    }
+
+    .match-stat {
+      text-align: center;
+    }
+
+    .match-stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #0369a1;
+    }
+
+    .match-stat-label {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+    }
+
+    .matches-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .match-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 0.875rem;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .match-item:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    .match-date {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #475569;
+      min-width: 80px;
+      padding-top: 0.125rem;
+    }
+
+    .match-details {
+      flex: 1;
+    }
+
+    .match-name {
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 0.375rem;
+    }
+
+    .match-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .match-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      background: white;
+      border-radius: 4px;
+      color: #475569;
+    }
+
+    @media (max-width: 768px) {
+      .match-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* === Proof of Broadcast Styles === */
+    .proofs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .proof-item {
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .proof-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: #2563eb;
+    }
+
+    .proof-thumbnail {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .proof-info {
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .proof-date {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .proof-badge {
+      font-size: 0.625rem;
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .proof-badge.badge-manual {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .proof-badge.badge-scheduled {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .proof-badge.badge-command {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .proof-modal-body {
+      text-align: center;
+    }
+
+    .proof-fullsize {
+      max-width: 100%;
+      max-height: 60vh;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .proof-meta {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      padding: 1rem;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .meta-label {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .meta-value {
+      font-weight: 500;
+      color: #1e293b;
+    }
+
+    .meta-value.monospace {
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 0.75rem;
+    }
+
     @media (max-width: 768px) {
       .page-container {
         padding: 1rem;
@@ -1162,10 +1522,21 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   } | null = null;
   systemInfoLoading = false;
 
+  // Match History
+  matchHistory: MatchHistoryData | null = null;
+  matchHistoryLoading = false;
+
+  // Proof of Broadcast
+  proofs: ProofOfBroadcast[] = [];
+  proofsLoading = false;
+  capturingProof = false;
+  selectedProof: ProofOfBroadcast | null = null;
+
   private readonly route = inject(ActivatedRoute);
   private readonly sitesService = inject(SitesService);
   private readonly notificationService = inject(NotificationService);
   private readonly logger = inject(LoggerService);
+  private readonly proofService = inject(ProofService);
   private refreshSubscription?: Subscription;
 
   ngOnInit(): void {
@@ -1187,6 +1558,8 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     this.sitesService.getSite(this.siteId).subscribe({
       next: (site) => {
         this.site = site;
+        this.loadMatchHistory();
+        this.loadProofs();
       },
       error: (error) => {
         const message = ErrorExtractor.getMessage(error);
@@ -1194,6 +1567,82 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         this.notificationService.error(`Erreur: ${message}`);
       }
     });
+  }
+
+  loadMatchHistory(): void {
+    this.matchHistoryLoading = true;
+    this.sitesService.getMatchHistory(this.siteId, 10).subscribe({
+      next: (data) => {
+        this.matchHistory = data;
+        this.matchHistoryLoading = false;
+      },
+      error: () => {
+        this.matchHistory = null;
+        this.matchHistoryLoading = false;
+      }
+    });
+  }
+
+  formatMatchDate(date: Date): string {
+    const d = new Date(date);
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  // === Proof of Broadcast Methods ===
+  loadProofs(): void {
+    this.proofsLoading = true;
+    this.proofService.getProofsForSite(this.siteId, 6).subscribe({
+      next: (response) => {
+        this.proofs = response.proofs;
+        this.proofsLoading = false;
+      },
+      error: () => {
+        this.proofs = [];
+        this.proofsLoading = false;
+      }
+    });
+  }
+
+  captureProof(): void {
+    if (!this.isConnected) {
+      this.notificationService.warning('Le site doit être connecté pour capturer l\'écran');
+      return;
+    }
+
+    this.capturingProof = true;
+    this.proofService.triggerCapture(this.siteId).subscribe({
+      next: () => {
+        this.notificationService.success('Capture déclenchée, elle apparaîtra dans quelques secondes');
+        // Recharger après un délai pour laisser le temps à la capture
+        setTimeout(() => {
+          this.loadProofs();
+          this.capturingProof = false;
+        }, 5000);
+      },
+      error: (error) => {
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur de capture: ${message}`);
+        this.capturingProof = false;
+      }
+    });
+  }
+
+  formatProofDate(date: Date): string {
+    const d = new Date(date);
+    return d.toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  openProofModal(proof: ProofOfBroadcast): void {
+    this.selectedProof = proof;
+  }
+
+  closeProofModal(): void {
+    this.selectedProof = null;
   }
 
   loadDashboardData(): void {

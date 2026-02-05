@@ -1,10 +1,23 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { Subscription, interval } from 'rxjs';
 import { SitesService } from '../../core/services/sites.service';
 import { AuthService } from '../../core/services/auth.service';
 import { SiteStats, Site, SiteConnectionSummary } from '../../core/models';
+import { environment } from '../../../environments/environment';
+
+interface PredictiveAlert {
+  id: string;
+  site_id: string;
+  site_name?: string;
+  type: string;
+  severity: 'warning' | 'critical';
+  message: string;
+  created_at: string;
+  is_active: boolean;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -111,6 +124,32 @@ import { SiteStats, Site, SiteConnectionSummary } from '../../core/models';
                 <div class="action-desc">Déployer des mises à jour logicielles</div>
               </div>
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alertes prédictives -->
+      <div class="card predictive-alerts" *ngIf="predictiveAlerts.length > 0 || loadingAlerts">
+        <div class="card-header">
+          <h2>🔮 Alertes prédictives</h2>
+          <button class="btn btn-secondary btn-sm" (click)="loadPredictiveAlerts()" [disabled]="loadingAlerts">
+            {{ loadingAlerts ? '...' : '↻' }}
+          </button>
+        </div>
+        <div *ngIf="loadingAlerts" class="alerts-loading">
+          Chargement...
+        </div>
+        <div *ngIf="!loadingAlerts" class="alerts-list">
+          <div *ngFor="let alert of predictiveAlerts" class="alert-item" [class.critical]="alert.severity === 'critical'">
+            <span class="alert-icon">{{ alert.severity === 'critical' ? '🔴' : '🟡' }}</span>
+            <div class="alert-content">
+              <div class="alert-site">{{ alert.site_name || 'Site inconnu' }}</div>
+              <div class="alert-message">{{ alert.message }}</div>
+            </div>
+            <span class="alert-time">{{ formatAlertTime(alert.created_at) }}</span>
+          </div>
+          <div *ngIf="predictiveAlerts.length === 0" class="empty-alerts">
+            ✅ Aucune alerte prédictive
           </div>
         </div>
       </div>
@@ -423,15 +462,84 @@ import { SiteStats, Site, SiteConnectionSummary } from '../../core/models';
       font-weight: 600;
       color: #0f172a;
     }
+
+    /* Predictive Alerts */
+    .predictive-alerts {
+      margin-bottom: 2rem;
+    }
+
+    .alerts-loading {
+      text-align: center;
+      padding: 2rem;
+      color: #64748b;
+    }
+
+    .alerts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .alert-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+    }
+
+    .alert-item.critical {
+      background: #fee2e2;
+      border-left-color: #ef4444;
+    }
+
+    .alert-icon {
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .alert-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .alert-site {
+      font-weight: 600;
+      color: #0f172a;
+      margin-bottom: 0.25rem;
+    }
+
+    .alert-message {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+
+    .alert-time {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .empty-alerts {
+      text-align: center;
+      padding: 2rem;
+      color: #10b981;
+      font-weight: 500;
+    }
   `]
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly sitesService = inject(SitesService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly http = inject(HttpClient);
 
   stats: SiteStats | null = null;
   recentSites: Site[] = [];
+  predictiveAlerts: PredictiveAlert[] = [];
+  loadingAlerts = false;
 
   // Map des statuts de connexion temps réel (siteId -> status)
   private connectionStatusMap = new Map<string, SiteConnectionSummary>();
@@ -444,6 +552,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadStats();
     this.loadRecentSites();
     this.loadConnectionStatus();
+    this.loadPredictiveAlerts();
     // Rafraîchir les statuts de connexion toutes les 30 secondes
     this.refreshSubscription = interval(30000).subscribe(() => {
       this.loadConnectionStatus();
@@ -536,5 +645,35 @@ export class DashboardComponent implements OnInit, OnDestroy {
   getPercentage(value: number | undefined): number {
     if (!value || !this.stats?.total_sites) return 0;
     return (value / this.stats.total_sites) * 100;
+  }
+
+  loadPredictiveAlerts(): void {
+    this.loadingAlerts = true;
+    this.http.get<{ success: boolean; alerts: PredictiveAlert[] }>(
+      `${environment.apiUrl}/alerts?type=predictive&active=true&limit=10`
+    ).subscribe({
+      next: (response) => {
+        this.predictiveAlerts = response.alerts || [];
+        this.loadingAlerts = false;
+      },
+      error: () => {
+        this.loadingAlerts = false;
+        // Silently fail - alerts are optional
+      }
+    });
+  }
+
+  formatAlertTime(dateStr: string): string {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return "À l'instant";
+    if (diffMins < 60) return `Il y a ${diffMins}min`;
+    if (diffHours < 24) return `Il y a ${diffHours}h`;
+    return `Il y a ${diffDays}j`;
   }
 }

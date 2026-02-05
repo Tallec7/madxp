@@ -22,6 +22,7 @@ import networkAlertsService from './services/network-alerts.service';
 import { adminOpsService } from './services/admin-ops.service';
 import { alertingService } from './services/alerting.service';
 import { realtimeStatsService } from './services/realtime-stats.service';
+import { predictiveAlertsService } from './services/predictive-alerts.service';
 
 import authRoutes from './routes/auth.routes';
 import mfaRoutes from './routes/mfa.routes';
@@ -47,6 +48,10 @@ import assetsRoutes from './routes/assets.routes';
 import remoteRoutes from './routes/remote.routes';
 import subscriptionRoutes from './routes/subscription.routes';
 import billingRoutes from './routes/billing.routes';
+import proofRoutes from './routes/proof.routes';
+import reportsRoutes from './routes/reports.routes';
+import alertsRoutes from './routes/alerts.routes';
+import benchmarkRoutes from './routes/benchmark.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 import { correlationMiddleware } from './middleware/correlation';
@@ -333,6 +338,10 @@ app.use('/api/assets', sensitiveRateLimit, assetsRoutes); // Assets (watermarks,
 app.use('/api/remote', remoteRoutes); // Remote cloud - rate limits per-route
 app.use('/api/subscriptions', subscriptionRoutes); // Subscription management - rate limits per-route
 app.use('/api/billing', billingRoutes); // Billing export - admin only
+app.use('/api/proofs', proofRoutes); // Proof of broadcast (screenshots) - rate limits per-route
+app.use('/api/reports', apiRateLimit, reportsRoutes); // Generated PDF reports
+app.use('/api/alerts', apiRateLimit, alertsRoutes); // System and predictive alerts
+app.use('/api/benchmark', apiRateLimit, benchmarkRoutes); // Anonymous benchmarks
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler
 // Uses standardized error format with correlation ID
@@ -377,6 +386,10 @@ const startServer = async () => {
     networkAlertsService.start();
     logger.info('Network alerts service started');
 
+    // Demarrer le service d'alertes predictives (Phase 3.1 - Analytics Enhancement)
+    predictiveAlertsService.start();
+    logger.info('Predictive alerts service started');
+
     // Initialiser et démarrer le service de stats temps réel
     const io = socketService.getIO();
     if (io) {
@@ -410,6 +423,7 @@ process.on('SIGTERM', async () => {
   schedulerService.stop();
   cronSchedulerService.stop();
   memoryManagerService.stop();
+  predictiveAlertsService.stop();
   adminOpsService.stopCleanup();
   httpServer.close(async () => {
     logger.info('HTTP server closed');
