@@ -1,3 +1,9 @@
+## [3.7.3](https://github.com/Tallec7/neopro/compare/v3.7.2...v3.7.3) (2026-02-06)
+
+### Bug Fixes
+
+- **analytics:** prevent data loss on Pi reboot with immediate persistence ([26bc592](https://github.com/Tallec7/neopro/commit/26bc5925d70a0cd04bd5dd935a0cbfd1197b392b))
+
 ## [3.7.2](https://github.com/Tallec7/neopro/compare/v3.7.1...v3.7.2) (2026-02-06)
 
 ### Bug Fixes
