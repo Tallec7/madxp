@@ -417,6 +417,7 @@ print_success "Scripts runtime copiés"
 print_step "Copie des fichiers systemd..."
 mkdir -p ${DEPLOY_DIR}/config/systemd
 SYSTEMD_FILES=(
+    "raspberry/config/systemd/neopro-kiosk.service"
     "raspberry/config/systemd/neopro-hotspot-watchdog.service"
     "raspberry/config/systemd/neopro-hotspot-optimizer.service"
     "raspberry/config/systemd/neopro-sync-guardian.service"
