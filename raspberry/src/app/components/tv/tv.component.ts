@@ -1452,6 +1452,10 @@ export class TvComponent implements OnInit, OnDestroy {
   /**
    * Appelé quand une vidéo se termine sur un player
    * Mode simplifié: pas de préchargement anticipé pour éviter les saccades
+   *
+   * IMPORTANT: On capture un freeze-frame AVANT de switcher pour éviter
+   * le flash noir entre les vidéos. Le freeze-frame masque la transition
+   * pendant que le nouveau player charge et démarre.
    */
   private onVideoEnded(fromPlayer: 'A' | 'B'): void {
     console.log(`[TV] onVideoEnded called from player ${fromPlayer}, isLoopMode=${this.isLoopMode}, activePlayer=${this.activePlayer}`);
@@ -1468,12 +1472,22 @@ export class TvComponent implements OnInit, OnDestroy {
       return;
     }
 
-    console.log('[TV] Video ended, triggering switch');
+    // Capturer le freeze-frame du dernier frame visible AVANT que le player
+    // devienne noir (ended). Cela masque le gap entre les deux vidéos.
+    // Note: on capture même si le player a fini - le dernier frame est encore
+    // dans le buffer vidéo tant qu'on n'a pas changé la source.
+    this.captureAndShowFreezeFrame();
+
+    console.log('[TV] Video ended, freeze frame captured, triggering switch');
     this.triggerSwitch();
   }
 
   /**
    * Switch entre les deux players (transition sans flash)
+   *
+   * Le freeze-frame est affiché par onVideoEnded() AVANT d'appeler cette méthode.
+   * Il masque la transition pendant toute la durée du chargement.
+   * On le cache une fois que la nouvelle vidéo a affiché son premier frame.
    */
   private switchPlayers(nextVideoIndex: number): void {
     const oldPlayer = this.getActivePlayer();
@@ -1483,41 +1497,52 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Fonction pour effectuer le switch une fois que la vidéo est prête
     const doSwitch = () => {
-      // Démarrer la vidéo préchargée AVANT de faire le switch visuel
+      // Rendre le nouveau player visible AVANT play() pour qu'il soit prêt
+      // Le freeze-frame (z-index 20) masque tout, donc pas de flash
+      this.setPlayerVisible(newPlayer, true);
+
+      // Démarrer la vidéo préchargée
       newPlayer.play().then(() => {
-        // Attendre un court instant pour s'assurer que le premier frame est affiché
+        // Attendre que le premier frame soit réellement affiché sur le Pi
+        // 2x requestAnimationFrame + 100ms pour le décodeur hardware
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            // Une fois que la nouvelle vidéo joue vraiment, faire le switch visuel
-            this.setPlayerVisible(newPlayer, true);
-            this.setPlayerVisible(oldPlayer, false);
+            setTimeout(() => {
+              // Cacher l'ancien player et le freeze-frame
+              this.setPlayerVisible(oldPlayer, false);
+              this.hideFreezeFrame();
 
-            // Mettre à jour l'état
-            this.activePlayer = this.activePlayer === 'A' ? 'B' : 'A';
-            this.currentLoopIndex = nextVideoIndex;
-            this.preloadReady = false;
-            this.preloadedIndex = null;
+              // Mettre à jour l'état
+              this.activePlayer = this.activePlayer === 'A' ? 'B' : 'A';
+              this.currentLoopIndex = nextVideoIndex;
+              this.preloadReady = false;
+              this.preloadedIndex = null;
 
-            // Tracker
-            const video = this.currentLoopVideos[nextVideoIndex];
-            this.analyticsService.trackVideoStart(video, 'auto');
-            this.sponsorAnalytics.trackSponsorStart(
-              video,
-              'auto',
-              newPlayer.duration || 0
-            );
+              // Incrémenter le compteur pour le cleanup mémoire
+              this.incrementVideoPlayCount();
 
-            console.log(`[TV] Switched to player ${this.activePlayer}, now playing index ${nextVideoIndex}`);
+              // Tracker
+              const video = this.currentLoopVideos[nextVideoIndex];
+              this.analyticsService.trackVideoStart(video, 'auto');
+              this.sponsorAnalytics.trackSponsorStart(
+                video,
+                'auto',
+                newPlayer.duration || 0
+              );
 
-            // NE PAS précharger immédiatement après le switch
-            // Le préchargement sera déclenché par onTimeUpdate 3s avant la fin
-            // Cela évite de décoder 2 vidéos en parallèle
-            this.pendingSwitch = false;
-            this.switchTriggered = false; // Reset pour le prochain cycle
+              console.log(`[TV] Switched to player ${this.activePlayer}, now playing index ${nextVideoIndex}`);
+
+              // NE PAS précharger immédiatement après le switch
+              // Le préchargement sera déclenché par onTimeUpdate 3s avant la fin
+              // Cela évite de décoder 2 vidéos en parallèle
+              this.pendingSwitch = false;
+              this.switchTriggered = false; // Reset pour le prochain cycle
+            }, 100); // 100ms pour le décodeur hardware du Pi
           });
         });
       }).catch(err => {
         console.error('[TV] Error switching to next video:', err);
+        this.hideFreezeFrame();
         this.pendingSwitch = false;
         this.switchTriggered = false;
         this.preloadReady = false;
@@ -1530,8 +1555,9 @@ export class TvComponent implements OnInit, OnDestroy {
     };
 
     // Si la vidéo n'est pas encore préchargée, attendre
+    // Le freeze-frame masque tout pendant cette attente
     if (!this.preloadReady || this.preloadedIndex !== nextVideoIndex) {
-      console.log(`[TV] Waiting for preload to complete...`);
+      console.log(`[TV] Waiting for preload to complete (freeze frame visible)...`);
 
       // Charger si pas déjà en cours
       if (this.preloadedIndex !== nextVideoIndex) {
