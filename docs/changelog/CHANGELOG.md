@@ -1,3 +1,9 @@
+## [3.7.5](https://github.com/Tallec7/neopro/compare/v3.7.4...v3.7.5) (2026-02-06)
+
+### Bug Fixes
+
+- **server:** reduce memory pressure on Railway Hobby plan ([#384](https://github.com/Tallec7/neopro/issues/384)) ([3a37735](https://github.com/Tallec7/neopro/commit/3a37735b6ba6e2ca69077ed8aee620367cb57866))
+
 ## [3.7.4](https://github.com/Tallec7/neopro/compare/v3.7.3...v3.7.4) (2026-02-06)
 
 ### Performance Improvements
