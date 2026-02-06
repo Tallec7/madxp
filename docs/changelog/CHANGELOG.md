@@ -1,3 +1,9 @@
+## [3.7.7](https://github.com/Tallec7/neopro/compare/v3.7.6...v3.7.7) (2026-02-06)
+
+### Bug Fixes
+
+- **tv:** eliminate black flash between loop videos using freeze-frame ([3a07330](https://github.com/Tallec7/neopro/commit/3a073301bb4137d2ddde53d398ea65044d6252ed))
+
 ## [3.7.6](https://github.com/Tallec7/neopro/compare/v3.7.5...v3.7.6) (2026-02-06)
 
 ### Bug Fixes
