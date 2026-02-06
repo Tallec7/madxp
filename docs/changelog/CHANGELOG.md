@@ -1,3 +1,9 @@
+## [3.7.2](https://github.com/Tallec7/neopro/compare/v3.7.1...v3.7.2) (2026-02-06)
+
+### Bug Fixes
+
+- **raspberry:** fix Pi 5 crashes after OTA update and false GPU warning ([#383](https://github.com/Tallec7/neopro/issues/383)) ([61d2c46](https://github.com/Tallec7/neopro/commit/61d2c468b9d9931479f456bf600c5e7a039c2ddf))
+
 ## [3.7.1](https://github.com/Tallec7/neopro/compare/v3.7.0...v3.7.1) (2026-02-05)
 
 ### Bug Fixes
