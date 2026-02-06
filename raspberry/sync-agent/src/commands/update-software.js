@@ -580,6 +580,23 @@ class SoftwareUpdateHandler {
 
       logger.info('Services startup complete');
 
+      // Restart neopro-kiosk to apply new webapp + kiosk-watchdog.sh changes
+      // (e.g. Pi 5 SwiftShader flags, error recovery improvements)
+      // This causes a brief TV interruption (~5s) but is necessary after updates
+      try {
+        const { stdout: kioskExists } = await execAsync(
+          `systemctl list-unit-files neopro-kiosk.service 2>/dev/null | grep -q neopro-kiosk && echo "exists" || echo "not_found"`
+        );
+
+        if (kioskExists.trim() === 'exists') {
+          logger.info('Restarting neopro-kiosk to apply display updates...');
+          await execAsync('sudo systemctl restart neopro-kiosk');
+          logger.info('Service neopro-kiosk restarted');
+        }
+      } catch (error) {
+        logger.warn('Failed to restart neopro-kiosk (non-critical):', error.message);
+      }
+
       // Schedule sync-agent restart to apply any updates to itself
       // Use spawn with detached to allow the current process to exit
       logger.info('Scheduling sync-agent restart in 5 seconds...');

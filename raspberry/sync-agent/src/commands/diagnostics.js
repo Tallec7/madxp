@@ -118,17 +118,37 @@ async function runManualDiagnostics() {
 
   // 4. GPU Memory
   try {
+    // Detect Pi 5 - vcgencmd get_mem gpu returns legacy 4M value (not actual GPU memory)
+    // Pi 5 uses CMA (Contiguous Memory Allocator) with dynamic GPU memory
+    let isPi5 = false;
+    try {
+      const { stdout: modelStr } = await execAsync('cat /proc/device-tree/model 2>/dev/null');
+      isPi5 = modelStr.includes('Raspberry Pi 5');
+    } catch {
+      // Not a Pi or model detection failed
+    }
+
     const { stdout } = await execAsync('vcgencmd get_mem gpu 2>/dev/null');
     const match = stdout.match(/gpu=(\d+)M/);
     if (match) {
       const gpuMem = parseInt(match[1]);
-      results.checks.push({
-        category: 'System',
-        name: 'GPU Memory',
-        status: gpuMem >= 128 ? 'ok' : 'fail',
-        value: `${gpuMem}M`,
-        warning: gpuMem < 128 ? 'Minimum requis: 128M, recommandé: 256M' : null,
-      });
+      if (isPi5) {
+        results.checks.push({
+          category: 'System',
+          name: 'GPU Memory (Pi 5)',
+          status: 'ok',
+          value: 'Dynamique (CMA)',
+          warning: null,
+        });
+      } else {
+        results.checks.push({
+          category: 'System',
+          name: 'GPU Memory',
+          status: gpuMem >= 128 ? 'ok' : 'fail',
+          value: `${gpuMem}M`,
+          warning: gpuMem < 128 ? 'Minimum requis: 128M, recommandé: 256M' : null,
+        });
+      }
     }
   } catch {
     results.checks.push({
