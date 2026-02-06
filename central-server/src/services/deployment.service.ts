@@ -401,7 +401,7 @@ class DeploymentService {
         `UPDATE content_deployments
          SET progress = $1
          WHERE id = $2`,
-        [progress, deploymentId]
+        [Math.round(progress), deploymentId]
       );
 
       // Si tous les sites ont terminé, marquer comme complété

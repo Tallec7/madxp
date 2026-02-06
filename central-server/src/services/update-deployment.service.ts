@@ -381,7 +381,7 @@ class UpdateDeploymentService {
         `UPDATE update_deployments
          SET progress = $1, status = 'in_progress'
          WHERE id = $2`,
-        [progress, deploymentId]
+        [Math.round(progress), deploymentId]
       );
     } catch (error) {
       logger.error('Error updating deployment progress:', { deploymentId, error });

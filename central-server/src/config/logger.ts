@@ -69,22 +69,9 @@ export function createContextLogger(context: Record<string, unknown>): winston.L
 
 // Add Logtail transport in production if configured
 if (process.env.NODE_ENV === 'production') {
-  // File transports for local backup (reduced for Railway Hobby plan)
-  logger.add(
-    new winston.transports.File({
-      filename: 'logs/error.log',
-      level: 'error',
-      maxsize: 2097152, // 2MB (reduced from 10MB)
-      maxFiles: 2, // Reduced from 5
-    })
-  );
-  logger.add(
-    new winston.transports.File({
-      filename: 'logs/combined.log',
-      maxsize: 2097152, // 2MB (reduced from 10MB)
-      maxFiles: 2, // Reduced from 5
-    })
-  );
+  // File transports REMOVED - Railway has no persistent disk,
+  // file buffers waste ~8MB of memory for logs that are lost on redeploy.
+  // All logs go to console (captured by Railway) + Logtail (if configured).
 
   // Logtail transport for centralized logging
   if (logtail) {
