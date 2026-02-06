@@ -134,13 +134,18 @@ start_chromium() {
     # Flags spécifiques au modèle
     local gpu_flags=()
     if [[ "$PI_MODEL" == "pi5" ]]; then
-        # Pi 5 : VideoCore VII a des problèmes avec le décodage vidéo hardware
-        # Utiliser SwiftShader (rendu logiciel) pour éviter les erreurs SharedImageStub
-        log "📱 Pi 5 détecté: utilisation de SwiftShader pour la compatibilité GPU"
+        # Pi 5 : Tenter l'accélération GPU native avec EGL + V4L2
+        # Fallback: si SharedImageStub errors reviennent, remettre SwiftShader :
+        #   --disable-gpu-compositing --use-gl=angle --use-angle=swiftshader
+        log "📱 Pi 5 détecté: utilisation de EGL natif avec V4L2"
         gpu_flags=(
-            --disable-gpu-compositing
-            --use-gl=angle
-            --use-angle=swiftshader
+            --use-gl=egl
+            --enable-features=VaapiVideoDecoder,V4L2VideoDecoder,V4L2StatelessVideoDecoder
+            --ignore-gpu-blocklist
+            --enable-gpu-rasterization
+            --enable-zero-copy
+            --enable-accelerated-video-decode
+            --disable-gpu-driver-bug-workarounds
         )
     else
         # Pi 4 et antérieurs : utiliser l'accélération GPU hardware

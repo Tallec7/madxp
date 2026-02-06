@@ -2053,6 +2053,7 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 | Écran blanc après crash       | Chromium bloqué sur erreur  | Le watchdog devrait récupérer automatiquement    |
 | Crash fréquents (>3 en 5 min) | Vidéo corrompue ou GPU mort | Vérifier les vidéos, température Pi              |
 | "gpu=4M" au lieu de 128M+     | Config `/boot/config.txt`   | Ajouter `gpu_mem=256` et reboot                  |
+| Vidéos lentes/dégradées Pi 5  | SwiftShader (ancien config) | Mettre à jour `kiosk-watchdog.sh` (v3.7.2+ EGL)  |
 
 **Diagnostic GPU** :
 
@@ -2094,6 +2095,23 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v3.7.2 (Février 2026)
+
+- **Pi 5 : Remplacement SwiftShader par EGL natif + V4L2** : Amélioration des performances vidéo sur Raspberry Pi 5
+  - **Problème** : Les vidéos apparaissaient lentes/dégradées sur Pi 5 car SwiftShader (rendu 100% CPU) était utilisé depuis v2.27
+  - **Cause racine** : SwiftShader avait été choisi pour éviter les erreurs "SharedImageStub" du VideoCore VII, mais le rendu logiciel dégrade significativement les performances de lecture vidéo
+  - **Solution** : Remplacement des flags Chromium Pi 5 par EGL natif + décodeurs V4L2 hardware
+  - **Anciens flags** : `--disable-gpu-compositing --use-gl=angle --use-angle=swiftshader`
+  - **Nouveaux flags** : `--use-gl=egl --enable-features=VaapiVideoDecoder,V4L2VideoDecoder,V4L2StatelessVideoDecoder --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy --enable-accelerated-video-decode --disable-gpu-driver-bug-workarounds`
+  - **Note importante** : Le Pi 5 a supprimé le décodeur H.264 hardware — seul H.265/HEVC est accéléré. EGL améliore au minimum le compositing GPU et le rendu des overlays.
+  - **Fallback** : Si les erreurs SharedImageStub reviennent, les anciens flags SwiftShader sont en commentaire dans le script
+  - **Fichier modifié** : `raspberry/scripts/kiosk-watchdog.sh`
+  - **Migration Pi 5 existants** :
+    ```bash
+    scp raspberry/scripts/kiosk-watchdog.sh pi@<IP>:/home/pi/neopro/scripts/
+    ssh pi@<IP> 'sudo systemctl restart neopro-kiosk'
+    ```
 
 ### v3.7.1 (Février 2026)
 
@@ -3301,17 +3319,18 @@ vcgencmd get_mem gpu
     - `central-dashboard/src/app/core/interceptors/error.interceptor.ts` - Suppression du code `isDraft404` devenu inutile
   - **Migration** : Rebuild et redéployer le dashboard + API
 
-- **Support Raspberry Pi 5 (SwiftShader)** : Fix des crashs Chromium "Aw, Snap!" sur Pi 5
-  - **Problème** : Le Pi 5 utilise VideoCore VII qui a des problèmes d'incompatibilité avec le décodage vidéo hardware de Chromium
-  - **Symptôme** : Erreurs `SharedImageStub: Unable to create shared image` toutes les 5 secondes dans les logs
-  - **Note** : Sur Pi 5, `vcgencmd get_mem gpu` retourne toujours `gpu=4M` (valeur legacy) - ce n'est pas un problème
-  - **Solution** : Utiliser SwiftShader (rendu logiciel) au lieu de l'accélération GPU hardware
-  - **Flags Chromium Pi 5** : `--disable-gpu-compositing --use-gl=angle --use-angle=swiftshader`
+- **Support Raspberry Pi 5 (EGL natif + V4L2)** : Accélération GPU pour le Pi 5 (remplace SwiftShader)
+  - **Problème initial** : Le Pi 5 utilise VideoCore VII qui causait des erreurs "SharedImageStub" avec les flags GPU par défaut
+  - **Ancienne solution (v2.27-v3.7.1)** : SwiftShader (rendu 100% CPU) — stable mais vidéos lentes/dégradées
+  - **Nouvelle solution (v3.7.2+)** : EGL natif + décodeurs V4L2 hardware pour de meilleures performances
+  - **Flags Chromium Pi 5** : `--use-gl=egl --enable-features=VaapiVideoDecoder,V4L2VideoDecoder,V4L2StatelessVideoDecoder --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy --enable-accelerated-video-decode --disable-gpu-driver-bug-workarounds`
+  - **Fallback** : Si SharedImageStub errors reviennent, remettre SwiftShader : `--disable-gpu-compositing --use-gl=angle --use-angle=swiftshader`
+  - **Note** : Le Pi 5 n'a pas de décodeur H.264 hardware (supprimé), seul H.265/HEVC est accéléré. EGL améliore au minimum le compositing GPU.
   - **Détection automatique** : Le script `kiosk-watchdog.sh` détecte le modèle de Pi et applique les bons flags
   - **Fichiers modifiés** :
     - `raspberry/scripts/kiosk-watchdog.sh` - Détection Pi 4 vs Pi 5, flags GPU adaptés
-    - `docs/guides/TROUBLESHOOTING.md` - Section 5 réécrite avec solutions distinctes Pi 4/Pi 5
-  - **Migration Pi 5 existants** : Éditer `/etc/systemd/system/neopro-kiosk.service` et ajouter les flags SwiftShader, ou déployer le nouveau `kiosk-watchdog.sh`
+    - `docs/guides/TROUBLESHOOTING.md` - Section Pi 5 mise à jour avec EGL + fallback SwiftShader
+  - **Migration Pi 5 existants** : Copier le nouveau `kiosk-watchdog.sh` et `sudo systemctl restart neopro-kiosk`
 
 - **Fix faux avertissement GPU sur Pi 5 dans le dashboard** : Le health check ignore maintenant la valeur legacy `gpu=4M` sur Pi 5
   - **Problème** : Le dashboard central affichait "Mémoire GPU insuffisante (4M)" sur Pi 5, alors que ce n'est pas un problème
