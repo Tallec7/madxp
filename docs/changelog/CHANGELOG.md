@@ -1,3 +1,9 @@
+## [3.7.6](https://github.com/Tallec7/neopro/compare/v3.7.5...v3.7.6) (2026-02-06)
+
+### Bug Fixes
+
+- **build:** include neopro-kiosk.service in build archive ([6d188d5](https://github.com/Tallec7/neopro/commit/6d188d519e84f77b51295b745d289c54558ec24f))
+
 ## [3.7.5](https://github.com/Tallec7/neopro/compare/v3.7.4...v3.7.5) (2026-02-06)
 
 ### Bug Fixes
