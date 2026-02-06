@@ -126,7 +126,6 @@ start_chromium() {
         --disable-hang-monitor
         --disable-popup-blocking
         --enable-features=OverlayScrollbar
-        --incognito
         --memory-pressure-off
         --disable-breakpad
         --disable-crash-reporter

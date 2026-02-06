@@ -644,6 +644,42 @@ sudo apt install chromium
 
 ## Problèmes d'analytics
 
+### Perte complète des analytics après reboot du Pi (corrigé v3.7.1)
+
+#### Symptômes
+
+- Le Pi a été utilisé pendant plusieurs jours/semaines offline
+- Après reconnexion au cloud, aucune donnée analytics pour la période offline
+- Les données apparaissent uniquement pour le jour de reconnexion
+
+#### Cause racine
+
+Chromium était lancé avec le flag `--incognito` dans `kiosk-watchdog.sh`, rendant le localStorage **éphémère**. À chaque redémarrage de Chromium (reboot Pi, crash, watchdog kill), le buffer analytics en localStorage était perdu.
+
+De plus, les événements n'étaient persistés sur disque (via POST au serveur local) que toutes les 5 minutes, créant une fenêtre de perte de données.
+
+#### Solution (v3.7.1+)
+
+1. **`--incognito` supprimé** de `kiosk-watchdog.sh` → localStorage persistant entre les redémarrages
+2. **Persistance immédiate** : chaque événement est sauvé dans localStorage ET envoyé au serveur local dès la fin de la vidéo
+3. **Retry 30s** : si le serveur local n'est pas prêt (boot), retry automatique après 30 secondes
+
+#### Migration Pi existants
+
+```bash
+# 1. Copier kiosk-watchdog.sh (supprime --incognito)
+scp raspberry/scripts/kiosk-watchdog.sh pi@neopro.local:/home/pi/neopro/scripts/
+
+# 2. Rebuild et déployer le frontend Angular
+npm run build:raspberry
+# puis déployer le build vers le Pi
+
+# 3. Redémarrer Chromium
+ssh pi@neopro.local 'sudo systemctl restart neopro-kiosk'
+```
+
+---
+
 ### Les analytics vidéo ne remontent pas au dashboard central
 
 #### Symptômes
@@ -656,7 +692,7 @@ sudo apt install chromium
 
 ```
 Frontend Angular → POST /api/analytics → serveur local (port 3000)
-                                              ↓
+                    (immédiat)                ↓
                                     analytics_buffer.json
                                               ↓
                         Sync-agent (toutes les 5 min) → POST /api/analytics/video-plays

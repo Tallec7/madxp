@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 3.0.0 | **Dernière mise à jour**: 2026-02-05
+**Version**: 3.7.1 | **Dernière mise à jour**: 2026-02-06
 
 ---
 
@@ -2094,6 +2094,34 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v3.7.1 (Février 2026)
+
+- **Fix perte totale des analytics après reboot Pi** : Les données analytics ne sont plus perdues quand le Pi redémarre ou est offline
+  - **Problème résolu** : Si le Pi était utilisé offline pendant des jours/semaines puis redémarré, toutes les données analytics de la période étaient perdues
+  - **Cause racine** : Chromium lancé avec `--incognito` dans `kiosk-watchdog.sh` rendait le localStorage éphémère. Combiné au flush de 5 minutes, les données en mémoire étaient perdues au moindre redémarrage (reboot, crash, kill -9 du watchdog)
+  - **Solution** (3 couches de protection) :
+    1. **`--incognito` supprimé** de `kiosk-watchdog.sh` → localStorage persistant entre les redémarrages
+    2. **Persistance immédiate** : chaque événement est sauvé dans localStorage ET envoyé au serveur local dès la fin de la vidéo (plus d'attente de 5 minutes)
+    3. **Retry 30s** : si le serveur local n'est pas prêt au boot, retry automatique après 30 secondes
+  - **Timestamps préservés** : `played_at` est capturé au moment exact de `trackVideoStart()` et traverse toute la chaîne sans modification
+  - **Fichiers modifiés** :
+    - `raspberry/scripts/kiosk-watchdog.sh` - Suppression du flag `--incognito`
+    - `raspberry/src/app/services/analytics.service.ts` - `sendSingleEvent()` + `saveToStorage()` immédiat
+    - `raspberry/src/app/services/sponsor-analytics.service.ts` - `sendSingleImpression()` + persistance immédiate
+  - **Migration Pi existants** :
+    ```bash
+    # Copier kiosk-watchdog.sh (supprime --incognito)
+    scp raspberry/scripts/kiosk-watchdog.sh pi@neopro.local:/home/pi/neopro/scripts/
+    # Rebuild et déployer le frontend Angular, puis :
+    ssh pi@neopro.local 'sudo systemctl restart neopro-kiosk'
+    ```
+
+- **Fix affichage uptime "0m" dans l'onglet État** : L'uptime s'affiche maintenant correctement
+  - **Problème** : L'uptime affichait "0m" dans la section "Métriques actuelles" de l'onglet État, alors que l'onglet Debug affichait la bonne valeur
+  - **Cause** : `formatUptime()` traitait la valeur comme des millisecondes (division par 1000) alors que `os.uptime()` retourne des secondes
+  - **Fichier modifié** : `central-dashboard/src/app/features/sites/site-detail.component.ts`
+  - **Migration** : Rebuild et redéployer le dashboard
 
 ### v3.0.0 (Février 2026)
 

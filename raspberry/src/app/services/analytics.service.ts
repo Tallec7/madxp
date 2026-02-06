@@ -176,6 +176,12 @@ export class AnalyticsService {
 
     this.buffer.push(event);
 
+    // Persistance immédiate dans localStorage (survit aux redémarrages)
+    this.saveToStorage();
+
+    // Envoi immédiat au serveur local (persiste sur disque dans analytics_buffer.json)
+    this.sendSingleEvent(event);
+
     console.log('[Analytics] Video ended:', {
       filename: event.video_filename,
       category: event.category,
@@ -305,6 +311,29 @@ export class AnalyticsService {
 
     // Envoyer au serveur local pour que le sync-agent puisse les récupérer
     this.sendToServer();
+  }
+
+  /**
+   * Envoyer un seul événement immédiatement au serveur local.
+   * Retry après 30s en cas d'échec (serveur local pas encore prêt au boot).
+   */
+  private sendSingleEvent(event: VideoPlayEvent, isRetry = false): void {
+    this.http.post<{ success: boolean; received: number; total: number }>(
+      this.getApiUrl(),
+      { events: [event] }
+    ).subscribe({
+      next: () => {
+        // Événement persisté sur disque via server.js → analytics_buffer.json
+      },
+      error: () => {
+        if (!isRetry) {
+          // Retry une fois après 30s (le serveur local peut ne pas être prêt)
+          setTimeout(() => this.sendSingleEvent(event, true), 30_000);
+        }
+        // Si le retry échoue aussi, l'événement reste dans localStorage
+        // et sera envoyé par le flush périodique (toutes les 5 min)
+      }
+    });
   }
 
   private sendToServer(): void {

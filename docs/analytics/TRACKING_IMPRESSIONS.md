@@ -29,11 +29,12 @@ Ce document décrit le système complet de tracking des impressions annonceurs d
 │                 ▼                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │  SponsorAnalyticsService                                 │    │
-│  │  - Buffer local (localStorage)                           │    │
-│  │  - Auto-flush 5min ou 50 impressions                     │    │
+│  │  - Buffer local (localStorage, persistant)               │    │
+│  │  - Envoi immédiat à chaque impression (v3.7.1+)          │    │
+│  │  - Auto-flush 5min ou 50 impressions (filet de sécurité) │    │
 │  └──────────────┬───────────────────────────────────────────┘    │
 │                 │                                                 │
-│                 │ HTTP POST                                       │
+│                 │ HTTP POST (immédiat + flush périodique)         │
 │                 ▼                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │  Local Server (Express, port 3000)                       │    │

@@ -1475,9 +1475,8 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     return `Il y a ${Math.floor(diffMins / 1440)} jours`;
   }
 
-  formatUptime(ms: number | null): string {
-    if (!ms) return 'N/A';
-    const seconds = Math.floor(ms / 1000);
+  formatUptime(seconds: number | null): string {
+    if (!seconds || seconds <= 0) return 'N/A';
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
