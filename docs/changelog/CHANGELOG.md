@@ -1,3 +1,9 @@
+## [3.7.4](https://github.com/Tallec7/neopro/compare/v3.7.3...v3.7.4) (2026-02-06)
+
+### Performance Improvements
+
+- **raspberry:** replace SwiftShader with EGL native + V4L2 on Pi 5 ([1d52e57](https://github.com/Tallec7/neopro/commit/1d52e5749312b5c7319de50c123b4e74658c62e3))
+
 ## [3.7.3](https://github.com/Tallec7/neopro/compare/v3.7.2...v3.7.3) (2026-02-06)
 
 ### Bug Fixes
