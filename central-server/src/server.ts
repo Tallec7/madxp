@@ -4,10 +4,8 @@ import dns from 'node:dns';
 import path from 'path';
 import helmet from 'helmet';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
-import swaggerUi from 'swagger-ui-express';
-import YAML from 'yamljs';
+// swagger-ui-express and yamljs loaded only in development (saves ~5-8MB memory in production)
 import dotenv from 'dotenv';
 
 import logger from './config/logger';
@@ -218,12 +216,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Adds X-Correlation-ID header for request tracing across frontend/backend
 app.use(correlationMiddleware);
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: NODE_ENV === 'production' ? 100 : 1000,
-  message: 'Trop de requêtes, veuillez réessayer plus tard',
-});
-app.use('/api/', limiter);
+// Rate limiting is handled per-route (see routes below)
+// No global rate limiter - the per-route limiters are sufficient
+// and a global limiter of 100/15min was causing 429 errors with normal dashboard usage
 
 app.use((req: Request, _res: Response, next: NextFunction) => {
   logger.debug('Request', {
@@ -261,16 +256,24 @@ app.get('/', (_req: Request, res: Response) => {
   });
 });
 
-// Documentation API Swagger/OpenAPI
-try {
-  const swaggerDocument = YAML.load(path.join(__dirname, 'docs', 'openapi.yaml'));
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'NEOPRO API Documentation',
-  }));
-  logger.info('Swagger documentation available at /api-docs');
-} catch (error) {
-  logger.warn('Could not load OpenAPI documentation:', error);
+// Documentation API Swagger/OpenAPI (development only to save memory)
+if (NODE_ENV !== 'production') {
+  try {
+    const YAML = require('yamljs');
+    const swaggerUi = require('swagger-ui-express');
+    const swaggerDocument = YAML.load(path.join(__dirname, 'docs', 'openapi.yaml'));
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'NEOPRO API Documentation',
+    }));
+    logger.info('Swagger documentation available at /api-docs');
+  } catch (error) {
+    logger.warn('Could not load OpenAPI documentation:', error);
+  }
+} else {
+  app.get('/api-docs', (_req: Request, res: Response) => {
+    res.json({ message: 'API docs disabled in production to save memory. Run in dev mode.' });
+  });
 }
 
 // Health check pour Render - toujours retourne 200 pour éviter les timeouts de déploiement

@@ -1400,7 +1400,7 @@ class SocketService {
             `UPDATE content_deployments
              SET progress = $1, status = 'in_progress'
              WHERE id = $2`,
-            [progressValue || 0, deploymentId]
+            [Math.round(progressValue || 0), deploymentId]
           );
         }
       } else if (videoId) {
@@ -1411,7 +1411,7 @@ class SocketService {
            WHERE video_id = $2 AND (target_id = $3 OR target_id IN (
              SELECT group_id FROM site_groups WHERE site_id = $3
            ))`,
-          [progressValue || 0, videoId, siteId]
+          [Math.round(progressValue || 0), videoId, siteId]
         );
       }
 
