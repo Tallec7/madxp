@@ -141,6 +141,7 @@ export class TvComponent implements OnInit, OnDestroy {
   private preloadedIndex: number | null = null;
   private preloadReady = false;
   private switchTriggered = false;
+  private switchGeneration = 0; // Incrémenté à chaque switchToPhase pour annuler les callbacks en cours
   private lastTimeUpdateCheck = 0;
 
   // État des players manuels
@@ -309,6 +310,9 @@ export class TvComponent implements OnInit, OnDestroy {
         this.play(command.data as Video);
       } else if (command.type === 'sponsors') {
         this.lastTriggerType = 'auto';
+        // Capturer le freeze-frame AVANT de relancer la boucle
+        // pour éviter un flash noir pendant le rechargement
+        this.captureAndShowFreezeFrame();
         this.sponsors();
       } else if (command.type === 'reload-config' && command.data) {
         // Recharger la config d'un nouveau club (mode démo)
@@ -403,6 +407,8 @@ export class TvComponent implements OnInit, OnDestroy {
           this.play(command.data as Video);
         } else if (command.type === 'sponsors') {
           this.lastTriggerType = 'auto';
+          // Capturer le freeze-frame AVANT de relancer la boucle
+          this.captureAndShowFreezeFrame();
           this.sponsors();
         } else if (command.type === 'reload-config' && command.data) {
           this.reloadConfiguration(command.data as Configuration);
@@ -619,6 +625,10 @@ export class TvComponent implements OnInit, OnDestroy {
 
     const targetPlayer = this.manualPlayerA;
 
+    // ÉTAPE 0: Mettre isManualMode IMMÉDIATEMENT pour bloquer les transitions de boucle
+    // (onVideoEnded ignore les ended events quand isManualMode est true)
+    this.isManualMode = true;
+
     // ÉTAPE 1: Capturer et afficher le freeze-frame IMMÉDIATEMENT
     this.captureAndShowFreezeFrame();
 
@@ -656,7 +666,7 @@ export class TvComponent implements OnInit, OnDestroy {
               // NOTE: On garde le black overlay visible pendant toute la lecture
               // pour éviter que la boucle transparaisse si la vidéo a des zones transparentes
 
-              this.isManualMode = true;
+              // isManualMode déjà mis à true à l'ÉTAPE 0 (avant le chargement)
               this.activeManualPlayer = 'A';
 
               // Tracker
@@ -720,15 +730,32 @@ export class TvComponent implements OnInit, OnDestroy {
         this.sponsorAnalytics.trackSponsorEnd(true);
       }
 
-      // Cacher le player manuel et le black overlay - la boucle est visible en dessous
+      // Cacher le player manuel
       targetPlayer.style.opacity = '0';
       targetPlayer.pause();
       targetPlayer.src = '';
-      this.hideBlackOverlay();
 
       // Sortir du mode manuel
       this.isManualMode = false;
       this.lastTriggerType = 'auto';
+
+      // Vérifier si la boucle tourne encore correctement
+      // La boucle a pu se terminer pendant la lecture manuelle (pas de gestion du ended)
+      const activeLoopPlayer = this.getActivePlayer();
+      if (!activeLoopPlayer || activeLoopPlayer.paused || activeLoopPlayer.ended || !this.isLoopMode) {
+        console.log('tv player : loop died during manual, restarting');
+        // La boucle est morte — la relancer proprement
+        // Le freeze-frame couvre visuellement pendant le redémarrage
+        this.captureAndShowFreezeFrame();
+        this.pendingSwitch = false;
+        this.switchTriggered = false;
+        this.startSeamlessLoop();
+        // playOnActivePlayer cachera le freeze-frame quand la vidéo sera prête
+      } else {
+        // La boucle tourne encore — cacher les overlays pour la révéler
+        this.hideFreezeFrame();
+        this.hideBlackOverlay();
+      }
 
       console.log('tv player : returning to loop');
     };
@@ -772,6 +799,11 @@ export class TvComponent implements OnInit, OnDestroy {
    */
   public switchToPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
     console.log('[TV] Switching to phase:', phase, 'isManualMode:', this.isManualMode);
+
+    // Annuler tout switchPlayers/onVideoEnded en cours pour éviter les race conditions
+    this.switchGeneration++;
+    this.pendingSwitch = false;
+    this.switchTriggered = false;
 
     // Si une vidéo manuelle est en cours, on la coupe pour revenir à la boucle
     // même si c'est la même phase
@@ -1504,11 +1536,19 @@ export class TvComponent implements OnInit, OnDestroy {
    * pendant que le nouveau player charge et démarre.
    */
   private onVideoEnded(fromPlayer: 'A' | 'B'): void {
-    console.log(`[TV] onVideoEnded called from player ${fromPlayer}, isLoopMode=${this.isLoopMode}, activePlayer=${this.activePlayer}`);
+    console.log(`[TV] onVideoEnded called from player ${fromPlayer}, isLoopMode=${this.isLoopMode}, activePlayer=${this.activePlayer}, isManualMode=${this.isManualMode}`);
 
     // Ignorer si ce n'est pas le player actif ou si pas en mode boucle
     if (!this.isLoopMode || fromPlayer !== this.activePlayer) {
       console.log('[TV] Ignoring ended event (not active or not in loop mode)');
+      return;
+    }
+
+    // IMPORTANT: Ignorer les ended events pendant le mode manuel
+    // La boucle continue en arrière-plan mais on ne doit PAS switcher
+    // car ça pourrait cacher le freeze-frame/black overlay protégeant la vidéo manuelle
+    if (this.isManualMode) {
+      console.log('[TV] Ignoring ended event during manual mode');
       return;
     }
 
@@ -1539,25 +1579,31 @@ export class TvComponent implements OnInit, OnDestroy {
     // Attendre que la vidéo soit prête, PUIS switcher
     const inactivePlayer = this.getInactivePlayer();
     let switchTriggered = false;
+    const generation = this.switchGeneration; // Capturer la génération actuelle
 
     const doTriggerSwitch = () => {
       if (switchTriggered) return;
+      // Si switchToPhase a été appelé entre-temps, abandonner ce switch
+      if (this.switchGeneration !== generation) {
+        console.log('[TV] Switch cancelled by phase change (generation mismatch)');
+        return;
+      }
       switchTriggered = true;
       console.log('[TV] Video ended, freeze frame shown:', freezeOk, '- triggering switch (preloaded)');
       this.triggerSwitch();
     };
 
     const onReady = () => {
-      inactivePlayer.removeEventListener('canplay', onReady);
+      inactivePlayer.removeEventListener('canplaythrough', onReady);
       clearTimeout(safetyTimeout);
       this.preloadReady = true;
       doTriggerSwitch();
     };
-    inactivePlayer.addEventListener('canplay', onReady);
+    inactivePlayer.addEventListener('canplaythrough', onReady);
 
     // Timeout de sécurité 3s — switch quand même si le préchargement traîne
     const safetyTimeout = setTimeout(() => {
-      inactivePlayer.removeEventListener('canplay', onReady);
+      inactivePlayer.removeEventListener('canplaythrough', onReady);
       console.warn('[TV] Preload safety timeout in onVideoEnded, forcing switch');
       doTriggerSwitch();
     }, 3000);
@@ -1630,16 +1676,25 @@ export class TvComponent implements OnInit, OnDestroy {
         });
       }).catch(err => {
         console.error('[TV] Error switching to next video:', err);
-        this.hideFreezeFrame();
-        this.hideBlackOverlay();
+        // Remettre le nouveau player en invisible (il n'a pas de frame affiché)
+        this.setPlayerVisible(newPlayer, false, 0);
+        // NE PAS cacher les overlays pendant le mode manuel
+        // Le freeze-frame et le black overlay protègent la vidéo manuelle
+        if (!this.isManualMode) {
+          // Garder le freeze-frame visible — playOnActivePlayer le cachera
+          // this.hideFreezeFrame(); -- on ne cache PAS, le fallback le fera
+          // this.hideBlackOverlay(); -- on ne cache PAS non plus
+        }
         this.pendingSwitch = false;
         this.switchTriggered = false;
         this.preloadReady = false;
         this.preloadedIndex = null;
-        // Fallback: rejouer sur le même player
-        setTimeout(() => {
-          this.playOnActivePlayer(nextVideoIndex);
-        }, 500);
+        // Fallback: rejouer sur le même player (il cachera le freeze quand prêt)
+        if (!this.isManualMode) {
+          setTimeout(() => {
+            this.playOnActivePlayer(nextVideoIndex);
+          }, 500);
+        }
       });
     };
 
@@ -1674,19 +1729,19 @@ export class TvComponent implements OnInit, OnDestroy {
         }
       }, 30);
 
-      // Écouter aussi l'événement canplay
+      // Écouter aussi l'événement canplaythrough
       const onCanPlay = () => {
-        newPlayer.removeEventListener('canplay', onCanPlay);
+        newPlayer.removeEventListener('canplaythrough', onCanPlay);
         clearInterval(checkInterval);
         this.preloadReady = true;
         executeSwitchOnce();
       };
-      newPlayer.addEventListener('canplay', onCanPlay);
+      newPlayer.addEventListener('canplaythrough', onCanPlay);
 
       // Safety timeout - si toujours pas prêt après 2s, forcer
       setTimeout(() => {
         clearInterval(checkInterval);
-        newPlayer.removeEventListener('canplay', onCanPlay);
+        newPlayer.removeEventListener('canplaythrough', onCanPlay);
         if (!switchExecuted) {
           console.warn('[TV] Preload timeout, forcing switch');
           executeSwitchOnce();
@@ -1728,8 +1783,10 @@ export class TvComponent implements OnInit, OnDestroy {
     // Tracker la fin de la vidéo manuelle (interrompue)
     this.analyticsService.trackVideoEnd(false); // false = pas complétée
 
-    // Cacher le black overlay (sera réaffiché si nécessaire par switchToPhase)
-    this.hideBlackOverlay();
+    // NE PAS cacher le black overlay ici — l'appelant (switchToPhase) gère
+    // les overlays après avoir capturé le freeze-frame. Cacher l'overlay ici
+    // causerait un flash noir entre le moment où il disparaît et le moment
+    // où le freeze-frame est affiché par switchToPhase.
 
     // Sortir du mode manuel
     this.isManualMode = false;
@@ -1806,9 +1863,22 @@ export class TvComponent implements OnInit, OnDestroy {
    */
   private captureLastFrame(): void {
     if (!this.freezeCanvas || !this.freezeCtx) return;
-    if (!this.isLoopMode || this.isManualMode) return;
 
-    const player = this.getActivePlayer();
+    // Capturer le frame du player visuellement au premier plan :
+    // - En mode manuel : capturer depuis le player manuel
+    // - En mode boucle : capturer depuis le player de boucle actif
+    // IMPORTANT: On capture aussi en mode manuel car la boucle continue
+    // en arrière-plan et peut se terminer. Sans capture du player manuel,
+    // il n'y aurait aucun frame valide pour couvrir les transitions.
+    let player: HTMLVideoElement | null = null;
+
+    if (this.isManualMode) {
+      player = this.getActiveManualPlayer();
+    } else if (this.isLoopMode) {
+      player = this.getActivePlayer();
+    } else {
+      return;
+    }
 
     // Vérifier que la vidéo joue et a des dimensions valides
     if (!player || player.paused || player.ended) return;
@@ -2146,7 +2216,11 @@ export class TvComponent implements OnInit, OnDestroy {
     // Nettoyer le canvas freeze-frame (libère ~4.5MB)
     if (this.freezeCtx && this.freezeCanvas) {
       this.freezeCtx.clearRect(0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
-      this.hasValidLastFrame = false; // La prochaine capture périodique le remplira
+      // Recapturer immédiatement pour ne pas laisser de fenêtre sans frame valide
+      // (sinon un onVideoEnded pendant les 500ms de gap utiliserait le black overlay)
+      this.captureLastFrame();
+      // Si captureLastFrame a réussi, hasValidLastFrame est true
+      // Sinon il reste false mais la prochaine capture périodique le remplira
     }
 
     // Nettoyer le player inactif (libère les buffers vidéo)
@@ -2189,9 +2263,18 @@ export class TvComponent implements OnInit, OnDestroy {
     this.videoPlayCount++;
 
     // Cleanup après un certain nombre de vidéos (indépendamment du timer)
+    // IMPORTANT: Différer le cleanup pour ne pas l'exécuter pendant une transition
+    // (clearRect sur le canvas pendant qu'il est affiché causerait un flash noir)
     if (this.videoPlayCount >= this.VIDEO_COUNT_BEFORE_CLEANUP) {
-      console.log(`[TV] 🧹 Reached ${this.VIDEO_COUNT_BEFORE_CLEANUP} videos, triggering cleanup`);
-      this.performPreventiveMemoryCleanup();
+      console.log(`[TV] 🧹 Reached ${this.VIDEO_COUNT_BEFORE_CLEANUP} videos, scheduling cleanup`);
+      setTimeout(() => {
+        if (!this.pendingSwitch) {
+          this.performPreventiveMemoryCleanup();
+        } else {
+          // Réessayer plus tard si une transition est en cours
+          console.log('[TV] 🧹 Cleanup deferred (switch in progress)');
+        }
+      }, 1000);
     }
   }
 

@@ -940,7 +940,7 @@ Pendant la lecture:
      ├── hasValidLastFrame=true → affiche le canvas pré-capturé (z-index 20)
      └── hasValidLastFrame=false → showBlackOverlay() (z-index 5, fallback)
   2. preloadOnInactivePlayer() → charge la vidéo suivante sur le player inactif
-  3. Attend canplay (ou timeout 3s) → la vidéo est prête à jouer
+  3. Attend canplaythrough (ou timeout 3s) → la vidéo est prête à jouer
   4. triggerSwitch() → switchPlayers() :
      a. Rend le nouveau player visible (opacity 1, z-index 2 — AU-DESSUS de l'ancien à z-index 1)
      b. Lance play()
@@ -2153,14 +2153,23 @@ vcgencmd get_mem gpu
     - (commit 3) `setPlayerVisible()` mettait les deux players au même z-index (`1`) pendant la transition, et `hideFreezeFrame()` invalidait le flag `hasValidLastFrame` créant un gap sans frame valide
   - **Cause racine flash blanc (vidéo manuelle)** :
     - Le player manuel était rendu visible (opacity 1) **avant** que la vidéo soit chargée et prête à jouer. Le `<video>` sans source affiche un fond blanc/transparent sur Chromium/Pi.
-  - **Solution flash noir** (4 commits cumulés) :
+  - **Solution flash noir** (5 commits cumulés) :
     - (commit 3) `setPlayerVisible()` : z-index `2` pour le nouveau player pendant la transition, ramené à `1` après
     - (commit 3) `hideFreezeFrame()` : ne reset plus `hasValidLastFrame`
     - (commit 3) `switchPlayers()` : délai augmenté de 100ms à 150ms
     - (commit 4) **Suppression de `display: none/block`** sur le freeze canvas — `opacity: 0/1` seul suffit. `display: none` provoquait un **reflow layout complet** qui exposait 1-2 frames noirs sur le GPU lent du Pi (VideoCore)
     - (commit 4) **Délai augmenté à 300ms** dans `switchPlayers()` et `playOnActivePlayer()` — le décodeur hardware VideoCore VI/VII nécessite 200-400ms pour compositor le premier I-frame
-    - (commit 4) **Préchargement dans `onVideoEnded()`** — la vidéo suivante est chargée sur le player inactif et on attend `canplay` AVANT de déclencher le switch (timeout 3s de sécurité)
+    - (commit 4) **Préchargement dans `onVideoEnded()`** — la vidéo suivante est chargée sur le player inactif et on attend `canplaythrough` AVANT de déclencher le switch (timeout 3s de sécurité)
     - (commit 4) **`playOnActivePlayer()` attend `canplaythrough`** avant de lancer `play()` — garantit que le décodeur a le premier I-frame prêt
+    - (commit 5) **Guard `isManualMode` dans `onVideoEnded()`** — ignore les `ended` events de la boucle pendant une vidéo manuelle
+    - (commit 5) **`captureLastFrame()` capture le player manuel** — le freeze-frame est valide même en mode manuel
+    - (commit 5) **Protection overlays dans `switchPlayers()` catch** — en cas d'erreur en mode manuel, ne cache pas le freeze/overlay
+    - (commit 5) **`onManualEnded` vérifie l'état de la boucle** — si la boucle est morte, la redémarre au lieu de juste cacher les overlays
+    - (commit 5) **`stopManualVideoAndReturnToLoop()` ne cache plus le black overlay** — l'appelant (`switchToPhase`) gère les overlays
+    - (commit 5) **`performPreventiveMemoryCleanup()` recapture immédiatement** — plus de fenêtre de 500ms sans frame valide
+    - (commit 5) **Freeze-frame avant `sponsors()` dans tous les handlers** — socket ET BroadcastChannel
+    - (commit 5) **`canplaythrough` unifié** — remplace `canplay` dans `onVideoEnded()` et `switchPlayers()` pour un buffer plus complet
+    - (commit 5) **Token d'annulation `switchGeneration`** — annule les callbacks `onVideoEnded` lors d'un changement de phase
   - **Solution flash blanc** :
     - `play()` (vidéo manuelle) : le player reste à opacity `0` pendant le chargement
     - Après `play()` + 2×`requestAnimationFrame` + 200ms, le player est rendu visible puis le freeze-frame est caché
