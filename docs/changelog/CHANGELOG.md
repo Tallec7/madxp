@@ -1,3 +1,9 @@
+## [3.7.8](https://github.com/Tallec7/neopro/compare/v3.7.7...v3.7.8) (2026-02-07)
+
+### Bug Fixes
+
+- **remote:** reduce excessive HTTP requests from cloud remote ([#385](https://github.com/Tallec7/neopro/issues/385)) ([bf33d27](https://github.com/Tallec7/neopro/commit/bf33d278ca854152bb15b8616571c324a67d76b3))
+
 ## [3.7.7](https://github.com/Tallec7/neopro/compare/v3.7.6...v3.7.7) (2026-02-06)
 
 ### Bug Fixes
