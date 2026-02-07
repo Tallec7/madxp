@@ -1,3 +1,9 @@
+## [3.7.12](https://github.com/Tallec7/neopro/compare/v3.7.11...v3.7.12) (2026-02-07)
+
+### Bug Fixes
+
+- **tv:** eliminate black flash between loop videos on Chromium/Pi ([5d73998](https://github.com/Tallec7/neopro/commit/5d73998965b5733462a020d94012f50ae053d0f5))
+
 ## [3.7.11](https://github.com/Tallec7/neopro/compare/v3.7.10...v3.7.11) (2026-02-07)
 
 ### Bug Fixes
