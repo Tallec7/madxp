@@ -807,14 +807,17 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Si une vidéo manuelle est en cours, on la coupe pour revenir à la boucle
     // même si c'est la même phase
+    const wasInManualMode = this.isManualMode;
     if (this.isManualMode) {
       console.log('[TV] Cutting manual video to return to loop');
       this.stopManualVideoAndReturnToLoop();
     }
 
-    // Si même phase ET pas de vidéo manuelle qui vient d'être coupée, ne rien faire
+    // Si même phase ET on ne vient PAS de couper une vidéo manuelle, ne rien faire
     // (la boucle tourne déjà)
-    if (phase === this.activePhase && !this.isManualMode) {
+    // IMPORTANT: Si on vient du mode manuel, on doit TOUJOURS continuer pour
+    // cacher le black overlay et relancer la boucle proprement
+    if (phase === this.activePhase && !wasInManualMode) {
       // Vérifier si la boucle est bien en cours, sinon la relancer
       if (this.isLoopMode && !this.pendingSwitch) {
         const activePlayer = this.getActivePlayer();
@@ -1374,6 +1377,9 @@ export class TvComponent implements OnInit, OnDestroy {
       console.warn('[TV] No videos in loop');
       this.isLoopMode = false;
       this.isStartingLoop = false;
+      // Cacher les overlays pour ne pas rester figé sur un écran noir/freeze
+      this.hideFreezeFrame();
+      this.hideBlackOverlay();
       return;
     }
 
@@ -2141,9 +2147,10 @@ export class TvComponent implements OnInit, OnDestroy {
     this.activePlayer = 'A';
     this.consecutiveErrors = 0;
 
-    // Cacher les overlays
+    // Garder le black overlay visible pendant le cooldown GPU
+    // pour éviter un écran noir/vide pendant 3 secondes
     this.hideFreezeFrame();
-    this.hideBlackOverlay();
+    this.showBlackOverlay();
 
     // Libérer la mémoire du canvas
     if (this.freezeCtx && this.freezeCanvas) {
@@ -2155,6 +2162,7 @@ export class TvComponent implements OnInit, OnDestroy {
     this.setPlayerVisible(this.playerB, false);
 
     // Attendre un peu pour que le GPU se libère, puis redémarrer
+    // playOnActivePlayer cachera le black overlay quand la vidéo sera prête
     setTimeout(() => {
       console.log('[TV] 🔄 Restarting video loop after full reset');
       this.startWatchdog();
