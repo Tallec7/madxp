@@ -1,3 +1,13 @@
+## [3.7.10](https://github.com/Tallec7/neopro/compare/v3.7.9...v3.7.10) (2026-02-07)
+
+### Bug Fixes
+
+- **raspberry:** remove custom GPU flags on Pi 5, use native V3D driver ([c6b2996](https://github.com/Tallec7/neopro/commit/c6b2996fc6c7d3f1afc150e4a4ffa00879f8c083))
+
+### Reverts
+
+- **raspberry:** revert Pi 5 to SwiftShader after EGL SharedImageStub failures ([fd73217](https://github.com/Tallec7/neopro/commit/fd73217003af56d1c5a3fd18edcb20b01bda5892))
+
 ## [3.7.9](https://github.com/Tallec7/neopro/compare/v3.7.8...v3.7.9) (2026-02-07)
 
 ### Bug Fixes
