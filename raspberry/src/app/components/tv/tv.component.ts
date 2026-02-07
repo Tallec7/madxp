@@ -163,6 +163,8 @@ export class TvComponent implements OnInit, OnDestroy {
   // Canvas freeze-frame
   private freezeCanvas: HTMLCanvasElement;
   private freezeCtx: CanvasRenderingContext2D | null = null;
+  private lastFrameCaptureInterval: ReturnType<typeof setInterval> | null = null;
+  private hasValidLastFrame = false; // true si le canvas contient un frame valide pré-capturé
 
   // Black overlay pour bloquer la boucle
   private blackOverlay: HTMLDivElement;
@@ -578,6 +580,9 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Arrêter le watchdog
     this.stopWatchdog();
+
+    // Arrêter la capture périodique
+    this.stopLastFrameCapture();
 
     // Arrêter la boucle seamless
     this.stopSeamlessLoop();
@@ -1209,6 +1214,12 @@ export class TvComponent implements OnInit, OnDestroy {
     // Démarrer le watchdog de santé
     this.startWatchdog();
 
+    // Démarrer la capture périodique du dernier frame visible
+    // Sur Chromium/Pi, le décodeur hardware libère le frame buffer à 'ended',
+    // donc captureAndShowFreezeFrame() dans onVideoEnded() capture du noir.
+    // On pré-capture le frame toutes les 500ms pour avoir toujours un frame valide.
+    this.startLastFrameCapture();
+
     console.log('[TV] Double-buffer initialized (4 players) with error recovery');
   }
 
@@ -1472,13 +1483,17 @@ export class TvComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Capturer le freeze-frame du dernier frame visible AVANT que le player
-    // devienne noir (ended). Cela masque le gap entre les deux vidéos.
-    // Note: on capture même si le player a fini - le dernier frame est encore
-    // dans le buffer vidéo tant qu'on n'a pas changé la source.
-    this.captureAndShowFreezeFrame();
+    // Afficher le freeze-frame pré-capturé pour masquer le gap entre les vidéos.
+    // Sur Chromium/Pi avec décodeur hardware, le frame buffer est déjà libéré
+    // à ce stade (ended), donc on utilise le frame pré-capturé par l'intervalle.
+    // Si aucun frame pré-capturé n'est disponible, on utilise le black overlay.
+    const freezeOk = this.captureAndShowFreezeFrame();
+    if (!freezeOk) {
+      // Fallback: le black overlay évite de voir la boucle sans vidéo
+      this.showBlackOverlay();
+    }
 
-    console.log('[TV] Video ended, freeze frame captured, triggering switch');
+    console.log('[TV] Video ended, freeze frame shown:', freezeOk, '- triggering switch');
     this.triggerSwitch();
   }
 
@@ -1508,9 +1523,10 @@ export class TvComponent implements OnInit, OnDestroy {
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             setTimeout(() => {
-              // Cacher l'ancien player et le freeze-frame
+              // Cacher l'ancien player, le freeze-frame et le black overlay (fallback)
               this.setPlayerVisible(oldPlayer, false);
               this.hideFreezeFrame();
+              this.hideBlackOverlay();
 
               // Mettre à jour l'état
               this.activePlayer = this.activePlayer === 'A' ? 'B' : 'A';
@@ -1543,6 +1559,7 @@ export class TvComponent implements OnInit, OnDestroy {
       }).catch(err => {
         console.error('[TV] Error switching to next video:', err);
         this.hideFreezeFrame();
+        this.hideBlackOverlay();
         this.pendingSwitch = false;
         this.switchTriggered = false;
         this.preloadReady = false;
@@ -1662,8 +1679,9 @@ export class TvComponent implements OnInit, OnDestroy {
     this.manualPlayerA?.pause();
     this.manualPlayerB?.pause();
 
-    // Arrêter le watchdog
+    // Arrêter le watchdog et la capture périodique
     this.stopWatchdog();
+    this.stopLastFrameCapture();
 
     console.log('[TV] All players stopped due to license block');
   }
@@ -1677,13 +1695,72 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   // ===========================================================================
+  // LAST FRAME PRE-CAPTURE SYSTEM
+  // Capture périodiquement le dernier frame visible pendant la lecture.
+  // Sur Chromium/Pi avec décodeur hardware, le frame buffer est libéré
+  // dès l'événement 'ended', donc drawImage() dans onVideoEnded() capture
+  // du noir. En pré-capturant toutes les 500ms, on a toujours un frame
+  // valide prêt à afficher instantanément.
+  // ===========================================================================
+
+  /**
+   * Démarre la capture périodique du dernier frame visible
+   */
+  private startLastFrameCapture(): void {
+    if (this.lastFrameCaptureInterval) {
+      clearInterval(this.lastFrameCaptureInterval);
+    }
+
+    this.lastFrameCaptureInterval = setInterval(() => {
+      this.captureLastFrame();
+    }, 500); // Toutes les 500ms - léger sur le CPU
+
+    console.log('[TV] Last frame pre-capture started (every 500ms)');
+  }
+
+  /**
+   * Arrête la capture périodique
+   */
+  private stopLastFrameCapture(): void {
+    if (this.lastFrameCaptureInterval) {
+      clearInterval(this.lastFrameCaptureInterval);
+      this.lastFrameCaptureInterval = null;
+    }
+  }
+
+  /**
+   * Capture silencieusement le frame actuel dans le canvas (sans l'afficher)
+   * Le canvas reste caché (display:none) mais contient un frame valide
+   */
+  private captureLastFrame(): void {
+    if (!this.freezeCanvas || !this.freezeCtx) return;
+    if (!this.isLoopMode || this.isManualMode) return;
+
+    const player = this.getActivePlayer();
+
+    // Vérifier que la vidéo joue et a des dimensions valides
+    if (!player || player.paused || player.ended) return;
+    if (player.videoWidth === 0 || player.videoHeight === 0) return;
+    if (player.readyState < 2) return; // HAVE_CURRENT_DATA minimum
+
+    try {
+      this.freezeCtx.drawImage(player, 0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
+      this.hasValidLastFrame = true;
+    } catch {
+      // Silencieux - erreur CORS ou vidéo pas encore prête
+    }
+  }
+
+  // ===========================================================================
   // CANVAS FREEZE-FRAME SYSTEM
   // Capture le frame actuel pour masquer les transitions
   // ===========================================================================
 
   /**
-   * Capture le frame actuel de la vidéo visible et l'affiche sur le canvas
-   * Retourne true si la capture a réussi
+   * Affiche le freeze-frame pré-capturé sur le canvas.
+   * Si aucun frame pré-capturé n'est disponible, tente une capture live
+   * (fonctionne sur desktop mais pas sur Chromium/Pi après 'ended').
+   * Retourne true si le canvas est affiché avec un frame valide.
    */
   private captureAndShowFreezeFrame(): boolean {
     if (!this.freezeCanvas || !this.freezeCtx) {
@@ -1691,33 +1768,38 @@ export class TvComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    // Déterminer quelle vidéo est actuellement visible
+    // Si on a un frame pré-capturé valide, l'afficher directement
+    // (pas besoin de drawImage, le canvas contient déjà le frame)
+    if (this.hasValidLastFrame) {
+      this.freezeCanvas.style.display = 'block';
+      this.freezeCanvas.style.opacity = '1';
+      this.freezeCanvas.style.zIndex = '20';
+      console.log('[TV] Freeze frame shown (pre-captured)');
+      return true;
+    }
+
+    // Fallback: tenter une capture live (fonctionne sur desktop, pas sur Pi après ended)
     let sourceVideo: HTMLVideoElement | null = null;
 
     if (this.isManualMode) {
-      // En mode manuel, utiliser le player manuel actif
       sourceVideo = this.getActiveManualPlayer();
     } else {
-      // En mode boucle, utiliser le player de boucle actif
       sourceVideo = this.getActivePlayer();
     }
 
-    // Vérifier que la vidéo a des dimensions valides
     if (!sourceVideo || sourceVideo.videoWidth === 0 || sourceVideo.videoHeight === 0) {
-      console.warn('[TV] No valid video source for freeze frame');
+      console.warn('[TV] No valid video source for freeze frame, using black overlay');
       return false;
     }
 
     try {
-      // Dessiner le frame actuel sur le canvas
       this.freezeCtx.drawImage(sourceVideo, 0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
 
-      // Afficher le canvas (au-dessus de tout - z-index 20)
       this.freezeCanvas.style.display = 'block';
       this.freezeCanvas.style.opacity = '1';
-      this.freezeCanvas.style.zIndex = '20'; // Au-dessus de tout pour les transitions
+      this.freezeCanvas.style.zIndex = '20';
 
-      console.log('[TV] Freeze frame captured and displayed');
+      console.log('[TV] Freeze frame captured live and displayed');
       return true;
     } catch (err) {
       console.error('[TV] Error capturing freeze frame:', err);
@@ -1726,15 +1808,18 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Cache le canvas freeze-frame et libère la mémoire bitmap
+   * Cache le canvas freeze-frame
+   * Note: on ne clearRect() PAS ici car la capture périodique va remplir
+   * le canvas avec le prochain frame valide. Le clearRect est fait
+   * uniquement dans performPreventiveMemoryCleanup() toutes les 30min.
    */
   private hideFreezeFrame(): void {
     if (this.freezeCanvas && this.freezeCtx) {
       this.freezeCanvas.style.opacity = '0';
-      this.freezeCanvas.style.display = 'none'; // Complètement caché
+      this.freezeCanvas.style.display = 'none';
       this.freezeCanvas.style.zIndex = '20';
-      // Libérer la mémoire bitmap (important pour usage intensif sur Pi)
-      this.freezeCtx.clearRect(0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
+      // Marquer le frame comme invalide - la capture périodique le renouvellera
+      this.hasValidLastFrame = false;
       console.log('[TV] Freeze frame hidden');
     }
   }
