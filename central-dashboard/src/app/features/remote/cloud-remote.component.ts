@@ -16,7 +16,7 @@ import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, interval, takeUntil } from 'rxjs';
+import { Subject, interval, takeUntil, debounceTime } from 'rxjs';
 import { RemoteService, RemoteState } from '../../core/services/remote.service';
 
 // Types locaux (identiques au Pi)
@@ -214,6 +214,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly remoteService = inject(RemoteService);
   private readonly destroy$ = new Subject<void>();
+  private readonly scoreUpdate$ = new Subject<void>();
 
   public siteId: string = '';
   public siteName: string = '';
@@ -379,10 +380,16 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     // Récupérer le siteId depuis la route
     this.siteId = this.route.snapshot.paramMap.get('siteId') || '';
 
+    // Debounce score updates (500ms) pour éviter les rafales de requêtes HTTP
+    this.scoreUpdate$.pipe(
+      debounceTime(500),
+      takeUntil(this.destroy$)
+    ).subscribe(() => this.sendScoreUpdate());
+
     if (this.siteId) {
       this.loadSiteState();
-      // Polling pour garder l'état synchronisé (toutes les 30 secondes)
-      interval(30000)
+      // Polling pour garder l'état synchronisé (toutes les 60 secondes)
+      interval(60000)
         .pipe(takeUntil(this.destroy$))
         .subscribe(() => this.refreshState());
     } else {
@@ -833,6 +840,12 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   public broadcastScore(): void {
+    // Debounced : déclenche l'envoi HTTP après 500ms d'inactivité
+    // Permet de cliquer rapidement +1 +1 +1 sans faire 3 requêtes
+    this.scoreUpdate$.next();
+  }
+
+  private sendScoreUpdate(): void {
     const scoreData = {
       homeTeam: this.currentScore.homeTeam,
       awayTeam: this.currentScore.awayTeam,
@@ -1406,7 +1419,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         }
       }
 
-      if (this.timerCurrentTime % 5 === 0) {
+      // Sync timer toutes les 30s au lieu de 5s pour réduire les requêtes HTTP
+      if (this.timerCurrentTime % 30 === 0) {
         this.syncTimer();
       }
     }, 1000);

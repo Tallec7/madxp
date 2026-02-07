@@ -131,6 +131,22 @@ export const loggingRateLimit = createUserRateLimit(
   }
 );
 
+// Cloud Remote - permissif par IP (60 requêtes / minute)
+// La télécommande cloud fait du polling (1/min) + des commandes utilisateur (score, timer sync, vidéo)
+// Pendant un match actif: ~4 req/min (polling + timer sync) + actions utilisateur
+// 60/min laisse assez de marge pour un usage intensif sans bloquer
+export const remoteRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60,
+  keyGenerator: (req: Request): string => {
+    return req.ip || 'unknown';
+  },
+  handler: limitHandler,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de requêtes télécommande. Réessayez dans quelques secondes.' },
+});
+
 // Pi Analytics - très permissif (500 requêtes / minute)
 // Les Pi sont des appareils de confiance authentifiés par API key
 // Avec 100 Pi et backlog, on peut avoir des pics de trafic importants
@@ -178,6 +194,7 @@ export default {
   authRateLimit,
   apiRateLimit,
   sensitiveRateLimit,
+  remoteRateLimit,
   uploadRateLimit,
   publicRateLimit,
   adminRateLimit,

@@ -11,14 +11,14 @@
  *
  * La sécurité repose sur:
  * - L'UUID du site (difficile à deviner)
- * - Le rate limiting (30 req/min par IP)
+ * - Le rate limiting (60 req/min par IP)
  * - Le fait que le site doit être online pour recevoir les commandes
  *
  * Date: 2026-01-18
  */
 
 import { Router } from 'express';
-import { sensitiveRateLimit } from '../middleware/user-rate-limit';
+import { remoteRateLimit } from '../middleware/user-rate-limit';
 import {
   getRemoteState,
   sendRemoteCommand,
@@ -28,13 +28,13 @@ import {
 const router = Router();
 
 // Routes PUBLIQUES (pas d'authentification JWT)
-// Rate limit: sensitiveRateLimit (30/min par IP) pour éviter les abus
+// Rate limit: remoteRateLimit (60/min par IP) pour éviter les abus
 
 /**
  * GET /api/remote/:siteId/state
  * Récupère l'état actuel du site (connexion, config, vidéos)
  */
-router.get('/:siteId/state', sensitiveRateLimit, getRemoteState);
+router.get('/:siteId/state', remoteRateLimit, getRemoteState);
 
 /**
  * POST /api/remote/:siteId/command
@@ -52,12 +52,12 @@ router.get('/:siteId/state', sensitiveRateLimit, getRemoteState);
  * - breaking-news: { message, duration?, position? }
  * - match-config: { sessionId, matchDate, matchName, audienceEstimate }
  */
-router.post('/:siteId/command', sensitiveRateLimit, sendRemoteCommand);
+router.post('/:siteId/command', remoteRateLimit, sendRemoteCommand);
 
 /**
  * GET /api/remote/:siteId/videos
  * Liste les vidéos disponibles sur le site pour la télécommande
  */
-router.get('/:siteId/videos', sensitiveRateLimit, getRemoteVideos);
+router.get('/:siteId/videos', remoteRateLimit, getRemoteVideos);
 
 export default router;
