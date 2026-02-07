@@ -451,6 +451,26 @@ Dashboard Cloud Remote → HTTP API → Central Server
 - `central-dashboard/src/app/features/remote/cloud-remote.component.ts`
 - `central-dashboard/src/app/core/services/remote.service.ts`
 
+**Sécurité** (sans JWT) :
+
+- L'UUID du site est difficile à deviner (128 bits d'entropie)
+- Rate limiting : 60 req/min par IP (`remoteRateLimit`)
+- Le site doit être online pour recevoir les commandes
+
+**Optimisations requêtes HTTP** (v3.7.8+) :
+
+Le Cloud Remote a été optimisé pour réduire le nombre de requêtes HTTP de **~664 à ~112 par match de 45min** :
+
+| Source                    | Avant        | Après          | Réduction |
+| ------------------------- | ------------ | -------------- | --------- |
+| Polling état (`/state`)   | 1 req / 30s  | 1 req / 60s    | -50%      |
+| Timer sync (`/command`)   | 1 req / 5s   | 1 req / 30s    | **-83%**  |
+| Score update (`/command`) | 1 req / clic | Debounce 500ms | -64%      |
+
+- **Debounce score** : `scoreUpdate$` avec `debounceTime(500)` - cliquer +1 +1 +1 rapidement envoie 1 seule requête
+- **Timer sync** : Synchronisation toutes les 30s au lieu de 5s (suffisant pour un chrono)
+- **Polling** : Vérification état du site toutes les 60s au lieu de 30s
+
 ### Rate Limiting
 
 Les rate limits sont appliqués **par route** pour éviter les conflits :
@@ -460,6 +480,7 @@ Auth:         10 req/15min    (anti-bruteforce) - 1 min dev
 Monitoring:   300 req/min     (status, metrics, dashboard, local-content)
 Admin:        200 req/min     (lecture sites, logs, config-history)
 Sensitive:    30 req/min      (commands, deployments, créations, suppressions)
+Remote Cloud: 60 req/min      (télécommande cloud - PUBLIC, par IP)
 Logging:      200 req/min     (frontend logs - throttled client-side)
 Upload:       10 req/hour     (video uploads)
 Pi Analytics: 500 req/min     (impressions sponsors depuis les Pi - par IP)
@@ -471,7 +492,7 @@ Pi Analytics: 500 req/min     (impressions sponsors depuis les Pi - par IP)
 - `/api/sites/:id/dashboard`, `/api/sites/:id/connection-status`, `/api/sites/:id/metrics`, `/api/sites/:id/local-content` → `monitoringRateLimit` (300/min)
 - `/api/sites/:id`, `/api/sites/:id/logs`, `/api/sites/:id/config-history/*` → `adminRateLimit` (200/min)
 - POST/PUT/DELETE, `/api/sites/:id/command` → `sensitiveRateLimit` (30/min)
-- `/api/remote/*` → `sensitiveRateLimit` (30/min) - **PUBLIC (pas d'auth JWT)** - par IP
+- `/api/remote/*` → `remoteRateLimit` (60/min) - **PUBLIC (pas d'auth JWT)** - par IP
 - `/api/analytics/impressions` → `piAnalyticsRateLimit` (500/min) - **Par IP** - permet backlog de ~5 Pi simultanément
 
 **Frontend Log Throttling** (v2.25+) :
