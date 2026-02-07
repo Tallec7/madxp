@@ -2166,6 +2166,20 @@ vcgencmd get_mem gpu
 
 ### v3.7.8 (Février 2026)
 
+- **Réduction requêtes HTTP Cloud Remote (-83%)** : Le Cloud Remote générait ~664 requêtes par match de 45min par utilisateur
+  - **Problèmes** : Timer sync toutes les 5s (540 req/match), polling état toutes les 30s (90 req), score sans debounce (1 req/clic)
+  - **Solutions** :
+    - Debounce score updates (500ms) via `scoreUpdate$` Subject + `debounceTime(500)`
+    - Polling état : 30s → 60s
+    - Timer sync : 5s → 30s
+    - Rate limit dédié `remoteRateLimit` (60 req/min par IP) remplace `sensitiveRateLimit` (30 req/min)
+  - **Résultat** : ~112 requêtes par match par utilisateur (réduction 83%)
+  - **Fichiers modifiés** :
+    - `central-dashboard/src/app/features/remote/cloud-remote.component.ts` - Debounce, polling, timer sync
+    - `central-server/src/middleware/user-rate-limit.ts` - Nouveau `remoteRateLimit`
+    - `central-server/src/routes/remote.routes.ts` - Utilise `remoteRateLimit`
+  - **Migration** : Rebuild dashboard et redéployer central-server
+
 - **Fix flash noir/blanc entre vidéos sur Chromium/Pi** : Élimination des flashs noirs (boucle) et blancs (vidéo manuelle) lors des transitions
   - **Problème** : Un écran noir apparaissait brièvement (~200-500ms) entre chaque vidéo de la boucle, et un flash blanc apparaissait au lancement d'une vidéo manuelle sur la TV (Chromium kiosk sur Raspberry Pi).
   - **Cause racine flash noir (boucle)** :
@@ -2207,6 +2221,26 @@ vcgencmd get_mem gpu
     scp -r dist/raspberry/* pi@neopro.local:/home/pi/neopro/webapp/
     ssh pi@neopro.local 'sudo systemctl restart neopro-kiosk'
     ```
+
+### v3.7.4 (Février 2026)
+
+- **Optimisations mémoire Railway Hobby plan** : Résolution des crashs OOM et déconnexions Socket.IO en cascade
+  - **Problème** : Le serveur Railway atteignait 93% du heap (38MB/41MB), causant des déconnexions Socket.IO en cascade et des erreurs 502/503
+  - **Cause racine** : Accumulation mémoire due à Swagger chargé en prod, Winston file transports, realtime-stats trop fréquent, et rate limiter global interférant
+  - **Solutions** :
+    - Swagger chargé uniquement en mode dev (`NODE_ENV !== 'production'`)
+    - Winston file transports supprimés en production (Railway n'a pas de filesystem persistant)
+    - Intervalle realtime-stats réduit de 10s à 30s
+    - Rate limiter global supprimé (les rate limiters par route suffisent)
+    - Fix progress float→integer dans 4 fichiers (évite des logs et émissions Socket.IO inutiles)
+  - **Fichiers modifiés** :
+    - `central-server/src/server.ts` - Swagger conditionnel, suppression rate limiter global
+    - `central-server/src/config/logger.ts` - Suppression file transports en prod
+    - `central-server/src/services/realtime-stats.service.ts` - Intervalle 10s → 30s
+    - `central-server/src/services/deployment.service.ts` - `Math.round(progress)`
+    - `central-server/src/services/update-deployment.service.ts` - `Math.round(progress)`
+    - `central-server/src/services/socket.service.ts` - `Math.round(progressValue)`
+  - **Migration** : Redéployer le central-server sur Railway
 
 ### v3.7.3 (Février 2026)
 
@@ -2765,10 +2799,10 @@ vcgencmd get_mem gpu
   - **Solution** :
     - Suppression du `authGuard` sur la route Angular `/remote/:siteId`
     - Suppression du middleware `authenticate` sur les routes API `/api/remote/*`
-    - Conservation du `sensitiveRateLimit` (30 req/min par IP) pour la sécurité
+    - Conservation du rate limiting par IP pour la sécurité (depuis v3.7.8 : `remoteRateLimit` 60 req/min)
   - **Sécurité** (sans JWT) :
     - L'UUID du site est difficile à deviner (128 bits d'entropie)
-    - Rate limiting : 30 req/min par IP
+    - Rate limiting : 60 req/min par IP (remoteRateLimit, augmenté de 30 en v3.7.8)
     - Le site doit être online pour recevoir les commandes
   - **Fichiers modifiés** :
     - `central-dashboard/src/app/app.routes.ts` - Route `/remote/:siteId` sans authGuard

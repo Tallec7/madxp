@@ -947,16 +947,18 @@ GET    /advertiser-analytics/*  - Stats annonceurs
 **Rate Limiting :**
 
 ```
-Auth:       10 req/15min    (anti-bruteforce)
-API:        100 req/min     (standard)
-Monitoring: 300 req/min     (status, metrics polling)
-Logging:    200 req/min     (frontend logs - silently dropped if exceeded)
-Sensitive:  30 req/min      (commands, deployments)
-Upload:     10 req/hour     (video uploads)
-Admin:      200 req/min     (dashboard ops)
+Auth:         10 req/15min    (anti-bruteforce)
+API:          100 req/min     (standard)
+Monitoring:   300 req/min     (status, metrics polling)
+Logging:      200 req/min     (frontend logs - silently dropped if exceeded)
+Sensitive:    30 req/min      (commands, deployments)
+Remote Cloud: 60 req/min      (télécommande cloud - PUBLIC, par IP)
+Upload:       10 req/hour     (video uploads)
+Admin:        200 req/min     (dashboard ops)
+Pi Analytics: 500 req/min     (impressions sponsors depuis les Pi - par IP)
 ```
 
-**Note** : Les rate limits sont basés sur le `user_id` (et non sur l'IP) en production.
+**Note** : Les rate limits sont basés sur le `user_id` (et non sur l'IP) en production, sauf Remote Cloud et Pi Analytics qui sont par IP (endpoints publics).
 
 ### Services Backend Critiques
 
@@ -986,6 +988,13 @@ HEAP_WARNING_THRESHOLD = 88; // Log warning
 HEAP_CRITICAL_THRESHOLD = 93; // Trigger cleanup callbacks
 HEAP_EMERGENCY_THRESHOLD = 97; // Emergency cleanup + GC
 ```
+
+**Optimisations mémoire (v3.7.4+)** :
+
+- Swagger chargé uniquement en dev (`NODE_ENV !== 'production'`)
+- Winston file transports supprimés en prod (Railway n'a pas de filesystem persistant)
+- Realtime-stats interval réduit de 10s à 30s
+- Pas de rate limiter global (les rate limiters par route suffisent)
 
 **Endpoints Health :**
 
