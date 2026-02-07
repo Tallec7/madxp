@@ -1,3 +1,10 @@
+## [3.7.13](https://github.com/Tallec7/neopro/compare/v3.7.12...v3.7.13) (2026-02-07)
+
+### Bug Fixes
+
+- **tv:** fix 3 remaining edge cases causing black screen ([4d66b00](https://github.com/Tallec7/neopro/commit/4d66b006821d052130c0bb1a6c92241e3aa9cdd2))
+- **tv:** fix intermittent black flashes in loop and manual video modes ([efe1522](https://github.com/Tallec7/neopro/commit/efe152215aa4102dd01529831ecf321d77031f09))
+
 ## [3.7.12](https://github.com/Tallec7/neopro/compare/v3.7.11...v3.7.12) (2026-02-07)
 
 ### Bug Fixes
