@@ -1925,10 +1925,10 @@ iwconfig wlan1 | grep -E "ESSID|Signal"
 
 Le problème et la solution diffèrent selon le modèle de Raspberry Pi :
 
-| Modèle                 | GPU           | Problème                       | Solution                            |
-| ---------------------- | ------------- | ------------------------------ | ----------------------------------- |
-| **Pi 4 et antérieurs** | VideoCore VI  | Mémoire GPU insuffisante       | Configurer `gpu_mem=256`            |
-| **Pi 5**               | VideoCore VII | Pas de décodeur H.264 hardware | Utiliser EGL natif + V4L2 (v3.7.2+) |
+| Modèle                 | GPU           | Problème                       | Solution                                     |
+| ---------------------- | ------------- | ------------------------------ | -------------------------------------------- |
+| **Pi 4 et antérieurs** | VideoCore VI  | Mémoire GPU insuffisante       | Configurer `gpu_mem=256`                     |
+| **Pi 5**               | VideoCore VII | Pas de décodeur H.264 hardware | Utiliser SwiftShader (seule solution stable) |
 
 **Identifier le modèle :**
 
@@ -1974,52 +1974,71 @@ Le Pi 5 (BCM2712) a **supprimé le décodeur H.264 hardware**. Seul H.265/HEVC e
 
 **Note :** Sur Pi 5, `vcgencmd get_mem gpu` retourne toujours `gpu=4M` - c'est une valeur legacy, pas un problème.
 
-**Solution (v3.7.2+) : EGL natif + V4L2**
+**Solution : SwiftShader (seule solution stable pour Pi 5)**
 
-Depuis la v3.7.2, le `kiosk-watchdog.sh` utilise EGL natif avec les décodeurs V4L2 au lieu de SwiftShader :
+EGL natif a ete teste mais provoque des erreurs `SharedImageStub: Unable to create shared image` toutes les 5 secondes sur Pi 5, causant une degradation progressive de la lecture video. **SwiftShader est confirme comme la seule solution stable pour Pi 5.**
+
+Le `kiosk-watchdog.sh` utilise les flags suivants pour Pi 5 :
 
 ```bash
---use-gl=egl
---enable-features=VaapiVideoDecoder,V4L2VideoDecoder,V4L2StatelessVideoDecoder
---ignore-gpu-blocklist
---enable-gpu-rasterization
---enable-zero-copy
---enable-accelerated-video-decode
---disable-gpu-driver-bug-workarounds
+# Flags specifiques Pi 5
+--disable-gpu-compositing
+--use-gl=angle
+--use-angle=swiftshader
+--disable-gpu-vsync
+--disable-frame-rate-limit
+
+# Flags communs (Pi 4 et Pi 5)
+--disable-dev-shm-usage
+--disable-checker-imaging
 ```
 
-**Mise à jour depuis une ancienne version :**
+**Explication des flags Pi 5 :**
+
+| Flag                                     | Effet                                                                      |
+| ---------------------------------------- | -------------------------------------------------------------------------- |
+| `--disable-gpu-compositing`              | Desactive le compositing GPU (evite les erreurs VideoCore VII)             |
+| `--use-gl=angle --use-angle=swiftshader` | Utilise le rendu logiciel SwiftShader (stable sur Pi 5)                    |
+| `--disable-gpu-vsync`                    | Desactive la synchronisation verticale GPU                                 |
+| `--disable-frame-rate-limit`             | Supprime la limitation de framerate                                        |
+| `--disable-dev-shm-usage`                | Utilise /tmp au lieu de /dev/shm (evite les problemes de memoire partagee) |
+| `--disable-checker-imaging`              | Desactive le decodage checker (reduit la charge CPU)                       |
+
+**Pourquoi pas EGL natif ?**
+
+EGL natif (`--use-gl=egl`) a ete teste en v3.7.2 mais cause des erreurs `SharedImageStub: Unable to create shared image` toutes les 5 secondes dans les logs Chromium. Ces erreurs provoquent :
+
+- Degradation progressive de la lecture video
+- Saccades et artefacts visuels
+- Crashs apres quelques heures de boucle
+
+Le VideoCore VII du Pi 5 n'est pas compatible avec le mode EGL de Chromium en mode kiosque avec plusieurs players video.
+
+**Mise a jour depuis une ancienne version :**
 
 ```bash
 # Copier le nouveau kiosk-watchdog.sh
 scp raspberry/scripts/kiosk-watchdog.sh pi@<IP>:/home/pi/neopro/scripts/
-# Redémarrer le kiosk
+# Redemarrer le kiosk
 ssh pi@<IP> 'sudo systemctl restart neopro-kiosk'
 ```
 
-**Vérifier que les flags EGL sont actifs :**
+**Verifier que les flags SwiftShader sont actifs :**
 
 ```bash
-pgrep -a chromium | grep use-gl
-# Doit afficher le processus avec --use-gl=egl
+pgrep -a chromium | grep use-angle
+# Doit afficher le processus avec --use-angle=swiftshader
 ```
 
-**⚠️ Fallback SwiftShader** : Si des erreurs "SharedImageStub" apparaissent dans les logs, revenir à SwiftShader :
+**Verifier les logs pour des erreurs SharedImageStub (ne devrait PAS en avoir avec SwiftShader) :**
 
 ```bash
-# Vérifier les logs pour SharedImageStub
 journalctl -u neopro-kiosk --since "10 minutes ago" | grep -i "sharedimage"
+# Aucun resultat = OK (SwiftShader actif)
+# Si des erreurs apparaissent = les flags EGL sont utilises par erreur, repasser a SwiftShader
 ```
 
-Si présentes, éditer `/home/pi/neopro/scripts/kiosk-watchdog.sh` et remplacer les flags Pi 5 par :
-
-```
---disable-gpu-compositing --use-gl=angle --use-angle=swiftshader
-```
-
-Puis `sudo systemctl restart neopro-kiosk`.
-
-**Note :** Le script `kiosk-watchdog.sh` détecte automatiquement le modèle de Pi et applique les bons flags.
+**Note :** Le script `kiosk-watchdog.sh` detecte automatiquement le modele de Pi et applique les bons flags (GPU hardware pour Pi 4, SwiftShader pour Pi 5).
 
 ---
 
@@ -2048,7 +2067,7 @@ sudo systemctl status neopro-kiosk
 
 # Logs du watchdog (vérifier le modèle détecté)
 sudo tail -50 /var/log/neopro-kiosk-watchdog.log
-# Doit afficher : "Pi 5 détecté: utilisation de EGL natif avec V4L2" ou "Pi 4 ou antérieur: utilisation de l'accélération GPU hardware"
+# Doit afficher : "Pi 5 détecté: utilisation de SwiftShader (rendu logiciel)" ou "Pi 4 ou antérieur: utilisation de l'accélération GPU hardware"
 ```
 
 **Note :** Les nouvelles installations (v2.24+) configurent automatiquement `gpu_mem=256` pour les Pi 4 et antérieurs via le script `install.sh`.

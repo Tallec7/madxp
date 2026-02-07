@@ -129,23 +129,24 @@ start_chromium() {
         --memory-pressure-off
         --disable-breakpad
         --disable-crash-reporter
+        --disable-dev-shm-usage
+        --disable-checker-imaging
     )
 
     # Flags spécifiques au modèle
     local gpu_flags=()
     if [[ "$PI_MODEL" == "pi5" ]]; then
-        # Pi 5 : Tenter l'accélération GPU native avec EGL + V4L2
-        # Fallback: si SharedImageStub errors reviennent, remettre SwiftShader :
-        #   --disable-gpu-compositing --use-gl=angle --use-angle=swiftshader
-        log "📱 Pi 5 détecté: utilisation de EGL natif avec V4L2"
+        # Pi 5 : VideoCore VII ne supporte PAS SharedImage pour H.264 1080p
+        # EGL natif cause des erreurs "SharedImageStub: Unable to create shared image"
+        # toutes les 5 secondes → saccades et dégradation vidéo.
+        # SwiftShader = rendu CPU, plus lent mais STABLE et sans artefacts.
+        log "📱 Pi 5 détecté: utilisation de SwiftShader (rendu logiciel stable)"
         gpu_flags=(
-            --use-gl=egl
-            --enable-features=VaapiVideoDecoder,V4L2VideoDecoder,V4L2StatelessVideoDecoder
-            --ignore-gpu-blocklist
-            --enable-gpu-rasterization
-            --enable-zero-copy
-            --enable-accelerated-video-decode
-            --disable-gpu-driver-bug-workarounds
+            --disable-gpu-compositing
+            --use-gl=angle
+            --use-angle=swiftshader
+            --disable-gpu-vsync
+            --disable-frame-rate-limit
         )
     else
         # Pi 4 et antérieurs : utiliser l'accélération GPU hardware
@@ -156,6 +157,7 @@ start_chromium() {
             --enable-zero-copy
             --ignore-gpu-blocklist
             --disable-software-rasterizer
+            --disable-gpu-vsync
         )
     fi
 

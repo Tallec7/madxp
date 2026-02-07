@@ -882,9 +882,9 @@ Les clubs peuvent définir des playlists différentes selon la **phase du match*
 - `central-dashboard/.../site-content-tab.component.ts` - UI de configuration
 - `central-dashboard/.../remote-preview.component.ts` - Prévisualisation
 
-### Double-Buffer Vidéo (Transitions Sans Flash) ⚡ UPDATED (2026-01-10)
+### Double-Buffer Vidéo (Transitions Sans Flash) ⚡ UPDATED (2026-02-07)
 
-Le composant TV utilise un système **double-buffer + freeze-frame + black overlay** pour éliminer les flash entre vidéos.
+Le composant TV utilise un système **double-buffer + freeze-frame pré-capturé + black overlay** pour éliminer les flash entre vidéos.
 
 **⚠️ IMPORTANT - Optimisation Pi** :
 
@@ -895,13 +895,22 @@ Le préchargement anticipé et l'événement `timeupdate` causent des **saccades
 - **Préchargement au `ended`** - on charge la suivante uniquement quand la vidéo se termine
 - Légère pause entre vidéos acceptable (< 1s) en échange d'une lecture fluide
 
+**⚠️ IMPORTANT - Pré-capture freeze-frame (v3.7.8+)** :
+
+Sur Chromium/Pi avec décodeur vidéo matériel (VideoCore), le frame buffer est **libéré immédiatement** quand l'événement `ended` se déclenche. Un `drawImage()` dans le handler `ended` capture donc un écran noir au lieu de la dernière image. Solution adoptée :
+
+- **Pré-capture périodique** toutes les 500ms pendant la lecture (`startLastFrameCapture`)
+- Le canvas contient toujours la dernière image valide **avant** que `ended` ne se déclenche
+- **Fallback black overlay** si aucun frame pré-capturé n'est disponible (premier chargement)
+- Fonctionne à la fois sur navigateur desktop (live capture suffisait) et Chromium kiosk Pi
+
 **Architecture des couches (z-index)** :
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        TV Component                              │
 │                                                                  │
-│  z-index 20: Canvas freeze-frame (capture image actuelle)       │
+│  z-index 20: Canvas freeze-frame (pré-capturé toutes les 500ms)│
 │  z-index 10: Player manuel (vidéos déclenchées manuellement)    │
 │  z-index 5:  Black overlay (bloque la boucle pendant transitions)│
 │  z-index 1-2: Players boucle A/B (alternent pour la boucle)     │
@@ -917,6 +926,24 @@ Le préchargement anticipé et l'événement `timeupdate` causent des **saccades
 │                   │                                              │
 │         playerA ←→ playerB alternent                            │
 └─────────────────────────────────────────────────────────────────┘
+```
+
+**Stratégie de transition entre vidéos de boucle (v3.7.8+)** :
+
+```
+Pendant la lecture:
+  setInterval(500ms) → captureLastFrame() → canvas (invisible, hasValidLastFrame=true)
+
+À la fin de la vidéo (ended):
+  1. captureAndShowFreezeFrame()
+     ├── hasValidLastFrame=true → affiche le canvas pré-capturé (z-index 20)
+     └── hasValidLastFrame=false → showBlackOverlay() (z-index 5, fallback)
+  2. preloadOnInactivePlayer() → charge la vidéo suivante
+  3. switchPlayers() :
+     a. Rend le nouveau player visible (opacity 1, z-index 2)
+     b. Lance play()
+     c. Attend 2×rAF + 100ms (GPU a le temps de rendre la première frame)
+     d. Cache l'ancien player + freeze-frame + black overlay
 ```
 
 **Stratégie pour les vidéos manuelles** :
@@ -939,24 +966,35 @@ Le préchargement anticipé et l'événement `timeupdate` causent des **saccades
 
 **Méthodes clés** :
 
-| Méthode                            | Rôle                                             |
-| ---------------------------------- | ------------------------------------------------ |
-| `initDoubleBuffer()`               | Initialise les 4 players + canvas + overlay      |
-| `setPlayerVisible()`               | Contrôle opacité/z-index via styles inline       |
-| `playOnActivePlayer()`             | Joue une vidéo sur le player visible             |
-| `preloadOnInactivePlayer()`        | Charge la vidéo suivante (appelé au `ended`)     |
-| `switchPlayers()`                  | Bascule entre les 2 players                      |
-| `onVideoEnded()`                   | Déclenche le switch à la fin d'une vidéo         |
-| `captureAndShowFreezeFrame()`      | Capture l'image actuelle sur le canvas           |
-| `hideFreezeFrame()`                | Cache le canvas + clearRect (libère mémoire)     |
-| `showBlackOverlay()`               | Affiche l'overlay noir (bloque la boucle)        |
-| `hideBlackOverlay()`               | Cache l'overlay noir                             |
-| `stopManualVideoAndReturnToLoop()` | Coupe la vidéo manuelle pour revenir à la boucle |
+| Méthode                            | Rôle                                                          |
+| ---------------------------------- | ------------------------------------------------------------- |
+| `initDoubleBuffer()`               | Initialise les 4 players + canvas + overlay + pré-capture     |
+| `setPlayerVisible()`               | Contrôle opacité/z-index via styles inline                    |
+| `playOnActivePlayer()`             | Joue une vidéo sur le player visible                          |
+| `preloadOnInactivePlayer()`        | Charge la vidéo suivante (appelé au `ended`)                  |
+| `switchPlayers()`                  | Bascule entre les 2 players (2×rAF + 100ms sécurité)          |
+| `onVideoEnded()`                   | Freeze-frame + preload + switch à la fin d'une vidéo          |
+| `startLastFrameCapture()`          | Démarre la pré-capture toutes les 500ms ⚡ v3.7.8             |
+| `stopLastFrameCapture()`           | Arrête l'intervalle de pré-capture ⚡ v3.7.8                  |
+| `captureLastFrame()`               | Capture silencieuse du frame actuel sur le canvas ⚡ v3.7.8   |
+| `captureAndShowFreezeFrame()`      | Affiche le frame pré-capturé ou tente capture live (fallback) |
+| `hideFreezeFrame()`                | Cache le canvas, reset `hasValidLastFrame`                    |
+| `showBlackOverlay()`               | Affiche l'overlay noir (fallback si pas de frame)             |
+| `hideBlackOverlay()`               | Cache l'overlay noir                                          |
+| `stopManualVideoAndReturnToLoop()` | Coupe la vidéo manuelle pour revenir à la boucle              |
+
+**Propriétés de pré-capture** ⚡ v3.7.8 :
+
+```typescript
+private lastFrameCaptureInterval: ReturnType<typeof setInterval> | null = null;
+private hasValidLastFrame = false; // true si le canvas contient un frame valide pré-capturé
+```
 
 **Optimisation mémoire (usage intensif)** :
 
 - Canvas réduit à 720p (1280x720) au lieu de 1080p → économise ~4.5MB
-- `clearRect()` appelé après chaque transition pour libérer la mémoire bitmap
+- `hideFreezeFrame()` ne fait plus `clearRect()` car le canvas est continuellement rafraîchi par la pré-capture
+- Le flag `hasValidLastFrame` est reset à `false` dans `hideFreezeFrame()` puis remis à `true` par la prochaine pré-capture réussie
 - Important pour les sessions longues (5h+) avec 3-4 déclenchements manuels/minute
 
 **Ce qui a été désactivé** (causait des saccades sur Pi) :
@@ -964,10 +1002,11 @@ Le préchargement anticipé et l'événement `timeupdate` causent des **saccades
 - `timeupdate` listener - même throttlé, causait des micro-freezes
 - Préchargement anticipé - décodage parallèle surchargeait le GPU
 - Transition CSS opacity - repaints causaient des saccades
+- Capture live dans `onVideoEnded()` - frame buffer déjà libéré sur Chromium/Pi (v3.7.8)
 
 **Fichiers impliqués** :
 
-- `raspberry/src/app/components/tv/tv.component.ts` - Logique double-buffer + freeze-frame
+- `raspberry/src/app/components/tv/tv.component.ts` - Logique double-buffer + freeze-frame + pré-capture
 - `raspberry/src/app/components/tv/tv.component.html` - 4 vidéos + canvas + overlay
 - `raspberry/src/app/components/tv/tv.component.scss` - CSS (z-index, positions)
 
@@ -2046,14 +2085,14 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 
 #### Kiosk/TV (Chromium)
 
-| Symptôme                      | Cause probable              | Solution                                         |
-| ----------------------------- | --------------------------- | ------------------------------------------------ |
-| "Aw, Snap! Error code: 5"     | **gpu_mem trop faible**     | Vérifier `vcgencmd get_mem gpu`, configurer 256M |
-| Crash après 2h de boucle      | Mémoire GPU saturée         | Augmenter gpu_mem, watchdog kiosk actif          |
-| Écran blanc après crash       | Chromium bloqué sur erreur  | Le watchdog devrait récupérer automatiquement    |
-| Crash fréquents (>3 en 5 min) | Vidéo corrompue ou GPU mort | Vérifier les vidéos, température Pi              |
-| "gpu=4M" au lieu de 128M+     | Config `/boot/config.txt`   | Ajouter `gpu_mem=256` et reboot                  |
-| Vidéos lentes/dégradées Pi 5  | SwiftShader (ancien config) | Mettre à jour `kiosk-watchdog.sh` (v3.7.2+ EGL)  |
+| Symptôme                      | Cause probable              | Solution                                                           |
+| ----------------------------- | --------------------------- | ------------------------------------------------------------------ |
+| "Aw, Snap! Error code: 5"     | **gpu_mem trop faible**     | Vérifier `vcgencmd get_mem gpu`, configurer 256M                   |
+| Crash après 2h de boucle      | Mémoire GPU saturée         | Augmenter gpu_mem, watchdog kiosk actif                            |
+| Écran blanc après crash       | Chromium bloqué sur erreur  | Le watchdog devrait récupérer automatiquement                      |
+| Crash fréquents (>3 en 5 min) | Vidéo corrompue ou GPU mort | Vérifier les vidéos, température Pi                                |
+| "gpu=4M" au lieu de 128M+     | Config `/boot/config.txt`   | Ajouter `gpu_mem=256` et reboot                                    |
+| Vidéos lentes/dégradées Pi 5  | SwiftShader (rendu CPU)     | Ajouter `--disable-gpu-vsync --disable-frame-rate-limit` (v3.7.2+) |
 
 **Diagnostic GPU** :
 
@@ -2096,17 +2135,39 @@ vcgencmd get_mem gpu
 
 ## Historique Breaking Changes
 
+### v3.7.8 (Février 2026)
+
+- **Fix flash noir entre vidéos de boucle sur Chromium/Pi** : Élimination des flashs noirs lors des transitions entre vidéos dans la boucle de sponsors
+  - **Problème** : Un écran noir apparaissait brièvement (~200-500ms) entre chaque vidéo de la boucle sur la TV (Chromium kiosk sur Raspberry Pi). Le problème n'était pas visible sur un navigateur desktop.
+  - **Cause racine (commit 1)** : Aucun mécanisme de freeze-frame n'était utilisé lors des transitions de boucle. L'ancien player devenait invisible avant que le nouveau soit prêt, exposant le fond noir.
+  - **Fix initial (v3.7.7)** : Ajout d'un freeze-frame canvas capturé dans `onVideoEnded()` pour couvrir la transition. Fonctionnait sur desktop mais **pas sur Chromium/Pi**.
+  - **Cause racine (commit 2)** : Sur Chromium avec décodeur vidéo matériel (VideoCore), le frame buffer est **libéré immédiatement** lors de l'événement `ended`. Un `drawImage()` dans le handler `ended` capture un écran noir au lieu de la dernière image visible.
+  - **Solution finale** : Système de **pré-capture périodique** toutes les 500ms pendant la lecture
+    - `startLastFrameCapture()` : Démarre un `setInterval(500ms)` qui capture silencieusement le frame courant sur le canvas
+    - Le flag `hasValidLastFrame` indique si un frame valide est disponible
+    - `captureAndShowFreezeFrame()` : Utilise le frame pré-capturé en priorité, fallback sur capture live (desktop)
+    - Si aucun frame disponible : fallback sur le black overlay (z-index 5)
+    - `switchPlayers()` : Attend 2×`requestAnimationFrame` + 100ms avant de cacher le freeze-frame
+  - **Résultat** : Transitions sans flash noir sur Chromium/Pi ET navigateur desktop
+  - **Fichier modifié** : `raspberry/src/app/components/tv/tv.component.ts`
+  - **Migration Pi existants** :
+    ```bash
+    # Rebuild le frontend Angular puis déployer
+    npm run build:raspberry
+    scp -r dist/raspberry/* pi@neopro.local:/home/pi/neopro/webapp/
+    ssh pi@neopro.local 'sudo systemctl restart neopro-kiosk'
+    ```
+
 ### v3.7.2 (Février 2026)
 
-- **Pi 5 : Remplacement SwiftShader par EGL natif + V4L2** : Amélioration des performances vidéo sur Raspberry Pi 5
-  - **Problème** : Les vidéos apparaissaient lentes/dégradées sur Pi 5 car SwiftShader (rendu 100% CPU) était utilisé depuis v2.27
-  - **Cause racine** : SwiftShader avait été choisi pour éviter les erreurs "SharedImageStub" du VideoCore VII, mais le rendu logiciel dégrade significativement les performances de lecture vidéo
-  - **Solution** : Remplacement des flags Chromium Pi 5 par EGL natif + décodeurs V4L2 hardware
-  - **Anciens flags** : `--disable-gpu-compositing --use-gl=angle --use-angle=swiftshader`
-  - **Nouveaux flags** : `--use-gl=egl --enable-features=VaapiVideoDecoder,V4L2VideoDecoder,V4L2StatelessVideoDecoder --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy --enable-accelerated-video-decode --disable-gpu-driver-bug-workarounds`
-  - **Note importante** : Le Pi 5 a supprimé le décodeur H.264 hardware — seul H.265/HEVC est accéléré. EGL améliore au minimum le compositing GPU et le rendu des overlays.
-  - **Fallback** : Si les erreurs SharedImageStub reviennent, les anciens flags SwiftShader sont en commentaire dans le script
-  - **Fichier modifié** : `raspberry/scripts/kiosk-watchdog.sh`
+- **Pi 5 : Retour a SwiftShader apres echec EGL (SharedImageStub)** : EGL natif cause des erreurs toutes les 5 secondes sur Pi 5
+  - **Tentative** : Remplacement de SwiftShader par EGL natif + V4L2 pour ameliorer les performances video
+  - **Resultat** : EGL cause des erreurs "SharedImageStub" dans les logs toutes les ~5 secondes sur Pi 5 (VideoCore VII). Ces erreurs polluent les logs et peuvent degrader la stabilite sur de longues sessions
+  - **Decision** : Retour a SwiftShader qui est stable, avec ajout de `--disable-gpu-vsync` et `--disable-frame-rate-limit` pour ameliorer la fluidite
+  - **Flags Pi 5** : `--disable-gpu-compositing --use-gl=angle --use-angle=swiftshader --disable-gpu-vsync --disable-frame-rate-limit`
+  - **Flags communs ajoutes** (Pi 4 et Pi 5) : `--disable-dev-shm-usage --disable-checker-imaging`
+  - **Note importante** : Le Pi 5 a supprime le decodeur H.264 hardware -- seul H.265/HEVC est accelere. SwiftShader reste la seule option stable pour le compositing sur VideoCore VII.
+  - **Fichier modifie** : `raspberry/scripts/kiosk-watchdog.sh`
   - **Migration Pi 5 existants** :
     ```bash
     scp raspberry/scripts/kiosk-watchdog.sh pi@<IP>:/home/pi/neopro/scripts/
@@ -3319,17 +3380,16 @@ vcgencmd get_mem gpu
     - `central-dashboard/src/app/core/interceptors/error.interceptor.ts` - Suppression du code `isDraft404` devenu inutile
   - **Migration** : Rebuild et redéployer le dashboard + API
 
-- **Support Raspberry Pi 5 (EGL natif + V4L2)** : Accélération GPU pour le Pi 5 (remplace SwiftShader)
-  - **Problème initial** : Le Pi 5 utilise VideoCore VII qui causait des erreurs "SharedImageStub" avec les flags GPU par défaut
-  - **Ancienne solution (v2.27-v3.7.1)** : SwiftShader (rendu 100% CPU) — stable mais vidéos lentes/dégradées
-  - **Nouvelle solution (v3.7.2+)** : EGL natif + décodeurs V4L2 hardware pour de meilleures performances
-  - **Flags Chromium Pi 5** : `--use-gl=egl --enable-features=VaapiVideoDecoder,V4L2VideoDecoder,V4L2StatelessVideoDecoder --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy --enable-accelerated-video-decode --disable-gpu-driver-bug-workarounds`
-  - **Fallback** : Si SharedImageStub errors reviennent, remettre SwiftShader : `--disable-gpu-compositing --use-gl=angle --use-angle=swiftshader`
-  - **Note** : Le Pi 5 n'a pas de décodeur H.264 hardware (supprimé), seul H.265/HEVC est accéléré. EGL améliore au minimum le compositing GPU.
-  - **Détection automatique** : Le script `kiosk-watchdog.sh` détecte le modèle de Pi et applique les bons flags
-  - **Fichiers modifiés** :
-    - `raspberry/scripts/kiosk-watchdog.sh` - Détection Pi 4 vs Pi 5, flags GPU adaptés
-    - `docs/guides/TROUBLESHOOTING.md` - Section Pi 5 mise à jour avec EGL + fallback SwiftShader
+- **Support Raspberry Pi 5 (SwiftShader)** : Rendu GPU stable pour le Pi 5 via SwiftShader
+  - **Problème** : Le Pi 5 utilise VideoCore VII qui cause des erreurs "SharedImageStub" toutes les ~5 secondes avec les flags GPU par défaut (y compris EGL natif)
+  - **Solution retenue** : SwiftShader (rendu logiciel CPU) -- seule option stable pour VideoCore VII
+  - **EGL teste et abandonne (v3.7.2)** : EGL natif + V4L2 a ete teste mais cause des erreurs SharedImageStub repetees, rendant la solution instable
+  - **Flags Chromium Pi 5** : `--disable-gpu-compositing --use-gl=angle --use-angle=swiftshader --disable-gpu-vsync --disable-frame-rate-limit`
+  - **Note** : Le Pi 5 n'a pas de decodeur H.264 hardware (supprime), seul H.265/HEVC est accelere. SwiftShader reste la seule option stable pour le compositing sur VideoCore VII.
+  - **Detection automatique** : Le script `kiosk-watchdog.sh` detecte le modele de Pi et applique les bons flags
+  - **Fichiers modifies** :
+    - `raspberry/scripts/kiosk-watchdog.sh` - Detection Pi 4 vs Pi 5, flags GPU adaptes
+    - `docs/guides/TROUBLESHOOTING.md` - Section Pi 5
   - **Migration Pi 5 existants** : Copier le nouveau `kiosk-watchdog.sh` et `sudo systemctl restart neopro-kiosk`
 
 - **Fix faux avertissement GPU sur Pi 5 dans le dashboard** : Le health check ignore maintenant la valeur legacy `gpu=4M` sur Pi 5
