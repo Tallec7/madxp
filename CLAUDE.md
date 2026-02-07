@@ -936,17 +936,22 @@ Pendant la lecture:
   hasValidLastFrame reste true entre les transitions (pas de reset dans hideFreezeFrame)
 
 À la fin de la vidéo (ended):
-  1. captureAndShowFreezeFrame()
+  1. captureAndShowFreezeFrame() — uniquement opacity (PAS display:none/block)
      ├── hasValidLastFrame=true → affiche le canvas pré-capturé (z-index 20)
      └── hasValidLastFrame=false → showBlackOverlay() (z-index 5, fallback)
-  2. preloadOnInactivePlayer() → charge la vidéo suivante
-  3. switchPlayers() :
+  2. preloadOnInactivePlayer() → charge la vidéo suivante sur le player inactif
+  3. Attend canplay (ou timeout 3s) → la vidéo est prête à jouer
+  4. triggerSwitch() → switchPlayers() :
      a. Rend le nouveau player visible (opacity 1, z-index 2 — AU-DESSUS de l'ancien à z-index 1)
      b. Lance play()
-     c. Attend 2×rAF + 150ms (GPU a le temps de rendre la première frame)
-     d. Cache l'ancien player (z-index 0) + freeze-frame + black overlay
+     c. Attend 2×rAF + 300ms (VideoCore VI/VII nécessite 200-400ms pour compositor le premier I-frame)
+     d. Cache l'ancien player (z-index 0) + freeze-frame (opacity 0) + black overlay
      e. Ramène le nouveau player à z-index 1 (état normal)
 ```
+
+**⚠️ IMPORTANT - Pas de display:none sur le freeze canvas** :
+
+Le freeze canvas utilise **uniquement `opacity: 0/1`** pour être montré/caché. `display: none` supprime l'élément du render tree et provoque un **reflow layout complet**, ce qui sur le GPU lent du Pi expose 1-2 frames noirs entre la disparition du freeze et le compositing du nouveau player. `opacity: 0` garde l'élément dans le render tree (invisible mais présent) — pas de reflow, pas de flash.
 
 **Stratégie pour les vidéos manuelles (v3.7.8+)** :
 
@@ -972,15 +977,15 @@ Pendant la lecture:
 | ---------------------------------- | ------------------------------------------------------------- |
 | `initDoubleBuffer()`               | Initialise les 4 players + canvas + overlay + pré-capture     |
 | `setPlayerVisible()`               | Contrôle opacité/z-index via styles inline                    |
-| `playOnActivePlayer()`             | Joue une vidéo sur le player visible                          |
+| `playOnActivePlayer()`             | Joue une vidéo sur le player visible (attend canplaythrough)  |
 | `preloadOnInactivePlayer()`        | Charge la vidéo suivante (appelé au `ended`)                  |
-| `switchPlayers()`                  | Bascule entre les 2 players (2×rAF + 100ms sécurité)          |
-| `onVideoEnded()`                   | Freeze-frame + preload + switch à la fin d'une vidéo          |
+| `switchPlayers()`                  | Bascule entre les 2 players (2×rAF + 300ms sécurité)          |
+| `onVideoEnded()`                   | Freeze-frame + preload + wait canplay + switch                |
 | `startLastFrameCapture()`          | Démarre la pré-capture toutes les 500ms ⚡ v3.7.8             |
 | `stopLastFrameCapture()`           | Arrête l'intervalle de pré-capture ⚡ v3.7.8                  |
 | `captureLastFrame()`               | Capture silencieuse du frame actuel sur le canvas ⚡ v3.7.8   |
 | `captureAndShowFreezeFrame()`      | Affiche le frame pré-capturé ou tente capture live (fallback) |
-| `hideFreezeFrame()`                | Cache le canvas, reset `hasValidLastFrame`                    |
+| `hideFreezeFrame()`                | Cache le canvas (opacity 0, PAS display:none)                 |
 | `showBlackOverlay()`               | Affiche l'overlay noir (fallback si pas de frame)             |
 | `hideBlackOverlay()`               | Cache l'overlay noir                                          |
 | `stopManualVideoAndReturnToLoop()` | Coupe la vidéo manuelle pour revenir à la boucle              |
@@ -996,7 +1001,8 @@ private hasValidLastFrame = false; // true si le canvas contient un frame valide
 
 - Canvas réduit à 720p (1280x720) au lieu de 1080p → économise ~4.5MB
 - `hideFreezeFrame()` ne fait plus `clearRect()` car le canvas est continuellement rafraîchi par la pré-capture
-- Le flag `hasValidLastFrame` est reset à `false` dans `hideFreezeFrame()` puis remis à `true` par la prochaine pré-capture réussie
+- `hideFreezeFrame()` utilise uniquement `opacity: 0` (PAS `display: none`) pour éviter les reflows layout
+- Le flag `hasValidLastFrame` n'est PAS reset dans `hideFreezeFrame()` — reste true entre les transitions
 - Important pour les sessions longues (5h+) avec 3-4 déclenchements manuels/minute
 
 **Ce qui a été désactivé** (causait des saccades sur Pi) :
@@ -2147,10 +2153,14 @@ vcgencmd get_mem gpu
     - (commit 3) `setPlayerVisible()` mettait les deux players au même z-index (`1`) pendant la transition, et `hideFreezeFrame()` invalidait le flag `hasValidLastFrame` créant un gap sans frame valide
   - **Cause racine flash blanc (vidéo manuelle)** :
     - Le player manuel était rendu visible (opacity 1) **avant** que la vidéo soit chargée et prête à jouer. Le `<video>` sans source affiche un fond blanc/transparent sur Chromium/Pi.
-  - **Solution flash noir** :
-    - `setPlayerVisible()` : z-index `2` pour le nouveau player (au-dessus de l'ancien à `1`) pendant la transition, ramené à `1` après
-    - `hideFreezeFrame()` : ne reset plus `hasValidLastFrame` — la capture périodique continue de fournir des frames valides sans interruption
-    - `switchPlayers()` : délai augmenté de 100ms à 150ms pour le décodeur V3D
+  - **Solution flash noir** (4 commits cumulés) :
+    - (commit 3) `setPlayerVisible()` : z-index `2` pour le nouveau player pendant la transition, ramené à `1` après
+    - (commit 3) `hideFreezeFrame()` : ne reset plus `hasValidLastFrame`
+    - (commit 3) `switchPlayers()` : délai augmenté de 100ms à 150ms
+    - (commit 4) **Suppression de `display: none/block`** sur le freeze canvas — `opacity: 0/1` seul suffit. `display: none` provoquait un **reflow layout complet** qui exposait 1-2 frames noirs sur le GPU lent du Pi (VideoCore)
+    - (commit 4) **Délai augmenté à 300ms** dans `switchPlayers()` et `playOnActivePlayer()` — le décodeur hardware VideoCore VI/VII nécessite 200-400ms pour compositor le premier I-frame
+    - (commit 4) **Préchargement dans `onVideoEnded()`** — la vidéo suivante est chargée sur le player inactif et on attend `canplay` AVANT de déclencher le switch (timeout 3s de sécurité)
+    - (commit 4) **`playOnActivePlayer()` attend `canplaythrough`** avant de lancer `play()` — garantit que le décodeur a le premier I-frame prêt
   - **Solution flash blanc** :
     - `play()` (vidéo manuelle) : le player reste à opacity `0` pendant le chargement
     - Après `play()` + 2×`requestAnimationFrame` + 200ms, le player est rendu visible puis le freeze-frame est caché
@@ -2159,7 +2169,7 @@ vcgencmd get_mem gpu
     - `startLastFrameCapture()` : Capture le frame courant toutes les 500ms
     - `captureAndShowFreezeFrame()` : Utilise le frame pré-capturé, fallback sur capture live ou black overlay
   - **Résultat** : Transitions sans flash noir NI blanc sur Chromium/Pi ET navigateur desktop
-  - **Fichier modifié** : `raspberry/src/app/components/tv/tv.component.ts`
+  - **Fichiers modifiés** : `raspberry/src/app/components/tv/tv.component.ts`, `tv.component.scss`
   - **Migration Pi existants** :
     ```bash
     # Rebuild le frontend Angular puis déployer

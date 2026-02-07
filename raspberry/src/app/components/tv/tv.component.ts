@@ -1375,42 +1375,66 @@ export class TvComponent implements OnInit, OnDestroy {
     player.src = video.path;
     player.load();
 
-    player.play().then(() => {
-      this.ngZone.run(() => {
-        this.currentLoopIndex = videoIndex;
-        this.lastTriggerType = 'auto';
+    let playStarted = false;
 
-        // Incrémenter le compteur pour le cleanup mémoire
-        this.incrementVideoPlayCount();
+    const doPlay = () => {
+      if (playStarted) return;
+      playStarted = true;
 
-        // Tracker
-        this.analyticsService.trackVideoStart(video, 'auto');
-        this.sponsorAnalytics.trackSponsorStart(
-          video,
-          'auto',
-          player.duration || 0
-        );
+      player.play().then(() => {
+        this.ngZone.run(() => {
+          this.currentLoopIndex = videoIndex;
+          this.lastTriggerType = 'auto';
 
-        console.log(`[TV] Now playing video ${videoIndex} on ${this.activePlayer}`);
+          // Incrémenter le compteur pour le cleanup mémoire
+          this.incrementVideoPlayCount();
 
-        // Cacher le freeze-frame après un court délai pour que le premier frame soit affiché
+          // Tracker
+          this.analyticsService.trackVideoStart(video, 'auto');
+          this.sponsorAnalytics.trackSponsorStart(
+            video,
+            'auto',
+            player.duration || 0
+          );
+
+          console.log(`[TV] Now playing video ${videoIndex} on ${this.activePlayer}`);
+
+          // Cacher le freeze-frame après 2×rAF + 300ms pour que le premier frame
+          // soit réellement composité sur le Pi (décodeur hardware VideoCore)
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                this.hideFreezeFrame();
+                this.hideBlackOverlay();
+              }, 300);
+            });
+          });
+        });
+      }).catch(err => {
+        console.error('[TV] Error playing video:', err, '- skipping to next');
+        // En cas d'erreur, cacher quand même le freeze-frame
+        this.hideFreezeFrame();
+        this.hideBlackOverlay();
         setTimeout(() => {
-          this.hideFreezeFrame();
-          this.hideBlackOverlay();
-        }, 150);
+          const nextIndex = (videoIndex + 1) % this.currentLoopVideos.length;
+          if (nextIndex !== videoIndex) {
+            this.playOnActivePlayer(nextIndex);
+          }
+        }, 1000);
       });
-    }).catch(err => {
-      console.error('[TV] Error playing video:', err, '- skipping to next');
-      // En cas d'erreur, cacher quand même le freeze-frame
-      this.hideFreezeFrame();
-      this.hideBlackOverlay();
-      setTimeout(() => {
-        const nextIndex = (videoIndex + 1) % this.currentLoopVideos.length;
-        if (nextIndex !== videoIndex) {
-          this.playOnActivePlayer(nextIndex);
-        }
-      }, 1000);
-    });
+    };
+
+    // Attendre canplaythrough avant de jouer (la vidéo est décodée et prête)
+    // Sur Pi, cela garantit que le décodeur hardware a le premier I-frame prêt
+    player.addEventListener('canplaythrough', doPlay, { once: true });
+
+    // Safety timeout — si canplaythrough ne se déclenche pas après 3s, jouer quand même
+    setTimeout(() => {
+      if (!playStarted) {
+        console.warn('[TV] canplaythrough timeout in playOnActivePlayer, forcing play');
+        doPlay();
+      }
+    }, 3000);
   }
 
   /**
@@ -1504,8 +1528,39 @@ export class TvComponent implements OnInit, OnDestroy {
       this.showBlackOverlay();
     }
 
-    console.log('[TV] Video ended, freeze frame shown:', freezeOk, '- triggering switch');
-    this.triggerSwitch();
+    // Calculer l'index de la vidéo suivante
+    const loopVideos = this.currentLoopVideos;
+    const nextIndex = (this.currentLoopIndex + 1) % loopVideos.length;
+
+    // Précharger la vidéo suivante AVANT le switch
+    // Le freeze-frame couvre visuellement cette attente
+    this.preloadOnInactivePlayer(nextIndex);
+
+    // Attendre que la vidéo soit prête, PUIS switcher
+    const inactivePlayer = this.getInactivePlayer();
+    let switchTriggered = false;
+
+    const doTriggerSwitch = () => {
+      if (switchTriggered) return;
+      switchTriggered = true;
+      console.log('[TV] Video ended, freeze frame shown:', freezeOk, '- triggering switch (preloaded)');
+      this.triggerSwitch();
+    };
+
+    const onReady = () => {
+      inactivePlayer.removeEventListener('canplay', onReady);
+      clearTimeout(safetyTimeout);
+      this.preloadReady = true;
+      doTriggerSwitch();
+    };
+    inactivePlayer.addEventListener('canplay', onReady);
+
+    // Timeout de sécurité 3s — switch quand même si le préchargement traîne
+    const safetyTimeout = setTimeout(() => {
+      inactivePlayer.removeEventListener('canplay', onReady);
+      console.warn('[TV] Preload safety timeout in onVideoEnded, forcing switch');
+      doTriggerSwitch();
+    }, 3000);
   }
 
   /**
@@ -1570,7 +1625,7 @@ export class TvComponent implements OnInit, OnDestroy {
               // Cela évite de décoder 2 vidéos en parallèle
               this.pendingSwitch = false;
               this.switchTriggered = false; // Reset pour le prochain cycle
-            }, 150); // 150ms pour le décodeur hardware du Pi (augmenté pour V3D)
+            }, 300); // 300ms pour le décodeur hardware Pi (VideoCore VI/VII nécessite 200-400ms pour compositor le premier I-frame)
           });
         });
       }).catch(err => {
@@ -1747,7 +1802,7 @@ export class TvComponent implements OnInit, OnDestroy {
 
   /**
    * Capture silencieusement le frame actuel dans le canvas (sans l'afficher)
-   * Le canvas reste caché (display:none) mais contient un frame valide
+   * Le canvas reste invisible (opacity: 0) mais contient un frame valide
    */
   private captureLastFrame(): void {
     if (!this.freezeCanvas || !this.freezeCtx) return;
@@ -1787,8 +1842,9 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Si on a un frame pré-capturé valide, l'afficher directement
     // (pas besoin de drawImage, le canvas contient déjà le frame)
+    // Note: PAS de display:block — on utilise uniquement opacity pour éviter le reflow
+    // layout qui causait un flash noir sur le GPU lent du Pi
     if (this.hasValidLastFrame) {
-      this.freezeCanvas.style.display = 'block';
       this.freezeCanvas.style.opacity = '1';
       this.freezeCanvas.style.zIndex = '20';
       console.log('[TV] Freeze frame shown (pre-captured)');
@@ -1812,7 +1868,7 @@ export class TvComponent implements OnInit, OnDestroy {
     try {
       this.freezeCtx.drawImage(sourceVideo, 0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
 
-      this.freezeCanvas.style.display = 'block';
+      // Note: PAS de display:block — on utilise uniquement opacity pour éviter le reflow
       this.freezeCanvas.style.opacity = '1';
       this.freezeCanvas.style.zIndex = '20';
 
@@ -1834,8 +1890,9 @@ export class TvComponent implements OnInit, OnDestroy {
   private hideFreezeFrame(): void {
     if (this.freezeCanvas && this.freezeCtx) {
       this.freezeCanvas.style.opacity = '0';
-      this.freezeCanvas.style.display = 'none';
-      this.freezeCanvas.style.zIndex = '20';
+      // PAS de display:none — on utilise uniquement opacity pour éviter le reflow
+      // layout qui causait un flash noir sur le GPU lent du Pi (VideoCore)
+      // L'élément reste dans le render tree mais invisible (opacity: 0)
       // NE PAS reset hasValidLastFrame - la capture périodique continue
       // et le canvas contient toujours un frame valide de la vidéo précédente
       // La prochaine capture le mettra à jour avec la nouvelle vidéo

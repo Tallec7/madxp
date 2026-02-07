@@ -21,8 +21,8 @@
   height: 100vh;
   object-fit: cover;
   background: #000;
-  // Par défaut: COMPLÈTEMENT CACHÉ avec display:none
-  display: none;
+  // Par défaut: invisible via opacity (PAS display:none qui cause un reflow layout
+  // et un flash noir sur le GPU lent du Pi lors des transitions)
   opacity: 0;
   z-index: 20; // Au-dessus de tout pour les transitions
   pointer-events: none;
