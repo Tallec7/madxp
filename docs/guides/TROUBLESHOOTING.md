@@ -1912,6 +1912,36 @@ iwconfig wlan1 | grep -E "ESSID|Signal"
 2. **Rapprocher le Pi** d'un des points d'accès mesh si possible
 3. **Envisager l'Ethernet** si disponible dans le lieu (solution la plus fiable)
 
+**Comprendre les reason codes de déconnexion WiFi :**
+
+Les logs `wpa_supplicant` affichent un `reason=X` lors des déconnexions. Voici les codes les plus fréquents :
+
+| Code   | Nom                         | Signification                | Action                                   |
+| ------ | --------------------------- | ---------------------------- | ---------------------------------------- |
+| **1**  | UNSPECIFIED                 | Raison non spécifiée         | Vérifier les logs AP                     |
+| **2**  | AUTH_NOT_VALID              | Authentification invalide    | Vérifier le mot de passe                 |
+| **3**  | DEAUTH_LEAVING              | Le client quitte le BSS      | Normal si `locally_generated=1` (bgscan) |
+| **4**  | DISASSOC_INACTIVITY         | Inactivité détectée          | Vérifier power management                |
+| **6**  | CLASS2_FRAME                | Frame classe 2 non autorisée | Problème d'association                   |
+| **7**  | CLASS3_FRAME                | Frame classe 3 non autorisée | Problème d'authentification              |
+| **8**  | DISASSOC_STA_LEFT           | Le STA quitte le réseau      | Normal lors d'un roaming                 |
+| **15** | 4WAY_HANDSHAKE_TIMEOUT      | Timeout handshake            | Problème de mot de passe ou AP surchargé |
+| **16** | GROUP_KEY_HANDSHAKE_TIMEOUT | Timeout group key            | AP surchargé, firmware bugué             |
+
+**Drapeaux complémentaires :**
+
+- `locally_generated=1` → La déconnexion est initiée par le Pi (souvent bgscan qui cherche mieux)
+- `locally_generated=0` → La borne a éjecté le Pi (surcharge, timeout, sécurité)
+
+**Exemple typique en mesh (signal limite ~-70/-75 dBm) :**
+
+```
+DISCONNECTED bssid=XX:XX:XX reason=3 locally_generated=1  ← bgscan cherche mieux
+CONNECTED    bssid=XX:XX:XX completed [id=0]               ← reconnecté 2s après (même borne)
+```
+
+Ce comportement est **normal** et géré automatiquement par le NetworkWatchdog. Les coupures durent 1-3 secondes et n'impactent pas la lecture vidéo (vidéos locales sur le Pi).
+
 ### 6. Chromium crash "Aw, Snap! Error code: 5" après 1-2h de boucle vidéo
 
 **Symptômes :**

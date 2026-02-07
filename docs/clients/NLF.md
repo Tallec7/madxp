@@ -4,15 +4,15 @@
 
 ## Informations générales
 
-| Champ            | Valeur                       |
-| ---------------- | ---------------------------- |
-| **Nom**          | NLF - Nantes Loire Féminin |
-| **Site ID**      | _c994620c-2016-40f3-9399-2d0345f69274
-_              |
-| **Type de lieu** | Gymnase   |
-| **Réseau WiFi**  | NLFH (mesh, 3+ APs)          |
-| **Contact**      | _(à compléter)_              |
-| **Priorité**     | 🔴 Haute - Plus gros client  |
+| Champ            | Valeur                                 |
+| ---------------- | -------------------------------------- |
+| **Nom**          | NLF - Nantes Loire Féminin             |
+| **Site ID**      | \_c994620c-2016-40f3-9399-2d0345f69274 |
+| \_               |
+| **Type de lieu** | Gymnase                                |
+| **Réseau WiFi**  | NLFH (mesh, 3+ APs)                    |
+| **Contact**      | _(à compléter)_                        |
+| **Priorité**     | 🔴 Haute - Plus gros client            |
 
 ---
 
@@ -483,4 +483,65 @@ sudo journalctl -u neopro-sync-agent -n 100 | grep -i "watchdog\|recovery\|rollb
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (v2.37 - NetworkWatchdog, Auto-recovery, Alertes proactives)
+## Diagnostic WiFi USB (wlan1) - 7 février 2026
+
+### Contexte
+
+Signalement de coupures fréquentes de la clé WiFi USB (wlan1). Diagnostic complet réalisé à distance via l'admin panel.
+
+### Résultats du diagnostic
+
+| Vérification        | Résultat          | Détail                                    |
+| ------------------- | ----------------- | ----------------------------------------- |
+| Alimentation        | ✅ OK             | `vcgencmd get_throttled` = `0x0`          |
+| Power Management    | ✅ OFF            | `iwconfig wlan1` → `Power Management:off` |
+| bgscan (roaming)    | ✅ Configuré      | `simple:30:-70:300`                       |
+| BSSID lock          | ✅ Aucun          | Correct pour mesh                         |
+| Signal              | ⚠️ Limite         | **-73 dBm**, Link Quality 37/70 (53%)     |
+| Environnement radio | ⚠️ Canal 6 saturé | 5 réseaux sur le canal 6                  |
+
+### Scan des canaux WiFi
+
+| Canal  | Réseaux détectés                                         |
+| ------ | -------------------------------------------------------- |
+| **1**  | `NEOPRO-NLF` (hotspot Pi), `NEPTUNESVOLLEY-82F0`         |
+| **6**  | `NLFH`, `NLFH_GUEST`, + 3 réseaux cachés → **5 réseaux** |
+| **11** | `NLFH`, `NLFH_GUEST`                                     |
+
+### Analyse des déconnexions (wpa_supplicant)
+
+```
+17:31:33 ✅ CONNECTED    → 34:8a:12:30:0b:00 (canal 11)
+17:50:54 ❌ DISCONNECTED → reason=3 locally_generated=1
+17:50:56 ✅ CONNECTED    → 34:8a:12:30:0b:00 (même borne, 2s après)
+```
+
+**Interprétation :**
+
+- **reason=3** = `DEAUTH_LEAVING` → Le Pi initie la déconnexion (pas la borne)
+- **locally_generated=1** = Confirmé côté Pi
+- Le bgscan détecte un signal oscillant autour de -70 dBm, tente de trouver mieux, ne trouve pas, se reconnecte à la même borne en **2 secondes**
+- Fréquence : ~1 coupure toutes les 20 minutes
+
+### Impact réel
+
+| Fonctionnalité         | Impact                                               |
+| ---------------------- | ---------------------------------------------------- |
+| **TV (lecture vidéo)** | ✅ Aucun — vidéos locales, lecture continue          |
+| **Télécommande cloud** | ⚠️ Micro-interruption 2s, quasi imperceptible        |
+| **Dashboard central**  | ⚠️ Peut flasher "connexion instable" brièvement      |
+| **Sync-agent**         | ✅ Reconnexion automatique gérée par NetworkWatchdog |
+
+### Conclusion
+
+Le problème est **purement physique** (signal WiFi limite à -73 dBm entre deux bornes mesh). Le logiciel est correctement configuré et gère les reconnexions automatiquement.
+
+### Recommandations
+
+1. **🔌 Câble Ethernet** — Solution définitive recommandée pour le NLF (client critique)
+2. **📡 Rapprocher le Pi** d'une borne NLFH (même 2-3m de différence impactent le signal)
+3. **🔧 Dongle avec antenne externe** — Gain potentiel de ~10 dBm
+
+---
+
+**Dernière mise à jour :** 7 février 2026 (Diagnostic WiFi USB - signal -73 dBm, coupures reason=3, Ethernet recommandé)
