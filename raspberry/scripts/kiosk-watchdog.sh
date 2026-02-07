@@ -136,17 +136,21 @@ start_chromium() {
     # Flags spécifiques au modèle
     local gpu_flags=()
     if [[ "$PI_MODEL" == "pi5" ]]; then
-        # Pi 5 : VideoCore VII ne supporte PAS SharedImage pour H.264 1080p
-        # EGL natif cause des erreurs "SharedImageStub: Unable to create shared image"
-        # toutes les 5 secondes → saccades et dégradation vidéo.
-        # SwiftShader = rendu CPU, plus lent mais STABLE et sans artefacts.
-        log "📱 Pi 5 détecté: utilisation de SwiftShader (rendu logiciel stable)"
+        # Pi 5 : Pas de flags GPU ! Laisser Chromium utiliser le driver V3D natif (Mesa).
+        #
+        # Historique des tentatives :
+        # - SwiftShader (--use-gl=angle --use-angle=swiftshader) : trop lent, vidéos saccadées
+        # - EGL natif avec flags (--use-gl=egl --enable-features=Vulkan) : SharedImageStub errors /5s
+        # - --disable-gpu : Skia CPU, mieux que SwiftShader mais encore trop lent
+        #
+        # Solution : AUCUN flag GPU. Chromium utilise par défaut le driver V3D 7.1 (Mesa)
+        # pour le compositing GPU. C'est exactement ce que fait le navigateur normal
+        # quand on ouvre neopro.local/tv et que les vidéos sont fluides.
+        # Le flag --kiosk ne change PAS le pipeline de rendu, juste l'UI (fullscreen).
+        log "📱 Pi 5 détecté: utilisation du driver V3D natif (Mesa) - pas de flags GPU"
         gpu_flags=(
-            --disable-gpu-compositing
-            --use-gl=angle
-            --use-angle=swiftshader
-            --disable-gpu-vsync
-            --disable-frame-rate-limit
+            --ignore-gpu-blocklist
+            --enable-gpu-rasterization
         )
     else
         # Pi 4 et antérieurs : utiliser l'accélération GPU hardware

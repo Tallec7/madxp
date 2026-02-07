@@ -2085,14 +2085,14 @@ ssh pi@neopro.local 'systemctl list-units --type=service | grep neopro'
 
 #### Kiosk/TV (Chromium)
 
-| Symptôme                      | Cause probable              | Solution                                                           |
-| ----------------------------- | --------------------------- | ------------------------------------------------------------------ |
-| "Aw, Snap! Error code: 5"     | **gpu_mem trop faible**     | Vérifier `vcgencmd get_mem gpu`, configurer 256M                   |
-| Crash après 2h de boucle      | Mémoire GPU saturée         | Augmenter gpu_mem, watchdog kiosk actif                            |
-| Écran blanc après crash       | Chromium bloqué sur erreur  | Le watchdog devrait récupérer automatiquement                      |
-| Crash fréquents (>3 en 5 min) | Vidéo corrompue ou GPU mort | Vérifier les vidéos, température Pi                                |
-| "gpu=4M" au lieu de 128M+     | Config `/boot/config.txt`   | Ajouter `gpu_mem=256` et reboot                                    |
-| Vidéos lentes/dégradées Pi 5  | SwiftShader (rendu CPU)     | Ajouter `--disable-gpu-vsync --disable-frame-rate-limit` (v3.7.2+) |
+| Symptôme                      | Cause probable                                   | Solution                                                              |
+| ----------------------------- | ------------------------------------------------ | --------------------------------------------------------------------- |
+| "Aw, Snap! Error code: 5"     | **gpu_mem trop faible**                          | Vérifier `vcgencmd get_mem gpu`, configurer 256M                      |
+| Crash après 2h de boucle      | Mémoire GPU saturée                              | Augmenter gpu_mem, watchdog kiosk actif                               |
+| Écran blanc après crash       | Chromium bloqué sur erreur                       | Le watchdog devrait récupérer automatiquement                         |
+| Crash fréquents (>3 en 5 min) | Vidéo corrompue ou GPU mort                      | Vérifier les vidéos, température Pi                                   |
+| "gpu=4M" au lieu de 128M+     | Config `/boot/config.txt`                        | Ajouter `gpu_mem=256` et reboot                                       |
+| Vidéos lentes/dégradées Pi 5  | Flags GPU custom désactivent le driver V3D natif | Supprimer les flags GPU, laisser Chromium utiliser V3D Mesa (v3.7.3+) |
 
 **Diagnostic GPU** :
 
@@ -2158,21 +2158,33 @@ vcgencmd get_mem gpu
     ssh pi@neopro.local 'sudo systemctl restart neopro-kiosk'
     ```
 
+### v3.7.3 (Février 2026)
+
+- **Pi 5 : Suppression des flags GPU custom, utilisation du driver V3D natif** : Les vidéos sont maintenant fluides en mode kiosk
+  - **Problème** : Les vidéos étaient saccadées en mode kiosk alors qu'elles étaient fluides dans le navigateur normal sur `neopro.local/tv`
+  - **Cause racine** : Les flags GPU ajoutés au mode kiosk (SwiftShader, `--disable-gpu-compositing`) **désactivaient le driver V3D natif (Mesa)** que Chromium utilise par défaut. Le flag `--kiosk` ne change PAS le pipeline de rendu, seulement l'UI (fullscreen). C'étaient nos flags custom qui causaient les saccades.
+  - **Historique des tentatives échouées** :
+    - SwiftShader (`--use-gl=angle --use-angle=swiftshader --disable-gpu-compositing`) : Rendu CPU via ANGLE, trop lent pour vidéo 1080p
+    - EGL natif (`--use-gl=egl --enable-features=Vulkan`) : Erreurs SharedImageStub toutes les 5 secondes
+  - **Solution** : Supprimer TOUS les flags GPU custom sur Pi 5. Garder uniquement `--ignore-gpu-blocklist` et `--enable-gpu-rasterization` pour s'assurer que le GPU V3D est bien utilisé. Chromium utilise alors le driver Mesa V3D 7.1 pour le compositing GPU, exactement comme le navigateur normal.
+  - **Flags Pi 5 (v3.7.3)** : `--ignore-gpu-blocklist --enable-gpu-rasterization` (plus aucun flag ANGLE/SwiftShader/EGL)
+  - **Flags communs** (Pi 4 et Pi 5) : `--disable-dev-shm-usage --disable-checker-imaging`
+  - **Note** : Le Pi 5 n'a pas de décodeur H.264 hardware (supprimé), seul H.265/HEVC est accéléré. Le décodage vidéo reste en CPU (FFmpeg) mais le compositing GPU via V3D est suffisamment rapide.
+  - **Fichier modifié** : `raspberry/scripts/kiosk-watchdog.sh`
+  - **Migration Pi 5 existants** :
+    ```bash
+    scp raspberry/scripts/kiosk-watchdog.sh pi@<IP>:/home/pi/neopro/scripts/
+    ssh pi@<IP> 'sudo systemctl restart neopro-kiosk'
+    ```
+
 ### v3.7.2 (Février 2026)
 
 - **Pi 5 : Retour a SwiftShader apres echec EGL (SharedImageStub)** : EGL natif cause des erreurs toutes les 5 secondes sur Pi 5
   - **Tentative** : Remplacement de SwiftShader par EGL natif + V4L2 pour ameliorer les performances video
   - **Resultat** : EGL cause des erreurs "SharedImageStub" dans les logs toutes les ~5 secondes sur Pi 5 (VideoCore VII). Ces erreurs polluent les logs et peuvent degrader la stabilite sur de longues sessions
   - **Decision** : Retour a SwiftShader qui est stable, avec ajout de `--disable-gpu-vsync` et `--disable-frame-rate-limit` pour ameliorer la fluidite
-  - **Flags Pi 5** : `--disable-gpu-compositing --use-gl=angle --use-angle=swiftshader --disable-gpu-vsync --disable-frame-rate-limit`
-  - **Flags communs ajoutes** (Pi 4 et Pi 5) : `--disable-dev-shm-usage --disable-checker-imaging`
-  - **Note importante** : Le Pi 5 a supprime le decodeur H.264 hardware -- seul H.265/HEVC est accelere. SwiftShader reste la seule option stable pour le compositing sur VideoCore VII.
+  - **Note** : SwiftShader s'est avéré trop lent pour la vidéo 1080p → corrigé en v3.7.3
   - **Fichier modifie** : `raspberry/scripts/kiosk-watchdog.sh`
-  - **Migration Pi 5 existants** :
-    ```bash
-    scp raspberry/scripts/kiosk-watchdog.sh pi@<IP>:/home/pi/neopro/scripts/
-    ssh pi@<IP> 'sudo systemctl restart neopro-kiosk'
-    ```
 
 ### v3.7.1 (Février 2026)
 
@@ -3380,15 +3392,18 @@ vcgencmd get_mem gpu
     - `central-dashboard/src/app/core/interceptors/error.interceptor.ts` - Suppression du code `isDraft404` devenu inutile
   - **Migration** : Rebuild et redéployer le dashboard + API
 
-- **Support Raspberry Pi 5 (SwiftShader)** : Rendu GPU stable pour le Pi 5 via SwiftShader
-  - **Problème** : Le Pi 5 utilise VideoCore VII qui cause des erreurs "SharedImageStub" toutes les ~5 secondes avec les flags GPU par défaut (y compris EGL natif)
-  - **Solution retenue** : SwiftShader (rendu logiciel CPU) -- seule option stable pour VideoCore VII
-  - **EGL teste et abandonne (v3.7.2)** : EGL natif + V4L2 a ete teste mais cause des erreurs SharedImageStub repetees, rendant la solution instable
-  - **Flags Chromium Pi 5** : `--disable-gpu-compositing --use-gl=angle --use-angle=swiftshader --disable-gpu-vsync --disable-frame-rate-limit`
-  - **Note** : Le Pi 5 n'a pas de decodeur H.264 hardware (supprime), seul H.265/HEVC est accelere. SwiftShader reste la seule option stable pour le compositing sur VideoCore VII.
-  - **Detection automatique** : Le script `kiosk-watchdog.sh` detecte le modele de Pi et applique les bons flags
-  - **Fichiers modifies** :
-    - `raspberry/scripts/kiosk-watchdog.sh` - Detection Pi 4 vs Pi 5, flags GPU adaptes
+- **Support Raspberry Pi 5 (driver V3D natif)** : Rendu GPU via le driver Mesa V3D pour le Pi 5
+  - **Problème** : Le Pi 5 utilise VideoCore VII, nécessitant une configuration Chromium adaptée
+  - **Solution finale (v3.7.3)** : Aucun flag GPU custom. Chromium utilise le driver V3D natif (Mesa) par défaut, identique au navigateur normal. Flags minimaux : `--ignore-gpu-blocklist --enable-gpu-rasterization`
+  - **Historique des tentatives** :
+    - SwiftShader (v2.27) : Rendu CPU, stable mais vidéos saccadées
+    - EGL natif + Vulkan (v3.7.1) : Erreurs SharedImageStub toutes les 5 secondes
+    - Retour SwiftShader + optimisations (v3.7.2) : Toujours trop lent
+    - **Suppression flags GPU (v3.7.3)** : ✅ Solution finale, vidéos fluides
+  - **Note** : Le Pi 5 n'a pas de décodeur H.264 hardware (supprimé), seul H.265/HEVC est accéléré. Le décodage vidéo reste en CPU (FFmpeg) mais le compositing V3D est rapide.
+  - **Détection automatique** : Le script `kiosk-watchdog.sh` détecte le modèle de Pi et applique les bons flags
+  - **Fichiers modifiés** :
+    - `raspberry/scripts/kiosk-watchdog.sh` - Détection Pi 4 vs Pi 5, flags GPU adaptés
     - `docs/guides/TROUBLESHOOTING.md` - Section Pi 5
   - **Migration Pi 5 existants** : Copier le nouveau `kiosk-watchdog.sh` et `sudo systemctl restart neopro-kiosk`
 
