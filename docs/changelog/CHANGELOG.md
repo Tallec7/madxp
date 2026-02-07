@@ -1,3 +1,9 @@
+## [3.7.9](https://github.com/Tallec7/neopro/compare/v3.7.8...v3.7.9) (2026-02-07)
+
+### Bug Fixes
+
+- **tv:** pre-capture last frame to fix black flash on Chromium/Pi ([8f63512](https://github.com/Tallec7/neopro/commit/8f635127b8266c366bafff36bde8ad80e7ec026c))
+
 ## [3.7.8](https://github.com/Tallec7/neopro/compare/v3.7.7...v3.7.8) (2026-02-07)
 
 ### Bug Fixes
