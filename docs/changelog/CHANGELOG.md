@@ -1,3 +1,9 @@
+## [3.7.11](https://github.com/Tallec7/neopro/compare/v3.7.10...v3.7.11) (2026-02-07)
+
+### Bug Fixes
+
+- **tv:** fix black/white flash between videos on Chromium/Pi ([ed32681](https://github.com/Tallec7/neopro/commit/ed3268128f56d6a837d09ae12c448918cfd53a8e))
+
 ## [3.7.10](https://github.com/Tallec7/neopro/compare/v3.7.9...v3.7.10) (2026-02-07)
 
 ### Bug Fixes
