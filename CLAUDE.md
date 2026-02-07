@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 3.7.1 | **Dernière mise à jour**: 2026-02-06
+**Version**: 3.7.8 | **Dernière mise à jour**: 2026-02-07
 
 ---
 
@@ -933,6 +933,7 @@ Sur Chromium/Pi avec décodeur vidéo matériel (VideoCore), le frame buffer est
 ```
 Pendant la lecture:
   setInterval(500ms) → captureLastFrame() → canvas (invisible, hasValidLastFrame=true)
+  hasValidLastFrame reste true entre les transitions (pas de reset dans hideFreezeFrame)
 
 À la fin de la vidéo (ended):
   1. captureAndShowFreezeFrame()
@@ -940,19 +941,20 @@ Pendant la lecture:
      └── hasValidLastFrame=false → showBlackOverlay() (z-index 5, fallback)
   2. preloadOnInactivePlayer() → charge la vidéo suivante
   3. switchPlayers() :
-     a. Rend le nouveau player visible (opacity 1, z-index 2)
+     a. Rend le nouveau player visible (opacity 1, z-index 2 — AU-DESSUS de l'ancien à z-index 1)
      b. Lance play()
-     c. Attend 2×rAF + 100ms (GPU a le temps de rendre la première frame)
-     d. Cache l'ancien player + freeze-frame + black overlay
+     c. Attend 2×rAF + 150ms (GPU a le temps de rendre la première frame)
+     d. Cache l'ancien player (z-index 0) + freeze-frame + black overlay
+     e. Ramène le nouveau player à z-index 1 (état normal)
 ```
 
-**Stratégie pour les vidéos manuelles** :
+**Stratégie pour les vidéos manuelles (v3.7.8+)** :
 
 1. Capturer le freeze-frame (z-index 20, image de la vidéo en cours)
 2. Afficher le black overlay (z-index 5, bloque physiquement la boucle)
-3. Charger la vidéo manuelle sur le player manuel (z-index 10)
+3. Charger la vidéo manuelle sur le player manuel (z-index 10, **opacity 0**)
 4. Attendre `canplaythrough` puis jouer
-5. Après 200ms, cacher le freeze-frame (vidéo manuelle visible)
+5. Après play() + 2×rAF + 200ms : rendre le player visible (opacity 1) PUIS cacher freeze-frame
 6. À la fin : cacher player manuel + black overlay → boucle visible
 
 **Stratégie pour les changements de phase** :
@@ -2137,18 +2139,26 @@ vcgencmd get_mem gpu
 
 ### v3.7.8 (Février 2026)
 
-- **Fix flash noir entre vidéos de boucle sur Chromium/Pi** : Élimination des flashs noirs lors des transitions entre vidéos dans la boucle de sponsors
-  - **Problème** : Un écran noir apparaissait brièvement (~200-500ms) entre chaque vidéo de la boucle sur la TV (Chromium kiosk sur Raspberry Pi). Le problème n'était pas visible sur un navigateur desktop.
-  - **Cause racine (commit 1)** : Aucun mécanisme de freeze-frame n'était utilisé lors des transitions de boucle. L'ancien player devenait invisible avant que le nouveau soit prêt, exposant le fond noir.
-  - **Fix initial (v3.7.7)** : Ajout d'un freeze-frame canvas capturé dans `onVideoEnded()` pour couvrir la transition. Fonctionnait sur desktop mais **pas sur Chromium/Pi**.
-  - **Cause racine (commit 2)** : Sur Chromium avec décodeur vidéo matériel (VideoCore), le frame buffer est **libéré immédiatement** lors de l'événement `ended`. Un `drawImage()` dans le handler `ended` capture un écran noir au lieu de la dernière image visible.
-  - **Solution finale** : Système de **pré-capture périodique** toutes les 500ms pendant la lecture
-    - `startLastFrameCapture()` : Démarre un `setInterval(500ms)` qui capture silencieusement le frame courant sur le canvas
-    - Le flag `hasValidLastFrame` indique si un frame valide est disponible
-    - `captureAndShowFreezeFrame()` : Utilise le frame pré-capturé en priorité, fallback sur capture live (desktop)
-    - Si aucun frame disponible : fallback sur le black overlay (z-index 5)
-    - `switchPlayers()` : Attend 2×`requestAnimationFrame` + 100ms avant de cacher le freeze-frame
-  - **Résultat** : Transitions sans flash noir sur Chromium/Pi ET navigateur desktop
+- **Fix flash noir/blanc entre vidéos sur Chromium/Pi** : Élimination des flashs noirs (boucle) et blancs (vidéo manuelle) lors des transitions
+  - **Problème** : Un écran noir apparaissait brièvement (~200-500ms) entre chaque vidéo de la boucle, et un flash blanc apparaissait au lancement d'une vidéo manuelle sur la TV (Chromium kiosk sur Raspberry Pi).
+  - **Cause racine flash noir (boucle)** :
+    - (commit 1) Aucun mécanisme de freeze-frame n'était utilisé lors des transitions de boucle
+    - (commit 2) Sur Chromium/Pi, le frame buffer est **libéré à `ended`** → capture noir
+    - (commit 3) `setPlayerVisible()` mettait les deux players au même z-index (`1`) pendant la transition, et `hideFreezeFrame()` invalidait le flag `hasValidLastFrame` créant un gap sans frame valide
+  - **Cause racine flash blanc (vidéo manuelle)** :
+    - Le player manuel était rendu visible (opacity 1) **avant** que la vidéo soit chargée et prête à jouer. Le `<video>` sans source affiche un fond blanc/transparent sur Chromium/Pi.
+  - **Solution flash noir** :
+    - `setPlayerVisible()` : z-index `2` pour le nouveau player (au-dessus de l'ancien à `1`) pendant la transition, ramené à `1` après
+    - `hideFreezeFrame()` : ne reset plus `hasValidLastFrame` — la capture périodique continue de fournir des frames valides sans interruption
+    - `switchPlayers()` : délai augmenté de 100ms à 150ms pour le décodeur V3D
+  - **Solution flash blanc** :
+    - `play()` (vidéo manuelle) : le player reste à opacity `0` pendant le chargement
+    - Après `play()` + 2×`requestAnimationFrame` + 200ms, le player est rendu visible puis le freeze-frame est caché
+    - Le freeze-frame + black overlay masquent tout pendant le chargement
+  - **Pré-capture périodique** (inchangé depuis v3.7.7) :
+    - `startLastFrameCapture()` : Capture le frame courant toutes les 500ms
+    - `captureAndShowFreezeFrame()` : Utilise le frame pré-capturé, fallback sur capture live ou black overlay
+  - **Résultat** : Transitions sans flash noir NI blanc sur Chromium/Pi ET navigateur desktop
   - **Fichier modifié** : `raspberry/src/app/components/tv/tv.component.ts`
   - **Migration Pi existants** :
     ```bash

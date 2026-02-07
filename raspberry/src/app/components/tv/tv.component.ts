@@ -625,8 +625,10 @@ export class TvComponent implements OnInit, OnDestroy {
     // ÉTAPE 2: Afficher le black overlay pour bloquer la boucle
     this.showBlackOverlay();
 
-    // ÉTAPE 3: Rendre le player manuel opaque (sous le canvas mais au-dessus du black overlay)
-    targetPlayer.style.opacity = '1';
+    // ÉTAPE 3: Garder le player manuel INVISIBLE pendant le chargement
+    // Le freeze-frame (z-index 20) et le black overlay (z-index 5) masquent tout
+    // On ne rend le player visible qu'après play() pour éviter le flash blanc
+    targetPlayer.style.opacity = '0';
     targetPlayer.style.zIndex = '10';
 
     // ÉTAPE 4: Configurer la source (le canvas masque tout)
@@ -635,35 +637,43 @@ export class TvComponent implements OnInit, OnDestroy {
 
     let switchDone = false;
 
-    // ÉTAPE 5: Quand la vidéo est prête, la jouer puis attendre avant de cacher le canvas
+    // ÉTAPE 5: Quand la vidéo est prête, la jouer puis rendre visible
     const doSwitch = () => {
       if (switchDone) return;
       switchDone = true;
 
       targetPlayer.play().then(() => {
-        // IMPORTANT: Attendre 200ms APRÈS play() pour que le décodeur
+        // IMPORTANT: Attendre 2×rAF + 200ms APRÈS play() pour que le décodeur
         // ait vraiment affiché le premier frame sur le Pi
-        setTimeout(() => {
-          // Cacher le freeze-frame (la vidéo manuelle est visible maintenant)
-          this.hideFreezeFrame();
-          // NOTE: On garde le black overlay visible pendant toute la lecture
-          // pour éviter que la boucle transparaisse si la vidéo a des zones transparentes
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              // D'abord rendre le player manuel visible (il a maintenant un frame affiché)
+              targetPlayer.style.opacity = '1';
 
-          this.isManualMode = true;
-          this.activeManualPlayer = 'A';
+              // Puis cacher le freeze-frame (le player manuel est visible en dessous)
+              this.hideFreezeFrame();
+              // NOTE: On garde le black overlay visible pendant toute la lecture
+              // pour éviter que la boucle transparaisse si la vidéo a des zones transparentes
 
-          // Tracker
-          this.analyticsService.trackVideoStart(video, 'manual');
-          if (isSponsor) {
-            this.sponsorAnalytics.trackSponsorStart(video, 'manual', targetPlayer.duration || 0);
-          }
+              this.isManualMode = true;
+              this.activeManualPlayer = 'A';
 
-          console.log('tv player : manual video playing, freeze frame hidden');
-        }, 200); // 200ms de délai pour le décodeur Pi (augmenté pour plus de sécurité)
+              // Tracker
+              this.analyticsService.trackVideoStart(video, 'manual');
+              if (isSponsor) {
+                this.sponsorAnalytics.trackSponsorStart(video, 'manual', targetPlayer.duration || 0);
+              }
+
+              console.log('tv player : manual video playing, freeze frame hidden');
+            }, 200); // 200ms de délai pour le décodeur Pi
+          });
+        });
       }).catch(err => {
         console.error('tv player : error playing manual video', err);
         this.hideFreezeFrame();
         this.hideBlackOverlay();
+        targetPlayer.style.opacity = '0';
       });
     };
 
@@ -1284,10 +1294,11 @@ export class TvComponent implements OnInit, OnDestroy {
 
   /**
    * Rend un player visible ou invisible via styles inline
+   * @param zIndex optionnel: z-index à appliquer (défaut: 2 si visible, 0 si caché)
    */
-  private setPlayerVisible(player: HTMLVideoElement, visible: boolean): void {
+  private setPlayerVisible(player: HTMLVideoElement, visible: boolean, zIndex?: number): void {
     player.style.opacity = visible ? '1' : '0';
-    player.style.zIndex = visible ? '1' : '0';
+    player.style.zIndex = String(zIndex ?? (visible ? '2' : '0'));
   }
 
   /**
@@ -1512,21 +1523,27 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Fonction pour effectuer le switch une fois que la vidéo est prête
     const doSwitch = () => {
-      // Rendre le nouveau player visible AVANT play() pour qu'il soit prêt
-      // Le freeze-frame (z-index 20) masque tout, donc pas de flash
-      this.setPlayerVisible(newPlayer, true);
+      // Rendre le nouveau player visible avec z-index 2 (au-dessus de l'ancien à z-index 1)
+      // Le freeze-frame (z-index 20) masque tout, donc pas de flash visible
+      this.setPlayerVisible(newPlayer, true, 2);
 
       // Démarrer la vidéo préchargée
       newPlayer.play().then(() => {
         // Attendre que le premier frame soit réellement affiché sur le Pi
-        // 2x requestAnimationFrame + 100ms pour le décodeur hardware
+        // 2x requestAnimationFrame + 150ms pour le décodeur hardware
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             setTimeout(() => {
-              // Cacher l'ancien player, le freeze-frame et le black overlay (fallback)
-              this.setPlayerVisible(oldPlayer, false);
+              // D'abord cacher l'ancien player (en dessous, à z-index 0)
+              this.setPlayerVisible(oldPlayer, false, 0);
+
+              // Puis cacher le freeze-frame et le black overlay
+              // Le nouveau player (z-index 2, opacity 1) est déjà visible
               this.hideFreezeFrame();
               this.hideBlackOverlay();
+
+              // Ramener le nouveau player au z-index standard (1) une fois l'ancien caché
+              newPlayer.style.zIndex = '1';
 
               // Mettre à jour l'état
               this.activePlayer = this.activePlayer === 'A' ? 'B' : 'A';
@@ -1553,7 +1570,7 @@ export class TvComponent implements OnInit, OnDestroy {
               // Cela évite de décoder 2 vidéos en parallèle
               this.pendingSwitch = false;
               this.switchTriggered = false; // Reset pour le prochain cycle
-            }, 100); // 100ms pour le décodeur hardware du Pi
+            }, 150); // 150ms pour le décodeur hardware du Pi (augmenté pour V3D)
           });
         });
       }).catch(err => {
@@ -1809,17 +1826,19 @@ export class TvComponent implements OnInit, OnDestroy {
 
   /**
    * Cache le canvas freeze-frame
-   * Note: on ne clearRect() PAS ici car la capture périodique va remplir
-   * le canvas avec le prochain frame valide. Le clearRect est fait
-   * uniquement dans performPreventiveMemoryCleanup() toutes les 30min.
+   * Note: on ne clearRect() PAS et on ne reset PAS hasValidLastFrame ici
+   * car la capture périodique continue de remplir le canvas avec des frames
+   * valides de la vidéo en cours. Le canvas reste disponible pour la prochaine
+   * transition. Le clearRect est fait uniquement dans performPreventiveMemoryCleanup().
    */
   private hideFreezeFrame(): void {
     if (this.freezeCanvas && this.freezeCtx) {
       this.freezeCanvas.style.opacity = '0';
       this.freezeCanvas.style.display = 'none';
       this.freezeCanvas.style.zIndex = '20';
-      // Marquer le frame comme invalide - la capture périodique le renouvellera
-      this.hasValidLastFrame = false;
+      // NE PAS reset hasValidLastFrame - la capture périodique continue
+      // et le canvas contient toujours un frame valide de la vidéo précédente
+      // La prochaine capture le mettra à jour avec la nouvelle vidéo
       console.log('[TV] Freeze frame hidden');
     }
   }
@@ -2070,6 +2089,7 @@ export class TvComponent implements OnInit, OnDestroy {
     // Nettoyer le canvas freeze-frame (libère ~4.5MB)
     if (this.freezeCtx && this.freezeCanvas) {
       this.freezeCtx.clearRect(0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
+      this.hasValidLastFrame = false; // La prochaine capture périodique le remplira
     }
 
     // Nettoyer le player inactif (libère les buffers vidéo)
