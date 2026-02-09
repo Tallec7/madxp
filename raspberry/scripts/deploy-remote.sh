@@ -282,8 +282,9 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Si le nouveau code crashe, le guardian pourra restaurer cette version
     if [ -d ${RASPBERRY_DIR}/sync-agent/src ] && [ ! -d ${RASPBERRY_DIR}/sync-agent-golden ]; then
         echo 'Création du golden snapshot sync-agent (filet de sécurité)...'
-        cp -r ${RASPBERRY_DIR}/sync-agent ${RASPBERRY_DIR}/sync-agent-golden
-        date -Iseconds > ${RASPBERRY_DIR}/sync-agent-golden/.golden-created
+        sudo cp -r ${RASPBERRY_DIR}/sync-agent ${RASPBERRY_DIR}/sync-agent-golden
+        sudo sh -c \"date -Iseconds > ${RASPBERRY_DIR}/sync-agent-golden/.golden-created\"
+        sudo chown -R pi:pi ${RASPBERRY_DIR}/sync-agent-golden
         echo '✓ Golden snapshot créé'
     fi
 
