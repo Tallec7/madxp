@@ -43,10 +43,6 @@ cd central-server && npm run db:migrate
 - Push directement sur `main` sans PR
 - Requêtes SQL non paramétrées (`'${email}'` → injection SQL)
 
-## Client critique
-
-**NLF** — Voir `docs/clients/NLF.md` : Mesh WiFi (3+ APs), ne JAMAIS lock BSSID, tester avant déploiement.
-
 ## Architecture détaillée
 
 - Vue système : `docs/technical/ARCHITECTURE.md`
@@ -55,19 +51,6 @@ cd central-server && npm run db:migrate
 - Schéma DB : `central-server/src/scripts/full-schema.sql`
 - Troubleshooting : `docs/TROUBLESHOOTING.md`
 - Onboarding : `docs/01-START-HERE.md`
+- Client critique NLF : `docs/clients/NLF.md`
 
-## Règles contextuelles (.claude/rules/)
-
-Les règles détaillées par domaine sont dans `.claude/rules/` et se chargent automatiquement selon les fichiers édités :
-
-| Fichier | Contenu |
-|---------|---------|
-| `context.md` | Contexte métier, stack, rôles |
-| `api-routes.md` | Endpoints API, rate limiting |
-| `services.md` | Services critiques, protocole Socket.IO |
-| `code-patterns.md` | Patterns Express/Angular, conventions |
-| `database.md` | Schéma DB, RLS, rétention données |
-| `security.md` | OWASP, validation, audit |
-| `raspberry.md` | Architecture Pi, sync-agent, kiosk |
-| `raspberry-tv.md` | Double-buffer vidéo, freeze-frame |
-| `network.md` | Résilience réseau, profils, watchdog |
+Les règles détaillées par domaine sont dans `.claude/rules/` et se chargent automatiquement selon les fichiers édités.

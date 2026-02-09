@@ -40,15 +40,6 @@
 | Agency | Gère plusieurs advertisers |
 | Club Staff | Utilise la télécommande locale |
 
-## Glossaire essentiel
+## Glossaire
 
-Voir `docs/GLOSSARY.md` pour le glossaire complet.
-
-Termes les plus importants :
-- **Site** : Un club sportif équipé d'un Raspberry Pi + TV
-- **Boîtier** : Le Raspberry Pi physique installé dans un club
-- **Déploiement** : Envoi d'une vidéo du cloud vers un ou plusieurs Pi
-- **Heartbeat** : Signal envoyé toutes les 30s par le Pi au cloud
-- **Phase de match** : Moment du match (neutral/before/during/after)
-- **wlan0** : WiFi intégré du Pi → Hotspot pour /remote et admin :8080
-- **wlan1** : Dongle USB WiFi → Connexion Internet vers le cloud
+Voir `docs/GLOSSARY.md` pour le glossaire complet (termes métier, techniques, rôles).
