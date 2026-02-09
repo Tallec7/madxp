@@ -28,9 +28,10 @@ const execAsync = util.promisify(exec);
 const HOTSPOT_CHECK_INTERVAL = 30 * 1000; // 30 secondes
 const INTERNET_CHECK_INTERVAL = 60 * 1000; // 60 secondes
 const CLOUD_CHECK_INTERVAL = 30 * 1000; // 30 secondes
-const MAX_RECOVERY_ATTEMPTS = 3;
+const MAX_RECOVERY_ATTEMPTS = 5; // Increased from 3 to support aggressive phases
 const RECOVERY_COOLDOWN = 5 * 60 * 1000; // 5 minutes
 const ROLLBACK_TIMEOUT = 30 * 1000; // 30 secondes pour rollback
+const GRACE_PERIOD_DURATION = 60 * 1000; // 60s grace period after network operations
 
 // Interfaces
 const HOTSPOT_INTERFACE = 'wlan0';
@@ -44,6 +45,7 @@ const state = {
     recoveryAttempts: 0,
     lastRecoveryTime: 0,
     issues: [],
+    gracePeriodUntil: 0, // Timestamp until which checks are skipped
   },
   internet: {
     healthy: true,
@@ -54,6 +56,7 @@ const state = {
     ipAddress: null,
     gateway: null,
     connectionType: null, // 'ethernet' or 'wifi'
+    gracePeriodUntil: 0, // Timestamp until which checks are skipped
   },
   cloud: {
     healthy: true,
@@ -370,6 +373,30 @@ function canAttemptRecovery(type) {
 }
 
 /**
+ * Enable grace period for a subsystem (skip checks during network operations)
+ * Called by SafeNetworkOperations.autoOptimize() or after wpa_cli reconfigure
+ */
+function enableGracePeriod(type, durationMs = GRACE_PERIOD_DURATION) {
+  const stateObj = state[type];
+  if (stateObj) {
+    stateObj.gracePeriodUntil = Date.now() + durationMs;
+    logger.info('NetworkWatchdog: Grace period enabled', {
+      type,
+      durationMs,
+      until: new Date(stateObj.gracePeriodUntil).toISOString()
+    });
+  }
+}
+
+/**
+ * Check if a subsystem is in grace period
+ */
+function isInGracePeriod(type) {
+  const stateObj = state[type];
+  return stateObj && Date.now() < stateObj.gracePeriodUntil;
+}
+
+/**
  * Tente la récupération du hotspot
  */
 async function attemptHotspotRecovery() {
@@ -428,30 +455,91 @@ async function attemptHotspotRecovery() {
 // =============================================================================
 
 /**
- * Tente la récupération de la connexion internet
+ * Tente la récupération de la connexion internet avec phases progressives.
+ *
+ * Phase 1 (attempts 1-2): Gentle - wpa_cli reconfigure + dhclient
+ * Phase 2 (attempt 3): Medium - interface down/up cycle
+ * Phase 3 (attempt 4): Aggressive - wpa_supplicant restart
+ * Phase 4 (attempt 5): Nuclear - USB WiFi driver reload (modprobe)
  */
 async function attemptInternetRecovery() {
   state.internet.recoveryAttempts++;
   state.internet.lastRecoveryTime = Date.now();
 
+  const attempt = state.internet.recoveryAttempts;
+
   logger.warn('NetworkWatchdog: Tentative récupération internet', {
-    attempt: state.internet.recoveryAttempts,
+    attempt,
     maxAttempts: MAX_RECOVERY_ATTEMPTS,
+    phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : 'nuclear',
   });
 
   try {
-    // Étape 1: Reconfigurer wpa_supplicant
-    await execAsync('sudo wpa_cli -i wlan1 reconfigure 2>/dev/null || true');
-    await sleep(5000);
+    if (attempt <= 2) {
+      // Phase 1: Gentle - wpa_cli reconfigure + dhclient
+      await execAsync('sudo wpa_cli -i wlan1 reconfigure 2>/dev/null || true');
+      await sleep(5000);
 
-    // Vérifier si on a une IP
-    let ip = await getInternetIp();
-    if (!ip) {
-      // Étape 2: Forcer DHCP
-      logger.info('NetworkWatchdog: Pas d\'IP, tentative DHCP...');
+      let ip = await getInternetIp();
+      if (!ip) {
+        logger.info('NetworkWatchdog: Pas d\'IP, tentative DHCP...');
+        await execAsync('sudo dhclient wlan1 2>/dev/null || true');
+        await sleep(3000);
+      }
+
+    } else if (attempt === 3) {
+      // Phase 2: Medium - interface down/up cycle
+      logger.warn('NetworkWatchdog: Phase 2 - interface down/up cycle');
+      await execAsync('sudo ip link set wlan1 down 2>/dev/null || true');
+      await sleep(2000);
+      await execAsync('sudo ip link set wlan1 up 2>/dev/null || true');
+      await sleep(5000);
+      // Reconnect
+      await execAsync('sudo wpa_cli -i wlan1 reconfigure 2>/dev/null || true');
+      await sleep(5000);
       await execAsync('sudo dhclient wlan1 2>/dev/null || true');
       await sleep(3000);
-      ip = await getInternetIp();
+
+    } else if (attempt === 4) {
+      // Phase 3: Aggressive - kill and restart wpa_supplicant
+      logger.warn('NetworkWatchdog: Phase 3 - wpa_supplicant restart');
+      await execAsync('sudo killall wpa_supplicant 2>/dev/null || true');
+      await sleep(2000);
+      await execAsync('sudo wpa_supplicant -B -i wlan1 -c /etc/wpa_supplicant/wpa_supplicant-wlan1.conf 2>/dev/null || true');
+      await sleep(5000);
+      await execAsync('sudo dhclient wlan1 2>/dev/null || true');
+      await sleep(3000);
+
+    } else {
+      // Phase 4: Nuclear - USB WiFi driver reload
+      // Detect the driver module used by wlan1
+      logger.warn('NetworkWatchdog: Phase 4 - USB WiFi driver reload (modprobe)');
+      const driverResult = await execAsync(
+        'readlink /sys/class/net/wlan1/device/driver 2>/dev/null | xargs basename 2>/dev/null || echo ""'
+      ).catch(() => ({ stdout: '' }));
+      const driverModule = driverResult.stdout.trim();
+
+      if (driverModule) {
+        logger.warn('NetworkWatchdog: Reloading USB WiFi driver module', { module: driverModule });
+        await execAsync(`sudo modprobe -r ${driverModule} 2>/dev/null || true`);
+        await sleep(3000);
+        await execAsync(`sudo modprobe ${driverModule} 2>/dev/null || true`);
+        await sleep(5000);
+        // Wait for interface to reappear
+        await execAsync('sudo wpa_supplicant -B -i wlan1 -c /etc/wpa_supplicant/wpa_supplicant-wlan1.conf 2>/dev/null || true');
+        await sleep(5000);
+        await execAsync('sudo dhclient wlan1 2>/dev/null || true');
+        await sleep(3000);
+      } else {
+        logger.error('NetworkWatchdog: Cannot detect USB WiFi driver module, skipping modprobe');
+        // Fallback: try interface down/up
+        await execAsync('sudo ip link set wlan1 down 2>/dev/null || true');
+        await sleep(2000);
+        await execAsync('sudo ip link set wlan1 up 2>/dev/null || true');
+        await sleep(5000);
+        await execAsync('sudo wpa_cli -i wlan1 reconfigure 2>/dev/null || true');
+        await sleep(3000);
+      }
     }
 
     // Vérification finale
@@ -460,22 +548,25 @@ async function attemptInternetRecovery() {
       logger.info('NetworkWatchdog: Internet récupéré avec succès', {
         ip: health.ipAddress,
         gateway: health.gateway,
+        phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : 'nuclear',
       });
       state.internet.recoveryAttempts = 0;
       state.internet.healthy = true;
       state.internet.issues = [];
       state.internet.ipAddress = health.ipAddress;
       state.internet.gateway = health.gateway;
-      return { success: true };
+      return { success: true, phase: attempt };
     } else {
       logger.error('NetworkWatchdog: Récupération internet échouée', {
         issues: health.issues,
+        phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : 'nuclear',
       });
-      return { success: false, issues: health.issues };
+      return { success: false, issues: health.issues, phase: attempt };
     }
   } catch (error) {
     logger.error('NetworkWatchdog: Erreur lors de la récupération internet', {
       error: error.message,
+      attempt,
     });
     return { success: false, error: error.message };
   }
@@ -617,6 +708,12 @@ function confirmOperation() {
  */
 async function hotspotWatchLoop() {
   try {
+    // Skip check during grace period (e.g. after network operations)
+    if (isInGracePeriod('hotspot')) {
+      logger.info('NetworkWatchdog: Hotspot check skipped (grace period)');
+      return;
+    }
+
     const health = await checkHotspotHealth();
     state.hotspot.lastCheck = Date.now();
     state.hotspot.healthy = health.healthy;
@@ -660,6 +757,12 @@ async function hotspotWatchLoop() {
  */
 async function internetWatchLoop() {
   try {
+    // Skip check during grace period (e.g. after auto-optimize / wpa_cli reconfigure)
+    if (isInGracePeriod('internet')) {
+      logger.info('NetworkWatchdog: Internet check skipped (grace period)');
+      return;
+    }
+
     const health = await checkInternetHealth();
     state.internet.lastCheck = Date.now();
     state.internet.healthy = health.healthy;
@@ -847,6 +950,10 @@ module.exports = {
   // Recovery
   attemptHotspotRecovery,
   attemptInternetRecovery,
+
+  // Grace period
+  enableGracePeriod,
+  isInGracePeriod,
 
   // Rollback
   saveRollbackPoint,

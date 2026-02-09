@@ -218,11 +218,25 @@ SharedImageManager::ProduceSkia: non-existent mailbox
 
 Ces erreurs se répètent toutes les ~5 secondes pendant la lecture vidéo.
 
-### Analyse
+### Analyse approfondie
 
-Per CLAUDE.md v3.7.3 : ces erreurs "SharedImageStub" sont caractéristiques de flags GPU incorrects sur Pi 5. Le fix était de supprimer tous les flags GPU custom (SwiftShader, EGL, ANGLE) et laisser Chromium utiliser le driver V3D Mesa natif.
+Le code dans le repo (`raspberry/scripts/kiosk-watchdog.sh`) est **correct** depuis v3.7.3 : le Pi 5 est détecté via `/proc/device-tree/model` et seuls les flags minimaux `--ignore-gpu-blocklist --enable-gpu-rasterization` sont utilisés (pas de SwiftShader/EGL/ANGLE). Le driver V3D Mesa natif est utilisé par défaut.
 
-Le Pi est en v3.7.13.1, mais le `kiosk-watchdog.sh` déployé pourrait être une version antérieure au fix v3.7.3. Le kiosk a été redémarré manuellement via l'admin panel à 16:01:18 et les erreurs apparaissent immédiatement après (16:04:41).
+**Diagnostic** : Le Pi NLF (v3.7.13.1) présente ces erreurs malgré le fix v3.7.3 disponible. Deux hypothèses :
+
+1. **Version déployée obsolète** : Le `kiosk-watchdog.sh` déployé sur ce Pi est une version antérieure au fix v3.7.3. C'est l'hypothèse la plus probable car les services manquants (hotspot-watchdog, sync-guardian) montrent que ce Pi n'a pas reçu toutes les mises à jour.
+
+2. **Cache GPU contaminé** : Même si le script est correct, un cache Chromium contenant des shaders compilés avec les anciens flags (EGL/SwiftShader) pourrait persister et causer des conflits avec le pipeline V3D natif. Le kiosk a été redémarré à 16:01:18 et les erreurs apparaissent immédiatement après (16:04:41).
+
+**Vérification immédiate** (Phase 1.3 du plan d'action) :
+```bash
+# Vérifier les flags GPU actuels du kiosk
+ssh pi@neopro.local 'ps aux | grep chromium | grep -v grep'
+# Si contient --use-gl, --use-angle, ou swiftshader → kiosk-watchdog.sh obsolète
+
+# Nettoyer le cache GPU
+ssh pi@neopro.local 'rm -rf /home/pi/.cache/chromium/'
+```
 
 ### Impact
 
@@ -334,53 +348,54 @@ ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
 ssh pi@neopro.local 'python3 -c "import json; print(len(json.load(open(\"/home/pi/neopro/data/analytics_buffer.json\"))))"'
 ```
 
-### Phase 2 — Corrections de code (cause racine)
+### Phase 2 — Corrections de code (cause racine) ✅ IMPLÉMENTÉ
 
 **Objectif** : éliminer la cascade de reconfigure qui plante la clé WiFi USB.
 
-#### 2.1 Debounce sur NetworkDetector.detect()
+#### 2.1 Debounce sur NetworkDetector.detect() ✅
 
 **Fichier** : `raspberry/sync-agent/src/services/network-detector.js`
 
-Ajouter un cooldown de 120 secondes : si `detect()` a été appelé il y a moins de 120s, retourner le profil en cache au lieu de relancer une détection complète. Cela élimine la double détection au boot et les 2 reconfigure redondants.
+**Implémenté** : Cooldown de 120 secondes (`DETECTION_COOLDOWN_MS`). Si `detect()` a été appelé il y a moins de 120s, retourne le profil en cache immédiatement. Élimine la double détection au boot (séparée de seulement 32s) et les 2 reconfigure redondants.
 
-#### 2.2 Grace period watchdog après auto-optimize
+#### 2.2 Grace period watchdog après auto-optimize ✅
 
 **Fichier** : `raspberry/sync-agent/src/services/network-watchdog.js`
 
-Après que `SafeNetworkOperations.autoOptimize()` exécute un `wpa_cli reconfigure`, notifier le watchdog de **suspendre ses checks internet pendant 30 secondes**. Cela élimine les recovery watchdog qui amplifient la coupure.
+**Implémenté** :
+- Nouvelle fonction `enableGracePeriod(type, durationMs)` qui suspend les checks pendant 60s
+- `SafeNetworkOperations.autoOptimize()` appelle `enableGracePeriod('internet', 60000)` **avant** tout `wpa_cli reconfigure`
+- `internetWatchLoop()` et `hotspotWatchLoop()` vérifient `isInGracePeriod()` et skip si actif
+- Élimine les recovery watchdog qui amplifiaient la coupure (reconfigure #2 et #4 dans les logs)
 
-#### 2.3 Écriture atomique du fichier wpa_supplicant
+#### 2.3 Écriture atomique du fichier wpa_supplicant ✅
 
 **Fichier** : `raspberry/sync-agent/src/services/safe-network-operations.js`
 
-Remplacer les deux `sed -i` successifs par une écriture atomique :
-1. Lire le fichier en mémoire
-2. Modifier (supprimer bgscan + ajouter bgscan)
-3. Écrire dans un fichier `.tmp`
-4. `mv .tmp` → fichier final (opération atomique)
-5. Puis `wpa_cli reconfigure`
+**Implémenté** : Nouvelle méthode `atomicWpaSupplicantEdit(configPath, modifyFn)` qui remplace les `sed -i` :
+1. `sudo cat` → lecture en mémoire
+2. `modifyFn(content)` → modification (supprime + ajoute en une passe)
+3. `sudo tee .tmp` → écriture fichier temporaire
+4. `sudo mv .tmp original` → rename atomique
+5. `sudo chmod 600` → permissions
+6. Puis un seul `wpa_cli reconfigure`
 
-Cela élimine la race condition où wpa_supplicant lit une config incohérente entre deux `sed`.
+Appliqué sur : `removeBssidLock()`, `setBssidLock()`, `configureBgscan()`. Élimine la race condition.
 
-#### 2.4 Recovery agressive dans le NetworkWatchdog
+#### 2.4 Recovery agressive dans le NetworkWatchdog ✅
 
 **Fichier** : `raspberry/sync-agent/src/services/network-watchdog.js`
 
-Après 2 échecs de `wpa_cli reconfigure`, passer en mode recovery agressive :
+**Implémenté** : 4 phases progressives dans `attemptInternetRecovery()` :
 
-```bash
-sudo killall dhclient                          # Tuer les dhclient zombies
-sudo wpa_cli -i wlan1 terminate                # Arrêter wpa_supplicant
-sudo ip link set wlan1 down                    # Désactiver l'interface
-sudo modprobe -r <driver>                      # Décharger le module driver
-sudo modprobe <driver>                         # Recharger le module driver
-sudo ip link set wlan1 up                      # Réactiver l'interface
-sudo systemctl restart wpa_supplicant@wlan1    # Redémarrer wpa_supplicant
-sudo dhclient wlan1                            # Obtenir une IP
-```
+| Phase | Attempts | Action | Risque |
+|-------|----------|--------|--------|
+| Gentle | 1-2 | `wpa_cli reconfigure` + `dhclient` | Bas |
+| Medium | 3 | `ip link set wlan1 down/up` | Moyen (coupure 10s) |
+| Aggressive | 4 | Kill + restart `wpa_supplicant` | Moyen-haut |
+| Nuclear | 5 | `modprobe -r` + `modprobe` du driver USB | Haut (alternative au reboot) |
 
-Cela donnerait une alternative au reboot complet quand la clé USB WiFi se bloque.
+La phase Nuclear détecte automatiquement le module driver via `/sys/class/net/wlan1/device/driver` et le recharge. `MAX_RECOVERY_ATTEMPTS` augmenté de 3 à 5 pour supporter les 4 phases.
 
 ### Phase 3 — Améliorations à considérer
 
