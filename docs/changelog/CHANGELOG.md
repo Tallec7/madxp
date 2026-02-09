@@ -1,3 +1,9 @@
+## [3.7.14](https://github.com/Tallec7/neopro/compare/v3.7.13...v3.7.14) (2026-02-09)
+
+### Bug Fixes
+
+- **rate-limit:** remove double rate limiting causing 429 on dashboard load ([449ebd5](https://github.com/Tallec7/neopro/commit/449ebd5a87b9764493109d39691274c2e2d30ea6))
+
 ## [3.7.13](https://github.com/Tallec7/neopro/compare/v3.7.12...v3.7.13) (2026-02-07)
 
 ### Bug Fixes
