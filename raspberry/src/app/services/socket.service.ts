@@ -61,6 +61,26 @@ export interface RequestState {
   // Empty interface - just a signal to request current state
 }
 
+export interface RecordingStateEvent {
+  isRecording: boolean;
+  isManualOverride: boolean;
+}
+
+export interface LoopState {
+  videoIndex: number;
+  videoPath: string;
+  videoStartedAt: number | null;
+  isManualMode: boolean;
+  manualVideoPath: string | null;
+  manualVideoStartedAt: number | null;
+  updatedAt: number;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface TvRegister {
+  // Empty interface - just a signal to register as TV instance
+}
+
 interface Socket {
   on<T>(event: string, callback: (data: T) => void): void;
   emit(event: string, data: unknown): void;
@@ -113,7 +133,7 @@ export class SocketService {
     }
   }
 
-  public emit(action: string, data: Command | MatchConfig | ScoreUpdate | PhaseChange | RequestState | TimerUpdate | BreakingNews | OptionsUpdate) {
+  public emit(action: string, data: Command | MatchConfig | ScoreUpdate | PhaseChange | RequestState | TimerUpdate | BreakingNews | OptionsUpdate | RecordingStateEvent | LoopState | TvRegister) {
     if (this.socket) {
       console.log('socket service : emit', action, data);
       this.socket.emit(action, data);

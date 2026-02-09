@@ -458,6 +458,49 @@ let currentTimer = {
 	countDown: true
 };
 
+// État d'enregistrement analytics (hybride : OFF au boot, ON sur phase match)
+let currentRecordingState = {
+	isRecording: false,
+	isManualOverride: false
+};
+
+// ============================================================================
+// TV LOOP STATE SYNCHRONIZATION (Master-Slave pour second écran)
+// ============================================================================
+const tvInstances = new Map(); // socketId -> { role: 'master'|'slave', connectedAt }
+let currentLoopState = {
+	videoIndex: 0,
+	videoPath: '',
+	videoStartedAt: null,
+	isManualMode: false,
+	manualVideoPath: null,
+	manualVideoStartedAt: null,
+	updatedAt: Date.now()
+};
+
+function getMasterId() {
+	for (const [socketId, info] of tvInstances) {
+		if (info.role === 'master') return socketId;
+	}
+	return null;
+}
+
+function promoteSlave() {
+	let oldestId = null;
+	let oldestTime = Infinity;
+	for (const [socketId, info] of tvInstances) {
+		if (info.role === 'slave' && info.connectedAt < oldestTime) {
+			oldestId = socketId;
+			oldestTime = info.connectedAt;
+		}
+	}
+	if (oldestId) {
+		tvInstances.get(oldestId).role = 'master';
+		io.to(oldestId).emit('tv-role-assigned', { role: 'master' });
+		console.log('[TV-Sync] Promoted', oldestId, 'to master');
+	}
+}
+
 // Gestion des connexions Socket.IO
 io.on('connection', (socket) => {
 	console.log('Client connecté:', socket.id);
@@ -465,6 +508,7 @@ io.on('connection', (socket) => {
 	// Envoyer l'état actuel au client qui vient de se connecter
 	socket.emit('score-update', currentScore);
 	socket.emit('phase-change', { phase: currentPhase });
+	socket.emit('recording-state', currentRecordingState);
 	if (currentOptions) {
 		socket.emit('options-update', currentOptions);
 	}
@@ -513,6 +557,7 @@ io.on('connection', (socket) => {
 		console.log('Request state reçu de:', socket.id);
 		socket.emit('score-update', currentScore);
 		socket.emit('phase-change', { phase: currentPhase });
+		socket.emit('recording-state', currentRecordingState);
 		if (currentOptions) {
 			socket.emit('options-update', currentOptions);
 		}
@@ -522,6 +567,53 @@ io.on('connection', (socket) => {
 				...currentTimer
 			});
 		}
+	});
+
+	// ========================================================================
+	// RECORDING STATE - Contrôle d'enregistrement analytics
+	// ========================================================================
+	socket.on('recording-state', (data) => {
+		console.log('[Recording] State update:', data);
+		currentRecordingState = {
+			isRecording: data.isRecording || false,
+			isManualOverride: data.isManualOverride || false
+		};
+		// Broadcast à tous les clients (TV + Remote)
+		io.emit('recording-state', currentRecordingState);
+	});
+
+	// ========================================================================
+	// TV LOOP SYNC - Synchronisation boucle vidéo (Master-Slave)
+	// ========================================================================
+
+	// Enregistrement d'une instance TV
+	socket.on('tv-register', () => {
+		const masterId = getMasterId();
+		if (!masterId) {
+			tvInstances.set(socket.id, { role: 'master', connectedAt: Date.now() });
+			socket.emit('tv-role-assigned', { role: 'master' });
+			console.log('[TV-Sync] Registered as master:', socket.id);
+		} else {
+			tvInstances.set(socket.id, { role: 'slave', connectedAt: Date.now() });
+			socket.emit('tv-role-assigned', { role: 'slave' });
+			// Envoyer l'état de boucle actuel au nouveau slave
+			socket.emit('tv-loop-state', currentLoopState);
+			console.log('[TV-Sync] Registered as slave:', socket.id);
+		}
+	});
+
+	// Mise à jour de l'état de boucle (seul le master peut update)
+	socket.on('tv-loop-update', (data) => {
+		const instance = tvInstances.get(socket.id);
+		if (!instance || instance.role !== 'master') return;
+
+		currentLoopState = {
+			...currentLoopState,
+			...data,
+			updatedAt: Date.now()
+		};
+		// Broadcast aux slaves uniquement (pas au master)
+		socket.broadcast.emit('tv-loop-state', currentLoopState);
 	});
 
 	// ========================================================================
@@ -605,6 +697,16 @@ io.on('connection', (socket) => {
 
 	socket.on('disconnect', () => {
 		console.log('Client déconnecté:', socket.id);
+
+		// TV Sync : gérer la déconnexion d'une instance TV
+		const tvInstance = tvInstances.get(socket.id);
+		if (tvInstance) {
+			tvInstances.delete(socket.id);
+			if (tvInstance.role === 'master') {
+				console.log('[TV-Sync] Master disconnected, promoting slave');
+				promoteSlave();
+			}
+		}
 	});
 });
 
