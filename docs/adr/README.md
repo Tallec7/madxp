@@ -19,6 +19,11 @@ Un ADR documente une décision technique importante avec :
 | [ADR-003](ADR-003-postgresql-supabase.md) | PostgreSQL + Supabase | Accepté | Oct 2024 |
 | [ADR-004](ADR-004-jwt-httponly-cookies.md) | JWT avec HttpOnly Cookies | Accepté | Nov 2024 |
 | [ADR-005](ADR-005-multitenant-rls.md) | Multi-tenant avec RLS | Accepté | Nov 2024 |
+| [ADR-006](ADR-006-subscription-license-system.md) | Système d'Abonnement et Licence Offline | Accepté | Jan 2026 |
+| [ADR-007](ADR-007-network-resilience-layers.md) | Résilience Réseau Multi-Couches | Accepté | Jan 2026 |
+| [ADR-008](ADR-008-double-buffer-video-pi.md) | Double-Buffer Vidéo avec Freeze-Frame | Accepté | Fév 2026 |
+| [ADR-009](ADR-009-predictive-alerts.md) | Alertes Prédictives Multi-Métriques | Accepté | Fév 2026 |
+| [ADR-010](ADR-010-analytics-ui-removal.md) | Suppression UI Analytics Dashboard | Accepté | Fév 2026 |
 
 ## Statuts
 
@@ -81,4 +86,4 @@ Un ADR documente une décision technique importante avec :
 
 ---
 
-*Dernière mise à jour : 9 janvier 2026*
+*Dernière mise à jour : 9 février 2026*
