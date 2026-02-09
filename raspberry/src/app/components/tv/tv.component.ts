@@ -5,7 +5,7 @@ import { Subscription } from 'rxjs';
 import videojs from 'video.js';
 import "videojs-playlist";
 import Player from 'video.js/dist/types/player';
-import { SocketService } from '../../services/socket.service';
+import { SocketService, LoopState } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { SponsorAnalyticsService } from '../../services/sponsor-analytics.service';
 import { LocalBroadcastService, ScoreUpdateEvent, PhaseChangeEvent, OptionsUpdateEvent, BreakingNewsEvent, TimerUpdateEvent } from '../../services/local-broadcast.service';
@@ -170,6 +170,10 @@ export class TvComponent implements OnInit, OnDestroy {
   // Black overlay pour bloquer la boucle
   private blackOverlay: HTMLDivElement;
 
+  // Master-Slave synchronisation (second écran via Socket.IO)
+  private tvRole: 'master' | 'slave' | null = null;
+  private isSlaveMode = false;
+
   public player: Player;
 
   public ngOnInit() {
@@ -254,19 +258,23 @@ export class TvComponent implements OnInit, OnDestroy {
     document.addEventListener('keydown', activateFullscreenAndUnmute, { once: true });
     document.addEventListener('touchstart', activateFullscreenAndUnmute, { once: true });
 
-    // Tracker les erreurs de lecture
+    // Tracker les erreurs de lecture (désactivé pour les slaves)
     this.player.on('error', (error: Event) => {
       console.error('tv player error', error);
       // Tracker l'erreur si une vidéo était en cours
-      const currentSrc = this.player.currentSrc();
-      if (currentSrc) {
-        this.analyticsService.trackVideoError({ name: 'unknown', path: currentSrc, type: 'video/mp4' }, error);
+      if (!this.isSlaveMode) {
+        const currentSrc = this.player.currentSrc();
+        if (currentSrc) {
+          this.analyticsService.trackVideoError({ name: 'unknown', path: currentSrc, type: 'video/mp4' }, error);
+        }
       }
       this.sponsors();
     });
 
     // Tracker le changement de vidéo dans la playlist (sponsors)
+    // Note: analytics désactivées pour les slaves (second écran)
     this.player.on('play', () => {
+      if (this.isSlaveMode) return;
       const currentSrc = this.player.currentSrc();
       console.log('[TV] Video play event:', { currentSrc, triggerType: this.lastTriggerType, phase: this.activePhase, loopCount: this.currentLoopVideos.length });
       if (currentSrc && this.lastTriggerType === 'auto') {
@@ -296,6 +304,7 @@ export class TvComponent implements OnInit, OnDestroy {
     });
 
     this.player.on('ended', () => {
+      if (this.isSlaveMode) return;
       // Pour les vidéos de la boucle, tracker la fin
       if (this.lastTriggerType === 'auto') {
         this.analyticsService.trackVideoEnd(true);
@@ -444,6 +453,38 @@ export class TvComponent implements OnInit, OnDestroy {
         this.handleTimerUpdate(timerEvent);
       })
     );
+
+    // =========================================================================
+    // MASTER-SLAVE TV SYNCHRONISATION
+    // Le kiosk est le master (premier connecté), les navigateurs sont des slaves
+    // Le master émet son état de boucle, les slaves se synchronisent
+    // =========================================================================
+
+    // S'enregistrer en tant qu'instance TV
+    this.socketService.emit('tv-register', {});
+
+    // Recevoir le rôle assigné par le serveur
+    this.socketService.on<{ role: 'master' | 'slave' }>('tv-role-assigned', (data) => {
+      this.ngZone.run(() => {
+        this.tvRole = data.role;
+        this.isSlaveMode = data.role === 'slave';
+        console.log(`[TV] Role assigned: ${data.role}`);
+
+        if (this.isSlaveMode) {
+          console.log('[TV] Running as SLAVE - analytics disabled, waiting for master state');
+        } else {
+          console.log('[TV] Running as MASTER - will emit loop state updates');
+        }
+      });
+    });
+
+    // Recevoir l'état de la boucle du master (slaves uniquement)
+    this.socketService.on<LoopState>('tv-loop-state', (state) => {
+      if (!this.isSlaveMode) return;
+      this.ngZone.run(() => {
+        this.handleMasterLoopState(state);
+      });
+    });
   }
 
   /**
@@ -578,8 +619,10 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   public ngOnDestroy() {
-    // Terminer la session analytics
-    this.analyticsService.endSession();
+    // Terminer la session analytics (désactivé pour les slaves)
+    if (!this.isSlaveMode) {
+      this.analyticsService.endSession();
+    }
 
     // Arrêter le timer local
     this.stopLocalTimer();
@@ -669,10 +712,25 @@ export class TvComponent implements OnInit, OnDestroy {
               // isManualMode déjà mis à true à l'ÉTAPE 0 (avant le chargement)
               this.activeManualPlayer = 'A';
 
-              // Tracker
-              this.analyticsService.trackVideoStart(video, 'manual');
-              if (isSponsor) {
-                this.sponsorAnalytics.trackSponsorStart(video, 'manual', targetPlayer.duration || 0);
+              // Tracker (désactivé pour les slaves)
+              if (!this.isSlaveMode) {
+                this.analyticsService.trackVideoStart(video, 'manual');
+                if (isSponsor) {
+                  this.sponsorAnalytics.trackSponsorStart(video, 'manual', targetPlayer.duration || 0);
+                }
+              }
+
+              // Émettre l'état si master (vidéo manuelle)
+              if (this.tvRole === 'master') {
+                this.socketService.emit('tv-loop-update', {
+                  videoIndex: this.currentLoopIndex,
+                  videoPath: this.currentLoopVideos[this.currentLoopIndex]?.path || '',
+                  videoStartedAt: null,
+                  isManualMode: true,
+                  manualVideoPath: video.path,
+                  manualVideoStartedAt: Date.now(),
+                  updatedAt: Date.now()
+                });
               }
 
               console.log('tv player : manual video playing, freeze frame hidden');
@@ -724,10 +782,12 @@ export class TvComponent implements OnInit, OnDestroy {
       console.log('tv player : manual video ended', video.path);
       targetPlayer.removeEventListener('ended', onManualEnded);
 
-      // Tracker la fin
-      this.analyticsService.trackVideoEnd(true);
-      if (isSponsor) {
-        this.sponsorAnalytics.trackSponsorEnd(true);
+      // Tracker la fin (désactivé pour les slaves)
+      if (!this.isSlaveMode) {
+        this.analyticsService.trackVideoEnd(true);
+        if (isSponsor) {
+          this.sponsorAnalytics.trackSponsorEnd(true);
+        }
       }
 
       // Cacher le player manuel
@@ -1427,13 +1487,20 @@ export class TvComponent implements OnInit, OnDestroy {
           // Incrémenter le compteur pour le cleanup mémoire
           this.incrementVideoPlayCount();
 
-          // Tracker
-          this.analyticsService.trackVideoStart(video, 'auto');
-          this.sponsorAnalytics.trackSponsorStart(
-            video,
-            'auto',
-            player.duration || 0
-          );
+          // Tracker (désactivé pour les slaves)
+          if (!this.isSlaveMode) {
+            this.analyticsService.trackVideoStart(video, 'auto');
+            this.sponsorAnalytics.trackSponsorStart(
+              video,
+              'auto',
+              player.duration || 0
+            );
+          }
+
+          // Émettre l'état de la boucle si master
+          if (this.tvRole === 'master') {
+            this.emitLoopState(videoIndex, video.path, false);
+          }
 
           console.log(`[TV] Now playing video ${videoIndex} on ${this.activePlayer}`);
 
@@ -1519,9 +1586,11 @@ export class TvComponent implements OnInit, OnDestroy {
     this.pendingSwitch = true;
 
     this.ngZone.run(() => {
-      // Tracker la fin de la vidéo actuelle
-      this.analyticsService.trackVideoEnd(true);
-      this.sponsorAnalytics.trackSponsorEnd(true);
+      // Tracker la fin de la vidéo actuelle (désactivé pour les slaves)
+      if (!this.isSlaveMode) {
+        this.analyticsService.trackVideoEnd(true);
+        this.sponsorAnalytics.trackSponsorEnd(true);
+      }
 
       const loopVideos = this.currentLoopVideos;
       const nextIndex = (this.currentLoopIndex + 1) % loopVideos.length;
@@ -1542,7 +1611,7 @@ export class TvComponent implements OnInit, OnDestroy {
    * pendant que le nouveau player charge et démarre.
    */
   private onVideoEnded(fromPlayer: 'A' | 'B'): void {
-    console.log(`[TV] onVideoEnded called from player ${fromPlayer}, isLoopMode=${this.isLoopMode}, activePlayer=${this.activePlayer}, isManualMode=${this.isManualMode}`);
+    console.log(`[TV] onVideoEnded called from player ${fromPlayer}, isLoopMode=${this.isLoopMode}, activePlayer=${this.activePlayer}, isManualMode=${this.isManualMode}, isSlaveMode=${this.isSlaveMode}`);
 
     // Ignorer si ce n'est pas le player actif ou si pas en mode boucle
     if (!this.isLoopMode || fromPlayer !== this.activePlayer) {
@@ -1555,6 +1624,14 @@ export class TvComponent implements OnInit, OnDestroy {
     // car ça pourrait cacher le freeze-frame/black overlay protégeant la vidéo manuelle
     if (this.isManualMode) {
       console.log('[TV] Ignoring ended event during manual mode');
+      return;
+    }
+
+    // En mode slave, afficher le freeze-frame et attendre le prochain état du master
+    // Le master va envoyer tv-loop-state quand sa propre vidéo change
+    if (this.isSlaveMode) {
+      console.log('[TV] Slave mode: showing freeze frame, waiting for master state');
+      this.captureAndShowFreezeFrame();
       return;
     }
 
@@ -1661,14 +1738,21 @@ export class TvComponent implements OnInit, OnDestroy {
               // Incrémenter le compteur pour le cleanup mémoire
               this.incrementVideoPlayCount();
 
-              // Tracker
+              // Tracker (désactivé pour les slaves)
               const video = this.currentLoopVideos[nextVideoIndex];
-              this.analyticsService.trackVideoStart(video, 'auto');
-              this.sponsorAnalytics.trackSponsorStart(
-                video,
-                'auto',
-                newPlayer.duration || 0
-              );
+              if (!this.isSlaveMode) {
+                this.analyticsService.trackVideoStart(video, 'auto');
+                this.sponsorAnalytics.trackSponsorStart(
+                  video,
+                  'auto',
+                  newPlayer.duration || 0
+                );
+              }
+
+              // Émettre l'état de la boucle si master
+              if (this.tvRole === 'master') {
+                this.emitLoopState(nextVideoIndex, video.path, false);
+              }
 
               console.log(`[TV] Switched to player ${this.activePlayer}, now playing index ${nextVideoIndex}`);
 
@@ -1786,8 +1870,15 @@ export class TvComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Tracker la fin de la vidéo manuelle (interrompue)
-    this.analyticsService.trackVideoEnd(false); // false = pas complétée
+    // Tracker la fin de la vidéo manuelle (interrompue) — désactivé pour les slaves
+    if (!this.isSlaveMode) {
+      this.analyticsService.trackVideoEnd(false); // false = pas complétée
+    }
+
+    // Émettre l'état si master (retour à la boucle)
+    if (this.tvRole === 'master') {
+      this.emitLoopState(this.currentLoopIndex, this.currentLoopVideos[this.currentLoopIndex]?.path || '', false);
+    }
 
     // NE PAS cacher le black overlay ici — l'appelant (switchToPhase) gère
     // les overlays après avoir capturé le freeze-frame. Cacher l'overlay ici
@@ -1797,6 +1888,122 @@ export class TvComponent implements OnInit, OnDestroy {
     // Sortir du mode manuel
     this.isManualMode = false;
     this.lastTriggerType = 'auto';
+  }
+
+  // ===========================================================================
+  // MASTER-SLAVE TV SYNCHRONISATION
+  // Le master émet son état, les slaves se synchronisent
+  // ===========================================================================
+
+  /**
+   * Émet l'état actuel de la boucle vers les slaves via Socket.IO
+   */
+  private emitLoopState(videoIndex: number, videoPath: string, isManualMode: boolean, manualVideoPath?: string): void {
+    const state: LoopState = {
+      videoIndex,
+      videoPath,
+      videoStartedAt: Date.now(),
+      isManualMode,
+      manualVideoPath: manualVideoPath || null,
+      manualVideoStartedAt: isManualMode ? Date.now() : null,
+      updatedAt: Date.now()
+    };
+
+    this.socketService.emit('tv-loop-update', state);
+    console.log('[TV] Master emitted loop state:', { videoIndex, videoPath, isManualMode });
+  }
+
+  /**
+   * Gère l'état de boucle reçu du master (slaves uniquement)
+   * Synchronise la vidéo en cours avec le master
+   */
+  private handleMasterLoopState(state: LoopState): void {
+    console.log('[TV] Slave received master state:', {
+      videoPath: state.videoPath,
+      videoIndex: state.videoIndex,
+      isManualMode: state.isManualMode,
+      manualVideoPath: state.manualVideoPath
+    });
+
+    // CAS 1: Le master joue une vidéo manuelle
+    if (state.isManualMode && state.manualVideoPath) {
+      // Si on n'est pas déjà en mode manuel ou si c'est une vidéo différente
+      const currentManualPlayer = this.getActiveManualPlayer();
+      const currentManualSrc = currentManualPlayer?.src || '';
+
+      if (!this.isManualMode || !currentManualSrc.includes(state.manualVideoPath)) {
+        console.log('[TV] Slave: master switched to manual video:', state.manualVideoPath);
+        // Jouer la vidéo manuelle comme le master
+        const video: Video = {
+          name: state.manualVideoPath.split('/').pop() || 'manual',
+          path: state.manualVideoPath,
+          type: 'video/mp4'
+        };
+        this.play(video);
+
+        // Seek approximatif au temps du master
+        if (state.manualVideoStartedAt) {
+          const elapsed = (Date.now() - state.manualVideoStartedAt) / 1000;
+          if (elapsed > 1) {
+            setTimeout(() => {
+              const player = this.getActiveManualPlayer();
+              if (player && player.duration && elapsed < player.duration) {
+                player.currentTime = elapsed;
+                console.log(`[TV] Slave: seeked manual video to ${elapsed.toFixed(1)}s`);
+              }
+            }, 500); // Attendre que le player charge
+          }
+        }
+      }
+      return;
+    }
+
+    // CAS 2: Le master est en mode boucle
+    // Si on est en mode manuel, en sortir
+    if (this.isManualMode) {
+      console.log('[TV] Slave: master returned to loop, stopping manual video');
+      this.stopManualVideoAndReturnToLoop();
+      // Cacher les overlays
+      this.hideFreezeFrame();
+      this.hideBlackOverlay();
+    }
+
+    // Trouver la vidéo dans notre boucle locale
+    const targetIndex = this.currentLoopVideos.findIndex(v => v.path === state.videoPath);
+
+    if (targetIndex >= 0) {
+      // La vidéo existe dans notre boucle
+      console.log(`[TV] Slave: syncing to video index ${targetIndex} (${state.videoPath})`);
+
+      // Afficher le freeze-frame pour masquer la transition
+      this.captureAndShowFreezeFrame();
+
+      // Jouer la vidéo sur le player actif
+      this.playOnActivePlayer(targetIndex);
+
+      // Seek approximatif au temps du master
+      if (state.videoStartedAt) {
+        const elapsed = (Date.now() - state.videoStartedAt) / 1000;
+        if (elapsed > 1) {
+          setTimeout(() => {
+            const player = this.getActivePlayer();
+            if (player && player.duration && elapsed < player.duration) {
+              player.currentTime = elapsed;
+              console.log(`[TV] Slave: seeked loop video to ${elapsed.toFixed(1)}s`);
+            }
+          }, 500);
+        }
+      }
+    } else {
+      // Vidéo pas trouvée dans notre boucle (config différente ?)
+      // Essayer par index comme fallback
+      console.warn(`[TV] Slave: video ${state.videoPath} not found in local loop, using index ${state.videoIndex}`);
+      if (this.currentLoopVideos.length > 0) {
+        const fallbackIndex = state.videoIndex % this.currentLoopVideos.length;
+        this.captureAndShowFreezeFrame();
+        this.playOnActivePlayer(fallbackIndex);
+      }
+    }
   }
 
   /**
@@ -2029,11 +2236,13 @@ export class TvComponent implements OnInit, OnDestroy {
       networkState: player.networkState
     });
 
-    // Tracker l'erreur dans les analytics
-    this.analyticsService.trackVideoError(
-      { name: currentSrc.split('/').pop() || 'unknown', path: currentSrc, type: 'video/mp4' },
-      event
-    );
+    // Tracker l'erreur dans les analytics (désactivé pour les slaves)
+    if (!this.isSlaveMode) {
+      this.analyticsService.trackVideoError(
+        { name: currentSrc.split('/').pop() || 'unknown', path: currentSrc, type: 'video/mp4' },
+        event
+      );
+    }
 
     this.consecutiveErrors++;
 

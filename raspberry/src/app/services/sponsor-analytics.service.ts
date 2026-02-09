@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Video } from '../interfaces/video.interface';
 import { Configuration } from '../interfaces/configuration.interface';
 import { environment } from '../../environments/environment';
+import { RecordingStateService } from './recording-state.service';
 
 /**
  * Interface pour une impression sponsor (alignée avec le schéma DB backend)
@@ -28,6 +29,7 @@ export interface SponsorImpression {
 @Injectable({ providedIn: 'root' })
 export class SponsorAnalyticsService {
   private readonly http = inject(HttpClient);
+  private readonly recordingState = inject(RecordingStateService);
 
   private buffer: SponsorImpression[] = [];
   private currentImpression: Partial<SponsorImpression> | null = null;
@@ -128,6 +130,11 @@ export class SponsorAnalyticsService {
     triggerType: 'auto' | 'manual' = 'auto',
     videoDuration?: number
   ): void {
+    // Ne pas tracker si l'enregistrement est désactivé
+    if (!this.recordingState.isRecording) {
+      return;
+    }
+
     // Terminer l'impression précédente si elle existe
     if (this.currentImpression && this.currentVideoStart) {
       this.trackSponsorEnd(false);
@@ -159,6 +166,13 @@ export class SponsorAnalyticsService {
    */
   public trackSponsorEnd(completed = true): void {
     if (!this.currentImpression || !this.currentVideoStart) {
+      return;
+    }
+
+    // Ne pas tracker si l'enregistrement est désactivé (mais reset l'état interne)
+    if (!this.recordingState.isRecording) {
+      this.currentImpression = null;
+      this.currentVideoStart = null;
       return;
     }
 

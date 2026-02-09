@@ -1,3 +1,15 @@
+## [3.8.1](https://github.com/Tallec7/neopro/compare/v3.8.0...v3.8.1) (2026-02-09)
+
+### Bug Fixes
+
+- **deploy:** install systemd services via deploy-remote.sh ([#395](https://github.com/Tallec7/neopro/issues/395)) ([5a37572](https://github.com/Tallec7/neopro/commit/5a37572eda7c29f5a72194da76b0af2a6848c6b3))
+
+# [3.8.0](https://github.com/Tallec7/neopro/compare/v3.7.15...v3.8.0) (2026-02-09)
+
+### Features
+
+- **raspberry:** add analytics recording control and TV master-slave sync ([#392](https://github.com/Tallec7/neopro/issues/392)) ([5b500b4](https://github.com/Tallec7/neopro/commit/5b500b42cbde9928a3b5ab7444be7f5fc15039d2))
+
 ## [3.7.15](https://github.com/Tallec7/neopro/compare/v3.7.14...v3.7.15) (2026-02-09)
 
 ### Bug Fixes

@@ -20,6 +20,7 @@ export class LocalBroadcastService implements OnDestroy {
   private optionsUpdate$ = new Subject<OptionsUpdateEvent>();
   private breakingNews$ = new Subject<BreakingNewsEvent>();
   private timerUpdate$ = new Subject<TimerUpdateEvent>();
+  private recordingState$ = new Subject<RecordingStateEvent>();
 
   constructor() {
     this.initChannel();
@@ -61,6 +62,9 @@ export class LocalBroadcastService implements OnDestroy {
         break;
       case 'timer-update':
         this.timerUpdate$.next(message.payload as TimerUpdateEvent);
+        break;
+      case 'recording-state':
+        this.recordingState$.next(message.payload as RecordingStateEvent);
         break;
     }
   }
@@ -160,6 +164,20 @@ export class LocalBroadcastService implements OnDestroy {
     return this.timerUpdate$.asObservable();
   }
 
+  /**
+   * Émet un changement d'état d'enregistrement analytics
+   */
+  public emitRecordingState(state: RecordingStateEvent): void {
+    this.broadcast('recording-state', state);
+  }
+
+  /**
+   * Observable des changements d'état d'enregistrement analytics
+   */
+  public onRecordingState(): Observable<RecordingStateEvent> {
+    return this.recordingState$.asObservable();
+  }
+
   public ngOnDestroy(): void {
     if (this.channel) {
       this.channel.close();
@@ -171,11 +189,12 @@ export class LocalBroadcastService implements OnDestroy {
     this.optionsUpdate$.complete();
     this.breakingNews$.complete();
     this.timerUpdate$.complete();
+    this.recordingState$.complete();
   }
 }
 
 // Types
-export type BroadcastMessageType = 'score-update' | 'score-reset' | 'phase-change' | 'command' | 'options-update' | 'breaking-news' | 'timer-update';
+export type BroadcastMessageType = 'score-update' | 'score-reset' | 'phase-change' | 'command' | 'options-update' | 'breaking-news' | 'timer-update' | 'recording-state';
 
 export interface BroadcastMessage {
   type: BroadcastMessageType;
@@ -246,4 +265,9 @@ export interface TimerUpdateEvent {
   isRunning?: boolean;
   halfDuration?: number; // durée mi-temps en minutes
   countDown?: boolean;
+}
+
+export interface RecordingStateEvent {
+  isRecording: boolean;
+  isManualOverride: boolean;
 }

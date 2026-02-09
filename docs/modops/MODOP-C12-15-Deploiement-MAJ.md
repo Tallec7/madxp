@@ -145,6 +145,8 @@ Dashboard → Sites → [Site] → Actions → Mettre à jour le logiciel
 
 **Note (v3.7.14+) :** Le script `update-software.js` copie maintenant aussi le dossier `config/` (services systemd) vers le Pi. Les versions précédentes ne copiaient jamais ce dossier, ce qui empêchait l'installation des services de protection via OTA. L'archive inclut maintenant **7 services systemd** (3 core + 4 protection) et **12 scripts runtime** (dont `fix-fleet-pi.sh` et `diagnose-pi.sh`). Si des services sont manquants sur un Pi existant, utiliser `fix-fleet-pi.sh` pour les installer manuellement.
 
+**⚠️ Golden snapshot automatique (v3.7.16+) :** Avant de remplacer le code du sync-agent, `update-software.js` crée automatiquement un snapshot "golden" de la version actuelle (si aucun golden n'existe). Cela garantit que le guardian peut restaurer la version précédente en cas de crash du nouveau code. Sans ce mécanisme, un Pi recevant le guardian pour la première fois via OTA n'aurait aucun fallback et resterait hors ligne indéfiniment en cas de régression.
+
 **Méthode alternative : SSH manuelle**
 
 ```bash
