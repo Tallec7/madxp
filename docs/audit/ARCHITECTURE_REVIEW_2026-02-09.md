@@ -2,7 +2,7 @@
 
 **Date** : 2026-02-09
 **Version analysee** : 3.7.15
-**Methodologie** : Analyse croisee documentation (CLAUDE.md) + exploration exhaustive du codebase
+**Methodologie** : Analyse croisee documentation (CLAUDE.md + 143 fichiers docs/) + exploration exhaustive du codebase
 **Perimetre** : Documentation, architecture systeme/reseau/applicative/donnees, exploitabilite
 
 ---
@@ -43,13 +43,19 @@ Le projet Neopro est un systeme de TV interactive pour clubs sportifs, architect
 - Couverture fonctionnelle tres large (50+ endpoints API, 30+ commandes Pi)
 - Historique des breaking changes exhaustif (facilite le debugging)
 - Patterns de code coherents et bien documentes
+- Ecosysteme documentaire riche : 143 fichiers, 71K lignes, parcours par role (01-START-HERE.md)
+- MODOPs operationnels exemplaires (9/10) — procedures pas-a-pas pour le terrain
+- Packs autonomes (PACK_TECHNICAL_DEEP_DIVE 52K) utilisables en copier-coller pour prestataires externes
+- Dossier client critique NLF.md (10/10) — modele a suivre
 
 **Points faibles :**
-- Documentation concentree dans un seul fichier monolithique (CLAUDE.md : 239 KB)
+- **⚠️ BLOQUANT : Documents legaux non remplis** (4 templates avec placeholders `[NOM DE LA SOCIETE]`)
+- Documentation concentree dans un seul fichier monolithique (CLAUDE.md : 239 KB) avec ~25% de duplication vers docs/
 - Lacunes sur l'infrastructure (CI/CD, Docker, K8s non documentes dans CLAUDE.md)
 - Test coverage insuffisante (23 spec.ts, 3 E2E)
 - Couplage fort entre composants (synchronisation manuelle Remote Pi / Cloud Remote)
-- Certaines briques non documentees (monitoring Pi, handlers Socket.IO)
+- ADRs non mis a jour depuis v2.33 (5 ADRs seulement, decisions post-Jan 2026 non tracees)
+- Certains docs obsoletes (SQL_QUERIES.md, ERROR_HANDLING_MIGRATION.md) ou stubs (DEMO_MODE.md)
 
 ### Metriques du codebase
 
@@ -270,31 +276,114 @@ Le projet Neopro est un systeme de TV interactive pour clubs sportifs, architect
 
 **Role** : Reference technique, guides d'installation, troubleshooting, decisions d'architecture, docs client.
 
-**Contenu** : 136 fichiers markdown repartis dans 22 repertoires
+**Contenu** : ~143 fichiers (128 markdown + assets) repartis dans 22 repertoires, totalisant ~71 600 lignes (~14 MB)
 
-| Repertoire | Fichiers | Contenu |
-|-----------|----------|---------|
-| technical/ | 14 | Architecture, sync, error handling, reference API |
-| guides/ | 14 | Installation, troubleshooting, configuration |
-| changelog/ | 36 | Historique des versions (auto-genere) |
-| business/ | 6 | Business plan, roadmap |
-| audit/ | 4 | Rapports d'audit |
-| clients/ | 1 | Fiche client critique (NLF) |
-| research/ | 2 | Analyse industrie WiFi mesh |
-| adr/ | 5 | Architecture Decision Records |
-| legal/ | 4 | CGU, confidentialite, RGPD |
-| modops/ | 4 | Procedures operationnelles |
-| archive/ | 11 | Ancienne documentation |
-| analysis/ | 2 | Debug bundles clients |
+#### 3.4.1 Inventaire detaille par repertoire
 
-#### Evaluation
+| Repertoire | Fichiers | Lignes est. | Qualite | Contenu |
+|-----------|----------|-------------|---------|---------|
+| **Racine docs/** | 7 | ~1 800 | 9/10 | 00-INDEX.md (hub navigation), 01-START-HERE.md (guide par role), ONBOARDING.md, GLOSSARY.md, VERSIONING.md, TESTING.md, ONLINE_INSTALLATION.md |
+| **technical/** | 13 | ~8 000 | 8.2/10 | ARCHITECTURE.md, REFERENCE.md (19K), SYNC_ARCHITECTURE.md (26K), COMMAND_QUEUE.md (525L), ERROR_HANDLING.md, REMOTE_SHELL.md, REMOTE_SHELL_SECURITY.md, MULTI_TENANT.md, VIDEO_STORAGE.md (401L), SQL_QUERIES.md (195L), ROW_LEVEL_SECURITY.md, TESTING_GUIDE.md (417L), SYNC_AGENT_CONFIG.md |
+| **guides/** | 16 | ~6 500 | 7.8/10 | GUIDE_OPERATEUR_INSTALLATION.md (30min terrain), INSTALLATION_COMPLETE.md (3 methodes), TROUBLESHOOTING.md (53K!), GOLDEN_IMAGE.md (439L), CONFIG_DRAFTS.md (325L), GUIDE_UTILISATEUR.md (21K), QR_CODE_REMOTE.md, SSH_SETUP.md, MESH_WIFI_ENVIRONMENTS.md (417L), ANDROID_HOTSPOT_FIX.md (184L), CONFIGURATION.md, DEMO_MODE.md (6L stub), ERROR_HANDLING_MIGRATION.md |
+| **analytics/** | 8 | ~3 200 | 8.1/10 | README.md, ONBOARDING_DEV.md, IMPLEMENTATION.md, TRACKING_IMPRESSIONS.md (720L excellent), PDF_REPORTS_GUIDE.md, TESTS.md, AVANCEMENT.md |
+| **audit/** | 6 | ~5 000 | 8.4/10 | AUDIT_PLATEFORME_COMPLET_2025.md (41K), PRODUCT_STRATEGY_ANALYSIS.md (33K), AUDIT_DOCS_2025-12-25.md, AUDIT_RGPD_SECURITE_2025-12-29.md, ARCHITECTURE_REVIEW_2026-02-09.md |
+| **business/** | 5 | ~7 500 | 8.4/10 | STATUS.md (9.8/10 project rating), BUSINESS_PLAN_COMPLET.md (113K!), ROADMAP_10_SUR_10.md (37K), BACKLOG.md (23K), ANALYTICS_CATEGORIES_IMPL.md |
+| **deployment/** | 3 | ~1 920 | 8/10 | DEPLOY_CENTRAL_SERVER.md (461L Railway+Supabase), GUIDE_MISE_EN_PRODUCTION.md (1438L complet), README.md |
+| **adr/** | 6 | ~920 | 8.4/10 | ADR-001 Edge+Cloud, ADR-002 Socket.IO, ADR-003 PostgreSQL+Supabase, ADR-004 JWT HttpOnly, ADR-005 Multi-tenant RLS, README.md |
+| **modops/** | 6 | ~4 045 | 9/10 | MODOP-C01-06 Onboarding Client (898L), MODOP-C07-11 Configuration, MODOP-C12-15 Deploiement MAJ, MODOP-O05-08 Monitoring Proactif, MODOP-S04-05 Diagnostic Distance, MODOP-S11-15 Monitoring Alertes |
+| **legal/** | 4 | ~1 118 | 3/10 | PRIVACY_POLICY.md (templates non remplis!), TERMS_OF_SERVICE.md, GENERAL_SALES_CONDITIONS.md, GDPR_PROCESSING_REGISTER.md |
+| **clients/** | 1 | ~603 | 10/10 | NLF.md — Dossier client critique exhaustif (topologie reseau, incidents, solutions) |
+| **research/** | 2 | ~800 | 8.5/10 | NETWORK_CHALLENGES_INDUSTRY_ANALYSIS.md (analyse concurrence), NEOPRO_NETWORK_RESILIENCE_VISION.md (vision produit) |
+| **packs/** | 4 | ~2 900 | 8.5/10 | README.md, PACK_DEV_QUICKSTART.md (28K), PACK_BUSINESS_PITCH.md (20K), PACK_TECHNICAL_DEEP_DIVE.md (52K) — Packs autonomes copier-coller |
+| **changelog/** | 30+ | ~8 000 | 7.8/10 | CHANGELOG.md principal + fichiers dates (auto-generes depuis commits) |
+| **analysis/** | 2 | ~400 | 8/10 | NARH-debug-bundle-2026-02-08.md, NLF-debug-bundle-2026-02-08.md — Analyses incidents recentes |
+| **archive/** | 11+ | ~3 000 | 6/10 | Anciennes versions d'audits, fixes, rapports de session |
+| **dev/** | 1 | ~50 | 7/10 | README.md — Reference configuration developpeur (minimal) |
+| **Charte graphique/** | 6 | N/A | N/A | Logos, palettes couleurs, polices (assets visuels) |
+
+#### 3.4.2 Analyse qualitative des documents cles
+
+**Documents a haute valeur (qualite >= 9/10) :**
+
+| Document | Qualite | Pourquoi |
+|----------|---------|----------|
+| docs/clients/NLF.md | 10/10 | Dossier client exemplaire : topologie reseau, timeline incidents, root causes, solutions. 603 lignes, mis a jour 8 Feb 2026 |
+| docs/01-START-HERE.md | 9/10 | Navigation par role (dev, PO, ops, support) avec temps estimes. Point d'entree ideal |
+| docs/guides/TROUBLESHOOTING.md | 9/10 | 53K de debugging structure par symptome. Couvre Pi 5, mesh WiFi, GPU, hotspot |
+| docs/modops/* (6 fichiers) | 9/10 | Procedures operationnelles completes avec arbres de decision. 4045 lignes au total |
+| docs/technical/SYNC_ARCHITECTURE.md | 9/10 | 26K de documentation du protocole edge-cloud. Indispensable pour comprendre le coeur du systeme |
+| docs/technical/REFERENCE.md | 9/10 | 19K de reference technique API/services/patterns |
+| docs/packs/PACK_TECHNICAL_DEEP_DIVE.md | 9/10 | 52K autonome, pret a copier pour partage externe ou IA |
+| docs/adr/* (5 ADRs) | 9/10 | Decisions architecturales avec contexte, alternatives, consequences |
+
+**Documents problematiques :**
+
+| Document | Qualite | Probleme |
+|----------|---------|---------|
+| docs/legal/PRIVACY_POLICY.md | 3/10 | **TEMPLATE NON REMPLI** : `[NOM DE LA SOCIETE]`, `[ADRESSE]`, `[DATE A COMPLETER]`. NON UTILISABLE en production |
+| docs/legal/TERMS_OF_SERVICE.md | 3/10 | Idem — placeholders non remplis, necessite revision juridique |
+| docs/legal/GENERAL_SALES_CONDITIONS.md | 3/10 | Idem — CGV B2B avec champs vides |
+| docs/guides/DEMO_MODE.md | 2/10 | **STUB** : 6 lignes seulement, quasi vide |
+| docs/technical/SQL_QUERIES.md | 7/10 | Certaines requetes utilisent `first_name`/`last_name` au lieu de `full_name` (schema modifie) |
+| docs/guides/ERROR_HANDLING_MIGRATION.md | 5/10 | Possiblement obsolete (references patterns v2.x) |
+
+#### 3.4.3 Analyse de la duplication CLAUDE.md ↔ docs/
+
+| Type de contenu | Dans CLAUDE.md | Dans docs/ | Duplication | Verdict |
+|----------------|---------------|-----------|-------------|---------|
+| Architecture globale | Oui (100 lignes) | technical/ARCHITECTURE.md (368L) | ~30% overlap | **Acceptable** : CLAUDE.md = resume, docs/ = detail |
+| API Reference | Oui (200 lignes routes) | technical/REFERENCE.md (19K) | ~40% overlap | **A surveiller** : risque de divergence |
+| Troubleshooting | Oui (100 lignes) | guides/TROUBLESHOOTING.md (53K) | ~10% overlap | **Correct** : profondeurs differentes |
+| Glossaire | Oui (80 termes) | GLOSSARY.md (246L) | ~70% overlap | **Redondant** : devrait etre consolide |
+| Breaking changes | Oui (exhaustif) | changelog/ (30+ fichiers) | ~50% overlap | **Problematique** : double maintenance |
+| Schema DB | Oui (detaille) | technical/ + full-schema.sql | ~60% overlap | **A surveiller** : CLAUDE.md pourrait diverger |
+| Patterns de code | Oui (exemples) | Unique a CLAUDE.md | 0% | **Correct** : exclusif a CLAUDE.md |
+| Procedures ops | Non | modops/ (4045L) | 0% | **Correct** : exclusive aux MODOPs |
+| Business | Non | business/ (113K+) | 0% | **Correct** : hors perimetre CLAUDE.md |
+
+#### 3.4.4 Points d'entree par audience
+
+Le systeme de documentation offre des parcours differencies :
+
+**Developpeur junior :**
+```
+01-START-HERE.md → ONBOARDING.md → PACK_DEV_QUICKSTART.md → CLAUDE.md (patterns)
+                                                           ↓
+                                    TESTING_GUIDE.md ← REFERENCE.md ← ADR-001..005
+```
+
+**Operateur terrain :**
+```
+01-START-HERE.md → GUIDE_OPERATEUR_INSTALLATION.md (30 min)
+                 → TROUBLESHOOTING.md (reference)
+                 → MODOP-C01-06 (onboarding client)
+```
+
+**Agence web externe :**
+```
+01-START-HERE.md → PACK_TECHNICAL_DEEP_DIVE.md (52K autonome)
+                 → ARCHITECTURE.md + ADRs
+                 → REFERENCE.md + VIDEO_STORAGE.md
+```
+
+**Support/Astreinte :**
+```
+TROUBLESHOOTING.md (53K) → MODOP-S04-05 (diagnostic distance)
+                         → clients/NLF.md (client critique)
+                         → analysis/NLF-debug-bundle.md (incident recent)
+```
+
+#### Evaluation globale
 
 | Critere | Note | Commentaire |
 |---------|------|-------------|
-| Exhaustivite | 8/10 | Tres complet sur l'applicatif. Lacunes sur l'infrastructure |
-| Structure | 6/10 | 136 fichiers mais navigation difficile. 00-INDEX.md est le seul point d'entree |
-| Maintenance | 7/10 | Changelog auto-genere. CLAUDE.md mis a jour regulierement |
-| Accessibilite junior | 5/10 | CLAUDE.md est un mur de 239KB. Pas de "getting started" simple |
+| Exhaustivite | 9/10 | 143 fichiers, 71K lignes. Couvre technique, ops, business, legal, incidents |
+| Structure | 8/10 | 00-INDEX.md + 01-START-HERE.md + parcours par role. Bien organise |
+| Maintenance | 8/10 | Docs recentes (Feb 2026), changelog auto-genere, audits reguliers |
+| Accessibilite junior | 7/10 | Bon parcours via 01-START-HERE.md et packs. CLAUDE.md reste un mur |
+| Accessibilite agence | 8/10 | PACK_TECHNICAL_DEEP_DIVE.md (52K autonome) est excellent |
+| **Probleme critique** | **3/10** | **Documents legaux NON REMPLIS — bloquant pour usage commercial** |
+| Duplication CLAUDE.md | 6/10 | ~25% de duplication moyenne, risque de divergence sur API/schema/glossaire |
 
 ---
 
@@ -509,7 +598,7 @@ users (7 roles)
 
 ## 5. Lacunes identifiees
 
-### 5.1 Lacunes de documentation
+### 5.1 Lacunes de documentation (CLAUDE.md)
 
 | Element | Statut dans CLAUDE.md | Statut reel | Impact |
 |---------|----------------------|-------------|--------|
@@ -526,14 +615,26 @@ users (7 roles)
 | Tools Pi | Absent | raspberry/tools/ (golden image, recovery) | Outils de production non documentes |
 | server-render | Present | N'existe plus (supprime ou deplace) | Reference morte dans CLAUDE.md |
 
-### 5.2 Lacunes techniques
+### 5.2 Lacunes de documentation (docs/)
+
+| Element | Statut actuel | Impact | Priorite |
+|---------|--------------|--------|----------|
+| **Documents legaux NON REMPLIS** | 4 fichiers avec placeholders (`[NOM DE LA SOCIETE]`, `[ADRESSE]`, `[DATE]`) | **BLOQUANT pour mise en production commerciale** — RGPD, CGV, mentions legales inutilisables | **CRITIQUE** |
+| **DEMO_MODE.md** : 6 lignes | Stub quasi vide, aucune documentation du mode demo | Les clients et commerciaux ne savent pas utiliser le mode demo | Haute |
+| **SQL_QUERIES.md** : colonnes obsoletes | References `first_name`/`last_name` alors que le schema utilise `full_name` | Requetes copy-paste qui echouent en production | Haute |
+| **ADRs manquants pour features recentes** | Seulement ADR-001 a ADR-005 (decisions pre-v2.33). Aucun ADR pour : subscriptions, network resilience, predictive alerts, benchmark, double-buffer video | Les decisions architecturales post-Jan 2026 ne sont pas tracees formellement | Moyenne |
+| **ERROR_HANDLING_MIGRATION.md** | Potentiellement obsolete (references patterns v2.x) | Confusion si un dev suit ce guide | Faible |
+| **Pas de docs pour analytics/ (feature supprimee)** | Le repertoire `features/analytics/` existe toujours mais la doc dit "supprime v3.0" | Aucun document n'explique pourquoi le code est encore la | Faible |
+| **Duplication glossaire** | CLAUDE.md (~80 termes) ↔ docs/GLOSSARY.md (246 lignes) : ~70% overlap | Risque de divergence sur les definitions | Faible |
+
+### 5.3 Lacunes techniques
 
 | Lacune | Consequence | Priorite |
 |--------|------------|----------|
 | Pas de tracing distribue (OpenTelemetry) | Debugging cross-service difficile (Dashboard → Server → Pi) | Moyenne |
 | Pas de tests de charge | Limites de scaling inconnues (50 Pi OK, 200 Pi ?) | Haute |
 | Pas de backup DB documente | Risque perte de donnees si incident Supabase | Haute |
-| Pas de runbook operationnel | Procedures d'urgence non formalisees | Moyenne |
+| Pas de runbook operationnel | MODOPs couvrent l'operationnel mais pas les urgences (incident DB, breach securite) | Moyenne |
 | Pas de feature flags | Deploiements tout-ou-rien | Faible |
 | Pas de tests d'integration reseau | Les scenarios mesh/isolation sont testes uniquement en prod | Moyenne |
 
@@ -552,7 +653,18 @@ users (7 roles)
 | **Local Server lifecycle** | Qui demarre le local server (port 3000) ? Pas clair : neopro-app ou un service systemd dedie ? | Gap dans la documentation des services |
 | **socket.service.ts dual** | Le dashboard ET le central-server ont chacun un socket.service.ts avec des roles differents | Nom identique, confusion potentielle |
 
-### 6.2 Responsabilites mal definies
+### 6.2 Ambiguites documentaires (docs/)
+
+| Ambiguite | Localisation | Risque |
+|-----------|-------------|--------|
+| **Breaking changes : double source de verite** | CLAUDE.md (section "Historique Breaking Changes", ~500 lignes) ET docs/changelog/ (30+ fichiers auto-generes) | ~50% overlap, risque de divergence sur les details de migration |
+| **Schema DB : triple source** | CLAUDE.md (tables principales), full-schema.sql (schema complet), docs/technical/ARCHITECTURE.md (resume) | Risque d'oubli de mise a jour d'une source lors d'un ajout de colonne |
+| **TROUBLESHOOTING.md vs CLAUDE.md** | Les deux contiennent des sections debugging, avec des niveaux de detail differents | Un dev ne sait pas lequel consulter en premier |
+| **SQL_QUERIES.md desynchronise** | Utilise `u.first_name || ' ' || u.last_name` alors que la table users n'a que `full_name` | Requetes qui echouent si copiees directement |
+| **GUIDE_UTILISATEUR.md : 21K lignes** | Guide utilisateur exhaustif mais potentiellement obsolete (references UI pre-v3.0) | Un operateur pourrait suivre des instructions pour des ecrans qui ont change |
+| **Packs vs docs/** | PACK_TECHNICAL_DEEP_DIVE.md (52K) est une copie autonome de plusieurs docs/technical/*. Pas de lien de synchronisation | Si un doc technique change, le pack ne sera pas mis a jour |
+
+### 6.3 Responsabilites mal definies
 
 | Zone | Probleme | Consequence |
 |------|----------|-------------|
@@ -592,48 +704,72 @@ users (7 roles)
 
 | Critere | Note | Justification |
 |---------|------|---------------|
-| **Comprendre le projet** | 7/10 | Le contexte metier est bien explique dans CLAUDE.md. Le schema ASCII aide beaucoup |
-| **Trouver ou coder** | 5/10 | 239 KB de CLAUDE.md sans Ctrl+F efficace. Pas de "getting started" dedie |
-| **Ecrire du code correct** | 8/10 | Patterns de code bien documentes avec exemples copier-coller |
-| **Eviter les pieges** | 7/10 | Section "NE JAMAIS FAIRE" tres explicite. Breaking changes bien documentes |
-| **Debugger un probleme** | 6/10 | Troubleshooting exhaustif mais noye dans la masse du document |
-| **Comprendre le deploiement** | 3/10 | CI/CD, Docker, Railway non documentes dans CLAUDE.md |
-| **Lancer le projet en local** | 4/10 | Commandes listees mais pas de guide step-by-step "from scratch" |
-| **Score global junior** | **5.7/10** | Le junior sera surcharge d'info mais manquera de guidage pratique |
+| **Comprendre le projet** | 8/10 | 01-START-HERE.md oriente par role + ONBOARDING.md + GLOSSARY.md. Bon parcours d'entree |
+| **Trouver ou coder** | 6/10 | PACK_DEV_QUICKSTART.md (28K) est bon, mais CLAUDE.md (239 KB) reste un mur. 00-INDEX.md aide |
+| **Ecrire du code correct** | 8/10 | Patterns de code bien documentes dans CLAUDE.md + TESTING_GUIDE.md (417L) |
+| **Eviter les pieges** | 7/10 | "NE JAMAIS FAIRE" explicite. Breaking changes documentes. NLF.md comme cas reel |
+| **Debugger un probleme** | 7/10 | TROUBLESHOOTING.md (53K exhaustif) + MODOPs (procedures pas-a-pas). Bon outillage |
+| **Comprendre le deploiement** | 5/10 | DEPLOY_CENTRAL_SERVER.md (461L) et GUIDE_MISE_EN_PRODUCTION.md (1438L) existent dans docs/. Manque dans CLAUDE.md |
+| **Lancer le projet en local** | 5/10 | ONLINE_INSTALLATION.md + INSTALLATION_COMPLETE.md couvrent le Pi. Setup dev local moins detaille |
+| **Score global junior** | **6.6/10** | Nettement meilleur qu'avec CLAUDE.md seul grace aux parcours docs/. Reste le probleme du volume d'info |
 
 ### 8.2 Pour une agence web externe
 
 | Critere | Note | Justification |
 |---------|------|---------------|
-| **Comprendre le perimetre** | 8/10 | Architecture, base de donnees, API tres bien documentes |
-| **Estimer la complexite** | 7/10 | Nombre de composants, services, et endpoints clairement quantifiable |
-| **Identifier les risques** | 6/10 | Breaking changes documentes, mais pas de "tech debt register" formel |
-| **Planifier une reprise** | 5/10 | Manque : diagrammes de deploiement, runbooks, SLA, procedures de migration |
+| **Comprendre le perimetre** | 9/10 | PACK_TECHNICAL_DEEP_DIVE.md (52K autonome) est excellent. Copier-coller pret |
+| **Estimer la complexite** | 8/10 | Composants, services, endpoints quantifies. ADRs expliquent les choix. business/BACKLOG.md (23K) |
+| **Identifier les risques** | 7/10 | Breaking changes + audits (AUDIT_PLATEFORME_COMPLET 41K, AUDIT_RGPD 29K). Pas de "tech debt register" formel |
+| **Planifier une reprise** | 6/10 | MODOPs operationnels, guides deploiement. Manque : runbooks urgence, SLA, procedures migration DB |
 | **Evaluer la qualite du code** | 7/10 | Patterns coherents, TypeScript strict, mais coverage faible |
 | **Comprendre les dependances** | 6/10 | 56 deps runtime listees, mais pas d'analyse de vulnerabilites/obsolescence |
-| **Score global agence** | **6.5/10** | L'agence pourrait reprendre le projet mais avec un temps d'onboarding significatif |
+| **Score global agence** | **7.2/10** | Les packs et audits ameliorent significativement l'exploitabilite externe |
 
-### 8.3 Recommandations pour l'exploitabilite
+### 8.3 Pour le support/operations
 
-1. **Creer un ONBOARDING.md** separe et concis (~5 pages) avec :
-   - Prerequisites (Node 18, PostgreSQL, etc.)
-   - Setup local step-by-step
-   - Premier deploiement test
-   - Architecture en 1 page (diagramme simple)
-   - Liens vers les sections detaillees de CLAUDE.md
+| Critere | Note | Justification |
+|---------|------|---------------|
+| **Diagnostiquer un probleme** | 9/10 | TROUBLESHOOTING.md (53K) + MODOPs diagnostic (S04-05) + debug bundle + scripts |
+| **Onboarder un client** | 9/10 | MODOPs C01-06 (898L) couvrent tout le processus en 6 etapes |
+| **Gerer un client critique** | 10/10 | NLF.md est le modele a suivre : topologie, incidents, root causes, solutions |
+| **Reagir a une urgence** | 5/10 | Pas de runbook d'urgence formel (incident DB, breach, DDoS). MODOPs couvrent l'operationnel, pas les crises |
+| **Score global support** | **8.2/10** | Excellent pour le quotidien, lacune sur les situations de crise |
 
-2. **Scinder CLAUDE.md** en documents thematiques :
-   - `ARCHITECTURE.md` : Vue systeme
-   - `API_REFERENCE.md` : Routes et formats
-   - `DATABASE.md` : Schema et migrations
-   - `CHANGELOG.md` : Historique (deja dans docs/changelog/)
-   - `CLAUDE.md` : Garder uniquement les instructions pour Claude Code
+### 8.4 Recommandations pour l'exploitabilite
 
-3. **Ajouter des diagrammes d'architecture** :
-   - Diagramme de deploiement (Cloud/Edge)
-   - Diagramme de composants par Pi
-   - Diagramme de flux de donnees
-   - Diagramme de sequence pour les cas critiques
+1. **Completer les documents legaux** (CRITIQUE, bloquant) :
+   - Remplir les 4 templates legal/ avec les vraies informations societe
+   - Faire reviser par un juriste specialise RGPD
+   - Publier les mentions legales, politique de confidentialite, CGV
+   - Completer le registre des traitements RGPD
+
+2. **Consolider CLAUDE.md ↔ docs/** :
+   - Deplacer le glossaire de CLAUDE.md vers docs/GLOSSARY.md (source unique)
+   - Deplacer les breaking changes vers docs/changelog/ (supprimer la duplication)
+   - Garder dans CLAUDE.md uniquement : instructions Claude Code, patterns de code, et liens vers docs/
+   - Ajouter des liens `[→ detail](docs/technical/xxx.md)` dans CLAUDE.md
+
+3. **Creer les ADRs manquants** :
+   - ADR-006 : Systeme d'abonnement et licence (v2.47)
+   - ADR-007 : Network resilience multi-couche (v2.35-2.37)
+   - ADR-008 : Double-buffer video avec freeze-frame (v3.7.8)
+   - ADR-009 : Alertes predictives (v3.0)
+   - ADR-010 : Suppression analytics UI (v3.0)
+
+4. **Completer DEMO_MODE.md** :
+   - Documenter comment activer/utiliser le mode demo
+   - Cas d'usage (demos commerciales, tests)
+   - Configuration requise
+
+5. **Corriger SQL_QUERIES.md** :
+   - Remplacer `first_name`/`last_name` par `full_name`
+   - Verifier toutes les requetes contre le schema actuel (full-schema.sql)
+
+6. **Creer un runbook d'urgence** :
+   - Incident DB (Supabase down) : procedure de fallback
+   - Breach securite : rotation JWT_SECRET, invalidation sessions
+   - DDoS/abus : procedures de blocage
+   - Perte d'un Pi : procedure de remplacement
 
 ---
 
@@ -643,37 +779,42 @@ users (7 roles)
 
 | # | Recommandation | Effort | Impact | Justification |
 |---|---------------|--------|--------|---------------|
-| 1 | **Supprimer features/analytics/** ou documenter explicitement son statut | S | Moyen | Code mort source de confusion |
-| 2 | **Documenter le CI/CD** dans CLAUDE.md (section dediee) | M | Haut | Un dev ne peut pas comprendre le pipeline actuel |
-| 3 | **Consolider raspberry/systemd/** dans config/systemd/ | S | Faible | Eliminer la duplication |
-| 4 | **Supprimer la reference server-render** de CLAUDE.md | S | Faible | Reference morte |
-| 5 | **Creer un ONBOARDING.md** de 5 pages | M | Haut | Onboarding junior et agence |
-| 6 | **Documenter le middleware remote-shell-security** | S | Moyen | Securite critique non visible |
-| 7 | **Nettoyer les routes sponsor-*.ts legacy** ou documenter la coexistence | M | Moyen | Confusion naming |
+| 1 | **⚠️ CRITIQUE : Completer les documents legaux** | M | **Bloquant** | 4 templates non remplis (PRIVACY_POLICY, TERMS, CGV, RGPD). Inutilisables en l'etat. Necessite juriste |
+| 2 | **Corriger SQL_QUERIES.md** (colonnes obsoletes) | S | Moyen | `first_name`/`last_name` → `full_name`. Requetes qui echouent si copiees |
+| 3 | **Completer DEMO_MODE.md** (6 lignes actuellement) | S | Moyen | Aucune doc du mode demo pour les commerciaux |
+| 4 | **Supprimer features/analytics/** ou documenter explicitement son statut | S | Moyen | Code mort source de confusion |
+| 5 | **Supprimer la reference server-render** de CLAUDE.md | S | Faible | Reference morte |
+| 6 | **Consolider raspberry/systemd/** dans config/systemd/ | S | Faible | Eliminer la duplication |
+| 7 | **Documenter le CI/CD** dans CLAUDE.md ou dans docs/deployment/ | M | Haut | 5 workflows GitHub Actions non documentes |
+| 8 | **Documenter le middleware remote-shell-security** | S | Moyen | Securite critique non visible |
 
 ### Moyen terme (1-3 mois)
 
 | # | Recommandation | Effort | Impact | Justification |
 |---|---------------|--------|--------|---------------|
-| 8 | **Augmenter la couverture de tests** (objectif : 60% lignes) | L | Haut | 23 spec.ts pour un dashboard critique |
-| 9 | **Extraire un design system Angular** (shared styles, tokens) | L | Moyen | 6 shared components pour 18 features |
-| 10 | **Scinder CLAUDE.md** en documents thematiques | M | Haut | 239 KB est inexploitable en l'etat |
-| 11 | **Creer une couche repository** dans le central-server | L | Moyen | Decouplage SQL/logique metier |
-| 12 | **Refactorer admin/public/app.js** (3600 lignes vanilla JS) | L | Moyen | Maintenabilite critique |
-| 13 | **Unifier le Remote Pi et Cloud Remote** (composant partage ou generation) | L | Haut | Risque de divergence lors de chaque modification |
-| 14 | **Documenter les procedures de backup/restore DB** | S | Haut | Risque de perte de donnees |
-| 15 | **Ajouter des tests de charge** pour valider le scaling a 100+ Pi | M | Haut | Limites de scaling inconnues |
+| 9 | **Consolider CLAUDE.md ↔ docs/** : reduire la duplication a < 10% | M | Haut | ~25% de duplication actuellement (glossaire, breaking changes, schema DB) |
+| 10 | **Creer ADR-006 a ADR-010** pour les decisions recentes | M | Moyen | Decisions post-Jan 2026 non tracees (subscriptions, network resilience, double-buffer, etc.) |
+| 11 | **Augmenter la couverture de tests** (objectif : 60% lignes) | L | Haut | 23 spec.ts pour un dashboard critique |
+| 12 | **Extraire un design system Angular** (shared styles, tokens) | L | Moyen | 6 shared components pour 18 features |
+| 13 | **Creer une couche repository** dans le central-server | L | Moyen | Decouplage SQL/logique metier |
+| 14 | **Refactorer admin/public/app.js** (3600 lignes vanilla JS) | L | Moyen | Maintenabilite critique |
+| 15 | **Unifier le Remote Pi et Cloud Remote** (composant partage ou generation) | L | Haut | Risque de divergence lors de chaque modification |
+| 16 | **Documenter les procedures de backup/restore DB** | S | Haut | Risque de perte de donnees |
+| 17 | **Ajouter des tests de charge** pour valider le scaling a 100+ Pi | M | Haut | Limites de scaling inconnues |
+| 18 | **Creer un runbook d'urgence** (incident DB, breach, DDoS) | M | Haut | MODOPs couvrent l'operationnel, pas les crises |
+| 19 | **Nettoyer les routes sponsor-*.ts legacy** ou documenter la coexistence | M | Moyen | Confusion naming sponsors/advertisers |
 
 ### Long terme (3-6 mois)
 
 | # | Recommandation | Effort | Impact | Justification |
 |---|---------------|--------|--------|---------------|
-| 16 | **Migrer vers un ORM ou query builder** (Drizzle, Kysely) | XL | Moyen | Decouplage DB, type safety SQL |
-| 17 | **Implementer OpenTelemetry** pour le tracing distribue | L | Moyen | Debugging cross-service Dashboard → Server → Pi |
-| 18 | **Evaluer la migration Railway Hobby → Pro** ou vers K8s | M | Haut | 40MB heap, 1 instance = single point of failure |
-| 19 | **Creer un SDK partage** pour le protocole Socket.IO (types + events) | L | Moyen | Contrat d'interface entre Pi et Server |
-| 20 | **Evaluer un monorepo tooling** (Nx, Turborepo) | L | Moyen | Build/test incrementaux, dependency graph |
-| 21 | **Supprimer la table proof_of_broadcasts** (feature supprimee v3.0) | S | Faible | Nettoyage DB |
+| 20 | **Migrer vers un ORM ou query builder** (Drizzle, Kysely) | XL | Moyen | Decouplage DB, type safety SQL |
+| 21 | **Implementer OpenTelemetry** pour le tracing distribue | L | Moyen | Debugging cross-service Dashboard → Server → Pi |
+| 22 | **Evaluer la migration Railway Hobby → Pro** ou vers K8s | M | Haut | 40MB heap, 1 instance = single point of failure |
+| 23 | **Creer un SDK partage** pour le protocole Socket.IO (types + events) | L | Moyen | Contrat d'interface entre Pi et Server |
+| 24 | **Evaluer un monorepo tooling** (Nx, Turborepo) | L | Moyen | Build/test incrementaux, dependency graph |
+| 25 | **Supprimer la table proof_of_broadcasts** (feature supprimee v3.0) | S | Faible | Nettoyage DB |
+| 26 | **Mettre en place une synchronisation automatique des packs** | M | Moyen | PACK_TECHNICAL_DEEP_DIVE.md (52K) divergera inevitablement de docs/technical/ |
 
 ---
 
@@ -748,4 +889,4 @@ Raspberry Pi
 
 **Fin du document**
 
-*Revue realisee par analyse croisee du codebase (exploration exhaustive) et de la documentation (CLAUDE.md + docs/). Aucune supposition non justifiee par le code source ou la documentation.*
+*Revue realisee par analyse croisee du codebase (exploration exhaustive) et de la documentation complete (CLAUDE.md 239 KB + 143 fichiers docs/ totalisant 71K lignes dans 22 repertoires). Chaque fichier de docs/ a ete examine individuellement. Aucune supposition non justifiee par le code source ou la documentation.*
