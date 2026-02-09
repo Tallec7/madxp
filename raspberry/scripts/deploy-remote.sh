@@ -39,7 +39,6 @@ RASPBERRY_IP="${1:-neopro.local}"
 RASPBERRY_USER="pi"
 RASPBERRY_DIR="/home/pi/neopro"
 DEPLOY_ARCHIVE="raspberry/neopro-raspberry-deploy.tar.gz"
-ADMIN_SERVICE_FILE="raspberry/config/systemd/neopro-admin.service"
 PACKAGE_VERSION="unknown"
 
 if [ -f "raspberry/deploy/VERSION" ]; then
@@ -141,13 +140,6 @@ print_success "Backup créé"
 print_step "Upload de la nouvelle version..."
 scp ${DEPLOY_ARCHIVE} ${RASPBERRY_USER}@${RASPBERRY_IP}:~/neopro-deploy.tar.gz
 print_success "Upload terminé"
-
-# Upload du fichier de service admin si disponible
-if [ -f "${ADMIN_SERVICE_FILE}" ]; then
-    print_step "Mise à jour de l'unité systemd neopro-admin..."
-    scp ${ADMIN_SERVICE_FILE} ${RASPBERRY_USER}@${RASPBERRY_IP}:/tmp/neopro-admin.service
-    print_success "Fichier de service uploadé"
-fi
 
 # Extraction et installation
 print_step "Installation de la nouvelle version..."
@@ -292,6 +284,14 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
         echo 'Scripts runtime installés'
     fi
 
+    # Installation des fichiers de configuration (systemd services, etc.)
+    if [ -d ~/neopro-update/config ]; then
+        sudo mkdir -p ${RASPBERRY_DIR}/config
+        sudo cp -r ~/neopro-update/config/* ${RASPBERRY_DIR}/config/
+        sudo chown -R pi:pi ${RASPBERRY_DIR}/config
+        echo 'Config files installés'
+    fi
+
     # Permissions correctes pour nginx et sync-agent
     echo 'Configuration des permissions...'
     sudo chmod 755 /home/pi
@@ -313,14 +313,41 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Nettoyage
     rm -rf ~/neopro-update ~/neopro-deploy.tar.gz
 
-    # Mise à jour de l'unité systemd neopro-admin si fournie
-    if [ -f /tmp/neopro-admin.service ]; then
-        echo 'Mise à jour de /etc/systemd/system/neopro-admin.service'
-        sudo cp /tmp/neopro-admin.service /etc/systemd/system/neopro-admin.service
-        sudo chown root:root /etc/systemd/system/neopro-admin.service
-        sudo chmod 644 /etc/systemd/system/neopro-admin.service
-        sudo rm /tmp/neopro-admin.service
+    # Installation des services systemd depuis config/systemd/
+    if [ -d ${RASPBERRY_DIR}/config/systemd ]; then
+        echo 'Installation des services systemd...'
+        NEWLY_INSTALLED=''
+        for svc_file in ${RASPBERRY_DIR}/config/systemd/*.service; do
+            if [ -f \"\$svc_file\" ]; then
+                svc_name=\$(basename \"\$svc_file\")
+                was_installed=false
+                if [ -f /etc/systemd/system/\$svc_name ]; then
+                    was_installed=true
+                fi
+                sudo cp \"\$svc_file\" /etc/systemd/system/\$svc_name
+                sudo chown root:root /etc/systemd/system/\$svc_name
+                sudo chmod 644 /etc/systemd/system/\$svc_name
+                sudo systemctl enable \${svc_name%.service} 2>/dev/null || true
+                if [ \"\$was_installed\" = false ]; then
+                    NEWLY_INSTALLED=\"\${NEWLY_INSTALLED} \${svc_name%.service}\"
+                fi
+                echo \"  ✓ \$svc_name installé\"
+            fi
+        done
         sudo systemctl daemon-reload
+
+        # Démarrer les NOUVEAUX services (pas ceux gérés par le restart ci-dessous)
+        MANAGED_SERVICES='neopro-app neopro-admin neopro-kiosk neopro-sync-agent'
+        for svc in \$NEWLY_INSTALLED; do
+            case \" \$MANAGED_SERVICES \" in
+                *\" \$svc \"*) ;;  # Sera géré par le restart des services
+                *)
+                    sudo systemctl start \$svc 2>/dev/null || true
+                    echo \"  ▶ \$svc démarré (nouveau service)\"
+                    ;;
+            esac
+        done
+        echo 'Services systemd installés'
     fi
 "
 print_success "Installation terminée"

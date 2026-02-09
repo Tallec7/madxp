@@ -514,6 +514,7 @@ cp -r ${DEPLOY_DIR}/server ${LEGACY_DIR}/deploy/
 [ -d ${DEPLOY_DIR}/sync-agent ] && cp -r ${DEPLOY_DIR}/sync-agent ${LEGACY_DIR}/deploy/
 [ -d ${DEPLOY_DIR}/admin ] && cp -r ${DEPLOY_DIR}/admin ${LEGACY_DIR}/deploy/
 [ -d ${DEPLOY_DIR}/scripts ] && cp -r ${DEPLOY_DIR}/scripts ${LEGACY_DIR}/deploy/
+[ -d ${DEPLOY_DIR}/config ] && cp -r ${DEPLOY_DIR}/config ${LEGACY_DIR}/deploy/
 
 # Copier VERSION et release.json à la racine
 cp ${DEPLOY_DIR}/VERSION ${LEGACY_DIR}/
