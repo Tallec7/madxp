@@ -179,19 +179,8 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Installation serveur
     if [ -d ~/neopro-update/server ]; then
         sudo cp -r ~/neopro-update/server/* ${RASPBERRY_DIR}/server/
-        # npm install seulement si package.json a changé
-        if [ -f ~/neopro-update/server/package.json ]; then
-            cd ${RASPBERRY_DIR}/server
-            if ! cmp -s ~/neopro-update/server/package.json ${RASPBERRY_DIR}/server/.package.json.last 2>/dev/null; then
-                sudo npm install --production 2>/dev/null || true
-                sudo cp package.json .package.json.last
-                echo 'Serveur installé (dépendances mises à jour)'
-            else
-                echo 'Serveur installé (dépendances inchangées)'
-            fi
-        else
-            echo 'Serveur installé'
-        fi
+        cd ${RASPBERRY_DIR}/server && sudo npm install --production 2>/dev/null || true
+        echo 'Serveur installé'
     fi
 
     # NOTE: Les vidéos ne sont pas déployées ici
@@ -220,37 +209,16 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
             rm /tmp/sync-agent-config.env.backup
         fi
         # npm install pour sync-agent (CRITICAL - sans ça le service crash)
-        if [ -f ~/neopro-update/sync-agent/package.json ]; then
-            cd ${RASPBERRY_DIR}/sync-agent
-            if ! cmp -s ~/neopro-update/sync-agent/package.json ${RASPBERRY_DIR}/sync-agent/.package.json.last 2>/dev/null; then
-                sudo npm install --production 2>/dev/null || true
-                sudo cp package.json .package.json.last
-                echo 'Sync-agent installé (dépendances mises à jour)'
-            else
-                echo 'Sync-agent installé (dépendances inchangées)'
-            fi
-        else
-            echo 'Sync-agent installé (configuration préservée)'
-        fi
+        cd ${RASPBERRY_DIR}/sync-agent && sudo npm install --production 2>/dev/null || true
+        echo 'Sync-agent installé'
     fi
 
     # Installation admin panel
     if [ -d ~/neopro-update/admin ]; then
         sudo mkdir -p ${RASPBERRY_DIR}/admin
         sudo cp -r ~/neopro-update/admin/* ${RASPBERRY_DIR}/admin/
-        # npm install seulement si package.json a changé
-        if [ -f ~/neopro-update/admin/package.json ]; then
-            cd ${RASPBERRY_DIR}/admin
-            if ! cmp -s ~/neopro-update/admin/package.json ${RASPBERRY_DIR}/admin/.package.json.last 2>/dev/null; then
-                sudo npm install --production 2>/dev/null || true
-                sudo cp package.json .package.json.last
-                echo 'Admin panel installé (dépendances mises à jour)'
-            else
-                echo 'Admin panel installé (dépendances inchangées)'
-            fi
-        else
-            echo 'Admin panel installé'
-        fi
+        cd ${RASPBERRY_DIR}/admin && sudo npm install --production 2>/dev/null || true
+        echo 'Admin panel installé'
     fi
 
     # Enregistrer les métadonnées de version (à la racine de neopro/)
