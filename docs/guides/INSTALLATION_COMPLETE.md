@@ -520,6 +520,7 @@ La partie longue (install.sh) n'est à faire qu'une fois par Pi physique.
 | `prepare-golden-image.sh` | `raspberry/tools/`   | Prépare Pi pour clonage           |
 | `clone-sd-card.sh`        | `raspberry/tools/`   | Clone carte SD en image           |
 | `cleanup-pi.sh`           | `raspberry/scripts/` | Nettoie ~/raspberry après install |
+| `diagnose-pi.sh`          | `raspberry/scripts/` | Diagnostic complet du Pi (CPU, GPU, services, réseau) |
 | `fix-fleet-pi.sh`         | `raspberry/scripts/` | Réparation flotte (TKIP, services, GPU, buffers) |
 | `fix-hotspot.sh`          | `raspberry/scripts/` | Diagnostic et réparation hotspot WiFi |
 
