@@ -1,3 +1,9 @@
+## [3.8.2](https://github.com/Tallec7/neopro/compare/v3.8.1...v3.8.2) (2026-02-09)
+
+### Bug Fixes
+
+- **hotspot:** fix stdout pollution in channel optimizer causing sed failure ([4500515](https://github.com/Tallec7/neopro/commit/45005157d8d543232b8dc6181f14c3c55d064e34))
+
 ## [3.8.1](https://github.com/Tallec7/neopro/compare/v3.8.0...v3.8.1) (2026-02-09)
 
 ### Bug Fixes
