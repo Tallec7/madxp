@@ -7,6 +7,7 @@
 import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import { adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
+import { validate, schemas } from '../middleware/validation';
 import {
   getSubscriptionStats,
   getSitesAtRisk,
@@ -120,6 +121,7 @@ siteSubscriptionRouter.put(
   '/extend',
   requireRole('super_admin', 'superadmin', 'admin'),
   sensitiveRateLimit,
+  validate(schemas.extendSubscription),
   extendSubscription
 );
 
@@ -131,6 +133,7 @@ siteSubscriptionRouter.post(
   '/suspend',
   requireRole('super_admin', 'superadmin', 'admin'),
   sensitiveRateLimit,
+  validate(schemas.suspendSite),
   suspendSite
 );
 
@@ -142,6 +145,7 @@ siteSubscriptionRouter.post(
   '/reactivate',
   requireRole('super_admin', 'superadmin', 'admin'),
   sensitiveRateLimit,
+  validate(schemas.reactivateSite),
   reactivateSite
 );
 
@@ -153,6 +157,7 @@ siteSubscriptionRouter.put(
   '/plan',
   requireRole('super_admin', 'superadmin'),
   sensitiveRateLimit,
+  validate(schemas.changePlan),
   changePlan
 );
 
@@ -165,5 +170,6 @@ siteSubscriptionRouter.put(
   '/',
   requireRole('super_admin', 'superadmin', 'admin'),
   sensitiveRateLimit,
+  validate(schemas.updateSubscription),
   updateSubscription
 );

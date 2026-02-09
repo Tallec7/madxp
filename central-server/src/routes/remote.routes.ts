@@ -19,6 +19,7 @@
 
 import { Router } from 'express';
 import { remoteRateLimit } from '../middleware/user-rate-limit';
+import { validate, schemas } from '../middleware/validation';
 import {
   getRemoteState,
   sendRemoteCommand,
@@ -52,7 +53,7 @@ router.get('/:siteId/state', remoteRateLimit, getRemoteState);
  * - breaking-news: { message, duration?, position? }
  * - match-config: { sessionId, matchDate, matchName, audienceEstimate }
  */
-router.post('/:siteId/command', remoteRateLimit, sendRemoteCommand);
+router.post('/:siteId/command', remoteRateLimit, validate(schemas.remoteCommand), sendRemoteCommand);
 
 /**
  * GET /api/remote/:siteId/videos
