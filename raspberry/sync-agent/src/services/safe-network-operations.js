@@ -324,18 +324,25 @@ class SafeNetworkOperations {
       // Modify in memory
       const newContent = modifyFn(content);
 
-      // Write to tmp file atomically
-      await execAsync(`echo ${JSON.stringify(newContent)} | sudo tee ${tmpPath} > /dev/null`);
+      // Write to tmp file atomically using fs-extra (avoids shell escaping issues)
+      // We write to a local temp file first, then sudo mv to the target
+      const localTmpPath = `/tmp/wpa-supplicant-edit-${Date.now()}.tmp`;
+      await fs.writeFile(localTmpPath, newContent, 'utf8');
+
+      // Copy with sudo to the target tmp path (preserves content exactly)
+      await execAsync(`sudo cp ${localTmpPath} ${tmpPath}`);
+      await fs.remove(localTmpPath);
 
       // Atomic move (rename is atomic on same filesystem)
       await execAsync(`sudo mv ${tmpPath} ${configPath}`);
 
       // Fix permissions
       await execAsync(`sudo chmod 600 ${configPath}`);
+      await execAsync(`sudo chown root:root ${configPath}`);
 
       return { success: true };
     } catch (error) {
-      // Cleanup tmp file on failure
+      // Cleanup tmp files on failure
       await execAsync(`sudo rm -f ${tmpPath} 2>/dev/null || true`);
       throw error;
     }
