@@ -813,6 +813,20 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 
 ## 📝 Changelog
 
+### Version 1.2.0 - 9 Février 2026
+
+**Contrôle d'enregistrement analytics (RecordingStateService)** :
+
+- ✅ Nouveau service `RecordingStateService` contrôlant l'activation/désactivation du tracking
+- ✅ Guards dans `SponsorAnalyticsService.trackSponsorStart/End()` : `if (!recordingState.isRecording) return`
+- ✅ Guards dans `AnalyticsService.trackVideoStart/End()` : idem
+- ✅ Au boot : OFF (aucune donnée enregistrée)
+- ✅ Auto-ON quand la Remote change de phase (neutral → before/during/after)
+- ✅ Auto-OFF quand retour en neutral + timeout 15 min
+- ✅ Override manuel via bouton 🔴 REC sur la télécommande
+- ✅ Contexte sponsor automatique : la Remote wire eventType, period et audienceEstimate
+- ✅ TV second écran (slaves) : analytics désactivées automatiquement
+
 ### Version 1.1.0 - 28 Décembre 2025
 
 **Authentification API Key pour impressions** :

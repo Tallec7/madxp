@@ -4,6 +4,7 @@ import { Video } from '../interfaces/video.interface';
 import { Configuration } from '../interfaces/configuration.interface';
 import { environment } from '../../environments/environment';
 import { HdmiStatusService } from './hdmi-status.service';
+import { RecordingStateService } from './recording-state.service';
 
 /**
  * Interface pour un événement de lecture vidéo
@@ -39,6 +40,7 @@ export interface VideoPlayEvent {
 export class AnalyticsService {
   private readonly http = inject(HttpClient);
   private readonly hdmiStatus = inject(HdmiStatusService);
+  private readonly recordingState = inject(RecordingStateService);
 
   private buffer: VideoPlayEvent[] = [];
   private currentSession: string | null = null;
@@ -113,6 +115,11 @@ export class AnalyticsService {
    * Capture également l'état de la TV via HDMI-CEC
    */
   public trackVideoStart(video: Video, triggerType: 'auto' | 'manual' = 'auto'): void {
+    // Ne pas tracker si l'enregistrement est désactivé
+    if (!this.recordingState.isRecording) {
+      return;
+    }
+
     // Si une vidéo était en cours, la terminer comme incomplète
     if (this.currentVideo && this.currentVideoStart) {
       this.trackVideoEnd(false);
@@ -138,6 +145,14 @@ export class AnalyticsService {
    */
   public trackVideoEnd(completed = true): void {
     if (!this.currentVideo || !this.currentVideoStart) {
+      return;
+    }
+
+    // Ne pas tracker si l'enregistrement est désactivé (mais reset l'état interne)
+    if (!this.recordingState.isRecording) {
+      this.currentVideo = null;
+      this.currentVideoStart = null;
+      this.currentTvStatus = 'unknown';
       return;
     }
 

@@ -9,6 +9,8 @@ import { Category } from '../../interfaces/category.interface';
 import { Video } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
+import { SponsorAnalyticsService } from '../../services/sponsor-analytics.service';
+import { RecordingStateService } from '../../services/recording-state.service';
 import { DemoConfigService } from '../../services/demo-config.service';
 import { LocalBroadcastService, TimerUpdateEvent } from '../../services/local-broadcast.service';
 import {
@@ -40,6 +42,8 @@ export class RemoteComponent implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly socketService = inject(SocketService);
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly sponsorAnalytics = inject(SponsorAnalyticsService);
+  private readonly recordingState = inject(RecordingStateService);
   private readonly demoConfigService = inject(DemoConfigService);
   private readonly localBroadcast = inject(LocalBroadcastService);
   private readonly localOptionsService = inject(LocalOptionsService);
@@ -108,6 +112,9 @@ export class RemoteComponent implements OnInit, OnDestroy {
   // Vidéos récemment lancées
   public recentVideos: Video[] = [];
   private readonly MAX_RECENT_VIDEOS = 5;
+
+  // État d'enregistrement analytics
+  public isRecording = false;
 
   // Loading state
   public isLoading = false;
@@ -207,6 +214,15 @@ export class RemoteComponent implements OnInit, OnDestroy {
     this.licenseState = this.licenseService.getCurrentState();
     this.isLicenseBlocked = this.licenseService.isBlocked();
     this.hasLicenseWarning = this.licenseService.hasWarning();
+
+    // S'abonner à l'état d'enregistrement analytics
+    this.subscriptions.push(
+      this.recordingState.isRecording$.subscribe((recording) => {
+        this.ngZone.run(() => {
+          this.isRecording = recording;
+        });
+      })
+    );
 
     this.isDemoMode = this.demoConfigService.isDemoMode();
 
@@ -599,6 +615,11 @@ export class RemoteComponent implements OnInit, OnDestroy {
     // Créer une nouvelle session avec les infos du match
     this.currentSessionId = this.generateUUID();
 
+    // Mettre à jour l'estimation d'audience dans le sponsor analytics
+    if (this.matchInfo.audienceEstimate > 0) {
+      this.sponsorAnalytics.setAudienceEstimate(this.matchInfo.audienceEstimate);
+    }
+
     // Envoyer au serveur via socket
     this.socketService.emit('match-config', {
       sessionId: this.currentSessionId,
@@ -746,10 +767,36 @@ export class RemoteComponent implements OnInit, OnDestroy {
   public switchPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
     this.activePhase = phase;
     console.log('Switching to phase:', phase);
+
+    // Notifier le RecordingStateService (auto-start/stop analytics)
+    this.recordingState.onPhaseChange(phase);
+
+    // Mettre à jour le contexte sponsor analytics
+    const periodMap: Record<string, 'pre_match' | 'halftime' | 'post_match' | 'loop'> = {
+      'before': 'pre_match',
+      'during': 'halftime',
+      'after': 'post_match',
+      'neutral': 'loop'
+    };
+    if (phase !== 'neutral') {
+      this.sponsorAnalytics.setEventType('match');
+      this.sponsorAnalytics.setPeriod(periodMap[phase]);
+    } else {
+      this.sponsorAnalytics.setEventType('other');
+      this.sponsorAnalytics.setPeriod('loop');
+    }
+
     // Communication locale (Remote ↔ TV sur le même Raspberry) - PRIORITAIRE
     this.localBroadcast.emitPhaseChange({ phase });
     // Communication cloud (pour monitoring/dashboard - optionnel)
     this.socketService.emit('phase-change', { phase });
+  }
+
+  /**
+   * Toggle l'enregistrement analytics (override manuel)
+   */
+  public toggleRecording(): void {
+    this.recordingState.toggleRecording();
   }
 
   /**
