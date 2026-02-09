@@ -402,6 +402,7 @@ RUNTIME_SCRIPTS=(
     "raspberry/scripts/fix-hotspot.sh"
     "raspberry/scripts/sync-agent-guardian.sh"
     "raspberry/scripts/fix-fleet-pi.sh"
+    "raspberry/scripts/diagnose-pi.sh"
 )
 mkdir -p ${DEPLOY_DIR}/scripts
 for script_path in "${RUNTIME_SCRIPTS[@]}"; do
@@ -422,6 +423,9 @@ SYSTEMD_FILES=(
     "raspberry/config/systemd/neopro-hotspot-watchdog.service"
     "raspberry/config/systemd/neopro-hotspot-optimizer.service"
     "raspberry/config/systemd/neopro-sync-guardian.service"
+    "raspberry/config/systemd/neopro-app.service"
+    "raspberry/config/systemd/neopro-sync-agent.service"
+    "raspberry/config/systemd/neopro-admin.service"
 )
 for svc_path in "${SYSTEMD_FILES[@]}"; do
     if [ -f "${svc_path}" ]; then
