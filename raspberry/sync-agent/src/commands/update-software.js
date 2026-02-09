@@ -333,6 +333,26 @@ class SoftwareUpdateHandler {
 
       // Copier sync-agent (comme deploy-remote.sh et admin-server.js)
       if (await fs.pathExists(path.join(sourcePath, 'sync-agent'))) {
+        // IMPORTANT: Créer un golden snapshot AVANT de remplacer le code
+        // Si le nouveau code crashe, le guardian pourra restaurer cette version
+        const goldenDir = path.join(rootDir, 'sync-agent-golden');
+        if (!await fs.pathExists(goldenDir)) {
+          const currentAgentJs = path.join(rootDir, 'sync-agent', 'src', 'agent.js');
+          if (await fs.pathExists(currentAgentJs)) {
+            logger.info('Creating golden snapshot before update (first-time safety net)...');
+            try {
+              await execAsync(`cp -r ${path.join(rootDir, 'sync-agent')} ${goldenDir}`);
+              await execAsync(`echo "$(date -Iseconds)" > ${goldenDir}/.golden-created`);
+              await execAsync(`chown -R pi:pi ${goldenDir}`);
+              logger.info('Golden snapshot created successfully');
+            } catch (goldenError) {
+              logger.warn('Failed to create golden snapshot (non-critical)', { error: goldenError.message });
+            }
+          }
+        } else {
+          logger.info('Golden snapshot already exists, skipping');
+        }
+
         // Sauvegarder les configs locales du sync-agent
         const syncAgentEnvBackup = '/tmp/sync-agent.env.backup';
         const syncAgentConfigEnvBackup = '/tmp/sync-agent-config.env.backup';

@@ -870,6 +870,8 @@ ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
 
 **Note (v3.7.14+) :** Le script `update-software.js` copie maintenant aussi le dossier `config/` (services systemd). Les versions précédentes ne copiaient jamais `config/`, ce qui empêchait l'installation des services `neopro-hotspot-watchdog`, `neopro-sync-guardian` et `neopro-hotspot-optimizer` via OTA.
 
+**⚠️ Golden snapshot automatique (v3.7.16+) :** `update-software.js` crée automatiquement un snapshot golden de la version actuelle du sync-agent **avant** de la remplacer (si aucun golden n'existe). Cela résout le problème critique suivant : un Pi recevant le guardian pour la première fois via OTA n'avait aucun golden → si le nouveau code crashait, le guardian ne pouvait pas restaurer → **Pi hors ligne indéfiniment**. Symptôme : Pi reste "Hors ligne" après OTA, le guardian log "Golden directory does not exist". Fix immédiat si déjà impacté : reboot physique du Pi.
+
 **Voir aussi :** Section [v2.15.x dans CLAUDE.md](/CLAUDE.md#v215x-janvier-2026) pour les détails techniques.
 
 ---
