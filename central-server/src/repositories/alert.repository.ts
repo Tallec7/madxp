@@ -30,6 +30,21 @@ export interface AlertWithSite extends Alert {
   club_name: string;
 }
 
+export interface AlertListFilters {
+  type?: string;
+  active?: boolean;
+  severity?: 'warning' | 'critical';
+  siteId?: string;
+}
+
+export interface AlertStatsData {
+  bySeverity: Record<string, number>;
+  byType: Array<{ type: string; count: number }>;
+  topSites: Array<{ siteId: string; siteName: string; alertCount: number }>;
+  trend: Array<{ date: string; count: number; criticalCount: number }>;
+  totalActive: number;
+}
+
 // --------------------------------------------------------------------------
 // Repository
 // --------------------------------------------------------------------------
@@ -74,13 +89,14 @@ class AlertRepositoryImpl extends BaseRepository<Alert> {
   }
 
   /**
-   * Resout une alerte.
+   * Resout une alerte et retourne l'alerte mise a jour.
    */
-  async resolve(id: string): Promise<void> {
-    await query(
-      `UPDATE alerts SET status = 'resolved', resolved_at = NOW() WHERE id = $1`,
+  async resolve(id: string): Promise<Alert | null> {
+    const result = await query<Alert>(
+      `UPDATE alerts SET status = 'resolved', resolved_at = NOW() WHERE id = $1 RETURNING *`,
       [id]
     );
+    return result.rows[0] || null;
   }
 
   /**
@@ -142,6 +158,146 @@ class AlertRepositoryImpl extends BaseRepository<Alert> {
       params
     );
     return result.rows;
+  }
+
+  /**
+   * Resout toutes les alertes actives d'un site (tous types confondus).
+   */
+  async resolveAllForSite(siteId: string): Promise<number> {
+    const result = await query(
+      `UPDATE alerts SET status = 'resolved', resolved_at = NOW()
+       WHERE site_id = $1 AND status = 'active'`,
+      [siteId]
+    );
+    return result.rowCount ?? 0;
+  }
+
+  /**
+   * Liste les alertes avec filtres et pagination, JOIN avec sites.
+   */
+  async findWithFilters(
+    filters: AlertListFilters,
+    pagination: { limit: number; offset: number }
+  ): Promise<{ rows: AlertWithSite[]; total: number }> {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    let paramIndex = 1;
+
+    if (filters.type === 'predictive') {
+      conditions.push(`(
+        a.alert_type LIKE '%[PRÉD]%'
+        OR a.alert_type IN (
+          'days_since_last_video', 'disk_growth_rate', 'disconnections_24h',
+          'wifi_signal_quality', 'video_errors_24h', 'temperature_trend',
+          'hotspot_restarts_24h', 'days_until_subscription_end'
+        )
+      )`);
+    } else if (filters.type) {
+      conditions.push(`a.alert_type = $${paramIndex++}`);
+      params.push(filters.type);
+    }
+
+    if (filters.active === true) {
+      conditions.push(`a.status = 'active'`);
+    } else if (filters.active === false) {
+      conditions.push(`a.status IN ('acknowledged', 'resolved')`);
+    }
+
+    if (filters.severity) {
+      conditions.push(`a.severity = $${paramIndex++}`);
+      params.push(filters.severity);
+    }
+
+    if (filters.siteId) {
+      conditions.push(`a.site_id = $${paramIndex++}`);
+      params.push(filters.siteId);
+    }
+
+    const whereClause = conditions.length > 0
+      ? `WHERE ${conditions.join(' AND ')}`
+      : '';
+
+    const [dataResult, countResult] = await Promise.all([
+      query<AlertWithSite>(
+        `SELECT a.id, a.site_id, s.site_name, s.club_name,
+                a.alert_type, a.severity, a.message, a.metadata,
+                a.created_at, a.resolved_at, a.status
+         FROM alerts a
+         LEFT JOIN sites s ON s.id = a.site_id
+         ${whereClause}
+         ORDER BY
+           CASE WHEN a.severity = 'critical' THEN 0 ELSE 1 END,
+           a.created_at DESC
+         LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
+        [...params, pagination.limit, pagination.offset]
+      ),
+      query(
+        `SELECT COUNT(*) as total FROM alerts a ${whereClause}`,
+        params
+      ),
+    ]);
+
+    return {
+      rows: dataResult.rows,
+      total: parseInt(countResult.rows[0].total as string, 10),
+    };
+  }
+
+  /**
+   * Statistiques agregees des alertes actives.
+   */
+  async getStats(): Promise<AlertStatsData> {
+    const [severityResult, typeResult, sitesResult, trendResult] = await Promise.all([
+      query(
+        `SELECT severity, COUNT(*) as count
+         FROM alerts WHERE status = 'active'
+         GROUP BY severity`
+      ),
+      query(
+        `SELECT alert_type as type, COUNT(*) as count
+         FROM alerts WHERE status = 'active'
+         GROUP BY alert_type ORDER BY count DESC LIMIT 10`
+      ),
+      query(
+        `SELECT a.site_id, s.site_name, s.club_name, COUNT(*) as alert_count
+         FROM alerts a
+         LEFT JOIN sites s ON s.id = a.site_id
+         WHERE a.status = 'active'
+         GROUP BY a.site_id, s.site_name, s.club_name
+         ORDER BY alert_count DESC LIMIT 10`
+      ),
+      query(
+        `SELECT DATE(created_at) as date, COUNT(*) as count,
+                COUNT(*) FILTER (WHERE severity = 'critical') as critical_count
+         FROM alerts
+         WHERE created_at > NOW() - INTERVAL '7 days'
+         GROUP BY DATE(created_at) ORDER BY date`
+      ),
+    ]);
+
+    const bySeverity: Record<string, number> = {};
+    for (const row of severityResult.rows) {
+      bySeverity[row.severity as string] = parseInt(row.count as string, 10);
+    }
+
+    return {
+      bySeverity,
+      byType: typeResult.rows.map(row => ({
+        type: row.type as string,
+        count: parseInt(row.count as string, 10),
+      })),
+      topSites: sitesResult.rows.map(row => ({
+        siteId: row.site_id as string,
+        siteName: (row.site_name || row.club_name) as string,
+        alertCount: parseInt(row.alert_count as string, 10),
+      })),
+      trend: trendResult.rows.map(row => ({
+        date: row.date as string,
+        count: parseInt(row.count as string, 10),
+        criticalCount: parseInt(row.critical_count as string, 10),
+      })),
+      totalActive: Object.values(bySeverity).reduce((a, b) => a + b, 0),
+    };
   }
 
   // --------------------------------------------------------------------------

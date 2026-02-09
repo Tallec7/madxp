@@ -13,6 +13,7 @@ import { getFtpPublicUrl, isFtpConfigured } from '../config/ftp-storage';
 import { getPublicUrl } from '../config/supabase';
 import { validateShellCommand, getAllowedCommandsForRole } from '../middleware/remote-shell-security';
 import { memoryCache } from '../services/memory-cache.service';
+import { siteRepository } from '../repositories/site.repository';
 
 class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -191,13 +192,13 @@ export const getSite = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await query('SELECT * FROM sites WHERE id = $1', [id]);
+    const site = await siteRepository.findById(id);
 
-    if (result.rows.length === 0) {
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    res.json(result.rows[0]);
+    res.json(site);
   } catch (error) {
     logger.error('Get site error:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération du site' });
