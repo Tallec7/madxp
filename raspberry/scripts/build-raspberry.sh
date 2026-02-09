@@ -401,6 +401,7 @@ RUNTIME_SCRIPTS=(
     "raspberry/scripts/hotspot-optimizer.sh"
     "raspberry/scripts/fix-hotspot.sh"
     "raspberry/scripts/sync-agent-guardian.sh"
+    "raspberry/scripts/fix-fleet-pi.sh"
 )
 mkdir -p ${DEPLOY_DIR}/scripts
 for script_path in "${RUNTIME_SCRIPTS[@]}"; do
