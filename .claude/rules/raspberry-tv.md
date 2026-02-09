@@ -3,6 +3,8 @@ paths:
   - "raspberry/src/app/components/tv/**"
   - "raspberry/src/app/services/double-buffer*"
   - "raspberry/src/app/services/video-error*"
+  - "raspberry/src/app/services/recording-state*"
+  - "raspberry/server/server.js"
 ---
 
 # Double-Buffer Vidéo (TV Component)
@@ -54,3 +56,33 @@ Pendant lecture: setInterval(500ms) → captureLastFrame() → canvas
 - Watchdog vérifie toutes les 10s que la vidéo progresse
 - Memory cleanup toutes les 30 min OU après 50 vidéos
 - Canvas réduit à 720p (économise ~4.5MB)
+
+## Synchronisation TV Master-Slave (v3.8.0+)
+
+Permet de synchroniser plusieurs instances TV (kiosk + navigateur) sur la même boucle vidéo via Socket.IO local (port 3000).
+
+**Pourquoi Socket.IO ?** Le kiosk Chromium est un processus séparé → BroadcastChannel ne fonctionne pas entre processes. Tout passe par le serveur local.
+
+**Architecture** :
+- Premier TV connecté = **master**, suivants = **slaves**
+- Master émet `tv-loop-update` à chaque changement de vidéo
+- Slaves reçoivent `tv-loop-state`, trouvent la vidéo par path, jouent + seek au temps approximatif
+- Si master déconnecte → promotion automatique du slave le plus ancien
+- **Analytics désactivées pour les slaves** : `if (!this.isSlaveMode)` avant tout `track*()`
+
+**Fichiers** :
+- `raspberry/server/server.js` — tvInstances Map, promoteSlave(), handlers
+- `raspberry/src/app/components/tv/tv.component.ts` — tvRole, isSlaveMode, emitLoopState(), handleMasterLoopState()
+
+## RecordingStateService (v3.8.0+)
+
+Contrôle hybride (auto + manuel) de l'enregistrement analytics.
+
+- **Au boot : OFF** — aucune donnée analytics enregistrée
+- **Auto ON** quand la Remote change de phase (`neutral` → `before`/`during`/`after`)
+- **Auto OFF** quand retour en `neutral` + timeout 15 min
+- **Override manuel** : bouton REC sur la télécommande
+- **Guards** : `AnalyticsService` et `SponsorAnalyticsService` vérifient `recordingState.isRecording` avant de tracker
+- **Propagation** : BroadcastChannel (onglets locaux) + Socket.IO (serveur local + cloud)
+
+**Fichier** : `raspberry/src/app/services/recording-state.service.ts`

@@ -56,6 +56,13 @@ Détection : si `storage_path` ne contient pas `/` → FTP, sinon Supabase.
 'deploy_video'      : { deploymentId, videoUrl, ... }
 'update_config'     : { configVersionId, configuration }
 'execute_command'   : { commandId, type, data }
+
+// Événements locaux (serveur port 3000 sur le Pi) — v3.8.0+
+'recording-state'   : { isRecording, isManualOverride }  // Contrôle analytics
+'tv-register'       : {}                                 // Enregistrement instance TV
+'tv-role-assigned'  : { role: 'master' | 'slave' }       // Rôle assigné à la TV
+'tv-loop-update'    : LoopState                           // Master → serveur (boucle)
+'tv-loop-state'     : LoopState                           // Serveur → slaves (relai)
 ```
 
 ## Cloud Remote Relay Architecture
