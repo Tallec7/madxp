@@ -782,11 +782,11 @@ users (7 roles)
 | 2 | **⚠️ CRITIQUE : Restructurer CLAUDE.md** (~80 lignes max) | L | **Haut** | 239 KB = ~6000 lignes, limite officielle ~80 lignes. Claude Code ignore probablement >90% du contenu. Deplacer vers `.claude/rules/` et `docs/` |
 | ~~3~~ | ~~Corriger SQL_QUERIES.md~~ | — | — | **Faux positif** — les requetes sont correctes |
 | ~~4~~ | ~~Completer DEMO_MODE.md~~ | — | — | **Faux positif** — le fichier fait 238 lignes et est complet |
-| 5 | **Supprimer features/analytics/** ou documenter explicitement son statut | S | Moyen | Code mort source de confusion |
-| 6 | **Supprimer la reference server-render** de CLAUDE.md | S | Faible | Reference morte |
-| 7 | **Consolider raspberry/systemd/** dans config/systemd/ | S | Faible | Eliminer la duplication |
-| 8 | **Documenter le CI/CD** dans CLAUDE.md ou dans docs/deployment/ | M | Haut | 5 workflows GitHub Actions non documentes |
-| 9 | **Documenter le middleware remote-shell-security** | S | Moyen | Securite critique non visible |
+| 5 | **Statuer sur features/analytics/** — code actif malgre doc "supprime v3.0" | S | Moyen | Discordance doc/code. README d'avertissement ajoute ✅ |
+| ~~6~~ | ~~Supprimer la reference server-render~~ | — | — | **FAIT** — CLAUDE.md restructure, reference eliminee ✅ |
+| ~~7~~ | ~~Consolider raspberry/systemd/~~ | — | — | **Faux positif** — 2 repertoires complementaires (services principaux vs backup/video) |
+| ~~8~~ | ~~Documenter le CI/CD~~ | — | — | **FAIT** — `docs/deployment/CI_CD.md` cree ✅ |
+| ~~9~~ | ~~Documenter remote-shell-security~~ | — | — | **Deja documente** dans `docs/technical/REMOTE_SHELL_SECURITY.md` |
 
 ### Moyen terme (1-3 mois)
 
