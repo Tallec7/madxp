@@ -322,9 +322,9 @@ app.use('/api/sites', sitesRoutes);
 app.use('/api/sites', draftsRoutes);  // Config drafts - sous /api/sites/:siteId/draft
 app.use('/api/groups', apiRateLimit, groupsRoutes);
 app.use('/api', sensitiveRateLimit, contentRoutes); // Upload de vidéos - plus restrictif
-app.use('/api', sensitiveRateLimit, updatesRoutes); // Mises à jour - sensible
+app.use('/api', updatesRoutes); // Mises à jour - rate limits per-route dans updates.routes.ts
 app.use('/api/analytics', apiRateLimit, analyticsRoutes);
-app.use('/api/analytics', apiRateLimit, advertiserAnalyticsRoutes); // Analytics annonceurs (+ backward compat sponsors)
+app.use('/api/analytics', advertiserAnalyticsRoutes); // Analytics annonceurs - rate limits per-route (piAnalyticsRateLimit for /impressions, apiRateLimit for the rest)
 app.use('/api', apiRateLimit, advertiserSitesRoutes); // Gestion associations annonceurs <-> sites (+ backward compat)
 app.use('/api/audit', apiRateLimit, auditRoutes);
 app.use('/api/canary', sensitiveRateLimit, canaryRoutes); // Déploiements canary - sensible
@@ -342,7 +342,7 @@ app.use('/api/subscriptions', subscriptionRoutes); // Subscription management - 
 app.use('/api/billing', billingRoutes); // Billing export - admin only
 app.use('/api/reports', apiRateLimit, reportsRoutes); // Generated PDF reports
 app.use('/api/alerts', apiRateLimit, alertsRoutes); // System and predictive alerts
-app.use('/api/benchmark', apiRateLimit, benchmarkRoutes); // Anonymous benchmarks
+app.use('/api/benchmark', benchmarkRoutes); // Anonymous benchmarks - rate limits per-route in benchmark.routes.ts
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler
 // Uses standardized error format with correlation ID

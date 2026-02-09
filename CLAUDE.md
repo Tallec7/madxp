@@ -476,9 +476,10 @@ Le Cloud Remote a été optimisé pour réduire le nombre de requêtes HTTP de *
 Les rate limits sont appliqués **par route** pour éviter les conflits :
 
 ```
-Auth:         10 req/15min    (anti-bruteforce) - 1 min dev
-Monitoring:   300 req/min     (status, metrics, dashboard, local-content)
-Admin:        200 req/min     (lecture sites, logs, config-history)
+Auth:         60 req/min      (anti-bruteforce) - 100 en dev
+Monitoring:   300 req/min     (status, metrics, dashboard, local-content, benchmark)
+Admin:        400 req/min     (lecture sites, logs, config-history)
+API General:  100 req/min     (analytics, audit, advertisers, agencies, etc.)
 Sensitive:    30 req/min      (commands, deployments, créations, suppressions)
 Remote Cloud: 60 req/min      (télécommande cloud - PUBLIC, par IP)
 Logging:      200 req/min     (frontend logs - throttled client-side)
@@ -490,10 +491,16 @@ Pi Analytics: 500 req/min     (impressions sponsors depuis les Pi - par IP)
 
 - `/api/sites` : Rate limits **par route** (pas de limite globale pour éviter les doubles comptages)
 - `/api/sites/:id/dashboard`, `/api/sites/:id/connection-status`, `/api/sites/:id/metrics`, `/api/sites/:id/local-content` → `monitoringRateLimit` (300/min)
-- `/api/sites/:id`, `/api/sites/:id/logs`, `/api/sites/:id/config-history/*` → `adminRateLimit` (200/min)
+- `/api/sites/:id`, `/api/sites/:id/logs`, `/api/sites/:id/config-history/*` → `adminRateLimit` (400/min)
 - POST/PUT/DELETE, `/api/sites/:id/command` → `sensitiveRateLimit` (30/min)
 - `/api/remote/*` → `remoteRateLimit` (60/min) - **PUBLIC (pas d'auth JWT)** - par IP
-- `/api/analytics/impressions` → `piAnalyticsRateLimit` (500/min) - **Par IP** - permet backlog de ~5 Pi simultanément
+- `/api/benchmark/*` → `monitoringRateLimit` (300/min) - **per-route** (pas de rate limit global sur le montage)
+- `/api/analytics/impressions` → `piAnalyticsRateLimit` (500/min) - **Par IP** - plus de double rate limiting avec apiRateLimit
+- `/api/analytics/advertisers/*` → `apiRateLimit` (100/min) - **per-route** dans advertiser-analytics.routes.ts
+
+**⚠️ Anti-pattern : double rate limiting** (corrigé v3.7.14+) :
+
+Les rate limiters `express-rate-limit` sont des **singletons** : un seul compteur partagé entre toutes les routes qui utilisent la même instance. Mettre `apiRateLimit` à la fois dans `server.ts` (montage global) ET dans les routes internes crée un double comptage. La règle : si un fichier de routes définit ses propres rate limiters, ne PAS en mettre dans `server.ts`.
 
 **Frontend Log Throttling** (v2.25+) :
 
@@ -2163,6 +2170,21 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v3.7.14 (Février 2026)
+
+- **Fix double rate limiting causant des 429 au chargement du dashboard** : Suppression des rate limiters redondants sur `/api/benchmark` et `/api/analytics` (advertiser)
+  - **Problème** : Des erreurs 429 (Too Many Requests) apparaissaient dès la connexion au dashboard, sans action de l'utilisateur
+  - **Cause racine** : Double rate limiting — le `apiRateLimit` (100 req/min, singleton partagé) était appliqué dans `server.ts` en plus des rate limiters internes des routes. Le compteur `apiRateLimit` étant partagé entre ~10 groupes de routes (benchmark, analytics, alerts, audit, agencies, reports, etc.), le quota s'épuisait rapidement au chargement du dashboard qui sollicite plusieurs de ces endpoints simultanément.
+  - **Cas 1 — `/api/benchmark`** : `apiRateLimit` (100/min) dans `server.ts` + `monitoringRateLimit` (300/min) dans `benchmark.routes.ts` → le 100/min partagé bloquait avant le 300/min dédié
+  - **Cas 2 — `/api/analytics` (advertiser)** : `apiRateLimit` (100/min) dans `server.ts` + `piAnalyticsRateLimit` (500/min) sur `POST /impressions` → les Pi étaient limités à 100/min au lieu de 500/min
+  - **Solutions** :
+    - `/api/benchmark` : Suppression du `apiRateLimit` dans `server.ts` (les routes internes ont déjà `monitoringRateLimit`)
+    - `/api/analytics` (advertiser) : `apiRateLimit` déplacé en per-route dans `advertiser-analytics.routes.ts` sur chaque route SAUF `POST /impressions` qui garde uniquement `piAnalyticsRateLimit`
+  - **Fichiers modifiés** :
+    - `central-server/src/server.ts` - Suppression `apiRateLimit` sur les montages benchmark et advertiser-analytics
+    - `central-server/src/routes/advertiser-analytics.routes.ts` - Import et application de `apiRateLimit` per-route
+  - **Migration** : Redéployer le central-server sur Railway
 
 ### v3.7.8 (Février 2026)
 
