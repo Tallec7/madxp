@@ -1,240 +1,402 @@
-# NLF Handball - Debug Bundle Analysis
+# NLF Handball - Analyse Debug Bundle
 
-**Date**: 2026-02-08 15:05-16:05 UTC
-**Pi Model**: Raspberry Pi 5 Model B Rev 1.0
-**Software**: v3.7.13.1 (built 2026-02-07)
-**OS**: Debian GNU/Linux 13 (trixie), Kernel 6.12.47+rpt-rpi-2712
+**Date du bundle** : 2026-02-08 15:05-16:05 UTC
+**Pi** : Raspberry Pi 5 Model B Rev 1.0
+**Software** : v3.7.13.1 (build 2026-02-07)
+**OS** : Debian GNU/Linux 13 (trixie), Kernel 6.12.47+rpt-rpi-2712
+**Uptime au moment du bundle** : ~39 minutes
 
 ---
 
-## Overall Status: Healthy (Score 100/100) — 5 Actionable Issues
+## Verdict : le Pi fonctionne, mais la stabilité réseau est fragile
 
-| Metric | Value | Status |
-|--------|-------|--------|
+Le health score affiche 100/100 et les 7 services tournent. Les métriques système (CPU 40%, RAM 40%, disque 35%, température 65°C) sont saines. Mais sous cette façade, **un problème de fond déstabilise toute la connectivité** du Pi et provoque des plantages de la clé WiFi USB nécessitant un reboot complet.
+
+### Métriques système
+
+| Métrique | Valeur | Verdict |
+|----------|--------|---------|
 | CPU | 40.8% | OK |
-| Memory | 40.4% | OK |
-| Disk | 35.4% (9.5G/28G) | OK |
-| Temperature | 65-66°C | OK |
-| Throttling | 0x0 | None |
-| WiFi signal | -69 dBm / 59% | Marginal |
-| Central server latency | 243ms | OK |
-| All 7 services | Active | OK |
+| RAM | 40.4% | OK |
+| Disque | 35.4% (9.5G/28G) | OK |
+| Température | 65-66°C | OK (Pi 5) |
+| Throttling | 0x0 | Aucun |
+| Latence serveur central | 243ms | OK |
+| Services | 7/7 actifs | OK |
+| Signal WiFi (wlan1) | -69 dBm / 59% | Marginal |
+| Carrier changes wlan1 | **10 en 39 min** | Anormal |
+
+### Services manquants
+
+3 services de protection prévus par l'architecture ne sont **pas installés** sur ce Pi :
+
+| Service | Rôle | Depuis |
+|---------|------|--------|
+| `neopro-hotspot-watchdog` | Recovery auto si hotspot plante | v2.34 |
+| `neopro-sync-guardian` | Recovery auto si sync-agent crash | v2.40 |
+| `neopro-hotspot-optimizer` | Sélection canal au boot | v2.28 |
 
 ---
 
-## Issue 1: SharedImageStub GPU Errors (Every ~5s)
+## Analyse causale : tout est lié
 
-**Severity**: Medium
-**Service**: neopro-kiosk (Chromium)
-
-### Symptoms
+La plupart des problèmes observés ne sont pas indépendants. Ils forment une **chaîne causale** avec une cause racine unique :
 
 ```
-SharedImageFactory: Could not find SharedImageBackingFactory with params:
-  usage: Gles2Read|RasterRead|DisplayRead|CpuWriteOnly|CpuRead,
-  format: (Y_UV, 420, 8unorm, ExtSamplerOff),
-  size: 1920x1080, debug_label: MediaGmbVideoFramePoolMappableSI_Pid:0_Pid:0
+CAUSE RACINE : Double détection réseau au boot (NetworkDetector sans debounce)
+     │
+     ├─→ 4× wpa_cli reconfigure en 39 min (bgscan ×2 + watchdog recovery ×2)
+     │    │
+     │    ├─→ 10 carrier changes sur wlan1 (dongle USB WiFi)
+     │    │
+     │    ├─→ 2 coupures internet de 8-9 secondes
+     │    │
+     │    ├─→ Fichier wpa_supplicant édité par sed pendant que wpa_supplicant tourne
+     │    │    (race condition : config lue entre deux sed → état incohérent)
+     │    │
+     │    └─→ À terme : driver USB WiFi bloqué → plus d'internet
+     │         → replug USB ne fonctionne pas (wpa_supplicant zombie + module driver corrompu)
+     │         → seul un reboot complet restaure la connexion
+     │
+     ├─→ Perturbation du sous-système WiFi kernel → disassociations hotspot
+     │
+     └─→ Analytics bloquées (pas de connexion stable pour envoyer le buffer)
 
+PROBLÈMES INDÉPENDANTS :
+  ├─→ Hotspot : config TKIP obsolète → téléphones éjectés
+  ├─→ Hotspot : aucun watchdog installé → pas de recovery auto
+  ├─→ GPU : erreurs SharedImageStub toutes les 5s → risque crash match long
+  └─→ Permission : dossier videos-processing non créé
+```
+
+---
+
+## Problème 1 (CRITIQUE) : Cascade de reconfigure WiFi — cause racine des plantages clé USB
+
+### Ce qui se passe
+
+Au démarrage du Pi, le `NetworkDetector` se lance **deux fois** en 32 secondes (pas de debounce). Chaque détection déclenche une configuration bgscan via `sed` sur le fichier `wpa_supplicant-wlan1.conf` puis un `wpa_cli reconfigure`. Le `NetworkWatchdog`, qui tourne en parallèle, détecte la coupure causée par le reconfigure et lance **sa propre** recovery (encore un `wpa_cli reconfigure`).
+
+### Preuve dans les logs
+
+```
+15:27:54 - Local state synced to central
+15:27:57 - Network profile detection complete (1ère fois)
+15:27:57 - sed -i /bgscan=/d wpa_supplicant-wlan1.conf
+15:27:57 - sed -i '/^network={/a bgscan=...' wpa_supplicant-wlan1.conf
+15:27:57 - wpa_cli -i wlan1 reconfigure                    ← reconfigure #1
+15:28:03 - NetworkWatchdog: Problèmes internet détectés
+15:28:03 - wpa_cli -i wlan1 reconfigure                    ← reconfigure #2 (watchdog)
+15:28:09 - NetworkWatchdog: Pas d'IP, tentative DHCP...
+15:28:12 - NetworkWatchdog: Internet récupéré              (coupure 9s)
+
+15:28:24 - Starting network profile detection (2e fois, 32s après la 1ère)
+15:28:29 - sed -i /bgscan=/d wpa_supplicant-wlan1.conf
+15:28:29 - sed -i '/^network={/a bgscan=...' wpa_supplicant-wlan1.conf
+15:28:29 - wpa_cli -i wlan1 reconfigure                    ← reconfigure #3
+15:38:25 - NetworkWatchdog: Problèmes internet détectés
+15:38:25 - wpa_cli -i wlan1 reconfigure                    ← reconfigure #4 (watchdog)
+15:38:30 - NetworkWatchdog: Pas d'IP, tentative DHCP...
+15:38:33 - NetworkWatchdog: Internet récupéré              (coupure 8s)
+```
+
+**4 `wpa_cli reconfigure` en 39 minutes** → les 10 carrier changes de wlan1 correspondent exactement (2 par reconfigure + 2 au boot initial).
+
+### Pourquoi ça finit par planter la clé USB
+
+Les drivers USB WiFi (`rtl88xxau`, `mt76`, `ath9k_htc`...) ont des bugs connus quand ils reçoivent des commandes rapides et contradictoires (scan + associate + reconfigure en simultané). Le driver entre dans un état d'erreur interne.
+
+**Pourquoi débrancher/rebrancher ne fonctionne pas** :
+1. `wpa_supplicant` garde une référence zombie à `wlan1`
+2. `dhclient` garde son bail et son process
+3. Le module kernel du driver reste chargé avec son état corrompu
+4. Au replug, le kernel recrée l'interface mais wpa_supplicant ne s'y reconnecte pas
+5. Seul un reboot nettoie tout (module kernel + wpa_supplicant + dhclient)
+
+### Race condition sur le fichier wpa_supplicant
+
+Les deux `sed -i` s'exécutent séquentiellement mais `wpa_cli reconfigure` est asynchrone. Si wpa_supplicant relit le fichier **entre** le `sed` qui supprime bgscan et celui qui le rajoute, il obtient une config sans bgscan → comportement imprévisible.
+
+### Impact
+
+- Plantage de la clé WiFi USB nécessitant un **reboot complet**
+- Coupures internet de 8-9 secondes à chaque boot
+- Socket.IO déconnecté pendant les coupures → dashboard affiche "Offline"
+- Télécommande cloud injoignable pendant les coupures
+- Analytics ne peuvent pas être envoyées pendant les coupures
+
+---
+
+## Problème 2 (IMPORTANT) : Hotspot instable — clients éjectés + aucun watchdog
+
+### Disassociations multiples anormales
+
+```
+15:35:40 - STA 76:36:2d:ae:6d:25 disassociated
+15:35:40 - STA 76:36:2d:ae:6d:25 disassociated   ← doublon même timestamp
+15:35:40 - STA 76:36:2d:ae:6d:25 disassociated   ← triplon même timestamp
+
+15:45:21 - STA 76:36:2d:ae:6d:25 disassociated ×2
+16:03:11 - STA 76:36:2d:ae:6d:25 disassociated ×2
+```
+
+Un téléphone qui se déconnecte normalement génère **1 seul** message `disassociated`. Des messages multiples au même timestamp indiquent que **le hotspot éjecte le client** (envoi de frames deauth multiples).
+
+Pattern du client `76:36:2d:ae:6d:25` :
+
+```
+15:30 connecté → 15:35 éjecté (5 min)
+15:39 reconnecté → 15:45 éjecté (6 min)
+15:49 reconnecté → 16:03 éjecté (14 min)
+```
+
+Cycle régulier d'éjection ≠ comportement normal d'un utilisateur qui utilise la télécommande.
+
+### Cause probable : TKIP dans la config hostapd
+
+```
+wpa_pairwise=TKIP        ← protocole obsolète, problématique
+rsn_pairwise=CCMP         ← protocole moderne, OK
+```
+
+TKIP est un protocole de chiffrement legacy. Les iPhones et Android récents peuvent tenter de négocier en TKIP, échouer, et être éjectés. Cela correspond au pattern observé : connexion réussie (WPA handshake OK en CCMP), puis éjection quelques minutes plus tard quand le renouvellement de clé tente TKIP.
+
+### Aucune recovery automatique
+
+Le service `neopro-hotspot-watchdog` (prévu depuis v2.34) **n'est pas installé** sur ce Pi. Si hostapd plante ou se bloque → le hotspot disparaît de la liste WiFi des téléphones → le staff ne peut plus utiliser la télécommande locale → aucune recovery automatique → reboot manuel nécessaire.
+
+### Contribution de la cascade wpa_cli
+
+Les `wpa_cli reconfigure` sur wlan1 sollicitent le sous-système WiFi du kernel. Sur Pi 5, le driver `brcmfmac` (WiFi interne = wlan0) a des bugs documentés en mode Virtual AP. Le stress kernel causé par wlan1 peut indirectement déstabiliser wlan0 et provoquer des éjections de clients sur le hotspot.
+
+### Impact
+
+- Téléphones déconnectés du hotspot toutes les ~5-10 minutes
+- Utilisateurs de la télécommande locale obligés de se reconnecter
+- Si hostapd crash : hotspot invisible, pas de recovery automatique, reboot nécessaire
+
+---
+
+## Problème 3 (IMPORTANT) : Analytics bloquées — 2 676 événements en attente
+
+### Données
+
+| Buffer | Événements | Taille | Plus ancien | Plus récent |
+|--------|------------|--------|-------------|-------------|
+| Analytics (video_plays) | 2 676 | 656 KB | 2026-02-07 11:50 | 2026-02-08 15:05 |
+| Sponsors (impressions) | 666 | 164 KB | N/A | N/A |
+
+### Analyse
+
+- Les impressions sponsors ont été envoyées avec succès à 15:32 (batching fonctionne)
+- Le buffer analytics ne montre **aucune tentative d'envoi** dans les logs capturés
+- Les données les plus anciennes ont **27 heures** (match du 7 février probablement perdu)
+- Au rythme actuel (~17 280 événements/jour), le **plafond de 50K sera atteint en ~2.7 jours**
+- Au-delà de 50K : les plus anciens sont supprimés en FIFO **sans avoir été envoyés**
+
+Cause possible : les coupures internet répétées (problème 1) empêchent l'envoi, et le sync-agent ne re-tente peut-être pas assez agressivement après recovery.
+
+### Impact
+
+- Stats du match du 7 février potentiellement perdues
+- Dashboard affiche une activité sous-estimée pour le NLF
+- Rapports PDF et benchmarks faussés
+- Si non résolu en ~3 jours : perte définitive de données
+
+---
+
+## Problème 4 (MODÉRÉ) : Erreurs GPU Chromium — risque crash en match long
+
+### Symptômes
+
+```
+SharedImageFactory: Could not find SharedImageBackingFactory
+  format: (Y_UV, 420, 8unorm), size: 1920x1080
 SharedImageStub: Unable to create shared image
-SharedImageManager::ProduceSkia: Trying to Produce a Skia representation from a non-existent mailbox.
+SharedImageManager::ProduceSkia: non-existent mailbox
 ```
 
-These errors repeat every ~5 seconds during video playback (1920x1080 Y_UV format).
+Ces erreurs se répètent toutes les ~5 secondes pendant la lecture vidéo.
 
-### Analysis
+### Analyse
 
-Per CLAUDE.md v3.7.2/v3.7.3 history, EGL native mode caused these exact "SharedImageStub" errors on Pi 5. The fix in v3.7.3 was to remove ALL custom GPU flags and let Chromium use the V3D Mesa driver natively. The Pi is running v3.7.13.1, so the fix should be applied.
+Per CLAUDE.md v3.7.3 : ces erreurs "SharedImageStub" sont caractéristiques de flags GPU incorrects sur Pi 5. Le fix était de supprimer tous les flags GPU custom (SwiftShader, EGL, ANGLE) et laisser Chromium utiliser le driver V3D Mesa natif.
 
-However, the errors are still present. This suggests either:
-1. The `kiosk-watchdog.sh` on this Pi was not updated to the v3.7.3 version
-2. The Pi 5's VideoCore VII has inherent shared memory limitations with 1920x1080 Y_UV shared images
+Le Pi est en v3.7.13.1, mais le `kiosk-watchdog.sh` déployé pourrait être une version antérieure au fix v3.7.3. Le kiosk a été redémarré manuellement via l'admin panel à 16:01:18 et les erreurs apparaissent immédiatement après (16:04:41).
 
-### Recommended Action
+### Impact
+
+- ~12 lignes d'erreur/5s = **~8 600 lignes/heure** de log pollution
+- Le pipeline GPU tourne en mode dégradé (pas de partage mémoire optimisé pour les frames 1080p)
+- Risque de crash Chromium "Aw, Snap!" après **3-5h** de boucle vidéo continue (jour de match)
+- Le watchdog kiosk redémarrera Chromium, mais le public voit un écran blanc pendant 10-15s
+
+---
+
+## Problème 5 (MINEUR) : Permission dossier videos-processing
+
+```
+neopro-admin: EACCES: permission denied, mkdir '/home/pi/neopro/videos-processing'
+```
+
+L'admin panel ne peut pas créer le dossier de traitement vidéo. Impact limité (la plupart des opérations passent par le dashboard central).
+
+---
+
+## Observations informatives (non problématiques)
+
+### Erreurs D-Bus dans le kiosk
+
+```
+Failed to connect to the bus: Address does not contain a colon
+```
+
+Cosmétique. Chromium cherche D-Bus pour l'intégration desktop (notifications, media keys) mais D-Bus n'est pas configuré en mode kiosk headless. Aucun impact fonctionnel.
+
+### HDMI CEC : 0 devices
+
+CEC disponible (`cec_available: true`) mais aucun appareil TV détecté (`devices_found: 0`, `tv_power: unknown`). La TV ne supporte probablement pas CEC ou l'a désactivé. Conséquence : toutes les lectures vidéo sont comptées dans les analytics, y compris TV éteinte.
+
+### DAEMON_OPTS non défini dans hostapd.service
+
+```
+hostapd.service: Referenced but unset environment variable evaluates to an empty string: DAEMON_OPTS
+```
+
+Le fichier service systemd référence `$DAEMON_OPTS` qui n'est pas défini. Mineur, hostapd fonctionne quand même.
+
+### Signal WiFi marginal
+
+-69 dBm / 59% est à la limite basse mais fonctionnel. 0% packet loss et 24ms de latence une fois stabilisé. Le signal n'est pas la cause des problèmes — c'est la cascade logicielle qui déstabilise la connexion.
+
+---
+
+## Plan d'action
+
+### Phase 1 — Corrections immédiates (SSH, aucun changement de code)
+
+**Objectif** : stabiliser le Pi NLF pour les prochains matchs.
+
+#### 1.1 Fixer la config hotspot (TKIP → CCMP)
+
+Élimine les éjections de clients sur le hotspot.
 
 ```bash
-# Check actual GPU flags being used
+ssh pi@neopro.local 'sudo sed -i "s/wpa_pairwise=TKIP/wpa_pairwise=CCMP/" /etc/hostapd/hostapd.conf && sudo systemctl restart hostapd'
+```
+
+#### 1.2 Installer les 3 services de protection manquants
+
+```bash
+# Hotspot watchdog — recovery auto si hotspot plante
+scp raspberry/scripts/hotspot-watchdog.sh pi@neopro.local:/home/pi/neopro/scripts/
+scp raspberry/config/systemd/neopro-hotspot-watchdog.service pi@neopro.local:/tmp/
+ssh pi@neopro.local 'chmod +x /home/pi/neopro/scripts/hotspot-watchdog.sh && \
+  sudo mv /tmp/neopro-hotspot-watchdog.service /etc/systemd/system/ && \
+  sudo systemctl daemon-reload && \
+  sudo systemctl enable --now neopro-hotspot-watchdog'
+
+# Sync-agent guardian — recovery auto si sync-agent crash
+scp raspberry/scripts/sync-agent-guardian.sh pi@neopro.local:/home/pi/neopro/scripts/
+scp raspberry/config/systemd/neopro-sync-guardian.service pi@neopro.local:/tmp/
+ssh pi@neopro.local 'chmod +x /home/pi/neopro/scripts/sync-agent-guardian.sh && \
+  sudo mv /tmp/neopro-sync-guardian.service /etc/systemd/system/ && \
+  sudo systemctl daemon-reload && \
+  sudo systemctl enable --now neopro-sync-guardian && \
+  /home/pi/neopro/scripts/sync-agent-guardian.sh create-golden'
+```
+
+#### 1.3 Fixer les permissions et vérifier le kiosk
+
+```bash
+# Dossier videos-processing
+ssh pi@neopro.local 'sudo mkdir -p /home/pi/neopro/videos-processing && sudo chown pi:pi /home/pi/neopro/videos-processing'
+
+# Vérifier les flags GPU du kiosk (ne doit PAS contenir --use-gl, --use-angle, swiftshader)
 ssh pi@neopro.local 'ps aux | grep chromium | grep -v grep'
+ssh pi@neopro.local 'grep -E "(use-gl|use-angle|swiftshader)" /home/pi/neopro/scripts/kiosk-watchdog.sh'
 
-# Verify kiosk-watchdog.sh has correct flags (should NOT have --use-gl, --use-angle, or SwiftShader)
-ssh pi@neopro.local 'cat /home/pi/neopro/scripts/kiosk-watchdog.sh | grep -E "(use-gl|use-angle|swiftshader|gpu)"'
-```
-
-If the old flags are still present, deploy the updated `kiosk-watchdog.sh`:
-```bash
+# Si flags GPU obsolètes trouvés :
 scp raspberry/scripts/kiosk-watchdog.sh pi@neopro.local:/home/pi/neopro/scripts/
 ssh pi@neopro.local 'sudo systemctl restart neopro-kiosk'
 ```
 
-### Impact
-
-Log pollution (~12 error lines per 5 seconds). Videos appear to play but GPU shared image pipeline is failing. May cause instability during long sessions (5h+ match days).
-
----
-
-## Issue 2: Analytics Buffer Not Draining (2,676 Events)
-
-**Severity**: Medium
-**Service**: neopro-sync-agent / neopro-app
-
-### Data
-
-| Buffer | Count | Size | Oldest Event | Newest Event |
-|--------|-------|------|-------------|-------------|
-| Analytics | 2,676 | 656KB | 2026-02-07 11:50 | 2026-02-08 15:05 |
-| Sponsors | 666 | 164KB | N/A | N/A |
-
-### Analysis
-
-- Sponsor impressions were successfully sent at 15:32:06 via batching (batch send visible in logs)
-- Analytics buffer is accumulating at ~1 event every 5 seconds but **no send attempt is logged**
-- The oldest event is ~27 hours old, meaning the buffer hasn't been flushed since at least Feb 7 at 11:50
-- At current rate (~17,280/day), the 50K limit would be reached in ~2.7 days
-
-### Recommended Action
-
-1. Check if analytics send is configured correctly in the sync-agent
-2. Verify the central server analytics endpoint is accessible:
-   ```bash
-   ssh pi@neopro.local 'curl -s -o /dev/null -w "%{http_code}" https://neopro-central-production.up.railway.app/api/analytics/video-plays'
-   ```
-3. If stuck, restart sync-agent to trigger a flush:
-   ```bash
-   ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
-   ```
-
-### Impact
-
-Loss of video play analytics data if buffer hits 50K limit. Club usage stats will be incomplete.
-
----
-
-## Issue 3: NetworkWatchdog Fighting Auto-Optimization
-
-**Severity**: Low-Medium
-**Service**: neopro-sync-agent (NetworkWatchdog + SafeNetworkOperations)
-
-### Timeline
-
-```
-15:27:57 - bgscan configured → wpa_cli reconfigure
-15:28:03 - NetworkWatchdog: Internet problems detected
-15:28:03 - NetworkWatchdog: Recovery attempt (wpa_cli reconfigure)
-15:28:09 - NetworkWatchdog: No IP, trying DHCP...
-15:28:12 - NetworkWatchdog: Internet recovered (9s outage)
-
-15:28:29 - bgscan configured AGAIN → wpa_cli reconfigure
-15:38:25 - NetworkWatchdog: Internet problems detected (10 min later)
-15:38:25 - NetworkWatchdog: Recovery attempt
-15:38:30 - NetworkWatchdog: No IP, trying DHCP...
-15:38:33 - NetworkWatchdog: Internet recovered (8s outage)
-```
-
-### Analysis
-
-The `SafeNetworkOperations.autoOptimize()` configures bgscan and runs `wpa_cli reconfigure`, which temporarily drops the WiFi connection. The `NetworkWatchdog` (checking every 60s) then detects the drop and initiates its own recovery — including another `wpa_cli reconfigure`.
-
-This creates a feedback loop:
-1. Auto-optimize → reconfigure → brief disconnect
-2. Watchdog detects → recovery → another reconfigure
-3. Second reconfigure extends the outage
-
-### Recommended Fix
-
-In the auto-optimize code, add a short grace period notification to the watchdog so it doesn't trigger recovery immediately after a planned reconfigure. Or skip the watchdog check for 30s after auto-optimize completes.
-
-### Impact
-
-~8-9 second internet outages at boot. May cause Socket.IO heartbeat misses.
-
----
-
-## Issue 4: Duplicate Network Profile Detection at Boot
-
-**Severity**: Low
-**Service**: neopro-sync-agent
-
-### Evidence
-
-```
-15:27:57 - Network profile detection complete → bgscan configured
-15:28:24 - Starting network profile detection (again)
-15:28:29 - Network profile detection complete → bgscan configured (again)
-```
-
-Two full network detection cycles run within 32 seconds, each triggering:
-- `iwlist wlan1 scan` (5 seconds)
-- `journalctl` query
-- `sed` to edit wpa_supplicant config (twice each)
-- `wpa_cli reconfigure` (twice each)
-
-### Root Cause
-
-Likely the detection is triggered both by the initial boot timer (30s after start) and by a `sync_local_state` response. The second detection is redundant.
-
-### Recommended Fix
-
-Add a debounce/cooldown (e.g., 60s) to `NetworkDetector.detect()` to prevent re-running if already completed recently.
-
-### Impact
-
-Wasted resources, contributes to issue #3 (internet recovery cycles).
-
----
-
-## Issue 5: Permission Error on videos-processing Directory
-
-**Severity**: Low
-**Service**: neopro-admin
-
-### Error
-
-```
-⚠ Erreur lors de la création des répertoires: EACCES: permission denied, mkdir '/home/pi/neopro/videos-processing'
-```
-
-### Fix
+#### 1.4 Forcer l'envoi des analytics bloquées
 
 ```bash
-ssh pi@neopro.local 'sudo mkdir -p /home/pi/neopro/videos-processing && sudo chown pi:pi /home/pi/neopro/videos-processing'
+# Vérifier la taille du buffer
+ssh pi@neopro.local 'python3 -c "import json; print(len(json.load(open(\"/home/pi/neopro/data/analytics_buffer.json\"))))"'
+
+# Redémarrer le sync-agent pour déclencher un flush
+ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
+
+# Vérifier que l'envoi a fonctionné (attendre 2 min puis)
+ssh pi@neopro.local 'python3 -c "import json; print(len(json.load(open(\"/home/pi/neopro/data/analytics_buffer.json\"))))"'
 ```
 
-### Impact
+### Phase 2 — Corrections de code (cause racine)
 
-Video processing features in the admin panel (:8080) may not work until the directory is created.
+**Objectif** : éliminer la cascade de reconfigure qui plante la clé WiFi USB.
+
+#### 2.1 Debounce sur NetworkDetector.detect()
+
+**Fichier** : `raspberry/sync-agent/src/services/network-detector.js`
+
+Ajouter un cooldown de 120 secondes : si `detect()` a été appelé il y a moins de 120s, retourner le profil en cache au lieu de relancer une détection complète. Cela élimine la double détection au boot et les 2 reconfigure redondants.
+
+#### 2.2 Grace period watchdog après auto-optimize
+
+**Fichier** : `raspberry/sync-agent/src/services/network-watchdog.js`
+
+Après que `SafeNetworkOperations.autoOptimize()` exécute un `wpa_cli reconfigure`, notifier le watchdog de **suspendre ses checks internet pendant 30 secondes**. Cela élimine les recovery watchdog qui amplifient la coupure.
+
+#### 2.3 Écriture atomique du fichier wpa_supplicant
+
+**Fichier** : `raspberry/sync-agent/src/services/safe-network-operations.js`
+
+Remplacer les deux `sed -i` successifs par une écriture atomique :
+1. Lire le fichier en mémoire
+2. Modifier (supprimer bgscan + ajouter bgscan)
+3. Écrire dans un fichier `.tmp`
+4. `mv .tmp` → fichier final (opération atomique)
+5. Puis `wpa_cli reconfigure`
+
+Cela élimine la race condition où wpa_supplicant lit une config incohérente entre deux `sed`.
+
+#### 2.4 Recovery agressive dans le NetworkWatchdog
+
+**Fichier** : `raspberry/sync-agent/src/services/network-watchdog.js`
+
+Après 2 échecs de `wpa_cli reconfigure`, passer en mode recovery agressive :
+
+```bash
+sudo killall dhclient                          # Tuer les dhclient zombies
+sudo wpa_cli -i wlan1 terminate                # Arrêter wpa_supplicant
+sudo ip link set wlan1 down                    # Désactiver l'interface
+sudo modprobe -r <driver>                      # Décharger le module driver
+sudo modprobe <driver>                         # Recharger le module driver
+sudo ip link set wlan1 up                      # Réactiver l'interface
+sudo systemctl restart wpa_supplicant@wlan1    # Redémarrer wpa_supplicant
+sudo dhclient wlan1                            # Obtenir une IP
+```
+
+Cela donnerait une alternative au reboot complet quand la clé USB WiFi se bloque.
+
+### Phase 3 — Améliorations à considérer
+
+| Action | Bénéfice |
+|--------|----------|
+| Script `fix-usb-wifi.sh` pour recovery manuelle | Alternative au reboot en attendant la phase 2 |
+| Vérifier/améliorer le positionnement du dongle USB | Signal -69 dBm → -55 dBm avec rallonge USB |
+| Activer CEC sur la TV (si supporté) | Analytics fiables (ne compte que quand TV allumée) |
+| Audit des autres Pi de la flotte | Vérifier si les mêmes services manquent ailleurs |
 
 ---
 
-## Non-Issues (Informational)
+## Résumé exécutif
 
-### D-Bus Errors in Kiosk
+Le Pi NLF est fonctionnel mais souffre d'un **problème de stabilité réseau auto-infligé** : le logiciel de détection réseau se lance en double au boot, provoque 4+ reconfigurations WiFi en cascade, ce qui finit par planter la clé WiFi USB. Ce plantage nécessite un reboot complet car le driver kernel se bloque dans un état que le simple replug ne peut pas résoudre.
 
-```
-Failed to connect to the bus: Address does not contain a colon
-Failed to call method: org.freedesktop.DBus.NameHasOwner
-```
+En parallèle, le hotspot éjecte les téléphones toutes les ~5 minutes (config TKIP obsolète) et n'a aucun watchdog de recovery. Les analytics s'accumulent sans être envoyées (2 676 événements / 27 heures de retard). Le GPU Chromium produit des erreurs qui pourraient causer un crash après plusieurs heures de match.
 
-These are cosmetic. Chromium tries to use D-Bus for desktop integration (notifications, media keys) but D-Bus is not configured in the headless kiosk environment. No functional impact.
-
-### Hotspot Client Churn
-
-STA `76:36:2d:ae:6d:25` shows 4 associate/disassociate cycles in 30 minutes. This is normal mobile phone behavior — users connecting to the hotspot to use the remote control, then disconnecting.
-
-### HDMI CEC: 0 Devices Found
-
-CEC is available (`cec_available: true`) but no TV devices are detected (`devices_found: 0`, `tv_power: unknown`). The TV connected to this Pi either doesn't support CEC or has it disabled in settings. Analytics will count all video plays (including when TV is off) since CEC can't determine TV state.
-
-### WiFi Signal Quality
-
-Signal at -69 dBm / 59% is marginal but functional. The NLFH network uses mesh WiFi (as indicated by bgscan configuration). Connection is stable with 0 reconnections in 24h and 0% packet loss.
-
----
-
-## Summary of Recommended Actions
-
-| Priority | Action | Effort |
-|----------|--------|--------|
-| 1 | Check & update kiosk-watchdog.sh GPU flags | 5 min |
-| 2 | Investigate analytics buffer not sending | 15 min |
-| 3 | Fix videos-processing directory permissions | 1 min |
-| 4 | Add debounce to network profile detection | Code change |
-| 5 | Add watchdog grace period after auto-optimize | Code change |
+**La phase 1 (corrections SSH) stabilise le Pi pour les prochains matchs. La phase 2 (corrections de code) élimine la cause racine des plantages de clé WiFi USB.**
