@@ -144,8 +144,9 @@ sudo ./install.sh NANTES VotreMotDePasseWiFi123
 - ✅ Configure nginx
 - ✅ **Détecte le modèle de Pi** et configure le GPU :
   - Pi 4 et antérieurs : `gpu_mem=256` dans `/boot/config.txt`
-  - Pi 5 : Flags SwiftShader pour Chromium (rendu logiciel)
+  - Pi 5 : Driver V3D natif (aucun flag GPU custom, v3.7.3+)
 - ✅ **Installe le watchdog kiosk** pour récupération automatique des crashs Chromium
+- ✅ **Installe 3 services de protection** : hotspot-watchdog, sync-guardian, hotspot-optimizer
 - ✅ Affiche la durée totale d'installation
 
 ### 1.5 Vérification
@@ -519,6 +520,8 @@ La partie longue (install.sh) n'est à faire qu'une fois par Pi physique.
 | `prepare-golden-image.sh` | `raspberry/tools/`   | Prépare Pi pour clonage           |
 | `clone-sd-card.sh`        | `raspberry/tools/`   | Clone carte SD en image           |
 | `cleanup-pi.sh`           | `raspberry/scripts/` | Nettoie ~/raspberry après install |
+| `fix-fleet-pi.sh`         | `raspberry/scripts/` | Réparation flotte (TKIP, services, GPU, buffers) |
+| `fix-hotspot.sh`          | `raspberry/scripts/` | Diagnostic et réparation hotspot WiFi |
 
 ---
 
@@ -526,16 +529,16 @@ La partie longue (install.sh) n'est à faire qu'une fois par Pi physique.
 
 ## Support Raspberry Pi 5
 
-Depuis la version 2.27+, le **Raspberry Pi 5** est entièrement supporté.
+Depuis la version 2.27+, le **Raspberry Pi 5** est entièrement supporté. Depuis la v3.7.3, le Pi 5 utilise le **driver V3D natif (Mesa)** pour des performances optimales.
 
-| Modèle       | GPU           | Configuration GPU                        |
-| ------------ | ------------- | ---------------------------------------- |
-| Pi 3B+, Pi 4 | VideoCore VI  | `gpu_mem=256` dans `/boot/config.txt`    |
-| **Pi 5**     | VideoCore VII | SwiftShader (rendu logiciel automatique) |
+| Modèle       | GPU           | Configuration GPU                                |
+| ------------ | ------------- | ------------------------------------------------ |
+| Pi 3B+, Pi 4 | VideoCore VI  | `gpu_mem=256` dans `/boot/config.txt`            |
+| **Pi 5**     | VideoCore VII | V3D natif (Mesa) — aucun flag GPU custom (v3.7.3+) |
 
-**Pourquoi SwiftShader sur Pi 5 ?**
+**Pourquoi V3D natif sur Pi 5 ?**
 
-Le VideoCore VII du Pi 5 a des incompatibilités avec le décodage vidéo hardware de Chromium, causant des crashs "Aw, Snap!" après 1-2h de boucle vidéo. SwiftShader utilise le CPU pour le rendu, ce qui est stable.
+Le Pi 5 utilise le driver Mesa V3D 7.1 pour le compositing GPU, identique au navigateur Chromium normal. Les anciennes solutions (SwiftShader v2.27, EGL natif v3.7.2) ont été abandonnées car elles causaient des saccades ou des erreurs SharedImageStub.
 
 **Vérifier le modèle** :
 
@@ -551,8 +554,9 @@ cat /proc/device-tree/model
 vcgencmd get_mem gpu
 
 # Pi 5 : affiche toujours 4M (normal, utilise CMA dynamique)
-# Vérifier SwiftShader actif :
-pgrep -a chromium | grep swiftshader
+# Vérifier qu'aucun flag GPU custom n'est actif :
+pgrep -a chromium | grep -E "use-gl|use-angle|swiftshader"
+# Aucun résultat = OK (V3D natif actif)
 ```
 
 Pour plus de détails sur les crashs Chromium, voir [TROUBLESHOOTING.md](TROUBLESHOOTING.md#5-chromium-crash-aw-snap-error-code-5-après-1-2h-de-boucle-vidéo).
@@ -567,5 +571,5 @@ Pour plus de détails sur les crashs Chromium, voir [TROUBLESHOOTING.md](TROUBLE
 
 ---
 
-**Version :** 2.0.0
-**Dernière mise à jour :** Janvier 2026
+**Version :** 2.1.0
+**Dernière mise à jour :** Février 2026
