@@ -26,15 +26,27 @@ Le health score affiche 100/100 et les 7 services tournent. Les métriques syst�
 | Signal WiFi (wlan1) | -69 dBm / 59% | Marginal |
 | Carrier changes wlan1 | **10 en 39 min** | Anormal |
 
-### Services manquants
+### Services de protection — statut à vérifier
 
-3 services de protection prévus par l'architecture ne sont **pas installés** sur ce Pi :
+Le debug bundle montre 7 services actifs. 3 services de protection prévus par l'architecture ne figurent **pas dans la liste des services actifs** du bundle :
 
-| Service | Rôle | Depuis |
-|---------|------|--------|
-| `neopro-hotspot-watchdog` | Recovery auto si hotspot plante | v2.34 |
-| `neopro-sync-guardian` | Recovery auto si sync-agent crash | v2.40 |
-| `neopro-hotspot-optimizer` | Sélection canal au boot | v2.28 |
+| Service | Rôle | Depuis | Dans le build ? |
+|---------|------|--------|-----------------|
+| `neopro-hotspot-watchdog` | Recovery auto si hotspot plante | v2.34 | ✅ Oui |
+| `neopro-sync-guardian` | Recovery auto si sync-agent crash | v2.40 | ✅ Oui |
+| `neopro-hotspot-optimizer` | Sélection canal au boot | v2.28 | ✅ Oui |
+
+Ces 3 services **sont inclus dans le build** (`build-raspberry.sh` l.416-432) et le pipeline OTA les installe automatiquement (`update-software.js` l.439-464 : `sudo cp` + `systemctl enable` pour tous les `.service`).
+
+**Hypothèses** :
+1. Le Pi NLF n'a pas reçu d'OTA update depuis l'ajout de ces services (installé avec un ancien `install.sh`)
+2. L'OTA a échoué silencieusement sur l'installation systemd (le `catch` masque l'erreur)
+3. Les services sont installés mais inactifs (non démarrés)
+
+**Vérification requise** :
+```bash
+ssh pi@neopro.local 'systemctl list-unit-files | grep neopro'
+```
 
 ---
 
@@ -299,10 +311,18 @@ Le fichier service systemd référence `$DAEMON_OPTS` qui n'est pas défini. Min
 ssh pi@neopro.local 'sudo sed -i "s/wpa_pairwise=TKIP/wpa_pairwise=CCMP/" /etc/hostapd/hostapd.conf && sudo systemctl restart hostapd'
 ```
 
-#### 1.2 Installer les 3 services de protection manquants
+#### 1.2 Vérifier et activer les 3 services de protection
+
+Ces services sont inclus dans le build et l'OTA. Vérifier d'abord s'ils sont déjà installés :
 
 ```bash
-# Hotspot watchdog — recovery auto si hotspot plante
+# Vérifier quels services neopro sont enregistrés
+ssh pi@neopro.local 'systemctl list-unit-files | grep neopro'
+
+# Si les 3 services sont listés mais inactifs, les démarrer :
+ssh pi@neopro.local 'sudo systemctl enable --now neopro-hotspot-watchdog neopro-sync-guardian neopro-hotspot-optimizer'
+
+# Si les services ne sont PAS listés (ancien install sans OTA), les installer :
 scp raspberry/scripts/hotspot-watchdog.sh pi@neopro.local:/home/pi/neopro/scripts/
 scp raspberry/config/systemd/neopro-hotspot-watchdog.service pi@neopro.local:/tmp/
 ssh pi@neopro.local 'chmod +x /home/pi/neopro/scripts/hotspot-watchdog.sh && \
@@ -310,7 +330,6 @@ ssh pi@neopro.local 'chmod +x /home/pi/neopro/scripts/hotspot-watchdog.sh && \
   sudo systemctl daemon-reload && \
   sudo systemctl enable --now neopro-hotspot-watchdog'
 
-# Sync-agent guardian — recovery auto si sync-agent crash
 scp raspberry/scripts/sync-agent-guardian.sh pi@neopro.local:/home/pi/neopro/scripts/
 scp raspberry/config/systemd/neopro-sync-guardian.service pi@neopro.local:/tmp/
 ssh pi@neopro.local 'chmod +x /home/pi/neopro/scripts/sync-agent-guardian.sh && \
