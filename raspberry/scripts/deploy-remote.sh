@@ -310,6 +310,15 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     sudo chown -R pi:pi ${RASPBERRY_DIR}/logs
     echo 'Permissions configurées'
 
+    # Créer un golden snapshot du sync-agent AVANT le premier déploiement
+    # Si le nouveau code crashe, le guardian pourra restaurer cette version
+    if [ -d ${RASPBERRY_DIR}/sync-agent/src ] && [ ! -d ${RASPBERRY_DIR}/sync-agent-golden ]; then
+        echo 'Création du golden snapshot sync-agent (filet de sécurité)...'
+        cp -r ${RASPBERRY_DIR}/sync-agent ${RASPBERRY_DIR}/sync-agent-golden
+        date -Iseconds > ${RASPBERRY_DIR}/sync-agent-golden/.golden-created
+        echo '✓ Golden snapshot créé'
+    fi
+
     # Nettoyage
     rm -rf ~/neopro-update ~/neopro-deploy.tar.gz
 
@@ -379,6 +388,11 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
         sudo systemctl restart neopro-sync-agent &
     fi
 
+    # Redémarrer kiosk pour appliquer la nouvelle webapp + kiosk-watchdog.sh
+    if systemctl list-unit-files neopro-kiosk.service >/dev/null 2>&1; then
+        sudo systemctl restart neopro-kiosk &
+    fi
+
     # Attendre que tous les services redémarrent
     wait
     sleep 1
@@ -413,6 +427,15 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
             echo '✓ Service neopro-sync-agent: OK'
         else
             echo '⚠ Service neopro-sync-agent: NON ACTIF (peut être normal si non configuré)'
+        fi
+    fi
+
+    # Vérifier kiosk si installé
+    if systemctl list-unit-files neopro-kiosk.service >/dev/null 2>&1; then
+        if systemctl is-active --quiet neopro-kiosk; then
+            echo '✓ Service neopro-kiosk: OK'
+        else
+            echo '⚠ Service neopro-kiosk: NON ACTIF'
         fi
     fi
 "

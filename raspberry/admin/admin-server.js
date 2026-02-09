@@ -2871,6 +2871,21 @@ app.post('/api/update', uploadPackage.single('package'), async (req, res) => {
     const hasSyncAgent = await execCommand(`test -d ${extractDir}/${sourcePrefix}sync-agent`);
     if (hasSyncAgent.success) {
       await ensureDirectory(`${NEOPRO_DIR}/sync-agent`);
+
+      // Créer un golden snapshot AVANT de remplacer le code
+      // Si le nouveau code crashe, le guardian pourra restaurer cette version
+      const goldenExists = await execCommand(`test -d ${NEOPRO_DIR}/sync-agent-golden`);
+      if (!goldenExists.success) {
+        const agentJsExists = await execCommand(`test -f ${NEOPRO_DIR}/sync-agent/src/agent.js`);
+        if (agentJsExists.success) {
+          console.log('[UPDATE] Création du golden snapshot sync-agent (filet de sécurité)...');
+          await execCommand(`cp -r ${NEOPRO_DIR}/sync-agent ${NEOPRO_DIR}/sync-agent-golden`);
+          await execCommand(`date -Iseconds > ${NEOPRO_DIR}/sync-agent-golden/.golden-created`);
+          await execCommand(`chown -R pi:pi ${NEOPRO_DIR}/sync-agent-golden`);
+          console.log('[UPDATE] Golden snapshot créé');
+        }
+      }
+
       // Sauvegarder la config locale du sync-agent (.env, config/.env)
       await execCommand(`test -f ${NEOPRO_DIR}/sync-agent/.env && cp ${NEOPRO_DIR}/sync-agent/.env /tmp/sync-agent.env.backup`);
       await execCommand(`test -f ${NEOPRO_DIR}/sync-agent/config/.env && cp ${NEOPRO_DIR}/sync-agent/config/.env /tmp/sync-agent-config.env.backup`);
@@ -2977,6 +2992,8 @@ app.post('/api/update', uploadPackage.single('package'), async (req, res) => {
     await runCommand('sudo systemctl restart nginx', 'Échec du redémarrage de nginx');
     // Redémarrer le sync-agent pour qu'il prenne en compte les nouveaux fichiers
     await execCommand('sudo systemctl restart neopro-sync-agent 2>/dev/null || true');
+    // Redémarrer le kiosk pour appliquer la nouvelle webapp + kiosk-watchdog.sh
+    await execCommand('sudo systemctl restart neopro-kiosk 2>/dev/null || true');
 
     // Nettoyage
     await fs.unlink(req.file.path);
