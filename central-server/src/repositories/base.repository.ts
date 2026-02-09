@@ -32,7 +32,7 @@ export abstract class BaseRepository<T extends QueryResultRow> {
       ? `SELECT COUNT(*)::int AS count FROM ${this.tableName} WHERE ${whereClause}`
       : `SELECT COUNT(*)::int AS count FROM ${this.tableName}`;
     const result = await query(sql, params);
-    return result.rows[0]?.count ?? 0;
+    return (result.rows[0]?.count as number) ?? 0;
   }
 
   async exists(id: string): Promise<boolean> {

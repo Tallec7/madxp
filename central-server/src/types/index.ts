@@ -60,6 +60,7 @@ export interface Agency {
 
 // Site types
 export interface Site {
+  [key: string]: unknown;
   id: string;
   site_name: string;
   club_name: string;
@@ -120,6 +121,7 @@ export interface Video {
 
 // Deployment types
 export interface ContentDeployment {
+  [key: string]: unknown;
   id: string;
   video_id: string;
   target_type: 'site' | 'group';
@@ -190,6 +192,7 @@ export interface Metrics {
 
 // Alert types
 export interface Alert {
+  [key: string]: unknown;
   id: string;
   site_id: string;
   alert_type: string;
@@ -268,6 +271,7 @@ export type OrchestratedDeploymentStatus =
   | 'failed';
 
 export interface OrchestratedDeployment {
+  [key: string]: unknown;
   id: string;
   site_id: string;
   draft_id: string | null;
@@ -490,6 +494,7 @@ export type LicenseStatus =
  * Données d'abonnement d'un site (colonnes ajoutées à la table sites)
  */
 export interface SiteSubscription {
+  [key: string]: unknown;
   subscription_start: string | null;
   subscription_end: string | null;
   subscription_plan: SubscriptionPlan;
@@ -505,6 +510,7 @@ export interface SiteSubscription {
  * Contient uniquement les champs nécessaires au calcul, pas tout le site
  */
 export interface SiteSubscriptionInfo extends SiteSubscription {
+  [key: string]: unknown;
   id: string;
   last_seen_at: string | null;
   site_name?: string; // Optionnel, utilisé pour le logging
@@ -514,6 +520,7 @@ export interface SiteSubscriptionInfo extends SiteSubscription {
  * Motif de suspension avec métadonnées (table subscription_suspension_reasons)
  */
 export interface SuspensionReasonInfo {
+  [key: string]: unknown;
   code: SuspensionReason;
   label: string;
   description: string;
@@ -558,6 +565,7 @@ export type SubscriptionAction =
  * Entrée dans l'historique des abonnements
  */
 export interface SubscriptionHistoryEntry {
+  [key: string]: unknown;
   id: string;
   site_id: string;
   action: SubscriptionAction;
@@ -576,6 +584,7 @@ export interface SubscriptionHistoryEntry {
  * Statistiques globales des abonnements (vue subscription_stats)
  */
 export interface SubscriptionStats {
+  [key: string]: unknown;
   active_count: number;         // Abonnements actifs (> date actuelle, non suspendus)
   expiring_soon_count: number;  // Expirent dans < 30 jours
   grace_period_count: number;   // En période de grâce (expirés < 7 jours)
@@ -617,7 +626,20 @@ export interface ReactivateSiteRequest {
  * Site avec informations d'abonnement (pour les vues dashboard et calcul licence)
  * Note: last_seen_at est redéfini comme string | null pour compatibilité avec les données DB
  */
-export interface SiteWithSubscription extends Omit<Site, 'last_seen_at' | 'created_at' | 'updated_at'>, SiteSubscription {
+export interface SiteWithSubscription extends SiteSubscription {
+  [key: string]: unknown;
+  // Champs du Site (redéfinis car Omit perd les propriétés avec index signature)
+  id: string;
+  site_name: string;
+  club_name: string;
+  location: Site['location'];
+  sports: string[] | null;
+  status: Site['status'];
+  software_version: string | null;
+  hardware_model: string;
+  api_key: string;
+  metadata: Record<string, unknown>;
+  pending_config_version_id: string | null;
   // Redéfinition des champs Date en string pour compatibilité avec les données SQL brutes
   last_seen_at: string | null;
   created_at?: string;

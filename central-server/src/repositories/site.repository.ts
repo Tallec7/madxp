@@ -31,6 +31,7 @@ export interface PaginatedResult<T> {
 }
 
 export interface SiteDashboardRow {
+  [key: string]: unknown;
   id: string;
   site_name: string;
   club_name: string;
@@ -72,7 +73,7 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
       `SELECT COUNT(*)::int AS count FROM sites ${whereSQL}`,
       params
     );
-    const total = countResult.rows[0]?.count ?? 0;
+    const total = (countResult.rows[0]?.count as number) ?? 0;
 
     const offset = (pagination.page - 1) * pagination.limit;
     const dataParams = [...params, pagination.limit, offset];
@@ -141,7 +142,7 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
       `SELECT COUNT(*)::int AS count FROM sites ${whereSQL}`,
       params
     );
-    const total = countResult.rows[0]?.count ?? 0;
+    const total = (countResult.rows[0]?.count as number) ?? 0;
 
     const offset = (pagination.page - 1) * pagination.limit;
     const dataParams = [...params, pagination.limit, offset];

@@ -15,6 +15,7 @@ export interface CreateAlertInput {
 }
 
 export interface AlertThreshold {
+  [key: string]: unknown;
   id: string;
   metric: string;
   operator: '>' | '<' | '>=' | '<=' | '==';
