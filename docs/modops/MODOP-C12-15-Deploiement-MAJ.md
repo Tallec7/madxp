@@ -143,6 +143,8 @@ Dashboard → Sites → [Site] → Actions → Mettre à jour le logiciel
 
 **⏱️ Durée totale : 5-10 minutes**
 
+**Note (v3.7.14+) :** Le script `update-software.js` copie maintenant aussi le dossier `config/` (services systemd) vers le Pi. Les versions précédentes ne copiaient jamais ce dossier, ce qui empêchait l'installation des services de protection (`neopro-hotspot-watchdog`, `neopro-sync-guardian`, `neopro-hotspot-optimizer`) via OTA. Si ces services sont manquants sur un Pi existant, utiliser `fix-fleet-pi.sh` pour les installer manuellement.
+
 **Méthode alternative : SSH manuelle**
 
 ```bash
@@ -639,12 +641,12 @@ Depuis la v2.27, le **Raspberry Pi 5** est entièrement supporté.
 
 ### Différences Pi 4 vs Pi 5
 
-| Aspect         | Pi 4          | Pi 5                   |
-| -------------- | ------------- | ---------------------- |
-| GPU            | VideoCore VI  | VideoCore VII          |
-| Config GPU     | `gpu_mem=256` | SwiftShader (auto)     |
-| `vcgencmd gpu` | Affiche 256M  | Affiche 4M (normal)    |
-| Décodage vidéo | Hardware      | Logiciel (SwiftShader) |
+| Aspect         | Pi 4          | Pi 5                       |
+| -------------- | ------------- | -------------------------- |
+| GPU            | VideoCore VI  | VideoCore VII              |
+| Config GPU     | `gpu_mem=256` | V3D natif (aucun flag, v3.7.3+) |
+| `vcgencmd gpu` | Affiche 256M  | Affiche 4M (normal)        |
+| Décodage vidéo | Hardware      | CPU (FFmpeg) + GPU V3D     |
 
 ### Vérification après déploiement
 
@@ -656,9 +658,9 @@ ssh pi@neopro.local 'cat /proc/device-tree/model'
 ssh pi@neopro.local 'vcgencmd get_mem gpu'
 # Doit afficher : gpu=256M
 
-# Pi 5 : vérifier SwiftShader
-ssh pi@neopro.local 'pgrep -a chromium | grep swiftshader'
-# Doit afficher le processus avec --use-angle=swiftshader
+# Pi 5 : vérifier V3D natif (aucun flag GPU custom)
+ssh pi@neopro.local 'pgrep -a chromium | grep -E "use-gl|use-angle|swiftshader"'
+# Aucun résultat = OK (V3D natif actif)
 ```
 
 ### Problèmes connus Pi 5
@@ -667,7 +669,7 @@ Le dashboard peut afficher un faux avertissement "Mémoire GPU insuffisante (4M)
 
 ---
 
-**Version :** 1.1
-**Dernière mise à jour :** Janvier 2026
+**Version :** 1.2
+**Dernière mise à jour :** Février 2026
 
 **FIN DU MODOP-C12-15**

@@ -763,6 +763,22 @@ configure_services() {
         print_success "Service neopro-sync-agent configuré"
     fi
 
+    # Service hotspot-watchdog (surveillance et auto-recovery du hotspot WiFi)
+    if [ -f "${SERVICE_DIR}/neopro-hotspot-watchdog.service" ]; then
+        cp "${SERVICE_DIR}/neopro-hotspot-watchdog.service" /etc/systemd/system/
+
+        # Copier le script hotspot-watchdog
+        local SCRIPT_DIR="./scripts"
+        if [ -f "${SCRIPT_DIR}/hotspot-watchdog.sh" ]; then
+            cp "${SCRIPT_DIR}/hotspot-watchdog.sh" /home/pi/neopro/scripts/
+            chmod +x /home/pi/neopro/scripts/hotspot-watchdog.sh
+            chown pi:pi /home/pi/neopro/scripts/hotspot-watchdog.sh
+        fi
+
+        systemctl enable neopro-hotspot-watchdog.service
+        print_success "Service neopro-hotspot-watchdog configuré"
+    fi
+
     # Service hotspot-optimizer (auto-select best WiFi channel at boot)
     if [ -f "${SERVICE_DIR}/neopro-hotspot-optimizer.service" ]; then
         cp "${SERVICE_DIR}/neopro-hotspot-optimizer.service" /etc/systemd/system/

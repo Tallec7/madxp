@@ -868,6 +868,8 @@ scp raspberry/sync-agent/src/commands/update-software.js pi@neopro.local:/home/p
 ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
 ```
 
+**Note (v3.7.14+) :** Le script `update-software.js` copie maintenant aussi le dossier `config/` (services systemd). Les versions précédentes ne copiaient jamais `config/`, ce qui empêchait l'installation des services `neopro-hotspot-watchdog`, `neopro-sync-guardian` et `neopro-hotspot-optimizer` via OTA.
+
 **Voir aussi :** Section [v2.15.x dans CLAUDE.md](/CLAUDE.md#v215x-janvier-2026) pour les détails techniques.
 
 ---
@@ -1464,6 +1466,30 @@ free -h
 
 ## Réparation rapide
 
+### Script fix-fleet-pi.sh (v3.7.14+)
+
+Pour corriger les problèmes courants identifiés par un debug bundle, utiliser le script générique de réparation flotte :
+
+```bash
+# Copier et exécuter sur le Pi
+scp raspberry/scripts/fix-fleet-pi.sh pi@neopro.local:/tmp/
+ssh pi@neopro.local 'chmod +x /tmp/fix-fleet-pi.sh && sudo /tmp/fix-fleet-pi.sh'
+```
+
+**Ce que fait le script :**
+
+1. **TKIP → CCMP** dans hostapd.conf (éjections téléphones)
+2. **Installe les 3 services systemd manquants** (watchdog, guardian, optimizer)
+3. **Crée le dossier videos-processing** (permission denied)
+4. **Vérifie les flags GPU** du kiosk (Pi 4 vs Pi 5)
+5. **Vide le cache Chromium** (erreurs SharedImage/AllocateRingBuffer)
+6. **Flush les buffers** analytics et sponsors bloqués
+7. **Vérifie gpu_mem** (doit être 256 sur Pi 4)
+
+Le script auto-détecte le modèle de Pi, le type de connexion (Ethernet vs WiFi) et le nom du site.
+
+**Voir aussi :** [MODOP-S04-05 Section 3.7](../modops/MODOP-S04-05-Diagnostic-Distance.md#37-script-fix-fleet-pish-v3714)
+
 ### Réinitialiser les permissions
 
 ```bash
@@ -1942,6 +1968,28 @@ CONNECTED    bssid=XX:XX:XX completed [id=0]               ← reconnecté 2s ap
 
 Ce comportement est **normal** et géré automatiquement par le NetworkWatchdog. Les coupures durent 1-3 secondes et n'impactent pas la lecture vidéo (vidéos locales sur le Pi).
 
+**Protections automatiques (v3.7.14+) :**
+
+Depuis la v3.7.14, le NetworkDetector et NetworkWatchdog incluent des protections supplémentaires pour les environnements mesh :
+
+| Protection                         | Détail                                                                     |
+| ---------------------------------- | -------------------------------------------------------------------------- |
+| **Debounce 120s** (NetworkDetector)| Le profil réseau n'est pas réévalué plus d'une fois toutes les 120s        |
+| **Grace period 60s au boot**       | Pas de recovery WiFi pendant les 60 premières secondes après le démarrage |
+| **Recovery progressive (4 phases)**| Escalade graduelle au lieu de `wpa_cli reconfigure` agressif               |
+| **Écriture atomique wpa_supplicant** | Écriture dans un fichier temporaire + `mv` atomique (pas de corruption)  |
+
+**Les 4 phases de recovery progressive :**
+
+| Phase | Délai  | Action                                          |
+| ----- | ------ | ----------------------------------------------- |
+| 1     | 0-30s  | Attente passive (laisse le driver se reconnecter)|
+| 2     | 30-60s | `wpa_cli -i wlan1 reassociate`                  |
+| 3     | 60-90s | `wpa_cli -i wlan1 reconfigure`                  |
+| 4     | 90s+   | `dhclient -r wlan1 && dhclient wlan1`            |
+
+Maximum 5 tentatives de recovery, cooldown de 300s (5 min) entre les cycles.
+
 ### 6. Chromium crash "Aw, Snap! Error code: 5" après 1-2h de boucle vidéo
 
 **Symptômes :**
@@ -2004,19 +2052,16 @@ Le Pi 5 (BCM2712) a **supprimé le décodeur H.264 hardware**. Seul H.265/HEVC e
 
 **Note :** Sur Pi 5, `vcgencmd get_mem gpu` retourne toujours `gpu=4M` - c'est une valeur legacy, pas un problème.
 
-**Solution : SwiftShader (seule solution stable pour Pi 5)**
+**Solution : Driver V3D natif (v3.7.3+)**
 
-EGL natif a ete teste mais provoque des erreurs `SharedImageStub: Unable to create shared image` toutes les 5 secondes sur Pi 5, causant une degradation progressive de la lecture video. **SwiftShader est confirme comme la seule solution stable pour Pi 5.**
+Depuis la v3.7.3, le Pi 5 utilise le **driver V3D natif (Mesa)** — identique au navigateur normal. Les anciennes solutions (SwiftShader, EGL natif) ont été abandonnées car elles causaient des saccades ou des erreurs.
 
 Le `kiosk-watchdog.sh` utilise les flags suivants pour Pi 5 :
 
 ```bash
-# Flags specifiques Pi 5
---disable-gpu-compositing
---use-gl=angle
---use-angle=swiftshader
---disable-gpu-vsync
---disable-frame-rate-limit
+# Flags spécifiques Pi 5 (v3.7.3+) — aucun flag GPU custom
+--ignore-gpu-blocklist
+--enable-gpu-rasterization
 
 # Flags communs (Pi 4 et Pi 5)
 --disable-dev-shm-usage
@@ -2025,50 +2070,40 @@ Le `kiosk-watchdog.sh` utilise les flags suivants pour Pi 5 :
 
 **Explication des flags Pi 5 :**
 
-| Flag                                     | Effet                                                                      |
-| ---------------------------------------- | -------------------------------------------------------------------------- |
-| `--disable-gpu-compositing`              | Desactive le compositing GPU (evite les erreurs VideoCore VII)             |
-| `--use-gl=angle --use-angle=swiftshader` | Utilise le rendu logiciel SwiftShader (stable sur Pi 5)                    |
-| `--disable-gpu-vsync`                    | Desactive la synchronisation verticale GPU                                 |
-| `--disable-frame-rate-limit`             | Supprime la limitation de framerate                                        |
-| `--disable-dev-shm-usage`                | Utilise /tmp au lieu de /dev/shm (evite les problemes de memoire partagee) |
-| `--disable-checker-imaging`              | Desactive le decodage checker (reduit la charge CPU)                       |
+| Flag                         | Effet                                                                      |
+| ---------------------------- | -------------------------------------------------------------------------- |
+| `--ignore-gpu-blocklist`     | Force l'utilisation du GPU même si le modèle est dans la blocklist         |
+| `--enable-gpu-rasterization` | Active la rastérisation GPU pour de meilleures performances                |
+| `--disable-dev-shm-usage`    | Utilise /tmp au lieu de /dev/shm (évite les problèmes de mémoire partagée) |
+| `--disable-checker-imaging`  | Désactive le décodage checker (réduit la charge CPU)                       |
 
-**Pourquoi pas EGL natif ?**
+**Historique des tentatives échouées :**
 
-EGL natif (`--use-gl=egl`) a ete teste en v3.7.2 mais cause des erreurs `SharedImageStub: Unable to create shared image` toutes les 5 secondes dans les logs Chromium. Ces erreurs provoquent :
+| Version | Solution            | Résultat                                                    |
+| ------- | ------------------- | ----------------------------------------------------------- |
+| v2.27   | SwiftShader         | Rendu CPU, stable mais vidéos saccadées en 1080p            |
+| v3.7.2  | EGL natif + Vulkan  | Erreurs SharedImageStub toutes les 5 secondes               |
+| v3.7.2  | Retour SwiftShader  | Toujours trop lent pour vidéo 1080p                         |
+| v3.7.3  | **V3D natif (Mesa)**| **Solution finale** — vidéos fluides, pas d'erreurs GPU     |
 
-- Degradation progressive de la lecture video
-- Saccades et artefacts visuels
-- Crashs apres quelques heures de boucle
-
-Le VideoCore VII du Pi 5 n'est pas compatible avec le mode EGL de Chromium en mode kiosque avec plusieurs players video.
-
-**Mise a jour depuis une ancienne version :**
+**Mise à jour depuis une ancienne version :**
 
 ```bash
 # Copier le nouveau kiosk-watchdog.sh
 scp raspberry/scripts/kiosk-watchdog.sh pi@<IP>:/home/pi/neopro/scripts/
-# Redemarrer le kiosk
+# Redémarrer le kiosk
 ssh pi@<IP> 'sudo systemctl restart neopro-kiosk'
 ```
 
-**Verifier que les flags SwiftShader sont actifs :**
+**Vérifier que le driver V3D est actif (pas de flags SwiftShader/EGL) :**
 
 ```bash
-pgrep -a chromium | grep use-angle
-# Doit afficher le processus avec --use-angle=swiftshader
+pgrep -a chromium | grep -E "use-gl|use-angle|swiftshader"
+# Aucun résultat = OK (V3D natif actif)
+# Si des flags apparaissent = ancienne version, mettre à jour kiosk-watchdog.sh
 ```
 
-**Verifier les logs pour des erreurs SharedImageStub (ne devrait PAS en avoir avec SwiftShader) :**
-
-```bash
-journalctl -u neopro-kiosk --since "10 minutes ago" | grep -i "sharedimage"
-# Aucun resultat = OK (SwiftShader actif)
-# Si des erreurs apparaissent = les flags EGL sont utilises par erreur, repasser a SwiftShader
-```
-
-**Note :** Le script `kiosk-watchdog.sh` detecte automatiquement le modele de Pi et applique les bons flags (GPU hardware pour Pi 4, SwiftShader pour Pi 5).
+**Note :** Le script `kiosk-watchdog.sh` détecte automatiquement le modèle de Pi et applique les bons flags (GPU hardware pour Pi 4, V3D natif pour Pi 5).
 
 ---
 
@@ -2164,6 +2199,8 @@ Le watchdog vérifie toutes les 30 secondes :
 
 En cas de problème, il tente une récupération automatique (max 3 tentatives, cooldown 5 min).
 
+**Installation :** Depuis la v3.7.14, `install.sh` enregistre automatiquement le service `neopro-hotspot-watchdog` ainsi que `neopro-sync-guardian` et `neopro-hotspot-optimizer`. Pour les Pi installés avant cette version, utiliser `fix-fleet-pi.sh` pour installer les services manquants.
+
 ### Commandes utiles
 
 ```bash
@@ -2212,4 +2249,4 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (v2.34 - Hotspot Watchdog, Blocage BSSID en mesh, Détection profil réseau)
+**Dernière mise à jour :** 9 février 2026 (v3.7.14 - Pi 5 V3D natif, fix-fleet-pi.sh, recovery progressive mesh, OTA config/ fix)

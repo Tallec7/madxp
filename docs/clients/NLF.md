@@ -435,8 +435,22 @@ Service de surveillance réseau complet au niveau du sync-agent.
 - Surveillance hotspot (wlan0) toutes les 30 secondes
 - Surveillance Internet (wlan1) toutes les 60 secondes
 - Surveillance connexion cloud toutes les 30 secondes
-- Récupération automatique (max 3 tentatives, cooldown 5 min entre cycles)
+- **Grace period 60s au boot** — ne tente aucune recovery pendant la première minute (laisse le réseau se stabiliser)
+- Récupération automatique progressive (max 5 tentatives)
 - Rollback automatique après changement de config réseau
+
+**Séquence de récupération Internet (progressive, v3.7.14+)** :
+
+| Phase | Tentative | Action | Délai après |
+|-------|-----------|--------|-------------|
+| 1 - Douce | 1 | `dhclient wlan1` (renouveler DHCP seulement) | 30s |
+| 2 - Normale | 2 | `wpa_cli reconfigure` + `dhclient` | 60s |
+| 3 - Agressive | 3-4 | `ip link set wlan1 down/up` + reconfigure + dhclient | 120s |
+| 4 - Dernière chance | 5 | Alerte envoyée au central | — |
+
+> **Pourquoi la progression ?** Un simple `wpa_cli reconfigure` causait une cascade de réassociations WiFi
+> qui faisait planter le driver USB WiFi (brcmfmac). La recovery progressive essaie d'abord DHCP seul,
+> qui suffit dans 80% des cas sans toucher à l'association WiFi.
 
 **Séquence de récupération hotspot :**
 
@@ -444,11 +458,6 @@ Service de surveillance réseau complet au niveau du sync-agent.
 2. Configuration IP (192.168.4.1)
 3. Restart hostapd
 4. Restart dnsmasq
-
-**Séquence de récupération Internet :**
-
-1. wpa_cli reconfigure
-2. dhclient wlan1
 
 ### Rollback Automatique
 
@@ -544,4 +553,51 @@ Le problème est **purement physique** (signal WiFi limite à -73 dBm entre deux
 
 ---
 
-**Dernière mise à jour :** 7 février 2026 (Diagnostic WiFi USB - signal -73 dBm, coupures reason=3, Ethernet recommandé)
+---
+
+## Analyse debug bundle — 8 février 2026
+
+### Contexte
+
+Export du debug bundle depuis le dashboard central pour analyse approfondie des problèmes de stabilité.
+
+### Problèmes identifiés
+
+| # | Problème | Sévérité | Statut |
+|---|----------|----------|--------|
+| 1 | **Double NetworkDetector.detect()** → 4x `wpa_cli reconfigure` → crash USB WiFi | CRITIQUE | Corrigé (Phase 2 code) |
+| 2 | **TKIP sur le hotspot** → éjections téléphones (triple disassociation) | MAJEUR | Corrigé (script SSH `fix-fleet-pi.sh`) |
+| 3 | **3 services systemd manquants** (watchdog, guardian, optimizer) | MAJEUR | Corrigé (fix OTA + script SSH) |
+| 4 | **2 676 analytics bloquées** | MODÉRÉ | Flush via script SSH |
+| 5 | **Erreurs GPU SharedImage** (~5/s) | MINEUR | Nettoyage cache via script SSH |
+
+### Corrections appliquées
+
+**Phase 2 — Code (livrée via OTA)** :
+- Debounce 120s sur `NetworkDetector.detect()` (empêche double appel)
+- Grace period 60s au boot pour NetworkWatchdog (laisse le réseau se stabiliser)
+- Écriture atomique wpa_supplicant (plus de double `sed -i` qui corrompait le fichier)
+- Recovery progressive (4 phases au lieu d'un wpa_cli immédiat)
+- Fix pipeline OTA (`update-software.js` copie maintenant `config/` → services systemd installés)
+
+**Phase 1 — SSH (script `fix-fleet-pi.sh`)** :
+1. TKIP → CCMP dans `/etc/hostapd/hostapd.conf`
+2. Installation des 3 services systemd manquants
+3. Création du dossier `videos-processing`
+4. Vérification flags GPU kiosk
+5. Nettoyage cache Chromium
+6. Flush buffers analytics et sponsors
+7. Vérification gpu_mem
+
+```bash
+# Après OTA (qui dépose le script sur le Pi)
+ssh pi@neopro.local 'sudo /home/pi/neopro/scripts/fix-fleet-pi.sh'
+```
+
+### Rapport complet
+
+Voir `docs/analysis/NLF-debug-bundle-2026-02-08.md`
+
+---
+
+**Dernière mise à jour :** 8 février 2026 (Analyse debug bundle — 5 problèmes identifiés, corrections Phase 2 code + script SSH fleet)

@@ -377,6 +377,15 @@ class SoftwareUpdateHandler {
         logger.info('Scripts updated');
       }
 
+      // Copier config/ si présent (contient les fichiers systemd .service)
+      // IMPORTANT: Sans cette copie, les nouveaux services systemd ajoutés après
+      // l'install initial ne sont jamais installés via OTA
+      if (await fs.pathExists(path.join(sourcePath, 'config'))) {
+        await fs.ensureDir(path.join(rootDir, 'config'));
+        await execAsync(`cp -r ${path.join(sourcePath, 'config')}/* ${rootDir}/config/`);
+        logger.info('Config files updated (systemd services, etc.)');
+      }
+
       // Copier VERSION et release.json à la racine (avec sudo car peuvent appartenir à root)
       const versionSource = await fs.pathExists(path.join(extractDir, 'VERSION'))
         ? path.join(extractDir, 'VERSION')
@@ -441,23 +450,54 @@ class SoftwareUpdateHandler {
       if (await fs.pathExists(systemdConfigDir)) {
         logger.info('Installing systemd services...');
         try {
+          await execAsync('sudo systemctl daemon-reload');
           const serviceFiles = await fs.readdir(systemdConfigDir);
+          const newlyInstalledServices = [];
+
           for (const serviceFile of serviceFiles) {
             if (serviceFile.endsWith('.service')) {
               const srcPath = path.join(systemdConfigDir, serviceFile);
               const destPath = `/etc/systemd/system/${serviceFile}`;
+              const serviceName = serviceFile.replace('.service', '');
+
+              // Vérifier si le service est déjà installé
+              const wasInstalled = await fs.pathExists(destPath);
 
               // Copier le fichier service
               await execAsync(`sudo cp ${srcPath} ${destPath}`);
-              logger.info(`Installed systemd service: ${serviceFile}`);
+              logger.info(`Installed systemd service: ${serviceFile}`, { wasUpdate: wasInstalled });
 
-              // Activer le service (mais ne pas démarrer - sera fait au reboot ou manuellement)
-              const serviceName = serviceFile.replace('.service', '');
-              await execAsync(`sudo systemctl daemon-reload`);
+              // Activer le service
               await execAsync(`sudo systemctl enable ${serviceName} 2>/dev/null || true`);
+
+              // Si c'est un NOUVEAU service (pas une mise à jour), le démarrer
+              if (!wasInstalled) {
+                newlyInstalledServices.push(serviceName);
+              }
             }
           }
-          logger.info('Systemd services installed and enabled');
+
+          // Recharger après toutes les copies
+          await execAsync('sudo systemctl daemon-reload');
+
+          // Démarrer les nouveaux services (pas ceux gérés par startServices)
+          const managedServices = ['neopro-app', 'neopro-admin', 'neopro-kiosk', 'neopro-sync-agent'];
+          for (const serviceName of newlyInstalledServices) {
+            if (!managedServices.includes(serviceName)) {
+              try {
+                await execAsync(`sudo systemctl start ${serviceName}`);
+                logger.info(`Started new service: ${serviceName}`);
+              } catch (startError) {
+                logger.warn(`Failed to start new service ${serviceName}`, { error: startError.message });
+              }
+            }
+          }
+
+          logger.info('Systemd services installed and enabled', {
+            total: serviceFiles.filter(f => f.endsWith('.service')).length,
+            newlyInstalled: newlyInstalledServices.length,
+            started: newlyInstalledServices.filter(s => !managedServices.includes(s)).length
+          });
         } catch (e) {
           logger.warn('Failed to install some systemd services', { error: e.message });
         }
