@@ -55,7 +55,8 @@ Le projet Neopro est un systeme de TV interactive pour clubs sportifs, architect
 - Test coverage insuffisante (23 spec.ts, 3 E2E)
 - Couplage fort entre composants (synchronisation manuelle Remote Pi / Cloud Remote)
 - ADRs non mis a jour depuis v2.33 (5 ADRs seulement, decisions post-Jan 2026 non tracees)
-- Certains docs obsoletes (SQL_QUERIES.md, ERROR_HANDLING_MIGRATION.md) ou stubs (DEMO_MODE.md)
+- **⚠️ CLAUDE.md a 239 KB (~6000 lignes) alors que la limite officielle est ~80 lignes** — Claude ignore probablement >90% du contenu
+- ERROR_HANDLING_MIGRATION.md potentiellement obsolete
 
 ### Metriques du codebase
 
@@ -284,7 +285,7 @@ Le projet Neopro est un systeme de TV interactive pour clubs sportifs, architect
 |-----------|----------|-------------|---------|---------|
 | **Racine docs/** | 7 | ~1 800 | 9/10 | 00-INDEX.md (hub navigation), 01-START-HERE.md (guide par role), ONBOARDING.md, GLOSSARY.md, VERSIONING.md, TESTING.md, ONLINE_INSTALLATION.md |
 | **technical/** | 13 | ~8 000 | 8.2/10 | ARCHITECTURE.md, REFERENCE.md (19K), SYNC_ARCHITECTURE.md (26K), COMMAND_QUEUE.md (525L), ERROR_HANDLING.md, REMOTE_SHELL.md, REMOTE_SHELL_SECURITY.md, MULTI_TENANT.md, VIDEO_STORAGE.md (401L), SQL_QUERIES.md (195L), ROW_LEVEL_SECURITY.md, TESTING_GUIDE.md (417L), SYNC_AGENT_CONFIG.md |
-| **guides/** | 16 | ~6 500 | 7.8/10 | GUIDE_OPERATEUR_INSTALLATION.md (30min terrain), INSTALLATION_COMPLETE.md (3 methodes), TROUBLESHOOTING.md (53K!), GOLDEN_IMAGE.md (439L), CONFIG_DRAFTS.md (325L), GUIDE_UTILISATEUR.md (21K), QR_CODE_REMOTE.md, SSH_SETUP.md, MESH_WIFI_ENVIRONMENTS.md (417L), ANDROID_HOTSPOT_FIX.md (184L), CONFIGURATION.md, DEMO_MODE.md (6L stub), ERROR_HANDLING_MIGRATION.md |
+| **guides/** | 16 | ~6 500 | 8.2/10 | GUIDE_OPERATEUR_INSTALLATION.md (30min terrain), INSTALLATION_COMPLETE.md (3 methodes), TROUBLESHOOTING.md (53K!), GOLDEN_IMAGE.md (439L), CONFIG_DRAFTS.md (325L), GUIDE_UTILISATEUR.md (21K), QR_CODE_REMOTE.md, SSH_SETUP.md, MESH_WIFI_ENVIRONMENTS.md (417L), ANDROID_HOTSPOT_FIX.md (184L), CONFIGURATION.md, DEMO_MODE.md (238L, complet), ERROR_HANDLING_MIGRATION.md |
 | **analytics/** | 8 | ~3 200 | 8.1/10 | README.md, ONBOARDING_DEV.md, IMPLEMENTATION.md, TRACKING_IMPRESSIONS.md (720L excellent), PDF_REPORTS_GUIDE.md, TESTS.md, AVANCEMENT.md |
 | **audit/** | 6 | ~5 000 | 8.4/10 | AUDIT_PLATEFORME_COMPLET_2025.md (41K), PRODUCT_STRATEGY_ANALYSIS.md (33K), AUDIT_DOCS_2025-12-25.md, AUDIT_RGPD_SECURITE_2025-12-29.md, ARCHITECTURE_REVIEW_2026-02-09.md |
 | **business/** | 5 | ~7 500 | 8.4/10 | STATUS.md (9.8/10 project rating), BUSINESS_PLAN_COMPLET.md (113K!), ROADMAP_10_SUR_10.md (37K), BACKLOG.md (23K), ANALYTICS_CATEGORIES_IMPL.md |
@@ -323,8 +324,8 @@ Le projet Neopro est un systeme de TV interactive pour clubs sportifs, architect
 | docs/legal/PRIVACY_POLICY.md | 3/10 | **TEMPLATE NON REMPLI** : `[NOM DE LA SOCIETE]`, `[ADRESSE]`, `[DATE A COMPLETER]`. NON UTILISABLE en production |
 | docs/legal/TERMS_OF_SERVICE.md | 3/10 | Idem — placeholders non remplis, necessite revision juridique |
 | docs/legal/GENERAL_SALES_CONDITIONS.md | 3/10 | Idem — CGV B2B avec champs vides |
-| docs/guides/DEMO_MODE.md | 2/10 | **STUB** : 6 lignes seulement, quasi vide |
-| docs/technical/SQL_QUERIES.md | 7/10 | Certaines requetes utilisent `first_name`/`last_name` au lieu de `full_name` (schema modifie) |
+| docs/guides/DEMO_MODE.md | 9/10 | Complet (238 lignes) : activation, build, deploiement, config clubs, architecture, UX |
+| docs/technical/SQL_QUERIES.md | 8/10 | Requetes correctes — le bug `first_name`/`last_name` etait dans le code controleur (corrige v2.6) |
 | docs/guides/ERROR_HANDLING_MIGRATION.md | 5/10 | Possiblement obsolete (references patterns v2.x) |
 
 #### 3.4.3 Analyse de la duplication CLAUDE.md ↔ docs/
@@ -620,8 +621,9 @@ users (7 roles)
 | Element | Statut actuel | Impact | Priorite |
 |---------|--------------|--------|----------|
 | **Documents legaux NON REMPLIS** | 4 fichiers avec placeholders (`[NOM DE LA SOCIETE]`, `[ADRESSE]`, `[DATE]`) | **BLOQUANT pour mise en production commerciale** — RGPD, CGV, mentions legales inutilisables | **CRITIQUE** |
-| **DEMO_MODE.md** : 6 lignes | Stub quasi vide, aucune documentation du mode demo | Les clients et commerciaux ne savent pas utiliser le mode demo | Haute |
-| **SQL_QUERIES.md** : colonnes obsoletes | References `first_name`/`last_name` alors que le schema utilise `full_name` | Requetes copy-paste qui echouent en production | Haute |
+| ~~**DEMO_MODE.md**~~ | ~~Initialement evalue comme stub 6 lignes~~ — **CORRIGE** : le fichier fait 238 lignes et est complet | N/A — faux positif | ~~Haute~~ **Resolu** |
+| ~~**SQL_QUERIES.md**~~ | ~~Initialement evalue avec colonnes obsoletes~~ — **CORRIGE** : les requetes sont correctes, le fix etait dans le code controleur (v2.6) | N/A — faux positif | ~~Haute~~ **Resolu** |
+| **CLAUDE.md : 239 KB (~6000 lignes)** | La limite officielle est **~80 lignes**. Au-dela, Claude Code commence a ignorer des sections. Le fichier actuel est x75 au-dessus de la limite recommandee | **Claude ignore probablement >90% du contenu** — les instructions sont noyees dans le bruit documentaire | **CRITIQUE** |
 | **ADRs manquants pour features recentes** | Seulement ADR-001 a ADR-005 (decisions pre-v2.33). Aucun ADR pour : subscriptions, network resilience, predictive alerts, benchmark, double-buffer video | Les decisions architecturales post-Jan 2026 ne sont pas tracees formellement | Moyenne |
 | **ERROR_HANDLING_MIGRATION.md** | Potentiellement obsolete (references patterns v2.x) | Confusion si un dev suit ce guide | Faible |
 | **Pas de docs pour analytics/ (feature supprimee)** | Le repertoire `features/analytics/` existe toujours mais la doc dit "supprime v3.0" | Aucun document n'explique pourquoi le code est encore la | Faible |
@@ -660,7 +662,7 @@ users (7 roles)
 | **Breaking changes : double source de verite** | CLAUDE.md (section "Historique Breaking Changes", ~500 lignes) ET docs/changelog/ (30+ fichiers auto-generes) | ~50% overlap, risque de divergence sur les details de migration |
 | **Schema DB : triple source** | CLAUDE.md (tables principales), full-schema.sql (schema complet), docs/technical/ARCHITECTURE.md (resume) | Risque d'oubli de mise a jour d'une source lors d'un ajout de colonne |
 | **TROUBLESHOOTING.md vs CLAUDE.md** | Les deux contiennent des sections debugging, avec des niveaux de detail differents | Un dev ne sait pas lequel consulter en premier |
-| **SQL_QUERIES.md desynchronise** | Utilise `u.first_name || ' ' || u.last_name` alors que la table users n'a que `full_name` | Requetes qui echouent si copiees directement |
+| ~~**SQL_QUERIES.md desynchronise**~~ | **CORRIGE** : Faux positif. Les requetes sont correctes, le bug etait dans le code controleur (corrige v2.6) | N/A |
 | **GUIDE_UTILISATEUR.md : 21K lignes** | Guide utilisateur exhaustif mais potentiellement obsolete (references UI pre-v3.0) | Un operateur pourrait suivre des instructions pour des ecrans qui ont change |
 | **Packs vs docs/** | PACK_TECHNICAL_DEEP_DIVE.md (52K) est une copie autonome de plusieurs docs/technical/*. Pas de lien de synchronisation | Si un doc technique change, le pack ne sera pas mis a jour |
 
@@ -756,14 +758,11 @@ users (7 roles)
    - ADR-009 : Alertes predictives (v3.0)
    - ADR-010 : Suppression analytics UI (v3.0)
 
-4. **Completer DEMO_MODE.md** :
-   - Documenter comment activer/utiliser le mode demo
-   - Cas d'usage (demos commerciales, tests)
-   - Configuration requise
+4. ~~**Completer DEMO_MODE.md**~~ : **CORRIGE** — Le fichier fait 238 lignes et est deja complet
 
-5. **Corriger SQL_QUERIES.md** :
-   - Remplacer `first_name`/`last_name` par `full_name`
-   - Verifier toutes les requetes contre le schema actuel (full-schema.sql)
+5. ~~**Corriger SQL_QUERIES.md**~~ : **CORRIGE** — Faux positif, les requetes sont correctes
+
+5bis. **Restructurer radicalement CLAUDE.md** (voir section dediee ci-dessous)
 
 6. **Creer un runbook d'urgence** :
    - Incident DB (Supabase down) : procedure de fallback
@@ -780,13 +779,14 @@ users (7 roles)
 | # | Recommandation | Effort | Impact | Justification |
 |---|---------------|--------|--------|---------------|
 | 1 | **⚠️ CRITIQUE : Completer les documents legaux** | M | **Bloquant** | 4 templates non remplis (PRIVACY_POLICY, TERMS, CGV, RGPD). Inutilisables en l'etat. Necessite juriste |
-| 2 | **Corriger SQL_QUERIES.md** (colonnes obsoletes) | S | Moyen | `first_name`/`last_name` → `full_name`. Requetes qui echouent si copiees |
-| 3 | **Completer DEMO_MODE.md** (6 lignes actuellement) | S | Moyen | Aucune doc du mode demo pour les commerciaux |
-| 4 | **Supprimer features/analytics/** ou documenter explicitement son statut | S | Moyen | Code mort source de confusion |
-| 5 | **Supprimer la reference server-render** de CLAUDE.md | S | Faible | Reference morte |
-| 6 | **Consolider raspberry/systemd/** dans config/systemd/ | S | Faible | Eliminer la duplication |
-| 7 | **Documenter le CI/CD** dans CLAUDE.md ou dans docs/deployment/ | M | Haut | 5 workflows GitHub Actions non documentes |
-| 8 | **Documenter le middleware remote-shell-security** | S | Moyen | Securite critique non visible |
+| 2 | **⚠️ CRITIQUE : Restructurer CLAUDE.md** (~80 lignes max) | L | **Haut** | 239 KB = ~6000 lignes, limite officielle ~80 lignes. Claude Code ignore probablement >90% du contenu. Deplacer vers `.claude/rules/` et `docs/` |
+| ~~3~~ | ~~Corriger SQL_QUERIES.md~~ | — | — | **Faux positif** — les requetes sont correctes |
+| ~~4~~ | ~~Completer DEMO_MODE.md~~ | — | — | **Faux positif** — le fichier fait 238 lignes et est complet |
+| 5 | **Supprimer features/analytics/** ou documenter explicitement son statut | S | Moyen | Code mort source de confusion |
+| 6 | **Supprimer la reference server-render** de CLAUDE.md | S | Faible | Reference morte |
+| 7 | **Consolider raspberry/systemd/** dans config/systemd/ | S | Faible | Eliminer la duplication |
+| 8 | **Documenter le CI/CD** dans CLAUDE.md ou dans docs/deployment/ | M | Haut | 5 workflows GitHub Actions non documentes |
+| 9 | **Documenter le middleware remote-shell-security** | S | Moyen | Securite critique non visible |
 
 ### Moyen terme (1-3 mois)
 
@@ -815,6 +815,86 @@ users (7 roles)
 | 24 | **Evaluer un monorepo tooling** (Nx, Turborepo) | L | Moyen | Build/test incrementaux, dependency graph |
 | 25 | **Supprimer la table proof_of_broadcasts** (feature supprimee v3.0) | S | Faible | Nettoyage DB |
 | 26 | **Mettre en place une synchronisation automatique des packs** | M | Moyen | PACK_TECHNICAL_DEEP_DIVE.md (52K) divergera inevitablement de docs/technical/ |
+
+---
+
+### 9.4 Focus : Restructuration CLAUDE.md (Priorite CRITIQUE)
+
+**Constat** : Le CLAUDE.md actuel (239 KB, ~6000 lignes) depasse de x75 la limite recommandee par les bonnes pratiques Claude Code (~80 lignes). Au-dela de cette limite, Claude commence a ignorer des sections du fichier.
+
+**Principe officiel** : *"Pour chaque ligne de CLAUDE.md, se demander : si je retire cette ligne, est-ce que Claude va faire des erreurs ? Si non, la supprimer."*
+
+**Structure cible** (~50-80 lignes) :
+
+```markdown
+# CLAUDE.md - Neopro
+
+## Commandes
+npm start                    # Frontend Raspberry (port 4200)
+npm run start:central        # Dashboard central (port 4300)
+cd central-server && npm run dev  # API Backend
+npm run test:server          # Jest (API)
+npm run lint                 # ESLint
+
+## Regles de code
+- TypeScript strict : jamais de `any`, toujours typer explicitement
+- SQL parametre uniquement : query('...WHERE id = $1', [id])
+- Logger Winston uniquement, pas de console.log
+- Conventional Commits : feat(scope): ..., fix(scope): ...
+- Joi pour validation des inputs
+
+## Ne jamais faire
+- Modifier les migrations deja en production
+- Changer le format des api_key des sites
+- Commit des secrets ou .env
+- Push sur main sans PR
+
+## Architecture
+Voir @docs/technical/ARCHITECTURE.md
+Voir @docs/REFERENCE.md
+
+## Clients critiques
+Voir @docs/clients/NLF.md (mesh WiFi, ne JAMAIS lock BSSID)
+```
+
+**Migration du contenu** :
+
+| Contenu actuel dans CLAUDE.md | Destination | Methode |
+|------------------------------|-------------|---------|
+| Contexte metier, glossaire (~200L) | `docs/GLOSSARY.md` (existe deja) | Supprimer de CLAUDE.md, enrichir le fichier existant |
+| Schema DB, tables (~150L) | `docs/technical/DATABASE.md` (creer) | Extraire |
+| API Routes (~200L) | `docs/technical/API_REFERENCE.md` (creer) | Extraire |
+| Breaking changes (~500L) | `docs/changelog/` (existe deja) | Supprimer de CLAUDE.md |
+| Services critiques (~300L) | `.claude/rules/services.md` | Extraire — charge conditionnelle |
+| Double-buffer video (~200L) | `.claude/rules/raspberry-tv.md` | Extraire — charge uniquement pour fichiers Pi |
+| Network resilience (~300L) | `.claude/rules/network.md` | Extraire — charge conditionnelle |
+| Troubleshooting (~200L) | `docs/TROUBLESHOOTING.md` (existe deja) | Supprimer de CLAUDE.md |
+| Diagrammes de sequence (~100L) | `docs/technical/SEQUENCE_DIAGRAMS.md` | Extraire |
+| Patterns de code (~100L) | `.claude/rules/code-patterns.md` | Extraire — charge conditionnelle |
+| Rate limiting (~80L) | `.claude/rules/rate-limiting.md` | Extraire — charge conditionnelle |
+| Raspberry Pi details (~500L) | `.claude/rules/raspberry.md` | Extraire — charge pour fichiers raspberry/ |
+| FAQ developpeur (~100L) | `docs/FAQ.md` (creer) | Extraire |
+
+**Structure `.claude/rules/`** (chargement conditionnel par path) :
+
+```
+.claude/
+├── CLAUDE.md              # ~50-80 lignes (instructions essentielles)
+└── rules/
+    ├── services.md         # Details services central-server
+    ├── code-patterns.md    # Patterns Express, Angular, validation
+    ├── rate-limiting.md    # Configuration rate limiting
+    ├── raspberry.md        # Architecture Pi, sync-agent, kiosk
+    ├── raspberry-tv.md     # Double-buffer, freeze-frame, video errors
+    ├── network.md          # Network resilience, profiles, watchdog
+    └── database.md         # Schema, migrations, RLS
+```
+
+**Benefices attendus** :
+- Claude Code respecte effectivement les instructions (~80 au lieu de ~6000 lignes a parser)
+- Chargement conditionnel : les regles Pi ne sont chargees que quand on edite des fichiers Pi
+- Reduction des tokens consommes a chaque conversation (~50x moins)
+- Les instructions critiques ne sont plus noyees dans le bruit
 
 ---
 
