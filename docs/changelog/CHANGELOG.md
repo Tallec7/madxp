@@ -1,3 +1,9 @@
+## [3.7.15](https://github.com/Tallec7/neopro/compare/v3.7.14...v3.7.15) (2026-02-09)
+
+### Bug Fixes
+
+- **pi:** improve GPU crash detection, sponsor buffer retry, and hostapd diagnostics ([#386](https://github.com/Tallec7/neopro/issues/386)) ([5caad82](https://github.com/Tallec7/neopro/commit/5caad82d3a36d36dfb79ce3634537c3e020e75a7))
+
 ## [3.7.14](https://github.com/Tallec7/neopro/compare/v3.7.13...v3.7.14) (2026-02-09)
 
 ### Bug Fixes
