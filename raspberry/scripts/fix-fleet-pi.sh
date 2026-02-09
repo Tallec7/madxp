@@ -257,18 +257,15 @@ if [ -f "$KIOSK_SCRIPT" ]; then
 
     # Exclure les lignes de commentaires (le nouveau script contient des commentaires
     # documentant l'historique des tentatives GPU avec ces mots-clés)
-    if grep -v '^\s*#' "$KIOSK_SCRIPT" | grep -qE "use-gl|use-angle|swiftshader"; then
+    # Note: --use-angle est un défaut système Debian (/usr/bin/chromium), pas un flag obsolète de notre code
+    if grep -v '^\s*#' "$KIOSK_SCRIPT" | grep -qE "use-gl|swiftshader|disable-gpu-compositing"; then
         log_warn "Flags GPU obsolètes détectés dans kiosk-watchdog.sh"
         BAD_FLAGS=true
 
         # Lister les flags problématiques (exclure commentaires)
-        grep -v '^\s*#' "$KIOSK_SCRIPT" | grep -oE "(--use-gl=[a-z]+|--use-angle=[a-z]+|--disable-gpu-compositing|swiftshader)" | while read -r flag; do
+        grep -v '^\s*#' "$KIOSK_SCRIPT" | grep -oE "(--use-gl=[a-z]+|--disable-gpu-compositing|swiftshader)" | while read -r flag; do
             log_warn "  Flag obsolète : $flag"
         done
-    fi
-
-    if grep -v '^\s*#' "$KIOSK_SCRIPT" | grep -qE "disable-gpu-compositing"; then
-        BAD_FLAGS=true
     fi
 
     if [ "$BAD_FLAGS" = true ]; then
@@ -292,7 +289,9 @@ fi
 # Vérifier les flags du process Chromium en cours
 CHROMIUM_CMD=$(ps aux 2>/dev/null | grep "[c]hromium" | head -1 || true)
 if [ -n "$CHROMIUM_CMD" ]; then
-    if echo "$CHROMIUM_CMD" | grep -qE "use-gl|use-angle|swiftshader|disable-gpu-compositing"; then
+    # Note: --use-angle=gles est injecté par /usr/bin/chromium (wrapper Debian ARM), pas par notre code
+    # Ne vérifier que les flags réellement obsolètes de notre kiosk-watchdog.sh
+    if echo "$CHROMIUM_CMD" | grep -qE "use-gl|swiftshader|disable-gpu-compositing"; then
         log_warn "Chromium tourne avec des flags GPU obsolètes — reboot nécessaire"
         NEEDS_REBOOT=true
     else
@@ -512,7 +511,7 @@ echo ""
 echo "  # Vérifier les 3 nouveaux services"
 echo "  systemctl status neopro-hotspot-watchdog neopro-sync-guardian neopro-hotspot-optimizer"
 echo ""
-echo "  # Vérifier les flags GPU (ne doit PAS contenir use-gl/swiftshader)"
+echo "  # Vérifier les flags GPU (ne doit PAS contenir use-gl/swiftshader — use-angle=gles est normal, c'est un défaut Debian)"
 echo "  ps aux | grep chromium | grep -v grep"
 echo ""
 echo "  # Vérifier que les buffers se vident"

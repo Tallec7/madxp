@@ -48,7 +48,9 @@ find_best_channel() {
 
     for channel in 1 6 11; do
         local count=$(count_networks_on_channel "$channel")
-        log "Channel $channel: $count networks detected"
+        # Write directly to log file (NOT via log() which uses tee → stdout)
+        # stdout is captured by $(find_best_channel), so log() would pollute the return value
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Channel $channel: $count networks detected" >> "$LOG_FILE"
 
         if [ "$count" -lt "$min_networks" ]; then
             min_networks=$count

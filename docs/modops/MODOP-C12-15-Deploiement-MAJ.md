@@ -147,6 +147,23 @@ Dashboard → Sites → [Site] → Actions → Mettre à jour le logiciel
 
 **⚠️ Golden snapshot automatique (v3.7.16+) :** Avant de remplacer le code du sync-agent, `update-software.js` crée automatiquement un snapshot "golden" de la version actuelle (si aucun golden n'existe). Cela garantit que le guardian peut restaurer la version précédente en cas de crash du nouveau code. Sans ce mécanisme, un Pi recevant le guardian pour la première fois via OTA n'aurait aucun fallback et resterait hors ligne indéfiniment en cas de régression.
 
+**Parité des 3 chemins de déploiement (v3.8.1+) :** Les 3 méthodes de mise à jour sont maintenant **100% alignées** :
+
+| Étape | OTA (`update-software.js`) | SCP (`deploy-remote.sh`) | Admin `:8080` (`admin-server.js`) |
+| ----- | --- | --- | --- |
+| webapp/ | ✅ | ✅ | ✅ |
+| server/ + npm install | ✅ | ✅ | ✅ |
+| sync-agent/ + npm install | ✅ | ✅ | ✅ |
+| admin/ | ✅ | ✅ | ✅ |
+| scripts/ | ✅ | ✅ | ✅ |
+| config/systemd/ + enable | ✅ | ✅ | ✅ |
+| Golden snapshot | ✅ | ✅ | ✅ |
+| VERSION + release.json | ✅ | ✅ | ✅ |
+| Restart nginx | ✅ | ✅ | ✅ |
+| Restart kiosk | ✅ | ✅ | ✅ |
+
+Avant la v3.8.1, chaque chemin avait des lacunes différentes (services systemd manquants, golden snapshot absent, nginx non redémarré, etc.), ce qui causait des divergences entre Pi selon la méthode de mise à jour utilisée.
+
 **Méthode alternative : SSH manuelle**
 
 ```bash
@@ -671,7 +688,7 @@ Le dashboard peut afficher un faux avertissement "Mémoire GPU insuffisante (4M)
 
 ---
 
-**Version :** 1.2
-**Dernière mise à jour :** Février 2026
+**Version :** 1.3
+**Dernière mise à jour :** 9 février 2026
 
 **FIN DU MODOP-C12-15**
