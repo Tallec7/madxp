@@ -37,28 +37,36 @@ get_current_channel() {
 # Set hostapd channel
 set_channel() {
     local new_channel=$1
+    # Validate channel is a number (1, 6, or 11) to prevent sed injection from corrupted input
+    if ! [[ "$new_channel" =~ ^(1|6|11)$ ]]; then
+        log "ERROR: Invalid channel value '$new_channel', aborting channel change"
+        return 1
+    fi
     log "Setting hotspot channel to $new_channel"
     sed -i "s/^channel=.*/channel=$new_channel/" "$HOSTAPD_CONF"
 }
 
 # Find the least congested channel among 1, 6, 11
+# Sets BEST_CHANNEL variable (not stdout) to avoid $() capture pollution
 find_best_channel() {
-    local best_channel=6
+    BEST_CHANNEL=6
     local min_networks=999
 
     for channel in 1 6 11; do
         local count=$(count_networks_on_channel "$channel")
-        # Write directly to log file (NOT via log() which uses tee → stdout)
-        # stdout is captured by $(find_best_channel), so log() would pollute the return value
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Channel $channel: $count networks detected" >> "$LOG_FILE"
+
+        # Ensure count is a valid number, default to 0
+        if ! [[ "$count" =~ ^[0-9]+$ ]]; then
+            count=0
+        fi
+
+        log "Channel $channel: $count networks detected"
 
         if [ "$count" -lt "$min_networks" ]; then
             min_networks=$count
-            best_channel=$channel
+            BEST_CHANNEL=$channel
         fi
     done
-
-    echo "$best_channel"
 }
 
 # Main
@@ -99,7 +107,8 @@ main() {
     if [ "$current_count" -ge "$CONGESTION_THRESHOLD" ]; then
         log "Channel $current_channel is congested (>= $CONGESTION_THRESHOLD networks)"
 
-        best_channel=$(find_best_channel)
+        find_best_channel
+        best_channel=$BEST_CHANNEL
 
         if [ "$best_channel" != "$current_channel" ]; then
             log "Switching from channel $current_channel to $best_channel"
