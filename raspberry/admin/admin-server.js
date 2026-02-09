@@ -2871,6 +2871,21 @@ app.post('/api/update', uploadPackage.single('package'), async (req, res) => {
     const hasSyncAgent = await execCommand(`test -d ${extractDir}/${sourcePrefix}sync-agent`);
     if (hasSyncAgent.success) {
       await ensureDirectory(`${NEOPRO_DIR}/sync-agent`);
+
+      // Créer un golden snapshot AVANT de remplacer le code
+      // Si le nouveau code crashe, le guardian pourra restaurer cette version
+      const goldenExists = await execCommand(`test -d ${NEOPRO_DIR}/sync-agent-golden`);
+      if (!goldenExists.success) {
+        const agentJsExists = await execCommand(`test -f ${NEOPRO_DIR}/sync-agent/src/agent.js`);
+        if (agentJsExists.success) {
+          console.log('[UPDATE] Création du golden snapshot sync-agent (filet de sécurité)...');
+          await execCommand(`cp -r ${NEOPRO_DIR}/sync-agent ${NEOPRO_DIR}/sync-agent-golden`);
+          await execCommand(`date -Iseconds > ${NEOPRO_DIR}/sync-agent-golden/.golden-created`);
+          await execCommand(`chown -R pi:pi ${NEOPRO_DIR}/sync-agent-golden`);
+          console.log('[UPDATE] Golden snapshot créé');
+        }
+      }
+
       // Sauvegarder la config locale du sync-agent (.env, config/.env)
       await execCommand(`test -f ${NEOPRO_DIR}/sync-agent/.env && cp ${NEOPRO_DIR}/sync-agent/.env /tmp/sync-agent.env.backup`);
       await execCommand(`test -f ${NEOPRO_DIR}/sync-agent/config/.env && cp ${NEOPRO_DIR}/sync-agent/config/.env /tmp/sync-agent-config.env.backup`);
@@ -2880,6 +2895,30 @@ app.post('/api/update', uploadPackage.single('package'), async (req, res) => {
       await execCommand(`test -f /tmp/sync-agent.env.backup && cp /tmp/sync-agent.env.backup ${NEOPRO_DIR}/sync-agent/.env && rm /tmp/sync-agent.env.backup`);
       await execCommand(`test -f /tmp/sync-agent-config.env.backup && cp /tmp/sync-agent-config.env.backup ${NEOPRO_DIR}/sync-agent/config/.env && rm /tmp/sync-agent-config.env.backup`);
       console.log('[UPDATE] Sync-agent mis à jour');
+    }
+
+    // Copier les scripts s'ils sont présents dans le package
+    const hasScripts = await execCommand(`test -d ${extractDir}/${sourcePrefix}scripts`);
+    if (hasScripts.success) {
+      await ensureDirectory(`${NEOPRO_DIR}/scripts`);
+      await runCommand(`cp -r ${extractDir}/${sourcePrefix}scripts/* ${NEOPRO_DIR}/scripts/`, 'Échec de la copie des scripts');
+      await execCommand(`chmod +x ${NEOPRO_DIR}/scripts/*.sh 2>/dev/null || true`);
+      console.log('[UPDATE] Scripts mis à jour');
+    }
+
+    // Copier le dossier admin s'il est présent dans le package
+    const hasAdmin = await execCommand(`test -d ${extractDir}/${sourcePrefix}admin`);
+    if (hasAdmin.success) {
+      await runCommand(`cp -r ${extractDir}/${sourcePrefix}admin/* ${NEOPRO_DIR}/admin/`, 'Échec de la copie des fichiers admin');
+      console.log('[UPDATE] Admin panel mis à jour');
+    }
+
+    // Copier config/ (services systemd, etc.) s'il est présent
+    const hasConfig = await execCommand(`test -d ${extractDir}/${sourcePrefix}config`);
+    if (hasConfig.success) {
+      await ensureDirectory(`${NEOPRO_DIR}/config`);
+      await runCommand(`cp -r ${extractDir}/${sourcePrefix}config/* ${NEOPRO_DIR}/config/`, 'Échec de la copie des fichiers config');
+      console.log('[UPDATE] Config files mis à jour');
     }
 
     // Restaurer configuration.json
@@ -2907,13 +2946,54 @@ app.post('/api/update', uploadPackage.single('package'), async (req, res) => {
     await execCommand(`sudo chown -R pi:pi ${NEOPRO_DIR}/server`);
     await execCommand(`sudo chown -R pi:pi ${NEOPRO_DIR}/sync-agent 2>/dev/null || true`);
     await execCommand(`sudo chown -R pi:pi ${NEOPRO_DIR}/admin 2>/dev/null || true`);
+    await execCommand(`sudo chown -R pi:pi ${NEOPRO_DIR}/scripts 2>/dev/null || true`);
+    await execCommand(`sudo chown -R pi:pi ${NEOPRO_DIR}/config 2>/dev/null || true`);
     await execCommand('sudo usermod -a -G pi www-data 2>/dev/null || true');
+
+    // Installer les services systemd depuis config/systemd/ si présents
+    const hasSystemdServices = await execCommand(`test -d ${NEOPRO_DIR}/config/systemd`);
+    if (hasSystemdServices.success) {
+      const serviceFiles = await execCommand(`ls ${NEOPRO_DIR}/config/systemd/*.service 2>/dev/null`);
+      if (serviceFiles.success && serviceFiles.stdout) {
+        const files = serviceFiles.stdout.trim().split('\n').filter(f => f);
+        const managedServices = ['neopro-app', 'neopro-admin', 'neopro-kiosk', 'neopro-sync-agent'];
+        const newlyInstalled = [];
+
+        for (const svcFile of files) {
+          const svcName = path.basename(svcFile);
+          const svcBaseName = svcName.replace('.service', '');
+          const wasInstalled = (await execCommand(`test -f /etc/systemd/system/${svcName}`)).success;
+
+          await execCommand(`sudo cp "${svcFile}" /etc/systemd/system/${svcName}`);
+          await execCommand(`sudo chown root:root /etc/systemd/system/${svcName}`);
+          await execCommand(`sudo chmod 644 /etc/systemd/system/${svcName}`);
+          await execCommand(`sudo systemctl enable ${svcBaseName} 2>/dev/null || true`);
+
+          if (!wasInstalled) {
+            newlyInstalled.push(svcBaseName);
+          }
+          console.log(`[UPDATE] Service ${svcName} installé`);
+        }
+
+        await execCommand('sudo systemctl daemon-reload');
+
+        // Démarrer les nouveaux services (sauf ceux gérés manuellement)
+        for (const svc of newlyInstalled) {
+          if (!managedServices.includes(svc)) {
+            await execCommand(`sudo systemctl start ${svc} 2>/dev/null || true`);
+            console.log(`[UPDATE] Service ${svc} démarré (nouveau)`);
+          }
+        }
+      }
+    }
 
     // Redémarrer les services
     await runCommand('sudo systemctl restart neopro-app', 'Échec du redémarrage de neopro-app');
     await runCommand('sudo systemctl restart nginx', 'Échec du redémarrage de nginx');
     // Redémarrer le sync-agent pour qu'il prenne en compte les nouveaux fichiers
     await execCommand('sudo systemctl restart neopro-sync-agent 2>/dev/null || true');
+    // Redémarrer le kiosk pour appliquer la nouvelle webapp + kiosk-watchdog.sh
+    await execCommand('sudo systemctl restart neopro-kiosk 2>/dev/null || true');
 
     // Nettoyage
     await fs.unlink(req.file.path);

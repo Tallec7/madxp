@@ -255,17 +255,19 @@ if [ -f "$KIOSK_SCRIPT" ]; then
     # Vérifier si des flags GPU problématiques sont présents
     BAD_FLAGS=false
 
-    if grep -qE "use-gl|use-angle|swiftshader" "$KIOSK_SCRIPT"; then
+    # Exclure les lignes de commentaires (le nouveau script contient des commentaires
+    # documentant l'historique des tentatives GPU avec ces mots-clés)
+    if grep -v '^\s*#' "$KIOSK_SCRIPT" | grep -qE "use-gl|use-angle|swiftshader"; then
         log_warn "Flags GPU obsolètes détectés dans kiosk-watchdog.sh"
         BAD_FLAGS=true
 
-        # Lister les flags problématiques
-        grep -oE "(--use-gl=[a-z]+|--use-angle=[a-z]+|--disable-gpu-compositing|swiftshader)" "$KIOSK_SCRIPT" | while read -r flag; do
+        # Lister les flags problématiques (exclure commentaires)
+        grep -v '^\s*#' "$KIOSK_SCRIPT" | grep -oE "(--use-gl=[a-z]+|--use-angle=[a-z]+|--disable-gpu-compositing|swiftshader)" | while read -r flag; do
             log_warn "  Flag obsolète : $flag"
         done
     fi
 
-    if grep -qE "disable-gpu-compositing" "$KIOSK_SCRIPT"; then
+    if grep -v '^\s*#' "$KIOSK_SCRIPT" | grep -qE "disable-gpu-compositing"; then
         BAD_FLAGS=true
     fi
 

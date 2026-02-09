@@ -576,7 +576,7 @@ class SoftwareUpdateHandler {
     try {
       logger.info('Starting services');
 
-      const services = ['neopro-app', 'neopro-admin'];
+      const services = ['neopro-app', 'neopro-admin', 'nginx'];
 
       for (const service of services) {
         try {
