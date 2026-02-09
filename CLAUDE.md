@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 3.7.8 | **Dernière mise à jour**: 2026-02-07
+**Version**: 3.8.0 | **Dernière mise à jour**: 2026-02-09
 
 ---
 
@@ -542,17 +542,123 @@ Le `LoggerService` Angular implémente un throttling côté client pour éviter 
 
 Ces services ont été extraits de `tv.component.ts` pour réduire sa complexité :
 
-| Service           | Fichier                           | Rôle                                               |
-| ----------------- | --------------------------------- | -------------------------------------------------- |
-| **DoubleBuffer**  | `double-buffer-video.service.ts`  | Transitions vidéo sans flash (2 players alternés)  |
-| **ErrorRecovery** | `video-error-recovery.service.ts` | Récupération crashs GPU, watchdog, cleanup mémoire |
-| **Watermark**     | `watermark.service.ts`            | Affichage et scheduling du watermark TV            |
+| Service            | Fichier                           | Rôle                                                   |
+| ------------------ | --------------------------------- | ------------------------------------------------------ |
+| **DoubleBuffer**   | `double-buffer-video.service.ts`  | Transitions vidéo sans flash (2 players alternés)      |
+| **ErrorRecovery**  | `video-error-recovery.service.ts` | Récupération crashs GPU, watchdog, cleanup mémoire     |
+| **Watermark**      | `watermark.service.ts`            | Affichage et scheduling du watermark TV                |
+| **RecordingState** | `recording-state.service.ts`      | Contrôle d'enregistrement analytics (ON/OFF) ⚡ v3.8.0 |
 
 **Fichiers** :
 
 - `raspberry/src/app/services/double-buffer-video.service.ts`
 - `raspberry/src/app/services/video-error-recovery.service.ts`
 - `raspberry/src/app/services/watermark.service.ts`
+- `raspberry/src/app/services/recording-state.service.ts`
+
+### Service RecordingStateService (v3.8.0+) ⚡ NEW
+
+Service de contrôle hybride (auto + manuel) de l'enregistrement analytics.
+
+**Comportement** :
+
+- **Au boot : OFF** — aucune donnée analytics enregistrée
+- **Auto ON** quand la Remote change de phase (`neutral` → `before`/`during`/`after`)
+- **Auto OFF** quand retour en `neutral` + timeout 15 min
+- **Override manuel** : bouton 🔴 REC sur la télécommande pour forcer start/stop
+
+| Méthode             | Rôle                                                     |
+| ------------------- | -------------------------------------------------------- |
+| `isRecording`       | `BehaviorSubject<boolean>` — état courant (défaut OFF)   |
+| `onPhaseChange()`   | Auto-start si quitte neutral, auto-stop timer si neutral |
+| `toggleRecording()` | Override manuel                                          |
+| `startRecording()`  | Démarre l'enregistrement (manuel ou auto)                |
+| `stopRecording()`   | Arrête l'enregistrement                                  |
+
+**Propagation** :
+
+- Broadcast via `LocalBroadcastService` (BroadcastChannel entre onglets)
+- Broadcast via `SocketService` (Socket.IO pour sync-agent et cloud)
+- Écoute les changements externes (autre onglet, socket)
+
+**Guards analytics** :
+
+- `AnalyticsService.trackVideoStart/End()` : `if (!recordingState.isRecording) return`
+- `SponsorAnalyticsService.trackSponsorStart/End()` : idem
+- TV slaves (second écran) : analytics désactivées automatiquement
+
+**Fichier** : `raspberry/src/app/services/recording-state.service.ts`
+
+### Synchronisation TV Second Écran (Master-Slave) ⚡ NEW (v3.8.0)
+
+Permet de synchroniser plusieurs instances TV (kiosk + navigateur) sur la même boucle vidéo via Socket.IO.
+
+**Pourquoi pas BroadcastChannel ?** Le kiosk Chromium est un processus séparé → BroadcastChannel ne fonctionne pas entre processes Chromium. Tout passe par Socket.IO (serveur local port 3000).
+
+**Architecture** :
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Serveur local (port 3000)                   │
+│                                                                  │
+│  tvInstances Map = { socketId → { role, connectedAt } }         │
+│  currentLoopState = { videoIndex, videoPath, videoStartedAt,    │
+│                       isManualMode, manualVideoPath, ... }      │
+│                                                                  │
+│  Premier TV = MASTER, suivants = SLAVES                          │
+│  Si master déconnecte → promoteSlave() (plus ancien)            │
+└──────────────────┬───────────────────┬──────────────────────────┘
+                   │                   │
+         ┌─────────┘                   └──────────┐
+         ▼                                        ▼
+┌─────────────────┐                    ┌─────────────────┐
+│  TV Kiosk       │                    │  TV Navigateur  │
+│  (MASTER)       │                    │  (SLAVE)        │
+│                 │                    │                 │
+│  Émet loop state│                    │  Reçoit state   │
+│  à chaque       │    tv-loop-state   │  → trouve vidéo │
+│  changement     │ ──────────────────>│  → play + seek  │
+│  de vidéo       │                    │  → pas analytics│
+│                 │                    │                 │
+│  Analytics: OUI │                    │  Analytics: NON │
+└─────────────────┘                    └─────────────────┘
+```
+
+**Événements Socket.IO locaux** :
+
+| Événement          | Direction        | Payload                                 |
+| ------------------ | ---------------- | --------------------------------------- |
+| `tv-register`      | TV → Serveur     | `{}` (signal d'enregistrement)          |
+| `tv-role-assigned` | Serveur → TV     | `{ role: 'master' \| 'slave' }`         |
+| `tv-loop-update`   | Master → Serveur | `LoopState` (état complet de la boucle) |
+| `tv-loop-state`    | Serveur → Slaves | `LoopState` (relayé depuis le master)   |
+
+**Interface LoopState** :
+
+```typescript
+interface LoopState {
+  videoIndex: number;
+  videoPath: string;
+  videoStartedAt: number | null;
+  isManualMode: boolean;
+  manualVideoPath: string | null;
+  manualVideoStartedAt: number | null;
+  updatedAt: number;
+}
+```
+
+**Comportement du slave** :
+
+1. Reçoit `tv-loop-state` → trouve la vidéo par `videoPath` dans sa boucle locale
+2. Joue la vidéo et seek au temps approximatif (basé sur `videoStartedAt`)
+3. À la fin d'une vidéo → freeze-frame + attend le prochain état du master (ne passe PAS à la suivante)
+4. Si le master joue une vidéo manuelle → le slave la joue aussi
+
+**Fichiers impliqués** :
+
+- `raspberry/server/server.js` - Infrastructure master/slave (tvInstances, promoteSlave, handlers)
+- `raspberry/src/app/components/tv/tv.component.ts` - Logique master (emit) et slave (handleMasterLoopState)
+- `raspberry/src/app/services/socket.service.ts` - Interfaces LoopState, TvRegister
 
 ### Service NetworkDetector (v2.35+) ⚡ NEW
 
@@ -773,6 +879,13 @@ FTP_PUBLIC_URL=https://cdn.neopro.tv  # URL publique du CDN
 'deploy_video'      : { deploymentId, videoUrl, ... }
 'update_config'     : { configVersionId, configuration }
 'execute_command'   : { commandId, type, data }
+
+// Événements locaux (serveur port 3000 sur le Pi) ⚡ v3.8.0
+'recording-state'   : { isRecording, isManualOverride }  // Contrôle analytics
+'tv-register'       : {}                                 // Enregistrement instance TV
+'tv-role-assigned'  : { role: 'master' | 'slave' }       // Rôle assigné à la TV
+'tv-loop-update'    : LoopState                           // Master → serveur (boucle)
+'tv-loop-state'     : LoopState                           // Serveur → slaves (relai)
 ```
 
 ### Synchronisation des Vidéos Locales ⚡ NEW
@@ -1655,17 +1768,18 @@ Le `CloudRemoteComponent` (dashboard) est une copie quasi-identique du `RemoteCo
 
 ### Raspberry Pi
 
-| Fichier                                                     | Description                  |
-| ----------------------------------------------------------- | ---------------------------- |
-| `raspberry/src/app/components/tv/tv.component.ts`           | Affichage TV (double-buffer) |
-| `raspberry/frontend/src/app/components/remote.component.ts` | Télécommande                 |
-| `raspberry/sync-agent/src/agent.js`                         | Agent de synchronisation     |
-| `raspberry/sync-agent/src/watchers/video-watcher.js`        | Surveillance vidéos ⚡       |
-| `raspberry/sync-agent/src/license-cache.js`                 | Cache licence local ⚡ v2.47 |
-| `raspberry/src/app/services/license.service.ts`             | Service licence ⚡ v2.47     |
-| `raspberry/src/app/components/license-block/`               | Écran blocage TV ⚡ v2.47    |
-| `raspberry/src/app/components/license-banner/`              | Bannière remote ⚡ v2.47     |
-| `raspberry/scripts/setup-new-club.sh`                       | Setup nouveau club           |
+| Fichier                                                   | Description                                 |
+| --------------------------------------------------------- | ------------------------------------------- |
+| `raspberry/src/app/components/tv/tv.component.ts`         | Affichage TV (double-buffer + master/slave) |
+| `raspberry/src/app/components/remote/remote.component.ts` | Télécommande (REC + phases)                 |
+| `raspberry/sync-agent/src/agent.js`                       | Agent de synchronisation                    |
+| `raspberry/sync-agent/src/watchers/video-watcher.js`      | Surveillance vidéos ⚡                      |
+| `raspberry/sync-agent/src/license-cache.js`               | Cache licence local ⚡ v2.47                |
+| `raspberry/src/app/services/license.service.ts`           | Service licence ⚡ v2.47                    |
+| `raspberry/src/app/services/recording-state.service.ts`   | Contrôle analytics REC ⚡ v3.8.0            |
+| `raspberry/src/app/components/license-block/`             | Écran blocage TV ⚡ v2.47                   |
+| `raspberry/src/app/components/license-banner/`            | Bannière remote ⚡ v2.47                    |
+| `raspberry/scripts/setup-new-club.sh`                     | Setup nouveau club                          |
 
 ### Documentation
 
@@ -2170,6 +2284,53 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v3.8.0 (Février 2026)
+
+- **Contrôle d'enregistrement analytics (mode hybride)** : Les analytics ne sont enregistrées que quand l'enregistrement est activé
+  - **Comportement** : OFF au boot, auto-ON quand la Remote change de phase (neutral → before/during/after), auto-OFF quand retour en neutral + timeout 15 min, override manuel via bouton 🔴 REC
+  - **Nouveau service** : `RecordingStateService` — singleton gérant l'état d'enregistrement avec `BehaviorSubject<boolean>`
+  - **Guards analytics** : `AnalyticsService.trackVideoStart/End()` et `SponsorAnalyticsService.trackSponsorStart/End()` vérifient `recordingState.isRecording` avant de tracker
+  - **Propagation** : L'état est propagé via BroadcastChannel (onglets locaux) ET Socket.IO (serveur local + cloud)
+  - **Contexte sponsor automatique** : La Remote wire automatiquement le `eventType`, `period`, et `audienceEstimate` vers `SponsorAnalyticsService` lors des changements de phase
+  - **UI Remote** : Indicateur 🔴 REC pulsant dans le header + bouton toggle dans la zone match
+  - **Nouveaux fichiers** :
+    - `raspberry/src/app/services/recording-state.service.ts` - Service de contrôle
+  - **Fichiers modifiés** :
+    - `raspberry/src/app/services/analytics.service.ts` - Guards `if (!recordingState.isRecording) return`
+    - `raspberry/src/app/services/sponsor-analytics.service.ts` - Guards idem
+    - `raspberry/src/app/services/local-broadcast.service.ts` - Type `recording-state`, Subject, emit/on
+    - `raspberry/src/app/services/socket.service.ts` - Interfaces `RecordingStateEvent`, `LoopState`, `TvRegister`
+    - `raspberry/src/app/components/remote/remote.component.ts` - Injection services, wire phase→analytics, toggle
+    - `raspberry/src/app/components/remote/remote.component.html` - Indicateur REC, bouton toggle
+    - `raspberry/src/app/components/remote/remote.component.scss` - Styles `.recording-indicator` avec pulse
+    - `raspberry/server/server.js` - Persistance `currentRecordingState`, handler `recording-state`, envoi aux nouveaux clients
+  - **Migration Pi existants** :
+    ```bash
+    npm run build:raspberry
+    scp -r dist/raspberry/* pi@<IP>:/home/pi/neopro/webapp/
+    scp raspberry/server/server.js pi@<IP>:/home/pi/neopro/server/
+    ssh pi@<IP> 'sudo systemctl restart neopro-app neopro-kiosk'
+    ```
+
+- **Synchronisation boucle TV second écran (Master-Slave via Socket.IO)** : Un second écran /tv se synchronise automatiquement sur la boucle du kiosk
+  - **Problème résolu** : Ouvrir `/tv` dans un navigateur en plus du kiosk jouait une boucle indépendante (vidéos différentes, analytics doublées)
+  - **Architecture** : Premier TV connecté = master, suivants = slaves. BroadcastChannel ne fonctionne PAS entre le kiosk (processus Chromium séparé) et le navigateur → tout passe par Socket.IO local (port 3000)
+  - **Master** : Émet `tv-loop-update` à chaque changement de vidéo (boucle ou manuelle)
+  - **Slave** : Reçoit `tv-loop-state`, trouve la vidéo par path dans sa boucle locale, joue + seek au temps approximatif. À la fin d'une vidéo → freeze-frame + attend le prochain état du master
+  - **Promotion automatique** : Si le master se déconnecte, le slave le plus ancien est promu master
+  - **Analytics désactivées pour les slaves** : Tous les appels `analyticsService.track*()` et `sponsorAnalytics.track*()` sont wrappés avec `if (!this.isSlaveMode)`
+  - **Fichiers modifiés** :
+    - `raspberry/server/server.js` - `tvInstances` Map, `currentLoopState`, `getMasterId()`, `promoteSlave()`, handlers `tv-register`/`tv-loop-update`
+    - `raspberry/src/app/components/tv/tv.component.ts` - Propriétés `tvRole`/`isSlaveMode`, registration, `emitLoopState()`, `handleMasterLoopState()`, guards analytics
+    - `raspberry/src/app/services/socket.service.ts` - Interfaces `LoopState`, `TvRegister`
+  - **Migration Pi existants** :
+    ```bash
+    npm run build:raspberry
+    scp -r dist/raspberry/* pi@<IP>:/home/pi/neopro/webapp/
+    scp raspberry/server/server.js pi@<IP>:/home/pi/neopro/server/
+    ssh pi@<IP> 'sudo systemctl restart neopro-app neopro-kiosk'
+    ```
 
 ### v3.7.14 (Février 2026)
 
@@ -3989,41 +4150,45 @@ SMTP_PORT=1025
 
 ## Glossaire Métier
 
-| Terme                | Définition                                                         |
-| -------------------- | ------------------------------------------------------------------ |
-| **Site**             | Un club sportif équipé d'un Raspberry Pi + TV                      |
-| **Boîtier**          | Le Raspberry Pi physique installé dans un club                     |
-| **Flotte**           | L'ensemble des boîtiers gérés (50+)                                |
-| **Déploiement**      | Envoi d'une vidéo du cloud vers un ou plusieurs Pi                 |
-| **Heartbeat**        | Signal envoyé toutes les 30s par le Pi au cloud                    |
-| **Sync**             | Synchronisation bidirectionnelle Pi ↔ Cloud                        |
-| **Config mirror**    | Copie de la config locale stockée dans le cloud                    |
-| **VideoWatcher**     | Surveillance du dossier vidéos sur le Pi                           |
-| **LocalVideo**       | Métadonnées d'une vidéo présente sur le boîtier                    |
-| **Advertiser**       | Annonceur qui diffuse des pubs sur les TV                          |
-| **Agency**           | Agence gérant plusieurs annonceurs                                 |
-| **Operator**         | Utilisateur gérant un sous-ensemble de clubs                       |
-| **Golden image**     | Image SD pré-configurée pour clonage rapide                        |
-| **Canary**           | Déploiement progressif (10% → 50% → 100%)                          |
-| **Phase de match**   | Moment du match (neutral/before/during/after)                      |
-| **TimeCategory**     | Configuration d'une phase avec ses vidéos et catégories            |
-| **LoopVideo**        | Vidéo dans une boucle de phase                                     |
-| **CategoryMapping**  | Association catégorie locale → type analytics                      |
-| **RemotePreview**    | Simulation visuelle de la télécommande Pi dans le dashboard        |
-| **wlan0**            | WiFi intégré du Pi → Hotspot pour /remote et admin :8080           |
-| **wlan1**            | Dongle USB WiFi → Connexion Internet du lieu vers le cloud         |
-| **Mesh WiFi**        | Réseau avec plusieurs APs partageant le même SSID                  |
-| **BSSID lock**       | Verrouillage sur une borne spécifique (⛔ INTERDIT en mesh)        |
-| **bgscan**           | Scan background pour roaming contrôlé en environnement mesh        |
-| **Hotspot Watchdog** | Service surveillant la santé du hotspot (hostapd, dnsmasq)         |
-| **Network Profile**  | Type de réseau : simple, mesh, mesh_isolated, enterprise, ethernet |
-| **AP Isolation**     | Sécurité mesh empêchant les clients de communiquer                 |
-| **brcmfmac**         | Driver WiFi Raspberry Pi (bugs documentés avec Virtual AP)         |
-| **LicenseStatus**    | État licence : VALID, WARNING, GRACE_PERIOD, BLOCKED               |
-| **LicenseCache**     | Cache local de la licence (7 jours de validité)                    |
-| **GracePeriod**      | Délai de grâce après expiration (7 jours sans blocage)             |
-| **SuspensionReason** | Motif de suspension (voir tableau ci-dessous)                      |
-| **Auto-unblock**     | Déblocage automatique si abonnement renouvelé (certains motifs)    |
+| Terme                | Définition                                                             |
+| -------------------- | ---------------------------------------------------------------------- |
+| **Site**             | Un club sportif équipé d'un Raspberry Pi + TV                          |
+| **Boîtier**          | Le Raspberry Pi physique installé dans un club                         |
+| **Flotte**           | L'ensemble des boîtiers gérés (50+)                                    |
+| **Déploiement**      | Envoi d'une vidéo du cloud vers un ou plusieurs Pi                     |
+| **Heartbeat**        | Signal envoyé toutes les 30s par le Pi au cloud                        |
+| **Sync**             | Synchronisation bidirectionnelle Pi ↔ Cloud                            |
+| **Config mirror**    | Copie de la config locale stockée dans le cloud                        |
+| **VideoWatcher**     | Surveillance du dossier vidéos sur le Pi                               |
+| **LocalVideo**       | Métadonnées d'une vidéo présente sur le boîtier                        |
+| **Advertiser**       | Annonceur qui diffuse des pubs sur les TV                              |
+| **Agency**           | Agence gérant plusieurs annonceurs                                     |
+| **Operator**         | Utilisateur gérant un sous-ensemble de clubs                           |
+| **Golden image**     | Image SD pré-configurée pour clonage rapide                            |
+| **Canary**           | Déploiement progressif (10% → 50% → 100%)                              |
+| **Phase de match**   | Moment du match (neutral/before/during/after)                          |
+| **TimeCategory**     | Configuration d'une phase avec ses vidéos et catégories                |
+| **LoopVideo**        | Vidéo dans une boucle de phase                                         |
+| **CategoryMapping**  | Association catégorie locale → type analytics                          |
+| **RemotePreview**    | Simulation visuelle de la télécommande Pi dans le dashboard            |
+| **wlan0**            | WiFi intégré du Pi → Hotspot pour /remote et admin :8080               |
+| **wlan1**            | Dongle USB WiFi → Connexion Internet du lieu vers le cloud             |
+| **Mesh WiFi**        | Réseau avec plusieurs APs partageant le même SSID                      |
+| **BSSID lock**       | Verrouillage sur une borne spécifique (⛔ INTERDIT en mesh)            |
+| **bgscan**           | Scan background pour roaming contrôlé en environnement mesh            |
+| **Hotspot Watchdog** | Service surveillant la santé du hotspot (hostapd, dnsmasq)             |
+| **Network Profile**  | Type de réseau : simple, mesh, mesh_isolated, enterprise, ethernet     |
+| **AP Isolation**     | Sécurité mesh empêchant les clients de communiquer                     |
+| **brcmfmac**         | Driver WiFi Raspberry Pi (bugs documentés avec Virtual AP)             |
+| **LicenseStatus**    | État licence : VALID, WARNING, GRACE_PERIOD, BLOCKED                   |
+| **LicenseCache**     | Cache local de la licence (7 jours de validité)                        |
+| **GracePeriod**      | Délai de grâce après expiration (7 jours sans blocage)                 |
+| **SuspensionReason** | Motif de suspension (voir tableau ci-dessous)                          |
+| **Auto-unblock**     | Déblocage automatique si abonnement renouvelé (certains motifs)        |
+| **RecordingState**   | État d'enregistrement analytics (OFF au boot, auto ON sur phase match) |
+| **Master (TV)**      | Première instance TV connectée, émet l'état de la boucle vidéo         |
+| **Slave (TV)**       | Instance TV secondaire synchronisée sur le master, analytics OFF       |
+| **LoopState**        | État de la boucle vidéo (index, path, timestamps, mode manuel)         |
 
 ### Motifs de suspension et auto-déblocage
 
