@@ -1,3 +1,9 @@
+## [3.8.1](https://github.com/Tallec7/neopro/compare/v3.8.0...v3.8.1) (2026-02-09)
+
+### Bug Fixes
+
+- **deploy:** install systemd services via deploy-remote.sh ([#395](https://github.com/Tallec7/neopro/issues/395)) ([5a37572](https://github.com/Tallec7/neopro/commit/5a37572eda7c29f5a72194da76b0af2a6848c6b3))
+
 # [3.8.0](https://github.com/Tallec7/neopro/compare/v3.7.15...v3.8.0) (2026-02-09)
 
 ### Features
