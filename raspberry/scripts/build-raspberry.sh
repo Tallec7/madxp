@@ -372,6 +372,15 @@ if [ -d "raspberry/sync-agent" ]; then
     print_success "Sync-agent copié (avec node_modules)"
 fi
 
+# Build admin panel (concaténer les modules JS en app.js)
+if [ -f "raspberry/admin/public/build-admin.sh" ]; then
+    print_step "Build admin panel (modules → app.js)..."
+    cd raspberry/admin/public
+    bash build-admin.sh
+    cd - > /dev/null
+    print_success "Admin JS modules concaténés"
+fi
+
 # Copier l'admin panel
 if [ -d "raspberry/admin" ]; then
     mkdir -p ${DEPLOY_DIR}/admin
