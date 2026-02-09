@@ -26,27 +26,54 @@ Le health score affiche 100/100 et les 7 services tournent. Les métriques syst�
 | Signal WiFi (wlan1) | -69 dBm / 59% | Marginal |
 | Carrier changes wlan1 | **10 en 39 min** | Anormal |
 
-### Services de protection — statut à vérifier
+### Services de protection — absents à cause d'un bug OTA ⚠️ CONFIRMÉ
 
 Le debug bundle montre 7 services actifs. 3 services de protection prévus par l'architecture ne figurent **pas dans la liste des services actifs** du bundle :
 
-| Service | Rôle | Depuis | Dans le build ? |
-|---------|------|--------|-----------------|
-| `neopro-hotspot-watchdog` | Recovery auto si hotspot plante | v2.34 | ✅ Oui |
-| `neopro-sync-guardian` | Recovery auto si sync-agent crash | v2.40 | ✅ Oui |
-| `neopro-hotspot-optimizer` | Sélection canal au boot | v2.28 | ✅ Oui |
+| Service | Rôle | Depuis | Dans le build ? | Installé sur ce Pi ? |
+|---------|------|--------|-----------------|---------------------|
+| `neopro-hotspot-watchdog` | Recovery auto si hotspot plante | v2.34 | ✅ Oui | ❌ Non |
+| `neopro-sync-guardian` | Recovery auto si sync-agent crash | v2.40 | ✅ Oui | ❌ Non |
+| `neopro-hotspot-optimizer` | Sélection canal au boot | v2.28 | ✅ Oui | ❌ Non |
 
-Ces 3 services **sont inclus dans le build** (`build-raspberry.sh` l.416-432) et le pipeline OTA les installe automatiquement (`update-software.js` l.439-464 : `sudo cp` + `systemctl enable` pour tous les `.service`).
+**Cause racine confirmée : Bug dans `update-software.js`** (voir section dédiée ci-dessous).
 
-**Hypothèses** :
-1. Le Pi NLF n'a pas reçu d'OTA update depuis l'ajout de ces services (installé avec un ancien `install.sh`)
-2. L'OTA a échoué silencieusement sur l'installation systemd (le `catch` masque l'erreur)
-3. Les services sont installés mais inactifs (non démarrés)
+Le Pi NLF a été installé avec un ancien `install.sh` (avant l'existence de ces 3 services). Depuis, il a uniquement reçu des builds OTA. Mais le chemin OTA a un bug : il **ne copie jamais le dossier `config/`** de l'archive extraite, alors que les fichiers `.service` s'y trouvent. Le bloc de code qui est censé installer les services systemd vérifie `/home/pi/neopro/config/systemd/` — un dossier qui n'existe pas sur ce Pi car il n'a jamais été créé.
 
-**Vérification requise** :
-```bash
-ssh pi@neopro.local 'systemctl list-unit-files | grep neopro'
+---
+
+### Bug OTA confirmé : `config/` jamais copié par `update-software.js`
+
+**Impact** : Tout Pi installé avec un `install.sh` antérieur à v2.34 et mis à jour uniquement via OTA **n'a aucun des 3 services de protection installé**.
+
+**Trace du bug** :
+
 ```
+build-raspberry.sh (l.416-432) :
+  ✅ Copie config/systemd/*.service dans l'archive
+
+update-software.js extractAndInstall() :
+  ✅ cp -r webapp/*      → /home/pi/neopro/webapp/      (l.317)
+  ✅ cp -r server/*      → /home/pi/neopro/server/      (l.330)
+  ✅ cp -r sync-agent/*  → /home/pi/neopro/sync-agent/  (l.349)
+  ✅ cp -r admin/*       → /home/pi/neopro/admin/       (l.368)
+  ✅ cp -r scripts/*     → /home/pi/neopro/scripts/     (l.375)
+  ❌ config/ → JAMAIS COPIÉ (aucune ligne de code pour ça)
+
+update-software.js (l.440) :
+  const systemdConfigDir = path.join(rootDir, 'config', 'systemd');
+  if (await fs.pathExists(systemdConfigDir)) {  ← FALSE car jamais copié
+    // Ce bloc n'est JAMAIS exécuté
+    // Les services ne sont jamais installés
+  }
+```
+
+**Bug secondaire dans `install.sh`** : Même la version actuelle de `install.sh` ne registre pas `neopro-hotspot-watchdog.service` explicitement (seuls `hotspot-optimizer` et `sync-guardian` sont gérés aux lignes 766-798).
+
+**Fix implémenté** (Phase 2.5) :
+1. `update-software.js` : Ajout de la copie de `config/` avant le bloc systemd
+2. `update-software.js` : Le bloc systemd démarre maintenant les **nouveaux** services (pas seulement `enable`)
+3. `install.sh` : Ajout de l'enregistrement de `neopro-hotspot-watchdog.service`
 
 ---
 
@@ -311,32 +338,30 @@ Le fichier service systemd référence `$DAEMON_OPTS` qui n'est pas défini. Min
 ssh pi@neopro.local 'sudo sed -i "s/wpa_pairwise=TKIP/wpa_pairwise=CCMP/" /etc/hostapd/hostapd.conf && sudo systemctl restart hostapd'
 ```
 
-#### 1.2 Vérifier et activer les 3 services de protection
+#### 1.2 Installer les 3 services de protection manquants
 
-Ces services sont inclus dans le build et l'OTA. Vérifier d'abord s'ils sont déjà installés :
+**Cause confirmée** (voir bug OTA) : Le dossier `config/` n'est jamais copié par l'OTA, donc les services systemd ne sont jamais installés sur les Pi mis à jour uniquement via OTA. Le fix 2.5 corrige cela pour les futurs OTA, mais pour le Pi NLF il faut installer manuellement :
 
 ```bash
-# Vérifier quels services neopro sont enregistrés
-ssh pi@neopro.local 'systemctl list-unit-files | grep neopro'
-
-# Si les 3 services sont listés mais inactifs, les démarrer :
-ssh pi@neopro.local 'sudo systemctl enable --now neopro-hotspot-watchdog neopro-sync-guardian neopro-hotspot-optimizer'
-
-# Si les services ne sont PAS listés (ancien install sans OTA), les installer :
+# Copier les scripts et les services
 scp raspberry/scripts/hotspot-watchdog.sh pi@neopro.local:/home/pi/neopro/scripts/
-scp raspberry/config/systemd/neopro-hotspot-watchdog.service pi@neopro.local:/tmp/
-ssh pi@neopro.local 'chmod +x /home/pi/neopro/scripts/hotspot-watchdog.sh && \
-  sudo mv /tmp/neopro-hotspot-watchdog.service /etc/systemd/system/ && \
-  sudo systemctl daemon-reload && \
-  sudo systemctl enable --now neopro-hotspot-watchdog'
-
 scp raspberry/scripts/sync-agent-guardian.sh pi@neopro.local:/home/pi/neopro/scripts/
+scp raspberry/scripts/hotspot-optimizer.sh pi@neopro.local:/home/pi/neopro/scripts/
+ssh pi@neopro.local 'chmod +x /home/pi/neopro/scripts/hotspot-watchdog.sh /home/pi/neopro/scripts/sync-agent-guardian.sh /home/pi/neopro/scripts/hotspot-optimizer.sh'
+
+# Installer les 3 services systemd
+scp raspberry/config/systemd/neopro-hotspot-watchdog.service pi@neopro.local:/tmp/
 scp raspberry/config/systemd/neopro-sync-guardian.service pi@neopro.local:/tmp/
-ssh pi@neopro.local 'chmod +x /home/pi/neopro/scripts/sync-agent-guardian.sh && \
-  sudo mv /tmp/neopro-sync-guardian.service /etc/systemd/system/ && \
+scp raspberry/config/systemd/neopro-hotspot-optimizer.service pi@neopro.local:/tmp/
+ssh pi@neopro.local 'sudo mv /tmp/neopro-hotspot-watchdog.service /tmp/neopro-sync-guardian.service /tmp/neopro-hotspot-optimizer.service /etc/systemd/system/ && \
   sudo systemctl daemon-reload && \
-  sudo systemctl enable --now neopro-sync-guardian && \
-  /home/pi/neopro/scripts/sync-agent-guardian.sh create-golden'
+  sudo systemctl enable --now neopro-hotspot-watchdog neopro-sync-guardian neopro-hotspot-optimizer'
+
+# Créer le snapshot golden pour le guardian
+ssh pi@neopro.local '/home/pi/neopro/scripts/sync-agent-guardian.sh create-golden'
+
+# Vérifier
+ssh pi@neopro.local 'systemctl list-unit-files | grep neopro'
 ```
 
 #### 1.3 Fixer les permissions et vérifier le kiosk
@@ -416,14 +441,38 @@ Appliqué sur : `removeBssidLock()`, `setBssidLock()`, `configureBgscan()`. Éli
 
 La phase Nuclear détecte automatiquement le module driver via `/sys/class/net/wlan1/device/driver` et le recharge. `MAX_RECOVERY_ATTEMPTS` augmenté de 3 à 5 pour supporter les 4 phases.
 
+#### 2.5 Fix du pipeline OTA pour les services systemd ✅
+
+**Fichiers** : `raspberry/sync-agent/src/commands/update-software.js`, `raspberry/install.sh`
+
+**Problème** : Le dossier `config/` (contenant les fichiers `.service` systemd) est inclus dans l'archive de build mais **jamais copié** par `update-software.js` vers `/home/pi/neopro/config/`. Le bloc d'installation systemd (l.439-464) vérifie ce dossier, le trouve absent, et saute silencieusement l'installation.
+
+Conséquence : tout Pi installé avec un ancien `install.sh` (avant v2.34) et mis à jour uniquement via OTA **n'a aucun des 3 services de protection** (hotspot-watchdog, sync-guardian, hotspot-optimizer).
+
+**Implémenté** :
+
+1. **`update-software.js`** : Ajout copie `config/` après les scripts (l.378+) :
+   ```javascript
+   if (await fs.pathExists(path.join(sourcePath, 'config'))) {
+     await fs.ensureDir(path.join(rootDir, 'config'));
+     await execAsync(`cp -r ${path.join(sourcePath, 'config')}/* ${rootDir}/config/`);
+   }
+   ```
+
+2. **`update-software.js`** : Le bloc systemd est amélioré — il vérifie si le service existait déjà avant la copie et **démarre** les services nouvellement installés (pas juste `enable`). Les services principaux (`neopro-app`, `neopro-kiosk`, etc.) sont exclus du démarrage automatique car gérés par `startServices()`.
+
+3. **`install.sh`** : Ajout de l'enregistrement explicite de `neopro-hotspot-watchdog.service` (manquant).
+
+**Résultat attendu** : Au prochain OTA update, les 3 services seront installés, activés et démarrés automatiquement — même sur des Pi installés avec d'anciennes versions de `install.sh`.
+
 ### Phase 3 — Améliorations à considérer
 
-| Action | Bénéfice |
-|--------|----------|
-| Script `fix-usb-wifi.sh` pour recovery manuelle | Alternative au reboot en attendant la phase 2 |
-| Vérifier/améliorer le positionnement du dongle USB | Signal -69 dBm → -55 dBm avec rallonge USB |
-| Activer CEC sur la TV (si supporté) | Analytics fiables (ne compte que quand TV allumée) |
-| Audit des autres Pi de la flotte | Vérifier si les mêmes services manquent ailleurs |
+| Action | Bénéfice | Priorité |
+|--------|----------|----------|
+| **Audit des autres Pi de la flotte** | **Le bug OTA affecte TOUS les Pi installés avant v2.34** — chaque Pi qui n'a reçu que des OTA manque les 3 services de protection | **HAUTE** |
+| Script `fix-usb-wifi.sh` pour recovery manuelle | Alternative au reboot en attendant la phase 2 | Moyenne |
+| Vérifier/améliorer le positionnement du dongle USB | Signal -69 dBm → -55 dBm avec rallonge USB | Basse |
+| Activer CEC sur la TV (si supporté) | Analytics fiables (ne compte que quand TV allumée) | Basse |
 
 ---
 
@@ -433,4 +482,6 @@ Le Pi NLF est fonctionnel mais souffre d'un **problème de stabilité réseau au
 
 En parallèle, le hotspot éjecte les téléphones toutes les ~5 minutes (config TKIP obsolète) et n'a aucun watchdog de recovery. Les analytics s'accumulent sans être envoyées (2 676 événements / 27 heures de retard). Le GPU Chromium produit des erreurs qui pourraient causer un crash après plusieurs heures de match.
 
-**La phase 1 (corrections SSH) stabilise le Pi pour les prochains matchs. La phase 2 (corrections de code) élimine la cause racine des plantages de clé WiFi USB.**
+**Investigation supplémentaire** : un bug dans le pipeline OTA (`update-software.js`) a été confirmé. Le dossier `config/` (contenant les fichiers `.service` systemd) est inclus dans l'archive de build mais **jamais copié** vers le Pi lors des mises à jour OTA. Conséquence : les 3 services de protection (hotspot-watchdog, sync-guardian, hotspot-optimizer) ne sont **jamais installés** sur les Pi mis à jour uniquement via OTA — et ce bug **affecte potentiellement toute la flotte**, pas seulement le Pi NLF.
+
+**La phase 1 (corrections SSH) stabilise le Pi NLF pour les prochains matchs. La phase 2 (corrections de code) élimine la cause racine des plantages WiFi ET corrige le pipeline OTA pour que les futurs builds installent automatiquement les services manquants sur tous les Pi.**
