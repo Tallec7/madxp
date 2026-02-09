@@ -223,11 +223,17 @@ Les deux méthodes créent la même structure sur le Pi :
 │   ├── configuration.json    # Configuration du club (préservée lors des mises à jour)
 │   └── [app Angular...]
 ├── server/                    # Serveur Node.js Socket.IO
-├── admin/                     # Panel d'administration
+├── admin/                     # Panel d'administration (port 8080)
 ├── sync-agent/                # Agent de synchronisation centrale
+├── sync-agent-golden/         # Snapshot de secours (créé automatiquement)
+├── config/
+│   └── systemd/               # Services systemd (guardian, watchdog, etc.)
+├── scripts/                   # Scripts runtime (diagnose-pi.sh, fix-hotspot.sh, etc.)
 ├── videos/                    # Vidéos du club (préservées)
 ├── logs/                      # Logs applicatifs
-└── backups/                   # Sauvegardes automatiques
+├── backups/                   # Sauvegardes automatiques
+├── VERSION                    # Version du logiciel
+└── release.json               # Métadonnées du build
 ```
 
 ---

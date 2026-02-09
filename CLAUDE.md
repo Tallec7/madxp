@@ -2,7 +2,7 @@
 
 > Ce fichier est lu automatiquement par Claude Code pour comprendre le projet.
 
-**Version**: 3.8.0 | **Dernière mise à jour**: 2026-02-09
+**Version**: 3.8.1 | **Dernière mise à jour**: 2026-02-09
 
 ---
 
@@ -2284,6 +2284,35 @@ vcgencmd get_mem gpu
 ---
 
 ## Historique Breaking Changes
+
+### v3.8.1 (Février 2026)
+
+- **Parité complète des 3 chemins de déploiement Pi** : Les 3 méthodes de mise à jour copient et installent maintenant les mêmes composants
+  - **Problème** : `deploy-remote.sh` (SCP) et `admin-server.js` (:8080) ne copiaient que `webapp/`, `server/` et `sync-agent/`. Les dossiers `config/` (services systemd), `scripts/` (kiosk-watchdog, fix-hotspot, etc.) et `admin/` (le panel lui-même) étaient ignorés. Seul le chemin OTA via `update-software.js` fonctionnait correctement.
+  - **Impact** : Les services de protection (guardian, hotspot-watchdog, hotspot-optimizer) n'étaient jamais installés via SCP ou :8080. Les scripts de diagnostic n'étaient pas mis à jour. Le kiosk n'était pas redémarré (TV sur ancienne UI).
+  - **Composants maintenant alignés sur les 3 chemins** :
+
+    | Composant | OTA (`update-software.js`) | SCP (`deploy-remote.sh`) | :8080 (`admin-server.js`) |
+    |-----------|:---:|:---:|:---:|
+    | webapp/ | ✅ | ✅ | ✅ |
+    | server/ | ✅ | ✅ | ✅ |
+    | sync-agent/ | ✅ | ✅ | ✅ |
+    | admin/ | ✅ | ✅ | ✅ |
+    | scripts/ | ✅ | ✅ | ✅ |
+    | config/systemd/ | ✅ | ✅ | ✅ |
+    | Golden snapshot | ✅ | ✅ | ✅ |
+    | npm install | ✅ toujours | ✅ toujours | ✅ toujours |
+    | Restart nginx | ✅ | ✅ | ✅ |
+    | Restart kiosk | ✅ | ✅ | ✅ |
+    | Install systemd services | ✅ | ✅ | ✅ |
+
+  - **Fichiers modifiés** :
+    - `raspberry/scripts/deploy-remote.sh` - Copie config/, scripts/, golden snapshot, kiosk restart, npm install simplifié
+    - `raspberry/admin/admin-server.js` - Copie config/, scripts/, admin/, golden snapshot, kiosk restart, install systemd
+    - `raspberry/sync-agent/src/commands/update-software.js` - Ajout nginx au restart
+    - `raspberry/scripts/build-raspberry.sh` - Archive legacy inclut config/
+    - `raspberry/scripts/fix-fleet-pi.sh` - Exclut les commentaires dans la vérification GPU
+  - **Migration** : Aucune (les 3 chemins fonctionnent maintenant). Pour les Pi existants avec services manquants, lancer `fix-fleet-pi.sh` ou redéployer via n'importe quel chemin.
 
 ### v3.8.0 (Février 2026)
 
