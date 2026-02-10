@@ -136,21 +136,23 @@ start_chromium() {
     # Flags spécifiques au modèle
     local gpu_flags=()
     if [[ "$PI_MODEL" == "pi5" ]]; then
-        # Pi 5 : Pas de flags GPU ! Laisser Chromium utiliser le driver V3D natif (Mesa).
+        # Pi 5 : GPU compositing via V3D natif (Mesa), mais décodage vidéo en software.
         #
         # Historique des tentatives :
         # - SwiftShader (--use-gl=angle --use-angle=swiftshader) : trop lent, vidéos saccadées
         # - EGL natif avec flags (--use-gl=egl --enable-features=Vulkan) : SharedImageStub errors /5s
         # - --disable-gpu : Skia CPU, mieux que SwiftShader mais encore trop lent
+        # - Sans --disable-accelerated-video-decode : SharedImageStub + AllocateRingBuffer errors
+        #   toutes les 5s, mémoire GPU sature après une boucle complète → flash noir puis "Aw, Snap!"
         #
-        # Solution : AUCUN flag GPU. Chromium utilise par défaut le driver V3D 7.1 (Mesa)
-        # pour le compositing GPU. C'est exactement ce que fait le navigateur normal
-        # quand on ouvre neopro.local/tv et que les vidéos sont fluides.
-        # Le flag --kiosk ne change PAS le pipeline de rendu, juste l'UI (fullscreen).
-        log "📱 Pi 5 détecté: utilisation du driver V3D natif (Mesa) - pas de flags GPU"
+        # Solution : Laisser le GPU faire le compositing (V3D 7.1 Mesa) mais désactiver le
+        # décodage vidéo hardware (ANGLE/GLES SharedImage ne fonctionne pas sur V3D).
+        # Le CPU Pi 5 (4x Cortex-A76 @2.4GHz) gère le décodage 1080p software sans problème.
+        log "📱 Pi 5 détecté: V3D natif (Mesa) + décodage vidéo software"
         gpu_flags=(
             --ignore-gpu-blocklist
             --enable-gpu-rasterization
+            --disable-accelerated-video-decode
         )
     else
         # Pi 4 et antérieurs : utiliser l'accélération GPU hardware
