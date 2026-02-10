@@ -197,7 +197,7 @@ neopro/
 | Frontend Dashboard | Angular 20.3, Chart.js 4.5, Leaflet, ngx-translate (EN/FR/ES) |
 | Backend API        | Node.js 20+, Express 4.18, TypeScript 5.9 strict              |
 | Base de données    | PostgreSQL 15 (Supabase) - Pool: 5 connexions                 |
-| Stockage vidéos    | FTP (Hostinger) + Supabase Storage (fallback)                 |
+| Stockage vidéos    | FTP Hostinger (unifié via `storage.service.ts`)               |
 | WebSocket          | Socket.IO 4.8                                                 |
 | Cache              | Redis (Upstash) - optionnel, pour scaling horizontal          |
 | Auth               | JWT HttpOnly cookie + Bearer token + MFA (TOTP)               |

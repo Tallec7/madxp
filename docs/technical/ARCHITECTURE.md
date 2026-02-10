@@ -96,10 +96,12 @@ neopro/ (monorepo)
 │
 ├── central-server/                 # Cloud API backend
 │   ├── src/
-│   │   ├── controllers/
-│   │   ├── routes/
-│   │   ├── middleware/
-│   │   └── services/
+│   │   ├── controllers/            # HTTP route handlers
+│   │   ├── routes/                 # Express route definitions
+│   │   ├── middleware/             # Auth, RLS, rate-limit, error-handler
+│   │   ├── services/              # Business logic (socket, deployment, alerting…)
+│   │   ├── handlers/              # 9 Socket.IO event handlers (extraits de socket.service)
+│   │   └── repositories/          # 21 repos (BaseRepository<T> + implémentations)
 │   └── package.json
 │
 ├── central-dashboard/              # Cloud admin dashboard
@@ -291,10 +293,23 @@ Video.js API (play/pause/seek)
 
 ### 5. Repository Pattern (central-server)
 
-- Accès base de données exclusivement via repositories (`siteRepository`, `alertRepository`, etc.)
-- 13 repositories couvrant 100% des accès PostgreSQL
-- Règle ESLint interdisant `import { query }` dans les controllers
+- Accès base de données exclusivement via repositories typés (`siteRepository`, `alertRepository`, etc.)
+- `BaseRepository<T>` générique (CRUD, pagination, exists)
+- 21 repositories couvrant 100% des accès PostgreSQL :
+  `site`, `user`, `video`, `group`, `alert`, `analytics`, `sponsor`, `config-history`,
+  `deployment`, `advertising`, `subscription`, `agency`, `metrics`, `objective`,
+  `playlist-schedule`, `remote-command`, `report`, `timeline`, `advertiser-portal`,
+  `software-update`, `email` (notification)
+- Règle ESLint `no-restricted-imports` bloquant **tout** import de `../config/database` dans les controllers
 - Requêtes SQL paramétrées uniquement (`$1`, `$2`, etc.)
+
+### 5b. Socket Handler Extraction (central-server)
+
+- `socket.service.ts` réduit de 1 717 → 676 lignes (orchestrateur uniquement)
+- 9 handlers extraits dans `src/handlers/` :
+  `heartbeat`, `config-sync`, `deploy-progress`, `command-dispatch`,
+  `health-monitor`, `license`, `network-resilience`, `score-update`, `match-config`
+- Chaque handler est une fonction pure recevant `(socket, data, dependencies)`
 
 ### 6. Structured Logging (Winston)
 
@@ -440,9 +455,11 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 
 ### Stockage vidéo
 
-- **Production** : FTP Hostinger (`kalonpartners.bzh/neopro-video/`)
-- **Fallback** : Supabase Storage
+- **FTP Hostinger uniquement** (`kalonpartners.bzh/neopro-video/`) — unifié via `storage.service.ts`
+- Upload streaming depuis le disque (zéro buffer mémoire)
+- Checksum SHA256 streaming pendant l'upload
 - **URLs publiques** : `https://kalonpartners.bzh/neopro-video/{uuid}.mp4`
+- Nettoyage périodique des fichiers temporaires abandonnés (> 1h)
 
 ---
 
@@ -523,6 +540,24 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 - White-label
 - App mobile iOS/Android
 
+### Architecture Roadmap (✅ Complété)
+
+Refactoring en 7 phases réalisé en février 2026 :
+
+1. **Storage** — Unification FTP-only via `storage.service.ts`
+2. **Dead Code** — Suppression dossiers obsolètes, références mortes
+3. **Winston Logger** — Remplacement `console.log` → Winston structuré
+4. **Modularisation Pi** — admin-server (3 970→260 lignes), socket-server (812→110 lignes)
+5. **Error Handling** — Classes d'erreur typées (`ServiceError`, `ValidationError`)
+6. **Repository Pattern** — 150 appels `query()` → 21 repositories typés
+7. **Refactoring avancé** :
+   - 7.1 — Migration services vers Repository pattern
+   - 7.2 — Extraction socket handlers (1 717→676 lignes, 9 handlers)
+   - 7.3 — Migration controllers vers Repository pattern (ESLint enforced)
+   - 7.4 — Auth admin/super_admin boundary
+
+Résultat : 1 586 tests / 75 suites, 0 failures.
+
 ---
 
 ## Documentation associée
@@ -535,4 +570,4 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 ---
 
 **Dernière mise à jour** : 10 février 2026
-**Version** : 3.8.1
+**Version** : 3.9.0

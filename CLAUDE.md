@@ -16,10 +16,10 @@ npm run build:central              # Build dashboard
 cd central-server && npm run build # Compile TypeScript
 
 # Tests
-npm run test:server                # Jest (API central-server)
-npm run test:central               # Karma (Angular Dashboard)
+npm run test:server                # Jest (API central-server — 1218 tests)
+npm run test:central               # Karma (Angular Dashboard — 266 tests)
 cd raspberry/server && npm test    # Jest (Socket.IO server — 71 tests)
-cd raspberry/admin && npm test     # Jest (Admin server)
+cd raspberry/admin && npm test     # Jest (Admin server — 124 tests)
 cd e2e && npx playwright test      # E2E
 npm run lint                       # ESLint
 
@@ -42,7 +42,7 @@ cd central-server && npm run db:migrate
 - Modifier les migrations déjà en production
 - Changer le format des `api_key` des sites (casserait tous les Pi)
 - Utiliser `console.log` dans central-server (utiliser Winston)
-- Importer `query` directement dans les controllers (utiliser les repositories)
+- Importer `../config/database` dans les controllers (ESLint bloque tout import, utiliser les repositories)
 - Commit des secrets ou fichiers `.env`
 - Push directement sur `main` sans PR
 - Requêtes SQL non paramétrées (`'${email}'` → injection SQL)

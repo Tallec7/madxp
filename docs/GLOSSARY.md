@@ -41,6 +41,7 @@ Signal envoyé **toutes les 30 secondes** par chaque Raspberry Pi au serveur cen
 ### Sync
 
 **Synchronisation bidirectionnelle** entre le Raspberry Pi et le cloud :
+
 - **Pi → Cloud** : Métriques, analytics, liste vidéos locales
 - **Cloud → Pi** : Configuration, commandes, vidéos
 
@@ -92,12 +93,12 @@ Rôle en **lecture seule** : peut voir les sites et statistiques mais ne peut ri
 
 Moment du match qui détermine **quelle playlist de vidéos est jouée** :
 
-| Phase | ID | Icône | Description |
-|-------|----|-------|-------------|
-| Boucle par défaut | `neutral` | - | Hors match, playlist standard |
-| Avant-match | `before` | 🏁 | Accueil des spectateurs |
-| Pendant le match | `during` | ▶️ | Mi-temps, temps morts |
-| Après-match | `after` | 🏆 | Célébrations, résultats |
+| Phase             | ID        | Icône | Description                   |
+| ----------------- | --------- | ----- | ----------------------------- |
+| Boucle par défaut | `neutral` | -     | Hors match, playlist standard |
+| Avant-match       | `before`  | 🏁    | Accueil des spectateurs       |
+| Pendant le match  | `during`  | ▶️    | Mi-temps, temps morts         |
+| Après-match       | `after`   | 🏆    | Célébrations, résultats       |
 
 ### TimeCategory
 
@@ -111,12 +112,12 @@ Une **vidéo dans une boucle de phase**. Structure : `{ name, path, type }`.
 
 **Association** entre une catégorie locale du Pi et un type analytics standardisé pour le reporting.
 
-| Type Analytics | Couleur | Exemples |
-|----------------|---------|----------|
-| `sponsor` | Bleu | SPONSORS, PUBS, PARTENAIRES |
-| `jingle` | Vert | JINGLES, BUTS, ANIMATIONS |
-| `ambiance` | Violet | AMBIANCE, MUSIQUE |
-| `other` | Gris | Tout le reste |
+| Type Analytics | Couleur | Exemples                    |
+| -------------- | ------- | --------------------------- |
+| `sponsor`      | Bleu    | SPONSORS, PUBS, PARTENAIRES |
+| `jingle`       | Vert    | JINGLES, BUTS, ANIMATIONS   |
+| `ambiance`     | Violet  | AMBIANCE, MUSIQUE           |
+| `other`        | Gris    | Tout le reste               |
 
 ### RemotePreview
 
@@ -200,37 +201,51 @@ Commande générique pour **exécuter une action** sur le Pi (restart, diagnosti
 
 ### FTP Storage
 
-Backend de stockage **principal** sur Hostinger. Les vidéos sont accessibles via URL publique `https://cdn.neopro.tv/`.
+Backend de stockage **unique** sur Hostinger, unifié via `storage.service.ts`. Upload en streaming depuis le disque (zéro buffer mémoire). Les vidéos sont accessibles via URL publique `https://kalonpartners.bzh/neopro-video/`.
 
 ### Supabase Storage
 
-Backend de stockage **fallback** utilisé si FTP non configuré. Intégré à la base de données Supabase.
+_Obsolète depuis Phase 1 (février 2026)_ — Le stockage est désormais FTP uniquement. Supabase Storage n'est plus utilisé.
 
 ### Storage Path
 
-Chemin de stockage d'une vidéo. Le format indique le backend :
-- **FTP** : `filename.mp4` (sans slash)
-- **Supabase** : `uploads/filename.mp4` (avec slash)
+Chemin de stockage d'une vidéo sur FTP : `filename.mp4`
+
+---
+
+## Termes Architecture (central-server)
+
+### Repository Pattern
+
+Pattern d'accès base de données utilisé dans central-server. 21 repositories héritant de `BaseRepository<T>` encapsulent toutes les requêtes SQL. Aucun `pool.query()` direct n'est autorisé dans les controllers (ESLint enforced).
+
+### Socket Handler
+
+Fonction spécialisée dans `src/handlers/` qui traite un événement Socket.IO spécifique. 9 handlers extraits de `socket.service.ts` lors du refactoring Phase 7.2 (heartbeat, config-sync, deploy-progress, etc.).
+
+### BaseRepository
+
+Classe abstraite générique fournissant les opérations CRUD communes (findById, findAll, create, update, delete, exists, count). Tous les repositories du central-server en héritent.
 
 ---
 
 ## Acronymes
 
-| Acronyme | Signification |
-|----------|---------------|
-| API | Application Programming Interface |
-| CLI | Command Line Interface |
-| CORS | Cross-Origin Resource Sharing |
-| CRUD | Create, Read, Update, Delete |
-| E2E | End-to-End (tests) |
-| FTP | File Transfer Protocol |
-| JWT | JSON Web Token |
-| MFA | Multi-Factor Authentication |
-| OTA | Over-The-Air (mise à jour) |
-| PWA | Progressive Web App |
-| RLS | Row-Level Security |
-| TOTP | Time-based One-Time Password |
-| WS | WebSocket |
+| Acronyme | Signification                     |
+| -------- | --------------------------------- |
+| API      | Application Programming Interface |
+| CLI      | Command Line Interface            |
+| CORS     | Cross-Origin Resource Sharing     |
+| CRUD     | Create, Read, Update, Delete      |
+| E2E      | End-to-End (tests)                |
+| FTP      | File Transfer Protocol            |
+| JWT      | JSON Web Token                    |
+| MFA      | Multi-Factor Authentication       |
+| OTA      | Over-The-Air (mise à jour)        |
+| PWA      | Progressive Web App               |
+| RLS      | Row-Level Security                |
+| TOTP     | Time-based One-Time Password      |
+| WS       | WebSocket                         |
 
 ---
 
@@ -242,4 +257,4 @@ Chemin de stockage d'une vidéo. Le format indique le backend :
 
 ---
 
-*Dernière mise à jour : 9 janvier 2026*
+_Dernière mise à jour : 10 février 2026_

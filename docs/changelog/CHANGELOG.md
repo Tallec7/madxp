@@ -1,5 +1,12 @@
 ## Architecture Roadmap (2026-02-09 → 2026-02-10)
 
+### Phase 1 — Storage Unification (central-server)
+
+- **Unification** stockage vidéo : double backend (FTP + Supabase) → FTP uniquement via `storage.service.ts`
+- Upload streaming depuis disque (zéro buffer mémoire, élimine OOM)
+- Checksum SHA256 calculé en streaming pendant l'upload
+- Nettoyage périodique des fichiers temporaires abandonnés (> 1h)
+
 ### Phase 2 — Dead Code Cleanup
 
 - **Suppression** des dossiers obsolètes : `k8s/`, `raspberry/monitoring/`, `raspberry/frontend/`, `server-render/`
@@ -36,6 +43,37 @@
 - Création de 13 repositories : `siteRepository`, `userRepository`, `videoRepository`, `groupRepository`, `alertRepository`, `analyticsRepository`, `sponsorRepository`, `configRepository`, `deploymentRepository`, `advertisingRepository`, `emailRepository`, `notificationRepository`, `agencyRepository`
 - Règle ESLint `no-restricted-imports` bloquant `import { query }` dans les controllers
 - Tous les tests passent (`npm run test:server`)
+
+### Phase 6 — Auth & Security Refactoring
+
+- **Clarification** frontière admin vs super_admin dans les rôles utilisateurs
+- Ajout PIN optionnel pour l'accès télécommande cloud
+- JSDoc complet sur tous les services et handlers Raspberry Pi
+
+### Phase 7 — Architecture Avancée (central-server)
+
+**7.1 — Services → Repository pattern**
+
+- Migration des services restants (`deployment.service`, `alerting.service`, etc.) vers les repositories
+- 8 nouveaux repositories : `metrics`, `objective`, `playlist-schedule`, `remote-command`, `report`, `timeline`, `advertiser-portal`, `subscription`
+
+**7.2 — Socket Handler Extraction**
+
+- `socket.service.ts` : 1 717 → 676 lignes (orchestrateur uniquement)
+- 9 handlers extraits dans `src/handlers/` : `heartbeat`, `config-sync`, `deploy-progress`, `command-dispatch`, `health-monitor`, `license`, `network-resilience`, `score-update`, `match-config`
+
+**7.3 — Controllers → Repository pattern**
+
+- `content.controller.ts` : 21 `pool.query()` → `videoRepository` + `deploymentRepository`
+- `updates.controller.ts` : 13 `pool.query()` → `softwareUpdateRepository`
+- Règle ESLint mise à jour : bloque **tout** import de `../config/database` (pas seulement les named imports)
+- Création de `video.repository.ts` et `software-update.repository.ts`
+
+**7.4 — Auth boundary admin/super_admin**
+
+- Vérification complétée et commitée
+
+**Résultat final** : 21 repositories, 75 suites de tests, 1 586 tests, 0 failures.
 
 ---
 

@@ -4,18 +4,18 @@ Serveur central de gestion de flotte pour les boîtiers Raspberry Pi NEOPRO.
 
 ## Stack Technique
 
-| Composant             | Technologies                                         |
-| --------------------- | ---------------------------------------------------- |
-| Runtime               | Node.js 20+, TypeScript strict                       |
-| Framework             | Express 4.18                                         |
-| Base de données       | PostgreSQL 15 (Supabase)                             |
-| Stockage vidéos       | FTP (Hostinger) + Supabase Storage (fallback)        |
-| Stockage mises à jour | FTP séparé (Hostinger) + Supabase Storage (fallback) |
-| WebSocket             | Socket.IO 4.8                                        |
-| Auth                  | JWT HttpOnly cookie + Bearer token + MFA (TOTP)      |
-| Validation            | Joi                                                  |
-| Logs                  | Winston + Logtail (Better Stack)                     |
-| Tests                 | Jest + Supertest                                     |
+| Composant             | Technologies                                    |
+| --------------------- | ----------------------------------------------- |
+| Runtime               | Node.js 20+, TypeScript strict                  |
+| Framework             | Express 4.18                                    |
+| Base de données       | PostgreSQL 15 (Supabase)                        |
+| Stockage vidéos       | FTP Hostinger (unifié via `storage.service.ts`) |
+| Stockage mises à jour | FTP séparé (Hostinger)                          |
+| WebSocket             | Socket.IO 4.8                                   |
+| Auth                  | JWT HttpOnly cookie + Bearer token + MFA (TOTP) |
+| Validation            | Joi                                             |
+| Logs                  | Winston + Logtail (Better Stack)                |
+| Tests                 | Jest + Supertest                                |
 
 ## Quick Start
 

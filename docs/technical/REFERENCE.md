@@ -582,7 +582,14 @@ neopro/
 │   ├── server/          # Code serveur Socket.IO
 │   ├── admin/           # Code interface admin
 │   └── sync-agent/      # Code agent sync
-├── central-server/      # Serveur central
+├── central-server/      # Serveur central (API backend)
+│   └── src/
+│       ├── controllers/     # HTTP route handlers
+│       ├── routes/          # Express route definitions
+│       ├── middleware/      # Auth, RLS, rate-limit
+│       ├── services/        # Business logic
+│       ├── handlers/        # 9 Socket.IO event handlers
+│       └── repositories/    # 21 repositories (BaseRepository<T>)
 ├── central-dashboard/   # Dashboard central
 └── docs/                # Documentation
 ```
@@ -823,7 +830,7 @@ socket.on('site_config_updated', (data) => {
 
 La détection des connexions zombies se fait à **deux niveaux** :
 
-1. **Côté serveur** (`socket.service.ts`) :
+1. **Côté serveur** (`socket.service.ts` + `handlers/health-monitor.handler.ts`) :
    - Ping/pong toutes les 30s : si pas de `pong_check` après 90s, connexion déconnectée
    - Sync DB/WebSocket toutes les 2 minutes : si site "online" en DB mais absent de `connectedSites` Map, passage en "offline"
 
@@ -971,15 +978,62 @@ Pi Analytics: 500 req/min     (impressions sponsors depuis les Pi - par IP)
 
 ### Services Backend Critiques
 
-| Service           | Fichier                     | Rôle                                        |
-| ----------------- | --------------------------- | ------------------------------------------- |
-| **Socket**        | `socket.service.ts`         | Communication temps réel Pi ↔ Cloud         |
-| **MemoryManager** | `memory-manager.service.ts` | Monitoring heap, cleanup automatique        |
-| **AdminOps**      | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire  |
-| **CronScheduler** | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)         |
-| **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook) |
-| **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready            |
-| **Metrics**       | `metrics.service.ts`        | Export Prometheus                           |
+| Service           | Fichier                     | Rôle                                             |
+| ----------------- | --------------------------- | ------------------------------------------------ |
+| **Socket**        | `socket.service.ts`         | Orchestrateur temps réel Pi ↔ Cloud (676 lignes) |
+| **Storage**       | `storage.service.ts`        | Upload/download vidéos FTP (unifié)              |
+| **Deployment**    | `deployment.service.ts`     | Orchestration déploiement vidéos                 |
+| **CommandQueue**  | `command-queue.service.ts`  | File d'attente commandes (offline/online)        |
+| **MemoryManager** | `memory-manager.service.ts` | Monitoring heap, cleanup automatique             |
+| **AdminOps**      | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire       |
+| **CronScheduler** | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)              |
+| **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook)      |
+| **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready                 |
+| **Metrics**       | `metrics.service.ts`        | Export Prometheus                                |
+
+### Socket Handlers (`src/handlers/`)
+
+Le service Socket.IO délègue le traitement des événements à 9 handlers spécialisés :
+
+| Handler               | Fichier                         | Événements                |
+| --------------------- | ------------------------------- | ------------------------- |
+| **Heartbeat**         | `heartbeat.handler.ts`          | `heartbeat`, `pong_check` |
+| **ConfigSync**        | `config-sync.handler.ts`        | `sync_local_state`        |
+| **DeployProgress**    | `deploy-progress.handler.ts`    | `deploy_progress`         |
+| **CommandDispatch**   | `command-dispatch.handler.ts`   | `command_result`          |
+| **HealthMonitor**     | `health-monitor.handler.ts`     | Zombie detection, DB sync |
+| **License**           | `license.handler.ts`            | `license_status`          |
+| **NetworkResilience** | `network-resilience.handler.ts` | `network_status`          |
+| **ScoreUpdate**       | `score-update.handler.ts`       | `score_update`            |
+| **MatchConfig**       | `match-config.handler.ts`       | `match_config`            |
+
+### Repositories (`src/repositories/`)
+
+Tous les accès PostgreSQL passent par des repositories typés héritant de `BaseRepository<T>` :
+
+| Repository          | Table(s) principale(s)                             |
+| ------------------- | -------------------------------------------------- |
+| `site`              | `sites`                                            |
+| `user`              | `users`                                            |
+| `video`             | `videos`                                           |
+| `group`             | `groups`, `group_sites`                            |
+| `deployment`        | `content_deployments`, `deployment_targets`        |
+| `software-update`   | `software_updates`, `update_deployments`           |
+| `alert`             | `alerts`, `alert_thresholds`                       |
+| `analytics`         | `video_plays`, `club_sessions`, `club_daily_stats` |
+| `sponsor`           | `advertiser_impressions`, `advertiser_daily_stats` |
+| `config-history`    | `config_drafts`, `config_history`                  |
+| `advertising`       | `advertiser_videos`, `advertiser_sites`            |
+| `advertiser-portal` | `advertisers` (portail annonceurs)                 |
+| `agency`            | `agencies`, `agency_sites`                         |
+| `subscription`      | `subscription_history`                             |
+| `metrics`           | `site_metrics`                                     |
+| `objective`         | `objectives`                                       |
+| `playlist-schedule` | `playlist_schedules`                               |
+| `remote-command`    | `remote_commands`, `pending_commands`              |
+| `report`            | `reports`                                          |
+| `timeline`          | `timeline_events`                                  |
+| `email`             | Notifications email (templates)                    |
 
 ### Gestion Mémoire (Railway Hobby Plan)
 
