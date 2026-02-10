@@ -254,7 +254,7 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
 
       validPlays.push({
         siteId: site_id,
-        sessionId: sessionId ?? '',
+        sessionId,
         videoFilename: play.video_filename,
         category: play.category || 'other',
         playedAt: play.played_at || new Date().toISOString(),

@@ -162,7 +162,7 @@ export interface CreateCategoryInput {
 
 export interface VideoPlaysBatchItem {
   siteId: string;
-  sessionId: string;
+  sessionId: string | null;
   videoFilename: string;
   category: string;
   playedAt: string;

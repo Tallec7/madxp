@@ -172,6 +172,7 @@ CREATE TABLE IF NOT EXISTS remote_commands (
   error_message TEXT,
   executed_by UUID REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
   executed_at TIMESTAMP,
   completed_at TIMESTAMP,
   CONSTRAINT check_status_command CHECK (status IN ('pending', 'executing', 'completed', 'failed', 'timeout'))

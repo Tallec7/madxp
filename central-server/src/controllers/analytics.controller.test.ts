@@ -354,10 +354,10 @@ describe('Analytics Controller', () => {
 
       await recordVideoPlays(req, res);
 
-      // Verify that recordVideoPlays was called with items where sessionId is empty string
-      // (invalid UUIDs are replaced with null -> then coerced to empty string)
+      // Verify that recordVideoPlays was called with items where sessionId is null
+      // (invalid UUIDs are replaced with null to avoid PG "invalid input syntax for type uuid" error)
       const callArgs = mockedAnalytics.recordVideoPlays.mock.calls[0][0];
-      expect(callArgs[0].sessionId).toBe('');
+      expect(callArgs[0].sessionId).toBeNull();
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ success: true })
       );
