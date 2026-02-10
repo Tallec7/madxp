@@ -15,8 +15,9 @@ jest.mock('../config/database', () => {
   };
 });
 
-jest.mock('../config/supabase', () => ({
-  uploadFile: jest.fn(),
+// Mock storage service (replaces old supabase mock)
+jest.mock('../services/storage.service', () => ({
+  uploadUpdate: jest.fn(),
 }));
 
 import {
@@ -32,7 +33,7 @@ import {
   deleteUpdateDeployment,
 } from './updates.controller';
 import pool from '../config/database';
-import { uploadFile } from '../config/supabase';
+import { uploadUpdate } from '../services/storage.service';
 
 // Helper to create mock response
 const createMockResponse = (): Response => {
@@ -165,9 +166,11 @@ describe('Updates Controller', () => {
           description: 'Major release',
         };
 
-        (uploadFile as jest.Mock).mockResolvedValueOnce({
+        (uploadUpdate as jest.Mock).mockResolvedValueOnce({
           path: 'uploads/update.tar.gz',
           url: 'https://storage/update.tar.gz',
+          verified: true,
+          actualSize: 1024,
         });
 
         (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [mockUpdate] });
@@ -190,9 +193,11 @@ describe('Updates Controller', () => {
         });
         const res = createMockResponse();
 
-        (uploadFile as jest.Mock).mockResolvedValueOnce({
+        (uploadUpdate as jest.Mock).mockResolvedValueOnce({
           path: 'uploads/update.tar.gz',
           url: 'https://storage/update.tar.gz',
+          verified: true,
+          actualSize: 2048,
         });
         (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
 

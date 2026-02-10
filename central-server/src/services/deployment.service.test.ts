@@ -47,11 +47,11 @@ jest.mock('./command-queue.service', () => ({
   },
 }));
 
-const mockDeleteFile = jest.fn();
-const mockGetPublicUrl = jest.fn();
-jest.mock('../config/supabase', () => ({
-  deleteFile: (...args: any[]) => mockDeleteFile(...args),
-  getPublicUrl: (...args: any[]) => mockGetPublicUrl(...args),
+const mockDeleteVideo = jest.fn();
+const mockGetVideoUrl = jest.fn();
+jest.mock('./storage.service', () => ({
+  deleteVideo: (...args: any[]) => mockDeleteVideo(...args),
+  getVideoUrl: (...args: any[]) => mockGetVideoUrl(...args),
 }));
 
 // Mock uuid
@@ -65,7 +65,7 @@ import deploymentService from './deployment.service';
 describe('DeploymentService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetPublicUrl.mockReturnValue('https://storage.example.com/videos/test.mp4');
+    mockGetVideoUrl.mockReturnValue('https://storage.example.com/videos/test.mp4');
     mockIsConnected.mockReset();
     mockSendCommand.mockReset();
     mockSendOrQueue.mockReset();
@@ -346,7 +346,7 @@ describe('DeploymentService', () => {
         .mockResolvedValueOnce({ rows: [{ count: '0' }] }) // Check pending
         .mockResolvedValueOnce({ rows: [{ storage_path: 'videos/test.mp4' }] }); // Get storage path
 
-      mockDeleteFile.mockResolvedValue(true);
+      mockDeleteVideo.mockResolvedValue(true);
 
       await deploymentService.updateProgress('deploy-uuid-123', 'site-123', 100, true);
 
@@ -371,11 +371,11 @@ describe('DeploymentService', () => {
         .mockResolvedValueOnce({ rows: [{ count: '0' }] }) // No pending
         .mockResolvedValueOnce({ rows: [{ storage_path: 'videos/cleanup-me.mp4' }] });
 
-      mockDeleteFile.mockResolvedValue(true);
+      mockDeleteVideo.mockResolvedValue(true);
 
       await deploymentService.updateProgress('deploy-uuid-123', 'site-123', 100, true);
 
-      expect(mockDeleteFile).toHaveBeenCalledWith('videos/cleanup-me.mp4');
+      expect(mockDeleteVideo).toHaveBeenCalledWith('videos/cleanup-me.mp4');
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Video file cleaned up from storage after all deployments completed',
         expect.any(Object)
@@ -393,7 +393,7 @@ describe('DeploymentService', () => {
 
       await deploymentService.updateProgress('deploy-uuid-123', 'site-123', 100, true);
 
-      expect(mockDeleteFile).not.toHaveBeenCalled();
+      expect(mockDeleteVideo).not.toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Video still has pending deployments, not cleaning up',
         expect.any(Object)

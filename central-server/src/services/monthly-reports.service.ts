@@ -5,12 +5,11 @@
  * - Tous les clubs actifs
  * - Tous les annonceurs avec des vidéos
  *
- * Les rapports sont stockés sur FTP/Supabase et enregistrés en base
+ * Les rapports sont stockés sur FTP et enregistrés en base
  */
 
 import { query } from '../config/database';
-import { uploadFileToFtp, isFtpConfigured, getFtpPublicUrl } from '../config/ftp-storage';
-import { uploadFile, getPublicUrl } from '../config/supabase';
+import { uploadAsset, getAssetUrl } from './storage.service';
 import { generateClubReport, generateAdvertiserReport } from './pdf-report.service';
 import logger from '../config/logger';
 import * as crypto from 'crypto';
@@ -188,17 +187,10 @@ async function generateSingleClubReport(
     // Calculer checksum
     const checksum = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
 
-    // Upload vers le storage
+    // Upload vers le storage via storage service
     const filename = `reports/clubs/${siteId}/${periodStart.substring(0, 7)}.pdf`;
-    let storageUrl: string;
-
-    if (isFtpConfigured()) {
-      await uploadFileToFtp(pdfBuffer, filename, 'application/pdf');
-      storageUrl = getFtpPublicUrl(filename);
-    } else {
-      await uploadFile(pdfBuffer, filename, 'application/pdf');
-      storageUrl = getPublicUrl(filename);
-    }
+    await uploadAsset(pdfBuffer, filename, 'application/pdf');
+    const storageUrl = getAssetUrl(filename);
 
     // Mettre à jour l'entrée en DB
     await query(`
@@ -330,17 +322,10 @@ async function generateSingleAdvertiserReport(
     // Calculer checksum
     const checksum = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
 
-    // Upload
+    // Upload via storage service
     const filename = `reports/advertisers/${advertiserId}/${periodStart.substring(0, 7)}.pdf`;
-    let storageUrl: string;
-
-    if (isFtpConfigured()) {
-      await uploadFileToFtp(pdfBuffer, filename, 'application/pdf');
-      storageUrl = getFtpPublicUrl(filename);
-    } else {
-      await uploadFile(pdfBuffer, filename, 'application/pdf');
-      storageUrl = getPublicUrl(filename);
-    }
+    await uploadAsset(pdfBuffer, filename, 'application/pdf');
+    const storageUrl = getAssetUrl(filename);
 
     // Mettre à jour l'entrée
     await query(`

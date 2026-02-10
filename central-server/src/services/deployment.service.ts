@@ -2,26 +2,8 @@ import { query } from '../config/database';
 import socketService from './socket.service';
 import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
-import { deleteFile, getPublicUrl } from '../config/supabase';
-import { isFtpConfigured, getFtpPublicUrl } from '../config/ftp-storage';
+import { getVideoUrl, deleteVideo } from './storage.service';
 import { uploadVerificationService } from './upload-verification.service';
-
-/**
- * Génère l'URL publique pour télécharger une vidéo.
- * Détecte automatiquement si le fichier est sur FTP ou Supabase
- * en fonction du format du storage_path.
- */
-function getVideoDownloadUrl(storagePath: string): string {
-  // Si le path est juste un filename (pas de /) → c'est un fichier FTP
-  const isFtpPath = !storagePath.includes('/');
-
-  if (isFtpPath && isFtpConfigured()) {
-    return getFtpPublicUrl(storagePath);
-  }
-
-  // Sinon c'est un chemin Supabase (ex: uploads/filename.mp4)
-  return getPublicUrl(storagePath);
-}
 
 // Configuration du retry
 const RETRY_CONFIG = {
@@ -116,8 +98,8 @@ class DeploymentService {
         return;
       }
 
-      // Construire l'URL de la vidéo depuis Supabase Storage
-      const videoUrl = getVideoDownloadUrl(deployment.storage_path);
+      // Construire l'URL de la vidéo depuis le stockage
+      const videoUrl = getVideoUrl(deployment.storage_path);
 
       // Tenter d'envoyer aux sites (ou mettre en queue si offline)
       let successCount = 0;
@@ -253,7 +235,7 @@ class DeploymentService {
 
       for (const row of result.rows) {
         const deployment = row as unknown as DeploymentRow;
-        const videoUrl = getVideoDownloadUrl(deployment.storage_path);
+        const videoUrl = getVideoUrl(deployment.storage_path);
 
         // deployToSite utilise sendOrQueue, donc si le site est maintenant connecté,
         // la commande sera envoyée immédiatement
@@ -464,9 +446,9 @@ class DeploymentService {
 
       const storagePath = videoResult.rows[0].storage_path as string | null;
 
-      // Supprimer le fichier du stockage Supabase
+      // Supprimer le fichier du stockage FTP
       if (storagePath) {
-        const deleted = await deleteFile(storagePath);
+        const deleted = await deleteVideo(storagePath);
         if (deleted) {
           logger.info('Video file cleaned up from storage after all deployments completed', { videoId, storagePath });
         }
@@ -619,7 +601,7 @@ class DeploymentService {
 
         // Obtenir les sites cibles
         const targets = await this.getTargetSites(deployment.target_type, deployment.target_id);
-        const videoUrl = getVideoDownloadUrl(deployment.storage_path);
+        const videoUrl = getVideoUrl(deployment.storage_path);
 
         for (const target of targets) {
           // sendOrQueue fonctionne que le site soit connecté ou non

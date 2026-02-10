@@ -4,8 +4,8 @@ import * as ftp from 'basic-ftp';
 import logger from '../config/logger';
 import pool from '../config/database';
 import { AuthRequest } from '../types';
-import { UPDATE_BUCKET, uploadFile } from '../config/supabase';
-import { isFtpUpdateConfigured, uploadUpdateToFtp, uploadUpdateToFtpWithVerification } from '../config/ftp-storage';
+import { uploadUpdate } from '../services/storage.service';
+import { isFtpUpdateConfigured } from '../config/ftp-storage';
 import { updateDeploymentService } from '../services/update-deployment.service';
 import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';
 
@@ -86,47 +86,23 @@ export const createUpdate = async (req: AuthRequest, res: Response) => {
     const filename = `update-${version}-${Date.now()}-${file.originalname}`;
     const checksum = crypto.createHash('sha256').update(file.buffer).digest('hex');
 
-    // Utiliser FTP Hostinger en priorité (avec vérification), fallback sur Supabase
-    let uploadResult: { path: string; url: string; verified?: boolean; actualSize?: number | null } | null = null;
-    let storageType = 'unknown';
-    let uploadVerified = false;
-
-    if (isFtpUpdateConfigured()) {
-      logger.info('Using FTP storage for update package (Hostinger) with verification');
-      const ftpResult = await uploadUpdateToFtpWithVerification(file.buffer, filename, file.mimetype);
-      if (ftpResult) {
-        uploadResult = ftpResult;
-        storageType = 'FTP';
-        uploadVerified = ftpResult.verified;
-      }
-    }
-
-    if (!uploadResult) {
-      logger.info('Using Supabase storage for update package (FTP not configured or failed)');
-      const supabaseResult = await uploadFile(file.buffer, filename, file.mimetype, UPDATE_BUCKET);
-      if (supabaseResult) {
-        uploadResult = {
-          ...supabaseResult,
-          verified: true, // Supabase gère l'intégrité
-          actualSize: file.size,
-        };
-        storageType = 'Supabase';
-        uploadVerified = true;
-      }
-    }
+    // Upload via storage service (FTP)
+    logger.info('Uploading update package via storage service', { filename });
+    const uploadResult = await uploadUpdate(file.buffer, filename, file.mimetype);
 
     if (!uploadResult) {
       return res.status(500).json({
-        error: "Impossible d'uploader le package. Vérifiez la configuration FTP (FTP_UPDATE_*) ou Supabase (SUPABASE_URL, SUPABASE_SERVICE_KEY)."
+        error: "Impossible d'uploader le package. Vérifiez la configuration FTP (FTP_UPDATE_*)."
       });
     }
+
+    const uploadVerified = uploadResult.verified;
 
     // Déterminer le statut d'upload
     const uploadStatus: UploadStatus = uploadVerified ? 'ready' : 'failed';
 
     logger.info('Update package uploaded:', {
       filename,
-      storageType,
       url: uploadResult.url,
       verified: uploadVerified,
       uploadStatus,
@@ -415,7 +391,7 @@ export const deleteUpdateDeployment = async (req: AuthRequest, res: Response) =>
 
 /**
  * Endpoint de diagnostic pour vérifier l'URL d'un package de mise à jour
- * Vérifie si le fichier est accessible (FTP, Supabase, ou autre)
+ * Vérifie si le fichier est accessible (FTP)
  */
 export const checkUpdatePackageUrl = async (req: AuthRequest, res: Response) => {
   try {

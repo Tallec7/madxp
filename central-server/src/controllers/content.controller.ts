@@ -8,121 +8,17 @@ import logger from '../config/logger';
 import pool from '../config/database';
 import { AuthRequest } from '../types';
 import deploymentService from '../services/deployment.service';
-import { uploadFile, uploadFileFromDisk, deleteFile, getPublicUrl } from '../config/supabase';
-import { uploadFileToFtp, uploadFileToFtpFromDiskWithVerification, deleteFileFromFtp, isFtpConfigured, getFtpPublicUrl, uploadFileToFtpWithVerification } from '../config/ftp-storage';
+import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl } from '../services/storage.service';
 import { formatPaginatedResponse } from '../middleware/pagination';
 import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';
 import { imageToVideoService } from '../services/image-to-video.service';
 import { cleanupTempFile } from '../middleware/upload';
 
-/**
- * Génère l'URL publique accessible pour une vidéo en fonction de son backend de stockage
- * @param storagePath - Le chemin stocké en DB (filename.mp4 pour FTP, uploads/filename.mp4 pour Supabase)
- * @returns L'URL complète accessible depuis un navigateur
- */
-function getVideoDownloadUrl(storagePath: string): string {
-  // Si le path est juste un filename (pas de /) → c'est un fichier FTP
-  const isFtpPath = !storagePath.includes('/');
-
-  if (isFtpPath && isFtpConfigured()) {
-    return getFtpPublicUrl(storagePath);
-  }
-
-  // Sinon c'est un chemin Supabase (ex: uploads/filename.mp4)
-  return getPublicUrl(storagePath);
-}
-
-/**
- * Upload une vidéo vers le stockage (FTP Hostinger en priorité, sinon Supabase)
- * Avec vérification post-upload pour éviter les race conditions.
- * Supporte les deux modes : buffer (legacy, images) et disk path (streaming, vidéos).
- */
-async function uploadVideoToStorage(
-  fileBuffer: Buffer,
-  filename: string,
-  contentType: string
-): Promise<{ path: string; url: string; verified: boolean; actualSize: number | null } | null> {
-  // Utiliser FTP Hostinger si configuré - avec vérification
-  if (isFtpConfigured()) {
-    logger.info('Using FTP storage (Hostinger) with verification');
-    const result = await uploadFileToFtpWithVerification(fileBuffer, filename, contentType);
-    if (result) {
-      return {
-        path: result.path,
-        url: result.url,
-        verified: result.verified,
-        actualSize: result.actualSize,
-      };
-    }
-    return null;
-  }
-
-  // Fallback vers Supabase (vérification HTTP après upload)
-  logger.info('Using Supabase storage (FTP not configured)');
-  const result = await uploadFile(fileBuffer, filename, contentType);
-  if (result) {
-    return {
-      path: result.path,
-      url: result.url,
-      verified: true,
-      actualSize: fileBuffer.length,
-    };
-  }
-  return null;
-}
-
-/**
- * Upload une vidéo vers le stockage en streaming depuis le disque.
- * Le fichier n'est jamais chargé entièrement en mémoire.
- */
-async function uploadVideoToStorageFromDisk(
-  filePath: string,
-  fileSize: number,
-  filename: string,
-  contentType: string
-): Promise<{ path: string; url: string; verified: boolean; actualSize: number | null } | null> {
-  // Utiliser FTP Hostinger si configuré - streaming avec vérification
-  if (isFtpConfigured()) {
-    logger.info('Using FTP storage (Hostinger) with streaming + verification');
-    const result = await uploadFileToFtpFromDiskWithVerification(filePath, fileSize, filename, contentType);
-    if (result) {
-      return {
-        path: result.path,
-        url: result.url,
-        verified: result.verified,
-        actualSize: result.actualSize,
-      };
-    }
-    return null;
-  }
-
-  // Fallback vers Supabase (lecture du fichier juste avant l'upload)
-  logger.info('Using Supabase storage from disk (FTP not configured)');
-  const result = await uploadFileFromDisk(filePath, filename, contentType);
-  if (result) {
-    return {
-      path: result.path,
-      url: result.url,
-      verified: true,
-      actualSize: fileSize,
-    };
-  }
-  return null;
-}
-
-/**
- * Supprime une vidéo du stockage
- */
-async function deleteVideoFromStorage(storagePath: string): Promise<boolean> {
-  // Si le path est juste un filename (FTP) vs un chemin complet (Supabase)
-  const isFtpPath = !storagePath.includes('/');
-
-  if (isFtpPath && isFtpConfigured()) {
-    return deleteFileFromFtp(storagePath);
-  }
-
-  return deleteFile(storagePath);
-}
+// Upload/download/delete functions are provided by storage.service.ts
+// - uploadVideo(buffer, filename, contentType)
+// - uploadVideoFromDisk(filePath, fileSize, filename, contentType)
+// - deleteVideo(storagePath)
+// - getVideoUrl(storagePath)
 
 /**
  * Calcule le checksum SHA256 d'un buffer
@@ -249,7 +145,7 @@ export const getVideos = async (req: AuthRequest, res: Response) => {
     const videos = dataResult.rows.map(video => ({
       ...video,
       title: (video.metadata as { title?: string })?.title || video.original_name || video.filename,
-      url: video.url ? getVideoDownloadUrl(video.url as string) : null
+      url: video.url ? getVideoUrl(video.url as string) : null
     }));
 
     const total = parseInt((countResult.rows[0] as any)?.count || '0', 10);
@@ -280,7 +176,7 @@ export const getVideo = async (req: AuthRequest, res: Response) => {
 
     const video = result.rows[0];
     video.title = (video.metadata as { title?: string })?.title || video.original_name || video.filename;
-    video.url = video.url ? getVideoDownloadUrl(video.url as string) : null;
+    video.url = video.url ? getVideoUrl(video.url as string) : null;
 
     res.json(video);
   } catch (error) {
@@ -385,13 +281,13 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     logger.info('Uploading video to storage with verification:', { filename, size: file.size, mimetype: file.mimetype, siteId: site_id });
 
     const uploadResult = tempFilePath
-      ? await uploadVideoToStorageFromDisk(tempFilePath, file.size, filename, file.mimetype)
-      : await uploadVideoToStorage(file.buffer, filename, file.mimetype);
+      ? await uploadVideoFromDisk(tempFilePath, file.size, filename, file.mimetype)
+      : await uploadVideo(file.buffer, filename, file.mimetype);
 
     if (!uploadResult) {
       logger.error('Failed to upload video to storage - uploadResult is null');
       return res.status(500).json({
-        error: 'Erreur lors de l\'upload vers le stockage. Vérifiez la configuration FTP ou Supabase.'
+        error: 'Erreur lors de l\'upload vers le stockage. Vérifiez la configuration FTP.'
       });
     }
 
@@ -494,13 +390,13 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
         logger.info('Uploading video to storage (bulk):', { filename, size: file.size });
 
         const uploadResult = tempFilePath
-          ? await uploadVideoToStorageFromDisk(tempFilePath, file.size, filename, file.mimetype)
-          : await uploadVideoToStorage(file.buffer, filename, file.mimetype);
+          ? await uploadVideoFromDisk(tempFilePath, file.size, filename, file.mimetype)
+          : await uploadVideo(file.buffer, filename, file.mimetype);
 
         if (!uploadResult) {
           errors.push({
             name: file.originalname,
-            error: 'Erreur lors de l\'upload vers le stockage. Vérifiez la configuration FTP ou Supabase.'
+            error: 'Erreur lors de l\'upload vers le stockage. Vérifiez la configuration FTP.'
           });
           continue;
         }
@@ -622,9 +518,9 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
       [id]
     );
 
-    // Supprimer du stockage (FTP ou Supabase)
+    // Supprimer du stockage FTP
     if (storagePath) {
-      await deleteVideoFromStorage(storagePath);
+      await deleteStorageVideo(storagePath);
     }
 
     logger.info('Video deleted:', { id, storagePath });
@@ -882,7 +778,7 @@ export const getVideosForSite = async (req: AuthRequest, res: Response) => {
     const videos = dataResult.rows.map(video => ({
       ...video,
       title: (video.metadata as { title?: string })?.title || video.original_name || video.filename,
-      url: video.url ? getVideoDownloadUrl(video.url as string) : null,
+      url: video.url ? getVideoUrl(video.url as string) : null,
       isForCurrentSite: video.is_for_site === 1,
     }));
 
@@ -955,7 +851,7 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
     const checksum = calculateChecksum(result.buffer);
 
     // Upload vers le stockage
-    const uploadResult = await uploadVideoToStorage(result.buffer, filename, result.mimetype);
+    const uploadResult = await uploadVideo(result.buffer, filename, result.mimetype);
 
     if (!uploadResult) {
       logger.error('Failed to upload converted video to storage');

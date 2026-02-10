@@ -8,7 +8,7 @@ import { query } from '../config/database';
 import socketService from './socket.service';
 import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
-import { getPublicUrl } from '../config/supabase';
+
 import { uploadVerificationService } from './upload-verification.service';
 
 interface UpdateDeploymentRow {

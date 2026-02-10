@@ -14,15 +14,12 @@ jest.mock('../config/database', () => {
   };
 });
 
-// Mock supabase
-jest.mock('../config/supabase');
-
-// Mock FTP storage - priority storage backend
-jest.mock('../config/ftp-storage', () => ({
-  isFtpConfigured: jest.fn().mockReturnValue(true),
-  uploadFileToFtp: jest.fn(),
-  deleteFileFromFtp: jest.fn(),
-  getFtpPublicUrl: jest.fn().mockReturnValue('https://cdn.example.com/test.mp4'),
+// Mock storage service (replaces old supabase + ftp-storage mocks)
+jest.mock('../services/storage.service', () => ({
+  uploadVideo: jest.fn(),
+  uploadVideoFromDisk: jest.fn(),
+  deleteVideo: jest.fn(),
+  getVideoUrl: jest.fn().mockReturnValue('https://cdn.example.com/test.mp4'),
 }));
 
 // Mock deployment service
@@ -34,7 +31,7 @@ import {
   getVideoDeployments,
   createVideo,
   updateVideo,
-  deleteVideo,
+  deleteVideo as deleteVideoController,
   getDeployments,
   getDeployment,
   createDeployment,
@@ -42,8 +39,7 @@ import {
   deleteDeployment,
 } from './content.controller';
 import pool from '../config/database';
-import { uploadFile, deleteFile } from '../config/supabase';
-import { uploadFileToFtp, isFtpConfigured } from '../config/ftp-storage';
+import { uploadVideo, deleteVideo as deleteStorageVideo, getVideoUrl } from '../services/storage.service';
 import deploymentService from '../services/deployment.service';
 import { AuthRequest } from '../types';
 
@@ -174,10 +170,12 @@ describe('Content Controller', () => {
         });
         const res = createMockResponse();
 
-        // Mock FTP upload (priority backend)
-        (uploadFileToFtp as jest.Mock).mockResolvedValueOnce({
+        // Mock storage service upload
+        (uploadVideo as jest.Mock).mockResolvedValueOnce({
           path: 'test-video.mp4',
           url: 'https://cdn.example.com/test-video.mp4',
+          verified: true,
+          actualSize: 1024,
         });
 
         // Mock generateUniqueFilename query (check if filename exists)
@@ -195,7 +193,7 @@ describe('Content Controller', () => {
 
         await createVideo(req, res);
 
-        expect(uploadFileToFtp).toHaveBeenCalledWith(mockFile.buffer, expect.any(String), 'video/mp4');
+        expect(uploadVideo).toHaveBeenCalledWith(mockFile.buffer, expect.any(String), 'video/mp4');
         expect(res.status).toHaveBeenCalledWith(201);
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
           id: 'video-123',
@@ -227,13 +225,12 @@ describe('Content Controller', () => {
         // Mock generateUniqueFilename query
         (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
 
-        // Mock FTP upload failure
-        (uploadFileToFtp as jest.Mock).mockResolvedValueOnce(null);
+        // Mock storage service upload failure
+        (uploadVideo as jest.Mock).mockRejectedValueOnce(new Error('FTP non configuré'));
 
         await createVideo(req, res);
 
         expect(res.status).toHaveBeenCalledWith(500);
-        expect(res.json).toHaveBeenCalledWith({ error: "Erreur lors de l'upload vers le stockage. Vérifiez la configuration FTP ou Supabase." });
       });
 
       it('should return 500 on database error', async () => {
@@ -252,7 +249,12 @@ describe('Content Controller', () => {
           .mockResolvedValueOnce({ rows: [] }) // filename check
           .mockRejectedValueOnce(new Error('DB Error')); // INSERT fails
 
-        (uploadFileToFtp as jest.Mock).mockResolvedValueOnce({ path: 'test.mp4', url: 'http://test' });
+        (uploadVideo as jest.Mock).mockResolvedValueOnce({
+          path: 'test.mp4',
+          url: 'http://test',
+          verified: true,
+          actualSize: 1024,
+        });
 
         await createVideo(req, res);
 
@@ -318,11 +320,11 @@ describe('Content Controller', () => {
         (pool.query as jest.Mock)
           .mockResolvedValueOnce({ rows: [{ storage_path: 'videos/test.mp4' }] })
           .mockResolvedValueOnce({ rows: [{ id: 'video-123' }] });
-        (deleteFile as jest.Mock).mockResolvedValueOnce(undefined);
+        (deleteStorageVideo as jest.Mock).mockResolvedValueOnce(undefined);
 
-        await deleteVideo(req, res);
+        await deleteVideoController(req, res);
 
-        expect(deleteFile).toHaveBeenCalledWith('videos/test.mp4');
+        expect(deleteStorageVideo).toHaveBeenCalledWith('videos/test.mp4');
         expect(res.json).toHaveBeenCalledWith({ message: 'Vidéo supprimée avec succès' });
       });
 
@@ -332,7 +334,7 @@ describe('Content Controller', () => {
 
         (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
 
-        await deleteVideo(req, res);
+        await deleteVideoController(req, res);
 
         expect(res.status).toHaveBeenCalledWith(404);
         expect(res.json).toHaveBeenCalledWith({ error: 'Vidéo non trouvée' });
@@ -346,9 +348,9 @@ describe('Content Controller', () => {
           .mockResolvedValueOnce({ rows: [{ storage_path: null }] })
           .mockResolvedValueOnce({ rows: [{ id: 'video-123' }] });
 
-        await deleteVideo(req, res);
+        await deleteVideoController(req, res);
 
-        expect(deleteFile).not.toHaveBeenCalled();
+        expect(deleteStorageVideo).not.toHaveBeenCalled();
         expect(res.json).toHaveBeenCalledWith({ message: 'Vidéo supprimée avec succès' });
       });
     });

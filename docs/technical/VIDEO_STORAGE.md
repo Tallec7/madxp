@@ -1,7 +1,7 @@
 # Stockage Vidéo - Architecture et Déploiement
 
 > **Document de référence technique**
-> Version 1.0 - 9 Janvier 2026
+> Version 2.0 - 10 Février 2026
 
 ---
 
@@ -30,10 +30,10 @@ Les vidéos uploadées dans le dashboard central doivent être :
 
 ### La solution : Stockage FTP Hostinger
 
-> **PRODUCTION** : Toutes les vidéos sont stockées sur **FTP Hostinger uniquement**.
-> Le code contient un fallback Supabase Storage (si FTP non configuré) mais il n'est **pas utilisé en production**.
+> **Toutes les vidéos et assets sont stockés sur FTP Hostinger.**
+> Le stockage est géré par un service centralisé `storage.service.ts` qui encapsule toutes les opérations.
 
-### Détail du flux (FTP-first, fallback Supabase inutilisé en prod)
+### Détail du flux
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -41,14 +41,11 @@ Les vidéos uploadées dans le dashboard central doivent être :
 │                                                                  │
 │  Upload vidéo →                                                  │
 │                                                                  │
-│  FTP configuré ?                                                 │
-│    ├── OUI → Upload vers FTP Hostinger                          │
-│    │         storage_path = "filename.mp4" (pas de /)           │
-│    │         URL = FTP_PUBLIC_URL + filename                    │
-│    │                                                             │
-│    └── NON → Upload vers Supabase Storage                       │
-│              storage_path = "uploads/filename.mp4" (avec /)     │
-│              URL = SUPABASE_URL/storage/v1/object/public/...    │
+│  storage.service.ts                                              │
+│    → uploadVideo() / uploadVideoFromDisk()                      │
+│    → Upload vers FTP Hostinger                                  │
+│    → storage_path = "filename.mp4"                              │
+│    → URL = FTP_PUBLIC_URL + filename                            │
 │                                                                  │
 └──────────────────────────┬──────────────────────────────────────┘
                            │
@@ -72,11 +69,28 @@ Les vidéos uploadées dans le dashboard central doivent être :
 
 ## 2. Architecture de stockage
 
-### Stockage primaire : FTP Hostinger
+### Service centralisé : `storage.service.ts`
 
-**Quand utilisé** : Si les variables d'environnement FTP sont configurées
+Toutes les opérations de stockage passent par `central-server/src/services/storage.service.ts`, une façade sur `ftp-storage.ts`.
 
-**Variables requises** :
+**Fonctions principales** :
+
+| Fonction                | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `uploadVideo()`         | Upload vidéo depuis un buffer mémoire             |
+| `uploadVideoFromDisk()` | Upload vidéo depuis un fichier disque (streaming) |
+| `deleteVideo()`         | Supprime un fichier vidéo du stockage             |
+| `getVideoUrl()`         | Retourne l'URL publique d'une vidéo               |
+| `uploadUpdate()`        | Upload un package de mise à jour                  |
+| `uploadAsset()`         | Upload un asset (watermark, logo, rapport)        |
+| `getAssetUrl()`         | Retourne l'URL publique d'un asset                |
+| `verifyFileExists()`    | Vérifie l'existence d'un fichier sur FTP          |
+
+**Comportement** : Si le FTP n'est pas configuré, le service lance une erreur explicite au lieu d'échouer silencieusement.
+
+### Configuration FTP
+
+**Variables d'environnement requises** :
 
 ```bash
 FTP_HOST=ftp.example.com
@@ -85,40 +99,27 @@ FTP_PASSWORD=password
 FTP_PUBLIC_URL=https://cdn.example.com/videos
 ```
 
+**Pour les mises à jour logicielles** (optionnel) :
+
+```bash
+FTP_UPDATE_HOST=ftp.example.com
+FTP_UPDATE_USER=username
+FTP_UPDATE_PASSWORD=password
+FTP_UPDATE_PUBLIC_URL=https://cdn.example.com/updates
+```
+
 **Caractéristiques** :
 
-- Upload direct via protocole FTP
+- Upload direct via protocole FTP (streaming depuis disque)
 - URL publique simple : `FTP_PUBLIC_URL/filename.mp4`
-- Pas de limite de taille (contrairement à Supabase)
+- Pas de limite de taille artificielle
+- Vérification post-upload (taille, existence)
 - Coût réduit pour gros volumes
 
-**Format du `storage_path`** : Juste le nom de fichier sans slash
+**Format du `storage_path`** : Nom de fichier seul
 
 ```
 Decathlon_FOCUS_Partenaire.mp4
-```
-
-### Stockage fallback : Supabase Storage
-
-**Quand utilisé** : Si FTP n'est pas configuré
-
-**Variables requises** :
-
-```bash
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_KEY=xxx
-```
-
-**Caractéristiques** :
-
-- Bucket `videos` créé automatiquement s'il n'existe pas
-- Limite de 1 GB par fichier
-- URL publique : `SUPABASE_URL/storage/v1/object/public/videos/uploads/filename.mp4`
-
-**Format du `storage_path`** : Chemin complet avec slash
-
-```
-uploads/Decathlon_FOCUS_Partenaire.mp4
 ```
 
 ---
@@ -127,12 +128,12 @@ uploads/Decathlon_FOCUS_Partenaire.mp4
 
 ### Fichiers impliqués
 
-| Fichier                  | Rôle                                                |
-| ------------------------ | --------------------------------------------------- |
-| `upload.ts` (middleware) | Multer disk storage, cleanup temp files             |
-| `content.controller.ts`  | Réception du fichier, génération du nom, upload     |
-| `ftp-storage.ts`         | Upload vers FTP Hostinger (streaming depuis disque) |
-| `supabase.ts`            | Upload vers Supabase Storage (fallback)             |
+| Fichier                  | Rôle                                    |
+| ------------------------ | --------------------------------------- |
+| `upload.ts` (middleware) | Multer disk storage, cleanup temp files |
+| `content.controller.ts`  | Réception du fichier, génération du nom |
+| `storage.service.ts`     | Façade d'upload (délègue à ftp-storage) |
+| `ftp-storage.ts`         | Upload vers FTP Hostinger (streaming)   |
 
 ### Séquence d'upload
 
@@ -149,9 +150,9 @@ uploads/Decathlon_FOCUS_Partenaire.mp4
    │
 3. Calcul du checksum SHA256 (streaming depuis le disque)
    │
-4. Upload vers le stockage (streaming)
-   │ - FTP : basic-ftp.uploadFrom(filePath) — stream direct disque → FTP
-   │ - Supabase : lecture du fichier juste avant l'envoi (fallback)
+4. Upload vers FTP via storage.service
+   │ - uploadVideoFromDisk() → basic-ftp.uploadFrom(filePath)
+   │ - Stream direct disque → FTP
    │ - Vérification post-upload (taille, existence)
    │
 5. Enregistrement en base de données
@@ -201,11 +202,12 @@ function sanitizeFilename(filename: string): string {
 
 ### Fichiers impliqués
 
-| Fichier                        | Rôle                                  |
-| ------------------------------ | ------------------------------------- |
-| `deployment.service.ts`        | Orchestration du déploiement          |
-| `command-queue.service.ts`     | Gestion des sites offline             |
-| `deploy-video.js` (sync-agent) | Téléchargement et installation sur Pi |
+| Fichier                        | Rôle                                     |
+| ------------------------------ | ---------------------------------------- |
+| `deployment.service.ts`        | Orchestration du déploiement             |
+| `storage.service.ts`           | Génération URL + suppression post-deploy |
+| `command-queue.service.ts`     | Gestion des sites offline                |
+| `deploy-video.js` (sync-agent) | Téléchargement et installation sur Pi    |
 
 ### Séquence de déploiement
 
@@ -216,8 +218,7 @@ function sanitizeFilename(filename: string): string {
    │ - storage_path, checksum, metadata
    │
 3. Génération de l'URL de téléchargement
-   │ - getVideoDownloadUrl(storage_path)
-   │ - Détecte automatiquement FTP vs Supabase
+   │ - getVideoUrl(storage_path)  via storage.service
    │
 4. Envoi de la commande aux sites cibles
    │ - sendOrQueue() : envoi immédiat ou mise en queue
@@ -235,40 +236,34 @@ function sanitizeFilename(filename: string): string {
 9. Mise à jour de configuration.json
    │
 10. Notification de succès au serveur central
+    │
+11. Nettoyage automatique du fichier FTP
+    │ - deleteVideo(storagePath) via storage.service
+    │ - Une fois TOUS les sites déployés avec succès
 ```
 
 ---
 
 ## 5. Génération des URLs
 
-### Le problème (bug corrigé le 2026-01-09)
+### Mécanisme
 
-Avant la correction, `deployment.service.ts` utilisait toujours `getPublicUrl()` de Supabase, même si le fichier était stocké sur FTP. Cela générait des URLs Supabase invalides pour des fichiers qui n'existaient pas sur Supabase.
-
-### La solution : détection automatique
+Le service `storage.service.ts` utilise `getFtpPublicUrl()` pour générer les URLs :
 
 ```typescript
-// deployment.service.ts
-
-function getVideoDownloadUrl(storagePath: string): string {
-  // Si le path est juste un filename (pas de /) → c'est un fichier FTP
-  const isFtpPath = !storagePath.includes('/');
-
-  if (isFtpPath && isFtpConfigured()) {
-    return getFtpPublicUrl(storagePath);
-  }
-
-  // Sinon c'est un chemin Supabase (ex: uploads/filename.mp4)
-  return getPublicUrl(storagePath);
-}
+// storage.service.ts
+export const getVideoUrl = (storagePath: string): string => {
+  return getFtpPublicUrl(storagePath);
+  // → FTP_PUBLIC_URL + "/" + storagePath
+};
 ```
 
 ### Exemples
 
-| storage_path        | Type détecté | URL générée                                                                 |
-| ------------------- | ------------ | --------------------------------------------------------------------------- |
-| `video.mp4`         | FTP          | `https://cdn.neopro.tv/video.mp4`                                           |
-| `uploads/video.mp4` | Supabase     | `https://xxx.supabase.co/storage/v1/object/public/videos/uploads/video.mp4` |
+| storage_path          | URL générée                                 |
+| --------------------- | ------------------------------------------- |
+| `video.mp4`           | `https://cdn.neopro.tv/video.mp4`           |
+| `watermarks/logo.png` | `https://cdn.neopro.tv/watermarks/logo.png` |
 
 ---
 
@@ -291,11 +286,11 @@ function getVideoDownloadUrl(storagePath: string): string {
 
 ### Champs en base de données
 
-| Champ           | Description               | Exemple                                                                 |
-| --------------- | ------------------------- | ----------------------------------------------------------------------- |
-| `filename`      | Nom sanitisé (clé unique) | `Decathlon_FOCUS.mp4`                                                   |
-| `original_name` | Nom original uploadé      | `Décathlon FOCUS.mp4`                                                   |
-| `storage_path`  | Chemin dans le stockage   | `Decathlon_FOCUS.mp4` (FTP) ou `uploads/Decathlon_FOCUS.mp4` (Supabase) |
+| Champ           | Description                 | Exemple               |
+| --------------- | --------------------------- | --------------------- |
+| `filename`      | Nom sanitisé (clé unique)   | `Decathlon_FOCUS.mp4` |
+| `original_name` | Nom original uploadé        | `Décathlon FOCUS.mp4` |
+| `storage_path`  | Chemin dans le stockage FTP | `Decathlon_FOCUS.mp4` |
 
 ---
 
@@ -346,15 +341,11 @@ Video deployment failed: Failed to download video
 
 **Causes possibles** :
 
-1. **Mauvaise URL générée** (bug corrigé 2026-01-09)
-   - Vérifier que le serveur central a la dernière version du code
-   - Le `storage_path` doit correspondre au type de stockage
-
-2. **Fichier non trouvé sur le stockage**
-   - Vérifier que le fichier existe sur FTP/Supabase
+1. **Fichier non trouvé sur FTP**
+   - Vérifier que le fichier existe sur le serveur FTP
    - Vérifier les credentials de stockage
 
-3. **URL FTP_PUBLIC_URL mal configurée**
+2. **URL FTP_PUBLIC_URL mal configurée**
    - Doit pointer vers l'URL publique du CDN FTP
    - Ne pas inclure de slash final
 
@@ -365,6 +356,16 @@ Video deployment failed: Failed to download video
 SELECT filename, storage_path, checksum
 FROM videos
 WHERE filename LIKE '%Decathlon%';
+```
+
+### Erreur "Stockage vidéo (FTP) non configuré"
+
+**Symptôme** : Upload échoue avec erreur 500 et message indiquant que le FTP n'est pas configuré.
+
+**Solution** : Vérifier que les 4 variables FTP sont définies dans l'environnement :
+
+```bash
+echo $FTP_HOST $FTP_USER $FTP_PASSWORD $FTP_PUBLIC_URL
 ```
 
 ### Déploiement bloqué à 0%
@@ -400,15 +401,16 @@ Checksum mismatch: expected abc123, got def456
 **Solution** :
 
 - Ré-uploader la vidéo
-- Vérifier l'intégrité du fichier sur le stockage
+- Vérifier l'intégrité du fichier sur le stockage FTP
 
 ---
 
 ## Historique des versions
 
-| Version | Date       | Modifications     |
-| ------- | ---------- | ----------------- |
-| 1.0     | 2026-01-09 | Création initiale |
+| Version | Date       | Modifications                                                    |
+| ------- | ---------- | ---------------------------------------------------------------- |
+| 1.0     | 2026-01-09 | Création initiale                                                |
+| 2.0     | 2026-02-10 | Suppression Supabase fallback, migration vers storage.service.ts |
 
 ---
 

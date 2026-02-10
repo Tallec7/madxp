@@ -3,9 +3,9 @@ import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import crypto from 'crypto';
 import { createReadStream } from 'fs';
+import { readFile } from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
-import { uploadFileToFtp, uploadFileToFtpFromDisk, deleteFileFromFtp, isFtpConfigured } from '../config/ftp-storage';
-import { uploadFile, uploadFileFromDisk, deleteFile } from '../config/supabase';
+import { uploadAsset, deleteVideo } from '../services/storage.service';
 import { cleanupTempFile } from '../middleware/upload';
 import { advertiserRepository } from '../repositories';
 import { advertiserPortalRepository } from '../repositories/advertiser-portal.repository';
@@ -392,33 +392,7 @@ export const getAdvertiserDetailedStats = async (req: AuthRequest, res: Response
 // VIDEO UPLOAD - Annonceurs peuvent uploader leurs propres créas
 // ============================================================================
 
-/**
- * Helper: Upload vers le stockage (FTP prioritaire, Supabase fallback)
- */
-async function uploadVideoToStorage(
-  fileBuffer: Buffer,
-  filename: string,
-  contentType: string
-): Promise<{ path: string; url: string } | null> {
-  if (isFtpConfigured()) {
-    return uploadFileToFtp(fileBuffer, filename, contentType);
-  }
-  return uploadFile(fileBuffer, filename, contentType);
-}
-
-/**
- * Helper: Upload vers le stockage en streaming depuis le disque
- */
-async function uploadVideoToStorageFromDisk(
-  filePath: string,
-  filename: string,
-  contentType: string
-): Promise<{ path: string; url: string } | null> {
-  if (isFtpConfigured()) {
-    return uploadFileToFtpFromDisk(filePath, filename, contentType);
-  }
-  return uploadFileFromDisk(filePath, filename, contentType);
-}
+// Upload/delete are provided by storage.service.ts (uploadAsset, deleteVideo)
 
 /**
  * POST /api/advertiser/videos
@@ -489,8 +463,8 @@ export const uploadAdvertiserVideo = async (req: AuthRequest, res: Response): Pr
 
     // Upload vers le stockage en streaming depuis le disque
     const uploadResult = tempFilePath
-      ? await uploadVideoToStorageFromDisk(tempFilePath, filename, mime_type)
-      : await uploadVideoToStorage(file.buffer, filename, mime_type);
+      ? await uploadAsset(await readFile(tempFilePath), filename, mime_type)
+      : await uploadAsset(file.buffer, filename, mime_type);
 
     if (!uploadResult) {
       logger.error('Failed to upload advertiser video to storage');
@@ -595,14 +569,10 @@ export const deleteAdvertiserVideo = async (req: AuthRequest, res: Response): Pr
       return;
     }
 
-    // Supprimer du stockage
+    // Supprimer du stockage FTP
     try {
       const storagePath = String(video.storage_path || video.filename);
-      if (isFtpConfigured()) {
-        await deleteFileFromFtp(storagePath);
-      } else {
-        await deleteFile(storagePath);
-      }
+      await deleteVideo(storagePath);
     } catch (storageError: unknown) {
       logger.warn('Error deleting video from storage (continuing with DB deletion):', storageError);
     }
