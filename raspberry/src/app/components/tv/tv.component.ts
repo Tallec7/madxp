@@ -161,6 +161,12 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly MEMORY_CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutes
   private readonly VIDEO_COUNT_BEFORE_CLEANUP = 50; // Cleanup après 50 vidéos
 
+  // Disk cache warming : prefetch des prochaines vidéos via fetch()
+  // Les données vont dans le page cache du kernel, pas dans la mémoire Chromium
+  private prefetchedIndices: Set<number> = new Set();
+  private prefetchAbortController: AbortController | null = null;
+  private readonly PREFETCH_LOOKAHEAD = 3; // Nombre de vidéos à prefetch en avance
+
   // Canvas freeze-frame
   private freezeCanvas: HTMLCanvasElement;
   private freezeCtx: CanvasRenderingContext2D | null = null;
@@ -636,6 +642,9 @@ export class TvComponent implements OnInit, OnDestroy {
     // Arrêter la boucle seamless
     this.stopSeamlessLoop();
 
+    // Annuler les fetch de prefetch en cours
+    this.resetPrefetchState();
+
     // Nettoyer le service watermark
     this.watermarkService.destroy();
 
@@ -864,6 +873,9 @@ export class TvComponent implements OnInit, OnDestroy {
     this.switchGeneration++;
     this.pendingSwitch = false;
     this.switchTriggered = false;
+
+    // Réinitialiser le prefetch (la liste de vidéos va changer)
+    this.resetPrefetchState();
 
     // Si une vidéo manuelle est en cours, on la coupe pour revenir à la boucle
     // même si c'est la même phase
@@ -1306,6 +1318,11 @@ export class TvComponent implements OnInit, OnDestroy {
     this.playerA.addEventListener('ended', () => this.onVideoEnded('A'));
     this.playerB.addEventListener('ended', () => this.onVideoEnded('B'));
 
+    // TimeUpdate listeners pour le preload anticipé et l'early switch
+    // Déclenche le préchargement 1.5s avant la fin et le switch 0.5s avant
+    this.playerA.addEventListener('timeupdate', () => this.onTimeUpdate('A'));
+    this.playerB.addEventListener('timeupdate', () => this.onTimeUpdate('B'));
+
     // Error handlers pour TOUS les players (critique pour éviter les crashs)
     this.playerA.addEventListener('error', (e) => this.handleVideoError(this.playerA, 'loop-A', e));
     this.playerB.addEventListener('error', (e) => this.handleVideoError(this.playerB, 'loop-B', e));
@@ -1368,8 +1385,16 @@ export class TvComponent implements OnInit, OnDestroy {
     if (!player.duration || player.duration <= 0) return;
 
     const remaining = player.duration - player.currentTime;
+    const elapsed = player.currentTime;
 
-    // Précharger 1s avant la fin seulement - minimise le temps de décodage parallèle
+    // Préchauffer le cache disque à mi-vidéo pour les 3 prochaines vidéos
+    // Les données vont dans le page cache kernel, pas dans la mémoire Chromium
+    if (elapsed >= player.duration * 0.5 && !this.prefetchedIndices.has(this.currentLoopIndex)) {
+      this.prefetchedIndices.add(this.currentLoopIndex); // Marquer comme traité pour ne pas refetch
+      this.warmDiskCache(this.currentLoopIndex);
+    }
+
+    // Précharger 1.5s avant la fin seulement - minimise le temps de décodage parallèle
     // Le préchargement cause une saccade, donc on le retarde au maximum
     const preloadThreshold = Math.min(1.5, player.duration * 0.15); // 1.5s ou 15% max
     if (remaining <= preloadThreshold && !this.preloadReady && !this.preloadedIndex) {
@@ -1419,6 +1444,9 @@ export class TvComponent implements OnInit, OnDestroy {
       return;
     }
     this.isStartingLoop = true;
+
+    // Réinitialiser le prefetch (nouvelle boucle = nouvelle liste de vidéos)
+    this.resetPrefetchState();
 
     // Arrêter les players existants
     this.playerA?.pause();
@@ -1564,6 +1592,8 @@ export class TvComponent implements OnInit, OnDestroy {
     this.preloadReady = false;
     this.preloadedIndex = videoIndex;
 
+    // Restaurer preload='auto' si le cleanup l'avait mis à 'none'
+    player.preload = 'auto';
     player.src = video.path;
     player.load();
 
@@ -1576,6 +1606,93 @@ export class TvComponent implements OnInit, OnDestroy {
       player.removeEventListener('canplaythrough', onCanPlay);
     };
     player.addEventListener('canplaythrough', onCanPlay);
+  }
+
+  /**
+   * Nettoie le player inactif après un switch pour libérer la mémoire GPU.
+   * Chaque vidéo décodée occupe ~30-50MB de buffers décodeur.
+   * Sans cleanup, la mémoire croît linéairement avec le nombre de vidéos jouées
+   * et finit par causer un OOM kill de Chromium.
+   */
+  private cleanupInactivePlayer(): void {
+    // Après un switch, le player actif a changé.
+    // getInactivePlayer() retourne donc l'ancien player qui a fini de jouer.
+    const inactivePlayer = this.getInactivePlayer();
+    if (!inactivePlayer) return;
+
+    // Ne pas nettoyer si un preload est en cours sur ce player
+    if (this.preloadReady || this.preloadedIndex !== null) return;
+
+    if (inactivePlayer.src) {
+      inactivePlayer.pause();
+      inactivePlayer.removeAttribute('src');
+      inactivePlayer.load(); // Force libération des buffers décodeur GPU
+      inactivePlayer.preload = 'none'; // Empêche re-buffering automatique
+      console.log('[TV] 🧹 Cleaned inactive player after switch (freed decoder buffers)');
+    }
+  }
+
+  /**
+   * Préchauffe le cache disque du kernel pour les prochaines vidéos de la boucle.
+   * Utilise fetch() pour lire les fichiers vidéo en mémoire puis les jeter.
+   * Les données restent dans le page cache du kernel Linux, rendant le preload
+   * quasi-instantané quand le player en a besoin.
+   *
+   * Appelé à mi-vidéo par onTimeUpdate pour avoir le temps de charger
+   * avant que le preload réel ne se déclenche (1.5s avant la fin).
+   *
+   * Crucial pour les boucles de 20-100+ vidéos où la vidéo 0 n'est plus
+   * en cache quand on y revient après 19+ autres vidéos.
+   */
+  private warmDiskCache(fromIndex: number): void {
+    const videos = this.currentLoopVideos;
+    if (videos.length <= 1) return;
+
+    // Annuler les fetch en cours si changement de contexte
+    this.prefetchAbortController?.abort();
+    this.prefetchAbortController = new AbortController();
+    const signal = this.prefetchAbortController.signal;
+
+    for (let offset = 1; offset <= this.PREFETCH_LOOKAHEAD; offset++) {
+      const targetIndex = (fromIndex + offset) % videos.length;
+
+      // Skip si déjà prefetché
+      if (this.prefetchedIndices.has(targetIndex)) continue;
+
+      const video = videos[targetIndex];
+      if (!video?.path) continue;
+
+      this.prefetchedIndices.add(targetIndex);
+
+      // fetch() lit le fichier → données vont dans le page cache kernel
+      // On consomme le body avec arrayBuffer() puis on le laisse GC
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      fetch(video.path, { signal, priority: 'low' } as any)
+        .then((response: Response) => {
+          if (response.ok) {
+            return response.arrayBuffer();
+          }
+          return undefined;
+        })
+        .then(() => {
+          if (!signal.aborted) {
+            console.log(`[TV] Disk cache warmed for video ${targetIndex}: ${video.name || video.path}`);
+          }
+        })
+        .catch(() => {
+          // Silencieux : abort ou erreur réseau
+          // Le preload normal fonctionnera quand même, juste plus lentement
+        });
+    }
+  }
+
+  /**
+   * Réinitialise le state du prefetch (à appeler quand la liste de vidéos change)
+   */
+  private resetPrefetchState(): void {
+    this.prefetchAbortController?.abort();
+    this.prefetchAbortController = null;
+    this.prefetchedIndices.clear();
   }
 
   /**
@@ -1757,10 +1874,14 @@ export class TvComponent implements OnInit, OnDestroy {
               console.log(`[TV] Switched to player ${this.activePlayer}, now playing index ${nextVideoIndex}`);
 
               // NE PAS précharger immédiatement après le switch
-              // Le préchargement sera déclenché par onTimeUpdate 3s avant la fin
+              // Le préchargement sera déclenché par onTimeUpdate 1.5s avant la fin
               // Cela évite de décoder 2 vidéos en parallèle
               this.pendingSwitch = false;
               this.switchTriggered = false; // Reset pour le prochain cycle
+
+              // Nettoyer l'ancien player après stabilisation du nouveau
+              // Libère les buffers décodeur GPU (~30-50MB par vidéo)
+              setTimeout(() => this.cleanupInactivePlayer(), 500);
             }, 300); // 300ms pour le décodeur hardware Pi (VideoCore VI/VII nécessite 200-400ms pour compositor le premier I-frame)
           });
         });

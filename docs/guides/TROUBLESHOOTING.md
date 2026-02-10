@@ -1974,25 +1974,46 @@ Ce comportement est **normal** et géré automatiquement par le NetworkWatchdog.
 
 Depuis la v3.7.14, le NetworkDetector et NetworkWatchdog incluent des protections supplémentaires pour les environnements mesh :
 
-| Protection                         | Détail                                                                     |
-| ---------------------------------- | -------------------------------------------------------------------------- |
-| **Debounce 120s** (NetworkDetector)| Le profil réseau n'est pas réévalué plus d'une fois toutes les 120s        |
-| **Grace period 60s au boot**       | Pas de recovery WiFi pendant les 60 premières secondes après le démarrage |
-| **Recovery progressive (4 phases)**| Escalade graduelle au lieu de `wpa_cli reconfigure` agressif               |
-| **Écriture atomique wpa_supplicant** | Écriture dans un fichier temporaire + `mv` atomique (pas de corruption)  |
+| Protection                           | Détail                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------- |
+| **Debounce 120s** (NetworkDetector)  | Le profil réseau n'est pas réévalué plus d'une fois toutes les 120s       |
+| **Grace period 60s au boot**         | Pas de recovery WiFi pendant les 60 premières secondes après le démarrage |
+| **Recovery progressive (4 phases)**  | Escalade graduelle au lieu de `wpa_cli reconfigure` agressif              |
+| **Écriture atomique wpa_supplicant** | Écriture dans un fichier temporaire + `mv` atomique (pas de corruption)   |
 
 **Les 4 phases de recovery progressive :**
 
-| Phase | Délai  | Action                                          |
-| ----- | ------ | ----------------------------------------------- |
-| 1     | 0-30s  | Attente passive (laisse le driver se reconnecter)|
-| 2     | 30-60s | `wpa_cli -i wlan1 reassociate`                  |
-| 3     | 60-90s | `wpa_cli -i wlan1 reconfigure`                  |
-| 4     | 90s+   | `dhclient -r wlan1 && dhclient wlan1`            |
+| Phase | Délai  | Action                                            |
+| ----- | ------ | ------------------------------------------------- |
+| 1     | 0-30s  | Attente passive (laisse le driver se reconnecter) |
+| 2     | 30-60s | `wpa_cli -i wlan1 reassociate`                    |
+| 3     | 60-90s | `wpa_cli -i wlan1 reconfigure`                    |
+| 4     | 90s+   | `dhclient -r wlan1 && dhclient wlan1`             |
 
 Maximum 5 tentatives de recovery, cooldown de 300s (5 min) entre les cycles.
 
-### 6. Chromium crash "Aw, Snap! Error code: 5" après 1-2h de boucle vidéo
+### 6. Flash noir entre les vidéos sur boucles longues (20+ vidéos)
+
+**Symptômes :**
+
+- Écran noir visible (~1-3s) entre la dernière et la première vidéo de la boucle
+- Ne se produit pas avec des boucles courtes (8-10 vidéos)
+- Flash uniquement au "wrap" (retour à la vidéo 0)
+
+**Cause racine (corrigée en v3.9.1) :**
+
+Deux bugs combinés :
+
+1. **Listeners `timeupdate` jamais enregistrés** : le preload anticipé (1.5s avant la fin) et l'early switch (0.5s avant la fin) étaient du code mort. Chaque transition attendait l'event `ended` puis lançait le preload from scratch.
+2. **Cache disque OS évincé** : avec 20+ vidéos, la vidéo 0 n'est plus dans le page cache Linux quand on y revient après 19 autres fichiers. Le preload depuis la carte SD prend trop longtemps.
+
+**Solution (v3.9.1) :**
+
+- Enregistrement des listeners `timeupdate` (active preload anticipé + early switch)
+- `warmDiskCache()` préchauffe le page cache kernel via `fetch()` à mi-vidéo pour les 3 prochaines vidéos
+- Supporte les boucles de 100+ vidéos sans flash
+
+### 7. Chromium crash "Aw, Snap! Error code: 5" après 1-2h de boucle vidéo
 
 **Symptômes :**
 
@@ -2000,6 +2021,8 @@ Maximum 5 tentatives de recovery, cooldown de 300s (5 min) entre les cycles.
 - Le bouton "Reload" est affiché mais personne n'est là pour cliquer
 - Nécessite un reboot manuel (débrancher/rebrancher)
 - Après reboot, écran blanc
+
+**Note (v3.9.1) :** Le cleanup agressif des buffers décodeur GPU (`cleanupInactivePlayer()`) après chaque switch maintient la mémoire Chromium stable (~50-60MB) quel que soit le nombre de vidéos, réduisant significativement les crash OOM.
 
 #### ⚠️ IMPORTANT : Raspberry Pi 5 vs Pi 4
 
@@ -2081,12 +2104,12 @@ Le `kiosk-watchdog.sh` utilise les flags suivants pour Pi 5 :
 
 **Historique des tentatives échouées :**
 
-| Version | Solution            | Résultat                                                    |
-| ------- | ------------------- | ----------------------------------------------------------- |
-| v2.27   | SwiftShader         | Rendu CPU, stable mais vidéos saccadées en 1080p            |
-| v3.7.2  | EGL natif + Vulkan  | Erreurs SharedImageStub toutes les 5 secondes               |
-| v3.7.2  | Retour SwiftShader  | Toujours trop lent pour vidéo 1080p                         |
-| v3.7.3  | **V3D natif (Mesa)**| **Solution finale** — vidéos fluides, pas d'erreurs GPU     |
+| Version | Solution             | Résultat                                                |
+| ------- | -------------------- | ------------------------------------------------------- |
+| v2.27   | SwiftShader          | Rendu CPU, stable mais vidéos saccadées en 1080p        |
+| v3.7.2  | EGL natif + Vulkan   | Erreurs SharedImageStub toutes les 5 secondes           |
+| v3.7.2  | Retour SwiftShader   | Toujours trop lent pour vidéo 1080p                     |
+| v3.7.3  | **V3D natif (Mesa)** | **Solution finale** — vidéos fluides, pas d'erreurs GPU |
 
 **Mise à jour depuis une ancienne version :**
 

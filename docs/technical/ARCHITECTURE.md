@@ -474,7 +474,7 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 
 ### Optimisations backend
 
-- Redis cache (sessions, config)
+- Redis adapter Socket.IO (sticky sessions multi-instance)
 - PostgreSQL indexes
 - Connection pooling configurable (`DB_POOL_MAX`, defaut 10, clamp 1-50)
 - Rate limiting (per-user based)
@@ -489,6 +489,10 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 - Local video storage
 - Zero latency control
 - Offline playback
+- Double-buffer vidéo avec early switch (`timeupdate` → preload 1.5s, switch 0.5s avant la fin)
+- Cleanup agressif des buffers décodeur GPU après chaque switch (~50MB mémoire stable)
+- Disk cache warming via `fetch()` pour boucles 20-100+ vidéos (page cache kernel)
+- Freeze-frame pré-capturé (500ms) pour transitions sans flash
 
 ---
 
@@ -528,7 +532,7 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 - Rapports PDF
 - Graphiques temps réel
 
-### Phase 4 : Intelligence (🚧 En cours)
+### Phase 4 : Intelligence (📋 Backlog)
 
 - Estimation audience (caméra RPi)
 - Score live (websocket)

@@ -1,3 +1,15 @@
+# [3.9.1] (2026-02-10)
+
+### Bug Fixes
+
+- **dashboard:** fix buffer analytics polling — `loadBufferStatus()` now polls `getCommandStatus()` instead of treating the send response as the result (showed 0 events instead of actual count)
+- **raspberry:** register missing `timeupdate` listeners on video players — early preload (1.5s before end) and early switch (0.5s before end) were dead code, causing all transitions to wait for `ended` event + 1-3s preload delay
+- **raspberry:** aggressive cleanup of inactive player after each switch — `cleanupInactivePlayer()` frees GPU decoder buffers (~30-50MB) preventing memory growth and eventual OOM crash on long sessions
+
+### Features
+
+- **raspberry:** disk cache warming for large video loops (20-100+ videos) — `warmDiskCache()` prefetches next 3 videos via `fetch()` into OS page cache at mid-playback, eliminating black flash at loop wrap-around (video N → video 0)
+
 # [3.9.0](https://github.com/Tallec7/neopro/compare/v3.8.2...v3.9.0) (2026-02-10)
 
 ### Bug Fixes
