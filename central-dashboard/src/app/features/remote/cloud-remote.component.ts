@@ -236,6 +236,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   // Recherche
   public searchQuery = '';
+  public readonly searchPlaceholder = 'Rechercher une vid\u00e9o...';
   public searchResults: Video[] = [];
   public isSearching = false;
 
@@ -278,6 +279,13 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   // Loading state
   public isLoading = true;
+
+  // PIN
+  public pinRequired = false;
+  public pinInput = '';
+  public pinError = '';
+  public pinVerifying = false;
+  public pinAttemptsRemaining: number | null = null;
 
   // Dark mode
   public isDarkMode = false;
@@ -422,9 +430,19 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
         if (!this.isConnected) {
           this.connectionError = 'Le boîtier n\'est pas connecté au cloud. Vérifiez sa connexion Internet.';
+          this.isLoading = false;
+          return;
         }
 
-        // Construire la configuration
+        // Vérifier si un PIN est requis
+        if (state.pinRequired && !state.config) {
+          this.pinRequired = true;
+          this.isLoading = false;
+          return;
+        }
+
+        // PIN ok ou pas de PIN → charger normalement
+        this.pinRequired = false;
         this.configuration = {
           remote: { title: state.siteName },
           categories: state.config?.categories || [],
@@ -447,6 +465,61 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.loadSiteState();
   }
 
+  /**
+   * Vérifie le PIN saisi par l'utilisateur
+   */
+  public submitPin(): void {
+    if (!this.pinInput || this.pinInput.length < 4) {
+      this.pinError = 'Le PIN doit contenir au moins 4 chiffres';
+      return;
+    }
+
+    this.pinVerifying = true;
+    this.pinError = '';
+
+    this.remoteService.verifyPin(this.siteId, this.pinInput).subscribe({
+      next: () => {
+        // PIN vérifié avec succès → recharger l'état complet
+        this.pinRequired = false;
+        this.pinInput = '';
+        this.pinError = '';
+        this.pinVerifying = false;
+        this.pinAttemptsRemaining = null;
+        this.loadSiteState();
+      },
+      error: (err: { status: number; error?: { message?: string; attemptsRemaining?: number } }) => {
+        this.pinVerifying = false;
+        this.pinInput = '';
+        if (err.status === 429) {
+          this.pinError = err.error?.message || 'Trop de tentatives. Réessayez plus tard.';
+        } else {
+          this.pinError = err.error?.message || 'PIN incorrect';
+          this.pinAttemptsRemaining = err.error?.attemptsRemaining ?? null;
+        }
+      }
+    });
+  }
+
+  /**
+   * Gestion de la saisie du PIN (numpad)
+   */
+  public onPinDigit(digit: string): void {
+    if (this.pinInput.length < 6) {
+      this.pinInput += digit;
+      this.pinError = '';
+    }
+  }
+
+  public onPinBackspace(): void {
+    this.pinInput = this.pinInput.slice(0, -1);
+    this.pinError = '';
+  }
+
+  public onPinClear(): void {
+    this.pinInput = '';
+    this.pinError = '';
+  }
+
   private refreshState(): void {
     if (!this.siteId) return;
 
@@ -454,11 +527,28 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
       next: (state: RemoteState) => {
         this.isConnected = state.isConnected && state.connectionHealth?.isHealthy;
 
+        // Si PIN requis à nouveau (token expiré)
+        if (state.pinRequired && !state.config) {
+          this.remoteService.clearToken(this.siteId);
+          this.pinRequired = true;
+          return;
+        }
+
         if (!this.isConnected && !this.connectionError) {
           this.displayToast('Connexion perdue avec le boîtier', 'info');
         } else if (this.isConnected && this.connectionError) {
           this.displayToast('Connexion rétablie', 'success');
           this.connectionError = null;
+        }
+
+        if (state.config) {
+          this.configuration = {
+            remote: { title: state.siteName },
+            categories: state.config.categories || [],
+            sponsors: state.config.sponsors || [],
+            timeCategories: state.config.timeCategories || [],
+            liveScoreEnabled: state.config.liveScoreEnabled || false,
+          };
         }
       },
       error: () => {

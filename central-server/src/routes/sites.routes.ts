@@ -250,6 +250,24 @@ router.delete(
   sitesController.clearPendingCommands
 );
 
+// Remote PIN management
+router.post(
+  '/:id/remote-pin',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sensitiveRateLimit,
+  validate(schemas.setRemotePin),
+  sitesController.setRemotePin
+);
+
+router.delete(
+  '/:id/remote-pin',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sensitiveRateLimit,
+  sitesController.clearRemotePin
+);
+
 // Subscription management routes for specific site
 // Routes: GET /, GET /history, GET /license-status, PUT /extend, POST /suspend, POST /reactivate, PUT /plan
 router.use('/:id/subscription', siteSubscriptionRouter);

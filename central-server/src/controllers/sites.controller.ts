@@ -1811,6 +1811,76 @@ export const getFleetMetrics = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * POST /api/sites/:id/remote-pin
+ * Définit un PIN pour la télécommande cloud.
+ * Le PIN est hashé en SHA-256 et stocké en base.
+ */
+export async function setRemotePin(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { pin } = req.body;
+
+    // Vérifier que le site existe
+    const site = await siteRepository.findById(id);
+    if (!site) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    // Hasher le PIN
+    const pinHash = createHash('sha256').update(pin).digest('hex');
+
+    // Stocker le hash
+    await siteRepository.setRemotePin(id, pinHash);
+
+    logger.info('Remote PIN set for site', {
+      siteId: id,
+      userId: req.user?.id,
+      siteName: site.site_name,
+    });
+
+    res.json({
+      success: true,
+      message: 'PIN de télécommande cloud défini avec succès',
+    });
+  } catch (error) {
+    logger.error('Error setting remote PIN:', { error, siteId: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
+ * DELETE /api/sites/:id/remote-pin
+ * Supprime le PIN de télécommande cloud (retour à l'accès libre).
+ */
+export async function clearRemotePin(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+
+    // Vérifier que le site existe
+    const site = await siteRepository.findById(id);
+    if (!site) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    await siteRepository.clearRemotePin(id);
+
+    logger.info('Remote PIN cleared for site', {
+      siteId: id,
+      userId: req.user?.id,
+      siteName: site.site_name,
+    });
+
+    res.json({
+      success: true,
+      message: 'PIN de télécommande cloud supprimé',
+    });
+  } catch (error) {
+    logger.error('Error clearing remote PIN:', { error, siteId: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
  * Get match history for a specific site
  * Returns recent matches with audience estimates, videos played, and duration
  */

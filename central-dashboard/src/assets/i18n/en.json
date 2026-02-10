@@ -349,6 +349,17 @@
     "deselect": "Deselect",
     "confirmDeletion": "Confirm deletion"
   },
+  "remotePin": {
+    "title": "Cloud Remote PIN",
+    "description": "Protect cloud remote access with a 4-6 digit PIN code. Users will need to enter this PIN on their first connection.",
+    "pinActive": "PIN active",
+    "pinInactive": "Open access (no PIN)",
+    "clearPin": "Remove PIN",
+    "clearingPin": "Removing...",
+    "newPinLabel": "New PIN (4-6 digits)",
+    "setPin": "Set PIN",
+    "settingPin": "Setting..."
+  },
   "debug": {
     "playing": "Playing...",
     "play": "▶ Play",

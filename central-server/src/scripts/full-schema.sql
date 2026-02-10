@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS sites (
   pending_config_version_id UUID,
   -- Blocage temporaire des sync_local_state après déploiement config
   config_update_pending_until TIMESTAMPTZ DEFAULT NULL,
+  -- PIN optionnel pour la télécommande cloud
+  remote_pin_hash VARCHAR(64) DEFAULT NULL,
   CONSTRAINT check_status CHECK (status IN ('online', 'offline', 'maintenance', 'error'))
 );
 

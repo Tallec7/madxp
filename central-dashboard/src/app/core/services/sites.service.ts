@@ -540,6 +540,19 @@ export class SitesService {
   cancelDeployment(deploymentId: string): Observable<void> {
     return this.api.delete(`/deployments/${deploymentId}`);
   }
+
+  // Remote PIN management
+  setRemotePin(siteId: string, pin: string): Observable<{ success: boolean; message: string }> {
+    return this.api.post(`/sites/${siteId}/remote-pin`, { pin });
+  }
+
+  clearRemotePin(siteId: string): Observable<{ success: boolean; message: string }> {
+    return this.api.delete(`/sites/${siteId}/remote-pin`);
+  }
+
+  getRemotePinStatus(siteId: string): Observable<{ pinEnabled: boolean }> {
+    return this.api.get(`/sites/${siteId}/remote-pin`);
+  }
 }
 
 export interface PendingDeployment {

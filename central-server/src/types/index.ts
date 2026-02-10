@@ -83,6 +83,7 @@ export interface Site {
   created_at: Date;
   updated_at: Date;
   pending_config_version_id: string | null;
+  remote_pin_hash: string | null;
 }
 
 // Group types

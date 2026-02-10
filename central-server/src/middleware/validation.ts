@@ -151,6 +151,22 @@ export const schemas = {
     data: Joi.object().optional().default({}),
   }),
 
+  // Remote PIN verification (public endpoint)
+  remotePin: Joi.object({
+    pin: Joi.string().pattern(/^\d{4,6}$/).required().messages({
+      'string.pattern.base': 'Le PIN doit contenir entre 4 et 6 chiffres',
+      'any.required': 'Le PIN est requis',
+    }),
+  }),
+
+  // Set remote PIN (admin/operator endpoint)
+  setRemotePin: Joi.object({
+    pin: Joi.string().pattern(/^\d{4,6}$/).required().messages({
+      'string.pattern.base': 'Le PIN doit contenir entre 4 et 6 chiffres',
+      'any.required': 'Le PIN est requis',
+    }),
+  }),
+
   // Subscription schemas
   extendSubscription: Joi.object({
     new_end_date: Joi.string().isoDate().required(),

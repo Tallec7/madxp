@@ -9,7 +9,7 @@
 
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface RemoteState {
@@ -26,7 +26,8 @@ export interface RemoteState {
     reason: string;
   };
   lastSeenAt: string;
-  config: {
+  pinRequired?: boolean;
+  config?: {
     sponsors: Array<{ name: string; path: string }>;
     categories: Array<{
       id: string;
@@ -51,7 +52,7 @@ export interface RemoteState {
     scoreOverlay: unknown;
     watermark: unknown;
   };
-  localVideos: Array<{
+  localVideos?: Array<{
     filename: string;
     path: string;
     category: string;
@@ -133,6 +134,12 @@ export interface MatchConfigData {
   audienceEstimate: number;
 }
 
+export interface PinVerifyResult {
+  success: boolean;
+  token: string;
+  expiresIn: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -140,25 +147,95 @@ export class RemoteService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = environment.apiUrl;
 
+  // Token PIN stocké par siteId (en mémoire + localStorage pour persister)
+  private readonly TOKEN_STORAGE_PREFIX = 'neopro_remote_pin_';
+
+  /**
+   * Récupère le token PIN stocké pour un site
+   */
+  private getToken(siteId: string): string | null {
+    return localStorage.getItem(this.TOKEN_STORAGE_PREFIX + siteId);
+  }
+
+  /**
+   * Stocke le token PIN pour un site
+   */
+  private setToken(siteId: string, token: string): void {
+    localStorage.setItem(this.TOKEN_STORAGE_PREFIX + siteId, token);
+  }
+
+  /**
+   * Supprime le token PIN pour un site
+   */
+  clearToken(siteId: string): void {
+    localStorage.removeItem(this.TOKEN_STORAGE_PREFIX + siteId);
+  }
+
+  /**
+   * Vérifie si un token PIN est stocké pour un site
+   */
+  hasToken(siteId: string): boolean {
+    return !!this.getToken(siteId);
+  }
+
+  /**
+   * Retourne les headers HTTP avec le token PIN si disponible
+   */
+  private getHeaders(siteId: string): { headers?: Record<string, string> } {
+    const token = this.getToken(siteId);
+    if (token) {
+      return { headers: { 'X-Remote-Token': token } };
+    }
+    return {};
+  }
+
+  /**
+   * Vérifie le PIN et stocke le token retourné
+   */
+  verifyPin(siteId: string, pin: string): Observable<PinVerifyResult> {
+    return this.http.post<PinVerifyResult>(
+      `${this.apiUrl}/remote/${siteId}/verify-pin`,
+      { pin }
+    ).pipe(
+      tap((result) => {
+        if (result.success && result.token) {
+          this.setToken(siteId, result.token);
+        }
+      })
+    );
+  }
+
   /**
    * Récupère l'état actuel du site (connexion, config, vidéos)
+   * Inclut le header X-Remote-Token si disponible
    */
   getState(siteId: string): Observable<RemoteState> {
-    return this.http.get<RemoteState>(`${this.apiUrl}/remote/${siteId}/state`);
+    return this.http.get<RemoteState>(
+      `${this.apiUrl}/remote/${siteId}/state`,
+      this.getHeaders(siteId)
+    );
   }
 
   /**
    * Liste les vidéos disponibles sur le site
    */
   getVideos(siteId: string): Observable<RemoteVideos> {
-    return this.http.get<RemoteVideos>(`${this.apiUrl}/remote/${siteId}/videos`);
+    return this.http.get<RemoteVideos>(
+      `${this.apiUrl}/remote/${siteId}/videos`,
+      this.getHeaders(siteId)
+    );
   }
 
   /**
    * Envoie une commande générique au site
    */
   sendCommand(siteId: string, type: RemoteCommandType, data?: unknown): Observable<CommandResult> {
-    return this.http.post<CommandResult>(`${this.apiUrl}/remote/${siteId}/command`, { type, data });
+    const options = this.getHeaders(siteId);
+    return this.http.post<CommandResult>(
+      `${this.apiUrl}/remote/${siteId}/command`,
+      { type, data },
+      options
+    );
   }
 
   // === Commandes typées pour une meilleure DX ===

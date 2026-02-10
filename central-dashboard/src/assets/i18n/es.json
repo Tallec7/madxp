@@ -349,6 +349,17 @@
     "deselect": "Deseleccionar",
     "confirmDeletion": "Confirmar eliminación"
   },
+  "remotePin": {
+    "title": "PIN Mando Cloud",
+    "description": "Proteja el acceso al mando cloud con un código PIN de 4-6 dígitos. Los usuarios deberán introducir este PIN en su primera conexión.",
+    "pinActive": "PIN activo",
+    "pinInactive": "Acceso libre (sin PIN)",
+    "clearPin": "Eliminar PIN",
+    "clearingPin": "Eliminando...",
+    "newPinLabel": "Nuevo PIN (4-6 dígitos)",
+    "setPin": "Definir PIN",
+    "settingPin": "Definiendo..."
+  },
   "debug": {
     "playing": "Reproduciendo...",
     "play": "▶ Reproducir",

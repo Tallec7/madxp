@@ -42,6 +42,59 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
         </button>
       </div>
 
+      <!-- PIN Télécommande Cloud -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="vertical-align: text-bottom; margin-right: 6px;">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          <h4>{{ 'remotePin.title' | translate }}</h4>
+        </div>
+        <p class="settings-desc">
+          {{ 'remotePin.description' | translate }}
+        </p>
+
+        <ng-container *ngIf="remotePinEnabled; else noPinActive">
+          <div class="pin-status-badge active">
+            <span class="pin-badge-icon">&#128274;</span>
+            <span>{{ 'remotePin.pinActive' | translate }}</span>
+          </div>
+          <button
+            class="btn btn-danger btn-sm"
+            (click)="clearRemotePin()"
+            [disabled]="clearingRemotePin"
+          >
+            {{ clearingRemotePin ? ('remotePin.clearingPin' | translate) : ('remotePin.clearPin' | translate) }}
+          </button>
+        </ng-container>
+        <ng-template #noPinActive>
+          <div class="pin-status-badge inactive">
+            <span class="pin-badge-icon">&#128275;</span>
+            <span>{{ 'remotePin.pinInactive' | translate }}</span>
+          </div>
+          <div class="form-group">
+            <label>{{ 'remotePin.newPinLabel' | translate }}</label>
+            <input
+              type="text"
+              [(ngModel)]="remotePin"
+              placeholder="1234"
+              maxlength="6"
+              pattern="[0-9]*"
+              inputmode="numeric"
+              class="form-input pin-input"
+            />
+          </div>
+          <button
+            class="btn btn-primary btn-sm"
+            (click)="saveRemotePin()"
+            [disabled]="savingRemotePin || !remotePin || remotePin.length < 4"
+          >
+            {{ savingRemotePin ? ('remotePin.settingPin' | translate) : ('remotePin.setPin' | translate) }}
+          </button>
+        </ng-template>
+      </div>
+
       <!-- QR Code Telecommande -->
       <div class="settings-card">
         <div class="settings-header">
@@ -1201,6 +1254,42 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       line-height: 1;
     }
 
+    /* PIN status badge */
+    .pin-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+
+    .pin-status-badge.active {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .pin-status-badge.inactive {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+    }
+
+    .pin-badge-icon {
+      font-size: 1rem;
+    }
+
+    .pin-input {
+      max-width: 150px;
+      font-family: monospace;
+      font-size: 1.25rem;
+      letter-spacing: 4px;
+      text-align: center;
+    }
+
     /* Rapports PDF */
     .reports-list {
       display: flex;
@@ -1297,6 +1386,12 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   clubName: string = '';
   remotePassword: string = '';
   savingClubAuth: boolean = false;
+
+  // Remote PIN
+  remotePin: string = '';
+  remotePinEnabled: boolean = false;
+  savingRemotePin: boolean = false;
+  clearingRemotePin: boolean = false;
 
   // Hotspot
   hotspotSsid: string = '';
@@ -1409,7 +1504,22 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
       // Charger les rapports du club
       this.loadClubReports();
+
+      // Charger le statut du PIN télécommande cloud
+      this.loadRemotePinStatus();
     }
+  }
+
+  private loadRemotePinStatus(): void {
+    this.sitesService.getRemotePinStatus(this.siteId).subscribe({
+      next: (response) => {
+        this.remotePinEnabled = response.pinEnabled;
+      },
+      error: () => {
+        // Silencieux - le statut PIN n'est pas critique
+        this.remotePinEnabled = false;
+      }
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -1546,7 +1656,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
       neoProContent,
       mode: 'merge'
     }).subscribe({
-      next: (response: any) => {
+      next: (response: { queued?: boolean }) => {
         this.savingClubAuth = false;
         this.notificationService.success(
           response.queued
@@ -1558,6 +1668,42 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
         this.savingClubAuth = false;
         const message = ErrorExtractor.getMessage(error);
         this.notificationService.error(`Erreur déploiement: ${message}`);
+      }
+    });
+  }
+
+  saveRemotePin(): void {
+    if (!this.remotePin || this.remotePin.length < 4) {
+      this.notificationService.error('Le PIN doit contenir entre 4 et 6 chiffres');
+      return;
+    }
+
+    this.savingRemotePin = true;
+    this.sitesService.setRemotePin(this.siteId, this.remotePin).subscribe({
+      next: () => {
+        this.remotePinEnabled = true;
+        this.remotePin = '';
+        this.savingRemotePin = false;
+        this.notificationService.success('PIN de télécommande cloud défini avec succès');
+      },
+      error: (error: { error?: { error?: string } }) => {
+        this.savingRemotePin = false;
+        this.notificationService.error(error.error?.error || 'Erreur lors de la définition du PIN');
+      }
+    });
+  }
+
+  clearRemotePin(): void {
+    this.clearingRemotePin = true;
+    this.sitesService.clearRemotePin(this.siteId).subscribe({
+      next: () => {
+        this.remotePinEnabled = false;
+        this.clearingRemotePin = false;
+        this.notificationService.success('PIN de télécommande cloud supprimé');
+      },
+      error: (error: { error?: { error?: string } }) => {
+        this.clearingRemotePin = false;
+        this.notificationService.error(error.error?.error || 'Erreur lors de la suppression du PIN');
       }
     });
   }

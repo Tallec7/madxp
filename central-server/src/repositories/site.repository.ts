@@ -80,6 +80,7 @@ export interface UpdateSiteInput {
   sports?: string;
   status?: string;
   live_score_enabled?: boolean;
+  remote_pin_hash?: string | null;
 }
 
 export interface SiteConnectionRow extends QueryResultRow {
@@ -633,6 +634,32 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
       [siteId]
     );
     return result.rows[0];
+  }
+
+  // --------------------------------------------------------------------------
+  // Remote PIN management
+  // --------------------------------------------------------------------------
+
+  async setRemotePin(id: string, pinHash: string): Promise<void> {
+    await query(
+      'UPDATE sites SET remote_pin_hash = $1, updated_at = NOW() WHERE id = $2',
+      [pinHash, id]
+    );
+  }
+
+  async clearRemotePin(id: string): Promise<void> {
+    await query(
+      'UPDATE sites SET remote_pin_hash = NULL, updated_at = NOW() WHERE id = $1',
+      [id]
+    );
+  }
+
+  async getRemotePinHash(id: string): Promise<string | null> {
+    const result = await query<{ remote_pin_hash: string | null }>(
+      'SELECT remote_pin_hash FROM sites WHERE id = $1',
+      [id]
+    );
+    return result.rows[0]?.remote_pin_hash || null;
   }
 
   // --------------------------------------------------------------------------
