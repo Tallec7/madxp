@@ -232,7 +232,7 @@ describe('Deploy Video Handler', () => {
 
       await expect(
         deployVideo.execute(baseVideoData, jest.fn())
-      ).rejects.toThrow('Failed to download video: Network error');
+      ).rejects.toThrow('Échec du téléchargement vidéo: Network error');
     });
 
     it('should update configuration after successful download', async () => {
@@ -748,7 +748,7 @@ describe('Deploy Video Handler', () => {
 
       await expect(
         deployVideo.execute(baseVideoData, jest.fn())
-      ).rejects.toThrow('Checksum mismatch');
+      ).rejects.toThrow('Checksum incorrect');
 
       expect(fs.remove).toHaveBeenCalled();
     });

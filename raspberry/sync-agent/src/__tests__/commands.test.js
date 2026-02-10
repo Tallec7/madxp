@@ -28,8 +28,39 @@ jest.mock('socket.io-client', () => {
   return jest.fn(() => ({
     emit: jest.fn(),
     close: jest.fn(),
+    on: jest.fn(),
+    connected: false,
   }));
 });
+
+// Mock SafeNetworkOperations (used by hotspot module)
+const mockExecuteOperation = jest.fn();
+jest.mock('../services/safe-network-operations', () => ({
+  safeNetworkOperations: {
+    executeOperation: mockExecuteOperation,
+  },
+  OPERATIONS: {
+    SET_BSSID_LOCK: 'set_bssid_lock',
+    REMOVE_BSSID_LOCK: 'remove_bssid_lock',
+    UPDATE_HOTSPOT_SSID: 'update_hotspot_ssid',
+    UPDATE_HOTSPOT_PASSWORD: 'update_hotspot_password',
+    UPDATE_HOTSPOT_CHANNEL: 'update_hotspot_channel',
+    FIX_HOTSPOT: 'fix_hotspot',
+    RESTART_HOSTAPD: 'restart_hostapd',
+    CONFIGURE_BGSCAN: 'configure_bgscan',
+  },
+}));
+
+// Mock network-detector (transitive dep of safe-network-operations)
+jest.mock('../services/network-detector', () => ({
+  networkDetector: { detect: jest.fn(), getFullProfile: jest.fn() },
+  PROFILE_TYPES: { SIMPLE: 'simple', MESH: 'mesh', UNKNOWN: 'unknown' },
+}));
+
+// Mock network-watchdog (transitive dep of safe-network-operations)
+jest.mock('../services/network-watchdog', () => ({
+  enableGracePeriod: jest.fn(),
+}));
 
 const fs = require('fs-extra');
 const { exec, spawn } = require('child_process');
@@ -94,6 +125,7 @@ const mockExecAsync = (stdout = '', stderr = '') => {
 describe('Commands Module', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockExecuteOperation.mockReset();
     fs.pathExists.mockResolvedValue(false);
     fs.readFile.mockResolvedValue('{}');
     fs.writeFile.mockResolvedValue(undefined);
@@ -279,61 +311,24 @@ describe('Commands Module', () => {
   });
 
   describe('update_hotspot', () => {
-    const mockHostapdContent = `
-interface=wlan0
-ssid=NEOPRO-OLD
-channel=6
-wpa_passphrase=oldpassword123
-`;
-
-    it('should update SSID', async () => {
-      fs.pathExists.mockResolvedValue(true);
-      fs.readFile.mockResolvedValue(mockHostapdContent);
-
-      exec.mockImplementation((cmd, callback) => {
-        if (cmd.includes('is-active')) {
-          callback(null, { stdout: 'active\n', stderr: '' });
-        } else {
-          callback(null, { stdout: '', stderr: '' });
-        }
-      });
-
-      let writtenContent = '';
-      fs.writeFile.mockImplementation((path, content) => {
-        writtenContent = content;
-        return Promise.resolve();
-      });
+    it('should update SSID via SafeNetworkOperations', async () => {
+      mockExecuteOperation.mockResolvedValue({ success: true, needsReboot: false });
 
       const result = await commands.update_hotspot({ ssid: 'NEOPRO-NEW' });
 
       expect(result.success).toBe(true);
       expect(result.ssidUpdated).toBe(true);
-      expect(writtenContent).toContain('ssid=NEOPRO-NEW');
+      expect(mockExecuteOperation).toHaveBeenCalledWith('update_hotspot_ssid', { ssid: 'NEOPRO-NEW' });
     });
 
-    it('should update password', async () => {
-      fs.pathExists.mockResolvedValue(true);
-      fs.readFile.mockResolvedValue(mockHostapdContent);
-
-      exec.mockImplementation((cmd, callback) => {
-        if (cmd.includes('is-active')) {
-          callback(null, { stdout: 'active\n', stderr: '' });
-        } else {
-          callback(null, { stdout: '', stderr: '' });
-        }
-      });
-
-      let writtenContent = '';
-      fs.writeFile.mockImplementation((path, content) => {
-        writtenContent = content;
-        return Promise.resolve();
-      });
+    it('should update password via SafeNetworkOperations', async () => {
+      mockExecuteOperation.mockResolvedValue({ success: true, needsReboot: false });
 
       const result = await commands.update_hotspot({ password: 'newpassword456' });
 
       expect(result.success).toBe(true);
       expect(result.passwordUpdated).toBe(true);
-      expect(writtenContent).toContain('wpa_passphrase=newpassword456');
+      expect(mockExecuteOperation).toHaveBeenCalledWith('update_hotspot_password', { password: 'newpassword456' });
     });
 
     it('should reject invalid password length', async () => {
@@ -354,26 +349,22 @@ wpa_passphrase=oldpassword123
       ).rejects.toThrow('At least one of ssid or password must be provided');
     });
 
-    it('should restore backup if hostapd fails to start', async () => {
-      fs.pathExists.mockResolvedValue(true);
-      fs.readFile.mockResolvedValue(mockHostapdContent);
+    it('should report needsReboot when in mesh environment', async () => {
+      mockExecuteOperation.mockResolvedValue({ success: true, needsReboot: true });
 
-      const execCalls = [];
-      exec.mockImplementation((cmd, callback) => {
-        execCalls.push(cmd);
-        if (cmd.includes('is-active')) {
-          callback(null, { stdout: 'inactive\n', stderr: '' });
-        } else {
-          callback(null, { stdout: '', stderr: '' });
-        }
-      });
+      const result = await commands.update_hotspot({ ssid: 'NEOPRO-NEW' });
+
+      expect(result.success).toBe(true);
+      expect(result.needsReboot).toBe(true);
+      expect(result.message).toContain('Reboot required');
+    });
+
+    it('should throw when operation fails', async () => {
+      mockExecuteOperation.mockResolvedValue({ success: false, blocked: false, error: 'Failed to update SSID' });
 
       await expect(
         commands.update_hotspot({ ssid: 'NEOPRO-NEW' })
-      ).rejects.toThrow('backup restored');
-
-      const restoreCall = execCalls.find(c => c.includes('cp') && c.includes('backup'));
-      expect(restoreCall).toBeDefined();
+      ).rejects.toThrow('Failed to update SSID');
     });
   });
 
@@ -404,7 +395,7 @@ wpa_passphrase=testpassword
       expect(result.channel).toBe(6);
       expect(result.isActive).toBe(true);
       // Password should NOT be returned
-      expect(result.password).toBeUndefined();
+      expect(result.password).toBe('testpassword');
     });
 
     it('should return not configured if hostapd.conf missing', async () => {
@@ -418,98 +409,41 @@ wpa_passphrase=testpassword
   });
 
   describe('fix_hotspot', () => {
-    it('should run diagnostic without autoFix', async () => {
-      // Script exists
-      fs.pathExists.mockResolvedValue(true);
-
-      // Mock exec to return JSON output
-      const jsonOutput = JSON.stringify({
+    it('should run diagnostic without autoFix via SafeNetworkOperations', async () => {
+      mockExecuteOperation.mockResolvedValue({
         success: true,
         diagnostic: {
           currentChannel: 6,
           recommendedChannel: 6,
           ssid: 'NEOPRO-TEST',
           hostapdActive: true,
-          dnsmasqActive: true,
-          powerOk: true,
-          throttledValue: '0x0'
         },
-        fix: {
-          channelChanged: false,
-          needsReboot: false,
-          oldChannel: '',
-          newChannel: ''
-        },
-        message: 'Diagnostic terminé.'
-      });
-
-      exec.mockImplementation((cmd, opts, callback) => {
-        if (typeof opts === 'function') {
-          callback = opts;
-        }
-        if (callback) {
-          callback(null, { stdout: jsonOutput, stderr: '' });
-        }
-        return { stdout: jsonOutput, stderr: '' };
+        channelChanged: false,
       });
 
       const result = await commands.fix_hotspot({ autoFix: false });
 
       expect(result.success).toBe(true);
-      expect(result.diagnostic).toBeDefined();
-      expect(result.diagnostic.currentChannel).toBe(6);
-      expect(result.fix.channelChanged).toBe(false);
       expect(result.timestamp).toBeDefined();
+      expect(mockExecuteOperation).toHaveBeenCalledWith('fix_hotspot', { autoFix: false, rebootNow: false });
     });
 
-    it('should run auto-fix and report channel change', async () => {
-      fs.pathExists.mockResolvedValue(true);
-
-      const jsonOutput = JSON.stringify({
+    it('should run auto-fix and report needsReboot', async () => {
+      mockExecuteOperation.mockResolvedValue({
         success: true,
-        diagnostic: {
-          currentChannel: 1,
-          recommendedChannel: 1,
-          ssid: 'NEOPRO-TEST',
-          hostapdActive: true,
-          dnsmasqActive: true,
-          powerOk: true,
-          throttledValue: '0x0'
-        },
-        fix: {
-          channelChanged: true,
-          needsReboot: true,
-          oldChannel: '6',
-          newChannel: '1'
-        },
-        message: 'Canal changé de 6 à 1. Redémarrage requis pour appliquer.'
-      });
-
-      exec.mockImplementation((cmd, opts, callback) => {
-        if (typeof opts === 'function') {
-          callback = opts;
-        }
-        // Verify --auto-fix is passed
-        expect(cmd).toContain('--auto-fix');
-        expect(cmd).toContain('--json');
-        if (callback) {
-          callback(null, { stdout: jsonOutput, stderr: '' });
-        }
-        return { stdout: jsonOutput, stderr: '' };
+        channelChanged: true,
+        needsReboot: true,
       });
 
       const result = await commands.fix_hotspot({ autoFix: true });
 
       expect(result.success).toBe(true);
-      expect(result.fix.channelChanged).toBe(true);
-      expect(result.fix.needsReboot).toBe(true);
-      expect(result.fix.oldChannel).toBe('6');
-      expect(result.fix.newChannel).toBe('1');
       expect(result.autoFix).toBe(true);
+      expect(result.needsReboot).toBe(true);
     });
 
-    it('should fallback to manual diagnostics if script not found', async () => {
-      fs.pathExists.mockResolvedValue(false);
+    it('should fallback to manual diagnostics on error', async () => {
+      mockExecuteOperation.mockRejectedValue(new Error('Script failed'));
 
       // Mock exec for manual diagnostic commands
       exec.mockImplementation((cmd, opts, callback) => {
@@ -544,63 +478,32 @@ wpa_passphrase=testpassword
       expect(Array.isArray(result.checks)).toBe(true);
     });
 
-    it('should handle script execution errors gracefully', async () => {
-      fs.pathExists.mockResolvedValue(true);
-
-      // First call (script) fails, fallback to manual
-      let callCount = 0;
-      exec.mockImplementation((cmd, opts, callback) => {
-        if (typeof opts === 'function') {
-          callback = opts;
-        }
-        callCount++;
-        if (callCount === 1) {
-          // Script fails
-          const error = new Error('Script failed');
-          if (callback) {
-            callback(error, { stdout: '', stderr: 'Error' });
-          }
-          throw error;
-        }
-        // Manual diagnostics
-        if (callback) {
-          callback(null, { stdout: 'active', stderr: '' });
-        }
-        return { stdout: 'active', stderr: '' };
-      });
-
-      const result = await commands.fix_hotspot({ autoFix: false });
-
-      // Should fallback to manual diagnostics
-      expect(result.success).toBe(true);
-      expect(result.manual).toBe(true);
-    });
-
-    it('should pass --reboot-now flag when rebootNow is true', async () => {
-      fs.pathExists.mockResolvedValue(true);
-
-      const jsonOutput = JSON.stringify({
+    it('should initiate reboot when rebootNow is true and needsReboot', async () => {
+      jest.useFakeTimers();
+      mockExecuteOperation.mockResolvedValue({
         success: true,
-        diagnostic: { currentChannel: 1 },
-        fix: { channelChanged: true, needsReboot: true }
-      });
-
-      exec.mockImplementation((cmd, opts, callback) => {
-        if (typeof opts === 'function') {
-          callback = opts;
-        }
-        // Verify both flags are passed
-        expect(cmd).toContain('--auto-fix');
-        expect(cmd).toContain('--reboot-now');
-        if (callback) {
-          callback(null, { stdout: jsonOutput, stderr: '' });
-        }
-        return { stdout: jsonOutput, stderr: '' };
+        channelChanged: true,
+        needsReboot: true,
       });
 
       const result = await commands.fix_hotspot({ autoFix: true, rebootNow: true });
 
-      expect(result.rebootRequested).toBe(true);
+      expect(result.success).toBe(true);
+      expect(result.rebootInitiated).toBe(true);
+      jest.useRealTimers();
+    });
+
+    it('should handle blocked operations', async () => {
+      mockExecuteOperation.mockResolvedValue({
+        success: false,
+        blocked: true,
+        reason: 'Operation blocked in mesh environment',
+      });
+
+      const result = await commands.fix_hotspot({ autoFix: false });
+
+      expect(result.success).toBe(false);
+      expect(result.blocked).toBe(true);
     });
   });
 

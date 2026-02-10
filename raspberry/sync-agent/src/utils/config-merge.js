@@ -226,17 +226,33 @@ function mergeCategories(localCategories, centralCategories) {
       logger.debug(`[config-merge] Catégorie NEOPRO ajoutée/mise à jour: ${centralCat.id}`);
     } else {
       // Catégorie Club envoyée par le central (modifiée via dashboard)
-      // Utiliser la version du central qui contient les modifications
-      result.push({
-        ...centralCat,
-        locked: false,
-        owner: centralCat.owner || 'club',
-      });
-      processedIds.add(centralCat.id);
-      if (localCat) {
-        logger.info(`[config-merge] Catégorie Club mise à jour depuis le central: ${centralCat.id} (${centralCat.name})`);
+      // Si la catégorie existe localement avec du contenu et que le central
+      // l'envoie vide, préserver la version locale (le club ne doit pas perdre ses vidéos)
+      const localHasVideos = localCat && (localCat.videos || []).length > 0;
+      const centralHasNoVideos = !centralCat.videos || centralCat.videos.length === 0;
+
+      if (localCat && localHasVideos && centralHasNoVideos) {
+        // Préserver la version locale qui contient du contenu
+        result.push({
+          ...localCat,
+          locked: false,
+          owner: localCat.owner || 'club',
+        });
+        processedIds.add(centralCat.id);
+        logger.info(`[config-merge] Catégorie Club locale préservée (central vide): ${centralCat.id} (${centralCat.name})`);
       } else {
-        logger.debug(`[config-merge] Nouvelle catégorie Club ajoutée: ${centralCat.id}`);
+        // Utiliser la version du central qui contient les modifications
+        result.push({
+          ...centralCat,
+          locked: false,
+          owner: centralCat.owner || 'club',
+        });
+        processedIds.add(centralCat.id);
+        if (localCat) {
+          logger.info(`[config-merge] Catégorie Club mise à jour depuis le central: ${centralCat.id} (${centralCat.name})`);
+        } else {
+          logger.debug(`[config-merge] Nouvelle catégorie Club ajoutée: ${centralCat.id}`);
+        }
       }
     }
   }
