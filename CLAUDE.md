@@ -16,8 +16,10 @@ npm run build:central              # Build dashboard
 cd central-server && npm run build # Compile TypeScript
 
 # Tests
-npm run test:server                # Jest (API)
+npm run test:server                # Jest (API central-server)
 npm run test:central               # Karma (Angular Dashboard)
+cd raspberry/server && npm test    # Jest (Socket.IO server — 71 tests)
+cd raspberry/admin && npm test     # Jest (Admin server)
 cd e2e && npx playwright test      # E2E
 npm run lint                       # ESLint
 
@@ -28,18 +30,19 @@ cd central-server && npm run db:migrate
 ## Règles de code
 
 - **TypeScript strict** : jamais de `any`, toujours typer explicitement
-- **SQL paramétré uniquement** : `query('...WHERE id = $1', [id])`
-- **Logger Winston** : `logger.info('Action', { context })` — pas de `console.log`
+- **Repository pattern** : utiliser les repositories (`siteRepository`, `alertRepository`, etc.) — 0 `query()` direct (ESLint enforced)
+- **Logger Winston** : `logger.info('Action', { context })` — pas de `console.log` dans central-server
 - **Validation Joi** avant traitement des inputs
 - **Async/await** avec try/catch, jamais de callbacks
 - **Conventional Commits** : `feat(scope):`, `fix(scope):`, `docs(scope):`
-- **Repository pattern** : utiliser les repositories (`siteRepository`, `alertRepository`) au lieu de `query()` direct dans les controllers
+- **Architecture modulaire Pi** : `raspberry/server/` et `raspberry/admin/` suivent le pattern orchestrateur + services + routes
 
 ## NE JAMAIS FAIRE
 
 - Modifier les migrations déjà en production
 - Changer le format des `api_key` des sites (casserait tous les Pi)
-- Utiliser `console.log` (utiliser le logger)
+- Utiliser `console.log` dans central-server (utiliser Winston)
+- Importer `query` directement dans les controllers (utiliser les repositories)
 - Commit des secrets ou fichiers `.env`
 - Push directement sur `main` sans PR
 - Requêtes SQL non paramétrées (`'${email}'` → injection SQL)
@@ -47,10 +50,10 @@ cd central-server && npm run db:migrate
 ## Architecture détaillée
 
 - Vue système : `docs/technical/ARCHITECTURE.md`
-- Référence complète : `docs/REFERENCE.md`
+- Référence complète : `docs/technical/REFERENCE.md`
 - Sync-agent : `docs/technical/SYNC_ARCHITECTURE.md`
 - Schéma DB : `central-server/src/scripts/full-schema.sql`
-- Troubleshooting : `docs/TROUBLESHOOTING.md`
+- Troubleshooting : `docs/guides/TROUBLESHOOTING.md`
 - Onboarding : `docs/01-START-HERE.md`
 - Client critique NLF : `docs/clients/NLF.md`
 - Changelog : `docs/changelog/CHANGELOG.md`

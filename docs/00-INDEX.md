@@ -128,7 +128,7 @@ neopro/
 │   └── src/                        # Controllers, routes, middleware, services
 ├── central-dashboard/              # Cloud admin dashboard (Angular 20.3)
 │   └── src/app/features/sites/     # Gestion sites (4 tabs: État/Contenu/Params/Debug)
-├── server-render/                  # Cloud WebSocket server
+├── raspberry/server/               # Cloud WebSocket server
 ├── e2e/                           # End-to-end tests (Playwright)
 │
 ├── docs/                          # Documentation (vous êtes ici)

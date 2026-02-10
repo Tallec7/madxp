@@ -19,7 +19,7 @@
  */
 
 import { Request, Response } from 'express';
-import { query } from '../config/database';
+import { siteRepository } from '../repositories';
 import socketService from '../services/socket.service';
 import logger from '../config/logger';
 
@@ -34,17 +34,12 @@ export async function getRemoteState(req: Request, res: Response) {
     const { siteId } = req.params;
 
     // Récupérer les infos du site
-    const siteResult = await query(
-      `SELECT id, site_name, club_name, status, local_config_mirror, last_seen_at
-       FROM sites WHERE id = $1`,
-      [siteId]
-    );
+    const site = await siteRepository.findById(siteId);
 
-    if (siteResult.rows.length === 0) {
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    const site = siteResult.rows[0];
     // Cast localConfig pour accéder aux propriétés (type JSONB en DB)
     const localConfig = (site.local_config_mirror || {}) as Record<string, unknown>;
 
@@ -236,17 +231,14 @@ export async function getRemoteVideos(req: Request, res: Response) {
     const { siteId } = req.params;
 
     // Récupérer les vidéos locales depuis le miroir de config
-    const siteResult = await query(
-      `SELECT local_config_mirror FROM sites WHERE id = $1`,
-      [siteId]
-    );
+    const site = await siteRepository.findById(siteId);
 
-    if (siteResult.rows.length === 0) {
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
     // Cast localConfig pour accéder aux propriétés (type JSONB en DB)
-    const localConfig = (siteResult.rows[0].local_config_mirror || {}) as Record<string, unknown>;
+    const localConfig = (site.local_config_mirror || {}) as Record<string, unknown>;
     const localVideos = (localConfig._localVideos as Array<{
       filename: string;
       path: string;

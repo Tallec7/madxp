@@ -113,7 +113,7 @@ Ce document décrit le système complet de tracking des impressions annonceurs d
 
 #### `sponsor-analytics.service.ts`
 
-**Localisation**: `raspberry/frontend/app/services/sponsor-analytics.service.ts`
+**Localisation**: `raspberry/src/app/services/sponsor-analytics.service.ts`
 
 **Responsabilités**:
 
@@ -159,7 +159,7 @@ SYNC_AGENT_URL = environment.socketUrl + '/api/sync/sponsor-impressions';
 
 #### `tv.component.ts` (Modifié)
 
-**Localisation**: `raspberry/frontend/app/components/tv/tv.component.ts`
+**Localisation**: `raspberry/src/app/components/tv/tv.component.ts`
 
 **Intégration**:
 

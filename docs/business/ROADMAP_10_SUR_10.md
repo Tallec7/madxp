@@ -8,17 +8,17 @@
 
 ## RESUME DES AMELIORATIONS
 
-| Composant                     | Note Initiale | Note Actuelle  | Manque pour 10/10 | Effort Restant |
-| ----------------------------- | ------------- | -------------- | ----------------- | -------------- |
-| Fonctionnement Hors Connexion | 9/10          | **9.8/10** ✅  | 1 jour            | Faible         |
-| Mises a Jour Distantes        | 8.5/10        | **9.5/10** ✅  | 1-2 jours         | Faible         |
-| Deploiement Videos            | 8/10          | **9/10** ✅    | 2-3 jours         | Faible         |
-| Architecture Serveur/Client   | 8.5/10        | **9.5/10** ✅  | 2-3 jours         | Faible         |
-| Synchronisation Donnees       | 9/10          | 9/10           | 2-3 jours         | Faible         |
-| Securite                      | 8/10          | **9.5/10** ✅  | 1 jour            | Faible         |
-| Qualite Code/Tests            | 7.5/10        | **8/10** ✅    | 8-10 jours        | Moyen          |
-| Documentation                 | 9/10          | **9.5/10** ✅  | 1 jour            | Faible         |
-| **Overlay Multi-Sport**       | 6.8/10        | **8.8/10** ✅  | 1-2 jours         | Faible         |
+| Composant                     | Note Initiale | Note Actuelle | Manque pour 10/10 | Effort Restant |
+| ----------------------------- | ------------- | ------------- | ----------------- | -------------- |
+| Fonctionnement Hors Connexion | 9/10          | **9.8/10** ✅ | 1 jour            | Faible         |
+| Mises a Jour Distantes        | 8.5/10        | **9.5/10** ✅ | 1-2 jours         | Faible         |
+| Deploiement Videos            | 8/10          | **9/10** ✅   | 2-3 jours         | Faible         |
+| Architecture Serveur/Client   | 8.5/10        | **9.5/10** ✅ | 2-3 jours         | Faible         |
+| Synchronisation Donnees       | 9/10          | 9/10          | 2-3 jours         | Faible         |
+| Securite                      | 8/10          | **9.5/10** ✅ | 1 jour            | Faible         |
+| Qualite Code/Tests            | 7.5/10        | **8/10** ✅   | 8-10 jours        | Moyen          |
+| Documentation                 | 9/10          | **9.5/10** ✅ | 1 jour            | Faible         |
+| **Overlay Multi-Sport**       | 6.8/10        | **8.8/10** ✅ | 1-2 jours         | Faible         |
 
 ### Changelog des améliorations (25-31 Décembre 2025)
 
@@ -51,11 +51,11 @@
 
 ### ✅ CORRIGÉ (30 Déc 2025)
 
-| Item               | Description                                         | Statut        |
-| ------------------ | --------------------------------------------------- | ------------- |
-| Socket.IO local    | Fichier `socket.io.min.js` inclus dans assets       | ✅ Implémenté |
-| Mode hotspot       | Communication Remote↔TV sans internet               | ✅ Implémenté |
-| Sync-agent buffer  | Analytics/impressions buffered pour retry           | ✅ Implémenté |
+| Item              | Description                                   | Statut        |
+| ----------------- | --------------------------------------------- | ------------- |
+| Socket.IO local   | Fichier `socket.io.min.js` inclus dans assets | ✅ Implémenté |
+| Mode hotspot      | Communication Remote↔TV sans internet         | ✅ Implémenté |
+| Sync-agent buffer | Analytics/impressions buffered pour retry     | ✅ Implémenté |
 
 ### Ce qui reste (1 jour):
 
@@ -105,7 +105,7 @@ class OfflineCommandQueue {
 **Probleme**: L'utilisateur ne sait pas si le Pi est connecte au central.
 
 ```typescript
-// A ajouter dans raspberry/frontend/src/app/components/
+// A ajouter dans raspberry/src/app/components/
 @Component({
   selector: 'app-connection-status',
   template: `
@@ -1384,18 +1384,18 @@ paths:
 
 > **Mise à jour 31 Décembre 2025**: ~75% du travail initial a été accompli.
 
-| Composant          | Effort Initial  | Effort Restant  | Progression |
-| ------------------ | --------------- | --------------- | ----------- |
-| Hors Connexion     | 3-4 jours       | 1 jour          | **75%** ✅  |
-| Mises a Jour       | 5-7 jours       | 1-2 jours       | **80%** ✅  |
-| Deploiement Videos | 5-6 jours       | 2-3 jours       | **50%** ✅  |
-| Architecture       | 7-10 jours      | 2-3 jours       | **70%** ✅  |
-| Synchronisation    | 2-3 jours       | 2-3 jours       | 0%          |
-| Securite           | 5-7 jours       | 1 jour          | **85%** ✅  |
-| Tests/Qualite      | 10-15 jours     | 8-10 jours      | **30%** ✅  |
-| Documentation      | 2-3 jours       | 1 jour          | **70%** ✅  |
-| Overlay Multi-Sport| 5-6 jours       | 1-2 jours       | **80%** ✅  |
-| **TOTAL**          | **45-60 jours** | **18-25 jours** | **~70%**    |
+| Composant           | Effort Initial  | Effort Restant  | Progression |
+| ------------------- | --------------- | --------------- | ----------- |
+| Hors Connexion      | 3-4 jours       | 1 jour          | **75%** ✅  |
+| Mises a Jour        | 5-7 jours       | 1-2 jours       | **80%** ✅  |
+| Deploiement Videos  | 5-6 jours       | 2-3 jours       | **50%** ✅  |
+| Architecture        | 7-10 jours      | 2-3 jours       | **70%** ✅  |
+| Synchronisation     | 2-3 jours       | 2-3 jours       | 0%          |
+| Securite            | 5-7 jours       | 1 jour          | **85%** ✅  |
+| Tests/Qualite       | 10-15 jours     | 8-10 jours      | **30%** ✅  |
+| Documentation       | 2-3 jours       | 1 jour          | **70%** ✅  |
+| Overlay Multi-Sport | 5-6 jours       | 1-2 jours       | **80%** ✅  |
+| **TOTAL**           | **45-60 jours** | **18-25 jours** | **~70%**    |
 
 ### Ce qui a été fait (25-31 Décembre 2025)
 

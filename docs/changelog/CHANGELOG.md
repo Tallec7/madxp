@@ -1,3 +1,44 @@
+## Architecture Roadmap (2026-02-09 → 2026-02-10)
+
+### Phase 2 — Dead Code Cleanup
+
+- **Suppression** des dossiers obsolètes : `k8s/`, `raspberry/monitoring/`, `raspberry/frontend/`, `server-render/`
+- Correction des 24+ références mortes dans la documentation et CLAUDE.md
+
+### Phase 3 — Winston Logger Migration (central-server)
+
+- **Remplacement** de tous les `console.log` par Winston structured logging
+- Ajout de Correlation ID pour traçabilité distribuée
+- Format JSON structuré en production
+
+### Phase 4A — Admin-server Modularisation (raspberry/admin/)
+
+- **admin-server.js** : 3 970 → ~260 lignes (orchestrateur uniquement)
+- Extraction de 7 services métier (`video.service`, `config.service`, `system.service`, etc.)
+- Extraction de 9 routes Express (factory pattern avec injection de dépendances)
+- Tests Jest avec 60%+ couverture
+
+### Phase 4B — Socket Server Modularisation (raspberry/server/)
+
+- **server.js** : 812 → ~110 lignes (orchestrateur uniquement)
+- Extraction de 5 services (`state`, `buffer`, `license`, `hdmi`, `auth`)
+- Extraction de 6 routes Express + `socket/handlers.js` (18 events)
+- 71 tests Jest (6 suites, 100% pass)
+
+### Phase 4C — Error Handling (central-server)
+
+- Standardisation des réponses d'erreur dans tous les controllers
+- Classes d'erreur typées (`ServiceError`, `ValidationError`, `CacheError`)
+
+### Phase 5 — Repository Pattern Migration (central-server)
+
+- **Migration** de 150 appels `query()` directs → 0 (100% via repositories)
+- Création de 13 repositories : `siteRepository`, `userRepository`, `videoRepository`, `groupRepository`, `alertRepository`, `analyticsRepository`, `sponsorRepository`, `configRepository`, `deploymentRepository`, `advertisingRepository`, `emailRepository`, `notificationRepository`, `agencyRepository`
+- Règle ESLint `no-restricted-imports` bloquant `import { query }` dans les controllers
+- Tous les tests passent (`npm run test:server`)
+
+---
+
 ## [3.8.2](https://github.com/Tallec7/neopro/compare/v3.8.1...v3.8.2) (2026-02-09)
 
 ### Bug Fixes

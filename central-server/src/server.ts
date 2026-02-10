@@ -21,6 +21,7 @@ import { adminOpsService } from './services/admin-ops.service';
 import { alertingService } from './services/alerting.service';
 import { realtimeStatsService } from './services/realtime-stats.service';
 import { predictiveAlertsService } from './services/predictive-alerts.service';
+import { cleanupStaleTempFiles } from './middleware/upload';
 
 import authRoutes from './routes/auth.routes';
 import mfaRoutes from './routes/mfa.routes';
@@ -391,9 +392,10 @@ const startServer = async () => {
     networkAlertsService.start();
     logger.info('Network alerts service started');
 
-    // Demarrer le service d'alertes predictives (Phase 3.1 - Analytics Enhancement)
-    predictiveAlertsService.start();
-    logger.info('Predictive alerts service started');
+    // DISABLED: Alertes prédictives - UI commentée dans le dashboard, cron inutile
+    // TODO: Réactiver quand le dashboard affichera les alertes prédictives (Phase 5)
+    // predictiveAlertsService.start();
+    // logger.info('Predictive alerts service started');
 
     // Initialiser et démarrer le service de stats temps réel
     const io = socketService.getIO();
@@ -417,6 +419,10 @@ const startServer = async () => {
     });
     memoryManagerService.start();
     logger.info('Memory manager started');
+
+    // Nettoyage périodique des fichiers temporaires d'upload abandonnés (toutes les 30 min)
+    const tempCleanupInterval = setInterval(cleanupStaleTempFiles, 30 * 60 * 1000);
+    tempCleanupInterval.unref(); // Ne pas empêcher le shutdown
   } catch (error) {
     logger.error('Failed to initialize dependencies:', error);
     // Ne pas quitter - le serveur reste en mode dégradé et le health check rapportera l'état
@@ -428,7 +434,7 @@ process.on('SIGTERM', async () => {
   schedulerService.stop();
   cronSchedulerService.stop();
   memoryManagerService.stop();
-  predictiveAlertsService.stop();
+  // predictiveAlertsService.stop(); // DISABLED: see start() comment above
   alertingService.cleanup();
   adminOpsService.stopCleanup();
   httpServer.close(async () => {

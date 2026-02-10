@@ -509,7 +509,7 @@ neopro/
 │   ├── sync-agent/                    # Agent synchronisation
 │   └── server/                        # Socket.IO local
 │
-└── server-render/                     # Socket.IO cloud
+└── raspberry/server/                   # Socket.IO cloud
 
 Total: ~50,000 lignes de code
 ```

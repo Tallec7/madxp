@@ -1,5 +1,7 @@
 import * as ftp from 'basic-ftp';
-import { Readable } from 'stream';
+import { Readable, pipeline } from 'stream';
+import { createReadStream } from 'fs';
+import { stat } from 'fs/promises';
 import logger from './logger';
 
 // Configuration FTP Hostinger pour les vidéos
@@ -99,6 +101,140 @@ export const uploadFileToFtp = async (
   } finally {
     client.close();
   }
+};
+
+/**
+ * Upload un fichier vers FTP en streaming depuis le disque (pas de chargement en mémoire).
+ * Utilisé par le disk storage multer pour les fichiers volumineux.
+ */
+export const uploadFileToFtpFromDisk = async (
+  filePath: string,
+  filename: string,
+  _contentType: string
+): Promise<{ path: string; url: string } | null> => {
+  if (!isFtpConfigured()) {
+    logger.error('FTP not configured - check FTP_HOST, FTP_USER, FTP_PASSWORD, and FTP_PUBLIC_URL');
+    return null;
+  }
+
+  const client = new ftp.Client();
+  client.ftp.verbose = process.env.NODE_ENV === 'development';
+
+  try {
+    const fileStats = await stat(filePath);
+    logger.info('Connecting to FTP server (streaming):', { host: ftpConfig.host, user: ftpConfig.user });
+
+    await client.access({
+      host: ftpConfig.host,
+      port: ftpConfig.port,
+      user: ftpConfig.user,
+      password: ftpConfig.password,
+      secure: ftpConfig.secure,
+    });
+
+    logger.info('FTP connected, streaming file from disk:', { filename, size: fileStats.size });
+
+    // Stream directement depuis le disque — pas de buffer en mémoire
+    await client.uploadFrom(filePath, filename);
+
+    const url = getFtpPublicUrl(filename);
+    logger.info('File streamed to FTP successfully:', { filename, url });
+
+    return { path: filename, url };
+  } catch (error) {
+    logger.error('Error streaming file to FTP:', error);
+    return null;
+  } finally {
+    client.close();
+  }
+};
+
+/**
+ * Upload un fichier vers FTP depuis le disque avec vérification post-upload.
+ * Version streaming de uploadFileToFtpWithVerification.
+ */
+export const uploadFileToFtpFromDiskWithVerification = async (
+  filePath: string,
+  fileSize: number,
+  filename: string,
+  contentType: string,
+  maxRetries: number = 3
+): Promise<{
+  path: string;
+  url: string;
+  verified: boolean;
+  actualSize: number | null;
+} | null> => {
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    attempt++;
+
+    const uploadResult = await uploadFileToFtpFromDisk(filePath, filename, contentType);
+
+    if (!uploadResult) {
+      logger.warn('FTP streaming upload failed, retrying...', { filename, attempt, maxRetries });
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      return null;
+    }
+
+    // Vérifier que le fichier est bien présent et a la bonne taille
+    const verification = await verifyFtpFileExists(filename, 'video');
+
+    if (!verification.exists) {
+      logger.warn('FTP verification failed: file not found after streaming upload', {
+        filename,
+        attempt,
+        maxRetries,
+      });
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      return {
+        ...uploadResult,
+        verified: false,
+        actualSize: null,
+      };
+    }
+
+    // Vérifier la taille
+    if (verification.size !== null && verification.size !== fileSize) {
+      logger.warn('FTP verification failed: size mismatch after streaming upload', {
+        filename,
+        expected: fileSize,
+        actual: verification.size,
+        attempt,
+        maxRetries,
+      });
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      return {
+        ...uploadResult,
+        verified: false,
+        actualSize: verification.size,
+      };
+    }
+
+    logger.info('FTP streaming upload with verification successful', {
+      filename,
+      size: verification.size,
+      attempts: attempt,
+    });
+
+    return {
+      ...uploadResult,
+      verified: true,
+      actualSize: verification.size,
+    };
+  }
+
+  return null;
 };
 
 export const deleteFileFromFtp = async (filename: string): Promise<boolean> => {

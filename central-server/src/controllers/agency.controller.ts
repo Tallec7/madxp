@@ -1,36 +1,14 @@
 import { Response } from 'express';
-import { query } from '../config/database';
-import { AuthRequest, Agency } from '../types';
+import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { validate as validateUuid } from 'uuid';
 import { isAdmin } from '../middleware/auth';
+import { agencyRepository } from '../repositories';
 
 // ============================================================================
 // AGENCY CONTROLLER
 // Gestion des agences et accès portail agence
 // ============================================================================
-
-interface AgencySiteRow {
-  [key: string]: unknown;
-  site_id: string;
-  site_name: string;
-  club_name: string;
-  location: Record<string, unknown>;
-  status: string;
-  last_seen_at: Date | null;
-  software_version: string | null;
-  videos_played_30d: number;
-  screen_time_30d: number;
-}
-
-interface AgencyDashboardStats {
-  [key: string]: unknown;
-  total_sites: number;
-  online_sites: number;
-  offline_sites: number;
-  total_videos_played_30d: number;
-  total_screen_time_30d: number;
-}
 
 // ============================================================================
 // AGENCY CRUD (Admin only)
@@ -42,24 +20,26 @@ interface AgencyDashboardStats {
  */
 export const listAgencies = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    let result;
-
     if (isAdmin(req.user?.role || 'viewer')) {
       // Admin voit toutes les agences avec compteur de sites
-      result = await query<Agency>(
-        `SELECT a.id, a.name, a.description, a.logo_url, a.contact_name, a.contact_email, a.contact_phone, a.status, a.created_at,
-                (SELECT COUNT(*) FROM agency_sites WHERE agency_id = a.id) as site_count
-         FROM agencies a
-         ORDER BY a.name ASC`
-      );
+      const agencies = await agencyRepository.findAllWithSiteCount();
+      res.json({
+        success: true,
+        data: {
+          agencies,
+          total: agencies.length,
+        },
+      });
     } else if (req.user?.role === 'agency' && req.user?.agency_id) {
       // Agence voit seulement la sienne
-      result = await query<Agency>(
-        `SELECT id, name, description, logo_url, contact_name, contact_email, contact_phone, status, created_at
-         FROM agencies
-         WHERE id = $1`,
-        [req.user.agency_id]
-      );
+      const agencies = await agencyRepository.findByIdLimited(req.user.agency_id);
+      res.json({
+        success: true,
+        data: {
+          agencies,
+          total: agencies.length,
+        },
+      });
     } else {
       res.status(403).json({
         success: false,
@@ -67,14 +47,6 @@ export const listAgencies = async (req: AuthRequest, res: Response): Promise<voi
       });
       return;
     }
-
-    res.json({
-      success: true,
-      data: {
-        agencies: result.rows,
-        total: result.rowCount || 0,
-      },
-    });
   } catch (error) {
     logger.error('Error listing agencies:', error);
     res.status(500).json({
@@ -109,12 +81,9 @@ export const getAgency = async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    const result = await query<Agency>(
-      `SELECT * FROM agencies WHERE id = $1`,
-      [id]
-    );
+    const agency = await agencyRepository.findAgencyById(id);
 
-    if (result.rowCount === 0) {
+    if (!agency) {
       res.status(404).json({
         success: false,
         error: 'Agence non trouvée',
@@ -124,7 +93,7 @@ export const getAgency = async (req: AuthRequest, res: Response): Promise<void> 
 
     res.json({
       success: true,
-      data: { agency: result.rows[0] },
+      data: { agency },
     });
   } catch (error) {
     logger.error('Error getting agency:', error);
@@ -151,18 +120,22 @@ export const createAgency = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    const result = await query<Agency>(
-      `INSERT INTO agencies (name, description, logo_url, contact_name, contact_email, contact_phone, address, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [name, description || null, logo_url || null, contact_name || null, contact_email || null, contact_phone || null, address || null, metadata || {}]
-    );
+    const agency = await agencyRepository.createAgency({
+      name,
+      description,
+      logo_url,
+      contact_name,
+      contact_email,
+      contact_phone,
+      address,
+      metadata,
+    });
 
-    logger.info('Agency created', { agencyId: result.rows[0].id, name, by: req.user?.email });
+    logger.info('Agency created', { agencyId: agency.id, name, by: req.user?.email });
 
     res.status(201).json({
       success: true,
-      data: result.rows[0],
+      data: agency,
     });
   } catch (error) {
     logger.error('Error creating agency:', error);
@@ -190,24 +163,19 @@ export const updateAgency = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    const result = await query<Agency>(
-      `UPDATE agencies
-       SET name = COALESCE($1, name),
-           description = COALESCE($2, description),
-           logo_url = COALESCE($3, logo_url),
-           contact_name = COALESCE($4, contact_name),
-           contact_email = COALESCE($5, contact_email),
-           contact_phone = COALESCE($6, contact_phone),
-           address = COALESCE($7, address),
-           status = COALESCE($8, status),
-           metadata = COALESCE($9, metadata),
-           updated_at = NOW()
-       WHERE id = $10
-       RETURNING *`,
-      [name, description, logo_url, contact_name, contact_email, contact_phone, address, status, metadata, id]
-    );
+    const agency = await agencyRepository.updateAgency(id, {
+      name,
+      description,
+      logo_url,
+      contact_name,
+      contact_email,
+      contact_phone,
+      address,
+      status,
+      metadata,
+    });
 
-    if (result.rowCount === 0) {
+    if (!agency) {
       res.status(404).json({
         success: false,
         error: 'Agence non trouvée',
@@ -219,7 +187,7 @@ export const updateAgency = async (req: AuthRequest, res: Response): Promise<voi
 
     res.json({
       success: true,
-      data: result.rows[0],
+      data: agency,
     });
   } catch (error) {
     logger.error('Error updating agency:', error);
@@ -246,9 +214,9 @@ export const deleteAgency = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    const result = await query(`DELETE FROM agencies WHERE id = $1`, [id]);
+    const deleted = await agencyRepository.deleteAgency(id);
 
-    if (result.rowCount === 0) {
+    if (!deleted) {
       res.status(404).json({
         success: false,
         error: 'Agence non trouvée',
@@ -301,8 +269,8 @@ export const addSitesToAgency = async (req: AuthRequest, res: Response): Promise
     }
 
     // Vérifier que l'agence existe
-    const agencyCheck = await query(`SELECT id FROM agencies WHERE id = $1`, [id]);
-    if (agencyCheck.rowCount === 0) {
+    const agencyExists = await agencyRepository.agencyExists(id);
+    if (!agencyExists) {
       res.status(404).json({
         success: false,
         error: 'Agence non trouvée',
@@ -310,13 +278,10 @@ export const addSitesToAgency = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    // Insérer les associations
-    const values = site_ids
-      .filter(sid => validateUuid(sid))
-      .map((sid, idx) => `($1, $${idx + 2}, $${site_ids.length + 2})`)
-      .join(', ');
+    // Filtrer les UUIDs valides
+    const validSiteIds = site_ids.filter((sid: string) => validateUuid(sid));
 
-    if (!values) {
+    if (validSiteIds.length === 0) {
       res.status(400).json({
         success: false,
         error: 'Aucun site_id valide fourni',
@@ -324,14 +289,8 @@ export const addSitesToAgency = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    const params = [id, ...site_ids.filter(sid => validateUuid(sid)), req.user?.id];
-
-    await query(
-      `INSERT INTO agency_sites (agency_id, site_id, added_by)
-       VALUES ${values}
-       ON CONFLICT (agency_id, site_id) DO NOTHING`,
-      params
-    );
+    // Insérer les associations
+    await agencyRepository.addSites(id, validSiteIds, req.user?.id);
 
     logger.info('Sites added to agency', { agencyId: id, siteCount: site_ids.length, by: req.user?.email });
 
@@ -365,8 +324,8 @@ export const getAgencySitesAdmin = async (req: AuthRequest, res: Response): Prom
     }
 
     // Vérifier que l'agence existe
-    const agencyCheck = await query(`SELECT id, name FROM agencies WHERE id = $1`, [id]);
-    if (agencyCheck.rowCount === 0) {
+    const agency = await agencyRepository.findAgencyIdName(id);
+    if (!agency) {
       res.status(404).json({
         success: false,
         error: 'Agence non trouvée',
@@ -375,21 +334,14 @@ export const getAgencySitesAdmin = async (req: AuthRequest, res: Response): Prom
     }
 
     // Récupérer les sites associés
-    const result = await query(
-      `SELECT s.id, s.site_name, s.club_name, s.status, s.location
-       FROM agency_sites as2
-       JOIN sites s ON s.id = as2.site_id
-       WHERE as2.agency_id = $1
-       ORDER BY s.club_name ASC`,
-      [id]
-    );
+    const sites = await agencyRepository.findAdminAgencySites(id);
 
     res.json({
       success: true,
       data: {
-        agency: agencyCheck.rows[0],
-        sites: result.rows,
-        total: result.rowCount || 0,
+        agency,
+        sites,
+        total: sites.length,
       },
     });
   } catch (error) {
@@ -417,12 +369,9 @@ export const removeSiteFromAgency = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    const result = await query(
-      `DELETE FROM agency_sites WHERE agency_id = $1 AND site_id = $2`,
-      [id, siteId]
-    );
+    const removed = await agencyRepository.removeSite(id, siteId);
 
-    if (result.rowCount === 0) {
+    if (!removed) {
       res.status(404).json({
         success: false,
         error: 'Association non trouvée',
@@ -478,13 +427,9 @@ export const getAgencyDashboard = async (req: AuthRequest, res: Response): Promi
     }
 
     // Récupérer les infos de l'agence
-    const agencyResult = await query<Agency>(
-      `SELECT id, name, logo_url, status, created_at
-       FROM agencies WHERE id = $1`,
-      [agencyId]
-    );
+    const agency = await agencyRepository.findDashboardAgency(agencyId);
 
-    if (agencyResult.rowCount === 0) {
+    if (!agency) {
       res.status(404).json({
         success: false,
         error: 'Agence non trouvée',
@@ -492,44 +437,11 @@ export const getAgencyDashboard = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    const agency = agencyResult.rows[0];
-
     // Stats globales
-    const statsResult = await query<AgencyDashboardStats>(
-      `SELECT
-        COUNT(DISTINCT s.id) as total_sites,
-        COUNT(DISTINCT CASE WHEN s.status = 'online' THEN s.id END) as online_sites,
-        COUNT(DISTINCT CASE WHEN s.status = 'offline' THEN s.id END) as offline_sites,
-        COALESCE(SUM(cds.videos_played), 0) as total_videos_played_30d,
-        COALESCE(SUM(cds.screen_time_seconds), 0) as total_screen_time_30d
-       FROM agency_sites as2
-       JOIN sites s ON s.id = as2.site_id
-       LEFT JOIN club_daily_stats cds ON cds.site_id = s.id
-         AND cds.date >= CURRENT_DATE - INTERVAL '30 days'
-       WHERE as2.agency_id = $1`,
-      [agencyId]
-    );
-
-    const stats = statsResult.rows[0] || {
-      total_sites: 0,
-      online_sites: 0,
-      offline_sites: 0,
-      total_videos_played_30d: 0,
-      total_screen_time_30d: 0,
-    };
+    const stats = await agencyRepository.findDashboardStats(agencyId);
 
     // Alertes récentes sur les sites de l'agence
-    const alertsResult = await query(
-      `SELECT a.id, a.site_id, s.site_name, a.alert_type, a.severity, a.message, a.created_at
-       FROM alerts a
-       JOIN sites s ON s.id = a.site_id
-       JOIN agency_sites as2 ON as2.site_id = s.id
-       WHERE as2.agency_id = $1
-         AND a.status = 'active'
-       ORDER BY a.created_at DESC
-       LIMIT 10`,
-      [agencyId]
-    );
+    const recentAlerts = await agencyRepository.findDashboardAlerts(agencyId);
 
     res.json({
       success: true,
@@ -547,7 +459,7 @@ export const getAgencyDashboard = async (req: AuthRequest, res: Response): Promi
           total_videos_played_30d: parseInt(String(stats.total_videos_played_30d)) || 0,
           total_screen_time_30d: parseInt(String(stats.total_screen_time_30d)) || 0,
         },
-        recent_alerts: alertsResult.rows,
+        recent_alerts: recentAlerts,
       },
     });
   } catch (error) {
@@ -580,37 +492,12 @@ export const getAgencySites = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    const result = await query<AgencySiteRow>(
-      `SELECT
-        s.id as site_id,
-        s.site_name,
-        s.club_name,
-        s.location,
-        s.status,
-        s.last_seen_at,
-        s.software_version,
-        COALESCE(stats.videos_played, 0) as videos_played_30d,
-        COALESCE(stats.screen_time, 0) as screen_time_30d
-       FROM agency_sites as2
-       JOIN sites s ON s.id = as2.site_id
-       LEFT JOIN (
-         SELECT
-           site_id,
-           SUM(videos_played) as videos_played,
-           SUM(screen_time_seconds) as screen_time
-         FROM club_daily_stats
-         WHERE date >= CURRENT_DATE - INTERVAL '30 days'
-         GROUP BY site_id
-       ) stats ON stats.site_id = s.id
-       WHERE as2.agency_id = $1
-       ORDER BY s.club_name ASC`,
-      [agencyId]
-    );
+    const sites = await agencyRepository.findPortalSites(agencyId);
 
     res.json({
       success: true,
       data: {
-        sites: result.rows.map(r => ({
+        sites: sites.map(r => ({
           site_id: r.site_id,
           site_name: r.site_name,
           club_name: r.club_name,
@@ -621,7 +508,7 @@ export const getAgencySites = async (req: AuthRequest, res: Response): Promise<v
           videos_played_30d: parseInt(String(r.videos_played_30d)) || 0,
           screen_time_30d: parseInt(String(r.screen_time_30d)) || 0,
         })),
-        total: result.rowCount || 0,
+        total: sites.length,
       },
     });
   } catch (error) {
@@ -659,12 +546,9 @@ export const getAgencySiteDetails = async (req: AuthRequest, res: Response): Pro
     }
 
     // Vérifier que le site appartient à l'agence
-    const accessCheck = await query(
-      `SELECT 1 FROM agency_sites WHERE agency_id = $1 AND site_id = $2`,
-      [agencyId, siteId]
-    );
+    const hasAccess = await agencyRepository.sitebelongsToAgency(agencyId, siteId);
 
-    if (accessCheck.rowCount === 0) {
+    if (!hasAccess) {
       res.status(403).json({
         success: false,
         error: 'Accès non autorisé à ce site',
@@ -673,16 +557,9 @@ export const getAgencySiteDetails = async (req: AuthRequest, res: Response): Pro
     }
 
     // Récupérer les détails du site
-    const siteResult = await query(
-      `SELECT s.*,
-              (SELECT json_agg(json_build_object('id', a.id, 'type', a.alert_type, 'severity', a.severity, 'message', a.message, 'created_at', a.created_at))
-               FROM alerts a WHERE a.site_id = s.id AND a.status = 'active') as active_alerts
-       FROM sites s
-       WHERE s.id = $1`,
-      [siteId]
-    );
+    const site = await agencyRepository.findSiteWithAlerts(siteId);
 
-    if (siteResult.rowCount === 0) {
+    if (!site) {
       res.status(404).json({
         success: false,
         error: 'Site non trouvé',
@@ -691,42 +568,22 @@ export const getAgencySiteDetails = async (req: AuthRequest, res: Response): Pro
     }
 
     // Stats 30 jours
-    const statsResult = await query(
-      `SELECT
-        SUM(videos_played) as total_videos,
-        SUM(screen_time_seconds) as total_screen_time,
-        AVG(uptime_percent) as avg_uptime,
-        COUNT(*) as active_days
-       FROM club_daily_stats
-       WHERE site_id = $1
-         AND date >= CURRENT_DATE - INTERVAL '30 days'`,
-      [siteId]
-    );
+    const stats30d = await agencyRepository.findSiteStats30d(siteId);
 
     // Tendances 7 jours
-    const trendsResult = await query(
-      `SELECT
-        date,
-        videos_played,
-        screen_time_seconds
-       FROM club_daily_stats
-       WHERE site_id = $1
-         AND date >= CURRENT_DATE - INTERVAL '7 days'
-       ORDER BY date ASC`,
-      [siteId]
-    );
+    const trends = await agencyRepository.findSiteTrends7d(siteId);
 
     res.json({
       success: true,
       data: {
-        site: siteResult.rows[0],
+        site,
         stats_30d: {
-          total_videos: parseInt(String(statsResult.rows[0]?.total_videos)) || 0,
-          total_screen_time: parseInt(String(statsResult.rows[0]?.total_screen_time)) || 0,
-          avg_uptime: parseFloat(String(statsResult.rows[0]?.avg_uptime)) || 0,
-          active_days: parseInt(String(statsResult.rows[0]?.active_days)) || 0,
+          total_videos: parseInt(String(stats30d.total_videos)) || 0,
+          total_screen_time: parseInt(String(stats30d.total_screen_time)) || 0,
+          avg_uptime: parseFloat(String(stats30d.avg_uptime)) || 0,
+          active_days: parseInt(String(stats30d.active_days)) || 0,
         },
-        trends: trendsResult.rows,
+        trends,
       },
     });
   } catch (error) {
@@ -771,12 +628,9 @@ export const getAgencyStats = async (req: AuthRequest, res: Response): Promise<v
     }
 
     // Sites de l'agence
-    const sitesResult = await query(
-      `SELECT site_id FROM agency_sites WHERE agency_id = $1`,
-      [agencyId]
-    );
+    const siteIds = await agencyRepository.findAgencySiteIds(agencyId);
 
-    if (sitesResult.rowCount === 0) {
+    if (siteIds.length === 0) {
       res.json({
         success: true,
         data: {
@@ -794,69 +648,26 @@ export const getAgencyStats = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    const siteIds = sitesResult.rows.map(r => r.site_id);
-
     // Summary
-    const summaryResult = await query(
-      `SELECT
-        COUNT(DISTINCT site_id) as total_sites,
-        SUM(videos_played) as total_videos,
-        SUM(screen_time_seconds) as total_screen_time,
-        ROUND(AVG(uptime_percent)::numeric, 1) as avg_uptime
-       FROM club_daily_stats
-       WHERE site_id = ANY($1::uuid[])
-         AND date >= $2::date
-         AND date <= $3::date`,
-      [siteIds, fromDate, toDate]
-    );
+    const summary = await agencyRepository.findStatsSummary(siteIds, fromDate, toDate);
 
     // Par site
-    const bySiteResult = await query(
-      `SELECT
-        s.id as site_id,
-        s.site_name,
-        s.club_name,
-        SUM(cds.videos_played) as videos_played,
-        SUM(cds.screen_time_seconds) as screen_time,
-        ROUND(AVG(cds.uptime_percent)::numeric, 1) as avg_uptime
-       FROM sites s
-       JOIN club_daily_stats cds ON cds.site_id = s.id
-       WHERE s.id = ANY($1::uuid[])
-         AND cds.date >= $2::date
-         AND cds.date <= $3::date
-       GROUP BY s.id, s.site_name, s.club_name
-       ORDER BY videos_played DESC`,
-      [siteIds, fromDate, toDate]
-    );
+    const bySiteRows = await agencyRepository.findStatsBySite(siteIds, fromDate, toDate);
 
     // Tendances
-    const trendsResult = await query(
-      `SELECT
-        DATE(date) as date,
-        SUM(videos_played) as videos_played,
-        SUM(screen_time_seconds) as screen_time
-       FROM club_daily_stats
-       WHERE site_id = ANY($1::uuid[])
-         AND date >= $2::date
-         AND date <= $3::date
-       GROUP BY DATE(date)
-       ORDER BY date ASC`,
-      [siteIds, fromDate, toDate]
-    );
-
-    const summary = summaryResult.rows[0];
+    const trendRows = await agencyRepository.findStatsTrends(siteIds, fromDate, toDate);
 
     res.json({
       success: true,
       data: {
         period: { from: fromDate, to: toDate },
         summary: {
-          total_sites: parseInt(String(summary?.total_sites)) || 0,
-          total_videos: parseInt(String(summary?.total_videos)) || 0,
-          total_screen_time: parseInt(String(summary?.total_screen_time)) || 0,
-          avg_uptime: parseFloat(String(summary?.avg_uptime)) || 0,
+          total_sites: parseInt(String(summary.total_sites)) || 0,
+          total_videos: parseInt(String(summary.total_videos)) || 0,
+          total_screen_time: parseInt(String(summary.total_screen_time)) || 0,
+          avg_uptime: parseFloat(String(summary.avg_uptime)) || 0,
         },
-        by_site: bySiteResult.rows.map(r => ({
+        by_site: bySiteRows.map(r => ({
           site_id: r.site_id,
           site_name: r.site_name,
           club_name: r.club_name,
@@ -864,7 +675,7 @@ export const getAgencyStats = async (req: AuthRequest, res: Response): Promise<v
           screen_time: parseInt(String(r.screen_time)) || 0,
           avg_uptime: parseFloat(String(r.avg_uptime)) || 0,
         })),
-        trends: trendsResult.rows.map(r => ({
+        trends: trendRows.map(r => ({
           date: r.date,
           videos_played: parseInt(String(r.videos_played)) || 0,
           screen_time: parseInt(String(r.screen_time)) || 0,

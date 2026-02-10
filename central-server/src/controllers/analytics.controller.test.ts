@@ -1,10 +1,49 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 
-// Mock the database module BEFORE importing controller
-jest.mock('../config/database', () => ({
-  query: jest.fn(),
-}));
+// Mock repositories BEFORE importing controller
+jest.mock('../repositories', () => {
+  const mockAnalyticsRepository = {
+    getLatestMetrics: jest.fn(),
+    getHeartbeatStats30d: jest.fn(),
+    getAlertStats: jest.fn(),
+    get24hAverages: jest.fn(),
+    getHeartbeatCount24h: jest.fn(),
+    getAlertCount24h: jest.fn(),
+    getDailyHeartbeats: jest.fn(),
+    getClubAlerts: jest.fn(),
+    getUsageStats: jest.fn(),
+    getDailyStats: jest.fn(),
+    getCategoryStats: jest.fn(),
+    getTopVideos: jest.fn(),
+    getDashboardHealth: jest.fn(),
+    getDashboardUsage: jest.fn(),
+    getDashboardCategories: jest.fn(),
+    getDashboardTopVideos: jest.fn(),
+    getDashboardAlerts: jest.fn(),
+    recordVideoPlays: jest.fn(),
+    startSession: jest.fn(),
+    endSession: jest.fn(),
+    calculateDailyStats: jest.fn(),
+    getSiteCounts: jest.fn(),
+    getPlayCounts: jest.fn(),
+    getFleetAvailability: jest.fn(),
+    getSitesSummary: jest.fn(),
+    exportVideoPlays: jest.fn(),
+    exportDailyStats: jest.fn(),
+    exportMetrics: jest.fn(),
+  };
+
+  const mockSiteRepository = {
+    findById: jest.fn(),
+    exists: jest.fn(),
+  };
+
+  return {
+    analyticsRepository: mockAnalyticsRepository,
+    siteRepository: mockSiteRepository,
+  };
+});
 
 jest.mock('../config/logger', () => ({
   info: jest.fn(),
@@ -43,7 +82,11 @@ import {
   calculateDailyStats,
   getAnalyticsOverview,
 } from './analytics.controller';
-import { query } from '../config/database';
+import { analyticsRepository, siteRepository } from '../repositories';
+
+// Type the mocked repositories for convenience
+const mockedAnalytics = analyticsRepository as jest.Mocked<typeof analyticsRepository>;
+const mockedSite = siteRepository as unknown as jest.Mocked<Pick<typeof siteRepository, 'findById' | 'exists'>>;
 
 // Helper to create mock response
 const createMockResponse = (): Response => {
@@ -54,10 +97,6 @@ const createMockResponse = (): Response => {
     send: jest.fn().mockReturnThis(),
   };
   return res as Response;
-};
-
-const mockQueryResponses = (responses: Array<{ rows?: any[] }>) => {
-  responses.forEach((response) => (query as jest.Mock).mockResolvedValueOnce(response));
 };
 
 // Helper to create authenticated request
@@ -80,53 +119,53 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      mockQueryResponses([
-        {
-          rows: [
-            {
-              id: 'site-123',
-              site_name: 'Site 123',
-              club_name: 'Club 123',
-              status: 'online',
-              last_seen_at: '2025-12-01T00:00:00Z',
-            },
-          ],
-        },
-        {
-          rows: [
-            {
-              cpu_usage: 25,
-              memory_usage: 35,
-              temperature: 65,
-              disk_usage: 45,
-              uptime: 1234,
-              recorded_at: '2025-12-01T00:00:00Z',
-            },
-          ],
-        },
-        {
-          rows: [
-            {
-              heartbeat_count: '2000',
-              first_heartbeat: '2025-11-01T00:00:00Z',
-              last_heartbeat: '2025-12-01T00:00:00Z',
-            },
-          ],
-        },
-        { rows: [{ active_alerts: '1', alerts_last_30d: '5' }] },
-        {
-          rows: [
-            {
-              avg_cpu: 22,
-              avg_memory: 33,
-              avg_temperature: 45,
-              max_temperature: 70,
-            },
-          ],
-        },
-        { rows: [{ heartbeat_count: '1000' }] },
-        { rows: [{ alerts_24h: '3' }] },
-      ]);
+      mockedSite.findById.mockResolvedValueOnce({
+        id: 'site-123',
+        site_name: 'Site 123',
+        club_name: 'Club 123',
+        status: 'online',
+        last_seen_at: new Date('2025-12-01T00:00:00Z'),
+        location: null,
+        sports: null,
+        software_version: null,
+        hardware_model: 'pi4',
+        api_key: 'key-123',
+        metadata: {},
+        created_at: new Date(),
+        updated_at: new Date(),
+        pending_config_version_id: null,
+      });
+
+      mockedAnalytics.getLatestMetrics.mockResolvedValueOnce({
+        cpu_usage: 25,
+        memory_usage: 35,
+        temperature: 65,
+        disk_usage: 45,
+        uptime: 1234,
+        recorded_at: new Date('2025-12-01T00:00:00Z'),
+      });
+
+      mockedAnalytics.getHeartbeatStats30d.mockResolvedValueOnce({
+        heartbeat_count: '2000',
+        first_heartbeat: new Date('2025-11-01T00:00:00Z'),
+        last_heartbeat: new Date('2025-12-01T00:00:00Z'),
+      });
+
+      mockedAnalytics.getAlertStats.mockResolvedValueOnce({
+        active_alerts: '1',
+        alerts_last_30d: '5',
+      });
+
+      mockedAnalytics.get24hAverages.mockResolvedValueOnce({
+        avg_cpu: 22,
+        avg_memory: 33,
+        avg_temperature: 45,
+        max_temperature: 70,
+      });
+
+      mockedAnalytics.getHeartbeatCount24h.mockResolvedValueOnce(1000);
+
+      mockedAnalytics.getAlertCount24h.mockResolvedValueOnce(3);
 
       await getClubHealth(req, res);
 
@@ -145,7 +184,7 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ params: { siteId: 'nonexistent' } });
       const res = createMockResponse();
 
-      mockQueryResponses([{ rows: [] }]);
+      mockedSite.findById.mockResolvedValueOnce(null);
 
       await getClubHealth(req, res);
 
@@ -157,7 +196,7 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockedSite.findById.mockRejectedValueOnce(new Error('DB Error'));
 
       await getClubHealth(req, res);
 
@@ -173,12 +212,8 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      mockQueryResponses([
-        {
-          rows: [
-            { date: '2025-12-01', heartbeat_count: '2880', avg_cpu: 45.5, avg_temp: 52.3 },
-          ],
-        },
+      mockedAnalytics.getDailyHeartbeats.mockResolvedValueOnce([
+        { date: new Date('2025-12-01'), heartbeat_count: '2880', avg_cpu: 45.5, avg_temp: 52.3 },
       ]);
 
       await getClubAvailability(req, res);
@@ -187,7 +222,7 @@ describe('Analytics Controller', () => {
         expect.objectContaining({
           availability: [
             expect.objectContaining({
-              date: '2025-12-01',
+              date: expect.anything(),
               online_minutes: 1440,
               availability_percent: 100,
             }),
@@ -203,21 +238,18 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      mockQueryResponses([{ rows: [] }]);
+      mockedAnalytics.getDailyHeartbeats.mockResolvedValueOnce([]);
 
       await getClubAvailability(req, res);
 
-      expect(query).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.arrayContaining(['site-123', 90])
-      );
+      expect(mockedAnalytics.getDailyHeartbeats).toHaveBeenCalledWith('site-123', 90);
     });
 
     it('should return 500 on database error', async () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockedAnalytics.getDailyHeartbeats.mockRejectedValueOnce(new Error('DB Error'));
 
       await getClubAvailability(req, res);
 
@@ -230,19 +262,15 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      mockQueryResponses([
+      mockedAnalytics.getClubAlerts.mockResolvedValueOnce([
         {
-          rows: [
-            {
-              id: 'alert-1',
-              alert_type: 'temperature',
-              severity: 'warning',
-              message: 'Trop chaud',
-              status: 'active',
-              created_at: '2025-12-01T00:00:00Z',
-              resolved_at: null,
-            },
-          ],
+          id: 'alert-1',
+          type: 'temperature',
+          severity: 'warning',
+          message: 'Trop chaud',
+          status: 'active',
+          created_at: new Date('2025-12-01T00:00:00Z'),
+          resolved_at: null,
         },
       ]);
 
@@ -264,13 +292,14 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      mockQueryResponses([{ rows: [] }]);
+      mockedAnalytics.getClubAlerts.mockResolvedValueOnce([]);
 
       await getClubAlerts(req, res);
 
-      expect(query).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.arrayContaining(['site-123', 30, 'active', 'critical'])
+      expect(mockedAnalytics.getClubAlerts).toHaveBeenCalledWith(
+        'site-123',
+        30,
+        { status: 'active', severity: 'critical', limit: 50 }
       );
     });
 
@@ -278,7 +307,7 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockedAnalytics.getClubAlerts.mockRejectedValueOnce(new Error('DB Error'));
 
       await getClubAlerts(req, res);
 
@@ -296,9 +325,8 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [{ id: 'site-123' }] })
-        .mockResolvedValue({ rows: [] });
+      mockedSite.exists.mockResolvedValueOnce(true);
+      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce(undefined);
 
       await recordVideoPlays(req, res);
 
@@ -320,14 +348,15 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [{ id: 'site-123' }] })
-        .mockResolvedValue({ rows: [] });
+      mockedSite.exists.mockResolvedValueOnce(true);
+      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce(undefined);
 
       await recordVideoPlays(req, res);
 
-      // First call checks site, second call inserts play
-      expect((query as jest.Mock).mock.calls[1][1][1]).toBeNull();
+      // Verify that recordVideoPlays was called with items where sessionId is empty string
+      // (invalid UUIDs are replaced with null -> then coerced to empty string)
+      const callArgs = mockedAnalytics.recordVideoPlays.mock.calls[0][0];
+      expect(callArgs[0].sessionId).toBe('');
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ success: true })
       );
@@ -349,7 +378,7 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      mockedSite.exists.mockResolvedValueOnce(false);
 
       await recordVideoPlays(req, res);
 
@@ -362,7 +391,7 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockedSite.exists.mockRejectedValueOnce(new Error('DB Error'));
 
       await recordVideoPlays(req, res);
 
@@ -377,8 +406,9 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{ id: 'session-123', started_at: new Date() }],
+      mockedAnalytics.startSession.mockResolvedValueOnce({
+        id: 'session-123',
+        started_at: new Date(),
       });
 
       await manageSession(req, res);
@@ -394,8 +424,14 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{ id: 'session-123', ended_at: new Date(), duration_seconds: 3600 }],
+      mockedAnalytics.endSession.mockResolvedValueOnce({
+        id: 'session-123',
+        started_at: new Date(),
+        ended_at: new Date(),
+        duration_seconds: 3600,
+        videos_played: null,
+        manual_triggers: null,
+        auto_plays: null,
       });
 
       await manageSession(req, res);
@@ -432,7 +468,7 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      mockedAnalytics.endSession.mockResolvedValueOnce(null);
 
       await manageSession(req, res);
 
@@ -445,7 +481,7 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockedAnalytics.startSession.mockRejectedValueOnce(new Error('DB Error'));
 
       await manageSession(req, res);
 
@@ -461,9 +497,9 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{ played_at: '2025-12-01', video_filename: 'video1.mp4', category: 'sponsors' }],
-      });
+      mockedAnalytics.exportVideoPlays.mockResolvedValueOnce([
+        { played_at: '2025-12-01', video_filename: 'video1.mp4', category: 'sponsors' },
+      ]);
 
       await exportClubData(req, res);
 
@@ -478,9 +514,9 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{ date: '2025-12-01', videos: '50' }],
-      });
+      mockedAnalytics.exportDailyStats.mockResolvedValueOnce([
+        { date: '2025-12-01', videos: '50' },
+      ]);
 
       await exportClubData(req, res);
 
@@ -494,9 +530,9 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{ recorded_at: new Date(), cpu_usage: 45 }],
-      });
+      mockedAnalytics.exportMetrics.mockResolvedValueOnce([
+        { recorded_at: new Date().toISOString(), cpu_usage: 45 },
+      ]);
 
       await exportClubData(req, res);
 
@@ -522,7 +558,7 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      mockedAnalytics.exportVideoPlays.mockResolvedValueOnce([]);
 
       await exportClubData(req, res);
 
@@ -536,7 +572,7 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockedAnalytics.exportVideoPlays.mockRejectedValueOnce(new Error('DB Error'));
 
       await exportClubData(req, res);
 
@@ -551,26 +587,19 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      mockQueryResponses([
-        {
-          rows: [
-            {
-              screen_time_seconds: '3600',
-              videos_played: '50',
-              unique_videos: '10',
-              sessions_count: '5',
-              active_days: '4',
-              manual_triggers: '2',
-              auto_plays: '3',
-              avg_completion: '85.2',
-            },
-          ],
-        },
-        {
-          rows: [
-            { date: '2025-12-01', screen_time: '1800', videos: '25' },
-          ],
-        },
+      mockedAnalytics.getUsageStats.mockResolvedValueOnce({
+        screen_time_seconds: '3600',
+        videos_played: '50',
+        unique_videos: '10',
+        sessions_count: '5',
+        active_days: '4',
+        manual_triggers: '2',
+        auto_plays: '3',
+        avg_completion: 85.2,
+      });
+
+      mockedAnalytics.getDailyStats.mockResolvedValueOnce([
+        { date: new Date('2025-12-01'), screen_time: '1800', videos: '25' },
       ]);
 
       await getClubUsage(req, res);
@@ -593,31 +622,26 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      mockQueryResponses([
-        {
-          rows: [
-            {
-              screen_time_seconds: '0',
-              videos_played: '0',
-              unique_videos: '0',
-              sessions_count: '0',
-              active_days: '0',
-              manual_triggers: '0',
-              auto_plays: '0',
-              avg_completion: null,
-            },
-          ],
-        },
-        {
-          rows: [],
-        },
-      ]);
+      mockedAnalytics.getUsageStats.mockResolvedValueOnce({
+        screen_time_seconds: '0',
+        videos_played: '0',
+        unique_videos: '0',
+        sessions_count: '0',
+        active_days: '0',
+        manual_triggers: '0',
+        auto_plays: '0',
+        avg_completion: null,
+      });
+
+      mockedAnalytics.getDailyStats.mockResolvedValueOnce([]);
 
       await getClubUsage(req, res);
 
-      const usageCallArgs = (query as jest.Mock).mock.calls[0][1];
-      const fromDate = usageCallArgs[1];
-      const diffDays = Math.round((Date.now() - fromDate.valueOf()) / (1000 * 60 * 60 * 24));
+      // Verify getUsageStats was called with correct from/to dates (7 days apart)
+      const callArgs = mockedAnalytics.getUsageStats.mock.calls[0];
+      const fromDate = new Date(callArgs[1]);
+      const toDate = new Date(callArgs[2]);
+      const diffDays = Math.round((toDate.valueOf() - fromDate.valueOf()) / (1000 * 60 * 60 * 24));
       expect(Math.abs(diffDays - 7)).toBeLessThanOrEqual(1);
     });
 
@@ -625,7 +649,7 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockedAnalytics.getUsageStats.mockRejectedValueOnce(new Error('DB Error'));
 
       await getClubUsage(req, res);
 
@@ -638,22 +662,17 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      mockQueryResponses([
+      mockedAnalytics.getCategoryStats.mockResolvedValueOnce([
+        { category: 'sponsors', plays: '30', total_duration: '1800' },
+      ]);
+
+      mockedAnalytics.getTopVideos.mockResolvedValueOnce([
         {
-          rows: [
-            { category: 'sponsors', plays: '30', total_duration: '1800' },
-          ],
-        },
-        {
-          rows: [
-            {
-              video_filename: 'video1.mp4',
-              category: 'sponsors',
-              plays: '15',
-              total_duration: '900',
-              avg_completion: '90',
-            },
-          ],
+          video_filename: 'video1.mp4',
+          category: 'sponsors',
+          plays: '15',
+          total_duration: '900',
+          avg_completion: 90,
         },
       ]);
 
@@ -675,7 +694,7 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockedAnalytics.getCategoryStats.mockRejectedValueOnce(new Error('DB Error'));
 
       await getClubContent(req, res);
 
@@ -688,50 +707,43 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      mockQueryResponses([
+      mockedAnalytics.getDashboardHealth.mockResolvedValueOnce({
+        status: 'online',
+        last_seen_at: new Date('2025-12-01T00:00:00Z'),
+        cpu_usage: 45,
+        memory_usage: 60,
+        temperature: 55,
+        disk_usage: 30,
+      });
+
+      mockedAnalytics.getDashboardUsage.mockResolvedValueOnce({
+        screen_time_seconds: '3600',
+        videos_played: '50',
+        active_days: '10',
+        manual_triggers: '20',
+        auto_plays: '30',
+      });
+
+      mockedAnalytics.getDashboardCategories.mockResolvedValueOnce([
+        { category: 'sponsors', plays: '30' },
+      ]);
+
+      mockedAnalytics.getDashboardTopVideos.mockResolvedValueOnce([
+        { video_filename: 'video1.mp4', plays: '15' },
+      ]);
+
+      mockedAnalytics.getDashboardAlerts.mockResolvedValueOnce([
         {
-          rows: [
-            {
-              status: 'online',
-              last_seen_at: '2025-12-01T00:00:00Z',
-              cpu_usage: 45,
-              memory_usage: 60,
-              temperature: 55,
-              disk_usage: 30,
-            },
-          ],
+          alert_type: 'temperature',
+          severity: 'warning',
+          message: 'Alerte',
+          created_at: '2025-12-01T00:00:00Z',
+          resolved_at: null,
         },
-        {
-          rows: [
-            {
-              screen_time_seconds: '3600',
-              videos_played: '50',
-              active_days: '10',
-              manual_triggers: '20',
-              auto_plays: '30',
-            },
-          ],
-        },
-        {
-          rows: [{ category: 'sponsors', plays: '30' }],
-        },
-        {
-          rows: [{ video_filename: 'video1.mp4', plays: '15' }],
-        },
-        {
-          rows: [
-            {
-              alert_type: 'temperature',
-              severity: 'warning',
-              message: 'Alerte',
-              created_at: '2025-12-01T00:00:00Z',
-              resolved_at: null,
-            },
-          ],
-        },
-        {
-          rows: [{ date: '2025-12-01', screen_time: '1800', videos: '25' }],
-        },
+      ]);
+
+      mockedAnalytics.getDailyStats.mockResolvedValueOnce([
+        { date: new Date('2025-12-01'), screen_time: '1800', videos: '25' },
       ]);
 
       await getClubDashboard(req, res);
@@ -752,27 +764,27 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      mockQueryResponses([
-        {
-          rows: [
-            {
-              status: 'offline',
-              last_seen_at: null,
-              cpu_usage: null,
-              memory_usage: null,
-              temperature: null,
-              disk_usage: null,
-            },
-          ],
-        },
-        {
-          rows: [{ screen_time_seconds: '0', videos_played: '0', active_days: '0', manual_triggers: '0', auto_plays: '0' }],
-        },
-        { rows: [] },
-        { rows: [] },
-        { rows: [] },
-        { rows: [] },
-      ]);
+      mockedAnalytics.getDashboardHealth.mockResolvedValueOnce({
+        status: 'offline',
+        last_seen_at: null,
+        cpu_usage: null,
+        memory_usage: null,
+        temperature: null,
+        disk_usage: null,
+      });
+
+      mockedAnalytics.getDashboardUsage.mockResolvedValueOnce({
+        screen_time_seconds: '0',
+        videos_played: '0',
+        active_days: '0',
+        manual_triggers: '0',
+        auto_plays: '0',
+      });
+
+      mockedAnalytics.getDashboardCategories.mockResolvedValueOnce([]);
+      mockedAnalytics.getDashboardTopVideos.mockResolvedValueOnce([]);
+      mockedAnalytics.getDashboardAlerts.mockResolvedValueOnce([]);
+      mockedAnalytics.getDailyStats.mockResolvedValueOnce([]);
 
       await getClubDashboard(req, res);
 
@@ -787,7 +799,7 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockedAnalytics.getDashboardHealth.mockRejectedValueOnce(new Error('DB Error'));
 
       await getClubDashboard(req, res);
 
@@ -802,7 +814,7 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      mockQueryResponses([{ rows: [{ count: '10' }] }]);
+      mockedAnalytics.calculateDailyStats.mockResolvedValueOnce(10);
 
       await calculateDailyStats(req, res);
 
@@ -819,7 +831,7 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ body: {} });
       const res = createMockResponse();
 
-      mockQueryResponses([{ rows: [{ count: '5' }] }]);
+      mockedAnalytics.calculateDailyStats.mockResolvedValueOnce(5);
 
       await calculateDailyStats(req, res);
 
@@ -835,7 +847,7 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest({ body: {} });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockedAnalytics.calculateDailyStats.mockRejectedValueOnce(new Error('DB Error'));
 
       await calculateDailyStats(req, res);
 
@@ -848,20 +860,25 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest();
       const res = createMockResponse();
 
-      mockQueryResponses([
-        { rows: [{ total_sites: '20', online_sites: '10' }] },
-        { rows: [{ plays_today: '5', plays_week: '35' }] },
-        { rows: [{ avg_availability: '90' }] },
+      mockedAnalytics.getSiteCounts.mockResolvedValueOnce({
+        total_sites: '20',
+        online_sites: '10',
+      });
+
+      mockedAnalytics.getPlayCounts.mockResolvedValueOnce({
+        plays_today: '5',
+        plays_week: '35',
+      });
+
+      mockedAnalytics.getFleetAvailability.mockResolvedValueOnce(90);
+
+      mockedAnalytics.getSitesSummary.mockResolvedValueOnce([
         {
-          rows: [
-            {
-              site_id: 'site-1',
-              club_name: 'Club A',
-              status: 'online',
-              plays_today: '5',
-              heartbeat_count: '2880',
-            },
-          ],
+          site_id: 'site-1',
+          club_name: 'Club A',
+          status: 'online',
+          plays_today: '5',
+          heartbeat_count: '2880',
         },
       ]);
 
@@ -884,12 +901,19 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest();
       const res = createMockResponse();
 
-      mockQueryResponses([
-        { rows: [{ total_sites: '0', online_sites: '0' }] },
-        { rows: [{ plays_today: '0', plays_week: '0' }] },
-        { rows: [{ avg_availability: null }] },
-        { rows: [] },
-      ]);
+      mockedAnalytics.getSiteCounts.mockResolvedValueOnce({
+        total_sites: '0',
+        online_sites: '0',
+      });
+
+      mockedAnalytics.getPlayCounts.mockResolvedValueOnce({
+        plays_today: '0',
+        plays_week: '0',
+      });
+
+      mockedAnalytics.getFleetAvailability.mockResolvedValueOnce(null);
+
+      mockedAnalytics.getSitesSummary.mockResolvedValueOnce([]);
 
       await getAnalyticsOverview(req, res);
 
@@ -906,7 +930,7 @@ describe('Analytics Controller', () => {
       const req = createAuthRequest();
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockedAnalytics.getSiteCounts.mockRejectedValueOnce(new Error('DB Error'));
 
       await getAnalyticsOverview(req, res);
 

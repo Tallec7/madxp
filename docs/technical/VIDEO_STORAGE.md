@@ -28,7 +28,12 @@ Les vidéos uploadées dans le dashboard central doivent être :
 - Téléchargées par les Raspberry Pi lors du déploiement
 - Supprimées automatiquement une fois tous les déploiements terminés
 
-### La solution : Double stockage avec fallback
+### La solution : Stockage FTP Hostinger
+
+> **PRODUCTION** : Toutes les vidéos sont stockées sur **FTP Hostinger uniquement**.
+> Le code contient un fallback Supabase Storage (si FTP non configuré) mais il n'est **pas utilisé en production**.
+
+### Détail du flux (FTP-first, fallback Supabase inutilisé en prod)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐

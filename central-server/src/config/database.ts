@@ -66,13 +66,19 @@ const getSslConfig = () => {
 
 const sslConfig = getSslConfig();
 
+// Pool size configurable via env : DB_POOL_MAX (défaut: 10 en prod, 5 en hobby)
+// Railway Hobby : 5 | Railway Pro / Render Standard : 15-20
+const dbPoolMax = parseInt(process.env.DB_POOL_MAX || '10', 10);
+
 const poolConfig: PoolConfig = {
   connectionString: process.env.DATABASE_URL,
   ssl: sslConfig,
-  max: 5, // Reduced from 20 for Railway Hobby plan (~40MB heap)
+  max: Math.min(Math.max(dbPoolMax, 1), 50), // Clamp entre 1 et 50
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 };
+
+logger.info('Database pool configuration', { max: poolConfig.max, idleTimeout: poolConfig.idleTimeoutMillis });
 
 logger.info('Database SSL configuration', {
   NODE_ENV: process.env.NODE_ENV,

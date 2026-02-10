@@ -1,5 +1,13 @@
 # Architecture Neopro
 
+## Diagrammes de Sequence
+
+> Diagrammes Mermaid detailles des flux critiques (prerequis pour le refactoring)
+
+- [01 - Authentification](diagrams/01-auth-sequence.md) : Login -> JWT -> MFA -> Cookie -> Requetes authentifiees
+- [02 - Sync Pi <-> Cloud](diagrams/02-sync-pi-cloud-sequence.md) : Connexion -> Heartbeat -> Etat -> Commandes
+- [03 - Deploiement Video](diagrams/03-video-deployment-sequence.md) : Upload -> FTP -> Deploy -> Pi -> Checksum
+
 ## Vue d'ensemble
 
 Neopro est une plateforme distribuée Edge + Cloud pour la diffusion de contenu vidéo dans les clubs sportifs.
@@ -68,9 +76,20 @@ neopro/ (monorepo)
 │
 ├── raspberry/                      # Edge application
 │   ├── src/                        # Angular frontend (TV/Remote/Login)
-│   ├── server/                     # Socket.IO local server
+│   ├── server/                     # Socket.IO local server (Express modulaire)
+│   │   ├── server.js               #   Orchestrateur (~110 lignes)
+│   │   ├── helpers.js              #   Constantes partagées
+│   │   ├── services/               #   5 services (state, buffer, license, hdmi, auth)
+│   │   ├── routes/                 #   6 contrôleurs HTTP minces
+│   │   ├── socket/                 #   Handlers Socket.IO (18 events)
+│   │   ├── __tests__/              #   Tests Jest (71 tests)
 │   │   └── package.json
-│   ├── admin/                      # Admin interface (Express)
+│   ├── admin/                      # Admin interface (Express modulaire)
+│   │   ├── admin-server.js         #   Orchestrateur (~260 lignes)
+│   │   ├── helpers.js              #   Utilitaires partagés (exec, paths)
+│   │   ├── services/               #   7 services métier
+│   │   ├── routes/                 #   9 contrôleurs HTTP minces
+│   │   ├── __tests__/              #   Tests Jest (60%+ couverture)
 │   │   └── package.json
 │   └── sync-agent/                 # Sync service with cloud
 │       └── package.json
@@ -88,9 +107,6 @@ neopro/ (monorepo)
 │   │   ├── features/
 │   │   ├── core/
 │   │   └── shared/
-│   └── package.json
-│
-├── server-render/                  # Cloud WebSocket server
 │   └── package.json
 │
 ├── e2e/                           # End-to-end tests
@@ -123,10 +139,10 @@ neopro/ (monorepo)
 └──────────────┘          └──────────────┘
         │
         ▼
-┌──────────────┐          ┌──────────────┐
-│local-server  │◀─Socket─▶│server-render │
-│ (Socket.IO)  │          │ (Socket.IO)  │
-└──────────────┘          └──────────────┘
+┌──────────────┐
+│local-server  │
+│ (Socket.IO)  │
+└──────────────┘
 ```
 
 ---
@@ -197,16 +213,15 @@ Video.js API (play/pause/seek)
 
 ## Technologies par composant
 
-| Composant              | Stack                                      | Base de données                               | Déploiement            |
-| ---------------------- | ------------------------------------------ | --------------------------------------------- | ---------------------- |
-| `raspberry/src`        | Angular 20, Video.js 8.x, Socket.IO client | -                                             | Raspberry Pi (systemd) |
-| `raspberry/server`     | Node.js, Socket.IO 4.8                     | -                                             | Raspberry Pi (systemd) |
-| `raspberry/admin`      | Express, vanilla JS                        | -                                             | Raspberry Pi (systemd) |
-| `raspberry/sync-agent` | Node.js 20, Axios, SHA256 checksum         | -                                             | Raspberry Pi (systemd) |
-| `central-server`       | Node.js 20+, Express 4.18, TypeScript 5.9  | Supabase (PostgreSQL), FTP Hostinger (vidéos) | Railway                |
-| `central-dashboard`    | Angular 20.3, Chart.js 4.5, Leaflet        | -                                             | Hostinger (static)     |
-| `server-render`        | Node.js 20, Socket.IO 4.8                  | Redis (Upstash)                               | Railway                |
-| `e2e`                  | Playwright                                 | -                                             | CI/CD                  |
+| Composant              | Stack                                                                  | Base de données                               | Déploiement            |
+| ---------------------- | ---------------------------------------------------------------------- | --------------------------------------------- | ---------------------- |
+| `raspberry/src`        | Angular 20, Video.js 8.x, Socket.IO client                             | -                                             | Raspberry Pi (systemd) |
+| `raspberry/server`     | Node.js, Socket.IO 4.8                                                 | -                                             | Raspberry Pi (systemd) |
+| `raspberry/admin`      | Express, vanilla JS                                                    | -                                             | Raspberry Pi (systemd) |
+| `raspberry/sync-agent` | Node.js 20, Axios, SHA256 checksum                                     | -                                             | Raspberry Pi (systemd) |
+| `central-server`       | Node.js 20+, Express 4.18, TypeScript 5.9, Winston, Repository Pattern | Supabase (PostgreSQL), FTP Hostinger (vidéos) | Railway                |
+| `central-dashboard`    | Angular 20.3, Chart.js 4.5, Leaflet                                    | -                                             | Hostinger (static)     |
+| `e2e`                  | Playwright                                                             | -                                             | CI/CD                  |
 
 ---
 
@@ -237,9 +252,8 @@ Video.js API (play/pause/seek)
 
 **Infrastructure as Code**
 
-- `render.yaml` : Central Server, Socket Server, Dashboard
+- `render.yaml` : Central Server, Dashboard
 - `docker-compose.yml` : Stack locale (dev)
-- `k8s/` : Kubernetes manifests (base + overlays)
 
 **CI/CD**
 
@@ -275,7 +289,21 @@ Video.js API (play/pause/seek)
 - Merge intelligent (central overrides)
 - Schema validation
 
-### 5. Monitoring & Observability
+### 5. Repository Pattern (central-server)
+
+- Accès base de données exclusivement via repositories (`siteRepository`, `alertRepository`, etc.)
+- 13 repositories couvrant 100% des accès PostgreSQL
+- Règle ESLint interdisant `import { query }` dans les controllers
+- Requêtes SQL paramétrées uniquement (`$1`, `$2`, etc.)
+
+### 6. Structured Logging (Winston)
+
+- Winston remplace console.log dans central-server
+- Correlation ID pour traçabilité distribuée
+- Niveaux : error, warn, info, debug
+- Format JSON structuré en production
+
+### 7. Monitoring & Observability
 
 - Prometheus metrics (Port 9090)
 - Grafana dashboards (Port 3000)
@@ -284,7 +312,7 @@ Video.js API (play/pause/seek)
 - Memory Manager Service (heap monitoring, pressure cleanup)
 - Health checks (/health, /live, /ready)
 
-### 6. Alerting Multi-Canal
+### 8. Alerting Multi-Canal
 
 - Email (SMTP via emailService)
 - Webhook (POST JSON vers URL configurable)
@@ -504,5 +532,5 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 
 ---
 
-**Dernière mise à jour** : 9 janvier 2026
-**Version** : 2.21.2
+**Dernière mise à jour** : 10 février 2026
+**Version** : 3.8.1

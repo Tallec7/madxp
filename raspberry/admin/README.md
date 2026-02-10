@@ -266,12 +266,64 @@ npm run dev
 
 ```
 admin/
-├── admin-server.js      # Serveur Express
-├── package.json         # Dépendances
-└── public/             # Frontend
-    ├── index.html      # Interface
-    ├── styles.css      # Styles
-    └── app.js          # JS
+├── admin-server.js          # Orchestrateur Express (wiring services ↔ routes)
+├── helpers.js               # Utilitaires partagés (exec, sanitize, paths)
+├── cache-manager.js         # Cache en mémoire avec TTL & namespaces
+├── email-notifier.js        # Notifications email (nodemailer)
+├── package.json             # Dépendances
+│
+├── services/                # Logique métier (pur, testable)
+│   ├── errors.js            #   Classes d'erreur typées (NotFound, Locked, Validation…)
+│   ├── configuration.service.js  #   CRUD sur configuration.json
+│   ├── video.service.js     #   Upload, list, edit, delete, orphelins
+│   ├── video-processing.service.js  #   File de traitement (compression, miniatures)
+│   ├── system.service.js    #   CPU, disk, version, logs, services systemd
+│   ├── network.service.js   #   WiFi scan, connect, BSSID lock, hotspot
+│   └── backup.service.js    #   Backups CRUD, timer systemd
+│
+├── routes/                  # Contrôleurs HTTP minces (délèguent aux services)
+│   ├── auth.js              #   Login, sessions, middleware requireAuth
+│   ├── system.js            #   GET /api/system, POST /api/system/reboot…
+│   ├── videos.js            #   CRUD vidéos, upload, orphelins, miniatures
+│   ├── config.js            #   Catégories, sous-catégories, timeCategories
+│   ├── network.js           #   WiFi, réseau, hotspot
+│   ├── backup.js            #   Backups, auto-backup
+│   ├── update.js            #   Mise à jour OTA (.tar.gz)
+│   ├── email.js             #   Config email, test, envoi
+│   └── cache.js             #   Stats cache, vidage
+│
+├── __tests__/               # Tests unitaires (Jest, 60%+ couverture)
+│   ├── helpers.test.js
+│   ├── errors.test.js
+│   ├── configuration.service.test.js
+│   ├── system.service.test.js
+│   ├── network.service.test.js
+│   ├── video-processing.service.test.js
+│   └── backup.service.test.js
+│
+└── public/                  # Frontend (HTML/CSS/JS statique)
+    ├── index.html
+    ├── styles.css
+    └── app.js
+```
+
+### Architecture
+
+Le serveur suit une architecture en couches :
+
+```
+HTTP Request → Route (thin controller) → Service (business logic) → helpers/fs/exec
+```
+
+- **Routes** : parsent les inputs HTTP, appellent le service, formatent la réponse
+- **Services** : encapsulent la logique métier, lèvent des erreurs typées
+- **Helpers** : fonctions utilitaires pures (sanitize, format, exec sécurisé)
+
+### Tests
+
+```bash
+npm test              # Lance les tests Jest
+npm run test:coverage # Tests avec rapport de couverture
 ```
 
 ## Dépannage
@@ -324,7 +376,7 @@ Pour toute question : support@neopro.fr
 
 ---
 
-**Version :** 1.3.0
+**Version :** 2.0.0
 **Licence :** MIT
 **Auteur :** Neopro / Kalon Partners
-**Dernière mise à jour :** 3 janvier 2026
+**Dernière mise à jour :** 10 février 2026

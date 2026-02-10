@@ -213,6 +213,7 @@ verify_build_integrity() {
     if [ -d "${DEPLOY_DIR}/admin" ]; then
         local ADMIN_CRITICAL=(
             "admin/admin-server.js"
+            "admin/helpers.js"
             "admin/package.json"
         )
         for file in "${ADMIN_CRITICAL[@]}"; do
@@ -384,7 +385,7 @@ fi
 # Copier l'admin panel
 if [ -d "raspberry/admin" ]; then
     mkdir -p ${DEPLOY_DIR}/admin
-    rsync -a --exclude='*.md' --exclude='node_modules' raspberry/admin/ ${DEPLOY_DIR}/admin/
+    rsync -a --exclude='*.md' --exclude='node_modules' --exclude='__tests__' --exclude='*.bak' raspberry/admin/ ${DEPLOY_DIR}/admin/
 
     # Installer les dépendances de l'admin panel
     if [ -f "${DEPLOY_DIR}/admin/package.json" ]; then

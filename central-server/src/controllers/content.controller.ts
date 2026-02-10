@@ -2,15 +2,18 @@ import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import crypto from 'crypto';
+import { createReadStream } from 'fs';
+import { stat } from 'fs/promises';
 import logger from '../config/logger';
 import pool from '../config/database';
 import { AuthRequest } from '../types';
 import deploymentService from '../services/deployment.service';
-import { uploadFile, deleteFile, getPublicUrl } from '../config/supabase';
-import { uploadFileToFtp, deleteFileFromFtp, isFtpConfigured, getFtpPublicUrl, uploadFileToFtpWithVerification } from '../config/ftp-storage';
+import { uploadFile, uploadFileFromDisk, deleteFile, getPublicUrl } from '../config/supabase';
+import { uploadFileToFtp, uploadFileToFtpFromDiskWithVerification, deleteFileFromFtp, isFtpConfigured, getFtpPublicUrl, uploadFileToFtpWithVerification } from '../config/ftp-storage';
 import { formatPaginatedResponse } from '../middleware/pagination';
 import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';
 import { imageToVideoService } from '../services/image-to-video.service';
+import { cleanupTempFile } from '../middleware/upload';
 
 /**
  * Génère l'URL publique accessible pour une vidéo en fonction de son backend de stockage
@@ -31,7 +34,8 @@ function getVideoDownloadUrl(storagePath: string): string {
 
 /**
  * Upload une vidéo vers le stockage (FTP Hostinger en priorité, sinon Supabase)
- * Avec vérification post-upload pour éviter les race conditions
+ * Avec vérification post-upload pour éviter les race conditions.
+ * Supporte les deux modes : buffer (legacy, images) et disk path (streaming, vidéos).
  */
 async function uploadVideoToStorage(
   fileBuffer: Buffer,
@@ -57,13 +61,50 @@ async function uploadVideoToStorage(
   logger.info('Using Supabase storage (FTP not configured)');
   const result = await uploadFile(fileBuffer, filename, contentType);
   if (result) {
-    // Pour Supabase, on considère l'upload vérifié immédiatement
-    // car Supabase gère l'intégrité en interne
     return {
       path: result.path,
       url: result.url,
       verified: true,
       actualSize: fileBuffer.length,
+    };
+  }
+  return null;
+}
+
+/**
+ * Upload une vidéo vers le stockage en streaming depuis le disque.
+ * Le fichier n'est jamais chargé entièrement en mémoire.
+ */
+async function uploadVideoToStorageFromDisk(
+  filePath: string,
+  fileSize: number,
+  filename: string,
+  contentType: string
+): Promise<{ path: string; url: string; verified: boolean; actualSize: number | null } | null> {
+  // Utiliser FTP Hostinger si configuré - streaming avec vérification
+  if (isFtpConfigured()) {
+    logger.info('Using FTP storage (Hostinger) with streaming + verification');
+    const result = await uploadFileToFtpFromDiskWithVerification(filePath, fileSize, filename, contentType);
+    if (result) {
+      return {
+        path: result.path,
+        url: result.url,
+        verified: result.verified,
+        actualSize: result.actualSize,
+      };
+    }
+    return null;
+  }
+
+  // Fallback vers Supabase (lecture du fichier juste avant l'upload)
+  logger.info('Using Supabase storage from disk (FTP not configured)');
+  const result = await uploadFileFromDisk(filePath, filename, contentType);
+  if (result) {
+    return {
+      path: result.path,
+      url: result.url,
+      verified: true,
+      actualSize: fileSize,
     };
   }
   return null;
@@ -88,6 +129,19 @@ async function deleteVideoFromStorage(storagePath: string): Promise<boolean> {
  */
 function calculateChecksum(buffer: Buffer): string {
   return crypto.createHash('sha256').update(buffer).digest('hex');
+}
+
+/**
+ * Calcule le checksum SHA256 d'un fichier en streaming (sans le charger en mémoire)
+ */
+function calculateChecksumFromFile(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha256');
+    const stream = createReadStream(filePath);
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+    stream.on('error', reject);
+  });
 }
 
 /**
@@ -300,9 +354,11 @@ export const getVideoDeployments = async (req: AuthRequest, res: Response) => {
 };
 
 export const createVideo = async (req: AuthRequest, res: Response) => {
-  try {
-    const file = req.file;
+  const file = req.file;
+  // Disk storage : le fichier est sur disque, pas en mémoire
+  const tempFilePath = file?.path;
 
+  try {
     if (!file) {
       return res.status(400).json({ error: 'Aucun fichier vidéo fourni' });
     }
@@ -320,12 +376,17 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     // Générer un nom de fichier unique basé sur le nom original
     const filename = await generateUniqueFilename(file.originalname);
 
-    // Calculer le checksum SHA256 pour vérification d'intégrité
-    const checksum = calculateChecksum(file.buffer);
+    // Calculer le checksum SHA256 en streaming depuis le disque (pas de chargement en mémoire)
+    const checksum = tempFilePath
+      ? await calculateChecksumFromFile(tempFilePath)
+      : calculateChecksum(file.buffer);
 
-    // Upload vers le stockage (FTP Hostinger ou Supabase) avec vérification
+    // Upload vers le stockage en streaming depuis le disque
     logger.info('Uploading video to storage with verification:', { filename, size: file.size, mimetype: file.mimetype, siteId: site_id });
-    const uploadResult = await uploadVideoToStorage(file.buffer, filename, file.mimetype);
+
+    const uploadResult = tempFilePath
+      ? await uploadVideoToStorageFromDisk(tempFilePath, file.size, filename, file.mimetype)
+      : await uploadVideoToStorage(file.buffer, filename, file.mimetype);
 
     if (!uploadResult) {
       logger.error('Failed to upload video to storage - uploadResult is null');
@@ -391,13 +452,18 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       error: 'Erreur lors de la création de la vidéo',
       details: errorMessage
     });
+  } finally {
+    // Nettoyer le fichier temporaire dans tous les cas
+    if (tempFilePath) {
+      cleanupTempFile(tempFilePath);
+    }
   }
 };
 
 export const createVideos = async (req: AuthRequest, res: Response) => {
-  try {
-    const files = req.files as Express.Multer.File[];
+  const files = req.files as Express.Multer.File[];
 
+  try {
     if (!files || files.length === 0) {
       return res.status(400).json({ error: 'Aucun fichier vidéo fourni' });
     }
@@ -418,13 +484,18 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
     logger.info('Starting bulk video upload:', { count: files.length, category, subcategory, siteId: site_id });
 
     for (const file of files) {
+      const tempFilePath = file.path;
+
       try {
         // Générer un nom de fichier unique basé sur le nom original
         const filename = await generateUniqueFilename(file.originalname);
 
-        // Upload vers le stockage (FTP Hostinger ou Supabase)
+        // Upload vers le stockage en streaming depuis le disque
         logger.info('Uploading video to storage (bulk):', { filename, size: file.size });
-        const uploadResult = await uploadVideoToStorage(file.buffer, filename, file.mimetype);
+
+        const uploadResult = tempFilePath
+          ? await uploadVideoToStorageFromDisk(tempFilePath, file.size, filename, file.mimetype)
+          : await uploadVideoToStorage(file.buffer, filename, file.mimetype);
 
         if (!uploadResult) {
           errors.push({
@@ -440,8 +511,10 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
         const file_size = file.size;
         const mime_type = file.mimetype;
 
-        // Calculer le checksum SHA256 pour vérification d'intégrité
-        const checksum = calculateChecksum(file.buffer);
+        // Calculer le checksum SHA256 en streaming depuis le disque
+        const checksum = tempFilePath
+          ? await calculateChecksumFromFile(tempFilePath)
+          : calculateChecksum(file.buffer);
 
         const result = await pool.query(
           `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, checksum, metadata, uploaded_by, uploaded_for_site_id)
@@ -464,6 +537,11 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
         const errorMessage = fileError instanceof Error ? fileError.message : 'Erreur inconnue';
         errors.push({ name: file.originalname, error: errorMessage });
         logger.error('Error creating video in bulk:', { filename: file.originalname, error: fileError });
+      } finally {
+        // Nettoyer chaque fichier temporaire après traitement
+        if (tempFilePath) {
+          cleanupTempFile(tempFilePath);
+        }
       }
     }
 

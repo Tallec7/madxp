@@ -151,12 +151,9 @@ neopro/ (root workspace)
 │       ├── features/            # Sites, Analytics, Admin
 │       └── core/                # Services, guards, models
 │
-├── server-render/               # Cloud WebSocket server
-│
 ├── e2e/                         # End-to-end tests
 │
 ├── docker/                      # Monitoring (Prometheus/Grafana)
-├── k8s/                         # Kubernetes manifests
 └── docs/                        # Documentation (180+ files)
 ```
 
@@ -168,11 +165,11 @@ neopro/ (root workspace)
 │    (Angular 20 CLI)             │
 └────────────┬────────────────────┘
              │
-    ┌────────┼────────┬──────────────┐
-    ▼        ▼        ▼              ▼
-raspberry  central-  central-     server-
-(Angular)  dashboard  server       render
-           (Angular)  (Express)    (Socket.IO)
+    ┌────────┼────────┐
+    ▼        ▼        ▼
+raspberry  central-  central-
+(Angular)  dashboard  server
+           (Angular)  (Express)
     │         │         │
     │         └────┬────┘
     │              ▼
@@ -301,11 +298,11 @@ npm run start:central
 Terminal 3 - Local servers:
 
 ```bash
-cd server-render && node server.js
+cd raspberry/server && node server.js
 # Socket.IO at port 3000
 
 # In another terminal:
-cd raspberry/admin && node admin-server-demo.js
+cd raspberry/admin && node admin-server.js
 # Admin UI at port 8080
 ```
 

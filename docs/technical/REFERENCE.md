@@ -533,13 +533,22 @@ npm run deploy:raspberry 192.168.4.1
 │   ├── configuration.json
 │   └── ...
 │
-├── server/              # Serveur Socket.IO
-│   ├── server.js
+├── server/              # Serveur Socket.IO (Express modulaire)
+│   ├── server.js        #   Orchestrateur (~110 lignes)
+│   ├── helpers.js       #   Constantes partagées
+│   ├── services/        #   5 services (state, buffer, license, hdmi, auth)
+│   ├── routes/          #   6 contrôleurs HTTP minces
+│   ├── socket/          #   Handlers Socket.IO (18 events)
+│   ├── __tests__/       #   Tests Jest (71 tests)
 │   └── package.json
 │
-├── admin/               # Interface admin
-│   ├── admin-server.js
-│   └── public/
+├── admin/               # Interface admin (Express modulaire)
+│   ├── admin-server.js  #   Orchestrateur (wiring services ↔ routes)
+│   ├── helpers.js       #   Utilitaires partagés
+│   ├── services/        #   7 services métier
+│   ├── routes/          #   9 contrôleurs HTTP
+│   ├── __tests__/       #   Tests Jest (60%+ couverture)
+│   └── public/          #   Frontend statique
 │
 ├── sync-agent/          # Agent de sync central
 │   ├── agent.js

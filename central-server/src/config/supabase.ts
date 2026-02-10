@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { readFile } from 'fs/promises';
 import logger from './logger';
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -91,6 +92,52 @@ export const uploadFile = async (
 
   const url = getPublicUrl(data.path, bucket);
   logger.info('File uploaded to Supabase:', { path: data.path, url });
+
+  return { path: data.path, url };
+};
+
+/**
+ * Upload un fichier vers Supabase Storage depuis le disque.
+ * Lit le fichier en mémoire juste avant l'upload (Supabase SDK exige un Buffer).
+ * Pour les très gros fichiers, FTP est préférable.
+ */
+export const uploadFileFromDisk = async (
+  filePath: string,
+  filename: string,
+  contentType: string,
+  bucket: string = STORAGE_BUCKET
+): Promise<{ path: string; url: string } | null> => {
+  if (!supabase) {
+    logger.error('Supabase client not initialized - check SUPABASE_URL and SUPABASE_SERVICE_KEY');
+    return null;
+  }
+
+  const bucketReady = await ensureBucketExists(bucket);
+  if (!bucketReady) {
+    logger.error(`Bucket "${bucket}" does not exist and could not be created`);
+    return null;
+  }
+
+  const storagePath = `uploads/${filename}`;
+
+  // Supabase JS SDK ne supporte pas le streaming natif,
+  // mais on lit le fichier juste avant l'envoi (pas pendant tout le traitement)
+  const fileBuffer = await readFile(filePath);
+
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .upload(storagePath, fileBuffer, {
+      contentType,
+      upsert: false,
+    });
+
+  if (error) {
+    logger.error('Error uploading file from disk to Supabase:', error);
+    return null;
+  }
+
+  const url = getPublicUrl(data.path, bucket);
+  logger.info('File uploaded from disk to Supabase:', { path: data.path, url });
 
   return { path: data.path, url };
 };

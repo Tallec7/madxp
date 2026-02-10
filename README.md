@@ -1,5 +1,8 @@
 # Neopro - Système de télévision interactive pour clubs sportifs
 
+[![CI](https://github.com/kalonpartners/neopro/actions/workflows/ci.yml/badge.svg)](https://github.com/kalonpartners/neopro/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/kalonpartners/neopro/graph/badge.svg)](https://codecov.io/gh/kalonpartners/neopro)
+
 Plateforme complète de gestion et de diffusion de contenu vidéo pour clubs sportifs, basée sur Raspberry Pi synchronisés avec un serveur central cloud.
 
 ## Table des matières
@@ -173,7 +176,7 @@ neopro/
 │       ├── assets/i18n/          # Traductions (EN/FR/ES)
 │       └── environments/
 │
-├── server-render/                # Serveur Socket.IO cloud
+├── raspberry/server/              # Serveur Socket.IO cloud
 │
 ├── e2e/                          # Tests E2E (Playwright)
 ├── docker/                       # Config monitoring (Prometheus/Grafana)
