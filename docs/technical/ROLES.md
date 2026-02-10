@@ -1,29 +1,45 @@
-# Roles & Permissions
+# Rôles et Permissions
 
-> Permission model for the Neopro platform — Central Server + Dashboard.
+> Modèle de permissions pour la plateforme Neopro — Central Server + Dashboard.
 
-## Philosophy
+## Philosophie
 
-Neopro uses a **hierarchical role system** where each role inherits the capabilities of the roles below it. The `super_admin` role is special: it **bypasses all role checks** in both backend middleware and frontend guards.
+Neopro utilise un **système de rôles hiérarchique** où chaque rôle hérite des capacités des rôles inférieurs. Le rôle `super_admin` est spécial : il **contourne toutes les vérifications de rôle** dans les middleware backend et les guards frontend.
 
-## Roles
+## Rôles
 
-| Role          | Level | Description                                                                                                   |
-| ------------- | ----- | ------------------------------------------------------------------------------------------------------------- |
-| `super_admin` | 100   | Full platform access. Manages users, subscriptions, all sites.                                                |
-| `admin`       | 80    | Manages all operational resources (sites, content, analytics, updates). Cannot manage users or subscriptions. |
-| `operator`    | 60    | Day-to-day operations on assigned sites: upload videos, deploy, manage content.                               |
-| `viewer`      | 40    | Read-only access to assigned sites and dashboards.                                                            |
-| `advertiser`  | 30    | Manages own advertising content (videos, analytics). Scoped to own data.                                      |
-| `agency`      | 20    | Manages multiple advertisers under one umbrella.                                                              |
+```
+super_admin (100)  ──── Accès total, bypass toutes les vérifications
+    │
+    ▼
+  admin (80)  ────────── Gestion opérationnelle (pas users/abonnements)
+    │
+    ▼
+  operator (60)  ─────── Opérations quotidiennes (sites assignés)
+    │
+    ▼
+  viewer (40)  ───────── Lecture seule (sites assignés)
 
-### Naming convention
+  advertiser (30)  ───── Portail annonceur (ses données uniquement)
+  agency (20)  ────────── Portail agence (ses annonceurs uniquement)
+```
 
-The canonical role name uses an underscore: `super_admin`. The legacy alias `superadmin` (no underscore) exists in the database `UserRole` type and `ROLE_HIERARCHY` for backward compatibility but **must not be used in route definitions or frontend guards**.
+| Rôle          | Niveau | Description                                                                                                                                  |
+| ------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `super_admin` | 100    | Accès complet. Gère les utilisateurs, abonnements, tous les sites.                                                                           |
+| `admin`       | 80     | Gère toutes les ressources opérationnelles (sites, contenu, analytics, mises à jour). Ne peut pas gérer les utilisateurs ni les abonnements. |
+| `operator`    | 60     | Opérations quotidiennes sur les sites assignés : upload vidéos, déploiement, gestion contenu.                                                |
+| `viewer`      | 40     | Accès lecture seule aux sites assignés et dashboards.                                                                                        |
+| `advertiser`  | 30     | Gère son propre contenu publicitaire (vidéos, analytics). Limité à ses données.                                                              |
+| `agency`      | 20     | Gère plusieurs annonceurs sous une même structure.                                                                                           |
 
-## Permission Matrix
+### Convention de nommage
 
-### User Management
+Le nom canonique du rôle utilise un underscore : `super_admin`. L'alias legacy `superadmin` (sans underscore) existe dans le type `UserRole` de la base de données et dans `ROLE_HIERARCHY` pour la compatibilité ascendante mais **ne doit pas être utilisé dans les définitions de routes ou les guards frontend**.
+
+## Matrice de permissions
+
+### Gestion utilisateurs
 
 | Operation      | super_admin | admin | operator | viewer | advertiser | agency |
 | -------------- | :---------: | :---: | :------: | :----: | :--------: | :----: |
@@ -47,7 +63,7 @@ The canonical role name uses an underscore: `super_admin`. The legacy alias `sup
 | Debug connections    |      x      |   x   |          |        |            |        |
 | View site (assigned) |      x      |   x   |    x     |   x    |            |        |
 
-### Content (Videos)
+### Contenu (Vidéos)
 
 | Operation         | super_admin | admin | operator | viewer | advertiser | agency |
 | ----------------- | :---------: | :---: | :------: | :----: | :--------: | :----: |
@@ -106,7 +122,7 @@ The canonical role name uses an underscore: `super_admin`. The legacy alias `sup
 | Predictive alerts |      x      |   x   |          |        |            |        |
 | Manage agencies   |      x      |   x   |          |        |            |        |
 
-## Backend Implementation
+## Implémentation Backend
 
 ### Middleware (`central-server/src/middleware/auth.ts`)
 
@@ -126,22 +142,22 @@ requireAdmin()
 ROLE_HIERARCHY = { super_admin: 100, superadmin: 100, admin: 80, ... }
 ```
 
-**Key behavior**: `requireRole('admin')` implicitly allows `super_admin` via the bypass in `requireRole()`. This means routes don't need to list `super_admin` explicitly — it always passes.
+**Comportement clé** : `requireRole('admin')` autorise implicitement `super_admin` via le bypass dans `requireRole()`. Les routes n'ont pas besoin de lister `super_admin` explicitement — il passe toujours.
 
-### When to use each helper
+### Quand utiliser chaque helper
 
-| Helper                                       | Use case                                | Example                         |
-| -------------------------------------------- | --------------------------------------- | ------------------------------- |
-| `requireSuperAdmin()`                        | Super admin exclusive operations        | User CRUD, subscription changes |
-| `requireRole('admin')`                       | Admin operations (super_admin bypasses) | Delete site, manage updates     |
-| `requireRole('admin', 'operator')`           | Admin + operator operations             | Create site, deploy video       |
-| `requireRole('admin', 'operator', 'viewer')` | All internal roles                      | View sites, analytics           |
+| Helper                                       | Cas d'usage                           | Exemple                            |
+| -------------------------------------------- | ------------------------------------- | ---------------------------------- |
+| `requireSuperAdmin()`                        | Opérations exclusives super admin     | CRUD users, changement abonnement  |
+| `requireRole('admin')`                       | Opérations admin (super_admin bypass) | Supprimer site, gérer mises à jour |
+| `requireRole('admin', 'operator')`           | Opérations admin + operator           | Créer site, déployer vidéo         |
+| `requireRole('admin', 'operator', 'viewer')` | Tous les rôles internes               | Voir sites, analytics              |
 
-## Frontend Implementation
+## Implémentation Frontend
 
 ### Guard (`auth.guard.ts`)
 
-Routes define allowed roles in `data.roles`. The `roleGuard` reads these and calls `authService.hasRole()`.
+Les routes définissent les rôles autorisés via `data.roles`. Le `roleGuard` lit ces rôles et appelle `authService.hasRole()`.
 
 ### Service (`auth.service.ts`)
 
@@ -155,4 +171,23 @@ hasRole(...roles: string[]): boolean {
 }
 ```
 
-This mirrors the backend bypass: a `super_admin` user passes any `hasRole()` check, so routes don't need to list `super_admin` explicitly in their `data.roles` array.
+Ce comportement miroir le backend : un utilisateur `super_admin` passe n'importe quel `hasRole()`, donc les routes n'ont pas besoin de lister `super_admin` explicitement dans leur `data.roles`.
+
+---
+
+## Frontière admin / super_admin (Phase 7.4)
+
+Depuis février 2026, la frontière entre `admin` et `super_admin` est strictement appliquée :
+
+| Opération                       | super_admin | admin |
+| ------------------------------- | :---------: | :---: |
+| Gestion utilisateurs (CRUD)     |     ✅      |  ❌   |
+| Changement de plan d'abonnement |     ✅      |  ❌   |
+| Suppression de site             |     ✅      |  ✅   |
+| Régénération clé API            |     ✅      |  ✅   |
+
+Le middleware `requireSuperAdmin()` est utilisé pour les opérations exclusives au super_admin, tandis que `requireRole('admin')` autorise implicitement le super_admin via le bypass hiérarchique.
+
+---
+
+**Dernière mise à jour** : 10 février 2026

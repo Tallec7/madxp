@@ -151,11 +151,11 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 
 ### 3.1 Tableau Récapitulatif
 
-| Type                | Propriétaire | Stockage Central | Stockage Local               | Modifiable par Club | Supprimable par Club |
-| ------------------- | ------------ | ---------------- | ---------------------------- | ------------------- | -------------------- |
-| **Annonces NEOPRO** | NEOPRO       | DB + Supabase    | configuration.json + /videos | Non                 | Non                  |
-| **Contenu Club**    | Club         | Miroir (lecture) | configuration.json + /videos | Oui                 | Oui                  |
-| **Config Système**  | NEOPRO       | DB               | configuration.json           | Non                 | Non                  |
+| Type                | Propriétaire | Stockage Central   | Stockage Local               | Modifiable par Club | Supprimable par Club |
+| ------------------- | ------------ | ------------------ | ---------------------------- | ------------------- | -------------------- |
+| **Annonces NEOPRO** | NEOPRO       | DB + FTP Hostinger | configuration.json + /videos | Non                 | Non                  |
+| **Contenu Club**    | Club         | Miroir (lecture)   | configuration.json + /videos | Oui                 | Oui                  |
+| **Config Système**  | NEOPRO       | DB                 | configuration.json           | Non                 | Non                  |
 
 ### 3.2 Contenu NEOPRO (Verrouillé)
 
@@ -750,7 +750,7 @@ socket.emit('neopro_sync', {
       video: {
         id: 'decathlon_noel_2024',
         name: 'Décathlon - Noël 2024',
-        url: 'https://storage.supabase.co/videos/decathlon_noel.mp4',
+        url: 'https://kalonpartners.bzh/neopro-video/decathlon_noel.mp4',
         expires_at: '2025-01-31T23:59:59Z',
       },
     },

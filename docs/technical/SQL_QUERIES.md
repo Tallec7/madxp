@@ -141,6 +141,53 @@ UPDATE content_deployments SET status = 'failed'
 WHERE status = 'in_progress' AND started_at < NOW() - INTERVAL '1 hour';
 ```
 
+### Déploiements avec détails vidéo et site
+
+```sql
+-- Historique complet des déploiements récents avec JOINs
+SELECT
+  cd.id,
+  cd.status,
+  cd.progress,
+  cd.created_at,
+  cd.completed_at,
+  v.filename as video,
+  v.file_size,
+  v.category,
+  s.site_name,
+  s.club_name,
+  u.email as deployed_by,
+  EXTRACT(EPOCH FROM (cd.completed_at - cd.created_at)) as duration_seconds
+FROM content_deployments cd
+JOIN videos v ON v.id = cd.video_id
+LEFT JOIN sites s ON s.id = cd.target_id AND cd.target_type = 'site'
+LEFT JOIN users u ON u.id = cd.deployed_by
+WHERE cd.created_at > NOW() - INTERVAL '7 days'
+ORDER BY cd.created_at DESC
+LIMIT 50;
+```
+
+### Taux de succès par site (30 jours)
+
+```sql
+-- Taux de réussite des déploiements par site
+SELECT
+  s.site_name,
+  s.club_name,
+  COUNT(*) as total_deployments,
+  COUNT(*) FILTER (WHERE cd.status = 'completed') as success,
+  COUNT(*) FILTER (WHERE cd.status = 'failed') as failed,
+  ROUND(
+    100.0 * COUNT(*) FILTER (WHERE cd.status = 'completed') / NULLIF(COUNT(*), 0),
+    1
+  ) as success_rate
+FROM content_deployments cd
+JOIN sites s ON s.id = cd.target_id
+WHERE cd.created_at > NOW() - INTERVAL '30 days'
+GROUP BY s.id, s.site_name, s.club_name
+ORDER BY success_rate ASC NULLS FIRST;
+```
+
 ---
 
 ## Configuration
@@ -162,6 +209,18 @@ SELECT
   v1.deployed_at as current_date,
   v2.deployed_at as previous_date,
   jsonb_diff(v2.configuration, v1.configuration) as changes
+FROM versions v1
+JOIN versions v2 ON v2.rn = v1.rn + 1
+WHERE v1.rn = 1;
+
+-- Note : jsonb_diff() n'est pas une fonction PostgreSQL standard.
+-- Utiliser jsonb_pretty() pour comparer visuellement, ou installer l'extension pgdiff.
+-- Alternative simple :
+SELECT
+  v1.deployed_at as current_date,
+  v2.deployed_at as previous_date,
+  jsonb_pretty(v1.configuration) as current_config,
+  jsonb_pretty(v2.configuration) as previous_config
 FROM versions v1
 JOIN versions v2 ON v2.rn = v1.rn + 1
 WHERE v1.rn = 1;
@@ -192,3 +251,109 @@ FROM users
 GROUP BY role
 ORDER BY count DESC;
 ```
+
+---
+
+## Abonnements
+
+### Historique des changements de plan
+
+```sql
+SELECT
+  sh.id,
+  s.site_name,
+  s.club_name,
+  sh.previous_plan,
+  sh.new_plan,
+  sh.changed_at,
+  u.email as changed_by
+FROM subscription_history sh
+JOIN sites s ON s.id = sh.site_id
+LEFT JOIN users u ON u.id = sh.changed_by
+ORDER BY sh.changed_at DESC
+LIMIT 20;
+```
+
+---
+
+## Command Queue
+
+### Commandes en attente par site
+
+```sql
+-- Résumé des commandes pendantes avec ancienneté
+SELECT
+  s.site_name,
+  s.club_name,
+  s.status as site_status,
+  COUNT(*) as pending_count,
+  MIN(pc.priority) as highest_priority,
+  MIN(pc.created_at) as oldest_command,
+  ARRAY_AGG(DISTINCT pc.command_type) as command_types
+FROM pending_commands pc
+JOIN sites s ON s.id = pc.site_id
+WHERE pc.attempts < pc.max_attempts
+  AND (pc.expires_at IS NULL OR pc.expires_at > NOW())
+GROUP BY s.id, s.site_name, s.club_name, s.status
+ORDER BY pending_count DESC;
+```
+
+---
+
+## Alertes
+
+### Alertes actives avec seuils
+
+```sql
+SELECT
+  a.id,
+  a.type,
+  a.severity,
+  a.message,
+  s.site_name,
+  a.created_at,
+  a.acknowledged_at
+FROM alerts a
+JOIN sites s ON s.id = a.site_id
+WHERE a.resolved_at IS NULL
+ORDER BY
+  CASE a.severity WHEN 'critical' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END,
+  a.created_at DESC;
+```
+
+---
+
+## Index importants
+
+### Index à vérifier pour les performances
+
+```sql
+-- Vérifier que les index critiques existent
+SELECT indexname, tablename
+FROM pg_indexes
+WHERE schemaname = 'public'
+  AND indexname IN (
+    'idx_metrics_site_id',
+    'idx_metrics_recorded_at',
+    'idx_video_plays_site_id',
+    'idx_video_plays_played_at',
+    'idx_alerts_site_id',
+    'idx_pending_commands_site_id',
+    'idx_content_deployments_status'
+  )
+ORDER BY tablename;
+
+-- Taille des index
+SELECT
+  schemaname,
+  tablename,
+  indexname,
+  pg_size_pretty(pg_relation_size(indexrelid)) as index_size
+FROM pg_stat_user_indexes
+ORDER BY pg_relation_size(indexrelid) DESC
+LIMIT 20;
+```
+
+---
+
+**Dernière mise à jour** : 10 février 2026

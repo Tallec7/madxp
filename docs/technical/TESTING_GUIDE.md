@@ -4,20 +4,20 @@ Ce document décrit la stratégie de tests pour le projet NEOPRO, couvrant le ce
 
 ## Vue d'ensemble
 
-| Composant | Framework | Couverture | Tests |
-|-----------|-----------|------------|-------|
-| central-server | Jest | ~90% | 760 |
-| central-dashboard | Karma/Jasmine | N/A | ~150 |
-| sync-agent | Jest | ~42% | 89 |
+| Composant         | Framework     | Couverture | Tests |
+| ----------------- | ------------- | ---------- | ----- |
+| central-server    | Jest          | ~90%       | 1 586 |
+| central-dashboard | Karma/Jasmine | N/A        | ~150  |
+| sync-agent        | Jest          | ~50%       | 89    |
 
 ### Seuils de couverture (central-server)
 
-| Métrique | Seuil | Description |
-|----------|-------|-------------|
-| Statements | 80% | % d'instructions exécutées |
-| Branches | 60% | % de chemins conditionnels (if/else, switch) |
-| Lines | 80% | % de lignes de code exécutées |
-| Functions | 75% | % de fonctions appelées au moins une fois |
+| Métrique   | Seuil | Description                                  |
+| ---------- | ----- | -------------------------------------------- |
+| Statements | 80%   | % d'instructions exécutées                   |
+| Branches   | 60%   | % de chemins conditionnels (if/else, switch) |
+| Lines      | 80%   | % de lignes de code exécutées                |
+| Functions  | 75%   | % de fonctions appelées au moins une fois    |
 
 > **Note**: Les seuils de branches (60%) et functions (75%) sont ajustés pour tenir compte des services WebSocket et streams difficiles à tester unitairement.
 
@@ -47,6 +47,15 @@ cd raspberry/sync-agent
 npm test                    # Tests avec couverture
 npm test -- --watch         # Mode watch
 npm test -- --verbose       # Mode verbeux
+```
+
+### End-to-End (Playwright)
+
+```bash
+cd e2e
+npx playwright test                    # Tous les tests
+npx playwright test --ui               # Mode interactif
+npx playwright test --project=chromium # Browser spécifique
 ```
 
 ## Structure des tests
@@ -97,11 +106,11 @@ central-server/src/
 
 Certains fichiers sont exclus de la couverture car ils sont difficiles à tester unitairement :
 
-| Fichier | Raison |
-|---------|--------|
+| Fichier                 | Raison                                                |
+| ----------------------- | ----------------------------------------------------- |
 | `pdf-report.service.ts` | Utilise PDFKit avec des streams asynchrones complexes |
-| `alert.service.ts` | Service legacy remplacé par `alerting.service.ts` |
-| `server.ts` | Point d'entrée avec connexions réelles |
+| `alert.service.ts`      | Service legacy remplacé par `alerting.service.ts`     |
+| `server.ts`             | Point d'entrée avec connexions réelles                |
 
 ## Tests critiques
 
@@ -112,6 +121,7 @@ Le module de fusion de configuration est **CRITIQUE** car il gère la synchronis
 **Fichier**: `raspberry/sync-agent/src/__tests__/config-merge.test.js`
 
 **Scénarios testés**:
+
 - Calcul du hash de configuration
 - Création de backup avant modification
 - Détection du contenu verrouillé (locked/owner)
@@ -145,6 +155,7 @@ Gère le téléchargement et le déploiement des vidéos depuis le central.
 **Fichier**: `raspberry/sync-agent/src/__tests__/deploy-video.test.js`
 
 **Scénarios testés**:
+
 - Téléchargement de fichier avec progress callback
 - Création du répertoire cible
 - Mise à jour de la configuration après déploiement
@@ -159,6 +170,7 @@ Gère toutes les commandes distantes (reboot, restart_service, update_hotspot, e
 **Fichier**: `raspberry/sync-agent/src/__tests__/commands.test.js`
 
 **Commandes testées**:
+
 - `reboot` - Redémarrage système
 - `restart_service` - Redémarrage de service avec git pull
 - `get_logs` - Récupération des logs
@@ -226,9 +238,9 @@ jest.mock('../config/logger', () => ({
 ```javascript
 it('should throw error on download failure', async () => {
   axios.mockRejectedValue(new Error('Network error'));
-  await expect(
-    deployVideo.execute(videoData, jest.fn())
-  ).rejects.toThrow('Failed to download video');
+  await expect(deployVideo.execute(videoData, jest.fn())).rejects.toThrow(
+    'Failed to download video',
+  );
 });
 ```
 
@@ -268,28 +280,41 @@ describe('Real-World Scenarios', () => {
 });
 ```
 
-## Couverture actuelle (central-server)
+## Couverture actuelle
 
-| Service | Statements | Branches | Functions | Lignes non couvertes |
-|---------|------------|----------|-----------|---------------------|
-| admin-ops.service.ts | 100% | 79% | 100% | 140-148, 158-162 |
-| alerting.service.ts | 91% | 80% | 96% | 362-375, 452, 477-487 |
-| audit.service.ts | 100% | 97% | 100% | 211 |
-| canary-deployment.service.ts | 92% | 84% | 92% | 238-240, 342-355 |
-| deployment.service.ts | 91% | 90% | 100% | 209-210, 218-219 |
-| mfa.service.ts | 100% | 96% | 100% | 314 |
-| thumbnail.service.ts | 96% | 93% | 86% | 180, 188, 219 |
-| video-compression.service.ts | 98% | 80% | 93% | 221, 243 |
-| socket.service.ts | 74% | 67% | 67% | WebSocket callbacks |
-| health.service.ts | 90% | 54% | 100% | Edge cases timing |
+### Central Dashboard (Karma)
+
+| Catégorie               | Tests | Statut                          |
+| ----------------------- | ----- | ------------------------------- |
+| Components (standalone) | ~80   | ✅ Tests de rendu, interactions |
+| Services                | ~40   | ✅ Appels API, état             |
+| Guards / Interceptors   | ~15   | ✅ Auth, erreurs                |
+| Pipes / Directives      | ~15   | ✅ Formatage, conditions        |
+
+> **Note** : Le dashboard Angular utilise Karma/Jasmine. La couverture n'est pas mesurée automatiquement en CI mais les composants critiques (login, sites-list, content-management, site-detail) sont testés.
+
+### Central Server (Jest)
+
+| Service                      | Statements | Branches | Functions | Lignes non couvertes  |
+| ---------------------------- | ---------- | -------- | --------- | --------------------- |
+| admin-ops.service.ts         | 100%       | 79%      | 100%      | 140-148, 158-162      |
+| alerting.service.ts          | 91%        | 80%      | 96%       | 362-375, 452, 477-487 |
+| audit.service.ts             | 100%       | 97%      | 100%      | 211                   |
+| canary-deployment.service.ts | 92%        | 84%      | 92%       | 238-240, 342-355      |
+| deployment.service.ts        | 91%        | 90%      | 100%      | 209-210, 218-219      |
+| mfa.service.ts               | 100%       | 96%      | 100%      | 314                   |
+| thumbnail.service.ts         | 96%        | 93%      | 86%       | 180, 188, 219         |
+| video-compression.service.ts | 98%        | 80%      | 93%       | 221, 243              |
+| socket.service.ts            | 74%        | 67%      | 67%       | WebSocket callbacks   |
+| health.service.ts            | 90%        | 54%      | 100%      | Edge cases timing     |
 
 ### Couverture sync-agent
 
-| Composant | Cible | Actuel |
-|-----------|-------|--------|
-| config-merge.js | 95% | 100% ✅ |
-| deploy-video.js | 90% | 96% ✅ |
-| commands/index.js | 85% | 82% ⚠️ |
+| Composant         | Cible | Actuel  |
+| ----------------- | ----- | ------- |
+| config-merge.js   | 95%   | 100% ✅ |
+| deploy-video.js   | 90%   | 96% ✅  |
+| commands/index.js | 85%   | 82% ⚠️  |
 
 ## Améliorations futures
 
@@ -314,6 +339,16 @@ describe('Real-World Scenarios', () => {
 4. **delete-video.js** (sync-agent)
 5. **update-software.js** (sync-agent)
 6. **config-watcher.js** (sync-agent)
+
+### Plan d'amélioration sync-agent (objectif : 70%)
+
+| Module               | Couverture actuelle | Cible | Tests à ajouter                        |
+| -------------------- | ------------------- | ----- | -------------------------------------- |
+| `agent.js`           | ~10%                | 50%   | Connexion WebSocket, auth, reconnexion |
+| `delete-video.js`    | 0%                  | 80%   | Suppression fichier, nettoyage config  |
+| `update-software.js` | 0%                  | 60%   | Download, backup, rollback             |
+| `config-watcher.js`  | 0%                  | 70%   | Détection changements, debounce        |
+| `video-watcher.js`   | 0%                  | 70%   | Scan vidéos, hash comparaison          |
 
 ## Ajout de nouveaux tests
 
@@ -381,6 +416,11 @@ jobs:
           cd central-dashboard
           npm ci
           npx ng test --no-watch --browsers=ChromeHeadless
+      - name: Test E2E
+        run: |
+          cd e2e
+          npx playwright install --with-deps
+          npx playwright test
 ```
 
 ## Troubleshooting
@@ -395,6 +435,7 @@ jest.setTimeout(30000);
 ### Mocks qui ne fonctionnent pas
 
 Vérifier l'ordre des imports :
+
 ```javascript
 // ❌ Mauvais
 const myModule = require('../myModule');
@@ -414,3 +455,7 @@ jest.useFakeTimers();
 jest.advanceTimersByTime(1000);
 jest.useRealTimers();
 ```
+
+---
+
+_Dernière mise à jour : 10 février 2026_

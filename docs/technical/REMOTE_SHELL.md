@@ -111,12 +111,23 @@ const DANGEROUS_PATTERNS = [
   /reboot/, // Utiliser la commande dédiée
 ];
 
-// Timeout de 30 secondes
-const COMMAND_TIMEOUT = 30000;
+// Timeout de 60 secondes
+const COMMAND_TIMEOUT = 60000; // 60 secondes
 
 // Limite de sortie (évite saturation mémoire)
 const MAX_OUTPUT_SIZE = 1024 * 1024; // 1 MB
 ```
+
+## Limites
+
+| Paramètre         | Valeur                  | Description                             |
+| ----------------- | ----------------------- | --------------------------------------- |
+| `COMMAND_TIMEOUT` | 60 secondes             | Timeout d'exécution de la commande      |
+| `MAX_OUTPUT_SIZE` | 1 MB (1 048 576 octets) | Taille maximale de la sortie capturée   |
+| `MAX_CONCURRENT`  | 1 par site              | Une seule commande à la fois par site   |
+| Encodage          | UTF-8                   | Sortie tronquée si caractères invalides |
+
+> **Note** : Si la sortie dépasse `MAX_OUTPUT_SIZE`, elle est tronquée avec un message d'avertissement.
 
 ## Utilisation
 
@@ -158,6 +169,21 @@ du -sh /home/pi/neopro/videos/*
 ip addr show
 ping -c 3 google.com
 curl -s http://localhost:3000/health
+```
+
+### Exemple de résultat
+
+```json
+{
+  "commandId": "uuid-xxx",
+  "status": "success",
+  "result": {
+    "stdout": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/mmcblk0p2   29G  8.2G   20G  30% /\n",
+    "stderr": "",
+    "exitCode": 0,
+    "executionTime": 234
+  }
+}
 ```
 
 ## Déploiement
@@ -232,6 +258,7 @@ Le terminal distant nécessite que le site soit connecté. Vérifier :
 
 ## Changelog
 
+- **10 février 2026** : Ajout section Limites, exemple de résultat, correction timeout 60s
 - **v2.12.0** (2026-01-08) : Ajout de la fonctionnalité remote shell
   - Nouveau handler `remote-shell.js`
   - UI terminal dans l'onglet Debug

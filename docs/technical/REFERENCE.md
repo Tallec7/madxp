@@ -343,9 +343,7 @@ socket.emit('update_progress', {
 
 ### Mot de passe par défaut
 
-Si aucun mot de passe n'est configuré : `GG_NEO_25k!`
-
-**⚠️ À changer en production !**
+Si aucun mot de passe n'est configuré, un setup initial est requis au premier démarrage (voir SEC-002 dans SECURITY_IMPROVEMENTS.md).
 
 ---
 
@@ -371,7 +369,7 @@ Si aucun mot de passe n'est configuré : `GG_NEO_25k!`
    - Alertes automatiques
 
 3. **Déploiement**
-   - Mise à jour OTA (à venir)
+   - Mise à jour OTA
    - Gestion des configurations
    - Push de contenu
 
@@ -1198,4 +1196,4 @@ Voir **[docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ---
 
-**Dernière mise à jour :** 8 janvier 2026
+**Dernière mise à jour :** 10 février 2026

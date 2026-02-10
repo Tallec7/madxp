@@ -122,6 +122,15 @@ FTP_UPDATE_PUBLIC_URL=https://cdn.example.com/updates
 Decathlon_FOCUS_Partenaire.mp4
 ```
 
+### Limites de taille
+
+| Paramètre                   | Valeur                     | Description                                          |
+| --------------------------- | -------------------------- | ---------------------------------------------------- |
+| Taille max upload           | Pas de limite artificielle | Limité par l'espace disque temporaire Railway        |
+| Taille max mémoire (images) | 50 MB                      | Les images restent en memory storage pour conversion |
+| Espace disque temp          | `/tmp/neopro-uploads/`     | Nettoyé automatiquement (fichiers > 1h supprimés)    |
+| Nom de fichier max          | 100 caractères             | Après sanitization (extension non comptée)           |
+
 ---
 
 ## 3. Flux d'upload
@@ -325,6 +334,36 @@ if (downloadedChecksum !== expectedChecksum) {
 - **Intégrité** : Garantit que le fichier n'a pas été corrompu pendant le transfert
 - **Sécurité** : Empêche l'injection de fichiers malveillants
 - **Fiabilité** : Le Pi rejette automatiquement les fichiers corrompus
+
+## Nettoyage automatique des fichiers temporaires
+
+Le middleware d'upload (`upload.ts`) effectue un nettoyage périodique des fichiers temporaires abandonnés :
+
+- **Fréquence** : Toutes les 30 minutes
+- **Critère** : Fichiers dans `/tmp/neopro-uploads/` datant de plus de 1 heure
+- **Déclencheur** : Cron interne au serveur (pas de dépendance externe)
+
+```typescript
+// Nettoyage dans upload.ts
+const TEMP_CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 min
+const TEMP_MAX_AGE = 60 * 60 * 1000; // 1 heure
+
+setInterval(async () => {
+  const files = await fs.readdir(UPLOAD_DIR);
+  for (const file of files) {
+    const stat = await fs.stat(path.join(UPLOAD_DIR, file));
+    if (Date.now() - stat.mtimeMs > TEMP_MAX_AGE) {
+      await fs.unlink(path.join(UPLOAD_DIR, file));
+    }
+  }
+}, TEMP_CLEANUP_INTERVAL);
+```
+
+**Cas de nettoyage** :
+
+- Upload interrompu (client déconnecté)
+- Erreur pendant le traitement FTP
+- Crash du serveur pendant un upload
 
 ---
 
