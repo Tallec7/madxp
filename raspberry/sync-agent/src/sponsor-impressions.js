@@ -1,3 +1,6 @@
+// @ts-check
+/** @typedef {import('./types').SponsorImpression} SponsorImpression */
+
 /**
  * Module de collecte et d'envoi des impressions sponsors.
  *

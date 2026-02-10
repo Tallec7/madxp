@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Module de fusion intelligente de configuration NEOPRO
  *

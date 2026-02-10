@@ -1,3 +1,6 @@
+// @ts-check
+/** @typedef {import('./types').SystemMetrics} SystemMetrics */
+
 const si = require('systeminformation');
 const os = require('os');
 const { exec } = require('child_process');
@@ -41,6 +44,7 @@ class MetricsCollector {
     this._isPi5 = false;
     return { model: this._piModel, isPi5: this._isPi5 };
   }
+  /** @returns {Promise<SystemMetrics>} */
   async collectAll() {
     try {
       const [cpu, memory, temperature, disk, localIp] = await Promise.all([

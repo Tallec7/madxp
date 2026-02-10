@@ -1,3 +1,6 @@
+// @ts-check
+/** @typedef {import('../types').ConnectionStatusInfo} ConnectionStatusInfo */
+
 /**
  * Service de statut de connexion
  *

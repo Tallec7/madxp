@@ -1,3 +1,7 @@
+// @ts-check
+/** @typedef {import('../types').CommandData} CommandData */
+/** @typedef {import('../types').CommandResult} CommandResult */
+
 /**
  * Commands Index - Point d'entrée pour toutes les commandes du sync-agent
  *

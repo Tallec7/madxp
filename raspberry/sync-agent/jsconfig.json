@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2022",
+    "checkJs": false,
+    "strict": false,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "lib": ["ES2022"]
+  },
+  "include": ["src/**/*.js", "scripts/**/*.js"],
+  "exclude": ["node_modules", "coverage", "src/__tests__"]
+}

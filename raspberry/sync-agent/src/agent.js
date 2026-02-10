@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// @ts-check
+/** @typedef {import('./types').SyncAgentConfig} SyncAgentConfig */
+/** @typedef {import('./types').SystemMetrics} SystemMetrics */
 
 const io = require('socket.io-client');
 const fs = require('fs-extra');
