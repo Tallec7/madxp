@@ -26,8 +26,7 @@
             "paths": [
               {
                 "name": "../config/database",
-                "importNames": ["query", "getClient"],
-                "message": "Controllers must use repositories instead of direct query(). Import from '../repositories'."
+                "message": "Controllers must use repositories instead of direct database access. Import from '../repositories'."
               }
             ]
           }

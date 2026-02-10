@@ -3,10 +3,9 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import crypto from 'crypto';
 import { createReadStream } from 'fs';
-import { stat } from 'fs/promises';
 import logger from '../config/logger';
-import pool from '../config/database';
 import { AuthRequest } from '../types';
+import { videoRepository, deploymentRepository, siteRepository } from '../repositories';
 import deploymentService from '../services/deployment.service';
 import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl } from '../services/storage.service';
 import { formatPaginatedResponse } from '../middleware/pagination';
@@ -80,12 +79,9 @@ async function generateUniqueFilename(originalName: string): Promise<string> {
   let counter = 0;
 
   while (true) {
-    const existing = await pool.query(
-      'SELECT id FROM videos WHERE filename = $1',
-      [filename]
-    );
+    const exists = await videoRepository.filenameExists(filename);
 
-    if (existing.rows.length === 0) {
+    if (!exists) {
       // Nom disponible
       return filename;
     }
@@ -108,47 +104,18 @@ export const getVideos = async (req: AuthRequest, res: Response) => {
     const { category, search } = req.query;
     const pagination = req.pagination || { page: 1, limit: 20, offset: 0 };
 
-    let whereClause = 'WHERE 1=1';
-    const params: any[] = [];
-    let paramIndex = 1;
-
-    if (category) {
-      whereClause += ` AND category = $${paramIndex}`;
-      params.push(category);
-      paramIndex++;
-    }
-
-    if (search) {
-      whereClause += ` AND (original_name ILIKE $${paramIndex} OR filename ILIKE $${paramIndex})`;
-      params.push(`%${search}%`);
-      paramIndex++;
-    }
-
-    // Requêtes paginée et count en parallèle
-    const dataQuery = `
-      SELECT id, filename, original_name, category, subcategory,
-             file_size, duration, storage_path as url,
-             thumbnail_url, metadata, created_at, updated_at
-      FROM videos
-      ${whereClause}
-      ORDER BY created_at DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `;
-    const countQuery = `SELECT COUNT(*) as count FROM videos ${whereClause}`;
-
-    const [dataResult, countResult] = await Promise.all([
-      pool.query(dataQuery, [...params, pagination.limit, pagination.offset]),
-      pool.query(countQuery, params),
-    ]);
+    const { rows, total } = await videoRepository.findAllPaginated(
+      { category: category as string | undefined, search: search as string | undefined },
+      pagination.limit,
+      pagination.offset
+    );
 
     // Ajouter le titre et transformer l'URL en URL publique accessible
-    const videos = dataResult.rows.map(video => ({
+    const videos = rows.map(video => ({
       ...video,
       title: (video.metadata as { title?: string })?.title || video.original_name || video.filename,
       url: video.url ? getVideoUrl(video.url as string) : null
     }));
-
-    const total = parseInt((countResult.rows[0] as any)?.count || '0', 10);
 
     res.json(formatPaginatedResponse(videos, total, pagination));
   } catch (error) {
@@ -161,24 +128,19 @@ export const getVideo = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `SELECT id, filename, original_name, category, subcategory,
-              file_size, duration, storage_path as url,
-              thumbnail_url, metadata, created_at, updated_at
-       FROM videos
-       WHERE id = $1`,
-      [id]
-    );
+    const video = await videoRepository.findVideoById(id);
 
-    if (result.rows.length === 0) {
+    if (!video) {
       return res.status(404).json({ error: 'Vidéo non trouvée' });
     }
 
-    const video = result.rows[0];
-    video.title = (video.metadata as { title?: string })?.title || video.original_name || video.filename;
-    video.url = video.url ? getVideoUrl(video.url as string) : null;
+    const result = {
+      ...video,
+      title: (video.metadata as { title?: string })?.title || video.original_name || video.filename,
+      url: video.url ? getVideoUrl(video.url as string) : null,
+    };
 
-    res.json(video);
+    res.json(result);
   } catch (error) {
     logger.error('Error fetching video:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération de la vidéo' });
@@ -195,49 +157,30 @@ export const getVideoDeployments = async (req: AuthRequest, res: Response) => {
     logger.info('Fetching video deployments:', { videoId: id });
 
     // Vérifier que la vidéo existe
-    const videoResult = await pool.query('SELECT id FROM videos WHERE id = $1', [id]);
-    if (videoResult.rows.length === 0) {
+    const videoExists = await videoRepository.findVideoById(id);
+    if (!videoExists) {
       logger.warn('Video not found for deployments:', { videoId: id });
       return res.status(404).json({ error: 'Vidéo non trouvée' });
     }
 
     // Récupérer tous les déploiements pour cette vidéo
-    // Note: On évite la jointure sur "groups" car la table peut ne pas exister en production
-    const result = await pool.query(
-      `SELECT cd.id, cd.video_id, cd.target_type, cd.target_id, cd.status, cd.progress,
-              cd.error_message as error, cd.completed_at, cd.created_at, cd.started_at,
-              CASE
-                WHEN cd.target_type = 'site' THEN s.site_name
-                ELSE 'Groupe'
-              END as target_name,
-              CASE
-                WHEN cd.target_type = 'site' THEN s.club_name
-                ELSE NULL
-              END as club_name,
-              COALESCE(u.full_name, 'Système') as deployed_by_name
-       FROM content_deployments cd
-       LEFT JOIN sites s ON cd.target_type = 'site' AND cd.target_id = s.id
-       LEFT JOIN users u ON cd.deployed_by = u.id
-       WHERE cd.video_id = $1
-       ORDER BY cd.created_at DESC`,
-      [id]
-    );
+    const deployments = await deploymentRepository.findDeploymentsForVideo(id);
 
     // Statistiques résumées
     const stats = {
-      total: result.rows.length,
-      completed: result.rows.filter(d => d.status === 'completed').length,
-      failed: result.rows.filter(d => d.status === 'failed').length,
-      pending: result.rows.filter(d => d.status === 'pending').length,
-      in_progress: result.rows.filter(d => d.status === 'in_progress').length,
+      total: deployments.length,
+      completed: deployments.filter(d => d.status === 'completed').length,
+      failed: deployments.filter(d => d.status === 'failed').length,
+      pending: deployments.filter(d => d.status === 'pending').length,
+      in_progress: deployments.filter(d => d.status === 'in_progress').length,
     };
 
-    logger.info('Video deployments fetched successfully:', { videoId: id, count: result.rows.length });
+    logger.info('Video deployments fetched successfully:', { videoId: id, count: deployments.length });
 
     res.json({
       video_id: id,
       stats,
-      deployments: result.rows
+      deployments
     });
   } catch (error) {
     logger.error('Error fetching video deployments:', { videoId: req.params.id, error });
@@ -263,8 +206,8 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
 
     // Valider site_id si fourni (upload contextuel)
     if (site_id) {
-      const siteResult = await pool.query('SELECT id FROM sites WHERE id = $1', [site_id]);
-      if (siteResult.rows.length === 0) {
+      const siteExists = await siteRepository.exists(site_id);
+      if (!siteExists) {
         return res.status(400).json({ error: 'Site non trouvé' });
       }
     }
@@ -301,29 +244,30 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     const mime_type = file.mimetype;
 
     logger.info('Inserting video metadata into database:', { filename, title: videoTitle, siteId: site_id, uploadStatus, verified: uploadResult.verified });
-    const result = await pool.query(
-      `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, checksum, metadata, uploaded_by, uploaded_for_site_id, upload_status, upload_verified_at, upload_verified_size)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-       RETURNING id, filename as name, original_name, category, subcategory, file_size as size, duration, storage_path as url, thumbnail_url, checksum, metadata, uploaded_for_site_id, upload_status, created_at, updated_at`,
-      [
-        filename, original_name, category || null, subcategory || null,
-        file_size, mime_type, uploadResult.path, checksum, { title: videoTitle },
-        req.user?.id || null, site_id || null,
-        uploadStatus,
-        uploadResult.verified ? new Date() : null,
-        uploadResult.actualSize
-      ]
-    );
+    const video = await videoRepository.create({
+      filename,
+      original_name,
+      category: category || null,
+      subcategory: subcategory || null,
+      file_size,
+      mime_type,
+      storage_path: uploadResult.path,
+      checksum,
+      metadata: { title: videoTitle },
+      uploaded_by: req.user?.id || null,
+      uploaded_for_site_id: site_id || null,
+      upload_status: uploadStatus,
+      upload_verified_at: uploadResult.verified ? new Date() : null,
+      upload_verified_size: uploadResult.actualSize ?? null,
+    });
 
     // Ajouter le titre et l'URL à la réponse pour l'affichage client
-    const video = result.rows[0];
-    video.title = videoTitle;
-    video.url = uploadResult.url;
+    const videoResponse = { ...video, title: videoTitle, url: uploadResult.url };
 
     // Logger avec info de vérification
     if (!uploadResult.verified) {
       logger.warn('Video uploaded but verification failed:', {
-        id: video.id,
+        id: videoResponse.id,
         filename,
         expectedSize: file_size,
         actualSize: uploadResult.actualSize,
@@ -331,7 +275,7 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     }
 
     logger.info('Video created successfully:', {
-      id: video.id,
+      id: videoResponse.id,
       filename,
       title: videoTitle,
       storagePath: uploadResult.path,
@@ -340,7 +284,7 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       uploadStatus,
       verified: uploadResult.verified,
     });
-    res.status(201).json(video);
+    res.status(201).json(videoResponse);
   } catch (error) {
     logger.error('Error creating video:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
@@ -368,8 +312,8 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
 
     // Valider site_id si fourni (upload contextuel)
     if (site_id) {
-      const siteResult = await pool.query('SELECT id FROM sites WHERE id = $1', [site_id]);
-      if (siteResult.rows.length === 0) {
+      const siteExists = await siteRepository.exists(site_id);
+      if (!siteExists) {
         return res.status(400).json({ error: 'Site non trouvé' });
       }
     }
@@ -412,14 +356,20 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
           ? await calculateChecksumFromFile(tempFilePath)
           : calculateChecksum(file.buffer);
 
-        const result = await pool.query(
-          `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, storage_path, checksum, metadata, uploaded_by, uploaded_for_site_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-           RETURNING id, filename as name, original_name, file_size as size, checksum`,
-          [filename, original_name, category || null, subcategory || null, file_size, mime_type, uploadResult.path, checksum, { title: videoTitle }, req.user?.id || null, site_id || null]
-        );
+        const video = await videoRepository.createBulk({
+          filename,
+          original_name,
+          category: category || null,
+          subcategory: subcategory || null,
+          file_size,
+          mime_type,
+          storage_path: uploadResult.path,
+          checksum,
+          metadata: { title: videoTitle },
+          uploaded_by: req.user?.id || null,
+          uploaded_for_site_id: site_id || null,
+        });
 
-        const video = result.rows[0] as { id: string; name: string; original_name: string; size: number };
         results.push({
           id: video.id,
           name: video.name,
@@ -467,29 +417,17 @@ export const updateVideo = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { filename, original_name, category, subcategory, file_size, duration, storage_path, thumbnail_url, metadata } = req.body;
 
-    const result = await pool.query(
-      `UPDATE videos
-       SET filename = COALESCE($1, filename),
-           original_name = COALESCE($2, original_name),
-           category = COALESCE($3, category),
-           subcategory = COALESCE($4, subcategory),
-           file_size = COALESCE($5, file_size),
-           duration = COALESCE($6, duration),
-           storage_path = COALESCE($7, storage_path),
-           thumbnail_url = COALESCE($8, thumbnail_url),
-           metadata = COALESCE($9, metadata),
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $10
-       RETURNING *`,
-      [filename, original_name, category, subcategory, file_size, duration, storage_path, thumbnail_url, metadata, id]
-    );
+    const result = await videoRepository.update(id, {
+      filename, original_name, category, subcategory,
+      file_size, duration, storage_path, thumbnail_url, metadata,
+    });
 
-    if (result.rows.length === 0) {
+    if (!result) {
       return res.status(404).json({ error: 'Vidéo non trouvée' });
     }
 
     logger.info('Video updated:', { id, filename });
-    res.json(result.rows[0]);
+    res.json(result);
   } catch (error) {
     logger.error('Error updating video:', error);
     res.status(500).json({ error: 'Erreur lors de la mise à jour de la vidéo' });
@@ -501,22 +439,18 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     // Récupérer le chemin de stockage avant suppression
-    const videoResult = await pool.query(
-      `SELECT storage_path FROM videos WHERE id = $1`,
-      [id]
-    );
+    const storagePath = await videoRepository.findStoragePath(id);
 
-    if (videoResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Vidéo non trouvée' });
+    if (storagePath === null) {
+      // findStoragePath returns null if video not found
+      const exists = await videoRepository.findVideoById(id);
+      if (!exists) {
+        return res.status(404).json({ error: 'Vidéo non trouvée' });
+      }
     }
 
-    const storagePath = videoResult.rows[0].storage_path as string | null;
-
     // Supprimer de la base de données
-    const result = await pool.query(
-      `DELETE FROM videos WHERE id = $1 RETURNING *`,
-      [id]
-    );
+    await videoRepository.deleteAndReturn(id);
 
     // Supprimer du stockage FTP
     if (storagePath) {
@@ -533,23 +467,10 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
 
 export const getDeployments = async (req: AuthRequest, res: Response) => {
   try {
-    const result = await pool.query(
-      `SELECT cd.id, cd.video_id, cd.target_type, cd.target_id, cd.status, cd.progress,
-              cd.error_message as error, cd.completed_at as deployed_at,
-              cd.created_at, cd.started_at,
-              v.filename, v.original_name, v.metadata,
-              CASE
-                WHEN cd.target_type = 'site' THEN s.site_name
-                ELSE 'Groupe'
-              END as target_name
-       FROM content_deployments cd
-       LEFT JOIN videos v ON cd.video_id = v.id
-       LEFT JOIN sites s ON cd.target_type = 'site' AND cd.target_id = s.id
-       ORDER BY cd.created_at DESC`
-    );
+    const rows = await deploymentRepository.findAllWithDetails();
 
     // Ajouter video_title depuis metadata
-    const deployments = result.rows.map(d => ({
+    const deployments = rows.map(d => ({
       ...d,
       video_title: (d.metadata as { title?: string })?.title || d.original_name || d.filename
     }));
@@ -565,27 +486,13 @@ export const getDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `SELECT cd.id, cd.video_id, cd.target_type, cd.target_id, cd.status, cd.progress,
-              cd.error_message as error, cd.completed_at as deployed_at,
-              cd.created_at, cd.started_at,
-              v.filename as video_name,
-              CASE
-                WHEN cd.target_type = 'site' THEN s.site_name
-                ELSE 'Groupe'
-              END as target_name
-       FROM content_deployments cd
-       LEFT JOIN videos v ON cd.video_id = v.id
-       LEFT JOIN sites s ON cd.target_type = 'site' AND cd.target_id = s.id
-       WHERE cd.id = $1`,
-      [id]
-    );
+    const result = await deploymentRepository.findWithDetails(id);
 
-    if (result.rows.length === 0) {
+    if (!result) {
       return res.status(404).json({ error: 'Déploiement non trouvé' });
     }
 
-    res.json(result.rows[0]);
+    res.json(result);
   } catch (error) {
     logger.error('Error fetching deployment:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération du déploiement' });
@@ -631,22 +538,15 @@ export const createDeployment = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const result = await pool.query(
-      `INSERT INTO content_deployments (video_id, target_type, target_id, status, progress, deployed_by, scheduled_at, scheduled_by)
-       VALUES ($1, $2, $3, $4, 0, $5, $6, $7)
-       RETURNING *`,
-      [
-        video_id,
-        target_type || 'site',
-        target_id,
-        status,
-        req.user?.id || null,
-        scheduledDate,
-        isScheduled ? req.user?.id : null
-      ]
-    );
-
-    const deployment = result.rows[0];
+    const deployment = await deploymentRepository.createFull({
+      video_id,
+      target_type: target_type || 'site',
+      target_id,
+      status,
+      deployed_by: req.user?.id || null,
+      scheduled_at: scheduledDate,
+      scheduled_by: isScheduled ? req.user?.id || null : null,
+    });
 
     if (isScheduled) {
       logger.info('Scheduled deployment created:', {
@@ -677,24 +577,14 @@ export const updateDeployment = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { status, progress, error_message } = req.body;
 
-    const result = await pool.query(
-      `UPDATE content_deployments
-       SET status = COALESCE($1, status),
-           progress = COALESCE($2, progress),
-           error_message = COALESCE($3, error_message),
-           started_at = CASE WHEN $1 = 'in_progress' AND started_at IS NULL THEN CURRENT_TIMESTAMP ELSE started_at END,
-           completed_at = CASE WHEN $1 IN ('completed', 'failed') THEN CURRENT_TIMESTAMP ELSE completed_at END
-       WHERE id = $4
-       RETURNING *`,
-      [status, progress, error_message, id]
-    );
+    const result = await deploymentRepository.updateFields(id, { status, progress, error_message });
 
-    if (result.rows.length === 0) {
+    if (!result) {
       return res.status(404).json({ error: 'Déploiement non trouvé' });
     }
 
     logger.info('Deployment updated:', { id, status, progress });
-    res.json(result.rows[0]);
+    res.json(result);
   } catch (error) {
     logger.error('Error updating deployment:', error);
     res.status(500).json({ error: 'Erreur lors de la mise à jour du déploiement' });
@@ -705,12 +595,9 @@ export const deleteDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `DELETE FROM content_deployments WHERE id = $1 RETURNING *`,
-      [id]
-    );
+    const deleted = await deploymentRepository.deleteAndReturn(id);
 
-    if (result.rows.length === 0) {
+    if (!deleted) {
       return res.status(404).json({ error: 'Déploiement non trouvé' });
     }
 
@@ -734,55 +621,25 @@ export const getVideosForSite = async (req: AuthRequest, res: Response) => {
     const pagination = req.pagination || { page: 1, limit: 50, offset: 0 };
 
     // Vérifier que le site existe
-    const siteResult = await pool.query('SELECT id FROM sites WHERE id = $1', [siteId]);
-    if (siteResult.rows.length === 0) {
+    const siteExists = await siteRepository.exists(siteId);
+    if (!siteExists) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    let whereClause = 'WHERE 1=1';
-    const params: any[] = [siteId];  // $1 = siteId pour le tri
-    let paramIndex = 2;
-
-    if (category) {
-      whereClause += ` AND category = $${paramIndex}`;
-      params.push(category);
-      paramIndex++;
-    }
-
-    if (search) {
-      whereClause += ` AND (original_name ILIKE $${paramIndex} OR filename ILIKE $${paramIndex})`;
-      params.push(`%${search}%`);
-      paramIndex++;
-    }
-
-    // Query avec tri par uploaded_for_site_id (vidéos du site en premier)
-    const dataQuery = `
-      SELECT id, filename, original_name, category, subcategory,
-             file_size, duration, storage_path as url,
-             thumbnail_url, metadata, uploaded_for_site_id,
-             created_at, updated_at,
-             CASE WHEN uploaded_for_site_id = $1 THEN 1 ELSE 0 END as is_for_site
-      FROM videos
-      ${whereClause}
-      ORDER BY is_for_site DESC, created_at DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `;
-    const countQuery = `SELECT COUNT(*) as count FROM videos ${whereClause}`;
-
-    const [dataResult, countResult] = await Promise.all([
-      pool.query(dataQuery, [...params, pagination.limit, pagination.offset]),
-      pool.query(countQuery, params.slice(1)),  // Sans siteId pour le count
-    ]);
+    const { rows, total } = await videoRepository.findForSitePaginated(
+      siteId,
+      { category: category as string | undefined, search: search as string | undefined },
+      pagination.limit,
+      pagination.offset
+    );
 
     // Ajouter le titre et transformer l'URL en URL publique accessible
-    const videos = dataResult.rows.map(video => ({
+    const videos = rows.map(video => ({
       ...video,
       title: (video.metadata as { title?: string })?.title || video.original_name || video.filename,
       url: video.url ? getVideoUrl(video.url as string) : null,
       isForCurrentSite: video.is_for_site === 1,
     }));
-
-    const total = parseInt((countResult.rows[0] as any)?.count || '0', 10);
 
     res.json(formatPaginatedResponse(videos, total, pagination));
   } catch (error) {
@@ -815,8 +672,8 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
 
     // Valider site_id si fourni
     if (site_id) {
-      const siteResult = await pool.query('SELECT id FROM sites WHERE id = $1', [site_id]);
-      if (siteResult.rows.length === 0) {
+      const siteExists = await siteRepository.exists(site_id);
+      if (!siteExists) {
         return res.status(400).json({ error: 'Site non trouvé' });
       }
     }
@@ -868,35 +725,28 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
     const videoTitle = imageBaseName;
 
     // Insérer en base de données
-    const dbResult = await pool.query(
-      `INSERT INTO videos (filename, original_name, category, subcategory, file_size, mime_type, duration, storage_path, checksum, metadata, uploaded_by, uploaded_for_site_id, upload_status, upload_verified_at, upload_verified_size)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-       RETURNING id, filename as name, original_name, category, subcategory, file_size as size, duration, storage_path as url, thumbnail_url, checksum, metadata, uploaded_for_site_id, upload_status, created_at, updated_at`,
-      [
-        filename,
-        result.filename,  // original_name = nom généré depuis l'image
-        null,  // category
-        null,  // subcategory
-        result.size,
-        result.mimetype,
-        duration,  // durée de la vidéo
-        uploadResult.path,
-        checksum,
-        { title: videoTitle, convertedFromImage: true, originalImage: file.originalname },
-        req.user?.id || null,
-        site_id || null,
-        uploadStatus,
-        uploadResult.verified ? new Date() : null,
-        uploadResult.actualSize
-      ]
-    );
+    const video = await videoRepository.create({
+      filename,
+      original_name: result.filename,
+      category: null,
+      subcategory: null,
+      file_size: result.size,
+      mime_type: result.mimetype,
+      storage_path: uploadResult.path,
+      checksum,
+      metadata: { title: videoTitle, convertedFromImage: true, originalImage: file.originalname },
+      uploaded_by: req.user?.id || null,
+      uploaded_for_site_id: site_id || null,
+      upload_status: uploadStatus,
+      upload_verified_at: uploadResult.verified ? new Date() : null,
+      upload_verified_size: uploadResult.actualSize ?? null,
+      duration,
+    });
 
-    const video = dbResult.rows[0];
-    video.title = videoTitle;
-    video.url = uploadResult.url;
+    const videoResponse = { ...video, title: videoTitle, url: uploadResult.url };
 
     logger.info('Image converted to video successfully', {
-      id: video.id,
+      id: videoResponse.id,
       filename,
       title: videoTitle,
       originalImage: file.originalname,
@@ -908,7 +758,7 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
     res.status(201).json({
       success: true,
       message: `Image convertie en vidéo de ${duration} secondes`,
-      video,
+      video: videoResponse,
     });
   } catch (error) {
     logger.error('Error converting image to video:', error);

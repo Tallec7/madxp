@@ -26,7 +26,15 @@ export {
   type SiteDashboardRow,
 } from './site.repository';
 export { subscriptionRepository, type SubscriptionUpdate, type HistoryInput } from './subscription.repository';
-export { deploymentRepository, type DeploymentWithVideo, type CreateDeploymentInput } from './deployment.repository';
+export {
+  deploymentRepository,
+  type DeploymentWithVideo,
+  type CreateDeploymentInput,
+  type VideoDeploymentRow,
+  type DeploymentDetailRow,
+  type CreateFullDeploymentInput,
+  type UpdateDeploymentFields,
+} from './deployment.repository';
 export { alertRepository, type CreateAlertInput, type AlertThreshold, type AlertWithSite } from './alert.repository';
 export {
   remoteCommandRepository,
@@ -189,4 +197,22 @@ export {
   type SiteIdRow,
   type AdvertiserSiteAssocRow,
 } from './advertiser-portal.repository';
+export {
+  videoRepository,
+  type VideoRow,
+  type VideoFilters,
+  type CreateVideoInput,
+  type CreateVideoBulkResult,
+  type UpdateVideoInput,
+} from './video.repository';
+export {
+  softwareUpdateRepository,
+  type SoftwareUpdateRow,
+  type CreateSoftwareUpdateInput,
+  type UpdateSoftwareUpdateInput,
+  type PackageCheckRow,
+  type UpdateDeploymentRow,
+  type CreateUpdateDeploymentInput,
+  type UpdateUpdateDeploymentFields,
+} from './software-update.repository';
 export { BaseRepository } from './base.repository';
