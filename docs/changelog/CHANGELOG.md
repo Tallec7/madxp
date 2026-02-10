@@ -1,3 +1,16 @@
+# [3.9.0](https://github.com/Tallec7/neopro/compare/v3.8.2...v3.9.0) (2026-02-10)
+
+### Bug Fixes
+
+- **analytics:** allow null sessionId for invalid UUIDs + add updated_at to remote_commands ([36a2ea3](https://github.com/Tallec7/neopro/commit/36a2ea3a26fa7f401f335a4e3da52be58394b53c))
+- **raspberry:** deepMerge now accepts undefined values to clear properties ([c08decf](https://github.com/Tallec7/neopro/commit/c08decfc03da8493e1056a81facd0f366a1e145d))
+- **tests:** sync 6 broken test suites with refactored codebase ([f8257dd](https://github.com/Tallec7/neopro/commit/f8257ddc0496001423adcc0a8bcba59b027fb4b3))
+
+### Features
+
+- **remote:** add optional PIN for cloud remote access ([4cc0fcc](https://github.com/Tallec7/neopro/commit/4cc0fccb2528990dd6a6b1b57ae7fa6f8456d69c))
+- **sync-agent:** add jsconfig.json, shared types, and [@ts-check](https://github.com/ts-check) to 10 critical files ([23da2d9](https://github.com/Tallec7/neopro/commit/23da2d95fc1c2a56bc7a7998e4ce9bca8be03c42))
+
 ## Architecture Roadmap (2026-02-09 → 2026-02-10)
 
 ### Phase 1 — Storage Unification (central-server)
