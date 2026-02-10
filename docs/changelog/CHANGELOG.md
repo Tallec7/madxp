@@ -1,3 +1,9 @@
+## [3.9.1](https://github.com/Tallec7/neopro/compare/v3.9.0...v3.9.1) (2026-02-10)
+
+### Bug Fixes
+
+- **video:** fix black flash on large loops, OOM crash, and buffer analytics display ([3c591ea](https://github.com/Tallec7/neopro/commit/3c591eaef40262268f17b2dcd635d4b15699215a))
+
 # [3.9.1] (2026-02-10)
 
 ### Bug Fixes
