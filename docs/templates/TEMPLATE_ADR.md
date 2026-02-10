@@ -1,58 +1,54 @@
-# ADR-NNN — [Titre de la d\u00e9cision]
+# ADR-XXX: [Titre]
 
-## M\u00e9tadonn\u00e9es
+**Date** : [YYYY-MM-DD]
+**Statut** : Propos\u00e9 | Accept\u00e9 | D\u00e9pr\u00e9ci\u00e9 | Rejet\u00e9
+**D\u00e9cideurs** : [Noms]
+**Remplace** : ADR-XXX (si applicable)
+**Remplac\u00e9 par** : ADR-YYY (si applicable)
 
-- Statut: `proposed|accepted|deprecated|superseded`
-- Date: `YYYY-MM-DD`
-- D\u00e9cideurs: `nom(s)`
-- Remplace: `ADR-XXX` (si applicable)
-- Remplac\u00e9 par: `ADR-YYY` (si applicable)
+---
 
 ## Contexte
 
-Quel est le probl\u00e8me ou le besoin qui motive cette d\u00e9cision ?
+[Pourquoi cette d\u00e9cision est n\u00e9cessaire]
 
 - Contraintes techniques
 - Contraintes m\u00e9tier
 - \u00c9tat actuel du syst\u00e8me
 
-## Options consid\u00e9r\u00e9es
-
-### Option A \u2014 [Nom]
-
-- **Description** : ...
-- **Avantages** : ...
-- **Inconv\u00e9nients** : ...
-
-### Option B \u2014 [Nom]
-
-- **Description** : ...
-- **Avantages** : ...
-- **Inconv\u00e9nients** : ...
-
-### Option C \u2014 [Nom] (si applicable)
-
-- **Description** : ...
-- **Avantages** : ...
-- **Inconv\u00e9nients** : ...
-
 ## D\u00e9cision
 
-L'option retenue et pourquoi.
+[Le choix retenu et pourquoi]
+
+## Alternatives Consid\u00e9r\u00e9es
+
+### 1. [Nom]
+
+**Avantages** : ...
+**Inconv\u00e9nients** : ...
+**Verdict** : Rejet\u00e9 - [raison]
+
+### 2. [Nom] (choisie) \u2705
+
+**Avantages** : ...
+**Inconv\u00e9nients** : ...
+**Verdict** : Accept\u00e9 - [raison]
 
 ## Cons\u00e9quences
 
 ### Positives
 
-- ...
+1. ...
 
 ### N\u00e9gatives
 
-- ...
+1. ...
 
 ### Risques
 
-- ...
+| Risque | Mitigation |
+| ------ | ---------- |
+| ...    | ...        |
 
 ## Plan d'impl\u00e9mentation
 
@@ -62,4 +58,5 @@ L'option retenue et pourquoi.
 
 ## R\u00e9f\u00e9rences
 
-- Liens vers documentation, issues, discussions
+- [Lien vers doc]
+- [Lien vers code]
