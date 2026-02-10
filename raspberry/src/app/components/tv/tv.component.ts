@@ -1372,7 +1372,7 @@ export class TvComponent implements OnInit, OnDestroy {
     // Précharger 1s avant la fin seulement - minimise le temps de décodage parallèle
     // Le préchargement cause une saccade, donc on le retarde au maximum
     const preloadThreshold = Math.min(1.5, player.duration * 0.15); // 1.5s ou 15% max
-    if (remaining <= preloadThreshold && !this.preloadReady && !this.preloadedIndex) {
+    if (remaining <= preloadThreshold && !this.preloadReady && this.preloadedIndex === null) {
       const nextIndex = (this.currentLoopIndex + 1) % this.currentLoopVideos.length;
       console.log(`[TV] Starting late preload, ${remaining.toFixed(1)}s remaining`);
       this.preloadOnInactivePlayer(nextIndex);
