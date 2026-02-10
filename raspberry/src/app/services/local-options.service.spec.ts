@@ -223,18 +223,13 @@ describe('LocalOptionsService', () => {
     expect(service.getOptions().match.awayTeam.logo).toBe('/logos/away.png');
   });
 
-  it('should note that clearTeamLogos does not clear via deepMerge (undefined skipped)', () => {
-    // BUG CONNU : clearTeamLogos() appelle updateHomeTeam({logo: undefined})
-    // mais deepMerge ignore les valeurs undefined (sourceValue !== undefined).
-    // Le logo n'est donc PAS effacé. resetMatch() a le même problème.
-    // Ce test documente le comportement actuel en attendant un fix du deepMerge.
+  it('should clear team logos', () => {
     service.setTeamLogo('home', 'logo.png');
     service.setTeamLogo('away', 'logo2.png');
     service.clearTeamLogos();
 
-    // Comportement actuel : les logos ne sont PAS effacés à cause du deepMerge
-    expect(service.getOptions().match.homeTeam.logo).toBe('logo.png');
-    expect(service.getOptions().match.awayTeam.logo).toBe('logo2.png');
+    expect(service.getOptions().match.homeTeam.logo).toBeUndefined();
+    expect(service.getOptions().match.awayTeam.logo).toBeUndefined();
   });
 
   it('should reset match', () => {

@@ -577,7 +577,8 @@ export class LocalOptionsService {
             targetValue as object,
             sourceValue as object
           );
-        } else if (sourceValue !== undefined) {
+        } else {
+          // Accepter toutes les valeurs, y compris undefined (pour effacer une prop)
           (result as Record<string, unknown>)[key] = sourceValue;
         }
       }
