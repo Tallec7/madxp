@@ -81,13 +81,27 @@ const ADMIN_ROLES: UserRole[] = ['super_admin', 'admin'];
 // Rôles internes NeoPro (pas des partenaires externes)
 const INTERNAL_ROLES: UserRole[] = ['super_admin', 'admin', 'operator', 'viewer'];
 
+/**
+ * Middleware that restricts access to the specified roles.
+ *
+ * **Important**: `super_admin` always bypasses this check — even if it is not
+ * listed in `allowedRoles`.  This means `requireRole('admin')` implicitly
+ * grants access to `super_admin` as well.
+ *
+ * @example
+ *   // Admins (and super_admins via bypass)
+ *   router.delete('/sites/:id', authenticate, requireRole('admin'), handler);
+ *
+ *   // Admins + operators
+ *   router.post('/sites', authenticate, requireRole('admin', 'operator'), handler);
+ */
 export const requireRole = (...allowedRoles: UserRole[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Non authentifié' });
     }
 
-    // Super admin a accès à tout
+    // Super admin bypasses all role checks
     if (req.user.role === 'super_admin') {
       return next();
     }
@@ -96,6 +110,32 @@ export const requireRole = (...allowedRoles: UserRole[]) => {
       return res.status(403).json({
         error: 'Accès refusé',
         message: `Rôle requis: ${allowedRoles.join(' ou ')}`
+      });
+    }
+
+    return next();
+  };
+};
+
+/**
+ * Middleware that restricts access to `super_admin` only.
+ * Use for sensitive operations like user CRUD and subscription plan changes.
+ *
+ * Unlike {@link requireRole}, there is no implicit bypass — the check is explicit.
+ *
+ * @example
+ *   router.post('/users', authenticate, requireSuperAdmin(), handler);
+ */
+export const requireSuperAdmin = () => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        error: 'Accès refusé',
+        message: 'Réservé aux super administrateurs'
       });
     }
 

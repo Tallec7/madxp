@@ -39,7 +39,7 @@ interface HistoryEntry {
         <span>Commandes limitées : ls, cat, df, journalctl, ps, ping, etc.</span>
       </div>
 
-      <div class="security-info warning" *ngIf="userRole === 'super_admin' || userRole === 'superadmin'">
+      <div class="security-info warning" *ngIf="userRole === 'super_admin'">
         <span class="info-icon">⚠️</span>
         <span>Mode super admin : commandes destructives bloquées (rm -rf, shutdown...)</span>
       </div>

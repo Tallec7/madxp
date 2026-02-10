@@ -307,6 +307,44 @@ describe('AuthService', () => {
     }));
   });
 
+  describe('hasRole — super_admin bypass', () => {
+    const superAdminUser: User = {
+      id: '2',
+      email: 'super@example.com',
+      full_name: 'Super Admin',
+      role: 'super_admin',
+      created_at: new Date(),
+      last_login_at: new Date()
+    };
+
+    const superAdminAuthResponse: AuthResponse = {
+      token: 'super-token-456',
+      user: superAdminUser
+    };
+
+    beforeEach(fakeAsync(() => {
+      apiServiceSpy.post.and.returnValue(of(superAdminAuthResponse));
+      service.login('super@example.com', 'password123').subscribe();
+      tick();
+    }));
+
+    it('should bypass role check for super_admin (any role returns true)', () => {
+      expect(service.hasRole('admin')).toBeTrue();
+      expect(service.hasRole('operator')).toBeTrue();
+      expect(service.hasRole('viewer')).toBeTrue();
+      expect(service.hasRole('advertiser')).toBeTrue();
+      expect(service.hasRole('agency')).toBeTrue();
+    });
+
+    it('should return true even for roles that do not exist', () => {
+      expect(service.hasRole('nonexistent_role')).toBeTrue();
+    });
+
+    it('should return true for multiple roles', () => {
+      expect(service.hasRole('operator', 'viewer')).toBeTrue();
+    });
+  });
+
   describe('refreshCurrentUser', () => {
     it('should update current user from API', fakeAsync(() => {
       apiServiceSpy.get.and.returnValue(of(mockUser));
