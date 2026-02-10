@@ -1,8 +1,8 @@
 /**
  * VideoProcessingService
  *
- * Gère la file d'attente de traitement vidéo (compression, miniatures).
- * Lit et écrit dans PROCESSING_DIR/queue.json et job-{id}.json.
+ * G\u00e8re la file d'attente de traitement vid\u00e9o (compression, miniatures).
+ * Lit et \u00e9crit dans PROCESSING_DIR/queue.json et job-{id}.json.
  */
 
 const fs = require('fs').promises;
@@ -20,9 +20,13 @@ class VideoProcessingService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Ajouter un job à la file de traitement.
-   * @param {Object} jobData - Données du job (inputPath, outputPath, etc.)
-   * @returns {string} jobId
+   * Add a job to the video processing queue.
+   *
+   * Creates the processing directory and queue file if they don't exist.
+   * Each job gets a unique ID based on timestamp + random suffix.
+   *
+   * @param {Object} jobData — Job parameters (inputPath, outputPath, compress, thumbnail, etc.)
+   * @returns {Promise<string>} Unique job ID
    */
   async addToQueue(jobData) {
     await fs.mkdir(PROCESSING_DIR, { recursive: true });
@@ -50,7 +54,7 @@ class VideoProcessingService {
       JSON.stringify({ jobs: queue, updated: new Date().toISOString() }, null, 2),
     );
 
-    console.log('[admin] Job ajouté à la file de traitement', {
+    console.log('[admin] Job ajout\u00e9 \u00e0 la file de traitement', {
       jobId,
       inputPath: jobData.inputPath,
     });
@@ -59,9 +63,13 @@ class VideoProcessingService {
   }
 
   /**
-   * Obtenir le statut d'un job spécifique.
-   * @param {string} jobId
-   * @returns {Object|null}
+   * Get the status of a specific processing job.
+   *
+   * Reads `job-{id}.json` from PROCESSING_DIR. Returns `null` if
+   * the job status file doesn't exist (job may still be pending).
+   *
+   * @param {string} jobId — Unique job identifier
+   * @returns {Promise<Object|null>} Job status object or null if not found
    */
   async getJobStatus(jobId) {
     try {
@@ -74,8 +82,9 @@ class VideoProcessingService {
   }
 
   /**
-   * Obtenir la file d'attente complète.
-   * @returns {Array}
+   * Get the full processing queue.
+   *
+   * @returns {Promise<Array<{id: string, status: string, createdAt: string, inputPath: string, outputPath: string}>>}
    */
   async getQueue() {
     try {
@@ -92,7 +101,11 @@ class VideoProcessingService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Retourne la configuration actuelle du traitement vidéo.
+   * Return the current video processing configuration.
+   *
+   * Reads from environment variables / helpers constants.
+   *
+   * @returns {{compressionEnabled: boolean, thumbnailsEnabled: boolean, quality: string}}
    */
   getProcessingConfig() {
     return {

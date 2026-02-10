@@ -1,8 +1,8 @@
 /**
  * BackupService
  *
- * Logique métier pour la gestion des backups : lister, créer,
- * télécharger, supprimer et gérer le backup automatique (timer systemd).
+ * Logique m\u00e9tier pour la gestion des backups : lister, cr\u00e9er,
+ * t\u00e9l\u00e9charger, supprimer et g\u00e9rer le backup automatique (timer systemd).
  */
 
 const fs = require('fs').promises;
@@ -19,6 +19,11 @@ class BackupService {
   // Validation
   // ---------------------------------------------------------------------------
 
+  /**
+   * Validate that a filename matches the expected backup pattern `backup-YYYYMMDD-HHMMSS.tar.gz`.
+   * @param {string} filename
+   * @returns {boolean} True if the filename is a valid backup archive name
+   */
   isValidBackupFilename(filename) {
     return BACKUP_FILENAME_REGEX.test(filename);
   }
@@ -27,6 +32,13 @@ class BackupService {
   // List backups
   // ---------------------------------------------------------------------------
 
+  /**
+   * List all backup archives in BACKUP_DIR, sorted newest-first.
+   *
+   * Also reads `last-backup-status.json` for the most recent backup outcome.
+   *
+   * @returns {Promise<{backups: Array<{name: string, size: string, sizeBytes: number, date: string|null, created: Date, age: string}>, status: object|null, total: number, totalSize: number}>}
+   */
   async listBackups() {
     try {
       await fs.access(BACKUP_DIR);
@@ -87,6 +99,13 @@ class BackupService {
   // Create backup
   // ---------------------------------------------------------------------------
 
+  /**
+   * Create a new backup by executing the `auto-backup.sh` script.
+   *
+   * @returns {Promise<{output: string}>} Shell output from the backup script
+   * @throws {NotFoundError} If the backup script is not found
+   * @throws {CommandError} If the script execution fails
+   */
   async createBackup() {
     const scriptPath = path.join(NEOPRO_DIR, 'scripts', 'auto-backup.sh');
 
@@ -98,7 +117,7 @@ class BackupService {
 
     const result = await execCommand(`sudo bash ${scriptPath}`);
     if (!result.success) {
-      throw new CommandError('Échec de la cr\u00e9ation du backup: ' + (result.error || ''));
+      throw new CommandError('\u00c9chec de la cr\u00e9ation du backup: ' + (result.error || ''));
     }
 
     return { output: result.output };
@@ -108,6 +127,14 @@ class BackupService {
   // Get backup path (for download)
   // ---------------------------------------------------------------------------
 
+  /**
+   * Resolve and validate the full path to a backup file (for download).
+   *
+   * @param {string} filename — Backup file name (e.g. `backup-20260210-143000.tar.gz`)
+   * @returns {Promise<string>} Absolute path to the backup file
+   * @throws {ValidationError} If the filename format is invalid
+   * @throws {NotFoundError} If the backup file does not exist
+   */
   async getBackupPath(filename) {
     if (!this.isValidBackupFilename(filename)) {
       throw new ValidationError('Nom de fichier invalide');
@@ -127,6 +154,13 @@ class BackupService {
   // Delete backup
   // ---------------------------------------------------------------------------
 
+  /**
+   * Delete a backup archive from disk.
+   *
+   * @param {string} filename — Backup file name
+   * @throws {ValidationError} If the filename format is invalid
+   * @throws {NotFoundError} If the backup file does not exist
+   */
   async deleteBackup(filename) {
     if (!this.isValidBackupFilename(filename)) {
       throw new ValidationError('Nom de fichier invalide');
@@ -146,6 +180,14 @@ class BackupService {
   // Auto-backup status
   // ---------------------------------------------------------------------------
 
+  /**
+   * Get the auto-backup systemd timer status.
+   *
+   * Checks whether `neopro-backup.timer` is enabled and active,
+   * reads the next scheduled run time, and fetches recent journal logs.
+   *
+   * @returns {Promise<{enabled: boolean, active: boolean, nextRun: string|null, logs: string|null}>}
+   */
   async getAutoBackupStatus() {
     // Is timer enabled?
     const timerResult = await execCommand(
@@ -184,6 +226,14 @@ class BackupService {
   // Toggle auto-backup
   // ---------------------------------------------------------------------------
 
+  /**
+   * Enable or disable the auto-backup systemd timer.
+   *
+   * @param {boolean} enable — `true` to enable, `false` to disable
+   * @returns {Promise<{enabled: boolean}>}
+   * @throws {ValidationError} If the `enable` parameter is missing
+   * @throws {CommandError} If the systemctl command fails
+   */
   async toggleAutoBackup(enable) {
     if (enable === undefined) {
       throw new ValidationError('Param\u00e8tre "enable" requis');

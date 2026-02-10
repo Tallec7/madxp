@@ -3,16 +3,32 @@ const fs = require('fs');
 /**
  * Register all Socket.IO event handlers.
  *
+ * Manages 18 event types across 6 domains: command relay, score, phase,
+ * recording, TV sync (master-slave), options/timer, breaking news,
+ * config/license updates, and connection lifecycle.
+ *
  * @param {object} deps
  * @param {object} deps.io           - Socket.IO server instance
  * @param {import('../services/state.service')} deps.stateService - State manager
  * @param {string} deps.configPath   - Path to configuration.json
+ *
+ * @fires io#score-update — `{ home: number, away: number, sets?: object }`
+ * @fires io#phase-change — `{ phase: string }`
+ * @fires io#recording-state — `{ isRecording: boolean, startedAt?: string }`
+ * @fires io#options-update — `{ matchType?: string, sport?: string, ... }`
+ * @fires io#timer-update — `{ action: string, currentTime: number, isRunning: boolean }`
+ * @fires io#tv-role-assigned — `{ role: 'master'|'slave' }`
+ * @fires io#tv-loop-state — `{ currentIndex: number, currentVideo?: string }`
+ * @fires io#breaking-news — `{ message: string, type?: string }`
+ * @fires io#action — `{ type: string, data?: object }` (command relay + config reload)
+ * @fires io#license_update — `{ status: string, reason?: string }`
+ * @fires io#license_blocked — `{ status: string, reason?: string }`
  */
 module.exports = function registerSocketHandlers({ io, stateService, configPath }) {
   io.on('connection', (socket) => {
     console.log('Client connect\u00e9:', socket.id);
 
-    // --- Initial state sync ---
+    // --- Initial state sync (send full state to newly connected client) ---
     const state = stateService.getFullState();
     socket.emit('score-update', state.score);
     socket.emit('phase-change', { phase: state.phase });
@@ -24,19 +40,31 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
       socket.emit('timer-update', { action: 'sync', ...state.timer });
     }
 
-    // --- Command relay ---
+    /**
+     * Generic command relay — forwards any action to all clients.
+     * @event command
+     * @param {object} data — `{ type: string, ...payload }`
+     */
     socket.on('command', (data) => {
       console.log('Commande re\u00e7ue:', data);
       io.emit('action', data);
     });
 
-    // --- Score ---
+    /**
+     * Score update — merges partial score data into in-memory state.
+     * @event score-update
+     * @param {object} data — `{ home?: number, away?: number, sets?: object }`
+     */
     socket.on('score-update', (data) => {
       console.log('Score update re\u00e7u:', data);
       const score = stateService.updateScore(data);
       io.emit('score-update', score);
     });
 
+    /**
+     * Score reset — resets score to 0-0 and broadcasts.
+     * @event score-reset
+     */
     socket.on('score-reset', () => {
       console.log('Score reset re\u00e7u');
       stateService.resetScore();
@@ -44,14 +72,22 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
       io.emit('score-update', stateService.getScore());
     });
 
-    // --- Phase ---
+    /**
+     * Phase change — switches match phase (e.g. warmup, live, halftime, ended).
+     * @event phase-change
+     * @param {object} data — `{ phase: string }`
+     */
     socket.on('phase-change', (data) => {
       console.log('Phase change re\u00e7u:', data);
       stateService.setPhase(data.phase);
       io.emit('phase-change', data);
     });
 
-    // --- State request (after Angular routing) ---
+    /**
+     * Request full state — used after Angular routing to re-sync a client.
+     * Sends all current state back to the requesting socket only.
+     * @event request-state
+     */
     socket.on('request-state', () => {
       console.log('Request state re\u00e7u de:', socket.id);
       const s = stateService.getFullState();
@@ -66,14 +102,22 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
       }
     });
 
-    // --- Recording state ---
+    /**
+     * Recording state toggle — updates and broadcasts recording status.
+     * @event recording-state
+     * @param {object} data — `{ isRecording: boolean, startedAt?: string }`
+     */
     socket.on('recording-state', (data) => {
       console.log('[Recording] State update:', data);
       const recording = stateService.setRecordingState(data);
       io.emit('recording-state', recording);
     });
 
-    // --- TV registration (master-slave) ---
+    /**
+     * TV registration — registers a TV screen as master (first) or slave.
+     * Slaves receive the current loop state immediately.
+     * @event tv-register
+     */
     socket.on('tv-register', () => {
       const role = stateService.registerTv(socket.id);
       socket.emit('tv-role-assigned', { role });
@@ -85,7 +129,12 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
       }
     });
 
-    // --- TV loop sync (master only) ---
+    /**
+     * TV loop update (master only) — syncs video loop position to all slaves.
+     * Ignored if the sender is not the current master.
+     * @event tv-loop-update
+     * @param {object} data — `{ currentIndex: number, currentVideo?: string }`
+     */
     socket.on('tv-loop-update', (data) => {
       if (!stateService.isTvMaster(socket.id)) return;
       const loopState = stateService.updateLoopState(data);
@@ -93,27 +142,43 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
       socket.broadcast.emit('tv-loop-state', loopState);
     });
 
-    // --- Options ---
+    /**
+     * Options update — stores match options and broadcasts to other clients.
+     * @event options-update
+     * @param {object} data — `{ matchType?: string, sport?: string, teamHome?: string, teamAway?: string, ... }`
+     */
     socket.on('options-update', (data) => {
       console.log('Options update re\u00e7u:', data);
       stateService.setOptions(data);
       socket.broadcast.emit('options-update', data);
     });
 
-    // --- Timer ---
+    /**
+     * Timer update — stores timer state and broadcasts to other clients.
+     * @event timer-update
+     * @param {object} data — `{ action: 'start'|'stop'|'reset'|'sync', currentTime: number, isRunning: boolean }`
+     */
     socket.on('timer-update', (data) => {
       console.log('Timer update re\u00e7u:', data);
       stateService.updateTimer(data);
       socket.broadcast.emit('timer-update', data);
     });
 
-    // --- Breaking news (no persistence, immediate relay) ---
+    /**
+     * Breaking news relay — immediate broadcast, no persistence.
+     * @event breaking-news
+     * @param {object} data — `{ message: string, type?: string }`
+     */
     socket.on('breaking-news', (data) => {
       console.log('Breaking news re\u00e7u:', data);
       socket.broadcast.emit('breaking-news', data);
     });
 
-    // --- Config update (from sync-agent) ---
+    /**
+     * Config updated notification (from sync-agent) — re-reads configuration.json
+     * from disk and broadcasts a reload-config action to all clients.
+     * @event config_updated
+     */
     socket.on('config_updated', () => {
       console.log('[Config] Configuration updated notification received');
       try {
@@ -130,18 +195,31 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
       }
     });
 
-    // --- License events (from sync-agent) ---
+    /**
+     * License status update (from sync-agent) — relays to all clients.
+     * @event license_update
+     * @param {object} status — `{ status: string, reason?: string, expiresAt?: string }`
+     */
     socket.on('license_update', (status) => {
       console.log('[License] Status update received:', status?.status, status?.reason);
       io.emit('license_update', status);
     });
 
+    /**
+     * License blocked (from sync-agent) — relays blocking status to all clients.
+     * @event license_blocked
+     * @param {object} status — `{ status: 'BLOCKED', reason: string }`
+     */
     socket.on('license_blocked', (status) => {
       console.log('[License] BLOCKED received:', status?.status, status?.reason);
       io.emit('license_blocked', status);
     });
 
-    // --- Disconnect ---
+    /**
+     * Client disconnect — unregisters TV if applicable.
+     * If the master disconnects, promotes the next slave to master.
+     * @event disconnect
+     */
     socket.on('disconnect', () => {
       console.log('Client d\u00e9connect\u00e9:', socket.id);
       const { wasMaster, promoted } = stateService.unregisterTv(socket.id);

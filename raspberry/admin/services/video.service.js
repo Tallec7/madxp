@@ -1,11 +1,11 @@
 /**
  * VideoService
  *
- * Logique métier pour la gestion des vidéos : upload (simple/multiple),
- * listing, modification, suppression, vidéos orphelines, ajout à config
- * (simple et bulk), réorganisation, déplacement entre catégories.
+ * Logique m\u00e9tier pour la gestion des vid\u00e9os : upload (simple/multiple),
+ * listing, modification, suppression, vid\u00e9os orphelines, ajout \u00e0 config
+ * (simple et bulk), r\u00e9organisation, d\u00e9placement entre cat\u00e9gories.
  *
- * Dépend de ConfigurationService pour les opérations sur configuration.json.
+ * D\u00e9pend de ConfigurationService pour les op\u00e9rations sur configuration.json.
  */
 
 const fs = require('fs').promises;
@@ -50,6 +50,12 @@ class VideoService {
 
   /**
    * List all video files on disk, enriched with configuration metadata.
+   *
+   * Recursively scans VIDEOS_DIR for `.mp4`, `.mkv`, `.mov`, `.avi` files
+   * and cross-references each with configuration.json to resolve display
+   * names and category assignments.
+   *
+   * @returns {Promise<Array<{name: string, path: string, category: string, displayName: string, configCategory: string|null, configSubcategory: string|null, size: string, modified: Date}>>}
    */
   async listVideos() {
     await ensureDirectory(VIDEOS_DIR);
@@ -60,6 +66,8 @@ class VideoService {
 
   /**
    * List orphan videos (on disk but not referenced in configuration).
+   *
+   * @returns {Promise<Array<{name: string, path: string, category: string, displayName: string, configCategory: null, configSubcategory: null, size: string, modified: Date}>>}
    */
   async listOrphans() {
     await ensureDirectory(VIDEOS_DIR);
@@ -74,15 +82,21 @@ class VideoService {
 
   /**
    * Process a single uploaded video file.
+   *
+   * If compression or thumbnail generation is requested, the file is moved
+   * to PROCESSING_DIR and a job is added to the processing queue.
+   * Otherwise, the file is moved directly to the target directory and
+   * configuration.json is updated.
+   *
    * @param {Object} params
-   * @param {Object} params.file - multer file object
-   * @param {string} params.categoryId
-   * @param {string} params.subcategoryId
-   * @param {boolean} params.compress
-   * @param {boolean} params.thumbnail
-   * @param {string} params.displayName
-   * @param {Function} params.addToProcessingQueue - callback to add a job
-   * @returns {Object} result with file info and optional processing info
+   * @param {Object} params.file - multer file object (`{ filename, path, size, mimetype }`)
+   * @param {string} params.categoryId - Target category ID
+   * @param {string} params.subcategoryId - Target subcategory ID (optional)
+   * @param {boolean} params.compress - Whether to compress the video
+   * @param {boolean} params.thumbnail - Whether to generate a thumbnail
+   * @param {string} params.displayName - Custom display name (optional)
+   * @param {Function} params.addToProcessingQueue - Callback `(jobData) => Promise<string>` returning jobId
+   * @returns {Promise<{file: {name: string, size: string, path: string}, processing?: {jobId: string, compress: boolean, thumbnail: boolean, status: string}}>}
    */
   async processUpload({
     file,
@@ -138,7 +152,7 @@ class VideoService {
       };
     }
 
-    // No processing — move directly
+    // No processing \u2014 move directly
     await fs.rename(file.path, targetPath);
     await this._updateConfigurationWithVideo(
       categoryId,
@@ -161,6 +175,15 @@ class VideoService {
 
   /**
    * Process multiple uploaded video files (no compression/thumbnail).
+   *
+   * Each file is moved to the resolved target directory and added to
+   * configuration.json. Errors on individual files do not abort the batch.
+   *
+   * @param {Object} params
+   * @param {Array<Object>} params.files - Array of multer file objects
+   * @param {string} params.categoryId - Target category ID
+   * @param {string} params.subcategoryId - Target subcategory ID (optional)
+   * @returns {Promise<{results: Array<{name: string, size: string, path: string, success: boolean}>, errors: Array<{name: string, error: string}>, total: number}>}
    */
   async processMultipleUploads({ files, categoryId, subcategoryId }) {
     const { category, subcategory } = await this._resolveUploadDirectories(
@@ -216,7 +239,15 @@ class VideoService {
   // ===========================================================================
 
   /**
-   * Delete a video file from disk and configuration.
+   * Delete a video file from disk and remove its entry from configuration.json.
+   *
+   * Checks whether the video or its parent category is locked (NEOPRO-managed)
+   * before deletion. Also cleans up empty parent directories.
+   *
+   * @param {string} category - Directory path relative to VIDEOS_DIR (e.g. `'BASKETBALL/SENIORS'`)
+   * @param {string} filename - Video file name
+   * @returns {Promise<{path: string}>} The deleted video's relative path
+   * @throws {LockedError} If the video or category is NEOPRO-managed
    */
   async deleteVideo(category, filename) {
     const normalizedCategory = (category || '').replace(/\\/g, '/');
@@ -262,7 +293,19 @@ class VideoService {
   // ===========================================================================
 
   /**
-   * Edit a video: move, rename, change category/displayName.
+   * Edit a video: move to another category, rename file, or change display name.
+   *
+   * Handles both the filesystem move (including thumbnail) and the
+   * configuration.json update (remove old entry, add new entry).
+   *
+   * @param {Object} params
+   * @param {string} params.originalPath - Current relative path (e.g. `'videos/BASKET/match.mp4'`)
+   * @param {string} params.categoryId - Target category ID
+   * @param {string} [params.subcategoryId] - Target subcategory ID
+   * @param {string} [params.displayName] - New display name
+   * @param {string} [params.newFilename] - New file name (extension preserved if omitted)
+   * @returns {Promise<{path: string, displayName: string, category: string, configCategory: string, configSubcategory: string|null}>}
+   * @throws {ValidationError} If the path is invalid or category is missing
    */
   async editVideo({
     originalPath,
@@ -367,7 +410,19 @@ class VideoService {
   // ===========================================================================
 
   /**
-   * Add a single orphan video to configuration.
+   * Add a single orphan video to configuration.json.
+   *
+   * If the target category or subcategory doesn't exist, it is created
+   * automatically. Duplicate paths are silently skipped.
+   *
+   * @param {Object} params
+   * @param {string} params.videoPath - Relative path from VIDEOS_DIR
+   * @param {string} params.categoryId - Target category ID
+   * @param {string} [params.subcategoryId] - Target subcategory ID
+   * @param {string} [params.displayName] - Custom display name
+   * @returns {Promise<{name: string, path: string, type: string}>} The new video entry
+   * @throws {ValidationError} If videoPath or categoryId is missing
+   * @throws {NotFoundError} If the video file does not exist on disk
    */
   async addToConfig({ videoPath, categoryId, subcategoryId, displayName }) {
     if (!videoPath || !categoryId) {
@@ -430,7 +485,17 @@ class VideoService {
   }
 
   /**
-   * Bulk add orphan videos to configuration.
+   * Bulk add orphan videos to configuration.json.
+   *
+   * Processes an array of video paths in a single config write.
+   * Missing files are reported in `errors`, duplicates in `skipped`.
+   *
+   * @param {Object} params
+   * @param {Array<{path: string, displayName?: string}>} params.videos - Videos to add
+   * @param {string} params.categoryId - Target category ID
+   * @param {string} [params.subcategoryId] - Target subcategory ID
+   * @returns {Promise<{added: string[], skipped: string[], errors: Array<{path: string, error: string}>}>}
+   * @throws {ValidationError} If videos array is empty or categoryId is missing
    */
   async addToConfigBulk({ videos, categoryId, subcategoryId }) {
     if (!videos || !Array.isArray(videos) || videos.length === 0) {
@@ -509,6 +574,16 @@ class VideoService {
   // DELETE FROM CONFIG (+ disk)
   // ===========================================================================
 
+  /**
+   * Delete a video from both configuration.json and disk.
+   *
+   * Unlike `deleteVideo()`, this method accepts any videoPath format
+   * (with or without `videos/` prefix) and does not check lock status.
+   *
+   * @param {string} videoPath - Relative path (e.g. `'videos/BASKET/match.mp4'` or `'BASKET/match.mp4'`)
+   * @returns {Promise<{path: string}>}
+   * @throws {ValidationError} If videoPath is missing
+   */
   async deleteFromConfig(videoPath) {
     if (!videoPath) {
       throw new ValidationError('videoPath requis');
@@ -540,6 +615,21 @@ class VideoService {
   // REORDER
   // ===========================================================================
 
+  /**
+   * Reorder a video within its category/subcategory list.
+   *
+   * Moves the video from its current position to `newIndex`.
+   * Adjusts the index when moving downward to account for the splice.
+   *
+   * @param {Object} params
+   * @param {string} params.videoPath - Full config path (e.g. `'videos/BASKET/match.mp4'`)
+   * @param {string} params.categoryId - Category ID containing the video
+   * @param {string} [params.subcategoryId] - Subcategory ID if applicable
+   * @param {number} params.newIndex - Target position (0-based)
+   * @returns {Promise<{newIndex: number}>} The actual index after adjustment
+   * @throws {ValidationError} If required params are missing
+   * @throws {NotFoundError} If category, subcategory, or video is not found
+   */
   async reorderVideo({ videoPath, categoryId, subcategoryId, newIndex }) {
     if (!videoPath || !categoryId || newIndex === undefined) {
       throw new ValidationError('videoPath, categoryId et newIndex sont requis');
@@ -588,6 +678,23 @@ class VideoService {
   // MOVE between categories
   // ===========================================================================
 
+  /**
+   * Move a video from one category/subcategory to another.
+   *
+   * Removes the video entry from the source list, inserts it at the
+   * specified index in the target list, and saves configuration.json.
+   *
+   * @param {Object} params
+   * @param {string} params.videoPath - Full config path (e.g. `'videos/BASKET/match.mp4'`)
+   * @param {string} params.fromCategoryId - Source category ID
+   * @param {string} [params.fromSubcategoryId] - Source subcategory ID
+   * @param {string} params.toCategoryId - Target category ID
+   * @param {string} [params.toSubcategoryId] - Target subcategory ID
+   * @param {number} [params.newIndex] - Insertion index in target (defaults to end)
+   * @returns {Promise<{newIndex: number}>}
+   * @throws {ValidationError} If required params are missing
+   * @throws {NotFoundError} If any category, subcategory, or video is not found
+   */
   async moveVideo({
     videoPath,
     fromCategoryId,
@@ -680,7 +787,13 @@ class VideoService {
   // ===========================================================================
 
   /**
-   * Load video path mapping from configuration (with cache).
+   * Load video path mapping from configuration (with 60s cache).
+   *
+   * Maps category/subcategory IDs to their filesystem directory names
+   * by inspecting existing video paths in configuration.json.
+   *
+   * @private
+   * @returns {Promise<{categories: Object<string,string>, subcategories: Object<string,string>}>}
    */
   async _loadVideoPathMapping() {
     return this._cache.getOrSet(this._NAMESPACES.CONFIG, 'videoMapping', async () => {
@@ -733,7 +846,14 @@ class VideoService {
   }
 
   /**
-   * Get video metadata from configuration (with cache).
+   * Get video metadata from configuration (with 60s cache).
+   *
+   * Builds a lookup map from config video path to
+   * `{ displayName, categoryId, subcategoryId }` for each video entry,
+   * including sponsors.
+   *
+   * @private
+   * @returns {Promise<Object<string, {displayName: string, categoryId: string, subcategoryId: string|null}>>}
    */
   async _getVideoMetadataFromConfig() {
     return this._cache.getOrSet(this._NAMESPACES.CONFIG, 'videoMetadata', async () => {
@@ -792,6 +912,13 @@ class VideoService {
 
   /**
    * Resolve upload directories from category/subcategory IDs using the mapping.
+   *
+   * Falls back to sanitized ID as directory name if no existing mapping is found.
+   *
+   * @private
+   * @param {string} categoryId
+   * @param {string|null} subcategoryId
+   * @returns {Promise<{category: string, subcategory: string|null}>}
    */
   async _resolveUploadDirectories(categoryId, subcategoryId) {
     const mapping = await this._loadVideoPathMapping();
@@ -814,6 +941,14 @@ class VideoService {
 
   /**
    * Ensure category/subcategory structure exists in config, return target videos array.
+   *
+   * @private
+   * @param {Object} config - Full configuration object (mutated in place)
+   * @param {string} categoryId
+   * @param {string|null} subcategoryId
+   * @param {string} resolvedCategoryDir
+   * @param {string|null} resolvedSubcategoryDir
+   * @returns {Promise<Array>} Reference to the target videos array
    */
   async _ensureCategoryStructure(
     config,
@@ -859,6 +994,18 @@ class VideoService {
 
   /**
    * Update configuration.json with a new video entry.
+   *
+   * Creates category/subcategory structure if needed. Skips if the
+   * video path already exists in the target list.
+   *
+   * @private
+   * @param {string} categoryId
+   * @param {string|null} subcategoryId
+   * @param {string} resolvedCategory - Filesystem directory name
+   * @param {string|null} resolvedSubcategory - Filesystem subdirectory name
+   * @param {string} filename
+   * @param {string} mimeType
+   * @param {string|null} displayName
    */
   async _updateConfigurationWithVideo(
     categoryId,
@@ -901,7 +1048,13 @@ class VideoService {
   }
 
   /**
-   * Remove a video entry from configuration.json.
+   * Remove a video entry from configuration.json by its path.
+   *
+   * Searches all categories and subcategories for a matching path
+   * and removes the first match found.
+   *
+   * @private
+   * @param {string} relativePath - Full config path (e.g. `'videos/BASKET/match.mp4'`)
    */
   async _removeVideoFromConfig(relativePath) {
     const config = await this._configService.loadConfig();
@@ -931,6 +1084,13 @@ class VideoService {
 
   /**
    * Cleanup empty directories up to a stop directory.
+   *
+   * Walks upward from `dirPath`, removing empty directories until
+   * reaching `stopAt` or a non-empty directory.
+   *
+   * @private
+   * @param {string} dirPath - Starting directory
+   * @param {string} stopAt - Ancestor directory to stop at (exclusive)
    */
   async _cleanupEmptyDirs(dirPath, stopAt) {
     const resolvedStop = path.resolve(stopAt);
@@ -949,6 +1109,15 @@ class VideoService {
 
   /**
    * Recursively list video files in a directory.
+   *
+   * Scans for `.mp4`, `.mkv`, `.mov`, `.avi` files and enriches each
+   * with metadata from the configuration lookup map.
+   *
+   * @private
+   * @param {string} dir - Current directory to scan
+   * @param {string} [baseDir=dir] - Root directory for relative path calculation
+   * @param {Object} [metadata={}] - Config metadata lookup map
+   * @returns {Promise<Array<{name: string, path: string, category: string, displayName: string, configCategory: string|null, configSubcategory: string|null, size: string, modified: Date}>>}
    */
   async _listVideosRecursive(dir, baseDir = dir, metadata = {}) {
     const files = await fs.readdir(dir, { withFileTypes: true });

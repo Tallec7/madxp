@@ -1,8 +1,8 @@
 /**
  * SystemService
  *
- * Logique métier pour les informations système, gestion de version,
- * lecture des logs et contrôle des services systemd.
+ * Logique m\u00e9tier pour les informations syst\u00e8me, gestion de version,
+ * lecture des logs et contr\u00f4le des services systemd.
  */
 
 const fs = require('fs').promises;
@@ -22,25 +22,36 @@ const { ValidationError, CommandError } = require('./errors');
 
 class SystemService {
   constructor() {
+    /** @private */
     this._versionCache = null;
+    /** @private */
     this._versionCacheTimestamp = 0;
-    this._VERSION_CACHE_TTL = 60000; // 1 minute
+    /** @private @type {number} TTL in ms for version cache (1 minute) */
+    this._VERSION_CACHE_TTL = 60000;
   }
 
   // ---------------------------------------------------------------------------
   // System info
   // ---------------------------------------------------------------------------
 
+  /**
+   * Collect comprehensive Raspberry Pi system information.
+   *
+   * Gathers CPU usage, memory, temperature (thermal zone), disk usage,
+   * uptime, and systemd service statuses in a single call.
+   *
+   * @returns {Promise<{cpu: {usage: string, cores: number}, memory: {total: string, used: string, free: string, percent: string}, temperature: string, disk: object|null, uptime: string, services: Object<string,string>, hostname: string, platform: string, arch: string}>}
+   */
   async getSystemInfo() {
     try {
       const cpuUsage = await this._getCpuUsage();
 
-      // Mémoire
+      // M\u00e9moire
       const totalMem = os.totalmem();
       const freeMem = os.freemem();
       const usedMem = totalMem - freeMem;
 
-      // Température (Raspberry Pi)
+      // Temp\u00e9rature (Raspberry Pi)
       const tempResult = await execCommand('cat /sys/class/thermal/thermal_zone0/temp');
       const temperature = tempResult.success
         ? (parseInt(tempResult.output) / 1000).toFixed(1)
@@ -83,6 +94,19 @@ class SystemService {
   // Version info (with TTL cache)
   // ---------------------------------------------------------------------------
 
+  /**
+   * Get the current Neopro version with fallback chain.
+   *
+   * Resolution order:
+   * 1. `release.json` — written by the deploy pipeline
+   * 2. `webapp/version.json` — written by Angular build
+   * 3. `VERSION` file — manual fallback
+   * 4. `package.json` — last resort
+   *
+   * Results are cached for 1 minute to avoid repeated file reads.
+   *
+   * @returns {Promise<{version: string, commit: string|null, buildDate: string|null, source: string}>}
+   */
   async getVersionInfo() {
     const now = Date.now();
     if (this._versionCache && now - this._versionCacheTimestamp < this._VERSION_CACHE_TTL) {
@@ -161,6 +185,15 @@ class SystemService {
   // Logs
   // ---------------------------------------------------------------------------
 
+  /**
+   * Read recent journal logs for a given service.
+   *
+   * @param {string} service — One of `'app'`, `'nginx'`, or `'system'`
+   * @param {number} [lines=100] — Number of log lines to return
+   * @returns {Promise<string>} Raw journalctl output
+   * @throws {ValidationError} If the service name is not in the allowed list
+   * @throws {CommandError} If journalctl fails
+   */
   async getServiceLogs(service, lines = 100) {
     const serviceMap = {
       app: 'neopro-app',
@@ -188,10 +221,19 @@ class SystemService {
   // Service control
   // ---------------------------------------------------------------------------
 
+  /**
+   * Restart a systemd service.
+   *
+   * Only `neopro-app`, `nginx`, and `neopro-kiosk` are allowed.
+   *
+   * @param {string} service — Systemd unit name
+   * @throws {ValidationError} If the service is not in the allowlist
+   * @throws {CommandError} If systemctl restart fails
+   */
   async restartService(service) {
     const allowedServices = ['neopro-app', 'nginx', 'neopro-kiosk'];
     if (!allowedServices.includes(service)) {
-      throw new ValidationError('Service non autorisé');
+      throw new ValidationError('Service non autoris\u00e9');
     }
 
     const result = await execCommand(`sudo systemctl restart ${service}`);
@@ -200,6 +242,12 @@ class SystemService {
     }
   }
 
+  /**
+   * Schedule a system reboot in 5 seconds.
+   *
+   * Uses `sudo reboot` via child_process. The delay gives the HTTP
+   * response time to be sent before the Pi reboots.
+   */
   reboot() {
     const { exec } = require('child_process');
     setTimeout(() => {
@@ -207,6 +255,12 @@ class SystemService {
     }, 5000);
   }
 
+  /**
+   * Schedule a system shutdown in 5 seconds.
+   *
+   * Uses `sudo shutdown -h now` via child_process. The delay gives the
+   * HTTP response time to be sent before the Pi powers off.
+   */
   shutdown() {
     const { exec } = require('child_process');
     setTimeout(() => {
@@ -218,6 +272,11 @@ class SystemService {
   // Private helpers
   // ---------------------------------------------------------------------------
 
+  /**
+   * Calculate current CPU usage from os.cpus() snapshot.
+   * @private
+   * @returns {Promise<{usage: string, cores: number}>}
+   */
   async _getCpuUsage() {
     const cpus = os.cpus();
     let totalIdle = 0;
@@ -240,6 +299,11 @@ class SystemService {
     };
   }
 
+  /**
+   * Query systemd for the status of core Pi services.
+   * @private
+   * @returns {Promise<Object<string, 'running'|'stopped'|'unknown'|'unavailable'>>}
+   */
   async _getServicesStatus() {
     const services = ['neopro-app', 'nginx', 'hostapd', 'dnsmasq', 'avahi-daemon'];
     const statuses = {};
