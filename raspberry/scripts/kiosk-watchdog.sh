@@ -136,23 +136,22 @@ start_chromium() {
     # Flags spécifiques au modèle
     local gpu_flags=()
     if [[ "$PI_MODEL" == "pi5" ]]; then
-        # Pi 5 : GPU compositing via V3D natif (Mesa), mais décodage vidéo en software.
+        # Pi 5 : GPU compositing via V3D natif (Mesa).
         #
         # Historique des tentatives :
         # - SwiftShader (--use-gl=angle --use-angle=swiftshader) : trop lent, vidéos saccadées
         # - EGL natif avec flags (--use-gl=egl --enable-features=Vulkan) : SharedImageStub errors /5s
         # - --disable-gpu : Skia CPU, mieux que SwiftShader mais encore trop lent
-        # - Sans --disable-accelerated-video-decode : SharedImageStub + AllocateRingBuffer errors
-        #   toutes les 5s, mémoire GPU sature après une boucle complète → flash noir puis "Aw, Snap!"
+        # - --disable-accelerated-video-decode : flash noir plus long (decode software plus lent)
+        # - --use-angle=disabled : GPU process crash (seul egl-angle autorisé sur Pi OS)
         #
-        # Solution : Laisser le GPU faire le compositing (V3D 7.1 Mesa) mais désactiver le
-        # décodage vidéo hardware (ANGLE/GLES SharedImage ne fonctionne pas sur V3D).
-        # Le CPU Pi 5 (4x Cortex-A76 @2.4GHz) gère le décodage 1080p software sans problème.
-        log "📱 Pi 5 détecté: V3D natif (Mesa) + décodage vidéo software"
+        # Solution : Laisser Chromium utiliser le driver V3D 7.1 (Mesa) par défaut.
+        # Les erreurs SharedImageStub/AllocateRingBuffer sont cosmétiques.
+        # Le flash noir en fin de boucle est géré côté webapp (preload anticipé).
+        log "📱 Pi 5 détecté: utilisation du driver V3D natif (Mesa)"
         gpu_flags=(
             --ignore-gpu-blocklist
             --enable-gpu-rasterization
-            --disable-accelerated-video-decode
         )
     else
         # Pi 4 et antérieurs : utiliser l'accélération GPU hardware
