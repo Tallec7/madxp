@@ -127,16 +127,19 @@ uploads/Decathlon_FOCUS_Partenaire.mp4
 
 ### Fichiers impliqués
 
-| Fichier                 | Rôle                                            |
-| ----------------------- | ----------------------------------------------- |
-| `content.controller.ts` | Réception du fichier, génération du nom, upload |
-| `ftp-storage.ts`        | Upload vers FTP Hostinger                       |
-| `supabase.ts`           | Upload vers Supabase Storage                    |
+| Fichier                  | Rôle                                                |
+| ------------------------ | --------------------------------------------------- |
+| `upload.ts` (middleware) | Multer disk storage, cleanup temp files             |
+| `content.controller.ts`  | Réception du fichier, génération du nom, upload     |
+| `ftp-storage.ts`         | Upload vers FTP Hostinger (streaming depuis disque) |
+| `supabase.ts`            | Upload vers Supabase Storage (fallback)             |
 
 ### Séquence d'upload
 
 ```
 1. Réception du fichier (multipart/form-data)
+   │  Multer écrit le fichier sur disque (/tmp/neopro-uploads/)
+   │  PAS de chargement en mémoire (évite OOM sur fichiers > 256MB)
    │
 2. Génération du nom de fichier sanitisé
    │ - Suppression des accents
@@ -144,11 +147,12 @@ uploads/Decathlon_FOCUS_Partenaire.mp4
    │ - Suppression des caractères spéciaux
    │ - Ajout de suffixe numérique si doublon
    │
-3. Calcul du checksum SHA256
+3. Calcul du checksum SHA256 (streaming depuis le disque)
    │
-4. Upload vers le stockage
-   │ - FTP si configuré
-   │ - Supabase sinon
+4. Upload vers le stockage (streaming)
+   │ - FTP : basic-ftp.uploadFrom(filePath) — stream direct disque → FTP
+   │ - Supabase : lecture du fichier juste avant l'envoi (fallback)
+   │ - Vérification post-upload (taille, existence)
    │
 5. Enregistrement en base de données
    │ - filename: nom sanitisé
@@ -156,8 +160,14 @@ uploads/Decathlon_FOCUS_Partenaire.mp4
    │ - storage_path: chemin de stockage
    │ - checksum: SHA256 pour vérification
    │
-6. Retour de la réponse avec l'ID vidéo
+6. Nettoyage du fichier temporaire (finally)
+   │ - Cleanup immédiat après traitement
+   │ - Nettoyage périodique des fichiers abandonnés (> 1h, toutes les 30 min)
+   │
+7. Retour de la réponse avec l'ID vidéo
 ```
+
+> **Note** : Les images (< 50MB, conversion image→vidéo) restent en memory storage car leur taille est compatible avec le heap.
 
 ### Sanitization des noms de fichiers
 

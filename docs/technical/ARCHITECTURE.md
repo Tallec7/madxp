@@ -459,11 +459,13 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 
 - Redis cache (sessions, config)
 - PostgreSQL indexes
-- Connection pooling
+- Connection pooling configurable (`DB_POOL_MAX`, defaut 10, clamp 1-50)
 - Rate limiting (per-user based)
 - Memory Manager with automatic cleanup at 93% heap usage
 - Bounded Maps/Arrays to prevent memory leaks (pendingCommands: 100, jobs: 100)
 - Node.js heap limit: 256MB (Railway Hobby plan optimization)
+- Video upload en disk storage + streaming FTP (pas de buffer memoire)
+- Batch insert analytics (`video_plays`) par lots de 100
 
 ### Optimisations edge
 

@@ -39,6 +39,18 @@
 
 ---
 
+## [3.9.0](https://github.com/Tallec7/neopro/compare/v3.8.2...v3.9.0) (2026-02-10)
+
+### Performance Improvements
+
+- **upload:** streaming disk storage pour les uploads video (memoryStorage → diskStorage), elimine les OOM sur fichiers volumineux
+- **analytics:** batch insert video_plays par lots de 100 (N+1 queries → 1 seule requete par lot)
+- **database:** pool size configurable via `DB_POOL_MAX` (defaut 10, clamp 1-50)
+- **upload:** streaming checksum SHA256 et FTP upload depuis le disque (zero buffer memoire)
+- **upload:** nettoyage periodique des fichiers temporaires abandonnes (> 1h)
+
+---
+
 ## [3.8.2](https://github.com/Tallec7/neopro/compare/v3.8.1...v3.8.2) (2026-02-09)
 
 ### Bug Fixes
