@@ -1,0 +1,65 @@
+# /etc/sudoers.d/neopro
+# Permissions sudo ciblées pour l'utilisateur pi (sync-agent Neopro)
+# Installé automatiquement via OTA, admin-server et deploy-remote.sh
+#
+# Principe : le sync-agent tourne en User=pi mais doit gérer
+# les services systemd, le réseau wifi, et les mises à jour.
+# Plutôt que NOPASSWD: ALL, on restreint aux commandes nécessaires.
+
+# --- Services systemd ---
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop neopro-*
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl start neopro-*
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart neopro-*
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl enable neopro-*
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active neopro-*
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart hostapd
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart dnsmasq
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart nginx
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active hostapd
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl start nginx
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl daemon-reload
+
+# --- Déploiement OTA (copie .service et sudoers) ---
+pi ALL=(ALL) NOPASSWD: /usr/bin/cp /home/pi/neopro/config/systemd/*.service /etc/systemd/system/*
+pi ALL=(ALL) NOPASSWD: /usr/bin/cp /home/pi/neopro/config/sudoers.d/neopro /etc/sudoers.d/neopro
+pi ALL=(ALL) NOPASSWD: /usr/bin/chown root\:root /etc/systemd/system/neopro-*
+pi ALL=(ALL) NOPASSWD: /usr/bin/chown root\:root /etc/sudoers.d/neopro
+pi ALL=(ALL) NOPASSWD: /usr/bin/chmod 644 /etc/systemd/system/neopro-*
+pi ALL=(ALL) NOPASSWD: /usr/bin/chmod 440 /etc/sudoers.d/neopro
+
+# --- Réseau WiFi ---
+pi ALL=(ALL) NOPASSWD: /usr/sbin/wpa_cli -i wlan1 *
+pi ALL=(ALL) NOPASSWD: /usr/sbin/wpa_supplicant -B -i wlan1 *
+pi ALL=(ALL) NOPASSWD: /sbin/iwlist wlan1 scan
+pi ALL=(ALL) NOPASSWD: /sbin/iwlist wlan0 scan
+pi ALL=(ALL) NOPASSWD: /sbin/dhclient wlan1
+pi ALL=(ALL) NOPASSWD: /usr/sbin/rfkill unblock wifi
+pi ALL=(ALL) NOPASSWD: /sbin/ip link set wlan1 *
+pi ALL=(ALL) NOPASSWD: /sbin/ip addr add 192.168.4.1/24 dev wlan0
+pi ALL=(ALL) NOPASSWD: /sbin/ip link set wlan0 up
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe *
+pi ALL=(ALL) NOPASSWD: /usr/bin/killall wpa_supplicant
+pi ALL=(ALL) NOPASSWD: /usr/sbin/hostapd_cli *
+
+# --- Fichiers de config réseau ---
+pi ALL=(ALL) NOPASSWD: /usr/bin/cat /etc/wpa_supplicant/*
+pi ALL=(ALL) NOPASSWD: /usr/bin/cp /tmp/neopro-* /etc/wpa_supplicant/*
+pi ALL=(ALL) NOPASSWD: /usr/bin/mv /tmp/neopro-* /etc/wpa_supplicant/*
+pi ALL=(ALL) NOPASSWD: /usr/bin/chmod 600 /etc/wpa_supplicant/*
+pi ALL=(ALL) NOPASSWD: /usr/bin/chown root\:root /etc/wpa_supplicant/*
+pi ALL=(ALL) NOPASSWD: /usr/bin/sed -i * /etc/hostapd/hostapd.conf
+pi ALL=(ALL) NOPASSWD: /usr/bin/rm -f /tmp/neopro-*
+
+# --- Permissions fichiers (chown pi:pi sur /home/pi/neopro/) ---
+pi ALL=(ALL) NOPASSWD: /usr/bin/chown -R pi\:pi /home/pi/neopro/*
+pi ALL=(ALL) NOPASSWD: /usr/sbin/usermod -a -G pi www-data
+
+# --- Logs (journalctl) ---
+pi ALL=(ALL) NOPASSWD: /usr/bin/journalctl -u neopro-* *
+pi ALL=(ALL) NOPASSWD: /usr/bin/journalctl -u wpa_supplicant* *
+
+# --- Système ---
+pi ALL=(ALL) NOPASSWD: /usr/sbin/reboot
+
+# --- Scripts Neopro ---
+pi ALL=(ALL) NOPASSWD: /home/pi/neopro/scripts/*

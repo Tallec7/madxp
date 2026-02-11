@@ -446,6 +446,13 @@ for svc_path in "${SYSTEMD_FILES[@]}"; do
 done
 print_success "Fichiers systemd copiés"
 
+# Copier le fichier sudoers (permissions sudo ciblées pour le sync-agent)
+if [ -f "raspberry/config/sudoers.d/neopro" ]; then
+    mkdir -p ${DEPLOY_DIR}/config/sudoers.d
+    cp raspberry/config/sudoers.d/neopro ${DEPLOY_DIR}/config/sudoers.d/
+    print_success "Fichier sudoers copié"
+fi
+
 create_version_metadata
 
 # Vérifier l'intégrité avant de créer l'archive

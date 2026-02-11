@@ -406,15 +406,14 @@ class SoftwareUpdateHandler {
         logger.info('Config files updated (systemd services, etc.)');
       }
 
-      // Copier VERSION et release.json à la racine (avec sudo car peuvent appartenir à root)
+      // Copier VERSION et release.json à la racine (pas besoin de sudo, le process tourne en pi)
       const versionSource = await fs.pathExists(path.join(extractDir, 'VERSION'))
         ? path.join(extractDir, 'VERSION')
         : await fs.pathExists(path.join(sourcePath, 'VERSION'))
           ? path.join(sourcePath, 'VERSION')
           : null;
       if (versionSource) {
-        await execAsync(`sudo cp ${versionSource} ${path.join(rootDir, 'VERSION')}`);
-        await execAsync(`sudo chown pi:pi ${path.join(rootDir, 'VERSION')}`);
+        await fs.copy(versionSource, path.join(rootDir, 'VERSION'), { overwrite: true });
       }
 
       const releaseSource = await fs.pathExists(path.join(extractDir, 'release.json'))
@@ -423,18 +422,12 @@ class SoftwareUpdateHandler {
           ? path.join(sourcePath, 'release.json')
           : null;
       if (releaseSource) {
-        await execAsync(`sudo cp ${releaseSource} ${path.join(rootDir, 'release.json')}`);
-        await execAsync(`sudo chown pi:pi ${path.join(rootDir, 'release.json')}`);
+        await fs.copy(releaseSource, path.join(rootDir, 'release.json'), { overwrite: true });
       }
 
-      // Corriger les permissions (comme deploy-remote.sh et admin-server.js)
-      logger.info('Fixing permissions...');
-      await execAsync(`sudo chown -R pi:pi ${rootDir}/webapp`);
-      await execAsync(`sudo chown -R pi:pi ${rootDir}/server`);
-      await execAsync(`sudo chown -R pi:pi ${rootDir}/sync-agent 2>/dev/null || true`);
-      await execAsync(`sudo chown -R pi:pi ${rootDir}/admin 2>/dev/null || true`);
-      await execAsync(`sudo chown -R pi:pi ${rootDir}/scripts 2>/dev/null || true`);
-      await execAsync('sudo usermod -a -G pi www-data 2>/dev/null || true');
+      // Les permissions sont déjà correctes : le process tourne en User=pi,
+      // les fichiers extraits/copiés appartiennent déjà à pi:pi.
+      logger.info('Permissions OK (process runs as pi)');
 
       // npm install si nécessaire
       if (await fs.pathExists(path.join(rootDir, 'webapp', 'package.json'))) {
@@ -462,6 +455,18 @@ class SoftwareUpdateHandler {
         } catch (e) {
           logger.error('npm install sync-agent failed', { error: e.message });
           // C'est critique pour le sync-agent, on log l'erreur mais on continue
+        }
+      }
+
+      // Installer le fichier sudoers si présent dans l'archive
+      const sudoersSrc = path.join(rootDir, 'config', 'sudoers.d', 'neopro');
+      if (await fs.pathExists(sudoersSrc)) {
+        try {
+          await execAsync(`sudo cp ${sudoersSrc} /etc/sudoers.d/neopro`);
+          await execAsync('sudo chmod 440 /etc/sudoers.d/neopro');
+          logger.info('Sudoers file installed');
+        } catch (e) {
+          logger.warn('Failed to install sudoers file', { error: e.message });
         }
       }
 
@@ -544,22 +549,18 @@ class SoftwareUpdateHandler {
       const buildDate = new Date().toISOString();
       const rootDir = config.paths.root;
 
-      // Écrire VERSION (avec sudo car peut appartenir à root)
+      // Écrire VERSION (pas besoin de sudo, le process tourne en pi)
       const versionPath = path.join(rootDir, 'VERSION');
-      const versionContent = version + '\n';
-      await execAsync(`echo '${versionContent.trim()}' | sudo tee ${versionPath} > /dev/null`);
-      await execAsync(`sudo chown pi:pi ${versionPath}`);
+      await fs.writeFile(versionPath, version + '\n');
 
-      // Écrire release.json (avec sudo car peut appartenir à root)
+      // Écrire release.json
       const releaseData = {
         version,
         buildDate,
         source: 'central-dashboard',
       };
       const releasePath = path.join(rootDir, 'release.json');
-      const releaseContent = JSON.stringify(releaseData, null, 2);
-      await execAsync(`echo '${releaseContent.replace(/'/g, "\\'")}' | sudo tee ${releasePath} > /dev/null`);
-      await execAsync(`sudo chown pi:pi ${releasePath}`);
+      await fs.writeJson(releasePath, releaseData, { spaces: 2 });
 
       // Écrire webapp/version.json (pi:pi devrait avoir les droits)
       const webappVersionPath = path.join(rootDir, 'webapp', 'version.json');

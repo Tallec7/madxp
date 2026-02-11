@@ -291,6 +291,14 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Nettoyage
     rm -rf ~/neopro-update ~/neopro-deploy.tar.gz
 
+    # Installation du fichier sudoers (permissions ciblées pour le sync-agent)
+    if [ -f ${RASPBERRY_DIR}/config/sudoers.d/neopro ]; then
+        sudo cp ${RASPBERRY_DIR}/config/sudoers.d/neopro /etc/sudoers.d/neopro
+        sudo chown root:root /etc/sudoers.d/neopro
+        sudo chmod 440 /etc/sudoers.d/neopro
+        echo 'Sudoers neopro installé'
+    fi
+
     # Installation des services systemd depuis config/systemd/
     if [ -d ${RASPBERRY_DIR}/config/systemd ]; then
         echo 'Installation des services systemd...'

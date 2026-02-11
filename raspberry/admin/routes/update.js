@@ -182,6 +182,15 @@ router.post('/api/update', uploadPackage.single('package'), async (req, res) => 
     await execCommand(`sudo chown -R pi:pi ${NEOPRO_DIR}/config 2>/dev/null || true`);
     await execCommand('sudo usermod -a -G pi www-data 2>/dev/null || true');
 
+    // Installer le fichier sudoers si présent
+    const hasSudoers = await execCommand(`test -f ${NEOPRO_DIR}/config/sudoers.d/neopro`);
+    if (hasSudoers.success) {
+      await execCommand(`sudo cp ${NEOPRO_DIR}/config/sudoers.d/neopro /etc/sudoers.d/neopro`);
+      await execCommand('sudo chown root:root /etc/sudoers.d/neopro');
+      await execCommand('sudo chmod 440 /etc/sudoers.d/neopro');
+      console.log('[UPDATE] Sudoers neopro installé');
+    }
+
     // Installer les services systemd depuis config/systemd/ si présents
     const hasSystemdServices = await execCommand(`test -d ${NEOPRO_DIR}/config/systemd`);
     if (hasSystemdServices.success) {
