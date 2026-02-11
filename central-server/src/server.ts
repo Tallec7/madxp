@@ -21,6 +21,7 @@ import { adminOpsService } from './services/admin-ops.service';
 import { alertingService } from './services/alerting.service';
 import { realtimeStatsService } from './services/realtime-stats.service';
 import { predictiveAlertsService } from './services/predictive-alerts.service';
+import { subscriptionService } from './services/subscription.service';
 import { cleanupStaleTempFiles } from './middleware/upload';
 
 import authRoutes from './routes/auth.routes';
@@ -269,6 +270,25 @@ app.get('/metrics', async (req: Request, res: Response) => {
   try {
     // Mettre à jour les métriques snapshot
     metricsService.recordConnectedSites(socketService.getConnectionCount());
+
+    // Subscription stats snapshot (lightweight PostgreSQL view)
+    try {
+      const subStats = await subscriptionService.getSubscriptionStats();
+      metricsService.recordSubscriptionStats({
+        active: subStats.active_count,
+        expiring_soon: subStats.expiring_soon_count,
+        grace_period: subStats.grace_period_count,
+        blocked: subStats.blocked_count,
+        suspended: subStats.suspended_count,
+      });
+      metricsService.recordSubscriptionPlans({
+        trial: subStats.trial_count,
+        standard: subStats.standard_count,
+        premium: subStats.premium_count,
+      });
+    } catch (subError) {
+      logger.debug('Could not collect subscription metrics', { error: subError });
+    }
 
     res.set('Content-Type', metricsService.getContentType());
     res.send(await metricsService.getMetrics());

@@ -242,6 +242,77 @@ const rateLimitNearExhaustionTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Memory Manager =============
+
+const memoryHeapUsageGauge = new Gauge({
+  name: 'neopro_memory_heap_usage_percent',
+  help: 'Current heap usage as percentage (0-100)',
+  registers: [register],
+});
+
+const memoryPressureEventsTotal = new Counter({
+  name: 'neopro_memory_pressure_events_total',
+  help: 'Total memory pressure events by severity',
+  labelNames: ['severity'],
+  registers: [register],
+});
+
+const memoryGcRunsTotal = new Counter({
+  name: 'neopro_memory_gc_runs_total',
+  help: 'Total forced garbage collection runs',
+  registers: [register],
+});
+
+const memoryGcFreedBytes = new Counter({
+  name: 'neopro_memory_gc_freed_bytes',
+  help: 'Total bytes freed by forced garbage collection',
+  registers: [register],
+});
+
+// ============= Métriques Predictive Alerts =============
+
+const predictiveChecksTotal = new Counter({
+  name: 'neopro_predictive_checks_total',
+  help: 'Total predictive alert check runs',
+  labelNames: ['status'],
+  registers: [register],
+});
+
+const predictiveAlertsGeneratedTotal = new Counter({
+  name: 'neopro_predictive_alerts_generated_total',
+  help: 'Total predictive alerts generated',
+  registers: [register],
+});
+
+const predictiveCheckDuration = new Histogram({
+  name: 'neopro_predictive_check_duration_seconds',
+  help: 'Duration of predictive alert checks in seconds',
+  buckets: [1, 5, 10, 30, 60, 120, 300],
+  registers: [register],
+});
+
+const predictiveSitesCheckedGauge = new Gauge({
+  name: 'neopro_predictive_sites_checked',
+  help: 'Number of sites checked in last predictive run',
+  registers: [register],
+});
+
+// ============= Métriques Subscriptions/Billing =============
+
+const subscriptionStatusGauge = new Gauge({
+  name: 'neopro_subscription_status',
+  help: 'Number of sites by subscription status',
+  labelNames: ['status'],
+  registers: [register],
+});
+
+const subscriptionPlanGauge = new Gauge({
+  name: 'neopro_subscription_plan',
+  help: 'Number of sites by subscription plan',
+  labelNames: ['plan'],
+  registers: [register],
+});
+
 // ============= Métriques Réseau Pi =============
 
 const siteNetworkTypeGauge = new Gauge({
@@ -447,6 +518,60 @@ class MetricsService {
 
   recordRateLimitNearExhaustion(limiter: string): void {
     rateLimitNearExhaustionTotal.inc({ limiter });
+  }
+
+  // ============= Méthodes Memory Manager =============
+
+  recordHeapUsage(percent: number): void {
+    memoryHeapUsageGauge.set(percent);
+  }
+
+  recordMemoryPressureEvent(severity: 'warning' | 'critical' | 'emergency'): void {
+    memoryPressureEventsTotal.inc({ severity });
+  }
+
+  recordGcRun(freedBytes: number): void {
+    memoryGcRunsTotal.inc();
+    if (freedBytes > 0) {
+      memoryGcFreedBytes.inc(freedBytes);
+    }
+  }
+
+  // ============= Méthodes Predictive Alerts =============
+
+  recordPredictiveCheck(status: 'success' | 'failed', sitesChecked: number, alertsGenerated: number, durationSeconds: number): void {
+    predictiveChecksTotal.inc({ status });
+    predictiveSitesCheckedGauge.set(sitesChecked);
+    if (alertsGenerated > 0) {
+      predictiveAlertsGeneratedTotal.inc(alertsGenerated);
+    }
+    predictiveCheckDuration.observe(durationSeconds);
+  }
+
+  // ============= Méthodes Subscriptions/Billing =============
+
+  recordSubscriptionStats(stats: {
+    active: number;
+    expiring_soon: number;
+    grace_period: number;
+    blocked: number;
+    suspended: number;
+  }): void {
+    subscriptionStatusGauge.set({ status: 'active' }, stats.active);
+    subscriptionStatusGauge.set({ status: 'expiring_soon' }, stats.expiring_soon);
+    subscriptionStatusGauge.set({ status: 'grace_period' }, stats.grace_period);
+    subscriptionStatusGauge.set({ status: 'blocked' }, stats.blocked);
+    subscriptionStatusGauge.set({ status: 'suspended' }, stats.suspended);
+  }
+
+  recordSubscriptionPlans(plans: {
+    trial: number;
+    standard: number;
+    premium: number;
+  }): void {
+    subscriptionPlanGauge.set({ plan: 'trial' }, plans.trial);
+    subscriptionPlanGauge.set({ plan: 'standard' }, plans.standard);
+    subscriptionPlanGauge.set({ plan: 'premium' }, plans.premium);
   }
 
   // ============= Méthodes réseau Pi =============
