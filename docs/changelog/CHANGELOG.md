@@ -1,3 +1,9 @@
+## [3.11.1](https://github.com/Tallec7/neopro/compare/v3.11.0...v3.11.1) (2026-02-11)
+
+### Bug Fixes
+
+- **monitoring:** use scrape_job=NEOPRO label for Grafana Cloud dashboards ([fc16d94](https://github.com/Tallec7/neopro/commit/fc16d942586d098089490ccc8950bac7460f1bda))
+
 # [3.11.0](https://github.com/Tallec7/neopro/compare/v3.10.0...v3.11.0) (2026-02-11)
 
 ### Features
