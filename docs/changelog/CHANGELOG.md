@@ -1,3 +1,9 @@
+## [3.9.3](https://github.com/Tallec7/neopro/compare/v3.9.2...v3.9.3) (2026-02-11)
+
+### Bug Fixes
+
+- **ci:** fix all 3 failing CI jobs — lint errors, dashboard lint setup, raspberry build ([0eae86c](https://github.com/Tallec7/neopro/commit/0eae86c54314bf60afe7e73d189c59aed0aaa3f1))
+
 ## [3.9.2](https://github.com/Tallec7/neopro/compare/v3.9.1...v3.9.2) (2026-02-11)
 
 ### Bug Fixes
