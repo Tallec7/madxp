@@ -1,3 +1,9 @@
+## [3.9.2](https://github.com/Tallec7/neopro/compare/v3.9.1...v3.9.2) (2026-02-11)
+
+### Bug Fixes
+
+- **pi:** fix GPU crash detection grep -c multiline bug in kiosk-watchdog ([b95e874](https://github.com/Tallec7/neopro/commit/b95e87492bb88b8ba97450ca371703b5c0658d45))
+
 ## [Unreleased]
 
 ### Bug Fixes
