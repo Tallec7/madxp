@@ -33,6 +33,23 @@ Un même sujet (ex: sponsor X) peut avoir **2 versions** : une optimisée TV (19
 - Pas de variantes vidéo (1 fichier = 1 format)
 - L'app Angular est servie sur un seul endpoint `/tv`
 
+### La Remote et les faits de jeu — Élément critique
+
+La Remote (télécommande sur smartphone/tablette) permet au staff du club de déclencher des **faits de jeu** pendant un match. Avec le dual TV+LED, un même fait de jeu doit produire des **réactions visuelles différentes** sur chaque support **simultanément** :
+
+| Fait de jeu (Remote)                             | Réaction TV                                                                | Réaction LED                                                          |
+| ------------------------------------------------ | -------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **BUT / Point marqué**                           | Animation fullscreen/popup + jingle vidéo + son + overlay score mis à jour | Flash bandeau "⚽ BUUUUT !" + score clignotant + couleur équipe       |
+| **Lancer vidéo sponsor**                         | Vidéo sponsor 16:9 par-dessus la boucle                                    | Variante LED du même sponsor (bandeau/portrait)                       |
+| **Breaking news**                                | Bandeau texte défilant en haut/bas de l'écran                              | Texte pleine largeur intégré au bandeau LED                           |
+| **Changement de phase** (mi-temps, fin de match) | Switch vers boucle vidéo de la phase + animation transition                | Switch vers contenu LED de la phase (stats, prochain match, sponsors) |
+| **Timeout / Temps mort**                         | Vidéo sponsor timeout 16:9 + chrono timeout                                | Bandeau LED "⏸ TEMPS MORT" + chrono décompte                          |
+| **Score Stramatel** (auto, cf. ADR-013)          | Overlay score mis à jour + animation de but si score change                | Score LED mis à jour + flash bandeau                                  |
+
+**Communication actuelle** : La Remote émet chaque action sur **BroadcastChannel** (local) + **Socket.IO** (réseau). Dans le scénario dual kiosk, les 2 instances Chromium (TV + LED) tournent **sur le même Pi** → **BroadcastChannel atteint les deux** car il fonctionne entre tous les onglets/fenêtres du même navigateur (même profil). Cependant, les 2 instances utilisent des `--user-data-dir` différents → BroadcastChannel ne traversera pas. **Socket.IO reste le canal de communication fiable** entre la Remote et les 2 instances kiosk.
+
+**Point clé** : Chaque instance Chromium (TV et LED) écoute les mêmes événements Socket.IO (`score-update`, `command`, `breaking-news`, `phase-change`) mais les **interprète différemment** selon son `displayType`.
+
 ## Décision
 
 Utiliser les **2 sorties HDMI natives du Pi** avec **2 instances Chromium kiosk indépendantes**, chacune chargeant une route Angular différente (`/tv` et `/led`), et introduire un **système de variantes vidéo** dans le modèle de données.
@@ -200,6 +217,122 @@ Chaque route instancie le même `TvComponent` mais avec un paramètre `displayTy
 └──────────────────────────────────────────────────────────────┘
 ```
 
+### Faits de jeu — Réactions différenciées TV vs LED
+
+Quand l'opérateur déclenche un fait de jeu depuis la Remote, **un seul événement Socket.IO** est émis. Chaque instance (TV et LED) l'interprète selon son `displayType` :
+
+**Exemple : l'opérateur appuie sur "+" → But marqué**
+
+```
+Remote (smartphone)
+   │
+   └─► Socket.IO: score-update { homeScore: 3, awayScore: 1 }
+          │
+          ├──────────────────────────────────────────────────┐
+          ↓                                                  ↓
+   Instance TV (/tv)                               Instance LED (/led)
+   displayType = 'tv'                              displayType = 'led'
+          │                                                  │
+          ↓                                                  ↓
+   handleScoreUpdate()                             handleScoreUpdate()
+   • Détecte homeScore a changé                    • Détecte homeScore a changé
+   • triggerGoalAnimation('home')                  • triggerLedGoalAnimation('home')
+     ├─ Style: popup/fullscreen/slide                ├─ Flash couleur équipe
+     ├─ Son: goal-football.mp3                       ├─ Texte: "⚽ BUUUUT ! PSG"
+     ├─ Durée: 4s                                    ├─ Score clignotant 3s
+     └─ Score highlight pulse                        └─ Retour bandeau score
+   • Met à jour overlay score                      • Met à jour bandeau score
+```
+
+**Exemple : l'opérateur lance une vidéo sponsor**
+
+```
+Remote (smartphone)
+   │
+   └─► Socket.IO: command { type: 'video', data: { id: 'sponsor-decathlon' } }
+          │
+          ├──────────────────────────────────────────────────┐
+          ↓                                                  ↓
+   Instance TV (/tv)                               Instance LED (/led)
+          │                                                  │
+          ↓                                                  ↓
+   Cherche video_variants                          Cherche video_variants
+   WHERE display_type='tv'                         WHERE display_type='led'
+          │                                                  │
+          ↓                                                  ↓
+   Joue Decathlon-16x9.mp4                         Joue Decathlon-bandeau.mp4
+   (1920×1080, 30s)                                (1920×384, 15s)
+```
+
+**Logique dans le TvComponent** :
+
+```typescript
+// tv.component.ts — handleCommand() modifié
+private handleCommand(command: CommandEvent): void {
+  if (command.type === 'video') {
+    const video = command.data;
+    // Sélectionner la variante adaptée au type d'écran
+    const variant = this.getVideoVariant(video.id, this.displayType);
+    if (variant) {
+      this.playManualVideo(variant);
+    } else if (this.displayType === 'led') {
+      // Fallback LED : redimensionner la version TV
+      this.playManualVideo(video, { objectFit: 'cover' });
+    } else {
+      this.playManualVideo(video);
+    }
+  }
+}
+
+// Nouvelles animations spécifiques LED
+private triggerLedGoalAnimation(team: 'home' | 'away'): void {
+  // Animation bandeau : flash couleur + texte "BUUUUT !" + score clignotant
+  this.ledGoalFlash = true;
+  this.ledGoalTeam = team;
+  setTimeout(() => { this.ledGoalFlash = false; }, 3000);
+}
+```
+
+**Événements et leur comportement par display** :
+
+| Événement Socket.IO  | TV (`displayType='tv'`)                                       | LED (`displayType='led'`)                 |
+| -------------------- | ------------------------------------------------------------- | ----------------------------------------- |
+| `score-update`       | Overlay score + goal animation (popup/fullscreen/slide) + son | Bandeau score + flash LED + texte "BUT !" |
+| `command` (video)    | Joue variante TV (16:9)                                       | Joue variante LED (bandeau/portrait)      |
+| `command` (sponsors) | Boucle sponsors TV                                            | Boucle sponsors LED                       |
+| `breaking-news`      | Bandeau texte en overlay (haut/bas)                           | Texte pleine largeur dans le bandeau LED  |
+| `phase-change`       | Switch boucle vidéo de phase                                  | Switch contenu LED de phase               |
+| `timer-update`       | Chrono dans overlay score ou standalone                       | Chrono intégré au bandeau score           |
+| `score-reset`        | Reset overlay + animation                                     | Reset bandeau score                       |
+| `stramatel-extended` | Fautes/temps morts dans overlay (optionnel)                   | Fautes/TM dans bandeau (compact)          |
+
+### Impact Remote — Dual TV+LED
+
+**Bonne nouvelle** : la Remote **ne change quasiment pas** pour le dual TV+LED. L'opérateur n'a pas besoin de "choisir" entre TV et LED — chaque action s'applique aux deux simultanément.
+
+La Remote reste l'interface unique :
+
+- **Score** → broadcast aux deux (chacun réagit selon son type)
+- **Vidéo manuelle** → broadcast aux deux (chacun joue sa variante)
+- **Breaking news** → broadcast aux deux (format adapté)
+- **Phase** → broadcast aux deux (boucle adaptée)
+- **Options overlay** → broadcast aux deux (template adapté)
+
+**Seul ajout Remote** : un indicateur montrant que le LED est actif et connecté :
+
+```
+┌──────────────────────────────────────────────┐
+│ 📺 TV: connecté    💡 LED: connecté          │
+│──────────────────────────────────────────────│
+│                                              │
+│ [Vidéos]  [Score]  [Phase]  [Options]        │
+│                                              │
+│ ... (interface inchangée)                    │
+└──────────────────────────────────────────────┘
+```
+
+**Différence clé avec ADR-011 (scénario C multi-TV)** : dans le multi-TV, on veut pouvoir cibler UNE TV spécifique (sélecteur de display). Ici, TV+LED, on broadcast TOUJOURS aux deux — pas de sélecteur nécessaire. L'intelligence est dans le **récepteur** (chaque instance interprète l'événement), pas dans l'**émetteur** (la Remote).
+
 ## Alternatives Considérées
 
 ### 1. Un seul HDMI splitté + conversion format pour LED
@@ -251,20 +384,37 @@ Chaque route instancie le même `TvComponent` mais avec un paramètre `displayTy
 
 ## Plan d'implémentation
 
-### Phase 1 — Dual kiosk (2-3 jours)
+### Phase 1 — Dual kiosk + routing (2-3 jours)
 
 1. **Modifier `kiosk-watchdog.sh`** : lancer 2 instances Chromium si `led_enabled=true`
 2. **Ajouter `/boot/firmware/config.txt`** : `max_framebuffers=2`, résolutions par port
 3. **Créer route `/led`** dans le routing Angular du Pi
 4. **Paramétrer `TvComponent`** : accepter `displayType` query param, filtrer la playlist
-5. **Adapter l'overlay de score** : template compact pour LED
+5. **S'assurer que Socket.IO est le canal primaire** : les 2 kiosks ont des `--user-data-dir` séparés → BroadcastChannel ne traverse pas → Socket.IO gère toute la communication
 
 **Critères de validation** :
 
 - [ ] 2 écrans affichent des contenus différents simultanément
-- [ ] Score visible sur les 2 écrans dans un format adapté
+- [ ] Commande depuis la Remote → les 2 instances réagissent
 - [ ] Stabilité sur 5h avec double flux vidéo
 - [ ] Mémoire RAM < 2GB total (headroom pour Pi 4GB)
+
+### Phase 1b — Faits de jeu différenciés TV vs LED (2-3 jours)
+
+1. **Score overlay LED** : template bandeau compact (score + chrono + période)
+2. **Animation de but LED** : flash couleur équipe + texte "BUT !" + score clignotant (CSS, pas de vidéo)
+3. **Breaking news LED** : texte pleine largeur dans le bandeau (pas d'overlay flottant)
+4. **Sélection de variante vidéo** : `handleCommand()` cherche la variante adaptée au `displayType`
+5. **Indicateur LED dans la Remote** : pastille "💡 LED: connecté" dans le header
+6. **Fallback LED** : si pas de variante LED pour une vidéo, `object-fit: cover` sur la version TV
+
+**Critères de validation** :
+
+- [ ] But marqué → TV affiche animation popup/fullscreen, LED affiche flash bandeau simultanément
+- [ ] Vidéo sponsor lancée → TV joue version 16:9, LED joue version bandeau
+- [ ] Breaking news → TV bandeau overlay, LED texte pleine largeur
+- [ ] Phase change → TV et LED switchent chacun vers leur boucle de phase
+- [ ] Fallback : vidéo sans variante LED → version TV redimensionnée sur le LED
 
 ### Phase 2 — Variantes vidéo (3-5 jours)
 
@@ -288,24 +438,29 @@ Chaque route instancie le même `TvComponent` mais avec un paramètre `displayTy
 
 ## Budget estimé
 
-| Composant                              | Prix estimé    |
-| -------------------------------------- | -------------- |
-| Contrôleur LED (Linsn MC100 ou equiv.) | 150-300€       |
-| Câble HDMI (Pi → contrôleur)           | 5-10€          |
-| Pi 5 8GB (si upgrade depuis Pi 4)      | 80-100€        |
-| **Total hardware additionnel**         | **235-410€**   |
-| **Développement**                      | **~5-8 jours** |
+| Composant                              | Prix estimé     |
+| -------------------------------------- | --------------- |
+| Contrôleur LED (Linsn MC100 ou equiv.) | 150-300€        |
+| Câble HDMI (Pi → contrôleur)           | 5-10€           |
+| Pi 5 8GB (si upgrade depuis Pi 4)      | 80-100€         |
+| **Total hardware additionnel**         | **235-410€**    |
+| **Développement**                      | **~8-12 jours** |
 
 (Hors panneaux LED eux-mêmes — matériel du club)
 
 ## Références
 
 - `raspberry/scripts/kiosk-watchdog.sh` — Watchdog à modifier pour dual kiosk
-- `raspberry/src/app/components/tv/tv.component.ts` — Component TV à paramétrer
-- `raspberry/src/app/components/tv/tv.component.html` — Templates overlay score
+- `raspberry/src/app/components/tv/tv.component.ts` — Component TV (goal animation lignes 1001-1064, handleCommand)
+- `raspberry/src/app/components/tv/tv.component.html` — Templates overlay score + goal animation (lignes 123-175)
+- `raspberry/src/app/components/remote/remote.component.ts` — Remote controller (broadcastScore ligne 719, launchVideo lignes 362-383, breakingNews lignes 1369-1420)
+- `raspberry/src/app/services/local-broadcast.service.ts` — BroadcastChannel (8 types d'événements)
+- `raspberry/src/app/services/local-options.service.ts` — GoalAnimationConfig, sport sounds, period labels
+- `raspberry/server/socket/handlers.js` — Relay événements (score-update, command, breaking-news, phase-change)
 - `central-server/src/scripts/full-schema.sql` — Schéma DB (table videos)
 - ADR-008 — Double-Buffer Vidéo (contraintes GPU)
 - ADR-011 — Multi-TV (combinaison splitter + dual output)
+- ADR-013 — Score Stramatel (source automatique des score-update)
 
 ---
 
