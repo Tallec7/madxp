@@ -107,7 +107,7 @@ let metricsServiceInstance: {
 const getMetricsService = () => {
   if (!metricsServiceInstance) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       metricsServiceInstance = require('../services/metrics.service').default;
     } catch {
       // Metrics service not available yet during startup

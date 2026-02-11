@@ -20,7 +20,8 @@ import networkAlertsService from './services/network-alerts.service';
 import { adminOpsService } from './services/admin-ops.service';
 import { alertingService } from './services/alerting.service';
 import { realtimeStatsService } from './services/realtime-stats.service';
-import { predictiveAlertsService } from './services/predictive-alerts.service';
+// predictiveAlertsService disabled — see startServices() comments
+// import { predictiveAlertsService } from './services/predictive-alerts.service';
 import { subscriptionService } from './services/subscription.service';
 import { cleanupStaleTempFiles } from './middleware/upload';
 
@@ -311,7 +312,9 @@ app.get('/', (_req: Request, res: Response) => {
 // Documentation API Swagger/OpenAPI (development only to save memory)
 if (NODE_ENV !== 'production') {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const YAML = require('yamljs');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const swaggerUi = require('swagger-ui-express');
     const swaggerDocument = YAML.load(path.join(__dirname, 'docs', 'openapi.yaml'));
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
