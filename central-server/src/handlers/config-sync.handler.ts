@@ -184,12 +184,39 @@ export async function handleSyncLocalState(
       configUpdatePending: isConfigUpdatePending,
     });
 
+    // Record sync operation metric
+    metricsService.recordSyncOperation('local_state', 'success');
+
+    // Config drift detection: compare Pi hash to expected hash in DB
+    if (configHash && !isConfigUpdatePending) {
+      const expectedResult = await query<{ local_config_hash: string | null }>(
+        'SELECT local_config_hash FROM sites WHERE id = $1',
+        [siteId]
+      );
+      const expectedHash = expectedResult.rows[0]?.local_config_hash;
+      if (expectedHash && expectedHash !== configHash) {
+        metricsService.recordConfigDrift();
+        logger.warn('Config drift detected', {
+          siteId,
+          expectedHash,
+          actualHash: configHash,
+        });
+      }
+    }
+
+    // Update pending config sync count for Prometheus
+    const pendingResult = await query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM sites WHERE pending_config_version_id IS NOT NULL`
+    );
+    metricsService.recordConfigSyncPending(parseInt(pendingResult.rows[0]?.count || '0', 10));
+
     await triggerPendingConfigSync(ctx, siteId);
 
     // Send license status to Pi
     await sendLicenseStatusFn(ctx, siteId);
   } catch (error) {
     logger.error('Error handling sync_local_state:', error);
+    metricsService.recordSyncOperation('local_state', 'failed');
   }
 }
 

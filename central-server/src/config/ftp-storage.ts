@@ -3,6 +3,24 @@ import { Readable } from 'stream';
 import { stat } from 'fs/promises';
 import logger from './logger';
 
+// Lazy import to avoid circular dependency with metrics.service
+let metricsServiceInstance: {
+  recordFtpOperation: (operation: string, status: string, storageType: string, durationSeconds?: number) => void;
+  recordFtpRetry: (operation: string, storageType: string) => void;
+  recordFtpUploadBytes: (storageType: string, bytes: number) => void;
+} | null = null;
+const getMetricsService = () => {
+  if (!metricsServiceInstance) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      metricsServiceInstance = require('../services/metrics.service').default;
+    } catch {
+      // Metrics service not available yet during startup
+    }
+  }
+  return metricsServiceInstance;
+};
+
 // Configuration FTP Hostinger pour les vidéos
 const ftpConfig = {
   host: process.env.FTP_HOST || '',
@@ -72,15 +90,21 @@ export const uploadFileToFtp = async (
     // Convertir le buffer en stream lisible
     const stream = Readable.from(fileBuffer);
 
+    const uploadStart = Date.now();
     // Upload du fichier à la racine (le compte FTP est déjà dans /neopro-video)
     await client.uploadFrom(stream, filename);
+    const uploadDuration = (Date.now() - uploadStart) / 1000;
 
     const url = getFtpPublicUrl(filename);
     logger.info('File uploaded to FTP successfully:', { filename, url });
 
+    getMetricsService()?.recordFtpOperation('upload', 'success', 'video', uploadDuration);
+    getMetricsService()?.recordFtpUploadBytes('video', fileBuffer.length);
+
     return { path: filename, url };
   } catch (error) {
     logger.error('Error uploading file to FTP:', error);
+    getMetricsService()?.recordFtpOperation('upload', 'failed', 'video');
     return null;
   } finally {
     client.close();
@@ -118,15 +142,21 @@ export const uploadFileToFtpFromDisk = async (
 
     logger.info('FTP connected, streaming file from disk:', { filename, size: fileStats.size });
 
+    const uploadStart = Date.now();
     // Stream directement depuis le disque — pas de buffer en mémoire
     await client.uploadFrom(filePath, filename);
+    const uploadDuration = (Date.now() - uploadStart) / 1000;
 
     const url = getFtpPublicUrl(filename);
     logger.info('File streamed to FTP successfully:', { filename, url });
 
+    getMetricsService()?.recordFtpOperation('upload', 'success', 'video', uploadDuration);
+    getMetricsService()?.recordFtpUploadBytes('video', fileStats.size);
+
     return { path: filename, url };
   } catch (error) {
     logger.error('Error streaming file to FTP:', error);
+    getMetricsService()?.recordFtpOperation('upload', 'failed', 'video');
     return null;
   } finally {
     client.close();
@@ -159,6 +189,7 @@ export const uploadFileToFtpFromDiskWithVerification = async (
     if (!uploadResult) {
       logger.warn('FTP streaming upload failed, retrying...', { filename, attempt, maxRetries });
       if (attempt < maxRetries) {
+        getMetricsService()?.recordFtpRetry('upload', 'video');
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         continue;
       }
@@ -174,7 +205,9 @@ export const uploadFileToFtpFromDiskWithVerification = async (
         attempt,
         maxRetries,
       });
+      getMetricsService()?.recordFtpOperation('verify', 'failed', 'video');
       if (attempt < maxRetries) {
+        getMetricsService()?.recordFtpRetry('verify', 'video');
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         continue;
       }
@@ -194,7 +227,9 @@ export const uploadFileToFtpFromDiskWithVerification = async (
         attempt,
         maxRetries,
       });
+      getMetricsService()?.recordFtpOperation('verify', 'size_mismatch', 'video');
       if (attempt < maxRetries) {
+        getMetricsService()?.recordFtpRetry('verify', 'video');
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         continue;
       }
@@ -205,6 +240,7 @@ export const uploadFileToFtpFromDiskWithVerification = async (
       };
     }
 
+    getMetricsService()?.recordFtpOperation('verify', 'success', 'video');
     logger.info('FTP streaming upload with verification successful', {
       filename,
       size: verification.size,
@@ -238,11 +274,15 @@ export const deleteFileFromFtp = async (filename: string): Promise<boolean> => {
       secure: ftpConfig.secure,
     });
 
+    const deleteStart = Date.now();
     await client.remove(filename);
+    const deleteDuration = (Date.now() - deleteStart) / 1000;
     logger.info('File deleted from FTP:', { filename });
+    getMetricsService()?.recordFtpOperation('delete', 'success', 'video', deleteDuration);
     return true;
   } catch (error) {
     logger.error('Error deleting file from FTP:', error);
+    getMetricsService()?.recordFtpOperation('delete', 'failed', 'video');
     return false;
   } finally {
     client.close();
@@ -277,14 +317,20 @@ export const uploadUpdateToFtp = async (
     logger.info('FTP Update connected, uploading file:', { filename, size: fileBuffer.length });
 
     const stream = Readable.from(fileBuffer);
+    const uploadStart = Date.now();
     await client.uploadFrom(stream, filename);
+    const uploadDuration = (Date.now() - uploadStart) / 1000;
 
     const url = getFtpUpdatePublicUrl(filename);
     logger.info('Update file uploaded to FTP successfully:', { filename, url });
 
+    getMetricsService()?.recordFtpOperation('upload', 'success', 'update', uploadDuration);
+    getMetricsService()?.recordFtpUploadBytes('update', fileBuffer.length);
+
     return { path: filename, url };
   } catch (error) {
     logger.error('Error uploading update file to FTP:', error);
+    getMetricsService()?.recordFtpOperation('upload', 'failed', 'update');
     return null;
   } finally {
     client.close();
@@ -309,11 +355,15 @@ export const deleteUpdateFromFtp = async (filename: string): Promise<boolean> =>
       secure: ftpUpdateConfig.secure,
     });
 
+    const deleteStart = Date.now();
     await client.remove(filename);
+    const deleteDuration = (Date.now() - deleteStart) / 1000;
     logger.info('Update file deleted from FTP:', { filename });
+    getMetricsService()?.recordFtpOperation('delete', 'success', 'update', deleteDuration);
     return true;
   } catch (error) {
     logger.error('Error deleting update file from FTP:', error);
+    getMetricsService()?.recordFtpOperation('delete', 'failed', 'update');
     return false;
   } finally {
     client.close();
@@ -379,10 +429,13 @@ export const verifyFtpFileExists = async (
     });
 
     // Lister les fichiers pour trouver celui qu'on cherche
+    const verifyStart = Date.now();
     const list = await client.list();
     const file = list.find(f => f.name === filename);
+    const verifyDuration = (Date.now() - verifyStart) / 1000;
 
     if (!file) {
+      getMetricsService()?.recordFtpOperation('verify', 'not_found', config, verifyDuration);
       return { exists: false, size: null, error: 'File not found on FTP' };
     }
 
@@ -392,10 +445,12 @@ export const verifyFtpFileExists = async (
       modifiedAt: file.modifiedAt,
     });
 
+    getMetricsService()?.recordFtpOperation('verify', 'success', config, verifyDuration);
     return { exists: true, size: file.size };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown FTP error';
     logger.error('FTP file verification failed:', { filename, error: errorMessage });
+    getMetricsService()?.recordFtpOperation('verify', 'failed', config);
     return { exists: false, size: null, error: errorMessage };
   } finally {
     client.close();
@@ -428,6 +483,7 @@ export const uploadFileToFtpWithVerification = async (
     if (!uploadResult) {
       logger.warn('FTP upload failed, retrying...', { filename, attempt, maxRetries });
       if (attempt < maxRetries) {
+        getMetricsService()?.recordFtpRetry('upload', 'video');
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         continue;
       }
@@ -443,7 +499,9 @@ export const uploadFileToFtpWithVerification = async (
         attempt,
         maxRetries,
       });
+      getMetricsService()?.recordFtpOperation('verify', 'failed', 'video');
       if (attempt < maxRetries) {
+        getMetricsService()?.recordFtpRetry('verify', 'video');
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         continue;
       }
@@ -463,7 +521,9 @@ export const uploadFileToFtpWithVerification = async (
         attempt,
         maxRetries,
       });
+      getMetricsService()?.recordFtpOperation('verify', 'size_mismatch', 'video');
       if (attempt < maxRetries) {
+        getMetricsService()?.recordFtpRetry('verify', 'video');
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         continue;
       }
@@ -474,6 +534,7 @@ export const uploadFileToFtpWithVerification = async (
       };
     }
 
+    getMetricsService()?.recordFtpOperation('verify', 'success', 'video');
     logger.info('FTP upload with verification successful', {
       filename,
       size: verification.size,
@@ -515,6 +576,7 @@ export const uploadUpdateToFtpWithVerification = async (
     if (!uploadResult) {
       logger.warn('FTP update upload failed, retrying...', { filename, attempt, maxRetries });
       if (attempt < maxRetries) {
+        getMetricsService()?.recordFtpRetry('upload', 'update');
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         continue;
       }
@@ -530,7 +592,9 @@ export const uploadUpdateToFtpWithVerification = async (
         attempt,
         maxRetries,
       });
+      getMetricsService()?.recordFtpOperation('verify', 'failed', 'update');
       if (attempt < maxRetries) {
+        getMetricsService()?.recordFtpRetry('verify', 'update');
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         continue;
       }
@@ -550,7 +614,9 @@ export const uploadUpdateToFtpWithVerification = async (
         attempt,
         maxRetries,
       });
+      getMetricsService()?.recordFtpOperation('verify', 'size_mismatch', 'update');
       if (attempt < maxRetries) {
+        getMetricsService()?.recordFtpRetry('verify', 'update');
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         continue;
       }
@@ -561,6 +627,7 @@ export const uploadUpdateToFtpWithVerification = async (
       };
     }
 
+    getMetricsService()?.recordFtpOperation('verify', 'success', 'update');
     logger.info('FTP update upload with verification successful', {
       filename,
       size: verification.size,

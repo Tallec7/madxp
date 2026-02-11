@@ -174,6 +174,74 @@ const canaryRollbacksTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques FTP/Storage =============
+
+const ftpOperationsTotal = new Counter({
+  name: 'neopro_ftp_operations_total',
+  help: 'Total FTP operations (upload, delete, verify)',
+  labelNames: ['operation', 'status', 'storage_type'],
+  registers: [register],
+});
+
+const ftpOperationDuration = new Histogram({
+  name: 'neopro_ftp_operation_duration_seconds',
+  help: 'Duration of FTP operations in seconds',
+  labelNames: ['operation', 'storage_type'],
+  buckets: [0.5, 1, 2, 5, 10, 30, 60, 120],
+  registers: [register],
+});
+
+const ftpRetriesTotal = new Counter({
+  name: 'neopro_ftp_retries_total',
+  help: 'Total FTP retry attempts',
+  labelNames: ['operation', 'storage_type'],
+  registers: [register],
+});
+
+const ftpUploadBytesTotal = new Counter({
+  name: 'neopro_ftp_upload_bytes_total',
+  help: 'Total bytes uploaded to FTP',
+  labelNames: ['storage_type'],
+  registers: [register],
+});
+
+// ============= Métriques Sync Agent (côté central) =============
+
+const syncOperationsTotal = new Counter({
+  name: 'neopro_sync_operations_total',
+  help: 'Total sync operations received from Pi agents',
+  labelNames: ['type', 'status'],
+  registers: [register],
+});
+
+const configDriftTotal = new Counter({
+  name: 'neopro_config_drift_total',
+  help: 'Total config drift detections (Pi config hash mismatch)',
+  registers: [register],
+});
+
+const configSyncPendingGauge = new Gauge({
+  name: 'neopro_config_sync_pending',
+  help: 'Number of sites with pending config deployments',
+  registers: [register],
+});
+
+// ============= Métriques Rate Limiting =============
+
+const rateLimitHitsTotal = new Counter({
+  name: 'neopro_rate_limit_hits_total',
+  help: 'Total rate limit violations (429 responses)',
+  labelNames: ['limiter', 'key_type'],
+  registers: [register],
+});
+
+const rateLimitNearExhaustionTotal = new Counter({
+  name: 'neopro_rate_limit_near_exhaustion_total',
+  help: 'Total requests where rate limit was >80% consumed',
+  labelNames: ['limiter'],
+  registers: [register],
+});
+
 // ============= Métriques Réseau Pi =============
 
 const siteNetworkTypeGauge = new Gauge({
@@ -338,6 +406,47 @@ class MetricsService {
 
   recordCanaryRollback(): void {
     canaryRollbacksTotal.inc();
+  }
+
+  // ============= Méthodes FTP/Storage =============
+
+  recordFtpOperation(operation: string, status: string, storageType: string, durationSeconds?: number): void {
+    ftpOperationsTotal.inc({ operation, status, storage_type: storageType });
+    if (durationSeconds !== undefined) {
+      ftpOperationDuration.observe({ operation, storage_type: storageType }, durationSeconds);
+    }
+  }
+
+  recordFtpRetry(operation: string, storageType: string): void {
+    ftpRetriesTotal.inc({ operation, storage_type: storageType });
+  }
+
+  recordFtpUploadBytes(storageType: string, bytes: number): void {
+    ftpUploadBytesTotal.inc({ storage_type: storageType }, bytes);
+  }
+
+  // ============= Méthodes Sync Agent =============
+
+  recordSyncOperation(type: string, status: string): void {
+    syncOperationsTotal.inc({ type, status });
+  }
+
+  recordConfigDrift(): void {
+    configDriftTotal.inc();
+  }
+
+  recordConfigSyncPending(count: number): void {
+    configSyncPendingGauge.set(count);
+  }
+
+  // ============= Méthodes Rate Limiting =============
+
+  recordRateLimitHit(limiter: string, keyType: string): void {
+    rateLimitHitsTotal.inc({ limiter, key_type: keyType });
+  }
+
+  recordRateLimitNearExhaustion(limiter: string): void {
+    rateLimitNearExhaustionTotal.inc({ limiter });
   }
 
   // ============= Méthodes réseau Pi =============

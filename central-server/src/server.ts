@@ -221,12 +221,33 @@ app.use(correlationMiddleware);
 // No global rate limiter - the per-route limiters are sufficient
 // and a global limiter of 100/15min was causing 429 errors with normal dashboard usage
 
-app.use((req: Request, _res: Response, next: NextFunction) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const correlationReq = req as import('./middleware/correlation').CorrelationRequest;
+  const correlationId = correlationReq.correlationId;
+
   logger.debug('Request', {
     method: req.method,
     path: req.path,
     ip: req.ip,
+    correlationId,
   });
+
+  // Log completed requests with correlation ID for traceability
+  const startTime = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    if (res.statusCode >= 400) {
+      logger.warn('Request completed with error', {
+        method: req.method,
+        path: req.path,
+        statusCode: res.statusCode,
+        durationMs: duration,
+        correlationId,
+        userId: (req as import('./types').AuthRequest).user?.id,
+      });
+    }
+  });
+
   next();
 });
 
