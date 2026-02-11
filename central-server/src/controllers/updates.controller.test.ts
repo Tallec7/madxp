@@ -39,6 +39,17 @@ jest.mock('../services/update-deployment.service', () => ({
   },
 }));
 
+// Mock middleware/upload (cleanupTempFile)
+jest.mock('../middleware/upload', () => ({
+  cleanupTempFile: jest.fn(),
+}));
+
+// Mock fs.readFileSync for disk-storage file reads
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  readFileSync: jest.fn().mockReturnValue(Buffer.from('file-content')),
+}));
+
 // Mock logger
 jest.mock('../config/logger', () => ({
   info: jest.fn(),
@@ -187,7 +198,7 @@ describe('Updates Controller', () => {
             originalname: 'update.tar.gz',
             mimetype: 'application/gzip',
             size: 1024,
-            buffer: Buffer.from('file-content'),
+            path: '/tmp/neopro-uploads/test-file.tar.gz',
           } as unknown as Express.Multer.File,
         });
         const res = createMockResponse();
@@ -242,7 +253,7 @@ describe('Updates Controller', () => {
             originalname: 'update.tar.gz',
             mimetype: 'application/gzip',
             size: 2048,
-            buffer: Buffer.from('file-content'),
+            path: '/tmp/neopro-uploads/test-file.tar.gz',
           } as unknown as Express.Multer.File,
         });
         const res = createMockResponse();

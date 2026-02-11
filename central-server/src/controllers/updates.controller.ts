@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import crypto from 'crypto';
+import fs from 'fs';
 import * as ftp from 'basic-ftp';
 import logger from '../config/logger';
 import { AuthRequest } from '../types';
@@ -8,6 +9,7 @@ import { uploadUpdate } from '../services/storage.service';
 import { isFtpUpdateConfigured } from '../config/ftp-storage';
 import { updateDeploymentService } from '../services/update-deployment.service';
 import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';
+import { cleanupTempFile } from '../middleware/upload';
 
 type DatabaseError = Error & { code?: string; message?: string };
 
@@ -70,11 +72,14 @@ export const createUpdate = async (req: AuthRequest, res: Response) => {
 
     const file = req.file;
     const filename = `update-${version}-${Date.now()}-${file.originalname}`;
-    const checksum = crypto.createHash('sha256').update(file.buffer).digest('hex');
+
+    // Disk storage: read file from disk (file.buffer is undefined with diskStorage)
+    const fileBuffer = fs.readFileSync(file.path);
+    const checksum = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
     // Upload via storage service (FTP)
     logger.info('Uploading update package via storage service', { filename });
-    const uploadResult = await uploadUpdate(file.buffer, filename, file.mimetype);
+    const uploadResult = await uploadUpdate(fileBuffer, filename, file.mimetype);
 
     if (!uploadResult) {
       return res.status(500).json({
@@ -117,9 +122,16 @@ export const createUpdate = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Cleanup temp file after successful processing
+    cleanupTempFile(file.path);
+
     logger.info('Update created:', { id: result.id, version, uploadStatus });
     res.status(201).json(result);
   } catch (error) {
+    // Cleanup temp file on error
+    if (req.file?.path) {
+      cleanupTempFile(req.file.path);
+    }
     if (isTableMissingError(error, 'software_updates')) {
       logger.warn('software_updates table missing while creating update');
       return res.status(503).json(updatesFeatureUnavailable('software_updates'));

@@ -45,12 +45,10 @@ EXCEPTION WHEN duplicate_object THEN
   NULL;
 END $$;
 
+-- software_updates has no storage_path column; default all existing rows to 'ftp'
 UPDATE software_updates
-SET storage_backend = CASE
-  WHEN storage_path LIKE '%/%' THEN 'supabase'
-  ELSE 'ftp'
-END
-WHERE storage_backend IS NULL OR storage_backend = 'ftp';
+SET storage_backend = 'ftp'
+WHERE storage_backend IS NULL;
 
 -- ============================================================================
 -- COMMENTS
