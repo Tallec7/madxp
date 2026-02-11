@@ -11,6 +11,7 @@
 import { query } from '../config/database';
 import { CommandMessage, CommandResult } from '../types';
 import logger from '../config/logger';
+import metricsService from '../services/metrics.service';
 import { SocketContext } from './socket-context';
 import { cleanupZombieConnection } from './health-monitor.handler';
 
@@ -104,6 +105,7 @@ export function sendCommand(
   });
 
   socket.emit('command', command);
+  metricsService.recordWebsocketMessage('outbound', command.type);
   logger.info('Command sent to agent', {
     siteId,
     commandId: command.id,

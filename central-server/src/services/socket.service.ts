@@ -20,6 +20,7 @@ import { query } from '../config/database';
 import { SocketData, CommandMessage, CommandResult, HeartbeatMessage } from '../types';
 import logger from '../config/logger';
 import { alertService } from './alert.service';
+import metricsService from './metrics.service';
 import { handleMatchConfig } from '../handlers/match-config.handler';
 import { handleScoreUpdate, handleScoreReset } from '../handlers/score-update.handler';
 
@@ -390,17 +391,27 @@ class SocketService {
       network_rollback: (rollback: Record<string, unknown>) => handleNetworkRollback(ctx, siteId, rollback),
     };
 
-    socket.on('heartbeat', handlers.heartbeat);
-    socket.on('command_result', handlers.command_result);
-    socket.on('deploy_progress', handlers.deploy_progress);
-    socket.on('update_progress', handlers.update_progress);
-    socket.on('sync_local_state', handlers.sync_local_state);
-    socket.on('match-config', handlers['match-config']);
-    socket.on('score-update', handlers['score-update']);
-    socket.on('score-reset', handlers['score-reset']);
-    socket.on('pong_check', handlers.pong_check);
-    socket.on('network_alert', handlers.network_alert);
-    socket.on('network_rollback', handlers.network_rollback);
+    // Register handlers with metrics tracking for inbound WebSocket messages
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const withMetrics = (eventName: string, handler: (...args: any[]) => any) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (...args: any[]) => {
+        metricsService.recordWebsocketMessage('inbound', eventName);
+        return handler(...args);
+      };
+    };
+
+    socket.on('heartbeat', withMetrics('heartbeat', handlers.heartbeat));
+    socket.on('command_result', withMetrics('command_result', handlers.command_result));
+    socket.on('deploy_progress', withMetrics('deploy_progress', handlers.deploy_progress));
+    socket.on('update_progress', withMetrics('update_progress', handlers.update_progress));
+    socket.on('sync_local_state', withMetrics('sync_local_state', handlers.sync_local_state));
+    socket.on('match-config', withMetrics('match-config', handlers['match-config']));
+    socket.on('score-update', withMetrics('score-update', handlers['score-update']));
+    socket.on('score-reset', withMetrics('score-reset', handlers['score-reset']));
+    socket.on('pong_check', withMetrics('pong_check', handlers.pong_check));
+    socket.on('network_alert', withMetrics('network_alert', handlers.network_alert));
+    socket.on('network_rollback', withMetrics('network_rollback', handlers.network_rollback));
 
     (socket as any)._neoHandlers = handlers;
 

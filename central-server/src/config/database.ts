@@ -99,12 +99,31 @@ pool.on('connect', () => {
   logger.info('Database connection established');
 });
 
+// Lazy import to avoid circular dependency with metrics.service
+let metricsServiceInstance: { recordDbQuery: (operation: string, durationSeconds: number) => void } | null = null;
+const getMetricsService = () => {
+  if (!metricsServiceInstance) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      metricsServiceInstance = require('../services/metrics.service').default;
+    } catch {
+      // Metrics service not available yet during startup
+    }
+  }
+  return metricsServiceInstance;
+};
+
 export const query = async <T extends QueryResultRow = QueryResultRow>(text: string, params?: any[]) => {
   const start = Date.now();
   try {
     const result = await pool.query<T>(text, params);
     const duration = Date.now() - start;
     logger.debug('Executed query', { text, duration, rows: result.rowCount });
+
+    // Record DB query metrics
+    const operation = text.trim().split(/\s+/)[0]?.toUpperCase() || 'UNKNOWN';
+    getMetricsService()?.recordDbQuery(operation, duration / 1000);
+
     return result;
   } catch (error) {
     logger.error('Database query error:', { text, error });

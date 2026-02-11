@@ -7,6 +7,7 @@ import logger from '../config/logger';
 import { mfaService } from '../services/mfa.service';
 import { passwordResetService } from '../services/password-reset.service';
 import { emailService } from '../services/email.service';
+import metricsService from '../services/metrics.service';
 
 // Configuration des cookies sécurisés
 // Note: sameSite: 'none' est requis pour les cookies cross-origin (frontend et backend sur domaines différents)
@@ -40,6 +41,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
     const user = await userRepository.findByEmail(email);
 
     if (!user) {
+      metricsService.recordAuthAttempt('failure', false);
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
@@ -49,6 +51,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
+      metricsService.recordAuthAttempt('failure', false);
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
@@ -66,11 +69,13 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
       // Vérifier le code MFA
       const mfaResult = await mfaService.verifyMfaLogin(user.id, mfaCode);
       if (!mfaResult.valid) {
+        metricsService.recordAuthAttempt('failure', true);
         logger.warn('MFA verification failed during login', { email: user.email });
         return res.status(401).json({ error: 'Code MFA invalide' });
       }
     }
 
+    metricsService.recordAuthAttempt('success', user.mfa_enabled);
     await userRepository.updateLastLogin(user.id);
 
     const token = generateToken({
