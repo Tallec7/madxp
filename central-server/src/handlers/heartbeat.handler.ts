@@ -12,6 +12,7 @@ import { query } from '../config/database';
 import { HeartbeatMessage } from '../types';
 import logger from '../config/logger';
 import { alertService } from '../services/alert.service';
+import { metricsService } from '../services/metrics.service';
 import { SocketContext } from './socket-context';
 
 /**
@@ -29,6 +30,7 @@ export async function handleHeartbeat(
   try {
     // Le heartbeat prouve que la connexion est vivante
     ctx.lastPongReceived.set(siteId, Date.now());
+    metricsService.recordHeartbeat();
 
     await query(
       `INSERT INTO metrics (site_id, cpu_usage, memory_usage, temperature, disk_usage, uptime, recorded_at)

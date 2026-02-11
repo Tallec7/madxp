@@ -10,6 +10,7 @@
 
 import { query } from '../config/database';
 import logger from '../config/logger';
+import { metricsService } from '../services/metrics.service';
 import { SocketContext } from './socket-context';
 
 /**
@@ -31,6 +32,12 @@ export async function handleNetworkAlert(
       issues,
       recoveryAttempts,
     });
+
+    // Record Prometheus metrics
+    metricsService.recordNetworkAlert(String(type || 'unknown'), String(severity || 'warning'));
+    if (typeof recoveryAttempts === 'number' && recoveryAttempts > 0) {
+      metricsService.recordNetworkRecoveryAttempts(recoveryAttempts);
+    }
 
     // Store alert in database
     await query(
@@ -91,6 +98,9 @@ export async function handleNetworkRollback(
       reason,
       rollbackTimestamp: timestamp,
     });
+
+    // Record Prometheus metric
+    metricsService.recordNetworkRollback(String(operation || 'unknown'));
 
     // Store rollback event in database
     await query(

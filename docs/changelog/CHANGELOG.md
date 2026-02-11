@@ -1,3 +1,20 @@
+## [Unreleased]
+
+### Features
+
+- **monitoring:** add smoke test suite (`npm run test:smoke`) — 39 tests covering all 21 API route groups, health endpoints, auth middleware, CORS, and error handling. Detects wiring regressions after refactors
+- **monitoring:** add 6 new Prometheus metrics for Pi network monitoring: `neopro_site_network_type`, `neopro_site_stability_score`, `neopro_network_alerts_total`, `neopro_network_rollbacks_total`, `neopro_network_recovery_attempts_total`, `neopro_heartbeats_total`
+- **monitoring:** add 8 new Grafana panels to Services dashboard (Pi network types, stability gauge, heartbeat rate, network alerts, remote commands rate, rollbacks/recovery, event loop lag)
+- **monitoring:** add 2 new Grafana panels to Overview dashboard (deployment duration p50/p95, event loop lag)
+- **monitoring:** add docker-compose profiles — `docker compose up prometheus grafana` starts monitoring-only (scrapes local + prod Railway), no need to build central-server
+- **monitoring:** add production scrape target (Railway HTTPS) + environment selector variable in Grafana dashboards
+
+### Bug Fixes
+
+- **docker:** fix Dockerfile Alpine `libx264-dev` package no longer available — replaced with `ffmpeg` which includes libx264 codec
+- **monitoring:** fix Grafana "Datasource prometheus was not found" — add explicit `uid: prometheus` to datasource provisioning
+- **monitoring:** fix 6 broken Grafana panels in overview dashboard — correct metric names to match `metrics.service.ts` (`neopro_websocket_connections`, `neopro_deployments_total`, `neopro_alerts_total`, `process_resident_memory_bytes`, `process_cpu_seconds_total`, `neopro_canary_deployments_active`)
+
 ## [3.9.5](https://github.com/Tallec7/neopro/compare/v3.9.4...v3.9.5) (2026-02-11)
 
 ### Bug Fixes

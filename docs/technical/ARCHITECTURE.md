@@ -320,8 +320,12 @@ Video.js API (play/pause/seek)
 
 ### 7. Monitoring & Observability
 
-- Prometheus metrics (Port 9090)
-- Grafana dashboards (Port 3000)
+- **Prometheus metrics** (Port 9090) — 23 métriques custom `neopro_*` + métriques Node.js par défaut
+- **Grafana dashboards** (Port 3000) — 2 dashboards auto-provisionnés :
+  - _NeoPro Overview_ (10 panels) : HTTP rate/latence, WebSocket, déploiements, CPU/RAM, event loop lag
+  - _NeoPro Services_ (18 panels) : DB, auth, commandes Pi, alertes réseau, stabilité réseau, heartbeats
+- **Scrape targets** : Docker local, `host.docker.internal:3001` (dev), Railway HTTPS (prod)
+- **Smoke tests** : `npm run test:smoke` — 39 tests détectent les régressions de wiring API
 - Systemd journald logs
 - Winston structured logging with Correlation ID
 - Memory Manager Service (heap monitoring, pressure cleanup)

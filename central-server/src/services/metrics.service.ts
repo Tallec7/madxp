@@ -174,6 +174,47 @@ const canaryRollbacksTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Réseau Pi =============
+
+const siteNetworkTypeGauge = new Gauge({
+  name: 'neopro_site_network_type',
+  help: 'Network connection type per site (1=active for that type)',
+  labelNames: ['connection_type'],
+  registers: [register],
+});
+
+const siteStabilityScoreGauge = new Gauge({
+  name: 'neopro_site_stability_score',
+  help: 'Average network stability score across connected sites (0-100)',
+  registers: [register],
+});
+
+const networkAlertsTotal = new Counter({
+  name: 'neopro_network_alerts_total',
+  help: 'Total network alerts from Pi watchdog',
+  labelNames: ['type', 'severity'],
+  registers: [register],
+});
+
+const networkRollbacksTotal = new Counter({
+  name: 'neopro_network_rollbacks_total',
+  help: 'Total network config rollbacks on Pi',
+  labelNames: ['operation'],
+  registers: [register],
+});
+
+const networkRecoveryAttemptsTotal = new Counter({
+  name: 'neopro_network_recovery_attempts_total',
+  help: 'Total auto-recovery attempts by Pi watchdog',
+  registers: [register],
+});
+
+const heartbeatsTotal = new Counter({
+  name: 'neopro_heartbeats_total',
+  help: 'Total heartbeats received from Pi sites',
+  registers: [register],
+});
+
 // ============= Service Class =============
 
 class MetricsService {
@@ -297,6 +338,38 @@ class MetricsService {
 
   recordCanaryRollback(): void {
     canaryRollbacksTotal.inc();
+  }
+
+  // ============= Méthodes réseau Pi =============
+
+  recordSiteNetworkTypes(typeCounts: Record<string, number>): void {
+    // Reset all to 0, then set actuals
+    siteNetworkTypeGauge.reset();
+    for (const [connectionType, count] of Object.entries(typeCounts)) {
+      siteNetworkTypeGauge.set({ connection_type: connectionType }, count);
+    }
+  }
+
+  recordSiteStabilityScore(avgScore: number): void {
+    siteStabilityScoreGauge.set(avgScore);
+  }
+
+  recordNetworkAlert(type: string, severity: string): void {
+    networkAlertsTotal.inc({ type, severity });
+  }
+
+  recordNetworkRollback(operation: string): void {
+    networkRollbacksTotal.inc({ operation });
+  }
+
+  recordNetworkRecoveryAttempts(count: number): void {
+    for (let i = 0; i < count; i++) {
+      networkRecoveryAttemptsTotal.inc();
+    }
+  }
+
+  recordHeartbeat(): void {
+    heartbeatsTotal.inc();
   }
 
   /**

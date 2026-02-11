@@ -271,8 +271,21 @@ cd raspberry/admin && node admin-server-demo.js
 **Option 3 : Docker Compose (stack complète)**
 
 ```bash
-docker-compose up -d
+docker compose --profile full up -d    # Stack complète (DB + Redis + API + monitoring)
 ```
+
+**Option 4 : Monitoring seul (sans builder l'API)**
+
+```bash
+docker compose up prometheus grafana   # Scrape local (port 3001) + prod (Railway)
+```
+
+Ouvrir Grafana : `http://localhost:3000` (admin/admin) — sélectionner l'environnement dans le dropdown.
+
+Dashboards provisionnés automatiquement :
+
+- **NeoPro Overview** : HTTP rate, latence, WebSocket, déploiements, CPU/RAM, event loop lag
+- **NeoPro Services** : DB, auth, commandes Pi, alertes réseau Pi, stabilité réseau, heartbeats
 
 Services : PostgreSQL (5432), Redis (6379), API (3001), Prometheus (9090), Grafana (3000)
 

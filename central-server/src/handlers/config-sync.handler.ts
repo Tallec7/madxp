@@ -11,7 +11,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/database';
 import { CommandMessage } from '../types';
 import logger from '../config/logger';
+import { metricsService } from '../services/metrics.service';
 import { SocketContext } from './socket-context';
+
+/** Track network type counts across all connected sites for Prometheus */
+const networkTypeCounts: Record<string, Record<string, string>> = {};
+const stabilityScores: Record<string, number> = {};
 
 /**
  * Handle sync_local_state from a Raspberry Pi.
@@ -54,6 +59,33 @@ export async function handleSyncLocalState(
         ssid: (networkProfile as Record<string, unknown>).currentSsid,
         apCount: (networkProfile as Record<string, unknown>).apCount,
       });
+    }
+
+    // Update Prometheus network metrics from networkProfile
+    if (networkProfile && typeof networkProfile === 'object') {
+      const profile = networkProfile as Record<string, unknown>;
+      const netType = String(profile.type || 'unknown');
+      networkTypeCounts[siteId] = { type: netType };
+
+      if (typeof profile.stabilityScore === 'number') {
+        stabilityScores[siteId] = profile.stabilityScore;
+      }
+
+      // Aggregate type counts across all sites
+      const typeTotals: Record<string, number> = {};
+      for (const entry of Object.values(networkTypeCounts)) {
+        const t = entry.type;
+        typeTotals[t] = (typeTotals[t] || 0) + 1;
+      }
+      metricsService.recordSiteNetworkTypes(typeTotals);
+
+      // Average stability score
+      const scores = Object.values(stabilityScores);
+      if (scores.length > 0) {
+        metricsService.recordSiteStabilityScore(
+          scores.reduce((a, b) => a + b, 0) / scores.length
+        );
+      }
     }
 
     // Vérifier si une mise à jour de config est en attente
