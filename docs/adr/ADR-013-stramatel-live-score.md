@@ -273,17 +273,15 @@ Console Stramatel              HAT RS-485              Raspberry Pi 5
 
 **Coût hardware** : HAT RS-485 (~30€) + câble PTT (~15€) = **~45€**
 
-### Connecteur 2 — Bodet Scorepad (TCP/IP réseau)
+### Connecteur 2 — Bodet Sport (TCP/IP réseau OU RS-485 série)
+
+Bodet Sport a **deux générations** de consoles avec des interfaces différentes :
+
+#### Bodet Scorepad (modèles récents) — TCP/IP réseau
 
 **Protocole** : ASCII 8 bits, TCP client → serveur, port 4001 par défaut.
 
-**Avantages par rapport au série** :
-
-- **Pas de hardware supplémentaire** (pas de HAT RS-485)
-- Le Pi se connecte au Scorepad via le **réseau local** (Ethernet ou WiFi du club)
-- Protocole **documenté publiquement** par Bodet (PDF 608264)
-
-**Architecture** :
+Le Scorepad est la console tactile actuelle de Bodet. Elle dispose de **2 ports RJ-45 Ethernet** et communique via TCP/IP. Le protocole est **documenté publiquement** par Bodet (PDF 608264-Network output and protocols-Scorepad.pdf).
 
 ```
 Console Bodet Scorepad          Raspberry Pi 5
@@ -294,9 +292,60 @@ Console Bodet Scorepad          Raspberry Pi 5
               ASCII 8 bits
 ```
 
-**Modèles compatibles** : Scorepad (écran tactile), gamme BT6000, consoles avec sortie réseau.
+**Avantages** :
+
+- **Pas de hardware supplémentaire** — le Pi se connecte via le réseau local
+- Protocole **documenté publiquement**
+- Connexion sans fil possible (si le club a du WiFi)
 
 **Coût hardware** : **0€** (connexion réseau uniquement)
+
+#### Bodet BT6000 et anciennes consoles — RS-485 série
+
+Les consoles plus anciennes (BT6000, BT6xxx, et modèles filaires) utilisent une **sortie RS-485 série** via connecteur RJ-45 pour communiquer avec les panneaux d'affichage. Ces consoles sont **très courantes** dans les clubs amateurs qui n'ont pas renouvelé leur équipement.
+
+```
+Console Bodet BT6000            HAT RS-485              Raspberry Pi 5
+(Sortie RS-485 via RJ-45)      (SN65HVD72)             (GPIO UART)
+
+  Data+ ───────────────────→ A (RS-485+)
+  Data- ───────────────────→ B (RS-485-)
+  GND   ───────────────────→ GND ─────────────────→ GND
+                                RX ──────────────────→ GPIO 15 (RXD)
+```
+
+**Protocole** : Le protocole série Bodet est supporté par le projet **Panel2Net**. Le format est différent de Stramatel (ASCII vs binaire) mais les données extraites sont les mêmes (score, chrono, période, fautes).
+
+**Coût hardware** : HAT RS-485 (~30€) + câble RJ-45 vers bornier (~10€) = **~40€**
+
+#### Résumé Bodet
+
+| Modèle                           | Interface            | Protocole                       | Hardware Pi | Coût     |
+| -------------------------------- | -------------------- | ------------------------------- | ----------- | -------- |
+| **Scorepad** (récent, tactile)   | TCP/IP Ethernet      | ASCII, port 4001 (doc publique) | Aucun       | **0€**   |
+| **BT6000** et anciennes consoles | RS-485 série (RJ-45) | ASCII (supporté Panel2Net)      | HAT RS-485  | **~40€** |
+
+Le `BodetConnector` doit donc supporter **les deux modes** (réseau et série), sélectionnables dans la configuration du site :
+
+```typescript
+case 'bodet':
+  if (siteConfig.bodetMode === 'network') {
+    this.connector = new BodetNetworkConnector();
+    await this.connector.connect({
+      type: 'network',
+      host: siteConfig.host || '192.168.1.100',
+      port: siteConfig.port || 4001,
+    });
+  } else {
+    this.connector = new BodetSerialConnector();
+    await this.connector.connect({
+      type: 'serial',
+      port: siteConfig.serialPort || '/dev/serial0',
+      baudRate: 19200,
+    });
+  }
+  break;
+```
 
 ### Connecteur 3 — OCR (fallback universel)
 
@@ -581,13 +630,14 @@ Chaque connecteur suit le même pattern : implémenter `ScoreboardConnector`, pa
 
 ### Par club (hardware)
 
-| Configuration                | Hardware                     | Coût     |
-| ---------------------------- | ---------------------------- | -------- |
-| Bodet Scorepad (TCP/IP)      | Aucun (réseau existant)      | **0€**   |
-| Stramatel (RS-485)           | HAT RS-485 + câble PTT       | **~45€** |
-| Mobatime/Favero (RS-232/422) | Adaptateur USB-série + câble | **~25€** |
-| OCR fallback                 | Caméra USB                   | **~25€** |
-| Manuel (statu quo)           | Aucun                        | **0€**   |
+| Configuration                  | Hardware                     | Coût     |
+| ------------------------------ | ---------------------------- | -------- |
+| Bodet Scorepad (TCP/IP réseau) | Aucun (réseau existant)      | **0€**   |
+| Bodet BT6000 (RS-485 série)    | HAT RS-485 + câble RJ-45     | **~40€** |
+| Stramatel (RS-485)             | HAT RS-485 + câble PTT       | **~45€** |
+| Mobatime/Favero (RS-232/422)   | Adaptateur USB-série + câble | **~25€** |
+| OCR fallback                   | Caméra USB                   | **~25€** |
+| Manuel (statu quo)             | Aucun                        | **0€**   |
 
 ### Développement
 
