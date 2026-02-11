@@ -1,3 +1,9 @@
+# [3.13.0](https://github.com/Tallec7/neopro/compare/v3.12.0...v3.13.0) (2026-02-11)
+
+### Features
+
+- **monitoring:** wire DB connection pool metrics (active/idle) ([e698bf3](https://github.com/Tallec7/neopro/commit/e698bf318c840ba4c36fd2343d2a11f0a9b381ac))
+
 # [3.12.0](https://github.com/Tallec7/neopro/compare/v3.11.1...v3.12.0) (2026-02-11)
 
 ### Features
