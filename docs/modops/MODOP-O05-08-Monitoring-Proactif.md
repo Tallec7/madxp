@@ -31,18 +31,20 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 
 ### 3.2 Accès Grafana
 
-**URL** : `http://localhost:3000` (si Docker local) ou URL Grafana Cloud
+**URL** : `http://localhost:3000` — sélectionner `neopro-production` dans le dropdown "Environment"
+
+**Démarrage** : `docker compose up prometheus grafana` (scrape local + prod Railway)
 
 **Login** :
 
 - Username : admin
-- Password : [voir documentation interne]
+- Password : admin (par défaut, à changer en production)
 
 ### 3.3 Dashboards à consulter (15 min)
 
-#### Dashboard 1 : Vue d'ensemble (5 min)
+#### Dashboard 1 : NeoPro Overview (5 min)
 
-**URL** : Grafana → Dashboards → Neopro Overview
+**URL** : Grafana → Dashboards → NeoPro → NeoPro Overview
 
 **Métriques clés à vérifier :**
 

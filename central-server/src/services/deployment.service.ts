@@ -2,26 +2,9 @@ import { query } from '../config/database';
 import socketService from './socket.service';
 import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
-import { deleteFile, getPublicUrl } from '../config/supabase';
-import { isFtpConfigured, getFtpPublicUrl } from '../config/ftp-storage';
+import metricsService from './metrics.service';
+import { getVideoUrl, deleteVideo } from './storage.service';
 import { uploadVerificationService } from './upload-verification.service';
-
-/**
- * Génère l'URL publique pour télécharger une vidéo.
- * Détecte automatiquement si le fichier est sur FTP ou Supabase
- * en fonction du format du storage_path.
- */
-function getVideoDownloadUrl(storagePath: string): string {
-  // Si le path est juste un filename (pas de /) → c'est un fichier FTP
-  const isFtpPath = !storagePath.includes('/');
-
-  if (isFtpPath && isFtpConfigured()) {
-    return getFtpPublicUrl(storagePath);
-  }
-
-  // Sinon c'est un chemin Supabase (ex: uploads/filename.mp4)
-  return getPublicUrl(storagePath);
-}
 
 // Configuration du retry
 const RETRY_CONFIG = {
@@ -116,8 +99,8 @@ class DeploymentService {
         return;
       }
 
-      // Construire l'URL de la vidéo depuis Supabase Storage
-      const videoUrl = getVideoDownloadUrl(deployment.storage_path);
+      // Construire l'URL de la vidéo depuis le stockage
+      const videoUrl = getVideoUrl(deployment.storage_path);
 
       // Tenter d'envoyer aux sites (ou mettre en queue si offline)
       let successCount = 0;
@@ -173,6 +156,7 @@ class DeploymentService {
           [statusMessage.join(' | ') || null, deploymentId]
         );
 
+        metricsService.recordDeployment('in_progress', 'site');
         logger.info('Video deployment in progress', {
           deploymentId,
           commandSentSites,
@@ -188,6 +172,7 @@ class DeploymentService {
           ['Échec de l\'envoi à tous les sites cibles', deploymentId]
         );
 
+        metricsService.recordDeployment('failed', 'site');
         logger.error('Video deployment failed for all sites', {
           deploymentId,
           commandFailedSites,
@@ -253,7 +238,7 @@ class DeploymentService {
 
       for (const row of result.rows) {
         const deployment = row as unknown as DeploymentRow;
-        const videoUrl = getVideoDownloadUrl(deployment.storage_path);
+        const videoUrl = getVideoUrl(deployment.storage_path);
 
         // deployToSite utilise sendOrQueue, donc si le site est maintenant connecté,
         // la commande sera envoyée immédiatement
@@ -393,7 +378,7 @@ class DeploymentService {
       if (deploymentResult.rows.length === 0) return;
 
       const deployment = deploymentResult.rows[0] as { target_type: string; target_id: string };
-      const targets = await this.getTargetSites(deployment.target_type, deployment.target_id);
+      await this.getTargetSites(deployment.target_type, deployment.target_id);
 
       // Pour simplifier, on met à jour le progress basé sur le dernier site qui répond
       // Dans une implémentation plus complète, on suivrait le progress de chaque site
@@ -401,7 +386,7 @@ class DeploymentService {
         `UPDATE content_deployments
          SET progress = $1
          WHERE id = $2`,
-        [progress, deploymentId]
+        [Math.round(progress), deploymentId]
       );
 
       // Si tous les sites ont terminé, marquer comme complété
@@ -413,12 +398,20 @@ class DeploymentService {
         );
         const videoId = videoResult.rows[0]?.video_id;
 
-        await query(
+        // Calculer la durée du déploiement
+        const durationResult = await query(
           `UPDATE content_deployments
            SET status = 'completed', progress = 100, completed_at = NOW()
-           WHERE id = $1`,
+           WHERE id = $1
+           RETURNING EXTRACT(EPOCH FROM (NOW() - started_at)) as duration_seconds`,
           [deploymentId]
         );
+
+        metricsService.recordDeployment('completed', 'site');
+        const durationSeconds = parseFloat(durationResult.rows[0]?.duration_seconds as string);
+        if (!isNaN(durationSeconds)) {
+          metricsService.recordDeploymentDuration('site', durationSeconds);
+        }
 
         logger.info('Deployment completed', { deploymentId });
 
@@ -464,9 +457,9 @@ class DeploymentService {
 
       const storagePath = videoResult.rows[0].storage_path as string | null;
 
-      // Supprimer le fichier du stockage Supabase
+      // Supprimer le fichier du stockage FTP
       if (storagePath) {
-        const deleted = await deleteFile(storagePath);
+        const deleted = await deleteVideo(storagePath);
         if (deleted) {
           logger.info('Video file cleaned up from storage after all deployments completed', { videoId, storagePath });
         }
@@ -487,6 +480,7 @@ class DeploymentService {
       [errorMessage, deploymentId]
     );
 
+    metricsService.recordDeployment('failed', 'site');
     logger.error('Deployment failed', { deploymentId, errorMessage });
   }
 
@@ -574,6 +568,7 @@ class DeploymentService {
           [finalError, deploymentId]
         );
 
+        metricsService.recordDeployment('failed', 'site');
         logger.error('Deployment failed permanently', {
           deploymentId,
           retriesExhausted: retryCount >= RETRY_CONFIG.maxRetries,
@@ -619,7 +614,7 @@ class DeploymentService {
 
         // Obtenir les sites cibles
         const targets = await this.getTargetSites(deployment.target_type, deployment.target_id);
-        const videoUrl = getVideoDownloadUrl(deployment.storage_path);
+        const videoUrl = getVideoUrl(deployment.storage_path);
 
         for (const target of targets) {
           // sendOrQueue fonctionne que le site soit connecté ou non

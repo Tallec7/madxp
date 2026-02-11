@@ -5,8 +5,9 @@
  */
 
 import { Router } from 'express';
-import { authenticate, requireRole } from '../middleware/auth';
+import { authenticate, requireRole, requireSuperAdmin } from '../middleware/auth';
 import { adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
+import { validate, schemas } from '../middleware/validation';
 import {
   getSubscriptionStats,
   getSitesAtRisk,
@@ -37,7 +38,7 @@ router.use(authenticate);
  */
 router.get(
   '/stats',
-  requireRole('super_admin', 'superadmin', 'admin'),
+  requireRole('admin'),
   adminRateLimit,
   getSubscriptionStats
 );
@@ -49,7 +50,7 @@ router.get(
  */
 router.get(
   '/at-risk',
-  requireRole('super_admin', 'superadmin', 'admin'),
+  requireRole('admin'),
   adminRateLimit,
   getSitesAtRisk
 );
@@ -61,7 +62,7 @@ router.get(
  */
 router.get(
   '/reasons',
-  requireRole('super_admin', 'superadmin', 'admin'),
+  requireRole('admin'),
   adminRateLimit,
   getSuspensionReasons
 );
@@ -84,7 +85,7 @@ siteSubscriptionRouter.use(authenticate);
  */
 siteSubscriptionRouter.get(
   '/',
-  requireRole('super_admin', 'superadmin', 'admin', 'operator'),
+  requireRole('admin', 'operator'),
   adminRateLimit,
   getSiteSubscription
 );
@@ -95,7 +96,7 @@ siteSubscriptionRouter.get(
  */
 siteSubscriptionRouter.get(
   '/history',
-  requireRole('super_admin', 'superadmin', 'admin'),
+  requireRole('admin'),
   adminRateLimit,
   getSubscriptionHistory
 );
@@ -106,7 +107,7 @@ siteSubscriptionRouter.get(
  */
 siteSubscriptionRouter.get(
   '/license-status',
-  requireRole('super_admin', 'superadmin', 'admin'),
+  requireRole('admin'),
   adminRateLimit,
   getLicenseStatus
 );
@@ -118,8 +119,9 @@ siteSubscriptionRouter.get(
  */
 siteSubscriptionRouter.put(
   '/extend',
-  requireRole('super_admin', 'superadmin', 'admin'),
+  requireRole('admin'),
   sensitiveRateLimit,
+  validate(schemas.extendSubscription),
   extendSubscription
 );
 
@@ -129,8 +131,9 @@ siteSubscriptionRouter.put(
  */
 siteSubscriptionRouter.post(
   '/suspend',
-  requireRole('super_admin', 'superadmin', 'admin'),
+  requireRole('admin'),
   sensitiveRateLimit,
+  validate(schemas.suspendSite),
   suspendSite
 );
 
@@ -140,8 +143,9 @@ siteSubscriptionRouter.post(
  */
 siteSubscriptionRouter.post(
   '/reactivate',
-  requireRole('super_admin', 'superadmin', 'admin'),
+  requireRole('admin'),
   sensitiveRateLimit,
+  validate(schemas.reactivateSite),
   reactivateSite
 );
 
@@ -151,8 +155,9 @@ siteSubscriptionRouter.post(
  */
 siteSubscriptionRouter.put(
   '/plan',
-  requireRole('super_admin', 'superadmin'),
+  requireSuperAdmin(),
   sensitiveRateLimit,
+  validate(schemas.changePlan),
   changePlan
 );
 
@@ -163,7 +168,8 @@ siteSubscriptionRouter.put(
  */
 siteSubscriptionRouter.put(
   '/',
-  requireRole('super_admin', 'superadmin', 'admin'),
+  requireRole('admin'),
   sensitiveRateLimit,
+  validate(schemas.updateSubscription),
   updateSubscription
 );

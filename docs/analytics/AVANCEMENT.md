@@ -5,11 +5,13 @@
 ### Backend Complet (100%) ✅
 
 **Schéma SQL** : `central-server/src/scripts/sponsor-analytics-tables.sql`
+
 - ✅ 4 tables (sponsors, sponsor_videos, sponsor_impressions, sponsor_daily_stats)
 - ✅ 3 vues SQL optimisées
 - ✅ 2 fonctions PL/pgSQL pour agrégation automatique
 
 **API REST** : 12 endpoints opérationnels
+
 - ✅ CRUD sponsors complet
 - ✅ Association sponsors ↔ vidéos
 - ✅ Analytics complètes (stats, CSV, PDF)
@@ -17,6 +19,7 @@
 - ✅ Cron jobs pour stats quotidiennes
 
 **Service PDF** : `central-server/src/services/pdf-report.service.ts`
+
 - ✅ Structure complète rapports sponsors + clubs
 - ✅ Agrégation données DB
 - ✅ Génération PDF professionnelle avec PDFKit
@@ -28,6 +31,7 @@
 ### Frontend Dashboard (100%) ✅
 
 **Composant Liste** : `central-dashboard/src/app/features/sponsors/sponsors-list.component.ts`
+
 - ✅ Interface CRUD sponsors
 - ✅ Recherche et filtres
 - ✅ Modal création/édition
@@ -36,6 +40,7 @@
 - ✅ **Permissions basées sur les rôles (admin, operator)** via AuthService
 
 **Composant Détail** : `central-dashboard/src/app/features/sponsors/sponsor-detail.component.ts`
+
 - ✅ Onglets (Informations, Vidéos, Analytics)
 - ✅ Affichage infos complètes (contact, contrat, métadonnées)
 - ✅ Modal édition avec tous les champs
@@ -45,6 +50,7 @@
 - ✅ **Modal inline d'ajout de vidéos** (recherche, sélection multiple, filtrage)
 
 **Composant Analytics** : `central-dashboard/src/app/features/sponsors/sponsor-analytics.component.ts`
+
 - ✅ 6 KPIs cards (impressions, temps écran, complétion, vidéos, sites, durée moy.)
 - ✅ Graphique tendances quotidiennes (Chart.js line chart)
   - Courbe impressions
@@ -60,6 +66,7 @@
 - ✅ Responsive design complet
 
 **Composant Vidéos** : `central-dashboard/src/app/features/sponsors/sponsor-videos.component.ts`
+
 - ✅ Liste vidéos associées avec drag & drop
 - ✅ Réorganisation priorité par glisser-déposer
 - ✅ Modal ajout vidéos avec recherche
@@ -69,6 +76,7 @@
 - ✅ Affichage métadonnées vidéo
 
 **Routes et Configuration** :
+
 - ✅ Routes ajoutées dans `app.routes.ts`
 - ✅ Chart.js v4 installé avec types TypeScript
 - ✅ FormsModule intégré pour bindings
@@ -76,7 +84,8 @@
 
 ### Tracking Boîtiers TV (100%) ✅
 
-**Frontend Raspberry (Angular)** : `raspberry/frontend/app/services/sponsor-analytics.service.ts`
+**Frontend Raspberry (Angular)** : `raspberry/src/app/services/sponsor-analytics.service.ts`
+
 - ✅ Service tracking impressions sponsors
 - ✅ Buffer local (localStorage) + auto-flush
 - ✅ Interface SponsorImpression complète
@@ -84,7 +93,8 @@
 - ✅ Envoi périodique (5min) ou automatique (50 impressions)
 - ✅ Retry avec backoff en cas d'échec
 
-**TV Component Modifié** : `raspberry/frontend/app/components/tv/tv.component.ts`
+**TV Component Modifié** : `raspberry/src/app/components/tv/tv.component.ts`
+
 - ✅ Injection SponsorAnalyticsService
 - ✅ Tracking automatique lecture vidéos sponsors
 - ✅ Distinction auto/manual triggers
@@ -92,6 +102,7 @@
 - ✅ Integration avec analytics existant
 
 **Serveur Local (Express)** : `raspberry/server/server.js`
+
 - ✅ POST /api/sync/sponsor-impressions - Reçoit impressions frontend
 - ✅ GET /api/sync/sponsor-impressions/stats - Stats buffer local
 - ✅ Stockage ~/neopro/data/sponsor_impressions.json
@@ -99,6 +110,7 @@
 - ✅ Gestion erreurs avec logs détaillés
 
 **Sync Agent** : `raspberry/sync-agent/src/sponsor-impressions.js`
+
 - ✅ Nouveau module SponsorImpressionsCollector
 - ✅ Chargement buffer au démarrage
 - ✅ Envoi périodique vers /api/analytics/impressions
@@ -107,12 +119,14 @@
 - ✅ Méthodes: loadBuffer, saveBuffer, addImpressions, sendToServer
 
 **Sync Agent Intégration** : `raspberry/sync-agent/src/agent.js`
+
 - ✅ Import et démarrage automatique sponsorImpressionsCollector
 - ✅ Méthode startSponsorImpressionsSync()
 - ✅ API publique: addSponsorImpressions(), getSponsorImpressionsStats()
 - ✅ Indépendant WebSocket (HTTP-based)
 
 **Documentation Tracking** : `docs/TRACKING_IMPRESSIONS_SPONSORS.md`
+
 - ✅ Guide implémentation complet
 - ✅ Architecture détaillée avec diagramme
 - ✅ Flux de données end-to-end
@@ -123,12 +137,14 @@
 ### PDF Graphiques (100%) ✅
 
 **Dépendances** :
+
 - ✅ PDFKit v0.15.0 installé
 - ✅ chartjs-node-canvas installé
 - ✅ Types TypeScript (@types/pdfkit)
 - ✅ Build central-server réussi
 
 **Implémentation** : `central-server/src/services/pdf-report.service.ts`
+
 - ✅ **Page 1 - Page de garde** :
   - Logo NEOPRO stylisé
   - Titre rapport (SPONSOR/CLUB)
@@ -172,6 +188,7 @@
   - Date d'émission
 
 **Charte Graphique** :
+
 - ✅ Couleurs NEOPRO définies (primaire #1e3a8a, secondaire #3b82f6, etc.)
 - ✅ Typographie Helvetica (Bold/Regular/Oblique) + Courier (signature)
 - ✅ Tailles police cohérentes (8-32pt)
@@ -179,6 +196,7 @@
 - ✅ Pied de page sur toutes les pages (numéro, confidentialité)
 
 **Fonctions utilitaires** :
+
 - ✅ `generateDailyImpressionsChart()` - Graphique ligne Chart.js → Buffer PNG
 - ✅ `generateEventTypePieChart()` - Graphique anneau Chart.js → Buffer PNG
 - ✅ `generateDigitalSignature()` - Hash SHA-256 des données rapport
@@ -187,6 +205,7 @@
 - ✅ `formatDuration()` - Secondes → Xh Ymin
 
 **Documentation PDF** : `docs/PDF_REPORTS_GUIDE.md`
+
 - ✅ Guide complet 400+ lignes
 - ✅ Architecture et flux de données
 - ✅ Description détaillée 4 pages PDF
@@ -202,6 +221,7 @@
 ## ✅ Phase 4 - Tests & Optimisations (COMPLÉTÉE - 15 Décembre)
 
 **Tests Automatisés** : ✅ **TERMINÉ**
+
 - ✅ **Tests unitaires service PDF (Jest)** - 15 tests
   - ✅ Validation génération Buffer
   - ✅ Validation signature SHA-256
@@ -217,18 +237,21 @@
 - ✅ **Documentation tests** - TESTS_ANALYTICS_SPONSORS.md créé
 
 **Résultats** :
+
 - ✅ **39 tests** automatisés (100% passed)
 - ✅ Intégré à la suite Jest existante (416 tests total)
 - ✅ Coverage reports générés
 - ✅ CI/CD ready
 
 **Tests E2E (Optionnel Phase 5+)** :
+
 - [ ] Tests e2e dashboard Angular (Cypress)
   - Création sponsor
   - Navigation composants
   - Téléchargement PDF
 
 **Optimisations Performance** :
+
 - [ ] Cache Redis pour graphiques fréquents
   - Clé: `chart:${sponsorId}:${from}:${to}`
   - TTL: 1 heure
@@ -242,6 +265,7 @@
 ### Phase 5 - Améliorations Enterprise (1-2 semaines)
 
 **Personnalisation** :
+
 - [ ] Upload logos personnalisés
   - Logo sponsor (S3/Supabase Storage)
   - Logo club sur PDF
@@ -252,6 +276,7 @@
   - Sections optionnelles
 
 **Fonctionnalités Avancées** :
+
 - [ ] Rapports multi-sponsors comparatifs
   - Comparaison 2-5 sponsors
   - Benchmarking performance
@@ -266,6 +291,7 @@
   - Rapports programmés (cron)
 
 **Analytics Avancées** :
+
 - [ ] Prédictions ML
   - Prévision impressions futures
   - Recommandations optimisation
@@ -279,31 +305,34 @@
 
 ## 📊 Métriques de Conformité
 
-| Phase | Conformité BP §13 | Détail |
-|-------|-------------------|---------|
-| **Avant implémentation** | 0% 🔴 | Rien |
-| **Après Backend MVP** | 60% 🟠 | Backend complet, frontend starter |
-| **Après Frontend complet** | 80% 🟢 | Dashboard Angular complet avec Chart.js |
-| **Après Tracking** | 90% 🟢 | Impressions boîtiers complètes |
-| **Après PDF graphiques** | 95% ✅ | Rapports PDF professionnels avec Chart.js |
-| **Après Tests automatisés** | 98% ✅ | 39 tests unitaires + intégration + documentation |
-| **Après Finitions (ACTUEL)** | **100%** ✅ | Modal vidéo inline + permissions AuthService |
+| Phase                        | Conformité BP §13 | Détail                                           |
+| ---------------------------- | ----------------- | ------------------------------------------------ |
+| **Avant implémentation**     | 0% 🔴             | Rien                                             |
+| **Après Backend MVP**        | 60% 🟠            | Backend complet, frontend starter                |
+| **Après Frontend complet**   | 80% 🟢            | Dashboard Angular complet avec Chart.js          |
+| **Après Tracking**           | 90% 🟢            | Impressions boîtiers complètes                   |
+| **Après PDF graphiques**     | 95% ✅            | Rapports PDF professionnels avec Chart.js        |
+| **Après Tests automatisés**  | 98% ✅            | 39 tests unitaires + intégration + documentation |
+| **Après Finitions (ACTUEL)** | **100%** ✅       | Modal vidéo inline + permissions AuthService     |
 
 ---
 
 ## 🚀 Planning Réalisé et Restant
 
 ### ✅ Semaine 1 (Jours 1-5) - TERMINÉ
+
 - **✅ J1-2** : sponsor-detail.component.ts (tabs complets)
 - **✅ J3-4** : sponsor-analytics.component.ts avec Chart.js (3 graphiques + tables)
 - **✅ J5** : sponsor-videos.component.ts + routes (drag & drop fonctionnel)
 
 ### ✅ Semaine 2 (Jours 6-8) - TERMINÉ
+
 - **✅ J6** : sponsor-analytics.service.ts (tracking frontend) + tv.component.ts modifications
 - **✅ J7** : server.js (API endpoints) + sponsor-impressions.js (sync-agent collector)
 - **✅ J8** : agent.js intégration + documentation complète (TRACKING_IMPRESSIONS_SPONSORS.md)
 
 ### ✅ Semaine 3 (Jours 11-14) - TERMINÉ
+
 - **✅ J11** : Installation dépendances (PDFKit, chartjs-node-canvas)
 - **✅ J11-13** : Implémentation pdf-report.service.ts (4 pages PDF, graphiques, signature)
 - **✅ J13** : Fonctions utilitaires (formatDate, formatNumber, generateCharts)
@@ -359,17 +388,20 @@ neopro/
 ## 🎯 Impact Business (Rappel BP §13.6)
 
 ### Pour NEOPRO
+
 - **Différenciateur majeur** vs concurrence
 - **Upsell analytics premium** : +€10-25/mois
 - **Augmentation ARPU** : +30% estimé
 - **Taux conversion sponsors** : +50%
 
 ### Pour les Clubs
+
 - Justifier tarifs sponsors (données réelles)
 - Renouvellement contrats (preuve valeur)
 - Attirer nouveaux sponsors (dossier pro)
 
 ### Pour les Sponsors
+
 - ROI mesurable
 - Optimisation créas (data-driven)
 - Transparence totale
@@ -397,12 +429,14 @@ neopro/
 **✅ Semaines 1, 2 & 3 - TOUTES TERMINÉES**
 
 **Phase 4 - Tests & Optimisations (Optionnel, 2-3 jours)** :
+
 1. Tests unitaires service PDF (Jest)
 2. Tests d'intégration endpoint /api/sponsors/:id/report
 3. Optimisation performances (cache graphiques)
 4. Génération asynchrone avec queue (Bull/BullMQ)
 
 **Phase 5 - Améliorations Enterprise (Semaine 5-6)** :
+
 1. Support logos personnalisés (upload sponsor/club)
 2. Multi-sponsors (rapports comparatifs)
 3. Templates personnalisables par club
@@ -410,6 +444,7 @@ neopro/
 5. Watermarks personnalisés
 
 **Références utiles** :
+
 - Chart.js: https://www.chartjs.org/docs/
 - PDFKit: http://pdfkit.org/
 - chartjs-node-canvas: https://github.com/SeanSobey/ChartjsNodeCanvas

@@ -266,26 +266,28 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ### Ce qui est automatisé (v2.37+)
 
-| Fonctionnalité                          | Où                      | Comportement                                                                        |
-| --------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------- |
-| **🐕 NetworkWatchdog**                  | Sync-Agent              | Surveillance continue hotspot (30s) et internet (60s) avec auto-recovery           |
-| **🔄 Auto-recovery hotspot**            | NetworkWatchdog         | rfkill unblock → IP config → restart hostapd → restart dnsmasq (max 3 tentatives)  |
-| **🌐 Auto-recovery internet**           | NetworkWatchdog         | wpa_cli reconfigure → dhclient (max 3 tentatives)                                  |
-| **↩️ Rollback automatique**             | NetworkWatchdog         | Si perte connexion 30s après changement config → restaure config précédente        |
-| **📢 Alertes proactives**               | Central Server          | Check toutes les 4h : BSSID lock mesh, isolation, stabilité faible, offline > 24h  |
-| **🔔 network_alert events**             | Socket.IO               | Pi envoie alerte si recovery échoue après 3 tentatives → stocké en DB + dashboard  |
-| **📊 Statistiques risques réseau**      | NetworkAlertsService    | Agrégation profils, isolation, stabilité moyenne pour analytics                    |
+| Fonctionnalité                          | Où                    | Comportement                                                                      |
+| --------------------------------------- | --------------------- | --------------------------------------------------------------------------------- |
+| **🐕 NetworkWatchdog**                  | Sync-Agent            | Surveillance continue hotspot (30s) et internet (60s) avec auto-recovery          |
+| **⏳ Grace period 60s au boot**         | NetworkWatchdog       | Aucune recovery pendant 60s au démarrage (laisse le réseau se stabiliser)         |
+| **🔄 Auto-recovery hotspot**            | NetworkWatchdog       | rfkill unblock → IP config → restart hostapd → restart dnsmasq (max 3 tentatives) |
+| **🌐 Auto-recovery internet**           | NetworkWatchdog       | Recovery progressive en 4 phases : DHCP seul → reconfigure → link reset → alerte  |
+| **↩️ Rollback automatique**             | NetworkWatchdog       | Si perte connexion 30s après changement config → restaure config précédente       |
+| **✍️ Écriture atomique wpa_supplicant** | SafeNetworkOperations | Écriture dans fichier .tmp puis rename (évite corruption par double sed -i)       |
+| **📢 Alertes proactives**               | Central Server        | Check toutes les 4h : BSSID lock mesh, isolation, stabilité faible, offline > 24h |
+| **🔔 network_alert events**             | Socket.IO             | Pi envoie alerte si recovery échoue après 3 tentatives → stocké en DB + dashboard |
+| **📊 Statistiques risques réseau**      | NetworkAlertsService  | Agrégation profils, isolation, stabilité moyenne pour analytics                   |
 
 **Critères d'alertes proactives** :
 
-| Risque                    | Sévérité    | Condition                                  |
-| ------------------------- | ----------- | ------------------------------------------ |
-| `bssid_lock_in_mesh`      | 🔴 critical | BSSID lock activé en mesh                  |
-| `client_isolation`        | 🟡 warning  | Isolation client détectée                  |
-| `low_stability`           | 🟡/🔴       | Score stabilité < 50 (critical si < 25)    |
-| `enterprise_unconfigured` | 🟡 warning  | Réseau 802.1X détecté                      |
-| `mesh_offline_extended`   | 🔴 critical | Offline > 24h en environnement mesh        |
-| `multiple_warnings`       | 🟡 warning  | 3+ warnings dans le profil réseau          |
+| Risque                    | Sévérité    | Condition                               |
+| ------------------------- | ----------- | --------------------------------------- |
+| `bssid_lock_in_mesh`      | 🔴 critical | BSSID lock activé en mesh               |
+| `client_isolation`        | 🟡 warning  | Isolation client détectée               |
+| `low_stability`           | 🟡/🔴       | Score stabilité < 50 (critical si < 25) |
+| `enterprise_unconfigured` | 🟡 warning  | Réseau 802.1X détecté                   |
+| `mesh_offline_extended`   | 🔴 critical | Offline > 24h en environnement mesh     |
+| `multiple_warnings`       | 🟡 warning  | 3+ warnings dans le profil réseau       |
 
 ---
 
@@ -319,10 +321,11 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ## Clients identifiés comme "mesh"
 
-| Client  | Lieu         | SSID | Nombre d'APs | Notes                                      |
-| ------- | ------------ | ---- | ------------ | ------------------------------------------ |
-| **NLF** | Gymnase Nord | NLFH | 3+           | Incident 18/01/2026 - Ne JAMAIS lock BSSID |
-|         |              |      |              |                                            |
+| Client                     | Profil     | Équipement réseau                                 | Notes                                           |
+| -------------------------- | ---------- | ------------------------------------------------- | ----------------------------------------------- |
+| NLF (Nantes Loire Féminin) | Mesh isolé | TP-Link Deco (3 bornes), isolation client activée | Incident 18 jan 2026 — résolu avec remote cloud |
+| À identifier               | Mesh       | —                                                 | Sites avec >1 AP sur même SSID                  |
+| À identifier               | Enterprise | —                                                 | Sites avec 802.1X ou certificats                |
 
 > **Comment ajouter un client :**
 > Éditer ce fichier et ajouter une ligne au tableau ci-dessus.
@@ -331,7 +334,32 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ## Historique des incidents
 
-### NLF - 18 janvier 2026
+### NLF - 7 février 2026 (Diagnostic coupures WiFi USB)
+
+**Contexte :** Signalement de déconnexions fréquentes de wlan1.
+
+**Diagnostic réalisé :**
+
+- Signal : **-73 dBm** (Link Quality 37/70) — zone limite
+- Alimentation : OK (`throttled=0x0`)
+- Power Management : OFF
+- bgscan : Configuré (`simple:30:-70:300`)
+- BSSID lock : Aucun (correct)
+- Canal 6 saturé : 5 réseaux concurrents
+
+**Logs wpa_supplicant :**
+
+```
+17:31:33 CONNECTED    → 34:8a:12:30:0b:00
+17:50:54 DISCONNECTED → reason=3 locally_generated=1
+17:50:56 CONNECTED    → 34:8a:12:30:0b:00 (même borne, 2s après)
+```
+
+**Analyse :** `reason=3` (`DEAUTH_LEAVING`) + `locally_generated=1` = le Pi cherche un meilleur AP via bgscan (signal oscillant autour du seuil -70 dBm), ne trouve pas mieux, se reconnecte à la même borne en 2s. Impact nul sur la TV (vidéos locales), micro-interruption imperceptible sur la télécommande cloud.
+
+**Conclusion :** Problème purement physique (signal limite). Logiciel correctement configuré. Ethernet recommandé.
+
+### NLF - 18 janvier 2026 (Perte de connexion après déploiement)
 
 **Contexte :** Déploiement d'une mise à jour hotspot optimizer via le dashboard central.
 
@@ -387,4 +415,4 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (v2.37 - NetworkWatchdog, Auto-recovery, Alertes proactives)
+**Dernière mise à jour :** 10 février 2026

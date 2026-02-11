@@ -11,16 +11,16 @@ NeoPro supporte une architecture multi-tenant permettant à différents types d'
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ ADMIN PANEL  │  │SPONSOR PORTAL│  │ AGENCY PORTAL│          │
-│  │ /dashboard   │  │/sponsor-portal│ │/agency-portal│          │
+│  │ ADMIN PANEL  │  │ADVERTISER PORTAL│  │ AGENCY PORTAL│          │
+│  │ /dashboard   │  │/advertiser-portal│ │/agency-portal│          │
 │  │ /sites       │  │              │  │              │          │
-│  │ /sponsors    │  │              │  │              │          │
+│  │ /advertisers │  │              │  │              │          │
 │  │ /analytics   │  │              │  │              │          │
 │  │ /admin/*     │  │              │  │              │          │
 │  └──────────────┘  └──────────────┘  └──────────────┘          │
 │        │                  │                  │                  │
 │        ▼                  ▼                  ▼                  │
-│  super_admin         sponsor            agency                  │
+│  super_admin         advertiser         agency                  │
 │  admin               (+ admin)          (+ admin)               │
 │  operator                                                       │
 │  viewer                                                         │
@@ -42,38 +42,38 @@ NeoPro supporte une architecture multi-tenant permettant à différents types d'
 
 ### Hiérarchie des rôles
 
-| Rôle | Description | Accès |
-|------|-------------|-------|
-| `super_admin` | Administrateur NeoPro | Accès complet |
-| `admin` | Administrateur | Gestion sites, sponsors, agences |
-| `operator` | Opérateur | Gestion contenu, analytics |
-| `viewer` | Lecture seule | Consultation uniquement |
-| `sponsor` | Sponsor/Annonceur | Portail sponsor uniquement |
-| `agency` | Agence partenaire | Portail agence uniquement |
+| Rôle          | Description           | Accès                              |
+| ------------- | --------------------- | ---------------------------------- |
+| `super_admin` | Administrateur NeoPro | Accès complet                      |
+| `admin`       | Administrateur        | Gestion sites, annonceurs, agences |
+| `operator`    | Opérateur             | Gestion contenu, analytics         |
+| `viewer`      | Lecture seule         | Consultation uniquement            |
+| `advertiser`  | Annonceur             | Portail annonceur uniquement       |
+| `agency`      | Agence partenaire     | Portail agence uniquement          |
 
 ### Définition TypeScript
 
 ```typescript
 // central-server/src/types/index.ts
-export type UserRole = 'super_admin' | 'admin' | 'operator' | 'viewer' | 'sponsor' | 'agency';
+export type UserRole = 'super_admin' | 'admin' | 'operator' | 'viewer' | 'advertiser' | 'agency';
 
 export interface User {
   id: string;
   email: string;
   role: UserRole;
-  sponsor_id: string | null;  // Pour les utilisateurs sponsor
-  agency_id: string | null;   // Pour les utilisateurs agence
+  advertiser_id: string | null; // Pour les utilisateurs annonceur
+  agency_id: string | null; // Pour les utilisateurs agence
   // ...
 }
 ```
 
 ---
 
-## Portail Sponsor (`/sponsor-portal`)
+## Portail Annonceur (`/advertiser-portal`)
 
 ### Description
 
-Interface dédiée aux sponsors/annonceurs qui paient pour diffuser leurs contenus dans les clubs NeoPro.
+Interface dédiée aux annonceurs qui paient pour diffuser leurs contenus dans les clubs NeoPro.
 
 ### Fonctionnalités
 
@@ -85,43 +85,44 @@ Interface dédiée aux sponsors/annonceurs qui paient pour diffuser leurs conten
 ### Routes Angular
 
 ```typescript
-// /sponsor-portal
+// /advertiser-portal
 {
-  path: 'sponsor-portal',
+  path: 'advertiser-portal',
   canActivate: [roleGuard],
-  data: { roles: ['sponsor', 'admin', 'super_admin'] },
-  loadComponent: () => import('./features/sponsor-portal/sponsor-dashboard.component')
+  data: { roles: ['advertiser', 'admin', 'super_admin'] },
+  loadComponent: () => import('./features/advertiser-portal/advertiser-dashboard.component')
 }
 ```
 
 ### API Backend
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/sponsor/dashboard` | Dashboard avec stats |
-| GET | `/api/sponsor/sites` | Sites de diffusion |
-| GET | `/api/sponsor/videos` | Vidéos du sponsor |
-| GET | `/api/sponsor/stats` | Statistiques détaillées |
+| Méthode | Endpoint                    | Description             |
+| ------- | --------------------------- | ----------------------- |
+| GET     | `/api/advertiser/dashboard` | Dashboard avec stats    |
+| GET     | `/api/advertiser/sites`     | Sites de diffusion      |
+| GET     | `/api/advertiser/videos`    | Vidéos de l'annonceur   |
+| GET     | `/api/advertiser/stats`     | Statistiques détaillées |
 
 ### Sécurité
 
-Le middleware `requireSponsorAccess` vérifie que :
-1. L'utilisateur a le rôle `sponsor` ou est admin
-2. Le `sponsor_id` du JWT correspond à la ressource demandée
+Le middleware `requireAdvertiserAccess` vérifie que :
+
+1. L'utilisateur a le rôle `advertiser` ou est admin
+2. Le `advertiser_id` du JWT correspond à la ressource demandée
 
 ```typescript
 // Middleware de vérification
-export const requireSponsorAccess = (getSponsorIdFromRequest) => {
+export const requireAdvertiserAccess = (getAdvertiserIdFromRequest) => {
   return async (req, res, next) => {
     const user = req.user;
 
     // Admins ont accès à tout
     if (isAdmin(user.role)) return next();
 
-    // Sponsors accèdent uniquement à leurs données
-    if (user.role === 'sponsor') {
-      const requestedSponsorId = getSponsorIdFromRequest(req);
-      if (user.sponsor_id === requestedSponsorId) return next();
+    // Annonceurs accèdent uniquement à leurs données
+    if (user.role === 'advertiser') {
+      const requestedAdvertiserId = getAdvertiserIdFromRequest(req);
+      if (user.advertiser_id === requestedAdvertiserId) return next();
     }
 
     return res.status(403).json({ error: 'Accès non autorisé' });
@@ -166,16 +167,16 @@ Interface pour les agences qui gèrent plusieurs clubs sportifs pour le compte d
 
 ### API Backend
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/agencies` | Liste des agences (admin) |
-| POST | `/api/agencies` | Créer une agence |
-| PUT | `/api/agencies/:id` | Modifier une agence |
-| DELETE | `/api/agencies/:id` | Supprimer une agence |
-| GET | `/api/agencies/portal/dashboard` | Dashboard agence |
-| GET | `/api/agencies/portal/sites` | Sites gérés par l'agence |
-| GET | `/api/agencies/portal/sites/:id` | Détail d'un site |
-| GET | `/api/agencies/portal/stats` | Statistiques agrégées |
+| Méthode | Endpoint                         | Description               |
+| ------- | -------------------------------- | ------------------------- |
+| GET     | `/api/agencies`                  | Liste des agences (admin) |
+| POST    | `/api/agencies`                  | Créer une agence          |
+| PUT     | `/api/agencies/:id`              | Modifier une agence       |
+| DELETE  | `/api/agencies/:id`              | Supprimer une agence      |
+| GET     | `/api/agencies/portal/dashboard` | Dashboard agence          |
+| GET     | `/api/agencies/portal/sites`     | Sites gérés par l'agence  |
+| GET     | `/api/agencies/portal/sites/:id` | Détail d'un site          |
+| GET     | `/api/agencies/portal/stats`     | Statistiques agrégées     |
 
 ### Schéma Base de Données
 
@@ -233,7 +234,7 @@ interface JWTPayload {
   id: string;
   email: string;
   role: UserRole;
-  sponsor_id: string | null;
+  advertiser_id: string | null;
   agency_id: string | null;
   iat: number;
   exp: number;
@@ -248,7 +249,7 @@ const token = generateToken({
   id: user.id,
   email: user.email,
   role: user.role,
-  sponsor_id: user.sponsor_id,
+  advertiser_id: user.advertiser_id,
   agency_id: user.agency_id,
 });
 ```
@@ -286,11 +287,11 @@ export const roleGuard: CanActivateFn = (route) => {
 Les données sont isolées au niveau PostgreSQL via RLS :
 
 ```sql
--- Vue pour les sites accessibles par un sponsor
-CREATE VIEW sponsor_accessible_sites AS
+-- Vue pour les sites accessibles par un annonceur
+CREATE VIEW advertiser_accessible_sites AS
 SELECT s.* FROM sites s
-JOIN sponsor_sites ss ON s.id = ss.site_id
-WHERE ss.sponsor_id = current_setting('app.current_sponsor_id')::uuid;
+JOIN advertiser_sites ss ON s.id = ss.site_id
+WHERE ss.advertiser_id = current_setting('app.current_advertiser_id')::uuid;
 
 -- Vue pour les sites accessibles par une agence
 CREATE VIEW agency_accessible_sites AS
@@ -303,15 +304,15 @@ WHERE ags.agency_id = current_setting('app.current_agency_id')::uuid;
 
 ## Services Angular
 
-### SponsorPortalService
+### AdvertiserPortalService
 
 ```typescript
 @Injectable({ providedIn: 'root' })
-export class SponsorPortalService {
-  getDashboard(): Observable<SponsorDashboard>;
-  getSites(): Observable<SponsorSite[]>;
-  getVideos(): Observable<SponsorVideo[]>;
-  getStats(period?: string): Observable<SponsorStats>;
+export class AdvertiserPortalService {
+  getDashboard(): Observable<AdvertiserDashboard>;
+  getSites(): Observable<AdvertiserSite[]>;
+  getVideos(): Observable<AdvertiserVideo[]>;
+  getStats(period?: string): Observable<AdvertiserStats>;
 }
 ```
 
@@ -342,8 +343,8 @@ export class AgencyPortalService {
 
 ```
 central-dashboard/src/app/features/
-├── sponsor-portal/
-│   └── sponsor-dashboard.component.ts    # Dashboard sponsor
+├── advertiser-portal/
+│   └── advertiser-dashboard.component.ts    # Dashboard annonceur
 ├── agency-portal/
 │   └── agency-dashboard.component.ts     # Dashboard agence
 └── admin/
@@ -372,14 +373,14 @@ psql $DATABASE_URL < src/scripts/migrations/add-sponsor-agency-roles.sql
 
 ## Flux de Navigation
 
-### Sponsor
+### Annonceur
 
 ```
-Login → JWT avec sponsor_id
+Login → JWT avec advertiser_id
   ↓
-Redirection automatique vers /sponsor-portal
+Redirection automatique vers /advertiser-portal
   ↓
-Dashboard sponsor (ses données uniquement)
+Dashboard annonceur (ses données uniquement)
 ```
 
 ### Agence
@@ -404,5 +405,5 @@ Peut accéder à /admin/agencies pour gérer les agences
 
 ---
 
-**Version :** 1.0.0
-**Dernière mise à jour :** 26 décembre 2025
+**Version :** 1.1.0
+**Dernière mise à jour :** 10 février 2026

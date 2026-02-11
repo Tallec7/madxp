@@ -343,9 +343,7 @@ socket.emit('update_progress', {
 
 ### Mot de passe par défaut
 
-Si aucun mot de passe n'est configuré : `GG_NEO_25k!`
-
-**⚠️ À changer en production !**
+Si aucun mot de passe n'est configuré, un setup initial est requis au premier démarrage (voir SEC-002 dans SECURITY_IMPROVEMENTS.md).
 
 ---
 
@@ -371,7 +369,7 @@ Si aucun mot de passe n'est configuré : `GG_NEO_25k!`
    - Alertes automatiques
 
 3. **Déploiement**
-   - Mise à jour OTA (à venir)
+   - Mise à jour OTA
    - Gestion des configurations
    - Push de contenu
 
@@ -533,13 +531,22 @@ npm run deploy:raspberry 192.168.4.1
 │   ├── configuration.json
 │   └── ...
 │
-├── server/              # Serveur Socket.IO
-│   ├── server.js
+├── server/              # Serveur Socket.IO (Express modulaire)
+│   ├── server.js        #   Orchestrateur (~110 lignes)
+│   ├── helpers.js       #   Constantes partagées
+│   ├── services/        #   5 services (state, buffer, license, hdmi, auth)
+│   ├── routes/          #   6 contrôleurs HTTP minces
+│   ├── socket/          #   Handlers Socket.IO (18 events)
+│   ├── __tests__/       #   Tests Jest (71 tests)
 │   └── package.json
 │
-├── admin/               # Interface admin
-│   ├── admin-server.js
-│   └── public/
+├── admin/               # Interface admin (Express modulaire)
+│   ├── admin-server.js  #   Orchestrateur (wiring services ↔ routes)
+│   ├── helpers.js       #   Utilitaires partagés
+│   ├── services/        #   7 services métier
+│   ├── routes/          #   9 contrôleurs HTTP
+│   ├── __tests__/       #   Tests Jest (60%+ couverture)
+│   └── public/          #   Frontend statique
 │
 ├── sync-agent/          # Agent de sync central
 │   ├── agent.js
@@ -573,7 +580,14 @@ neopro/
 │   ├── server/          # Code serveur Socket.IO
 │   ├── admin/           # Code interface admin
 │   └── sync-agent/      # Code agent sync
-├── central-server/      # Serveur central
+├── central-server/      # Serveur central (API backend)
+│   └── src/
+│       ├── controllers/     # HTTP route handlers
+│       ├── routes/          # Express route definitions
+│       ├── middleware/      # Auth, RLS, rate-limit
+│       ├── services/        # Business logic
+│       ├── handlers/        # 9 Socket.IO event handlers
+│       └── repositories/    # 21 repositories (BaseRepository<T>)
 ├── central-dashboard/   # Dashboard central
 └── docs/                # Documentation
 ```
@@ -814,7 +828,7 @@ socket.on('site_config_updated', (data) => {
 
 La détection des connexions zombies se fait à **deux niveaux** :
 
-1. **Côté serveur** (`socket.service.ts`) :
+1. **Côté serveur** (`socket.service.ts` + `handlers/health-monitor.handler.ts`) :
    - Ping/pong toutes les 30s : si pas de `pong_check` après 90s, connexion déconnectée
    - Sync DB/WebSocket toutes les 2 minutes : si site "online" en DB mais absent de `connectedSites` Map, passage en "offline"
 
@@ -947,28 +961,77 @@ GET    /advertiser-analytics/*  - Stats annonceurs
 **Rate Limiting :**
 
 ```
-Auth:       10 req/15min    (anti-bruteforce)
-API:        100 req/min     (standard)
-Monitoring: 300 req/min     (status, metrics polling)
-Logging:    200 req/min     (frontend logs - silently dropped if exceeded)
-Sensitive:  30 req/min      (commands, deployments)
-Upload:     10 req/hour     (video uploads)
-Admin:      200 req/min     (dashboard ops)
+Auth:         10 req/15min    (anti-bruteforce)
+API:          100 req/min     (standard)
+Monitoring:   300 req/min     (status, metrics polling)
+Logging:      200 req/min     (frontend logs - silently dropped if exceeded)
+Sensitive:    30 req/min      (commands, deployments)
+Remote Cloud: 60 req/min      (télécommande cloud - PUBLIC, par IP)
+Upload:       10 req/hour     (video uploads)
+Admin:        200 req/min     (dashboard ops)
+Pi Analytics: 500 req/min     (impressions sponsors depuis les Pi - par IP)
 ```
 
-**Note** : Les rate limits sont basés sur le `user_id` (et non sur l'IP) en production.
+**Note** : Les rate limits sont basés sur le `user_id` (et non sur l'IP) en production, sauf Remote Cloud et Pi Analytics qui sont par IP (endpoints publics).
 
 ### Services Backend Critiques
 
-| Service           | Fichier                     | Rôle                                        |
-| ----------------- | --------------------------- | ------------------------------------------- |
-| **Socket**        | `socket.service.ts`         | Communication temps réel Pi ↔ Cloud         |
-| **MemoryManager** | `memory-manager.service.ts` | Monitoring heap, cleanup automatique        |
-| **AdminOps**      | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire  |
-| **CronScheduler** | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)         |
-| **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook) |
-| **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready            |
-| **Metrics**       | `metrics.service.ts`        | Export Prometheus                           |
+| Service           | Fichier                     | Rôle                                             |
+| ----------------- | --------------------------- | ------------------------------------------------ |
+| **Socket**        | `socket.service.ts`         | Orchestrateur temps réel Pi ↔ Cloud (676 lignes) |
+| **Storage**       | `storage.service.ts`        | Upload/download vidéos FTP (unifié)              |
+| **Deployment**    | `deployment.service.ts`     | Orchestration déploiement vidéos                 |
+| **CommandQueue**  | `command-queue.service.ts`  | File d'attente commandes (offline/online)        |
+| **MemoryManager** | `memory-manager.service.ts` | Monitoring heap, cleanup automatique             |
+| **AdminOps**      | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire       |
+| **CronScheduler** | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)              |
+| **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook)      |
+| **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready                 |
+| **Metrics**       | `metrics.service.ts`        | Export Prometheus                                |
+
+### Socket Handlers (`src/handlers/`)
+
+Le service Socket.IO délègue le traitement des événements à 9 handlers spécialisés :
+
+| Handler               | Fichier                         | Événements                |
+| --------------------- | ------------------------------- | ------------------------- |
+| **Heartbeat**         | `heartbeat.handler.ts`          | `heartbeat`, `pong_check` |
+| **ConfigSync**        | `config-sync.handler.ts`        | `sync_local_state`        |
+| **DeployProgress**    | `deploy-progress.handler.ts`    | `deploy_progress`         |
+| **CommandDispatch**   | `command-dispatch.handler.ts`   | `command_result`          |
+| **HealthMonitor**     | `health-monitor.handler.ts`     | Zombie detection, DB sync |
+| **License**           | `license.handler.ts`            | `license_status`          |
+| **NetworkResilience** | `network-resilience.handler.ts` | `network_status`          |
+| **ScoreUpdate**       | `score-update.handler.ts`       | `score_update`            |
+| **MatchConfig**       | `match-config.handler.ts`       | `match_config`            |
+
+### Repositories (`src/repositories/`)
+
+Tous les accès PostgreSQL passent par des repositories typés héritant de `BaseRepository<T>` :
+
+| Repository          | Table(s) principale(s)                             |
+| ------------------- | -------------------------------------------------- |
+| `site`              | `sites`                                            |
+| `user`              | `users`                                            |
+| `video`             | `videos`                                           |
+| `group`             | `groups`, `group_sites`                            |
+| `deployment`        | `content_deployments`, `deployment_targets`        |
+| `software-update`   | `software_updates`, `update_deployments`           |
+| `alert`             | `alerts`, `alert_thresholds`                       |
+| `analytics`         | `video_plays`, `club_sessions`, `club_daily_stats` |
+| `sponsor`           | `advertiser_impressions`, `advertiser_daily_stats` |
+| `config-history`    | `config_drafts`, `config_history`                  |
+| `advertising`       | `advertiser_videos`, `advertiser_sites`            |
+| `advertiser-portal` | `advertisers` (portail annonceurs)                 |
+| `agency`            | `agencies`, `agency_sites`                         |
+| `subscription`      | `subscription_history`                             |
+| `metrics`           | `site_metrics`                                     |
+| `objective`         | `objectives`                                       |
+| `playlist-schedule` | `playlist_schedules`                               |
+| `remote-command`    | `remote_commands`, `pending_commands`              |
+| `report`            | `reports`                                          |
+| `timeline`          | `timeline_events`                                  |
+| `email`             | Notifications email (templates)                    |
 
 ### Gestion Mémoire (Railway Hobby Plan)
 
@@ -986,6 +1049,13 @@ HEAP_WARNING_THRESHOLD = 88; // Log warning
 HEAP_CRITICAL_THRESHOLD = 93; // Trigger cleanup callbacks
 HEAP_EMERGENCY_THRESHOLD = 97; // Emergency cleanup + GC
 ```
+
+**Optimisations mémoire (v3.7.4+)** :
+
+- Swagger chargé uniquement en dev (`NODE_ENV !== 'production'`)
+- Winston file transports supprimés en prod (Railway n'a pas de filesystem persistant)
+- Realtime-stats interval réduit de 10s à 30s
+- Pas de rate limiter global (les rate limiters par route suffisent)
 
 **Endpoints Health :**
 
@@ -1126,4 +1196,4 @@ Voir **[docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ---
 
-**Dernière mise à jour :** 8 janvier 2026
+**Dernière mise à jour :** 10 février 2026

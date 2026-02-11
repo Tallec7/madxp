@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Video } from '../interfaces/video.interface';
 import { Configuration } from '../interfaces/configuration.interface';
 import { environment } from '../../environments/environment';
+import { RecordingStateService } from './recording-state.service';
 
 /**
  * Interface pour une impression sponsor (alignée avec le schéma DB backend)
@@ -28,6 +29,7 @@ export interface SponsorImpression {
 @Injectable({ providedIn: 'root' })
 export class SponsorAnalyticsService {
   private readonly http = inject(HttpClient);
+  private readonly recordingState = inject(RecordingStateService);
 
   private buffer: SponsorImpression[] = [];
   private currentImpression: Partial<SponsorImpression> | null = null;
@@ -128,6 +130,11 @@ export class SponsorAnalyticsService {
     triggerType: 'auto' | 'manual' = 'auto',
     videoDuration?: number
   ): void {
+    // Ne pas tracker si l'enregistrement est désactivé
+    if (!this.recordingState.isRecording) {
+      return;
+    }
+
     // Terminer l'impression précédente si elle existe
     if (this.currentImpression && this.currentVideoStart) {
       this.trackSponsorEnd(false);
@@ -162,6 +169,13 @@ export class SponsorAnalyticsService {
       return;
     }
 
+    // Ne pas tracker si l'enregistrement est désactivé (mais reset l'état interne)
+    if (!this.recordingState.isRecording) {
+      this.currentImpression = null;
+      this.currentVideoStart = null;
+      return;
+    }
+
     const now = new Date();
     const durationPlayed = Math.round((now.getTime() - this.currentVideoStart.getTime()) / 1000);
 
@@ -173,6 +187,12 @@ export class SponsorAnalyticsService {
 
     this.buffer.push(impression);
 
+    // Persistance immédiate dans localStorage (survit aux redémarrages)
+    this.saveToStorage();
+
+    // Envoi immédiat au serveur local (persiste sur disque dans sponsor_impressions.json)
+    this.sendSingleImpression(impression);
+
     console.log('[SponsorAnalytics] Sponsor video ended:', {
       filename: impression.video_filename,
       duration: durationPlayed,
@@ -183,9 +203,6 @@ export class SponsorAnalyticsService {
     // Reset
     this.currentImpression = null;
     this.currentVideoStart = null;
-
-    // Sauvegarder dans localStorage
-    this.saveToStorage();
 
     // Flush si le buffer est plein
     if (this.buffer.length >= this.MAX_BUFFER_SIZE) {
@@ -243,6 +260,29 @@ export class SponsorAnalyticsService {
 
     console.log('[SponsorAnalytics] Flushing buffer:', this.buffer.length, 'impressions');
     this.sendToSyncAgent();
+  }
+
+  /**
+   * Envoyer une seule impression immédiatement au serveur local.
+   * Retry après 30s en cas d'échec (serveur local pas encore prêt au boot).
+   */
+  private sendSingleImpression(impression: SponsorImpression, isRetry = false): void {
+    this.http.post<{ success: boolean; received: number; queued: number }>(
+      this.getApiUrl(),
+      { impressions: [impression] }
+    ).subscribe({
+      next: () => {
+        // Impression persistée sur disque via server.js → sponsor_impressions.json
+      },
+      error: () => {
+        if (!isRetry) {
+          // Retry une fois après 30s (le serveur local peut ne pas être prêt)
+          setTimeout(() => this.sendSingleImpression(impression, true), 30_000);
+        }
+        // Si le retry échoue aussi, l'impression reste dans localStorage
+        // et sera envoyée par le flush périodique (toutes les 5 min)
+      }
+    });
   }
 
   private sendToSyncAgent(): void {

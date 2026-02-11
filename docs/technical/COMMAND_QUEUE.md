@@ -363,6 +363,16 @@ CREATE INDEX idx_pending_commands_expires_at ON pending_commands(expires_at);
 | 6-9      | Basse           | Mises à jour mineures    |
 | 10       | Très basse      | Tâches de maintenance    |
 
+### Métriques de performance
+
+| Métrique                 | Valeur typique    | Description                              |
+| ------------------------ | ----------------- | ---------------------------------------- |
+| Latence traitement queue | < 2s par commande | Délai entre reconnexion et exécution     |
+| Délai inter-commandes    | 500ms             | Pause entre chaque commande séquentielle |
+| Max tentatives           | 3 (configurable)  | Nombre de retry avant abandon            |
+| Expiration par défaut    | Aucune            | Configurable via `expires_at`            |
+| Capacité queue par site  | Illimitée         | Limité uniquement par le stockage DB     |
+
 ### Vue de résumé
 
 ```sql
@@ -414,6 +424,8 @@ Si le site est offline :
 1. Aller dans **Sites → Queue globale**
 2. Voir tous les sites avec des commandes en attente
 3. Trier par nombre de commandes ou ancienneté
+
+> **Note** : La vue globale de la queue (`/api/sites/queue/summary`) est disponible via l'API mais n'est pas encore intégrée comme page dédiée dans le dashboard. Les commandes en attente sont visibles par site dans la page de détail du site.
 
 ---
 
@@ -523,3 +535,5 @@ psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f central-server/src/scripts/migration
 ---
 
 _Document généré pour le projet NEOPRO - Confidentiel_
+
+_Dernière mise à jour : 10 février 2026_

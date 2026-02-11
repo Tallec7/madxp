@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, requireRole } from '../middleware/auth';
+import { authenticate, requireRole, requireSuperAdmin } from '../middleware/auth';
 import { validate, schemas } from '../middleware/validation';
 import {
   listUsers,
@@ -38,19 +38,19 @@ router.delete(
 // USERS CRUD (Admin/Super Admin only)
 // ============================================================================
 
-// Liste tous les utilisateurs
+// Liste tous les utilisateurs (admin + super_admin via bypass)
 router.get(
   '/',
   authenticate,
-  requireRole('admin', 'super_admin'),
+  requireRole('admin'),
   listUsers
 );
 
-// Recuperer un utilisateur
+// Recuperer un utilisateur (admin + super_admin via bypass)
 router.get(
   '/:id',
   authenticate,
-  requireRole('admin', 'super_admin'),
+  requireRole('admin'),
   getUser
 );
 
@@ -58,7 +58,7 @@ router.get(
 router.post(
   '/',
   authenticate,
-  requireRole('super_admin'),
+  requireSuperAdmin(),
   validate(schemas.createUser),
   createUser
 );
@@ -67,7 +67,7 @@ router.post(
 router.put(
   '/:id',
   authenticate,
-  requireRole('super_admin'),
+  requireSuperAdmin(),
   validate(schemas.updateUser),
   updateUser
 );
@@ -76,7 +76,7 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  requireRole('super_admin'),
+  requireSuperAdmin(),
   deleteUser
 );
 
@@ -84,7 +84,7 @@ router.delete(
 router.patch(
   '/:id/status',
   authenticate,
-  requireRole('super_admin'),
+  requireSuperAdmin(),
   toggleUserStatus
 );
 
@@ -92,7 +92,7 @@ router.patch(
 router.post(
   '/:id/reset-password',
   authenticate,
-  requireRole('super_admin'),
+  requireSuperAdmin(),
   adminResetPassword
 );
 

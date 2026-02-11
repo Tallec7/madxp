@@ -1,7 +1,8 @@
-import { Component, Input, Output, EventEmitter, OnInit, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
+import { Subscription, interval } from 'rxjs';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
@@ -3228,7 +3229,7 @@ interface WifiBssidStatus {
     }
   `]
 })
-export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
+export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestroy {
   @Input() siteId!: string;
   @Input() isConnected: boolean = false;
   @Input() connectionHealth: ConnectionHealth | null = null;
@@ -3300,6 +3301,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
   showBufferStatus: boolean = false;
   bufferStatus: BufferStatus | null = null;
   loadingBufferStatus: boolean = false;
+  private bufferPollSubscription: Subscription | null = null;
 
   // Hotspot (P2.4)
   showHotspotFix: boolean = false;
@@ -3342,6 +3344,10 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
 
   ngOnInit(): void {
     this.loadDebugInfo();
+  }
+
+  ngOnDestroy(): void {
+    this.bufferPollSubscription?.unsubscribe();
   }
 
   ngAfterViewChecked(): void {
@@ -3880,16 +3886,61 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
     }
 
     this.loadingBufferStatus = true;
+    this.bufferPollSubscription?.unsubscribe();
 
     this.sitesService.sendCommand(this.siteId, 'get_analytics_buffer_status', {}).subscribe({
       next: (response: unknown) => {
-        this.loadingBufferStatus = false;
-        const result = (response as { result?: BufferStatus })?.result || response as BufferStatus;
-        if (result && result.success !== false) {
-          this.bufferStatus = result;
-        } else {
-          this.notificationService.error('Échec de la récupération de l\'état des buffers');
+        const commandResponse = response as { success?: boolean; commandId?: string; sent?: boolean };
+        if (!commandResponse.commandId) {
+          this.loadingBufferStatus = false;
+          this.notificationService.error('Échec de l\'envoi de la commande');
+          return;
         }
+
+        // Poller le résultat de la commande asynchrone
+        const commandId = commandResponse.commandId;
+        const POLL_TIMEOUT_SECONDS = 15;
+        let pollCount = 0;
+        let isPolling = false;
+
+        this.bufferPollSubscription = interval(1000).subscribe(() => {
+          pollCount++;
+
+          if (pollCount > POLL_TIMEOUT_SECONDS) {
+            this.bufferPollSubscription?.unsubscribe();
+            this.loadingBufferStatus = false;
+            this.notificationService.warning('Timeout: le boîtier ne répond pas');
+            return;
+          }
+
+          if (isPolling) {
+            return;
+          }
+          isPolling = true;
+
+          this.sitesService.getCommandStatus(this.siteId, commandId).subscribe({
+            next: (status: { status: string; result?: Record<string, unknown>; error_message?: string }) => {
+              isPolling = false;
+              if (status.status === 'completed') {
+                this.bufferPollSubscription?.unsubscribe();
+                this.loadingBufferStatus = false;
+                const result = status.result as unknown as BufferStatus;
+                if (result && result.success !== false) {
+                  this.bufferStatus = result;
+                } else {
+                  this.notificationService.error('Échec de la récupération de l\'état des buffers');
+                }
+              } else if (status.status === 'failed') {
+                this.bufferPollSubscription?.unsubscribe();
+                this.loadingBufferStatus = false;
+                this.notificationService.error(status.error_message || 'Commande échouée');
+              }
+            },
+            error: () => {
+              isPolling = false;
+            }
+          });
+        });
       },
       error: (error) => {
         this.loadingBufferStatus = false;

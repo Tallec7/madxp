@@ -1,13 +1,15 @@
 import { Response } from 'express';
 import crypto from 'crypto';
+import fs from 'fs';
 import * as ftp from 'basic-ftp';
 import logger from '../config/logger';
-import pool from '../config/database';
 import { AuthRequest } from '../types';
-import { UPDATE_BUCKET, uploadFile } from '../config/supabase';
-import { isFtpUpdateConfigured, uploadUpdateToFtp, uploadUpdateToFtpWithVerification } from '../config/ftp-storage';
+import { softwareUpdateRepository } from '../repositories';
+import { uploadUpdate } from '../services/storage.service';
+import { isFtpUpdateConfigured } from '../config/ftp-storage';
 import { updateDeploymentService } from '../services/update-deployment.service';
 import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';
+import { cleanupTempFile } from '../middleware/upload';
 
 type DatabaseError = Error & { code?: string; message?: string };
 
@@ -27,15 +29,8 @@ const updatesFeatureUnavailable = (tableName: string) => ({
 
 export const getUpdates = async (req: AuthRequest, res: Response) => {
   try {
-    const result = await pool.query(
-      `SELECT id, version, description, is_critical,
-              changelog as release_notes, package_url as file_url,
-              package_size as file_size, checksum, created_at
-       FROM software_updates
-       ORDER BY created_at DESC`
-    );
-
-    res.json(result.rows);
+    const updates = await softwareUpdateRepository.findAllUpdates();
+    res.json(updates);
   } catch (error) {
     if (isTableMissingError(error, 'software_updates')) {
       logger.warn('software_updates table missing, returning empty updates list');
@@ -50,20 +45,13 @@ export const getUpdate = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `SELECT id, version, description, is_critical,
-              changelog as release_notes, package_url as file_url,
-              package_size as file_size, checksum, created_at
-       FROM software_updates
-       WHERE id = $1`,
-      [id]
-    );
+    const update = await softwareUpdateRepository.findUpdateById(id);
 
-    if (result.rows.length === 0) {
+    if (!update) {
       return res.status(404).json({ error: 'Mise à jour non trouvée' });
     }
 
-    res.json(result.rows[0]);
+    res.json(update);
   } catch (error) {
     if (isTableMissingError(error, 'software_updates')) {
       logger.warn('software_updates table missing while fetching single update');
@@ -84,85 +72,66 @@ export const createUpdate = async (req: AuthRequest, res: Response) => {
 
     const file = req.file;
     const filename = `update-${version}-${Date.now()}-${file.originalname}`;
-    const checksum = crypto.createHash('sha256').update(file.buffer).digest('hex');
 
-    // Utiliser FTP Hostinger en priorité (avec vérification), fallback sur Supabase
-    let uploadResult: { path: string; url: string; verified?: boolean; actualSize?: number | null } | null = null;
-    let storageType = 'unknown';
-    let uploadVerified = false;
+    // Disk storage: read file from disk (file.buffer is undefined with diskStorage)
+    const fileBuffer = fs.readFileSync(file.path);
+    const checksum = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
-    if (isFtpUpdateConfigured()) {
-      logger.info('Using FTP storage for update package (Hostinger) with verification');
-      const ftpResult = await uploadUpdateToFtpWithVerification(file.buffer, filename, file.mimetype);
-      if (ftpResult) {
-        uploadResult = ftpResult;
-        storageType = 'FTP';
-        uploadVerified = ftpResult.verified;
-      }
-    }
-
-    if (!uploadResult) {
-      logger.info('Using Supabase storage for update package (FTP not configured or failed)');
-      const supabaseResult = await uploadFile(file.buffer, filename, file.mimetype, UPDATE_BUCKET);
-      if (supabaseResult) {
-        uploadResult = {
-          ...supabaseResult,
-          verified: true, // Supabase gère l'intégrité
-          actualSize: file.size,
-        };
-        storageType = 'Supabase';
-        uploadVerified = true;
-      }
-    }
+    // Upload via storage service (FTP)
+    logger.info('Uploading update package via storage service', { filename });
+    const uploadResult = await uploadUpdate(fileBuffer, filename, file.mimetype);
 
     if (!uploadResult) {
       return res.status(500).json({
-        error: "Impossible d'uploader le package. Vérifiez la configuration FTP (FTP_UPDATE_*) ou Supabase (SUPABASE_URL, SUPABASE_SERVICE_KEY)."
+        error: "Impossible d'uploader le package. Vérifiez la configuration FTP (FTP_UPDATE_*)."
       });
     }
+
+    const uploadVerified = uploadResult.verified;
 
     // Déterminer le statut d'upload
     const uploadStatus: UploadStatus = uploadVerified ? 'ready' : 'failed';
 
     logger.info('Update package uploaded:', {
       filename,
-      storageType,
       url: uploadResult.url,
       verified: uploadVerified,
       uploadStatus,
     });
 
-    const result = await pool.query(
-      `INSERT INTO software_updates (version, description, is_critical, changelog, package_url, package_size, checksum, uploaded_by, upload_status, upload_verified_at, upload_verified_size)
-       VALUES ($1, $2, COALESCE($3, false), $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING id, version, description, is_critical, changelog as release_notes, package_url as file_url, package_size as file_size, checksum, upload_status, created_at`,
-      [
-        version,
-        description,
-        typeof is_critical === 'string' ? is_critical === 'true' : Boolean(is_critical),
-        release_notes,
-        uploadResult.url,
-        file.size,
-        checksum,
-        req.user?.id || null,
-        uploadStatus,
-        uploadVerified ? new Date() : null,
-        uploadResult.actualSize || null,
-      ]
-    );
+    const result = await softwareUpdateRepository.createUpdate({
+      version,
+      description: description || null,
+      is_critical: typeof is_critical === 'string' ? is_critical === 'true' : Boolean(is_critical),
+      changelog: release_notes || null,
+      package_url: uploadResult.url,
+      package_size: file.size,
+      checksum,
+      uploaded_by: req.user?.id || null,
+      upload_status: uploadStatus,
+      upload_verified_at: uploadVerified ? new Date() : null,
+      upload_verified_size: uploadResult.actualSize || null,
+    });
 
     if (!uploadVerified) {
       logger.warn('Update uploaded but verification failed:', {
-        id: result.rows[0].id,
+        id: result.id,
         version,
         expectedSize: file.size,
         actualSize: uploadResult.actualSize,
       });
     }
 
-    logger.info('Update created:', { id: result.rows[0].id, version, uploadStatus });
-    res.status(201).json(result.rows[0]);
+    // Cleanup temp file after successful processing
+    cleanupTempFile(file.path);
+
+    logger.info('Update created:', { id: result.id, version, uploadStatus });
+    res.status(201).json(result);
   } catch (error) {
+    // Cleanup temp file on error
+    if (req.file?.path) {
+      cleanupTempFile(req.file.path);
+    }
     if (isTableMissingError(error, 'software_updates')) {
       logger.warn('software_updates table missing while creating update');
       return res.status(503).json(updatesFeatureUnavailable('software_updates'));
@@ -186,26 +155,16 @@ export const updateUpdate = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { version, changelog, description, is_critical, package_url, package_size, checksum } = req.body;
 
-    const result = await pool.query(
-      `UPDATE software_updates
-       SET version = COALESCE($1, version),
-           description = COALESCE($2, description),
-           is_critical = COALESCE($3, is_critical),
-           changelog = COALESCE($4, changelog),
-           package_url = COALESCE($5, package_url),
-           package_size = COALESCE($6, package_size),
-           checksum = COALESCE($7, checksum)
-       WHERE id = $8
-       RETURNING *`,
-      [version, description, is_critical, changelog, package_url, package_size, checksum, id]
-    );
+    const result = await softwareUpdateRepository.updateUpdate(id, {
+      version, description, is_critical, changelog, package_url, package_size, checksum,
+    });
 
-    if (result.rows.length === 0) {
+    if (!result) {
       return res.status(404).json({ error: 'Mise à jour non trouvée' });
     }
 
     logger.info('Update updated:', { id, version });
-    res.json(result.rows[0]);
+    res.json(result);
   } catch (error) {
     if (isTableMissingError(error, 'software_updates')) {
       logger.warn('software_updates table missing while updating update');
@@ -220,12 +179,9 @@ export const deleteUpdate = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `DELETE FROM software_updates WHERE id = $1 RETURNING *`,
-      [id]
-    );
+    const deleted = await softwareUpdateRepository.deleteUpdate(id);
 
-    if (result.rows.length === 0) {
+    if (!deleted) {
       return res.status(404).json({ error: 'Mise à jour non trouvée' });
     }
 
@@ -243,22 +199,8 @@ export const deleteUpdate = async (req: AuthRequest, res: Response) => {
 
 export const getUpdateDeployments = async (req: AuthRequest, res: Response) => {
   try {
-    const result = await pool.query(
-      `SELECT ud.id, ud.update_id, ud.target_type, ud.target_id, ud.status, ud.progress,
-              ud.error_message, ud.started_at, ud.completed_at, ud.created_at,
-              ud.backup_path,
-              su.version as update_version,
-              CASE
-                WHEN ud.target_type = 'site' THEN s.site_name
-                ELSE 'Groupe'
-              END as target_name
-       FROM update_deployments ud
-       LEFT JOIN software_updates su ON ud.update_id = su.id
-       LEFT JOIN sites s ON ud.target_type = 'site' AND ud.target_id = s.id
-       ORDER BY ud.created_at DESC`
-    );
-
-    res.json(result.rows);
+    const deployments = await softwareUpdateRepository.findAllDeployments();
+    res.json(deployments);
   } catch (error) {
     if (isTableMissingError(error, 'update_deployments')) {
       logger.warn('update_deployments table missing, returning empty deployment list');
@@ -273,27 +215,13 @@ export const getUpdateDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `SELECT ud.id, ud.update_id, ud.target_type, ud.target_id, ud.status, ud.progress,
-              ud.error_message, ud.started_at, ud.completed_at, ud.created_at,
-              ud.backup_path,
-              su.version as update_version,
-              CASE
-                WHEN ud.target_type = 'site' THEN s.site_name
-                ELSE 'Groupe'
-              END as target_name
-       FROM update_deployments ud
-       LEFT JOIN software_updates su ON ud.update_id = su.id
-       LEFT JOIN sites s ON ud.target_type = 'site' AND ud.target_id = s.id
-       WHERE ud.id = $1`,
-      [id]
-    );
+    const deployment = await softwareUpdateRepository.findDeploymentById(id);
 
-    if (result.rows.length === 0) {
+    if (!deployment) {
       return res.status(404).json({ error: 'Déploiement de mise à jour non trouvé' });
     }
 
-    res.json(result.rows[0]);
+    res.json(deployment);
   } catch (error) {
     if (isTableMissingError(error, 'update_deployments')) {
       logger.warn('update_deployments table missing while fetching single deployment');
@@ -328,14 +256,14 @@ export const createUpdateDeployment = async (req: AuthRequest, res: Response) =>
       });
     }
 
-    const result = await pool.query(
-      `INSERT INTO update_deployments (update_id, target_type, target_id, status, progress, deployed_by)
-       VALUES ($1, $2, $3, 'pending', 0, $4)
-       RETURNING *`,
-      [update_id, target_type || 'site', target_id, req.user?.id || null]
-    );
+    const result = await softwareUpdateRepository.createDeployment({
+      update_id,
+      target_type: target_type || 'site',
+      target_id,
+      deployed_by: req.user?.id || null,
+    });
 
-    const deploymentId = result.rows[0].id as string;
+    const deploymentId = result.id as string;
     logger.info('Update deployment created:', { id: deploymentId, update_id, target_type, target_id });
 
     // Démarrer le déploiement automatiquement (async, ne bloque pas la réponse)
@@ -343,7 +271,7 @@ export const createUpdateDeployment = async (req: AuthRequest, res: Response) =>
       logger.error('Error starting update deployment:', { deploymentId, error });
     });
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(result);
   } catch (error) {
     if (isTableMissingError(error, 'update_deployments')) {
       logger.warn('update_deployments table missing while creating deployment');
@@ -359,25 +287,16 @@ export const updateUpdateDeployment = async (req: AuthRequest, res: Response) =>
     const { id } = req.params;
     const { status, progress, error_message, backup_path } = req.body;
 
-    const result = await pool.query(
-      `UPDATE update_deployments
-       SET status = COALESCE($1, status),
-           progress = COALESCE($2, progress),
-           error_message = COALESCE($3, error_message),
-           backup_path = COALESCE($4, backup_path),
-           started_at = CASE WHEN $1 = 'in_progress' AND started_at IS NULL THEN CURRENT_TIMESTAMP ELSE started_at END,
-           completed_at = CASE WHEN $1 IN ('completed', 'failed', 'rolled_back') THEN CURRENT_TIMESTAMP ELSE completed_at END
-       WHERE id = $5
-       RETURNING *`,
-      [status, progress, error_message, backup_path, id]
-    );
+    const result = await softwareUpdateRepository.updateDeployment(id, {
+      status, progress, error_message, backup_path,
+    });
 
-    if (result.rows.length === 0) {
+    if (!result) {
       return res.status(404).json({ error: 'Déploiement de mise à jour non trouvé' });
     }
 
     logger.info('Update deployment updated:', { id, status, progress });
-    res.json(result.rows[0]);
+    res.json(result);
   } catch (error) {
     if (isTableMissingError(error, 'update_deployments')) {
       logger.warn('update_deployments table missing while updating deployment');
@@ -392,12 +311,9 @@ export const deleteUpdateDeployment = async (req: AuthRequest, res: Response) =>
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `DELETE FROM update_deployments WHERE id = $1 RETURNING *`,
-      [id]
-    );
+    const deleted = await softwareUpdateRepository.deleteDeployment(id);
 
-    if (result.rows.length === 0) {
+    if (!deleted) {
       return res.status(404).json({ error: 'Déploiement de mise à jour non trouvé' });
     }
 
@@ -415,25 +331,19 @@ export const deleteUpdateDeployment = async (req: AuthRequest, res: Response) =>
 
 /**
  * Endpoint de diagnostic pour vérifier l'URL d'un package de mise à jour
- * Vérifie si le fichier est accessible (FTP, Supabase, ou autre)
+ * Vérifie si le fichier est accessible (FTP)
  */
 export const checkUpdatePackageUrl = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `SELECT id, version, package_url, package_size, checksum
-       FROM software_updates
-       WHERE id = $1`,
-      [id]
-    );
+    const update = await softwareUpdateRepository.findPackageDetails(id);
 
-    if (result.rows.length === 0) {
+    if (!update) {
       return res.status(404).json({ error: 'Mise à jour non trouvée' });
     }
 
-    const update = result.rows[0];
-    const packageUrl = update.package_url as string | null;
+    const packageUrl = update.package_url;
 
     if (!packageUrl) {
       return res.json({

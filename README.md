@@ -1,5 +1,8 @@
 # Neopro - Système de télévision interactive pour clubs sportifs
 
+[![CI](https://github.com/kalonpartners/neopro/actions/workflows/ci.yml/badge.svg)](https://github.com/kalonpartners/neopro/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/kalonpartners/neopro/graph/badge.svg)](https://codecov.io/gh/kalonpartners/neopro)
+
 Plateforme complète de gestion et de diffusion de contenu vidéo pour clubs sportifs, basée sur Raspberry Pi synchronisés avec un serveur central cloud.
 
 ## Table des matières
@@ -173,7 +176,7 @@ neopro/
 │       ├── assets/i18n/          # Traductions (EN/FR/ES)
 │       └── environments/
 │
-├── server-render/                # Serveur Socket.IO cloud
+├── raspberry/server/              # Serveur Socket.IO cloud
 │
 ├── e2e/                          # Tests E2E (Playwright)
 ├── docker/                       # Config monitoring (Prometheus/Grafana)
@@ -194,7 +197,7 @@ neopro/
 | Frontend Dashboard | Angular 20.3, Chart.js 4.5, Leaflet, ngx-translate (EN/FR/ES) |
 | Backend API        | Node.js 20+, Express 4.18, TypeScript 5.9 strict              |
 | Base de données    | PostgreSQL 15 (Supabase) - Pool: 5 connexions                 |
-| Stockage vidéos    | FTP (Hostinger) + Supabase Storage (fallback)                 |
+| Stockage vidéos    | FTP Hostinger (unifié via `storage.service.ts`)               |
 | WebSocket          | Socket.IO 4.8                                                 |
 | Cache              | Redis (Upstash) - optionnel, pour scaling horizontal          |
 | Auth               | JWT HttpOnly cookie + Bearer token + MFA (TOTP)               |
@@ -268,8 +271,21 @@ cd raspberry/admin && node admin-server-demo.js
 **Option 3 : Docker Compose (stack complète)**
 
 ```bash
-docker-compose up -d
+docker compose --profile full up -d    # Stack complète (DB + Redis + API + monitoring)
 ```
+
+**Option 4 : Monitoring seul (sans builder l'API)**
+
+```bash
+docker compose up prometheus grafana   # Scrape local (port 3001) + prod (Railway)
+```
+
+Ouvrir Grafana : `http://localhost:3000` (admin/admin) — sélectionner l'environnement dans le dropdown.
+
+Dashboards provisionnés automatiquement :
+
+- **NeoPro Overview** : HTTP rate, latence, WebSocket, déploiements, CPU/RAM, event loop lag
+- **NeoPro Services** : DB, auth, commandes Pi, alertes réseau Pi, stabilité réseau, heartbeats
 
 Services : PostgreSQL (5432), Redis (6379), API (3001), Prometheus (9090), Grafana (3000)
 

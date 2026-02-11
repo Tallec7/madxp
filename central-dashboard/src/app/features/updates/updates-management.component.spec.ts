@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { UpdatesManagementComponent } from './updates-management.component';
 import { ApiService } from '../../core/services/api.service';
@@ -84,7 +85,7 @@ describe('UpdatesManagementComponent', () => {
     const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success']);
 
     await TestBed.configureTestingModule({
-      imports: [UpdatesManagementComponent, FormsModule],
+      imports: [UpdatesManagementComponent, FormsModule, TranslateModule.forRoot()],
       providers: [
         { provide: ApiService, useValue: apiServiceMock },
         { provide: SitesService, useValue: sitesServiceMock },

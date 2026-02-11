@@ -1,11 +1,13 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
+import { TranslateModule } from '@ngx-translate/core';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { GroupsListComponent } from './groups-list.component';
 import { GroupsService } from '../../core/services/groups.service';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { LoggerService } from '../../core/services/logger.service';
 import { Group, Site } from '../../core/models';
 
 describe('GroupsListComponent', () => {
@@ -62,13 +64,15 @@ describe('GroupsListComponent', () => {
     sitesServiceMock.loadSites.and.returnValue(of({ sites: mockSites, total: 1, page: 1, totalPages: 1 }));
 
     const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success']);
+    const loggerServiceMock = jasmine.createSpyObj('LoggerService', ['debug', 'info', 'warn', 'error', 'addBreadcrumb', 'setAuthenticated']);
 
     await TestBed.configureTestingModule({
-      imports: [GroupsListComponent, FormsModule, RouterTestingModule],
+      imports: [GroupsListComponent, FormsModule, RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: GroupsService, useValue: groupsServiceMock },
         { provide: SitesService, useValue: sitesServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
+        { provide: LoggerService, useValue: loggerServiceMock },
       ],
     }).compileComponents();
 

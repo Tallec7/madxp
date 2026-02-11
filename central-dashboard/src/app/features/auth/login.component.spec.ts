@@ -1,32 +1,66 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
+import { RouterTestingModule } from '@angular/router/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
+import { TranslateModule } from '@ngx-translate/core';
 import { LoginComponent } from './login.component';
 import { AuthService } from '../../core/services/auth.service';
+import { TranslationService } from '../../core/services/translation.service';
+import { LoggerService } from '../../core/services/logger.service';
 
 describe('LoginComponent', () => {
   let component: LoginComponent;
   let fixture: ComponentFixture<LoginComponent>;
   let authService: jasmine.SpyObj<AuthService>;
-  let router: jasmine.SpyObj<Router>;
+  let router: Router;
+  let translationService: jasmine.SpyObj<TranslationService>;
+  let loggerService: jasmine.SpyObj<LoggerService>;
 
   beforeEach(async () => {
     const authServiceSpy = jasmine.createSpyObj('AuthService', ['login']);
-    const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+    const translationServiceSpy = jasmine.createSpyObj('TranslationService', [
+      'initializeLanguage', 'setLanguage', 'getCurrentLanguage', 'instant'
+    ], {
+      currentLang$: of('fr'),
+      supportedLanguages: [
+        { code: 'fr', label: 'Français', flag: '🇫🇷' },
+        { code: 'en', label: 'English', flag: '🇬🇧' },
+      ],
+    });
+    translationServiceSpy.instant.and.callFake((key: string) => {
+      const translations: Record<string, string> = {
+        'auth.loginError': 'Erreur de connexion. Veuillez réessayer.',
+        'auth.signIn': 'Se connecter',
+        'auth.email': 'Email',
+        'auth.password': 'Mot de passe',
+        'auth.centralDashboard': 'Dashboard Central',
+      };
+      return translations[key] || key;
+    });
+    translationServiceSpy.getCurrentLanguage.and.returnValue('fr');
+    const loggerServiceMock = jasmine.createSpyObj('LoggerService', ['debug', 'info', 'warn', 'error', 'addBreadcrumb', 'setAuthenticated']);
+    const activatedRouteMock = {
+      queryParams: of({}),
+    };
 
     await TestBed.configureTestingModule({
-      imports: [LoginComponent, ReactiveFormsModule],
+      imports: [LoginComponent, ReactiveFormsModule, RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authServiceSpy },
-        { provide: Router, useValue: routerSpy },
+        { provide: TranslationService, useValue: translationServiceSpy },
+        { provide: LoggerService, useValue: loggerServiceMock },
+        { provide: ActivatedRoute, useValue: activatedRouteMock },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LoginComponent);
     component = fixture.componentInstance;
     authService = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
-    router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
+    router = TestBed.inject(Router);
+    translationService = TestBed.inject(TranslationService) as jasmine.SpyObj<TranslationService>;
+    loggerService = TestBed.inject(LoggerService) as jasmine.SpyObj<LoggerService>;
     fixture.detectChanges();
   });
 
@@ -119,6 +153,7 @@ describe('LoginComponent', () => {
 
     it('should set loading to true when submitting', fakeAsync(() => {
       authService.login.and.returnValue(of({ token: 'test-token', user: {} as any }));
+      spyOn(router, 'navigate');
 
       component.loginForm.setValue({
         email: 'test@example.com',
@@ -134,6 +169,7 @@ describe('LoginComponent', () => {
 
     it('should clear error message when submitting', fakeAsync(() => {
       authService.login.and.returnValue(of({ token: 'test-token', user: {} as any }));
+      spyOn(router, 'navigate');
       component.errorMessage = 'Previous error';
 
       component.loginForm.setValue({
@@ -150,6 +186,7 @@ describe('LoginComponent', () => {
 
     it('should call authService.login with correct credentials', fakeAsync(() => {
       authService.login.and.returnValue(of({ token: 'test-token', user: {} as any }));
+      spyOn(router, 'navigate');
 
       component.loginForm.setValue({
         email: 'test@example.com',
@@ -165,6 +202,7 @@ describe('LoginComponent', () => {
 
     it('should navigate to dashboard on successful login', fakeAsync(() => {
       authService.login.and.returnValue(of({ token: 'test-token', user: {} as any }));
+      const navigateSpy = spyOn(router, 'navigate');
 
       component.loginForm.setValue({
         email: 'test@example.com',
@@ -174,14 +212,15 @@ describe('LoginComponent', () => {
       component.onSubmit();
       tick();
 
-      expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+      expect(navigateSpy).toHaveBeenCalledWith(['/dashboard']);
     }));
 
     it('should set error message on login failure', fakeAsync(() => {
-      const errorResponse = {
+      const httpError = new HttpErrorResponse({
+        status: 401,
         error: { error: 'Invalid credentials' },
-      };
-      authService.login.and.returnValue(throwError(() => errorResponse));
+      });
+      authService.login.and.returnValue(throwError(() => httpError));
 
       component.loginForm.setValue({
         email: 'test@example.com',
@@ -196,6 +235,8 @@ describe('LoginComponent', () => {
     }));
 
     it('should set default error message if none provided', fakeAsync(() => {
+      // Plain object → ErrorExtractor returns 'Une erreur inattendue est survenue'
+      // which is truthy, so translationService.instant won't be called
       authService.login.and.returnValue(throwError(() => ({})));
 
       component.loginForm.setValue({
@@ -206,7 +247,8 @@ describe('LoginComponent', () => {
       component.onSubmit();
       tick();
 
-      expect(component.errorMessage).toBe('Erreur de connexion. Veuillez réessayer.');
+      // ErrorExtractor.getMessage({}) returns 'Une erreur inattendue est survenue'
+      expect(component.errorMessage).toBe('Une erreur inattendue est survenue');
     }));
 
     it('should set loading to false on error', fakeAsync(() => {
@@ -272,12 +314,13 @@ describe('LoginComponent', () => {
       expect(spinner).toBeTruthy();
     });
 
-    it('should show "Se connecter" text when not loading', () => {
+    it('should show sign in text when not loading', () => {
       component.loading = false;
       fixture.detectChanges();
 
       const submitButton = fixture.nativeElement.querySelector('button[type="submit"]');
-      expect(submitButton.textContent).toContain('Se connecter');
+      // Template uses {{ 'auth.signIn' | translate }}, TranslateModule.forRoot() returns key
+      expect(submitButton.textContent).toContain('auth.signIn');
     });
   });
 });

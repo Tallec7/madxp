@@ -3,12 +3,11 @@
  * Gère l'envoi des commandes update_software aux Raspberry Pi
  */
 
-import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/database';
 import socketService from './socket.service';
 import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
-import { getPublicUrl } from '../config/supabase';
+
 import { uploadVerificationService } from './upload-verification.service';
 
 interface UpdateDeploymentRow {
@@ -381,7 +380,7 @@ class UpdateDeploymentService {
         `UPDATE update_deployments
          SET progress = $1, status = 'in_progress'
          WHERE id = $2`,
-        [progress, deploymentId]
+        [Math.round(progress), deploymentId]
       );
     } catch (error) {
       logger.error('Error updating deployment progress:', { deploymentId, error });

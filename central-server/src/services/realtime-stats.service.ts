@@ -66,12 +66,12 @@ class RealtimeStatsService {
     // Premier broadcast immédiat
     this.broadcastStats();
 
-    // Puis toutes les 10 secondes
+    // Puis toutes les 30 secondes (reduced from 10s to save DB connections and memory)
     this.intervalId = setInterval(() => {
       this.broadcastStats();
-    }, 10000);
+    }, 30000);
 
-    logger.info('RealtimeStatsService started - broadcasting every 10s');
+    logger.info('RealtimeStatsService started - broadcasting every 30s');
   }
 
   /**

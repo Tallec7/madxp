@@ -1,4 +1,6 @@
 # Configuration Render.com pour NEOPRO
+# ⚠️  USAGE: Serveur Socket.IO de DÉMO uniquement (https://neopro.onrender.com)
+# ⚠️  PRODUCTION: Le serveur API principal est sur Railway (voir railway.json)
 # Base de données : Supabase (externe)
 
 services:

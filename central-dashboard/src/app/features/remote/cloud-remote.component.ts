@@ -16,7 +16,7 @@ import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, interval, takeUntil } from 'rxjs';
+import { Subject, interval, takeUntil, debounceTime } from 'rxjs';
 import { RemoteService, RemoteState } from '../../core/services/remote.service';
 
 // Types locaux (identiques au Pi)
@@ -214,6 +214,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly remoteService = inject(RemoteService);
   private readonly destroy$ = new Subject<void>();
+  private readonly scoreUpdate$ = new Subject<void>();
 
   public siteId: string = '';
   public siteName: string = '';
@@ -235,6 +236,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   // Recherche
   public searchQuery = '';
+  public readonly searchPlaceholder = 'Rechercher une vid\u00e9o...';
   public searchResults: Video[] = [];
   public isSearching = false;
 
@@ -277,6 +279,13 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   // Loading state
   public isLoading = true;
+
+  // PIN
+  public pinRequired = false;
+  public pinInput = '';
+  public pinError = '';
+  public pinVerifying = false;
+  public pinAttemptsRemaining: number | null = null;
 
   // Dark mode
   public isDarkMode = false;
@@ -379,10 +388,16 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     // Récupérer le siteId depuis la route
     this.siteId = this.route.snapshot.paramMap.get('siteId') || '';
 
+    // Debounce score updates (500ms) pour éviter les rafales de requêtes HTTP
+    this.scoreUpdate$.pipe(
+      debounceTime(500),
+      takeUntil(this.destroy$)
+    ).subscribe(() => this.sendScoreUpdate());
+
     if (this.siteId) {
       this.loadSiteState();
-      // Polling pour garder l'état synchronisé (toutes les 30 secondes)
-      interval(30000)
+      // Polling pour garder l'état synchronisé (toutes les 60 secondes)
+      interval(60000)
         .pipe(takeUntil(this.destroy$))
         .subscribe(() => this.refreshState());
     } else {
@@ -415,9 +430,19 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
         if (!this.isConnected) {
           this.connectionError = 'Le boîtier n\'est pas connecté au cloud. Vérifiez sa connexion Internet.';
+          this.isLoading = false;
+          return;
         }
 
-        // Construire la configuration
+        // Vérifier si un PIN est requis
+        if (state.pinRequired && !state.config) {
+          this.pinRequired = true;
+          this.isLoading = false;
+          return;
+        }
+
+        // PIN ok ou pas de PIN → charger normalement
+        this.pinRequired = false;
         this.configuration = {
           remote: { title: state.siteName },
           categories: state.config?.categories || [],
@@ -440,6 +465,61 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.loadSiteState();
   }
 
+  /**
+   * Vérifie le PIN saisi par l'utilisateur
+   */
+  public submitPin(): void {
+    if (!this.pinInput || this.pinInput.length < 4) {
+      this.pinError = 'Le PIN doit contenir au moins 4 chiffres';
+      return;
+    }
+
+    this.pinVerifying = true;
+    this.pinError = '';
+
+    this.remoteService.verifyPin(this.siteId, this.pinInput).subscribe({
+      next: () => {
+        // PIN vérifié avec succès → recharger l'état complet
+        this.pinRequired = false;
+        this.pinInput = '';
+        this.pinError = '';
+        this.pinVerifying = false;
+        this.pinAttemptsRemaining = null;
+        this.loadSiteState();
+      },
+      error: (err: { status: number; error?: { message?: string; attemptsRemaining?: number } }) => {
+        this.pinVerifying = false;
+        this.pinInput = '';
+        if (err.status === 429) {
+          this.pinError = err.error?.message || 'Trop de tentatives. Réessayez plus tard.';
+        } else {
+          this.pinError = err.error?.message || 'PIN incorrect';
+          this.pinAttemptsRemaining = err.error?.attemptsRemaining ?? null;
+        }
+      }
+    });
+  }
+
+  /**
+   * Gestion de la saisie du PIN (numpad)
+   */
+  public onPinDigit(digit: string): void {
+    if (this.pinInput.length < 6) {
+      this.pinInput += digit;
+      this.pinError = '';
+    }
+  }
+
+  public onPinBackspace(): void {
+    this.pinInput = this.pinInput.slice(0, -1);
+    this.pinError = '';
+  }
+
+  public onPinClear(): void {
+    this.pinInput = '';
+    this.pinError = '';
+  }
+
   private refreshState(): void {
     if (!this.siteId) return;
 
@@ -447,11 +527,28 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
       next: (state: RemoteState) => {
         this.isConnected = state.isConnected && state.connectionHealth?.isHealthy;
 
+        // Si PIN requis à nouveau (token expiré)
+        if (state.pinRequired && !state.config) {
+          this.remoteService.clearToken(this.siteId);
+          this.pinRequired = true;
+          return;
+        }
+
         if (!this.isConnected && !this.connectionError) {
           this.displayToast('Connexion perdue avec le boîtier', 'info');
         } else if (this.isConnected && this.connectionError) {
           this.displayToast('Connexion rétablie', 'success');
           this.connectionError = null;
+        }
+
+        if (state.config) {
+          this.configuration = {
+            remote: { title: state.siteName },
+            categories: state.config.categories || [],
+            sponsors: state.config.sponsors || [],
+            timeCategories: state.config.timeCategories || [],
+            liveScoreEnabled: state.config.liveScoreEnabled || false,
+          };
         }
       },
       error: () => {
@@ -833,6 +930,12 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   public broadcastScore(): void {
+    // Debounced : déclenche l'envoi HTTP après 500ms d'inactivité
+    // Permet de cliquer rapidement +1 +1 +1 sans faire 3 requêtes
+    this.scoreUpdate$.next();
+  }
+
+  private sendScoreUpdate(): void {
     const scoreData = {
       homeTeam: this.currentScore.homeTeam,
       awayTeam: this.currentScore.awayTeam,
@@ -1406,7 +1509,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         }
       }
 
-      if (this.timerCurrentTime % 5 === 0) {
+      // Sync timer toutes les 30s au lieu de 5s pour réduire les requêtes HTTP
+      if (this.timerCurrentTime % 30 === 0) {
         this.syncTimer();
       }
     }, 1000);

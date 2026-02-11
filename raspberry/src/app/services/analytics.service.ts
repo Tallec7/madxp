@@ -4,6 +4,7 @@ import { Video } from '../interfaces/video.interface';
 import { Configuration } from '../interfaces/configuration.interface';
 import { environment } from '../../environments/environment';
 import { HdmiStatusService } from './hdmi-status.service';
+import { RecordingStateService } from './recording-state.service';
 
 /**
  * Interface pour un événement de lecture vidéo
@@ -39,6 +40,7 @@ export interface VideoPlayEvent {
 export class AnalyticsService {
   private readonly http = inject(HttpClient);
   private readonly hdmiStatus = inject(HdmiStatusService);
+  private readonly recordingState = inject(RecordingStateService);
 
   private buffer: VideoPlayEvent[] = [];
   private currentSession: string | null = null;
@@ -113,6 +115,11 @@ export class AnalyticsService {
    * Capture également l'état de la TV via HDMI-CEC
    */
   public trackVideoStart(video: Video, triggerType: 'auto' | 'manual' = 'auto'): void {
+    // Ne pas tracker si l'enregistrement est désactivé
+    if (!this.recordingState.isRecording) {
+      return;
+    }
+
     // Si une vidéo était en cours, la terminer comme incomplète
     if (this.currentVideo && this.currentVideoStart) {
       this.trackVideoEnd(false);
@@ -138,6 +145,14 @@ export class AnalyticsService {
    */
   public trackVideoEnd(completed = true): void {
     if (!this.currentVideo || !this.currentVideoStart) {
+      return;
+    }
+
+    // Ne pas tracker si l'enregistrement est désactivé (mais reset l'état interne)
+    if (!this.recordingState.isRecording) {
+      this.currentVideo = null;
+      this.currentVideoStart = null;
+      this.currentTvStatus = 'unknown';
       return;
     }
 
@@ -175,6 +190,12 @@ export class AnalyticsService {
     }
 
     this.buffer.push(event);
+
+    // Persistance immédiate dans localStorage (survit aux redémarrages)
+    this.saveToStorage();
+
+    // Envoi immédiat au serveur local (persiste sur disque dans analytics_buffer.json)
+    this.sendSingleEvent(event);
 
     console.log('[Analytics] Video ended:', {
       filename: event.video_filename,
@@ -305,6 +326,29 @@ export class AnalyticsService {
 
     // Envoyer au serveur local pour que le sync-agent puisse les récupérer
     this.sendToServer();
+  }
+
+  /**
+   * Envoyer un seul événement immédiatement au serveur local.
+   * Retry après 30s en cas d'échec (serveur local pas encore prêt au boot).
+   */
+  private sendSingleEvent(event: VideoPlayEvent, isRetry = false): void {
+    this.http.post<{ success: boolean; received: number; total: number }>(
+      this.getApiUrl(),
+      { events: [event] }
+    ).subscribe({
+      next: () => {
+        // Événement persisté sur disque via server.js → analytics_buffer.json
+      },
+      error: () => {
+        if (!isRetry) {
+          // Retry une fois après 30s (le serveur local peut ne pas être prêt)
+          setTimeout(() => this.sendSingleEvent(event, true), 30_000);
+        }
+        // Si le retry échoue aussi, l'événement reste dans localStorage
+        // et sera envoyé par le flush périodique (toutes les 5 min)
+      }
+    });
   }
 
   private sendToServer(): void {

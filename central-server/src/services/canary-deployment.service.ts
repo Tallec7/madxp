@@ -9,6 +9,7 @@ import { query } from '../config/database';
 import deploymentService from './deployment.service';
 import socketService from './socket.service';
 import logger from '../config/logger';
+import metricsService from './metrics.service';
 
 export type CanaryPhase = 'canary' | 'gradual' | 'full' | 'completed' | 'failed' | 'rolled_back';
 
@@ -132,6 +133,7 @@ class CanaryDeploymentService {
       );
     }
 
+    metricsService.recordCanaryDeployment('canary', canaryCount);
     logger.info('Canary deployment created', {
       id,
       deploymentType,
@@ -328,6 +330,7 @@ class CanaryDeploymentService {
       }
     }
 
+    metricsService.recordCanaryRollback();
     logger.warn('Canary deployment rolled back', {
       canaryDeploymentId,
       reason,

@@ -35,6 +35,16 @@ jest.mock('./metrics.service', () => ({
   },
 }));
 
+// Mock email service
+jest.mock('./email.service', () => ({
+  __esModule: true,
+  default: {
+    sendEmail: jest.fn().mockResolvedValue(true),
+    sendAlertNotification: jest.fn().mockResolvedValue(true),
+    isEnabled: jest.fn().mockReturnValue(false),
+  },
+}));
+
 // Import after mocks
 import { alertingService, AlertSeverity, AlertThreshold } from './alerting.service';
 
@@ -71,7 +81,7 @@ describe('AlertingService', () => {
         .mockResolvedValueOnce({ rows: [] })
         // loadDefaultThresholds - SELECT existing
         .mockResolvedValueOnce({ rows: [] })
-        // loadDefaultThresholds - INSERT for each default threshold (6 thresholds)
+        // loadDefaultThresholds - INSERT for each default threshold (14 thresholds)
         .mockResolvedValue({ rows: [] });
 
       await alertingService.initialize();
@@ -108,8 +118,8 @@ describe('AlertingService', () => {
         call[0]?.includes('INSERT INTO alert_thresholds')
       );
 
-      // Should insert 4 thresholds (6 default - 2 existing)
-      expect(insertCalls.length).toBe(4);
+      // Should insert 12 thresholds (14 default - 2 existing)
+      expect(insertCalls.length).toBe(12);
     });
 
     it('should start periodic escalation check', async () => {
@@ -174,24 +184,25 @@ describe('AlertingService', () => {
     });
 
     it('should not create alert if within cooldown period', async () => {
-      const threshold: Partial<AlertThreshold> = {
+      // DB row format (snake_case) as returned by mockQuery -> mapThresholdRow
+      const thresholdDbRow = {
         id: 'threshold-1',
         name: 'CPU élevé',
         metric: 'cpu_usage',
         condition: 'gt',
-        warningValue: 70,
-        criticalValue: 90,
+        warning_value: 70,
+        critical_value: 90,
         duration: 0,
         enabled: true,
-        cooldownMinutes: 15,
-        escalateAfterMinutes: 30,
-        notifyChannels: [],
+        cooldown_minutes: 15,
+        escalate_after_minutes: 30,
+        notify_channels: '[]',
       };
 
       // Set last alert time to now
       (alertingService as any).lastAlertTime.set('site-123:threshold-1', new Date());
 
-      mockQuery.mockResolvedValueOnce({ rows: [threshold] });
+      mockQuery.mockResolvedValueOnce({ rows: [thresholdDbRow] });
 
       await alertingService.evaluateMetric('site-123', 'cpu_usage', 95);
 
@@ -203,12 +214,13 @@ describe('AlertingService', () => {
     });
 
     it('should skip disabled thresholds', async () => {
-      const threshold: Partial<AlertThreshold> = {
+      // DB row format (snake_case)
+      const thresholdDbRow = {
         id: 'threshold-1',
         enabled: false,
       };
 
-      mockQuery.mockResolvedValueOnce({ rows: [threshold] });
+      mockQuery.mockResolvedValueOnce({ rows: [thresholdDbRow] });
 
       await alertingService.evaluateMetric('site-123', 'cpu_usage', 95);
 
@@ -219,21 +231,22 @@ describe('AlertingService', () => {
     });
 
     it('should wait for duration before creating alert', async () => {
-      const threshold: Partial<AlertThreshold> = {
+      // DB row format (snake_case) as returned by mockQuery -> mapThresholdRow
+      const thresholdDbRow = {
         id: 'threshold-1',
         name: 'CPU élevé',
         metric: 'cpu_usage',
         condition: 'gt',
-        warningValue: 70,
-        criticalValue: 90,
+        warning_value: 70,
+        critical_value: 90,
         duration: 300, // 5 minutes
         enabled: true,
-        cooldownMinutes: 15,
-        escalateAfterMinutes: 30,
-        notifyChannels: [],
+        cooldown_minutes: 15,
+        escalate_after_minutes: 30,
+        notify_channels: '[]',
       };
 
-      mockQuery.mockResolvedValue({ rows: [threshold] });
+      mockQuery.mockResolvedValue({ rows: [thresholdDbRow] });
 
       // First reading - should start violation tracking
       await alertingService.evaluateMetric('site-123', 'cpu_usage', 95);
@@ -431,7 +444,7 @@ describe('AlertingService', () => {
       await alertingService.getActiveAlerts({ type: 'CPU élevé' });
 
       expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('type = $'),
+        expect.stringContaining('alert_type = $'),
         expect.arrayContaining(['CPU élevé'])
       );
     });
@@ -448,7 +461,7 @@ describe('AlertingService', () => {
       const call = mockQuery.mock.calls[0];
       expect(call[0]).toContain('site_id = $1');
       expect(call[0]).toContain('severity = $2');
-      expect(call[0]).toContain('type = $3');
+      expect(call[0]).toContain('alert_type = $3');
       expect(call[1]).toEqual(['site-123', 'critical', 'CPU élevé']);
     });
   });
@@ -773,42 +786,18 @@ describe('AlertingService', () => {
       (alertingService as any).tableChecked = true;
     });
 
-    it('should escalate overdue alerts', async () => {
-      mockQuery
-        .mockResolvedValueOnce({
-          rows: [
-            { id: 'alert-1', type: 'CPU', escalate_after_minutes: 30 },
-            { id: 'alert-2', type: 'Memory', escalate_after_minutes: 60 },
-          ],
-        })
-        .mockResolvedValueOnce({ rows: [] }) // UPDATE alert-1
-        .mockResolvedValueOnce({ rows: [] }); // UPDATE alert-2
-
+    it('should return immediately (escalation disabled in production)', async () => {
+      // checkEscalations() is currently disabled (returns immediately)
+      // because the alerts table in production lacks the threshold_id column.
       await (alertingService as any).checkEscalations();
 
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining("status = 'escalated'"),
-        expect.arrayContaining(['alert-1'])
-      );
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining("status = 'escalated'"),
-        expect.arrayContaining(['alert-2'])
-      );
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Alert escalated',
-        expect.objectContaining({ alertId: 'alert-1' })
-      );
+      // No DB queries should be made since the method returns immediately
+      expect(mockQuery).not.toHaveBeenCalled();
     });
 
-    it('should handle database errors gracefully', async () => {
-      mockQuery.mockRejectedValueOnce(new Error('Database error'));
-
-      await (alertingService as any).checkEscalations();
-
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error checking escalations:',
-        expect.any(Error)
-      );
+    it('should not throw errors when called', async () => {
+      // Even if DB had issues, checkEscalations returns before any query
+      await expect((alertingService as any).checkEscalations()).resolves.toBeUndefined();
     });
   });
 

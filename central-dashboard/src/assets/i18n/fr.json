@@ -349,6 +349,17 @@
     "deselect": "Désélectionner",
     "confirmDeletion": "Confirmer la suppression"
   },
+  "remotePin": {
+    "title": "PIN Télécommande Cloud",
+    "description": "Protégez l'accès à la télécommande cloud avec un code PIN à 4-6 chiffres. Les utilisateurs devront saisir ce PIN lors de leur première connexion.",
+    "pinActive": "PIN actif",
+    "pinInactive": "Accès libre (pas de PIN)",
+    "clearPin": "Supprimer le PIN",
+    "clearingPin": "Suppression...",
+    "newPinLabel": "Nouveau PIN (4-6 chiffres)",
+    "setPin": "Définir le PIN",
+    "settingPin": "Définition..."
+  },
   "debug": {
     "playing": "Lecture...",
     "play": "▶ Lire",

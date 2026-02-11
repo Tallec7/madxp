@@ -1,7 +1,6 @@
 import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
-import { isFtpConfigured, getFtpPublicUrl, uploadFileToFtp, verifyFtpFileExists } from '../config/ftp-storage';
-import { uploadFile, getPublicUrl } from '../config/supabase';
+import { uploadAsset as storageUploadAsset, getAssetUrl, verifyFileExists } from './storage.service';
 import crypto from 'crypto';
 import {
   WatermarkConfig,
@@ -34,7 +33,7 @@ class AssetService {
   }
 
   /**
-   * Upload un asset vers le stockage cloud (FTP ou Supabase)
+   * Upload un asset vers le stockage cloud (FTP)
    * Avec vérification post-upload pour s'assurer que le fichier est accessible
    * @returns URL publique de l'asset uploadé avec statut de vérification
    */
@@ -56,38 +55,32 @@ class AssetService {
       checksum,
     });
 
-    // Essayer FTP d'abord, sinon Supabase
-    if (isFtpConfigured()) {
-      const ftpPath = `${storageFolder}/${sanitizedFilename}`;
-      const mimeType = this.getMimeType(filename);
-      await uploadFileToFtp(buffer, ftpPath, mimeType);
-      const url = getFtpPublicUrl(ftpPath);
+    // Upload via storage service (FTP)
+    const storagePath = `${storageFolder}/${sanitizedFilename}`;
+    const mimeType = this.getMimeType(filename);
+    const uploadResult = await storageUploadAsset(buffer, storagePath, mimeType);
 
-      // Vérifier que le fichier a été uploadé correctement
-      const verification = await verifyFtpFileExists(ftpPath, 'video'); // 'video' pour le config FTP principal
-      const verified = verification.exists && verification.size === buffer.length;
-
-      if (!verified) {
-        logger.warn('Asset upload verification failed', {
-          ftpPath,
-          expectedSize: buffer.length,
-          actualSize: verification.size,
-          exists: verification.exists,
-          error: verification.error,
-        });
-      }
-
-      logger.info('Asset uploaded to FTP', { url, storagePath: ftpPath, verified });
-      return { url, storagePath: ftpPath, checksum, verified };
+    if (!uploadResult) {
+      throw new Error(`Failed to upload asset: ${sanitizedFilename}`);
     }
 
-    // Fallback vers Supabase (considéré vérifié car Supabase gère l'intégrité)
-    const supabasePath = `${storageFolder}/${sanitizedFilename}`;
-    await uploadFile(buffer, supabasePath, this.getMimeType(filename));
-    const url = getPublicUrl(supabasePath);
+    const url = getAssetUrl(storagePath);
 
-    logger.info('Asset uploaded to Supabase', { url, storagePath: supabasePath, verified: true });
-    return { url, storagePath: supabasePath, checksum, verified: true };
+    // Vérifier que le fichier a été uploadé correctement
+    const verification = await verifyFileExists(storagePath, 'video');
+    const verified = verification.exists && verification.size === buffer.length;
+
+    if (!verified) {
+      logger.warn('Asset upload verification failed', {
+        storagePath,
+        expectedSize: buffer.length,
+        actualSize: verification.size,
+        exists: verification.exists,
+      });
+    }
+
+    logger.info('Asset uploaded via storage service', { url, storagePath, verified });
+    return { url, storagePath, checksum, verified };
   }
 
   /**
@@ -175,7 +168,7 @@ class AssetService {
   /**
    * Crée une configuration watermark par défaut
    * @param imagePath Chemin local sur le Pi (relatif à /home/pi/neopro/webapp/)
-   * @param cloudUrl URL cloud (FTP ou Supabase) pour l'aperçu dans le dashboard
+   * @param cloudUrl URL cloud (FTP) pour l'aperçu dans le dashboard
    * @param fullscreen Mode plein écran par défaut
    */
   createDefaultWatermarkConfig(imagePath: string, cloudUrl?: string, fullscreen = true): WatermarkConfig {

@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS sites (
   pending_config_version_id UUID,
   -- Blocage temporaire des sync_local_state après déploiement config
   config_update_pending_until TIMESTAMPTZ DEFAULT NULL,
+  -- PIN optionnel pour la télécommande cloud
+  remote_pin_hash VARCHAR(64) DEFAULT NULL,
   CONSTRAINT check_status CHECK (status IN ('online', 'offline', 'maintenance', 'error'))
 );
 
@@ -94,8 +96,14 @@ CREATE TABLE IF NOT EXISTS videos (
   duration INT,
   mime_type VARCHAR(100),
   storage_path VARCHAR(500),
+  storage_backend VARCHAR(20) DEFAULT 'ftp',
   thumbnail_url VARCHAR(500),
   checksum VARCHAR(64),
+  upload_status VARCHAR(20) DEFAULT 'ready',
+  upload_verified_at TIMESTAMP,
+  upload_verified_size BIGINT,
+  upload_error_message TEXT,
+  upload_retry_count INT DEFAULT 0,
   metadata JSONB DEFAULT '{}',
   uploaded_by UUID REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW(),
@@ -164,6 +172,7 @@ CREATE TABLE IF NOT EXISTS remote_commands (
   error_message TEXT,
   executed_by UUID REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
   executed_at TIMESTAMP,
   completed_at TIMESTAMP,
   CONSTRAINT check_status_command CHECK (status IN ('pending', 'executing', 'completed', 'failed', 'timeout'))

@@ -8,6 +8,23 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 
+// Lazy import to avoid circular dependency with metrics.service
+let metricsServiceInstance: {
+  recordRateLimitHit: (limiter: string, keyType: string) => void;
+  recordRateLimitNearExhaustion: (limiter: string) => void;
+} | null = null;
+const getMetricsService = () => {
+  if (!metricsServiceInstance) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      metricsServiceInstance = require('../services/metrics.service').default;
+    } catch {
+      // Metrics service not available yet during startup
+    }
+  }
+  return metricsServiceInstance;
+};
+
 /**
  * Générateur de clé basé sur l'utilisateur ou l'IP
  */
@@ -20,14 +37,19 @@ const userKeyGenerator = (req: Request): string => {
 /**
  * Handler pour les dépassements de limite
  */
-const limitHandler = (req: Request, res: Response): void => {
+const createLimitHandler = (limiterName: string) => (req: Request, res: Response): void => {
   const authReq = req as AuthRequest;
+  const keyType = authReq.user?.id ? 'user' : 'ip';
+
   logger.warn('Rate limit exceeded', {
     userId: authReq.user?.id,
     ip: req.ip,
     path: req.path,
     method: req.method,
+    limiter: limiterName,
   });
+
+  getMetricsService()?.recordRateLimitHit(limiterName, keyType);
 
   res.status(429).json({
     error: 'Trop de requêtes',
@@ -36,19 +58,23 @@ const limitHandler = (req: Request, res: Response): void => {
   });
 };
 
+// Backward-compatible handler for public/remote rate limiters
+const limitHandler = createLimitHandler('unknown');
+
 /**
  * Crée un rate limiter avec configuration personnalisée
  */
 export const createUserRateLimit = (
   windowMs: number,
   max: number,
-  options: Partial<Options> = {}
+  options: Partial<Options> = {},
+  limiterName = 'unknown'
 ): RateLimitRequestHandler => {
   return rateLimit({
     windowMs,
     max,
     keyGenerator: userKeyGenerator,
-    handler: limitHandler,
+    handler: createLimitHandler(limiterName),
     standardHeaders: true, // Retourne les headers RateLimit-* standards
     legacyHeaders: false, // Désactive les headers X-RateLimit-*
     skipFailedRequests: false, // Compte aussi les requêtes échouées
@@ -68,19 +94,24 @@ export const authRateLimit = createUserRateLimit(
   isDev ? 100 : 60, // 100 en dev, 60 en prod (augmenté de 30)
   {
     message: { error: 'Trop de tentatives de connexion. Réessayez dans 1 minute.' },
-  }
+  },
+  'auth'
 );
 
 // API générale - modéré (100 requêtes / minute)
 export const apiRateLimit = createUserRateLimit(
   60 * 1000, // 1 minute
-  100
+  100,
+  {},
+  'api'
 );
 
 // Endpoints sensibles (commandes, déploiements) - restrictif (30 requêtes / minute)
 export const sensitiveRateLimit = createUserRateLimit(
   60 * 1000, // 1 minute
-  30
+  30,
+  {},
+  'sensitive'
 );
 
 // Upload de vidéos - très restrictif (10 uploads / heure)
@@ -89,7 +120,8 @@ export const uploadRateLimit = createUserRateLimit(
   10,
   {
     message: { error: 'Limite d\'uploads atteinte. Réessayez dans 1 heure.' },
-  }
+  },
+  'upload'
 );
 
 // Webhooks et endpoints publics - par IP uniquement (60 requêtes / minute)
@@ -98,7 +130,7 @@ export const publicRateLimit = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
-  handler: limitHandler,
+  handler: createLimitHandler('public'),
 });
 
 // Admin read operations - permissif (400 requêtes / minute)
@@ -106,7 +138,9 @@ export const publicRateLimit = rateLimit({
 // Increased from 200 to 400 to handle multiple components loading simultaneously
 export const adminRateLimit = createUserRateLimit(
   60 * 1000, // 1 minute
-  400
+  400,
+  {},
+  'admin'
 );
 
 // Monitoring endpoints - permissif (300 requêtes / minute)
@@ -116,7 +150,8 @@ export const monitoringRateLimit = createUserRateLimit(
   300,
   {
     message: { error: 'Trop de requêtes de monitoring. Réduisez la fréquence de polling.' },
-  }
+  },
+  'monitoring'
 );
 
 // Frontend logging - permissif (200 requêtes / minute)
@@ -128,8 +163,25 @@ export const loggingRateLimit = createUserRateLimit(
   {
     skipFailedRequests: true, // Don't count failed log submissions
     message: { error: 'Trop de logs. Certains logs peuvent être perdus.' },
-  }
+  },
+  'logging'
 );
+
+// Cloud Remote - permissif par IP (60 requêtes / minute)
+// La télécommande cloud fait du polling (1/min) + des commandes utilisateur (score, timer sync, vidéo)
+// Pendant un match actif: ~4 req/min (polling + timer sync) + actions utilisateur
+// 60/min laisse assez de marge pour un usage intensif sans bloquer
+export const remoteRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60,
+  keyGenerator: (req: Request): string => {
+    return req.ip || 'unknown';
+  },
+  handler: createLimitHandler('remote'),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de requêtes télécommande. Réessayez dans quelques secondes.' },
+});
 
 // Pi Analytics - très permissif (500 requêtes / minute)
 // Les Pi sont des appareils de confiance authentifiés par API key
@@ -142,7 +194,7 @@ export const piAnalyticsRateLimit = rateLimit({
     // Clé basée sur l'IP car les Pi s'authentifient par API key, pas JWT
     return req.ip || 'unknown';
   },
-  handler: limitHandler,
+  handler: createLimitHandler('pi_analytics'),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Trop de requêtes analytics. Réduisez la fréquence d\'envoi.' },
@@ -155,7 +207,8 @@ export const piAnalyticsRateLimit = rateLimit({
 export const roleBasedRateLimit = (
   windowMs: number,
   baseMax: number,
-  adminMultiplier = 3
+  adminMultiplier = 3,
+  limiterName = 'role_based'
 ): RateLimitRequestHandler => {
   return rateLimit({
     windowMs,
@@ -167,7 +220,7 @@ export const roleBasedRateLimit = (
       return baseMax;
     },
     keyGenerator: userKeyGenerator,
-    handler: limitHandler,
+    handler: createLimitHandler(limiterName),
     standardHeaders: true,
     legacyHeaders: false,
   });
@@ -178,6 +231,7 @@ export default {
   authRateLimit,
   apiRateLimit,
   sensitiveRateLimit,
+  remoteRateLimit,
   uploadRateLimit,
   publicRateLimit,
   adminRateLimit,

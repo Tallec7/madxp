@@ -44,7 +44,13 @@
   </div>
 } @else if (!isConnected) {
   <div class="offline-container">
-    <svg class="offline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <svg
+      class="offline-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
       <line x1="1" y1="1" x2="23" y2="23" />
       <path d="M16.72 11.06A10.94 10.94 0 0119 12.55" />
       <path d="M5 12.55a10.94 10.94 0 015.17-2.39" />
@@ -62,6 +68,82 @@
       </svg>
       Réessayer
     </button>
+  </div>
+} @else if (pinRequired) {
+  <div class="pin-container">
+    <div class="pin-card">
+      <div class="pin-lock-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      </div>
+
+      <h2 class="pin-title">{{ clubName || siteName }}</h2>
+      <p class="pin-subtitle">Saisissez le PIN pour accéder à la télécommande</p>
+
+      <!-- PIN dots -->
+      <div class="pin-dots">
+        @for (i of [0, 1, 2, 3, 4, 5]; track i) {
+          <div class="pin-dot" [class.filled]="pinInput.length > i"></div>
+        }
+      </div>
+
+      <!-- Error message -->
+      @if (pinError) {
+        <div class="pin-error">
+          <span>{{ pinError }}</span>
+          @if (pinAttemptsRemaining !== null && pinAttemptsRemaining >= 0) {
+            <span class="pin-attempts">{{ pinAttemptsRemaining }} tentative(s) restante(s)</span>
+          }
+        </div>
+      }
+
+      <!-- Numpad -->
+      <div class="pin-numpad">
+        @for (digit of ['1', '2', '3', '4', '5', '6', '7', '8', '9']; track digit) {
+          <button class="numpad-btn" (click)="onPinDigit(digit)" [disabled]="pinVerifying">
+            {{ digit }}
+          </button>
+        }
+        <button class="numpad-btn numpad-clear" (click)="onPinClear()" [disabled]="pinVerifying">
+          C
+        </button>
+        <button class="numpad-btn" (click)="onPinDigit('0')" [disabled]="pinVerifying">0</button>
+        <button
+          class="numpad-btn numpad-backspace"
+          (click)="onPinBackspace()"
+          [disabled]="pinVerifying"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            width="20"
+            height="20"
+          >
+            <path d="M21 4H8l-7 8 7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z" />
+            <line x1="18" y1="9" x2="12" y2="15" />
+            <line x1="12" y1="9" x2="18" y2="15" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Submit button -->
+      <button
+        class="pin-submit-btn"
+        (click)="submitPin()"
+        [disabled]="pinInput.length < 4 || pinVerifying"
+      >
+        @if (pinVerifying) {
+          <div class="pin-spinner"></div>
+          Vérification...
+        } @else {
+          Valider
+        }
+      </button>
+    </div>
   </div>
 } @else {
   <div
@@ -351,11 +433,11 @@
           <input
             type="text"
             class="search-input"
-            placeholder="Rechercher une vidéo..."
+            [placeholder]="searchPlaceholder"
             [(ngModel)]="searchQuery"
             (input)="onSearch()"
             (keyup.escape)="clearSearch()"
-            aria-label="Rechercher une vidéo"
+            [attr.aria-label]="searchPlaceholder"
           />
           @if (searchQuery) {
             <button class="search-clear" (click)="clearSearch()" aria-label="Effacer la recherche">

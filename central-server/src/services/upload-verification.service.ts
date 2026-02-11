@@ -9,7 +9,7 @@
  */
 
 import { query } from '../config/database';
-import { getFtpPublicUrl, isFtpConfigured } from '../config/ftp-storage';
+import { getFtpPublicUrl } from '../config/ftp-storage';
 import logger from '../config/logger';
 
 // Types
@@ -416,15 +416,8 @@ class UploadVerificationService {
   /**
    * Génère l'URL publique pour un fichier
    */
-  getPublicUrl(storagePath: string, supabaseGetPublicUrl: (path: string) => string): string {
-    // Détection FTP vs Supabase basée sur le format du path
-    const isFtpPath = !storagePath.includes('/');
-
-    if (isFtpPath && isFtpConfigured()) {
-      return getFtpPublicUrl(storagePath);
-    }
-
-    return supabaseGetPublicUrl(storagePath);
+  getPublicUrl(storagePath: string): string {
+    return getFtpPublicUrl(storagePath);
   }
 
   /**

@@ -29,7 +29,8 @@ const CONFIG = {
   STABILITY_THRESHOLD: 3,      // >3 disconnects/hour = unstable
   SCAN_TIMEOUT_MS: 15000,      // WiFi scan timeout
   PING_TIMEOUT_MS: 3000,       // Network ping timeout
-  ARP_SCAN_TIMEOUT_MS: 5000    // ARP scan timeout
+  ARP_SCAN_TIMEOUT_MS: 5000,   // ARP scan timeout
+  DETECTION_COOLDOWN_MS: 120 * 1000  // 120s minimum between detections
 };
 
 /**
@@ -359,6 +360,19 @@ class NetworkDetector {
     if (this.detectionInProgress) {
       logger.info('Network detection already in progress, skipping');
       return this.lastProfile;
+    }
+
+    // Debounce: skip if last detection was less than DETECTION_COOLDOWN_MS ago
+    if (this.lastDetectionTime) {
+      const elapsed = Date.now() - this.lastDetectionTime.getTime();
+      if (elapsed < CONFIG.DETECTION_COOLDOWN_MS) {
+        logger.info('Network detection skipped (cooldown)', {
+          elapsedMs: elapsed,
+          cooldownMs: CONFIG.DETECTION_COOLDOWN_MS,
+          remainingMs: CONFIG.DETECTION_COOLDOWN_MS - elapsed
+        });
+        return this.lastProfile;
+      }
     }
 
     this.detectionInProgress = true;

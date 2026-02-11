@@ -131,6 +131,77 @@ async function exportDebugBundle() {
     bundle.sections.hotspotConfig = { error: error.message };
   }
 
+  // 10b. Hotspot diagnostics (WiFi channel scan, connected clients, service health)
+  try {
+    const hotspotDiag = {};
+
+    // Connected clients on hotspot
+    try {
+      const { stdout: stationsOut } = await execAsync('sudo hostapd_cli all_sta 2>/dev/null | grep -c "^[0-9a-f]" || echo "0"', { timeout: 5000 });
+      hotspotDiag.connectedClients = parseInt(stationsOut.trim()) || 0;
+    } catch {
+      hotspotDiag.connectedClients = null;
+    }
+
+    // WiFi channel scan (interference analysis on channels 1, 6, 11)
+    try {
+      const { stdout: scanOut } = await execAsync(
+        'sudo iwlist wlan0 scan 2>/dev/null | grep -E "Channel:|ESSID:" | paste - - 2>/dev/null | head -30 || echo ""',
+        { timeout: 15000 }
+      );
+      const channelCounts = { 1: 0, 6: 0, 11: 0, other: 0 };
+      const lines = scanOut.trim().split('\n').filter(l => l.length > 0);
+      for (const line of lines) {
+        const chMatch = line.match(/Channel:(\d+)/);
+        if (chMatch) {
+          const ch = parseInt(chMatch[1]);
+          if (ch >= 1 && ch <= 3) channelCounts[1]++;
+          else if (ch >= 4 && ch <= 8) channelCounts[6]++;
+          else if (ch >= 9 && ch <= 13) channelCounts[11]++;
+          else channelCounts.other++;
+        }
+      }
+      hotspotDiag.channelScan = {
+        totalNetworks: lines.length,
+        channelGroups: channelCounts,
+      };
+    } catch {
+      hotspotDiag.channelScan = null;
+    }
+
+    // hostapd and dnsmasq service status
+    try {
+      const { stdout: hostapdStatus } = await execAsync('systemctl is-active hostapd 2>/dev/null || echo "unknown"', { timeout: 5000 });
+      const { stdout: dnsmasqStatus } = await execAsync('systemctl is-active dnsmasq 2>/dev/null || echo "unknown"', { timeout: 5000 });
+      hotspotDiag.services = {
+        hostapd: hostapdStatus.trim(),
+        dnsmasq: dnsmasqStatus.trim(),
+      };
+    } catch {
+      hotspotDiag.services = null;
+    }
+
+    // rfkill status
+    try {
+      const { stdout: rfkillOut } = await execAsync('rfkill list wifi 2>/dev/null | grep -i "blocked" || echo ""', { timeout: 5000 });
+      hotspotDiag.rfkill = rfkillOut.trim() || 'no blocks detected';
+    } catch {
+      hotspotDiag.rfkill = null;
+    }
+
+    // wlan0 AP mode verification
+    try {
+      const { stdout: iwOut } = await execAsync('iwconfig wlan0 2>/dev/null | grep Mode || echo ""', { timeout: 5000 });
+      hotspotDiag.wlan0Mode = iwOut.trim();
+    } catch {
+      hotspotDiag.wlan0Mode = null;
+    }
+
+    bundle.sections.hotspotDiagnostics = hotspotDiag;
+  } catch (error) {
+    bundle.sections.hotspotDiagnostics = { error: error.message };
+  }
+
   // 11. boot/config.txt (pour gpu_mem)
   try {
     const { stdout } = await execAsync('cat /boot/config.txt 2>/dev/null || cat /boot/firmware/config.txt 2>/dev/null || echo ""');

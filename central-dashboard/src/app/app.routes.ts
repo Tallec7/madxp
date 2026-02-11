@@ -127,7 +127,7 @@ export const routes: Routes = [
       {
         path: 'advertiser-portal',
         canActivate: [roleGuard],
-        data: { roles: ['advertiser', 'sponsor', 'admin', 'super_admin', 'superadmin'] },
+        data: { roles: ['advertiser', 'sponsor', 'admin', 'super_admin'] },
         loadComponent: () => import('./features/sponsor-portal/sponsor-dashboard.component').then(m => m.SponsorDashboardComponent)
       },
       // Legacy sponsor-portal redirect

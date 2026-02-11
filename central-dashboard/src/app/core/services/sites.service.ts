@@ -165,11 +165,11 @@ export class SitesService {
   }
 
   updateSiteStatus(id: string, status: string): void {
-    const sites = this.sitesSubject.value;
+    const sites = [...this.sitesSubject.value];
     const index = sites.findIndex(s => s.id === id);
     if (index >= 0) {
       sites[index] = { ...sites[index], status: status as Site['status'], last_seen_at: new Date() };
-      this.sitesSubject.next([...sites]);
+      this.sitesSubject.next(sites);
     }
   }
 
@@ -539,6 +539,19 @@ export class SitesService {
 
   cancelDeployment(deploymentId: string): Observable<void> {
     return this.api.delete(`/deployments/${deploymentId}`);
+  }
+
+  // Remote PIN management
+  setRemotePin(siteId: string, pin: string): Observable<{ success: boolean; message: string }> {
+    return this.api.post(`/sites/${siteId}/remote-pin`, { pin });
+  }
+
+  clearRemotePin(siteId: string): Observable<{ success: boolean; message: string }> {
+    return this.api.delete(`/sites/${siteId}/remote-pin`);
+  }
+
+  getRemotePinStatus(siteId: string): Observable<{ pinEnabled: boolean }> {
+    return this.api.get(`/sites/${siteId}/remote-pin`);
   }
 }
 

@@ -7,7 +7,8 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import { getClubReports, getAdvertiserReports, getReportById, generateReportOnDemand } from '../services/monthly-reports.service';
-import { query } from '../config/database';
+import { siteRepository, advertiserRepository } from '../repositories';
+import { reportRepository } from '../repositories/report.repository';
 import logger from '../config/logger';
 
 /**
@@ -93,14 +94,14 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
 
     // Vérifier que l'entité existe
     if (type === 'club') {
-      const siteResult = await query('SELECT id FROM sites WHERE id = $1', [entityId]);
-      if (siteResult.rowCount === 0) {
+      const siteExists = await siteRepository.exists(entityId);
+      if (!siteExists) {
         res.status(404).json({ error: 'Site non trouvé' });
         return;
       }
     } else {
-      const advertiserResult = await query('SELECT id FROM advertisers WHERE id = $1', [entityId]);
-      if (advertiserResult.rowCount === 0) {
+      const advertiserExists = await advertiserRepository.exists(entityId);
+      if (!advertiserExists) {
         res.status(404).json({ error: 'Annonceur non trouvé' });
         return;
       }
@@ -149,42 +150,21 @@ export const listAllReports = async (req: AuthRequest, res: Response): Promise<v
   try {
     const limit = parseInt(req.query.limit as string) || 50;
     const offset = parseInt(req.query.offset as string) || 0;
-    const type = req.query.type as string;
+    const type = req.query.type as string | undefined;
 
-    let whereClause = '';
-    const params: (string | number)[] = [];
+    const validType = type && ['club', 'advertiser'].includes(type) ? type : undefined;
 
-    if (type && ['club', 'advertiser'].includes(type)) {
-      whereClause = 'WHERE report_type = $1';
-      params.push(type);
-    }
-
-    const result = await query(`
-      SELECT
-        gr.*,
-        CASE
-          WHEN gr.report_type = 'club' THEN s.site_name
-          WHEN gr.report_type = 'advertiser' THEN a.name
-        END as entity_name
-      FROM generated_reports gr
-      LEFT JOIN sites s ON gr.site_id = s.id
-      LEFT JOIN advertisers a ON gr.advertiser_id = a.id
-      ${whereClause}
-      ORDER BY gr.created_at DESC
-      LIMIT $${params.length + 1} OFFSET $${params.length + 2}
-    `, [...params, limit, offset]);
-
-    const countResult = await query(`
-      SELECT COUNT(*) as total
-      FROM generated_reports
-      ${whereClause}
-    `, params);
+    const { rows, total } = await reportRepository.findAllWithEntityName({
+      type: validType,
+      limit,
+      offset,
+    });
 
     res.json({
       success: true,
-      data: result.rows,
+      data: rows,
       pagination: {
-        total: parseInt(countResult.rows[0].total as string),
+        total,
         limit,
         offset,
       },
@@ -200,34 +180,14 @@ export const listAllReports = async (req: AuthRequest, res: Response): Promise<v
  */
 export const getReportStats = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const stats = await query(`
-      SELECT
-        report_type,
-        status,
-        COUNT(*) as count,
-        SUM(file_size_bytes) as total_size
-      FROM generated_reports
-      GROUP BY report_type, status
-      ORDER BY report_type, status
-    `);
-
-    const monthlyStats = await query(`
-      SELECT
-        TO_CHAR(created_at, 'YYYY-MM') as month,
-        COUNT(*) as count,
-        COUNT(*) FILTER (WHERE status = 'completed') as completed,
-        COUNT(*) FILTER (WHERE status = 'failed') as failed
-      FROM generated_reports
-      WHERE created_at > NOW() - INTERVAL '12 months'
-      GROUP BY TO_CHAR(created_at, 'YYYY-MM')
-      ORDER BY month DESC
-    `);
+    const byTypeAndStatus = await reportRepository.getStatsByTypeAndStatus();
+    const monthly = await reportRepository.getMonthlyStats();
 
     res.json({
       success: true,
       data: {
-        byTypeAndStatus: stats.rows,
-        monthly: monthlyStats.rows,
+        byTypeAndStatus,
+        monthly,
       },
     });
   } catch (error) {

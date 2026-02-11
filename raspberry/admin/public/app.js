@@ -1,6 +1,14 @@
-/**
+/** 
  * Neopro Admin Panel - JavaScript
+ * FICHIER GENERE - Ne pas editer directement
+ * Editer les fichiers dans modules/ puis lancer: bash build-admin.sh
+ * Build: 2026-02-11T11:56:14Z
  */
+
+
+// ============================================================================
+// MODULE: modules/demo/index.js
+// ============================================================================
 
 // ============================================================================
 // MODE DEMO - Données mockées pour fonctionnement sans backend
@@ -206,7 +214,7 @@ if (DEMO_MODE) {
 }
 
 // ============================================================================
-// FIN MODE DEMO
+// MODULE: modules/core/state.js
 // ============================================================================
 
 // ============================================================================
@@ -254,6 +262,14 @@ let connectionCheckInterval = null;
 // Bulk selection state
 let selectedVideos = new Set();
 let bulkModeEnabled = false;
+
+// ============================================================================
+// MODULE: modules/core/connection.js
+// ============================================================================
+
+// ============================================================================
+// Connection monitoring + fetch wrapper
+// ============================================================================
 
 /**
  * Update connection status badge
@@ -374,207 +390,206 @@ window.fetch = async function(...args) {
     }
 };
 
-// Initialisation
-document.addEventListener('DOMContentLoaded', async () => {
-    initNavigation();
-    initSubNavigation();
-    initForms();
-    initLogButtons();
-    initDropZone();
-    updateTime();
-    startConnectionMonitoring(); // Start connection monitoring
-    loadDashboard();
-    loadVersionLabel();
+// ============================================================================
+// MODULE: modules/core/notifications.js
+// ============================================================================
 
-    // Charger la configuration pour peupler les selects
-    await loadConfiguration();
-
-    // Rafraîchissement automatique toutes les 5 secondes
-    refreshInterval = setInterval(() => {
-        if (currentTab === 'dashboard') {
-            loadDashboard();
-        }
-    }, 5000);
-});
+// ============================================================================
+// Notifications, modals, system actions, utilitaires UI
+// ============================================================================
 
 /**
- * Initialisation de la sous-navigation vidéos
+ * System Actions
  */
-function initSubNavigation() {
-    const subnavButtons = document.querySelectorAll('.subnav-btn');
-    subnavButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const subtab = btn.dataset.subtab;
-
-            // Update active button
-            subnavButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            // Update active content
-            document.querySelectorAll('.subtab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById(`subtab-${subtab}`).classList.add('active');
-        });
-    });
-}
-
-/**
- * Charge la configuration et peuple les selects de catégories
- */
-async function loadConfiguration() {
-    try {
-        const response = await fetch('/api/configuration');
-        if (!response.ok) {
-            console.error('Erreur lors du chargement de la configuration');
-            return;
-        }
-        cachedConfig = await response.json();
-        populateCategorySelects();
-    } catch (error) {
-        console.error('Erreur lors du chargement de la configuration:', error);
-    }
-}
-
-async function loadVersionLabel() {
-    const label = document.getElementById('version-label');
-    if (!label) {
+async function restartService(service) {
+    if (!confirm(`Redémarrer le service ${service} ?`)) {
         return;
     }
 
     try {
-        const response = await fetch('/api/version');
-        if (!response.ok) {
-            throw new Error('HTTP ' + response.status);
-        }
-        currentVersionInfo = await response.json();
-    } catch (error) {
-        console.warn('[admin-ui] Impossible de charger la version:', error);
-        currentVersionInfo = null;
-    }
-
-    updateVersionLabel();
-}
-
-function updateVersionLabel() {
-    const label = document.getElementById('version-label');
-    if (!label) {
-        return;
-    }
-
-    const rawVersion = currentVersionInfo?.version || null;
-    let versionLabel = null;
-
-    if (rawVersion) {
-        versionLabel = rawVersion.trim();
-        if (versionLabel && !/^v/i.test(versionLabel)) {
-            versionLabel = `v${versionLabel}`;
-        }
-    }
-
-    const versionText = versionLabel ? `Neopro ${versionLabel}` : 'Neopro';
-    label.textContent = `${versionText} | Raspberry Pi Admin Panel`;
-
-    const tooltip = [];
-    if (currentVersionInfo?.commit) {
-        tooltip.push(`commit ${currentVersionInfo.commit}`);
-    }
-    if (currentVersionInfo?.buildDate) {
-        try {
-            tooltip.push(
-                `build ${new Date(currentVersionInfo.buildDate).toLocaleString('fr-FR')}`
-            );
-        } catch (error) {
-            tooltip.push(`build ${currentVersionInfo.buildDate}`);
-        }
-    }
-    if (currentVersionInfo?.source) {
-        tooltip.push(`source ${currentVersionInfo.source}`);
-    }
-
-    if (tooltip.length) {
-        label.title = tooltip.join(' • ');
-    } else {
-        label.removeAttribute('title');
-    }
-}
-
-/**
- * Peuple les selects de catégories avec les données de la configuration
- * Les catégories verrouillées ne sont pas proposées pour l'upload
- */
-function populateCategorySelects() {
-    const categorySelect = document.getElementById('video-category');
-    if (!categorySelect || !cachedConfig) {
-        return;
-    }
-
-    const categories = cachedConfig.categories || [];
-
-    // Vider et repeupler le select (exclure les catégories verrouillées)
-    categorySelect.innerHTML = '<option value="">-- Sélectionner --</option>';
-
-    categories.forEach(cat => {
-        // Ne pas proposer les catégories verrouillées pour l'upload
-        if (isLocked(cat)) {
-            return;
-        }
-        const option = document.createElement('option');
-        option.value = cat.id;
-        option.textContent = cat.name || cat.id;
-        categorySelect.appendChild(option);
-    });
-}
-
-/**
- * Navigation
- */
-function initNavigation() {
-    const navButtons = document.querySelectorAll('.nav-btn');
-    navButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tab = btn.dataset.tab;
-            switchTab(tab);
+        const response = await fetch(`/api/services/${service}/restart`, {
+            method: 'POST'
         });
-    });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification(`Service ${service} redémarré`, 'success');
+            setTimeout(() => loadDashboard(), 2000);
+        } else {
+            showNotification('Erreur: ' + data.error, 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur lors du redémarrage', 'error');
+    }
 }
 
-function switchTab(tab) {
-    // Update buttons
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === tab);
-    });
+function confirmAction(action) {
+    const modal = document.getElementById('modal');
+    const title = document.getElementById('modal-title');
+    const message = document.getElementById('modal-message');
+    const confirmBtn = document.getElementById('modal-confirm');
 
-    // Update content
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.toggle('active', content.id === `tab-${tab}`);
-    });
+    if (action === 'reboot') {
+        title.textContent = 'Redémarrer le système';
+        message.textContent = 'Êtes-vous sûr de vouloir redémarrer le Raspberry Pi ? L\'opération prendra environ 1 minute.';
+        confirmBtn.onclick = () => executeAction('reboot');
+    } else if (action === 'shutdown') {
+        title.textContent = 'Éteindre le système';
+        message.textContent = 'Êtes-vous sûr de vouloir éteindre le Raspberry Pi ? Vous devrez le rallumer physiquement.';
+        confirmBtn.onclick = () => executeAction('shutdown');
+    }
 
-    currentTab = tab;
+    modal.classList.add('active');
+}
 
-    // Load data for specific tabs
-    switch (tab) {
-        case 'dashboard':
-            loadDashboard();
-            break;
-        case 'videos':
-            loadVideos();
-            loadTimeCategories();
-            loadCategoriesForManager();
-            break;
-        case 'network':
-            loadNetwork();
-            loadWifiCurrent();
-            break;
-        case 'logs':
-            loadLogs(currentLogService);
-            break;
+function closeModal() {
+    document.getElementById('modal').classList.remove('active');
+}
+
+async function executeAction(action) {
+    closeModal();
+
+    try {
+        const response = await fetch(`/api/system/${action}`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification(data.message, 'success');
+        } else {
+            showNotification('Erreur: ' + data.error, 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de l\'opération', 'error');
     }
 }
 
 /**
- * Dashboard
+ * Utilities
  */
+function updateTime() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('fr-FR');
+    document.getElementById('current-time').textContent = timeStr;
+
+    setTimeout(updateTime, 1000);
+}
+
+function showNotification(message, type = 'info') {
+    // Toast notification system
+    const icons = {
+        success: '✓',
+        error: '✗',
+        info: 'ℹ'
+    };
+
+    // Créer le container si nécessaire
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    // Créer le toast
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${icons[type]}</span>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+    `;
+
+    container.appendChild(toast);
+
+    // Animation d'entrée
+    setTimeout(() => toast.classList.add('show'), 10);
+
+    // Auto-suppression après 4 secondes
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+/**
+ * Prévisualisation vidéo
+ */
+function openVideoPreview(videoUrl, videoName) {
+    if (!videoUrl) {
+        showNotification('URL de vidéo manquante', 'error');
+        return;
+    }
+
+    const modal = document.getElementById('video-preview-modal');
+    const video = document.getElementById('preview-video');
+    const title = document.getElementById('preview-video-title');
+
+    if (!modal || !video) {
+        showNotification('Modal de prévisualisation non disponible', 'error');
+        return;
+    }
+
+    title.textContent = videoName || 'Prévisualisation';
+    video.src = videoUrl;
+    modal.classList.add('active');
+
+    // Lancer la lecture automatiquement
+    video.play().catch(() => {
+        // Ignorer l'erreur si autoplay est bloqué
+    });
+}
+
+function closeVideoPreview() {
+    const modal = document.getElementById('video-preview-modal');
+    const video = document.getElementById('preview-video');
+
+    if (video) {
+        video.pause();
+        video.src = '';
+    }
+
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+/**
+ * Formater la taille en bytes en format lisible
+ */
+function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+}
+
+/**
+ * Formater une durée en secondes en format mm:ss ou hh:mm:ss
+ */
+function formatDuration(seconds) {
+    if (!seconds || isNaN(seconds)) return '';
+    const s = Math.floor(seconds);
+    const hrs = Math.floor(s / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
+    if (hrs > 0) {
+        return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// ============================================================================
+// MODULE: modules/dashboard/index.js
+// ============================================================================
+
+// ============================================================================
+// Dashboard systeme + grille services
+// ============================================================================
+
 async function loadDashboard() {
     try {
         const response = await fetch('/api/system');
@@ -657,9 +672,34 @@ function updateServicesGrid(services) {
     }
 }
 
+// ============================================================================
+// MODULE: modules/videos/loader.js
+// ============================================================================
+
+// ============================================================================
+// Chargement + rendu videos config
+// ============================================================================
+
 /**
- * Videos
+ * Cache-buster pour les miniatures (mis à jour après régénération)
  */
+let thumbnailCacheBuster = Date.now();
+
+/**
+ * Générer l'URL de miniature à partir du chemin vidéo
+ * Les miniatures sont générées par video-processor.js dans /thumbnails/
+ */
+function getThumbnailUrl(videoPath) {
+    if (!videoPath) return null;
+    // Le chemin vidéo est comme: videos/category/video.mp4
+    // La miniature est dans: thumbnails/category/video.jpg
+    const pathWithoutExt = videoPath.replace(/\.\w+$/, '');
+    // Le chemin vidéo commence déjà par "videos/" donc on remplace
+    const thumbnailPath = pathWithoutExt.replace(/^videos\//, 'thumbnails/') + '.jpg';
+    // Ajouter cache-buster pour forcer le rechargement après régénération
+    return '/' + thumbnailPath + '?t=' + thumbnailCacheBuster;
+}
+
 async function loadVideos() {
     try {
         // Vider le cache des vidéos
@@ -947,303 +987,6 @@ function countVideosInCategory(category) {
         count += (sub.videos || []).length;
     });
     return count;
-}
-
-// State for orphan video bulk selection
-let selectedOrphanVideos = new Set();
-
-function renderOrphanVideos(container, orphans, existingCategories) {
-    selectedOrphanVideos.clear();
-
-    const section = document.createElement('div');
-    section.className = 'orphan-videos-section';
-
-    const header = document.createElement('div');
-    header.className = 'section-header orphan-header';
-    header.innerHTML = `
-        <div class="orphan-header-top">
-            <h3>⚠️ Vidéos non référencées (${orphans.length})</h3>
-            <label class="select-all-label">
-                <input type="checkbox" id="orphan-select-all" onchange="toggleAllOrphanSelection(this.checked)">
-                Tout sélectionner
-            </label>
-        </div>
-        <p class="hint">Ces vidéos sont sur le disque mais pas dans la configuration</p>
-    `;
-    section.appendChild(header);
-
-    // Barre d'action bulk (cachée par défaut)
-    const bulkBar = document.createElement('div');
-    bulkBar.id = 'orphan-bulk-bar';
-    bulkBar.className = 'orphan-bulk-bar';
-    bulkBar.style.display = 'none';
-    bulkBar.innerHTML = `
-        <span class="bulk-count"><strong id="orphan-selected-count">0</strong> vidéo(s) sélectionnée(s)</span>
-        <select id="bulk-category-select" class="bulk-select">
-            <option value="">-- Catégorie --</option>
-            ${existingCategories.map(cat => `<option value="${cat.id}">${cat.name || cat.id}</option>`).join('')}
-        </select>
-        <select id="bulk-subcategory-select" class="bulk-select" style="display: none;">
-            <option value="">-- Sous-catégorie --</option>
-        </select>
-        <button class="btn btn-primary btn-sm" onclick="addSelectedOrphansToConfig()">
-            Ajouter la sélection
-        </button>
-        <button class="btn btn-secondary btn-sm" onclick="clearOrphanSelection()">
-            Annuler
-        </button>
-    `;
-    section.appendChild(bulkBar);
-
-    // Event listener pour la catégorie bulk
-    setTimeout(() => {
-        const bulkCatSelect = document.getElementById('bulk-category-select');
-        const bulkSubSelect = document.getElementById('bulk-subcategory-select');
-        if (bulkCatSelect) {
-            bulkCatSelect.addEventListener('change', (e) => {
-                const catId = e.target.value;
-                const category = existingCategories.find(c => c.id === catId);
-                if (category && category.subCategories && category.subCategories.length > 0) {
-                    bulkSubSelect.innerHTML = `
-                        <option value="">-- Sans sous-cat. --</option>
-                        ${category.subCategories.map(sub => `<option value="${sub.id}">${sub.name || sub.id}</option>`).join('')}
-                    `;
-                    bulkSubSelect.style.display = 'inline-block';
-                } else {
-                    bulkSubSelect.style.display = 'none';
-                }
-            });
-        }
-    }, 0);
-
-    const list = document.createElement('div');
-    list.className = 'orphan-list';
-
-    orphans.forEach(video => {
-        const row = document.createElement('div');
-        row.className = 'orphan-row';
-        row.dataset.path = video.path;
-
-        row.innerHTML = `
-            <label class="orphan-checkbox">
-                <input type="checkbox" class="orphan-select-checkbox" data-path="${video.path}" onchange="updateOrphanSelection()">
-            </label>
-            <div class="orphan-info">
-                <div class="orphan-title">${video.displayName || video.name}</div>
-                <div class="orphan-meta">${video.size} • ${video.category || 'racine'}</div>
-                <div class="orphan-path">videos/${video.path}</div>
-            </div>
-            <div class="orphan-actions">
-                <select class="orphan-category-select" data-path="${video.path}">
-                    <option value="">-- Catégorie --</option>
-                    ${existingCategories.map(cat => `<option value="${cat.id}">${cat.name || cat.id}</option>`).join('')}
-                    <option value="__new__">+ Nouvelle catégorie...</option>
-                </select>
-                <select class="orphan-subcategory-select" data-path="${video.path}" style="display: none;">
-                    <option value="">-- Sous-catégorie (optionnel) --</option>
-                </select>
-                <button class="btn btn-primary btn-sm add-to-config-btn" data-path="${video.path}">
-                    Ajouter
-                </button>
-            </div>
-        `;
-
-        // Event listeners
-        const categorySelect = row.querySelector('.orphan-category-select');
-        const subcategorySelect = row.querySelector('.orphan-subcategory-select');
-        const addBtn = row.querySelector('.add-to-config-btn');
-
-        categorySelect.addEventListener('change', (e) => {
-            const catId = e.target.value;
-            if (catId === '__new__') {
-                const newCat = prompt('Nom de la nouvelle catégorie:');
-                if (newCat) {
-                    const option = document.createElement('option');
-                    option.value = newCat;
-                    option.textContent = newCat;
-                    option.selected = true;
-                    categorySelect.insertBefore(option, categorySelect.lastElementChild);
-                } else {
-                    categorySelect.value = '';
-                }
-                subcategorySelect.style.display = 'none';
-                return;
-            }
-
-            // Afficher les sous-catégories si la catégorie en a
-            const category = existingCategories.find(c => c.id === catId);
-            if (category && category.subCategories && category.subCategories.length > 0) {
-                subcategorySelect.innerHTML = `
-                    <option value="">-- Sans sous-cat. --</option>
-                    ${category.subCategories.map(sub => `<option value="${sub.id}">${sub.name || sub.id}</option>`).join('')}
-                    <option value="__new__">+ Nouvelle sous-cat...</option>
-                `;
-                subcategorySelect.style.display = 'inline-block';
-            } else {
-                subcategorySelect.style.display = 'none';
-            }
-        });
-
-        subcategorySelect.addEventListener('change', (e) => {
-            if (e.target.value === '__new__') {
-                const newSub = prompt('Nom de la nouvelle sous-catégorie:');
-                if (newSub) {
-                    const option = document.createElement('option');
-                    option.value = newSub;
-                    option.textContent = newSub;
-                    option.selected = true;
-                    subcategorySelect.insertBefore(option, subcategorySelect.lastElementChild);
-                } else {
-                    subcategorySelect.value = '';
-                }
-            }
-        });
-
-        addBtn.addEventListener('click', async () => {
-            const videoPath = addBtn.dataset.path;
-            const categoryId = categorySelect.value;
-            const subcategoryId = subcategorySelect.value !== '__new__' ? subcategorySelect.value : '';
-
-            if (!categoryId || categoryId === '__new__') {
-                showNotification('Sélectionnez une catégorie', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/videos/add-to-config', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        videoPath,
-                        categoryId,
-                        subcategoryId: subcategoryId || null,
-                        displayName: video.displayName
-                    })
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    showNotification('Vidéo ajoutée à la configuration', 'success');
-                    loadVideos(); // Recharger
-                } else {
-                    showNotification('Erreur: ' + data.error, 'error');
-                }
-            } catch (error) {
-                showNotification('Erreur lors de l\'ajout', 'error');
-            }
-        });
-
-        list.appendChild(row);
-    });
-
-    section.appendChild(list);
-    container.appendChild(section);
-}
-
-/**
- * Fonctions de sélection multiple des vidéos orphelines
- */
-function toggleAllOrphanSelection(checked) {
-    const checkboxes = document.querySelectorAll('.orphan-select-checkbox');
-    checkboxes.forEach(cb => {
-        cb.checked = checked;
-    });
-    updateOrphanSelection();
-}
-
-function updateOrphanSelection() {
-    selectedOrphanVideos.clear();
-    const checkboxes = document.querySelectorAll('.orphan-select-checkbox:checked');
-    checkboxes.forEach(cb => {
-        selectedOrphanVideos.add(cb.dataset.path);
-    });
-
-    // Mettre à jour le compteur et afficher/cacher la barre
-    const bulkBar = document.getElementById('orphan-bulk-bar');
-    const countEl = document.getElementById('orphan-selected-count');
-    const selectAllCb = document.getElementById('orphan-select-all');
-    const allCheckboxes = document.querySelectorAll('.orphan-select-checkbox');
-
-    if (countEl) {
-        countEl.textContent = selectedOrphanVideos.size;
-    }
-
-    if (bulkBar) {
-        bulkBar.style.display = selectedOrphanVideos.size > 0 ? 'flex' : 'none';
-    }
-
-    // Mettre à jour l'état du "Tout sélectionner"
-    if (selectAllCb && allCheckboxes.length > 0) {
-        selectAllCb.checked = selectedOrphanVideos.size === allCheckboxes.length;
-        selectAllCb.indeterminate = selectedOrphanVideos.size > 0 && selectedOrphanVideos.size < allCheckboxes.length;
-    }
-}
-
-function clearOrphanSelection() {
-    const checkboxes = document.querySelectorAll('.orphan-select-checkbox');
-    checkboxes.forEach(cb => {
-        cb.checked = false;
-    });
-    const selectAllCb = document.getElementById('orphan-select-all');
-    if (selectAllCb) {
-        selectAllCb.checked = false;
-        selectAllCb.indeterminate = false;
-    }
-    updateOrphanSelection();
-}
-
-async function addSelectedOrphansToConfig() {
-    if (selectedOrphanVideos.size === 0) {
-        showNotification('Aucune vidéo sélectionnée', 'error');
-        return;
-    }
-
-    const categoryId = document.getElementById('bulk-category-select')?.value;
-    const subcategoryId = document.getElementById('bulk-subcategory-select')?.value;
-
-    if (!categoryId) {
-        showNotification('Sélectionnez une catégorie', 'error');
-        return;
-    }
-
-    // Préparer les vidéos à ajouter
-    const videos = [];
-    selectedOrphanVideos.forEach(path => {
-        const orphan = cachedOrphanVideos.find(v => v.path === path);
-        if (orphan) {
-            videos.push({
-                path: orphan.path,
-                displayName: orphan.displayName || orphan.name
-            });
-        }
-    });
-
-    try {
-        const response = await fetch('/api/videos/add-to-config-bulk', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                videos,
-                categoryId,
-                subcategoryId: subcategoryId || null
-            })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            const msg = `${data.results.added.length} vidéo(s) ajoutée(s)`;
-            if (data.results.skipped.length > 0) {
-                showNotification(`${msg} (${data.results.skipped.length} déjà présente(s))`, 'success');
-            } else {
-                showNotification(msg, 'success');
-            }
-            loadVideos(); // Recharger
-        } else {
-            showNotification('Erreur: ' + data.error, 'error');
-        }
-    } catch (error) {
-        showNotification('Erreur lors de l\'ajout groupé', 'error');
-    }
 }
 
 function groupVideosByCategory(videos) {
@@ -1547,8 +1290,1055 @@ async function deleteConfigVideo(videoPath, categoryId, subcategoryId) {
 }
 
 /**
- * Network & WiFi
+ * Régénération des miniatures
  */
+async function regenerateThumbnails(force = false) {
+    const forceRegen = force || confirm('Régénérer uniquement les miniatures manquantes ?\n\nCliquez "Annuler" pour tout régénérer (plus long).');
+    const actualForce = force ? true : !forceRegen;
+
+    showNotification('Régénération des miniatures en cours... Veuillez patienter.', 'info');
+
+    try {
+        // Utiliser l'API synchrone pour attendre la fin de la génération
+        const response = await fetch('/api/thumbnails/regenerate-sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ force: actualForce })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            // Mettre à jour le cache-buster pour forcer le rechargement des images
+            thumbnailCacheBuster = Date.now();
+
+            // Rafraîchir l'affichage des vidéos
+            await refreshVideos();
+
+            const stats = data.stats || {};
+            showNotification(`Miniatures régénérées : ${stats.generated || 0} nouvelles, ${stats.skipped || 0} existantes`, 'success');
+        } else {
+            showNotification('Erreur: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Erreur régénération miniatures:', error);
+        showNotification('Erreur lors de la régénération', 'error');
+    }
+}
+
+/**
+ * Recherche/filtre dans la bibliothèque
+ */
+function filterVideos() {
+    const searchTerm = document.getElementById('video-search')?.value.toLowerCase().trim() || '';
+    const videoRows = document.querySelectorAll('#videos-list .video-row');
+    const videoGroups = document.querySelectorAll('#videos-list .video-group');
+    const videoSubgroups = document.querySelectorAll('#videos-list .video-subgroup');
+
+    // Si pas de terme de recherche, tout afficher
+    if (!searchTerm) {
+        videoRows.forEach(row => row.style.display = '');
+        videoSubgroups.forEach(sg => sg.style.display = '');
+        videoGroups.forEach(g => g.style.display = '');
+        return;
+    }
+
+    // Filtrer les lignes de vidéos
+    videoRows.forEach(row => {
+        const title = row.querySelector('.video-row-title')?.textContent.toLowerCase() || '';
+        const path = row.querySelector('.video-row-path')?.textContent.toLowerCase() || '';
+        const matches = title.includes(searchTerm) || path.includes(searchTerm);
+        row.style.display = matches ? '' : 'none';
+    });
+
+    // Cacher les sous-groupes vides
+    videoSubgroups.forEach(sg => {
+        const visibleRows = sg.querySelectorAll('.video-row:not([style*="display: none"])');
+        sg.style.display = visibleRows.length > 0 ? '' : 'none';
+    });
+
+    // Cacher les groupes vides
+    videoGroups.forEach(g => {
+        const visibleSubgroups = g.querySelectorAll('.video-subgroup:not([style*="display: none"])');
+        g.style.display = visibleSubgroups.length > 0 ? '' : 'none';
+    });
+}
+
+// ============================================================================
+// MODULE: modules/videos/orphans.js
+// ============================================================================
+
+// ============================================================================
+// Gestion videos orphelines
+// ============================================================================
+
+// State for orphan video bulk selection
+let selectedOrphanVideos = new Set();
+
+function renderOrphanVideos(container, orphans, existingCategories) {
+    selectedOrphanVideos.clear();
+
+    const section = document.createElement('div');
+    section.className = 'orphan-videos-section';
+
+    const header = document.createElement('div');
+    header.className = 'section-header orphan-header';
+    header.innerHTML = `
+        <div class="orphan-header-top">
+            <h3>⚠️ Vidéos non référencées (${orphans.length})</h3>
+            <label class="select-all-label">
+                <input type="checkbox" id="orphan-select-all" onchange="toggleAllOrphanSelection(this.checked)">
+                Tout sélectionner
+            </label>
+        </div>
+        <p class="hint">Ces vidéos sont sur le disque mais pas dans la configuration</p>
+    `;
+    section.appendChild(header);
+
+    // Barre d'action bulk (cachée par défaut)
+    const bulkBar = document.createElement('div');
+    bulkBar.id = 'orphan-bulk-bar';
+    bulkBar.className = 'orphan-bulk-bar';
+    bulkBar.style.display = 'none';
+    bulkBar.innerHTML = `
+        <span class="bulk-count"><strong id="orphan-selected-count">0</strong> vidéo(s) sélectionnée(s)</span>
+        <select id="bulk-category-select" class="bulk-select">
+            <option value="">-- Catégorie --</option>
+            ${existingCategories.map(cat => `<option value="${cat.id}">${cat.name || cat.id}</option>`).join('')}
+        </select>
+        <select id="bulk-subcategory-select" class="bulk-select" style="display: none;">
+            <option value="">-- Sous-catégorie --</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="addSelectedOrphansToConfig()">
+            Ajouter la sélection
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="clearOrphanSelection()">
+            Annuler
+        </button>
+    `;
+    section.appendChild(bulkBar);
+
+    // Event listener pour la catégorie bulk
+    setTimeout(() => {
+        const bulkCatSelect = document.getElementById('bulk-category-select');
+        const bulkSubSelect = document.getElementById('bulk-subcategory-select');
+        if (bulkCatSelect) {
+            bulkCatSelect.addEventListener('change', (e) => {
+                const catId = e.target.value;
+                const category = existingCategories.find(c => c.id === catId);
+                if (category && category.subCategories && category.subCategories.length > 0) {
+                    bulkSubSelect.innerHTML = `
+                        <option value="">-- Sans sous-cat. --</option>
+                        ${category.subCategories.map(sub => `<option value="${sub.id}">${sub.name || sub.id}</option>`).join('')}
+                    `;
+                    bulkSubSelect.style.display = 'inline-block';
+                } else {
+                    bulkSubSelect.style.display = 'none';
+                }
+            });
+        }
+    }, 0);
+
+    const list = document.createElement('div');
+    list.className = 'orphan-list';
+
+    orphans.forEach(video => {
+        const row = document.createElement('div');
+        row.className = 'orphan-row';
+        row.dataset.path = video.path;
+
+        row.innerHTML = `
+            <label class="orphan-checkbox">
+                <input type="checkbox" class="orphan-select-checkbox" data-path="${video.path}" onchange="updateOrphanSelection()">
+            </label>
+            <div class="orphan-info">
+                <div class="orphan-title">${video.displayName || video.name}</div>
+                <div class="orphan-meta">${video.size} • ${video.category || 'racine'}</div>
+                <div class="orphan-path">videos/${video.path}</div>
+            </div>
+            <div class="orphan-actions">
+                <select class="orphan-category-select" data-path="${video.path}">
+                    <option value="">-- Catégorie --</option>
+                    ${existingCategories.map(cat => `<option value="${cat.id}">${cat.name || cat.id}</option>`).join('')}
+                    <option value="__new__">+ Nouvelle catégorie...</option>
+                </select>
+                <select class="orphan-subcategory-select" data-path="${video.path}" style="display: none;">
+                    <option value="">-- Sous-catégorie (optionnel) --</option>
+                </select>
+                <button class="btn btn-primary btn-sm add-to-config-btn" data-path="${video.path}">
+                    Ajouter
+                </button>
+            </div>
+        `;
+
+        // Event listeners
+        const categorySelect = row.querySelector('.orphan-category-select');
+        const subcategorySelect = row.querySelector('.orphan-subcategory-select');
+        const addBtn = row.querySelector('.add-to-config-btn');
+
+        categorySelect.addEventListener('change', (e) => {
+            const catId = e.target.value;
+            if (catId === '__new__') {
+                const newCat = prompt('Nom de la nouvelle catégorie:');
+                if (newCat) {
+                    const option = document.createElement('option');
+                    option.value = newCat;
+                    option.textContent = newCat;
+                    option.selected = true;
+                    categorySelect.insertBefore(option, categorySelect.lastElementChild);
+                } else {
+                    categorySelect.value = '';
+                }
+                subcategorySelect.style.display = 'none';
+                return;
+            }
+
+            // Afficher les sous-catégories si la catégorie en a
+            const category = existingCategories.find(c => c.id === catId);
+            if (category && category.subCategories && category.subCategories.length > 0) {
+                subcategorySelect.innerHTML = `
+                    <option value="">-- Sans sous-cat. --</option>
+                    ${category.subCategories.map(sub => `<option value="${sub.id}">${sub.name || sub.id}</option>`).join('')}
+                    <option value="__new__">+ Nouvelle sous-cat...</option>
+                `;
+                subcategorySelect.style.display = 'inline-block';
+            } else {
+                subcategorySelect.style.display = 'none';
+            }
+        });
+
+        subcategorySelect.addEventListener('change', (e) => {
+            if (e.target.value === '__new__') {
+                const newSub = prompt('Nom de la nouvelle sous-catégorie:');
+                if (newSub) {
+                    const option = document.createElement('option');
+                    option.value = newSub;
+                    option.textContent = newSub;
+                    option.selected = true;
+                    subcategorySelect.insertBefore(option, subcategorySelect.lastElementChild);
+                } else {
+                    subcategorySelect.value = '';
+                }
+            }
+        });
+
+        addBtn.addEventListener('click', async () => {
+            const videoPath = addBtn.dataset.path;
+            const categoryId = categorySelect.value;
+            const subcategoryId = subcategorySelect.value !== '__new__' ? subcategorySelect.value : '';
+
+            if (!categoryId || categoryId === '__new__') {
+                showNotification('Sélectionnez une catégorie', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/videos/add-to-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        videoPath,
+                        categoryId,
+                        subcategoryId: subcategoryId || null,
+                        displayName: video.displayName
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('Vidéo ajoutée à la configuration', 'success');
+                    loadVideos(); // Recharger
+                } else {
+                    showNotification('Erreur: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Erreur lors de l\'ajout', 'error');
+            }
+        });
+
+        list.appendChild(row);
+    });
+
+    section.appendChild(list);
+    container.appendChild(section);
+}
+
+/**
+ * Fonctions de sélection multiple des vidéos orphelines
+ */
+function toggleAllOrphanSelection(checked) {
+    const checkboxes = document.querySelectorAll('.orphan-select-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = checked;
+    });
+    updateOrphanSelection();
+}
+
+function updateOrphanSelection() {
+    selectedOrphanVideos.clear();
+    const checkboxes = document.querySelectorAll('.orphan-select-checkbox:checked');
+    checkboxes.forEach(cb => {
+        selectedOrphanVideos.add(cb.dataset.path);
+    });
+
+    // Mettre à jour le compteur et afficher/cacher la barre
+    const bulkBar = document.getElementById('orphan-bulk-bar');
+    const countEl = document.getElementById('orphan-selected-count');
+    const selectAllCb = document.getElementById('orphan-select-all');
+    const allCheckboxes = document.querySelectorAll('.orphan-select-checkbox');
+
+    if (countEl) {
+        countEl.textContent = selectedOrphanVideos.size;
+    }
+
+    if (bulkBar) {
+        bulkBar.style.display = selectedOrphanVideos.size > 0 ? 'flex' : 'none';
+    }
+
+    // Mettre à jour l'état du "Tout sélectionner"
+    if (selectAllCb && allCheckboxes.length > 0) {
+        selectAllCb.checked = selectedOrphanVideos.size === allCheckboxes.length;
+        selectAllCb.indeterminate = selectedOrphanVideos.size > 0 && selectedOrphanVideos.size < allCheckboxes.length;
+    }
+}
+
+function clearOrphanSelection() {
+    const checkboxes = document.querySelectorAll('.orphan-select-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = false;
+    });
+    const selectAllCb = document.getElementById('orphan-select-all');
+    if (selectAllCb) {
+        selectAllCb.checked = false;
+        selectAllCb.indeterminate = false;
+    }
+    updateOrphanSelection();
+}
+
+async function addSelectedOrphansToConfig() {
+    if (selectedOrphanVideos.size === 0) {
+        showNotification('Aucune vidéo sélectionnée', 'error');
+        return;
+    }
+
+    const categoryId = document.getElementById('bulk-category-select')?.value;
+    const subcategoryId = document.getElementById('bulk-subcategory-select')?.value;
+
+    if (!categoryId) {
+        showNotification('Sélectionnez une catégorie', 'error');
+        return;
+    }
+
+    // Préparer les vidéos à ajouter
+    const videos = [];
+    selectedOrphanVideos.forEach(path => {
+        const orphan = cachedOrphanVideos.find(v => v.path === path);
+        if (orphan) {
+            videos.push({
+                path: orphan.path,
+                displayName: orphan.displayName || orphan.name
+            });
+        }
+    });
+
+    try {
+        const response = await fetch('/api/videos/add-to-config-bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                videos,
+                categoryId,
+                subcategoryId: subcategoryId || null
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            const msg = `${data.results.added.length} vidéo(s) ajoutée(s)`;
+            if (data.results.skipped.length > 0) {
+                showNotification(`${msg} (${data.results.skipped.length} déjà présente(s))`, 'success');
+            } else {
+                showNotification(msg, 'success');
+            }
+            loadVideos(); // Recharger
+        } else {
+            showNotification('Erreur: ' + data.error, 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de l\'ajout groupé', 'error');
+    }
+}
+
+// ============================================================================
+// MODULE: modules/videos/editor.js
+// ============================================================================
+
+// ============================================================================
+// Modal edition video
+// ============================================================================
+
+function openEditModal(videoPath) {
+    const modal = document.getElementById('edit-modal');
+    const form = document.getElementById('edit-video-form');
+    if (!modal || !form) {
+        return;
+    }
+
+    const video = cachedVideos.find(item => item.path === videoPath);
+    if (!video) {
+        showNotification('Vidéo introuvable', 'error');
+        return;
+    }
+
+    document.getElementById('edit-original-path').value = video.path;
+    document.getElementById('edit-display-name').value = video.displayName || '';
+
+    // Extraire le nom de fichier depuis le path (plus fiable)
+    const filename = video.path ? video.path.split('/').pop() : video.name;
+    const extIndex = filename.lastIndexOf('.');
+    const nameWithoutExt = extIndex > 0 ? filename.substring(0, extIndex) : filename;
+    document.getElementById('edit-filename').value = nameWithoutExt;
+
+    // Peupler le select des catégories
+    populateEditCategorySelect(video.configCategory || '');
+
+    // Pré-sélectionner la sous-catégorie si elle existe
+    if (video.configSubcategory) {
+        setTimeout(() => {
+            updateEditSubcategorySelect(video.configCategory, video.configSubcategory);
+        }, 50);
+    }
+
+    const pathLabel = document.getElementById('edit-current-path');
+    if (pathLabel) {
+        pathLabel.textContent = `Chemin actuel : videos/${video.path}`;
+    }
+
+    modal.classList.add('active');
+}
+
+/**
+ * Peuple le select des catégories dans le modal d'édition
+ * Les catégories verrouillées ne sont pas proposées (sauf si c'est la catégorie actuelle)
+ */
+function populateEditCategorySelect(selectedCategoryId) {
+    const categorySelect = document.getElementById('edit-category');
+    const subcategorySelect = document.getElementById('edit-subcategory');
+
+    if (!categorySelect || !cachedConfig?.categories) {
+        return;
+    }
+
+    // Peupler les catégories (exclure les verrouillées sauf si sélectionnée)
+    categorySelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+    cachedConfig.categories.forEach(cat => {
+        // Ne pas proposer les catégories verrouillées (sauf si c'est la catégorie actuelle)
+        if (isLocked(cat) && cat.id !== selectedCategoryId) {
+            return;
+        }
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.name + (isLocked(cat) ? ' 🔒' : '');
+        if (cat.id === selectedCategoryId) {
+            option.selected = true;
+        }
+        categorySelect.appendChild(option);
+    });
+
+    // Ajouter l'écouteur pour les sous-catégories
+    categorySelect.onchange = function() {
+        updateEditSubcategorySelect(this.value);
+    };
+
+    // Peupler les sous-catégories si une catégorie est sélectionnée
+    if (selectedCategoryId) {
+        // Trouver la sous-catégorie actuelle de la vidéo
+        const video = cachedVideos.find(v => v.path === document.getElementById('edit-original-path').value);
+        updateEditSubcategorySelect(selectedCategoryId, video?.configSubcategory || '');
+    } else {
+        subcategorySelect.innerHTML = '<option value="">-- Aucune --</option>';
+    }
+}
+
+/**
+ * Met à jour le select des sous-catégories en fonction de la catégorie sélectionnée
+ */
+function updateEditSubcategorySelect(categoryId, selectedSubcategoryId = '') {
+    const subcategorySelect = document.getElementById('edit-subcategory');
+    if (!subcategorySelect) return;
+
+    subcategorySelect.innerHTML = '<option value="">-- Aucune --</option>';
+
+    if (!categoryId || !cachedConfig?.categories) {
+        return;
+    }
+
+    const category = cachedConfig.categories.find(c => c.id === categoryId);
+    if (!category || !category.subCategories || category.subCategories.length === 0) {
+        return;
+    }
+
+    category.subCategories.forEach(sub => {
+        const option = document.createElement('option');
+        option.value = sub.id;
+        option.textContent = sub.name;
+        if (sub.id === selectedSubcategoryId) {
+            option.selected = true;
+        }
+        subcategorySelect.appendChild(option);
+    });
+}
+
+function closeEditModal() {
+    const modal = document.getElementById('edit-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+    resetEditForm();
+}
+
+function resetEditForm() {
+    const form = document.getElementById('edit-video-form');
+    if (form) {
+        form.reset();
+    }
+
+    const pathLabel = document.getElementById('edit-current-path');
+    if (pathLabel) {
+        pathLabel.textContent = '';
+    }
+
+    const originalInput = document.getElementById('edit-original-path');
+    if (originalInput) {
+        originalInput.value = '';
+    }
+}
+
+async function submitVideoEdition() {
+    const originalPath = document.getElementById('edit-original-path').value;
+    const categoryId = document.getElementById('edit-category').value;
+    const subcategoryId = document.getElementById('edit-subcategory').value;
+    const displayName = document.getElementById('edit-display-name').value.trim();
+    const filenameWithoutExt = document.getElementById('edit-filename').value.trim();
+
+    if (!originalPath || !categoryId || !filenameWithoutExt) {
+        showNotification('Catégorie et nom de fichier requis', 'error');
+        return;
+    }
+
+    // Récupérer l'extension originale du fichier depuis le path
+    const originalFilename = originalPath.split('/').pop();
+    const extIndex = originalFilename.lastIndexOf('.');
+    const ext = extIndex > 0 ? originalFilename.substring(extIndex) : '';
+
+    // Reconstruire le nom complet avec l'extension
+    const newFilename = filenameWithoutExt + ext;
+
+    try {
+        const response = await fetch('/api/videos/edit', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                originalPath,
+                categoryId,
+                subcategoryId: subcategoryId || null,
+                displayName: displayName || null,
+                newFilename
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Vidéo mise à jour', 'success');
+            closeEditModal();
+            // Recharger la configuration pour avoir les données à jour
+            await loadConfiguration();
+            loadVideos();
+        } else {
+            showNotification('Erreur: ' + (data.error || 'Impossible de modifier la vidéo'), 'error');
+        }
+    } catch (error) {
+        console.error('Error editing video:', error);
+        showNotification('Erreur lors de la modification', 'error');
+    }
+}
+
+// ============================================================================
+// MODULE: modules/videos/bulk.js
+// ============================================================================
+
+// ============================================================================
+// Selection/actions groupees
+// ============================================================================
+
+function handleVideoSelection(e, videoPath) {
+    if (e.target.checked) {
+        selectedVideos.add(videoPath);
+    } else {
+        selectedVideos.delete(videoPath);
+    }
+    updateBulkActionsToolbar();
+}
+
+function updateBulkActionsToolbar() {
+    let toolbar = document.getElementById('bulk-actions-toolbar');
+
+    if (selectedVideos.size === 0) {
+        if (toolbar) {
+            toolbar.classList.remove('visible');
+        }
+        return;
+    }
+
+    if (!toolbar) {
+        toolbar = createBulkActionsToolbar();
+        document.getElementById('subtab-library').appendChild(toolbar);
+    }
+
+    toolbar.querySelector('.bulk-count').textContent = `${selectedVideos.size} vidéo${selectedVideos.size > 1 ? 's' : ''} sélectionnée${selectedVideos.size > 1 ? 's' : ''}`;
+    toolbar.classList.add('visible');
+}
+
+function createBulkActionsToolbar() {
+    const toolbar = document.createElement('div');
+    toolbar.id = 'bulk-actions-toolbar';
+    toolbar.className = 'bulk-actions-toolbar';
+
+    toolbar.innerHTML = `
+        <div class="bulk-toolbar-content">
+            <span class="bulk-count">0 vidéos sélectionnées</span>
+            <div class="bulk-actions-buttons">
+                <button class="btn btn-secondary btn-sm" onclick="selectAllVideos()">☑ Tout</button>
+                <button class="btn btn-secondary btn-sm" onclick="clearVideoSelection()">☐ Aucun</button>
+                <button class="btn btn-primary btn-sm" onclick="openBulkMoveModal()">📁 Déplacer</button>
+                <button class="btn btn-danger btn-sm" onclick="bulkDeleteVideos()">🗑️ Supprimer</button>
+            </div>
+        </div>
+    `;
+
+    return toolbar;
+}
+
+function selectAllVideos() {
+    const checkboxes = document.querySelectorAll('.video-select-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = true;
+        selectedVideos.add(cb.dataset.path);
+    });
+    updateBulkActionsToolbar();
+}
+
+function clearVideoSelection() {
+    selectedVideos.clear();
+    const checkboxes = document.querySelectorAll('.video-select-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = false;
+    });
+    updateBulkActionsToolbar();
+}
+
+async function bulkDeleteVideos() {
+    if (selectedVideos.size === 0) {
+        showNotification('Aucune vidéo sélectionnée', 'info');
+        return;
+    }
+
+    const count = selectedVideos.size;
+    if (!confirm(`Supprimer ${count} vidéo${count > 1 ? 's' : ''} ?\n\nCette action est irréversible.`)) {
+        return;
+    }
+
+    const pathsToDelete = [...selectedVideos];
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const videoPath of pathsToDelete) {
+        // Find video info from cache
+        const video = cachedVideos.find(v => v.path === videoPath);
+        if (!video) {
+            errorCount++;
+            continue;
+        }
+
+        try {
+            const response = await fetch('/api/videos/delete-from-config', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    videoPath,
+                    categoryId: video.configCategory,
+                    subcategoryId: video.configSubcategory || null
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                successCount++;
+            } else {
+                errorCount++;
+            }
+        } catch (error) {
+            errorCount++;
+        }
+    }
+
+    // Clear selection and refresh
+    selectedVideos.clear();
+    await loadConfiguration();
+    loadVideos();
+    updateBulkActionsToolbar();
+
+    if (errorCount === 0) {
+        showNotification(`${successCount} vidéo${successCount > 1 ? 's' : ''} supprimée${successCount > 1 ? 's' : ''}`, 'success');
+    } else {
+        showNotification(`${successCount} supprimée(s), ${errorCount} erreur(s)`, 'error');
+    }
+}
+
+/**
+ * Bulk Move Modal
+ */
+function openBulkMoveModal() {
+    if (selectedVideos.size === 0) {
+        showNotification('Aucune vidéo sélectionnée', 'info');
+        return;
+    }
+
+    // Create modal if not exists
+    let modal = document.getElementById('bulk-move-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'bulk-move-modal';
+        modal.className = 'modal';
+        document.body.appendChild(modal);
+    }
+
+    // Build category options
+    const categories = cachedConfig?.categories || [];
+    let categoryOptions = categories.map(cat =>
+        `<option value="${cat.id}">${cat.name}</option>`
+    ).join('');
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>📁 Déplacer ${selectedVideos.size} vidéo${selectedVideos.size > 1 ? 's' : ''}</h3>
+            <div class="form-group">
+                <label>Catégorie de destination</label>
+                <select id="bulk-move-category" onchange="updateBulkMoveSubcategories()">
+                    <option value="">-- Sélectionner --</option>
+                    ${categoryOptions}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Sous-catégorie (optionnel)</label>
+                <select id="bulk-move-subcategory">
+                    <option value="">-- Racine de la catégorie --</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeBulkMoveModal()">Annuler</button>
+                <button class="btn btn-primary" onclick="executeBulkMove()">Déplacer</button>
+            </div>
+        </div>
+    `;
+
+    modal.classList.add('active');
+}
+
+function updateBulkMoveSubcategories() {
+    const categoryId = document.getElementById('bulk-move-category').value;
+    const subcategorySelect = document.getElementById('bulk-move-subcategory');
+
+    subcategorySelect.innerHTML = '<option value="">-- Racine de la catégorie --</option>';
+
+    if (!categoryId) return;
+
+    const category = (cachedConfig?.categories || []).find(c => c.id === categoryId);
+    if (category && category.subCategories) {
+        category.subCategories.forEach(sub => {
+            const option = document.createElement('option');
+            option.value = sub.id;
+            option.textContent = sub.name;
+            subcategorySelect.appendChild(option);
+        });
+    }
+}
+
+function closeBulkMoveModal() {
+    const modal = document.getElementById('bulk-move-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+async function executeBulkMove() {
+    const categoryId = document.getElementById('bulk-move-category').value;
+    const subcategoryId = document.getElementById('bulk-move-subcategory').value || null;
+
+    if (!categoryId) {
+        showNotification('Sélectionnez une catégorie', 'error');
+        return;
+    }
+
+    const pathsToMove = [...selectedVideos];
+    let successCount = 0;
+    let errorCount = 0;
+
+    closeBulkMoveModal();
+    showNotification('Déplacement en cours...', 'info');
+
+    for (const videoPath of pathsToMove) {
+        const video = cachedVideos.find(v => v.path === videoPath);
+        if (!video) {
+            errorCount++;
+            continue;
+        }
+
+        // Skip if already in target location
+        if (video.configCategory === categoryId &&
+            (video.configSubcategory || null) === subcategoryId) {
+            successCount++;
+            continue;
+        }
+
+        try {
+            const response = await fetch('/api/videos/move', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    videoPath,
+                    fromCategoryId: video.configCategory,
+                    fromSubcategoryId: video.configSubcategory || null,
+                    toCategoryId: categoryId,
+                    toSubcategoryId: subcategoryId
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                successCount++;
+            } else {
+                errorCount++;
+            }
+        } catch (error) {
+            errorCount++;
+        }
+    }
+
+    // Clear selection and refresh
+    selectedVideos.clear();
+    await loadConfiguration();
+    loadVideos();
+    updateBulkActionsToolbar();
+
+    if (errorCount === 0) {
+        showNotification(`${successCount} vidéo${successCount > 1 ? 's' : ''} déplacée${successCount > 1 ? 's' : ''}`, 'success');
+    } else {
+        showNotification(`${successCount} déplacée(s), ${errorCount} erreur(s)`, 'error');
+    }
+}
+
+// ============================================================================
+// MODULE: modules/videos/drag-drop.js
+// ============================================================================
+
+// ============================================================================
+// Drag & drop reordonnancement
+// ============================================================================
+
+let draggedElement = null;
+let draggedVideoPath = null;
+let draggedCategoryId = null;
+let draggedSubcategoryId = null;
+
+function handleDragStart(e) {
+    draggedElement = e.target.closest('.video-row');
+    if (!draggedElement) return;
+
+    draggedVideoPath = draggedElement.dataset.videoPath;
+    draggedCategoryId = draggedElement.dataset.categoryId;
+    draggedSubcategoryId = draggedElement.dataset.subcategoryId;
+
+    draggedElement.classList.add('dragging');
+
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', draggedVideoPath);
+}
+
+function handleDragEnd(e) {
+    if (draggedElement) {
+        draggedElement.classList.remove('dragging');
+    }
+    draggedElement = null;
+    draggedVideoPath = null;
+    draggedCategoryId = null;
+    draggedSubcategoryId = null;
+
+    // Remove all drag-over states
+    document.querySelectorAll('.video-rows.drag-over').forEach(el => {
+        el.classList.remove('drag-over');
+    });
+    document.querySelectorAll('.video-row.drag-over-above, .video-row.drag-over-below').forEach(el => {
+        el.classList.remove('drag-over-above', 'drag-over-below');
+    });
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    const container = e.target.closest('.video-rows');
+    if (!container) return;
+
+    container.classList.add('drag-over');
+
+    // Find the closest row and determine position
+    const rows = [...container.querySelectorAll('.video-row:not(.dragging)')];
+    const mouseY = e.clientY;
+
+    // Remove previous indicators
+    rows.forEach(row => row.classList.remove('drag-over-above', 'drag-over-below'));
+
+    // Find closest row
+    let closestRow = null;
+    let closestOffset = Number.NEGATIVE_INFINITY;
+
+    rows.forEach(row => {
+        const box = row.getBoundingClientRect();
+        const offset = mouseY - box.top - box.height / 2;
+
+        if (offset < 0 && offset > closestOffset) {
+            closestOffset = offset;
+            closestRow = row;
+        }
+    });
+
+    if (closestRow) {
+        closestRow.classList.add('drag-over-above');
+    } else if (rows.length > 0) {
+        rows[rows.length - 1].classList.add('drag-over-below');
+    }
+}
+
+function handleDragLeave(e) {
+    const container = e.target.closest('.video-rows');
+    if (!container) return;
+
+    // Only remove drag-over if we're actually leaving the container
+    const relatedTarget = e.relatedTarget;
+    if (!container.contains(relatedTarget)) {
+        container.classList.remove('drag-over');
+        container.querySelectorAll('.video-row').forEach(row => {
+            row.classList.remove('drag-over-above', 'drag-over-below');
+        });
+    }
+}
+
+async function handleDrop(e) {
+    e.preventDefault();
+
+    const container = e.target.closest('.video-rows');
+    if (!container || !draggedElement) return;
+
+    container.classList.remove('drag-over');
+
+    const targetCategoryId = container.dataset.categoryId;
+    const targetSubcategoryId = container.dataset.subcategoryId || null;
+
+    // Find drop position
+    const rows = [...container.querySelectorAll('.video-row:not(.dragging)')];
+    const mouseY = e.clientY;
+
+    let insertBeforeIndex = rows.length; // Default: append at end
+
+    for (let i = 0; i < rows.length; i++) {
+        const box = rows[i].getBoundingClientRect();
+        if (mouseY < box.top + box.height / 2) {
+            insertBeforeIndex = i;
+            break;
+        }
+    }
+
+    // Remove visual indicators
+    rows.forEach(row => row.classList.remove('drag-over-above', 'drag-over-below'));
+
+    // Check if moving within same category/subcategory or to different one
+    const sameCategoryAndSubcategory =
+        draggedCategoryId === targetCategoryId &&
+        draggedSubcategoryId === targetSubcategoryId;
+
+    if (sameCategoryAndSubcategory) {
+        // Reorder within the same list
+        await reorderVideoInList(draggedVideoPath, targetCategoryId, targetSubcategoryId, insertBeforeIndex);
+    } else {
+        // Move to different category/subcategory
+        await moveVideoToCategory(draggedVideoPath, draggedCategoryId, draggedSubcategoryId, targetCategoryId, targetSubcategoryId, insertBeforeIndex);
+    }
+}
+
+async function reorderVideoInList(videoPath, categoryId, subcategoryId, newIndex) {
+    try {
+        const response = await fetch('/api/videos/reorder', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                videoPath,
+                categoryId,
+                subcategoryId: subcategoryId || null,
+                newIndex
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            showNotification('Ordre des vidéos mis à jour', 'success');
+            await loadConfiguration();
+            loadVideos();
+        } else {
+            showNotification('Erreur: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error reordering video:', error);
+        showNotification('Erreur lors de la réorganisation', 'error');
+    }
+}
+
+async function moveVideoToCategory(videoPath, fromCategoryId, fromSubcategoryId, toCategoryId, toSubcategoryId, newIndex) {
+    try {
+        const response = await fetch('/api/videos/move', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                videoPath,
+                fromCategoryId,
+                fromSubcategoryId: fromSubcategoryId || null,
+                toCategoryId,
+                toSubcategoryId: toSubcategoryId || null,
+                newIndex
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            showNotification('Vidéo déplacée', 'success');
+            await loadConfiguration();
+            loadVideos();
+        } else {
+            showNotification('Erreur: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error moving video:', error);
+        showNotification('Erreur lors du déplacement', 'error');
+    }
+}
+
+// ============================================================================
+// MODULE: modules/network/wifi.js
+// ============================================================================
+
+// ============================================================================
+// Scanner WiFi, connexion, BSSID
+// ============================================================================
 
 // Track if we're in a mesh environment (multiple APs with same SSID)
 let isMeshEnvironment = false;
@@ -1890,9 +2680,14 @@ function refreshNetwork() {
     loadWifiCurrent();
 }
 
-/**
- * Hotspot Diagnostic
- */
+// ============================================================================
+// MODULE: modules/network/hotspot.js
+// ============================================================================
+
+// ============================================================================
+// Diagnostic hotspot
+// ============================================================================
+
 let lastHotspotResult = null;
 
 async function runHotspotDiagnostic(autoFix) {
@@ -2068,9 +2863,14 @@ async function confirmHotspotReboot() {
     }
 }
 
-/**
- * Logs
- */
+// ============================================================================
+// MODULE: modules/logs/index.js
+// ============================================================================
+
+// ============================================================================
+// Visionneuse de logs
+// ============================================================================
+
 function initLogButtons() {
     const buttons = document.querySelectorAll('[data-log]');
     buttons.forEach(btn => {
@@ -2101,9 +2901,14 @@ function refreshLogs() {
     loadLogs(currentLogService);
 }
 
-/**
- * Forms
- */
+// ============================================================================
+// MODULE: modules/upload/index.js
+// ============================================================================
+
+// ============================================================================
+// Upload video (dropzone, progress)
+// ============================================================================
+
 function initForms() {
     // Upload form
     const uploadForm = document.getElementById('upload-form');
@@ -2331,51 +3136,6 @@ function uploadWithProgress(url, formData, onProgress) {
     });
 }
 
-/**
- * Formater la taille en bytes en format lisible
- */
-function formatBytes(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
-    return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
-}
-
-/**
- * Formater une durée en secondes en format mm:ss ou hh:mm:ss
- */
-function formatDuration(seconds) {
-    if (!seconds || isNaN(seconds)) return '';
-    const s = Math.floor(seconds);
-    const hrs = Math.floor(s / 3600);
-    const mins = Math.floor((s % 3600) / 60);
-    const secs = s % 60;
-    if (hrs > 0) {
-        return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-/**
- * Cache-buster pour les miniatures (mis à jour après régénération)
- */
-let thumbnailCacheBuster = Date.now();
-
-/**
- * Générer l'URL de miniature à partir du chemin vidéo
- * Les miniatures sont générées par video-processor.js dans /thumbnails/
- */
-function getThumbnailUrl(videoPath) {
-    if (!videoPath) return null;
-    // Le chemin vidéo est comme: videos/category/video.mp4
-    // La miniature est dans: thumbnails/category/video.jpg
-    const pathWithoutExt = videoPath.replace(/\.\w+$/, '');
-    // Le chemin vidéo commence déjà par "videos/" donc on remplace
-    const thumbnailPath = pathWithoutExt.replace(/^videos\//, 'thumbnails/') + '.jpg';
-    // Ajouter cache-buster pour forcer le rechargement après régénération
-    return '/' + thumbnailPath + '?t=' + thumbnailCacheBuster;
-}
-
 async function uploadVideo() {
     const form = document.getElementById('upload-form');
     const fileInput = document.getElementById('video-file');
@@ -2570,430 +3330,14 @@ async function updateSystem() {
     }
 }
 
-/**
- * System Actions
- */
-async function restartService(service) {
-    if (!confirm(`Redémarrer le service ${service} ?`)) {
-        return;
-    }
+// ============================================================================
+// MODULE: modules/config/time-categories.js
+// ============================================================================
 
-    try {
-        const response = await fetch(`/api/services/${service}/restart`, {
-            method: 'POST'
-        });
+// ============================================================================
+// Blocs temps (avant/pendant/apres match)
+// ============================================================================
 
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification(`Service ${service} redémarré`, 'success');
-            setTimeout(() => loadDashboard(), 2000);
-        } else {
-            showNotification('Erreur: ' + data.error, 'error');
-        }
-    } catch (error) {
-        showNotification('Erreur lors du redémarrage', 'error');
-    }
-}
-
-function confirmAction(action) {
-    const modal = document.getElementById('modal');
-    const title = document.getElementById('modal-title');
-    const message = document.getElementById('modal-message');
-    const confirmBtn = document.getElementById('modal-confirm');
-
-    if (action === 'reboot') {
-        title.textContent = 'Redémarrer le système';
-        message.textContent = 'Êtes-vous sûr de vouloir redémarrer le Raspberry Pi ? L\'opération prendra environ 1 minute.';
-        confirmBtn.onclick = () => executeAction('reboot');
-    } else if (action === 'shutdown') {
-        title.textContent = 'Éteindre le système';
-        message.textContent = 'Êtes-vous sûr de vouloir éteindre le Raspberry Pi ? Vous devrez le rallumer physiquement.';
-        confirmBtn.onclick = () => executeAction('shutdown');
-    }
-
-    modal.classList.add('active');
-}
-
-function closeModal() {
-    document.getElementById('modal').classList.remove('active');
-}
-
-async function executeAction(action) {
-    closeModal();
-
-    try {
-        const response = await fetch(`/api/system/${action}`, {
-            method: 'POST'
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification(data.message, 'success');
-        } else {
-            showNotification('Erreur: ' + data.error, 'error');
-        }
-    } catch (error) {
-        showNotification('Erreur lors de l\'opération', 'error');
-    }
-}
-
-/**
- * Utilities
- */
-function updateTime() {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('fr-FR');
-    document.getElementById('current-time').textContent = timeStr;
-
-    setTimeout(updateTime, 1000);
-}
-
-function showNotification(message, type = 'info') {
-    // Toast notification system
-    const icons = {
-        success: '✓',
-        error: '✗',
-        info: 'ℹ'
-    };
-
-    // Créer le container si nécessaire
-    let container = document.getElementById('toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        document.body.appendChild(container);
-    }
-
-    // Créer le toast
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `
-        <span class="toast-icon">${icons[type]}</span>
-        <span class="toast-message">${message}</span>
-        <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
-    `;
-
-    container.appendChild(toast);
-
-    // Animation d'entrée
-    setTimeout(() => toast.classList.add('show'), 10);
-
-    // Auto-suppression après 4 secondes
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
-}
-
-/**
- * Prévisualisation vidéo
- */
-function openVideoPreview(videoUrl, videoName) {
-    if (!videoUrl) {
-        showNotification('URL de vidéo manquante', 'error');
-        return;
-    }
-
-    const modal = document.getElementById('video-preview-modal');
-    const video = document.getElementById('preview-video');
-    const title = document.getElementById('preview-video-title');
-
-    if (!modal || !video) {
-        showNotification('Modal de prévisualisation non disponible', 'error');
-        return;
-    }
-
-    title.textContent = videoName || 'Prévisualisation';
-    video.src = videoUrl;
-    modal.classList.add('active');
-
-    // Lancer la lecture automatiquement
-    video.play().catch(() => {
-        // Ignorer l'erreur si autoplay est bloqué
-    });
-}
-
-function closeVideoPreview() {
-    const modal = document.getElementById('video-preview-modal');
-    const video = document.getElementById('preview-video');
-
-    if (video) {
-        video.pause();
-        video.src = '';
-    }
-
-    if (modal) {
-        modal.classList.remove('active');
-    }
-}
-
-/**
- * Régénération des miniatures
- * Utilise l'API synchrone pour attendre la fin, puis rafraîchit l'affichage
- */
-async function regenerateThumbnails(force = false) {
-    const forceRegen = force || confirm('Régénérer uniquement les miniatures manquantes ?\n\nCliquez "Annuler" pour tout régénérer (plus long).');
-    const actualForce = force ? true : !forceRegen;
-
-    showNotification('Régénération des miniatures en cours... Veuillez patienter.', 'info');
-
-    try {
-        // Utiliser l'API synchrone pour attendre la fin de la génération
-        const response = await fetch('/api/thumbnails/regenerate-sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ force: actualForce })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            // Mettre à jour le cache-buster pour forcer le rechargement des images
-            thumbnailCacheBuster = Date.now();
-
-            // Rafraîchir l'affichage des vidéos
-            await refreshVideos();
-
-            const stats = data.stats || {};
-            showNotification(`Miniatures régénérées : ${stats.generated || 0} nouvelles, ${stats.skipped || 0} existantes`, 'success');
-        } else {
-            showNotification('Erreur: ' + data.error, 'error');
-        }
-    } catch (error) {
-        console.error('Erreur régénération miniatures:', error);
-        showNotification('Erreur lors de la régénération', 'error');
-    }
-}
-
-/**
- * Recherche/filtre dans la bibliothèque
- */
-function filterVideos() {
-    const searchTerm = document.getElementById('video-search')?.value.toLowerCase().trim() || '';
-    const videoRows = document.querySelectorAll('#videos-list .video-row');
-    const videoGroups = document.querySelectorAll('#videos-list .video-group');
-    const videoSubgroups = document.querySelectorAll('#videos-list .video-subgroup');
-
-    // Si pas de terme de recherche, tout afficher
-    if (!searchTerm) {
-        videoRows.forEach(row => row.style.display = '');
-        videoSubgroups.forEach(sg => sg.style.display = '');
-        videoGroups.forEach(g => g.style.display = '');
-        return;
-    }
-
-    // Filtrer les lignes de vidéos
-    videoRows.forEach(row => {
-        const title = row.querySelector('.video-row-title')?.textContent.toLowerCase() || '';
-        const path = row.querySelector('.video-row-path')?.textContent.toLowerCase() || '';
-        const matches = title.includes(searchTerm) || path.includes(searchTerm);
-        row.style.display = matches ? '' : 'none';
-    });
-
-    // Cacher les sous-groupes vides
-    videoSubgroups.forEach(sg => {
-        const visibleRows = sg.querySelectorAll('.video-row:not([style*="display: none"])');
-        sg.style.display = visibleRows.length > 0 ? '' : 'none';
-    });
-
-    // Cacher les groupes vides
-    videoGroups.forEach(g => {
-        const visibleSubgroups = g.querySelectorAll('.video-subgroup:not([style*="display: none"])');
-        g.style.display = visibleSubgroups.length > 0 ? '' : 'none';
-    });
-}
-
-function openEditModal(videoPath) {
-    const modal = document.getElementById('edit-modal');
-    const form = document.getElementById('edit-video-form');
-    if (!modal || !form) {
-        return;
-    }
-
-    const video = cachedVideos.find(item => item.path === videoPath);
-    if (!video) {
-        showNotification('Vidéo introuvable', 'error');
-        return;
-    }
-
-    document.getElementById('edit-original-path').value = video.path;
-    document.getElementById('edit-display-name').value = video.displayName || '';
-
-    // Extraire le nom de fichier depuis le path (plus fiable)
-    const filename = video.path ? video.path.split('/').pop() : video.name;
-    const extIndex = filename.lastIndexOf('.');
-    const nameWithoutExt = extIndex > 0 ? filename.substring(0, extIndex) : filename;
-    document.getElementById('edit-filename').value = nameWithoutExt;
-
-    // Peupler le select des catégories
-    populateEditCategorySelect(video.configCategory || '');
-
-    // Pré-sélectionner la sous-catégorie si elle existe
-    if (video.configSubcategory) {
-        setTimeout(() => {
-            updateEditSubcategorySelect(video.configCategory, video.configSubcategory);
-        }, 50);
-    }
-
-    const pathLabel = document.getElementById('edit-current-path');
-    if (pathLabel) {
-        pathLabel.textContent = `Chemin actuel : videos/${video.path}`;
-    }
-
-    modal.classList.add('active');
-}
-
-/**
- * Peuple le select des catégories dans le modal d'édition
- * Les catégories verrouillées ne sont pas proposées (sauf si c'est la catégorie actuelle)
- */
-function populateEditCategorySelect(selectedCategoryId) {
-    const categorySelect = document.getElementById('edit-category');
-    const subcategorySelect = document.getElementById('edit-subcategory');
-
-    if (!categorySelect || !cachedConfig?.categories) {
-        return;
-    }
-
-    // Peupler les catégories (exclure les verrouillées sauf si sélectionnée)
-    categorySelect.innerHTML = '<option value="">-- Sélectionner --</option>';
-    cachedConfig.categories.forEach(cat => {
-        // Ne pas proposer les catégories verrouillées (sauf si c'est la catégorie actuelle)
-        if (isLocked(cat) && cat.id !== selectedCategoryId) {
-            return;
-        }
-        const option = document.createElement('option');
-        option.value = cat.id;
-        option.textContent = cat.name + (isLocked(cat) ? ' 🔒' : '');
-        if (cat.id === selectedCategoryId) {
-            option.selected = true;
-        }
-        categorySelect.appendChild(option);
-    });
-
-    // Ajouter l'écouteur pour les sous-catégories
-    categorySelect.onchange = function() {
-        updateEditSubcategorySelect(this.value);
-    };
-
-    // Peupler les sous-catégories si une catégorie est sélectionnée
-    if (selectedCategoryId) {
-        // Trouver la sous-catégorie actuelle de la vidéo
-        const video = cachedVideos.find(v => v.path === document.getElementById('edit-original-path').value);
-        updateEditSubcategorySelect(selectedCategoryId, video?.configSubcategory || '');
-    } else {
-        subcategorySelect.innerHTML = '<option value="">-- Aucune --</option>';
-    }
-}
-
-/**
- * Met à jour le select des sous-catégories en fonction de la catégorie sélectionnée
- */
-function updateEditSubcategorySelect(categoryId, selectedSubcategoryId = '') {
-    const subcategorySelect = document.getElementById('edit-subcategory');
-    if (!subcategorySelect) return;
-
-    subcategorySelect.innerHTML = '<option value="">-- Aucune --</option>';
-
-    if (!categoryId || !cachedConfig?.categories) {
-        return;
-    }
-
-    const category = cachedConfig.categories.find(c => c.id === categoryId);
-    if (!category || !category.subCategories || category.subCategories.length === 0) {
-        return;
-    }
-
-    category.subCategories.forEach(sub => {
-        const option = document.createElement('option');
-        option.value = sub.id;
-        option.textContent = sub.name;
-        if (sub.id === selectedSubcategoryId) {
-            option.selected = true;
-        }
-        subcategorySelect.appendChild(option);
-    });
-}
-
-function closeEditModal() {
-    const modal = document.getElementById('edit-modal');
-    if (modal) {
-        modal.classList.remove('active');
-    }
-    resetEditForm();
-}
-
-function resetEditForm() {
-    const form = document.getElementById('edit-video-form');
-    if (form) {
-        form.reset();
-    }
-
-    const pathLabel = document.getElementById('edit-current-path');
-    if (pathLabel) {
-        pathLabel.textContent = '';
-    }
-
-    const originalInput = document.getElementById('edit-original-path');
-    if (originalInput) {
-        originalInput.value = '';
-    }
-}
-
-async function submitVideoEdition() {
-    const originalPath = document.getElementById('edit-original-path').value;
-    const categoryId = document.getElementById('edit-category').value;
-    const subcategoryId = document.getElementById('edit-subcategory').value;
-    const displayName = document.getElementById('edit-display-name').value.trim();
-    const filenameWithoutExt = document.getElementById('edit-filename').value.trim();
-
-    if (!originalPath || !categoryId || !filenameWithoutExt) {
-        showNotification('Catégorie et nom de fichier requis', 'error');
-        return;
-    }
-
-    // Récupérer l'extension originale du fichier depuis le path
-    const originalFilename = originalPath.split('/').pop();
-    const extIndex = originalFilename.lastIndexOf('.');
-    const ext = extIndex > 0 ? originalFilename.substring(extIndex) : '';
-
-    // Reconstruire le nom complet avec l'extension
-    const newFilename = filenameWithoutExt + ext;
-
-    try {
-        const response = await fetch('/api/videos/edit', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                originalPath,
-                categoryId,
-                subcategoryId: subcategoryId || null,
-                displayName: displayName || null,
-                newFilename
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification('Vidéo mise à jour', 'success');
-            closeEditModal();
-            // Recharger la configuration pour avoir les données à jour
-            await loadConfiguration();
-            loadVideos();
-        } else {
-            showNotification('Erreur: ' + (data.error || 'Impossible de modifier la vidéo'), 'error');
-        }
-    } catch (error) {
-        console.error('Error editing video:', error);
-        showNotification('Erreur lors de la modification', 'error');
-    }
-}
-
-/**
- * Time Categories Management
- */
 const defaultTimeCategories = [
     {
         id: 'before',
@@ -3224,9 +3568,14 @@ async function saveAllTimeCategories() {
     }
 }
 
-/**
- * Categories Manager
- */
+// ============================================================================
+// MODULE: modules/config/categories.js
+// ============================================================================
+
+// ============================================================================
+// Gestionnaire categories/sous-categories
+// ============================================================================
+
 let cachedCategoriesForManager = [];
 
 async function loadCategoriesForManager() {
@@ -3514,462 +3863,209 @@ async function deleteSubCategory(categoryId, subIndex) {
     }
 }
 
-/**
- * Drag & Drop pour réorganiser les vidéos
- */
-let draggedElement = null;
-let draggedVideoPath = null;
-let draggedCategoryId = null;
-let draggedSubcategoryId = null;
+// ============================================================================
+// MODULE: modules/bootstrap.js
+// ============================================================================
 
-function handleDragStart(e) {
-    draggedElement = e.target.closest('.video-row');
-    if (!draggedElement) return;
+// ============================================================================
+// Navigation, init, DOMContentLoaded
+// ============================================================================
 
-    draggedVideoPath = draggedElement.dataset.videoPath;
-    draggedCategoryId = draggedElement.dataset.categoryId;
-    draggedSubcategoryId = draggedElement.dataset.subcategoryId;
+// Initialisation
+document.addEventListener('DOMContentLoaded', async () => {
+    initNavigation();
+    initSubNavigation();
+    initForms();
+    initLogButtons();
+    initDropZone();
+    updateTime();
+    startConnectionMonitoring(); // Start connection monitoring
+    loadDashboard();
+    loadVersionLabel();
 
-    draggedElement.classList.add('dragging');
+    // Charger la configuration pour peupler les selects
+    await loadConfiguration();
 
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', draggedVideoPath);
-}
-
-function handleDragEnd(e) {
-    if (draggedElement) {
-        draggedElement.classList.remove('dragging');
-    }
-    draggedElement = null;
-    draggedVideoPath = null;
-    draggedCategoryId = null;
-    draggedSubcategoryId = null;
-
-    // Remove all drag-over states
-    document.querySelectorAll('.video-rows.drag-over').forEach(el => {
-        el.classList.remove('drag-over');
-    });
-    document.querySelectorAll('.video-row.drag-over-above, .video-row.drag-over-below').forEach(el => {
-        el.classList.remove('drag-over-above', 'drag-over-below');
-    });
-}
-
-function handleDragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-
-    const container = e.target.closest('.video-rows');
-    if (!container) return;
-
-    container.classList.add('drag-over');
-
-    // Find the closest row and determine position
-    const rows = [...container.querySelectorAll('.video-row:not(.dragging)')];
-    const mouseY = e.clientY;
-
-    // Remove previous indicators
-    rows.forEach(row => row.classList.remove('drag-over-above', 'drag-over-below'));
-
-    // Find closest row
-    let closestRow = null;
-    let closestOffset = Number.NEGATIVE_INFINITY;
-
-    rows.forEach(row => {
-        const box = row.getBoundingClientRect();
-        const offset = mouseY - box.top - box.height / 2;
-
-        if (offset < 0 && offset > closestOffset) {
-            closestOffset = offset;
-            closestRow = row;
+    // Rafraîchissement automatique toutes les 5 secondes
+    refreshInterval = setInterval(() => {
+        if (currentTab === 'dashboard') {
+            loadDashboard();
         }
+    }, 5000);
+});
+
+/**
+ * Initialisation de la sous-navigation vidéos
+ */
+function initSubNavigation() {
+    const subnavButtons = document.querySelectorAll('.subnav-btn');
+    subnavButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const subtab = btn.dataset.subtab;
+
+            // Update active button
+            subnavButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Update active content
+            document.querySelectorAll('.subtab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`subtab-${subtab}`).classList.add('active');
+        });
+    });
+}
+
+/**
+ * Charge la configuration et peuple les selects de catégories
+ */
+async function loadConfiguration() {
+    try {
+        const response = await fetch('/api/configuration');
+        if (!response.ok) {
+            console.error('Erreur lors du chargement de la configuration');
+            return;
+        }
+        cachedConfig = await response.json();
+        populateCategorySelects();
+    } catch (error) {
+        console.error('Erreur lors du chargement de la configuration:', error);
+    }
+}
+
+async function loadVersionLabel() {
+    const label = document.getElementById('version-label');
+    if (!label) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/version');
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+        }
+        currentVersionInfo = await response.json();
+    } catch (error) {
+        console.warn('[admin-ui] Impossible de charger la version:', error);
+        currentVersionInfo = null;
+    }
+
+    updateVersionLabel();
+}
+
+function updateVersionLabel() {
+    const label = document.getElementById('version-label');
+    if (!label) {
+        return;
+    }
+
+    const rawVersion = currentVersionInfo?.version || null;
+    let versionLabel = null;
+
+    if (rawVersion) {
+        versionLabel = rawVersion.trim();
+        if (versionLabel && !/^v/i.test(versionLabel)) {
+            versionLabel = `v${versionLabel}`;
+        }
+    }
+
+    const versionText = versionLabel ? `Neopro ${versionLabel}` : 'Neopro';
+    label.textContent = `${versionText} | Raspberry Pi Admin Panel`;
+
+    const tooltip = [];
+    if (currentVersionInfo?.commit) {
+        tooltip.push(`commit ${currentVersionInfo.commit}`);
+    }
+    if (currentVersionInfo?.buildDate) {
+        try {
+            tooltip.push(
+                `build ${new Date(currentVersionInfo.buildDate).toLocaleString('fr-FR')}`
+            );
+        } catch (error) {
+            tooltip.push(`build ${currentVersionInfo.buildDate}`);
+        }
+    }
+    if (currentVersionInfo?.source) {
+        tooltip.push(`source ${currentVersionInfo.source}`);
+    }
+
+    if (tooltip.length) {
+        label.title = tooltip.join(' • ');
+    } else {
+        label.removeAttribute('title');
+    }
+}
+
+/**
+ * Peuple les selects de catégories avec les données de la configuration
+ * Les catégories verrouillées ne sont pas proposées pour l'upload
+ */
+function populateCategorySelects() {
+    const categorySelect = document.getElementById('video-category');
+    if (!categorySelect || !cachedConfig) {
+        return;
+    }
+
+    const categories = cachedConfig.categories || [];
+
+    // Vider et repeupler le select (exclure les catégories verrouillées)
+    categorySelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+
+    categories.forEach(cat => {
+        // Ne pas proposer les catégories verrouillées pour l'upload
+        if (isLocked(cat)) {
+            return;
+        }
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.name || cat.id;
+        categorySelect.appendChild(option);
+    });
+}
+
+/**
+ * Navigation
+ */
+function initNavigation() {
+    const navButtons = document.querySelectorAll('.nav-btn');
+    navButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            switchTab(tab);
+        });
+    });
+}
+
+function switchTab(tab) {
+    // Update buttons
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
     });
 
-    if (closestRow) {
-        closestRow.classList.add('drag-over-above');
-    } else if (rows.length > 0) {
-        rows[rows.length - 1].classList.add('drag-over-below');
-    }
-}
+    // Update content
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === `tab-${tab}`);
+    });
 
-function handleDragLeave(e) {
-    const container = e.target.closest('.video-rows');
-    if (!container) return;
+    currentTab = tab;
 
-    // Only remove drag-over if we're actually leaving the container
-    const relatedTarget = e.relatedTarget;
-    if (!container.contains(relatedTarget)) {
-        container.classList.remove('drag-over');
-        container.querySelectorAll('.video-row').forEach(row => {
-            row.classList.remove('drag-over-above', 'drag-over-below');
-        });
-    }
-}
-
-async function handleDrop(e) {
-    e.preventDefault();
-
-    const container = e.target.closest('.video-rows');
-    if (!container || !draggedElement) return;
-
-    container.classList.remove('drag-over');
-
-    const targetCategoryId = container.dataset.categoryId;
-    const targetSubcategoryId = container.dataset.subcategoryId || null;
-
-    // Find drop position
-    const rows = [...container.querySelectorAll('.video-row:not(.dragging)')];
-    const mouseY = e.clientY;
-
-    let insertBeforeIndex = rows.length; // Default: append at end
-
-    for (let i = 0; i < rows.length; i++) {
-        const box = rows[i].getBoundingClientRect();
-        if (mouseY < box.top + box.height / 2) {
-            insertBeforeIndex = i;
+    // Load data for specific tabs
+    switch (tab) {
+        case 'dashboard':
+            loadDashboard();
             break;
-        }
-    }
-
-    // Remove visual indicators
-    rows.forEach(row => row.classList.remove('drag-over-above', 'drag-over-below'));
-
-    // Check if moving within same category/subcategory or to different one
-    const sameCategoryAndSubcategory =
-        draggedCategoryId === targetCategoryId &&
-        draggedSubcategoryId === targetSubcategoryId;
-
-    if (sameCategoryAndSubcategory) {
-        // Reorder within the same list
-        await reorderVideoInList(draggedVideoPath, targetCategoryId, targetSubcategoryId, insertBeforeIndex);
-    } else {
-        // Move to different category/subcategory
-        await moveVideoToCategory(draggedVideoPath, draggedCategoryId, draggedSubcategoryId, targetCategoryId, targetSubcategoryId, insertBeforeIndex);
-    }
-}
-
-async function reorderVideoInList(videoPath, categoryId, subcategoryId, newIndex) {
-    try {
-        const response = await fetch('/api/videos/reorder', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                videoPath,
-                categoryId,
-                subcategoryId: subcategoryId || null,
-                newIndex
-            })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            showNotification('Ordre des vidéos mis à jour', 'success');
-            await loadConfiguration();
+        case 'videos':
             loadVideos();
-        } else {
-            showNotification('Erreur: ' + data.error, 'error');
-        }
-    } catch (error) {
-        console.error('Error reordering video:', error);
-        showNotification('Erreur lors de la réorganisation', 'error');
-    }
-}
-
-async function moveVideoToCategory(videoPath, fromCategoryId, fromSubcategoryId, toCategoryId, toSubcategoryId, newIndex) {
-    try {
-        const response = await fetch('/api/videos/move', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                videoPath,
-                fromCategoryId,
-                fromSubcategoryId: fromSubcategoryId || null,
-                toCategoryId,
-                toSubcategoryId: toSubcategoryId || null,
-                newIndex
-            })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            showNotification('Vidéo déplacée', 'success');
-            await loadConfiguration();
-            loadVideos();
-        } else {
-            showNotification('Erreur: ' + data.error, 'error');
-        }
-    } catch (error) {
-        console.error('Error moving video:', error);
-        showNotification('Erreur lors du déplacement', 'error');
-    }
-}
-
-/**
- * Bulk Selection / Actions
- */
-function handleVideoSelection(e, videoPath) {
-    if (e.target.checked) {
-        selectedVideos.add(videoPath);
-    } else {
-        selectedVideos.delete(videoPath);
-    }
-    updateBulkActionsToolbar();
-}
-
-function updateBulkActionsToolbar() {
-    let toolbar = document.getElementById('bulk-actions-toolbar');
-
-    if (selectedVideos.size === 0) {
-        if (toolbar) {
-            toolbar.classList.remove('visible');
-        }
-        return;
-    }
-
-    if (!toolbar) {
-        toolbar = createBulkActionsToolbar();
-        document.getElementById('subtab-library').appendChild(toolbar);
-    }
-
-    toolbar.querySelector('.bulk-count').textContent = `${selectedVideos.size} vidéo${selectedVideos.size > 1 ? 's' : ''} sélectionnée${selectedVideos.size > 1 ? 's' : ''}`;
-    toolbar.classList.add('visible');
-}
-
-function createBulkActionsToolbar() {
-    const toolbar = document.createElement('div');
-    toolbar.id = 'bulk-actions-toolbar';
-    toolbar.className = 'bulk-actions-toolbar';
-
-    toolbar.innerHTML = `
-        <div class="bulk-toolbar-content">
-            <span class="bulk-count">0 vidéos sélectionnées</span>
-            <div class="bulk-actions-buttons">
-                <button class="btn btn-secondary btn-sm" onclick="selectAllVideos()">☑ Tout</button>
-                <button class="btn btn-secondary btn-sm" onclick="clearVideoSelection()">☐ Aucun</button>
-                <button class="btn btn-primary btn-sm" onclick="openBulkMoveModal()">📁 Déplacer</button>
-                <button class="btn btn-danger btn-sm" onclick="bulkDeleteVideos()">🗑️ Supprimer</button>
-            </div>
-        </div>
-    `;
-
-    return toolbar;
-}
-
-function selectAllVideos() {
-    const checkboxes = document.querySelectorAll('.video-select-checkbox');
-    checkboxes.forEach(cb => {
-        cb.checked = true;
-        selectedVideos.add(cb.dataset.path);
-    });
-    updateBulkActionsToolbar();
-}
-
-function clearVideoSelection() {
-    selectedVideos.clear();
-    const checkboxes = document.querySelectorAll('.video-select-checkbox');
-    checkboxes.forEach(cb => {
-        cb.checked = false;
-    });
-    updateBulkActionsToolbar();
-}
-
-async function bulkDeleteVideos() {
-    if (selectedVideos.size === 0) {
-        showNotification('Aucune vidéo sélectionnée', 'info');
-        return;
-    }
-
-    const count = selectedVideos.size;
-    if (!confirm(`Supprimer ${count} vidéo${count > 1 ? 's' : ''} ?\n\nCette action est irréversible.`)) {
-        return;
-    }
-
-    const pathsToDelete = [...selectedVideos];
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const videoPath of pathsToDelete) {
-        // Find video info from cache
-        const video = cachedVideos.find(v => v.path === videoPath);
-        if (!video) {
-            errorCount++;
-            continue;
-        }
-
-        try {
-            const response = await fetch('/api/videos/delete-from-config', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    videoPath,
-                    categoryId: video.configCategory,
-                    subcategoryId: video.configSubcategory || null
-                })
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                successCount++;
-            } else {
-                errorCount++;
-            }
-        } catch (error) {
-            errorCount++;
-        }
-    }
-
-    // Clear selection and refresh
-    selectedVideos.clear();
-    await loadConfiguration();
-    loadVideos();
-    updateBulkActionsToolbar();
-
-    if (errorCount === 0) {
-        showNotification(`${successCount} vidéo${successCount > 1 ? 's' : ''} supprimée${successCount > 1 ? 's' : ''}`, 'success');
-    } else {
-        showNotification(`${successCount} supprimée(s), ${errorCount} erreur(s)`, 'error');
-    }
-}
-
-/**
- * Bulk Move Modal
- */
-function openBulkMoveModal() {
-    if (selectedVideos.size === 0) {
-        showNotification('Aucune vidéo sélectionnée', 'info');
-        return;
-    }
-
-    // Create modal if not exists
-    let modal = document.getElementById('bulk-move-modal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'bulk-move-modal';
-        modal.className = 'modal';
-        document.body.appendChild(modal);
-    }
-
-    // Build category options
-    const categories = cachedConfig?.categories || [];
-    let categoryOptions = categories.map(cat =>
-        `<option value="${cat.id}">${cat.name}</option>`
-    ).join('');
-
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h3>📁 Déplacer ${selectedVideos.size} vidéo${selectedVideos.size > 1 ? 's' : ''}</h3>
-            <div class="form-group">
-                <label>Catégorie de destination</label>
-                <select id="bulk-move-category" onchange="updateBulkMoveSubcategories()">
-                    <option value="">-- Sélectionner --</option>
-                    ${categoryOptions}
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Sous-catégorie (optionnel)</label>
-                <select id="bulk-move-subcategory">
-                    <option value="">-- Racine de la catégorie --</option>
-                </select>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn btn-secondary" onclick="closeBulkMoveModal()">Annuler</button>
-                <button class="btn btn-primary" onclick="executeBulkMove()">Déplacer</button>
-            </div>
-        </div>
-    `;
-
-    modal.classList.add('active');
-}
-
-function updateBulkMoveSubcategories() {
-    const categoryId = document.getElementById('bulk-move-category').value;
-    const subcategorySelect = document.getElementById('bulk-move-subcategory');
-
-    subcategorySelect.innerHTML = '<option value="">-- Racine de la catégorie --</option>';
-
-    if (!categoryId) return;
-
-    const category = (cachedConfig?.categories || []).find(c => c.id === categoryId);
-    if (category && category.subCategories) {
-        category.subCategories.forEach(sub => {
-            const option = document.createElement('option');
-            option.value = sub.id;
-            option.textContent = sub.name;
-            subcategorySelect.appendChild(option);
-        });
-    }
-}
-
-function closeBulkMoveModal() {
-    const modal = document.getElementById('bulk-move-modal');
-    if (modal) {
-        modal.classList.remove('active');
-    }
-}
-
-async function executeBulkMove() {
-    const categoryId = document.getElementById('bulk-move-category').value;
-    const subcategoryId = document.getElementById('bulk-move-subcategory').value || null;
-
-    if (!categoryId) {
-        showNotification('Sélectionnez une catégorie', 'error');
-        return;
-    }
-
-    const pathsToMove = [...selectedVideos];
-    let successCount = 0;
-    let errorCount = 0;
-
-    closeBulkMoveModal();
-    showNotification('Déplacement en cours...', 'info');
-
-    for (const videoPath of pathsToMove) {
-        const video = cachedVideos.find(v => v.path === videoPath);
-        if (!video) {
-            errorCount++;
-            continue;
-        }
-
-        // Skip if already in target location
-        if (video.configCategory === categoryId &&
-            (video.configSubcategory || null) === subcategoryId) {
-            successCount++;
-            continue;
-        }
-
-        try {
-            const response = await fetch('/api/videos/move', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    videoPath,
-                    fromCategoryId: video.configCategory,
-                    fromSubcategoryId: video.configSubcategory || null,
-                    toCategoryId: categoryId,
-                    toSubcategoryId: subcategoryId
-                })
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                successCount++;
-            } else {
-                errorCount++;
-            }
-        } catch (error) {
-            errorCount++;
-        }
-    }
-
-    // Clear selection and refresh
-    selectedVideos.clear();
-    await loadConfiguration();
-    loadVideos();
-    updateBulkActionsToolbar();
-
-    if (errorCount === 0) {
-        showNotification(`${successCount} vidéo${successCount > 1 ? 's' : ''} déplacée${successCount > 1 ? 's' : ''}`, 'success');
-    } else {
-        showNotification(`${successCount} déplacée(s), ${errorCount} erreur(s)`, 'error');
+            loadTimeCategories();
+            loadCategoriesForManager();
+            break;
+        case 'network':
+            loadNetwork();
+            loadWifiCurrent();
+            break;
+        case 'logs':
+            loadLogs(currentLogService);
+            break;
     }
 }
 

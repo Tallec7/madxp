@@ -5,6 +5,7 @@
 ## Qu'est-ce qu'un ADR ?
 
 Un ADR documente une décision technique importante avec :
+
 - **Contexte** : Pourquoi cette décision était nécessaire
 - **Alternatives** : Options considérées avec avantages/inconvénients
 - **Décision** : Choix final et justification
@@ -62,50 +63,7 @@ Un ADR documente une décision technique importante avec :
 4. Soumettre une PR pour review
 5. Mettre à jour ce README après merge
 
-## Template
-
-```markdown
-# ADR-XXX: Titre
-
-**Date** : [Date]
-**Statut** : Proposé | Accepté | Déprécié | Rejeté
-**Décideurs** : [Noms]
-
----
-
-## Contexte
-
-[Pourquoi cette décision est nécessaire]
-
-## Décision
-
-[Le choix retenu]
-
-## Alternatives Considérées
-
-### Option 1
-**Avantages** : ...
-**Inconvénients** : ...
-**Verdict** : Rejeté - [raison]
-
-### Option 2 (choisie) ✅
-**Avantages** : ...
-**Inconvénients** : ...
-**Verdict** : Accepté - [raison]
-
-## Conséquences
-
-### Positives
-1. ...
-
-### Négatives
-1. ...
-
-## Références
-
-- [Lien vers doc]
-- [Lien vers code]
-```
+Template complet : [`docs/templates/TEMPLATE_ADR.md`](../templates/TEMPLATE_ADR.md)
 
 ---
 

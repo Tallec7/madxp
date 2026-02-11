@@ -14,6 +14,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const logger = require('../logger');
 const { networkDetector, PROFILE_TYPES } = require('./network-detector');
+const networkWatchdog = require('./network-watchdog');
 
 // Operation types
 const OPERATIONS = {
@@ -310,15 +311,63 @@ class SafeNetworkOperations {
   }
 
   /**
+   * Atomically modify a wpa_supplicant config file.
+   * Reads → modifies in memory → writes to .tmp → mv to original.
+   * This prevents race conditions where wpa_cli reconfigure reads a half-written file.
+   */
+  async atomicWpaSupplicantEdit(configPath, modifyFn) {
+    const tmpPath = `${configPath}.tmp`;
+    try {
+      // Read current content
+      const { stdout: content } = await execAsync(`sudo cat ${configPath}`);
+
+      // Modify in memory
+      const newContent = modifyFn(content);
+
+      // Write to tmp file atomically using fs-extra (avoids shell escaping issues)
+      // We write to a local temp file first, then sudo mv to the target
+      const localTmpPath = `/tmp/wpa-supplicant-edit-${Date.now()}.tmp`;
+      await fs.writeFile(localTmpPath, newContent, 'utf8');
+
+      // Copy with sudo to the target tmp path (preserves content exactly)
+      await execAsync(`sudo cp ${localTmpPath} ${tmpPath}`);
+      await fs.remove(localTmpPath);
+
+      // Atomic move (rename is atomic on same filesystem)
+      await execAsync(`sudo mv ${tmpPath} ${configPath}`);
+
+      // Fix permissions
+      await execAsync(`sudo chmod 600 ${configPath}`);
+      await execAsync(`sudo chown root:root ${configPath}`);
+
+      return { success: true };
+    } catch (error) {
+      // Cleanup tmp files on failure
+      await execAsync(`sudo rm -f ${tmpPath} 2>/dev/null || true`);
+      throw error;
+    }
+  }
+
+  /**
    * Remove BSSID lock from wpa_supplicant config
    */
   async removeBssidLock() {
     try {
-      // Remove from both possible config files
-      await execAsync(`sudo sed -i '/bssid=/d' ${this.wpaSupplicantPath} 2>/dev/null || true`);
-      await execAsync(`sudo sed -i '/bssid=/d' ${this.wpaSupplicantFallback} 2>/dev/null || true`);
+      // Atomically remove bssid= from main config
+      await this.atomicWpaSupplicantEdit(this.wpaSupplicantPath, (content) => {
+        return content.split('\n').filter(line => !line.trim().startsWith('bssid=')).join('\n');
+      });
 
-      // Reconfigure wpa_supplicant
+      // Also try fallback config (may not exist)
+      try {
+        await this.atomicWpaSupplicantEdit(this.wpaSupplicantFallback, (content) => {
+          return content.split('\n').filter(line => !line.trim().startsWith('bssid=')).join('\n');
+        });
+      } catch {
+        // Fallback file may not exist, ignore
+      }
+
+      // Reconfigure wpa_supplicant (single call, config is already consistent)
       await execAsync('sudo wpa_cli -i wlan1 reconfigure');
 
       logger.info('SafeNetworkOperations: BSSID lock removed');
@@ -337,13 +386,23 @@ class SafeNetworkOperations {
     }
 
     try {
-      // First remove any existing bssid line
-      await execAsync(`sudo sed -i '/bssid=/d' ${this.wpaSupplicantPath} 2>/dev/null || true`);
+      // Atomically: remove old bssid + add new one (single file write)
+      await this.atomicWpaSupplicantEdit(this.wpaSupplicantPath, (content) => {
+        const lines = content.split('\n');
+        // Remove existing bssid lines
+        const filtered = lines.filter(line => !line.trim().startsWith('bssid='));
+        // Find 'network={' and insert bssid after it
+        const result = [];
+        for (const line of filtered) {
+          result.push(line);
+          if (line.trim() === 'network={') {
+            result.push(`    bssid=${bssid}`);
+          }
+        }
+        return result.join('\n');
+      });
 
-      // Add new bssid inside the network block
-      await execAsync(`sudo sed -i '/^network={/a\\    bssid=${bssid}' ${this.wpaSupplicantPath}`);
-
-      // Reconfigure
+      // Single reconfigure call (config is already consistent)
       await execAsync('sudo wpa_cli -i wlan1 reconfigure');
 
       logger.info('SafeNetworkOperations: BSSID lock set', { bssid });
@@ -358,13 +417,23 @@ class SafeNetworkOperations {
    */
   async configureBgscan(bgscan = 'simple:30:-70:300') {
     try {
-      // Remove existing bgscan line if any
-      await execAsync(`sudo sed -i '/bgscan=/d' ${this.wpaSupplicantPath} 2>/dev/null || true`);
+      // Atomically: remove old bgscan + add new one (single file write)
+      await this.atomicWpaSupplicantEdit(this.wpaSupplicantPath, (content) => {
+        const lines = content.split('\n');
+        // Remove existing bgscan lines
+        const filtered = lines.filter(line => !line.trim().startsWith('bgscan='));
+        // Find 'network={' and insert bgscan after it
+        const result = [];
+        for (const line of filtered) {
+          result.push(line);
+          if (line.trim() === 'network={') {
+            result.push(`    bgscan="${bgscan}"`);
+          }
+        }
+        return result.join('\n');
+      });
 
-      // Add bgscan inside the network block
-      await execAsync(`sudo sed -i '/^network={/a\\    bgscan="${bgscan}"' ${this.wpaSupplicantPath}`);
-
-      // Reconfigure
+      // Single reconfigure call (config is already consistent)
       await execAsync('sudo wpa_cli -i wlan1 reconfigure');
 
       logger.info('SafeNetworkOperations: bgscan configured', { bgscan });
@@ -493,6 +562,30 @@ class SafeNetworkOperations {
     }
 
     const actions = [];
+    let willReconfigure = false;
+
+    // Determine if we'll need to reconfigure wpa_supplicant
+    if ((profile.type === PROFILE_TYPES.MESH || profile.type === PROFILE_TYPES.MESH_ISOLATED)
+        && profile.bssidInfo?.locked) {
+      willReconfigure = true;
+    }
+    if (profile.type === PROFILE_TYPES.MESH || profile.type === PROFILE_TYPES.MESH_ISOLATED) {
+      try {
+        const { stdout } = await execAsync(`grep "bgscan=" ${this.wpaSupplicantPath} 2>/dev/null || echo ""`);
+        if (!stdout.includes('bgscan=')) {
+          willReconfigure = true;
+        }
+      } catch (e) {
+        // Ignore
+      }
+    }
+
+    // Enable grace period BEFORE any wpa_cli reconfigure to prevent
+    // NetworkWatchdog from triggering recovery during the reconfigure
+    if (willReconfigure) {
+      networkWatchdog.enableGracePeriod('internet', 60000); // 60s grace period
+      logger.info('SafeNetworkOperations: grace period enabled before auto-optimize');
+    }
 
     // If mesh and BSSID is locked, remove it
     if ((profile.type === PROFILE_TYPES.MESH || profile.type === PROFILE_TYPES.MESH_ISOLATED)
@@ -503,7 +596,6 @@ class SafeNetworkOperations {
 
     // If mesh and no bgscan, configure it
     if (profile.type === PROFILE_TYPES.MESH || profile.type === PROFILE_TYPES.MESH_ISOLATED) {
-      // Check if bgscan is configured
       try {
         const { stdout } = await execAsync(`grep "bgscan=" ${this.wpaSupplicantPath} 2>/dev/null || echo ""`);
         if (!stdout.includes('bgscan=')) {

@@ -1,10 +1,13 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
+import { TranslateModule } from '@ngx-translate/core';
 import { BehaviorSubject, of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { SitesListComponent } from './sites-list.component';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { LoggerService } from '../../core/services/logger.service';
 import { Site } from '../../core/models';
 
 describe('SitesListComponent', () => {
@@ -56,12 +59,14 @@ describe('SitesListComponent', () => {
     }));
 
     const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success']);
+    const loggerServiceMock = jasmine.createSpyObj('LoggerService', ['debug', 'info', 'warn', 'error', 'addBreadcrumb', 'setAuthenticated']);
 
     await TestBed.configureTestingModule({
-      imports: [SitesListComponent, FormsModule, RouterTestingModule],
+      imports: [SitesListComponent, FormsModule, RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: SitesService, useValue: sitesServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
+        { provide: LoggerService, useValue: loggerServiceMock },
       ],
     }).compileComponents();
 
@@ -336,13 +341,15 @@ describe('SitesListComponent', () => {
     }));
 
     it('should show error notification on failure', fakeAsync(() => {
-      sitesService.createSite.and.returnValue(throwError(() => ({ error: { error: 'Creation failed' } })));
+      const httpError = new HttpErrorResponse({ status: 400, error: { error: 'Creation failed' } });
+      sitesService.createSite.and.returnValue(throwError(() => httpError));
 
       component.createSite();
       tick();
 
       expect(notificationService.error).toHaveBeenCalledWith(
-        'Erreur lors de la création du site: Creation failed'
+        'Erreur lors de la création du site: Creation failed',
+        jasmine.objectContaining({ correlationId: undefined })
       );
     }));
   });
@@ -455,13 +462,15 @@ describe('SitesListComponent', () => {
     }));
 
     it('should show error notification on failure', fakeAsync(() => {
-      sitesService.updateSite.and.returnValue(throwError(() => ({ error: { error: 'Update failed' } })));
+      const httpError = new HttpErrorResponse({ status: 400, error: { error: 'Update failed' } });
+      sitesService.updateSite.and.returnValue(throwError(() => httpError));
 
       component.saveEditSite();
       tick();
 
       expect(notificationService.error).toHaveBeenCalledWith(
-        'Erreur lors de la modification du site: Update failed'
+        'Erreur lors de la modification du site: Update failed',
+        jasmine.objectContaining({ correlationId: undefined })
       );
     }));
   });
@@ -529,13 +538,15 @@ describe('SitesListComponent', () => {
     }));
 
     it('should show error notification on failure', fakeAsync(() => {
-      sitesService.deleteSite.and.returnValue(throwError(() => ({ error: { error: 'Delete failed' } })));
+      const httpError = new HttpErrorResponse({ status: 400, error: { error: 'Delete failed' } });
+      sitesService.deleteSite.and.returnValue(throwError(() => httpError));
 
       component.deleteSite(mockSites[0]);
       tick();
 
       expect(notificationService.error).toHaveBeenCalledWith(
-        'Erreur lors de la suppression: Delete failed'
+        'Erreur lors de la suppression: Delete failed',
+        jasmine.objectContaining({ correlationId: undefined })
       );
     }));
   });

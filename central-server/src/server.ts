@@ -4,10 +4,8 @@ import dns from 'node:dns';
 import path from 'path';
 import helmet from 'helmet';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
-import swaggerUi from 'swagger-ui-express';
-import YAML from 'yamljs';
+// swagger-ui-express and yamljs loaded only in development (saves ~5-8MB memory in production)
 import dotenv from 'dotenv';
 
 import logger from './config/logger';
@@ -23,6 +21,7 @@ import { adminOpsService } from './services/admin-ops.service';
 import { alertingService } from './services/alerting.service';
 import { realtimeStatsService } from './services/realtime-stats.service';
 import { predictiveAlertsService } from './services/predictive-alerts.service';
+import { cleanupStaleTempFiles } from './middleware/upload';
 
 import authRoutes from './routes/auth.routes';
 import mfaRoutes from './routes/mfa.routes';
@@ -218,19 +217,37 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Adds X-Correlation-ID header for request tracing across frontend/backend
 app.use(correlationMiddleware);
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: NODE_ENV === 'production' ? 100 : 1000,
-  message: 'Trop de requêtes, veuillez réessayer plus tard',
-});
-app.use('/api/', limiter);
+// Rate limiting is handled per-route (see routes below)
+// No global rate limiter - the per-route limiters are sufficient
+// and a global limiter of 100/15min was causing 429 errors with normal dashboard usage
 
-app.use((req: Request, _res: Response, next: NextFunction) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const correlationReq = req as import('./middleware/correlation').CorrelationRequest;
+  const correlationId = correlationReq.correlationId;
+
   logger.debug('Request', {
     method: req.method,
     path: req.path,
     ip: req.ip,
+    correlationId,
   });
+
+  // Log completed requests with correlation ID for traceability
+  const startTime = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    if (res.statusCode >= 400) {
+      logger.warn('Request completed with error', {
+        method: req.method,
+        path: req.path,
+        statusCode: res.statusCode,
+        durationMs: duration,
+        correlationId,
+        userId: (req as import('./types').AuthRequest).user?.id,
+      });
+    }
+  });
+
   next();
 });
 
@@ -238,7 +255,17 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 app.use(metricsService.httpMetricsMiddleware());
 
 // Endpoint métriques Prometheus (non rate-limited pour le scraping)
-app.get('/metrics', async (_req: Request, res: Response) => {
+// Protégé par Bearer token si METRICS_BEARER_TOKEN est défini
+app.get('/metrics', async (req: Request, res: Response) => {
+  const metricsToken = process.env.METRICS_BEARER_TOKEN;
+  if (metricsToken) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || authHeader !== `Bearer ${metricsToken}`) {
+      res.status(401).json({ error: 'Unauthorized - Invalid metrics token' });
+      return;
+    }
+  }
+
   try {
     // Mettre à jour les métriques snapshot
     metricsService.recordConnectedSites(socketService.getConnectionCount());
@@ -261,16 +288,24 @@ app.get('/', (_req: Request, res: Response) => {
   });
 });
 
-// Documentation API Swagger/OpenAPI
-try {
-  const swaggerDocument = YAML.load(path.join(__dirname, 'docs', 'openapi.yaml'));
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'NEOPRO API Documentation',
-  }));
-  logger.info('Swagger documentation available at /api-docs');
-} catch (error) {
-  logger.warn('Could not load OpenAPI documentation:', error);
+// Documentation API Swagger/OpenAPI (development only to save memory)
+if (NODE_ENV !== 'production') {
+  try {
+    const YAML = require('yamljs');
+    const swaggerUi = require('swagger-ui-express');
+    const swaggerDocument = YAML.load(path.join(__dirname, 'docs', 'openapi.yaml'));
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'NEOPRO API Documentation',
+    }));
+    logger.info('Swagger documentation available at /api-docs');
+  } catch (error) {
+    logger.warn('Could not load OpenAPI documentation:', error);
+  }
+} else {
+  app.get('/api-docs', (_req: Request, res: Response) => {
+    res.json({ message: 'API docs disabled in production to save memory. Run in dev mode.' });
+  });
 }
 
 // Health check pour Render - toujours retourne 200 pour éviter les timeouts de déploiement
@@ -319,9 +354,9 @@ app.use('/api/sites', sitesRoutes);
 app.use('/api/sites', draftsRoutes);  // Config drafts - sous /api/sites/:siteId/draft
 app.use('/api/groups', apiRateLimit, groupsRoutes);
 app.use('/api', sensitiveRateLimit, contentRoutes); // Upload de vidéos - plus restrictif
-app.use('/api', sensitiveRateLimit, updatesRoutes); // Mises à jour - sensible
+app.use('/api', updatesRoutes); // Mises à jour - rate limits per-route dans updates.routes.ts
 app.use('/api/analytics', apiRateLimit, analyticsRoutes);
-app.use('/api/analytics', apiRateLimit, advertiserAnalyticsRoutes); // Analytics annonceurs (+ backward compat sponsors)
+app.use('/api/analytics', advertiserAnalyticsRoutes); // Analytics annonceurs - rate limits per-route (piAnalyticsRateLimit for /impressions, apiRateLimit for the rest)
 app.use('/api', apiRateLimit, advertiserSitesRoutes); // Gestion associations annonceurs <-> sites (+ backward compat)
 app.use('/api/audit', apiRateLimit, auditRoutes);
 app.use('/api/canary', sensitiveRateLimit, canaryRoutes); // Déploiements canary - sensible
@@ -339,7 +374,7 @@ app.use('/api/subscriptions', subscriptionRoutes); // Subscription management - 
 app.use('/api/billing', billingRoutes); // Billing export - admin only
 app.use('/api/reports', apiRateLimit, reportsRoutes); // Generated PDF reports
 app.use('/api/alerts', apiRateLimit, alertsRoutes); // System and predictive alerts
-app.use('/api/benchmark', apiRateLimit, benchmarkRoutes); // Anonymous benchmarks
+app.use('/api/benchmark', benchmarkRoutes); // Anonymous benchmarks - rate limits per-route in benchmark.routes.ts
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler
 // Uses standardized error format with correlation ID
@@ -388,9 +423,10 @@ const startServer = async () => {
     networkAlertsService.start();
     logger.info('Network alerts service started');
 
-    // Demarrer le service d'alertes predictives (Phase 3.1 - Analytics Enhancement)
-    predictiveAlertsService.start();
-    logger.info('Predictive alerts service started');
+    // DISABLED: Alertes prédictives - UI commentée dans le dashboard, cron inutile
+    // TODO: Réactiver quand le dashboard affichera les alertes prédictives (Phase 5)
+    // predictiveAlertsService.start();
+    // logger.info('Predictive alerts service started');
 
     // Initialiser et démarrer le service de stats temps réel
     const io = socketService.getIO();
@@ -414,6 +450,10 @@ const startServer = async () => {
     });
     memoryManagerService.start();
     logger.info('Memory manager started');
+
+    // Nettoyage périodique des fichiers temporaires d'upload abandonnés (toutes les 30 min)
+    const tempCleanupInterval = setInterval(cleanupStaleTempFiles, 30 * 60 * 1000);
+    tempCleanupInterval.unref(); // Ne pas empêcher le shutdown
   } catch (error) {
     logger.error('Failed to initialize dependencies:', error);
     // Ne pas quitter - le serveur reste en mode dégradé et le health check rapportera l'état
@@ -425,7 +465,7 @@ process.on('SIGTERM', async () => {
   schedulerService.stop();
   cronSchedulerService.stop();
   memoryManagerService.stop();
-  predictiveAlertsService.stop();
+  // predictiveAlertsService.stop(); // DISABLED: see start() comment above
   alertingService.cleanup();
   adminOpsService.stopCleanup();
   httpServer.close(async () => {

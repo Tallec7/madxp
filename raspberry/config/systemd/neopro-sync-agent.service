@@ -16,7 +16,7 @@ Environment=NODE_ENV=production
 EnvironmentFile=-/etc/neopro/site.conf
 
 # Commande de lancement
-ExecStart=/usr/bin/node /home/pi/neopro/sync-agent/src/index.js
+ExecStart=/usr/bin/node /home/pi/neopro/sync-agent/src/agent.js
 
 # Redémarrage automatique en cas de crash
 Restart=always

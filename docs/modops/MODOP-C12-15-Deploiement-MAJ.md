@@ -143,6 +143,27 @@ Dashboard → Sites → [Site] → Actions → Mettre à jour le logiciel
 
 **⏱️ Durée totale : 5-10 minutes**
 
+**Note (v3.7.14+) :** Le script `update-software.js` copie maintenant aussi le dossier `config/` (services systemd) vers le Pi. Les versions précédentes ne copiaient jamais ce dossier, ce qui empêchait l'installation des services de protection via OTA. L'archive inclut maintenant **7 services systemd** (3 core + 4 protection) et **12 scripts runtime** (dont `fix-fleet-pi.sh` et `diagnose-pi.sh`). Si des services sont manquants sur un Pi existant, utiliser `fix-fleet-pi.sh` pour les installer manuellement.
+
+**⚠️ Golden snapshot automatique (v3.7.16+) :** Avant de remplacer le code du sync-agent, `update-software.js` crée automatiquement un snapshot "golden" de la version actuelle (si aucun golden n'existe). Cela garantit que le guardian peut restaurer la version précédente en cas de crash du nouveau code. Sans ce mécanisme, un Pi recevant le guardian pour la première fois via OTA n'aurait aucun fallback et resterait hors ligne indéfiniment en cas de régression.
+
+**Parité des 3 chemins de déploiement (v3.8.1+) :** Les 3 méthodes de mise à jour sont maintenant **100% alignées** :
+
+| Étape                     | OTA (`update-software.js`) | SCP (`deploy-remote.sh`) | Admin `:8080` (`admin-server.js`) |
+| ------------------------- | -------------------------- | ------------------------ | --------------------------------- |
+| webapp/                   | ✅                         | ✅                       | ✅                                |
+| server/ + npm install     | ✅                         | ✅                       | ✅                                |
+| sync-agent/ + npm install | ✅                         | ✅                       | ✅                                |
+| admin/                    | ✅                         | ✅                       | ✅                                |
+| scripts/                  | ✅                         | ✅                       | ✅                                |
+| config/systemd/ + enable  | ✅                         | ✅                       | ✅                                |
+| Golden snapshot           | ✅                         | ✅                       | ✅                                |
+| VERSION + release.json    | ✅                         | ✅                       | ✅                                |
+| Restart nginx             | ✅                         | ✅                       | ✅                                |
+| Restart kiosk             | ✅                         | ✅                       | ✅                                |
+
+Avant la v3.8.1, chaque chemin avait des lacunes différentes (services systemd manquants, golden snapshot absent, nginx non redémarré, etc.), ce qui causait des divergences entre Pi selon la méthode de mise à jour utilisée.
+
 **Méthode alternative : SSH manuelle**
 
 ```bash
@@ -621,14 +642,31 @@ Pour le support technique, vous pouvez exporter un **bundle de diagnostic comple
 Dashboard → Sites → [Site] → Onglet Debug → "Export Debug Bundle"
 ```
 
+**Alternative en ligne de commande (Pi hors ligne ou sans accès dashboard) :**
+
+```bash
+cd /home/pi/neopro/sync-agent
+node -e "
+  const exp = require('./src/commands/debug-bundle');
+  exp().then(r => {
+    const fs = require('fs'), os = require('os');
+    const f = '/tmp/neopro-debug-' + os.hostname() + '-' + new Date().toISOString().slice(0,10) + '.json';
+    fs.writeFileSync(f, JSON.stringify(r.bundle, null, 2));
+    console.log('Rapport exporté: ' + f);
+  }).catch(e => console.error(e));
+"
+```
+
 **Contenu du bundle (JSON) :**
 
 - Configuration (sanitisée)
 - Version logicielle
 - État de santé système (GPU, services, throttling)
-- Logs récents (100 lignes)
+- Logs récents (100 lignes par service)
 - Diagnostics réseau
+- Diagnostics hotspot (clients connectés, scan WiFi, état hostapd/dnsmasq)
 - État des buffers analytics
+- Configuration boot (gpu_mem)
 - Liste des vidéos locales
 
 ---
@@ -639,12 +677,12 @@ Depuis la v2.27, le **Raspberry Pi 5** est entièrement supporté.
 
 ### Différences Pi 4 vs Pi 5
 
-| Aspect         | Pi 4          | Pi 5                   |
-| -------------- | ------------- | ---------------------- |
-| GPU            | VideoCore VI  | VideoCore VII          |
-| Config GPU     | `gpu_mem=256` | SwiftShader (auto)     |
-| `vcgencmd gpu` | Affiche 256M  | Affiche 4M (normal)    |
-| Décodage vidéo | Hardware      | Logiciel (SwiftShader) |
+| Aspect         | Pi 4          | Pi 5                            |
+| -------------- | ------------- | ------------------------------- |
+| GPU            | VideoCore VI  | VideoCore VII                   |
+| Config GPU     | `gpu_mem=256` | V3D natif (aucun flag, v3.7.3+) |
+| `vcgencmd gpu` | Affiche 256M  | Affiche 4M (normal)             |
+| Décodage vidéo | Hardware      | CPU (FFmpeg) + GPU V3D          |
 
 ### Vérification après déploiement
 
@@ -656,9 +694,9 @@ ssh pi@neopro.local 'cat /proc/device-tree/model'
 ssh pi@neopro.local 'vcgencmd get_mem gpu'
 # Doit afficher : gpu=256M
 
-# Pi 5 : vérifier SwiftShader
-ssh pi@neopro.local 'pgrep -a chromium | grep swiftshader'
-# Doit afficher le processus avec --use-angle=swiftshader
+# Pi 5 : vérifier V3D natif (aucun flag GPU custom)
+ssh pi@neopro.local 'pgrep -a chromium | grep -E "use-gl|use-angle|swiftshader"'
+# Aucun résultat = OK (V3D natif actif)
 ```
 
 ### Problèmes connus Pi 5
@@ -667,7 +705,7 @@ Le dashboard peut afficher un faux avertissement "Mémoire GPU insuffisante (4M)
 
 ---
 
-**Version :** 1.1
-**Dernière mise à jour :** Janvier 2026
+**Version :** 1.3
+**Dernière mise à jour :** 9 février 2026
 
 **FIN DU MODOP-C12-15**

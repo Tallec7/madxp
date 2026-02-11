@@ -1,3 +1,6 @@
+// @ts-check
+/** @typedef {import('./types').SponsorImpression} SponsorImpression */
+
 /**
  * Module de collecte et d'envoi des impressions sponsors.
  *
@@ -230,52 +233,90 @@ class SponsorImpressionsCollector {
 
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
+      let batchSent = false;
 
-      try {
-        const result = await this.sendBatch(url, apiKey, batch);
-        totalSent += batch.length;
-        totalRecorded += result.recorded || 0;
-        totalSkipped += result.skipped || 0;
+      // Retry logic: up to 2 retries for transient errors (429, 5xx, timeout)
+      for (let attempt = 0; attempt < 3 && !batchSent; attempt++) {
+        try {
+          if (attempt > 0) {
+            const retryDelay = attempt * 5000; // 5s, 10s
+            logger.info('[SponsorImpressions] Retrying batch after transient error', {
+              batch: i + 1, attempt: attempt + 1, retryDelay,
+            });
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+          }
 
-        logger.debug('[SponsorImpressions] Batch sent successfully', {
-          batch: i + 1,
-          of: batches.length,
-          sent: batch.length,
-          recorded: result.recorded || 0,
-        });
+          const result = await this.sendBatch(url, apiKey, batch);
+          totalSent += batch.length;
+          totalRecorded += result.recorded || 0;
+          totalSkipped += result.skipped || 0;
+          batchSent = true;
 
-        // Mettre à jour le buffer après chaque batch réussi
-        // Supprimer les impressions envoyées
-        this.buffer = impressions.slice(totalSent);
-        this.saveBuffer();
+          logger.debug('[SponsorImpressions] Batch sent successfully', {
+            batch: i + 1,
+            of: batches.length,
+            sent: batch.length,
+            recorded: result.recorded || 0,
+          });
 
-        // Petite pause entre les batches pour ne pas surcharger le serveur
-        if (i < batches.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+          // Mettre à jour le buffer après chaque batch réussi
+          // Supprimer les impressions envoyées
+          this.buffer = impressions.slice(totalSent);
+          this.saveBuffer();
+
+          // Petite pause entre les batches pour ne pas surcharger le serveur
+          if (i < batches.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+          }
+        } catch (error) {
+          // Analyser le type d'erreur
+          let message;
+          let isAuthError = false;
+          let isTransient = false;
+
+          if (error.response) {
+            const status = error.response.status;
+            message = `HTTP ${status}: ${error.response.data?.message || error.response.data?.error || error.response.statusText}`;
+            isAuthError = status === 401 || status === 403;
+            isTransient = status === 429 || status >= 500;
+          } else if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED') {
+            message = error.message;
+            isTransient = true;
+          } else {
+            message = error.message;
+          }
+
+          // Auth errors are permanent - stop immediately
+          if (isAuthError) {
+            logger.error('[SponsorImpressions] Auth error, stopping all batches', {
+              batch: i + 1, error: message,
+            });
+            lastError = message;
+            i = batches.length; // Break outer loop
+            break;
+          }
+
+          // Transient errors - retry if attempts remain
+          if (isTransient && attempt < 2) {
+            logger.warn('[SponsorImpressions] Transient error, will retry', {
+              batch: i + 1, attempt: attempt + 1, error: message,
+            });
+            continue;
+          }
+
+          // Final failure for this batch - stop sending remaining batches
+          logger.warn('[SponsorImpressions] Batch send failed after retries, stopping', {
+            batch: i + 1,
+            of: batches.length,
+            error: message,
+            sentSoFar: totalSent,
+            attempts: attempt + 1,
+          });
+
+          lastError = message;
+          i = batches.length; // Break outer loop
+          break;
         }
-      } catch (error) {
-        // Analyser le type d'erreur pour un meilleur logging
-        let message;
-        let isAuthError = false;
-
-        if (error.response) {
-          const status = error.response.status;
-          message = `HTTP ${status}: ${error.response.data?.message || error.response.data?.error || error.response.statusText}`;
-          isAuthError = status === 401 || status === 403;
-        } else {
-          message = error.message;
-        }
-
-        logger.warn('[SponsorImpressions] Batch send failed, stopping', {
-          batch: i + 1,
-          of: batches.length,
-          error: message,
-          sentSoFar: totalSent,
-          isAuthError,
-        });
-
-        lastError = message;
-        break; // Arrêter l'envoi, on réessaiera les impressions restantes plus tard
       }
     }
 
@@ -311,12 +352,18 @@ class SponsorImpressionsCollector {
     // Charger le buffer au démarrage
     this.loadBuffer();
 
-    // Envoyer immédiatement s'il y a des données en attente
+    // Envoyer immédiatement s'il y a des données en attente (après un délai pour laisser le réseau s'initialiser)
     if (this.buffer.length > 0) {
-      logger.info('[SponsorImpressions] Found pending impressions, sending immediately', {
+      logger.info('[SponsorImpressions] Found pending impressions, scheduling immediate send', {
         count: this.buffer.length
       });
-      this.sendToServer(serverUrl, siteId);
+      setTimeout(async () => {
+        try {
+          await this.sendToServer(serverUrl, siteId);
+        } catch (error) {
+          logger.warn('[SponsorImpressions] Initial send failed, will retry on next interval', { error: error.message });
+        }
+      }, 10000); // 10s delay to let network stabilize at boot
     }
 
     // Configurer l'envoi périodique

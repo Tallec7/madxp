@@ -1,9 +1,9 @@
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { query } from '../config/database';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import socketService from '../services/socket.service';
+import { configHistoryRepository } from '../repositories/config-history.repository';
 
 /**
  * Calcule les différences entre deux configurations
@@ -98,41 +98,24 @@ export const getConfigHistory = async (req: AuthRequest, res: Response) => {
     const { limit = 20, offset = 0 } = req.query;
 
     // Vérifier que le site existe
-    const siteResult = await query('SELECT id, site_name FROM sites WHERE id = $1', [id]);
-    if (siteResult.rows.length === 0) {
+    const site = await configHistoryRepository.findSiteBasic(id);
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    const result = await query(
-      `SELECT
-        ch.id,
-        ch.site_id,
-        ch.configuration,
-        ch.deployed_by,
-        ch.deployed_at,
-        ch.comment,
-        ch.changes_summary,
-        u.email as deployed_by_email,
-        u.full_name as deployed_by_name
-      FROM config_history ch
-      LEFT JOIN users u ON ch.deployed_by = u.id
-      WHERE ch.site_id = $1
-      ORDER BY ch.deployed_at DESC
-      LIMIT $2 OFFSET $3`,
-      [id, parseInt(limit as string), parseInt(offset as string)]
+    const history = await configHistoryRepository.findBySitePaginated(
+      id,
+      parseInt(limit as string),
+      parseInt(offset as string)
     );
 
     // Compter le total
-    const countResult = await query(
-      'SELECT COUNT(*) as total FROM config_history WHERE site_id = $1',
-      [id]
-    );
+    const total = await configHistoryRepository.countBySite(id);
 
-    const total = countResult.rows[0] as { total: string };
     res.json({
       site_id: id,
-      total: parseInt(total.total),
-      history: result.rows,
+      total,
+      history,
     });
   } catch (error) {
     logger.error('Get config history error:', error);
@@ -147,28 +130,13 @@ export const getConfigVersion = async (req: AuthRequest, res: Response) => {
   try {
     const { id, versionId } = req.params;
 
-    const result = await query(
-      `SELECT
-        ch.id,
-        ch.site_id,
-        ch.configuration,
-        ch.deployed_by,
-        ch.deployed_at,
-        ch.comment,
-        ch.changes_summary,
-        u.email as deployed_by_email,
-        u.full_name as deployed_by_name
-      FROM config_history ch
-      LEFT JOIN users u ON ch.deployed_by = u.id
-      WHERE ch.id = $1 AND ch.site_id = $2`,
-      [versionId, id]
-    );
+    const version = await configHistoryRepository.findVersionWithUser(versionId, id);
 
-    if (result.rows.length === 0) {
+    if (!version) {
       return res.status(404).json({ error: 'Version de configuration non trouvée' });
     }
 
-    res.json(result.rows[0]);
+    res.json(version);
   } catch (error) {
     logger.error('Get config version error:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération de la version' });
@@ -189,21 +157,14 @@ export const saveConfigVersion = async (req: AuthRequest, res: Response) => {
     }
 
     // Vérifier que le site existe
-    const siteResult = await query('SELECT id, site_name FROM sites WHERE id = $1', [id]);
-    if (siteResult.rows.length === 0) {
+    const site = await configHistoryRepository.findSiteBasic(id);
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
     // Récupérer la dernière version pour calculer le diff
-    const lastVersionResult = await query(
-      `SELECT id, configuration FROM config_history
-       WHERE site_id = $1
-       ORDER BY deployed_at DESC
-       LIMIT 1`,
-      [id]
-    );
+    const lastVersion = await configHistoryRepository.findLastVersion(id);
 
-    const lastVersion = lastVersionResult.rows[0] as { id: string; configuration: Record<string, unknown> } | undefined;
     const previousVersionId = lastVersion?.id || null;
     const previousConfig = lastVersion?.configuration || null;
 
@@ -212,38 +173,31 @@ export const saveConfigVersion = async (req: AuthRequest, res: Response) => {
 
     // Créer le nouvel enregistrement
     const versionId = uuidv4();
-    const result = await query(
-      `INSERT INTO config_history (id, site_id, configuration, deployed_by, comment, previous_version_id, changes_summary)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, site_id, configuration, deployed_by, deployed_at, comment, changes_summary`,
-      [
-        versionId,
-        id,
-        JSON.stringify(configuration),
-        req.user?.id,
-        comment || null,
-        previousVersionId,
-        JSON.stringify(changesSummary),
-      ]
-    );
+    const result = await configHistoryRepository.insertVersion({
+      id: versionId,
+      site_id: id,
+      configuration: JSON.stringify(configuration),
+      deployed_by: req.user?.id,
+      comment: comment || null,
+      previous_version_id: previousVersionId,
+      changes_summary: JSON.stringify(changesSummary),
+    });
 
     logger.info('Config version saved', {
       siteId: id,
-      siteName: siteResult.rows[0].site_name,
+      siteName: site.site_name,
       versionId,
       savedBy: req.user?.email,
       changesCount: changesSummary.length,
     });
 
     try {
-      await query(
-        `UPDATE sites SET pending_config_version_id = $1 WHERE id = $2`,
-        [versionId, id]
-      );
+      await configHistoryRepository.updateSitePendingConfigVersion(id, versionId);
 
       await socketService.triggerPendingConfigSync(id);
-    } catch (error: any) {
-      if (error?.code === '42703') {
+    } catch (error: unknown) {
+      const dbError = error as { code?: string };
+      if (dbError?.code === '42703') {
         logger.warn('pending_config_version_id column missing - pending sync will be skipped (run migration add-pending-config-column.sql)', {
           siteId: id,
           versionId,
@@ -254,7 +208,7 @@ export const saveConfigVersion = async (req: AuthRequest, res: Response) => {
     }
 
     res.status(201).json({
-      ...result.rows[0],
+      ...result,
       changes_summary: changesSummary,
     });
   } catch (error) {
@@ -276,23 +230,16 @@ export const compareConfigVersions = async (req: AuthRequest, res: Response) => 
     }
 
     // Récupérer les deux versions
-    const result = await query(
-      `SELECT id, configuration, deployed_at FROM config_history
-       WHERE site_id = $1 AND id IN ($2, $3)`,
-      [id, version1, version2]
+    const rows = await configHistoryRepository.findTwoVersionsForComparison(
+      id,
+      version1 as string,
+      version2 as string
     );
 
-    if (result.rows.length !== 2) {
+    if (rows.length !== 2) {
       return res.status(404).json({ error: 'Une ou plusieurs versions non trouvées' });
     }
 
-    interface ConfigVersionRow {
-      id: string;
-      configuration: Record<string, unknown>;
-      deployed_at: Date;
-    }
-
-    const rows = result.rows as unknown as ConfigVersionRow[];
     const v1 = rows.find((r) => r.id === version1);
     const v2 = rows.find((r) => r.id === version2);
 
@@ -378,28 +325,18 @@ export const previewConfigDiff = async (req: AuthRequest, res: Response) => {
     }
 
     // Récupérer la configuration actuelle depuis local_config_mirror (plus fiable que config_history)
-    const siteResult = await query(
-      `SELECT local_config_mirror FROM sites WHERE id = $1`,
-      [id]
-    );
+    const siteRow = await configHistoryRepository.findSiteLocalConfigMirror(id);
 
-    if (siteResult.rows.length === 0) {
+    if (!siteRow) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    const localConfigMirror = siteResult.rows[0].local_config_mirror as Record<string, unknown> | null;
+    const localConfigMirror = siteRow.local_config_mirror;
 
     // Si pas de config locale, fallback sur config_history
     let currentConfig: Record<string, unknown> | null = localConfigMirror;
     if (!currentConfig) {
-      const lastVersionResult = await query(
-        `SELECT configuration FROM config_history
-         WHERE site_id = $1
-         ORDER BY deployed_at DESC
-         LIMIT 1`,
-        [id]
-      );
-      const lastVersionRow = lastVersionResult.rows[0] as { configuration: Record<string, unknown> } | undefined;
+      const lastVersionRow = await configHistoryRepository.findLastConfigurationOnly(id);
       currentConfig = lastVersionRow?.configuration || null;
     }
 

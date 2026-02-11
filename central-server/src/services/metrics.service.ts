@@ -3,7 +3,7 @@
  * Expose des métriques pour le monitoring avec Prometheus/Grafana
  */
 
-import client, {
+import {
   Registry,
   Counter,
   Gauge,
@@ -174,6 +174,115 @@ const canaryRollbacksTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques FTP/Storage =============
+
+const ftpOperationsTotal = new Counter({
+  name: 'neopro_ftp_operations_total',
+  help: 'Total FTP operations (upload, delete, verify)',
+  labelNames: ['operation', 'status', 'storage_type'],
+  registers: [register],
+});
+
+const ftpOperationDuration = new Histogram({
+  name: 'neopro_ftp_operation_duration_seconds',
+  help: 'Duration of FTP operations in seconds',
+  labelNames: ['operation', 'storage_type'],
+  buckets: [0.5, 1, 2, 5, 10, 30, 60, 120],
+  registers: [register],
+});
+
+const ftpRetriesTotal = new Counter({
+  name: 'neopro_ftp_retries_total',
+  help: 'Total FTP retry attempts',
+  labelNames: ['operation', 'storage_type'],
+  registers: [register],
+});
+
+const ftpUploadBytesTotal = new Counter({
+  name: 'neopro_ftp_upload_bytes_total',
+  help: 'Total bytes uploaded to FTP',
+  labelNames: ['storage_type'],
+  registers: [register],
+});
+
+// ============= Métriques Sync Agent (côté central) =============
+
+const syncOperationsTotal = new Counter({
+  name: 'neopro_sync_operations_total',
+  help: 'Total sync operations received from Pi agents',
+  labelNames: ['type', 'status'],
+  registers: [register],
+});
+
+const configDriftTotal = new Counter({
+  name: 'neopro_config_drift_total',
+  help: 'Total config drift detections (Pi config hash mismatch)',
+  registers: [register],
+});
+
+const configSyncPendingGauge = new Gauge({
+  name: 'neopro_config_sync_pending',
+  help: 'Number of sites with pending config deployments',
+  registers: [register],
+});
+
+// ============= Métriques Rate Limiting =============
+
+const rateLimitHitsTotal = new Counter({
+  name: 'neopro_rate_limit_hits_total',
+  help: 'Total rate limit violations (429 responses)',
+  labelNames: ['limiter', 'key_type'],
+  registers: [register],
+});
+
+const rateLimitNearExhaustionTotal = new Counter({
+  name: 'neopro_rate_limit_near_exhaustion_total',
+  help: 'Total requests where rate limit was >80% consumed',
+  labelNames: ['limiter'],
+  registers: [register],
+});
+
+// ============= Métriques Réseau Pi =============
+
+const siteNetworkTypeGauge = new Gauge({
+  name: 'neopro_site_network_type',
+  help: 'Network connection type per site (1=active for that type)',
+  labelNames: ['connection_type'],
+  registers: [register],
+});
+
+const siteStabilityScoreGauge = new Gauge({
+  name: 'neopro_site_stability_score',
+  help: 'Average network stability score across connected sites (0-100)',
+  registers: [register],
+});
+
+const networkAlertsTotal = new Counter({
+  name: 'neopro_network_alerts_total',
+  help: 'Total network alerts from Pi watchdog',
+  labelNames: ['type', 'severity'],
+  registers: [register],
+});
+
+const networkRollbacksTotal = new Counter({
+  name: 'neopro_network_rollbacks_total',
+  help: 'Total network config rollbacks on Pi',
+  labelNames: ['operation'],
+  registers: [register],
+});
+
+const networkRecoveryAttemptsTotal = new Counter({
+  name: 'neopro_network_recovery_attempts_total',
+  help: 'Total auto-recovery attempts by Pi watchdog',
+  registers: [register],
+});
+
+const heartbeatsTotal = new Counter({
+  name: 'neopro_heartbeats_total',
+  help: 'Total heartbeats received from Pi sites',
+  registers: [register],
+});
+
 // ============= Service Class =============
 
 class MetricsService {
@@ -297,6 +406,79 @@ class MetricsService {
 
   recordCanaryRollback(): void {
     canaryRollbacksTotal.inc();
+  }
+
+  // ============= Méthodes FTP/Storage =============
+
+  recordFtpOperation(operation: string, status: string, storageType: string, durationSeconds?: number): void {
+    ftpOperationsTotal.inc({ operation, status, storage_type: storageType });
+    if (durationSeconds !== undefined) {
+      ftpOperationDuration.observe({ operation, storage_type: storageType }, durationSeconds);
+    }
+  }
+
+  recordFtpRetry(operation: string, storageType: string): void {
+    ftpRetriesTotal.inc({ operation, storage_type: storageType });
+  }
+
+  recordFtpUploadBytes(storageType: string, bytes: number): void {
+    ftpUploadBytesTotal.inc({ storage_type: storageType }, bytes);
+  }
+
+  // ============= Méthodes Sync Agent =============
+
+  recordSyncOperation(type: string, status: string): void {
+    syncOperationsTotal.inc({ type, status });
+  }
+
+  recordConfigDrift(): void {
+    configDriftTotal.inc();
+  }
+
+  recordConfigSyncPending(count: number): void {
+    configSyncPendingGauge.set(count);
+  }
+
+  // ============= Méthodes Rate Limiting =============
+
+  recordRateLimitHit(limiter: string, keyType: string): void {
+    rateLimitHitsTotal.inc({ limiter, key_type: keyType });
+  }
+
+  recordRateLimitNearExhaustion(limiter: string): void {
+    rateLimitNearExhaustionTotal.inc({ limiter });
+  }
+
+  // ============= Méthodes réseau Pi =============
+
+  recordSiteNetworkTypes(typeCounts: Record<string, number>): void {
+    // Reset all to 0, then set actuals
+    siteNetworkTypeGauge.reset();
+    for (const [connectionType, count] of Object.entries(typeCounts)) {
+      siteNetworkTypeGauge.set({ connection_type: connectionType }, count);
+    }
+  }
+
+  recordSiteStabilityScore(avgScore: number): void {
+    siteStabilityScoreGauge.set(avgScore);
+  }
+
+  recordNetworkAlert(type: string, severity: string): void {
+    networkAlertsTotal.inc({ type, severity });
+  }
+
+  recordNetworkRollback(operation: string): void {
+    networkRollbacksTotal.inc({ operation });
+  }
+
+  recordNetworkRecoveryAttempts(count: number): void {
+    for (let i = 0; i < count; i++) {
+      networkRecoveryAttemptsTotal.inc();
+    }
+  }
+
+  recordHeartbeat(): void {
+    heartbeatsTotal.inc();
   }
 
   /**

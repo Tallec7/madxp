@@ -1,3 +1,6 @@
+// @ts-check
+/** @typedef {import('./types').SyncAgentConfig} SyncAgentConfig */
+
 const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
@@ -55,6 +58,7 @@ const buildAllowedCommands = () => {
   return Array.from(commandsSet);
 };
 
+/** @type {SyncAgentConfig} */
 const config = {
   central: {
     url: process.env.CENTRAL_SERVER_URL || 'http://localhost:3001',
@@ -102,6 +106,7 @@ const config = {
   },
 };
 
+/** @returns {boolean} */
 const validateConfig = () => {
   if (!config.central.enabled) {
     console.warn('⚠️  Central server disabled - agent will run in offline mode');

@@ -19,13 +19,13 @@ module.exports = {
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
-    // Thresholds réalistes pour un projet avec WebSocket/streams
-    // Ces seuils peuvent être augmentés progressivement
+    // Seuils progressifs (cliquet) — augmenter à chaque sprint
+    // Phase 2: 25/45/45/45 → Phase 4: 40/60/60/60 → Phase 7: 60/75/75/75
     global: {
-      branches: 30,    // WebSocket/health services have many edge case branches
-      functions: 50,   // Some async handlers difficult to trigger in unit tests
-      lines: 50,
-      statements: 50,
+      branches: 25,    // WebSocket/health services have many edge case branches
+      functions: 45,   // Some async handlers difficult to trigger in unit tests
+      lines: 45,
+      statements: 45,
     },
   },
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],

@@ -308,7 +308,22 @@ ip route show default
 - Demander au client de vérifier sa box Internet
 - Vérifier les câbles Ethernet
 
-#### 3.7 Réparation des permissions
+#### 3.7 Script de réparation fleet (v3.7.14+)
+
+**Script tout-en-un pour corriger les problèmes courants** (TKIP, services manquants, GPU, permissions) :
+
+```bash
+# Le script est livré par OTA dans /home/pi/neopro/scripts/
+sudo /home/pi/neopro/scripts/fix-fleet-pi.sh
+
+# Le script détecte automatiquement :
+# - Modèle Pi (4 vs 5)
+# - Type de connexion (Ethernet vs WiFi)
+# - Nom du site
+# Et applique les corrections adaptées (7 étapes)
+```
+
+#### 3.8 Réparation manuelle des permissions
 
 **Si les logs montrent "Permission denied" :**
 

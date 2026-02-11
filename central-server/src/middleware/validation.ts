@@ -141,4 +141,60 @@ export const schemas = {
       'any.only': 'Les mots de passe ne correspondent pas',
     }),
   }),
+
+  // Remote command schema (PUBLIC endpoint - validation critique)
+  remoteCommand: Joi.object({
+    type: Joi.string().valid(
+      'score-update', 'score-reset', 'phase-change', 'play-video',
+      'play-sponsors', 'timer-update', 'breaking-news', 'match-config'
+    ).required(),
+    data: Joi.object().optional().default({}),
+  }),
+
+  // Remote PIN verification (public endpoint)
+  remotePin: Joi.object({
+    pin: Joi.string().pattern(/^\d{4,6}$/).required().messages({
+      'string.pattern.base': 'Le PIN doit contenir entre 4 et 6 chiffres',
+      'any.required': 'Le PIN est requis',
+    }),
+  }),
+
+  // Set remote PIN (admin/operator endpoint)
+  setRemotePin: Joi.object({
+    pin: Joi.string().pattern(/^\d{4,6}$/).required().messages({
+      'string.pattern.base': 'Le PIN doit contenir entre 4 et 6 chiffres',
+      'any.required': 'Le PIN est requis',
+    }),
+  }),
+
+  // Subscription schemas
+  extendSubscription: Joi.object({
+    new_end_date: Joi.string().isoDate().required(),
+    note: Joi.string().max(500).optional().allow('', null),
+  }),
+
+  suspendSite: Joi.object({
+    reason: Joi.string().valid(
+      'unpaid', 'expired', 'abuse', 'maintenance',
+      'request', 'hardware', 'trial_ended', 'connection'
+    ).required(),
+    note: Joi.string().max(500).optional().allow('', null),
+  }),
+
+  reactivateSite: Joi.object({
+    new_end_date: Joi.string().isoDate().optional().allow(null),
+    note: Joi.string().max(500).optional().allow('', null),
+  }),
+
+  changePlan: Joi.object({
+    plan: Joi.string().valid('trial', 'standard', 'premium').required(),
+    note: Joi.string().max(500).optional().allow('', null),
+  }),
+
+  updateSubscription: Joi.object({
+    subscription_start: Joi.string().isoDate().optional().allow(null, ''),
+    subscription_end: Joi.string().isoDate().optional().allow(null, ''),
+    subscription_plan: Joi.string().valid('trial', 'standard', 'premium').optional().allow(null),
+    note: Joi.string().max(500).optional().allow('', null),
+  }),
 };

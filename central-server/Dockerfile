@@ -49,7 +49,7 @@ WORKDIR /app
 
 # Install ffmpeg with full codec support for image-to-video conversion
 # libx264 is required for H.264 encoding, available in community repo
-RUN apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community ffmpeg libx264-dev
+RUN apk add --no-cache ffmpeg
 
 # Add non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \

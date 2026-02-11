@@ -96,7 +96,7 @@ describe('Integration Tests - Video Deployment Flow', () => {
             metadata: null,
           }],
         })
-        // getSignedUrl (mock simulating Supabase)
+        // getSignedUrl (mock simulating storage)
         .mockResolvedValueOnce({ rows: [] })
         // updateDeploymentStatus
         .mockResolvedValueOnce({ rows: [] })

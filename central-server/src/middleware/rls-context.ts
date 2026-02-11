@@ -211,6 +211,7 @@ export async function withAdminContext<T>(
  * Type augmentation pour Express Request
  */
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       rlsContext?: {

@@ -1,3 +1,344 @@
+# [3.15.0](https://github.com/Tallec7/neopro/compare/v3.14.0...v3.15.0) (2026-02-11)
+
+### Features
+
+- **monitoring:** add FTP, sync, rate-limit metrics + correlated logs ([654d0de](https://github.com/Tallec7/neopro/commit/654d0de559fd33bea6b94f5de30218daf3d9b11d))
+
+# [3.14.0](https://github.com/Tallec7/neopro/compare/v3.13.0...v3.14.0) (2026-02-11)
+
+### Features
+
+- **monitoring:** wire all missing metrics for 17/20 dashboard coverage ([87aa1b6](https://github.com/Tallec7/neopro/commit/87aa1b6f1f05d6ba6a17d85d05e79c69dd1bb41d))
+
+# [3.13.0](https://github.com/Tallec7/neopro/compare/v3.12.0...v3.13.0) (2026-02-11)
+
+### Features
+
+- **monitoring:** wire DB connection pool metrics (active/idle) ([e698bf3](https://github.com/Tallec7/neopro/commit/e698bf318c840ba4c36fd2343d2a11f0a9b381ac))
+
+# [3.12.0](https://github.com/Tallec7/neopro/compare/v3.11.1...v3.12.0) (2026-02-11)
+
+### Features
+
+- **monitoring:** wire DB, auth and WebSocket metrics to Grafana dashboards ([cf2b8ee](https://github.com/Tallec7/neopro/commit/cf2b8ee3644628616c6c76bb98c677c1314e944f))
+
+## [3.11.1](https://github.com/Tallec7/neopro/compare/v3.11.0...v3.11.1) (2026-02-11)
+
+### Bug Fixes
+
+- **monitoring:** use scrape_job=NEOPRO label for Grafana Cloud dashboards ([fc16d94](https://github.com/Tallec7/neopro/commit/fc16d942586d098089490ccc8950bac7460f1bda))
+
+# [3.11.0](https://github.com/Tallec7/neopro/compare/v3.10.0...v3.11.0) (2026-02-11)
+
+### Features
+
+- **monitoring:** add Bearer auth on /metrics + Grafana Cloud dashboards ([ff4b4ee](https://github.com/Tallec7/neopro/commit/ff4b4ee9a3690afba63fd02df7a516b06905a6f1))
+
+# [3.10.0](https://github.com/Tallec7/neopro/compare/v3.9.5...v3.10.0) (2026-02-11)
+
+### Bug Fixes
+
+- **server:** use disk storage for update uploads and fix storage_backend migration ([07ebec8](https://github.com/Tallec7/neopro/commit/07ebec8b106cff28b1ab1cd8a448dd2e86ce9cde))
+
+### Features
+
+- **monitoring:** add smoke tests, Pi network metrics, and fix Grafana dashboards ([c9f2602](https://github.com/Tallec7/neopro/commit/c9f2602e0d44ea842e06243d7c26a8d592f9ef94))
+
+## [Unreleased]
+
+### Features
+
+- **monitoring:** add smoke test suite (`npm run test:smoke`) — 39 tests covering all 21 API route groups, health endpoints, auth middleware, CORS, and error handling. Detects wiring regressions after refactors
+- **monitoring:** add 6 new Prometheus metrics for Pi network monitoring: `neopro_site_network_type`, `neopro_site_stability_score`, `neopro_network_alerts_total`, `neopro_network_rollbacks_total`, `neopro_network_recovery_attempts_total`, `neopro_heartbeats_total`
+- **monitoring:** add 8 new Grafana panels to Services dashboard (Pi network types, stability gauge, heartbeat rate, network alerts, remote commands rate, rollbacks/recovery, event loop lag)
+- **monitoring:** add 2 new Grafana panels to Overview dashboard (deployment duration p50/p95, event loop lag)
+- **monitoring:** add docker-compose profiles — `docker compose up prometheus grafana` starts monitoring-only (scrapes local + prod Railway), no need to build central-server
+- **monitoring:** add production scrape target (Railway HTTPS) + environment selector variable in Grafana dashboards
+
+### Bug Fixes
+
+- **docker:** fix Dockerfile Alpine `libx264-dev` package no longer available — replaced with `ffmpeg` which includes libx264 codec
+- **monitoring:** fix Grafana "Datasource prometheus was not found" — add explicit `uid: prometheus` to datasource provisioning
+- **monitoring:** fix 6 broken Grafana panels in overview dashboard — correct metric names to match `metrics.service.ts` (`neopro_websocket_connections`, `neopro_deployments_total`, `neopro_alerts_total`, `process_resident_memory_bytes`, `process_cpu_seconds_total`, `neopro_canary_deployments_active`)
+
+## [3.9.5](https://github.com/Tallec7/neopro/compare/v3.9.4...v3.9.5) (2026-02-11)
+
+### Bug Fixes
+
+- **health:** align health check memory thresholds with memory-manager ([8ff73ac](https://github.com/Tallec7/neopro/commit/8ff73aca2690fb92270b06059c2379b1f8ebfa3e))
+
+## [3.9.4](https://github.com/Tallec7/neopro/compare/v3.9.3...v3.9.4) (2026-02-11)
+
+### Bug Fixes
+
+- **dashboard:** fix BehaviorSubject array mutation in updateSiteStatus + sync docs ([f8ddf18](https://github.com/Tallec7/neopro/commit/f8ddf18a4d989cf56b52e4b4dc2d546f95ab6a51))
+- **tests:** add TranslateModule.forRoot() to dashboard specs + fix flaky health test ([a48844d](https://github.com/Tallec7/neopro/commit/a48844de7475ab6d0ecbbf4c39f0ad33c84439b7))
+
+## [3.9.3](https://github.com/Tallec7/neopro/compare/v3.9.2...v3.9.3) (2026-02-11)
+
+### Bug Fixes
+
+- **ci:** fix all 3 failing CI jobs — lint errors, dashboard lint setup, raspberry build ([0eae86c](https://github.com/Tallec7/neopro/commit/0eae86c54314bf60afe7e73d189c59aed0aaa3f1))
+
+## [Unreleased]
+
+### Bug Fixes
+
+- **dashboard:** fix `SitesService.updateSiteStatus()` array mutation — `BehaviorSubject.value` returned a direct reference, causing silent data corruption for existing subscribers. Replaced with spread copy `[...this.sitesSubject.value]` to ensure immutability
+- **tests:** fix all 298 failing Karma specs in central-dashboard (509/509 passing):
+  - Fix Router mock conflicts with `RouterTestingModule` in Layout, Dashboard, Login specs
+  - Add `TranslateModule`, `LoggerService`, `TranslationService` mocks to all components using i18n
+  - Rewrite `auth.guard.spec.ts` for async Observable-returning guards
+  - Fix `site-detail.component.spec.ts`: add `paramMap` mock, correct service method names, fix `formatUptime`/`formatLastSeen` assertions
+  - Fix `api.service.spec.ts`: replace flaky retry test (caused DISCONNECTED) with synchronous `maxRetries: 0` variant
+  - Fix `sites.service.spec.ts`: use fresh object copies to prevent cross-test mutation with randomized execution order
+  - Fix loading flag tests (`sponsors-list`, `analytics-overview`): use `delay()` for async assertion of intermediate states
+
+## [3.9.2](https://github.com/Tallec7/neopro/compare/v3.9.1...v3.9.2) (2026-02-11)
+
+### Bug Fixes
+
+- **pi:** fix GPU crash detection grep -c multiline bug in kiosk-watchdog ([b95e874](https://github.com/Tallec7/neopro/commit/b95e87492bb88b8ba97450ca371703b5c0658d45))
+
+## [Unreleased Archive]
+
+### Bug Fixes
+
+- **raspberry:** fix GPU crash detection in kiosk-watchdog — `grep -c` could return multiline output (`0\n0`) causing bash `(( ))` syntax error, making GPU driver error monitoring non-functional on Pi 5
+- **ci:** fix all 3 failing CI jobs on `main` branch:
+  - **raspberry build:** exclude `src/app/services/testing/**` from `tsconfig.app.json` — jasmine types from `test-helpers.ts` leaked into production compilation
+  - **central-dashboard lint:** install root dependencies and run `npx ng lint central-dashboard` from monorepo root where the lint target exists in `angular.json`
+  - **central-server lint:** fix 28 ESLint errors across 24 files — remove unused imports/variables, prefix unused params with `_`, change `let` → `const`, refactor `no-async-promise-executor`, replace `require()` with ESM import, migrate `admin.controller.ts` from forbidden `query()` to repository pattern
+
+## [3.9.1](https://github.com/Tallec7/neopro/compare/v3.9.0...v3.9.1) (2026-02-10)
+
+### Bug Fixes
+
+- **video:** fix black flash on large loops, OOM crash, and buffer analytics display ([3c591ea](https://github.com/Tallec7/neopro/commit/3c591eaef40262268f17b2dcd635d4b15699215a))
+
+# [3.9.1] (2026-02-10)
+
+### Bug Fixes
+
+- **dashboard:** fix buffer analytics polling — `loadBufferStatus()` now polls `getCommandStatus()` instead of treating the send response as the result (showed 0 events instead of actual count)
+- **raspberry:** register missing `timeupdate` listeners on video players — early preload (1.5s before end) and early switch (0.5s before end) were dead code, causing all transitions to wait for `ended` event + 1-3s preload delay
+- **raspberry:** aggressive cleanup of inactive player after each switch — `cleanupInactivePlayer()` frees GPU decoder buffers (~30-50MB) preventing memory growth and eventual OOM crash on long sessions
+
+### Features
+
+- **raspberry:** disk cache warming for large video loops (20-100+ videos) — `warmDiskCache()` prefetches next 3 videos via `fetch()` into OS page cache at mid-playback, eliminating black flash at loop wrap-around (video N → video 0)
+
+# [3.9.0](https://github.com/Tallec7/neopro/compare/v3.8.2...v3.9.0) (2026-02-10)
+
+### Bug Fixes
+
+- **analytics:** allow null sessionId for invalid UUIDs + add updated_at to remote_commands ([36a2ea3](https://github.com/Tallec7/neopro/commit/36a2ea3a26fa7f401f335a4e3da52be58394b53c))
+- **raspberry:** deepMerge now accepts undefined values to clear properties ([c08decf](https://github.com/Tallec7/neopro/commit/c08decfc03da8493e1056a81facd0f366a1e145d))
+- **tests:** sync 6 broken test suites with refactored codebase ([f8257dd](https://github.com/Tallec7/neopro/commit/f8257ddc0496001423adcc0a8bcba59b027fb4b3))
+
+### Features
+
+- **remote:** add optional PIN for cloud remote access ([4cc0fcc](https://github.com/Tallec7/neopro/commit/4cc0fccb2528990dd6a6b1b57ae7fa6f8456d69c))
+- **sync-agent:** add jsconfig.json, shared types, and [@ts-check](https://github.com/ts-check) to 10 critical files ([23da2d9](https://github.com/Tallec7/neopro/commit/23da2d95fc1c2a56bc7a7998e4ce9bca8be03c42))
+
+## Architecture Roadmap (2026-02-09 → 2026-02-10)
+
+### Phase 1 — Storage Unification (central-server)
+
+- **Unification** stockage vidéo : double backend (FTP + Supabase) → FTP uniquement via `storage.service.ts`
+- Upload streaming depuis disque (zéro buffer mémoire, élimine OOM)
+- Checksum SHA256 calculé en streaming pendant l'upload
+- Nettoyage périodique des fichiers temporaires abandonnés (> 1h)
+
+### Phase 2 — Dead Code Cleanup
+
+- **Suppression** des dossiers obsolètes : `k8s/`, `raspberry/monitoring/`, `raspberry/frontend/`, `server-render/`
+- Correction des 24+ références mortes dans la documentation et CLAUDE.md
+
+### Phase 3 — Winston Logger Migration (central-server)
+
+- **Remplacement** de tous les `console.log` par Winston structured logging
+- Ajout de Correlation ID pour traçabilité distribuée
+- Format JSON structuré en production
+
+### Phase 4A — Admin-server Modularisation (raspberry/admin/)
+
+- **admin-server.js** : 3 970 → ~260 lignes (orchestrateur uniquement)
+- Extraction de 7 services métier (`video.service`, `config.service`, `system.service`, etc.)
+- Extraction de 9 routes Express (factory pattern avec injection de dépendances)
+- Tests Jest avec 60%+ couverture
+
+### Phase 4B — Socket Server Modularisation (raspberry/server/)
+
+- **server.js** : 812 → ~110 lignes (orchestrateur uniquement)
+- Extraction de 5 services (`state`, `buffer`, `license`, `hdmi`, `auth`)
+- Extraction de 6 routes Express + `socket/handlers.js` (18 events)
+- 71 tests Jest (6 suites, 100% pass)
+
+### Phase 4C — Error Handling (central-server)
+
+- Standardisation des réponses d'erreur dans tous les controllers
+- Classes d'erreur typées (`ServiceError`, `ValidationError`, `CacheError`)
+
+### Phase 5 — Repository Pattern Migration (central-server)
+
+- **Migration** de 150 appels `query()` directs → 0 (100% via repositories)
+- Création de 13 repositories : `siteRepository`, `userRepository`, `videoRepository`, `groupRepository`, `alertRepository`, `analyticsRepository`, `sponsorRepository`, `configRepository`, `deploymentRepository`, `advertisingRepository`, `emailRepository`, `notificationRepository`, `agencyRepository`
+- Règle ESLint `no-restricted-imports` bloquant `import { query }` dans les controllers
+- Tous les tests passent (`npm run test:server`)
+
+### Phase 6 — Auth & Security Refactoring
+
+- **Clarification** frontière admin vs super_admin dans les rôles utilisateurs
+- Ajout PIN optionnel pour l'accès télécommande cloud
+- JSDoc complet sur tous les services et handlers Raspberry Pi
+
+### Phase 7 — Architecture Avancée (central-server)
+
+**7.1 — Services → Repository pattern**
+
+- Migration des services restants (`deployment.service`, `alerting.service`, etc.) vers les repositories
+- 8 nouveaux repositories : `metrics`, `objective`, `playlist-schedule`, `remote-command`, `report`, `timeline`, `advertiser-portal`, `subscription`
+
+**7.2 — Socket Handler Extraction**
+
+- `socket.service.ts` : 1 717 → 676 lignes (orchestrateur uniquement)
+- 9 handlers extraits dans `src/handlers/` : `heartbeat`, `config-sync`, `deploy-progress`, `command-dispatch`, `health-monitor`, `license`, `network-resilience`, `score-update`, `match-config`
+
+**7.3 — Controllers → Repository pattern**
+
+- `content.controller.ts` : 21 `pool.query()` → `videoRepository` + `deploymentRepository`
+- `updates.controller.ts` : 13 `pool.query()` → `softwareUpdateRepository`
+- Règle ESLint mise à jour : bloque **tout** import de `../config/database` (pas seulement les named imports)
+- Création de `video.repository.ts` et `software-update.repository.ts`
+
+**7.4 — Auth boundary admin/super_admin**
+
+- Vérification complétée et commitée
+
+**Résultat final** : 21 repositories, 75 suites de tests, 1 586 tests, 0 failures.
+
+---
+
+## [3.9.0](https://github.com/Tallec7/neopro/compare/v3.8.2...v3.9.0) (2026-02-10)
+
+### Performance Improvements
+
+- **upload:** streaming disk storage pour les uploads video (memoryStorage → diskStorage), elimine les OOM sur fichiers volumineux
+- **analytics:** batch insert video_plays par lots de 100 (N+1 queries → 1 seule requete par lot)
+- **database:** pool size configurable via `DB_POOL_MAX` (defaut 10, clamp 1-50)
+- **upload:** streaming checksum SHA256 et FTP upload depuis le disque (zero buffer memoire)
+- **upload:** nettoyage periodique des fichiers temporaires abandonnes (> 1h)
+
+---
+
+## [3.8.2](https://github.com/Tallec7/neopro/compare/v3.8.1...v3.8.2) (2026-02-09)
+
+### Bug Fixes
+
+- **hotspot:** fix stdout pollution in channel optimizer causing sed failure ([4500515](https://github.com/Tallec7/neopro/commit/45005157d8d543232b8dc6181f14c3c55d064e34))
+
+## [3.8.1](https://github.com/Tallec7/neopro/compare/v3.8.0...v3.8.1) (2026-02-09)
+
+### Bug Fixes
+
+- **deploy:** install systemd services via deploy-remote.sh ([#395](https://github.com/Tallec7/neopro/issues/395)) ([5a37572](https://github.com/Tallec7/neopro/commit/5a37572eda7c29f5a72194da76b0af2a6848c6b3))
+
+# [3.8.0](https://github.com/Tallec7/neopro/compare/v3.7.15...v3.8.0) (2026-02-09)
+
+### Features
+
+- **raspberry:** add analytics recording control and TV master-slave sync ([#392](https://github.com/Tallec7/neopro/issues/392)) ([5b500b4](https://github.com/Tallec7/neopro/commit/5b500b42cbde9928a3b5ab7444be7f5fc15039d2))
+
+## [3.7.15](https://github.com/Tallec7/neopro/compare/v3.7.14...v3.7.15) (2026-02-09)
+
+### Bug Fixes
+
+- **pi:** improve GPU crash detection, sponsor buffer retry, and hostapd diagnostics ([#386](https://github.com/Tallec7/neopro/issues/386)) ([5caad82](https://github.com/Tallec7/neopro/commit/5caad82d3a36d36dfb79ce3634537c3e020e75a7))
+
+## [3.7.14](https://github.com/Tallec7/neopro/compare/v3.7.13...v3.7.14) (2026-02-09)
+
+### Bug Fixes
+
+- **rate-limit:** remove double rate limiting causing 429 on dashboard load ([449ebd5](https://github.com/Tallec7/neopro/commit/449ebd5a87b9764493109d39691274c2e2d30ea6))
+
+## [3.7.13](https://github.com/Tallec7/neopro/compare/v3.7.12...v3.7.13) (2026-02-07)
+
+### Bug Fixes
+
+- **tv:** fix 3 remaining edge cases causing black screen ([4d66b00](https://github.com/Tallec7/neopro/commit/4d66b006821d052130c0bb1a6c92241e3aa9cdd2))
+- **tv:** fix intermittent black flashes in loop and manual video modes ([efe1522](https://github.com/Tallec7/neopro/commit/efe152215aa4102dd01529831ecf321d77031f09))
+
+## [3.7.12](https://github.com/Tallec7/neopro/compare/v3.7.11...v3.7.12) (2026-02-07)
+
+### Bug Fixes
+
+- **tv:** eliminate black flash between loop videos on Chromium/Pi ([5d73998](https://github.com/Tallec7/neopro/commit/5d73998965b5733462a020d94012f50ae053d0f5))
+
+## [3.7.11](https://github.com/Tallec7/neopro/compare/v3.7.10...v3.7.11) (2026-02-07)
+
+### Bug Fixes
+
+- **tv:** fix black/white flash between videos on Chromium/Pi ([ed32681](https://github.com/Tallec7/neopro/commit/ed3268128f56d6a837d09ae12c448918cfd53a8e))
+
+## [3.7.10](https://github.com/Tallec7/neopro/compare/v3.7.9...v3.7.10) (2026-02-07)
+
+### Bug Fixes
+
+- **raspberry:** remove custom GPU flags on Pi 5, use native V3D driver ([c6b2996](https://github.com/Tallec7/neopro/commit/c6b2996fc6c7d3f1afc150e4a4ffa00879f8c083))
+
+### Reverts
+
+- **raspberry:** revert Pi 5 to SwiftShader after EGL SharedImageStub failures ([fd73217](https://github.com/Tallec7/neopro/commit/fd73217003af56d1c5a3fd18edcb20b01bda5892))
+
+## [3.7.9](https://github.com/Tallec7/neopro/compare/v3.7.8...v3.7.9) (2026-02-07)
+
+### Bug Fixes
+
+- **tv:** pre-capture last frame to fix black flash on Chromium/Pi ([8f63512](https://github.com/Tallec7/neopro/commit/8f635127b8266c366bafff36bde8ad80e7ec026c))
+
+## [3.7.8](https://github.com/Tallec7/neopro/compare/v3.7.7...v3.7.8) (2026-02-07)
+
+### Bug Fixes
+
+- **remote:** reduce excessive HTTP requests from cloud remote ([#385](https://github.com/Tallec7/neopro/issues/385)) ([bf33d27](https://github.com/Tallec7/neopro/commit/bf33d278ca854152bb15b8616571c324a67d76b3))
+
+## [3.7.7](https://github.com/Tallec7/neopro/compare/v3.7.6...v3.7.7) (2026-02-06)
+
+### Bug Fixes
+
+- **tv:** eliminate black flash between loop videos using freeze-frame ([3a07330](https://github.com/Tallec7/neopro/commit/3a073301bb4137d2ddde53d398ea65044d6252ed))
+
+## [3.7.6](https://github.com/Tallec7/neopro/compare/v3.7.5...v3.7.6) (2026-02-06)
+
+### Bug Fixes
+
+- **build:** include neopro-kiosk.service in build archive ([6d188d5](https://github.com/Tallec7/neopro/commit/6d188d519e84f77b51295b745d289c54558ec24f))
+
+## [3.7.5](https://github.com/Tallec7/neopro/compare/v3.7.4...v3.7.5) (2026-02-06)
+
+### Bug Fixes
+
+- **server:** reduce memory pressure on Railway Hobby plan ([#384](https://github.com/Tallec7/neopro/issues/384)) ([3a37735](https://github.com/Tallec7/neopro/commit/3a37735b6ba6e2ca69077ed8aee620367cb57866))
+
+## [3.7.4](https://github.com/Tallec7/neopro/compare/v3.7.3...v3.7.4) (2026-02-06)
+
+### Performance Improvements
+
+- **raspberry:** replace SwiftShader with EGL native + V4L2 on Pi 5 ([1d52e57](https://github.com/Tallec7/neopro/commit/1d52e5749312b5c7319de50c123b4e74658c62e3))
+
+## [3.7.3](https://github.com/Tallec7/neopro/compare/v3.7.2...v3.7.3) (2026-02-06)
+
+### Bug Fixes
+
+- **analytics:** prevent data loss on Pi reboot with immediate persistence ([26bc592](https://github.com/Tallec7/neopro/commit/26bc5925d70a0cd04bd5dd935a0cbfd1197b392b))
+
+## [3.7.2](https://github.com/Tallec7/neopro/compare/v3.7.1...v3.7.2) (2026-02-06)
+
+### Bug Fixes
+
+- **raspberry:** fix Pi 5 crashes after OTA update and false GPU warning ([#383](https://github.com/Tallec7/neopro/issues/383)) ([61d2c46](https://github.com/Tallec7/neopro/commit/61d2c468b9d9931479f456bf600c5e7a039c2ddf))
+
 ## [3.7.1](https://github.com/Tallec7/neopro/compare/v3.7.0...v3.7.1) (2026-02-05)
 
 ### Bug Fixes

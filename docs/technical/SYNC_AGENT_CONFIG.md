@@ -1,13 +1,16 @@
 # Configuration du Sync-Agent - Guide complet
 
+> Pour comprendre l'architecture globale du sync-agent, voir [SYNC_ARCHITECTURE.md](./SYNC_ARCHITECTURE.md).
+
 ## ✅ Votre infrastructure
 
 - **Serveur central (API) :** https://neopro-central-production.up.railway.app
 - **Dashboard :** https://neopro-admin.kalonpartners.bzh
 - **Base de données :** Supabase (PostgreSQL)
 - **Credentials admin :**
-  - Email : `admin@neopro.fr`
-  - Password : `admin123`
+  - Email : `<ADMIN_EMAIL>`
+  - Password : `<ADMIN_PASSWORD>`
+  - _Les credentials sont disponibles auprès de l'équipe Neopro._
 
 ## 🔧 Configuration du sync-agent sur le boîtier
 
@@ -30,11 +33,11 @@ sudo node scripts/register-site.js
 
 ```
 Central Server URL: https://neopro-central-production.up.railway.app
-Admin email: admin@neopro.fr
-Admin password: admin123
+Admin email: <ADMIN_EMAIL>
+Admin password: <ADMIN_PASSWORD>
 ```
 
-**⚠️ Important :** Entrez exactement ces valeurs.
+**⚠️ Important :** Demandez les credentials admin à l'équipe Neopro avant de procéder.
 
 #### Étape 2 : Informations du site
 
@@ -98,8 +101,8 @@ Metrics sent successfully
 
 1. Ouvrir : https://neopro-admin.kalonpartners.bzh
 2. Se connecter avec :
-   - Email : `admin@neopro.fr`
-   - Password : `admin123`
+   - Email : `<ADMIN_EMAIL>`
+   - Password : `<ADMIN_PASSWORD>`
 
 ### Vérifier le site
 
@@ -138,15 +141,13 @@ curl https://neopro-central-production.up.railway.app/
 
 **Solution :**
 
-- Vérifier que vous utilisez bien :
-  - Email : `admin@neopro.fr`
-  - Password : `admin123`
+- Vérifier que vous utilisez bien les credentials fournis par l'équipe Neopro
 - Tester le login :
 
 ```bash
 curl -X POST https://neopro-central-production.up.railway.app/api/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"admin@neopro.fr","password":"admin123"}'
+  -d '{"email":"<ADMIN_EMAIL>","password":"<ADMIN_PASSWORD>"}'
 # Devrait retourner un token
 ```
 
@@ -255,4 +256,42 @@ sudo cat /etc/neopro/site.conf
 
 ---
 
-**Prochaine étape :** Tester le boîtier sur http://neopro.local/login 🚀
+## ⚙️ Options de configuration du sync-agent
+
+| Variable             | Description                                                        | Valeur par défaut                           |
+| -------------------- | ------------------------------------------------------------------ | ------------------------------------------- |
+| `CENTRAL_SERVER_URL` | URL du serveur central                                             | _(obligatoire)_                             |
+| `SITE_ID`            | UUID du site (généré automatiquement lors de l'enregistrement)     | _(auto)_                                    |
+| `API_KEY`            | Clé API du site (générée automatiquement lors de l'enregistrement) | _(auto)_                                    |
+| `HEARTBEAT_INTERVAL` | Intervalle heartbeat en secondes                                   | `30`                                        |
+| `VIDEO_DIR`          | Répertoire de stockage des vidéos                                  | `/home/pi/neopro/videos`                    |
+| `CONFIG_PATH`        | Chemin vers le fichier configuration.json                          | `/home/pi/neopro/webapp/configuration.json` |
+
+Ces options sont définies dans `/etc/neopro/site.conf` sur le Raspberry Pi.
+
+### Variables d'environnement complémentaires
+
+Les variables suivantes peuvent être définies dans l'environnement du service systemd (`/etc/systemd/system/neopro-sync-agent.service`) :
+
+| Variable                 | Description                                      | Valeur par défaut |
+| ------------------------ | ------------------------------------------------ | ----------------- |
+| `LOG_LEVEL`              | Niveau de log (`debug`, `info`, `warn`, `error`) | `info`            |
+| `METRICS_INTERVAL`       | Intervalle d'envoi des métriques (ms)            | `60000`           |
+| `RECONNECT_DELAY`        | Délai avant reconnexion WebSocket (ms)           | `5000`            |
+| `MAX_RECONNECT_ATTEMPTS` | Nombre max de tentatives de reconnexion          | `Infinity`        |
+| `BACKUP_ENABLED`         | Activer les sauvegardes locales chiffrées        | `true`            |
+| `BACKUP_INTERVAL`        | Intervalle entre sauvegardes (ms)                | `86400000` (24h)  |
+
+---
+
+**Prochaine étape :** Tester le boîtier sur http://neopro.local/login
+
+---
+
+_Dernière mise à jour : 10 février 2026_
+
+## Voir aussi
+
+- [SYNC_ARCHITECTURE.md](./SYNC_ARCHITECTURE.md) -- Architecture détaillée du sync-agent
+- [ARCHITECTURE.md](./ARCHITECTURE.md) -- Architecture système globale
+- [TROUBLESHOOTING.md](../guides/TROUBLESHOOTING.md) -- Guide de dépannage

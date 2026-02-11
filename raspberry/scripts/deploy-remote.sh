@@ -39,7 +39,6 @@ RASPBERRY_IP="${1:-neopro.local}"
 RASPBERRY_USER="pi"
 RASPBERRY_DIR="/home/pi/neopro"
 DEPLOY_ARCHIVE="raspberry/neopro-raspberry-deploy.tar.gz"
-ADMIN_SERVICE_FILE="raspberry/config/systemd/neopro-admin.service"
 PACKAGE_VERSION="unknown"
 
 if [ -f "raspberry/deploy/VERSION" ]; then
@@ -142,13 +141,6 @@ print_step "Upload de la nouvelle version..."
 scp ${DEPLOY_ARCHIVE} ${RASPBERRY_USER}@${RASPBERRY_IP}:~/neopro-deploy.tar.gz
 print_success "Upload terminé"
 
-# Upload du fichier de service admin si disponible
-if [ -f "${ADMIN_SERVICE_FILE}" ]; then
-    print_step "Mise à jour de l'unité systemd neopro-admin..."
-    scp ${ADMIN_SERVICE_FILE} ${RASPBERRY_USER}@${RASPBERRY_IP}:/tmp/neopro-admin.service
-    print_success "Fichier de service uploadé"
-fi
-
 # Extraction et installation
 print_step "Installation de la nouvelle version..."
 ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
@@ -187,19 +179,8 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Installation serveur
     if [ -d ~/neopro-update/server ]; then
         sudo cp -r ~/neopro-update/server/* ${RASPBERRY_DIR}/server/
-        # npm install seulement si package.json a changé
-        if [ -f ~/neopro-update/server/package.json ]; then
-            cd ${RASPBERRY_DIR}/server
-            if ! cmp -s ~/neopro-update/server/package.json ${RASPBERRY_DIR}/server/.package.json.last 2>/dev/null; then
-                sudo npm install --production 2>/dev/null || true
-                sudo cp package.json .package.json.last
-                echo 'Serveur installé (dépendances mises à jour)'
-            else
-                echo 'Serveur installé (dépendances inchangées)'
-            fi
-        else
-            echo 'Serveur installé'
-        fi
+        cd ${RASPBERRY_DIR}/server && sudo npm install --production 2>/dev/null || true
+        echo 'Serveur installé'
     fi
 
     # NOTE: Les vidéos ne sont pas déployées ici
@@ -228,37 +209,16 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
             rm /tmp/sync-agent-config.env.backup
         fi
         # npm install pour sync-agent (CRITICAL - sans ça le service crash)
-        if [ -f ~/neopro-update/sync-agent/package.json ]; then
-            cd ${RASPBERRY_DIR}/sync-agent
-            if ! cmp -s ~/neopro-update/sync-agent/package.json ${RASPBERRY_DIR}/sync-agent/.package.json.last 2>/dev/null; then
-                sudo npm install --production 2>/dev/null || true
-                sudo cp package.json .package.json.last
-                echo 'Sync-agent installé (dépendances mises à jour)'
-            else
-                echo 'Sync-agent installé (dépendances inchangées)'
-            fi
-        else
-            echo 'Sync-agent installé (configuration préservée)'
-        fi
+        cd ${RASPBERRY_DIR}/sync-agent && sudo npm install --production 2>/dev/null || true
+        echo 'Sync-agent installé'
     fi
 
     # Installation admin panel
     if [ -d ~/neopro-update/admin ]; then
         sudo mkdir -p ${RASPBERRY_DIR}/admin
         sudo cp -r ~/neopro-update/admin/* ${RASPBERRY_DIR}/admin/
-        # npm install seulement si package.json a changé
-        if [ -f ~/neopro-update/admin/package.json ]; then
-            cd ${RASPBERRY_DIR}/admin
-            if ! cmp -s ~/neopro-update/admin/package.json ${RASPBERRY_DIR}/admin/.package.json.last 2>/dev/null; then
-                sudo npm install --production 2>/dev/null || true
-                sudo cp package.json .package.json.last
-                echo 'Admin panel installé (dépendances mises à jour)'
-            else
-                echo 'Admin panel installé (dépendances inchangées)'
-            fi
-        else
-            echo 'Admin panel installé'
-        fi
+        cd ${RASPBERRY_DIR}/admin && sudo npm install --production 2>/dev/null || true
+        echo 'Admin panel installé'
     fi
 
     # Enregistrer les métadonnées de version (à la racine de neopro/)
@@ -292,6 +252,14 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
         echo 'Scripts runtime installés'
     fi
 
+    # Installation des fichiers de configuration (systemd services, etc.)
+    if [ -d ~/neopro-update/config ]; then
+        sudo mkdir -p ${RASPBERRY_DIR}/config
+        sudo cp -r ~/neopro-update/config/* ${RASPBERRY_DIR}/config/
+        sudo chown -R pi:pi ${RASPBERRY_DIR}/config
+        echo 'Config files installés'
+    fi
+
     # Permissions correctes pour nginx et sync-agent
     echo 'Configuration des permissions...'
     sudo chmod 755 /home/pi
@@ -310,17 +278,54 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     sudo chown -R pi:pi ${RASPBERRY_DIR}/logs
     echo 'Permissions configurées'
 
+    # Créer un golden snapshot du sync-agent AVANT le premier déploiement
+    # Si le nouveau code crashe, le guardian pourra restaurer cette version
+    if [ -d ${RASPBERRY_DIR}/sync-agent/src ] && [ ! -d ${RASPBERRY_DIR}/sync-agent-golden ]; then
+        echo 'Création du golden snapshot sync-agent (filet de sécurité)...'
+        sudo cp -r ${RASPBERRY_DIR}/sync-agent ${RASPBERRY_DIR}/sync-agent-golden
+        sudo sh -c \"date -Iseconds > ${RASPBERRY_DIR}/sync-agent-golden/.golden-created\"
+        sudo chown -R pi:pi ${RASPBERRY_DIR}/sync-agent-golden
+        echo '✓ Golden snapshot créé'
+    fi
+
     # Nettoyage
     rm -rf ~/neopro-update ~/neopro-deploy.tar.gz
 
-    # Mise à jour de l'unité systemd neopro-admin si fournie
-    if [ -f /tmp/neopro-admin.service ]; then
-        echo 'Mise à jour de /etc/systemd/system/neopro-admin.service'
-        sudo cp /tmp/neopro-admin.service /etc/systemd/system/neopro-admin.service
-        sudo chown root:root /etc/systemd/system/neopro-admin.service
-        sudo chmod 644 /etc/systemd/system/neopro-admin.service
-        sudo rm /tmp/neopro-admin.service
+    # Installation des services systemd depuis config/systemd/
+    if [ -d ${RASPBERRY_DIR}/config/systemd ]; then
+        echo 'Installation des services systemd...'
+        NEWLY_INSTALLED=''
+        for svc_file in ${RASPBERRY_DIR}/config/systemd/*.service; do
+            if [ -f \"\$svc_file\" ]; then
+                svc_name=\$(basename \"\$svc_file\")
+                was_installed=false
+                if [ -f /etc/systemd/system/\$svc_name ]; then
+                    was_installed=true
+                fi
+                sudo cp \"\$svc_file\" /etc/systemd/system/\$svc_name
+                sudo chown root:root /etc/systemd/system/\$svc_name
+                sudo chmod 644 /etc/systemd/system/\$svc_name
+                sudo systemctl enable \${svc_name%.service} 2>/dev/null || true
+                if [ \"\$was_installed\" = false ]; then
+                    NEWLY_INSTALLED=\"\${NEWLY_INSTALLED} \${svc_name%.service}\"
+                fi
+                echo \"  ✓ \$svc_name installé\"
+            fi
+        done
         sudo systemctl daemon-reload
+
+        # Démarrer les NOUVEAUX services (pas ceux gérés par le restart ci-dessous)
+        MANAGED_SERVICES='neopro-app neopro-admin neopro-kiosk neopro-sync-agent'
+        for svc in \$NEWLY_INSTALLED; do
+            case \" \$MANAGED_SERVICES \" in
+                *\" \$svc \"*) ;;  # Sera géré par le restart des services
+                *)
+                    sudo systemctl start \$svc 2>/dev/null || true
+                    echo \"  ▶ \$svc démarré (nouveau service)\"
+                    ;;
+            esac
+        done
+        echo 'Services systemd installés'
     fi
 "
 print_success "Installation terminée"
@@ -350,6 +355,11 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Redémarrer sync-agent si installé
     if systemctl list-unit-files neopro-sync-agent.service >/dev/null 2>&1; then
         sudo systemctl restart neopro-sync-agent &
+    fi
+
+    # Redémarrer kiosk pour appliquer la nouvelle webapp + kiosk-watchdog.sh
+    if systemctl list-unit-files neopro-kiosk.service >/dev/null 2>&1; then
+        sudo systemctl restart neopro-kiosk &
     fi
 
     # Attendre que tous les services redémarrent
@@ -386,6 +396,15 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
             echo '✓ Service neopro-sync-agent: OK'
         else
             echo '⚠ Service neopro-sync-agent: NON ACTIF (peut être normal si non configuré)'
+        fi
+    fi
+
+    # Vérifier kiosk si installé
+    if systemctl list-unit-files neopro-kiosk.service >/dev/null 2>&1; then
+        if systemctl is-active --quiet neopro-kiosk; then
+            echo '✓ Service neopro-kiosk: OK'
+        else
+            echo '⚠ Service neopro-kiosk: NON ACTIF'
         fi
     fi
 "

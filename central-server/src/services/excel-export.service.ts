@@ -4,7 +4,7 @@
  */
 import ExcelJS from 'exceljs';
 import { query } from '../config/database';
-import logger from '../config/logger';
+
 
 export interface ExcelExportOptions {
   siteId?: string;
@@ -195,7 +195,7 @@ class ExcelExportService {
       { label: 'Taux de complétion moyen', value: avgCompletion / 100, format: '0.0%' },
     ];
 
-    let row = 4;
+    const row = 4;
     kpis.forEach((kpi, i) => {
       const labelCell = sheet.getCell(`B${row + i}`);
       labelCell.value = kpi.label;
@@ -435,7 +435,7 @@ class ExcelExportService {
       { label: 'Moyenne/jour', value: Math.round(totalImpressions / Math.max(dailyStats.length, 1)) },
     ];
 
-    let row = 4;
+    const row = 4;
     kpis.forEach((kpi, i) => {
       sheet.getCell(`B${row + i}`).value = kpi.label;
       sheet.getCell(`B${row + i}`).font = { bold: true };
@@ -585,7 +585,7 @@ class ExcelExportService {
       { label: 'Moyenne lectures/site', value: Math.round(globalStats.avg_videos_per_site) },
     ];
 
-    let row = 4;
+    const row = 4;
     kpis.forEach((kpi, i) => {
       sheet.getCell(`B${row + i}`).value = kpi.label;
       sheet.getCell(`B${row + i}`).font = { bold: true };

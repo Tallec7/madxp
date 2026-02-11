@@ -1,3 +1,6 @@
+// @ts-check
+/** @typedef {import('../types').QueuedCommand} QueuedCommand */
+
 /**
  * Service de queue de commandes offline
  *

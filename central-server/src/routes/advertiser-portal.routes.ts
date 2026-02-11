@@ -24,7 +24,7 @@ const router = express.Router();
 router.get(
   '/dashboard',
   authenticate,
-  requireRole('advertiser', 'admin', 'superadmin', 'super_admin'),
+  requireRole('advertiser', 'admin'),
   getAdvertiserDashboard
 );
 
@@ -32,7 +32,7 @@ router.get(
 router.get(
   '/sites',
   authenticate,
-  requireRole('advertiser', 'admin', 'superadmin', 'super_admin'),
+  requireRole('advertiser', 'admin'),
   getAdvertiserSites
 );
 
@@ -40,7 +40,7 @@ router.get(
 router.get(
   '/videos',
   authenticate,
-  requireRole('advertiser', 'admin', 'superadmin', 'super_admin'),
+  requireRole('advertiser', 'admin'),
   getAdvertiserVideos
 );
 
@@ -49,7 +49,7 @@ router.get(
 router.get(
   '/stats',
   authenticate,
-  requireRole('advertiser', 'admin', 'superadmin', 'super_admin'),
+  requireRole('advertiser', 'admin'),
   getAdvertiserDetailedStats
 );
 
@@ -62,7 +62,7 @@ router.get(
 router.post(
   '/videos',
   authenticate,
-  requireRole('advertiser', 'admin', 'superadmin', 'super_admin'),
+  requireRole('advertiser', 'admin'),
   uploadVideo.single('video'),
   uploadAdvertiserVideo
 );
@@ -71,7 +71,7 @@ router.post(
 router.put(
   '/videos/:videoId',
   authenticate,
-  requireRole('advertiser', 'admin', 'superadmin', 'super_admin'),
+  requireRole('advertiser', 'admin'),
   updateAdvertiserVideo
 );
 
@@ -79,7 +79,7 @@ router.put(
 router.delete(
   '/videos/:videoId',
   authenticate,
-  requireRole('advertiser', 'admin', 'superadmin', 'super_admin'),
+  requireRole('advertiser', 'admin'),
   deleteAdvertiserVideo
 );
 
@@ -87,7 +87,7 @@ router.delete(
 router.get(
   '/videos/:videoId/stats',
   authenticate,
-  requireRole('advertiser', 'admin', 'superadmin', 'super_admin'),
+  requireRole('advertiser', 'admin'),
   getAdvertiserVideoStats
 );
 

@@ -261,9 +261,16 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
+  /**
+   * Check if the current user has one of the specified roles.
+   * `super_admin` bypasses all role checks (mirrors backend `requireRole()` behavior).
+   */
   hasRole(...roles: string[]): boolean {
     const user = this.getCurrentUser();
-    return user ? roles.includes(user.role) : false;
+    if (!user) return false;
+    // Super admin bypasses all role checks (mirrors backend behavior)
+    if (user.role === 'super_admin') return true;
+    return roles.includes(user.role);
   }
 
   /**

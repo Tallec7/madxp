@@ -199,6 +199,31 @@ Lecture seule autorisée sur :
 - Si dépassé, le Pi renvoie une erreur timeout
 - Le serveur émet `command_timeout` au dashboard
 
+## Arbre de décision de validation
+
+```
+Commande reçue
+│
+├── Rôle = viewer/advertiser/agency ?
+│   └── ❌ Accès refusé (403)
+│
+├── Commande dans la blacklist ?
+│   └── ❌ Bloqué — log warning + audit
+│
+├── Rôle = super_admin ?
+│   └── ✅ Autorisé (bypass whitelist)
+│
+├── Rôle = admin ?
+│   ├── Commande dans whitelist admin ?
+│   │   └── ✅ Autorisé
+│   └── ❌ Bloqué — commande non autorisée
+│
+└── Rôle = operator ?
+    ├── Commande dans whitelist operator ?
+    │   └── ✅ Autorisé (lecture seule)
+    └── ❌ Bloqué — commande non autorisée
+```
+
 ## Fichiers clés
 
 | Fichier                                                  | Description                     |
@@ -225,6 +250,39 @@ auditService.log('REMOTE_SHELL_EXECUTE', { siteId, command, userId });
 auditService.log('REMOTE_SHELL_BLOCKED', { siteId, command, userId, reason });
 ```
 
+### Exemples de logs d'audit
+
+**Commande validée :**
+
+```json
+{
+  "level": "info",
+  "message": "Shell command validated",
+  "command": "df -h",
+  "role": "operator",
+  "siteId": "abc-123",
+  "userId": "user-456",
+  "correlationId": "corr-789",
+  "timestamp": "2026-02-10T14:30:00Z"
+}
+```
+
+**Commande bloquée :**
+
+```json
+{
+  "level": "warn",
+  "message": "Blocked shell command (blacklist)",
+  "command": "rm -rf /home",
+  "role": "admin",
+  "siteId": "abc-123",
+  "userId": "user-456",
+  "pattern": "rm\\s+(-[rf]+|--recursive|--force)",
+  "correlationId": "corr-790",
+  "timestamp": "2026-02-10T14:31:00Z"
+}
+```
+
 ## Recommandations
 
 1. **Principe du moindre privilège** : N'accordez que les rôles nécessaires
@@ -234,4 +292,4 @@ auditService.log('REMOTE_SHELL_BLOCKED', { siteId, command, userId, reason });
 
 ---
 
-**Dernière mise à jour** : 8 janvier 2026
+**Dernière mise à jour** : 10 février 2026

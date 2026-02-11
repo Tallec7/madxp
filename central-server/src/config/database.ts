@@ -66,13 +66,19 @@ const getSslConfig = () => {
 
 const sslConfig = getSslConfig();
 
+// Pool size configurable via env : DB_POOL_MAX (défaut: 10 en prod, 5 en hobby)
+// Railway Hobby : 5 | Railway Pro / Render Standard : 15-20
+const dbPoolMax = parseInt(process.env.DB_POOL_MAX || '10', 10);
+
 const poolConfig: PoolConfig = {
   connectionString: process.env.DATABASE_URL,
   ssl: sslConfig,
-  max: 5, // Reduced from 20 for Railway Hobby plan (~40MB heap)
+  max: Math.min(Math.max(dbPoolMax, 1), 50), // Clamp entre 1 et 50
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 };
+
+logger.info('Database pool configuration', { max: poolConfig.max, idleTimeout: poolConfig.idleTimeoutMillis });
 
 logger.info('Database SSL configuration', {
   NODE_ENV: process.env.NODE_ENV,
@@ -93,12 +99,47 @@ pool.on('connect', () => {
   logger.info('Database connection established');
 });
 
+// Lazy import to avoid circular dependency with metrics.service
+let metricsServiceInstance: {
+  recordDbQuery: (operation: string, durationSeconds: number) => void;
+  recordDbConnections: (active: number, idle: number) => void;
+} | null = null;
+const getMetricsService = () => {
+  if (!metricsServiceInstance) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      metricsServiceInstance = require('../services/metrics.service').default;
+    } catch {
+      // Metrics service not available yet during startup
+    }
+  }
+  return metricsServiceInstance;
+};
+
+// Track DB connection pool metrics on pool events
+// pg Pool exposes totalCount/idleCount at runtime but @types/pg doesn't declare them
+const poolAny = pool as unknown as { totalCount: number; idleCount: number; on: (event: string, cb: () => void) => void };
+const updatePoolMetrics = () => {
+  const ms = getMetricsService();
+  if (ms && typeof poolAny.totalCount === 'number') {
+    ms.recordDbConnections(poolAny.totalCount - poolAny.idleCount, poolAny.idleCount);
+  }
+};
+
+poolAny.on('acquire', updatePoolMetrics);
+poolAny.on('release', updatePoolMetrics);
+
 export const query = async <T extends QueryResultRow = QueryResultRow>(text: string, params?: any[]) => {
   const start = Date.now();
   try {
     const result = await pool.query<T>(text, params);
     const duration = Date.now() - start;
     logger.debug('Executed query', { text, duration, rows: result.rowCount });
+
+    // Record DB query metrics
+    const operation = text.trim().split(/\s+/)[0]?.toUpperCase() || 'UNKNOWN';
+    getMetricsService()?.recordDbQuery(operation, duration / 1000);
+
     return result;
   } catch (error) {
     logger.error('Database query error:', { text, error });

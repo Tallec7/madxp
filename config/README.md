@@ -5,9 +5,11 @@ Ce dossier contient les configurations partagées entre tous les packages du mon
 ## Fichiers disponibles
 
 ### `tsconfig.base.json`
+
 Configuration TypeScript de base héritée par tous les projets.
 
 **Usage :**
+
 ```json
 {
   "extends": "../config/tsconfig.base.json",
@@ -18,9 +20,11 @@ Configuration TypeScript de base héritée par tous les projets.
 ```
 
 ### `eslint.shared.js`
+
 Configuration ESLint partagée (Angular + TypeScript).
 
 **Usage :**
+
 ```javascript
 // eslint.config.js
 const sharedConfig = require('./config/eslint.shared.js');
@@ -32,9 +36,11 @@ module.exports = [
 ```
 
 ### `prettier.shared.json`
+
 Configuration Prettier (formatage de code).
 
 **Usage :**
+
 ```json
 {
   "extends": "./config/prettier.shared.json"
@@ -42,6 +48,7 @@ Configuration Prettier (formatage de code).
 ```
 
 Ou via `.prettierrc` :
+
 ```
 ./config/prettier.shared.json
 ```
@@ -60,7 +67,7 @@ Ou via `.prettierrc` :
 - `raspberry/server/` (Node.js/Socket.IO)
 - `raspberry/admin/` (Express)
 - `raspberry/sync-agent/` (Node.js)
-- `server-render/` (Node.js/Socket.IO)
+- `raspberry/server/` (Node.js/Socket.IO)
 - `e2e/` (Playwright/TypeScript)
 
 ---

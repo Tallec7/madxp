@@ -264,11 +264,11 @@ Ce document regroupe les features planifiées et leur état d'avancement.
 
 **Fichiers modifiés** :
 
-- `raspberry/frontend/app/components/remote/remote.component.ts` (+250 lignes)
-- `raspberry/frontend/app/components/remote/remote.component.html` (refonte)
-- `raspberry/frontend/app/components/remote/remote.component.scss` (+500 lignes)
-- `raspberry/frontend/app/interfaces/configuration.interface.ts` (+`liveScoreEnabled`)
-- `raspberry/frontend/app/services/socket.service.ts` (nouveaux types)
+- `raspberry/src/app/components/remote/remote.component.ts` (+250 lignes)
+- `raspberry/src/app/components/remote/remote.component.html` (refonte)
+- `raspberry/src/app/components/remote/remote.component.scss` (+500 lignes)
+- `raspberry/src/app/interfaces/configuration.interface.ts` (+`liveScoreEnabled`)
+- `raspberry/src/app/services/socket.service.ts` (nouveaux types)
 
 **Note finale** : 95/100
 
@@ -365,9 +365,9 @@ ALTER TABLE club_sessions ADD COLUMN audience_estimate INTEGER;
 
 #### 2.4 Fichiers à modifier
 
-- `raspberry/frontend/app/components/remote/remote.component.ts` - Ajouter badge + modal
-- `raspberry/frontend/app/components/remote/remote.component.html` - UI badge
-- `raspberry/frontend/app/services/analytics.service.ts` - Stocker config match
+- `raspberry/src/app/components/remote/remote.component.ts` - Ajouter badge + modal
+- `raspberry/src/app/components/remote/remote.component.html` - UI badge
+- `raspberry/src/app/services/analytics.service.ts` - Stocker config match
 - `central-server/src/controllers/analytics.controller.ts` - Recevoir données match
 
 **Effort** : 2-3 jours
@@ -436,9 +436,9 @@ central-dashboard/src/app/features/sites/site-edit.component.ts
 
 **Fichiers à modifier** :
 
-- `raspberry/frontend/app/components/tv/tv.component.ts`
-- `raspberry/frontend/app/components/tv/tv.component.html`
-- `raspberry/frontend/app/components/tv/tv.component.css`
+- `raspberry/src/app/components/tv/tv.component.ts`
+- `raspberry/src/app/components/tv/tv.component.html`
+- `raspberry/src/app/components/tv/tv.component.css`
 
 ```html
 <!-- tv.component.html -->
@@ -1049,12 +1049,12 @@ CREATE TABLE api_usage_logs (
 
 Le sprint de décembre 2025 a été exceptionnellement productif avec **15 features majeures terminées**, incluant les P1 de janvier 2026 implémentées en avance :
 
-| Catégorie | Features terminées |
-|-----------|-------------------|
+| Catégorie    | Features terminées                                            |
+| ------------ | ------------------------------------------------------------- |
 | Overlay & UI | Overlay V2 Multi-Sport, Overlay Local System, Télécommande v2 |
-| Backend P1 | Objectifs & Alertes, Programmation Playlists, Cron Scheduler |
+| Backend P1   | Objectifs & Alertes, Programmation Playlists, Cron Scheduler  |
 | Architecture | Multi-tenant Portals, Migration Advertiser, Socket.IO Offline |
-| Analytics | Rapport PDF, Estimation audience, Score live UI |
+| Analytics    | Rapport PDF, Estimation audience, Score live UI               |
 
 ---
 

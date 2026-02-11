@@ -213,6 +213,7 @@ verify_build_integrity() {
     if [ -d "${DEPLOY_DIR}/admin" ]; then
         local ADMIN_CRITICAL=(
             "admin/admin-server.js"
+            "admin/helpers.js"
             "admin/package.json"
         )
         for file in "${ADMIN_CRITICAL[@]}"; do
@@ -372,10 +373,19 @@ if [ -d "raspberry/sync-agent" ]; then
     print_success "Sync-agent copié (avec node_modules)"
 fi
 
+# Build admin panel (concaténer les modules JS en app.js)
+if [ -f "raspberry/admin/public/build-admin.sh" ]; then
+    print_step "Build admin panel (modules → app.js)..."
+    cd raspberry/admin/public
+    bash build-admin.sh
+    cd - > /dev/null
+    print_success "Admin JS modules concaténés"
+fi
+
 # Copier l'admin panel
 if [ -d "raspberry/admin" ]; then
     mkdir -p ${DEPLOY_DIR}/admin
-    rsync -a --exclude='*.md' --exclude='node_modules' raspberry/admin/ ${DEPLOY_DIR}/admin/
+    rsync -a --exclude='*.md' --exclude='node_modules' --exclude='__tests__' --exclude='*.bak' raspberry/admin/ ${DEPLOY_DIR}/admin/
 
     # Installer les dépendances de l'admin panel
     if [ -f "${DEPLOY_DIR}/admin/package.json" ]; then
@@ -401,6 +411,8 @@ RUNTIME_SCRIPTS=(
     "raspberry/scripts/hotspot-optimizer.sh"
     "raspberry/scripts/fix-hotspot.sh"
     "raspberry/scripts/sync-agent-guardian.sh"
+    "raspberry/scripts/fix-fleet-pi.sh"
+    "raspberry/scripts/diagnose-pi.sh"
 )
 mkdir -p ${DEPLOY_DIR}/scripts
 for script_path in "${RUNTIME_SCRIPTS[@]}"; do
@@ -417,9 +429,13 @@ print_success "Scripts runtime copiés"
 print_step "Copie des fichiers systemd..."
 mkdir -p ${DEPLOY_DIR}/config/systemd
 SYSTEMD_FILES=(
+    "raspberry/config/systemd/neopro-kiosk.service"
     "raspberry/config/systemd/neopro-hotspot-watchdog.service"
     "raspberry/config/systemd/neopro-hotspot-optimizer.service"
     "raspberry/config/systemd/neopro-sync-guardian.service"
+    "raspberry/config/systemd/neopro-app.service"
+    "raspberry/config/systemd/neopro-sync-agent.service"
+    "raspberry/config/systemd/neopro-admin.service"
 )
 for svc_path in "${SYSTEMD_FILES[@]}"; do
     if [ -f "${svc_path}" ]; then
@@ -508,6 +524,7 @@ cp -r ${DEPLOY_DIR}/server ${LEGACY_DIR}/deploy/
 [ -d ${DEPLOY_DIR}/sync-agent ] && cp -r ${DEPLOY_DIR}/sync-agent ${LEGACY_DIR}/deploy/
 [ -d ${DEPLOY_DIR}/admin ] && cp -r ${DEPLOY_DIR}/admin ${LEGACY_DIR}/deploy/
 [ -d ${DEPLOY_DIR}/scripts ] && cp -r ${DEPLOY_DIR}/scripts ${LEGACY_DIR}/deploy/
+[ -d ${DEPLOY_DIR}/config ] && cp -r ${DEPLOY_DIR}/config ${LEGACY_DIR}/deploy/
 
 # Copier VERSION et release.json à la racine
 cp ${DEPLOY_DIR}/VERSION ${LEGACY_DIR}/

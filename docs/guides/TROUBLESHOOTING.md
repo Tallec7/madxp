@@ -644,6 +644,42 @@ sudo apt install chromium
 
 ## Problèmes d'analytics
 
+### Perte complète des analytics après reboot du Pi (corrigé v3.7.1)
+
+#### Symptômes
+
+- Le Pi a été utilisé pendant plusieurs jours/semaines offline
+- Après reconnexion au cloud, aucune donnée analytics pour la période offline
+- Les données apparaissent uniquement pour le jour de reconnexion
+
+#### Cause racine
+
+Chromium était lancé avec le flag `--incognito` dans `kiosk-watchdog.sh`, rendant le localStorage **éphémère**. À chaque redémarrage de Chromium (reboot Pi, crash, watchdog kill), le buffer analytics en localStorage était perdu.
+
+De plus, les événements n'étaient persistés sur disque (via POST au serveur local) que toutes les 5 minutes, créant une fenêtre de perte de données.
+
+#### Solution (v3.7.1+)
+
+1. **`--incognito` supprimé** de `kiosk-watchdog.sh` → localStorage persistant entre les redémarrages
+2. **Persistance immédiate** : chaque événement est sauvé dans localStorage ET envoyé au serveur local dès la fin de la vidéo
+3. **Retry 30s** : si le serveur local n'est pas prêt (boot), retry automatique après 30 secondes
+
+#### Migration Pi existants
+
+```bash
+# 1. Copier kiosk-watchdog.sh (supprime --incognito)
+scp raspberry/scripts/kiosk-watchdog.sh pi@neopro.local:/home/pi/neopro/scripts/
+
+# 2. Rebuild et déployer le frontend Angular
+npm run build:raspberry
+# puis déployer le build vers le Pi
+
+# 3. Redémarrer Chromium
+ssh pi@neopro.local 'sudo systemctl restart neopro-kiosk'
+```
+
+---
+
 ### Les analytics vidéo ne remontent pas au dashboard central
 
 #### Symptômes
@@ -656,7 +692,7 @@ sudo apt install chromium
 
 ```
 Frontend Angular → POST /api/analytics → serveur local (port 3000)
-                                              ↓
+                    (immédiat)                ↓
                                     analytics_buffer.json
                                               ↓
                         Sync-agent (toutes les 5 min) → POST /api/analytics/video-plays
@@ -831,6 +867,10 @@ Mettre à jour `update-software.js` vers v2.15.1+ qui aligne la logique sur `dep
 scp raspberry/sync-agent/src/commands/update-software.js pi@neopro.local:/home/pi/neopro/sync-agent/src/commands/
 ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
 ```
+
+**Note (v3.7.14+) :** Le script `update-software.js` copie maintenant aussi le dossier `config/` (services systemd). Les versions précédentes ne copiaient jamais `config/`, ce qui empêchait l'installation des services `neopro-hotspot-watchdog`, `neopro-sync-guardian` et `neopro-hotspot-optimizer` via OTA.
+
+**⚠️ Golden snapshot automatique (v3.7.16+) :** `update-software.js` crée automatiquement un snapshot golden de la version actuelle du sync-agent **avant** de la remplacer (si aucun golden n'existe). Cela résout le problème critique suivant : un Pi recevant le guardian pour la première fois via OTA n'avait aucun golden → si le nouveau code crashait, le guardian ne pouvait pas restaurer → **Pi hors ligne indéfiniment**. Symptôme : Pi reste "Hors ligne" après OTA, le guardian log "Golden directory does not exist". Fix immédiat si déjà impacté : reboot physique du Pi.
 
 **Voir aussi :** Section [v2.15.x dans CLAUDE.md](/CLAUDE.md#v215x-janvier-2026) pour les détails techniques.
 
@@ -1428,6 +1468,30 @@ free -h
 
 ## Réparation rapide
 
+### Script fix-fleet-pi.sh (v3.7.14+)
+
+Pour corriger les problèmes courants identifiés par un debug bundle, utiliser le script générique de réparation flotte :
+
+```bash
+# Copier et exécuter sur le Pi
+scp raspberry/scripts/fix-fleet-pi.sh pi@neopro.local:/tmp/
+ssh pi@neopro.local 'chmod +x /tmp/fix-fleet-pi.sh && sudo /tmp/fix-fleet-pi.sh'
+```
+
+**Ce que fait le script :**
+
+1. **TKIP → CCMP** dans hostapd.conf (éjections téléphones)
+2. **Installe les 3 services systemd manquants** (watchdog, guardian, optimizer)
+3. **Crée le dossier videos-processing** (permission denied)
+4. **Vérifie les flags GPU** du kiosk (Pi 4 vs Pi 5)
+5. **Vide le cache Chromium** (erreurs SharedImage/AllocateRingBuffer)
+6. **Flush les buffers** analytics et sponsors bloqués
+7. **Vérifie gpu_mem** (doit être 256 sur Pi 4)
+
+Le script auto-détecte le modèle de Pi, le type de connexion (Ethernet vs WiFi) et le nom du site.
+
+**Voir aussi :** [MODOP-S04-05 Section 3.7](../modops/MODOP-S04-05-Diagnostic-Distance.md#37-script-fix-fleet-pish-v3714)
+
 ### Réinitialiser les permissions
 
 ```bash
@@ -1876,7 +1940,80 @@ iwconfig wlan1 | grep -E "ESSID|Signal"
 2. **Rapprocher le Pi** d'un des points d'accès mesh si possible
 3. **Envisager l'Ethernet** si disponible dans le lieu (solution la plus fiable)
 
-### 6. Chromium crash "Aw, Snap! Error code: 5" après 1-2h de boucle vidéo
+**Comprendre les reason codes de déconnexion WiFi :**
+
+Les logs `wpa_supplicant` affichent un `reason=X` lors des déconnexions. Voici les codes les plus fréquents :
+
+| Code   | Nom                         | Signification                | Action                                   |
+| ------ | --------------------------- | ---------------------------- | ---------------------------------------- |
+| **1**  | UNSPECIFIED                 | Raison non spécifiée         | Vérifier les logs AP                     |
+| **2**  | AUTH_NOT_VALID              | Authentification invalide    | Vérifier le mot de passe                 |
+| **3**  | DEAUTH_LEAVING              | Le client quitte le BSS      | Normal si `locally_generated=1` (bgscan) |
+| **4**  | DISASSOC_INACTIVITY         | Inactivité détectée          | Vérifier power management                |
+| **6**  | CLASS2_FRAME                | Frame classe 2 non autorisée | Problème d'association                   |
+| **7**  | CLASS3_FRAME                | Frame classe 3 non autorisée | Problème d'authentification              |
+| **8**  | DISASSOC_STA_LEFT           | Le STA quitte le réseau      | Normal lors d'un roaming                 |
+| **15** | 4WAY_HANDSHAKE_TIMEOUT      | Timeout handshake            | Problème de mot de passe ou AP surchargé |
+| **16** | GROUP_KEY_HANDSHAKE_TIMEOUT | Timeout group key            | AP surchargé, firmware bugué             |
+
+**Drapeaux complémentaires :**
+
+- `locally_generated=1` → La déconnexion est initiée par le Pi (souvent bgscan qui cherche mieux)
+- `locally_generated=0` → La borne a éjecté le Pi (surcharge, timeout, sécurité)
+
+**Exemple typique en mesh (signal limite ~-70/-75 dBm) :**
+
+```
+DISCONNECTED bssid=XX:XX:XX reason=3 locally_generated=1  ← bgscan cherche mieux
+CONNECTED    bssid=XX:XX:XX completed [id=0]               ← reconnecté 2s après (même borne)
+```
+
+Ce comportement est **normal** et géré automatiquement par le NetworkWatchdog. Les coupures durent 1-3 secondes et n'impactent pas la lecture vidéo (vidéos locales sur le Pi).
+
+**Protections automatiques (v3.7.14+) :**
+
+Depuis la v3.7.14, le NetworkDetector et NetworkWatchdog incluent des protections supplémentaires pour les environnements mesh :
+
+| Protection                           | Détail                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------- |
+| **Debounce 120s** (NetworkDetector)  | Le profil réseau n'est pas réévalué plus d'une fois toutes les 120s       |
+| **Grace period 60s au boot**         | Pas de recovery WiFi pendant les 60 premières secondes après le démarrage |
+| **Recovery progressive (4 phases)**  | Escalade graduelle au lieu de `wpa_cli reconfigure` agressif              |
+| **Écriture atomique wpa_supplicant** | Écriture dans un fichier temporaire + `mv` atomique (pas de corruption)   |
+
+**Les 4 phases de recovery progressive :**
+
+| Phase | Délai  | Action                                            |
+| ----- | ------ | ------------------------------------------------- |
+| 1     | 0-30s  | Attente passive (laisse le driver se reconnecter) |
+| 2     | 30-60s | `wpa_cli -i wlan1 reassociate`                    |
+| 3     | 60-90s | `wpa_cli -i wlan1 reconfigure`                    |
+| 4     | 90s+   | `dhclient -r wlan1 && dhclient wlan1`             |
+
+Maximum 5 tentatives de recovery, cooldown de 300s (5 min) entre les cycles.
+
+### 6. Flash noir entre les vidéos sur boucles longues (20+ vidéos)
+
+**Symptômes :**
+
+- Écran noir visible (~1-3s) entre la dernière et la première vidéo de la boucle
+- Ne se produit pas avec des boucles courtes (8-10 vidéos)
+- Flash uniquement au "wrap" (retour à la vidéo 0)
+
+**Cause racine (corrigée en v3.9.1) :**
+
+Deux bugs combinés :
+
+1. **Listeners `timeupdate` jamais enregistrés** : le preload anticipé (1.5s avant la fin) et l'early switch (0.5s avant la fin) étaient du code mort. Chaque transition attendait l'event `ended` puis lançait le preload from scratch.
+2. **Cache disque OS évincé** : avec 20+ vidéos, la vidéo 0 n'est plus dans le page cache Linux quand on y revient après 19 autres fichiers. Le preload depuis la carte SD prend trop longtemps.
+
+**Solution (v3.9.1) :**
+
+- Enregistrement des listeners `timeupdate` (active preload anticipé + early switch)
+- `warmDiskCache()` préchauffe le page cache kernel via `fetch()` à mi-vidéo pour les 3 prochaines vidéos
+- Supporte les boucles de 100+ vidéos sans flash
+
+### 7. Chromium crash "Aw, Snap! Error code: 5" après 1-2h de boucle vidéo
 
 **Symptômes :**
 
@@ -1885,14 +2022,16 @@ iwconfig wlan1 | grep -E "ESSID|Signal"
 - Nécessite un reboot manuel (débrancher/rebrancher)
 - Après reboot, écran blanc
 
+**Note (v3.9.1) :** Le cleanup agressif des buffers décodeur GPU (`cleanupInactivePlayer()`) après chaque switch maintient la mémoire Chromium stable (~50-60MB) quel que soit le nombre de vidéos, réduisant significativement les crash OOM.
+
 #### ⚠️ IMPORTANT : Raspberry Pi 5 vs Pi 4
 
 Le problème et la solution diffèrent selon le modèle de Raspberry Pi :
 
-| Modèle                 | GPU           | Problème                                | Solution                              |
-| ---------------------- | ------------- | --------------------------------------- | ------------------------------------- |
-| **Pi 4 et antérieurs** | VideoCore VI  | Mémoire GPU insuffisante                | Configurer `gpu_mem=256`              |
-| **Pi 5**               | VideoCore VII | Incompatibilité décodage vidéo hardware | Utiliser SwiftShader (rendu logiciel) |
+| Modèle                 | GPU           | Problème                       | Solution                                     |
+| ---------------------- | ------------- | ------------------------------ | -------------------------------------------- |
+| **Pi 4 et antérieurs** | VideoCore VI  | Mémoire GPU insuffisante       | Configurer `gpu_mem=256`                     |
+| **Pi 5**               | VideoCore VII | Pas de décodeur H.264 hardware | Utiliser SwiftShader (seule solution stable) |
 
 **Identifier le modèle :**
 
@@ -1932,49 +2071,64 @@ vcgencmd get_mem gpu
 
 #### Solution pour Raspberry Pi 5
 
-**Cause racine : Incompatibilité GPU VideoCore VII**
+**Cause racine : Pas de décodeur H.264 hardware**
 
-Sur le Pi 5, le paramètre `gpu_mem` est **ignoré** car le GPU utilise une mémoire partagée dynamique (CMA). Le problème vient d'une incompatibilité entre Chromium et le décodeur vidéo hardware du VideoCore VII.
-
-**Symptôme spécifique :**
-
-```bash
-# Les logs montrent des erreurs SharedImageStub toutes les 5 secondes
-journalctl -u neopro-kiosk --since "10 minutes ago" | grep -i "sharedimage"
-# Exemple: "SharedImageStub: Unable to create shared image"
-```
+Le Pi 5 (BCM2712) a **supprimé le décodeur H.264 hardware**. Seul H.265/HEVC est accéléré par le GPU. Sur le Pi 5, `gpu_mem` est ignoré (mémoire partagée dynamique CMA).
 
 **Note :** Sur Pi 5, `vcgencmd get_mem gpu` retourne toujours `gpu=4M` - c'est une valeur legacy, pas un problème.
 
-**Solution : Utiliser SwiftShader (rendu logiciel)**
+**Solution : Driver V3D natif (v3.7.3+)**
 
-1. **Éditer le service kiosk :**
+Depuis la v3.7.3, le Pi 5 utilise le **driver V3D natif (Mesa)** — identique au navigateur normal. Les anciennes solutions (SwiftShader, EGL natif) ont été abandonnées car elles causaient des saccades ou des erreurs.
 
-```bash
-sudo nano /etc/systemd/system/neopro-kiosk.service
-```
-
-2. **Modifier la ligne ExecStart** pour ajouter ces flags à Chromium :
-
-```
---disable-gpu-compositing --use-gl=angle --use-angle=swiftshader
-```
-
-3. **Appliquer et redémarrer :**
+Le `kiosk-watchdog.sh` utilise les flags suivants pour Pi 5 :
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl restart neopro-kiosk
+# Flags spécifiques Pi 5 (v3.7.3+) — aucun flag GPU custom
+--ignore-gpu-blocklist
+--enable-gpu-rasterization
+
+# Flags communs (Pi 4 et Pi 5)
+--disable-dev-shm-usage
+--disable-checker-imaging
 ```
 
-4. **Vérifier que les flags sont actifs :**
+**Explication des flags Pi 5 :**
+
+| Flag                         | Effet                                                                      |
+| ---------------------------- | -------------------------------------------------------------------------- |
+| `--ignore-gpu-blocklist`     | Force l'utilisation du GPU même si le modèle est dans la blocklist         |
+| `--enable-gpu-rasterization` | Active la rastérisation GPU pour de meilleures performances                |
+| `--disable-dev-shm-usage`    | Utilise /tmp au lieu de /dev/shm (évite les problèmes de mémoire partagée) |
+| `--disable-checker-imaging`  | Désactive le décodage checker (réduit la charge CPU)                       |
+
+**Historique des tentatives échouées :**
+
+| Version | Solution             | Résultat                                                |
+| ------- | -------------------- | ------------------------------------------------------- |
+| v2.27   | SwiftShader          | Rendu CPU, stable mais vidéos saccadées en 1080p        |
+| v3.7.2  | EGL natif + Vulkan   | Erreurs SharedImageStub toutes les 5 secondes           |
+| v3.7.2  | Retour SwiftShader   | Toujours trop lent pour vidéo 1080p                     |
+| v3.7.3  | **V3D natif (Mesa)** | **Solution finale** — vidéos fluides, pas d'erreurs GPU |
+
+**Mise à jour depuis une ancienne version :**
 
 ```bash
-pgrep -a chromium | grep swiftshader
-# Doit afficher le processus avec --use-angle=swiftshader
+# Copier le nouveau kiosk-watchdog.sh
+scp raspberry/scripts/kiosk-watchdog.sh pi@<IP>:/home/pi/neopro/scripts/
+# Redémarrer le kiosk
+ssh pi@<IP> 'sudo systemctl restart neopro-kiosk'
 ```
 
-**Note :** Depuis la version 2.27+, le script `kiosk-watchdog.sh` détecte automatiquement le modèle de Pi et applique les flags SwiftShader pour le Pi 5.
+**Vérifier que le driver V3D est actif (pas de flags SwiftShader/EGL) :**
+
+```bash
+pgrep -a chromium | grep -E "use-gl|use-angle|swiftshader"
+# Aucun résultat = OK (V3D natif actif)
+# Si des flags apparaissent = ancienne version, mettre à jour kiosk-watchdog.sh
+```
+
+**Note :** Le script `kiosk-watchdog.sh` détecte automatiquement le modèle de Pi et applique les bons flags (GPU hardware pour Pi 4, V3D natif pour Pi 5).
 
 ---
 
@@ -1984,8 +2138,8 @@ Depuis la version 2.24+, deux systèmes de récupération automatique sont en pl
 
 1. **Watchdog Kiosk** (`/home/pi/neopro/scripts/kiosk-watchdog.sh`) :
    - Détecte automatiquement Pi 4 vs Pi 5 et applique les bons flags GPU
-   - Surveille le titre de la fenêtre Chromium
-   - Détecte "Aw, Snap!", "Error", "Oups" dans le titre
+   - Surveille le titre de la fenêtre Chromium (détecte "Aw, Snap!", "Error", "Oups")
+   - Surveille les erreurs GPU driver via journalctl (`AllocateRingBuffer`, `kFatalFailure`) — >10 erreurs en 2 min déclenche un recovery
    - Tue Chromium, vide le cache, libère la mémoire GPU, relance
    - Anti-boucle : attend 60s après 3 crashs en 5 min
 
@@ -2003,7 +2157,7 @@ sudo systemctl status neopro-kiosk
 
 # Logs du watchdog (vérifier le modèle détecté)
 sudo tail -50 /var/log/neopro-kiosk-watchdog.log
-# Doit afficher : "Pi 5 détecté: utilisation de SwiftShader" ou "Pi 4 ou antérieur: utilisation de l'accélération GPU hardware"
+# Doit afficher le modèle détecté (pi5 ou pi4)
 ```
 
 **Note :** Les nouvelles installations (v2.24+) configurent automatiquement `gpu_mem=256` pour les Pi 4 et antérieurs via le script `install.sh`.
@@ -2070,6 +2224,8 @@ Le watchdog vérifie toutes les 30 secondes :
 
 En cas de problème, il tente une récupération automatique (max 3 tentatives, cooldown 5 min).
 
+**Installation :** Depuis la v3.7.14, `install.sh` enregistre automatiquement le service `neopro-hotspot-watchdog` ainsi que `neopro-sync-guardian` et `neopro-hotspot-optimizer`. Pour les Pi installés avant cette version, utiliser `fix-fleet-pi.sh` pour installer les services manquants.
+
 ### Commandes utiles
 
 ```bash
@@ -2118,4 +2274,4 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ---
 
-**Dernière mise à jour :** 18 janvier 2026 (v2.34 - Hotspot Watchdog, Blocage BSSID en mesh, Détection profil réseau)
+**Dernière mise à jour :** 9 février 2026 (v3.7.14 - Pi 5 V3D natif, fix-fleet-pi.sh, recovery progressive mesh, OTA config/ fix)

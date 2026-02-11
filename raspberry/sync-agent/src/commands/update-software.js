@@ -333,6 +333,26 @@ class SoftwareUpdateHandler {
 
       // Copier sync-agent (comme deploy-remote.sh et admin-server.js)
       if (await fs.pathExists(path.join(sourcePath, 'sync-agent'))) {
+        // IMPORTANT: Créer un golden snapshot AVANT de remplacer le code
+        // Si le nouveau code crashe, le guardian pourra restaurer cette version
+        const goldenDir = path.join(rootDir, 'sync-agent-golden');
+        if (!await fs.pathExists(goldenDir)) {
+          const currentAgentJs = path.join(rootDir, 'sync-agent', 'src', 'agent.js');
+          if (await fs.pathExists(currentAgentJs)) {
+            logger.info('Creating golden snapshot before update (first-time safety net)...');
+            try {
+              await execAsync(`cp -r ${path.join(rootDir, 'sync-agent')} ${goldenDir}`);
+              await execAsync(`echo "$(date -Iseconds)" > ${goldenDir}/.golden-created`);
+              await execAsync(`chown -R pi:pi ${goldenDir}`);
+              logger.info('Golden snapshot created successfully');
+            } catch (goldenError) {
+              logger.warn('Failed to create golden snapshot (non-critical)', { error: goldenError.message });
+            }
+          }
+        } else {
+          logger.info('Golden snapshot already exists, skipping');
+        }
+
         // Sauvegarder les configs locales du sync-agent
         const syncAgentEnvBackup = '/tmp/sync-agent.env.backup';
         const syncAgentConfigEnvBackup = '/tmp/sync-agent-config.env.backup';
@@ -375,6 +395,15 @@ class SoftwareUpdateHandler {
         await execAsync(`cp -r ${path.join(sourcePath, 'scripts')}/* ${rootDir}/scripts/`);
         await execAsync(`chmod +x ${rootDir}/scripts/*.sh 2>/dev/null || true`);
         logger.info('Scripts updated');
+      }
+
+      // Copier config/ si présent (contient les fichiers systemd .service)
+      // IMPORTANT: Sans cette copie, les nouveaux services systemd ajoutés après
+      // l'install initial ne sont jamais installés via OTA
+      if (await fs.pathExists(path.join(sourcePath, 'config'))) {
+        await fs.ensureDir(path.join(rootDir, 'config'));
+        await execAsync(`cp -r ${path.join(sourcePath, 'config')}/* ${rootDir}/config/`);
+        logger.info('Config files updated (systemd services, etc.)');
       }
 
       // Copier VERSION et release.json à la racine (avec sudo car peuvent appartenir à root)
@@ -441,23 +470,54 @@ class SoftwareUpdateHandler {
       if (await fs.pathExists(systemdConfigDir)) {
         logger.info('Installing systemd services...');
         try {
+          await execAsync('sudo systemctl daemon-reload');
           const serviceFiles = await fs.readdir(systemdConfigDir);
+          const newlyInstalledServices = [];
+
           for (const serviceFile of serviceFiles) {
             if (serviceFile.endsWith('.service')) {
               const srcPath = path.join(systemdConfigDir, serviceFile);
               const destPath = `/etc/systemd/system/${serviceFile}`;
+              const serviceName = serviceFile.replace('.service', '');
+
+              // Vérifier si le service est déjà installé
+              const wasInstalled = await fs.pathExists(destPath);
 
               // Copier le fichier service
               await execAsync(`sudo cp ${srcPath} ${destPath}`);
-              logger.info(`Installed systemd service: ${serviceFile}`);
+              logger.info(`Installed systemd service: ${serviceFile}`, { wasUpdate: wasInstalled });
 
-              // Activer le service (mais ne pas démarrer - sera fait au reboot ou manuellement)
-              const serviceName = serviceFile.replace('.service', '');
-              await execAsync(`sudo systemctl daemon-reload`);
+              // Activer le service
               await execAsync(`sudo systemctl enable ${serviceName} 2>/dev/null || true`);
+
+              // Si c'est un NOUVEAU service (pas une mise à jour), le démarrer
+              if (!wasInstalled) {
+                newlyInstalledServices.push(serviceName);
+              }
             }
           }
-          logger.info('Systemd services installed and enabled');
+
+          // Recharger après toutes les copies
+          await execAsync('sudo systemctl daemon-reload');
+
+          // Démarrer les nouveaux services (pas ceux gérés par startServices)
+          const managedServices = ['neopro-app', 'neopro-admin', 'neopro-kiosk', 'neopro-sync-agent'];
+          for (const serviceName of newlyInstalledServices) {
+            if (!managedServices.includes(serviceName)) {
+              try {
+                await execAsync(`sudo systemctl start ${serviceName}`);
+                logger.info(`Started new service: ${serviceName}`);
+              } catch (startError) {
+                logger.warn(`Failed to start new service ${serviceName}`, { error: startError.message });
+              }
+            }
+          }
+
+          logger.info('Systemd services installed and enabled', {
+            total: serviceFiles.filter(f => f.endsWith('.service')).length,
+            newlyInstalled: newlyInstalledServices.length,
+            started: newlyInstalledServices.filter(s => !managedServices.includes(s)).length
+          });
         } catch (e) {
           logger.warn('Failed to install some systemd services', { error: e.message });
         }
@@ -516,7 +576,7 @@ class SoftwareUpdateHandler {
     try {
       logger.info('Starting services');
 
-      const services = ['neopro-app', 'neopro-admin'];
+      const services = ['neopro-app', 'neopro-admin', 'nginx'];
 
       for (const service of services) {
         try {
@@ -579,6 +639,23 @@ class SoftwareUpdateHandler {
       }
 
       logger.info('Services startup complete');
+
+      // Restart neopro-kiosk to apply new webapp + kiosk-watchdog.sh changes
+      // (e.g. Pi 5 SwiftShader flags, error recovery improvements)
+      // This causes a brief TV interruption (~5s) but is necessary after updates
+      try {
+        const { stdout: kioskExists } = await execAsync(
+          `systemctl list-unit-files neopro-kiosk.service 2>/dev/null | grep -q neopro-kiosk && echo "exists" || echo "not_found"`
+        );
+
+        if (kioskExists.trim() === 'exists') {
+          logger.info('Restarting neopro-kiosk to apply display updates...');
+          await execAsync('sudo systemctl restart neopro-kiosk');
+          logger.info('Service neopro-kiosk restarted');
+        }
+      } catch (error) {
+        logger.warn('Failed to restart neopro-kiosk (non-critical):', error.message);
+      }
 
       // Schedule sync-agent restart to apply any updates to itself
       // Use spawn with detached to allow the current process to exit

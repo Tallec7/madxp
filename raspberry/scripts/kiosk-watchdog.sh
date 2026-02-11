@@ -126,22 +126,31 @@ start_chromium() {
         --disable-hang-monitor
         --disable-popup-blocking
         --enable-features=OverlayScrollbar
-        --incognito
         --memory-pressure-off
         --disable-breakpad
         --disable-crash-reporter
+        --disable-dev-shm-usage
+        --disable-checker-imaging
     )
 
     # Flags spécifiques au modèle
     local gpu_flags=()
     if [[ "$PI_MODEL" == "pi5" ]]; then
-        # Pi 5 : VideoCore VII a des problèmes avec le décodage vidéo hardware
-        # Utiliser SwiftShader (rendu logiciel) pour éviter les erreurs SharedImageStub
-        log "📱 Pi 5 détecté: utilisation de SwiftShader pour la compatibilité GPU"
+        # Pi 5 : Pas de flags GPU ! Laisser Chromium utiliser le driver V3D natif (Mesa).
+        #
+        # Historique des tentatives :
+        # - SwiftShader (--use-gl=angle --use-angle=swiftshader) : trop lent, vidéos saccadées
+        # - EGL natif avec flags (--use-gl=egl --enable-features=Vulkan) : SharedImageStub errors /5s
+        # - --disable-gpu : Skia CPU, mieux que SwiftShader mais encore trop lent
+        #
+        # Solution : AUCUN flag GPU. Chromium utilise par défaut le driver V3D 7.1 (Mesa)
+        # pour le compositing GPU. C'est exactement ce que fait le navigateur normal
+        # quand on ouvre neopro.local/tv et que les vidéos sont fluides.
+        # Le flag --kiosk ne change PAS le pipeline de rendu, juste l'UI (fullscreen).
+        log "📱 Pi 5 détecté: utilisation du driver V3D natif (Mesa) - pas de flags GPU"
         gpu_flags=(
-            --disable-gpu-compositing
-            --use-gl=angle
-            --use-angle=swiftshader
+            --ignore-gpu-blocklist
+            --enable-gpu-rasterization
         )
     else
         # Pi 4 et antérieurs : utiliser l'accélération GPU hardware
@@ -152,6 +161,7 @@ start_chromium() {
             --enable-zero-copy
             --ignore-gpu-blocklist
             --disable-software-rasterizer
+            --disable-gpu-vsync
         )
     fi
 
@@ -183,6 +193,15 @@ check_for_crash_page() {
             log "⚠️ Erreurs GPU/mémoire détectées dans les logs Chromium"
             return 0  # Crash détecté
         fi
+    fi
+
+    # Méthode 3: Vérifier les erreurs GPU driver dans journalctl (AllocateRingBuffer, etc.)
+    # Ces erreurs ne sont pas visibles dans chrome_debug.log mais indiquent une défaillance du GPU driver.
+    # Sur Pi 5 avec V3D, ces erreurs se produisent quand le GPU ne peut plus allouer de mémoire.
+    local gpu_driver_errors=$(journalctl -u neopro-kiosk --since "2 minutes ago" --no-pager -q 2>/dev/null | grep -c "AllocateRingBuffer\|kFatalFailure\|GpuChannelMsg_CreateCommandBuffer" 2>/dev/null | tail -1 || echo "0")
+    if (( gpu_driver_errors > 10 )); then
+        log "⚠️ Erreurs GPU driver détectées (${gpu_driver_errors} en 2 min): AllocateRingBuffer/kFatalFailure"
+        return 0  # Crash détecté
     fi
 
     return 1  # Pas de crash

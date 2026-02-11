@@ -1,6 +1,6 @@
 {
   "name": "neopro",
-  "version": "3.7.1",
+  "version": "3.15.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve raspberry",
@@ -16,6 +16,7 @@
     "test:raspberry": "ng test raspberry",
     "test:central": "ng test central-dashboard",
     "test:server": "cd central-server && npm test",
+    "test:smoke": "cd central-server && npm run test:smoke",
     "test:sync-agent": "cd raspberry/sync-agent && npm test",
     "test:quick": "node scripts/quick-test.js",
     "test:full": "node scripts/quick-test.js --full",

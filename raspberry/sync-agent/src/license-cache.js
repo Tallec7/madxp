@@ -1,3 +1,7 @@
+// @ts-check
+/** @typedef {import('./types').LicenseStatus} LicenseStatus */
+/** @typedef {import('./types').LicenseCache} LicenseCache */
+
 /**
  * License Cache Module
  *

@@ -1,121 +1,14 @@
 import { Response } from 'express';
-import { query } from '../config/database';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { validate as validateUuid } from 'uuid';
-
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
-
-// Base interface for QueryResultRow compatibility
-interface QueryRow {
-  [column: string]: unknown;
-}
-
-interface MetricsRow extends QueryRow {
-  cpu_usage: number;
-  memory_usage: number;
-  temperature: number;
-  disk_usage: number;
-  uptime: number;
-  recorded_at: string;
-}
-
-interface SiteRow extends QueryRow {
-  id: string;
-  site_name: string;
-  club_name: string;
-  status: string;
-  last_seen_at: string;
-}
-
-interface AlertStatsRow extends QueryRow {
-  active_alerts: string;
-  alerts_last_30d: string;
-  active: string;
-  acknowledged: string;
-  resolved: string;
-  critical: string;
-  warning: string;
-  info: string;
-}
-
-interface AvgMetricsRow extends QueryRow {
-  avg_cpu: number | null;
-  avg_memory: number | null;
-  avg_temperature: number | null;
-  max_temperature: number | null;
-}
-
-interface HeartbeatRow extends QueryRow {
-  heartbeat_count: string;
-  first_heartbeat: string;
-  last_heartbeat: string;
-}
-
-interface DailyHeartbeatRow extends QueryRow {
-  date: string;
-  heartbeat_count: string;
-  avg_cpu: number | null;
-  avg_temp: number | null;
-}
-
-interface UsageStatsRow extends QueryRow {
-  screen_time_seconds: string;
-  videos_played: string;
-  sessions_count: string;
-  active_days: string;
-  manual_triggers: string;
-  auto_plays: string;
-}
-
-interface DailyStatsRow extends QueryRow {
-  date: string;
-  screen_time: string;
-  videos: string;
-}
-
-interface CategoryStatsRow extends QueryRow {
-  category: string;
-  plays: string;
-  total_duration: string;
-}
-
-interface TopVideoRow extends QueryRow {
-  video_filename: string;
-  category: string;
-  plays: string;
-  total_duration: string;
-  completed_count: string;
-}
-
-interface HealthDataRow extends QueryRow {
-  status: string;
-  last_seen_at: string;
-  cpu_usage: number | null;
-  memory_usage: number | null;
-  temperature: number | null;
-  disk_usage: number | null;
-}
-
-interface GlobalStatsRow extends QueryRow {
-  active_sites: string;
-  total_videos_this_month: string;
-  total_screen_time_this_month: string;
-}
-
-interface TopSiteRow extends QueryRow {
-  id: string;
-  site_name: string;
-  club_name: string;
-  videos_this_month: string;
-  screen_time_this_month: string;
-}
-
-interface DailyCalcRow extends QueryRow {
-  count: string;
-}
+import {
+  analyticsRepository,
+  siteRepository,
+  advertiserRepository,
+  type ClubAlertRow,
+  type VideoPlaysBatchItem,
+} from '../repositories';
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -128,15 +21,6 @@ const formatDuration = (seconds: number): string => {
     return `${hours}h ${minutes}min`;
   }
   return `${minutes}min`;
-};
-
-const calculatePercentChange = (current: number, previous: number): string => {
-  if (previous === 0) {
-    return current > 0 ? '+100%' : '0%';
-  }
-  const change = ((current - previous) / previous) * 100;
-  const sign = change >= 0 ? '+' : '';
-  return `${sign}${Math.round(change)}%`;
 };
 
 // ============================================================================
@@ -152,89 +36,43 @@ export const getClubHealth = async (req: AuthRequest, res: Response) => {
     const { siteId } = req.params;
 
     // Vérifier que le site existe
-    const siteResult = await query<SiteRow>('SELECT id, site_name, club_name, status, last_seen_at FROM sites WHERE id = $1', [siteId]);
-    if (siteResult.rows.length === 0) {
+    const site = await siteRepository.findById(siteId);
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    const site = siteResult.rows[0];
-
-    // Récupérer les dernières métriques
-    const latestMetrics = await query<MetricsRow>(
-      `SELECT cpu_usage, memory_usage, temperature, disk_usage, uptime, recorded_at
-       FROM metrics
-       WHERE site_id = $1
-       ORDER BY recorded_at DESC
-       LIMIT 1`,
-      [siteId]
-    );
-
-    // Calculer l'uptime sur 30 jours (basé sur les heartbeats)
-    const uptimeResult = await query<HeartbeatRow>(
-      `SELECT
-         COUNT(*) as heartbeat_count,
-         MIN(recorded_at) as first_heartbeat,
-         MAX(recorded_at) as last_heartbeat
-       FROM metrics
-       WHERE site_id = $1
-         AND recorded_at > NOW() - INTERVAL '30 days'`,
-      [siteId]
-    );
-
-    // Calculer le pourcentage d'uptime (heartbeat toutes les 30s = 2880/jour)
-    const expectedHeartbeats = 30 * 2880; // 30 jours
-    const actualHeartbeats = parseInt(uptimeResult.rows[0]?.heartbeat_count || '0');
-    const uptimePercent = Math.min(100, (actualHeartbeats / expectedHeartbeats) * 100);
-
-    // Compter les alertes actives et récentes
-    const alertsResult = await query<AlertStatsRow>(
-      `SELECT
-         COUNT(*) FILTER (WHERE status = 'active') as active_alerts,
-         COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days') as alerts_last_30d
-       FROM alerts
-       WHERE site_id = $1`,
-      [siteId]
-    );
-
-    // Moyennes sur 24h
-    const avgResult = await query<AvgMetricsRow>(
-      `SELECT
-         AVG(cpu_usage) as avg_cpu,
-         AVG(memory_usage) as avg_memory,
-         AVG(temperature) as avg_temperature,
-         MAX(temperature) as max_temperature
-       FROM metrics
-       WHERE site_id = $1
-         AND recorded_at > NOW() - INTERVAL '24 hours'`,
-      [siteId]
-    );
-
-    const currentMetrics = latestMetrics.rows[0];
-    const avgMetrics = avgResult.rows[0];
-    const alerts = alertsResult.rows[0];
+    // Récupérer les données en parallèle via le repository
+    const [currentMetrics, , , , heartbeats24h, alerts24h] = await Promise.all([
+      analyticsRepository.getLatestMetrics(siteId),
+      analyticsRepository.getHeartbeatStats30d(siteId),
+      analyticsRepository.getAlertStats(siteId),
+      analyticsRepository.get24hAverages(siteId),
+      analyticsRepository.getHeartbeatCount24h(siteId),
+      analyticsRepository.getAlertCount24h(siteId),
+    ]);
 
     // Déterminer le statut de santé
     let healthStatus = 'healthy';
     const issues: string[] = [];
 
     if (currentMetrics) {
-      if (currentMetrics.temperature > 80) {
+      if ((currentMetrics.temperature ?? 0) > 80) {
         healthStatus = 'critical';
         issues.push('Température critique');
-      } else if (currentMetrics.temperature > 70) {
+      } else if ((currentMetrics.temperature ?? 0) > 70) {
         healthStatus = 'warning';
         issues.push('Température élevée');
       }
 
-      if (currentMetrics.disk_usage > 90) {
+      if ((currentMetrics.disk_usage ?? 0) > 90) {
         healthStatus = 'critical';
         issues.push('Espace disque critique');
-      } else if (currentMetrics.disk_usage > 80) {
+      } else if ((currentMetrics.disk_usage ?? 0) > 80) {
         healthStatus = healthStatus === 'healthy' ? 'warning' : healthStatus;
         issues.push('Espace disque faible');
       }
 
-      if (currentMetrics.memory_usage > 90) {
+      if ((currentMetrics.memory_usage ?? 0) > 90) {
         healthStatus = healthStatus === 'healthy' ? 'warning' : healthStatus;
         issues.push('Mémoire élevée');
       }
@@ -246,27 +84,7 @@ export const getClubHealth = async (req: AuthRequest, res: Response) => {
     }
 
     // Calculer la disponibilité 24h
-    const avail24hResult = await query<HeartbeatRow>(
-      `SELECT COUNT(*) as heartbeat_count
-       FROM metrics
-       WHERE site_id = $1
-         AND recorded_at > NOW() - INTERVAL '24 hours'`,
-      [siteId]
-    );
-    const heartbeats24h = parseInt(avail24hResult.rows[0]?.heartbeat_count || '0');
     const availability24h = Math.min(100, (heartbeats24h / 2880) * 100);
-
-    // Compter les alertes des 24 dernières heures
-    interface AlertCount24hRow extends QueryRow {
-      alerts_24h: string;
-    }
-    const alerts24hResult = await query<AlertCount24hRow>(
-      `SELECT COUNT(*) as alerts_24h
-       FROM alerts
-       WHERE site_id = $1
-         AND created_at > NOW() - INTERVAL '24 hours'`,
-      [siteId]
-    );
 
     // Format attendu par le frontend (ClubHealthData)
     res.json({
@@ -275,16 +93,16 @@ export const getClubHealth = async (req: AuthRequest, res: Response) => {
       status: healthStatus,
       current_metrics: currentMetrics
         ? {
-            cpu_usage: Math.round(currentMetrics.cpu_usage * 10) / 10,
-            memory_usage: Math.round(currentMetrics.memory_usage * 10) / 10,
-            temperature: Math.round(currentMetrics.temperature),
-            disk_usage: Math.round(currentMetrics.disk_usage * 10) / 10,
+            cpu_usage: Math.round((currentMetrics.cpu_usage ?? 0) * 10) / 10,
+            memory_usage: Math.round((currentMetrics.memory_usage ?? 0) * 10) / 10,
+            temperature: Math.round(currentMetrics.temperature ?? 0),
+            disk_usage: Math.round((currentMetrics.disk_usage ?? 0) * 10) / 10,
             uptime: currentMetrics.uptime,
             recorded_at: currentMetrics.recorded_at,
           }
         : null,
       availability_24h: Math.round(availability24h * 10) / 10,
-      alerts_24h: parseInt(alerts24hResult.rows[0]?.alerts_24h || '0'),
+      alerts_24h: alerts24h,
       last_seen_at: site.last_seen_at,
     });
   } catch (error) {
@@ -304,24 +122,12 @@ export const getClubAvailability = async (req: AuthRequest, res: Response) => {
 
     const daysNum = Math.min(parseInt(days as string) || 30, 90);
 
-    // Récupérer les heartbeats groupés par jour
-    const result = await query<DailyHeartbeatRow>(
-      `SELECT
-         DATE(recorded_at) as date,
-         COUNT(*) as heartbeat_count,
-         AVG(cpu_usage) as avg_cpu,
-         AVG(temperature) as avg_temp
-       FROM metrics
-       WHERE site_id = $1
-         AND recorded_at > NOW() - INTERVAL '1 day' * $2
-       GROUP BY DATE(recorded_at)
-       ORDER BY date DESC`,
-      [siteId, daysNum]
-    );
+    // Récupérer les heartbeats groupés par jour via le repository
+    const rows = await analyticsRepository.getDailyHeartbeats(siteId, daysNum);
 
     // Calculer l'uptime par jour (2880 heartbeats max par jour = 48/heure * 24h)
     // Format attendu par le frontend: { date, total_minutes, online_minutes, availability_percent }
-    const availability = result.rows.map((row: DailyHeartbeatRow) => {
+    const availability = rows.map((row) => {
       const heartbeats = parseInt(row.heartbeat_count);
       // Chaque heartbeat = 30 secondes = 0.5 minute
       const onlineMinutes = Math.round(heartbeats * 0.5);
@@ -355,43 +161,18 @@ export const getClubAlerts = async (req: AuthRequest, res: Response) => {
     const { days = 30, status, severity, limit = 50 } = req.query;
 
     const daysNum = Math.min(parseInt(days as string) || 30, 90);
-
-    let sqlQuery = `SELECT id, alert_type as type, severity, message, status, created_at, resolved_at
-                    FROM alerts WHERE site_id = $1 AND created_at > NOW() - INTERVAL '1 day' * $2`;
-    const params: (string | number)[] = [siteId, daysNum];
-    let paramIndex = 3;
-
-    if (status) {
-      sqlQuery += ` AND status = $${paramIndex}`;
-      params.push(status as string);
-      paramIndex++;
-    }
-
-    if (severity) {
-      sqlQuery += ` AND severity = $${paramIndex}`;
-      params.push(severity as string);
-      paramIndex++;
-    }
-
-    sqlQuery += ` ORDER BY created_at DESC LIMIT $${paramIndex}`;
-    params.push(Math.min(parseInt(limit as string) || 50, 200));
+    const limitNum = Math.min(parseInt(limit as string) || 50, 200);
 
     // Format attendu par le frontend: { alerts: AlertData[] }
     // AlertData: { id, type, severity, message, resolved: boolean, created_at, resolved_at }
-    interface AlertRow extends QueryRow {
-      id: string;
-      type: string;
-      severity: string;
-      message: string;
-      status: string;
-      created_at: string;
-      resolved_at: string | null;
-    }
-
-    const result = await query<AlertRow>(sqlQuery, params);
+    const rows = await analyticsRepository.getClubAlerts(siteId, daysNum, {
+      status: status as string | undefined,
+      severity: severity as string | undefined,
+      limit: limitNum,
+    });
 
     res.json({
-      alerts: result.rows.map((row) => ({
+      alerts: rows.map((row: ClubAlertRow) => ({
         id: row.id,
         type: row.type,
         severity: row.severity,
@@ -424,62 +205,53 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
     }
 
     // Vérifier que le site existe
-    const siteResult = await query('SELECT id FROM sites WHERE id = $1', [site_id]);
-    if (siteResult.rows.length === 0) {
+    const siteExists = await siteRepository.exists(site_id);
+    if (!siteExists) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    let insertedCount = 0;
     let invalidSessions = 0;
 
+    // Valider et préparer toutes les entrées avant l'insertion batch
+    const validTvStatuses = ['on', 'standby', 'disconnected', 'unknown'];
+    const validPlays: VideoPlaysBatchItem[] = [];
+
     for (const play of plays) {
-      try {
-        const sessionId =
-          typeof play.session_id === 'string' && validateUuid(play.session_id)
-            ? play.session_id
-            : null;
+      const sessionId =
+        typeof play.session_id === 'string' && validateUuid(play.session_id)
+          ? play.session_id
+          : null;
 
-        if (play.session_id && !sessionId) {
-          invalidSessions++;
-        }
-
-        // Valider video_id et sponsor_id s'ils sont fournis
-        const videoId =
-          typeof play.video_id === 'string' && validateUuid(play.video_id)
-            ? play.video_id
-            : null;
-
-        const sponsorId =
-          typeof play.sponsor_id === 'string' && validateUuid(play.sponsor_id)
-            ? play.sponsor_id
-            : null;
-
-        // Validate tv_status (on, standby, disconnected, unknown)
-        const validTvStatuses = ['on', 'standby', 'disconnected', 'unknown'];
-        const tvStatus = validTvStatuses.includes(play.tv_status) ? play.tv_status : 'unknown';
-
-        await query(
-          `INSERT INTO video_plays (site_id, session_id, video_filename, category, played_at, duration_played, video_duration, completed, trigger_type, video_id, sponsor_id, tv_status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-          [
-            site_id,
-            sessionId,
-            play.video_filename,
-            play.category || 'other',
-            play.played_at || new Date(),
-            play.duration_played || 0,
-            play.video_duration || 0,
-            play.completed || false,
-            play.trigger_type || 'auto',
-            videoId,
-            sponsorId,
-            tvStatus,
-          ]
-        );
-        insertedCount++;
-      } catch (err) {
-        logger.warn('Failed to insert video play:', { play, error: err });
+      if (play.session_id && !sessionId) {
+        invalidSessions++;
       }
+
+      const videoId =
+        typeof play.video_id === 'string' && validateUuid(play.video_id)
+          ? play.video_id
+          : null;
+
+      const sponsorId =
+        typeof play.sponsor_id === 'string' && validateUuid(play.sponsor_id)
+          ? play.sponsor_id
+          : null;
+
+      const tvStatus = validTvStatuses.includes(play.tv_status) ? play.tv_status : 'unknown';
+
+      validPlays.push({
+        siteId: site_id,
+        sessionId,
+        videoFilename: play.video_filename,
+        category: play.category || 'other',
+        playedAt: play.played_at || new Date().toISOString(),
+        durationPlayed: play.duration_played || 0,
+        videoDuration: play.video_duration || 0,
+        completed: play.completed || false,
+        triggerType: play.trigger_type || 'auto',
+        videoId,
+        sponsorId,
+        tvStatus,
+      });
     }
 
     if (invalidSessions > 0) {
@@ -489,9 +261,12 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    logger.info('Video plays recorded', { siteId: site_id, count: insertedCount });
+    // Batch insert via repository (handles batching internally)
+    await analyticsRepository.recordVideoPlays(validPlays);
 
-    res.json({ success: true, recorded: insertedCount });
+    logger.info('Video plays recorded', { siteId: site_id, count: validPlays.length, totalPlays: validPlays.length });
+
+    res.json({ success: true, recorded: validPlays.length });
   } catch (error) {
     logger.error('Record video plays error:', error);
     res.status(500).json({ error: 'Erreur lors de l\'enregistrement des lectures' });
@@ -512,43 +287,28 @@ export const manageSession = async (req: AuthRequest, res: Response) => {
 
     if (action === 'start') {
       // Créer une nouvelle session
-      const result = await query(
-        `INSERT INTO club_sessions (site_id, started_at)
-         VALUES ($1, NOW())
-         RETURNING id, started_at`,
-        [site_id]
-      );
+      const session = await analyticsRepository.startSession(site_id);
 
-      logger.info('Session started', { siteId: site_id, sessionId: result.rows[0].id });
+      logger.info('Session started', { siteId: site_id, sessionId: session.id });
 
       return res.json({
         success: true,
-        session_id: result.rows[0].id,
-        started_at: result.rows[0].started_at,
+        session_id: session.id,
+        started_at: session.started_at,
       });
     }
 
     if (action === 'end' && session_id) {
       // Terminer une session
-      const result = await query(
-        `UPDATE club_sessions
-         SET ended_at = NOW(),
-             duration_seconds = EXTRACT(EPOCH FROM (NOW() - started_at))::INTEGER,
-             videos_played = (SELECT COUNT(*) FROM video_plays WHERE session_id = $1),
-             manual_triggers = (SELECT COUNT(*) FROM video_plays WHERE session_id = $1 AND trigger_type = 'manual'),
-             auto_plays = (SELECT COUNT(*) FROM video_plays WHERE session_id = $1 AND trigger_type = 'auto')
-         WHERE id = $1
-         RETURNING *`,
-        [session_id]
-      );
+      const session = await analyticsRepository.endSession(session_id);
 
-      if (result.rows.length === 0) {
+      if (!session) {
         return res.status(404).json({ error: 'Session non trouvée' });
       }
 
-      logger.info('Session ended', { sessionId: session_id, duration: result.rows[0].duration_seconds });
+      logger.info('Session ended', { sessionId: session_id, duration: session.duration_seconds });
 
-      return res.json({ success: true, session: result.rows[0] });
+      return res.json({ success: true, session });
     }
 
     res.status(400).json({ error: 'Action invalide' });
@@ -572,52 +332,14 @@ export const getClubUsage = async (req: AuthRequest, res: Response) => {
     fromDate.setDate(fromDate.getDate() - daysNum);
     const toDate = new Date();
 
-    // Stats période actuelle
-    interface UsageExtendedRow extends QueryRow {
-      screen_time_seconds: string;
-      videos_played: string;
-      unique_videos: string;
-      sessions_count: string;
-      active_days: string;
-      manual_triggers: string;
-      auto_plays: string;
-      avg_completion: string | null;
-    }
-    const currentStats = await query<UsageExtendedRow>(
-      `SELECT
-         COALESCE(SUM(duration_played), 0) as screen_time_seconds,
-         COUNT(*) as videos_played,
-         COUNT(DISTINCT video_filename) as unique_videos,
-         COUNT(DISTINCT session_id) as sessions_count,
-         COUNT(DISTINCT DATE(played_at)) as active_days,
-         COUNT(*) FILTER (WHERE trigger_type = 'manual') as manual_triggers,
-         COUNT(*) FILTER (WHERE trigger_type = 'auto') as auto_plays,
-         AVG(CASE WHEN completed THEN 100
-             WHEN video_duration > 0 THEN (duration_played::float / video_duration * 100)
-             ELSE 100 END) as avg_completion
-       FROM video_plays
-       WHERE site_id = $1
-         AND played_at >= $2
-         AND played_at <= $3`,
-      [siteId, fromDate, toDate]
-    );
+    const fromStr = fromDate.toISOString();
+    const toStr = toDate.toISOString();
 
-    // Stats quotidiennes
-    const dailyStats = await query<DailyStatsRow>(
-      `SELECT
-         DATE(played_at) as date,
-         COALESCE(SUM(duration_played), 0) as screen_time,
-         COUNT(*) as videos
-       FROM video_plays
-       WHERE site_id = $1
-         AND played_at >= $2
-         AND played_at <= $3
-       GROUP BY DATE(played_at)
-       ORDER BY date`,
-      [siteId, fromDate, toDate]
-    );
-
-    const current = currentStats.rows[0];
+    // Récupérer les stats en parallèle via le repository
+    const [current, dailyRows] = await Promise.all([
+      analyticsRepository.getUsageStats(siteId, fromStr, toStr),
+      analyticsRepository.getDailyStats(siteId, fromStr, toStr),
+    ]);
 
     // Format attendu par le frontend
     res.json({
@@ -625,10 +347,10 @@ export const getClubUsage = async (req: AuthRequest, res: Response) => {
       total_plays: parseInt(current.videos_played),
       unique_videos: parseInt(current.unique_videos),
       total_duration: parseInt(current.screen_time_seconds),
-      avg_completion_rate: current.avg_completion ? parseFloat(current.avg_completion) : 0,
+      avg_completion_rate: current.avg_completion ? Number(current.avg_completion) : 0,
       manual_triggers: parseInt(current.manual_triggers),
       auto_plays: parseInt(current.auto_plays),
-      daily_breakdown: dailyStats.rows.map((row: DailyStatsRow) => ({
+      daily_breakdown: dailyRows.map((row) => ({
         date: row.date,
         plays: parseInt(row.videos),
         duration: parseInt(row.screen_time),
@@ -654,58 +376,25 @@ export const getClubContent = async (req: AuthRequest, res: Response) => {
     fromDate.setDate(fromDate.getDate() - daysNum);
     const toDate = new Date();
 
-    // Stats par catégorie
-    const categoryStats = await query<CategoryStatsRow>(
-      `SELECT
-         category,
-         COUNT(*) as plays,
-         COALESCE(SUM(duration_played), 0) as total_duration
-       FROM video_plays
-       WHERE site_id = $1
-         AND played_at >= $2
-         AND played_at <= $3
-       GROUP BY category
-       ORDER BY plays DESC`,
-      [siteId, fromDate, toDate]
-    );
+    const fromStr = fromDate.toISOString();
+    const toStr = toDate.toISOString();
 
-    // Top vidéos avec taux de complétion
-    interface TopVideoExtendedRow extends QueryRow {
-      video_filename: string;
-      category: string;
-      plays: string;
-      total_duration: string;
-      avg_completion: string | null;
-    }
-    const topVideos = await query<TopVideoExtendedRow>(
-      `SELECT
-         video_filename,
-         category,
-         COUNT(*) as plays,
-         COALESCE(SUM(duration_played), 0) as total_duration,
-         AVG(CASE WHEN completed THEN 100
-             WHEN video_duration > 0 THEN (duration_played::float / video_duration * 100)
-             ELSE 100 END) as avg_completion
-       FROM video_plays
-       WHERE site_id = $1
-         AND played_at >= $2
-         AND played_at <= $3
-       GROUP BY video_filename, category
-       ORDER BY plays DESC
-       LIMIT 10`,
-      [siteId, fromDate, toDate]
-    );
+    // Récupérer les stats en parallèle via le repository
+    const [categoryRows, topVideoRows] = await Promise.all([
+      analyticsRepository.getCategoryStats(siteId, fromStr, toStr),
+      analyticsRepository.getTopVideos(siteId, fromStr, toStr, 10),
+    ]);
 
     // Format attendu par le frontend (ContentStats)
     res.json({
-      top_videos: topVideos.rows.map((row: TopVideoExtendedRow) => ({
+      top_videos: topVideoRows.map((row) => ({
         filename: row.video_filename,
         category: row.category || 'other',
         play_count: parseInt(row.plays),
         total_duration: parseInt(row.total_duration),
-        avg_completion: row.avg_completion ? parseFloat(row.avg_completion) : 0,
+        avg_completion: row.avg_completion ? Number(row.avg_completion) : 0,
       })),
-      categories_breakdown: categoryStats.rows.map((row: CategoryStatsRow) => ({
+      categories_breakdown: categoryRows.map((row) => ({
         category: row.category || 'other',
         play_count: parseInt(row.plays),
         total_duration: parseInt(row.total_duration),
@@ -733,107 +422,18 @@ export const getClubDashboard = async (req: AuthRequest, res: Response) => {
     const fromDate = from ? new Date(from as string) : new Date(new Date().setDate(1));
     const toDate = to ? new Date(to as string) : new Date();
 
-    // Local types for this function
-    interface DashboardUsageRow extends QueryRow {
-      screen_time_seconds: string;
-      videos_played: string;
-      active_days: string;
-      manual_triggers: string;
-      auto_plays: string;
-    }
-    interface ContentCategoryRow extends QueryRow {
-      category: string;
-      plays: string;
-    }
-    interface TopVideoSimpleRow extends QueryRow {
-      video_filename: string;
-      plays: string;
-    }
+    const fromStr = fromDate.toISOString();
+    const toStr = toDate.toISOString();
 
-    // Récupérer toutes les données en parallèle
-    const [healthData, usageData, contentData] = await Promise.all([
-      // Health data
-      query<HealthDataRow>(
-        `SELECT
-           s.status, s.last_seen_at,
-           m.cpu_usage, m.memory_usage, m.temperature, m.disk_usage
-         FROM sites s
-         LEFT JOIN LATERAL (
-           SELECT * FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1
-         ) m ON true
-         WHERE s.id = $1`,
-        [siteId]
-      ),
-      // Usage summary
-      query<DashboardUsageRow>(
-        `SELECT
-           COALESCE(SUM(duration_played), 0) as screen_time_seconds,
-           COUNT(*) as videos_played,
-           COUNT(DISTINCT DATE(played_at)) as active_days,
-           COUNT(*) FILTER (WHERE trigger_type = 'manual') as manual_triggers,
-           COUNT(*) FILTER (WHERE trigger_type = 'auto') as auto_plays
-         FROM video_plays
-         WHERE site_id = $1
-           AND played_at >= $2
-           AND played_at <= $3`,
-        [siteId, fromDate, toDate]
-      ),
-      // Content summary
-      query<ContentCategoryRow>(
-        `SELECT
-           category,
-           COUNT(*) as plays
-         FROM video_plays
-         WHERE site_id = $1
-           AND played_at >= $2
-           AND played_at <= $3
-         GROUP BY category`,
-        [siteId, fromDate, toDate]
-      ),
+    // Récupérer toutes les données en parallèle via le repository
+    const [health, usage, content, topVideos, recentAlerts, dailyRows] = await Promise.all([
+      analyticsRepository.getDashboardHealth(siteId),
+      analyticsRepository.getDashboardUsage(siteId, fromStr, toStr),
+      analyticsRepository.getDashboardCategories(siteId, fromStr, toStr),
+      analyticsRepository.getDashboardTopVideos(siteId, fromStr, toStr),
+      analyticsRepository.getDashboardAlerts(siteId, fromStr),
+      analyticsRepository.getDailyStats(siteId, fromStr, toStr),
     ]);
-
-    const health = healthData.rows[0];
-    const usage = usageData.rows[0];
-    const content = contentData.rows;
-
-    // Top 5 vidéos
-    const topVideos = await query<TopVideoSimpleRow>(
-      `SELECT video_filename, COUNT(*) as plays
-       FROM video_plays
-       WHERE site_id = $1
-         AND played_at >= $2
-         AND played_at <= $3
-       GROUP BY video_filename
-       ORDER BY plays DESC
-       LIMIT 5`,
-      [siteId, fromDate, toDate]
-    );
-
-    // Alertes récentes
-    const recentAlerts = await query(
-      `SELECT alert_type, severity, message, created_at, resolved_at
-       FROM alerts
-       WHERE site_id = $1
-         AND created_at >= $2
-       ORDER BY created_at DESC
-       LIMIT 5`,
-      [siteId, fromDate]
-    );
-
-    // Daily activity
-    const dailyActivity = await query<DailyStatsRow>(
-      `SELECT
-         DATE(played_at) as date,
-         COALESCE(SUM(duration_played), 0) as screen_time,
-         COUNT(*) as videos
-       FROM video_plays
-       WHERE site_id = $1
-         AND played_at >= $2
-         AND played_at <= $3
-       GROUP BY DATE(played_at)
-       ORDER BY date`,
-      [siteId, fromDate, toDate]
-    );
 
     // Construire la réponse
     const byCategory: Record<string, number> = {};
@@ -866,13 +466,13 @@ export const getClubDashboard = async (req: AuthRequest, res: Response) => {
       },
       content: {
         by_category: byCategory,
-        top_videos: topVideos.rows.map((row: TopVideoSimpleRow) => ({
+        top_videos: topVideos.map((row) => ({
           filename: row.video_filename,
           plays: parseInt(row.plays),
         })),
       },
-      alerts: recentAlerts.rows,
-      daily_activity: dailyActivity.rows.map((row: DailyStatsRow) => ({
+      alerts: recentAlerts,
+      daily_activity: dailyRows.map((row) => ({
         date: row.date,
         screen_time: parseInt(row.screen_time),
         videos: parseInt(row.videos),
@@ -896,46 +496,20 @@ export const exportClubData = async (req: AuthRequest, res: Response) => {
     const fromDate = from ? new Date(from as string) : new Date(new Date().setDate(1));
     const toDate = to ? new Date(to as string) : new Date();
 
-    let data: any[] = [];
+    const fromStr = fromDate.toISOString();
+    const toStr = toDate.toISOString();
+
+    let data: Record<string, unknown>[] = [];
     let filename = '';
 
     if (type === 'video_plays') {
-      const result = await query(
-        `SELECT
-           played_at, video_filename, category, duration_played,
-           video_duration, completed, trigger_type
-         FROM video_plays
-         WHERE site_id = $1
-           AND played_at >= $2
-           AND played_at <= $3
-         ORDER BY played_at DESC`,
-        [siteId, fromDate, toDate]
-      );
-      data = result.rows;
+      data = await analyticsRepository.exportVideoPlays(siteId, fromStr, toStr);
       filename = `video_plays_${siteId}_${fromDate.toISOString().split('T')[0]}.csv`;
     } else if (type === 'daily_stats') {
-      const result = await query(
-        `SELECT *
-         FROM club_daily_stats
-         WHERE site_id = $1
-           AND date >= $2
-           AND date <= $3
-         ORDER BY date DESC`,
-        [siteId, fromDate, toDate]
-      );
-      data = result.rows;
+      data = await analyticsRepository.exportDailyStats(siteId, fromStr, toStr);
       filename = `daily_stats_${siteId}_${fromDate.toISOString().split('T')[0]}.csv`;
     } else if (type === 'metrics') {
-      const result = await query(
-        `SELECT recorded_at, cpu_usage, memory_usage, temperature, disk_usage, uptime
-         FROM metrics
-         WHERE site_id = $1
-           AND recorded_at >= $2
-           AND recorded_at <= $3
-         ORDER BY recorded_at DESC`,
-        [siteId, fromDate, toDate]
-      );
-      data = result.rows;
+      data = await analyticsRepository.exportMetrics(siteId, fromStr, toStr);
       filename = `metrics_${siteId}_${fromDate.toISOString().split('T')[0]}.csv`;
     } else {
       return res.status(400).json({ error: 'Type d\'export invalide' });
@@ -983,15 +557,15 @@ export const calculateDailyStats = async (req: AuthRequest, res: Response) => {
 
     const dateStr = targetDate.toISOString().split('T')[0];
 
-    // Appeler la fonction PostgreSQL pour tous les sites
-    const result = await query<DailyCalcRow>(`SELECT calculate_all_daily_stats($1::DATE) as count`, [dateStr]);
+    // Appeler la fonction PostgreSQL pour tous les sites via le repository
+    const sitesProcessed = await analyticsRepository.calculateDailyStats(dateStr);
 
-    logger.info('Daily stats calculated', { date: dateStr, sitesProcessed: result.rows[0].count });
+    logger.info('Daily stats calculated', { date: dateStr, sitesProcessed });
 
     res.json({
       success: true,
       date: dateStr,
-      sites_processed: parseInt(result.rows[0].count),
+      sites_processed: sitesProcessed,
     });
   } catch (error) {
     logger.error('Calculate daily stats error:', error);
@@ -1005,88 +579,21 @@ export const calculateDailyStats = async (req: AuthRequest, res: Response) => {
  */
 export const getAnalyticsOverview = async (req: AuthRequest, res: Response) => {
   try {
-    // Compter tous les sites et ceux en ligne
-    interface SiteCountRow extends QueryRow {
-      total_sites: string;
-      online_sites: string;
-    }
-    const siteCountResult = await query<SiteCountRow>(`
-      SELECT
-        COUNT(*) as total_sites,
-        COUNT(*) FILTER (WHERE status = 'online') as online_sites
-      FROM sites
-    `);
-
-    // Lectures aujourd'hui
-    interface PlaysRow extends QueryRow {
-      plays_today: string;
-      plays_week: string;
-    }
-    const playsResult = await query<PlaysRow>(`
-      SELECT
-        COUNT(*) FILTER (WHERE played_at >= CURRENT_DATE) as plays_today,
-        COUNT(*) FILTER (WHERE played_at >= CURRENT_DATE - INTERVAL '7 days') as plays_week
-      FROM video_plays
-    `);
-
-    // Disponibilité moyenne (basée sur les heartbeats des dernières 24h)
-    interface AvgAvailRow extends QueryRow {
-      avg_availability: string | null;
-    }
-    const availResult = await query<AvgAvailRow>(`
-      SELECT AVG(availability) as avg_availability
-      FROM (
-        SELECT
-          site_id,
-          LEAST(100, (COUNT(*) * 100.0 / 2880)) as availability
-        FROM metrics
-        WHERE recorded_at >= NOW() - INTERVAL '24 hours'
-        GROUP BY site_id
-      ) sub
-    `);
-
-    // Résumé par site avec lectures et disponibilité
-    interface SiteSummaryRow extends QueryRow {
-      site_id: string;
-      club_name: string;
-      status: string;
-      plays_today: string;
-      heartbeat_count: string;
-    }
-    const sitesSummary = await query<SiteSummaryRow>(`
-      SELECT
-        s.id as site_id,
-        s.club_name,
-        s.status,
-        COALESCE(vp.plays_today, 0) as plays_today,
-        COALESCE(m.heartbeat_count, 0) as heartbeat_count
-      FROM sites s
-      LEFT JOIN (
-        SELECT site_id, COUNT(*) as plays_today
-        FROM video_plays
-        WHERE played_at >= CURRENT_DATE
-        GROUP BY site_id
-      ) vp ON vp.site_id = s.id
-      LEFT JOIN (
-        SELECT site_id, COUNT(*) as heartbeat_count
-        FROM metrics
-        WHERE recorded_at >= NOW() - INTERVAL '24 hours'
-        GROUP BY site_id
-      ) m ON m.site_id = s.id
-      ORDER BY s.club_name
-    `);
-
-    const siteCount = siteCountResult.rows[0];
-    const plays = playsResult.rows[0];
-    const avgAvail = availResult.rows[0];
+    // Récupérer toutes les données en parallèle via le repository
+    const [siteCount, plays, avgAvail, sitesSummaryRows] = await Promise.all([
+      analyticsRepository.getSiteCounts(),
+      analyticsRepository.getPlayCounts(),
+      analyticsRepository.getFleetAvailability(),
+      analyticsRepository.getSitesSummary(),
+    ]);
 
     res.json({
       total_sites: parseInt(siteCount?.total_sites || '0'),
       online_sites: parseInt(siteCount?.online_sites || '0'),
       total_plays_today: parseInt(plays?.plays_today || '0'),
       total_plays_week: parseInt(plays?.plays_week || '0'),
-      avg_availability: avgAvail?.avg_availability ? parseFloat(avgAvail.avg_availability) : 0,
-      sites_summary: sitesSummary.rows.map((row: SiteSummaryRow) => ({
+      avg_availability: avgAvail ? Number(avgAvail) : 0,
+      sites_summary: sitesSummaryRows.map((row) => ({
         site_id: row.site_id,
         club_name: row.club_name,
         status: row.status,
@@ -1104,31 +611,18 @@ export const getAnalyticsOverview = async (req: AuthRequest, res: Response) => {
 // ANALYTICS CATEGORIES MANAGEMENT
 // ============================================================================
 
-interface AnalyticsCategoryRow extends QueryRow {
-  id: string;
-  name: string;
-  description: string | null;
-  color: string | null;
-  is_default: boolean;
-  created_at: string;
-}
-
 /**
  * GET /api/analytics/categories
  * Liste des catégories analytics disponibles
  */
 export const getAnalyticsCategories = async (req: AuthRequest, res: Response) => {
   try {
-    const result = await query<AnalyticsCategoryRow>(
-      `SELECT id, name, description, color, is_default, created_at
-       FROM analytics_categories
-       ORDER BY is_default DESC, name ASC`
-    );
-
-    res.json(result.rows);
-  } catch (error: any) {
+    const categories = await analyticsRepository.getCategories();
+    res.json(categories);
+  } catch (error: unknown) {
     // Si la table n'existe pas encore, retourner les catégories par défaut
-    if (error.code === '42P01') {
+    const pgError = error as { code?: string };
+    if (pgError.code === '42P01') {
       logger.warn('analytics_categories table does not exist, returning defaults');
       res.json([
         { id: 'sponsor', name: 'Sponsor', description: 'Vidéos partenaires et sponsors', color: '#3B82F6', is_default: true },
@@ -1167,18 +661,19 @@ export const createAnalyticsCategory = async (req: AuthRequest, res: Response) =
       return res.status(400).json({ error: 'color doit être au format hex (#RRGGBB)' });
     }
 
-    const result = await query<AnalyticsCategoryRow>(
-      `INSERT INTO analytics_categories (id, name, description, color, is_default)
-       VALUES ($1, $2, $3, $4, false)
-       RETURNING id, name, description, color, is_default, created_at`,
-      [id, name, description || null, color || null]
-    );
+    const category = await analyticsRepository.createCategory({
+      id,
+      name,
+      description: description || null,
+      color: color || null,
+    });
 
     logger.info('Analytics category created', { id, name, createdBy: req.user?.email });
 
-    res.status(201).json(result.rows[0]);
-  } catch (error: any) {
-    if (error.code === '23505') {
+    res.status(201).json(category);
+  } catch (error: unknown) {
+    const pgError = error as { code?: string };
+    if (pgError.code === '23505') {
       // Unique violation
       return res.status(409).json({ error: 'Une catégorie avec cet id existe déjà' });
     }
@@ -1205,21 +700,15 @@ export const updateAnalyticsCategory = async (req: AuthRequest, res: Response) =
       return res.status(400).json({ error: 'color doit être au format hex (#RRGGBB)' });
     }
 
-    const result = await query<AnalyticsCategoryRow>(
-      `UPDATE analytics_categories
-       SET name = $2, description = $3, color = $4
-       WHERE id = $1
-       RETURNING id, name, description, color, is_default, created_at`,
-      [id, name, description || null, color || null]
-    );
+    const updated = await analyticsRepository.updateCategory(id, name, description || null, color || null);
 
-    if (result.rows.length === 0) {
+    if (!updated) {
       return res.status(404).json({ error: 'Catégorie non trouvée' });
     }
 
     logger.info('Analytics category updated', { id, updatedBy: req.user?.email });
 
-    res.json(result.rows[0]);
+    res.json(updated);
   } catch (error) {
     logger.error('Update analytics category error:', error);
     res.status(500).json({ error: 'Erreur lors de la mise à jour de la catégorie' });
@@ -1235,20 +724,17 @@ export const deleteAnalyticsCategory = async (req: AuthRequest, res: Response) =
     const { id } = req.params;
 
     // Vérifier si c'est une catégorie par défaut
-    const checkResult = await query<AnalyticsCategoryRow>(
-      'SELECT is_default FROM analytics_categories WHERE id = $1',
-      [id]
-    );
+    const isDefault = await analyticsRepository.isCategoryDefault(id);
 
-    if (checkResult.rows.length === 0) {
+    if (isDefault === null) {
       return res.status(404).json({ error: 'Catégorie non trouvée' });
     }
 
-    if (checkResult.rows[0].is_default) {
+    if (isDefault) {
       return res.status(400).json({ error: 'Impossible de supprimer une catégorie par défaut' });
     }
 
-    await query('DELETE FROM analytics_categories WHERE id = $1', [id]);
+    await analyticsRepository.deleteCategory(id);
 
     logger.info('Analytics category deleted', { id, deletedBy: req.user?.email });
 
@@ -1276,12 +762,9 @@ export const generateClubPdfReport = async (req: AuthRequest, res: Response) => 
     // Vérifier que l'utilisateur a accès à ce site
     if (req.user?.role !== 'admin' && req.user?.role !== 'operator') {
       // Pour les utilisateurs non-admin, vérifier qu'ils ont accès à ce site
-      const siteAccess = await query(
-        'SELECT id FROM sites WHERE id = $1',
-        [siteId]
-      );
+      const siteExists = await siteRepository.exists(siteId);
 
-      if (siteAccess.rowCount === 0) {
+      if (!siteExists) {
         return res.status(404).json({ error: 'Site non trouvé' });
       }
     }
@@ -1321,16 +804,6 @@ export const generateClubPdfReport = async (req: AuthRequest, res: Response) => 
 // MULTI-SITE COMPARISON
 // ============================================================================
 
-interface ComparisonSiteRow extends QueryRow {
-  id: string;
-  site_name: string;
-  club_name: string;
-  days_active: string;
-  total_videos: string;
-  total_screen_time: string;
-  avg_completion: string;
-}
-
 /**
  * GET /api/analytics/comparison?site_ids=uuid1,uuid2&days=30
  * Compare l'activité de plusieurs sites sur une période
@@ -1362,31 +835,16 @@ export const getMultiSiteComparison = async (req: AuthRequest, res: Response) =>
 
     const daysNum = parseInt(days as string) || 30;
 
-    // Query comparison data
-    const result = await query<ComparisonSiteRow>(`
-      SELECT
-        s.id,
-        s.site_name,
-        s.club_name,
-        COUNT(DISTINCT cds.date)::integer as days_active,
-        COALESCE(SUM(cds.videos_played), 0)::integer as total_videos,
-        COALESCE(SUM(cds.screen_time_seconds), 0)::integer as total_screen_time,
-        COALESCE(AVG(cds.completion_rate), 0)::numeric(5,1) as avg_completion
-      FROM sites s
-      LEFT JOIN club_daily_stats cds ON cds.site_id = s.id
-        AND cds.date > CURRENT_DATE - $2::interval
-      WHERE s.id = ANY($1::uuid[])
-      GROUP BY s.id, s.site_name, s.club_name
-      ORDER BY total_videos DESC
-    `, [siteIds, `${daysNum} days`]);
+    // Query comparison data via repository
+    const rows = await analyticsRepository.getMultiSiteComparison(siteIds, daysNum);
 
     // Calculate totals
     const totals = {
-      total_sites: result.rows.length,
-      total_videos: result.rows.reduce((sum, r) => sum + parseInt(r.total_videos), 0),
-      total_screen_time: result.rows.reduce((sum, r) => sum + parseInt(r.total_screen_time), 0),
-      avg_days_active: result.rows.length > 0
-        ? Math.round(result.rows.reduce((sum, r) => sum + parseInt(r.days_active), 0) / result.rows.length)
+      total_sites: rows.length,
+      total_videos: rows.reduce((sum, r) => sum + Number(r.total_videos), 0),
+      total_screen_time: rows.reduce((sum, r) => sum + Number(r.total_screen_time), 0),
+      avg_days_active: rows.length > 0
+        ? Math.round(rows.reduce((sum, r) => sum + Number(r.days_active), 0) / rows.length)
         : 0,
     };
 
@@ -1395,15 +853,15 @@ export const getMultiSiteComparison = async (req: AuthRequest, res: Response) =>
       data: {
         period_days: daysNum,
         totals,
-        sites: result.rows.map(site => ({
+        sites: rows.map(site => ({
           id: site.id,
           site_name: site.site_name,
           club_name: site.club_name,
-          days_active: parseInt(site.days_active),
-          total_videos: parseInt(site.total_videos),
-          total_screen_time: parseInt(site.total_screen_time),
-          total_screen_time_formatted: formatDuration(parseInt(site.total_screen_time)),
-          avg_completion: parseFloat(site.avg_completion as unknown as string) || 0,
+          days_active: Number(site.days_active),
+          total_videos: Number(site.total_videos),
+          total_screen_time: Number(site.total_screen_time),
+          total_screen_time_formatted: formatDuration(Number(site.total_screen_time)),
+          avg_completion: Number(site.avg_completion) || 0,
         })),
       },
     });
@@ -1447,12 +905,10 @@ export const exportClubExcel = async (req: AuthRequest, res: Response) => {
     }
 
     // Vérifier que le site existe
-    const siteResult = await query<SiteRow>('SELECT id, site_name, club_name FROM sites WHERE id = $1', [siteId]);
-    if (siteResult.rows.length === 0) {
+    const site = await siteRepository.findById(siteId);
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
-
-    const site = siteResult.rows[0];
 
     // Import dynamique du service Excel
     const { excelExportService } = await import('../services/excel-export.service');
@@ -1496,16 +952,10 @@ export const exportAdvertiserExcel = async (req: AuthRequest, res: Response) => 
     }
 
     // Vérifier que l'annonceur existe
-    interface AdvertiserRow extends QueryRow {
-      id: string;
-      name: string;
-    }
-    const advertiserResult = await query<AdvertiserRow>('SELECT id, name FROM advertisers WHERE id = $1', [advertiserId]);
-    if (advertiserResult.rows.length === 0) {
+    const advertiserName = await advertiserRepository.findName(advertiserId);
+    if (!advertiserName) {
       return res.status(404).json({ error: 'Annonceur non trouvé' });
     }
-
-    const advertiser = advertiserResult.rows[0];
 
     const { excelExportService } = await import('../services/excel-export.service');
 
@@ -1518,7 +968,7 @@ export const exportAdvertiserExcel = async (req: AuthRequest, res: Response) => 
       type: 'advertiser',
     });
 
-    const filename = `analytics-${advertiser.name}-${from}-${to}.xlsx`
+    const filename = `analytics-${advertiserName}-${from}-${to}.xlsx`
       .replace(/[^a-zA-Z0-9\-_.]/g, '_');
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

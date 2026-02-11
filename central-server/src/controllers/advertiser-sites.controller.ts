@@ -1,40 +1,15 @@
 import { Response } from 'express';
-import { query } from '../config/database';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { validate as validateUuid } from 'uuid';
+import { advertiserRepository } from '../repositories';
+import { advertiserPortalRepository } from '../repositories/advertiser-portal.repository';
+import { siteRepository } from '../repositories';
 
 // =============================================================================
 // ADVERTISER-SITES CONTROLLER
 // Gestion des associations annonceurs <-> sites avec contrats
 // =============================================================================
-
-interface AdvertiserSiteRow {
-  [key: string]: unknown;
-  advertiser_id: string;
-  site_id: string;
-  site_name: string;
-  club_name: string;
-  added_at: Date;
-  contract_start: Date | null;
-  contract_end: Date | null;
-  is_active: boolean;
-  contract_status: string;
-  days_remaining: number | null;
-}
-
-interface SiteAdvertiserRow {
-  [key: string]: unknown;
-  advertiser_id: string;
-  advertiser_name: string;
-  logo_url: string | null;
-  site_id: string;
-  added_at: Date;
-  contract_start: Date | null;
-  contract_end: Date | null;
-  is_active: boolean;
-  contract_status: string;
-}
 
 // =============================================================================
 // GET /api/advertisers/:id/sites
@@ -52,51 +27,20 @@ export const getAdvertiserSites = async (req: AuthRequest, res: Response): Promi
     }
 
     // Vérifier que l'annonceur existe
-    const advertiserCheck = await query('SELECT id, name FROM advertisers WHERE id = $1', [id]);
-    if (advertiserCheck.rowCount === 0) {
+    const advertiserName = await advertiserRepository.findName(id);
+    if (!advertiserName) {
       res.status(404).json({ success: false, error: 'Advertiser not found' });
       return;
     }
 
-    let whereClause = 'ads.advertiser_id = $1';
-    if (!includeInactive) {
-      whereClause += ' AND ads.is_active = true';
-    }
-
-    const result = await query<AdvertiserSiteRow>(
-      `SELECT
-        ads.advertiser_id,
-        ads.site_id,
-        s.site_name,
-        s.club_name,
-        ads.added_at,
-        ads.contract_start,
-        ads.contract_end,
-        ads.is_active,
-        CASE
-          WHEN NOT ads.is_active THEN 'inactive'
-          WHEN ads.contract_start IS NOT NULL AND ads.contract_start > CURRENT_DATE THEN 'pending'
-          WHEN ads.contract_end IS NOT NULL AND ads.contract_end < CURRENT_DATE THEN 'expired'
-          ELSE 'active'
-        END as contract_status,
-        CASE
-          WHEN ads.contract_end IS NOT NULL AND ads.contract_end >= CURRENT_DATE
-          THEN ads.contract_end - CURRENT_DATE
-          ELSE NULL
-        END as days_remaining
-       FROM advertiser_sites ads
-       JOIN sites s ON s.id = ads.site_id
-       WHERE ${whereClause}
-       ORDER BY ads.is_active DESC, ads.contract_start DESC NULLS LAST`,
-      [id]
-    );
+    const result = await advertiserPortalRepository.getAdvertiserSites(id, includeInactive);
 
     res.json({
       success: true,
       data: {
         advertiser: {
-          id: advertiserCheck.rows[0].id,
-          name: advertiserCheck.rows[0].name,
+          id,
+          name: advertiserName,
         },
         sites: result.rows.map(r => ({
           site_id: r.site_id,
@@ -112,7 +56,7 @@ export const getAdvertiserSites = async (req: AuthRequest, res: Response): Promi
         total: result.rowCount || 0,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Error fetching advertiser sites:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch advertiser sites' });
   }
@@ -155,19 +99,16 @@ export const addSitesToAdvertiser = async (req: AuthRequest, res: Response): Pro
     }
 
     // Vérifier que l'annonceur existe
-    const advertiserCheck = await query('SELECT id FROM advertisers WHERE id = $1', [id]);
-    if (advertiserCheck.rowCount === 0) {
+    const advertiserExists = await advertiserRepository.exists(id);
+    if (!advertiserExists) {
       res.status(404).json({ success: false, error: 'Advertiser not found' });
       return;
     }
 
     // Vérifier que tous les sites existent
-    const sitesCheck = await query(
-      'SELECT id FROM sites WHERE id = ANY($1::uuid[])',
-      [site_ids]
-    );
-    if (sitesCheck.rowCount !== site_ids.length) {
-      const foundIds = sitesCheck.rows.map(r => r.id);
+    const foundSites = await advertiserPortalRepository.findSitesByIds(site_ids);
+    if (foundSites.length !== site_ids.length) {
+      const foundIds = foundSites.map(r => r.id);
       const missingIds = site_ids.filter(sId => !foundIds.includes(sId));
       res.status(404).json({
         success: false,
@@ -206,19 +147,7 @@ export const addSitesToAdvertiser = async (req: AuthRequest, res: Response): Pro
     }
 
     // Insérer les associations avec UPSERT
-    const values = site_ids.map((_, idx) =>
-      `($1, $${idx + 2}, $${site_ids.length + 2}, $${site_ids.length + 3}, true)`
-    ).join(', ');
-
-    await query(
-      `INSERT INTO advertiser_sites (advertiser_id, site_id, contract_start, contract_end, is_active)
-       VALUES ${values}
-       ON CONFLICT (advertiser_id, site_id) DO UPDATE SET
-         contract_start = COALESCE(EXCLUDED.contract_start, advertiser_sites.contract_start),
-         contract_end = COALESCE(EXCLUDED.contract_end, advertiser_sites.contract_end),
-         is_active = true`,
-      [id, ...site_ids, contractStartDate, contractEndDate]
-    );
+    await advertiserPortalRepository.addSites(id, site_ids, contractStartDate, contractEndDate);
 
     logger.info('Sites added to advertiser', {
       advertiserId: id,
@@ -232,7 +161,7 @@ export const addSitesToAdvertiser = async (req: AuthRequest, res: Response): Pro
       success: true,
       message: `${site_ids.length} site(s) associated with advertiser`,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Error adding sites to advertiser:', error);
     res.status(500).json({ success: false, error: 'Failed to add sites to advertiser' });
   }
@@ -260,11 +189,8 @@ export const updateAdvertiserSite = async (req: AuthRequest, res: Response): Pro
     }
 
     // Vérifier que l'association existe
-    const check = await query(
-      'SELECT advertiser_id, site_id FROM advertiser_sites WHERE advertiser_id = $1 AND site_id = $2',
-      [advertiserId, siteId]
-    );
-    if (check.rowCount === 0) {
+    const association = await advertiserPortalRepository.findAssociation(advertiserId, siteId);
+    if (!association) {
       res.status(404).json({ success: false, error: 'Advertiser-site association not found' });
       return;
     }
@@ -312,14 +238,7 @@ export const updateAdvertiserSite = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    params.push(advertiserId, siteId);
-
-    await query(
-      `UPDATE advertiser_sites
-       SET ${updates.join(', ')}
-       WHERE advertiser_id = $${paramIndex} AND site_id = $${paramIndex + 1}`,
-      params
-    );
+    await advertiserPortalRepository.updateAssociation(advertiserId, siteId, updates, params);
 
     logger.info('Advertiser-site contract updated', {
       advertiserId,
@@ -332,7 +251,7 @@ export const updateAdvertiserSite = async (req: AuthRequest, res: Response): Pro
       success: true,
       message: 'Advertiser-site contract updated successfully',
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Error updating advertiser-site:', error);
     res.status(500).json({ success: false, error: 'Failed to update advertiser-site' });
   }
@@ -355,24 +274,17 @@ export const removeSiteFromAdvertiser = async (req: AuthRequest, res: Response):
 
     if (softDelete) {
       // Soft delete: marquer is_active = false
-      const result = await query(
-        `UPDATE advertiser_sites SET is_active = false
-         WHERE advertiser_id = $1 AND site_id = $2 AND is_active = true`,
-        [advertiserId, siteId]
-      );
+      const deactivated = await advertiserPortalRepository.deactivateAssociation(advertiserId, siteId);
 
-      if (result.rowCount === 0) {
+      if (!deactivated) {
         res.status(404).json({ success: false, error: 'Active advertiser-site association not found' });
         return;
       }
     } else {
       // Hard delete
-      const result = await query(
-        'DELETE FROM advertiser_sites WHERE advertiser_id = $1 AND site_id = $2',
-        [advertiserId, siteId]
-      );
+      const deleted = await advertiserPortalRepository.deleteAssociation(advertiserId, siteId);
 
-      if (result.rowCount === 0) {
+      if (!deleted) {
         res.status(404).json({ success: false, error: 'Advertiser-site association not found' });
         return;
       }
@@ -389,7 +301,7 @@ export const removeSiteFromAdvertiser = async (req: AuthRequest, res: Response):
       success: true,
       message: 'Site removed from advertiser',
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Error removing site from advertiser:', error);
     res.status(500).json({ success: false, error: 'Failed to remove site from advertiser' });
   }
@@ -411,50 +323,21 @@ export const getSiteAdvertisers = async (req: AuthRequest, res: Response): Promi
     }
 
     // Vérifier que le site existe
-    const siteCheck = await query('SELECT id, site_name, club_name FROM sites WHERE id = $1', [id]);
-    if (siteCheck.rowCount === 0) {
+    const site = await siteRepository.findById(id);
+    if (!site) {
       res.status(404).json({ success: false, error: 'Site not found' });
       return;
     }
 
-    let whereClause = 'ads.site_id = $1';
-    if (activeOnly) {
-      whereClause += `
-        AND ads.is_active = true
-        AND (ads.contract_start IS NULL OR ads.contract_start <= CURRENT_DATE)
-        AND (ads.contract_end IS NULL OR ads.contract_end >= CURRENT_DATE)`;
-    }
-
-    const result = await query<SiteAdvertiserRow>(
-      `SELECT
-        ads.advertiser_id,
-        a.name as advertiser_name,
-        a.logo_url,
-        ads.site_id,
-        ads.added_at,
-        ads.contract_start,
-        ads.contract_end,
-        ads.is_active,
-        CASE
-          WHEN NOT ads.is_active THEN 'inactive'
-          WHEN ads.contract_start IS NOT NULL AND ads.contract_start > CURRENT_DATE THEN 'pending'
-          WHEN ads.contract_end IS NOT NULL AND ads.contract_end < CURRENT_DATE THEN 'expired'
-          ELSE 'active'
-        END as contract_status
-       FROM advertiser_sites ads
-       JOIN advertisers a ON a.id = ads.advertiser_id
-       WHERE ${whereClause}
-       ORDER BY a.name ASC`,
-      [id]
-    );
+    const result = await advertiserPortalRepository.getSiteAdvertisers(id, activeOnly);
 
     res.json({
       success: true,
       data: {
         site: {
-          id: siteCheck.rows[0].id,
-          site_name: siteCheck.rows[0].site_name,
-          club_name: siteCheck.rows[0].club_name,
+          id: site.id,
+          site_name: site.site_name,
+          club_name: site.club_name,
         },
         advertisers: result.rows.map(r => ({
           advertiser_id: r.advertiser_id,
@@ -469,7 +352,7 @@ export const getSiteAdvertisers = async (req: AuthRequest, res: Response): Promi
         total: result.rowCount || 0,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Error fetching site advertisers:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch site advertisers' });
   }

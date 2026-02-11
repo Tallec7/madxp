@@ -7,12 +7,14 @@ Row-Level Security (RLS) est une fonctionnalité PostgreSQL qui permet d'isoler 
 ### Pourquoi RLS ?
 
 **Avant RLS:**
+
 ```sql
 -- Risque: une erreur dans le WHERE peut exposer des données d'autres clubs
 SELECT * FROM metrics WHERE site_id = $1;  -- Si $1 est mal validé = faille
 ```
 
 **Avec RLS:**
+
 ```sql
 -- Les policies PostgreSQL garantissent l'isolation même si le code a un bug
 SELECT * FROM metrics;  -- PostgreSQL filtre automatiquement par site_id
@@ -59,6 +61,7 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/enable-row-level-sec
 ```
 
 **Ce que fait le script:**
+
 - Active RLS sur 20+ tables (sites, metrics, alerts, deployments, analytics, sponsors)
 - Crée 60+ policies (admin + site-specific)
 - Crée les fonctions: `set_session_context()`, `reset_session_context()`, `current_site_id()`, `is_admin()`
@@ -92,46 +95,46 @@ npm run test:server
 
 ### Tables avec RLS activé
 
-| Table | Policy Admin | Policy Site | Description |
-|-------|-------------|------------|-------------|
-| `sites` | Full access | Read + Update own | Info site |
-| `metrics` | Full access | Read + Insert own | Métriques système |
-| `alerts` | Full access | Read own | Alertes |
-| `remote_commands` | Full access | Read + Update own | Commandes |
-| `pending_commands` | Full access | Read + Delete own | Queue offline |
-| `config_history` | Full access | Read + Insert own | Historique config |
-| `content_deployments` | Full access | Read + Update own | Déploiements vidéos |
-| `update_deployments` | Full access | Read + Update own | Mises à jour OTA |
-| `club_sessions` | Full access | Read + Insert + Update own | Sessions club |
-| `video_plays` | Full access | Read + Insert own | Lectures vidéos |
-| `club_daily_stats` | Full access | Read own | Stats quotidiennes |
-| `sponsor_impressions` | Full access | Read + Insert own | Impressions sponsors |
-| `sponsor_daily_stats` | Full access | Read own | Stats sponsors |
+| Table                 | Policy Admin | Policy Site                | Description          |
+| --------------------- | ------------ | -------------------------- | -------------------- |
+| `sites`               | Full access  | Read + Update own          | Info site            |
+| `metrics`             | Full access  | Read + Insert own          | Métriques système    |
+| `alerts`              | Full access  | Read own                   | Alertes              |
+| `remote_commands`     | Full access  | Read + Update own          | Commandes            |
+| `pending_commands`    | Full access  | Read + Delete own          | Queue offline        |
+| `config_history`      | Full access  | Read + Insert own          | Historique config    |
+| `content_deployments` | Full access  | Read + Update own          | Déploiements vidéos  |
+| `update_deployments`  | Full access  | Read + Update own          | Mises à jour OTA     |
+| `club_sessions`       | Full access  | Read + Insert + Update own | Sessions club        |
+| `video_plays`         | Full access  | Read + Insert own          | Lectures vidéos      |
+| `club_daily_stats`    | Full access  | Read own                   | Stats quotidiennes   |
+| `sponsor_impressions` | Full access  | Read + Insert own          | Impressions sponsors |
+| `sponsor_daily_stats` | Full access  | Read own                   | Stats sponsors       |
 
 ### Tables en lecture seule pour sites
 
-| Table | Access |
-|-------|--------|
-| `groups` | Read all |
-| `videos` | Read all |
+| Table              | Access   |
+| ------------------ | -------- |
+| `groups`           | Read all |
+| `videos`           | Read all |
 | `software_updates` | Read all |
-| `sponsors` | Read all |
-| `sponsor_videos` | Read all |
+| `sponsors`         | Read all |
+| `sponsor_videos`   | Read all |
 
 ### Tables admin-only
 
-| Table | Access |
-|-------|--------|
+| Table   | Access     |
+| ------- | ---------- |
 | `users` | Admin only |
 
 ### Isolation Sponsor/Agence (Multi-tenant)
 
 En plus de l'isolation par site, le système supporte l'isolation pour les sponsors et agences :
 
-| Rôle | Isolation | Accès |
-|------|-----------|-------|
+| Rôle      | Isolation        | Accès                                         |
+| --------- | ---------------- | --------------------------------------------- |
 | `sponsor` | Par `sponsor_id` | Ses vidéos, ses sites de diffusion, ses stats |
-| `agency` | Par `agency_id` | Ses clubs gérés, stats agrégées |
+| `agency`  | Par `agency_id`  | Ses clubs gérés, stats agrégées               |
 
 **Middlewares dédiés** (`central-server/src/middleware/auth.ts`) :
 
@@ -176,15 +179,12 @@ export const requireAgencyAccess = (getAgencyIdFromRequest) => {
 router.get('/:id', authenticate, async (req, res) => {
   // RLS context déjà défini par le middleware
   // Si non-admin, ne peut accéder qu'à son propre site
-  const result = await pool.query(
-    'SELECT * FROM sites WHERE id = $1',
-    [req.params.id]
-  );
+  const result = await siteRepository.findById(req.params.id);
 
   // PostgreSQL va vérifier:
   // - Si admin: retourne le site demandé
   // - Si non-admin: retourne SEULEMENT si id = current_site_id()
-  res.json(result.rows[0]);
+  res.json(result);
 });
 ```
 
@@ -194,12 +194,10 @@ router.get('/:id', authenticate, async (req, res) => {
 // routes/analytics.routes.ts
 router.get('/overview', authenticate, requireRole('admin'), async (req, res) => {
   // Admin peut voir tous les sites
-  const result = await pool.query(
-    'SELECT site_id, COUNT(*) as total FROM metrics GROUP BY site_id'
-  );
+  const result = await analyticsRepository.getOverview();
 
   // RLS permet l'accès car is_admin() = true
-  res.json(result.rows);
+  res.json(result);
 });
 ```
 
@@ -211,7 +209,10 @@ import { withAdminContext } from '../middleware/rls-context';
 import pool from '../config/database';
 
 async function calculateDailyStats() {
-  // Job système doit bypass RLS
+  // Les jobs système utilisent withAdminContext() qui bypass RLS
+  // en définissant is_admin = true dans le contexte de session PostgreSQL.
+  // Cela permet aux tâches planifiées (cron, scripts) d'accéder à toutes
+  // les données sans restriction de site.
   await withAdminContext(pool, async () => {
     await pool.query(`
       SELECT calculate_all_sponsor_daily_stats(CURRENT_DATE - INTERVAL '1 day')
@@ -232,17 +233,13 @@ async function crossSiteOperation(sourceSiteId: string, targetSiteId: string) {
     { siteId: sourceSiteId, isAdmin: false },
     async () => {
       return await pool.query('SELECT * FROM metrics LIMIT 10');
-    }
+    },
   );
 
   // Écrire vers target
-  await withRLSContext(
-    pool,
-    { siteId: targetSiteId, isAdmin: false },
-    async () => {
-      await pool.query('INSERT INTO metrics (...) VALUES (...)');
-    }
-  );
+  await withRLSContext(pool, { siteId: targetSiteId, isAdmin: false }, async () => {
+    await pool.query('INSERT INTO metrics (...) VALUES (...)');
+  });
 }
 ```
 
@@ -257,9 +254,9 @@ export interface JwtPayload {
   id: string;
   email: string;
   role: 'super_admin' | 'admin' | 'operator' | 'viewer' | 'sponsor' | 'agency';
-  siteId?: string;    // Pour RLS site
+  siteId?: string; // Pour RLS site
   sponsor_id?: string; // Pour isolation sponsor
-  agency_id?: string;  // Pour isolation agence
+  agency_id?: string; // Pour isolation agence
 }
 ```
 
@@ -273,7 +270,7 @@ export const login = async (req: Request, res: Response) => {
     id: user.id,
     email: user.email,
     role: user.role,
-    siteId: user.site_id  // ← Inclure dans le token
+    siteId: user.site_id, // ← Inclure dans le token
   });
 
   // ...
@@ -294,10 +291,9 @@ export const authenticateSite = async (req: AuthRequest, res: Response, next: Ne
   }
 
   // Vérifier en DB
-  const result = await pool.query(
-    'SELECT id, site_name, api_key FROM sites WHERE api_key = $1',
-    [apiKey]
-  );
+  const result = await pool.query('SELECT id, site_name, api_key FROM sites WHERE api_key = $1', [
+    apiKey,
+  ]);
 
   if (result.rows.length === 0) {
     return res.status(401).json({ error: 'API key invalide' });
@@ -309,8 +305,8 @@ export const authenticateSite = async (req: AuthRequest, res: Response, next: Ne
   req.user = {
     id: site.id,
     email: `${site.site_name}@site.neopro`,
-    role: 'viewer',  // Sites ont un rôle limité
-    siteId: site.id
+    role: 'viewer', // Sites ont un rôle limité
+    siteId: site.id,
   };
 
   next();
@@ -376,7 +372,7 @@ describe('Row-Level Security', () => {
     const result = await pool.query('SELECT * FROM metrics');
 
     // Toutes les lignes doivent appartenir au site
-    expect(result.rows.every(row => row.site_id === siteId)).toBe(true);
+    expect(result.rows.every((row) => row.site_id === siteId)).toBe(true);
   });
 
   it('should allow admin full access', async () => {
@@ -429,7 +425,7 @@ import { Counter } from 'prom-client';
 const rlsContextSetCounter = new Counter({
   name: 'neopro_rls_context_set_total',
   help: 'Total RLS contexts set',
-  labelNames: ['is_admin', 'has_site_id']
+  labelNames: ['is_admin', 'has_site_id'],
 });
 
 export const setRLSContext = (pool: Pool) => {
@@ -438,7 +434,7 @@ export const setRLSContext = (pool: Pool) => {
 
     rlsContextSetCounter.inc({
       is_admin: isAdmin.toString(),
-      has_site_id: (siteId !== null).toString()
+      has_site_id: (siteId !== null).toString(),
     });
 
     // ...
@@ -457,7 +453,7 @@ export const setRLSContext = (pool: Pool) => {
 ```typescript
 // Option 1: Reset après chaque requête (overhead)
 app.use(setRLSContext(pool));
-app.use(resetRLSContext(pool));  // ← Ajouter
+app.use(resetRLSContext(pool)); // ← Ajouter
 
 // Option 2: Client par requête (recommandé pour RLS strict)
 router.get('/:id', async (req, res) => {
@@ -482,10 +478,12 @@ router.get('/:id', async (req, res) => {
 ```typescript
 // ❌ MAUVAIS
 cron.schedule('0 2 * * *', async () => {
-  await pool.query('SELECT calculate_all_sponsor_daily_stats()');  // Échoue
+  await pool.query('SELECT calculate_all_sponsor_daily_stats()'); // Échoue
 });
 
-// ✅ BON
+// ✅ BON — Opération système : pool.query() est acceptable dans les jobs cron
+// car ils s'exécutent hors contexte HTTP (pas de repository disponible).
+// withAdminContext() définit le contexte admin pour bypass RLS.
 cron.schedule('0 2 * * *', async () => {
   await withAdminContext(pool, async () => {
     await pool.query('SELECT calculate_all_sponsor_daily_stats()');
@@ -535,11 +533,13 @@ afterEach(async () => {
 ### Benchmarks
 
 **Sans RLS:**
+
 ```
 SELECT * FROM metrics WHERE site_id = '...'  → 12ms
 ```
 
 **Avec RLS:**
+
 ```
 SELECT * FROM metrics  → 14ms (+2ms = 16% overhead)
 ```
@@ -592,14 +592,14 @@ ALTER TABLE metrics DISABLE ROW LEVEL SECURITY;
 
 ## Checklist Déploiement
 
-- [ ] Migration SQL exécutée sur DB de production
-- [ ] Middleware RLS intégré dans server.ts
-- [ ] JWT payload inclut `siteId`
-- [ ] Tests RLS passent (unit + integration)
+- [x] Migration SQL exécutée sur DB de production
+- [x] Middleware RLS intégré dans server.ts
+- [x] JWT payload inclut `siteId`
+- [x] Tests RLS passent (unit + integration)
 - [ ] Monitoring configuré (Prometheus)
-- [ ] Documentation équipe mise à jour
-- [ ] Rollback plan testé
-- [ ] Performance benchmarks validés (< 20% overhead)
+- [x] Documentation équipe mise à jour
+- [x] Rollback plan testé
+- [x] Performance benchmarks validés (< 20% overhead)
 - [ ] Audit logging activé (optionnel)
 
 ## Ressources
@@ -610,6 +610,6 @@ ALTER TABLE metrics DISABLE ROW LEVEL SECURITY;
 
 ---
 
-**Dernière mise à jour**: 26 décembre 2025
-**Version**: 1.1 (ajout isolation sponsor/agence)
+**Dernière mise à jour**: 10 février 2026
+**Version**: 1.2 (ajout isolation sponsor/agence)
 **Auteur**: Claude Code
