@@ -1,3 +1,9 @@
+# [3.15.0](https://github.com/Tallec7/neopro/compare/v3.14.0...v3.15.0) (2026-02-11)
+
+### Features
+
+- **monitoring:** add FTP, sync, rate-limit metrics + correlated logs ([654d0de](https://github.com/Tallec7/neopro/commit/654d0de559fd33bea6b94f5de30218daf3d9b11d))
+
 # [3.14.0](https://github.com/Tallec7/neopro/compare/v3.13.0...v3.14.0) (2026-02-11)
 
 ### Features
