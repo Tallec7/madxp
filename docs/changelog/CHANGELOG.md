@@ -1,3 +1,9 @@
+# [3.14.0](https://github.com/Tallec7/neopro/compare/v3.13.0...v3.14.0) (2026-02-11)
+
+### Features
+
+- **monitoring:** wire all missing metrics for 17/20 dashboard coverage ([87aa1b6](https://github.com/Tallec7/neopro/commit/87aa1b6f1f05d6ba6a17d85d05e79c69dd1bb41d))
+
 # [3.13.0](https://github.com/Tallec7/neopro/compare/v3.12.0...v3.13.0) (2026-02-11)
 
 ### Features
