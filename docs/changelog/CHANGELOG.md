@@ -1,3 +1,13 @@
+# [3.10.0](https://github.com/Tallec7/neopro/compare/v3.9.5...v3.10.0) (2026-02-11)
+
+### Bug Fixes
+
+- **server:** use disk storage for update uploads and fix storage_backend migration ([07ebec8](https://github.com/Tallec7/neopro/commit/07ebec8b106cff28b1ab1cd8a448dd2e86ce9cde))
+
+### Features
+
+- **monitoring:** add smoke tests, Pi network metrics, and fix Grafana dashboards ([c9f2602](https://github.com/Tallec7/neopro/commit/c9f2602e0d44ea842e06243d7c26a8d592f9ef94))
+
 ## [Unreleased]
 
 ### Features
