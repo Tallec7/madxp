@@ -4,13 +4,27 @@
 
 - **ci:** fix all 3 failing CI jobs — lint errors, dashboard lint setup, raspberry build ([0eae86c](https://github.com/Tallec7/neopro/commit/0eae86c54314bf60afe7e73d189c59aed0aaa3f1))
 
+## [Unreleased]
+
+### Bug Fixes
+
+- **dashboard:** fix `SitesService.updateSiteStatus()` array mutation — `BehaviorSubject.value` returned a direct reference, causing silent data corruption for existing subscribers. Replaced with spread copy `[...this.sitesSubject.value]` to ensure immutability
+- **tests:** fix all 298 failing Karma specs in central-dashboard (509/509 passing):
+  - Fix Router mock conflicts with `RouterTestingModule` in Layout, Dashboard, Login specs
+  - Add `TranslateModule`, `LoggerService`, `TranslationService` mocks to all components using i18n
+  - Rewrite `auth.guard.spec.ts` for async Observable-returning guards
+  - Fix `site-detail.component.spec.ts`: add `paramMap` mock, correct service method names, fix `formatUptime`/`formatLastSeen` assertions
+  - Fix `api.service.spec.ts`: replace flaky retry test (caused DISCONNECTED) with synchronous `maxRetries: 0` variant
+  - Fix `sites.service.spec.ts`: use fresh object copies to prevent cross-test mutation with randomized execution order
+  - Fix loading flag tests (`sponsors-list`, `analytics-overview`): use `delay()` for async assertion of intermediate states
+
 ## [3.9.2](https://github.com/Tallec7/neopro/compare/v3.9.1...v3.9.2) (2026-02-11)
 
 ### Bug Fixes
 
 - **pi:** fix GPU crash detection grep -c multiline bug in kiosk-watchdog ([b95e874](https://github.com/Tallec7/neopro/commit/b95e87492bb88b8ba97450ca371703b5c0658d45))
 
-## [Unreleased]
+## [Unreleased Archive]
 
 ### Bug Fixes
 

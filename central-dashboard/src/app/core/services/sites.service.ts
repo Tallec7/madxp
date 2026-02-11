@@ -165,11 +165,11 @@ export class SitesService {
   }
 
   updateSiteStatus(id: string, status: string): void {
-    const sites = this.sitesSubject.value;
+    const sites = [...this.sitesSubject.value];
     const index = sites.findIndex(s => s.id === id);
     if (index >= 0) {
       sites[index] = { ...sites[index], status: status as Site['status'], last_seen_at: new Date() };
-      this.sitesSubject.next([...sites]);
+      this.sitesSubject.next(sites);
     }
   }
 
