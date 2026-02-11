@@ -1,3 +1,9 @@
+# [3.16.0](https://github.com/Tallec7/neopro/compare/v3.15.0...v3.16.0) (2026-02-11)
+
+### Features
+
+- **monitoring:** restructure to 3 dashboards + wire memory/predictive/billing metrics ([7005d42](https://github.com/Tallec7/neopro/commit/7005d4227cfadae709f1b28d2e87ec3fb0b29d03))
+
 # [3.15.0](https://github.com/Tallec7/neopro/compare/v3.14.0...v3.15.0) (2026-02-11)
 
 ### Features
