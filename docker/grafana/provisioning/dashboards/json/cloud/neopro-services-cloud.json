@@ -69,7 +69,7 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"neopro-production\"}",
+          "expr": "up{scrape_job=\"NEOPRO\"}",
           "legendFormat": "API",
           "refId": "A"
         }
@@ -126,7 +126,7 @@
       },
       "targets": [
         {
-          "expr": "neopro_connected_sites_total{job=\"neopro-production\"}",
+          "expr": "neopro_connected_sites_total{scrape_job=\"NEOPRO\"}",
           "legendFormat": "Sites",
           "refId": "A"
         }
@@ -184,7 +184,7 @@
       },
       "targets": [
         {
-          "expr": "neopro_active_alerts{job=\"neopro-production\"}",
+          "expr": "neopro_active_alerts{scrape_job=\"NEOPRO\"}",
           "legendFormat": "Active Alerts",
           "refId": "A"
         }
@@ -234,7 +234,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_video_uploads_total{job=\"neopro-production\"}[5m]))",
+          "expr": "sum(rate(neopro_video_uploads_total{scrape_job=\"NEOPRO\"}[5m]))",
           "legendFormat": "Uploads/s",
           "refId": "A"
         }
@@ -315,17 +315,17 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(neopro_db_query_duration_seconds_bucket{job=\"neopro-production\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(neopro_db_query_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(neopro_db_query_duration_seconds_bucket{job=\"neopro-production\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(neopro_db_query_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(neopro_db_query_duration_seconds_bucket{job=\"neopro-production\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(neopro_db_query_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -406,12 +406,12 @@
       },
       "targets": [
         {
-          "expr": "neopro_db_connections{job=\"neopro-production\", state=\"active\"}",
+          "expr": "neopro_db_connections{scrape_job=\"NEOPRO\", state=\"active\"}",
           "legendFormat": "Active",
           "refId": "A"
         },
         {
-          "expr": "neopro_db_connections{job=\"neopro-production\", state=\"idle\"}",
+          "expr": "neopro_db_connections{scrape_job=\"NEOPRO\", state=\"idle\"}",
           "legendFormat": "Idle",
           "refId": "B"
         }
@@ -492,7 +492,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_websocket_messages_total{job=\"neopro-production\"}[5m])) by (direction)",
+          "expr": "sum(rate(neopro_websocket_messages_total{scrape_job=\"NEOPRO\"}[5m])) by (direction)",
           "legendFormat": "{{direction}}",
           "refId": "A"
         }
@@ -573,7 +573,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_auth_attempts_total{job=\"neopro-production\"}[5m])) by (status)",
+          "expr": "sum(rate(neopro_auth_attempts_total{scrape_job=\"NEOPRO\"}[5m])) by (status)",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -654,7 +654,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_video_uploads_total{job=\"neopro-production\"}[5m])) by (status)",
+          "expr": "sum(rate(neopro_video_uploads_total{scrape_job=\"NEOPRO\"}[5m])) by (status)",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -735,17 +735,17 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(neopro_command_latency_seconds_bucket{job=\"neopro-production\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(neopro_command_latency_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(neopro_command_latency_seconds_bucket{job=\"neopro-production\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(neopro_command_latency_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(neopro_command_latency_seconds_bucket{job=\"neopro-production\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(neopro_command_latency_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -825,22 +825,22 @@
       },
       "targets": [
         {
-          "expr": "neopro_site_network_type{job=\"neopro-production\", connection_type=\"ethernet\"}",
+          "expr": "neopro_site_network_type{scrape_job=\"NEOPRO\", connection_type=\"ethernet\"}",
           "legendFormat": "Ethernet",
           "refId": "A"
         },
         {
-          "expr": "neopro_site_network_type{job=\"neopro-production\", connection_type=\"simple\"}",
+          "expr": "neopro_site_network_type{scrape_job=\"NEOPRO\", connection_type=\"simple\"}",
           "legendFormat": "WiFi Simple",
           "refId": "B"
         },
         {
-          "expr": "neopro_site_network_type{job=\"neopro-production\", connection_type=\"mesh\"}",
+          "expr": "neopro_site_network_type{scrape_job=\"NEOPRO\", connection_type=\"mesh\"}",
           "legendFormat": "WiFi Mesh",
           "refId": "C"
         },
         {
-          "expr": "neopro_site_network_type{job=\"neopro-production\", connection_type=\"mesh_isolated\"}",
+          "expr": "neopro_site_network_type{scrape_job=\"NEOPRO\", connection_type=\"mesh_isolated\"}",
           "legendFormat": "Mesh Isolated",
           "refId": "D"
         }
@@ -900,7 +900,7 @@
       },
       "targets": [
         {
-          "expr": "neopro_site_stability_score{job=\"neopro-production\"}",
+          "expr": "neopro_site_stability_score{scrape_job=\"NEOPRO\"}",
           "legendFormat": "Stability",
           "refId": "A"
         }
@@ -950,7 +950,7 @@
       },
       "targets": [
         {
-          "expr": "rate(neopro_heartbeats_total{job=\"neopro-production\"}[5m]) * 60",
+          "expr": "rate(neopro_heartbeats_total{scrape_job=\"NEOPRO\"}[5m]) * 60",
           "legendFormat": "Heartbeats/min",
           "refId": "A"
         }
@@ -1031,7 +1031,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_network_alerts_total{job=\"neopro-production\"}[5m])) by (type, severity)",
+          "expr": "sum(rate(neopro_network_alerts_total{scrape_job=\"NEOPRO\"}[5m])) by (type, severity)",
           "legendFormat": "{{type}} ({{severity}})",
           "refId": "A"
         }
@@ -1112,7 +1112,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_commands_total{job=\"neopro-production\"}[5m])) by (type, status)",
+          "expr": "sum(rate(neopro_commands_total{scrape_job=\"NEOPRO\"}[5m])) by (type, status)",
           "legendFormat": "{{type}} ({{status}})",
           "refId": "A"
         }
@@ -1193,12 +1193,12 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_network_rollbacks_total{job=\"neopro-production\"}[5m])) by (operation)",
+          "expr": "sum(rate(neopro_network_rollbacks_total{scrape_job=\"NEOPRO\"}[5m])) by (operation)",
           "legendFormat": "{{operation}}",
           "refId": "A"
         },
         {
-          "expr": "rate(neopro_network_recovery_attempts_total{job=\"neopro-production\"}[5m])",
+          "expr": "rate(neopro_network_recovery_attempts_total{scrape_job=\"NEOPRO\"}[5m])",
           "legendFormat": "Recovery Attempts",
           "refId": "B"
         }
@@ -1279,17 +1279,17 @@
       },
       "targets": [
         {
-          "expr": "nodejs_eventloop_lag_p50_seconds{job=\"neopro-production\"}",
+          "expr": "nodejs_eventloop_lag_p50_seconds{scrape_job=\"NEOPRO\"}",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "nodejs_eventloop_lag_p99_seconds{job=\"neopro-production\"}",
+          "expr": "nodejs_eventloop_lag_p99_seconds{scrape_job=\"NEOPRO\"}",
           "legendFormat": "p99",
           "refId": "B"
         },
         {
-          "expr": "nodejs_eventloop_lag_max_seconds{job=\"neopro-production\"}",
+          "expr": "nodejs_eventloop_lag_max_seconds{scrape_job=\"NEOPRO\"}",
           "legendFormat": "max",
           "refId": "C"
         }

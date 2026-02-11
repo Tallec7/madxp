@@ -61,7 +61,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=\"neopro-production\"}[5m]))",
+          "expr": "sum(rate(http_requests_total{scrape_job=\"NEOPRO\"}[5m]))",
           "legendFormat": "Requests/sec",
           "refId": "A"
         }
@@ -111,7 +111,7 @@
       },
       "targets": [
         {
-          "expr": "neopro_connected_sites_total{job=\"neopro-production\"}",
+          "expr": "neopro_connected_sites_total{scrape_job=\"NEOPRO\"}",
           "legendFormat": "Sites connect\u00e9s",
           "refId": "A"
         }
@@ -192,17 +192,17 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"neopro-production\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"neopro-production\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"neopro-production\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -282,7 +282,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_deployments_total{job=\"neopro-production\"}[5m])) by (status)",
+          "expr": "sum(rate(neopro_deployments_total{scrape_job=\"NEOPRO\"}[5m])) by (status)",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -362,7 +362,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_alerts_total{job=\"neopro-production\"}[5m])) by (severity)",
+          "expr": "sum(rate(neopro_alerts_total{scrape_job=\"NEOPRO\"}[5m])) by (severity)",
           "legendFormat": "{{severity}}",
           "refId": "A"
         }
@@ -420,7 +420,7 @@
       },
       "targets": [
         {
-          "expr": "process_resident_memory_bytes{job=\"neopro-production\"} / 1024 / 1024",
+          "expr": "process_resident_memory_bytes{scrape_job=\"NEOPRO\"} / 1024 / 1024",
           "legendFormat": "RSS (MB)",
           "refId": "A"
         }
@@ -478,7 +478,7 @@
       },
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{job=\"neopro-production\"}[5m]) * 100",
+          "expr": "rate(process_cpu_seconds_total{scrape_job=\"NEOPRO\"}[5m]) * 100",
           "legendFormat": "CPU Usage",
           "refId": "A"
         }
@@ -528,7 +528,7 @@
       },
       "targets": [
         {
-          "expr": "sum(neopro_canary_deployments_active{job=\"neopro-production\"})",
+          "expr": "sum(neopro_canary_deployments_active{scrape_job=\"NEOPRO\"})",
           "legendFormat": "In Progress",
           "refId": "A"
         }
@@ -609,12 +609,12 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(neopro_deployment_duration_seconds_bucket{job=\"neopro-production\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(neopro_deployment_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(neopro_deployment_duration_seconds_bucket{job=\"neopro-production\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(neopro_deployment_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         }
@@ -695,12 +695,12 @@
       },
       "targets": [
         {
-          "expr": "nodejs_eventloop_lag_p50_seconds{job=\"neopro-production\"}",
+          "expr": "nodejs_eventloop_lag_p50_seconds{scrape_job=\"NEOPRO\"}",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "nodejs_eventloop_lag_p99_seconds{job=\"neopro-production\"}",
+          "expr": "nodejs_eventloop_lag_p99_seconds{scrape_job=\"NEOPRO\"}",
           "legendFormat": "p99",
           "refId": "B"
         }
