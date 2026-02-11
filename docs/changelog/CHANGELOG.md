@@ -1,3 +1,9 @@
+# [3.12.0](https://github.com/Tallec7/neopro/compare/v3.11.1...v3.12.0) (2026-02-11)
+
+### Features
+
+- **monitoring:** wire DB, auth and WebSocket metrics to Grafana dashboards ([cf2b8ee](https://github.com/Tallec7/neopro/commit/cf2b8ee3644628616c6c76bb98c677c1314e944f))
+
 ## [3.11.1](https://github.com/Tallec7/neopro/compare/v3.11.0...v3.11.1) (2026-02-11)
 
 ### Bug Fixes
