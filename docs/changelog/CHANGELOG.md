@@ -1,3 +1,10 @@
+## [3.9.4](https://github.com/Tallec7/neopro/compare/v3.9.3...v3.9.4) (2026-02-11)
+
+### Bug Fixes
+
+- **dashboard:** fix BehaviorSubject array mutation in updateSiteStatus + sync docs ([f8ddf18](https://github.com/Tallec7/neopro/commit/f8ddf18a4d989cf56b52e4b4dc2d546f95ab6a51))
+- **tests:** add TranslateModule.forRoot() to dashboard specs + fix flaky health test ([a48844d](https://github.com/Tallec7/neopro/commit/a48844de7475ab6d0ecbbf4c39f0ad33c84439b7))
+
 ## [3.9.3](https://github.com/Tallec7/neopro/compare/v3.9.2...v3.9.3) (2026-02-11)
 
 ### Bug Fixes
