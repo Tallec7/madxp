@@ -234,7 +234,17 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 app.use(metricsService.httpMetricsMiddleware());
 
 // Endpoint métriques Prometheus (non rate-limited pour le scraping)
-app.get('/metrics', async (_req: Request, res: Response) => {
+// Protégé par Bearer token si METRICS_BEARER_TOKEN est défini
+app.get('/metrics', async (req: Request, res: Response) => {
+  const metricsToken = process.env.METRICS_BEARER_TOKEN;
+  if (metricsToken) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || authHeader !== `Bearer ${metricsToken}`) {
+      res.status(401).json({ error: 'Unauthorized - Invalid metrics token' });
+      return;
+    }
+  }
+
   try {
     // Mettre à jour les métriques snapshot
     metricsService.recordConnectedSites(socketService.getConnectionCount());
