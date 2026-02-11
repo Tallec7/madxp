@@ -12,6 +12,7 @@ import { formatPaginatedResponse } from '../middleware/pagination';
 import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';
 import { imageToVideoService } from '../services/image-to-video.service';
 import { cleanupTempFile } from '../middleware/upload';
+import metricsService from '../services/metrics.service';
 
 // Upload/download/delete functions are provided by storage.service.ts
 // - uploadVideo(buffer, filename, contentType)
@@ -274,6 +275,7 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    metricsService.recordVideoUpload(uploadStatus === 'ready' ? 'success' : 'failed', file.size);
     logger.info('Video created successfully:', {
       id: videoResponse.id,
       filename,
@@ -286,6 +288,7 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     });
     res.status(201).json(videoResponse);
   } catch (error) {
+    metricsService.recordVideoUpload('failed');
     logger.error('Error creating video:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
     res.status(500).json({

@@ -159,6 +159,13 @@ export async function handleCommandResult(
   clearPendingConfigFn: (siteId: string, versionId: string) => Promise<void>
 ): Promise<void> {
   try {
+    // Measure command latency before deleting from pending
+    const pending = ctx.pendingCommands.get(result.commandId);
+    if (pending) {
+      const latencySeconds = (Date.now() - pending.sentAt) / 1000;
+      metricsService.recordCommandLatency(pending.type, latencySeconds);
+      metricsService.recordCommand(pending.type, result.status === 'success' ? 'success' : 'failed');
+    }
     ctx.pendingCommands.delete(result.commandId);
 
     await query(

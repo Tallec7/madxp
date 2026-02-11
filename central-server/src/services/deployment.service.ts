@@ -2,6 +2,7 @@ import { query } from '../config/database';
 import socketService from './socket.service';
 import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
+import metricsService from './metrics.service';
 import { getVideoUrl, deleteVideo } from './storage.service';
 import { uploadVerificationService } from './upload-verification.service';
 
@@ -155,6 +156,7 @@ class DeploymentService {
           [statusMessage.join(' | ') || null, deploymentId]
         );
 
+        metricsService.recordDeployment('in_progress', 'site');
         logger.info('Video deployment in progress', {
           deploymentId,
           commandSentSites,
@@ -170,6 +172,7 @@ class DeploymentService {
           ['Échec de l\'envoi à tous les sites cibles', deploymentId]
         );
 
+        metricsService.recordDeployment('failed', 'site');
         logger.error('Video deployment failed for all sites', {
           deploymentId,
           commandFailedSites,
@@ -395,12 +398,20 @@ class DeploymentService {
         );
         const videoId = videoResult.rows[0]?.video_id;
 
-        await query(
+        // Calculer la durée du déploiement
+        const durationResult = await query(
           `UPDATE content_deployments
            SET status = 'completed', progress = 100, completed_at = NOW()
-           WHERE id = $1`,
+           WHERE id = $1
+           RETURNING EXTRACT(EPOCH FROM (NOW() - started_at)) as duration_seconds`,
           [deploymentId]
         );
+
+        metricsService.recordDeployment('completed', 'site');
+        const durationSeconds = parseFloat(durationResult.rows[0]?.duration_seconds as string);
+        if (!isNaN(durationSeconds)) {
+          metricsService.recordDeploymentDuration('site', durationSeconds);
+        }
 
         logger.info('Deployment completed', { deploymentId });
 
@@ -469,6 +480,7 @@ class DeploymentService {
       [errorMessage, deploymentId]
     );
 
+    metricsService.recordDeployment('failed', 'site');
     logger.error('Deployment failed', { deploymentId, errorMessage });
   }
 
@@ -556,6 +568,7 @@ class DeploymentService {
           [finalError, deploymentId]
         );
 
+        metricsService.recordDeployment('failed', 'site');
         logger.error('Deployment failed permanently', {
           deploymentId,
           retriesExhausted: retryCount >= RETRY_CONFIG.maxRetries,
