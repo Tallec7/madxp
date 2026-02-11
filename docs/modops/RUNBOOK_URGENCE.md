@@ -59,6 +59,7 @@ railway restart
 **Configuration actuelle** : Railway Hobby plan, `--max-old-space-size=256`, pool DB = 5 connexions
 
 **Actions immédiates** :
+
 1. Restart Railway (libère la mémoire)
 2. Vérifier `/health` pour le heap usage
 3. Si récurrent : vérifier les optimisations v3.7.4 (Swagger prod, Winston file transports, realtime-stats intervalle)
@@ -110,6 +111,7 @@ curl https://API_URL/health | jq .dependencies.database
 **Configuration** : max 5 connexions, timeout 10s, idle 30s
 
 **Actions** :
+
 1. Vérifier le nombre de connexions actives :
    ```sql
    SELECT count(*) FROM pg_stat_activity WHERE datname = 'postgres';
@@ -156,11 +158,13 @@ AND started_at < NOW() - INTERVAL '1 hour';
 **Symptôme** : Plusieurs Pi passent offline simultanément
 
 **Causes possibles** :
+
 - OOM serveur → Les sockets sont fermées quand le process meurt
 - Redis down (si configuré) → Perte du broadcast multi-instance
 - Rate limit atteint → Vérifier les logs pour des 429
 
 **Actions** :
+
 1. Restart Railway (§2.1)
 2. Les Pi se reconnecteront automatiquement (retry exponentiel)
 3. Vérifier après 5min que les Pi reviennent online
@@ -170,12 +174,14 @@ AND started_at < NOW() - INTERVAL '1 hour';
 **Symptôme** : Dashboard affiche "Connexion instable" (orange) alors que le Pi est physiquement connecté
 
 **Diagnostic** :
+
 ```bash
 # Sur le Pi
 sudo journalctl -u neopro-sync-agent -n 50 | grep -E "health check|zombie|reconnect"
 ```
 
 **Solution immédiate** :
+
 ```bash
 # Restart du sync-agent sur le Pi
 ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
@@ -184,6 +190,7 @@ ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
 ### 4.3 Pi totalement inaccessible
 
 **Arbre de diagnostic** :
+
 ```
 Le Pi répond au ping ?
 ├── OUI → SSH possible ?
@@ -204,16 +211,19 @@ Le Pi répond au ping ?
 **Symptôme** : Upload vidéo échoue, déploiement vidéo échoue sur les Pi
 
 **Vérification** :
+
 ```bash
 curl -v ftp://FTP_HOST --user FTP_USER:FTP_PASSWORD
 ```
 
 **Impact** :
+
 - Les vidéos déjà sur les Pi continuent de fonctionner
 - Les nouveaux uploads/déploiements échouent
 - Le fallback Supabase est automatique **uniquement pour les nouveaux uploads** (si FTP non configuré)
 
 **Actions** :
+
 1. Vérifier le statut Hostinger
 2. Si down prolongé : les uploads seront mis en échec, retry possible depuis le dashboard
 
@@ -242,6 +252,7 @@ psql $DATABASE_URL -c "SELECT filename, upload_verified_size FROM videos WHERE f
 **Cause probable** : `JWT_SECRET` a été changé ou les variables d'env ont été réinitialisées
 
 **Actions** :
+
 1. Vérifier que `JWT_SECRET` est bien configuré dans Railway
 2. Si le secret a été perdu : en générer un nouveau, **tous les utilisateurs devront se reconnecter**
 3. Les Pi ne sont PAS affectés (ils utilisent `api_key`, pas JWT)
@@ -265,6 +276,7 @@ WHERE email = 'user@example.com';
 **Cause** : GPU saturé, mémoire insuffisante
 
 **Vérification** :
+
 ```bash
 ssh pi@neopro.local 'vcgencmd get_mem gpu'
 # Doit afficher gpu=256M (pas gpu=4M)
@@ -274,11 +286,13 @@ ssh pi@neopro.local 'vcgencmd measure_temp'
 ```
 
 **Solution immédiate** :
+
 ```bash
 ssh pi@neopro.local 'sudo systemctl restart neopro-kiosk'
 ```
 
 **Solution permanente** (si gpu=4M) :
+
 ```bash
 ssh pi@neopro.local 'echo "gpu_mem=256" | sudo tee -a /boot/config.txt && sudo reboot'
 ```
@@ -310,7 +324,19 @@ ssh pi@neopro.local '/home/pi/neopro/scripts/sync-agent-guardian.sh restore'
 
 ```bash
 # Depuis le dashboard : Onglet Debug → Export Debug Bundle
-# Ou via SSH :
+
+# Ou via SSH (génère le même fichier JSON que le dashboard) :
+ssh pi@neopro.local 'cd /home/pi/neopro/sync-agent && node -e "
+  const exp = require(\"./src/commands/debug-bundle\");
+  exp().then(r => {
+    const fs = require(\"fs\"), os = require(\"os\");
+    const f = \"/tmp/neopro-debug-\" + os.hostname() + \"-\" + new Date().toISOString().slice(0,10) + \".json\";
+    fs.writeFileSync(f, JSON.stringify(r.bundle, null, 2));
+    console.log(\"Rapport exporté: \" + f);
+  }).catch(e => console.error(e));
+"'
+
+# Diagnostic rapide (ancien script) :
 ssh pi@neopro.local 'cd /home/pi/neopro && ./scripts/diagnose-pi.sh'
 ```
 
@@ -320,24 +346,25 @@ ssh pi@neopro.local 'cd /home/pi/neopro && ./scripts/diagnose-pi.sh'
 
 ### 8.1 Sévérités
 
-| Sévérité | Exemples | Temps de réponse | Action |
-|----------|----------|------------------|--------|
-| **P0 - Critique** | Serveur down, DB inaccessible | <15 min | Restart + investigation immédiate |
-| **P1 - Majeur** | Déconnexions en cascade (>5 Pi) | <1h | Diagnostic + restart si nécessaire |
-| **P2 - Modéré** | 1-2 Pi offline, hotspot down | <4h | Diagnostic remote, intervention planifiée |
-| **P3 - Mineur** | Alerte prédictive, warning mémoire | <24h | Monitoring, action préventive |
+| Sévérité          | Exemples                           | Temps de réponse | Action                                    |
+| ----------------- | ---------------------------------- | ---------------- | ----------------------------------------- |
+| **P0 - Critique** | Serveur down, DB inaccessible      | <15 min          | Restart + investigation immédiate         |
+| **P1 - Majeur**   | Déconnexions en cascade (>5 Pi)    | <1h              | Diagnostic + restart si nécessaire        |
+| **P2 - Modéré**   | 1-2 Pi offline, hotspot down       | <4h              | Diagnostic remote, intervention planifiée |
+| **P3 - Mineur**   | Alerte prédictive, warning mémoire | <24h             | Monitoring, action préventive             |
 
 ### 8.2 Contacts
 
-| Rôle | Canal | Quand |
-|------|-------|-------|
-| Dev/Ops | Slack #neopro-ops | P0, P1 |
-| Support client | Email | P2 (si impact club) |
-| Hébergeurs | Dashboards respectifs | Si infra down |
+| Rôle           | Canal                 | Quand               |
+| -------------- | --------------------- | ------------------- |
+| Dev/Ops        | Slack #neopro-ops     | P0, P1              |
+| Support client | Email                 | P2 (si impact club) |
+| Hébergeurs     | Dashboards respectifs | Si infra down       |
 
 ### 8.3 Post-mortem
 
 Après tout incident P0/P1 :
+
 1. Documenter la timeline dans `docs/incidents/YYYY-MM-DD-description.md`
 2. Identifier la cause racine
 3. Proposer des actions préventives
@@ -370,4 +397,4 @@ curl -s https://API_URL/ready
 
 ---
 
-*Créé le 9 février 2026*
+_Créé le 9 février 2026_

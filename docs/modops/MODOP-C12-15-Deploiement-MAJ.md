@@ -149,18 +149,18 @@ Dashboard → Sites → [Site] → Actions → Mettre à jour le logiciel
 
 **Parité des 3 chemins de déploiement (v3.8.1+) :** Les 3 méthodes de mise à jour sont maintenant **100% alignées** :
 
-| Étape | OTA (`update-software.js`) | SCP (`deploy-remote.sh`) | Admin `:8080` (`admin-server.js`) |
-| ----- | --- | --- | --- |
-| webapp/ | ✅ | ✅ | ✅ |
-| server/ + npm install | ✅ | ✅ | ✅ |
-| sync-agent/ + npm install | ✅ | ✅ | ✅ |
-| admin/ | ✅ | ✅ | ✅ |
-| scripts/ | ✅ | ✅ | ✅ |
-| config/systemd/ + enable | ✅ | ✅ | ✅ |
-| Golden snapshot | ✅ | ✅ | ✅ |
-| VERSION + release.json | ✅ | ✅ | ✅ |
-| Restart nginx | ✅ | ✅ | ✅ |
-| Restart kiosk | ✅ | ✅ | ✅ |
+| Étape                     | OTA (`update-software.js`) | SCP (`deploy-remote.sh`) | Admin `:8080` (`admin-server.js`) |
+| ------------------------- | -------------------------- | ------------------------ | --------------------------------- |
+| webapp/                   | ✅                         | ✅                       | ✅                                |
+| server/ + npm install     | ✅                         | ✅                       | ✅                                |
+| sync-agent/ + npm install | ✅                         | ✅                       | ✅                                |
+| admin/                    | ✅                         | ✅                       | ✅                                |
+| scripts/                  | ✅                         | ✅                       | ✅                                |
+| config/systemd/ + enable  | ✅                         | ✅                       | ✅                                |
+| Golden snapshot           | ✅                         | ✅                       | ✅                                |
+| VERSION + release.json    | ✅                         | ✅                       | ✅                                |
+| Restart nginx             | ✅                         | ✅                       | ✅                                |
+| Restart kiosk             | ✅                         | ✅                       | ✅                                |
 
 Avant la v3.8.1, chaque chemin avait des lacunes différentes (services systemd manquants, golden snapshot absent, nginx non redémarré, etc.), ce qui causait des divergences entre Pi selon la méthode de mise à jour utilisée.
 
@@ -642,14 +642,31 @@ Pour le support technique, vous pouvez exporter un **bundle de diagnostic comple
 Dashboard → Sites → [Site] → Onglet Debug → "Export Debug Bundle"
 ```
 
+**Alternative en ligne de commande (Pi hors ligne ou sans accès dashboard) :**
+
+```bash
+cd /home/pi/neopro/sync-agent
+node -e "
+  const exp = require('./src/commands/debug-bundle');
+  exp().then(r => {
+    const fs = require('fs'), os = require('os');
+    const f = '/tmp/neopro-debug-' + os.hostname() + '-' + new Date().toISOString().slice(0,10) + '.json';
+    fs.writeFileSync(f, JSON.stringify(r.bundle, null, 2));
+    console.log('Rapport exporté: ' + f);
+  }).catch(e => console.error(e));
+"
+```
+
 **Contenu du bundle (JSON) :**
 
 - Configuration (sanitisée)
 - Version logicielle
 - État de santé système (GPU, services, throttling)
-- Logs récents (100 lignes)
+- Logs récents (100 lignes par service)
 - Diagnostics réseau
+- Diagnostics hotspot (clients connectés, scan WiFi, état hostapd/dnsmasq)
 - État des buffers analytics
+- Configuration boot (gpu_mem)
 - Liste des vidéos locales
 
 ---
@@ -660,12 +677,12 @@ Depuis la v2.27, le **Raspberry Pi 5** est entièrement supporté.
 
 ### Différences Pi 4 vs Pi 5
 
-| Aspect         | Pi 4          | Pi 5                       |
-| -------------- | ------------- | -------------------------- |
-| GPU            | VideoCore VI  | VideoCore VII              |
+| Aspect         | Pi 4          | Pi 5                            |
+| -------------- | ------------- | ------------------------------- |
+| GPU            | VideoCore VI  | VideoCore VII                   |
 | Config GPU     | `gpu_mem=256` | V3D natif (aucun flag, v3.7.3+) |
-| `vcgencmd gpu` | Affiche 256M  | Affiche 4M (normal)        |
-| Décodage vidéo | Hardware      | CPU (FFmpeg) + GPU V3D     |
+| `vcgencmd gpu` | Affiche 256M  | Affiche 4M (normal)             |
+| Décodage vidéo | Hardware      | CPU (FFmpeg) + GPU V3D          |
 
 ### Vérification après déploiement
 

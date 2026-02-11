@@ -2138,8 +2138,8 @@ Depuis la version 2.24+, deux systèmes de récupération automatique sont en pl
 
 1. **Watchdog Kiosk** (`/home/pi/neopro/scripts/kiosk-watchdog.sh`) :
    - Détecte automatiquement Pi 4 vs Pi 5 et applique les bons flags GPU
-   - Surveille le titre de la fenêtre Chromium
-   - Détecte "Aw, Snap!", "Error", "Oups" dans le titre
+   - Surveille le titre de la fenêtre Chromium (détecte "Aw, Snap!", "Error", "Oups")
+   - Surveille les erreurs GPU driver via journalctl (`AllocateRingBuffer`, `kFatalFailure`) — >10 erreurs en 2 min déclenche un recovery
    - Tue Chromium, vide le cache, libère la mémoire GPU, relance
    - Anti-boucle : attend 60s après 3 crashs en 5 min
 
@@ -2157,7 +2157,7 @@ sudo systemctl status neopro-kiosk
 
 # Logs du watchdog (vérifier le modèle détecté)
 sudo tail -50 /var/log/neopro-kiosk-watchdog.log
-# Doit afficher : "Pi 5 détecté: utilisation de SwiftShader (rendu logiciel)" ou "Pi 4 ou antérieur: utilisation de l'accélération GPU hardware"
+# Doit afficher le modèle détecté (pi5 ou pi4)
 ```
 
 **Note :** Les nouvelles installations (v2.24+) configurent automatiquement `gpu_mem=256` pour les Pi 4 et antérieurs via le script `install.sh`.

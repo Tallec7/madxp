@@ -1,3 +1,9 @@
+## [Unreleased]
+
+### Bug Fixes
+
+- **raspberry:** fix GPU crash detection in kiosk-watchdog — `grep -c` could return multiline output (`0\n0`) causing bash `(( ))` syntax error, making GPU driver error monitoring non-functional on Pi 5
+
 ## [3.9.1](https://github.com/Tallec7/neopro/compare/v3.9.0...v3.9.1) (2026-02-10)
 
 ### Bug Fixes
