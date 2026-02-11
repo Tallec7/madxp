@@ -1,3 +1,9 @@
+# [3.11.0](https://github.com/Tallec7/neopro/compare/v3.10.0...v3.11.0) (2026-02-11)
+
+### Features
+
+- **monitoring:** add Bearer auth on /metrics + Grafana Cloud dashboards ([ff4b4ee](https://github.com/Tallec7/neopro/commit/ff4b4ee9a3690afba63fd02df7a516b06905a6f1))
+
 # [3.10.0](https://github.com/Tallec7/neopro/compare/v3.9.5...v3.10.0) (2026-02-11)
 
 ### Bug Fixes
