@@ -61,14 +61,25 @@ describe('SitesService', () => {
 
   describe('loadSites', () => {
     it('should load sites from API and transform response', fakeAsync(() => {
-      apiServiceSpy.get.and.returnValue(of(mockApiResponse));
+      // Create fresh copies to avoid mutation from other tests (randomized order)
+      const freshSite1 = { ...mockSite };
+      const freshSite2 = { ...mockSite, id: 'site-2', site_name: 'Site 2' };
+      const freshApiResponse = {
+        data: [freshSite1, freshSite2],
+        pagination: { total: 2, page: 1, limit: 20, totalPages: 1, hasNext: false, hasPrev: false }
+      };
+      apiServiceSpy.get.and.returnValue(of(freshApiResponse));
 
       let result: { total: number; sites: Site[] } | undefined;
       service.loadSites().subscribe(r => result = r);
       tick();
 
       expect(apiServiceSpy.get).toHaveBeenCalledWith('/sites', undefined);
-      expect(result).toEqual(mockSitesResponse);
+      expect(result?.total).toBe(2);
+      expect(result?.sites.length).toBe(2);
+      expect(result?.sites[0].id).toBe('site-1');
+      expect(result?.sites[0].status).toBe('online');
+      expect(result?.sites[1].id).toBe('site-2');
     }));
 
     it('should pass filters to API', fakeAsync(() => {
@@ -263,7 +274,7 @@ describe('SitesService', () => {
       service.getLogs('site-1').subscribe();
       tick();
 
-      expect(apiServiceSpy.get).toHaveBeenCalledWith('/sites/site-1/logs', { lines: 100 });
+      expect(apiServiceSpy.get).toHaveBeenCalledWith('/sites/site-1/logs', { lines: 100, service: 'neopro-app' });
     }));
 
     it('should get logs with custom lines', fakeAsync(() => {
@@ -272,7 +283,7 @@ describe('SitesService', () => {
       service.getLogs('site-1', 50).subscribe();
       tick();
 
-      expect(apiServiceSpy.get).toHaveBeenCalledWith('/sites/site-1/logs', { lines: 50 });
+      expect(apiServiceSpy.get).toHaveBeenCalledWith('/sites/site-1/logs', { lines: 50, service: 'neopro-app' });
     }));
   });
 
@@ -302,8 +313,12 @@ describe('SitesService', () => {
 
   describe('updateSiteStatus', () => {
     it('should update site status in local state', fakeAsync(() => {
-      // First load sites
-      apiServiceSpy.get.and.returnValue(of(mockApiResponse));
+      // Use fresh copies to avoid polluting shared mock data
+      const freshApiResponse = {
+        data: [{ ...mockSite }, { ...mockSite, id: 'site-2', site_name: 'Site 2' }],
+        pagination: { total: 2, page: 1, limit: 20, totalPages: 1, hasNext: false, hasPrev: false }
+      };
+      apiServiceSpy.get.and.returnValue(of(freshApiResponse));
       service.loadSites().subscribe();
       tick();
 

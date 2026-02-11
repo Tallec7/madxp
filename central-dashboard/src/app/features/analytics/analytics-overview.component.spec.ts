@@ -1,13 +1,15 @@
 import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { of, throwError } from 'rxjs';
+import { of, throwError, delay } from 'rxjs';
 import { AnalyticsOverviewComponent } from './analytics-overview.component';
 import { AnalyticsService } from '../../core/services/analytics.service';
+import { LoggerService } from '../../core/services/logger.service';
 
 describe('AnalyticsOverviewComponent', () => {
   let component: AnalyticsOverviewComponent;
   let fixture: ComponentFixture<AnalyticsOverviewComponent>;
   let analyticsService: jasmine.SpyObj<AnalyticsService>;
+  let loggerService: jasmine.SpyObj<LoggerService>;
 
   const mockOverviewData = {
     total_sites: 10,
@@ -44,16 +46,20 @@ describe('AnalyticsOverviewComponent', () => {
     const analyticsServiceMock = jasmine.createSpyObj('AnalyticsService', ['getAnalyticsOverview']);
     analyticsServiceMock.getAnalyticsOverview.and.returnValue(of(mockOverviewData));
 
+    const loggerServiceMock = jasmine.createSpyObj('LoggerService', ['debug', 'info', 'warn', 'error', 'addBreadcrumb', 'setAuthenticated']);
+
     await TestBed.configureTestingModule({
       imports: [AnalyticsOverviewComponent, RouterTestingModule],
       providers: [
         { provide: AnalyticsService, useValue: analyticsServiceMock },
+        { provide: LoggerService, useValue: loggerServiceMock },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AnalyticsOverviewComponent);
     component = fixture.componentInstance;
     analyticsService = TestBed.inject(AnalyticsService) as jasmine.SpyObj<AnalyticsService>;
+    loggerService = TestBed.inject(LoggerService) as jasmine.SpyObj<LoggerService>;
   });
 
   afterEach(() => {
@@ -100,12 +106,14 @@ describe('AnalyticsOverviewComponent', () => {
 
   describe('loadData', () => {
     it('should set loading to true while fetching', fakeAsync(() => {
+      // Use delayed observable to test intermediate loading state
+      analyticsService.getAnalyticsOverview.and.returnValue(of(mockOverviewData).pipe(delay(100)));
       fixture.detectChanges();
 
       component.loadData();
       expect(component.loading).toBe(true);
 
-      tick();
+      tick(100);
       expect(component.loading).toBe(false);
 
       discardPeriodicTasks();
@@ -131,13 +139,15 @@ describe('AnalyticsOverviewComponent', () => {
       analyticsService.getAnalyticsOverview.and.returnValue(
         throwError(() => new Error('API Error'))
       );
-      const consoleSpy = spyOn(console, 'error');
 
       fixture.detectChanges();
       tick();
 
       expect(component.loading).toBe(false);
-      expect(consoleSpy).toHaveBeenCalled();
+      expect(loggerService.warn).toHaveBeenCalledWith(
+        'Failed to load analytics overview',
+        jasmine.objectContaining({ error: 'API Error' })
+      );
 
       discardPeriodicTasks();
     }));

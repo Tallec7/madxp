@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { ContentManagementComponent } from './content-management.component';
 import { ApiService } from '../../core/services/api.service';
@@ -7,6 +8,7 @@ import { SitesService } from '../../core/services/sites.service';
 import { GroupsService } from '../../core/services/groups.service';
 import { SocketService } from '../../core/services/socket.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { LoggerService } from '../../core/services/logger.service';
 
 describe('ContentManagementComponent', () => {
   let component: ContentManagementComponent;
@@ -76,15 +78,17 @@ describe('ContentManagementComponent', () => {
     socketServiceMock.on.and.returnValue(of({}));
 
     const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success', 'warning']);
+    const loggerServiceMock = jasmine.createSpyObj('LoggerService', ['debug', 'info', 'warn', 'error', 'addBreadcrumb', 'setAuthenticated']);
 
     await TestBed.configureTestingModule({
-      imports: [ContentManagementComponent, FormsModule],
+      imports: [ContentManagementComponent, FormsModule, TranslateModule.forRoot()],
       providers: [
         { provide: ApiService, useValue: apiServiceMock },
         { provide: SitesService, useValue: sitesServiceMock },
         { provide: GroupsService, useValue: groupsServiceMock },
         { provide: SocketService, useValue: socketServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
+        { provide: LoggerService, useValue: loggerServiceMock },
       ],
     }).compileComponents();
 

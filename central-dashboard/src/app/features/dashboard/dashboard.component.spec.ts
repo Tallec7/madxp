@@ -1,8 +1,10 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { DashboardComponent } from './dashboard.component';
 import { SitesService } from '../../core/services/sites.service';
+import { AuthService } from '../../core/services/auth.service';
 
 describe('DashboardComponent', () => {
   let component: DashboardComponent;
@@ -40,22 +42,31 @@ describe('DashboardComponent', () => {
     },
   ];
 
+  // Connection status response that matches stats structure
+  const mockConnectionStatus = {
+    sites: [
+      { siteId: '1', siteName: 'Site 1', clubName: 'Club A', isConnected: true, displayStatus: 'online' as const, lastSeenAt: new Date(), secondsSinceLastSeen: 0, localIp: null },
+      { siteId: '2', siteName: 'Site 2', clubName: 'Club B', isConnected: false, displayStatus: 'offline' as const, lastSeenAt: new Date(), secondsSinceLastSeen: 3600, localIp: null },
+    ],
+    stats: { total: 20, online: 15, warning: 0, offline: 3, unknown: 2 },
+    timestamp: new Date().toISOString(),
+  };
+
   beforeEach(async () => {
     const sitesServiceMock = jasmine.createSpyObj('SitesService', ['loadStats', 'loadSites', 'getAllConnectionStatus']);
     sitesServiceMock.loadStats.and.returnValue(of(mockStats));
     sitesServiceMock.loadSites.and.returnValue(of({ sites: mockSites, total: 2, page: 1, totalPages: 1 }));
-    sitesServiceMock.getAllConnectionStatus.and.returnValue(of({
-      sites: [
-        { siteId: '1', siteName: 'Site 1', clubName: 'Club A', isConnected: true, displayStatus: 'online', lastSeenAt: new Date(), secondsSinceLastSeen: 0, localIp: null },
-        { siteId: '2', siteName: 'Site 2', clubName: 'Club B', isConnected: false, displayStatus: 'offline', lastSeenAt: new Date(), secondsSinceLastSeen: 3600, localIp: null },
-      ],
-      stats: { total: 2, online: 1, warning: 0, offline: 1, unknown: 0 },
-      timestamp: new Date().toISOString(),
-    }));
+    sitesServiceMock.getAllConnectionStatus.and.returnValue(of(mockConnectionStatus));
+
+    const authServiceMock = jasmine.createSpyObj('AuthService', ['getCurrentUser', 'hasRole']);
+    authServiceMock.getCurrentUser.and.returnValue({ id: '1', email: 'admin@test.com', role: 'admin' });
 
     await TestBed.configureTestingModule({
-      imports: [DashboardComponent, RouterTestingModule],
-      providers: [{ provide: SitesService, useValue: sitesServiceMock }],
+      imports: [DashboardComponent, RouterTestingModule, HttpClientTestingModule],
+      providers: [
+        { provide: SitesService, useValue: sitesServiceMock },
+        { provide: AuthService, useValue: authServiceMock },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DashboardComponent);
@@ -81,7 +92,9 @@ describe('DashboardComponent', () => {
       tick();
 
       expect(sitesService.loadStats).toHaveBeenCalled();
-      expect(component.stats).toEqual(mockStats);
+      // After init, loadConnectionStatus overwrites stats
+      expect(component.stats).toBeTruthy();
+      discardPeriodicTasks();
     }));
 
     it('should load recent sites on init', fakeAsync(() => {
@@ -90,6 +103,7 @@ describe('DashboardComponent', () => {
 
       expect(sitesService.loadSites).toHaveBeenCalled();
       expect(component.recentSites.length).toBe(2);
+      discardPeriodicTasks();
     }));
 
     it('should limit recent sites to 5', fakeAsync(() => {
@@ -112,6 +126,7 @@ describe('DashboardComponent', () => {
       tick();
 
       expect(component.recentSites.length).toBe(5);
+      discardPeriodicTasks();
     }));
   });
 
@@ -163,6 +178,7 @@ describe('DashboardComponent', () => {
 
       const status = component.getRealTimeStatus(mockSites[0] as any);
       expect(status).toBe('online');
+      discardPeriodicTasks();
     }));
 
     it('should return offline when connection status map has offline status', fakeAsync(() => {
@@ -171,6 +187,7 @@ describe('DashboardComponent', () => {
 
       const status = component.getRealTimeStatus(mockSites[1] as any);
       expect(status).toBe('offline');
+      discardPeriodicTasks();
     }));
 
     it('should load connection status on init', fakeAsync(() => {
@@ -178,24 +195,27 @@ describe('DashboardComponent', () => {
       tick();
 
       expect(sitesService.getAllConnectionStatus).toHaveBeenCalled();
+      discardPeriodicTasks();
     }));
   });
 
   describe('getPercentage', () => {
-    beforeEach(fakeAsync(() => {
+    it('should calculate correct percentage', fakeAsync(() => {
       fixture.detectChanges();
       tick();
+
+      // After loadConnectionStatus, stats.total_sites = 20 (from mockConnectionStatus.stats.total)
+      expect(component.getPercentage(15)).toBe(75); // 15/20 * 100
+      discardPeriodicTasks();
     }));
 
-    it('should calculate correct percentage', () => {
-      expect(component.getPercentage(15)).toBe(75); // 15/20 * 100
-    });
-
     it('should return 0 for undefined value', () => {
+      component.stats = { ...mockStats };
       expect(component.getPercentage(undefined)).toBe(0);
     });
 
     it('should return 0 for zero value', () => {
+      component.stats = { ...mockStats };
       expect(component.getPercentage(0)).toBe(0);
     });
 
@@ -216,23 +236,31 @@ describe('DashboardComponent', () => {
       tick();
     }));
 
+    afterEach(fakeAsync(() => {
+      discardPeriodicTasks();
+    }));
+
     it('should display total sites count', () => {
+      fixture.detectChanges();
       const statValue = fixture.nativeElement.querySelector('.stat-card .stat-value');
       expect(statValue?.textContent).toContain('20');
     });
 
     it('should display online sites count', () => {
+      fixture.detectChanges();
       const statCards = fixture.nativeElement.querySelectorAll('.stat-card');
       const onlineCard = statCards[1];
       expect(onlineCard?.textContent).toContain('15');
     });
 
     it('should display recent sites', () => {
+      fixture.detectChanges();
       const siteItems = fixture.nativeElement.querySelectorAll('.site-item');
       expect(siteItems.length).toBe(2);
     });
 
     it('should display site club name', () => {
+      fixture.detectChanges();
       const siteName = fixture.nativeElement.querySelector('.site-name');
       expect(siteName?.textContent).toContain('Club A');
     });

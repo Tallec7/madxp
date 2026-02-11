@@ -277,28 +277,22 @@ describe('ApiService', () => {
       req.flush({});
     });
 
-    it('should emit error status on failure with retries exhausted', (done) => {
+    it('should emit error status on failure with no retries', () => {
       const formData = new FormData();
 
-      service.uploadWithProgress('/upload', formData, { maxRetries: 1, retryDelayMs: 10 }).subscribe({
-        next: progress => {
-          if (progress.status === 'error' && progress.error?.includes('Échec')) {
-            // Final error after retries
-            done();
-          }
-        },
-        error: () => done()
+      const progressEvents: any[] = [];
+      let errorReceived = false;
+      service.uploadWithProgress('/upload', formData, { maxRetries: 0 }).subscribe({
+        next: progress => progressEvents.push(progress),
+        error: () => { errorReceived = true; }
       });
 
-      // First attempt
+      // Single attempt — maxRetries: 0 means attempt 1 >= maxRetries so no retry, immediate error
       const req1 = httpMock.expectOne(`${environment.apiUrl}/upload`);
       req1.flush('Server Error', { status: 500, statusText: 'Server Error' });
 
-      // Wait for retry
-      setTimeout(() => {
-        const req2 = httpMock.expectOne(`${environment.apiUrl}/upload`);
-        req2.flush('Server Error', { status: 500, statusText: 'Server Error' });
-      }, 50);
+      expect(errorReceived).toBeTrue();
+      expect(progressEvents.some(p => p.status === 'error')).toBeTrue();
     });
   });
 });

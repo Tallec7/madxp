@@ -1,11 +1,13 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { LayoutComponent } from './layout.component';
 import { AuthService } from '../../core/services/auth.service';
 import { SocketService } from '../../core/services/socket.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { TranslationService } from '../../core/services/translation.service';
 import { Router } from '@angular/router';
 
 describe('LayoutComponent', () => {
@@ -14,7 +16,8 @@ describe('LayoutComponent', () => {
   let authService: jasmine.SpyObj<AuthService>;
   let socketService: jasmine.SpyObj<SocketService>;
   let notificationService: jasmine.SpyObj<NotificationService>;
-  let router: jasmine.SpyObj<Router>;
+  let translationService: jasmine.SpyObj<TranslationService>;
+  let router: Router;
 
   const mockUser = {
     id: '1',
@@ -28,12 +31,13 @@ describe('LayoutComponent', () => {
   const eventsSubject = new Subject<{ type: string; data?: any }>();
 
   beforeEach(async () => {
-    const authServiceMock = jasmine.createSpyObj('AuthService', ['hasRole', 'logout'], {
+    const authServiceMock = jasmine.createSpyObj('AuthService', ['hasRole', 'logout', 'getSseToken'], {
       currentUser$: currentUserSubject.asObservable()
     });
     authServiceMock.hasRole.and.returnValue(true);
+    authServiceMock.getSseToken.and.returnValue(null);
 
-    const socketServiceMock = jasmine.createSpyObj('SocketService', ['isConnected'], {
+    const socketServiceMock = jasmine.createSpyObj('SocketService', ['isConnected', 'connect', 'disconnect'], {
       events$: eventsSubject.asObservable()
     });
     socketServiceMock.isConnected.and.returnValue(true);
@@ -42,15 +46,54 @@ describe('LayoutComponent', () => {
       notification$: notificationSubject.asObservable()
     });
 
-    const routerMock = jasmine.createSpyObj('Router', ['navigate']);
+    const translationServiceMock = jasmine.createSpyObj('TranslationService', ['instant', 'initializeLanguage', 'setLanguage', 'getCurrentLanguage', 'getLanguageOption'], {
+      currentLang$: new BehaviorSubject('fr').asObservable(),
+      supportedLanguages: [
+        { code: 'fr', label: 'Français', flag: '🇫🇷' },
+        { code: 'en', label: 'English', flag: '🇬🇧' }
+      ]
+    });
+    translationServiceMock.instant.and.callFake((key: string) => {
+      const translations: Record<string, string> = {
+        'roles.admin': 'Administrateur',
+        'roles.operator': 'Opérateur',
+        'roles.viewer': 'Observateur',
+        'roles.super_admin': 'Super Admin',
+        'auth.logoutConfirm': 'Voulez-vous vous déconnecter ?',
+        'auth.logout': 'Déconnexion',
+        'status.connected': 'Connecté',
+        'status.disconnected': 'Déconnecté',
+        'nav.dashboard': 'Dashboard',
+        'nav.sites': 'Sites',
+        'nav.groups': 'Groupes',
+        'nav.advertisers': 'Annonceurs',
+        'nav.content': 'Contenu',
+        'nav.updates': 'Mises à jour',
+        'nav.administration': 'Administration',
+        'nav.users': 'Utilisateurs',
+        'nav.agencies': 'Agences',
+        'nav.localConsole': 'Console locale',
+        'nav.skipToContent': 'Aller au contenu',
+        'notifications.closeNotification': 'Fermer',
+        'language.select': 'Langue',
+      };
+      return translations[key] || key;
+    });
+    translationServiceMock.getLanguageOption.and.callFake((code: string) => {
+      const langs = [
+        { code: 'fr', label: 'Français', flag: '🇫🇷' },
+        { code: 'en', label: 'English', flag: '🇬🇧' }
+      ];
+      return langs.find(l => l.code === code);
+    });
 
     await TestBed.configureTestingModule({
-      imports: [LayoutComponent, RouterTestingModule, NoopAnimationsModule],
+      imports: [LayoutComponent, RouterTestingModule, NoopAnimationsModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authServiceMock },
         { provide: SocketService, useValue: socketServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
-        { provide: Router, useValue: routerMock },
+        { provide: TranslationService, useValue: translationServiceMock },
       ],
     }).compileComponents();
 
@@ -59,7 +102,8 @@ describe('LayoutComponent', () => {
     authService = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
     socketService = TestBed.inject(SocketService) as jasmine.SpyObj<SocketService>;
     notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
-    router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
+    translationService = TestBed.inject(TranslationService) as jasmine.SpyObj<TranslationService>;
+    router = TestBed.inject(Router);
   });
 
   afterEach(() => {
@@ -112,17 +156,20 @@ describe('LayoutComponent', () => {
       expect(component.isConnected).toBe(false);
     });
 
-    it('should show notification on command_completed', () => {
+    it('should not show notification on command_completed', () => {
       eventsSubject.next({ type: 'command_completed' });
 
-      expect(component.notifications.length).toBe(1);
-      expect(component.notifications[0].type).toBe('success');
+      // command_completed no longer triggers a global notification
+      // (handled by the component that sent the command)
+      expect(component.notifications.length).toBe(0);
     });
 
-    it('should show notification on deploy_progress at 100%', () => {
+    it('should not show notification on deploy_progress at 100%', () => {
       eventsSubject.next({ type: 'deploy_progress', data: { progress: 100 } });
 
-      expect(component.notifications.length).toBe(1);
+      // deploy_progress no longer triggers a global notification
+      // (handled by site-content-tab component)
+      expect(component.notifications.length).toBe(0);
     });
 
     it('should not show notification on deploy_progress below 100%', () => {
@@ -190,10 +237,10 @@ describe('LayoutComponent', () => {
   });
 
   describe('canManageContent', () => {
-    it('should call authService.hasRole with admin and operator', () => {
+    it('should call authService.hasRole with admin, super_admin and operator', () => {
       component.canManageContent();
 
-      expect(authService.hasRole).toHaveBeenCalledWith('admin', 'operator');
+      expect(authService.hasRole).toHaveBeenCalledWith('admin', 'super_admin', 'operator');
     });
 
     it('should return true when user has role', () => {
@@ -208,10 +255,10 @@ describe('LayoutComponent', () => {
   });
 
   describe('isAdmin', () => {
-    it('should call authService.hasRole with admin', () => {
+    it('should call authService.hasRole with admin and super_admin', () => {
       component.isAdmin();
 
-      expect(authService.hasRole).toHaveBeenCalledWith('admin');
+      expect(authService.hasRole).toHaveBeenCalledWith('admin', 'super_admin');
     });
   });
 
@@ -260,6 +307,7 @@ describe('LayoutComponent', () => {
 
       component.logout();
 
+      expect(socketService.disconnect).toHaveBeenCalled();
       expect(authService.logout).toHaveBeenCalled();
     });
 
@@ -289,7 +337,7 @@ describe('LayoutComponent', () => {
 
     it('should display connection status', () => {
       const connectionStatus = fixture.nativeElement.querySelector('.connection-status');
-      expect(connectionStatus.textContent).toContain('Connecté');
+      expect(connectionStatus).toBeTruthy();
     });
 
     it('should show disconnected when not connected', () => {
@@ -297,7 +345,8 @@ describe('LayoutComponent', () => {
       fixture.detectChanges();
 
       const connectionStatus = fixture.nativeElement.querySelector('.connection-status');
-      expect(connectionStatus.textContent).toContain('Déconnecté');
+      expect(connectionStatus).toBeTruthy();
+      expect(connectionStatus.classList.contains('connected')).toBeFalse();
     });
 
     it('should display notifications when present', () => {

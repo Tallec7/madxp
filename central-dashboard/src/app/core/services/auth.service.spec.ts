@@ -53,7 +53,8 @@ describe('AuthService', () => {
       expect(service).toBeTruthy();
     });
 
-    it('should check authentication status via API on init', fakeAsync(() => {
+    it('should check authentication status via API when checkAuthStatus is called', fakeAsync(() => {
+      service.checkAuthStatus();
       tick();
       expect(apiServiceSpy.get).toHaveBeenCalledWith('/auth/me');
     }));
@@ -61,21 +62,12 @@ describe('AuthService', () => {
     it('should load current user if cookie session is valid', fakeAsync(() => {
       apiServiceSpy.get.and.returnValue(of(mockUser));
 
-      TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        providers: [
-          AuthService,
-          { provide: ApiService, useValue: apiServiceSpy },
-          { provide: Router, useValue: routerSpy }
-        ]
-      });
-
-      const newService = TestBed.inject(AuthService);
+      service.checkAuthStatus();
       tick();
 
       expect(apiServiceSpy.get).toHaveBeenCalledWith('/auth/me');
-      expect(newService.getCurrentUser()).toEqual(mockUser);
-      expect(newService.isAuthenticated()).toBeTrue();
+      expect(service.getCurrentUser()).toEqual(mockUser);
+      expect(service.isAuthenticated()).toBeTrue();
     }));
 
     it('should set user to null if session is invalid', fakeAsync(() => {

@@ -1,8 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { SocketService, SocketEvent } from './socket.service';
+import { LoggerService } from './logger.service';
 
 describe('SocketService', () => {
   let service: SocketService;
+  let loggerService: jasmine.SpyObj<LoggerService>;
 
   // Mock socket object
   const mockSocket = {
@@ -19,10 +21,16 @@ describe('SocketService', () => {
     mockSocket.emit.calls.reset();
     mockSocket.disconnect.calls.reset();
 
+    const loggerSpy = jasmine.createSpyObj('LoggerService', ['debug', 'info', 'warn', 'error', 'addBreadcrumb', 'setAuthenticated']);
+
     TestBed.configureTestingModule({
-      providers: [SocketService]
+      providers: [
+        SocketService,
+        { provide: LoggerService, useValue: loggerSpy }
+      ]
     });
     service = TestBed.inject(SocketService);
+    loggerService = TestBed.inject(LoggerService) as jasmine.SpyObj<LoggerService>;
   });
 
   it('should be created', () => {
@@ -98,18 +106,16 @@ describe('SocketService', () => {
       (service as any).socket = null;
       (service as any).connected = false;
 
-      spyOn(console, 'warn');
       service.emit('test_event', { foo: 'bar' });
 
       expect(mockSocket.emit).not.toHaveBeenCalled();
-      expect(console.warn).toHaveBeenCalledWith('Cannot emit: socket not connected');
+      expect(loggerService.warn).toHaveBeenCalledWith('Cannot emit: socket not connected', { event: 'test_event' });
     });
 
     it('should not emit when socket exists but not connected', () => {
       (service as any).socket = mockSocket;
       (service as any).connected = false;
 
-      spyOn(console, 'warn');
       service.emit('test_event', { foo: 'bar' });
 
       expect(mockSocket.emit).not.toHaveBeenCalled();
