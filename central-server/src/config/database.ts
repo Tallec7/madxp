@@ -100,7 +100,10 @@ pool.on('connect', () => {
 });
 
 // Lazy import to avoid circular dependency with metrics.service
-let metricsServiceInstance: { recordDbQuery: (operation: string, durationSeconds: number) => void } | null = null;
+let metricsServiceInstance: {
+  recordDbQuery: (operation: string, durationSeconds: number) => void;
+  recordDbConnections: (active: number, idle: number) => void;
+} | null = null;
 const getMetricsService = () => {
   if (!metricsServiceInstance) {
     try {
@@ -112,6 +115,19 @@ const getMetricsService = () => {
   }
   return metricsServiceInstance;
 };
+
+// Track DB connection pool metrics on pool events
+// pg Pool exposes totalCount/idleCount at runtime but @types/pg doesn't declare them
+const poolAny = pool as unknown as { totalCount: number; idleCount: number; on: (event: string, cb: () => void) => void };
+const updatePoolMetrics = () => {
+  const ms = getMetricsService();
+  if (ms && typeof poolAny.totalCount === 'number') {
+    ms.recordDbConnections(poolAny.totalCount - poolAny.idleCount, poolAny.idleCount);
+  }
+};
+
+poolAny.on('acquire', updatePoolMetrics);
+poolAny.on('release', updatePoolMetrics);
 
 export const query = async <T extends QueryResultRow = QueryResultRow>(text: string, params?: any[]) => {
   const start = Date.now();
