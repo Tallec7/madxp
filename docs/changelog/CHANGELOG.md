@@ -1,3 +1,9 @@
+## [3.9.5](https://github.com/Tallec7/neopro/compare/v3.9.4...v3.9.5) (2026-02-11)
+
+### Bug Fixes
+
+- **health:** align health check memory thresholds with memory-manager ([8ff73ac](https://github.com/Tallec7/neopro/commit/8ff73aca2690fb92270b06059c2379b1f8ebfa3e))
+
 ## [3.9.4](https://github.com/Tallec7/neopro/compare/v3.9.3...v3.9.4) (2026-02-11)
 
 ### Bug Fixes
