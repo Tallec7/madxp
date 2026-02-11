@@ -150,12 +150,96 @@ sponsor_impressions (id, site_id, sponsor_id, viewed_at, duration)
 club_daily_stats (site_id, date, total_videos, total_impressions) -- Agrégation
 ```
 
+---
+
+## Évolutions (2025-2026)
+
+### Contraintes mémoire Railway Hobby plan (v2.11)
+
+Le pool de connexions a été réduit de 20 à **5 connexions** pour tenir dans les 512MB de RAM de Railway Hobby plan. Voir ADR-015 pour les détails.
+
+Optimisations associées :
+- Pending commands Socket.IO : 500 → 100
+- Logs Winston : 10MB×5 → 2MB×2
+- Seuils mémoire : warning 88%, critical 93%, emergency 97%
+
+### Politique de rétention des données (v2.16)
+
+La croissance non contrôlée de la DB a nécessité une politique de cleanup automatique :
+
+| Table | Rétention | Justification |
+|-------|-----------|---------------|
+| `video_plays` | 90 jours | `club_daily_stats` conserve l'historique long terme |
+| `advertiser_impressions` | 90 jours | `advertiser_daily_stats` conserve l'agrégation |
+| `metrics` | 7 jours | Debug court terme (CPU, RAM, temp) |
+| `config_history` | 20 versions/site | Rollback réaliste |
+| `remote_commands` | 30 jours | Historique debug |
+| `alerts`, `audit_logs` | 90 jours | Conformité/audit |
+
+**Tables préservées indéfiniment** (agrégations pré-calculées) :
+- `club_daily_stats`, `advertiser_daily_stats`
+
+Jobs cron quotidiens à 3h du matin via `cron-scheduler.service.ts`.
+
+### Nouvelles tables majeures (v2.27 → v3.0)
+
+| Table | Version | Usage |
+|-------|---------|-------|
+| `config_drafts` | v2.27 | Brouillons de configuration (1 par site, UNIQUE) |
+| `orchestrated_deployments` | v2.27 | Suivi déploiements vidéos + config |
+| `subscription_suspension_reasons` | v2.47 | Motifs de suspension avec messages TV/Remote |
+| `subscription_history` | v2.47 | Historique changements abonnement |
+| `alert_thresholds` | v3.0 | Seuils pour alertes prédictives (14 métriques) |
+
+### Vues matérialisées et agrégation
+
+12 vues analytics ajoutées pour éviter les requêtes complexes répétées :
+- `subscription_status_summary` : Sites enrichis avec statut calculé
+- `subscription_stats` : Compteurs globaux par statut/plan
+- `club_analytics_summary`, `top_videos_by_site`
+- `advertiser_analytics_summary`, `advertiser_performance_by_site`
+
+### Colonnes JSONB stratégiques
+
+| Colonne | Table | Usage |
+|---------|-------|-------|
+| `local_config_mirror` | `sites` | Copie de la config du Pi (sync bidirectionnel) |
+| `network_profile` | `sites` | Profil réseau auto-détecté (simple/mesh/enterprise) |
+| `configuration` | `config_drafts` | Brouillon de config pré-déploiement |
+| `metadata` | `videos` | Métadonnées variables par vidéo |
+
+### Schéma étendu
+
+```sql
+-- Tables ajoutées depuis la version initiale
+config_drafts (site_id UNIQUE, configuration JSONB, referenced_video_ids UUID[])
+orchestrated_deployments (site_id, draft_id, status, videos_completed, videos_failed)
+subscription_suspension_reasons (code, label, auto_unblock, message_tv, message_remote)
+subscription_history (site_id, action, reason, previous_end_date, new_end_date, note)
+alert_thresholds (metric_name, warning_threshold, critical_threshold)
+alerts (site_id, type, severity, message, active, resolved_at)
+
+-- Colonnes ajoutées sur sites
+sites += (subscription_start, subscription_end, subscription_plan,
+          suspended, suspension_reason, suspension_date, suspension_note,
+          network_profile JSONB, network_profile_updated_at,
+          config_update_pending_until TIMESTAMP)
+
+-- Colonnes ajoutées sur videos
+videos += (uploaded_for_site_id UUID, upload_status, upload_verified_at, upload_verified_size)
+
+-- Colonne ajoutée sur video_plays
+video_plays += (tv_status TEXT) -- 'on', 'standby', 'disconnected', 'unknown'
+```
+
 ## Références
 
 - [database.ts](../../central-server/src/config/database.ts)
 - [full-schema.sql](../../central-server/src/scripts/full-schema.sql)
 - [RLS_SECURITY.md](../technical/RLS_SECURITY.md)
+- ADR-010 : Détection HDMI-CEC pour analytics
+- ADR-015 : Contraintes Railway Hobby plan
 
 ---
 
-*Créé le 9 janvier 2026*
+*Créé le 9 janvier 2026 — Mis à jour le 11 février 2026*
