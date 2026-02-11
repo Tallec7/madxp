@@ -67,7 +67,7 @@ class OrchestratedDeploymentService {
       throw new Error('Aucun brouillon trouvé pour ce site');
     }
 
-    const validation = await draftService.validateDraft(siteId);
+    await draftService.validateDraft(siteId);
 
     // 2. Récupérer les vidéos à déployer
     const videosToDepoly = await draftService.getVideosToDeployForDraft(siteId);
@@ -216,7 +216,7 @@ class OrchestratedDeploymentService {
     orchestratedId: string,
     videoId: string,
     success: boolean,
-    errorMessage?: string
+    _errorMessage?: string
   ): Promise<void> {
     // Mettre à jour le compteur
     if (success) {

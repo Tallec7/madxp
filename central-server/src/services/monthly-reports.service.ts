@@ -427,7 +427,7 @@ export async function generateReportOnDemand(
   entityId: string,
   periodStart: string,
   periodEnd: string,
-  userId?: string
+  _userId?: string
 ): Promise<ReportGenerationResult> {
   const periodLabel = formatPeriodLabel(periodStart, periodEnd);
 

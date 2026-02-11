@@ -1,6 +1,5 @@
 import * as ftp from 'basic-ftp';
-import { Readable, pipeline } from 'stream';
-import { createReadStream } from 'fs';
+import { Readable } from 'stream';
 import { stat } from 'fs/promises';
 import logger from './logger';
 
@@ -42,21 +41,6 @@ export const getFtpPublicUrl = (filename: string): string => {
 export const getFtpUpdatePublicUrl = (filename: string): string => {
   const baseUrl = publicUpdateBaseUrl.endsWith('/') ? publicUpdateBaseUrl.slice(0, -1) : publicUpdateBaseUrl;
   return `${baseUrl}/${filename}`;
-};
-
-const createFtpClient = async (): Promise<ftp.Client> => {
-  const client = new ftp.Client();
-  client.ftp.verbose = process.env.NODE_ENV === 'development';
-
-  await client.access({
-    host: ftpConfig.host,
-    port: ftpConfig.port,
-    user: ftpConfig.user,
-    password: ftpConfig.password,
-    secure: ftpConfig.secure,
-  });
-
-  return client;
 };
 
 export const uploadFileToFtp = async (

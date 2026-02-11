@@ -64,6 +64,7 @@ export const authenticate = (
 };
 
 // Hierarchie des roles (du plus puissant au moins puissant)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ROLE_HIERARCHY: Record<UserRole, number> = {
   'super_admin': 100,
   'superadmin': 100,

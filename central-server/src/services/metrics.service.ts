@@ -3,7 +3,7 @@
  * Expose des métriques pour le monitoring avec Prometheus/Grafana
  */
 
-import client, {
+import {
   Registry,
   Counter,
   Gauge,

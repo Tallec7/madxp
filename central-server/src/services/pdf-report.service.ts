@@ -19,7 +19,6 @@ import { query } from '../config/database';
 import logger from '../config/logger';
 import PDFDocument from 'pdfkit';
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
-import { PassThrough } from 'stream';
 import * as crypto from 'crypto';
 
 // Types
@@ -411,8 +410,9 @@ export async function generateClubReport(
  * Génère un PDF professionnel avec graphiques et mise en page
  */
 async function generatePlaceholderPdf(data: ReportData, options: PdfReportOptions): Promise<Buffer> {
-  return new Promise(async (resolve, reject) => {
-    try {
+  return new Promise((resolve, reject) => {
+    (async () => {
+      try {
       // Configuration du document PDF
       const doc = new PDFDocument({
         size: options.format === 'letter' ? 'LETTER' : 'A4',
@@ -763,6 +763,7 @@ async function generatePlaceholderPdf(data: ReportData, options: PdfReportOption
     } catch (error) {
       reject(error);
     }
+    })().catch(reject);
   });
 }
 
@@ -912,7 +913,7 @@ async function generateEventTypePieChart(
 /**
  * Génère une signature numérique pour le certificat
  */
-function generateDigitalSignature(data: ReportData, options: PdfReportOptions): string {
+function generateDigitalSignature(data: ReportData, _options: PdfReportOptions): string {
   const signatureData = {
     sponsor: data.sponsor?.id,
     period: `${data.period.from}_${data.period.to}`,
@@ -946,8 +947,9 @@ function formatDate(isoDate: string): string {
  * Génère un PDF professionnel pour un club avec toutes les sections
  */
 async function generateClubPdf(data: any, options: PdfReportOptions): Promise<Buffer> {
-  return new Promise(async (resolve, reject) => {
-    try {
+  return new Promise((resolve, reject) => {
+    (async () => {
+      try {
       // Configuration du document PDF
       const doc = new PDFDocument({
         size: options.format === 'letter' ? 'LETTER' : 'A4',
@@ -1478,6 +1480,7 @@ async function generateClubPdf(data: any, options: PdfReportOptions): Promise<Bu
       logger.error('Error generating club PDF:', error);
       reject(error);
     }
+    })().catch(reject);
   });
 }
 

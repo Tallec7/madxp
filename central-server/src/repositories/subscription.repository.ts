@@ -1,5 +1,5 @@
 import { query } from '../config/database';
-import logger from '../config/logger';
+
 import {
   SiteSubscriptionInfo,
   SiteWithSubscription,
@@ -10,7 +10,7 @@ import {
   SuspensionReason,
   SuspensionReasonInfo,
 } from '../types';
-import { BaseRepository } from './base.repository';
+
 
 // --------------------------------------------------------------------------
 // Types specifiques

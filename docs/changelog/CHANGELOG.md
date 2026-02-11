@@ -9,6 +9,10 @@
 ### Bug Fixes
 
 - **raspberry:** fix GPU crash detection in kiosk-watchdog — `grep -c` could return multiline output (`0\n0`) causing bash `(( ))` syntax error, making GPU driver error monitoring non-functional on Pi 5
+- **ci:** fix all 3 failing CI jobs on `main` branch:
+  - **raspberry build:** exclude `src/app/services/testing/**` from `tsconfig.app.json` — jasmine types from `test-helpers.ts` leaked into production compilation
+  - **central-dashboard lint:** install root dependencies and run `npx ng lint central-dashboard` from monorepo root where the lint target exists in `angular.json`
+  - **central-server lint:** fix 28 ESLint errors across 24 files — remove unused imports/variables, prefix unused params with `_`, change `let` → `const`, refactor `no-async-promise-executor`, replace `require()` with ESM import, migrate `admin.controller.ts` from forbidden `query()` to repository pattern
 
 ## [3.9.1](https://github.com/Tallec7/neopro/compare/v3.9.0...v3.9.1) (2026-02-10)
 

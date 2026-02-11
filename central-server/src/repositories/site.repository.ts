@@ -1,6 +1,6 @@
 import { QueryResultRow } from 'pg';
 import { query } from '../config/database';
-import logger from '../config/logger';
+
 import { Site, UserRole } from '../types';
 import { BaseRepository } from './base.repository';
 

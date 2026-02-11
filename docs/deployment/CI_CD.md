@@ -13,8 +13,8 @@ Commit → Pre-commit Hooks → PR → CI Workflow → Merge main → Semantic R
 - **Trigger** : Push sur `main`/`develop` ou PR vers ces branches
 - **Jobs** :
   - Central Server : Lint, Type Check, Tests, Build
-  - Central Dashboard : Build production
-  - Webapp Raspberry : Build validation
+  - Central Dashboard : Lint, Tests, Build production
+  - Webapp Raspberry : Lint, Build validation
 - **Node** : v20
 
 ### 2. Release (`release.yml`)

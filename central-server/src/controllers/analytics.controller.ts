@@ -23,15 +23,6 @@ const formatDuration = (seconds: number): string => {
   return `${minutes}min`;
 };
 
-const calculatePercentChange = (current: number, previous: number): string => {
-  if (previous === 0) {
-    return current > 0 ? '+100%' : '0%';
-  }
-  const change = ((current - previous) / previous) * 100;
-  const sign = change >= 0 ? '+' : '';
-  return `${sign}${Math.round(change)}%`;
-};
-
 // ============================================================================
 // MVP - HEALTH ANALYTICS (données existantes)
 // ============================================================================
@@ -51,7 +42,7 @@ export const getClubHealth = async (req: AuthRequest, res: Response) => {
     }
 
     // Récupérer les données en parallèle via le repository
-    const [currentMetrics, uptimeResult, alertsResult, avgMetrics, heartbeats24h, alerts24h] = await Promise.all([
+    const [currentMetrics, , , , heartbeats24h, alerts24h] = await Promise.all([
       analyticsRepository.getLatestMetrics(siteId),
       analyticsRepository.getHeartbeatStats30d(siteId),
       analyticsRepository.getAlertStats(siteId),
@@ -59,11 +50,6 @@ export const getClubHealth = async (req: AuthRequest, res: Response) => {
       analyticsRepository.getHeartbeatCount24h(siteId),
       analyticsRepository.getAlertCount24h(siteId),
     ]);
-
-    // Calculer le pourcentage d'uptime (heartbeat toutes les 30s = 2880/jour)
-    const expectedHeartbeats = 30 * 2880; // 30 jours
-    const actualHeartbeats = parseInt(uptimeResult.heartbeat_count || '0');
-    const _uptimePercent = Math.min(100, (actualHeartbeats / expectedHeartbeats) * 100);
 
     // Déterminer le statut de santé
     let healthStatus = 'healthy';

@@ -1,5 +1,4 @@
 import { query } from '../config/database';
-import logger from '../config/logger';
 import { ContentDeployment, OrchestratedDeployment, OrchestratedDeploymentStatus } from '../types';
 import { BaseRepository } from './base.repository';
 

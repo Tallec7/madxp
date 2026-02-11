@@ -15,6 +15,7 @@
 
 import { Request, Response } from 'express';
 import { createHash } from 'crypto';
+import jwt from 'jsonwebtoken';
 import { siteRepository } from '../repositories';
 import socketService from '../services/socket.service';
 import logger from '../config/logger';
@@ -65,8 +66,7 @@ export async function getRemoteState(req: Request, res: Response) {
       const token = req.headers['x-remote-token'] as string;
       if (token) {
         try {
-          const jwt = require('jsonwebtoken');
-          const decoded = jwt.verify(token, process.env.JWT_SECRET) as { siteId: string; type: string };
+          const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { siteId: string; type: string };
           pinVerified = decoded.type === 'remote-pin' && decoded.siteId === siteId;
         } catch {
           // Token invalide ou expiré — pinVerified reste false

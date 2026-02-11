@@ -1,13 +1,11 @@
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { randomBytes, createHash } from 'crypto';
-import bcrypt from 'bcryptjs';
 import { AuthRequest, UserRole } from '../types';
 import logger from '../config/logger';
 import { auditService } from '../services/audit.service';
-import { formatPaginatedResponse, PaginationParams } from '../middleware/pagination';
+import { formatPaginatedResponse } from '../middleware/pagination';
 import { commandQueueService } from '../services/command-queue.service';
-import { isAdmin } from '../middleware/auth';
 import { getVideoUrl } from '../services/storage.service';
 import { validateShellCommand, getAllowedCommandsForRole } from '../middleware/remote-shell-security';
 import { memoryCache } from '../services/memory-cache.service';
@@ -18,7 +16,6 @@ import {
   timelineRepository,
   type ExtendedSiteFilters,
   type SubscriptionFilter,
-  type RemoteCommand,
   type UpdateSiteInput,
 } from '../repositories';
 
@@ -31,8 +28,6 @@ class HttpError extends Error {
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Video URL generation is provided by storage.service.ts
-
-const BCRYPT_ROUNDS = 10;
 
 // Seuils de connexion (en secondes)
 // Un site est considéré "online" si heartbeat reçu dans ce délai
@@ -400,7 +395,6 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
 
       // Vérifier la santé de la connexion (détecte les connexions zombie)
       const connectionHealth = isConnectedNow ? socketService.getConnectionHealth(site.id) : null;
-      const isHealthy = connectionHealth?.isHealthy ?? false;
 
       // Vérifier si c'est une vraie connexion zombie (socket morte mais flag actif)
       // Une connexion avec pong légèrement stale n'est PAS une zombie

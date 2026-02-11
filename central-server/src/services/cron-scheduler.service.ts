@@ -276,7 +276,7 @@ class CronSchedulerService {
   /**
    * Rassemble les données pour un rapport
    */
-  private async gatherReportData(sites: string[]): Promise<{
+  private async gatherReportData(_sites: string[]): Promise<{
     totalSites: number;
     onlineSites: number;
     alertsCount: number;
@@ -534,7 +534,7 @@ class CronSchedulerService {
   /**
    * Exécute une tâche d'agrégation
    */
-  private async executeAggregationTask(schedule: RecurringSchedule): Promise<ExecutionResult> {
+  private async executeAggregationTask(_schedule: RecurringSchedule): Promise<ExecutionResult> {
     // Appeler la fonction d'agrégation des stats quotidiennes
     try {
       await query(`SELECT calculate_all_daily_stats(CURRENT_DATE - 1)`, []);
@@ -553,7 +553,7 @@ class CronSchedulerService {
   /**
    * Exécute une tâche de backup (placeholder)
    */
-  private async executeBackupTask(schedule: RecurringSchedule): Promise<ExecutionResult> {
+  private async executeBackupTask(_schedule: RecurringSchedule): Promise<ExecutionResult> {
     // TODO: Implémenter la logique de backup
     return {
       success: true,

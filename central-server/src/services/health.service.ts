@@ -5,7 +5,7 @@
 
 import pool from '../config/database';
 import socketService from './socket.service';
-import logger from '../config/logger';
+
 
 export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 

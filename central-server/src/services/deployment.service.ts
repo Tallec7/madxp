@@ -375,7 +375,7 @@ class DeploymentService {
       if (deploymentResult.rows.length === 0) return;
 
       const deployment = deploymentResult.rows[0] as { target_type: string; target_id: string };
-      const targets = await this.getTargetSites(deployment.target_type, deployment.target_id);
+      await this.getTargetSites(deployment.target_type, deployment.target_id);
 
       // Pour simplifier, on met à jour le progress basé sur le dernier site qui répond
       // Dans une implémentation plus complète, on suivrait le progress de chaque site

@@ -76,8 +76,13 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Install root dependencies (for angular-eslint)
+        run: npm install
+        working-directory: .
+
       - name: Lint
-        run: npm run lint
+        run: npx ng lint central-dashboard
+        working-directory: .
 
       - name: Run tests
         run: npx ng test --no-watch --browsers=ChromeHeadless --code-coverage

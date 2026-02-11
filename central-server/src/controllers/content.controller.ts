@@ -78,7 +78,7 @@ async function generateUniqueFilename(originalName: string): Promise<string> {
   let filename = sanitized;
   let counter = 0;
 
-  while (true) {
+  for (;;) {
     const exists = await videoRepository.filenameExists(filename);
 
     if (!exists) {

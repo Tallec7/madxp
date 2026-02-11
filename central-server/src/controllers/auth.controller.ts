@@ -1,6 +1,6 @@
 import { Request, Response, CookieOptions } from 'express';
 import bcrypt from 'bcryptjs';
-import { userRepository, UserRow } from '../repositories';
+import { userRepository } from '../repositories';
 import { generateToken } from '../middleware/auth';
 import { AuthRequest, UserRole } from '../types';
 import logger from '../config/logger';
