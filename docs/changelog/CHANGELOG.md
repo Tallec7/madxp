@@ -1,3 +1,9 @@
+## [3.16.1](https://github.com/Tallec7/neopro/compare/v3.16.0...v3.16.1) (2026-02-11)
+
+### Bug Fixes
+
+- **central-server:** fix 9 eslint errors breaking CI lint step ([1690a0c](https://github.com/Tallec7/neopro/commit/1690a0c763b50ac853eb4b18b66745cbb69dedbc))
+
 # [3.16.0](https://github.com/Tallec7/neopro/compare/v3.15.0...v3.16.0) (2026-02-11)
 
 ### Features
