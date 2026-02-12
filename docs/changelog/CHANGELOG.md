@@ -1,3 +1,9 @@
+## [3.17.2] (2026-02-12)
+
+### Features
+
+- **raspberry:** add `apt-get`/`apt install` to sudoers — super_admins can now install system packages (e.g. `firmware-realtek`) from the dashboard remote shell without SSH access. Deployed automatically via next OTA update.
+
 ## [3.17.1] (2026-02-12)
 
 ### Bug Fixes

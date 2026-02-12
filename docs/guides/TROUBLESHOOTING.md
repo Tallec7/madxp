@@ -1716,7 +1716,7 @@ sudo reboot
 ip link show wlan1
 ```
 
-**Note :** Depuis la version 3.17.1, `install.sh` installe automatiquement ces firmwares. Ce problème ne concerne que les boîtiers installés avec une version antérieure.
+**Note :** Depuis la version 3.17.1, `install.sh` installe automatiquement ces firmwares. Ce problème ne concerne que les boîtiers installés avec une version antérieure. Depuis la version 3.17.2, cette commande peut être exécutée directement depuis le dashboard (onglet Debug, super_admin uniquement) sans SSH.
 
 ### 4. WiFi USB roaming entre points d'accès (connexion instable)
 

@@ -96,23 +96,37 @@ const DEFAULT_ALLOWED_COMMANDS = [
 | admin       | Toutes sauf rm, shutdown                                       |
 | operator    | Commandes en lecture seule (ls, cat, df, journalctl, ps, ping) |
 
+### Validation côté Central Server
+
+Le middleware `remote-shell-security.ts` applique une validation par rôle **avant** d'envoyer la commande au Pi :
+
+- **Operator** : whitelist stricte (lecture seule : `ls`, `cat`, `df`, `journalctl`, `ps`, `ping`...)
+- **Admin** : whitelist étendue (+ `systemctl restart`, `cp`, `mv`, `curl`...)
+- **Super Admin** : blacklist uniquement — toutes les commandes sauf patterns destructeurs
+
+**Blacklist (tous rôles)** : `rm -rf`, `mkfs`, `dd if=`, `shutdown`, `eval`, `curl|sh`, `sudo -S`, `sudo su`, écriture dans `/etc`, `/boot`, `/usr`, manipulation SSH keys, fork bombs...
+
+### Permissions sudo (sudoers)
+
+Le fichier `raspberry/config/sudoers.d/neopro` définit les commandes sudo autorisées pour l'utilisateur `pi` :
+
+| Catégorie        | Commandes autorisées                                                                    |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| Services systemd | `systemctl start/stop/restart/enable neopro-*`, `hostapd`, `dnsmasq`, `nginx`           |
+| Gestion paquets  | `apt-get update`, `apt-get install`, `apt update`, `apt install`, `dpkg --configure -a` |
+| Déploiement OTA  | `cp` services → `/etc/systemd/system/`, `cp` sudoers                                    |
+| Réseau WiFi      | `wpa_cli`, `wpa_supplicant`, `iwlist scan`, `dhclient`, `rfkill`, `hostapd_cli`         |
+| Système          | `reboot`, scripts `/home/pi/neopro/scripts/*`                                           |
+
+> **Note** : Ce fichier est déployé automatiquement via OTA (`update_software`).
+
 ### Protection côté Pi
 
-Le handler `remote-shell.js` applique des restrictions :
+Le handler `remote-shell.js` applique des restrictions d'exécution :
 
 ```javascript
-// Commandes dangereuses bloquées
-const DANGEROUS_PATTERNS = [
-  /rm\s+-rf?\s+\//, // rm -rf /
-  /mkfs/,
-  /dd\s+if=/,
-  />\s*\/dev\//,
-  /shutdown/,
-  /reboot/, // Utiliser la commande dédiée
-];
-
-// Timeout de 60 secondes
-const COMMAND_TIMEOUT = 60000; // 60 secondes
+// Timeout de 60 secondes (max 5 minutes)
+const COMMAND_TIMEOUT = 60000;
 
 // Limite de sortie (évite saturation mémoire)
 const MAX_OUTPUT_SIZE = 1024 * 1024; // 1 MB
@@ -169,6 +183,11 @@ du -sh /home/pi/neopro/videos/*
 ip addr show
 ping -c 3 google.com
 curl -s http://localhost:3000/health
+
+# Installation de paquets (super_admin uniquement)
+sudo apt-get update
+sudo apt-get install -y firmware-realtek firmware-ralink
+dpkg -l | grep firmware
 ```
 
 ### Exemple de résultat
@@ -258,6 +277,7 @@ Le terminal distant nécessite que le site soit connecté. Vérifier :
 
 ## Changelog
 
+- **12 février 2026** : Ajout `apt-get`/`apt install` au sudoers — installation de paquets depuis le dashboard (super_admin)
 - **10 février 2026** : Ajout section Limites, exemple de résultat, correction timeout 60s
 - **v2.12.0** (2026-01-08) : Ajout de la fonctionnalité remote shell
   - Nouveau handler `remote-shell.js`

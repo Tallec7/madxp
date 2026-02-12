@@ -58,6 +58,15 @@ pi ALL=(ALL) NOPASSWD: /usr/sbin/usermod -a -G pi www-data
 pi ALL=(ALL) NOPASSWD: /usr/bin/journalctl -u neopro-* *
 pi ALL=(ALL) NOPASSWD: /usr/bin/journalctl -u wpa_supplicant* *
 
+# --- Gestion des paquets (apt) ---
+pi ALL=(ALL) NOPASSWD: /usr/bin/apt-get update
+pi ALL=(ALL) NOPASSWD: /usr/bin/apt-get install *
+pi ALL=(ALL) NOPASSWD: /usr/bin/apt-get -y install *
+pi ALL=(ALL) NOPASSWD: /usr/bin/apt update
+pi ALL=(ALL) NOPASSWD: /usr/bin/apt install *
+pi ALL=(ALL) NOPASSWD: /usr/bin/apt -y install *
+pi ALL=(ALL) NOPASSWD: /usr/bin/dpkg --configure -a
+
 # --- Système ---
 pi ALL=(ALL) NOPASSWD: /usr/sbin/reboot
 
