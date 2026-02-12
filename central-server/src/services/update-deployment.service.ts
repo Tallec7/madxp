@@ -270,6 +270,61 @@ class UpdateDeploymentService {
   }
 
   /**
+   * Migration automatique pour les Pi avec l'ancien code qui utilise sudo cp/chown
+   * pour VERSION/release.json (bloqué par NoNewPrivileges=true depuis la 3.9.4).
+   *
+   * Envoie un remote_shell qui :
+   * 1. Vérifie si le vieux code contient encore "sudo cp" (sinon skip)
+   * 2. Supprime les lignes sudo cp/chown/tee du vieux update-software.js
+   * 3. Kill le process node (agent.js) pour que systemd le redémarre avec le code patché
+   *
+   * L'update_software est ensuite envoyé ou mis en queue et sera exécuté
+   * quand le sync-agent se reconnecte avec le code patché.
+   *
+   * Idempotent : si le fichier ne contient plus de "sudo cp", rien ne se passe.
+   * TODO: Retirer cette migration quand toute la flotte est en >= 3.16.1
+   */
+  private async applyPreUpdateMigration(siteId: string): Promise<void> {
+    if (!socketService.isConnected(siteId)) {
+      return; // Pas connecté, la migration se fera au prochain déploiement
+    }
+
+    // Commande chaînée : vérifier si le patch est nécessaire, l'appliquer, puis kill
+    // grep -q retourne 0 si "sudo cp" est trouvé (= vieux code), 1 sinon
+    // Si vieux code détecté : sed + kill du process parent (le sync-agent node)
+    // Si déjà patché : ne rien faire (exit 0)
+    const migrateCommand =
+      'grep -q "sudo cp" /home/pi/neopro/sync-agent/src/commands/update-software.js ' +
+      '&& sed -i \'/sudo cp/d; /sudo chown/d; /sudo tee/d\' ' +
+      '/home/pi/neopro/sync-agent/src/commands/update-software.js ' +
+      '&& kill $(pgrep -f agent.js) ' +
+      '|| true';
+
+    try {
+      const { v4: uuidv4 } = await import('uuid');
+      const commandId = uuidv4();
+
+      // Envoi direct via socket (bypass le middleware de sécurité UI)
+      socketService.sendCommand(siteId, {
+        id: commandId,
+        type: 'remote_shell',
+        data: { command: migrateCommand, timeout: 15000 },
+      });
+
+      logger.info('Pre-update migration sent', { siteId });
+
+      // Attendre que le sync-agent redémarre et se reconnecte
+      // systemd Restart=always + RestartSec=30 + connexion socket
+      await new Promise(resolve => setTimeout(resolve, 45000));
+
+      logger.info('Pre-update migration: wait complete', { siteId });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn('Pre-update migration failed (non-blocking)', { siteId, error: errorMessage });
+    }
+  }
+
+  /**
    * Envoie la commande de mise à jour à un site spécifique
    * Utilise commandQueueService.sendOrQueue() pour gérer les sites offline
    * (même comportement que update_config)
@@ -280,6 +335,11 @@ class UpdateDeploymentService {
     update: SoftwareUpdateRow
   ): Promise<boolean> {
     logger.info('deployToSite called', { deploymentId, siteId, updateVersion: update.version });
+
+    // Migration automatique : patcher l'ancien code qui utilise sudo cp/chown
+    // pour les Pi avec NoNewPrivileges=true (peut être retiré quand toute la
+    // flotte est en >= 3.16.1)
+    await this.applyPreUpdateMigration(siteId);
 
     const commandData = {
       deploymentId,
