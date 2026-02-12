@@ -11,6 +11,7 @@
 import { Socket } from 'socket.io';
 import { query } from '../config/database';
 import logger from '../config/logger';
+import metricsService from '../services/metrics.service';
 import { SocketContext } from './socket-context';
 
 // Memory safety limit for pong tracking entries
@@ -43,6 +44,7 @@ export function checkConnectionHealth(ctx: SocketContext): void {
       });
 
       // Forcer la déconnexion pour nettoyer l'état
+      metricsService.recordSocketDisconnect('zombie_timeout', 'agent');
       socket.disconnect(true);
       ctx.connectedSites.delete(siteId);
       ctx.lastPongReceived.delete(siteId);
@@ -118,6 +120,7 @@ export function cleanupZombieConnection(
   socket: Socket
 ): void {
   logger.info('Cleaning up zombie connection', { siteId, socketId: socket.id });
+  metricsService.recordSocketDisconnect('zombie_cleanup', 'agent');
 
   try {
     socket.disconnect(true);

@@ -143,6 +143,13 @@ const websocketMessagesTotal = new Counter({
   registers: [register],
 });
 
+const websocketDisconnectsTotal = new Counter({
+  name: 'neopro_websocket_disconnects_total',
+  help: 'Total WebSocket disconnections by reason and client type',
+  labelNames: ['reason', 'client_type'],
+  registers: [register],
+});
+
 // ============= Métriques Authentication =============
 
 const authAttemptsTotal = new Counter({
@@ -461,6 +468,10 @@ class MetricsService {
 
   recordWebsocketMessage(direction: 'inbound' | 'outbound', type: string): void {
     websocketMessagesTotal.inc({ direction, type });
+  }
+
+  recordSocketDisconnect(reason: string, clientType: 'agent' | 'dashboard' | 'unknown'): void {
+    websocketDisconnectsTotal.inc({ reason, client_type: clientType });
   }
 
   recordAuthAttempt(status: 'success' | 'failure', mfaUsed: boolean): void {

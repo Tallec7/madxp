@@ -281,8 +281,9 @@ class SocketService {
           role: decoded.role,
         });
 
-        socket.on('disconnect', () => {
-          logger.info('Dashboard user disconnected', { userId: decoded.id, email: decoded.email });
+        socket.on('disconnect', (reason: string) => {
+          logger.info('Dashboard user disconnected', { userId: decoded.id, email: decoded.email, reason });
+          metricsService.recordSocketDisconnect(reason, 'dashboard');
         });
 
         return;
@@ -314,9 +315,9 @@ class SocketService {
       }
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason: string) => {
       clearTimeout(authTimeout);
-      this.handleDisconnection(socket);
+      this.handleDisconnection(socket, reason);
     });
   }
 
@@ -463,8 +464,10 @@ class SocketService {
     }
   }
 
-  private handleDisconnection(socket: Socket) {
+  private handleDisconnection(socket: Socket, reason: string = 'unknown') {
     const siteId = (socket as any).siteId as string | undefined;
+    const clientType = siteId ? 'agent' : ((socket as any).clientType === 'dashboard' ? 'dashboard' : 'unknown');
+    metricsService.recordSocketDisconnect(reason, clientType as 'agent' | 'dashboard' | 'unknown');
 
     // Remove all registered handlers to prevent memory leaks
     const handlers = (socket as any)._neoHandlers as Record<string, (...args: unknown[]) => void> | undefined;
@@ -520,10 +523,10 @@ class SocketService {
         logger.error('Error sending offline alert:', error);
       });
 
-      logger.info('Agent disconnected', { siteId });
+      logger.info('Agent disconnected', { siteId, reason });
     }
 
-    logger.info('Socket disconnected', { socketId: socket.id });
+    logger.info('Socket disconnected', { socketId: socket.id, reason });
   }
 
   // ==========================================================================

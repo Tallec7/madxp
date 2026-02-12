@@ -285,7 +285,7 @@ Ouvrir Grafana : `http://localhost:3000` (admin/admin) — sélectionner l'envir
 Dashboards provisionnés automatiquement :
 
 - **NeoPro Overview** : HTTP rate, latence, WebSocket, déploiements, CPU/RAM, event loop lag
-- **NeoPro Services** : DB, auth, commandes Pi, alertes réseau Pi, stabilité réseau, heartbeats
+- **NeoPro Services** : DB, auth, commandes Pi, alertes réseau Pi, stabilité réseau, heartbeats, déconnexions socket (par raison et type de client)
 
 Services : PostgreSQL (5432), Redis (6379), API (3001), Prometheus (9090), Grafana (3000)
 
