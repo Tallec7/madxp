@@ -297,3 +297,45 @@ describe('Root endpoint', () => {
     expect(res.body.status).toBe('online');
   });
 });
+
+// ----------------------------------------------------------
+// 8. Raspberry Pi config conventions
+// ----------------------------------------------------------
+import * as fs from 'fs';
+import * as path from 'path';
+
+describe('Raspberry Pi config conventions', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const systemdDir = path.join(repoRoot, 'raspberry', 'config', 'systemd');
+
+  const getServiceFiles = (): string[] =>
+    fs.readdirSync(systemdDir).filter(f => f.endsWith('.service'));
+
+  it('systemd services must NOT have NoNewPrivileges=true (breaks sudo)', () => {
+    const serviceFiles = getServiceFiles();
+    expect(serviceFiles.length).toBeGreaterThan(0);
+
+    for (const file of serviceFiles) {
+      const content = fs.readFileSync(path.join(systemdDir, file), 'utf8');
+      expect({ file, hasNoNewPrivileges: /^\s*NoNewPrivileges\s*=\s*true/m.test(content) })
+        .toEqual({ file, hasNoNewPrivileges: false });
+    }
+  });
+
+  it('systemd services must NOT have ProtectSystem=strict (blocks /etc writes)', () => {
+    const serviceFiles = getServiceFiles();
+
+    for (const file of serviceFiles) {
+      const content = fs.readFileSync(path.join(systemdDir, file), 'utf8');
+      expect({ file, hasProtectSystem: /^\s*ProtectSystem\s*=\s*strict/m.test(content) })
+        .toEqual({ file, hasProtectSystem: false });
+    }
+  });
+
+  it('sudoers file must include apt rules', () => {
+    const sudoersPath = path.join(repoRoot, 'raspberry', 'config', 'sudoers.d', 'neopro');
+    const content = fs.readFileSync(sudoersPath, 'utf8');
+    expect(content).toMatch(/apt-get install/);
+    expect(content).toMatch(/apt install/);
+  });
+});
