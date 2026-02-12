@@ -115,9 +115,15 @@ const requireAuth = async (req, res, next) => {
   }
 
   // Allow localhost-only system routes (called by sync-agent on the same Pi)
-  const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
-  if (isLocalhost && req.path === '/api/system/apply-services' && req.method === 'POST') {
-    return next();
+  if (req.path === '/api/system/apply-services' && req.method === 'POST') {
+    const clientIp = req.ip || req.socket?.remoteAddress || '';
+    const socketAddr = req.socket?.remoteAddress || 'n/a';
+    const isLocal = clientIp === '127.0.0.1' || clientIp === '::1'
+      || clientIp.includes('127.0.0.1') || clientIp === '::ffff:7f00:1';
+    console.log(`[auth] apply-services request: req.ip=${req.ip} socket=${socketAddr} isLocal=${isLocal}`);
+    if (isLocal) {
+      return next();
+    }
   }
 
   if (req.path.match(/\.(css|js|png|jpg|ico|svg|woff|woff2)$/)) {

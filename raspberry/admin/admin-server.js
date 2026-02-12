@@ -216,6 +216,23 @@ app.use('/thumbnails', staticAssetsCors, normalizeUnicodePath(THUMBNAILS_DIR), e
 app.use(authRouter);
 
 // =============================================================================
+// LOCALHOST-ONLY ROUTES (before auth — called by sync-agent on the same Pi)
+// =============================================================================
+
+app.post('/api/system/apply-services', (req, res, next) => {
+  const clientIp = req.ip || req.socket?.remoteAddress || '';
+  const isLocal = clientIp === '127.0.0.1' || clientIp === '::1'
+    || clientIp.includes('127.0.0.1') || clientIp === '::ffff:7f00:1';
+  if (!isLocal) {
+    return next(); // Fall through to requireAuth → normal auth flow
+  }
+  console.log(`[auth] Localhost bypass apply-services (ip=${clientIp})`);
+  systemService.applySystemdServices()
+    .then(result => res.json({ success: true, ...result }))
+    .catch(error => res.status(500).json({ error: error.message }));
+});
+
+// =============================================================================
 // APPLY AUTHENTICATION TO ALL ROUTES BELOW
 // =============================================================================
 
