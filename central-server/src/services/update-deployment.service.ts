@@ -274,25 +274,24 @@ class UpdateDeploymentService {
    * pour VERSION/release.json (bloqué par NoNewPrivileges=true depuis la 3.9.4).
    *
    * Envoie un remote_shell qui :
-   * 1. Vérifie si le vieux code contient encore "sudo cp" (sinon skip)
+   * 1. Vérifie si le vieux code contient "sudo cp" (sinon skip = 0 impact)
    * 2. Remplace "sudo cp/chown/tee" par "cp/chown/tee" (fonctionnel sans root)
-   * 3. Kill le process node (agent.js) pour que systemd le redémarre avec le code patché
+   * 3. Kill le process pour que systemd le redémarre avec le code patché
    *
-   * L'update_software est ensuite envoyé ou mis en queue et sera exécuté
+   * L'update_software est mis en queue et sera envoyé automatiquement
    * quand le sync-agent se reconnecte avec le code patché.
    *
-   * Idempotent : si le fichier ne contient plus de "sudo cp", rien ne se passe.
+   * Retourne true si le Pi a été patché (= besoin de reconnexion).
    * TODO: Retirer cette migration quand toute la flotte est en >= 3.16.1
    */
-  private async applyPreUpdateMigration(siteId: string): Promise<void> {
+  private applyPreUpdateMigration(siteId: string): boolean {
     if (!socketService.isConnected(siteId)) {
-      return; // Pas connecté, la migration se fera au prochain déploiement
+      return false;
     }
 
-    // sed qui remplace "sudo " par "" dans les lignes contenant cp, chown, tee, usermod
-    // Cela garde les commandes fonctionnelles (cp, chown marchent sans sudo si
-    // les fichiers appartiennent à pi) tout en évitant le blocage NoNewPrivileges.
-    // Les lignes systemctl ne sont PAS touchées (elles ont des try/catch).
+    // sed remplace "sudo cp/chown/tee" → "cp/chown/tee" (fonctionnent sans root
+    // car le process tourne en pi). grep -q skip si déjà patché (0 impact).
+    // kill force un restart via systemd Restart=always.
     const targetFile = '/home/pi/neopro/sync-agent/src/commands/update-software.js';
     const migrateCommand =
       `grep -q "sudo cp" ${targetFile} ` +
@@ -302,10 +301,9 @@ class UpdateDeploymentService {
       '|| true';
 
     try {
-      const { v4: uuidv4 } = await import('uuid');
+      const { v4: uuidv4 } = require('uuid');
       const commandId = uuidv4();
 
-      // Envoi direct via socket (bypass le middleware de sécurité UI)
       socketService.sendCommand(siteId, {
         id: commandId,
         type: 'remote_shell',
@@ -313,15 +311,11 @@ class UpdateDeploymentService {
       });
 
       logger.info('Pre-update migration sent', { siteId });
-
-      // Attendre que le sync-agent redémarre et se reconnecte
-      // systemd Restart=always + RestartSec=30 + connexion socket
-      await new Promise(resolve => setTimeout(resolve, 45000));
-
-      logger.info('Pre-update migration: wait complete', { siteId });
+      return true; // Pi sera patché → il va se reconnecter
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.warn('Pre-update migration failed (non-blocking)', { siteId, error: errorMessage });
+      return false;
     }
   }
 
@@ -337,10 +331,9 @@ class UpdateDeploymentService {
   ): Promise<boolean> {
     logger.info('deployToSite called', { deploymentId, siteId, updateVersion: update.version });
 
-    // Migration automatique : patcher l'ancien code qui utilise sudo cp/chown
-    // pour les Pi avec NoNewPrivileges=true (peut être retiré quand toute la
-    // flotte est en >= 3.16.1)
-    await this.applyPreUpdateMigration(siteId);
+    // Migration legacy : patch les Pi avec l'ancien sudo cp (idempotent, 0 impact si déjà OK)
+    // Si le Pi est patché, il va restart et recevoir l'update via la queue
+    this.applyPreUpdateMigration(siteId);
 
     const commandData = {
       deploymentId,
