@@ -1,3 +1,9 @@
+## [3.17.2](https://github.com/Tallec7/neopro/compare/v3.17.1...v3.17.2) (2026-02-12)
+
+### Bug Fixes
+
+- **raspberry:** robust localhost bypass for apply-services route ([8499a18](https://github.com/Tallec7/neopro/commit/8499a1830e7560f5b9d1eb417c98624449ab49bf))
+
 ## [3.17.1](https://github.com/Tallec7/neopro/compare/v3.17.0...v3.17.1) (2026-02-12)
 
 ### Bug Fixes
