@@ -655,3 +655,4 @@ export interface UpdateSubscriptionRequest {
 // Re-export site config models
 export * from './site-config.model';
 export * from './admin';
+export * from './config-profile.model';

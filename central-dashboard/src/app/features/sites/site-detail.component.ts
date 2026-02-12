@@ -15,9 +15,10 @@ import { SiteContentTabComponent } from './components/site-content-tab/site-cont
 import { SiteSettingsTabComponent } from './components/site-settings-tab/site-settings-tab.component';
 import { SiteDebugTabComponent } from './components/site-debug-tab/site-debug-tab.component';
 import { SiteSubscriptionTabComponent } from './components/site-subscription-tab/site-subscription-tab.component';
+import { SiteProfilesTabComponent } from './components/site-profiles-tab/site-profiles-tab.component';
 import { SiteBenchmarkComponent } from './components/site-benchmark/site-benchmark.component';
 
-type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
+type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'subscription' | 'debug';
 
 @Component({
   selector: 'app-site-detail',
@@ -32,6 +33,7 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
     SiteSettingsTabComponent,
     SiteDebugTabComponent,
     SiteSubscriptionTabComponent,
+    SiteProfilesTabComponent,
     SiteBenchmarkComponent
   ],
   template: `
@@ -97,6 +99,14 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
         >
           <span class="tab-icon">⚙️</span>
           <span class="tab-label">Paramètres</span>
+        </button>
+        <button
+          class="tab-btn"
+          [class.active]="activeTab === 'profiles'"
+          (click)="activeTab = 'profiles'"
+        >
+          <span class="tab-icon">📑</span>
+          <span class="tab-label">Profils</span>
         </button>
         <button
           class="tab-btn"
@@ -407,6 +417,16 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
             [isConnected]="isConnected"
             (siteUpdated)="onSiteUpdated($event)"
           ></app-site-settings-tab>
+        </div>
+
+        <!-- TAB: Profils -->
+        <div *ngIf="activeTab === 'profiles'" class="tab-panel">
+          <app-site-profiles-tab
+            [siteId]="siteId"
+            [site]="site"
+            [isConnected]="isConnected"
+            (profileDeployed)="onConfigDeployed()"
+          ></app-site-profiles-tab>
         </div>
 
         <!-- TAB: Abonnement -->

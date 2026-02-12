@@ -48,7 +48,8 @@
     "generating": "Génération...",
     "downloadPdf": "Télécharger PDF",
     "deployToPi": "Déployer vers le Pi",
-    "editPriority": "Modifier la priorité"
+    "editPriority": "Modifier la priorité",
+    "saving": "Enregistrement..."
   },
   "auth": {
     "login": "Connexion",
@@ -410,5 +411,27 @@
     "notAvailable": "N/A",
     "notLoaded": "Non chargé",
     "wifiOfflineWarning": "Le boîtier doit être connecté pour récupérer l'état du WiFi client."
+  },
+  "profiles": {
+    "title": "Profils de configuration",
+    "create": "Nouveau profil",
+    "createTitle": "Creer un profil",
+    "editTitle": "Modifier le profil",
+    "syncAll": "Synchroniser vers le Pi",
+    "syncing": "Synchronisation...",
+    "empty": "Aucun profil configure.",
+    "default": "Par defaut",
+    "multiConfigActive": "profils — multi-config actif",
+    "nameLabel": "Nom interne",
+    "displayNameLabel": "Nom d'affichage",
+    "cityLabel": "Ville",
+    "sportLabel": "Sport",
+    "sortOrderLabel": "Ordre de tri",
+    "isDefault": "Profil par defaut",
+    "configSource": "Source de la configuration",
+    "configFromCurrent": "Importer la config actuelle du site",
+    "configFromProfile": "Copier depuis un autre profil",
+    "configEmpty": "Commencer avec une config vide",
+    "selectProfile": "Selectionner un profil a copier..."
   }
 }

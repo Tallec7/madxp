@@ -48,7 +48,8 @@
     "generating": "Generating...",
     "downloadPdf": "Download PDF",
     "deployToPi": "Deploy to Pi",
-    "editPriority": "Edit priority"
+    "editPriority": "Edit priority",
+    "saving": "Saving..."
   },
   "auth": {
     "login": "Login",
@@ -410,5 +411,27 @@
     "notAvailable": "N/A",
     "notLoaded": "Not loaded",
     "wifiOfflineWarning": "The box must be connected to retrieve WiFi client status."
+  },
+  "profiles": {
+    "title": "Config Profiles",
+    "create": "New Profile",
+    "createTitle": "Create Profile",
+    "editTitle": "Edit Profile",
+    "syncAll": "Sync All to Pi",
+    "syncing": "Syncing...",
+    "empty": "No profiles configured.",
+    "default": "Default",
+    "multiConfigActive": "profiles — multi-config active",
+    "nameLabel": "Internal name",
+    "displayNameLabel": "Display name",
+    "cityLabel": "City",
+    "sportLabel": "Sport",
+    "sortOrderLabel": "Sort order",
+    "isDefault": "Default profile",
+    "configSource": "Configuration source",
+    "configFromCurrent": "Import from current site config",
+    "configFromProfile": "Copy from another profile",
+    "configEmpty": "Start with empty config",
+    "selectProfile": "Select a profile to copy..."
   }
 }

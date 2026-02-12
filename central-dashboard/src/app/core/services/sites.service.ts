@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, BehaviorSubject, tap, map } from 'rxjs';
 import { ApiService } from './api.service';
 import { CacheService } from './cache.service';
-import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus, LocalVideo, LocalStorage, CloudVideo, FleetHealthData, MatchHistoryData } from '../models';
+import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus, LocalVideo, LocalStorage, CloudVideo, FleetHealthData, MatchHistoryData, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, ProfilesListResponse, DeployProfileResponse, SyncProfilesResponse } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -552,6 +552,38 @@ export class SitesService {
 
   getRemotePinStatus(siteId: string): Observable<{ pinEnabled: boolean }> {
     return this.api.get(`/sites/${siteId}/remote-pin`);
+  }
+
+  // ============================================================================
+  // Config Profiles (multi-config)
+  // ============================================================================
+
+  getProfiles(siteId: string): Observable<ProfilesListResponse> {
+    return this.api.get<ProfilesListResponse>(`/sites/${siteId}/profiles`);
+  }
+
+  getProfile(siteId: string, profileId: string): Observable<ConfigProfile> {
+    return this.api.get<ConfigProfile>(`/sites/${siteId}/profiles/${profileId}`);
+  }
+
+  createProfile(siteId: string, payload: CreateProfilePayload): Observable<ConfigProfile> {
+    return this.api.post<ConfigProfile>(`/sites/${siteId}/profiles`, payload);
+  }
+
+  updateProfile(siteId: string, profileId: string, payload: UpdateProfilePayload): Observable<ConfigProfile> {
+    return this.api.put<ConfigProfile>(`/sites/${siteId}/profiles/${profileId}`, payload);
+  }
+
+  deleteProfile(siteId: string, profileId: string): Observable<{ success: boolean; message: string }> {
+    return this.api.delete<{ success: boolean; message: string }>(`/sites/${siteId}/profiles/${profileId}`);
+  }
+
+  deployProfile(siteId: string, profileId: string): Observable<DeployProfileResponse> {
+    return this.api.post<DeployProfileResponse>(`/sites/${siteId}/profiles/${profileId}/deploy`, {});
+  }
+
+  syncProfiles(siteId: string): Observable<SyncProfilesResponse> {
+    return this.api.post<SyncProfilesResponse>(`/sites/${siteId}/profiles/sync`, {});
   }
 }
 
