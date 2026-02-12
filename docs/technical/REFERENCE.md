@@ -944,6 +944,9 @@ PUT    /sites/:id               - Modifier
 DELETE /sites/:id               - Supprimer (admin)
 POST   /sites/:id/api-key/regenerate - Régénérer la clé API
 POST   /sites/:id/command       - Envoyer commande au Pi
+GET    /sites/:id/remote-pin    - Statut PIN télécommande cloud
+POST   /sites/:id/remote-pin    - Définir PIN télécommande cloud
+DELETE /sites/:id/remote-pin    - Supprimer PIN télécommande cloud
 ```
 
 **Endpoints Contenu :**

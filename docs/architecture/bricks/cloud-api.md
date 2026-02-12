@@ -29,31 +29,31 @@ Serveur central cloud qui orchestre la flotte de Raspberry Pi, expose l'API REST
 
 ### API REST (27 modules de routes)
 
-| Domaine                | Routes                                                | Endpoints cl\u00e9s                                    | Auth                        |
-| ---------------------- | ----------------------------------------------------- | ------------------------------------------------------ | --------------------------- |
-| Auth                   | `auth.routes.ts`, `mfa.routes.ts`                     | POST /login, /register, /mfa/setup, /mfa/verify        | Public + JWT                |
-| Sites                  | `sites.routes.ts`                                     | CRUD /api/sites, GET /api/sites/:id/status             | JWT (super_admin, operator) |
-| Contenu                | `content.routes.ts`                                   | CRUD /api/videos, POST /api/deployments                | JWT (super_admin, operator) |
-| Utilisateurs           | `users.routes.ts`                                     | CRUD /api/users                                        | JWT (super_admin)           |
-| Analytics              | `analytics.routes.ts`                                 | GET /api/analytics/dashboard, /api/analytics/sites/:id | JWT                         |
-| Rapports               | `reports.routes.ts`                                   | GET /api/reports/pdf, /api/reports/excel               | JWT                         |
-| Alertes                | `alerts.routes.ts`                                    | CRUD /api/alerts, GET /api/alerts/thresholds           | JWT                         |
-| Groupes                | `groups.routes.ts`                                    | CRUD /api/groups                                       | JWT                         |
-| Mises \u00e0 jour      | `updates.routes.ts`                                   | CRUD /api/updates, /api/update-deployments             | JWT (super_admin)           |
-| Brouillons             | `drafts.routes.ts`                                    | CRUD /api/drafts                                       | JWT                         |
-| Assets                 | `assets.routes.ts`                                    | POST /api/assets (watermarks, logos)                   | JWT                         |
-| Abonnements            | `subscription.routes.ts`                              | CRUD /api/subscriptions                                | JWT (super_admin)           |
-| Benchmark              | `benchmark.routes.ts`                                 | GET /api/benchmarks                                    | JWT                         |
-| Audit                  | `audit.routes.ts`                                     | GET /api/audit-logs                                    | JWT (super_admin)           |
-| T\u00e9l\u00e9commande | `remote.routes.ts`                                    | POST /api/remote/command                               | JWT                         |
-| Publicit\u00e9         | `advertiser-*.routes.ts` (3)                          | CRUD advertisers, analytics, sites                     | JWT (advertiser, agency)    |
-| Agences                | `agency.routes.ts`                                    | CRUD /api/agencies                                     | JWT (agency, super_admin)   |
-| Facturation            | `billing.routes.ts`                                   | GET /api/billing                                       | JWT                         |
-| Logs                   | `logs.routes.ts`                                      | GET /api/logs                                          | JWT                         |
-| Objectifs              | `objectives.routes.ts`                                | CRUD /api/objectives                                   | JWT                         |
-| Playlists              | `playlist-schedules.routes.ts`, `schedules.routes.ts` | CRUD /api/playlist-schedules                           | JWT                         |
-| Canary                 | `canary.routes.ts`                                    | GET /api/canary                                        | Public (healthcheck)        |
-| Admin                  | `admin.routes.ts`                                     | Endpoints administration                               | JWT (super_admin)           |
+| Domaine                | Routes                                                | Endpoints cl\u00e9s                                                 | Auth                        |
+| ---------------------- | ----------------------------------------------------- | ------------------------------------------------------------------- | --------------------------- |
+| Auth                   | `auth.routes.ts`, `mfa.routes.ts`                     | POST /login, /register, /mfa/setup, /mfa/verify                     | Public + JWT                |
+| Sites                  | `sites.routes.ts`                                     | CRUD /api/sites, GET /api/sites/:id/status                          | JWT (super_admin, operator) |
+| Contenu                | `content.routes.ts`                                   | CRUD /api/videos, POST /api/deployments                             | JWT (super_admin, operator) |
+| Utilisateurs           | `users.routes.ts`                                     | CRUD /api/users                                                     | JWT (super_admin)           |
+| Analytics              | `analytics.routes.ts`                                 | GET /api/analytics/dashboard, /api/analytics/sites/:id              | JWT                         |
+| Rapports               | `reports.routes.ts`                                   | GET /api/reports/pdf, /api/reports/excel                            | JWT                         |
+| Alertes                | `alerts.routes.ts`                                    | CRUD /api/alerts, GET /api/alerts/thresholds                        | JWT                         |
+| Groupes                | `groups.routes.ts`                                    | CRUD /api/groups                                                    | JWT                         |
+| Mises \u00e0 jour      | `updates.routes.ts`                                   | CRUD /api/updates, /api/update-deployments                          | JWT (super_admin)           |
+| Brouillons             | `drafts.routes.ts`                                    | CRUD /api/drafts                                                    | JWT                         |
+| Assets                 | `assets.routes.ts`                                    | POST /api/assets (watermarks, logos)                                | JWT                         |
+| Abonnements            | `subscription.routes.ts`                              | CRUD /api/subscriptions                                             | JWT (super_admin)           |
+| Benchmark              | `benchmark.routes.ts`                                 | GET /api/benchmarks                                                 | JWT                         |
+| Audit                  | `audit.routes.ts`                                     | GET /api/audit-logs                                                 | JWT (super_admin)           |
+| T\u00e9l\u00e9commande | `remote.routes.ts`, `sites.routes.ts` (PIN)           | POST /api/remote/command, GET/POST/DELETE /api/sites/:id/remote-pin | JWT + Rate limit            |
+| Publicit\u00e9         | `advertiser-*.routes.ts` (3)                          | CRUD advertisers, analytics, sites                                  | JWT (advertiser, agency)    |
+| Agences                | `agency.routes.ts`                                    | CRUD /api/agencies                                                  | JWT (agency, super_admin)   |
+| Facturation            | `billing.routes.ts`                                   | GET /api/billing                                                    | JWT                         |
+| Logs                   | `logs.routes.ts`                                      | GET /api/logs                                                       | JWT                         |
+| Objectifs              | `objectives.routes.ts`                                | CRUD /api/objectives                                                | JWT                         |
+| Playlists              | `playlist-schedules.routes.ts`, `schedules.routes.ts` | CRUD /api/playlist-schedules                                        | JWT                         |
+| Canary                 | `canary.routes.ts`                                    | GET /api/canary                                                     | Public (healthcheck)        |
+| Admin                  | `admin.routes.ts`                                     | Endpoints administration                                            | JWT (super_admin)           |
 
 ### Socket.IO (temps r\u00e9el)
 

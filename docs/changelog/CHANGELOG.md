@@ -12,6 +12,10 @@
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **central-server:** add missing `GET /api/sites/:id/remote-pin` endpoint — the dashboard called this route to check PIN status on site settings load, but only POST (set) and DELETE (clear) were implemented, causing a 404
+
 ### Features
 
 - **monitoring:** add `neopro_websocket_disconnects_total` Prometheus metric — tracks socket disconnections by reason (`transport close`, `ping timeout`, `zombie_timeout`, `zombie_cleanup`, etc.) and client type (`agent`, `dashboard`). Instrumented in `socket.service.ts` (agent + dashboard disconnect handlers), `health-monitor.handler.ts` (zombie detection + cleanup). Two new Grafana panels added to NeoPro Services dashboard: "Socket Disconnects by Reason" and "Socket Disconnects by Client Type".

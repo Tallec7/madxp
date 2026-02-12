@@ -1811,6 +1811,28 @@ export const getFleetMetrics = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * GET /api/sites/:id/remote-pin
+ * Retourne si un PIN est actif pour la télécommande cloud.
+ */
+export async function getRemotePinStatus(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+
+    const site = await siteRepository.findById(id);
+    if (!site) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    const pinHash = await siteRepository.getRemotePinHash(id);
+
+    res.json({ pinEnabled: pinHash !== null });
+  } catch (error) {
+    logger.error('Error getting remote PIN status:', { error, siteId: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
  * POST /api/sites/:id/remote-pin
  * Définit un PIN pour la télécommande cloud.
  * Le PIN est hashé en SHA-256 et stocké en base.

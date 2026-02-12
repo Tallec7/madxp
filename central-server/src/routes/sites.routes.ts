@@ -251,6 +251,14 @@ router.delete(
 );
 
 // Remote PIN management
+router.get(
+  '/:id/remote-pin',
+  authenticate,
+  requireRole('admin', 'operator'),
+  adminRateLimit,
+  sitesController.getRemotePinStatus
+);
+
 router.post(
   '/:id/remote-pin',
   authenticate,
