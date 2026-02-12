@@ -1,3 +1,9 @@
+# [3.19.0](https://github.com/Tallec7/neopro/compare/v3.18.0...v3.19.0) (2026-02-12)
+
+### Features
+
+- **grafana:** add socket disconnect panels to cloud dashboard ([f9ae278](https://github.com/Tallec7/neopro/commit/f9ae278fd15c31ee16e721dde5227535014c0b62))
+
 # [3.18.0](https://github.com/Tallec7/neopro/compare/v3.17.2...v3.18.0) (2026-02-12)
 
 ### Features
