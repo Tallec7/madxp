@@ -12,6 +12,7 @@ import { AnalyticsService } from '../../services/analytics.service';
 import { SponsorAnalyticsService } from '../../services/sponsor-analytics.service';
 import { RecordingStateService } from '../../services/recording-state.service';
 import { DemoConfigService } from '../../services/demo-config.service';
+import { ProfileConfigService } from '../../services/profile-config.service';
 import { LocalBroadcastService, TimerUpdateEvent } from '../../services/local-broadcast.service';
 import {
   LocalOptionsService,
@@ -23,7 +24,7 @@ import {
   SPORT_PERIOD_DURATIONS
 } from '../../services/local-options.service';
 import { LicenseService, LicenseState } from '../../services/license.service';
-import { ClubSelectorComponent } from '../club-selector/club-selector.component';
+import { ClubSelectorComponent, ClubInfo } from '../club-selector/club-selector.component';
 import { LicenseBannerComponent } from '../license-banner/license-banner.component';
 import { LicenseBlockRemoteComponent } from '../license-block-remote/license-block-remote.component';
 
@@ -45,6 +46,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
   private readonly sponsorAnalytics = inject(SponsorAnalyticsService);
   private readonly recordingState = inject(RecordingStateService);
   private readonly demoConfigService = inject(DemoConfigService);
+  private readonly profileConfigService = inject(ProfileConfigService);
   private readonly localBroadcast = inject(LocalBroadcastService);
   private readonly localOptionsService = inject(LocalOptionsService);
   private readonly licenseService = inject(LicenseService);
@@ -65,7 +67,15 @@ export class RemoteComponent implements OnInit, OnDestroy {
   public currentView: ViewType = 'home';
   public breadcrumb: string[] = ['Télécommande'];
   public isDemoMode = false;
+  public isMultiProfile = false;
   public isReloading = false;
+
+  // Donnees pour le club-selector (mode demo ou multi-profil)
+  public selectorClubs: ClubInfo[] = [];
+  public selectorLoading = true;
+  public selectorError: string | null = null;
+  public selectorTitle = 'Mode Démo';
+  public selectorSubtitle = 'Sélectionnez un club pour démarrer la présentation';
 
   public selectedTimeCategory: TimeCategory | null = null;
   public selectedCategory: Category | null = null;
@@ -237,12 +247,36 @@ export class RemoteComponent implements OnInit, OnDestroy {
     this.initializeTimer();
 
     if (this.isDemoMode) {
-      // En mode démo, on commence par la sélection du club
+      // Mode demo : charger les clubs fictifs
+      this.selectorTitle = 'Mode Démo';
+      this.selectorSubtitle = 'Sélectionnez un club pour démarrer la présentation';
+      this.demoConfigService.getAvailableClubs().subscribe({
+        next: (clubs) => {
+          this.selectorClubs = clubs;
+          this.selectorLoading = false;
+        },
+        error: () => {
+          this.selectorError = 'Impossible de charger la liste des clubs';
+          this.selectorLoading = false;
+        }
+      });
       this.currentView = 'club-selector';
     } else {
-      // Mode normal : charger la config depuis le resolver
-      const data = this.route.snapshot.data['configuration'] as Configuration;
-      this.initializeWithConfiguration(data);
+      // Mode production : verifier si multi-profil
+      this.profileConfigService.getAvailableProfiles().subscribe(profiles => {
+        if (profiles.length > 1) {
+          this.isMultiProfile = true;
+          this.selectorTitle = 'Sélection du profil';
+          this.selectorSubtitle = 'Choisissez un profil de configuration';
+          this.selectorClubs = profiles;
+          this.selectorLoading = false;
+          this.currentView = 'club-selector';
+        } else {
+          // Mono-config : comportement normal
+          const data = this.route.snapshot.data['configuration'] as Configuration;
+          this.initializeWithConfiguration(data);
+        }
+      });
     }
 
     // Écouter le score envoyé par le serveur
@@ -270,11 +304,34 @@ export class RemoteComponent implements OnInit, OnDestroy {
     this.socketService.emit('request-state', {});
   }
 
-  public onClubSelected(config: Configuration): void {
-    this.initializeWithConfiguration(config);
-    this.currentView = 'home';
-    // Envoyer la nouvelle config à /tv et lancer la boucle partenaires
-    this.socketService.emit('command', { type: 'reload-config', data: config });
+  public onClubSelected(club: ClubInfo): void {
+    if (this.isDemoMode) {
+      // Mode demo : charger la config depuis /demo-configs/{id}.json
+      this.demoConfigService.loadClubConfiguration(club.id).subscribe({
+        next: (config) => {
+          this.initializeWithConfiguration(config);
+          this.currentView = 'home';
+          this.socketService.emit('command', { type: 'reload-config', data: config });
+        },
+        error: (err) => {
+          console.error('Erreur chargement config club demo:', err);
+        }
+      });
+    } else {
+      // Mode production multi-profil : charger depuis /profiles/{id}.json
+      this.profileConfigService.loadProfileConfiguration(club.id).subscribe({
+        next: (config) => {
+          this.initializeWithConfiguration(config);
+          this.currentView = 'home';
+          // Notifier le serveur local pour switcher le profil actif
+          this.socketService.emit('profile-switch', { profileId: club.id });
+          this.socketService.emit('command', { type: 'reload-config', data: config });
+        },
+        error: (err) => {
+          console.error('Erreur chargement config profil:', err);
+        }
+      });
+    }
   }
 
   private initializeWithConfiguration(config: Configuration): void {

@@ -1,8 +1,18 @@
-import { Component, inject, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DemoConfigService, ClubInfo } from '../../services/demo-config.service';
-import { Configuration } from '../../interfaces/configuration.interface';
 
+export interface ClubInfo {
+  id: string;
+  name: string;
+  city: string;
+  sport: string;
+}
+
+/**
+ * Composant de selection de club/profil.
+ * Agnostique : les donnees sont fournies par le parent via @Input.
+ * Utilise en mode demo (clubs fictifs) et en mode production (profils multi-config).
+ */
 @Component({
   selector: 'app-club-selector',
   standalone: true,
@@ -10,46 +20,29 @@ import { Configuration } from '../../interfaces/configuration.interface';
   templateUrl: './club-selector.component.html',
   styleUrl: './club-selector.component.scss'
 })
-export class ClubSelectorComponent implements OnInit {
-  private readonly demoConfigService = inject(DemoConfigService);
+export class ClubSelectorComponent {
+  @Input() clubs: ClubInfo[] = [];
+  @Input() isLoadingClubs = true;
+  @Input() error: string | null = null;
+  @Input() title = 'Mode Démo';
+  @Input() subtitle = 'Sélectionnez un club pour démarrer la présentation';
 
-  @Output() clubSelected = new EventEmitter<Configuration>();
+  @Output() clubSelected = new EventEmitter<ClubInfo>();
 
-  public clubs: ClubInfo[] = [];
-  public isLoadingClubs = true;
   public isLoading = false;
   public loadingClubId: string | null = null;
-  public error: string | null = null;
-
-  public ngOnInit(): void {
-    this.demoConfigService.getAvailableClubs().subscribe({
-      next: (clubs) => {
-        this.clubs = clubs;
-        this.isLoadingClubs = false;
-      },
-      error: (err) => {
-        console.error('Erreur chargement liste clubs:', err);
-        this.error = 'Impossible de charger la liste des clubs';
-        this.isLoadingClubs = false;
-      }
-    });
-  }
 
   public selectClub(club: ClubInfo): void {
     this.isLoading = true;
     this.loadingClubId = club.id;
+    this.clubSelected.emit(club);
+  }
 
-    this.demoConfigService.loadClubConfiguration(club.id).subscribe({
-      next: (config) => {
-        this.isLoading = false;
-        this.loadingClubId = null;
-        this.clubSelected.emit(config);
-      },
-      error: (err) => {
-        console.error('Erreur chargement config club:', err);
-        this.isLoading = false;
-        this.loadingClubId = null;
-      }
-    });
+  /**
+   * Appele par le parent apres le chargement pour reset le loading.
+   */
+  public resetLoading(): void {
+    this.isLoading = false;
+    this.loadingClubId = null;
   }
 }

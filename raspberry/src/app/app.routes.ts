@@ -9,6 +9,7 @@ import { HttpClient } from '@angular/common/http';
 import { map, tap } from 'rxjs';
 import { authGuard } from './guards/auth.guard';
 import { DemoConfigService } from './services/demo-config.service';
+import { ProfileConfigService } from './services/profile-config.service';
 
 /**
  * Enrichit les vidéos avec le categoryId de leur catégorie parente
@@ -33,6 +34,7 @@ function enrichVideosWithCategoryId(config: Configuration): Configuration {
 const getConfiguration: ResolveFn<Configuration> = () => {
   const http = inject(HttpClient);
   const demoConfigService = inject(DemoConfigService);
+  const profileConfigService = inject(ProfileConfigService);
 
   console.log('start loading configuration');
 
@@ -53,7 +55,16 @@ const getConfiguration: ResolveFn<Configuration> = () => {
     );
   }
 
-  // En mode normal, charger la config du Raspberry
+  // En mode production : si un profil est selectionne, le charger
+  const selectedProfile$ = profileConfigService.getSelectedConfiguration();
+  if (selectedProfile$) {
+    return selectedProfile$.pipe(
+      map(enrichVideosWithCategoryId),
+      tap(data => console.log('load configuration (profile)', data))
+    );
+  }
+
+  // Sinon, charger la config standard du Raspberry
   return http.get<Configuration>('/configuration.json').pipe(
     map(enrichVideosWithCategoryId),
     tap(data => console.log('load configuration', data))

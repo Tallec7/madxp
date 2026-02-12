@@ -947,6 +947,18 @@ DELETE /content/videos/:id      - Supprimer vidéo
 POST   /content/deploy          - Déployer vidéo vers site/groupe
 ```
 
+**Endpoints Config Profiles (multi-config) :**
+
+```
+GET    /sites/:siteId/profiles              - Liste des profils du site
+GET    /sites/:siteId/profiles/:profileId   - Détails d'un profil
+POST   /sites/:siteId/profiles              - Créer un profil
+PUT    /sites/:siteId/profiles/:profileId   - Modifier un profil
+DELETE /sites/:siteId/profiles/:profileId   - Supprimer (interdit si dernier)
+POST   /sites/:siteId/profiles/:profileId/deploy - Déployer un profil vers le Pi
+POST   /sites/:siteId/profiles/sync         - Sync tous les profils vers le Pi
+```
+
 **Endpoints Analytics :**
 
 ```
@@ -1021,6 +1033,7 @@ Tous les accès PostgreSQL passent par des repositories typés héritant de `Bas
 | `analytics`         | `video_plays`, `club_sessions`, `club_daily_stats` |
 | `sponsor`           | `advertiser_impressions`, `advertiser_daily_stats` |
 | `config-history`    | `config_drafts`, `config_history`                  |
+| `config-profile`    | `config_profiles`                                  |
 | `advertising`       | `advertiser_videos`, `advertiser_sites`            |
 | `advertiser-portal` | `advertisers` (portail annonceurs)                 |
 | `agency`            | `agencies`, `agency_sites`                         |

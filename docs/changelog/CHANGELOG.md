@@ -1,3 +1,17 @@
+# [3.17.0] (2026-02-12)
+
+### Features
+
+- **central-server:** add multi-config profiles — N configuration profiles per site selectable from Pi remote (`config_profiles` table, CRUD API, socket sync)
+- **sync-agent:** add `sync_profiles` and `switch_profile` commands — write profile JSONs to `profiles/`, generate `clubs.json` metadata, apply active profile via merge
+- **raspberry:** add `ProfileConfigService` + refactor `ClubSelectorComponent` to Input-driven — reuse demo club selector for production multi-profile switching
+- **raspberry:** profile-aware route resolver — loads selected profile from `/profiles/{id}.json` if available, fallback to standard `configuration.json`
+- **central-server:** auto-create default profile on site creation — zero-config for mono-profile sites, implicit multi-config flag via `COUNT(*) > 1`
+
+### Tests
+
+- **central-server:** add 45 new tests — `config-profile.repository.test.ts` (22 tests), `config-profiles.controller.test.ts` (23 tests)
+
 ## [3.16.2] (2026-02-12)
 
 ### Bug Fixes

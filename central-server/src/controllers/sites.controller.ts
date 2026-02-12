@@ -14,6 +14,7 @@ import {
   remoteCommandRepository,
   metricsRepository,
   timelineRepository,
+  configProfileRepository,
   type ExtendedSiteFilters,
   type SubscriptionFilter,
   type UpdateSiteInput,
@@ -148,6 +149,27 @@ export const createSite = async (req: AuthRequest, res: Response) => {
     });
 
     logger.info('Site created', { siteId: id, siteName: uniqueSiteName, createdBy: req.user?.email });
+
+    // Auto-creer un profil de configuration par defaut
+    try {
+      await configProfileRepository.create({
+        siteId: id,
+        name: 'Par defaut',
+        displayName: club_name,
+        city: location?.city || undefined,
+        sport: Array.isArray(sports) && sports.length > 0 ? sports[0] : undefined,
+        isDefault: true,
+        configuration: {},
+        createdBy: req.user?.id,
+      });
+      logger.info('Default config profile created', { siteId: id });
+    } catch (profileError) {
+      // Non-bloquant : si la table n'existe pas encore, on continue
+      logger.warn('Failed to create default config profile (migration may not be applied yet)', {
+        siteId: id,
+        error: profileError instanceof Error ? profileError.message : String(profileError),
+      });
+    }
 
     // Audit log
     auditService.logSiteCreated(id, uniqueSiteName, req);

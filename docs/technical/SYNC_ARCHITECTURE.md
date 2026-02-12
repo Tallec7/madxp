@@ -274,14 +274,17 @@ Commandes:          ────────────────────
 
 ### 4.2 Événements de Synchronisation
 
-| Événement                    | Direction       | Déclencheur                    | Action                           |
-| ---------------------------- | --------------- | ------------------------------ | -------------------------------- |
-| **Connexion du Pi**          | Bidirectionnel  | Pi se connecte au central      | Échange état complet             |
-| **Déploiement vidéo NEOPRO** | Central → Local | Admin NEOPRO clique "Déployer" | Download + merge config          |
-| **Modification locale**      | Local → Central | Opérateur modifie via Admin UI | Upload état vers central         |
-| **sync_local_state**         | Local → Central | Connexion + changement vidéos  | Config + liste vidéos + stockage |
-| **Heartbeat**                | Local → Central | Timer 30s                      | Métriques système uniquement     |
-| **Commande admin**           | Central → Local | Admin NEOPRO envoie commande   | Exécution sur Pi                 |
+| Événement                    | Direction          | Déclencheur                    | Action                           |
+| ---------------------------- | ------------------ | ------------------------------ | -------------------------------- |
+| **Connexion du Pi**          | Bidirectionnel     | Pi se connecte au central      | Échange état complet             |
+| **Déploiement vidéo NEOPRO** | Central → Local    | Admin NEOPRO clique "Déployer" | Download + merge config          |
+| **Modification locale**      | Local → Central    | Opérateur modifie via Admin UI | Upload état vers central         |
+| **sync_local_state**         | Local → Central    | Connexion + changement vidéos  | Config + liste vidéos + stockage |
+| **Heartbeat**                | Local → Central    | Timer 30s                      | Métriques système uniquement     |
+| **Commande admin**           | Central → Local    | Admin NEOPRO envoie commande   | Exécution sur Pi                 |
+| **sync_profiles**            | Central → Local    | Admin déploie profils          | Écriture profiles/ + clubs.json  |
+| **switch_profile**           | Central → Local    | Admin change profil actif      | Activation profil + merge config |
+| **profile-switch**           | Local (front→back) | Remote sélectionne un profil   | Activation profil + reload TV    |
 
 > **Note** : Le heartbeat (30s) n'envoie que les métriques système. La liste des vidéos est synchronisée via `sync_local_state` à la connexion et lors de changements détectés par le VideoWatcher.
 
@@ -827,6 +830,18 @@ function canDeleteVideo(video, category) {
 2. Téléchargement reporté
 3. NEOPRO notifié pour action (nettoyage distant ou contact club)
 
+### Q: Comment fonctionnent les profils multi-config ?
+
+**R**: Un site peut avoir N profils de configuration (ex: "Standard", "Tournoi U15", "Match Pro"). Chaque profil contient une configuration complète (sponsors, catégories, vidéos). Le flux :
+
+1. L'admin crée/modifie des profils via `/api/sites/:siteId/profiles`
+2. `POST .../profiles/sync` envoie la commande `sync_profiles` au Pi
+3. Le sync-agent écrit chaque profil dans `profiles/{id}.json` + génère `profiles/clubs.json`
+4. Le staff local sélectionne un profil via la télécommande (même UI que le mode démo)
+5. Le Pi active le profil : merge dans `configuration.json` + reload de la TV
+
+**Sites mono-config** : Aucun changement visible. Un seul profil "Par défaut" est auto-créé, le sélecteur n'apparaît pas.
+
 ### Q: L'opérateur peut-il réorganiser l'ordre des catégories NEOPRO ?
 
 **R**: À définir. Options :
@@ -850,14 +865,15 @@ function canDeleteVideo(video, category) {
 
 ## Historique des Versions
 
-| Version | Date       | Auteur        | Modifications                                            |
-| ------- | ---------- | ------------- | -------------------------------------------------------- |
-| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                        |
-| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                   |
-| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos       |
-| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix   |
-| 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support) |
-| 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config  |
+| Version | Date       | Auteur        | Modifications                                                               |
+| ------- | ---------- | ------------- | --------------------------------------------------------------------------- |
+| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                                           |
+| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                                      |
+| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos                          |
+| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix                      |
+| 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support)                    |
+| 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config                     |
+| 1.6     | 2026-02-12 | Claude/NEOPRO | Ajout multi-config profiles (sync_profiles, switch_profile, profile-switch) |
 
 ---
 

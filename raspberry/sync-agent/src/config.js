@@ -38,6 +38,9 @@ const DEFAULT_ALLOWED_COMMANDS = [
   'remove_bssid_lock',
   'optimize_for_mesh',
   'deploy_asset',
+  // Multi-config profiles - v3.x
+  'sync_profiles',
+  'switch_profile',
 ];
 
 const buildAllowedCommands = () => {

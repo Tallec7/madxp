@@ -245,6 +245,36 @@ export interface HeartbeatMessage {
 }
 
 // ============================================================================
+// Config Profile types (multi-config par site / profils / tournois)
+// ============================================================================
+
+export interface ConfigProfile {
+  id: string;
+  site_id: string;
+  name: string;
+  display_name: string | null;
+  city: string | null;
+  sport: string | null;
+  sort_order: number;
+  is_default: boolean;
+  configuration: SiteConfiguration;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ConfigProfileSyncPayload {
+  id: string;
+  name: string;
+  display_name: string | null;
+  city: string | null;
+  sport: string | null;
+  is_default: boolean;
+  configuration: SiteConfiguration;
+}
+
+// ============================================================================
 // Config Draft types (système de brouillons de configuration)
 // ============================================================================
 

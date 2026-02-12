@@ -218,8 +218,58 @@ CREATE TABLE IF NOT EXISTS config_history (
   deployed_at TIMESTAMP DEFAULT NOW(),
   comment TEXT,
   previous_version_id UUID REFERENCES config_history(id),
-  changes_summary JSONB
+  changes_summary JSONB,
+  profile_id UUID
 );
+
+-- =============================================================================
+-- TABLE PROFILS DE CONFIGURATION (multi-config par site)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS config_profiles (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  display_name VARCHAR(255),
+  city VARCHAR(255),
+  sport VARCHAR(100),
+  sort_order INTEGER DEFAULT 0,
+  is_default BOOLEAN DEFAULT false,
+  configuration JSONB NOT NULL DEFAULT '{}',
+  created_by UUID REFERENCES users(id),
+  updated_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(site_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_config_profiles_site ON config_profiles(site_id);
+CREATE INDEX IF NOT EXISTS idx_config_profiles_default ON config_profiles(site_id, is_default) WHERE is_default = true;
+
+-- FK config_history.profile_id -> config_profiles
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_config_history_profile'
+  ) THEN
+    ALTER TABLE config_history
+      ADD CONSTRAINT fk_config_history_profile
+      FOREIGN KEY (profile_id) REFERENCES config_profiles(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- FK sites.active_profile_id -> config_profiles
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_sites_active_profile'
+  ) THEN
+    ALTER TABLE sites
+      ADD COLUMN IF NOT EXISTS active_profile_id UUID,
+      ADD CONSTRAINT fk_sites_active_profile
+      FOREIGN KEY (active_profile_id) REFERENCES config_profiles(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 DO $$
 BEGIN

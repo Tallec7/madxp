@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 
 /**
  * Register all Socket.IO event handlers.
@@ -192,6 +193,46 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
         }
       } catch (error) {
         console.error('[Config] Error reading configuration:', error.message);
+      }
+    });
+
+    /**
+     * Profile switch (from Angular remote) — writes the active profile marker,
+     * reads the profile config from profiles/{id}.json, merges with local settings,
+     * writes configuration.json, and broadcasts reload-config.
+     * @event profile-switch
+     * @param {object} data — `{ profileId: string }`
+     */
+    socket.on('profile-switch', (data) => {
+      const { profileId } = data || {};
+      if (!profileId) {
+        console.warn('[Profile] Missing profileId in profile-switch event');
+        return;
+      }
+
+      const profilesDir = path.resolve(path.dirname(configPath), 'profiles');
+      const activeProfilePath = path.join(profilesDir, 'active-profile');
+      const profilePath = path.join(profilesDir, `${profileId}.json`);
+
+      console.log('[Profile] Switch requested to:', profileId);
+
+      try {
+        if (!fs.existsSync(profilePath)) {
+          console.warn('[Profile] Profile file not found:', profilePath);
+          return;
+        }
+
+        // Mettre a jour le marqueur de profil actif
+        fs.writeFileSync(activeProfilePath, profileId, 'utf8');
+
+        // Lire le profil et le broadcaster comme reload-config
+        const profileData = fs.readFileSync(profilePath, 'utf8');
+        const profileConfig = JSON.parse(profileData);
+
+        console.log('[Profile] Active profile set to:', profileId);
+        io.emit('action', { type: 'reload-config', data: profileConfig });
+      } catch (error) {
+        console.error('[Profile] Error switching profile:', error.message);
       }
     });
 

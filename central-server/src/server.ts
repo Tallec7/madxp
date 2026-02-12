@@ -45,6 +45,7 @@ import objectivesRoutes from './routes/objectives.routes';
 import playlistSchedulesRoutes from './routes/playlist-schedules.routes';
 import logsRoutes from './routes/logs.routes';
 import draftsRoutes from './routes/drafts.routes';
+import configProfilesRoutes from './routes/config-profiles.routes';
 import assetsRoutes from './routes/assets.routes';
 import remoteRoutes from './routes/remote.routes';
 import subscriptionRoutes from './routes/subscription.routes';
@@ -375,6 +376,7 @@ app.use('/api/mfa', authRateLimit, mfaRoutes);   // MFA - même restrictions que
 // Other endpoints use the default rate or sensitiveRateLimit where appropriate
 app.use('/api/sites', sitesRoutes);
 app.use('/api/sites', draftsRoutes);  // Config drafts - sous /api/sites/:siteId/draft
+app.use('/api/sites', configProfilesRoutes);  // Config profiles - sous /api/sites/:siteId/profiles
 app.use('/api/groups', apiRateLimit, groupsRoutes);
 app.use('/api', sensitiveRateLimit, contentRoutes); // Upload de vidéos - plus restrictif
 app.use('/api', updatesRoutes); // Mises à jour - rate limits per-route dans updates.routes.ts

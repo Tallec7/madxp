@@ -18,6 +18,7 @@ const deployAsset = require('./deploy-asset');
 
 // === Modules de commandes extraits (P2.4 refactoring) ===
 const updateConfig = require('./update-config');
+const { syncProfiles, switchProfile } = require('./sync-profiles');
 const {
   runDiagnostics,
   runManualDiagnostics,
@@ -65,6 +66,10 @@ const commands = {
 
   // === Configuration (module: update-config.js) ===
   update_config: updateConfig,
+
+  // === Profils multi-config (module: sync-profiles.js) ===
+  sync_profiles: syncProfiles,
+  switch_profile: switchProfile,
 
   // === Diagnostics (module: diagnostics.js) ===
   run_diagnostics: runDiagnostics,

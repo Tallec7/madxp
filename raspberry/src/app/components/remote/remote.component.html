@@ -33,9 +33,16 @@
     </div>
   }
 
-  <!-- Vue sélection de club (mode démo) -->
+  <!-- Vue sélection de club/profil (mode démo ou multi-config) -->
   @if (currentView === 'club-selector') {
-    <app-club-selector (clubSelected)="onClubSelected($event)"></app-club-selector>
+    <app-club-selector
+      [clubs]="selectorClubs"
+      [isLoadingClubs]="selectorLoading"
+      [error]="selectorError"
+      [title]="selectorTitle"
+      [subtitle]="selectorSubtitle"
+      (clubSelected)="onClubSelected($event)"
+    ></app-club-selector>
   } @else {
     <div
       class="remote-container"

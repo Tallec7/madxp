@@ -133,6 +133,13 @@ export {
   type InsertConfigVersionInput,
 } from './config-history.repository';
 export {
+  configProfileRepository,
+  type ConfigProfileRow,
+  type ConfigProfileMetadataRow,
+  type CreateProfileInput,
+  type UpdateProfileInput,
+} from './config-profile.repository';
+export {
   agencyRepository,
   type AgencyRow,
   type AgencyWithSiteCount,

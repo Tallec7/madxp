@@ -49,6 +49,10 @@ Signal envoyé **toutes les 30 secondes** par chaque Raspberry Pi au serveur cen
 
 Copie de la **configuration locale du Pi** stockée dans la base de données centrale (colonne `local_config_mirror` de la table `sites`). Permet de voir l'état réel du boîtier depuis le dashboard.
 
+### Config Profile
+
+**Profil de configuration** enregistré pour un site. Chaque profil contient une configuration complète (sponsors, catégories, vidéos). Permet d'avoir N configurations sélectionnables depuis la télécommande (ex: "Standard", "Tournoi U15", "Match Pro"). Table `config_profiles`. Sites mono-config : un seul profil "Par défaut", sélecteur masqué.
+
 ### VideoWatcher
 
 Service sur le Raspberry Pi qui **surveille le dossier `/home/pi/neopro/videos/`** et remonte automatiquement la liste des vidéos présentes vers le cloud.
@@ -191,6 +195,14 @@ Commande du cloud vers le Pi pour **télécharger et installer une nouvelle vid�
 
 Commande du cloud vers le Pi pour **mettre à jour la configuration** (sponsors, catégories, paramètres).
 
+### Sync Profiles
+
+Commande du cloud vers le Pi pour **synchroniser tous les profils de configuration**. Écrit les profils dans `profiles/` et génère `profiles/clubs.json`.
+
+### Switch Profile
+
+Commande pour **changer le profil actif** d'un site. Peut être déclenchée depuis le dashboard (`switch_profile` via WebSocket) ou depuis la télécommande locale (`profile-switch` via Socket.IO local).
+
 ### Execute Command
 
 Commande générique pour **exécuter une action** sur le Pi (restart, diagnostic, shell command).
@@ -217,7 +229,11 @@ Chemin de stockage d'une vidéo sur FTP : `filename.mp4`
 
 ### Repository Pattern
 
-Pattern d'accès base de données utilisé dans central-server. 21 repositories héritant de `BaseRepository<T>` encapsulent toutes les requêtes SQL. Aucun `pool.query()` direct n'est autorisé dans les controllers (ESLint enforced).
+Pattern d'accès base de données utilisé dans central-server. 22 repositories héritant de `BaseRepository<T>` encapsulent toutes les requêtes SQL. Aucun `pool.query()` direct n'est autorisé dans les controllers (ESLint enforced).
+
+### ProfileConfigService
+
+**Service Angular** sur le Raspberry Pi qui gère la sélection et le chargement des profils de configuration en mode production. Équivalent de `DemoConfigService` pour le mode multi-config. Stocke le profil sélectionné dans `localStorage` (`neopro_selected_profile`).
 
 ### Socket Handler
 
@@ -257,4 +273,4 @@ Classe abstraite générique fournissant les opérations CRUD communes (findById
 
 ---
 
-_Dernière mise à jour : 10 février 2026_
+_Dernière mise à jour : 12 février 2026_
