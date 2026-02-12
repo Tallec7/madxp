@@ -543,14 +543,14 @@ sudo systemctl restart neopro-admin
 **Redémarrage depuis l'interface :8080**
 
 - Les boutons "Redémarrer service" de l'interface admin exécutent `sudo systemctl restart ...` via `raspberry/admin/admin-server.js`.
-- Il faut que les unités systemd Neopro n'aient **pas** `NoNewPrivileges=true`. Ce flag kernel bloque irréversiblement `sudo` pour le process et tous ses enfants. Sinon `sudo` affiche _"no new privileges"_.
-- Après modification du fichier `raspberry/config/systemd/neopro-admin.service`, déployer-le sur le Raspberry Pi puis :
+- Il faut que **toutes** les unités systemd Neopro (`neopro-app`, `neopro-admin`, `neopro-sync`) n'aient **pas** `NoNewPrivileges=true`. Ce flag kernel bloque irréversiblement `sudo` pour le process et tous ses enfants. Sinon `sudo` affiche _"no new privileges"_.
+- Après modification d'un fichier `.service`, déployer-le sur le Raspberry Pi puis :
   ```bash
   sudo systemctl daemon-reload
-  sudo systemctl restart neopro-admin
+  sudo systemctl restart neopro-app neopro-admin neopro-sync
   ```
-- `./raspberry/scripts/build-and-deploy.sh` (ou `deploy-remote.sh`) copie automatiquement l'unité depuis `raspberry/config/systemd/neopro-admin.service` avant de relancer systemd.
-- **Smoke test** : `npm run test:smoke` vérifie qu'aucun `.service` du repo ne contient `NoNewPrivileges=true`.
+- `./raspberry/scripts/build-and-deploy.sh` (ou `deploy-remote.sh`) copie automatiquement les unités depuis `raspberry/config/systemd/` avant de relancer systemd.
+- **Smoke tests (garde-fou CI)** : `npm run test:smoke` vérifie que les `.service` ne contiennent ni `NoNewPrivileges=true` ni `ProtectSystem=strict`, et que le fichier sudoers inclut les règles `apt`.
 - **Auto-correction OTA (>= v3.17.1)** : le mécanisme `apply-services` corrige les `.service` lors du déploiement. Le sync-agent appelle `POST http://127.0.0.1:8080/api/system/apply-services` sur l'admin-server (qui n'a pas le flag), qui copie les fichiers corrigés dans `/etc/systemd/system/` et fait `daemon-reload` + restart.
 - Si le dashboard et l'admin-server sont tous deux bloqués, corriger via SSH :
   ```bash

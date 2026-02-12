@@ -3,6 +3,11 @@
 ### Bug Fixes
 
 - **raspberry:** robust localhost bypass for apply-services route ([8499a18](https://github.com/Tallec7/neopro/commit/8499a1830e7560f5b9d1eb417c98624449ab49bf))
+- **raspberry:** remove `NoNewPrivileges=true` from `neopro-app.service` — même cause que le deadlock sudo corrigé sur `neopro-admin.service`
+
+### Tests
+
+- **smoke:** add 3 Raspberry Pi config convention checks (systemd `NoNewPrivileges`, `ProtectSystem`, sudoers apt rules) — 42 smoke tests total ([46753fe](https://github.com/Tallec7/neopro/commit/46753fede5182c3a3960eedc0e0b893c32ba1178))
 
 ## [3.17.1](https://github.com/Tallec7/neopro/compare/v3.17.0...v3.17.1) (2026-02-12)
 
@@ -30,15 +35,26 @@
 
 ## [3.17.2] (2026-02-12)
 
-### Features
+### Bug Fixes
 
-- **raspberry:** add `apt-get`/`apt install` to sudoers — super_admins can now install system packages (e.g. `firmware-realtek`) from the dashboard remote shell without SSH access. Deployed automatically via next OTA update.
+- **raspberry:** robust localhost bypass for `apply-services` route — move route BEFORE `requireAuth` middleware in `admin-server.js`, add multiple IPv6 format checks (`::ffff:7f00:1`), use `127.0.0.1` instead of `localhost` in sync-agent curl to avoid IPv6 resolution issues
+- **raspberry:** remove `NoNewPrivileges=true` from `neopro-app.service` — same issue as sync-agent, caught by new smoke test
+
+### Tests
+
+- **smoke:** add 3 Raspberry Pi config convention checks — `NoNewPrivileges=true` interdit dans les `.service`, `ProtectSystem=strict` interdit, sudoers doit inclure les regles apt
 
 ## [3.17.1] (2026-02-12)
 
 ### Bug Fixes
 
-- **raspberry:** add `firmware-realtek` and `firmware-ralink` to install.sh dependencies — USB WiFi dongles (needed for dual WiFi hotspot + internet) were not detected out-of-the-box because drivers were missing from the base install
+- **raspberry:** fix `sudo` blocked by `NoNewPrivileges=true` in systemd services — all Pi deployed since Dec 2025 had this flag in `neopro-sync-agent.service`, blocking all `sudo` from dashboard remote shell (including `apt install`)
+- **raspberry:** add `apply-services` mechanism to auto-correct stuck Pi — admin-server (which does NOT have `NoNewPrivileges`) exposes `POST /api/system/apply-services` on localhost, copies corrected `.service` files and sudoers, does `daemon-reload` + restart
+- **raspberry:** add `firmware-realtek` and `firmware-ralink` to install.sh dependencies — USB WiFi dongles were not detected out-of-the-box
+
+### Features
+
+- **raspberry:** add `apt-get`/`apt install` to sudoers — super_admins can now install system packages from the dashboard remote shell without SSH access
 
 # [3.17.0] (2026-02-12)
 

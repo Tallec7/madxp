@@ -666,6 +666,14 @@ sudo journalctl -u neopro-sync-agent -f
 
 **Fichier :** `/etc/systemd/system/neopro-sync-agent.service`
 
+### Convention : pas de NoNewPrivileges
+
+Les fichiers `.service` Neopro ne doivent **jamais** contenir `NoNewPrivileges=true`. Ce flag kernel bloque irréversiblement `sudo` pour le process et ses enfants, ce qui empêche les commandes d'administration depuis le dashboard et l'OTA.
+
+- **Smoke test** : `npm run test:smoke` vérifie cette convention automatiquement
+- **Auto-correction** : l'OTA >= v3.17.1 corrige les `.service` via `POST /api/system/apply-services` sur l'admin-server local
+- **Fichiers source** : `raspberry/config/systemd/` (copiés vers `/etc/systemd/system/` lors de l'OTA)
+
 ### nginx
 
 **Serveur web** (port 80)

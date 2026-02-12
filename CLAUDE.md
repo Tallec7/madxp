@@ -17,7 +17,7 @@ cd central-server && npm run build # Compile TypeScript
 
 # Tests
 npm run test:server                # Jest (API central-server — 1218 tests)
-npm run test:smoke                 # Jest (Smoke tests — 39 tests, détecte régressions de wiring)
+npm run test:smoke                 # Jest (Smoke tests — 42 tests, détecte régressions de wiring)
 npm run test:central               # Karma (Angular Dashboard — 509 tests)
 cd raspberry/server && npm test    # Jest (Socket.IO server — 71 tests)
 cd raspberry/admin && npm test     # Jest (Admin server — 124 tests)
@@ -50,6 +50,7 @@ cd central-server && npm run db:migrate
 - Commit des secrets ou fichiers `.env`
 - Push directement sur `main` sans PR
 - Requêtes SQL non paramétrées (`'${email}'` → injection SQL)
+- Ajouter `NoNewPrivileges=true` dans les fichiers `.service` systemd (bloque sudo, deadlock OTA — smoke test enforced)
 
 ## Architecture détaillée
 

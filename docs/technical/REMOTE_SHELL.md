@@ -275,8 +275,40 @@ Le terminal distant nécessite que le site soit connecté. Vérifier :
 2. La connexion WebSocket fonctionne (logs sync-agent)
 3. L'API centrale est accessible depuis le Pi
 
+### Erreur "no new privileges" sur sudo
+
+**Cause** : Le fichier `.service` systemd du sync-agent contient `NoNewPrivileges=true`, un flag kernel qui bloque irréversiblement `sudo` pour le process et ses enfants. Tous les Pi installés entre déc. 2025 et fév. 2026 sont potentiellement concernés.
+
+**Solution** : Déployer un OTA >= v3.17.1. Le mécanisme `apply-services` corrige automatiquement les fichiers `.service` :
+
+```
+sync-agent (NoNewPrivileges=true)
+  │ sudo cp → BLOQUÉ par kernel
+  │ fallback: curl POST http://127.0.0.1:8080/api/system/apply-services
+  ▼
+admin-server (pas de NoNewPrivileges)
+  │ sudo cp .service → /etc/systemd/system/
+  │ sudo systemctl daemon-reload
+  │ sudo systemctl restart neopro-sync-agent
+  ▼
+sync-agent redémarré SANS NoNewPrivileges → sudo fonctionne
+```
+
+**Fichiers impliqués** :
+
+| Fichier                                      | Rôle                                              |
+| -------------------------------------------- | ------------------------------------------------- |
+| `admin/admin-server.js`                      | Route `apply-services` montée AVANT `requireAuth` |
+| `admin/services/system.service.js`           | Méthode `applySystemdServices()`                  |
+| `sync-agent/src/commands/update-software.js` | Fallback curl si sudo échoue                      |
+| `config/systemd/*.service`                   | Fichiers corrigés (sans `NoNewPrivileges`)        |
+| `config/sudoers.d/neopro`                    | Règles sudo pour apt, systemctl, etc.             |
+
+**Prévention** : `npm run test:smoke` vérifie qu'aucun `.service` ne contient `NoNewPrivileges=true`.
+
 ## Changelog
 
+- **12 février 2026** : Fix `NoNewPrivileges` deadlock — mécanisme `apply-services` via admin-server, smoke tests de convention, auto-correction OTA
 - **12 février 2026** : Ajout `apt-get`/`apt install` au sudoers — installation de paquets depuis le dashboard (super_admin)
 - **10 février 2026** : Ajout section Limites, exemple de résultat, correction timeout 60s
 - **v2.12.0** (2026-01-08) : Ajout de la fonctionnalité remote shell
