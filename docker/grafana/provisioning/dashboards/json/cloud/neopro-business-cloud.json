@@ -342,8 +342,98 @@
       "type": "gauge"
     },
     {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "ops"
+        }
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 23 },
+      "id": 18,
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "right" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_websocket_disconnects_total{scrape_job=\"NEOPRO\"}[5m])) by (reason)",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Socket Disconnects by Reason",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "ops"
+        }
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 23 },
+      "id": 19,
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "right" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_websocket_disconnects_total{scrape_job=\"NEOPRO\"}[5m])) by (client_type)",
+          "legendFormat": "{{client_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Socket Disconnects by Client Type",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 },
       "id": 300,
       "title": "🚀 Deployments",
       "type": "row"
@@ -382,7 +472,7 @@
           }
         ]
       },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 24 },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 31 },
       "id": 8,
       "options": {
         "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" },
@@ -427,7 +517,7 @@
           "unit": "s"
         }
       },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 24 },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 31 },
       "id": 9,
       "options": {
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
@@ -457,7 +547,7 @@
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
         }
       },
-      "gridPos": { "h": 7, "w": 4, "x": 16, "y": 24 },
+      "gridPos": { "h": 7, "w": 4, "x": 16, "y": 31 },
       "id": 10,
       "options": {
         "colorMode": "value",
@@ -486,7 +576,7 @@
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
         }
       },
-      "gridPos": { "h": 7, "w": 4, "x": 20, "y": 24 },
+      "gridPos": { "h": 7, "w": 4, "x": 20, "y": 31 },
       "id": 11,
       "options": {
         "colorMode": "value",
@@ -534,7 +624,7 @@
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
         }
       },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 31 },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 38 },
       "id": 12,
       "options": {
         "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" },
@@ -584,7 +674,7 @@
           "unit": "s"
         }
       },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 31 },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 38 },
       "id": 13,
       "options": {
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right" },
@@ -607,7 +697,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 38 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 45 },
       "id": 400,
       "title": "💼 Subscriptions & Alerts",
       "type": "row"
@@ -621,7 +711,7 @@
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
         }
       },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 39 },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 46 },
       "id": 14,
       "options": {
         "colorMode": "value",
@@ -670,7 +760,7 @@
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
         }
       },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 39 },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 46 },
       "id": 15,
       "options": {
         "colorMode": "value",
@@ -728,7 +818,7 @@
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
         }
       },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 46 },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 53 },
       "id": 16,
       "options": {
         "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" },
@@ -772,7 +862,7 @@
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
         }
       },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 46 },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 53 },
       "id": 17,
       "options": {
         "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" },
