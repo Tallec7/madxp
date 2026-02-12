@@ -1,3 +1,9 @@
+## [3.17.1] (2026-02-12)
+
+### Bug Fixes
+
+- **raspberry:** add `firmware-realtek` and `firmware-ralink` to install.sh dependencies — USB WiFi dongles (needed for dual WiFi hotspot + internet) were not detected out-of-the-box because drivers were missing from the base install
+
 # [3.17.0] (2026-02-12)
 
 ### Features

@@ -1694,6 +1694,30 @@ sudo systemctl restart hostapd
 sudo systemctl restart dnsmasq
 ```
 
+### 3b. Clé WiFi USB non détectée (pas de wlan1)
+
+**Symptômes :**
+
+- La clé WiFi USB est branchée mais `ip link show` n'affiche pas `wlan1`
+- `lsusb` montre le périphérique mais aucune interface réseau n'est créée
+
+**Cause :**
+
+Les drivers pour certains chipsets WiFi USB (Realtek, Ralink) ne sont pas inclus par défaut dans Raspberry Pi OS. C'est fréquent avec les clés USB bon marché.
+
+**Solution :**
+
+```bash
+# Installer les firmwares WiFi USB
+sudo apt update && sudo apt install -y firmware-realtek firmware-ralink
+sudo reboot
+
+# Après reboot, vérifier que wlan1 apparaît
+ip link show wlan1
+```
+
+**Note :** Depuis la version 3.17.1, `install.sh` installe automatiquement ces firmwares. Ce problème ne concerne que les boîtiers installés avec une version antérieure.
+
 ### 4. WiFi USB roaming entre points d'accès (connexion instable)
 
 **Symptômes :**

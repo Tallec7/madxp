@@ -135,7 +135,7 @@ sudo ./install.sh NANTES VotreMotDePasseWiFi123
 
 - ✅ Vérifie les prérequis (connexion Internet, espace disque, fichiers requis)
 - ✅ Met à jour le système
-- ✅ Installe Node.js, nginx, hostapd, dnsmasq
+- ✅ Installe Node.js, nginx, hostapd, dnsmasq, firmware WiFi USB (Realtek/Ralink)
 - ✅ Configure le hostname → `neopro.local`
 - ✅ Configure le WiFi hotspot → `NEOPRO-NANTES`
 - ✅ Détecte une clé WiFi USB (`wlan1`) et propose/configure le WiFi client (Internet)
@@ -511,18 +511,18 @@ La partie longue (install.sh) n'est à faire qu'une fois par Pi physique.
 
 ## Scripts disponibles
 
-| Script                    | Emplacement          | Description                       |
-| ------------------------- | -------------------- | --------------------------------- |
-| `copy-to-pi.sh`           | `raspberry/scripts/` | Copie intelligente vers Pi        |
-| `install.sh`              | `raspberry/`         | Installation système sur Pi       |
-| `setup-new-club.sh`       | `raspberry/scripts/` | Configuration club complète       |
-| `build-and-deploy.sh`     | `raspberry/scripts/` | Mise à jour application           |
-| `prepare-golden-image.sh` | `raspberry/tools/`   | Prépare Pi pour clonage           |
-| `clone-sd-card.sh`        | `raspberry/tools/`   | Clone carte SD en image           |
-| `cleanup-pi.sh`           | `raspberry/scripts/` | Nettoie ~/raspberry après install |
+| Script                    | Emplacement          | Description                                           |
+| ------------------------- | -------------------- | ----------------------------------------------------- |
+| `copy-to-pi.sh`           | `raspberry/scripts/` | Copie intelligente vers Pi                            |
+| `install.sh`              | `raspberry/`         | Installation système sur Pi                           |
+| `setup-new-club.sh`       | `raspberry/scripts/` | Configuration club complète                           |
+| `build-and-deploy.sh`     | `raspberry/scripts/` | Mise à jour application                               |
+| `prepare-golden-image.sh` | `raspberry/tools/`   | Prépare Pi pour clonage                               |
+| `clone-sd-card.sh`        | `raspberry/tools/`   | Clone carte SD en image                               |
+| `cleanup-pi.sh`           | `raspberry/scripts/` | Nettoie ~/raspberry après install                     |
 | `diagnose-pi.sh`          | `raspberry/scripts/` | Diagnostic complet du Pi (CPU, GPU, services, réseau) |
-| `fix-fleet-pi.sh`         | `raspberry/scripts/` | Réparation flotte (TKIP, services, GPU, buffers) |
-| `fix-hotspot.sh`          | `raspberry/scripts/` | Diagnostic et réparation hotspot WiFi |
+| `fix-fleet-pi.sh`         | `raspberry/scripts/` | Réparation flotte (TKIP, services, GPU, buffers)      |
+| `fix-hotspot.sh`          | `raspberry/scripts/` | Diagnostic et réparation hotspot WiFi                 |
 
 ---
 
@@ -532,9 +532,9 @@ La partie longue (install.sh) n'est à faire qu'une fois par Pi physique.
 
 Depuis la version 2.27+, le **Raspberry Pi 5** est entièrement supporté. Depuis la v3.7.3, le Pi 5 utilise le **driver V3D natif (Mesa)** pour des performances optimales.
 
-| Modèle       | GPU           | Configuration GPU                                |
-| ------------ | ------------- | ------------------------------------------------ |
-| Pi 3B+, Pi 4 | VideoCore VI  | `gpu_mem=256` dans `/boot/config.txt`            |
+| Modèle       | GPU           | Configuration GPU                                  |
+| ------------ | ------------- | -------------------------------------------------- |
+| Pi 3B+, Pi 4 | VideoCore VI  | `gpu_mem=256` dans `/boot/config.txt`              |
 | **Pi 5**     | VideoCore VII | V3D natif (Mesa) — aucun flag GPU custom (v3.7.3+) |
 
 **Pourquoi V3D natif sur Pi 5 ?**

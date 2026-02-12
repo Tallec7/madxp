@@ -331,10 +331,13 @@ install_dependencies() {
         x11-xserver-utils \
         chromium \
         cec-utils \
-        ffmpeg
+        ffmpeg \
+        firmware-realtek \
+        firmware-ralink
 
     # cec-utils: Permet de détecter si la TV est allumée via HDMI-CEC (pour analytics fiables)
     # ffmpeg: Permet d'extraire la durée des vidéos (ffprobe)
+    # firmware-realtek/ralink: Drivers pour clés WiFi USB (nécessaire pour le dual WiFi hotspot + internet)
     print_success "Dépendances installées"
 }
 
