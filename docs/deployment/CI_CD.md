@@ -104,6 +104,19 @@ Commit → Pre-commit Hooks → PR → CI Workflow → Merge main → Semantic R
 
 ## Secrets CI/CD (GitHub)
 
-- `RAILWAY_TOKEN` — Authentification Railway CLI
-- `RAILWAY_PROJECT_ID` — ID du projet Railway
-- `GITHUB_TOKEN` — Automatique (GitHub Actions)
+| Secret               | Usage                                              |
+| -------------------- | -------------------------------------------------- |
+| `RELEASE_TOKEN`      | PAT pour semantic-release (push tags/commits main) |
+| `RAILWAY_TOKEN`      | Authentification Railway CLI                       |
+| `RAILWAY_PROJECT_ID` | ID du projet Railway                               |
+| `GITHUB_TOKEN`       | Automatique (GitHub Actions, lecture seule)        |
+
+### RELEASE_TOKEN
+
+Le workflow `release.yml` utilise un **Personal Access Token (Classic)** avec le scope `repo` pour permettre à semantic-release de :
+
+- Pusher le commit `chore(release)` sur `main`
+- Créer le tag `v{version}`
+- Créer la GitHub Release
+
+> **Important** : Le `GITHUB_TOKEN` par défaut ne suffit pas car il ne peut pas déclencher d'autres workflows ni pusher sur des branches protégées. Si le release échoue avec `EGITNOPERMISSION`, régénérer le PAT et mettre à jour le secret.

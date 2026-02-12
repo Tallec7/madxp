@@ -10,8 +10,9 @@
 6. [Problèmes de synchronisation](#problèmes-de-synchronisation)
 7. [Diagnostic réseau à distance](#diagnostic-réseau-à-distance)
 8. [Diagnostic complet](#diagnostic-complet)
-9. [Hotspot Watchdog (v2.34+)](#hotspot-watchdog-v234)
-10. [Blocage BSSID Lock en Mesh (v2.34+)](#blocage-bssid-lock-en-mesh-v234)
+9. [CI/CD et Release](#cicd-et-release)
+10. [Hotspot Watchdog (v2.34+)](#hotspot-watchdog-v234)
+11. [Blocage BSSID Lock en Mesh (v2.34+)](#blocage-bssid-lock-en-mesh-v234)
 
 ---
 
@@ -542,13 +543,24 @@ sudo systemctl restart neopro-admin
 **Redémarrage depuis l'interface :8080**
 
 - Les boutons "Redémarrer service" de l'interface admin exécutent `sudo systemctl restart ...` via `raspberry/admin/admin-server.js`.
-- Il faut que l'unité systemd `neopro-admin.service` autorise cette élévation (pas de `NoNewPrivileges=true`). Sinon `sudo` affiche _"no new privileges"_ et les actions échouent.
+- Il faut que les unités systemd Neopro n'aient **pas** `NoNewPrivileges=true`. Ce flag kernel bloque irréversiblement `sudo` pour le process et tous ses enfants. Sinon `sudo` affiche _"no new privileges"_.
 - Après modification du fichier `raspberry/config/systemd/neopro-admin.service`, déployer-le sur le Raspberry Pi puis :
   ```bash
   sudo systemctl daemon-reload
   sudo systemctl restart neopro-admin
   ```
 - `./raspberry/scripts/build-and-deploy.sh` (ou `deploy-remote.sh`) copie automatiquement l'unité depuis `raspberry/config/systemd/neopro-admin.service` avant de relancer systemd.
+- **Smoke test** : `npm run test:smoke` vérifie qu'aucun `.service` du repo ne contient `NoNewPrivileges=true`.
+- **Auto-correction OTA (>= v3.17.1)** : le mécanisme `apply-services` corrige les `.service` lors du déploiement. Le sync-agent appelle `POST http://127.0.0.1:8080/api/system/apply-services` sur l'admin-server (qui n'a pas le flag), qui copie les fichiers corrigés dans `/etc/systemd/system/` et fait `daemon-reload` + restart.
+- Si le dashboard et l'admin-server sont tous deux bloqués, corriger via SSH :
+  ```bash
+  sudo cp /home/pi/neopro/config/systemd/*.service /etc/systemd/system/
+  sudo cp /home/pi/neopro/config/sudoers.d/neopro /etc/sudoers.d/neopro
+  sudo chmod 644 /etc/systemd/system/neopro-*.service
+  sudo chmod 440 /etc/sudoers.d/neopro
+  sudo systemctl daemon-reload
+  sudo systemctl restart neopro-sync-agent neopro-admin
+  ```
 
 ### Service nginx
 
@@ -2232,6 +2244,45 @@ Si le problème persiste après toutes ces vérifications :
 
 ---
 
+## CI/CD et Release
+
+### Semantic Release échoue avec EGITNOPERMISSION
+
+#### Erreur
+
+```
+SemanticReleaseError: Cannot push to the Git repository.
+code: 'EGITNOPERMISSION'
+```
+
+#### Cause
+
+Le token utilisé par le workflow `release.yml` n'a pas les permissions pour pusher des tags et commits sur `main`. Le workflow utilise le secret `RELEASE_TOKEN` (PAT Classic avec scope `repo`).
+
+#### Diagnostic
+
+```bash
+# Vérifier que le secret existe
+gh secret list --repo Tallec7/neopro
+
+# Vérifier les branch protection rules
+gh api repos/Tallec7/neopro/branches/main/protection
+
+# Vérifier les rulesets
+gh api repos/Tallec7/neopro/rulesets
+```
+
+#### Solution
+
+1. Aller sur **GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)**
+2. Créer ou régénérer un PAT avec le scope **`repo`**
+3. Mettre à jour le secret dans **Repo → Settings → Secrets → Actions → `RELEASE_TOKEN`**
+4. Relancer le workflow : `gh run rerun <run_id> --repo Tallec7/neopro`
+
+> **Note** : Le `GITHUB_TOKEN` par défaut ne suffit pas pour semantic-release car il ne peut pas pusher de commits/tags sur `main`.
+
+---
+
 ## Hotspot Watchdog (v2.34+)
 
 Depuis la version 2.34, un service de surveillance du hotspot est actif par défaut.
@@ -2298,4 +2349,4 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ---
 
-**Dernière mise à jour :** 9 février 2026 (v3.7.14 - Pi 5 V3D natif, fix-fleet-pi.sh, recovery progressive mesh, OTA config/ fix)
+**Dernière mise à jour :** 12 février 2026 (v3.17.2 - ajout section CI/CD EGITNOPERMISSION)
