@@ -3,6 +3,7 @@
  * Gère l'envoi des commandes update_software aux Raspberry Pi
  */
 
+import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/database';
 import socketService from './socket.service';
 import { commandQueueService } from './command-queue.service';
@@ -301,7 +302,6 @@ class UpdateDeploymentService {
       '|| true';
 
     try {
-      const { v4: uuidv4 } = require('uuid');
       const commandId = uuidv4();
 
       socketService.sendCommand(siteId, {
