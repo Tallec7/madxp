@@ -1,3 +1,9 @@
+## [3.19.1](https://github.com/Tallec7/neopro/compare/v3.19.0...v3.19.1) (2026-02-12)
+
+### Bug Fixes
+
+- **central-server:** add missing GET /api/sites/:id/remote-pin endpoint ([74e3a93](https://github.com/Tallec7/neopro/commit/74e3a93fea111f41abf9c0a8bb9f646a879b62e7))
+
 # [3.19.0](https://github.com/Tallec7/neopro/compare/v3.18.0...v3.19.0) (2026-02-12)
 
 ### Features
