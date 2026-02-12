@@ -1,3 +1,10 @@
+## [3.17.1](https://github.com/Tallec7/neopro/compare/v3.17.0...v3.17.1) (2026-02-12)
+
+### Bug Fixes
+
+- **central-server:** replace require('uuid') with ES module import ([7bef0de](https://github.com/Tallec7/neopro/commit/7bef0de3b3e6cb1e7645eee19b98aa8b24c44ef2))
+- **raspberry:** add apply-services route to fix NoNewPrivileges stuck Pi ([fb0b4e8](https://github.com/Tallec7/neopro/commit/fb0b4e8ace2e45cfc35de6b35dafb21f0b8359cd))
+
 # [3.17.0](https://github.com/Tallec7/neopro/compare/v3.16.1...v3.17.0) (2026-02-12)
 
 ### Bug Fixes
