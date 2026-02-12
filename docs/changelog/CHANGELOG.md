@@ -1,3 +1,20 @@
+# [3.17.0](https://github.com/Tallec7/neopro/compare/v3.16.1...v3.17.0) (2026-02-12)
+
+### Bug Fixes
+
+- **deploy:** auto-patch legacy Pi before OTA to bypass NoNewPrivileges ([8ceec7d](https://github.com/Tallec7/neopro/commit/8ceec7dc63612b5c0a1531beb3b287d929912aa7))
+- **deploy:** make pre-update migration non-blocking and instant ([3d371ee](https://github.com/Tallec7/neopro/commit/3d371eef606e46cf9ec31e51eb5b41f24317b2cb))
+- **deploy:** use sed replace instead of delete in pre-update migration ([7aa12aa](https://github.com/Tallec7/neopro/commit/7aa12aa7c60490b3541adcbd59eec010a3b3a102))
+- **raspberry:** add USB WiFi firmware packages to install.sh ([90fa714](https://github.com/Tallec7/neopro/commit/90fa714e545794f9409de8e3480c03b8f8c34616))
+- **sync-agent:** replace sudo with fs-extra and add targeted sudoers for OTA updates ([379cdb2](https://github.com/Tallec7/neopro/commit/379cdb27faa84d98ab6988714f026ec11e2aba76))
+- **sync-agent:** use fire-and-forget exec for reboot command ([0088c2d](https://github.com/Tallec7/neopro/commit/0088c2d39547fcb19d046f83ffc21d6f110a15c1))
+
+### Features
+
+- **dashboard:** add Profiles tab to site detail — multi-config UI ([93e2a8b](https://github.com/Tallec7/neopro/commit/93e2a8b78ca57fb37886274e1a368f270cd20f33))
+- **multi-config:** add config profiles — N configs per site selectable from Pi remote ([913ffde](https://github.com/Tallec7/neopro/commit/913ffde1571f9eb52967241a574533ddc31d0296))
+- **raspberry:** allow apt install from dashboard via sudoers ([a9908b8](https://github.com/Tallec7/neopro/commit/a9908b8f267ad0fdf298d5999a10bf51494809e7))
+
 ## [3.17.2] (2026-02-12)
 
 ### Features
