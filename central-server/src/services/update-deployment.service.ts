@@ -275,7 +275,7 @@ class UpdateDeploymentService {
    *
    * Envoie un remote_shell qui :
    * 1. Vérifie si le vieux code contient encore "sudo cp" (sinon skip)
-   * 2. Supprime les lignes sudo cp/chown/tee du vieux update-software.js
+   * 2. Remplace "sudo cp/chown/tee" par "cp/chown/tee" (fonctionnel sans root)
    * 3. Kill le process node (agent.js) pour que systemd le redémarre avec le code patché
    *
    * L'update_software est ensuite envoyé ou mis en queue et sera exécuté
@@ -289,15 +289,16 @@ class UpdateDeploymentService {
       return; // Pas connecté, la migration se fera au prochain déploiement
     }
 
-    // Commande chaînée : vérifier si le patch est nécessaire, l'appliquer, puis kill
-    // grep -q retourne 0 si "sudo cp" est trouvé (= vieux code), 1 sinon
-    // Si vieux code détecté : sed + kill du process parent (le sync-agent node)
-    // Si déjà patché : ne rien faire (exit 0)
+    // sed qui remplace "sudo " par "" dans les lignes contenant cp, chown, tee, usermod
+    // Cela garde les commandes fonctionnelles (cp, chown marchent sans sudo si
+    // les fichiers appartiennent à pi) tout en évitant le blocage NoNewPrivileges.
+    // Les lignes systemctl ne sont PAS touchées (elles ont des try/catch).
+    const targetFile = '/home/pi/neopro/sync-agent/src/commands/update-software.js';
     const migrateCommand =
-      'grep -q "sudo cp" /home/pi/neopro/sync-agent/src/commands/update-software.js ' +
-      '&& sed -i \'/sudo cp/d; /sudo chown/d; /sudo tee/d\' ' +
-      '/home/pi/neopro/sync-agent/src/commands/update-software.js ' +
-      '&& kill $(pgrep -f agent.js) ' +
+      `grep -q "sudo cp" ${targetFile} ` +
+      `&& sed -i 's/sudo cp/cp/g; s/sudo chown/chown/g; s/sudo tee/tee/g' ${targetFile} ` +
+      `&& sed -i '/sudo usermod/d' ${targetFile} ` +
+      `&& kill $(pgrep -f agent.js) ` +
       '|| true';
 
     try {
