@@ -107,8 +107,15 @@ neopro/ (monorepo)
 ├── central-dashboard/              # Cloud admin dashboard
 │   ├── src/app/
 │   │   ├── features/
-│   │   ├── core/
-│   │   └── shared/
+│   │   │   └── sites/
+│   │   │       ├── site-detail.component.ts     # Page détail (5 onglets)
+│   │   │       └── components/
+│   │   │           ├── site-content-tab/        # Boucles vidéo par phase
+│   │   │           ├── site-settings-tab/       # Config réseau, hotspot
+│   │   │           ├── site-profiles-tab/       # Multi-config CRUD + deploy
+│   │   │           └── site-debug-tab/          # Logs, commandes
+│   │   ├── core/                                # Models, services, guards
+│   │   └── shared/                              # Composants réutilisables
 │   └── package.json
 │
 ├── e2e/                           # End-to-end tests
@@ -210,6 +217,32 @@ TV Frontend (player commands)
          ▼
 Video.js API (play/pause/seek)
 ```
+
+### 4. Multi-config profiles
+
+```
+Dashboard (Admin crée/édite profil)
+         │
+         ▼
+Central Server API (POST /sites/:id/profiles)
+         │
+         ▼
+PostgreSQL (config_profiles table)
+         │
+         ▼
+Socket.IO → sync_profiles command
+         │
+         ▼
+Sync Agent (écrit profiles/*.json + clubs.json)
+         │
+         ▼
+Pi Frontend (ProfileConfigService sélectionne le profil actif)
+```
+
+- Un site peut avoir **N profils** de configuration
+- Chaque profil contient un `configuration` JSON complet
+- Le Pi résout le profil actif via `clubs.json` → `activeProfileId`
+- Switch de profil possible depuis la télécommande ou le dashboard
 
 ---
 
@@ -325,7 +358,7 @@ Video.js API (play/pause/seek)
   - _NeoPro Overview_ (10 panels) : HTTP rate/latence, WebSocket, déploiements, CPU/RAM, event loop lag
   - _NeoPro Services_ (18 panels) : DB, auth, commandes Pi, alertes réseau, stabilité réseau, heartbeats
 - **Scrape targets** : Docker local, `host.docker.internal:3001` (dev), Railway HTTPS (prod)
-- **Smoke tests** : `npm run test:smoke` — 39 tests détectent les régressions de wiring API
+- **Smoke tests** : `npm run test:smoke` — 42 tests détectent les régressions de wiring API + conventions Pi (systemd, sudoers)
 - Systemd journald logs
 - Winston structured logging with Correlation ID
 - Memory Manager Service (heap monitoring, pressure cleanup)

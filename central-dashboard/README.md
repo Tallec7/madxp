@@ -103,16 +103,26 @@ central-dashboard/
 | **Agency Portal**     | Dashboard dédié agences (clubs gérés, alertes)               |
 | **Admin Agencies**    | Gestion des agences partenaires (CRUD)                       |
 
-### Site Detail - Nouvelle Architecture (Janvier 2026)
+### Site Detail - Architecture (Février 2026)
 
-La page de détail d'un site est organisée en **4 onglets** :
+La page de détail d'un site est organisée en **5 onglets** :
 
 | Onglet         | Composant                  | Fonctionnalités                                  |
 | -------------- | -------------------------- | ------------------------------------------------ |
 | **État**       | `site-detail.component.ts` | Métriques, connexion, alertes                    |
 | **Contenu**    | `SiteContentTabComponent`  | Boucles par phase, catégories, mapping analytics |
 | **Paramètres** | `SiteSettingsTabComponent` | Config réseau, hotspot                           |
+| **Profils**    | `SiteProfilesTabComponent` | Multi-config CRUD, déploiement, synchronisation  |
 | **Debug**      | `SiteDebugTabComponent`    | Logs, commandes, diagnostics                     |
+
+#### Onglet Profils (multi-config)
+
+Gestion des profils de configuration multiples par site :
+
+- **Grille de cards** : vue d'ensemble de tous les profils avec badge « défaut »
+- **Modal CRUD** : création/édition avec source de configuration (actuelle, copie, vide)
+- **Déploiement** : deploy unitaire par profil ou sync global vers le Pi
+- **i18n** : clés traduites EN/FR/ES (section `profiles.*`)
 
 #### Boucles par Phase
 

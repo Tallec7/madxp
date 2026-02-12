@@ -1078,6 +1078,40 @@ GET /live      - Liveness probe (process vivant)
 GET /ready     - Readiness probe (prêt pour le trafic)
 ```
 
+### Dashboard Central — Composants Site Detail
+
+Le site-detail est organisé en **5 onglets** avec des composants Angular standalone :
+
+| Onglet         | Composant                  | Fonctionnalités                                  |
+| -------------- | -------------------------- | ------------------------------------------------ |
+| **État**       | `site-detail.component.ts` | Métriques, connexion temps réel, alertes         |
+| **Contenu**    | `SiteContentTabComponent`  | Boucles par phase, catégories, mapping analytics |
+| **Paramètres** | `SiteSettingsTabComponent` | Config réseau, hotspot, paramètres site          |
+| **Profils**    | `SiteProfilesTabComponent` | Multi-config CRUD, déploiement, synchronisation  |
+| **Debug**      | `SiteDebugTabComponent`    | Logs, commandes, diagnostics                     |
+
+#### SiteProfilesTabComponent (multi-config)
+
+Composant standalone pour gérer les profils de configuration d'un site :
+
+- **Grille de cards** : chaque profil affiché avec nom, ville, sport, badge « défaut »
+- **Modal CRUD** : création/édition avec choix de source (config actuelle, copie d'un profil, vide)
+- **Déploiement unitaire** : bouton deploy par profil → `POST /sites/:id/profiles/:id/deploy`
+- **Sync global** : synchronise tous les profils vers le Pi → `POST /sites/:id/profiles/sync`
+- **Suppression** : avec confirmation, impossible si dernier profil
+
+**Méthodes SitesService :**
+
+| Méthode                                     | Endpoint API                                     |
+| ------------------------------------------- | ------------------------------------------------ |
+| `getProfiles(siteId)`                       | `GET /sites/:siteId/profiles`                    |
+| `getProfile(siteId, profileId)`             | `GET /sites/:siteId/profiles/:profileId`         |
+| `createProfile(siteId, payload)`            | `POST /sites/:siteId/profiles`                   |
+| `updateProfile(siteId, profileId, payload)` | `PUT /sites/:siteId/profiles/:profileId`         |
+| `deleteProfile(siteId, profileId)`          | `DELETE /sites/:siteId/profiles/:profileId`      |
+| `deployProfile(siteId, profileId)`          | `POST /sites/:siteId/profiles/:profileId/deploy` |
+| `syncProfiles(siteId)`                      | `POST /sites/:siteId/profiles/sync`              |
+
 ---
 
 ## Sécurité
