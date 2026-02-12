@@ -1,3 +1,9 @@
+# [3.18.0](https://github.com/Tallec7/neopro/compare/v3.17.2...v3.18.0) (2026-02-12)
+
+### Features
+
+- **monitoring:** add socket disconnect Prometheus metric with Grafana panels ([f7e9b23](https://github.com/Tallec7/neopro/commit/f7e9b23a91faf37b90a8e116bb9358347dde041b))
+
 ## [Unreleased]
 
 ### Features
