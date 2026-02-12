@@ -269,6 +269,77 @@ class SystemService {
   }
 
   // ---------------------------------------------------------------------------
+  // Apply systemd services & sudoers from deployed config
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Copy systemd service files and sudoers from the deployed config
+   * into their system locations, then daemon-reload and restart.
+   *
+   * This fixes Pi units stuck with old service files (e.g. NoNewPrivileges=true)
+   * after an OTA that only updated /home/pi/neopro/config/ but could not
+   * copy into /etc/systemd/system/ due to privilege restrictions.
+   *
+   * @returns {Promise<{applied: string[], errors: string[]}>}
+   */
+  async applySystemdServices() {
+    const applied = [];
+    const errors = [];
+
+    // 1. Copy sudoers if present
+    const sudoersSrc = path.join(NEOPRO_DIR, 'config', 'sudoers.d', 'neopro');
+    try {
+      await fs.access(sudoersSrc);
+      const cpResult = await execCommand(`sudo cp ${sudoersSrc} /etc/sudoers.d/neopro`);
+      if (cpResult.success) {
+        await execCommand('sudo chown root:root /etc/sudoers.d/neopro');
+        await execCommand('sudo chmod 440 /etc/sudoers.d/neopro');
+        applied.push('sudoers');
+      } else {
+        errors.push(`sudoers: ${cpResult.error}`);
+      }
+    } catch {
+      // sudoers file not present in deployed config, skip
+    }
+
+    // 2. Copy all .service files from config/systemd/
+    const systemdDir = path.join(NEOPRO_DIR, 'config', 'systemd');
+    try {
+      await fs.access(systemdDir);
+      const files = await fs.readdir(systemdDir);
+      const serviceFiles = files.filter(f => f.endsWith('.service'));
+
+      for (const svcFile of serviceFiles) {
+        const src = path.join(systemdDir, svcFile);
+        const cpResult = await execCommand(`sudo cp ${src} /etc/systemd/system/${svcFile}`);
+        if (cpResult.success) {
+          await execCommand(`sudo chown root:root /etc/systemd/system/${svcFile}`);
+          await execCommand(`sudo chmod 644 /etc/systemd/system/${svcFile}`);
+          applied.push(svcFile);
+        } else {
+          errors.push(`${svcFile}: ${cpResult.error}`);
+        }
+      }
+
+      // 3. daemon-reload
+      if (applied.length > 0) {
+        await execCommand('sudo systemctl daemon-reload');
+      }
+
+      // 4. Restart sync-agent if its service file was updated
+      if (applied.includes('neopro-sync-agent.service')) {
+        await execCommand('sudo systemctl restart neopro-sync-agent');
+        applied.push('sync-agent-restarted');
+      }
+    } catch {
+      // config/systemd/ directory not present, skip
+    }
+
+    console.log(`[system] apply-services: applied=${applied.join(',')} errors=${errors.join(',')}`);
+    return { applied, errors };
+  }
+
+  // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
 

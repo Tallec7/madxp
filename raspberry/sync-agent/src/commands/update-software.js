@@ -466,7 +466,7 @@ class SoftwareUpdateHandler {
           await execAsync('sudo chmod 440 /etc/sudoers.d/neopro');
           logger.info('Sudoers file installed');
         } catch (e) {
-          logger.warn('Failed to install sudoers file', { error: e.message });
+          logger.warn('Failed to install sudoers via sudo (NoNewPrivileges?), admin-server will handle it', { error: e.message });
         }
       }
 
@@ -524,7 +524,22 @@ class SoftwareUpdateHandler {
             started: newlyInstalledServices.filter(s => !managedServices.includes(s)).length
           });
         } catch (e) {
-          logger.warn('Failed to install some systemd services', { error: e.message });
+          logger.warn('Failed to install systemd services via sudo, falling back to admin-server', { error: e.message });
+          // Fallback: delegate to admin-server which runs without NoNewPrivileges
+          try {
+            await execAsync('curl -s -X POST http://localhost:8080/api/system/apply-services');
+            logger.info('Systemd services applied via admin-server fallback');
+          } catch (fallbackError) {
+            logger.warn('Admin-server fallback also failed', { error: fallbackError.message });
+          }
+        }
+      } else {
+        // No config/systemd/ dir but try apply-services anyway (fixes legacy Pi)
+        try {
+          await execAsync('curl -s -X POST http://localhost:8080/api/system/apply-services');
+          logger.info('Systemd services applied via admin-server (no config/systemd in archive)');
+        } catch (e) {
+          // Admin-server may not have the route yet on very old versions
         }
       }
 

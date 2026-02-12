@@ -9,6 +9,7 @@
  * - POST /api/services/:service/restart -> Redémarrer un service
  * - POST /api/system/reboot             -> Redémarrer le système
  * - POST /api/system/shutdown           -> Arrêter le système
+ * - POST /api/system/apply-services     -> Appliquer services systemd + sudoers
  */
 
 const express = require('express');
@@ -71,6 +72,18 @@ module.exports = function createSystemRouter({ systemService }) {
   router.post('/api/system/shutdown', (req, res) => {
     res.json({ success: true, message: 'Arrêt du système dans 5 secondes...' });
     systemService.shutdown();
+  });
+
+  // POST /api/system/apply-services
+  // Copy systemd services & sudoers from deployed config into system locations.
+  // Fixes Pi units stuck with old service files after OTA.
+  router.post('/api/system/apply-services', async (req, res) => {
+    try {
+      const result = await systemService.applySystemdServices();
+      res.json({ success: true, ...result });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
   });
 
   return router;
