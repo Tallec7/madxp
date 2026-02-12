@@ -119,6 +119,7 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 | **Redis**           | Mémoire utilisée   | < 500MB  | 500-800MB      | > 800MB        |
 | **Redis**           | Hit rate           | > 90%    | 80-90%         | < 80%          |
 | **WebSocket**       | Connexions actives | 40-50    | 30-40 ou 50-60 | < 30 ou > 60   |
+| **WebSocket**       | Déconnexions/5min  | < 5      | 5-15           | > 15           |
 | **CPU serveur**     | Utilisation        | < 60%    | 60-80%         | > 80%          |
 | **Mémoire serveur** | Utilisation        | < 70%    | 70-85%         | > 85%          |
 
@@ -225,7 +226,34 @@ sum by (status) (
 - Ajouter validation fichier avant déploiement
 - Alerter proactivement sur disque < 15%
 
-#### C. Métriques d'alertes
+#### C. Métriques WebSocket (déconnexions)
+
+**Déconnexions par raison (7 jours) :**
+
+```promql
+sum by (reason) (
+  increase(neopro_websocket_disconnects_total[7d])
+)
+```
+
+**Raisons Socket.IO possibles :**
+
+| Raison                 | Signification                        |
+| ---------------------- | ------------------------------------ |
+| `transport close`      | Perte réseau (WiFi, Ethernet, proxy) |
+| `ping timeout`         | Timeout ping/pong Socket.IO          |
+| `io server disconnect` | Déconnexion forcée côté serveur      |
+| `io client disconnect` | Déconnexion volontaire côté client   |
+| `zombie_timeout`       | Health monitor (60s sans pong)       |
+| `zombie_cleanup`       | Nettoyage manuel de connexion zombie |
+
+**Actions :**
+
+- Si `transport close` > 50% → Problème réseau systémique, vérifier connectivité Pi
+- Si `zombie_timeout` > 20% → Instabilité serveur ou réseau, investiguer
+- Si déconnexions agent > 15/5min → Alerte, investiguer immédiatement
+
+#### D. Métriques d'alertes
 
 **Alertes générées par type (7 jours) :**
 
@@ -569,6 +597,7 @@ curl https://neopro-central-production.up.railway.app/health
 - [ ] PostgreSQL : taille DB < 10GB
 - [ ] Redis : mémoire < 1GB, hit rate > 90%
 - [ ] WebSocket : connexions = nombre de sites en ligne
+- [ ] WebSocket : déconnexions < 5/5min (panneau "Socket Disconnects by Reason")
 - [ ] Dashboard Grafana : toutes les métriques en vert
 
 **Temps total : 10-15 minutes**

@@ -1,3 +1,9 @@
+## [Unreleased]
+
+### Features
+
+- **monitoring:** add `neopro_websocket_disconnects_total` Prometheus metric — tracks socket disconnections by reason (`transport close`, `ping timeout`, `zombie_timeout`, `zombie_cleanup`, etc.) and client type (`agent`, `dashboard`). Instrumented in `socket.service.ts` (agent + dashboard disconnect handlers), `health-monitor.handler.ts` (zombie detection + cleanup). Two new Grafana panels added to NeoPro Services dashboard: "Socket Disconnects by Reason" and "Socket Disconnects by Client Type".
+
 ## [3.17.2](https://github.com/Tallec7/neopro/compare/v3.17.1...v3.17.2) (2026-02-12)
 
 ### Bug Fixes

@@ -996,34 +996,34 @@ Pi Analytics: 500 req/min     (impressions sponsors depuis les Pi - par IP)
 
 ### Services Backend Critiques
 
-| Service           | Fichier                     | Rôle                                             |
-| ----------------- | --------------------------- | ------------------------------------------------ |
-| **Socket**        | `socket.service.ts`         | Orchestrateur temps réel Pi ↔ Cloud (676 lignes) |
-| **Storage**       | `storage.service.ts`        | Upload/download vidéos FTP (unifié)              |
-| **Deployment**    | `deployment.service.ts`     | Orchestration déploiement vidéos                 |
-| **CommandQueue**  | `command-queue.service.ts`  | File d'attente commandes (offline/online)        |
-| **MemoryManager** | `memory-manager.service.ts` | Monitoring heap, cleanup automatique             |
-| **AdminOps**      | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire       |
-| **CronScheduler** | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)              |
-| **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook)      |
-| **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready                 |
-| **Metrics**       | `metrics.service.ts`        | Export Prometheus                                |
+| Service           | Fichier                     | Rôle                                               |
+| ----------------- | --------------------------- | -------------------------------------------------- |
+| **Socket**        | `socket.service.ts`         | Orchestrateur temps réel Pi ↔ Cloud (676 lignes)   |
+| **Storage**       | `storage.service.ts`        | Upload/download vidéos FTP (unifié)                |
+| **Deployment**    | `deployment.service.ts`     | Orchestration déploiement vidéos                   |
+| **CommandQueue**  | `command-queue.service.ts`  | File d'attente commandes (offline/online)          |
+| **MemoryManager** | `memory-manager.service.ts` | Monitoring heap, cleanup automatique               |
+| **AdminOps**      | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire         |
+| **CronScheduler** | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)                |
+| **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook)        |
+| **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready                   |
+| **Metrics**       | `metrics.service.ts`        | Export Prometheus (HTTP, WS, DB, disconnect, etc.) |
 
 ### Socket Handlers (`src/handlers/`)
 
 Le service Socket.IO délègue le traitement des événements à 9 handlers spécialisés :
 
-| Handler               | Fichier                         | Événements                |
-| --------------------- | ------------------------------- | ------------------------- |
-| **Heartbeat**         | `heartbeat.handler.ts`          | `heartbeat`, `pong_check` |
-| **ConfigSync**        | `config-sync.handler.ts`        | `sync_local_state`        |
-| **DeployProgress**    | `deploy-progress.handler.ts`    | `deploy_progress`         |
-| **CommandDispatch**   | `command-dispatch.handler.ts`   | `command_result`          |
-| **HealthMonitor**     | `health-monitor.handler.ts`     | Zombie detection, DB sync |
-| **License**           | `license.handler.ts`            | `license_status`          |
-| **NetworkResilience** | `network-resilience.handler.ts` | `network_status`          |
-| **ScoreUpdate**       | `score-update.handler.ts`       | `score_update`            |
-| **MatchConfig**       | `match-config.handler.ts`       | `match_config`            |
+| Handler               | Fichier                         | Événements                                    |
+| --------------------- | ------------------------------- | --------------------------------------------- |
+| **Heartbeat**         | `heartbeat.handler.ts`          | `heartbeat`, `pong_check`                     |
+| **ConfigSync**        | `config-sync.handler.ts`        | `sync_local_state`                            |
+| **DeployProgress**    | `deploy-progress.handler.ts`    | `deploy_progress`                             |
+| **CommandDispatch**   | `command-dispatch.handler.ts`   | `command_result`                              |
+| **HealthMonitor**     | `health-monitor.handler.ts`     | Zombie detection, DB sync, disconnect metrics |
+| **License**           | `license.handler.ts`            | `license_status`                              |
+| **NetworkResilience** | `network-resilience.handler.ts` | `network_status`                              |
+| **ScoreUpdate**       | `score-update.handler.ts`       | `score_update`                                |
+| **MatchConfig**       | `match-config.handler.ts`       | `match_config`                                |
 
 ### Repositories (`src/repositories/`)
 
@@ -1251,4 +1251,4 @@ Voir **[docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ---
 
-**Dernière mise à jour :** 10 février 2026
+**Dernière mise à jour :** 12 février 2026
