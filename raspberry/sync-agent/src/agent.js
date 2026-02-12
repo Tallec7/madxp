@@ -510,10 +510,8 @@ class NeoproSyncAgent {
       this.heartbeatInterval = null;
     }
 
-    if (this.analyticsInterval) {
-      clearInterval(this.analyticsInterval);
-      this.analyticsInterval = null;
-    }
+    // Note: On ne clear pas analyticsInterval car les analytics sont envoyées
+    // via HTTP, indépendamment de la connexion WebSocket (même logique que networkProfileInterval)
 
     if (this.connectionHealthCheckInterval) {
       clearInterval(this.connectionHealthCheckInterval);
