@@ -40,21 +40,25 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 - Username : admin
 - Password : admin (par défaut, à changer en production)
 
+> 📖 **Guide complet de lecture Grafana** : Un guide détaillé avec seuils vert/jaune/rouge, arbres de diagnostic et matrice d'escalade est disponible sur Notion :
+> [📊 Guide Grafana — Lecture & Diagnostic](https://www.notion.so/305c27de363881d1a95cc4891d6cd823)
+
 ### 3.3 Dashboards à consulter (15 min)
 
 #### Dashboard 1 : NeoPro Overview (5 min)
 
 **URL** : Grafana → Dashboards → NeoPro → NeoPro Overview
 
-**Métriques clés à vérifier :**
+**6 indicateurs clés (0 scroll) :**
 
-| Métrique                  | Valeur normale      | Action si anormale                             |
-| ------------------------- | ------------------- | ---------------------------------------------- |
-| **Sites connectés**       | Stable (±5% vs J-1) | Si chute > 10% → Vérifier logs serveur central |
-| **Requêtes HTTP/s**       | 50-200 req/s        | Si pic anormal → Vérifier logs nginx           |
-| **Temps de réponse API**  | < 200ms (p95)       | Si > 500ms → Vérifier PostgreSQL               |
-| **Déploiements en cours** | 0-5                 | Si > 10 → Vérifier la queue                    |
-| **Alertes actives**       | 0-2                 | Si > 5 → Consulter MODOP-S11-15                |
+| Métrique            | ✅ Vert                | ⚠️ Attention | 🔴 Problème             | Où investiguer                    |
+| ------------------- | ---------------------- | ------------ | ----------------------- | --------------------------------- |
+| **API Health**      | UP                     | —            | DOWN                    | Railway logs                      |
+| **Sites connectés** | Proche du total actifs | Écart 1-3    | Écart > 50% ou 0        | Fleet (Dashboard 3)               |
+| **Alertes actives** | 0                      | 1-4          | 5+                      | Alerts by Severity (Dashboard 3)  |
+| **Taux erreur 5xx** | 0%                     | 1-5%         | > 5%                    | HTTP Status Codes (Dashboard 2)   |
+| **Latence API p95** | < 200ms                | 200-500ms    | > 500ms                 | Event Loop + DB Latency (Dash. 2) |
+| **Mémoire RSS**     | < 256 MB               | 256-512 MB   | > 512 MB (OOM imminent) | Heap + Memory Pressure (Dash. 2)  |
 
 **Exemple de vue :**
 
@@ -85,9 +89,33 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 - ⚠️ Anomalie mineure → Créer une note pour investigation
 - 🚨 Anomalie critique → Intervention immédiate + escalade
 
-#### Dashboard 2 : Santé des sites (5 min)
+#### Dashboard 2 : Infrastructure (5 min)
 
-**URL** : Grafana → Dashboards → Sites Health
+**URL** : Grafana → Dashboards → NeoPro → NeoPro Infrastructure
+
+**Rows à vérifier (uniquement si Overview montre un problème) :**
+
+| Row                   | Métriques clés                                      | Seuils critiques                                  |
+| --------------------- | --------------------------------------------------- | ------------------------------------------------- |
+| **API Performance**   | Request Rate, Duration p50/p95/p99, Status Codes    | p99 > 1s, 5xx visibles, Requests In Progress > 15 |
+| **Node.js Runtime**   | Heap Usage %, Event Loop Lag, Memory Pressure       | Heap > 93%, Event Loop > 100ms, emergency events  |
+| **Auth & Rate Limit** | Auth Attempts (success/fail), Rate Limit Violations | Pic massif de failures = bruteforce               |
+| **Database**          | Query Latency p95, Connection Pool active/idle      | p95 > 200ms, Pool 5/5 permanent                   |
+| **FTP / Storage**     | FTP Operations success/failed, Duration, Throughput | Failed > 0, p95 > 60s                             |
+
+#### Dashboard 3 : Business & Fleet (5 min)
+
+**URL** : Grafana → Dashboards → NeoPro → NeoPro Business & Fleet
+
+**Vérifier :**
+
+- **Sites connectés** : Cohérent avec le nombre de clubs actifs (Subscription Status)
+- **WebSocket Connections par type** : Si Pi = 0 mais Dashboard OK → problème côté Pi
+- **Config Sync Pending** : Reste élevé > 30 min → Pi ne se synchronisent pas
+- **Config Drift** : Persiste > 30 min → problème
+- **Predictive Alerts** : "alerts generated" en hausse → intervention préventive
+
+#### Ancienne vue : Santé des sites (Pi)
 
 **Vérifier :**
 

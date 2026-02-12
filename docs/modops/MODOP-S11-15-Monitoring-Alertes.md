@@ -687,6 +687,9 @@ message:"Deployment failed"
 
 ## 9. ESCALADE
 
+> 📖 **Matrice d'escalade complète sur Notion** : arbres de diagnostic par type de problème (API down, sites déconnectés, 5xx, latence, mémoire, alertes), 5 scénarios types séquencés, et matrice d'escalade détaillée (9 situations × qui contacter × infos à fournir × urgence) :
+> [🔀 Diagnostic & Escalade](https://www.notion.so/305c27de3638816b9d88dcf4e55c65cc)
+
 ### 9.1 Matrice d'escalade
 
 | Niveau         | Délai d'intervention | Critères                                  |

@@ -10,6 +10,13 @@
 
 - **monitoring:** add `neopro_websocket_disconnects_total` Prometheus metric — tracks socket disconnections by reason (`transport close`, `ping timeout`, `zombie_timeout`, `zombie_cleanup`, etc.) and client type (`agent`, `dashboard`). Instrumented in `socket.service.ts` (agent + dashboard disconnect handlers), `health-monitor.handler.ts` (zombie detection + cleanup). Two new Grafana panels added to NeoPro Services dashboard: "Socket Disconnects by Reason" and "Socket Disconnects by Client Type".
 
+### Documentation
+
+- **monitoring:** create comprehensive Grafana reading guide on Notion — 5-page structure: Overview (6 stats with green/yellow/red thresholds), Infrastructure (API, Node.js, Auth, DB, FTP with recap tables per row), Business & Fleet (content pipeline, fleet Pi with WebSocket diagnostic grid, deployments, subscriptions), Diagnostic & Escalade (6 decision trees, 5 sequenced scenarios, 9-situation escalation matrix). [Notion link](https://www.notion.so/305c27de363881d1a95cc4891d6cd823)
+- **monitoring:** sync MODOP-O05-08 with 3-dashboard structure, add Notion guide cross-reference
+- **monitoring:** sync MODOP-S11-15 escalation section with Notion diagnostic guide cross-reference
+- **monitoring:** update ARCHITECTURE.md monitoring section — 3 dashboards (Overview, Infrastructure, Business & Fleet)
+
 ### Tests
 
 - **smoke:** extend smoke test suite from 42 to 122 tests — add 18 new test suites covering: extended health checks (dependency checks, summary, uptime), RBAC (5 roles), validation Joi (login, forgot/reset-password), security headers (Helmet: CSP, HSTS, nosniff, X-Frame), CORS (methods, headers, origin reflection), correlation ID (preserve client-provided, generate UUID v4), service initialization wiring (7 services), repository layer (20 repos + BaseRepository), middleware exports (auth 11fn, validation 22 schemas, rate-limit 12 limiters, pagination 5 helpers, RLS 5fn), error types (ErrorCode enum, AppError), Socket.IO handlers (10 files), pagination behavior, body parsing, compression, API docs, route/handler/repo file consistency, auth helpers (isAdmin, isInternal, generateToken), body size limits
