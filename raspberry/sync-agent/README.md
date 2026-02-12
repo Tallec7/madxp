@@ -303,7 +303,7 @@ Met à jour la configuration locale.
 
 ### 5. reboot
 
-Redémarre le Raspberry Pi.
+Redémarre le Raspberry Pi. La commande utilise `exec` en mode fire-and-forget (pas `execAsync`) car `sudo reboot` tue le système avant que le child process ne puisse retourner un exit code. Le résultat `{ success: true }` est envoyé au serveur central avant l'exécution effective du reboot (délai de 2 secondes).
 
 ```json
 {
@@ -632,5 +632,5 @@ Pour toute question ou problème, contacter l'équipe NEOPRO.
 
 ---
 
-**Version :** 1.0.0
-**Dernière mise à jour :** Décembre 2025
+**Version :** 1.0.1
+**Dernière mise à jour :** Février 2026

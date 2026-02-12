@@ -100,12 +100,17 @@ const commands = {
   async reboot() {
     logger.warn('System reboot requested');
 
-    setTimeout(async () => {
-      try {
-        await execAsync('sudo reboot');
-      } catch (error) {
-        logger.error('Reboot command failed:', { error: error.message });
-      }
+    // Use fire-and-forget exec (not execAsync) because:
+    // 1. sudo reboot kills the system before the child process can return
+    // 2. execAsync would reject (non-zero exit / signal) — the error was silently caught
+    // 3. The command_result is already sent before the timeout fires
+    setTimeout(() => {
+      logger.info('Executing sudo reboot now...');
+      exec('sudo reboot', (error) => {
+        if (error) {
+          logger.error('Reboot command failed:', { error: error.message });
+        }
+      });
     }, 2000);
 
     return { success: true, message: 'Rebooting in 2 seconds' };

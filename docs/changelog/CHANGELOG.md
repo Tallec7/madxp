@@ -1,3 +1,9 @@
+## [3.16.2] (2026-02-12)
+
+### Bug Fixes
+
+- **sync-agent:** fix reboot command never executing — replace `execAsync` (promisified) with fire-and-forget `exec` in reboot handler. `sudo reboot` kills the system before the child process can return, causing `execAsync` to reject silently. Aligned with admin server pattern that already used `exec` correctly.
+
 ## [3.16.1](https://github.com/Tallec7/neopro/compare/v3.16.0...v3.16.1) (2026-02-11)
 
 ### Bug Fixes
