@@ -16,10 +16,10 @@ Le mode démo est contrôlé par la variable `demoMode` dans les fichiers d'envi
 ## Build pour le serveur de démo
 
 ```bash
-npx ng build --configuration=demo
+npx ng build raspberry --configuration=demo
 ```
 
-Le build est généré dans `dist/neopro/browser/`.
+Le build est généré dans `dist/raspberry/browser/`.
 
 ## Fonctionnement
 
