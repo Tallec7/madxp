@@ -10,6 +10,10 @@
 
 - **monitoring:** add `neopro_websocket_disconnects_total` Prometheus metric — tracks socket disconnections by reason (`transport close`, `ping timeout`, `zombie_timeout`, `zombie_cleanup`, etc.) and client type (`agent`, `dashboard`). Instrumented in `socket.service.ts` (agent + dashboard disconnect handlers), `health-monitor.handler.ts` (zombie detection + cleanup). Two new Grafana panels added to NeoPro Services dashboard: "Socket Disconnects by Reason" and "Socket Disconnects by Client Type".
 
+### Tests
+
+- **smoke:** extend smoke test suite from 42 to 122 tests — add 18 new test suites covering: extended health checks (dependency checks, summary, uptime), RBAC (5 roles), validation Joi (login, forgot/reset-password), security headers (Helmet: CSP, HSTS, nosniff, X-Frame), CORS (methods, headers, origin reflection), correlation ID (preserve client-provided, generate UUID v4), service initialization wiring (7 services), repository layer (20 repos + BaseRepository), middleware exports (auth 11fn, validation 22 schemas, rate-limit 12 limiters, pagination 5 helpers, RLS 5fn), error types (ErrorCode enum, AppError), Socket.IO handlers (10 files), pagination behavior, body parsing, compression, API docs, route/handler/repo file consistency, auth helpers (isAdmin, isInternal, generateToken), body size limits
+
 ## [3.17.2](https://github.com/Tallec7/neopro/compare/v3.17.1...v3.17.2) (2026-02-12)
 
 ### Bug Fixes

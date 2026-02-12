@@ -354,15 +354,17 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 ### 7. Monitoring & Observability
 
 - **Prometheus metrics** (Port 9090) — 23 métriques custom `neopro_*` + métriques Node.js par défaut
-- **Grafana dashboards** (Port 3000) — 2 dashboards auto-provisionnés :
-  - _NeoPro Overview_ (10 panels) : HTTP rate/latence, WebSocket, déploiements, CPU/RAM, event loop lag
-  - _NeoPro Services_ (18 panels) : DB, auth, commandes Pi, alertes réseau, stabilité réseau, heartbeats
+- **Grafana dashboards** (Port 3000) — 3 dashboards (local) + 3 dashboards cloud :
+  - _NeoPro Overview_ : API Health, sites connectés, alertes actives, taux 5xx, latence p95, mémoire RSS
+  - _NeoPro Infrastructure_ : HTTP rate/latence par percentile, Node.js runtime (heap, event loop lag, memory pressure), auth & rate limiting, DB pool & latency, FTP storage
+  - _NeoPro Business & Fleet_ : content pipeline (video uploads), fleet Pi (WebSocket par type, heartbeats, network stability), deployments (canary, sync, drift), subscriptions & predictive alerts
 - **Scrape targets** : Docker local, `host.docker.internal:3001` (dev), Railway HTTPS (prod)
-- **Smoke tests** : `npm run test:smoke` — 42 tests détectent les régressions de wiring API + conventions Pi (systemd, sudoers)
+- **Smoke tests** : `npm run test:smoke` — 122 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types) + conventions Pi (systemd, sudoers)
 - Systemd journald logs
 - Winston structured logging with Correlation ID
 - Memory Manager Service (heap monitoring, pressure cleanup)
 - Health checks (/health, /live, /ready)
+- **Guide de lecture Grafana** : [Notion — Guide Grafana Support](https://www.notion.so/305c27de363881d1a95cc4891d6cd823) — seuils, arbres de diagnostic, matrice d'escalade
 
 ### 8. Alerting Multi-Canal
 
