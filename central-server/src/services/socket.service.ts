@@ -41,6 +41,7 @@ import {
 import { handleDeployProgress, handleUpdateProgress } from '../handlers/deploy-progress.handler';
 import { sendLicenseStatus } from '../handlers/license.handler';
 import { handleNetworkAlert, handleNetworkRollback } from '../handlers/network-resilience.handler';
+import { handleRecordingState, RecordingStateMessage } from '../handlers/recording-state.handler';
 import {
   checkConnectionHealth,
   syncDbWithWebSocketState,
@@ -122,6 +123,7 @@ class SocketService {
   private connectedSites: Map<string, Socket> = new Map();
   private pendingCommands: Map<string, PendingCommand> = new Map();
   private lastPongReceived: Map<string, number> = new Map();
+  private recordingStates: Map<string, { isRecording: boolean; isManualOverride: boolean; updatedAt: number }> = new Map();
   private timeoutCheckInterval: NodeJS.Timeout | null = null;
   private connectionHealthCheckInterval: NodeJS.Timeout | null = null;
   private dbSyncInterval: NodeJS.Timeout | null = null;
@@ -135,6 +137,7 @@ class SocketService {
       connectedSites: this.connectedSites,
       pendingCommands: this.pendingCommands,
       lastPongReceived: this.lastPongReceived,
+      recordingStates: this.recordingStates,
     };
   }
 
@@ -390,6 +393,7 @@ class SocketService {
       pong_check: () => this.lastPongReceived.set(siteId, Date.now()),
       network_alert: (alert: Record<string, unknown>) => handleNetworkAlert(ctx, siteId, alert),
       network_rollback: (rollback: Record<string, unknown>) => handleNetworkRollback(ctx, siteId, rollback),
+      'recording-state': (message: RecordingStateMessage) => handleRecordingState(ctx, siteId, message),
     };
 
     // Register handlers with metrics tracking for inbound WebSocket messages
@@ -413,6 +417,7 @@ class SocketService {
     socket.on('pong_check', withMetrics('pong_check', handlers.pong_check));
     socket.on('network_alert', withMetrics('network_alert', handlers.network_alert));
     socket.on('network_rollback', withMetrics('network_rollback', handlers.network_rollback));
+    socket.on('recording-state', withMetrics('recording-state', handlers['recording-state']));
 
     (socket as any)._neoHandlers = handlers;
 
@@ -483,6 +488,7 @@ class SocketService {
       socket.off('pong_check', handlers.pong_check);
       socket.off('network_alert', handlers.network_alert);
       socket.off('network_rollback', handlers.network_rollback);
+      socket.off('recording-state', handlers['recording-state']);
       delete (socket as any)._neoHandlers;
     }
 
@@ -511,6 +517,7 @@ class SocketService {
       const siteName = ((socket as any).siteName as string) || siteId;
       this.connectedSites.delete(siteId);
       this.lastPongReceived.delete(siteId);
+      this.recordingStates.delete(siteId);
 
       query(
         'UPDATE sites SET status = $1, last_seen_at = NOW() WHERE id = $2',
@@ -551,6 +558,11 @@ class SocketService {
 
   isConnected(siteId: string): boolean {
     return this.connectedSites.has(siteId);
+  }
+
+  getRecordingState(siteId: string): { isRecording: boolean; isManualOverride: boolean } | null {
+    const state = this.recordingStates.get(siteId);
+    return state ? { isRecording: state.isRecording, isManualOverride: state.isManualOverride } : null;
   }
 
   getConnectedSites(): string[] {
@@ -661,6 +673,7 @@ class SocketService {
     this.pendingCommands.clear();
     this.connectedSites.clear();
     this.lastPongReceived.clear();
+    this.recordingStates.clear();
 
     if (this.redisClient) {
       try {

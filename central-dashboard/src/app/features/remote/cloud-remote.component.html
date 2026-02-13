@@ -145,7 +145,14 @@
       </button>
     </div>
   </div>
+} @else if (isLicenseBlocked && licenseState) {
+  <app-license-block-remote [licenseState]="licenseState" [siteReference]="siteName || ''">
+  </app-license-block-remote>
 } @else {
+  @if (hasLicenseWarning && licenseState && !licenseBannerDismissed) {
+    <app-license-banner [licenseState]="licenseState" (dismissed)="dismissLicenseBanner()">
+    </app-license-banner>
+  }
   <div
     class="remote-container"
     role="main"
@@ -201,6 +208,21 @@
         </div>
 
         <div class="header-right">
+          <!-- Indicateur REC -->
+          <button
+            class="recording-indicator"
+            [class.recording]="isRecording"
+            (click)="toggleRecording()"
+            [title]="
+              isRecording
+                ? 'Enregistrement en cours (cliquer pour arrêter)'
+                : 'Enregistrement arrêté (cliquer pour démarrer)'
+            "
+          >
+            <span class="rec-dot"></span>
+            <span class="rec-label">REC</span>
+          </button>
+
           <!-- Sélecteur de phase (compact) -->
           <div class="phase-dropdown">
             <button

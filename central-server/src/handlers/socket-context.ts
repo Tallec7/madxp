@@ -40,4 +40,7 @@ export interface SocketContext {
 
   /** Map of siteId → timestamp (ms) of last pong/heartbeat received */
   readonly lastPongReceived: Map<string, number>;
+
+  /** Map of siteId → recording state (ephemeral, in-memory) */
+  readonly recordingStates: Map<string, { isRecording: boolean; isManualOverride: boolean; updatedAt: number }>;
 }

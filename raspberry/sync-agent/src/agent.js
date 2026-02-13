@@ -38,6 +38,7 @@ class NeoproSyncAgent {
     this.videoWatcher = null;
     this.lastSuccessfulHeartbeat = null;
     this.networkProfileInterval = null;
+    this._lastRecordingState = null;
   }
 
   async start() {
@@ -109,6 +110,8 @@ class NeoproSyncAgent {
     // Cloud remote action (play video, play sponsors) - relayed as 'command' to local server
     // The local server converts 'command' to 'action' for the TV component
     this.socket.on('cloud-remote-action', (data) => this.relayToLocalServer('command', data));
+    // Recording toggle from cloud remote
+    this.socket.on('recording-toggle', (data) => this.relayToLocalServer('recording-toggle', data));
 
     // =========================================================================
     // LICENSE STATUS
@@ -784,6 +787,44 @@ class NeoproSyncAgent {
     }, config.monitoring.heartbeatInterval);
   }
 
+  /**
+   * Fetch recording state from local Pi server (quick connection)
+   * @returns {Promise<{isRecording: boolean, isManualOverride: boolean} | null>}
+   */
+  fetchLocalRecordingState() {
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        localSocket.disconnect();
+        resolve(this._lastRecordingState);
+      }, 2000);
+
+      const localSocket = io('http://localhost:3000', {
+        timeout: 2000,
+        reconnection: false,
+      });
+
+      localSocket.on('connect', () => {
+        // The local server emits 'recording-state' on connection
+        // (see raspberry/server/socket/handlers.js line 36)
+      });
+
+      localSocket.on('recording-state', (data) => {
+        clearTimeout(timeout);
+        this._lastRecordingState = {
+          isRecording: !!data.isRecording,
+          isManualOverride: !!data.isManualOverride,
+        };
+        localSocket.disconnect();
+        resolve(this._lastRecordingState);
+      });
+
+      localSocket.on('connect_error', () => {
+        clearTimeout(timeout);
+        resolve(this._lastRecordingState);
+      });
+    });
+  }
+
   async sendHeartbeat() {
     // Vérifier à la fois le flag interne ET l'état réel de la socket
     if (!this.connected) {
@@ -830,6 +871,9 @@ class NeoproSyncAgent {
           // Ignore — le fichier peut ne pas encore exister
         }
 
+        // Fetch recording state from local server
+        const recordingState = await this.fetchLocalRecordingState();
+
         this.socket.emit('heartbeat', {
           siteId: config.site.id,
           timestamp: Date.now(),
@@ -837,6 +881,7 @@ class NeoproSyncAgent {
           softwareVersion,
           versionInfo,
           kioskStatus,
+          recordingState,
         });
 
         // Enregistrer le succès du heartbeat

@@ -146,7 +146,8 @@ export const schemas = {
   remoteCommand: Joi.object({
     type: Joi.string().valid(
       'score-update', 'score-reset', 'phase-change', 'play-video',
-      'play-sponsors', 'timer-update', 'breaking-news', 'match-config'
+      'play-sponsors', 'timer-update', 'breaking-news', 'match-config',
+      'recording-toggle'
     ).required(),
     data: Joi.object().optional().default({}),
   }),

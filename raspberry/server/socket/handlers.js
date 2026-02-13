@@ -115,6 +115,20 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
     });
 
     /**
+     * Recording toggle from cloud remote — toggles recording on/off.
+     * @event recording-toggle
+     */
+    socket.on('recording-toggle', () => {
+      console.log('[Recording] Cloud remote toggle received');
+      const current = stateService.getRecordingState();
+      const newState = stateService.setRecordingState({
+        isRecording: !current.isRecording,
+        isManualOverride: true,
+      });
+      io.emit('recording-state', newState);
+    });
+
+    /**
      * TV registration — registers a TV screen as master (first) or slave.
      * Slaves receive the current loop state immediately.
      * @event tv-register

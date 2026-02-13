@@ -11,6 +11,7 @@
 La télécommande Cloud Remote permet de contrôler un site à distance via `https://dashboard.neopro.tv/remote/{siteId}`. Elle est utilisée par le staff des clubs (bénévoles, responsables sportifs) qui scannent un QR code avec leur téléphone personnel.
 
 Contraintes :
+
 1. **Pas de compte utilisateur** : Les bénévoles n'ont pas de login Neopro
 2. **Accès immédiat** : Scanner le QR code → télécommande fonctionnelle en 2 secondes
 3. **Réseaux variés** : Le téléphone peut être sur le hotspot du club, le WiFi du lieu, ou la 4G
@@ -21,25 +22,35 @@ Contraintes :
 Les endpoints `/api/remote/*` sont **volontairement publics** (pas d'authentification JWT) :
 
 ```
-GET  /api/remote/:siteId/state    → État du site (public)
-POST /api/remote/:siteId/command  → Envoyer une commande (public)
-GET  /api/remote/:siteId/videos   → Liste vidéos (public)
+GET  /api/remote/:siteId/state      → État du site + licence + recording state (public)
+POST /api/remote/:siteId/verify-pin → Vérifier PIN → JWT token (public)
+POST /api/remote/:siteId/command    → Envoyer une commande (public, PIN-protégé si configuré)
+GET  /api/remote/:siteId/videos     → Liste vidéos (public, PIN-protégé si configuré)
 ```
 
 **Sécurité sans JWT** :
+
 - **UUID du site** : 128 bits d'entropie, impossible à deviner par force brute
 - **Rate limiting** : 30 req/min par IP (sensitiveRateLimit)
 - **Site online requis** : Les commandes ne sont relayées que si le Pi est connecté
+- **PIN optionnel** : 4-6 chiffres (SHA-256), protection brute-force (5 tentatives / 10 min), JWT token 24h après vérification
+
+**Données publiques exposées** :
+
+- `licenseStatus` : Toujours retourné (même sans PIN), expose uniquement le statut et les compteurs — pas de données sensibles
+- `recordingState` : État éphémère (isRecording, isManualOverride), stocké en mémoire uniquement
 
 ## Alternatives Considérées
 
 ### 1. Authentification JWT classique (login/password)
 
 **Avantages** :
+
 - Sécurité standard
 - Traçabilité par utilisateur
 
 **Inconvénients** :
+
 - Le bénévole doit créer un compte et se souvenir du mot de passe
 - Le scan du QR code mène à une page de login → friction fatale
 - La plupart des clubs ont 10-15 bénévoles qui changent chaque saison
@@ -49,10 +60,12 @@ GET  /api/remote/:siteId/videos   → Liste vidéos (public)
 ### 2. Token temporaire dans le QR code
 
 **Avantages** :
+
 - Pas de login
 - Token à durée limitée
 
 **Inconvénients** :
+
 - Le QR code doit être régénéré régulièrement
 - Si le QR code est imprimé (affiche), il expire
 - Complexité de gestion des tokens
@@ -62,10 +75,12 @@ GET  /api/remote/:siteId/videos   → Liste vidéos (public)
 ### 3. PIN simple (4-6 chiffres)
 
 **Avantages** :
+
 - Facile à retenir
 - Pas besoin de compte
 
 **Inconvénients** :
+
 - Espace d'entropie faible (10^4 à 10^6) → brute-forceable
 - Il faut communiquer le PIN au staff
 - Nécessite un écran de saisie supplémentaire
@@ -75,12 +90,14 @@ GET  /api/remote/:siteId/videos   → Liste vidéos (public)
 ### 4. UUID comme seul secret ✅
 
 **Avantages** :
+
 - **Zéro friction** : QR code → télécommande instantanée
 - **Entropie suffisante** : UUID v4 = 122 bits aléatoires
 - **QR code stable** : Peut être imprimé et affiché durablement
 - **Simple** : Pas de gestion de tokens/sessions
 
 **Inconvénients** :
+
 - Si l'UUID fuite, n'importe qui peut envoyer des commandes
 - Pas de traçabilité par utilisateur (uniquement par IP)
 
@@ -102,11 +119,11 @@ GET  /api/remote/:siteId/videos   → Liste vidéos (public)
 
 ### Mitigations
 
-| Risque | Mitigation |
-|--------|------------|
-| UUID dans les logs serveur | Logs d'accès par IP, rate limiting |
-| Abus externe | Rate limit 30 req/min par IP |
-| Spam de commandes | Le site doit être online pour recevoir |
+| Risque                               | Mitigation                                 |
+| ------------------------------------ | ------------------------------------------ |
+| UUID dans les logs serveur           | Logs d'accès par IP, rate limiting         |
+| Abus externe                         | Rate limit 30 req/min par IP               |
+| Spam de commandes                    | Le site doit être online pour recevoir     |
 | URL partagée sur les réseaux sociaux | Possibilité de régénérer l'API key du site |
 
 ### Impact sur l'intercepteur Angular
@@ -120,13 +137,24 @@ if (error.status === 401 && !req.url.includes('/api/remote/')) {
 }
 ```
 
+## Évolutions (février 2026)
+
+### PIN optionnel (v2.33)
+
+Les clubs peuvent configurer un PIN 4-6 chiffres pour protéger l'accès cloud remote. Le PIN est stocké en SHA-256 côté serveur. Après vérification (`POST /verify-pin`), un JWT token 24h est retourné et stocké en localStorage. Protection brute-force : max 5 tentatives par IP+site en 10 minutes.
+
+### Licence + REC (v3.21+)
+
+L'endpoint `GET /state` retourne désormais `licenseStatus` (statut, daysLeft, messageRemote...) et `recordingState` (isRecording, isManualOverride). La commande `recording-toggle` a été ajoutée aux commandes valides. Le recording state est éphémère (Map en mémoire côté serveur), alimenté par le heartbeat du Pi.
+
 ## Références
 
 - [remote.controller.ts](../../central-server/src/controllers/remote.controller.ts) - Endpoints publics
 - [remote.routes.ts](../../central-server/src/routes/remote.routes.ts) - Routes sans middleware authenticate
+- [remote-pin.middleware.ts](../../central-server/src/middleware/remote-pin.middleware.ts) - PIN vérification + JWT
 - [cloud-remote.component.ts](../../central-dashboard/src/app/features/remote/cloud-remote.component.ts) - UI
 - [auth.interceptor.ts](../../central-dashboard/src/app/core/interceptors/auth.interceptor.ts) - Exclusion remote
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_

@@ -60,6 +60,22 @@ export interface RemoteState {
     size: number;
     duration: number | null;
   }>;
+  licenseStatus?: {
+    status: string;
+    reason?: string;
+    daysLeft?: number;
+    daysExpired?: number;
+    messageRemote?: string;
+    subscriptionEnd?: string;
+    subscriptionPlan?: string;
+    canAutoUnblock?: boolean;
+    needsConnection?: boolean;
+    daysSinceCheck?: number;
+  } | null;
+  recordingState?: {
+    isRecording: boolean;
+    isManualOverride: boolean;
+  } | null;
 }
 
 export interface RemoteVideos {
@@ -99,7 +115,8 @@ export type RemoteCommandType =
   | 'play-sponsors'
   | 'timer-update'
   | 'breaking-news'
-  | 'match-config';
+  | 'match-config'
+  | 'recording-toggle';
 
 export interface ScoreData {
   homeTeam: string;
@@ -294,5 +311,12 @@ export class RemoteService {
    */
   configureMatch(siteId: string, config: MatchConfigData): Observable<CommandResult> {
     return this.sendCommand(siteId, 'match-config', config);
+  }
+
+  /**
+   * Toggle l'enregistrement analytics sur le Pi
+   */
+  toggleRecording(siteId: string): Observable<CommandResult> {
+    return this.sendCommand(siteId, 'recording-toggle');
   }
 }

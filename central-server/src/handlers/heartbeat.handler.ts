@@ -71,6 +71,15 @@ export async function handleHeartbeat(
       );
     }
 
+    // Update recording state in memory (ephemeral)
+    if (message.recordingState) {
+      ctx.recordingStates.set(siteId, {
+        isRecording: message.recordingState.isRecording,
+        isManualOverride: message.recordingState.isManualOverride,
+        updatedAt: Date.now(),
+      });
+    }
+
     await checkAlerts(siteId, message.metrics, message.kioskStatus);
   } catch (error) {
     logger.error('Error handling heartbeat:', error);

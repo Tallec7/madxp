@@ -18,6 +18,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, interval, takeUntil, debounceTime } from 'rxjs';
 import { RemoteService, RemoteState } from '../../core/services/remote.service';
+import { LicenseState, LicenseStatus } from '../../core/models/license.model';
+import { LicenseBannerComponent } from './components/license-banner.component';
+import { LicenseBlockRemoteComponent } from './components/license-block-remote.component';
 
 // Types locaux (identiques au Pi)
 type SportType = 'football' | 'basketball' | 'handball' | 'volleyball' | 'rugby' | 'hockey';
@@ -205,7 +208,7 @@ type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-v
 @Component({
   selector: 'app-cloud-remote',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LicenseBannerComponent, LicenseBlockRemoteComponent],
   templateUrl: './cloud-remote.component.html',
   styleUrls: ['./cloud-remote.component.scss']
 })
@@ -289,6 +292,15 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   // Dark mode
   public isDarkMode = false;
+
+  // License
+  public licenseState: LicenseState | null = null;
+  public isLicenseBlocked = false;
+  public hasLicenseWarning = false;
+  public licenseBannerDismissed = false;
+
+  // Recording
+  public isRecording = false;
 
   // Menu header
   public isHeaderMenuOpen = false;
@@ -452,6 +464,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         };
 
         this.initializeWithConfiguration(this.configuration);
+        this.updateLicenseState(state);
+        this.updateRecordingState(state);
         this.isLoading = false;
       },
       error: (err) => {
@@ -550,6 +564,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
             liveScoreEnabled: state.config.liveScoreEnabled || false,
           };
         }
+
+        this.updateLicenseState(state);
+        this.updateRecordingState(state);
       },
       error: () => {
         // Silencieux pour le polling
@@ -563,6 +580,59 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
       ? config.timeCategories
       : this.defaultTimeCategories;
     this.liveScoreEnabled = config.liveScoreEnabled ?? false;
+  }
+
+  // ============================================================================
+  // LICENSE & RECORDING
+  // ============================================================================
+
+  private updateLicenseState(state: RemoteState): void {
+    if (state.licenseStatus) {
+      this.licenseState = {
+        status: state.licenseStatus.status as LicenseStatus,
+        reason: state.licenseStatus.reason,
+        daysLeft: state.licenseStatus.daysLeft,
+        daysExpired: state.licenseStatus.daysExpired,
+        messageRemote: state.licenseStatus.messageRemote,
+        subscriptionEnd: state.licenseStatus.subscriptionEnd,
+        subscriptionPlan: state.licenseStatus.subscriptionPlan,
+        canAutoUnblock: state.licenseStatus.canAutoUnblock,
+        needsConnection: state.licenseStatus.needsConnection,
+        daysSinceCheck: state.licenseStatus.daysSinceCheck,
+      };
+      this.isLicenseBlocked = this.licenseState.status === 'BLOCKED';
+      this.hasLicenseWarning = ['WARNING', 'GRACE_PERIOD', 'CONNECTION_WARNING'].includes(this.licenseState.status);
+    } else {
+      this.licenseState = null;
+      this.isLicenseBlocked = false;
+      this.hasLicenseWarning = false;
+    }
+  }
+
+  private updateRecordingState(state: RemoteState): void {
+    if (state.recordingState) {
+      this.isRecording = state.recordingState.isRecording;
+    }
+  }
+
+  public toggleRecording(): void {
+    if (!this.siteId || !this.isConnected) return;
+    this.remoteService.toggleRecording(this.siteId).subscribe({
+      next: () => {
+        this.isRecording = !this.isRecording;
+        this.displayToast(
+          this.isRecording ? 'Enregistrement démarré' : 'Enregistrement arrêté',
+          'success'
+        );
+      },
+      error: () => {
+        this.displayToast('Erreur lors du toggle enregistrement', 'info');
+      },
+    });
+  }
+
+  public dismissLicenseBanner(): void {
+    this.licenseBannerDismissed = true;
   }
 
   // ============================================================================

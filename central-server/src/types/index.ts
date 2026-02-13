@@ -250,6 +250,10 @@ export interface HeartbeatMessage {
     reason?: string;
     pid: number;
   } | null;
+  recordingState?: {
+    isRecording: boolean;
+    isManualOverride: boolean;
+  } | null;
 }
 
 // ============================================================================

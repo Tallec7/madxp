@@ -20,6 +20,18 @@ import { siteRepository } from '../repositories';
 import socketService from '../services/socket.service';
 import logger from '../config/logger';
 import { generateRemotePinToken } from '../middleware/remote-pin.middleware';
+import { LicenseStatusResponse, SiteSubscriptionInfo, SubscriptionPlan, SuspensionReason } from '../types';
+
+// Lazy import to avoid circular dependency
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let subscriptionService: { computeLicenseStatus: (site: SiteSubscriptionInfo) => Promise<LicenseStatusResponse> } | null = null;
+const getSubscriptionService = async () => {
+  if (!subscriptionService) {
+    const module = await import('../services/subscription.service');
+    subscriptionService = module.subscriptionService;
+  }
+  return subscriptionService;
+};
 
 // Compteur brute-force en mémoire (par IP + siteId)
 const pinAttempts = new Map<string, { count: number; lastAttempt: number }>();
@@ -74,6 +86,28 @@ export async function getRemoteState(req: Request, res: Response) {
       }
     }
 
+    // Compute license status for the cloud remote
+    let licenseStatus: LicenseStatusResponse | null = null;
+    try {
+      const subService = await getSubscriptionService();
+      licenseStatus = await subService.computeLicenseStatus({
+        id: site.id,
+        subscription_start: site.subscription_start ? String(site.subscription_start) : null,
+        subscription_end: site.subscription_end ? String(site.subscription_end) : null,
+        subscription_plan: (site.subscription_plan as SubscriptionPlan) || 'standard',
+        suspended: !!(site.suspended),
+        suspension_reason: (site.suspension_reason as SuspensionReason) || null,
+        suspension_date: site.suspension_date ? String(site.suspension_date) : null,
+        suspension_note: null,
+        last_seen_at: site.last_seen_at ? site.last_seen_at.toISOString() : null,
+      });
+    } catch (error) {
+      logger.warn('Error computing license status for remote', { siteId, error });
+    }
+
+    // Get recording state (ephemeral, in-memory)
+    const recordingState = socketService.getRecordingState(siteId);
+
     // Réponse de base (toujours retournée)
     const response: Record<string, unknown> = {
       siteId,
@@ -84,6 +118,19 @@ export async function getRemoteState(req: Request, res: Response) {
       connectionHealth,
       lastSeenAt: site.last_seen_at,
       pinRequired,
+      licenseStatus: licenseStatus ? {
+        status: licenseStatus.status,
+        reason: licenseStatus.reason || null,
+        daysLeft: licenseStatus.days_left ?? null,
+        daysExpired: licenseStatus.days_expired ?? null,
+        messageRemote: licenseStatus.message_remote || null,
+        subscriptionEnd: licenseStatus.subscription_end || null,
+        subscriptionPlan: licenseStatus.subscription_plan || null,
+        canAutoUnblock: licenseStatus.can_auto_unblock ?? false,
+        needsConnection: (licenseStatus.days_since_check ?? 0) > 10,
+        daysSinceCheck: licenseStatus.days_since_check ?? null,
+      } : null,
+      recordingState: recordingState || { isRecording: false, isManualOverride: false },
     };
 
     // Si pas de PIN ou PIN vérifié → retourner la config complète
@@ -220,6 +267,7 @@ export async function sendRemoteCommand(req: Request, res: Response) {
       'timer-update',
       'breaking-news',
       'match-config',
+      'recording-toggle',
     ];
 
     if (!validCommands.includes(type)) {
@@ -315,6 +363,11 @@ export async function sendRemoteCommand(req: Request, res: Response) {
           audienceEstimate: data.audienceEstimate,
           timestamp,
         };
+        break;
+
+      case 'recording-toggle':
+        eventName = 'recording-toggle';
+        payload = { timestamp };
         break;
 
       default:

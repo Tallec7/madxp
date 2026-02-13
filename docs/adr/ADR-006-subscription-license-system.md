@@ -31,23 +31,23 @@ Cloud (subscription.service.ts)     Pi (license-cache.js)     UI (license.servic
 
 ### Statuts de licence
 
-| Statut | Signification | TV | Remote |
-|--------|--------------|-----|--------|
-| `VALID` | Abonnement actif | OK | OK |
-| `WARNING` | Expire dans ≤30 jours | OK | Bannière |
-| `GRACE_PERIOD` | Expiré depuis ≤7 jours | OK | Bannière urgente |
-| `CONNECTION_WARNING` | Offline 7-14 jours | OK | Bannière |
-| `BLOCKED` | Expiré/suspendu/offline >14j | Écran blocage | Écran blocage |
+| Statut               | Signification                | TV            | Remote locale    | Cloud Remote     |
+| -------------------- | ---------------------------- | ------------- | ---------------- | ---------------- |
+| `VALID`              | Abonnement actif             | OK            | OK               | OK               |
+| `WARNING`            | Expire dans ≤30 jours        | OK            | Bannière         | Bannière         |
+| `GRACE_PERIOD`       | Expiré depuis ≤7 jours       | OK            | Bannière urgente | Bannière urgente |
+| `CONNECTION_WARNING` | Offline 7-14 jours           | OK            | Bannière         | Bannière         |
+| `BLOCKED`            | Expiré/suspendu/offline >14j | Écran blocage | Écran blocage    | Écran blocage    |
 
 ### Constantes clés
 
-| Variable | Valeur | Rôle |
-|----------|--------|------|
-| `LICENSE_CACHE_TTL_DAYS` | 7 | Durée de validité du cache local |
-| `SUBSCRIPTION_GRACE_PERIOD_DAYS` | 7 | Délai de grâce après expiration |
-| `MAX_OFFLINE_DAYS` | 14 | Maximum offline avant blocage (cache + grace) |
-| `WARNING_THRESHOLD_DAYS` | 30 | Premier avertissement |
-| `URGENT_WARNING_THRESHOLD_DAYS` | 7 | Avertissement urgent |
+| Variable                         | Valeur | Rôle                                          |
+| -------------------------------- | ------ | --------------------------------------------- |
+| `LICENSE_CACHE_TTL_DAYS`         | 7      | Durée de validité du cache local              |
+| `SUBSCRIPTION_GRACE_PERIOD_DAYS` | 7      | Délai de grâce après expiration               |
+| `MAX_OFFLINE_DAYS`               | 14     | Maximum offline avant blocage (cache + grace) |
+| `WARNING_THRESHOLD_DAYS`         | 30     | Premier avertissement                         |
+| `URGENT_WARNING_THRESHOLD_DAYS`  | 7      | Avertissement urgent                          |
 
 ### Auto-déblocage
 
@@ -70,12 +70,14 @@ Les suspensions pour motifs financiers (`unpaid`, `expired`, `trial_ended`) se d
 ### 3. Cache local avec grace period (choisi) ✅
 
 **Avantages** :
+
 - 14 jours d'autonomie offline (7j cache + 7j grace)
 - Dégradation progressive (WARNING → GRACE → BLOCKED)
 - Auto-déblocage intelligent selon le motif
 - Backup du cache local pour résilience
 
 **Inconvénients** :
+
 - Complexité du calcul d'état distribué
 - 14 jours de "fuite" possible (utilisation gratuite après expiration)
 
@@ -98,19 +100,26 @@ Les suspensions pour motifs financiers (`unpaid`, `expired`, `trial_ended`) se d
 
 ### Risques Mitigés
 
-| Risque | Mitigation |
-|--------|------------|
-| Cache corrompu | Fichier backup `.backup.json` avec rollback |
-| Horloge Pi décalée | Utilisation de `server_timestamp` comme référence |
+| Risque              | Mitigation                                                        |
+| ------------------- | ----------------------------------------------------------------- |
+| Cache corrompu      | Fichier backup `.backup.json` avec rollback                       |
+| Horloge Pi décalée  | Utilisation de `server_timestamp` comme référence                 |
 | Auto-unblock abusif | Vérification stricte : suspension_reason + subscription_end > now |
+
+### Cloud Remote
+
+Depuis février 2026, la Cloud Remote (`/remote/:siteId`) affiche les mêmes états licence que la remote locale. Le statut est calculé côté serveur par `computeLicenseStatus()` et exposé dans `GET /api/remote/:siteId/state` (champ `licenseStatus`). Composants : `LicenseBannerComponent` et `LicenseBlockRemoteComponent` (standalone, portés depuis le raspberry).
 
 ## Références
 
 - `central-server/src/services/subscription.service.ts` — Calcul statut licence
+- `central-server/src/controllers/remote.controller.ts` — Expose licence dans l'API remote publique
 - `raspberry/sync-agent/src/license-cache.js` — Cache local Pi
-- `raspberry/src/app/services/license.service.ts` — Service Angular UI
+- `raspberry/src/app/services/license.service.ts` — Service Angular UI (remote locale)
+- `central-dashboard/src/app/features/remote/components/license-banner.component.ts` — Bannière licence (cloud remote)
+- `central-dashboard/src/app/features/remote/components/license-block-remote.component.ts` — Écran blocage (cloud remote)
 - `central-server/src/scripts/migrations/add-subscription-system.sql` — Migration DB
 
 ---
 
-*Créé le 9 février 2026*
+_Créé le 9 février 2026_
