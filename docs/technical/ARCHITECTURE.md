@@ -359,7 +359,7 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
   - _NeoPro Infrastructure_ : HTTP rate/latence par percentile, Node.js runtime (heap, event loop lag, memory pressure), auth & rate limiting, DB pool & latency, FTP storage
   - _NeoPro Business & Fleet_ : content pipeline (video uploads), fleet Pi (WebSocket par type, heartbeats, network stability), deployments (canary, sync, drift), subscriptions & predictive alerts
 - **Scrape targets** : Docker local, `host.docker.internal:3001` (dev), Railway HTTPS (prod)
-- **Smoke tests** : `npm run test:smoke` — 122 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types) + conventions Pi (systemd, sudoers)
+- **Smoke tests** : `npm run test:smoke` — 126 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types) + conventions Pi (systemd, sudoers)
 - Systemd journald logs
 - Winston structured logging with Correlation ID
 - Memory Manager Service (heap monitoring, pressure cleanup)
