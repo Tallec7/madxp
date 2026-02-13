@@ -4,8 +4,8 @@
 
 - Statut: `active`
 - Owner: \u00e9quipe NEOPRO
-- Derni\u00e8re revue: 2026-02-10
-- Version: 3.9.0
+- Derni\u00e8re revue: 2026-02-13
+- Version: 3.20.0
 - D\u00e9pend de: Central Server (Socket.IO), Local Server (port 3000), Admin Server (port 8080)
 - Impacte: \u00c9tat de synchronisation du Pi, d\u00e9ploiements vid\u00e9o, analytics cloud
 
@@ -136,7 +136,7 @@ raspberry/sync-agent/
 \u2502   \u251c\u2500\u2500 license-cache.js             # Cache licence (TTL 24h)
 \u2502   \u251c\u2500\u2500 sponsor-impressions.js       # Compteur impressions sponsors
 \u2502   \u2502
-\u2502   \u251c\u2500\u2500 commands/                    # 12 commandes ex\u00e9cutables
+\u2502   \u251c\u2500\u2500 commands/                    # 14 modules de commandes
 \u2502   \u2502   \u251c\u2500\u2500 index.js                 # Dispatch table
 \u2502   \u2502   \u251c\u2500\u2500 deploy-video.js          # Download vid\u00e9o + merge config
 \u2502   \u2502   \u251c\u2500\u2500 delete-video.js          # Suppression vid\u00e9o + update config
@@ -150,7 +150,8 @@ raspberry/sync-agent/
 \u2502   \u2502   \u251c\u2500\u2500 wifi-bssid.js            # Config WiFi BSSID
 \u2502   \u2502   \u251c\u2500\u2500 wifi-client.js           # Scan & connect WiFi client (wlan1)
 \u2502   \u2502   \u251c\u2500\u2500 hotspot.js               # Activation hotspot
-\u2502   \u2502   \u2514\u2500\u2500 analytics-buffer.js      # Flush buffer analytics
+\u2502   \u2502   \u251c\u2500\u2500 analytics-buffer.js      # Flush buffer analytics
+\u2502   \u2502   \u2514\u2500\u2500 sync-profiles.js         # Sync & switch profils multi-config
 \u2502   \u2502
 \u2502   \u251c\u2500\u2500 services/                    # 4 services
 \u2502   \u2502   \u251c\u2500\u2500 connection-status.js     # Track \u00e9tat connexion

@@ -84,9 +84,24 @@ const DEFAULT_ALLOWED_COMMANDS = [
   'update_hotspot',
   'get_hotspot_config',
   'network_diagnostics',
-  'remote_shell', // Terminal distant
+  'remote_shell',
+  'get_health_status',
+  'run_diagnostics',
+  'export_debug_bundle',
+  'get_analytics_buffer_status',
+  'fix_hotspot',
+  'get_wifi_bssid_status',
+  'remove_bssid_lock',
+  'optimize_for_mesh',
+  'deploy_asset',
+  'sync_profiles',
+  'switch_profile',
+  'scan_wifi_networks',
+  'configure_wifi_client',
 ];
 ```
+
+> **Important** : Toute nouvelle commande ajoutée dans `commands/index.js` **doit aussi** être ajoutée dans `DEFAULT_ALLOWED_COMMANDS` dans `config.js`, sinon l'agent la rejettera avec "Command not allowed".
 
 ### Restrictions par rôle
 
@@ -308,6 +323,7 @@ sync-agent redémarré SANS NoNewPrivileges → sudo fonctionne
 
 ## Changelog
 
+- **13 février 2026** : Synchronisation `DEFAULT_ALLOWED_COMMANDS` — ajout des 14 commandes manquantes dans la documentation (debug, WiFi, profiles, assets). Ajout note d'avertissement sur l'obligation d'ajouter toute nouvelle commande dans `config.js`
 - **12 février 2026** : Fix `NoNewPrivileges` deadlock — mécanisme `apply-services` via admin-server, smoke tests de convention, auto-correction OTA
 - **12 février 2026** : Ajout `apt-get`/`apt install` au sudoers — installation de paquets depuis le dashboard (super_admin)
 - **10 février 2026** : Ajout section Limites, exemple de résultat, correction timeout 60s

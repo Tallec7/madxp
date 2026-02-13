@@ -1730,6 +1730,42 @@ ip link show wlan1
 
 **Note :** Depuis la version 3.17.1, `install.sh` installe automatiquement ces firmwares. Ce problème ne concerne que les boîtiers installés avec une version antérieure. Depuis la version 3.17.2, cette commande peut être exécutée directement depuis le dashboard (onglet Debug, super_admin uniquement) sans SSH.
 
+### 3c. Configurer le WiFi client (wlan1) à distance depuis le dashboard
+
+**Contexte :**
+
+La clé WiFi USB (wlan1) permet de connecter le Pi au WiFi du club pour un accès Internet permanent. Depuis la version 3.20, cette configuration se fait **entièrement à distance** depuis le dashboard central, sans accès physique au Pi.
+
+**Prérequis :**
+
+- Le Pi doit être **en ligne** (connecté via Ethernet ou un ancien WiFi)
+- La clé WiFi USB doit être **branchée** et détectée (`wlan1` visible)
+- Version sync-agent >= 3.20 avec `scan_wifi_networks` dans `DEFAULT_ALLOWED_COMMANDS`
+
+**Procédure :**
+
+1. Dashboard central → détail du site → onglet **Debug**
+2. Section **WiFi Client (wlan1)** → Cliquer **📡 Scanner les réseaux**
+3. La liste des réseaux visibles s'affiche (triés par signal)
+4. Cliquer sur le réseau du club → Entrer le mot de passe WiFi → **Connecter**
+5. Le résultat affiche l'IP obtenue et le signal
+
+**Troubleshooting :**
+
+| Symptôme                         | Cause probable                                                        | Solution                                                                  |
+| -------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Le bouton "Scanner" ne fait rien | `scan_wifi_networks` absent de `DEFAULT_ALLOWED_COMMANDS` (config.js) | Pousser un OTA >= 3.20 incluant le fix config.js                          |
+| "Interface wlan1 non détectée"   | Clé USB non branchée ou driver manquant                               | Voir section 3b ci-dessus                                                 |
+| Scan OK mais connexion échoue    | Mot de passe incorrect ou signal trop faible                          | Vérifier le mot de passe (8-63 caractères WPA2), rapprocher le Pi de l'AP |
+| Timeout 30s sans résultat        | Pi hors ligne ou sync-agent non redémarré après OTA                   | Vérifier que le site est "En ligne" dans le dashboard                     |
+
+**Détails techniques :**
+
+- Le mot de passe est hashé via `wpa_passphrase` (jamais stocké en clair sur le Pi)
+- La config est écrite dans `/etc/wpa_supplicant/wpa_supplicant.conf`
+- Ne touche **jamais** wlan0 (hotspot) ni eth0
+- Commandes realtime-only (non queueables — le Pi doit être connecté au moment de l'action)
+
 ### 4. WiFi USB roaming entre points d'accès (connexion instable)
 
 **Symptômes :**
