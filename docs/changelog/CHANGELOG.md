@@ -1,3 +1,10 @@
+## [3.20.5](https://github.com/Tallec7/neopro/compare/v3.20.4...v3.20.5) (2026-02-13)
+
+### Bug Fixes
+
+- **admin:** add cache-busting query string to static assets ([8b9442b](https://github.com/Tallec7/neopro/commit/8b9442b0bddb780d399b7ef5df3b363758765478))
+- **release:** auto-sync raspberry subpackage versions on release ([fbbf5cd](https://github.com/Tallec7/neopro/commit/fbbf5cde95893bb34e97cdf0731e655722d55e91))
+
 ## [3.20.4](https://github.com/Tallec7/neopro/compare/v3.20.3...v3.20.4) (2026-02-13)
 
 ### Bug Fixes
