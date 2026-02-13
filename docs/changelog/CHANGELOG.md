@@ -1,3 +1,9 @@
+## [3.20.4](https://github.com/Tallec7/neopro/compare/v3.20.3...v3.20.4) (2026-02-13)
+
+### Bug Fixes
+
+- **deploy:** return enriched deployment response with version and target name ([955c563](https://github.com/Tallec7/neopro/commit/955c56384b74988a348a74cc5edadcec024125d7))
+
 ## [3.20.3](https://github.com/Tallec7/neopro/compare/v3.20.2...v3.20.3) (2026-02-13)
 
 ### Bug Fixes
