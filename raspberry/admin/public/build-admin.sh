@@ -53,4 +53,16 @@ for module in "${MODULES[@]}"; do
 done
 
 LINES=$(wc -l < "$OUTPUT")
+
+# Cache-busting: inject version query string in index.html
+# Express.static ignores query strings, so app.js?v=X serves app.js
+VERSION=$(grep '"version"' ../package.json | head -1 | sed 's/.*"version"[^"]*"\([^"]*\)".*/\1/' | sed 's/^v//')
+if [ -n "$VERSION" ] && [ -f "index.html" ]; then
+  # Idempotent: replaces app.js or app.js?v=old with app.js?v=new
+  sed -i.bak "s|app\.js\(?v=[^\"]*\)\{0,1\}\"|app.js?v=${VERSION}\"|g" index.html
+  sed -i.bak "s|styles\.css\(?v=[^\"]*\)\{0,1\}\"|styles.css?v=${VERSION}\"|g" index.html
+  rm -f index.html.bak
+  echo "Cache-busting: injected ?v=$VERSION in index.html"
+fi
+
 echo "Build complete: $OUTPUT ($LINES lines)"
