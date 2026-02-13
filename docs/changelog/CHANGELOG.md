@@ -1,3 +1,9 @@
+# [3.20.0](https://github.com/Tallec7/neopro/compare/v3.19.4...v3.20.0) (2026-02-13)
+
+### Features
+
+- **wifi:** add remote WiFi client configuration from central dashboard ([7eabdb1](https://github.com/Tallec7/neopro/commit/7eabdb1516b1fb8cc06f7241bfa28b6e98b95aae))
+
 ## [Unreleased]
 
 ### Features
