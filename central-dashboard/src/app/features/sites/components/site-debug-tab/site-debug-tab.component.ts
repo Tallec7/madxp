@@ -230,6 +230,25 @@ interface WifiBssidStatus {
   timestamp: string;
 }
 
+// Types pour WiFi Client Configuration (scan & connect wlan1)
+interface WifiNetwork {
+  ssid: string;
+  bssid: string | null;
+  signal: number | null;
+  quality: number | null;
+  channel: number | null;
+  security: string;
+}
+
+interface WifiScanResult {
+  success: boolean;
+  networks: WifiNetwork[];
+  currentSsid: string | null;
+  currentBssid: string | null;
+  scannedAt: string;
+  error?: string;
+}
+
 @Component({
   selector: 'app-site-debug-tab',
   standalone: true,
@@ -1219,6 +1238,91 @@ interface WifiBssidStatus {
               <button class="btn btn-secondary btn-sm" (click)="loadWifiBssidStatus()" [disabled]="loadingWifiBssid">
                 🔄 {{ 'debug.refresh' | translate }}
               </button>
+            </div>
+          </div>
+
+          <!-- WiFi Client Configuration (scan & connect wlan1) -->
+          <div class="wifi-config-section" *ngIf="isConnected">
+            <h5>{{ 'debug.wifiConfig' | translate }}</h5>
+
+            <div class="wifi-scan-actions">
+              <button class="btn btn-primary btn-sm" (click)="scanWifiNetworks()" [disabled]="scanningWifi || connectingWifi">
+                📡 {{ scanningWifi ? ('debug.scanningWifi' | translate) : ('debug.scanNetworks' | translate) }}
+              </button>
+            </div>
+
+            <!-- Scanning spinner -->
+            <div *ngIf="scanningWifi" class="loading-inline">
+              <div class="spinner-small"></div>
+              <span>{{ 'debug.scanningWifi' | translate }}</span>
+            </div>
+
+            <!-- Scan error -->
+            <div *ngIf="wifiScanResult && !wifiScanResult.success && wifiScanResult.error" class="wifi-scan-error">
+              ⚠️ {{ wifiScanResult.error }}
+            </div>
+
+            <!-- Scan results -->
+            <div *ngIf="wifiScanResult && wifiScanResult.success && !scanningWifi" class="wifi-networks-list">
+              <div class="scan-info">
+                {{ wifiScanResult.networks.length }} {{ 'debug.networksFound' | translate }}
+                <span class="scan-time">{{ wifiScanResult.scannedAt | date:'HH:mm:ss' }}</span>
+              </div>
+
+              <div *ngFor="let network of wifiScanResult.networks"
+                class="wifi-network-item"
+                [class.selected]="selectedWifiNetwork?.ssid === network.ssid && selectedWifiNetwork?.bssid === network.bssid"
+                [class.current-network]="wifiScanResult.currentSsid === network.ssid"
+                (click)="selectWifiNetwork(network)">
+                <div class="network-info">
+                  <span class="network-ssid">{{ network.ssid }}</span>
+                  <span class="network-details">{{ network.security }} · ch.{{ network.channel }}</span>
+                </div>
+                <div class="network-signal">
+                  <span [class]="getWifiSignalClass(network.signal)">
+                    {{ network.signal }} dBm
+                  </span>
+                  <span *ngIf="wifiScanResult.currentSsid === network.ssid" class="current-badge">
+                    ✓ {{ 'debug.currentNetwork' | translate }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Connect form when a network is selected -->
+              <div *ngIf="selectedWifiNetwork" class="wifi-connect-form">
+                <div class="connect-target">
+                  {{ 'debug.connectTo' | translate }} <strong>{{ selectedWifiNetwork.ssid }}</strong>
+                  ({{ selectedWifiNetwork.security }})
+                </div>
+
+                <div *ngIf="selectedWifiNetwork.security !== 'Open'" class="password-input-group">
+                  <label>{{ 'debug.wifiPassword' | translate }}</label>
+                  <input
+                    type="password"
+                    [(ngModel)]="wifiPassword"
+                    [placeholder]="'debug.wifiPasswordPlaceholder' | translate"
+                    class="form-control"
+                    (keyup.enter)="connectWifiClient()"
+                  />
+                </div>
+
+                <div class="connect-actions">
+                  <button
+                    class="btn btn-success btn-sm"
+                    (click)="connectWifiClient()"
+                    [disabled]="connectingWifi || (selectedWifiNetwork.security !== 'Open' && (!wifiPassword || wifiPassword.length < 8))">
+                    {{ connectingWifi ? ('debug.connectingWifi' | translate) : ('debug.connectWifi' | translate) }}
+                  </button>
+                </div>
+
+                <!-- Connection result -->
+                <div *ngIf="wifiConnectResult" class="wifi-connect-result"
+                  [class.connect-success]="wifiConnectResult.connected"
+                  [class.connect-pending]="!wifiConnectResult.connected">
+                  <div>{{ wifiConnectResult.message }}</div>
+                  <div *ngIf="wifiConnectResult.ipAddress">IP: {{ wifiConnectResult.ipAddress }}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -3013,6 +3117,158 @@ interface WifiBssidStatus {
       margin-left: 0.5rem;
     }
 
+    /* WiFi Client Configuration (scan & connect) */
+    .wifi-config-section {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .wifi-config-section h5 {
+      margin: 0 0 0.75rem 0;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .wifi-scan-actions {
+      margin-bottom: 0.75rem;
+    }
+
+    .wifi-scan-error {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+      font-size: 0.813rem;
+      color: #92400e;
+    }
+
+    .wifi-networks-list {
+      margin-top: 0.75rem;
+    }
+
+    .scan-info {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+
+    .scan-time {
+      margin-left: 0.5rem;
+      font-style: italic;
+    }
+
+    .wifi-network-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      margin-bottom: 0.25rem;
+      cursor: pointer;
+      transition: background-color 0.15s, border-color 0.15s;
+      font-size: 0.813rem;
+    }
+
+    .wifi-network-item:hover {
+      background-color: #f8fafc;
+    }
+
+    .wifi-network-item.selected {
+      border-color: #3b82f6;
+      background-color: #eff6ff;
+    }
+
+    .wifi-network-item.current-network {
+      border-left: 3px solid #16a34a;
+    }
+
+    .network-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+
+    .network-ssid {
+      font-weight: 500;
+    }
+
+    .network-details {
+      font-size: 0.688rem;
+      color: #94a3b8;
+    }
+
+    .network-signal {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .current-badge {
+      font-size: 0.688rem;
+      color: #16a34a;
+      font-weight: 600;
+    }
+
+    .wifi-connect-form {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .connect-target {
+      margin-bottom: 0.5rem;
+      font-size: 0.813rem;
+    }
+
+    .password-input-group {
+      margin-bottom: 0.5rem;
+    }
+
+    .password-input-group label {
+      display: block;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 0.25rem;
+    }
+
+    .password-input-group .form-control {
+      width: 100%;
+      padding: 0.375rem 0.625rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.813rem;
+    }
+
+    .connect-actions {
+      margin-top: 0.5rem;
+    }
+
+    .wifi-connect-result {
+      margin-top: 0.625rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.813rem;
+    }
+
+    .wifi-connect-result.connect-success {
+      background-color: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+
+    .wifi-connect-result.connect-pending {
+      background-color: #fef9c3;
+      color: #854d0e;
+      border: 1px solid #fde047;
+    }
+
     /* P3.3 - Export */
     .export-section {
       padding-top: 1rem;
@@ -3317,6 +3573,14 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
   loadingWifiBssid: boolean = false;
   removingBssidLock: boolean = false;
   optimizingMesh: boolean = false;
+
+  // WiFi Client Configuration (scan & connect wlan1)
+  wifiScanResult: WifiScanResult | null = null;
+  scanningWifi: boolean = false;
+  selectedWifiNetwork: WifiNetwork | null = null;
+  wifiPassword: string = '';
+  connectingWifi: boolean = false;
+  wifiConnectResult: { connected: boolean; ipAddress: string | null; message: string } | null = null;
 
   // Export (P3.3)
   showExport: boolean = false;
@@ -4147,6 +4411,92 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
         this.logger.error('Failed to optimize for mesh', { error: message, siteId: this.siteId });
       }
     });
+  }
+
+  // ============================================
+  // WiFi Client Configuration Methods (scan & connect wlan1)
+  // ============================================
+
+  scanWifiNetworks(): void {
+    if (!this.siteId || !this.isConnected) return;
+
+    this.scanningWifi = true;
+    this.selectedWifiNetwork = null;
+    this.wifiPassword = '';
+    this.wifiConnectResult = null;
+
+    this.sitesService.scanWifiNetworks(this.siteId).subscribe({
+      next: (response) => {
+        this.scanningWifi = false;
+        this.wifiScanResult = response;
+        if (!response.success && response.error) {
+          this.notificationService.warning(response.error);
+        }
+      },
+      error: (error) => {
+        this.scanningWifi = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur scan WiFi: ${message}`);
+        this.logger.error('Failed to scan WiFi networks', { error: message, siteId: this.siteId });
+      }
+    });
+  }
+
+  selectWifiNetwork(network: WifiNetwork): void {
+    if (this.selectedWifiNetwork?.ssid === network.ssid && this.selectedWifiNetwork?.bssid === network.bssid) {
+      this.selectedWifiNetwork = null;
+      this.wifiPassword = '';
+    } else {
+      this.selectedWifiNetwork = network;
+      this.wifiPassword = '';
+      this.wifiConnectResult = null;
+    }
+  }
+
+  connectWifiClient(): void {
+    if (!this.siteId || !this.isConnected || !this.selectedWifiNetwork) return;
+    if (this.selectedWifiNetwork.security !== 'Open' && (!this.wifiPassword || this.wifiPassword.length < 8)) {
+      this.notificationService.warning('Le mot de passe doit contenir au moins 8 caractères');
+      return;
+    }
+
+    this.connectingWifi = true;
+    this.wifiConnectResult = null;
+
+    this.sitesService.connectWifiClient(
+      this.siteId,
+      this.selectedWifiNetwork.ssid,
+      this.wifiPassword
+    ).subscribe({
+      next: (response) => {
+        this.connectingWifi = false;
+        this.wifiConnectResult = {
+          connected: response.connected,
+          ipAddress: response.ipAddress,
+          message: response.message,
+        };
+        if (response.connected) {
+          this.notificationService.success(response.message);
+          this.wifiPassword = '';
+          this.loadWifiBssidStatus();
+        } else {
+          this.notificationService.warning(response.message);
+        }
+      },
+      error: (error) => {
+        this.connectingWifi = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur connexion WiFi: ${message}`);
+        this.logger.error('Failed to connect WiFi client', { error: message, siteId: this.siteId });
+      }
+    });
+  }
+
+  getWifiSignalClass(signal: number | null): string {
+    if (!signal) return '';
+    if (signal > -60) return 'signal-good';
+    if (signal > -75) return 'signal-medium';
+    return 'signal-weak';
   }
 
   // ============================================

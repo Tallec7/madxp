@@ -996,6 +996,57 @@ export const optimizeForMesh = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const scanWifiNetworks = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    logger.info('Scanning WiFi networks', { siteId: id });
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'scan_wifi_networks', {}, req.user?.id)).commandId,
+      30000 // 30 secondes pour le scan
+    );
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Scan WiFi networks error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors du scan des réseaux WiFi' });
+  }
+};
+
+export const connectWifiClient = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { ssid, password } = req.body;
+
+    // Validation
+    if (!ssid || !ssid.trim()) {
+      return res.status(400).json({ error: 'SSID requis' });
+    }
+    if (!password || password.length < 8 || password.length > 63) {
+      return res.status(400).json({ error: 'Mot de passe invalide (8-63 caractères pour WPA2)' });
+    }
+
+    logger.info('Configuring WiFi client', { siteId: id, ssid });
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'configure_wifi_client', { ssid, password }, req.user?.id)).commandId,
+      45000 // 45 secondes pour configuration + connexion
+    );
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Configure WiFi client error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors de la configuration du WiFi client' });
+  }
+};
+
 export const exportDebugBundle = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

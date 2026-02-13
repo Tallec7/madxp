@@ -112,13 +112,15 @@ Ces commandes ont du sens même si le site est offline car elles seront appliqu�
 
 ### Commandes "temps réel uniquement" (non queueables)
 
-| Commande              | Description                  | Raison              |
-| --------------------- | ---------------------------- | ------------------- |
-| `get_logs`            | Récupérer les logs           | Données temps réel  |
-| `get_system_info`     | Infos système                | Données temps réel  |
-| `get_config`          | Récupérer la config actuelle | Données temps réel  |
-| `network_diagnostics` | Diagnostic réseau            | Interaction directe |
-| `get_hotspot_config`  | Config WiFi hotspot          | Données temps réel  |
+| Commande                | Description                  | Raison              |
+| ----------------------- | ---------------------------- | ------------------- |
+| `get_logs`              | Récupérer les logs           | Données temps réel  |
+| `get_system_info`       | Infos système                | Données temps réel  |
+| `get_config`            | Récupérer la config actuelle | Données temps réel  |
+| `network_diagnostics`   | Diagnostic réseau            | Interaction directe |
+| `get_hotspot_config`    | Config WiFi hotspot          | Données temps réel  |
+| `scan_wifi_networks`    | Scanner réseaux WiFi wlan1   | Données temps réel  |
+| `configure_wifi_client` | Connecter wlan1 au WiFi club | Interaction directe |
 
 Ces commandes nécessitent une réponse immédiate et n'ont pas de sens en mode différé.
 

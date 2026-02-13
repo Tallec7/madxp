@@ -39,6 +39,10 @@ const {
   removeBssidLock,
   optimizeForMesh,
 } = require('./wifi-bssid');
+const {
+  scanWifiNetworks,
+  configureWifiClient,
+} = require('./wifi-client');
 
 // === Dépendances ===
 const { exec } = require('child_process');
@@ -96,6 +100,10 @@ const commands = {
   get_wifi_bssid_status: getWifiBssidStatus,
   remove_bssid_lock: removeBssidLock,
   optimize_for_mesh: optimizeForMesh,
+
+  // === WiFi Client Configuration (module: wifi-client.js) ===
+  scan_wifi_networks: scanWifiNetworks,
+  configure_wifi_client: configureWifiClient,
 
   // === Commandes simples (inline) ===
 

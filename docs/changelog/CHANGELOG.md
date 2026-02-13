@@ -1,3 +1,9 @@
+## [Unreleased]
+
+### Features
+
+- **wifi:** remote WiFi client configuration from central dashboard — new sync-agent commands `scan_wifi_networks` and `configure_wifi_client` allow admins to scan available WiFi networks and connect wlan1 (USB WiFi dongle) to a club's WiFi from the Debug tab, without physical access to the Pi. Requires Pi to be online (Ethernet or existing WiFi). New API endpoints: `GET /api/sites/:id/wifi-scan`, `POST /api/sites/:id/wifi-connect`. Both commands are realtime-only (not queueable). Password is hashed via `wpa_passphrase` (never stored in plaintext). UI added to Debug tab with network list, signal strength, and connection form (i18n: FR/EN/ES)
+
 ## [3.19.4](https://github.com/Tallec7/neopro/compare/v3.19.3...v3.19.4) (2026-02-13)
 
 ### Bug Fixes

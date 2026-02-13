@@ -410,7 +410,17 @@
     "refresh": "Actualizar",
     "notAvailable": "N/A",
     "notLoaded": "No cargado",
-    "wifiOfflineWarning": "El dispositivo debe estar conectado para recuperar el estado del cliente WiFi."
+    "wifiOfflineWarning": "El dispositivo debe estar conectado para recuperar el estado del cliente WiFi.",
+    "wifiConfig": "Configuración de Cliente WiFi",
+    "scanNetworks": "Escanear redes",
+    "scanningWifi": "Escaneando...",
+    "networksFound": "red(es) encontrada(s)",
+    "currentNetwork": "Conectado",
+    "connectTo": "Conectar a",
+    "wifiPassword": "Contraseña WiFi",
+    "wifiPasswordPlaceholder": "Contraseña (8-63 caracteres)",
+    "connectWifi": "Conectar",
+    "connectingWifi": "Conectando..."
   },
   "profiles": {
     "title": "Perfiles de configuracion",

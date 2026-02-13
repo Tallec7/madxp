@@ -410,7 +410,17 @@
     "refresh": "Refresh",
     "notAvailable": "N/A",
     "notLoaded": "Not loaded",
-    "wifiOfflineWarning": "The box must be connected to retrieve WiFi client status."
+    "wifiOfflineWarning": "The box must be connected to retrieve WiFi client status.",
+    "wifiConfig": "WiFi Client Configuration",
+    "scanNetworks": "Scan Networks",
+    "scanningWifi": "Scanning...",
+    "networksFound": "network(s) found",
+    "currentNetwork": "Connected",
+    "connectTo": "Connect to",
+    "wifiPassword": "WiFi Password",
+    "wifiPasswordPlaceholder": "Password (8-63 characters)",
+    "connectWifi": "Connect",
+    "connectingWifi": "Connecting..."
   },
   "profiles": {
     "title": "Config Profiles",

@@ -1,23 +1,24 @@
 ---
 paths:
-  - "raspberry/sync-agent/src/services/network*"
-  - "raspberry/sync-agent/src/services/safe-network*"
-  - "raspberry/scripts/fix-hotspot*"
-  - "raspberry/scripts/hotspot*"
-  - "central-server/src/services/network*"
+  - 'raspberry/sync-agent/src/services/network*'
+  - 'raspberry/sync-agent/src/services/safe-network*'
+  - 'raspberry/sync-agent/src/commands/wifi*'
+  - 'raspberry/scripts/fix-hotspot*'
+  - 'raspberry/scripts/hotspot*'
+  - 'central-server/src/services/network*'
 ---
 
 # Network Resilience
 
 ## Profils réseau détectés
 
-| Type | Conditions | Comportement |
-|------|-----------|-------------|
-| `simple` | 1 AP, pas d'isolation | BSSID lock autorisé |
-| `mesh` | >1 AP même SSID | BSSID lock **BLOQUÉ**, bgscan |
-| `mesh_isolated` | >1 AP, isolation client | Remote Cloud recommandé |
-| `enterprise` | 802.1X | Configuration IT requise |
-| `ethernet` | eth0 UP avec IP | Connexion stable, score 100 |
+| Type            | Conditions              | Comportement                  |
+| --------------- | ----------------------- | ----------------------------- |
+| `simple`        | 1 AP, pas d'isolation   | BSSID lock autorisé           |
+| `mesh`          | >1 AP même SSID         | BSSID lock **BLOQUÉ**, bgscan |
+| `mesh_isolated` | >1 AP, isolation client | Remote Cloud recommandé       |
+| `enterprise`    | 802.1X                  | Configuration IT requise      |
+| `ethernet`      | eth0 UP avec IP         | Connexion stable, score 100   |
 
 ## Client critique : NLF
 
@@ -25,22 +26,22 @@ Voir `docs/clients/NLF.md` — **Ne JAMAIS lock BSSID, tester avant déploiement
 
 ## SafeNetworkOperations - Matrice de sécurité
 
-| Opération | Simple | Mesh | Mesh Isolé | Enterprise |
-|-----------|--------|------|-----------|-----------|
-| set_bssid_lock | ✅ | ❌ | ❌ | ❌ |
-| remove_bssid_lock | ✅ | ✅ | ✅ | ✅ |
-| update_hotspot_* | restart | reboot | reboot | reboot |
-| fix_hotspot | direct | reboot | reboot | reboot |
-| restart_hostapd | ✅ | ❌ | ❌ | ❌ |
-| configure_bgscan | ✅ | ✅ | ✅ | ✅ |
+| Opération         | Simple  | Mesh   | Mesh Isolé | Enterprise |
+| ----------------- | ------- | ------ | ---------- | ---------- |
+| set_bssid_lock    | ✅      | ❌     | ❌         | ❌         |
+| remove_bssid_lock | ✅      | ✅     | ✅         | ✅         |
+| update*hotspot*\* | restart | reboot | reboot     | reboot     |
+| fix_hotspot       | direct  | reboot | reboot     | reboot     |
+| restart_hostapd   | ✅      | ❌     | ❌         | ❌         |
+| configure_bgscan  | ✅      | ✅     | ✅         | ✅         |
 
 ## NetworkWatchdog - Intervalles
 
-| Type | Intervalle | Actions si problème |
-|------|-----------|-------------------|
-| Hotspot (wlan0) | 30s | rfkill unblock, restart hostapd |
-| Internet (wlan1) | 60s | wpa_cli reconfigure, dhclient |
-| Cloud (Socket.IO) | 30s | Détection zombie, force reconnect |
+| Type              | Intervalle | Actions si problème               |
+| ----------------- | ---------- | --------------------------------- |
+| Hotspot (wlan0)   | 30s        | rfkill unblock, restart hostapd   |
+| Internet (wlan1)  | 60s        | wpa_cli reconfigure, dhclient     |
+| Cloud (Socket.IO) | 30s        | Détection zombie, force reconnect |
 
 ## fix-hotspot.sh
 
@@ -50,11 +51,24 @@ Voir `docs/clients/NLF.md` — **Ne JAMAIS lock BSSID, tester avant déploiement
 - `--auto-fix` : prépare le changement de canal
 - `--reboot-now` : redémarre immédiatement
 
+## Commandes WiFi client (wlan1) — configuration à distance
+
+| Commande                | Action                                          | Temps réel          |
+| ----------------------- | ----------------------------------------------- | ------------------- |
+| `scan_wifi_networks`    | Scanner réseaux WiFi visibles par wlan1         | Oui (non queueable) |
+| `configure_wifi_client` | Connecter wlan1 au WiFi du club (SSID+password) | Oui (non queueable) |
+
+- Le mot de passe est hashé via `wpa_passphrase` (jamais stocké en clair)
+- Ne touche **jamais** wlan0 (hotspot) ni eth0
+- Nécessite que le Pi soit online (Ethernet ou ancien WiFi)
+- Endpoints : `GET /api/sites/:id/wifi-scan`, `POST /api/sites/:id/wifi-connect`
+
 ## Services impliqués
 
-| Fichier | Rôle |
-|---------|------|
-| `raspberry/sync-agent/src/services/network-detector.js` | Détection profil |
-| `raspberry/sync-agent/src/services/safe-network-operations.js` | Opérations sécurisées |
-| `raspberry/sync-agent/src/services/network-watchdog.js` | Surveillance auto-recovery |
-| `central-server/src/services/network-alerts.service.ts` | Alertes proactives serveur |
+| Fichier                                                        | Rôle                       |
+| -------------------------------------------------------------- | -------------------------- |
+| `raspberry/sync-agent/src/commands/wifi-client.js`             | Scan & connect WiFi client |
+| `raspberry/sync-agent/src/services/network-detector.js`        | Détection profil           |
+| `raspberry/sync-agent/src/services/safe-network-operations.js` | Opérations sécurisées      |
+| `raspberry/sync-agent/src/services/network-watchdog.js`        | Surveillance auto-recovery |
+| `central-server/src/services/network-alerts.service.ts`        | Alertes proactives serveur |

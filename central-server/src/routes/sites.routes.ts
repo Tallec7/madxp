@@ -123,6 +123,23 @@ router.post(
   sitesController.optimizeForMesh
 );
 
+// WiFi Client Configuration (scan & connect wlan1)
+router.get(
+  '/:id/wifi-scan',
+  authenticate,
+  requireRole('admin', 'operator'),
+  adminRateLimit,
+  sitesController.scanWifiNetworks
+);
+
+router.post(
+  '/:id/wifi-connect',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sensitiveRateLimit,
+  sitesController.connectWifiClient
+);
+
 router.get(
   '/:id/debug-bundle',
   authenticate,

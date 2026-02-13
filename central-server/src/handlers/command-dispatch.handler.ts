@@ -41,6 +41,8 @@ export const COMMAND_TIMEOUTS: Record<string, number> = {
   update_hotspot: 60 * 1000,          // 1 minute
   get_hotspot_config: 15 * 1000,      // 15 secondes
   network_diagnostics: 30 * 1000,     // 30 secondes pour les tests réseau
+  scan_wifi_networks: 30 * 1000,     // 30 secondes pour le scan WiFi
+  configure_wifi_client: 45 * 1000,  // 45 secondes pour config + connexion WiFi
   default: 2 * 60 * 1000,             // 2 minutes par défaut
 };
 

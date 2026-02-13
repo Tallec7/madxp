@@ -410,7 +410,17 @@
     "refresh": "Rafraîchir",
     "notAvailable": "N/A",
     "notLoaded": "Non chargé",
-    "wifiOfflineWarning": "Le boîtier doit être connecté pour récupérer l'état du WiFi client."
+    "wifiOfflineWarning": "Le boîtier doit être connecté pour récupérer l'état du WiFi client.",
+    "wifiConfig": "Configuration WiFi Client",
+    "scanNetworks": "Scanner les réseaux",
+    "scanningWifi": "Scan en cours...",
+    "networksFound": "réseau(x) détecté(s)",
+    "currentNetwork": "Connecté",
+    "connectTo": "Connecter à",
+    "wifiPassword": "Mot de passe WiFi",
+    "wifiPasswordPlaceholder": "Mot de passe (8-63 caractères)",
+    "connectWifi": "Connecter",
+    "connectingWifi": "Connexion en cours..."
   },
   "profiles": {
     "title": "Profils de configuration",

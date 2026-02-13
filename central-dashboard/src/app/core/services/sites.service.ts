@@ -371,6 +371,37 @@ export class SitesService {
     return this.api.post(`/sites/${id}/optimize-mesh`, {});
   }
 
+  // WiFi Client Configuration — scan & connect wlan1 à distance
+  scanWifiNetworks(id: string): Observable<{
+    success: boolean;
+    networks: Array<{
+      ssid: string;
+      bssid: string | null;
+      signal: number | null;
+      quality: number | null;
+      channel: number | null;
+      security: string;
+    }>;
+    currentSsid: string | null;
+    currentBssid: string | null;
+    scannedAt: string;
+    error?: string;
+  }> {
+    return this.api.get(`/sites/${id}/wifi-scan`);
+  }
+
+  connectWifiClient(id: string, ssid: string, password: string): Observable<{
+    success: boolean;
+    connected: boolean;
+    ssid: string;
+    ipAddress: string | null;
+    signal: number | null;
+    message: string;
+    timestamp: string;
+  }> {
+    return this.api.post(`/sites/${id}/wifi-connect`, { ssid, password });
+  }
+
   // Export debug bundle - collecte toutes les informations de debug du Pi
   exportDebugBundle(id: string): Observable<{
     success: boolean;

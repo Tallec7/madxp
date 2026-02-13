@@ -45,6 +45,8 @@ const REALTIME_ONLY_COMMANDS = [
   'get_analytics_buffer_status', // État des buffers analytics/sponsors
   'fix_hotspot',                // Réparation hotspot WiFi (fix-hotspot.sh)
   'export_debug_bundle',        // Export bundle debug pour support (P3.3)
+  'scan_wifi_networks',         // Scan WiFi nécessite une connexion temps réel
+  'configure_wifi_client',      // Configuration WiFi nécessite une connexion temps réel
 ];
 
 class CommandQueueService {

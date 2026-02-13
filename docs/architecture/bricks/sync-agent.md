@@ -148,6 +148,7 @@ raspberry/sync-agent/
 \u2502   \u2502   \u251c\u2500\u2500 remote-shell.js          # Shell distant s\u00e9curis\u00e9
 \u2502   \u2502   \u251c\u2500\u2500 debug-bundle.js          # Bundle debug pour support
 \u2502   \u2502   \u251c\u2500\u2500 wifi-bssid.js            # Config WiFi BSSID
+\u2502   \u2502   \u251c\u2500\u2500 wifi-client.js           # Scan & connect WiFi client (wlan1)
 \u2502   \u2502   \u251c\u2500\u2500 hotspot.js               # Activation hotspot
 \u2502   \u2502   \u2514\u2500\u2500 analytics-buffer.js      # Flush buffer analytics
 \u2502   \u2502
