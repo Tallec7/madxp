@@ -1,3 +1,9 @@
+# [3.22.0](https://github.com/Tallec7/neopro/compare/v3.21.0...v3.22.0) (2026-02-13)
+
+### Features
+
+- **kiosk-monitoring:** kiosk crash detection end-to-end + cloud remote link + docs sync ([1c05189](https://github.com/Tallec7/neopro/commit/1c051899332e9c3b83d1715377b51fc45bb1c671))
+
 # [3.21.0](https://github.com/Tallec7/neopro/compare/v3.20.5...v3.21.0) (2026-02-13)
 
 ### Features
