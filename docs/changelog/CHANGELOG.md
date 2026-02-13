@@ -1,3 +1,9 @@
+## [3.19.3](https://github.com/Tallec7/neopro/compare/v3.19.2...v3.19.3) (2026-02-13)
+
+### Bug Fixes
+
+- **deploy:** fix OTA stuck at 0% + EACCES permission error on VERSION file ([2dfa912](https://github.com/Tallec7/neopro/commit/2dfa912ce8d3fc69195ff885e9e11e76811b5eab))
+
 ## [3.19.2](https://github.com/Tallec7/neopro/compare/v3.19.1...v3.19.2) (2026-02-13)
 
 ### Bug Fixes
