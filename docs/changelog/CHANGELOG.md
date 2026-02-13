@@ -1,3 +1,9 @@
+## [3.20.3](https://github.com/Tallec7/neopro/compare/v3.20.2...v3.20.3) (2026-02-13)
+
+### Bug Fixes
+
+- **sync-agent:** add wifi client commands to allowedCommands whitelist ([8a200f2](https://github.com/Tallec7/neopro/commit/8a200f25e6ea9ed2d25ffd3f9d4887614adf624e))
+
 ## [3.20.2](https://github.com/Tallec7/neopro/compare/v3.20.1...v3.20.2) (2026-02-13)
 
 ### Bug Fixes
