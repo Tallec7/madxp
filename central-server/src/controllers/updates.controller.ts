@@ -271,7 +271,10 @@ export const createUpdateDeployment = async (req: AuthRequest, res: Response) =>
       logger.error('Error starting update deployment:', { deploymentId, error });
     });
 
-    res.status(201).json(result);
+    // Renvoyer le déploiement enrichi (avec update_version, target_name, total_count)
+    // Le RETURNING * brut ne contient pas les JOINs nécessaires à l'affichage
+    const enriched = await softwareUpdateRepository.findDeploymentById(deploymentId);
+    res.status(201).json(enriched || result);
   } catch (error) {
     if (isTableMissingError(error, 'update_deployments')) {
       logger.warn('update_deployments table missing while creating deployment');
