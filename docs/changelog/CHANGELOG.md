@@ -1,3 +1,9 @@
+# [3.23.0](https://github.com/Tallec7/neopro/compare/v3.22.0...v3.23.0) (2026-02-13)
+
+### Features
+
+- **cloud-remote:** add license display + REC indicator (iso with classic remote) ([e485dc4](https://github.com/Tallec7/neopro/commit/e485dc4af3510befbba5f6ee8d8fce8934d4c6c6))
+
 # [3.22.0](https://github.com/Tallec7/neopro/compare/v3.21.0...v3.22.0) (2026-02-13)
 
 ### Features
