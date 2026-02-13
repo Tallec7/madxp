@@ -1,3 +1,9 @@
+## [3.19.2](https://github.com/Tallec7/neopro/compare/v3.19.1...v3.19.2) (2026-02-13)
+
+### Bug Fixes
+
+- **deploy:** fix OTA deployments stuck in pending + dashboard UX + Grafana monitoring ([7bb7630](https://github.com/Tallec7/neopro/commit/7bb76300419cbead52fa21195f08f2c091003941))
+
 ## [3.19.1](https://github.com/Tallec7/neopro/compare/v3.19.0...v3.19.1) (2026-02-12)
 
 ### Bug Fixes
