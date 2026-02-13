@@ -291,35 +291,42 @@ class UpdateDeploymentService {
   }
 
   /**
-   * Migration automatique pour les Pi avec l'ancien code qui utilise sudo cp/chown
-   * pour VERSION/release.json (bloqué par NoNewPrivileges=true depuis la 3.9.4).
+   * Pré-migration avant OTA : corrige les problèmes connus sur le Pi AVANT
+   * que l'ancien code n'exécute l'update. Deux migrations idempotentes :
    *
-   * Envoie un remote_shell qui :
-   * 1. Vérifie si le vieux code contient "sudo cp" (sinon skip = 0 impact)
-   * 2. Remplace "sudo cp/chown/tee" par "cp/chown/tee" (fonctionnel sans root)
-   * 3. Kill le process pour que systemd le redémarre avec le code patché
+   * 1. Fichiers VERSION/release.json owned par root → sudo chown pi:pi
+   *    (sinon fs.copy échoue avec EACCES car le process tourne en pi)
    *
-   * L'update_software est mis en queue et sera envoyé automatiquement
-   * quand le sync-agent se reconnecte avec le code patché.
+   * 2. Ancien code avec "sudo cp/tee" → remplacer par "cp/tee"
+   *    (bloqué par NoNewPrivileges=true depuis la 3.9.4)
+   *    + kill pour forcer un restart avec le code patché
    *
-   * Retourne true si le Pi a été patché (= besoin de reconnexion).
-   * TODO: Retirer cette migration quand toute la flotte est en >= 3.16.1
+   * TODO: Retirer la migration #2 quand toute la flotte est en >= 3.16.1
    */
   private applyPreUpdateMigration(siteId: string): boolean {
     if (!socketService.isConnected(siteId)) {
       return false;
     }
 
-    // sed remplace "sudo cp/chown/tee" → "cp/chown/tee" (fonctionnent sans root
-    // car le process tourne en pi). grep -q skip si déjà patché (0 impact).
-    // kill force un restart via systemd Restart=always.
+    // Migration 1 : corriger l'ownership des fichiers VERSION/release.json
+    // Idempotent : si déjà pi:pi, chown est un no-op
+    const fixOwnershipCommand =
+      'for f in /home/pi/neopro/VERSION /home/pi/neopro/release.json /home/pi/neopro/webapp/version.json; do ' +
+      '[ -f "$f" ] && [ "$(stat -c %u "$f" 2>/dev/null)" = "0" ] && sudo chown pi:pi "$f" && echo "Fixed: $f"; ' +
+      'done; true';
+
+    // Migration 2 : patcher le code qui utilise sudo cp/chown/tee
+    // grep -q skip si déjà patché (0 impact)
+    // kill force un restart via systemd Restart=always
     const targetFile = '/home/pi/neopro/sync-agent/src/commands/update-software.js';
-    const migrateCommand =
+    const patchCodeCommand =
       `grep -q "sudo cp" ${targetFile} ` +
       `&& sed -i 's/sudo cp/cp/g; s/sudo chown/chown/g; s/sudo tee/tee/g' ${targetFile} ` +
       `&& sed -i '/sudo usermod/d' ${targetFile} ` +
       `&& kill $(pgrep -f agent.js) ` +
       '|| true';
+
+    const migrateCommand = `${fixOwnershipCommand}; ${patchCodeCommand}`;
 
     try {
       const commandId = uuidv4();
@@ -331,7 +338,7 @@ class UpdateDeploymentService {
       });
 
       logger.info('Pre-update migration sent', { siteId });
-      return true; // Pi sera patché → il va se reconnecter
+      return true;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.warn('Pre-update migration failed (non-blocking)', { siteId, error: errorMessage });
