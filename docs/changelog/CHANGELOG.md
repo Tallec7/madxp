@@ -1,3 +1,9 @@
+## [3.20.1](https://github.com/Tallec7/neopro/compare/v3.20.0...v3.20.1) (2026-02-13)
+
+### Bug Fixes
+
+- **ci:** remove duplicate release-webapp workflow causing asset upload failures ([aa984dd](https://github.com/Tallec7/neopro/commit/aa984dd9ddff5b1d8b59d72b17d1c3bef1735d4e))
+
 # [3.20.0](https://github.com/Tallec7/neopro/compare/v3.19.4...v3.20.0) (2026-02-13)
 
 ### Features
