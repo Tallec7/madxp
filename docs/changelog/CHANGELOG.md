@@ -1,3 +1,9 @@
+## [3.19.4](https://github.com/Tallec7/neopro/compare/v3.19.3...v3.19.4) (2026-02-13)
+
+### Bug Fixes
+
+- **deploy:** pre-migrate VERSION ownership before OTA to prevent EACCES on all Pi ([fcb7c5d](https://github.com/Tallec7/neopro/commit/fcb7c5d411ac4faec6c945370d88d43b536449fd))
+
 ## [3.19.3](https://github.com/Tallec7/neopro/compare/v3.19.2...v3.19.3) (2026-02-13)
 
 ### Bug Fixes
