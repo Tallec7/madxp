@@ -601,6 +601,17 @@ class NeoproSyncAgent {
             progress,
           });
         });
+        // Signaler la fin du déploiement (identique à deploy_video)
+        // IMPORTANT: Émis AVANT le command_result et le restart du sync-agent
+        // pour garantir que le serveur central marque le déploiement comme terminé
+        this.socket.emit('update_progress', {
+          deploymentId: data.deploymentId,
+          version: data.version,
+          progress: 100,
+          completed: true,
+        });
+        // Laisser le temps à Socket.IO de flush l'event avant le restart
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } else if (typeof handler === 'function') {
         result = await handler(data);
       } else {

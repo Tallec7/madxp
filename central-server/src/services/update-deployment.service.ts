@@ -199,7 +199,7 @@ class UpdateDeploymentService {
    */
   async processPendingDeploymentsForSite(siteId: string): Promise<void> {
     try {
-      // Récupérer les déploiements pending qui ciblent ce site (directement ou via un groupe)
+      // Récupérer les déploiements pending/in_progress qui ciblent ce site (directement ou via un groupe)
       const result = await query<UpdateDeploymentRow & SoftwareUpdateRow>(
         `SELECT ud.*, su.version, su.description, su.is_critical, su.changelog,
                 su.package_url, su.package_size, su.checksum
@@ -219,12 +219,34 @@ class UpdateDeploymentService {
         return;
       }
 
+      // Réconciliation : si le Pi tourne déjà la version cible, marquer comme terminé
+      // Cela couvre le cas où le Pi s'est restarté après la mise à jour et le
+      // callback completed a été perdu (race condition avec le restart du sync-agent)
+      const siteRow = await query<{ software_version: string | null }>(
+        `SELECT software_version FROM sites WHERE id = $1`,
+        [siteId]
+      );
+      const currentVersion = siteRow.rows[0]?.software_version;
+
       logger.info('Processing pending update deployments for site', {
         siteId,
         count: result.rows.length,
+        currentVersion,
       });
 
       for (const deployment of result.rows) {
+        // Si le site tourne déjà la version cible → le déploiement a réussi mais le callback a été perdu
+        if (currentVersion && deployment.version && currentVersion === deployment.version) {
+          logger.info('Reconciliation: site already running target version, marking deployment as completed', {
+            siteId,
+            deploymentId: deployment.id,
+            targetVersion: deployment.version,
+            currentVersion,
+          });
+          await this.handleDeploymentResult(deployment.id, siteId, true);
+          continue;
+        }
+
         const success = await this.deployToSite(deployment.id, siteId, deployment);
 
         if (success) {

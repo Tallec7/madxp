@@ -406,14 +406,23 @@ class SoftwareUpdateHandler {
         logger.info('Config files updated (systemd services, etc.)');
       }
 
-      // Copier VERSION et release.json à la racine (pas besoin de sudo, le process tourne en pi)
+      // Copier VERSION et release.json à la racine
+      // FIX: Les anciens scripts utilisaient "sudo cp/tee" pour écrire ces fichiers,
+      // ce qui les rendait owner root:root. Le process tourne en pi, donc fs.copy
+      // échoue avec EACCES en tentant d'unlink un fichier root.
+      // Solution : sudo chown avant fs.copy pour reprendre l'ownership.
+      const versionDest = path.join(rootDir, 'VERSION');
+      const releaseDest = path.join(rootDir, 'release.json');
+      await this.fixFileOwnership(versionDest);
+      await this.fixFileOwnership(releaseDest);
+
       const versionSource = await fs.pathExists(path.join(extractDir, 'VERSION'))
         ? path.join(extractDir, 'VERSION')
         : await fs.pathExists(path.join(sourcePath, 'VERSION'))
           ? path.join(sourcePath, 'VERSION')
           : null;
       if (versionSource) {
-        await fs.copy(versionSource, path.join(rootDir, 'VERSION'), { overwrite: true });
+        await fs.copy(versionSource, versionDest, { overwrite: true });
       }
 
       const releaseSource = await fs.pathExists(path.join(extractDir, 'release.json'))
@@ -422,12 +431,10 @@ class SoftwareUpdateHandler {
           ? path.join(sourcePath, 'release.json')
           : null;
       if (releaseSource) {
-        await fs.copy(releaseSource, path.join(rootDir, 'release.json'), { overwrite: true });
+        await fs.copy(releaseSource, releaseDest, { overwrite: true });
       }
 
-      // Les permissions sont déjà correctes : le process tourne en User=pi,
-      // les fichiers extraits/copiés appartiennent déjà à pi:pi.
-      logger.info('Permissions OK (process runs as pi)');
+      logger.info('VERSION and release.json copied (ownership fixed if needed)');
 
       // npm install si nécessaire
       if (await fs.pathExists(path.join(rootDir, 'webapp', 'package.json'))) {
@@ -564,8 +571,16 @@ class SoftwareUpdateHandler {
       const buildDate = new Date().toISOString();
       const rootDir = config.paths.root;
 
-      // Écrire VERSION (pas besoin de sudo, le process tourne en pi)
+      // FIX: Reprendre l'ownership des fichiers potentiellement créés par root (ancien sudo)
       const versionPath = path.join(rootDir, 'VERSION');
+      const releasePath = path.join(rootDir, 'release.json');
+      const webappVersionPath = path.join(rootDir, 'webapp', 'version.json');
+
+      await this.fixFileOwnership(versionPath);
+      await this.fixFileOwnership(releasePath);
+      await this.fixFileOwnership(webappVersionPath);
+
+      // Écrire VERSION
       await fs.writeFile(versionPath, version + '\n');
 
       // Écrire release.json
@@ -574,17 +589,42 @@ class SoftwareUpdateHandler {
         buildDate,
         source: 'central-dashboard',
       };
-      const releasePath = path.join(rootDir, 'release.json');
       await fs.writeJson(releasePath, releaseData, { spaces: 2 });
 
-      // Écrire webapp/version.json (pi:pi devrait avoir les droits)
-      const webappVersionPath = path.join(rootDir, 'webapp', 'version.json');
+      // Écrire webapp/version.json
       await fs.writeJson(webappVersionPath, { version, buildDate }, { spaces: 2 });
 
       logger.info('Version metadata written', { version });
     } catch (error) {
       logger.warn('Failed to write version metadata:', error.message);
       // Ne pas faire échouer la mise à jour pour ça
+    }
+  }
+
+  /**
+   * Reprend l'ownership d'un fichier s'il appartient à root.
+   * Les anciennes versions du sync-agent utilisaient "sudo cp/tee" pour écrire
+   * VERSION et release.json, créant des fichiers root:root que le user pi
+   * ne peut plus écraser (EACCES sur unlink). Ce fix est idempotent.
+   */
+  async fixFileOwnership(filePath) {
+    try {
+      if (!await fs.pathExists(filePath)) return;
+
+      const stat = await fs.stat(filePath);
+      // uid 0 = root. Si le fichier appartient à root, reprendre l'ownership
+      if (stat.uid === 0) {
+        logger.info('Fixing root-owned file ownership', { filePath });
+        await execAsync(`sudo chown pi:pi ${filePath}`);
+      }
+    } catch (error) {
+      // Fallback: si chown échoue, tenter sudo rm pour permettre la recréation
+      logger.warn('chown failed, trying sudo rm', { filePath, error: error.message });
+      try {
+        await execAsync(`sudo rm -f ${filePath}`);
+      } catch (rmError) {
+        logger.warn('sudo rm also failed', { filePath, error: rmError.message });
+      }
     }
   }
 
