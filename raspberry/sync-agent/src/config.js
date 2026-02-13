@@ -41,6 +41,9 @@ const DEFAULT_ALLOWED_COMMANDS = [
   // Multi-config profiles - v3.x
   'sync_profiles',
   'switch_profile',
+  // WiFi client configuration - v3.20
+  'scan_wifi_networks',
+  'configure_wifi_client',
 ];
 
 const buildAllowedCommands = () => {
