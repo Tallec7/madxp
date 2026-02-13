@@ -220,7 +220,12 @@ class SoftwareUpdateRepositoryImpl extends BaseRepository<SoftwareUpdateRow> {
                 WHEN ud.target_type = 'site' THEN 1
                 WHEN ud.target_type = 'group' THEN COALESCE(gc.site_count, 0)
                 ELSE 0
-              END as total_count
+              END as total_count,
+              CASE
+                WHEN ud.status = 'completed' THEN
+                  CASE WHEN ud.target_type = 'site' THEN 1 ELSE COALESCE(gc.site_count, 0) END
+                ELSE 0
+              END as deployed_count
        FROM update_deployments ud
        LEFT JOIN software_updates su ON ud.update_id = su.id
        LEFT JOIN sites s ON ud.target_type = 'site' AND ud.target_id = s.id
@@ -251,7 +256,12 @@ class SoftwareUpdateRepositoryImpl extends BaseRepository<SoftwareUpdateRow> {
                 WHEN ud.target_type = 'site' THEN 1
                 WHEN ud.target_type = 'group' THEN COALESCE(gc.site_count, 0)
                 ELSE 0
-              END as total_count
+              END as total_count,
+              CASE
+                WHEN ud.status = 'completed' THEN
+                  CASE WHEN ud.target_type = 'site' THEN 1 ELSE COALESCE(gc.site_count, 0) END
+                ELSE 0
+              END as deployed_count
        FROM update_deployments ud
        LEFT JOIN software_updates su ON ud.update_id = su.id
        LEFT JOIN sites s ON ud.target_type = 'site' AND ud.target_id = s.id
