@@ -2,7 +2,7 @@
  * Neopro Admin Panel - JavaScript
  * FICHIER GENERE - Ne pas editer directement
  * Editer les fichiers dans modules/ puis lancer: bash build-admin.sh
- * Build: 2026-02-11T22:02:05Z
+ * Build: 2026-02-13T16:01:19Z
  */
 
 
