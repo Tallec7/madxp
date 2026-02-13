@@ -453,6 +453,20 @@ class MetricsCollector {
   }
 
   /**
+   * Récupère le statut du kiosk Chromium via le fichier écrit par le watchdog.
+   * Retourne null si le fichier n'existe pas (watchdog pas encore démarré).
+   */
+  async getKioskStatus() {
+    const statusFile = '/home/pi/neopro/data/kiosk-status.json';
+    try {
+      const content = await fs.promises.readFile(statusFile, 'utf8');
+      return JSON.parse(content);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Récupère un rapport de santé complet du système
    * Utilisé par la commande get_health_status
    */
@@ -506,7 +520,7 @@ class MetricsCollector {
       }
 
       // Services critiques
-      const criticalServices = ['neopro-app', 'neopro-sync-agent', 'nginx'];
+      const criticalServices = ['neopro-app', 'neopro-sync-agent', 'neopro-kiosk', 'nginx'];
       for (const svc of services) {
         if (criticalServices.includes(svc.name) && svc.failed) {
           healthScore -= 15;
@@ -516,6 +530,30 @@ class MetricsCollector {
             message: `Service ${svc.name} en échec`,
             fix: `sudo systemctl restart ${svc.name}`,
             lastError: svc.lastError,
+          });
+        }
+      }
+
+      // Kiosk Chromium check — le service systemd peut être "active" (watchdog tourne)
+      // mais Chromium peut être crashé. Vérifier le fichier de statut du watchdog.
+      const kioskStatus = await this.getKioskStatus();
+      if (kioskStatus) {
+        if (!kioskStatus.chromiumAlive) {
+          healthScore -= 20;
+          issues.push({
+            severity: 'critical',
+            component: 'Kiosk',
+            message: 'Chromium non actif — la TV n\'affiche rien',
+            fix: 'sudo systemctl restart neopro-kiosk',
+          });
+        }
+        if (kioskStatus.restartCount > 3) {
+          healthScore -= 10;
+          issues.push({
+            severity: 'warning',
+            component: 'Kiosk',
+            message: `Chromium a redémarré ${kioskStatus.restartCount} fois récemment (instabilité GPU)`,
+            fix: 'Vérifier les logs GPU: journalctl -u neopro-kiosk -n 50',
           });
         }
       }

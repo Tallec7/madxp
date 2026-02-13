@@ -280,13 +280,13 @@ Commandes:          ────────────────────
 | **Déploiement vidéo NEOPRO** | Central → Local    | Admin NEOPRO clique "Déployer" | Download + merge config          |
 | **Modification locale**      | Local → Central    | Opérateur modifie via Admin UI | Upload état vers central         |
 | **sync_local_state**         | Local → Central    | Connexion + changement vidéos  | Config + liste vidéos + stockage |
-| **Heartbeat**                | Local → Central    | Timer 30s                      | Métriques système uniquement     |
+| **Heartbeat**                | Local → Central    | Timer 30s                      | Métriques système + statut kiosk |
 | **Commande admin**           | Central → Local    | Admin NEOPRO envoie commande   | Exécution sur Pi                 |
 | **sync_profiles**            | Central → Local    | Admin déploie profils          | Écriture profiles/ + clubs.json  |
 | **switch_profile**           | Central → Local    | Admin change profil actif      | Activation profil + merge config |
 | **profile-switch**           | Local (front→back) | Remote sélectionne un profil   | Activation profil + reload TV    |
 
-> **Note** : Le heartbeat (30s) n'envoie que les métriques système. La liste des vidéos est synchronisée via `sync_local_state` à la connexion et lors de changements détectés par le VideoWatcher.
+> **Note** : Le heartbeat (30s) envoie les métriques système + le statut kiosk Chromium (lu depuis `/home/pi/neopro/data/kiosk-status.json`, écrit par `kiosk-watchdog.sh`). La liste des vidéos est synchronisée via `sync_local_state` à la connexion et lors de changements détectés par le VideoWatcher.
 
 ### 4.3 Processus de Synchronisation Détaillé
 

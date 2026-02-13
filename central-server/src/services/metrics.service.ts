@@ -361,6 +361,26 @@ const heartbeatsTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Kiosk =============
+
+const kioskStatusGauge = new Gauge({
+  name: 'neopro_kiosk_status',
+  help: 'Kiosk Chromium status (1=running, 0=crashed)',
+  registers: [register],
+});
+
+const kioskRestartCountGauge = new Gauge({
+  name: 'neopro_kiosk_restart_count',
+  help: 'Number of recent kiosk Chromium restarts',
+  registers: [register],
+});
+
+const kioskCrashesTotal = new Counter({
+  name: 'neopro_kiosk_crashes_total',
+  help: 'Total kiosk Chromium crashes detected',
+  registers: [register],
+});
+
 // ============= Service Class =============
 
 class MetricsService {
@@ -615,6 +635,15 @@ class MetricsService {
 
   recordHeartbeat(): void {
     heartbeatsTotal.inc();
+  }
+
+  recordKioskStatus(alive: number, restartCount: number): void {
+    kioskStatusGauge.set(alive);
+    kioskRestartCountGauge.set(restartCount);
+  }
+
+  recordKioskCrash(): void {
+    kioskCrashesTotal.inc();
   }
 
   /**

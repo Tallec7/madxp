@@ -224,6 +224,17 @@ class AlertService {
     });
   }
 
+  async kioskCrash(siteId: string, siteName: string, reason: string, restartCount: number): Promise<boolean> {
+    return this.sendAlert({
+      title: 'Kiosk Crash — TV hors service',
+      message: `Le kiosk du site *${siteName}* a crashé: ${reason}. ${restartCount} redémarrages récents.`,
+      severity: 'critical',
+      siteId,
+      siteName,
+      metadata: { reason, restartCount: String(restartCount) }
+    });
+  }
+
   async serverError(error: Error, context?: string): Promise<boolean> {
     return this.sendAlert({
       title: 'Erreur serveur',

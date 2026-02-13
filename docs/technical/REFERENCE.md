@@ -756,7 +756,15 @@ socket.emit('heartbeat', {
   memory: 512,
   temperature: 45.2,
   disk: 15.8,
-  uptime: 86400
+  uptime: 86400,
+  kioskStatus: {            // optionnel — écrit par kiosk-watchdog.sh
+    status: 'running',      // 'running' | 'crashed'
+    chromiumAlive: true,
+    restartCount: 0,
+    lastEvent: '2026-02-13T10:00:00.000Z',
+    reason: null,           // ex: 'GPU process exited'
+    pid: 1234
+  }
 });
 
 // Progression déploiement vidéo
@@ -1000,18 +1008,18 @@ Pi Analytics: 500 req/min     (impressions sponsors depuis les Pi - par IP)
 
 ### Services Backend Critiques
 
-| Service           | Fichier                     | Rôle                                               |
-| ----------------- | --------------------------- | -------------------------------------------------- |
-| **Socket**        | `socket.service.ts`         | Orchestrateur temps réel Pi ↔ Cloud (676 lignes)   |
-| **Storage**       | `storage.service.ts`        | Upload/download vidéos FTP (unifié)                |
-| **Deployment**    | `deployment.service.ts`     | Orchestration déploiement vidéos                   |
-| **CommandQueue**  | `command-queue.service.ts`  | File d'attente commandes (offline/online)          |
-| **MemoryManager** | `memory-manager.service.ts` | Monitoring heap, cleanup automatique               |
-| **AdminOps**      | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire         |
-| **CronScheduler** | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)                |
-| **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook)        |
-| **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready                   |
-| **Metrics**       | `metrics.service.ts`        | Export Prometheus (HTTP, WS, DB, disconnect, etc.) |
+| Service           | Fichier                     | Rôle                                                      |
+| ----------------- | --------------------------- | --------------------------------------------------------- |
+| **Socket**        | `socket.service.ts`         | Orchestrateur temps réel Pi ↔ Cloud (676 lignes)          |
+| **Storage**       | `storage.service.ts`        | Upload/download vidéos FTP (unifié)                       |
+| **Deployment**    | `deployment.service.ts`     | Orchestration déploiement vidéos                          |
+| **CommandQueue**  | `command-queue.service.ts`  | File d'attente commandes (offline/online)                 |
+| **MemoryManager** | `memory-manager.service.ts` | Monitoring heap, cleanup automatique                      |
+| **AdminOps**      | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire                |
+| **CronScheduler** | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)                       |
+| **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook)               |
+| **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready                          |
+| **Metrics**       | `metrics.service.ts`        | Export Prometheus (HTTP, WS, DB, disconnect, kiosk, etc.) |
 
 ### Socket Handlers (`src/handlers/`)
 

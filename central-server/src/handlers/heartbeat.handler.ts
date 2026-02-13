@@ -71,7 +71,7 @@ export async function handleHeartbeat(
       );
     }
 
-    await checkAlerts(siteId, message.metrics);
+    await checkAlerts(siteId, message.metrics, message.kioskStatus);
   } catch (error) {
     logger.error('Error handling heartbeat:', error);
   }
@@ -81,7 +81,11 @@ export async function handleHeartbeat(
  * Check metrics against alert thresholds and create alerts if needed.
  * Deduplicates alerts: only creates one per type per hour.
  */
-async function checkAlerts(siteId: string, metrics: HeartbeatMessage['metrics']): Promise<void> {
+async function checkAlerts(
+  siteId: string,
+  metrics: HeartbeatMessage['metrics'],
+  kioskStatus?: HeartbeatMessage['kioskStatus']
+): Promise<void> {
   const alerts: Array<{ type: string; severity: string; message: string }> = [];
 
   if (metrics.temperature > 75) {
@@ -108,6 +112,29 @@ async function checkAlerts(siteId: string, metrics: HeartbeatMessage['metrics'])
     });
   }
 
+  // Kiosk crash detection
+  if (kioskStatus && !kioskStatus.chromiumAlive) {
+    alerts.push({
+      type: 'kiosk_crash',
+      severity: 'critical',
+      message: `Kiosk Chromium crashé: ${kioskStatus.reason || 'raison inconnue'} (${kioskStatus.restartCount} restarts)`,
+    });
+    metricsService.recordKioskCrash();
+  }
+
+  if (kioskStatus && kioskStatus.restartCount > 3) {
+    alerts.push({
+      type: 'kiosk_unstable',
+      severity: 'warning',
+      message: `Kiosk instable: ${kioskStatus.restartCount} redémarrages récents`,
+    });
+  }
+
+  // Update kiosk status metric
+  if (kioskStatus) {
+    metricsService.recordKioskStatus(kioskStatus.chromiumAlive ? 1 : 0, kioskStatus.restartCount);
+  }
+
   for (const alert of alerts) {
     const existing = await query(
       `SELECT id FROM alerts
@@ -131,6 +158,8 @@ async function checkAlerts(siteId: string, metrics: HeartbeatMessage['metrics'])
         alertService.highTemperature(siteId, clubName, metrics.temperature).catch((_e) => {/* ignore */});
       } else if (alert.type === 'high_disk_usage') {
         alertService.lowDiskSpace(siteId, clubName, metrics.disk).catch((_e) => {/* ignore */});
+      } else if (alert.type === 'kiosk_crash') {
+        alertService.kioskCrash(siteId, clubName, kioskStatus?.reason || 'GPU crash', kioskStatus?.restartCount || 0).catch((_e) => {/* ignore */});
       }
 
       logger.warn('Alert created', { siteId, ...alert });

@@ -125,6 +125,9 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
               <span class="mode-badge">Nouveau</span>
             </div>
             <p class="mode-desc">Fonctionne depuis n'importe quel reseau avec Internet. Ideal pour les reseaux avec isolation client (mesh WiFi).</p>
+            <a class="cloud-remote-link" [href]="'/remote/' + siteId" target="_blank" rel="noopener">
+              ↗️ Ouvrir la telecommande cloud
+            </a>
           </div>
         </div>
         <button class="btn btn-primary" (click)="openQrCode()" [disabled]="fetchingSsid">
@@ -1046,6 +1049,22 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       color: #64748b;
       margin: 0 0 0.75rem 0;
       line-height: 1.4;
+    }
+
+    .cloud-remote-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #6366f1;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .cloud-remote-link:hover {
+      color: #4f46e5;
+      text-decoration: underline;
     }
 
     .qr-mode-card .qr-detail {

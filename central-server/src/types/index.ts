@@ -242,6 +242,14 @@ export interface HeartbeatMessage {
     buildDate?: string | null;
     source?: string | null;
   };
+  kioskStatus?: {
+    status: 'running' | 'crashed';
+    chromiumAlive: boolean;
+    restartCount: number;
+    lastEvent: string;
+    reason?: string;
+    pid: number;
+  } | null;
 }
 
 // ============================================================================

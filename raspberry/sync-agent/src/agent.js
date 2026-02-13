@@ -822,12 +822,21 @@ class NeoproSyncAgent {
           logger.warn('Failed to load version info for heartbeat:', error.message);
         }
 
+        // Inclure le statut kiosk (fichier écrit par le watchdog)
+        let kioskStatus = null;
+        try {
+          kioskStatus = await metricsCollector.getKioskStatus();
+        } catch {
+          // Ignore — le fichier peut ne pas encore exister
+        }
+
         this.socket.emit('heartbeat', {
           siteId: config.site.id,
           timestamp: Date.now(),
           metrics,
           softwareVersion,
           versionInfo,
+          kioskStatus,
         });
 
         // Enregistrer le succès du heartbeat

@@ -13,10 +13,12 @@
 CHROMIUM_URL="http://neopro.local/tv"
 LOG_DIR="/home/pi/neopro/logs"
 LOG_FILE="$LOG_DIR/kiosk-watchdog.log"
+KIOSK_STATUS_FILE="/home/pi/neopro/data/kiosk-status.json"
 CHECK_INTERVAL=30  # Vérifier toutes les 30 secondes
 
 # Créer le dossier de logs si nécessaire
 mkdir -p "$LOG_DIR" 2>/dev/null || true
+mkdir -p "$(dirname "$KIOSK_STATUS_FILE")" 2>/dev/null || true
 MEMORY_THRESHOLD=85  # Redémarrer si mémoire > 85%
 MAX_CRASH_COUNT=3  # Après 3 crashs rapides, attendre plus longtemps
 CRASH_WINDOW=300   # Fenêtre de 5 minutes pour compter les crashs
@@ -52,10 +54,21 @@ cleanup_old_crashes() {
     crash_times=("${new_times[@]}")
 }
 
-# Enregistrer un crash
+# Enregistrer un crash et écrire le statut pour le sync-agent
 record_crash() {
     crash_times+=("$(date +%s)")
     cleanup_old_crashes
+    write_kiosk_status "crashed"
+}
+
+# Écrire le statut kiosk dans un fichier JSON lu par le sync-agent
+write_kiosk_status() {
+    local status="$1"
+    local reason="${2:-}"
+    local now=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+    cat > "$KIOSK_STATUS_FILE" 2>/dev/null <<EOF
+{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0}}
+EOF
 }
 
 # Vérifie si trop de crashs récents
@@ -169,6 +182,7 @@ start_chromium() {
 
     CHROMIUM_PID=$!
     log "✓ Chromium lancé (PID: $CHROMIUM_PID)"
+    write_kiosk_status "running"
 }
 
 # Vérifier si Chromium affiche une page d'erreur
@@ -188,9 +202,10 @@ check_for_crash_page() {
 
     # Méthode 2: Vérifier les logs Chromium pour les erreurs GPU/mémoire
     if [ -f /home/pi/.config/chromium/chrome_debug.log ]; then
-        local recent_errors=$(tail -100 /home/pi/.config/chromium/chrome_debug.log 2>/dev/null | grep -c "GPU process exited\|Renderer crash\|Out of memory" || echo "0")
+        local recent_errors
+        recent_errors=$(tail -100 /home/pi/.config/chromium/chrome_debug.log 2>/dev/null | grep -c "GPU process exited\|Renderer crash\|Out of memory") || recent_errors=0
         if (( recent_errors > 0 )); then
-            log "⚠️ Erreurs GPU/mémoire détectées dans les logs Chromium"
+            log "⚠️ Erreurs GPU/mémoire détectées dans les logs Chromium (${recent_errors})"
             return 0  # Crash détecté
         fi
     fi
@@ -198,8 +213,10 @@ check_for_crash_page() {
     # Méthode 3: Vérifier les erreurs GPU driver dans journalctl (AllocateRingBuffer, etc.)
     # Ces erreurs ne sont pas visibles dans chrome_debug.log mais indiquent une défaillance du GPU driver.
     # Sur Pi 5 avec V3D, ces erreurs se produisent quand le GPU ne peut plus allouer de mémoire.
-    local gpu_driver_errors=$(journalctl -u neopro-kiosk --since "2 minutes ago" --no-pager -q 2>/dev/null | grep -c "AllocateRingBuffer\|kFatalFailure\|GpuChannelMsg_CreateCommandBuffer" 2>/dev/null | tail -1 || echo "0")
-    if (( gpu_driver_errors > 10 )); then
+    # Seuil à 3 : Chromium crash après ~5-6 kFatalFailure, il faut détecter avant la mort.
+    local gpu_driver_errors
+    gpu_driver_errors=$(journalctl -u neopro-kiosk --since "2 minutes ago" --no-pager -q 2>/dev/null | grep -c "AllocateRingBuffer\|kFatalFailure\|GpuChannelMsg_CreateCommandBuffer") || gpu_driver_errors=0
+    if (( gpu_driver_errors > 3 )); then
         log "⚠️ Erreurs GPU driver détectées (${gpu_driver_errors} en 2 min): AllocateRingBuffer/kFatalFailure"
         return 0  # Crash détecté
     fi
@@ -266,6 +283,7 @@ main() {
 
         if $need_restart; then
             log "🔄 Redémarrage nécessaire: $reason"
+            write_kiosk_status "crashed" "$reason"
             record_crash
 
             cleanup_chromium

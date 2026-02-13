@@ -353,7 +353,7 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 
 ### 7. Monitoring & Observability
 
-- **Prometheus metrics** (Port 9090) — 23 métriques custom `neopro_*` + métriques Node.js par défaut
+- **Prometheus metrics** (Port 9090) — 26 métriques custom `neopro_*` (dont 3 kiosk : `neopro_kiosk_status`, `neopro_kiosk_restart_count`, `neopro_kiosk_crashes_total`) + métriques Node.js par défaut
 - **Grafana dashboards** (Port 3000) — 3 dashboards (local) + 3 dashboards cloud :
   - _NeoPro Overview_ : API Health, sites connectés, alertes actives, taux 5xx, latence p95, mémoire RSS
   - _NeoPro Infrastructure_ : HTTP rate/latence par percentile, Node.js runtime (heap, event loop lag, memory pressure), auth & rate limiting, DB pool & latency, FTP storage

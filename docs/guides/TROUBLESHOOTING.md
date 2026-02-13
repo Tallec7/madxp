@@ -2211,7 +2211,8 @@ Depuis la version 2.24+, deux systèmes de récupération automatique sont en pl
 1. **Watchdog Kiosk** (`/home/pi/neopro/scripts/kiosk-watchdog.sh`) :
    - Détecte automatiquement Pi 4 vs Pi 5 et applique les bons flags GPU
    - Surveille le titre de la fenêtre Chromium (détecte "Aw, Snap!", "Error", "Oups")
-   - Surveille les erreurs GPU driver via journalctl (`AllocateRingBuffer`, `kFatalFailure`) — >10 erreurs en 2 min déclenche un recovery
+   - Surveille les erreurs GPU driver via journalctl (`AllocateRingBuffer`, `kFatalFailure`) — >3 erreurs en 2 min déclenche un recovery (seuil abaissé de 10 à 3 pour détecter avant la mort de Chromium)
+   - Écrit le statut dans `/home/pi/neopro/data/kiosk-status.json` (lu par le sync-agent, remonté au central via heartbeat → alertes `kiosk_crash` / `kiosk_unstable`)
    - Tue Chromium, vide le cache, libère la mémoire GPU, relance
    - Anti-boucle : attend 60s après 3 crashs en 5 min
 
