@@ -225,6 +225,18 @@ const DEFAULT_THRESHOLDS: Omit<AlertThreshold, 'id'>[] = [
     escalateAfterMinutes: 4320,
     notifyChannels: ['email'],
   },
+  {
+    name: 'Déploiement bloqué',
+    metric: 'deployment_stuck_minutes',
+    condition: 'gt',
+    warningValue: 30,  // Warning après 30 minutes sans progression
+    criticalValue: 60, // Critical après 60 minutes
+    duration: 0,       // Immédiat (le check SQL calcule déjà la durée)
+    enabled: true,
+    cooldownMinutes: 30,
+    escalateAfterMinutes: 120,
+    notifyChannels: ['email'],
+  },
 ];
 
 class AlertingService {
@@ -919,10 +931,114 @@ class AlertingService {
   }
 
   private startPeriodicCheck(): void {
-    // Vérifier l'escalade toutes les minutes
+    // Vérifier l'escalade et les déploiements bloqués toutes les minutes
     this.checkInterval = setInterval(async () => {
       await this.checkEscalations();
+      await this.checkStuckDeployments();
     }, 60 * 1000);
+  }
+
+  /**
+   * Détecte les déploiements bloqués en in_progress depuis plus de 30 minutes.
+   * Vérifie à la fois content_deployments (vidéos) et update_deployments (OTA).
+   * Crée une alerte via createAlert() pour chaque déploiement coincé.
+   */
+  async checkStuckDeployments(): Promise<void> {
+    try {
+      // Chercher les déploiements content bloqués
+      const contentStuck = await query<{
+        id: string;
+        target_id: string;
+        minutes_stuck: number;
+      }>(`
+        SELECT id, target_id,
+          EXTRACT(EPOCH FROM (NOW() - COALESCE(started_at, created_at))) / 60 AS minutes_stuck
+        FROM content_deployments
+        WHERE status = 'in_progress'
+          AND COALESCE(started_at, created_at) < NOW() - INTERVAL '30 minutes'
+      `);
+
+      // Chercher les déploiements OTA bloqués
+      const updateStuck = await query<{
+        id: string;
+        target_id: string;
+        minutes_stuck: number;
+        version: string;
+      }>(`
+        SELECT ud.id, ud.target_id,
+          EXTRACT(EPOCH FROM (NOW() - COALESCE(ud.started_at, ud.created_at))) / 60 AS minutes_stuck,
+          su.version
+        FROM update_deployments ud
+        JOIN software_updates su ON ud.update_id = su.id
+        WHERE ud.status = 'in_progress'
+          AND COALESCE(ud.started_at, ud.created_at) < NOW() - INTERVAL '30 minutes'
+      `);
+
+      const allStuck = [
+        ...contentStuck.rows.map(r => ({
+          deploymentId: r.id,
+          targetId: r.target_id,
+          minutesStuck: Math.round(r.minutes_stuck),
+          type: 'content' as const,
+          version: undefined as string | undefined,
+        })),
+        ...updateStuck.rows.map(r => ({
+          deploymentId: r.id,
+          targetId: r.target_id,
+          minutesStuck: Math.round(r.minutes_stuck),
+          type: 'update' as const,
+          version: r.version,
+        })),
+      ];
+
+      if (allStuck.length === 0) return;
+
+      logger.warn('Stuck deployments detected', { count: allStuck.length });
+
+      for (const stuck of allStuck) {
+        // Cooldown par deployment ID pour éviter le spam
+        const cooldownKey = `deployment_stuck:${stuck.deploymentId}`;
+        const lastAlert = this.lastAlertTime.get(cooldownKey);
+        if (lastAlert) {
+          const cooldownEnd = new Date(lastAlert.getTime() + 30 * 60 * 1000);
+          if (new Date() < cooldownEnd) continue;
+        }
+
+        const severity: AlertSeverity = stuck.minutesStuck >= 60 ? 'critical' : 'warning';
+        const typeLabel = stuck.type === 'update' ? 'mise à jour logicielle' : 'vidéo';
+        const versionInfo = stuck.version ? ` v${stuck.version}` : '';
+
+        await this.createAlert({
+          siteId: stuck.targetId,
+          type: 'Déploiement bloqué',
+          severity,
+          message: `Déploiement ${typeLabel}${versionInfo} bloqué en in_progress depuis ${stuck.minutesStuck} minutes (ID: ${stuck.deploymentId})`,
+          metadata: {
+            metric: 'deployment_stuck_minutes',
+            value: stuck.minutesStuck,
+            deploymentId: stuck.deploymentId,
+            deploymentType: stuck.type,
+          },
+        });
+
+        this.lastAlertTime.set(cooldownKey, new Date());
+
+        logger.warn('Alert created for stuck deployment', {
+          deploymentId: stuck.deploymentId,
+          minutesStuck: stuck.minutesStuck,
+          severity,
+        });
+      }
+    } catch (error) {
+      // Ne pas faire planter le check périodique si les tables n'existent pas encore
+      if (error instanceof Error && (
+        error.message.includes('content_deployments') ||
+        error.message.includes('update_deployments')
+      )) {
+        return;
+      }
+      logger.error('Error checking stuck deployments:', error);
+    }
   }
 
   private async checkEscalations(): Promise<void> {

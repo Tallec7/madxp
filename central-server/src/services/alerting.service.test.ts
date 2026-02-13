@@ -118,8 +118,8 @@ describe('AlertingService', () => {
         call[0]?.includes('INSERT INTO alert_thresholds')
       );
 
-      // Should insert 12 thresholds (14 default - 2 existing)
-      expect(insertCalls.length).toBe(12);
+      // Should insert 13 thresholds (15 default - 2 existing)
+      expect(insertCalls.length).toBe(13);
     });
 
     it('should start periodic escalation check', async () => {
@@ -853,6 +853,127 @@ describe('AlertingService', () => {
       const thresholds = await alertingService.getThresholds();
 
       expect(thresholds[0].notifyChannels).toEqual([]);
+    });
+  });
+
+  // =========================================================
+  // checkStuckDeployments()
+  // =========================================================
+  describe('checkStuckDeployments', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      // Reset lastAlertTime map via a fresh call pattern
+      // (the map is private, but cooldown is time-based so we can test it)
+    });
+
+    it('should not create alert when no stuck deployments', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] }) // content_deployments
+        .mockResolvedValueOnce({ rows: [] }); // update_deployments
+
+      await alertingService.checkStuckDeployments();
+
+      // createAlert would call mockQuery for INSERT INTO alerts — should not happen
+      expect(mockLogger.warn).not.toHaveBeenCalledWith(
+        'Stuck deployments detected',
+        expect.anything(),
+      );
+    });
+
+    it('should create warning alert for OTA deployment stuck > 30 minutes', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] }) // content_deployments: none
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'deploy-stuck-1',
+            target_id: 'site-uuid-300',
+            minutes_stuck: 42,
+            version: '3.17.1',
+          }],
+        }) // update_deployments: 1 stuck
+        .mockResolvedValueOnce({ rows: [] }) // ensureTables check
+        .mockResolvedValueOnce({ rows: [{ id: 'alert-uuid-1' }] }); // INSERT alert
+
+      await alertingService.checkStuckDeployments();
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Stuck deployments detected',
+        expect.objectContaining({ count: 1 }),
+      );
+      // The createAlert call triggers an INSERT
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO'),
+        expect.arrayContaining([
+          'site-uuid-300',
+          expect.stringContaining('bloqué'),
+          'warning',
+        ]),
+      );
+    });
+
+    it('should create critical alert for deployment stuck > 60 minutes', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] }) // content_deployments
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'deploy-stuck-2',
+            target_id: 'site-uuid-400',
+            minutes_stuck: 75,
+            version: '3.18.0',
+          }],
+        })
+        .mockResolvedValueOnce({ rows: [] }) // ensureTables
+        .mockResolvedValueOnce({ rows: [{ id: 'alert-uuid-2' }] }); // INSERT
+
+      await alertingService.checkStuckDeployments();
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO'),
+        expect.arrayContaining(['critical']),
+      );
+    });
+
+    it('should handle both content and update stuck deployments', async () => {
+      mockQuery
+        .mockResolvedValueOnce({
+          rows: [{ id: 'content-stuck-1', target_id: 'site-1', minutes_stuck: 35 }],
+        }) // content_deployments
+        .mockResolvedValueOnce({
+          rows: [{ id: 'update-stuck-1', target_id: 'site-2', minutes_stuck: 45, version: '3.17.1' }],
+        }) // update_deployments
+        .mockResolvedValueOnce({ rows: [] }) // ensureTables (1st alert)
+        .mockResolvedValueOnce({ rows: [{ id: 'alert-1' }] }) // INSERT (1st)
+        .mockResolvedValueOnce({ rows: [] }) // ensureTables (2nd alert)
+        .mockResolvedValueOnce({ rows: [{ id: 'alert-2' }] }); // INSERT (2nd)
+
+      await alertingService.checkStuckDeployments();
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Stuck deployments detected',
+        expect.objectContaining({ count: 2 }),
+      );
+    });
+
+    it('should gracefully handle missing tables', async () => {
+      mockQuery.mockRejectedValueOnce(
+        new Error('relation "content_deployments" does not exist'),
+      );
+
+      // Should not throw
+      await alertingService.checkStuckDeployments();
+
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it('should log error for unexpected failures', async () => {
+      mockQuery.mockRejectedValueOnce(new Error('Connection refused'));
+
+      await alertingService.checkStuckDeployments();
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining('stuck deployments'),
+        expect.anything(),
+      );
     });
   });
 });

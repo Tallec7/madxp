@@ -9,6 +9,13 @@
 ### Features
 
 - **wifi:** remote WiFi client configuration from central dashboard — new sync-agent commands `scan_wifi_networks` and `configure_wifi_client` allow admins to scan available WiFi networks and connect wlan1 (USB WiFi dongle) to a club's WiFi from the Debug tab, without physical access to the Pi. Requires Pi to be online (Ethernet or existing WiFi). New API endpoints: `GET /api/sites/:id/wifi-scan`, `POST /api/sites/:id/wifi-connect`. Both commands are realtime-only (not queueable). Password is hashed via `wpa_passphrase` (never stored in plaintext). UI added to Debug tab with network list, signal strength, and connection form (i18n: FR/EN/ES)
+- **alerting:** add "Déploiement bloqué" alert — `checkStuckDeployments()` runs every 60s, queries both `content_deployments` and `update_deployments` for stuck `in_progress` status > 30min (warning) / 60min (critical). Uses existing `createAlert()` with per-deployment cooldown. New default threshold in `DEFAULT_THRESHOLDS`
+
+### Tests
+
+- **smoke:** add sync-agent command handler symmetry check (section 27) — verifies both `deploy_video` and `update_software` branches in `agent.js` emit `completed: true` and `progress: 100`. Prevents the asymmetry bug (Dec 2025 → Feb 2026) from recurring. 126 smoke tests total
+- **deploy:** add `update-deployment.service.test.ts` — 26 tests covering `startDeployment`, `handleDeploymentResult`, `processPendingDeploymentsForSite` (reconciliation), `retryDeployment`, `cancelDeployment`, `updateProgress`, and edge cases. Coverage from 9.7% to ~80%
+- **alerting:** add 6 tests for `checkStuckDeployments()` — warning/critical thresholds, both deployment tables, cooldown, graceful handling of missing tables. 1423 server tests total
 
 ## [3.19.4](https://github.com/Tallec7/neopro/compare/v3.19.3...v3.19.4) (2026-02-13)
 

@@ -1222,3 +1222,67 @@ describe('Request body size limits', () => {
     expect([413, 500]).toContain(res.status);
   });
 });
+
+// ----------------------------------------------------------
+// 27. Sync-agent command handler symmetry
+// ----------------------------------------------------------
+// Bug prevention: agent.js must emit `completed: true` for BOTH deploy_video
+// and update_software commands. The omission of completed:true for update_software
+// caused OTA deployments to stay stuck at 0% for months (Dec 2025 → Feb 2026).
+// This smoke test prevents the asymmetry from recurring after any refactor.
+describe('Sync-agent command handler symmetry', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const agentPath = path.join(repoRoot, 'raspberry', 'sync-agent', 'src', 'agent.js');
+
+  it('agent.js exists and is readable', () => {
+    expect(fs.existsSync(agentPath)).toBe(true);
+  });
+
+  it('deploy_video branch emits completed: true', () => {
+    const content = fs.readFileSync(agentPath, 'utf8');
+    const deployVideoMatch = content.match(
+      /type\s*===\s*['"]deploy_video['"]([\s\S]*?)(?=\}\s*else\s+if)/
+    );
+    expect(deployVideoMatch).not.toBeNull();
+    expect({
+      branch: 'deploy_video',
+      emitsCompleted: /completed:\s*true/.test(deployVideoMatch![1]),
+    }).toEqual({
+      branch: 'deploy_video',
+      emitsCompleted: true,
+    });
+  });
+
+  it('update_software branch emits completed: true', () => {
+    const content = fs.readFileSync(agentPath, 'utf8');
+    const updateSoftwareMatch = content.match(
+      /type\s*===\s*['"]update_software['"]([\s\S]*?)(?=\}\s*else\s+if)/
+    );
+    expect(updateSoftwareMatch).not.toBeNull();
+    expect({
+      branch: 'update_software',
+      emitsCompleted: /completed:\s*true/.test(updateSoftwareMatch![1]),
+    }).toEqual({
+      branch: 'update_software',
+      emitsCompleted: true,
+    });
+  });
+
+  it('both command branches emit progress: 100 in their completion signal', () => {
+    const content = fs.readFileSync(agentPath, 'utf8');
+
+    const dvMatch = content.match(
+      /type\s*===\s*['"]deploy_video['"]([\s\S]*?)(?=\}\s*else\s+if)/
+    );
+    expect(dvMatch).not.toBeNull();
+    expect({ branch: 'deploy_video', emitsProgress100: /progress:\s*100/.test(dvMatch![1]) })
+      .toEqual({ branch: 'deploy_video', emitsProgress100: true });
+
+    const usMatch = content.match(
+      /type\s*===\s*['"]update_software['"]([\s\S]*?)(?=\}\s*else\s+if)/
+    );
+    expect(usMatch).not.toBeNull();
+    expect({ branch: 'update_software', emitsProgress100: /progress:\s*100/.test(usMatch![1]) })
+      .toEqual({ branch: 'update_software', emitsProgress100: true });
+  });
+});
