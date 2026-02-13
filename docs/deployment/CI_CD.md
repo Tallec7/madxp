@@ -29,18 +29,13 @@ Commit → Pre-commit Hooks → PR → CI Workflow → Merge main → Semantic R
      - `neopro-raspberry-deploy.tar.gz` — Package complet
      - `neopro-webapp.tar.gz` — Webapp seule (mise à jour rapide)
 
-### 3. Webapp Release (`release-webapp.yml`)
-
-- **Trigger** : Tag `v*` ou dispatch manuel
-- Build et release de la webapp indépendamment
-
-### 4. Install Scripts (`publish-install-scripts.yml`)
+### 3. Install Scripts (`publish-install-scripts.yml`)
 
 - **Trigger** : Changements dans `raspberry/scripts/` ou `install.sh`
 - Publie les scripts d'installation sur GitHub Pages
 - URL : `https://tallec7.github.io/neopro/install/`
 
-### 5. Railway Restart (`railway-restart.yml`)
+### 4. Railway Restart (`railway-restart.yml`)
 
 - **Trigger** : Cron dimanche 4h UTC
 - Redémarre le serveur Railway pour libérer la mémoire
