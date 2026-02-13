@@ -260,10 +260,11 @@ GET    /api/updates                - Liste des versions disponibles
 POST   /api/updates                - Créer une version (multipart avec package)
 DELETE /api/updates/:id            - Supprimer une version
 
-GET    /api/update-deployments     - Historique des déploiements
-POST   /api/update-deployments     - Lancer un déploiement
-PUT    /api/update-deployments/:id - Mettre à jour statut
-DELETE /api/update-deployments/:id - Annuler un déploiement
+GET    /api/update-deployments          - Historique des déploiements (inclut update_version, target_name, total_count)
+POST   /api/update-deployments          - Lancer un déploiement
+POST   /api/update-deployments/:id/retry - Relancer un déploiement échoué
+PUT    /api/update-deployments/:id      - Mettre à jour statut
+DELETE /api/update-deployments/:id      - Annuler un déploiement
 ```
 
 **Variables d'environnement (FTP séparé pour les updates) :**

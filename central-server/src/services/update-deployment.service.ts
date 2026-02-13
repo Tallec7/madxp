@@ -10,6 +10,7 @@ import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
 
 import { uploadVerificationService } from './upload-verification.service';
+import { metricsService } from './metrics.service';
 
 interface UpdateDeploymentRow {
   id: string;
@@ -160,6 +161,8 @@ class UpdateDeploymentService {
           [statusMessage.join(' | ') || null, deploymentId]
         );
 
+        metricsService.recordDeployment('in_progress', deployment.target_type);
+
         logger.info('Update deployment in progress', {
           deploymentId,
           commandSentSites,
@@ -167,13 +170,8 @@ class UpdateDeploymentService {
           commandFailedSites,
         });
       } else {
-        // Aucune commande n'a pu être envoyée ou mise en queue
-        await query(
-          `UPDATE update_deployments
-           SET error_message = $1
-           WHERE id = $2 AND status = 'pending'`,
-          ['Échec de l\'envoi à tous les sites cibles', deploymentId]
-        );
+        // Aucune commande n'a pu être envoyée ou mise en queue → marquer comme échoué
+        await this.failDeployment(deploymentId, 'Échec de l\'envoi à tous les sites cibles');
 
         logger.error('Update deployment failed for all sites', {
           deploymentId,
@@ -409,6 +407,8 @@ class UpdateDeploymentService {
           [deploymentId]
         );
 
+        metricsService.recordDeployment('completed', deployment.rows[0].target_type);
+
         logger.info('Update deployment completed', { deploymentId, siteId });
       } else {
         await query(
@@ -418,6 +418,7 @@ class UpdateDeploymentService {
           [errorMessage || 'Erreur inconnue', deploymentId]
         );
 
+        metricsService.recordDeployment('failed', 'site');
         logger.error('Update deployment failed', { deploymentId, siteId, errorMessage });
       }
     } catch (error) {
@@ -452,6 +453,7 @@ class UpdateDeploymentService {
       [errorMessage, deploymentId]
     );
 
+    metricsService.recordDeployment('failed', 'site');
     logger.error('Update deployment failed', { deploymentId, errorMessage });
   }
 

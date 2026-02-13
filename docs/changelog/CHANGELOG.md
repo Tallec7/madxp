@@ -21,10 +21,16 @@
 ### Bug Fixes
 
 - **central-server:** add missing `GET /api/sites/:id/remote-pin` endpoint — the dashboard called this route to check PIN status on site settings load, but only POST (set) and DELETE (clear) were implemented, causing a 404
+- **deploy:** fix OTA deployments stuck in 'pending' forever — when all target sites failed to receive the update command, `update-deployment.service.ts` only set `error_message` without changing the status. The deployment remained in `pending` with 0% progress indefinitely. Now calls `failDeployment()` which properly sets `status = 'failed'` and `completed_at = NOW()`
+- **dashboard:** fix deployment history showing "/ sites" without count — the template was missing interpolation variables (`deployed_count` / `total_count`). Added `total_count` to the API response via LATERAL JOIN on `site_groups` for group targets
+- **dashboard:** fix group deployments showing "Groupe" instead of actual group name — `findAllDeployments()` now JOINs `groups` table to resolve `target_name`
 
 ### Features
 
-- **monitoring:** add `neopro_websocket_disconnects_total` Prometheus metric — tracks socket disconnections by reason (`transport close`, `ping timeout`, `zombie_timeout`, `zombie_cleanup`, etc.) and client type (`agent`, `dashboard`). Instrumented in `socket.service.ts` (agent + dashboard disconnect handlers), `health-monitor.handler.ts` (zombie detection + cleanup). Two new Grafana panels added to NeoPro Services dashboard: "Socket Disconnects by Reason" and "Socket Disconnects by Client Type".
+- **deploy:** add `POST /api/update-deployments/:id/retry` endpoint — allows retrying failed OTA deployments from the dashboard. Resets status to `pending` and restarts the deployment flow
+- **dashboard:** add retry/cancel action buttons on deployment history cards — "Relancer" button for failed deployments, "Annuler" button for pending/in_progress. Visual improvements: colored left border (grey=pending, red=failed), restructured footer with dates and actions
+- **monitoring:** instrument `update-deployment.service.ts` with `metricsService.recordDeployment()` — OTA software deployments now emit `neopro_deployments_total` Prometheus metrics on `in_progress`, `completed`, and `failed` transitions. Previously only content deployments were tracked
+- **grafana:** add 3 OTA deployment panels to cloud overview dashboard — "Déploiements échoués (24h)" (stat, red background on failures), "Déploiements par statut" (timeseries, stacked by status), "Durée déploiement p95" (stat, thresholds 120s/300s)
 
 ### Documentation
 
@@ -32,6 +38,12 @@
 - **monitoring:** sync MODOP-O05-08 with 3-dashboard structure, add Notion guide cross-reference
 - **monitoring:** sync MODOP-S11-15 escalation section with Notion diagnostic guide cross-reference
 - **monitoring:** update ARCHITECTURE.md monitoring section — 3 dashboards (Overview, Infrastructure, Business & Fleet)
+- **monitoring:** update MODOP-O05-08 overview section — 9 panels across 2 rows (Row 1: santé système, Row 2: déploiements OTA)
+- **docs:** add retry endpoint to REFERENCE.md and cloud-api.md
+
+### Features
+
+- **monitoring:** add `neopro_websocket_disconnects_total` Prometheus metric — tracks socket disconnections by reason (`transport close`, `ping timeout`, `zombie_timeout`, `zombie_cleanup`, etc.) and client type (`agent`, `dashboard`). Instrumented in `socket.service.ts` (agent + dashboard disconnect handlers), `health-monitor.handler.ts` (zombie detection + cleanup). Two new Grafana panels added to NeoPro Services dashboard: "Socket Disconnects by Reason" and "Socket Disconnects by Client Type".
 
 ### Tests
 

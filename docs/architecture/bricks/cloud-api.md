@@ -39,7 +39,7 @@ Serveur central cloud qui orchestre la flotte de Raspberry Pi, expose l'API REST
 | Rapports               | `reports.routes.ts`                                   | GET /api/reports/pdf, /api/reports/excel                            | JWT                         |
 | Alertes                | `alerts.routes.ts`                                    | CRUD /api/alerts, GET /api/alerts/thresholds                        | JWT                         |
 | Groupes                | `groups.routes.ts`                                    | CRUD /api/groups                                                    | JWT                         |
-| Mises \u00e0 jour      | `updates.routes.ts`                                   | CRUD /api/updates, /api/update-deployments                          | JWT (super_admin)           |
+| Mises à jour           | `updates.routes.ts`                                   | CRUD /api/updates, /api/update-deployments, POST retry              | JWT (super_admin)           |
 | Brouillons             | `drafts.routes.ts`                                    | CRUD /api/drafts                                                    | JWT                         |
 | Assets                 | `assets.routes.ts`                                    | POST /api/assets (watermarks, logos)                                | JWT                         |
 | Abonnements            | `subscription.routes.ts`                              | CRUD /api/subscriptions                                             | JWT (super_admin)           |

@@ -28,6 +28,7 @@ router.delete('/updates/:id', authenticate, requireRole('admin'), sensitiveRateL
 router.get('/update-deployments', authenticate, adminRateLimit, updatesController.getUpdateDeployments);
 router.get('/update-deployments/:id', authenticate, adminRateLimit, updatesController.getUpdateDeployment);
 router.post('/update-deployments', authenticate, requireRole('admin', 'operator'), sensitiveRateLimit, updatesController.createUpdateDeployment);
+router.post('/update-deployments/:id/retry', authenticate, requireRole('admin', 'operator'), sensitiveRateLimit, updatesController.retryUpdateDeployment);
 router.put('/update-deployments/:id', authenticate, requireRole('admin', 'operator'), sensitiveRateLimit, updatesController.updateUpdateDeployment);
 router.delete('/update-deployments/:id', authenticate, requireRole('admin'), sensitiveRateLimit, updatesController.deleteUpdateDeployment);
 

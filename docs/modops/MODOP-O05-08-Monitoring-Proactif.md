@@ -49,7 +49,9 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 
 **URL** : Grafana → Dashboards → NeoPro → NeoPro Overview
 
-**6 indicateurs clés (0 scroll) :**
+**9 indicateurs (2 rows) :**
+
+**Row 1 — Santé système (6 stats) :**
 
 | Métrique            | ✅ Vert                | ⚠️ Attention | 🔴 Problème             | Où investiguer                    |
 | ------------------- | ---------------------- | ------------ | ----------------------- | --------------------------------- |
@@ -59,6 +61,14 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 | **Taux erreur 5xx** | 0%                     | 1-5%         | > 5%                    | HTTP Status Codes (Dashboard 2)   |
 | **Latence API p95** | < 200ms                | 200-500ms    | > 500ms                 | Event Loop + DB Latency (Dash. 2) |
 | **Mémoire RSS**     | < 256 MB               | 256-512 MB   | > 512 MB (OOM imminent) | Heap + Memory Pressure (Dash. 2)  |
+
+**Row 2 — Déploiements OTA (3 panels) :**
+
+| Métrique                       | ✅ Vert   | ⚠️ Attention | 🔴 Problème    | Où investiguer                                |
+| ------------------------------ | --------- | ------------ | -------------- | --------------------------------------------- |
+| **Déploiements échoués (24h)** | 0         | 1-2          | 3+             | Dashboard → Mises à jour → Historique         |
+| **Déploiements par statut**    | Flux vert | failed rouge | Pics rouges    | Logs Railway, vérifier connectivité Pi        |
+| **Durée déploiement p95**      | < 120s    | 120-300s     | > 300s (5 min) | Bande passante FTP, taille package, Pi saturé |
 
 **Exemple de vue :**
 

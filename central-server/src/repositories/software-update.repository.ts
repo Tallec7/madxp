@@ -209,15 +209,25 @@ class SoftwareUpdateRepositoryImpl extends BaseRepository<SoftwareUpdateRow> {
     const result = await query<UpdateDeploymentRow>(
       `SELECT ud.id, ud.update_id, ud.target_type, ud.target_id, ud.status, ud.progress,
               ud.error_message, ud.started_at, ud.completed_at, ud.created_at,
-              ud.backup_path,
+              ud.backup_path, ud.deployed_by,
               su.version as update_version,
               CASE
                 WHEN ud.target_type = 'site' THEN s.site_name
-                ELSE 'Groupe'
-              END as target_name
+                WHEN ud.target_type = 'group' THEN g.name
+                ELSE 'Inconnu'
+              END as target_name,
+              CASE
+                WHEN ud.target_type = 'site' THEN 1
+                WHEN ud.target_type = 'group' THEN COALESCE(gc.site_count, 0)
+                ELSE 0
+              END as total_count
        FROM update_deployments ud
        LEFT JOIN software_updates su ON ud.update_id = su.id
        LEFT JOIN sites s ON ud.target_type = 'site' AND ud.target_id = s.id
+       LEFT JOIN groups g ON ud.target_type = 'group' AND ud.target_id = g.id
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int as site_count FROM site_groups WHERE group_id = ud.target_id
+       ) gc ON ud.target_type = 'group'
        ORDER BY ud.created_at DESC`
     );
     return result.rows;
@@ -230,15 +240,25 @@ class SoftwareUpdateRepositoryImpl extends BaseRepository<SoftwareUpdateRow> {
     const result = await query<UpdateDeploymentRow>(
       `SELECT ud.id, ud.update_id, ud.target_type, ud.target_id, ud.status, ud.progress,
               ud.error_message, ud.started_at, ud.completed_at, ud.created_at,
-              ud.backup_path,
+              ud.backup_path, ud.deployed_by,
               su.version as update_version,
               CASE
                 WHEN ud.target_type = 'site' THEN s.site_name
-                ELSE 'Groupe'
-              END as target_name
+                WHEN ud.target_type = 'group' THEN g.name
+                ELSE 'Inconnu'
+              END as target_name,
+              CASE
+                WHEN ud.target_type = 'site' THEN 1
+                WHEN ud.target_type = 'group' THEN COALESCE(gc.site_count, 0)
+                ELSE 0
+              END as total_count
        FROM update_deployments ud
        LEFT JOIN software_updates su ON ud.update_id = su.id
        LEFT JOIN sites s ON ud.target_type = 'site' AND ud.target_id = s.id
+       LEFT JOIN groups g ON ud.target_type = 'group' AND ud.target_id = g.id
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int as site_count FROM site_groups WHERE group_id = ud.target_id
+       ) gc ON ud.target_type = 'group'
        WHERE ud.id = $1`,
       [id]
     );

@@ -307,6 +307,28 @@ export const updateUpdateDeployment = async (req: AuthRequest, res: Response) =>
   }
 };
 
+export const retryUpdateDeployment = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const success = await updateDeploymentService.retryDeployment(id);
+
+    if (!success) {
+      return res.status(404).json({ error: 'Déploiement non trouvé ou pas en état échoué' });
+    }
+
+    logger.info('Update deployment retry requested:', { id });
+    res.json({ message: 'Déploiement relancé' });
+  } catch (error) {
+    if (isTableMissingError(error, 'update_deployments')) {
+      logger.warn('update_deployments table missing while retrying deployment');
+      return res.status(503).json(updatesFeatureUnavailable('update_deployments'));
+    }
+    logger.error('Error retrying update deployment:', error);
+    res.status(500).json({ error: 'Erreur lors de la relance du déploiement' });
+  }
+};
+
 export const deleteUpdateDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
