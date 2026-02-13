@@ -1,3 +1,9 @@
+## [3.20.2](https://github.com/Tallec7/neopro/compare/v3.20.1...v3.20.2) (2026-02-13)
+
+### Bug Fixes
+
+- **deploy:** add deployed_count to deployment history API response ([9c80cd7](https://github.com/Tallec7/neopro/commit/9c80cd771c51b43b58dd000d6426bb5d5685c2df))
+
 ## [3.20.1](https://github.com/Tallec7/neopro/compare/v3.20.0...v3.20.1) (2026-02-13)
 
 ### Bug Fixes
