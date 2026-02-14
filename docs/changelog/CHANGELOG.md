@@ -1,3 +1,9 @@
+# [3.24.0](https://github.com/Tallec7/neopro/compare/v3.23.0...v3.24.0) (2026-02-14)
+
+### Features
+
+- **admin:** add club/tech mode toggle and sync status widget ([ba57ff6](https://github.com/Tallec7/neopro/commit/ba57ff618d5be194f6a67961004516d3daaf1898))
+
 # [3.23.0](https://github.com/Tallec7/neopro/compare/v3.22.0...v3.23.0) (2026-02-13)
 
 ### Features
