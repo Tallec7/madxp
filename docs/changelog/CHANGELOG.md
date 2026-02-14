@@ -1,3 +1,9 @@
+## [3.26.3](https://github.com/Tallec7/neopro/compare/v3.26.2...v3.26.3) (2026-02-14)
+
+### Bug Fixes
+
+- **deploy-progress:** emit deployedCount and status in WebSocket progress events ([e803726](https://github.com/Tallec7/neopro/commit/e80372607ccf40f2c6919eaf7c3d6d4e74fe0498))
+
 ## [3.26.2](https://github.com/Tallec7/neopro/compare/v3.26.1...v3.26.2) (2026-02-14)
 
 ### Bug Fixes
