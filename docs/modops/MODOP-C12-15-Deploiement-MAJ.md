@@ -143,6 +143,18 @@ Dashboard → Sites → [Site] → Actions → Mettre à jour le logiciel
 
 **⏱️ Durée totale : 5-10 minutes**
 
+**Options de déploiement (v3.25.0+) :**
+
+Le wizard de déploiement propose deux options dans l'étape 3 :
+
+| Option                             | Défaut | Comportement                                                                                                   |
+| ---------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------- |
+| **Rollback automatique**           | ✅ Oui | En cas d'échec de la mise à jour, le Pi restaure automatiquement la version précédente depuis le backup local. |
+| **Redémarrage après installation** | ❌ Non | Après une mise à jour réussie, le Pi effectue un `sudo reboot` complet (délai de 10s pour remonter le statut). |
+
+- **Rollback automatique** : désactiver uniquement pour le debug (laisser le Pi dans l'état d'échec pour investigation)
+- **Redémarrage après installation** : utile pour appliquer des changements kernel, systemd, ou résoudre des problèmes de mémoire post-update
+
 **Note (v3.7.14+) :** Le script `update-software.js` copie maintenant aussi le dossier `config/` (services systemd) vers le Pi. Les versions précédentes ne copiaient jamais ce dossier, ce qui empêchait l'installation des services de protection via OTA. L'archive inclut maintenant **7 services systemd** (3 core + 4 protection) et **12 scripts runtime** (dont `fix-fleet-pi.sh` et `diagnose-pi.sh`). Si des services sont manquants sur un Pi existant, utiliser `fix-fleet-pi.sh` pour les installer manuellement.
 
 **⚠️ Golden snapshot automatique (v3.7.16+) :** Avant de remplacer le code du sync-agent, `update-software.js` crée automatiquement un snapshot "golden" de la version actuelle (si aucun golden n'existe). Cela garantit que le guardian peut restaurer la version précédente en cas de crash du nouveau code. Sans ce mécanisme, un Pi recevant le guardian pour la première fois via OTA n'aurait aucun fallback et resterait hors ligne indéfiniment en cas de régression.
@@ -294,11 +306,13 @@ Menu Contenu → Vidéos → [Vidéo] → Déployer
 
 ### 5.1 Détection automatique d'échec
 
-**Le système déclenche un rollback automatique si :**
+**Le système déclenche un rollback automatique si** (option "Rollback automatique" activée, défaut: oui) **:**
 
 - Taux de succès < seuil configuré (défaut: 95%)
 - Plus de 3 sites en échec consécutif
 - Erreur critique détectée dans les logs
+
+> **Note :** Si l'option "Rollback automatique" est désactivée dans le wizard de déploiement, le Pi restera dans son état actuel en cas d'échec (utile pour le debug).
 
 **Exemple :**
 

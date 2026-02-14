@@ -1,3 +1,14 @@
+# [3.25.0](https://github.com/Tallec7/neopro/compare/v3.24.1...v3.25.0) (2026-02-14)
+
+### Features
+
+- **ota:** wire schedule_reboot option end-to-end — Pi reboots after successful OTA update when enabled
+- **ota:** wire auto_rollback option end-to-end — controls whether Pi rolls back on update failure (default: true)
+
+### Database
+
+- **migration:** add `schedule_reboot` and `auto_rollback` columns to `update_deployments`
+
 ## [3.24.1](https://github.com/Tallec7/neopro/compare/v3.24.0...v3.24.1) (2026-02-14)
 
 ### Bug Fixes

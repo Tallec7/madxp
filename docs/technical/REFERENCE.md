@@ -284,7 +284,8 @@ FTP_UPDATE_PUBLIC_URL=https://cdn.example.com/updates
 
 ```javascript
 socket.on('update_software', (data) => {
-  // data: { deploymentId, updateId, version, updateUrl, checksum, isCritical, ... }
+  // data: { deploymentId, updateId, version, updateUrl, checksum, isCritical,
+  //         scheduleReboot, autoRollback, ... }
 });
 ```
 

@@ -234,7 +234,7 @@ export const getUpdateDeployment = async (req: AuthRequest, res: Response) => {
 
 export const createUpdateDeployment = async (req: AuthRequest, res: Response) => {
   try {
-    const { update_id, target_type, target_id } = req.body;
+    const { update_id, target_type, target_id, schedule_reboot, auto_rollback } = req.body;
 
     // === GATE: Vérifier que la mise à jour est prête pour le déploiement ===
     const updateReadiness = await uploadVerificationService.isUpdateReadyForDeployment(update_id);
@@ -261,6 +261,8 @@ export const createUpdateDeployment = async (req: AuthRequest, res: Response) =>
       target_type: target_type || 'site',
       target_id,
       deployed_by: req.user?.id || null,
+      schedule_reboot: Boolean(schedule_reboot),
+      auto_rollback: auto_rollback !== false,
     });
 
     const deploymentId = result.id as string;

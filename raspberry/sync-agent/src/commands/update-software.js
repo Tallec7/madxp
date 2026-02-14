@@ -15,7 +15,7 @@ class SoftwareUpdateHandler {
   }
 
   async execute(data, progressCallback) {
-    const { updateUrl, version, checksum, packageSize } = data;
+    const { updateUrl, version, checksum, packageSize, scheduleReboot, autoRollback } = data;
 
     logger.info('Starting software update', { version });
 
@@ -80,6 +80,18 @@ class SoftwareUpdateHandler {
 
       logger.info('Software update completed successfully', { newVersion, report });
 
+      // Reboot le Pi si demandé par le dashboard
+      if (scheduleReboot) {
+        logger.info('Scheduled reboot requested, rebooting in 10 seconds...');
+        const { spawn } = require('child_process');
+        setTimeout(() => {
+          spawn('sudo', ['reboot'], {
+            detached: true,
+            stdio: 'ignore',
+          }).unref();
+        }, 10000);
+      }
+
       return {
         success: true,
         version: newVersion,
@@ -89,10 +101,15 @@ class SoftwareUpdateHandler {
     } catch (error) {
       logger.error('Software update failed', { error: error.message, stack: error.stack });
 
-      try {
-        await this.rollback();
-      } catch (rollbackError) {
-        logger.error('Rollback failed', { error: rollbackError.message });
+      // autoRollback est true par défaut (rétrocompatible avec les anciennes commandes sans ce flag)
+      if (autoRollback !== false) {
+        try {
+          await this.rollback();
+        } catch (rollbackError) {
+          logger.error('Rollback failed', { error: rollbackError.message });
+        }
+      } else {
+        logger.warn('Auto-rollback disabled, leaving system in current state');
       }
 
       throw error;

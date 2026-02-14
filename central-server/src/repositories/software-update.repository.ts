@@ -78,6 +78,8 @@ export interface CreateUpdateDeploymentInput {
   target_type: string;
   target_id: string;
   deployed_by: string | null;
+  schedule_reboot: boolean;
+  auto_rollback: boolean;
 }
 
 export interface UpdateUpdateDeploymentFields {
@@ -280,10 +282,10 @@ class SoftwareUpdateRepositoryImpl extends BaseRepository<SoftwareUpdateRow> {
    */
   async createDeployment(input: CreateUpdateDeploymentInput): Promise<UpdateDeploymentRow> {
     const result = await query<UpdateDeploymentRow>(
-      `INSERT INTO update_deployments (update_id, target_type, target_id, status, progress, deployed_by)
-       VALUES ($1, $2, $3, 'pending', 0, $4)
+      `INSERT INTO update_deployments (update_id, target_type, target_id, status, progress, deployed_by, schedule_reboot, auto_rollback)
+       VALUES ($1, $2, $3, 'pending', 0, $4, $5, $6)
        RETURNING *`,
-      [input.update_id, input.target_type || 'site', input.target_id, input.deployed_by]
+      [input.update_id, input.target_type || 'site', input.target_id, input.deployed_by, input.schedule_reboot ?? false, input.auto_rollback ?? true]
     );
     return result.rows[0];
   }

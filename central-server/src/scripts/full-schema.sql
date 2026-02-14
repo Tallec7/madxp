@@ -153,6 +153,8 @@ CREATE TABLE IF NOT EXISTS update_deployments (
   error_message TEXT,
   backup_path VARCHAR(500),
   deployed_by UUID REFERENCES users(id),
+  schedule_reboot BOOLEAN DEFAULT FALSE,
+  auto_rollback BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT NOW(),
   started_at TIMESTAMP,
   completed_at TIMESTAMP,

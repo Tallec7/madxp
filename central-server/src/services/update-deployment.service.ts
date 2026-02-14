@@ -60,7 +60,7 @@ class UpdateDeploymentService {
         throw new Error(`Déploiement de mise à jour non trouvé: ${deploymentId}`);
       }
 
-      const deployment = deploymentResult.rows[0] as UpdateDeploymentRow & SoftwareUpdateRow & { upload_status: string };
+      const deployment = deploymentResult.rows[0] as UpdateDeploymentRow & SoftwareUpdateRow & { upload_status: string; schedule_reboot: boolean; auto_rollback: boolean };
       logger.info('Deployment info retrieved', {
         deploymentId,
         version: deployment.version,
@@ -130,7 +130,7 @@ class UpdateDeploymentService {
         });
 
         // deployToSite utilise maintenant sendOrQueue, donc fonctionne même si offline
-        const success = await this.deployToSite(deploymentId, target.siteId, deployment);
+        const success = await this.deployToSite(deploymentId, target.siteId, deployment, deployment.schedule_reboot, deployment.auto_rollback);
         if (success) {
           successCount++;
           if (isConnected) {
@@ -200,7 +200,7 @@ class UpdateDeploymentService {
   async processPendingDeploymentsForSite(siteId: string): Promise<void> {
     try {
       // Récupérer les déploiements pending/in_progress qui ciblent ce site (directement ou via un groupe)
-      const result = await query<UpdateDeploymentRow & SoftwareUpdateRow>(
+      const result = await query<UpdateDeploymentRow & SoftwareUpdateRow & { schedule_reboot: boolean; auto_rollback: boolean }>(
         `SELECT ud.*, su.version, su.description, su.is_critical, su.changelog,
                 su.package_url, su.package_size, su.checksum
          FROM update_deployments ud
@@ -247,7 +247,7 @@ class UpdateDeploymentService {
           continue;
         }
 
-        const success = await this.deployToSite(deployment.id, siteId, deployment);
+        const success = await this.deployToSite(deployment.id, siteId, deployment, deployment.schedule_reboot, deployment.auto_rollback);
 
         if (success) {
           // Passer en in_progress si c'était pending
@@ -354,7 +354,9 @@ class UpdateDeploymentService {
   private async deployToSite(
     deploymentId: string,
     siteId: string,
-    update: SoftwareUpdateRow
+    update: SoftwareUpdateRow,
+    scheduleReboot = false,
+    autoRollback = true
   ): Promise<boolean> {
     logger.info('deployToSite called', { deploymentId, siteId, updateVersion: update.version });
 
@@ -372,6 +374,8 @@ class UpdateDeploymentService {
       isCritical: update.is_critical,
       description: update.description,
       changelog: update.changelog,
+      scheduleReboot,
+      autoRollback,
     };
 
     logger.info('Sending update_software command via sendOrQueue', {
