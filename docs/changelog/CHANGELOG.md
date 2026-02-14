@@ -1,5 +1,15 @@
 # [3.25.0](https://github.com/Tallec7/neopro/compare/v3.24.1...v3.25.0) (2026-02-14)
 
+### Bug Fixes
+
+- **dashboard:** compute uptime24h from heartbeat count instead of hardcoded 0 ([4337b57](https://github.com/Tallec7/neopro/commit/4337b578a2210167fce87c8e8cbfa7e76122e332))
+
+### Features
+
+- **ota:** wire schedule_reboot and auto_rollback deployment options end-to-end ([120cf36](https://github.com/Tallec7/neopro/commit/120cf360957984a489a528058657f157af9f1132))
+
+# [3.25.0](https://github.com/Tallec7/neopro/compare/v3.24.1...v3.25.0) (2026-02-14)
+
 ### Features
 
 - **ota:** wire schedule_reboot option end-to-end — Pi reboots after successful OTA update when enabled
