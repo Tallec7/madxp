@@ -1,3 +1,9 @@
+## [3.28.1](https://github.com/Tallec7/neopro/compare/v3.28.0...v3.28.1) (2026-02-14)
+
+### Bug Fixes
+
+- **ota:** align fixFileOwnership() chown with sudoers rule (add -R flag) ([afbc892](https://github.com/Tallec7/neopro/commit/afbc8929d071e64847ec53ff4523177dace59382))
+
 # [3.28.0](https://github.com/Tallec7/neopro/compare/v3.27.0...v3.28.0) (2026-02-14)
 
 ### Features
