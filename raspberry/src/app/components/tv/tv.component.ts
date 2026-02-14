@@ -1674,7 +1674,7 @@ export class TvComponent implements OnInit, OnDestroy {
           const nextIdx = (videoIndex + 1) % loopVideos.length;
           this.emitPlayerState({
             currentVideo: PlayerStateService.filenameFromPath(video.path),
-            currentCategory: video.category || null,
+            currentCategory: video.analytics_category || null,
             duration: player.duration || 0,
             currentTime: 0,
             isManualMode: false,
