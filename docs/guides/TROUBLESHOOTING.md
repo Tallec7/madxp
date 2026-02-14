@@ -1009,6 +1009,46 @@ cat raspberry/sync-agent/src/commands/update-software.js | ssh pi@<IP_DU_PI> 'ca
 
 ---
 
+### Vérifier que les options de déploiement (reboot / rollback) ont été appliquées (v3.25.0+)
+
+**Contexte** : Le wizard de déploiement propose deux options : "Rollback automatique" et "Redémarrage après installation". Pour vérifier qu'elles ont bien été prises en compte :
+
+**1. Vérifier côté DB** (ce qui a été stocké) :
+
+```sql
+SELECT id, schedule_reboot, auto_rollback, status, created_at
+FROM update_deployments
+ORDER BY created_at DESC LIMIT 5;
+```
+
+**2. Vérifier côté central server** (Railway logs) — rechercher :
+
+```
+Sending update_software command via sendOrQueue { ..., scheduleReboot: true, autoRollback: true }
+```
+
+**3. Vérifier côté Pi** (SSH ou remote shell) :
+
+```bash
+# Logs du sync-agent — options reçues au début de la MAJ
+sudo journalctl -u neopro-sync-agent --since "1 hour ago" | grep "Starting software update"
+# → Starting software update { version: "x.y.z", scheduleReboot: true, autoRollback: true }
+
+# Preuve du reboot effectué
+sudo journalctl -u neopro-sync-agent --since "1 hour ago" | grep "Scheduled reboot"
+# → Scheduled reboot requested, rebooting in 10 seconds...
+
+# Preuve du rollback désactivé (en cas d'échec)
+sudo journalctl -u neopro-sync-agent --since "1 hour ago" | grep "Auto-rollback disabled"
+# → Auto-rollback disabled, leaving system in current state
+
+# Confirmer que le reboot a eu lieu (heure du dernier boot)
+who -b
+uptime
+```
+
+---
+
 ### Erreur EACCES permission denied sur configuration.backup.json
 
 **Symptôme** : Les logs du sync-agent affichent :
