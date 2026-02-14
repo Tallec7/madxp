@@ -57,14 +57,28 @@ Un ADR documente une décision technique importante avec :
 
 ## Créer un nouvel ADR
 
-1. Copier un ADR existant ou utiliser le template ci-dessous
-2. Numéroter séquentiellement (ADR-021, ADR-022, etc.)
-3. Remplir les sections
-4. Soumettre une PR pour review
-5. Mettre à jour ce README après merge
+1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
+2. Copier le template approprié (complet ou léger)
+3. Numéroter séquentiellement (ADR-021, ADR-022, etc.)
+4. Remplir les sections
+5. Commiter avec le code dans la même PR
+6. Mettre à jour ce README après merge
 
-Template complet : [`docs/templates/TEMPLATE_ADR.md`](../templates/TEMPLATE_ADR.md)
+### Templates
+
+| Format | Usage | Template |
+|---|---|---|
+| **Complet** (~100-175 lignes) | Décisions structurantes, irréversibles, cross-composant | [`TEMPLATE_ADR.md`](../templates/TEMPLATE_ADR.md) |
+| **Léger** (~15-30 lignes) | Choix avec trade-offs mais impact limité, décisions de session | [`TEMPLATE_ADR_LIGHT.md`](../templates/TEMPLATE_ADR_LIGHT.md) |
+
+### Bonnes pratiques
+
+Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
+- Quand créer un ADR vs. un commit enrichi
+- Comment capturer les décisions de session
+- Comment lier ADR et code
+- Cycle de vie et revue trimestrielle
 
 ---
 
-*Dernière mise à jour : 11 février 2026*
+*Dernière mise à jour : 14 février 2026*
