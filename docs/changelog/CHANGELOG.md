@@ -1,3 +1,9 @@
+## [3.24.1](https://github.com/Tallec7/neopro/compare/v3.24.0...v3.24.1) (2026-02-14)
+
+### Bug Fixes
+
+- **tv-transitions:** replace fixed timers with real frame detection to eliminate black holes on Pi 5 ([64a71be](https://github.com/Tallec7/neopro/commit/64a71be55c89daf2195ef414f1ec4d78adc4aa94))
+
 # [3.24.0](https://github.com/Tallec7/neopro/compare/v3.23.0...v3.24.0) (2026-02-14)
 
 ### Features
