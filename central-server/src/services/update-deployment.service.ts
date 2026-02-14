@@ -294,12 +294,14 @@ class UpdateDeploymentService {
    * Pré-migration avant OTA : corrige les problèmes connus sur le Pi AVANT
    * que l'ancien code n'exécute l'update. Deux migrations idempotentes :
    *
-   * 1. Fichiers VERSION/release.json owned par root → sudo chown pi:pi
+   * 1. Fichiers VERSION/release.json owned par root → sudo chown -R pi:pi
    *    (sinon fs.copy échoue avec EACCES car le process tourne en pi)
+   *    IMPORTANT : utiliser -R pour matcher la règle sudoers
    *
    * 2. Ancien code avec "sudo cp/tee" → remplacer par "cp/tee"
    *    (bloqué par NoNewPrivileges=true depuis la 3.9.4)
    *    + kill pour forcer un restart avec le code patché
+   *    IMPORTANT : ne PAS remplacer "sudo chown" (nécessaire dans fixFileOwnership)
    *
    * TODO: Retirer la migration #2 quand toute la flotte est en >= 3.16.1
    */
@@ -310,18 +312,20 @@ class UpdateDeploymentService {
 
     // Migration 1 : corriger l'ownership des fichiers VERSION/release.json
     // Idempotent : si déjà pi:pi, chown est un no-op
+    // IMPORTANT : utiliser -R pour matcher la règle sudoers (/usr/bin/chown -R pi:pi /home/pi/neopro/*)
     const fixOwnershipCommand =
       'for f in /home/pi/neopro/VERSION /home/pi/neopro/release.json /home/pi/neopro/webapp/version.json; do ' +
-      '[ -f "$f" ] && [ "$(stat -c %u "$f" 2>/dev/null)" = "0" ] && sudo chown pi:pi "$f" && echo "Fixed: $f"; ' +
+      '[ -f "$f" ] && [ "$(stat -c %u "$f" 2>/dev/null)" = "0" ] && sudo chown -R pi:pi "$f" && echo "Fixed: $f"; ' +
       'done; true';
 
-    // Migration 2 : patcher le code qui utilise sudo cp/chown/tee
+    // Migration 2 : patcher le code legacy qui utilise sudo cp/tee
     // grep -q skip si déjà patché (0 impact)
     // kill force un restart via systemd Restart=always
+    // IMPORTANT : ne PAS remplacer "sudo chown" — il est nécessaire dans fixFileOwnership()
     const targetFile = '/home/pi/neopro/sync-agent/src/commands/update-software.js';
     const patchCodeCommand =
       `grep -q "sudo cp" ${targetFile} ` +
-      `&& sed -i 's/sudo cp/cp/g; s/sudo chown/chown/g; s/sudo tee/tee/g' ${targetFile} ` +
+      `&& sed -i 's/sudo cp/cp/g; s/sudo tee/tee/g' ${targetFile} ` +
       `&& sed -i '/sudo usermod/d' ${targetFile} ` +
       `&& kill $(pgrep -f agent.js) ` +
       '|| true';

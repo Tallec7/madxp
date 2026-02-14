@@ -32,7 +32,7 @@
 
 ### Bug Fixes
 
-- **ota:** fix sudoers mismatch in `fixFileOwnership()` — `sudo chown pi:pi` (sans `-R`) ne matchait pas la règle sudoers `chown -R pi:pi`, causant un échec silencieux et EACCES sur `/home/pi/neopro/VERSION`. Ajout de `-R` dans la commande et de `sudo rm -f` ciblé dans le sudoers comme fallback
+- **ota:** fix sudoers mismatch in `fixFileOwnership()` and `applyPreUpdateMigration()` — `sudo chown pi:pi` (sans `-R`) ne matchait pas la règle sudoers `chown -R pi:pi`, causant un échec silencieux et EACCES sur `/home/pi/neopro/VERSION`. Fix côté Pi (sync-agent) + côté serveur (pré-migration). Aussi : retrait de `s/sudo chown/chown/g` dans la migration 2 qui supprimait le sudo nécessaire dans `fixFileOwnership()`
 - **config-sync:** fix pending config not delivered on Pi reconnect — `processPendingOnReconnect()` now calls `triggerPendingConfigSync(siteId)` after processing queued commands, so config profiles deployed while the Pi was offline are automatically sent at reconnection
 
 ### Features

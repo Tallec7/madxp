@@ -1001,7 +1001,12 @@ ssh pi@neopro.local "sudo chown pi:pi /home/pi/neopro/VERSION /home/pi/neopro/re
 
 Puis relancer la mise à jour depuis le dashboard.
 
-**Solution définitive** : Déployer une version >= 3.27.1 qui utilise `sudo chown -R pi:pi` (matche le sudoers) et inclut `sudo rm -f` en fallback dans le sudoers pour les 3 fichiers version (VERSION, release.json, webapp/version.json).
+**Solution définitive** : Le fix est en deux parties :
+
+1. **Côté Pi** (sync-agent `fixFileOwnership()`) : `sudo chown -R pi:pi` (avec `-R` pour matcher le sudoers) + `sudo rm -f` en fallback dans le sudoers
+2. **Côté central server** (`applyPreUpdateMigration()`) : la pré-migration envoyée via `remote_shell` avant chaque OTA utilise aussi `sudo chown -R pi:pi`. C'est ce qui débloque les Pi qui n'ont pas encore le fix local
+
+**Piège connu** : la migration 2 (patch legacy code) faisait `s/sudo chown/chown/g` ce qui supprimait le `sudo` nécessaire dans `fixFileOwnership()`. Depuis la correction, seuls `sudo cp` et `sudo tee` sont remplacés.
 
 ---
 
