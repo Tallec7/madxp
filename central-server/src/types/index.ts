@@ -224,6 +224,15 @@ export interface CommandResult {
   error?: string;
 }
 
+export interface TransitionMetrics {
+  earlySwitchCount: number;
+  safetyTimeoutCount: number;
+  cleanupSkippedCount: number;
+  videoErrorCount: number;
+  totalTransitions: number;
+  lastUpdatedAt?: number | null;
+}
+
 export interface HeartbeatMessage {
   siteId: string;
   timestamp: number;
@@ -254,6 +263,7 @@ export interface HeartbeatMessage {
     isRecording: boolean;
     isManualOverride: boolean;
   } | null;
+  transitionMetrics?: TransitionMetrics | null;
 }
 
 // ============================================================================

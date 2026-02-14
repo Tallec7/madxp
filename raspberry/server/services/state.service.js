@@ -28,6 +28,16 @@ class StateService {
       isManualOverride: false,
     };
 
+    // Transition quality metrics (accumulated from TV component, reset after heartbeat fetch)
+    this._transitionMetrics = {
+      earlySwitchCount: 0,
+      safetyTimeoutCount: 0,
+      cleanupSkippedCount: 0,
+      videoErrorCount: 0,
+      totalTransitions: 0,
+      lastUpdatedAt: null,
+    };
+
     // TV master-slave instances: socketId -> { role, connectedAt }
     this._tvInstances = new Map();
 
@@ -106,6 +116,31 @@ class StateService {
       isManualOverride: data.isManualOverride || false,
     };
     return this.getRecordingState();
+  }
+
+  // --- Transition Metrics ---
+  getTransitionMetrics() {
+    return { ...this._transitionMetrics };
+  }
+
+  updateTransitionMetrics(data) {
+    this._transitionMetrics.earlySwitchCount += data.earlySwitchCount || 0;
+    this._transitionMetrics.safetyTimeoutCount += data.safetyTimeoutCount || 0;
+    this._transitionMetrics.cleanupSkippedCount += data.cleanupSkippedCount || 0;
+    this._transitionMetrics.videoErrorCount += data.videoErrorCount || 0;
+    this._transitionMetrics.totalTransitions += data.totalTransitions || 0;
+    this._transitionMetrics.lastUpdatedAt = Date.now();
+    return this.getTransitionMetrics();
+  }
+
+  getAndResetTransitionMetrics() {
+    const metrics = this.getTransitionMetrics();
+    this._transitionMetrics.earlySwitchCount = 0;
+    this._transitionMetrics.safetyTimeoutCount = 0;
+    this._transitionMetrics.cleanupSkippedCount = 0;
+    this._transitionMetrics.videoErrorCount = 0;
+    this._transitionMetrics.totalTransitions = 0;
+    return metrics;
   }
 
   // --- Loop State ---

@@ -210,7 +210,40 @@ async function exportDebugBundle() {
     bundle.sections.bootConfig = { error: error.message };
   }
 
-  // 12. Video list summary
+  // 12. Transition metrics (read-only, no reset)
+  try {
+    const transitionMetrics = await new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        localSock.disconnect();
+        resolve(null);
+      }, 2000);
+
+      const ioClient = require('socket.io-client');
+      const localSock = ioClient('http://localhost:3000', {
+        timeout: 2000,
+        reconnection: false,
+      });
+
+      localSock.on('connect', () => {
+        // Use a read-only fetch — getTransitionMetrics (not getAndReset)
+        localSock.emit('get-transition-metrics-readonly', (metrics) => {
+          clearTimeout(timeout);
+          localSock.disconnect();
+          resolve(metrics);
+        });
+      });
+
+      localSock.on('connect_error', () => {
+        clearTimeout(timeout);
+        resolve(null);
+      });
+    });
+    bundle.sections.transitionMetrics = transitionMetrics || { note: 'No data available' };
+  } catch (error) {
+    bundle.sections.transitionMetrics = { error: error.message };
+  }
+
+  // 13. Video list summary
   try {
     const videosPath = config.paths.root + '/videos';
     if (await fs.pathExists(videosPath)) {

@@ -825,6 +825,37 @@ class NeoproSyncAgent {
     });
   }
 
+  /**
+   * Fetch transition metrics from local Pi server (get + reset)
+   * @returns {Promise<{earlySwitchCount: number, safetyTimeoutCount: number, cleanupSkippedCount: number, videoErrorCount: number, totalTransitions: number} | null>}
+   */
+  fetchLocalTransitionMetrics() {
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        localSocket.disconnect();
+        resolve(null);
+      }, 2000);
+
+      const localSocket = io('http://localhost:3000', {
+        timeout: 2000,
+        reconnection: false,
+      });
+
+      localSocket.on('connect', () => {
+        localSocket.emit('get-transition-metrics', (metrics) => {
+          clearTimeout(timeout);
+          localSocket.disconnect();
+          resolve(metrics);
+        });
+      });
+
+      localSocket.on('connect_error', () => {
+        clearTimeout(timeout);
+        resolve(null);
+      });
+    });
+  }
+
   async sendHeartbeat() {
     // Vérifier à la fois le flag interne ET l'état réel de la socket
     if (!this.connected) {
@@ -874,6 +905,9 @@ class NeoproSyncAgent {
         // Fetch recording state from local server
         const recordingState = await this.fetchLocalRecordingState();
 
+        // Fetch transition metrics from local server (get + reset)
+        const transitionMetrics = await this.fetchLocalTransitionMetrics();
+
         this.socket.emit('heartbeat', {
           siteId: config.site.id,
           timestamp: Date.now(),
@@ -882,6 +916,7 @@ class NeoproSyncAgent {
           versionInfo,
           kioskStatus,
           recordingState,
+          transitionMetrics,
         });
 
         // Enregistrer le succès du heartbeat

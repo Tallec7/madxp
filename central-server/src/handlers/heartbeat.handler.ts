@@ -80,6 +80,11 @@ export async function handleHeartbeat(
       });
     }
 
+    // Record transition quality metrics (video double-buffer)
+    if (message.transitionMetrics) {
+      metricsService.recordTransitionMetrics(message.transitionMetrics);
+    }
+
     await checkAlerts(siteId, message.metrics, message.kioskStatus);
   } catch (error) {
     logger.error('Error handling heartbeat:', error);

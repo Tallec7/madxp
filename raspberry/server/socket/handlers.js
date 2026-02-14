@@ -104,6 +104,39 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
     });
 
     /**
+     * Transition quality metrics — accumulates counters from TV component.
+     * @event transition-metrics
+     * @param {object} data — `{ earlySwitchCount, safetyTimeoutCount, cleanupSkippedCount, videoErrorCount, totalTransitions }`
+     */
+    socket.on('transition-metrics', (data) => {
+      stateService.updateTransitionMetrics(data);
+    });
+
+    /**
+     * Fetch transition metrics for heartbeat (get + reset).
+     * @event get-transition-metrics
+     */
+    socket.on('get-transition-metrics', (callback) => {
+      const metrics = stateService.getAndResetTransitionMetrics();
+      if (typeof callback === 'function') {
+        callback(metrics);
+      } else {
+        socket.emit('transition-metrics-response', metrics);
+      }
+    });
+
+    /**
+     * Fetch transition metrics read-only (for debug bundle, no reset).
+     * @event get-transition-metrics-readonly
+     */
+    socket.on('get-transition-metrics-readonly', (callback) => {
+      const metrics = stateService.getTransitionMetrics();
+      if (typeof callback === 'function') {
+        callback(metrics);
+      }
+    });
+
+    /**
      * Recording state toggle — updates and broadcasts recording status.
      * @event recording-state
      * @param {object} data — `{ isRecording: boolean, startedAt?: string }`

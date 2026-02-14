@@ -361,6 +361,38 @@ const heartbeatsTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Video Transition =============
+
+const videoTransitionEarlySwitchTotal = new Counter({
+  name: 'neopro_video_transition_early_switch_total',
+  help: 'Total early switch transitions (happy path, no black hole)',
+  registers: [register],
+});
+
+const videoTransitionSafetyTimeoutTotal = new Counter({
+  name: 'neopro_video_transition_safety_timeout_total',
+  help: 'Total safety timeout triggers (potential black hole)',
+  registers: [register],
+});
+
+const videoTransitionCleanupSkippedTotal = new Counter({
+  name: 'neopro_video_transition_cleanup_skipped_total',
+  help: 'Total cleanup skips on short videos (<5s)',
+  registers: [register],
+});
+
+const videoTransitionErrorTotal = new Counter({
+  name: 'neopro_video_transition_error_total',
+  help: 'Total video player errors during transitions',
+  registers: [register],
+});
+
+const videoTransitionsTotal = new Counter({
+  name: 'neopro_video_transitions_total',
+  help: 'Total video transitions attempted',
+  registers: [register],
+});
+
 // ============= Métriques Kiosk =============
 
 const kioskStatusGauge = new Gauge({
@@ -644,6 +676,17 @@ class MetricsService {
 
   recordKioskCrash(): void {
     kioskCrashesTotal.inc();
+  }
+
+  // ============= Méthodes Video Transition =============
+
+  recordTransitionMetrics(metrics: { earlySwitchCount?: number; safetyTimeoutCount?: number; cleanupSkippedCount?: number; videoErrorCount?: number; totalTransitions?: number } | null | undefined): void {
+    if (!metrics) return;
+    if (metrics.earlySwitchCount) videoTransitionEarlySwitchTotal.inc(metrics.earlySwitchCount);
+    if (metrics.safetyTimeoutCount) videoTransitionSafetyTimeoutTotal.inc(metrics.safetyTimeoutCount);
+    if (metrics.cleanupSkippedCount) videoTransitionCleanupSkippedTotal.inc(metrics.cleanupSkippedCount);
+    if (metrics.videoErrorCount) videoTransitionErrorTotal.inc(metrics.videoErrorCount);
+    if (metrics.totalTransitions) videoTransitionsTotal.inc(metrics.totalTransitions);
   }
 
   /**
