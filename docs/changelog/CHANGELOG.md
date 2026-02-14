@@ -1,3 +1,9 @@
+## [3.25.1](https://github.com/Tallec7/neopro/compare/v3.25.0...v3.25.1) (2026-02-14)
+
+### Bug Fixes
+
+- **ota:** update createDeployment test expectations with schedule_reboot and auto_rollback defaults ([26f0f20](https://github.com/Tallec7/neopro/commit/26f0f20800e4bb2ad445166ec5d85a3c01a77444))
+
 # [3.25.0](https://github.com/Tallec7/neopro/compare/v3.24.1...v3.25.0) (2026-02-14)
 
 ### Bug Fixes
