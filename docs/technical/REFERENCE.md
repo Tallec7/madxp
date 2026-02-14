@@ -250,9 +250,10 @@ Le système de mises à jour logicielles permet de déployer de nouvelles versio
 **Fonctionnement :**
 
 1. **Upload** : Créer une nouvelle version via `POST /api/updates` (package .tar.gz ou .zip)
-2. **Déploiement** : Lancer un déploiement via `POST /api/update-deployments`
+2. **Déploiement** : Lancer un déploiement via `POST /api/update-deployments` (avec options `schedule_reboot` et `auto_rollback`)
 3. **Distribution** : Le serveur envoie la commande `update_software` aux sites connectés
 4. **Fallback** : Les sites déconnectés recevront la mise à jour à leur reconnexion
+5. **Post-update** : Si `schedule_reboot: true`, le Pi reboot 10s après la fin de la mise à jour
 
 **Endpoints API :**
 
@@ -262,7 +263,7 @@ POST   /api/updates                - Créer une version (multipart avec package)
 DELETE /api/updates/:id            - Supprimer une version
 
 GET    /api/update-deployments          - Historique des déploiements (inclut update_version, target_name, total_count)
-POST   /api/update-deployments          - Lancer un déploiement
+POST   /api/update-deployments          - Lancer un déploiement (body: { update_id, target_type, target_id, schedule_reboot?, auto_rollback? })
 POST   /api/update-deployments/:id/retry - Relancer un déploiement échoué
 PUT    /api/update-deployments/:id      - Mettre à jour statut
 DELETE /api/update-deployments/:id      - Annuler un déploiement
@@ -430,6 +431,20 @@ Les deux vues utilisent la même logique basée sur `socketService.getConnection
 - `not_in_map` : Socket non enregistré dans la map
 
 > **Note (v2.6.1)** : Le composant `connection-indicator` peut recevoir les données via l'input `[externalStatus]` pour éviter le double polling quand le parent gère déjà le rafraîchissement.
+
+**Calcul de l'uptime 24h :**
+
+L'uptime affiché sur la page détail d'un site est calculé à partir du nombre de heartbeats reçus dans les dernières 24 heures :
+
+```typescript
+// Backend: central-server/src/controllers/sites.controller.ts
+// Frontend: central-dashboard/src/app/features/sites/site-detail.component.ts
+const heartbeatCount24h = stats.heartbeat_count; // COUNT(*) FROM metrics WHERE recorded_at > NOW() - 24h
+const uptime24h = Math.min(100, (heartbeatCount24h / 2880) * 100);
+// 2880 = heartbeats attendus en 24h (1 toutes les 30s)
+```
+
+Le endpoint `/api/sites/:id/dashboard` renvoie `heartbeat_24h.count`, et le frontend calcule l'uptime localement.
 
 ### Enregistrement d'un site
 
