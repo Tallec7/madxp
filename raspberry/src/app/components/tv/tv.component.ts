@@ -180,6 +180,16 @@ export class TvComponent implements OnInit, OnDestroy {
   private tvRole: 'master' | 'slave' | null = null;
   private isSlaveMode = false;
 
+  // Transition quality metrics (compteurs agrégés, émis toutes les 30s, reset après)
+  private transitionMetrics = {
+    earlySwitchCount: 0,
+    safetyTimeoutCount: 0,
+    cleanupSkippedCount: 0,
+    videoErrorCount: 0,
+    totalTransitions: 0,
+  };
+  private transitionMetricsInterval: ReturnType<typeof setInterval> | null = null;
+
   public player: Player;
 
   public ngOnInit() {
@@ -644,6 +654,12 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Annuler les fetch de prefetch en cours
     this.resetPrefetchState();
+
+    // Arrêter l'émission des métriques de transition
+    if (this.transitionMetricsInterval) {
+      clearInterval(this.transitionMetricsInterval);
+      this.transitionMetricsInterval = null;
+    }
 
     // Nettoyer le service watermark
     this.watermarkService.destroy();
@@ -1342,7 +1358,10 @@ export class TvComponent implements OnInit, OnDestroy {
     // On pré-capture le frame toutes les 500ms pour avoir toujours un frame valide.
     this.startLastFrameCapture();
 
-    console.log('[TV] Double-buffer initialized (4 players) with error recovery');
+    // Émettre les métriques de transition toutes les 30s (aligné avec heartbeat)
+    this.transitionMetricsInterval = setInterval(() => this.emitTransitionMetrics(), 30000);
+
+    console.log('[TV] Double-buffer initialized (4 players) with error recovery + transition metrics');
   }
 
   /**
@@ -1407,6 +1426,8 @@ export class TvComponent implements OnInit, OnDestroy {
     const switchThreshold = player.duration > 3 ? 0.5 : 0.3;
     if (remaining <= switchThreshold && remaining > 0) {
       console.log(`[TV] Triggering early switch, ${remaining.toFixed(2)}s remaining`);
+      this.transitionMetrics.earlySwitchCount++;
+      this.transitionMetrics.totalTransitions++;
       this.switchTriggered = true;
       this.triggerSwitch();
     }
@@ -1461,7 +1482,14 @@ export class TvComponent implements OnInit, OnDestroy {
     const loopVideos = this.getLoopVideosForPhase(this.activePhase);
     this.currentLoopVideos = loopVideos;
 
-    if (loopVideos.length === 0) {
+    // Filtrer les étapes sans vidéo pour éviter des écrans noirs
+    const validVideos = loopVideos.filter(v => v?.path);
+    if (validVideos.length !== loopVideos.length) {
+      console.warn(`[TV] Filtered out ${loopVideos.length - validVideos.length} step(s) with no video path`);
+    }
+    this.currentLoopVideos = validVideos;
+
+    if (validVideos.length === 0) {
       console.warn('[TV] No videos in loop');
       this.isLoopMode = false;
       this.isStartingLoop = false;
@@ -1494,6 +1522,17 @@ export class TvComponent implements OnInit, OnDestroy {
 
     const videoIndex = index % loopVideos.length;
     const video = loopVideos[videoIndex];
+
+    // Guard: skip step if no video path (prevents black screen)
+    if (!video?.path) {
+      console.warn(`[TV] Skipping step ${videoIndex}: no video path`);
+      const nextIndex = (videoIndex + 1) % loopVideos.length;
+      if (nextIndex !== videoIndex) {
+        this.playOnActivePlayer(nextIndex);
+      }
+      return;
+    }
+
     const player = this.getActivePlayer();
 
     console.log(`[TV] Playing video ${videoIndex} on player ${this.activePlayer}:`, video.path);
@@ -1539,6 +1578,7 @@ export class TvComponent implements OnInit, OnDestroy {
             if (!revealed) {
               revealed = true;
               console.warn('[TV] playOnActivePlayer frame detection timeout, revealing');
+              this.transitionMetrics.safetyTimeoutCount++;
               this.hideFreezeFrame();
               this.hideBlackOverlay();
             }
@@ -1615,6 +1655,17 @@ export class TvComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Guard: skip step if no video path
+    if (!video?.path) {
+      console.warn(`[TV] Skipping preload for step ${videoIndex}: no video path`);
+      // Chercher la prochaine vidéo valide
+      const nextIndex = (videoIndex + 1) % loopVideos.length;
+      if (nextIndex !== videoIndex) {
+        this.preloadOnInactivePlayer(nextIndex);
+      }
+      return;
+    }
+
     console.log(`[TV] Preloading video ${videoIndex} on inactive player:`, video.path);
 
     this.preloadReady = false;
@@ -1657,6 +1708,7 @@ export class TvComponent implements OnInit, OnDestroy {
     const activePlayer = this.getActivePlayer();
     if (activePlayer?.duration && activePlayer.duration < 5) {
       console.log('[TV] Skipping cleanup: active video is short, preload will need inactive player soon');
+      this.transitionMetrics.cleanupSkippedCount++;
       return;
     }
 
@@ -1667,6 +1719,35 @@ export class TvComponent implements OnInit, OnDestroy {
       inactivePlayer.preload = 'none'; // Empêche re-buffering automatique
       console.log('[TV] 🧹 Cleaned inactive player after switch (freed decoder buffers)');
     }
+  }
+
+  /**
+   * Émet les métriques de transition vers le serveur local via Socket.IO.
+   * Appelé toutes les 30s (aligné avec le heartbeat du sync-agent).
+   * Les compteurs sont accumulés par le serveur local, puis lus et reset par le sync-agent.
+   * Seul le master émet (les slaves ne font pas de transitions réelles).
+   */
+  private emitTransitionMetrics(): void {
+    if (this.isSlaveMode) return;
+
+    // Ne rien émettre si aucune activité
+    const m = this.transitionMetrics;
+    if (m.totalTransitions === 0 && m.safetyTimeoutCount === 0 && m.videoErrorCount === 0) return;
+
+    this.socketService.emit('transition-metrics', {
+      earlySwitchCount: m.earlySwitchCount,
+      safetyTimeoutCount: m.safetyTimeoutCount,
+      cleanupSkippedCount: m.cleanupSkippedCount,
+      videoErrorCount: m.videoErrorCount,
+      totalTransitions: m.totalTransitions,
+    });
+
+    // Reset après émission
+    m.earlySwitchCount = 0;
+    m.safetyTimeoutCount = 0;
+    m.cleanupSkippedCount = 0;
+    m.videoErrorCount = 0;
+    m.totalTransitions = 0;
   }
 
   /**
@@ -1825,6 +1906,8 @@ export class TvComponent implements OnInit, OnDestroy {
         console.log('[TV] Switch cancelled by phase change (generation mismatch)');
         return;
       }
+      // Compter comme transition (fallback path via onVideoEnded)
+      this.transitionMetrics.totalTransitions++;
       switchTriggered = true;
       console.log('[TV] Video ended, freeze frame shown:', freezeOk, '- triggering switch (preloaded)');
       this.triggerSwitch();
@@ -1948,6 +2031,7 @@ export class TvComponent implements OnInit, OnDestroy {
           if (!revealed) {
             revealed = true;
             console.warn('[TV] Frame detection safety timeout, revealing anyway');
+            this.transitionMetrics.safetyTimeoutCount++;
             revealWhenReady();
           }
         }, 1500); // Safety: max 1.5s d'attente (au lieu de 300ms fixe)
@@ -2464,6 +2548,7 @@ export class TvComponent implements OnInit, OnDestroy {
     }
 
     this.consecutiveErrors++;
+    this.transitionMetrics.videoErrorCount++;
 
     // Si trop d'erreurs consécutives, tenter un reset complet
     if (this.consecutiveErrors >= this.MAX_CONSECUTIVE_ERRORS) {

@@ -28,6 +28,7 @@ z-index 1-2: Players boucle A/B (alternent pour la boucle)
 - `display: none` sur le freeze canvas (cause reflow layout complet)
 - Timer fixe pour cacher le freeze-frame (le décodeur GPU peut être plus lent que prévu)
 - Cleanup du player inactif si la vidéo active est courte < 5s (race avec le preload)
+- Jouer une étape de boucle sans `video.path` (cause écran noir)
 
 **À faire** :
 
@@ -37,6 +38,7 @@ z-index 1-2: Players boucle A/B (alternent pour la boucle)
 - Attendre `canplaythrough` + polling `readyState` avant de jouer (pas `canplay`)
 - Détection de frame réel dans `switchPlayers()` (readyState >= 4 + currentTime > 0 + timeupdate)
 - z-index `2` pour le nouveau player pendant transition, ramené à `1` après
+- Filtrer les étapes sans `video.path` dans `startSeamlessLoop()` + guard dans `playOnActivePlayer()`/`preloadOnInactivePlayer()`
 
 ## Stratégie transition boucle
 
