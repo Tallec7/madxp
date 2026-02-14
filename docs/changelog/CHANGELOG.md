@@ -1,3 +1,13 @@
+# [3.26.0](https://github.com/Tallec7/neopro/compare/v3.25.1...v3.26.0) (2026-02-14)
+
+### Bug Fixes
+
+- **tv-loop:** skip loop steps with no video path to prevent black screen ([74c5a4b](https://github.com/Tallec7/neopro/commit/74c5a4b9c2bfde0daed268821cca09d794bb20f0))
+
+### Features
+
+- **monitoring:** add video transition quality metrics pipeline ([76b8741](https://github.com/Tallec7/neopro/commit/76b87419f731f7aae43df3af05adaffeef1ddf1f))
+
 ## [3.25.1](https://github.com/Tallec7/neopro/compare/v3.25.0...v3.25.1) (2026-02-14)
 
 ### Bug Fixes
