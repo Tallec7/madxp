@@ -8,10 +8,12 @@ public/
 ├── modules/
 │   ├── core/
 │   │   ├── state.js        # Etat global (variables partagees)
+│   │   ├── mode-switcher.js# Toggle mode club/technicien (localStorage)
 │   │   ├── connection.js   # Monitoring connexion + fetch wrapper
 │   │   └── notifications.js# Toasts, modals, utilitaires UI
 │   ├── dashboard/
-│   │   └── index.js        # Dashboard systeme + grille services
+│   │   ├── sync-status.js  # Widget sync cloud (connexion, queue, erreurs)
+│   │   └── index.js        # Dashboard systeme dual-mode (club: sante / tech: metriques)
 │   ├── videos/
 │   │   ├── loader.js       # Chargement + rendu videos config
 │   │   ├── orphans.js      # Gestion videos orphelines
@@ -50,3 +52,12 @@ bash build-admin.sh
 - Les fonctions appelees depuis index.html via onclick sont exportees sur `window` dans bootstrap.js
 - L'etat partage est dans `core/state.js`
 - L'ordre de concatenation est defini dans `build-admin.sh`
+
+## Mode club / technicien
+
+Le module `core/mode-switcher.js` gere un toggle qui simplifie l'UI :
+
+- **Mode club** (defaut) : `body.mode-club` → CSS masque les elements `.tech-only` via `display: none !important`
+- **Mode technicien** : `body.mode-tech` → tout visible
+- Persistance : `localStorage('neopro-admin-mode')`
+- Le dashboard utilise `getCurrentMode()` pour choisir entre rendu simplifie (carte sante) et complet (metriques)

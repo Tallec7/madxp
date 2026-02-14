@@ -56,8 +56,9 @@ Raspberry Pi (neopro.local / 192.168.4.1)
 │       └── Communication temps réel TV ↔ Remote
 │
 ├── Port 8080 (Node.js)
-│   └── Interface Admin
-│       ├── Dashboard système
+│   └── Interface Admin (dual mode: club/technicien)
+│       ├── Dashboard système (santé simplifiée ou métriques complètes)
+│       ├── Widget Sync Status (état connexion cloud)
 │       ├── Gestion configuration
 │       └── Upload vidéos
 │
@@ -541,13 +542,13 @@ npm run deploy:raspberry 192.168.4.1
 │   ├── __tests__/       #   Tests Jest (71 tests)
 │   └── package.json
 │
-├── admin/               # Interface admin (Express modulaire)
+├── admin/               # Interface admin (Express modulaire, dual mode club/tech)
 │   ├── admin-server.js  #   Orchestrateur (wiring services ↔ routes)
 │   ├── helpers.js       #   Utilitaires partagés
 │   ├── services/        #   7 services métier
-│   ├── routes/          #   9 contrôleurs HTTP
+│   ├── routes/          #   10 contrôleurs HTTP (dont sync-status)
 │   ├── __tests__/       #   Tests Jest (60%+ couverture)
-│   └── public/          #   Frontend statique
+│   └── public/          #   Frontend statique (modules/ → build-admin.sh → app.js)
 │
 ├── sync-agent/          # Agent de sync central
 │   ├── agent.js

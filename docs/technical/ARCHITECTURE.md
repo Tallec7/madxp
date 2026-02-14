@@ -49,6 +49,8 @@ Neopro est une plateforme distribuée Edge + Cloud pour la diffusion de contenu 
 │  │  - Config sync   │  │  - TV control    │  │            │ │
 │  │  - Video sync    │  │  - Remote events │  │  - Config  │ │
 │  │  - Analytics push│  │  - State mgmt    │  │  - Logs    │ │
+│  │                  │  │                  │  │  - Sync ◄──┤─── reads sync-agent state files
+│  │                  │  │                  │  │  - Modes   │ │
 │  └──────┬───────────┘  └──────┬───────────┘  └──────┬─────┘ │
 │         │                     │                     │       │
 │         └─────────────────────┴─────────────────────┘       │
@@ -88,7 +90,7 @@ neopro/ (monorepo)
 │   │   ├── admin-server.js         #   Orchestrateur (~260 lignes)
 │   │   ├── helpers.js              #   Utilitaires partagés (exec, paths)
 │   │   ├── services/               #   7 services métier
-│   │   ├── routes/                 #   9 contrôleurs HTTP minces
+│   │   ├── routes/                 #   10 contrôleurs HTTP (dont sync-status)
 │   │   ├── __tests__/              #   Tests Jest (60%+ couverture)
 │   │   └── package.json
 │   └── sync-agent/                 # Sync service with cloud
@@ -252,7 +254,7 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 | ---------------------- | ---------------------------------------------------------------------- | --------------------------------------------- | ---------------------- |
 | `raspberry/src`        | Angular 20, Video.js 8.x, Socket.IO client                             | -                                             | Raspberry Pi (systemd) |
 | `raspberry/server`     | Node.js, Socket.IO 4.8                                                 | -                                             | Raspberry Pi (systemd) |
-| `raspberry/admin`      | Express, vanilla JS                                                    | -                                             | Raspberry Pi (systemd) |
+| `raspberry/admin`      | Express, vanilla JS (dual mode: club/tech)                             | -                                             | Raspberry Pi (systemd) |
 | `raspberry/sync-agent` | Node.js 20, Axios, SHA256 checksum                                     | -                                             | Raspberry Pi (systemd) |
 | `central-server`       | Node.js 20+, Express 4.18, TypeScript 5.9, Winston, Repository Pattern | Supabase (PostgreSQL), FTP Hostinger (vidéos) | Railway                |
 | `central-dashboard`    | Angular 20.3, Chart.js 4.5, Leaflet                                    | -                                             | Hostinger (static)     |

@@ -8,14 +8,33 @@ Interface d'administration web pour gérer un système Neopro sur Raspberry Pi.
 
 Accessible depuis n'importe quel appareil connecté au WiFi `NEOPRO-[CLUB]`.
 
+## Modes d'utilisation
+
+L'interface propose deux modes adaptés à chaque profil utilisateur :
+
+### 🏠 Mode club (par défaut)
+
+Mode simplifié pour le staff sportif bénévole. Affiche uniquement :
+
+- **Dashboard** : carte santé globale (vert/jaune/rouge) + widget sync cloud
+- **Vidéos** : bibliothèque, upload, catégories, blocs temps
+- **Réseau** : connexion WiFi actuelle uniquement
+
+Les onglets Logs et Système sont masqués. Les métriques techniques (CPU, RAM, température détaillées) sont cachées.
+
+### 🔧 Mode technicien
+
+Mode complet pour les techniciens Neopro. Affiche toutes les fonctionnalités : métriques détaillées, scanner WiFi, hotspot, logs, services systemd, etc.
+
+Le mode est persisté dans le navigateur (localStorage). Toggle accessible dans le header.
+
 ## Fonctionnalités
 
 ### 📊 Dashboard
 
-- Monitoring système en temps réel
-- CPU, Mémoire, Température, Stockage
-- État des services
-- Uptime système
+- **Mode club** : carte santé système (🟢 vert / ⚠️ jaune / 🔴 rouge) basée sur les seuils CPU, RAM, température, stockage + uptime
+- **Mode technicien** : monitoring système complet en temps réel (CPU, Mémoire, Température, Stockage, Services, Uptime)
+- **Widget Sync Status** (les deux modes) : état de connexion cloud, dernière synchronisation, commandes en attente, erreurs dead-letter. Historique récent expandable en mode tech
 - Rafraîchissement automatique toutes les 5s
 
 ### 🎬 Vidéos
@@ -112,6 +131,7 @@ sudo systemctl start neopro-admin
 #### Système
 
 - `GET /api/system` - Infos système
+- `GET /api/sync-status` - État de synchronisation cloud (connexion, dernière sync, queue offline, dead letters)
 - `GET /api/config` - Configuration club
 - `GET /api/network` - Infos réseau
 - `POST /api/system/reboot` - Redémarrer
@@ -284,6 +304,7 @@ admin/
 ├── routes/                  # Contrôleurs HTTP minces (délèguent aux services)
 │   ├── auth.js              #   Login, sessions, middleware requireAuth
 │   ├── system.js            #   GET /api/system, POST /api/system/reboot…
+│   ├── sync-status.js       #   GET /api/sync-status (état sync-agent)
 │   ├── videos.js            #   CRUD vidéos, upload, orphelins, miniatures
 │   ├── config.js            #   Catégories, sous-catégories, timeCategories
 │   ├── network.js           #   WiFi, réseau, hotspot
@@ -304,7 +325,8 @@ admin/
 └── public/                  # Frontend (HTML/CSS/JS statique)
     ├── index.html
     ├── styles.css
-    └── app.js
+    ├── app.js               # Fichier concaténé (build output)
+    └── modules/             # Sources modulaires (voir MODULES.md)
 ```
 
 ### Architecture
@@ -376,7 +398,7 @@ Pour toute question : support@neopro.fr
 
 ---
 
-**Version :** 2.0.0
+**Version :** 3.23.0
 **Licence :** MIT
 **Auteur :** Neopro / Kalon Partners
-**Dernière mise à jour :** 10 février 2026
+**Dernière mise à jour :** 14 février 2026

@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initDropZone();
     updateTime();
     startConnectionMonitoring(); // Start connection monitoring
+    initMode(); // Initialize club/tech mode from localStorage
     loadDashboard();
     loadVersionLabel();
 
@@ -221,6 +222,9 @@ window.refreshTimeCategories = refreshTimeCategories;
 window.addCategory = addCategory;
 window.addTimeCategory = addTimeCategory;
 window.clearSelectedFiles = clearSelectedFiles;
+
+// Mode switcher
+window.toggleMode = toggleMode;
 
 // WiFi scanner functions
 window.loadWifiCurrent = loadWifiCurrent;

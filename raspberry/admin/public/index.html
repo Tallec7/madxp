@@ -23,11 +23,11 @@
     <link rel="preconnect" href="//neopro.local" />
 
     <!-- Preload Critical Resources -->
-    <link rel="preload" href="/styles.css?v=3.20.3" as="style" />
-    <link rel="preload" href="/app.js?v=3.20.3" as="script" />
+    <link rel="preload" href="/styles.css?v=3.23.0" as="style" />
+    <link rel="preload" href="/app.js?v=3.23.0" as="script" />
 
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css?v=3.20.3" />
+    <link rel="stylesheet" href="styles.css?v=3.23.0" />
   </head>
   <body>
     <div class="container" role="application" aria-label="Interface d'administration Neopro">
@@ -47,6 +47,18 @@
           >
         </div>
         <div class="header-info" role="status" aria-live="polite">
+          <div class="mode-switcher">
+            <label class="mode-switch-label">
+              <span id="mode-label">Mode club</span>
+              <input
+                type="checkbox"
+                id="mode-toggle"
+                onchange="toggleMode()"
+                aria-label="Basculer mode technicien"
+              />
+              <span class="mode-switch-slider"></span>
+            </label>
+          </div>
           <span id="connection-status" class="connection-badge" aria-label="État de la connexion">
             <span class="connection-dot"></span>
             <span class="connection-text">Connexion...</span>
@@ -72,10 +84,20 @@
         <button class="nav-btn" data-tab="network" aria-pressed="false" aria-controls="tab-network">
           <span aria-hidden="true">📡</span> Réseau
         </button>
-        <button class="nav-btn" data-tab="logs" aria-pressed="false" aria-controls="tab-logs">
+        <button
+          class="nav-btn tech-only"
+          data-tab="logs"
+          aria-pressed="false"
+          aria-controls="tab-logs"
+        >
           <span aria-hidden="true">📜</span> Logs
         </button>
-        <button class="nav-btn" data-tab="system" aria-pressed="false" aria-controls="tab-system">
+        <button
+          class="nav-btn tech-only"
+          data-tab="system"
+          aria-pressed="false"
+          aria-controls="tab-system"
+        >
           <span aria-hidden="true">⚙️</span> Système
         </button>
       </nav>
@@ -91,7 +113,22 @@
         >
           <h2>État du système</h2>
 
-          <div class="cards-grid">
+          <!-- Sync Status Widget (visible dans les deux modes) -->
+          <div id="sync-status-widget">
+            <!-- Peuplé par JS -->
+          </div>
+
+          <!-- Mode club : carte santé simplifiée -->
+          <div id="health-status-card" class="card" style="display: none">
+            <div class="card-header">
+              <h3>🏠 État du boîtier</h3>
+            </div>
+            <div class="card-body health-body">
+              <!-- Peuplé par JS -->
+            </div>
+          </div>
+
+          <div class="cards-grid tech-only">
             <!-- CPU Card -->
             <div class="card">
               <div class="card-header">
@@ -171,7 +208,7 @@
           </div>
 
           <!-- Services Status -->
-          <div class="card">
+          <div class="card tech-only">
             <div class="card-header">
               <h3>🔧 Services</h3>
             </div>
@@ -183,7 +220,7 @@
           </div>
 
           <!-- Uptime -->
-          <div class="info-box">
+          <div class="info-box tech-only">
             <span>⏱️ Uptime: <strong id="uptime">--</strong></span>
           </div>
         </div>
@@ -372,7 +409,7 @@
           </div>
 
           <!-- WiFi Scanner -->
-          <div class="card">
+          <div class="card tech-only">
             <div class="card-header">
               <h3>📡 Réseaux WiFi disponibles</h3>
               <button class="btn btn-primary" onclick="scanWifiNetworks()" id="scan-btn">
@@ -394,7 +431,7 @@
           </div>
 
           <!-- WiFi Connection Form (hidden by default) -->
-          <div class="card" id="wifi-connect-card" style="display: none">
+          <div class="card tech-only" id="wifi-connect-card" style="display: none">
             <div class="card-header">
               <h3>🔐 Connexion au réseau</h3>
               <button class="btn btn-secondary" onclick="cancelWifiConnect()">✕ Annuler</button>
@@ -439,7 +476,7 @@
           </div>
 
           <!-- Hotspot Diagnostic -->
-          <div class="card">
+          <div class="card tech-only">
             <div class="card-header">
               <h3>📶 Diagnostic Hotspot WiFi</h3>
             </div>
@@ -477,7 +514,7 @@
           </div>
 
           <!-- Reboot Confirmation Modal -->
-          <div id="reboot-modal" class="modal-overlay" style="display: none">
+          <div id="reboot-modal" class="modal-overlay tech-only" style="display: none">
             <div class="modal-content">
               <h3>⚠️ Redémarrage nécessaire</h3>
               <p id="reboot-modal-message">
@@ -501,7 +538,7 @@
           </div>
 
           <!-- Network Interfaces Info -->
-          <div class="card">
+          <div class="card tech-only">
             <div class="card-header">
               <h3>🌐 Interfaces réseau</h3>
               <button class="btn btn-secondary" onclick="refreshNetwork()">🔄 Actualiser</button>
@@ -700,6 +737,6 @@
       </div>
     </div>
 
-    <script src="app.js?v=3.20.3"></script>
+    <script src="app.js?v=3.23.0"></script>
   </body>
 </html>

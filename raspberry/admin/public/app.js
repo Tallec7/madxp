@@ -2,7 +2,7 @@
  * Neopro Admin Panel - JavaScript
  * FICHIER GENERE - Ne pas editer directement
  * Editer les fichiers dans modules/ puis lancer: bash build-admin.sh
- * Build: 2026-02-13T23:17:40Z
+ * Build: 2026-02-13T23:43:20Z
  */
 
 
@@ -125,6 +125,22 @@ if (DEMO_MODE) {
         await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
 
         // Router vers les données mockées
+        if (url.includes('/api/sync-status')) {
+            return new Response(JSON.stringify({
+                connected: true,
+                lastSyncAt: new Date(Date.now() - 300000).toISOString(),
+                pendingCommands: 0,
+                deadLetters: 0,
+                recentHistory: [
+                    { type: 'central_to_local', timestamp: new Date(Date.now() - 300000).toISOString(), success: true, error: null },
+                    { type: 'connection', timestamp: new Date(Date.now() - 600000).toISOString(), success: true, error: null },
+                    { type: 'local_to_central', timestamp: new Date(Date.now() - 900000).toISOString(), success: true, error: null },
+                ],
+                error: null,
+                lastErrorAt: null,
+            }), { status: 200 });
+        }
+
         if (url.includes('/api/system')) {
             // Varier légèrement les valeurs à chaque appel
             const data = JSON.parse(JSON.stringify(DEMO_DATA.system));
@@ -262,6 +278,88 @@ let connectionCheckInterval = null;
 // Bulk selection state
 let selectedVideos = new Set();
 let bulkModeEnabled = false;
+
+// ============================================================================
+// MODULE: modules/core/mode-switcher.js
+// ============================================================================
+
+// ============================================================================
+// Mode Switcher - Club / Technicien
+// ============================================================================
+
+const MODE_STORAGE_KEY = 'neopro-admin-mode';
+const MODE_CLUB = 'club';
+const MODE_TECH = 'tech';
+
+/**
+ * Retourne le mode courant depuis localStorage (default: 'club')
+ * @returns {'club'|'tech'}
+ */
+function getCurrentMode() {
+    try {
+        return localStorage.getItem(MODE_STORAGE_KEY) || MODE_CLUB;
+    } catch {
+        return MODE_CLUB;
+    }
+}
+
+/**
+ * Initialise le mode au chargement de la page :
+ * - Lit localStorage
+ * - Applique la classe CSS sur <body>
+ * - Met à jour le toggle UI
+ */
+function initMode() {
+    const mode = getCurrentMode();
+    applyMode(mode);
+}
+
+/**
+ * Bascule entre mode club et mode technicien
+ */
+function toggleMode() {
+    const current = getCurrentMode();
+    const next = current === MODE_CLUB ? MODE_TECH : MODE_CLUB;
+
+    try {
+        localStorage.setItem(MODE_STORAGE_KEY, next);
+    } catch {
+        // localStorage indisponible (navigation privée, etc.)
+    }
+
+    applyMode(next);
+
+    // Si l'utilisateur était sur un onglet tech-only en mode club, rediriger
+    if (next === MODE_CLUB && (currentTab === 'logs' || currentTab === 'system')) {
+        switchTab('dashboard');
+    }
+
+    // Re-render le dashboard pour basculer entre vue détaillée et simplifiée
+    if (currentTab === 'dashboard') {
+        loadDashboard();
+    }
+}
+
+/**
+ * Applique le mode : classe body, état du toggle, label
+ * @param {'club'|'tech'} mode
+ */
+function applyMode(mode) {
+    const body = document.body;
+    body.classList.remove('mode-club', 'mode-tech');
+    body.classList.add('mode-' + mode);
+
+    // Mettre à jour le toggle switch
+    const toggle = document.getElementById('mode-toggle');
+    if (toggle) {
+        toggle.checked = (mode === MODE_TECH);
+    }
+
+    const label = document.getElementById('mode-label');
+    if (label) {
+        label.textContent = mode === MODE_TECH ? 'Mode technicien' : 'Mode club';
+    }
+}
 
 // ============================================================================
 // MODULE: modules/core/connection.js
@@ -583,6 +681,145 @@ function formatDuration(seconds) {
 }
 
 // ============================================================================
+// MODULE: modules/dashboard/sync-status.js
+// ============================================================================
+
+// ============================================================================
+// Sync Status Widget - Dashboard
+// ============================================================================
+
+/**
+ * Charge et affiche le widget de statut de synchronisation
+ * Appelé depuis loadDashboard() à chaque cycle de rafraîchissement
+ */
+async function loadSyncStatus() {
+    const container = document.getElementById('sync-status-widget');
+    if (!container) return;
+
+    try {
+        const response = await fetch('/api/sync-status');
+
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+        }
+
+        const data = await response.json();
+        renderSyncStatus(container, data);
+    } catch (error) {
+        console.warn('[admin-ui] Sync status unavailable:', error.message);
+        renderSyncStatusError(container);
+    }
+}
+
+/**
+ * Affiche le widget sync status
+ */
+function renderSyncStatus(container, data) {
+    const connectionDot = data.connected ? 'sync-dot-connected' : 'sync-dot-disconnected';
+    const connectionText = data.connected ? 'Connecté au cloud' : 'Déconnecté du cloud';
+    const connectionClass = data.connected ? 'sync-connected' : 'sync-disconnected';
+
+    // Temps relatif de la dernière sync
+    const lastSyncText = data.lastSyncAt
+        ? formatRelativeTime(data.lastSyncAt)
+        : 'Jamais synchronisé';
+
+    // Badge commandes en attente
+    const pendingBadge = data.pendingCommands > 0
+        ? '<span class="sync-badge sync-badge-warning">' + data.pendingCommands + ' en attente</span>'
+        : '';
+
+    // Badge erreurs
+    const deadLetterBadge = data.deadLetters > 0
+        ? '<span class="sync-badge sync-badge-danger">' + data.deadLetters + ' erreur' + (data.deadLetters > 1 ? 's' : '') + '</span>'
+        : '';
+
+    // Mode tech : historique expandable
+    const mode = getCurrentMode();
+    let historySection = '';
+    if (mode === MODE_TECH && data.recentHistory && data.recentHistory.length > 0) {
+        const historyRows = data.recentHistory.map(function (entry) {
+            const icon = entry.success ? '✅' : '❌';
+            const time = formatRelativeTime(entry.timestamp);
+            const errorInfo = entry.error ? ' — ' + escapeHtml(entry.error) : '';
+            return '<div class="sync-history-row">'
+                + '<span>' + icon + '</span>'
+                + '<span class="sync-history-type">' + escapeHtml(entry.type) + '</span>'
+                + '<span class="sync-history-time">' + time + '</span>'
+                + '<span class="sync-history-error">' + errorInfo + '</span>'
+                + '</div>';
+        }).join('');
+
+        historySection = ''
+            + '<details class="sync-history-details tech-only">'
+            + '<summary>Historique récent</summary>'
+            + '<div class="sync-history-list">' + historyRows + '</div>'
+            + '</details>';
+    }
+
+    container.innerHTML = ''
+        + '<div class="sync-status-banner ' + connectionClass + '">'
+        + '  <div class="sync-status-main">'
+        + '    <div class="sync-status-item">'
+        + '      <span class="sync-dot ' + connectionDot + '"></span>'
+        + '      <span class="sync-status-text">' + connectionText + '</span>'
+        + '    </div>'
+        + '    <div class="sync-status-item">'
+        + '      <span class="sync-status-label">Dernière sync :</span>'
+        + '      <span class="sync-status-value">' + lastSyncText + '</span>'
+        + '    </div>'
+        + '    ' + pendingBadge
+        + '    ' + deadLetterBadge
+        + '  </div>'
+        + '  ' + historySection
+        + '</div>';
+}
+
+/**
+ * Affiche l'état d'erreur / indisponible
+ */
+function renderSyncStatusError(container) {
+    container.innerHTML = ''
+        + '<div class="sync-status-banner sync-unavailable">'
+        + '  <div class="sync-status-main">'
+        + '    <div class="sync-status-item">'
+        + '      <span class="sync-dot sync-dot-unknown"></span>'
+        + '      <span class="sync-status-text">Statut sync indisponible</span>'
+        + '    </div>'
+        + '  </div>'
+        + '</div>';
+}
+
+/**
+ * Formate un timestamp ISO en temps relatif en français
+ */
+function formatRelativeTime(isoTimestamp) {
+    try {
+        const date = new Date(isoTimestamp);
+        const now = new Date();
+        const diffSeconds = Math.floor((now - date) / 1000);
+
+        if (diffSeconds < 0) return "à l'instant";
+        if (diffSeconds < 60) return 'il y a ' + diffSeconds + 's';
+        if (diffSeconds < 3600) return 'il y a ' + Math.floor(diffSeconds / 60) + ' min';
+        if (diffSeconds < 86400) return 'il y a ' + Math.floor(diffSeconds / 3600) + 'h';
+        return 'il y a ' + Math.floor(diffSeconds / 86400) + ' jour(s)';
+    } catch {
+        return 'Inconnu';
+    }
+}
+
+/**
+ * Échappe le HTML pour éviter les injections XSS
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ============================================================================
 // MODULE: modules/dashboard/index.js
 // ============================================================================
 
@@ -591,6 +828,9 @@ function formatDuration(seconds) {
 // ============================================================================
 
 async function loadDashboard() {
+    // Charger le sync status (indépendant des métriques système)
+    loadSyncStatus();
+
     try {
         const response = await fetch('/api/system');
         console.log('[admin-ui] GET /api/system -> status', response.status);
@@ -602,53 +842,144 @@ async function loadDashboard() {
             return;
         }
 
-        // Update hostname
+        // Update hostname (les deux modes)
         document.getElementById('hostname').textContent = data.hostname || 'neopro';
 
-        // CPU
-        document.getElementById('cpu-usage').textContent = data.cpu.usage;
-        document.getElementById('cpu-cores').textContent = data.cpu.cores;
-        const cpuPercent = parseFloat(data.cpu.usage);
-        document.getElementById('cpu-progress').style.width = cpuPercent + '%';
+        const mode = getCurrentMode();
 
-        // Memory
-        document.getElementById('mem-used').textContent = data.memory.used;
-        document.getElementById('mem-total').textContent = data.memory.total;
-        const memPercent = parseFloat(data.memory.percent);
-        document.getElementById('mem-progress').style.width = memPercent + '%';
-
-        // Temperature
-        document.getElementById('temperature').textContent = data.temperature;
-        const temp = parseFloat(data.temperature);
-        const tempEl = document.getElementById('temperature');
-        if (temp > 70) {
-            tempEl.style.color = 'var(--danger)';
-        } else if (temp > 60) {
-            tempEl.style.color = 'var(--warning)';
+        if (mode === MODE_CLUB) {
+            renderClubDashboard(data);
         } else {
-            tempEl.style.color = 'var(--success)';
+            renderTechDashboard(data);
         }
 
-        // Disk
-        if (data.disk) {
-            document.getElementById('disk-used').textContent = data.disk.used;
-            document.getElementById('disk-total').textContent = data.disk.total;
-            const diskPercent = parseFloat(data.disk.percent);
-            document.getElementById('disk-progress').style.width = diskPercent + '%';
-        }
-
-        // Uptime
-        document.getElementById('uptime').textContent = data.uptime;
-
-        // Services
-        updateServicesGrid(data.services);
-
-        // Update timestamp
+        // Update timestamp (les deux modes)
         document.getElementById('last-update').textContent =
             'Dernière mise à jour: ' + new Date().toLocaleTimeString('fr-FR');
 
     } catch (error) {
         console.error('Error loading dashboard:', error);
+    }
+}
+
+/**
+ * Dashboard simplifié pour le mode club :
+ * Une seule carte "santé" avec indicateur vert/jaune/rouge
+ */
+function renderClubDashboard(data) {
+    const cardsGrid = document.querySelector('#tab-dashboard .cards-grid');
+    const healthCard = document.getElementById('health-status-card');
+
+    if (cardsGrid) cardsGrid.style.display = 'none';
+    if (healthCard) {
+        healthCard.style.display = 'block';
+        updateHealthStatus(data, healthCard);
+    }
+}
+
+/**
+ * Dashboard complet pour le mode technicien :
+ * Toutes les cartes métriques détaillées
+ */
+function renderTechDashboard(data) {
+    const cardsGrid = document.querySelector('#tab-dashboard .cards-grid');
+    const healthCard = document.getElementById('health-status-card');
+
+    if (cardsGrid) cardsGrid.style.display = '';
+    if (healthCard) healthCard.style.display = 'none';
+
+    // CPU
+    document.getElementById('cpu-usage').textContent = data.cpu.usage;
+    document.getElementById('cpu-cores').textContent = data.cpu.cores;
+    const cpuPercent = parseFloat(data.cpu.usage);
+    document.getElementById('cpu-progress').style.width = cpuPercent + '%';
+
+    // Memory
+    document.getElementById('mem-used').textContent = data.memory.used;
+    document.getElementById('mem-total').textContent = data.memory.total;
+    const memPercent = parseFloat(data.memory.percent);
+    document.getElementById('mem-progress').style.width = memPercent + '%';
+
+    // Temperature
+    document.getElementById('temperature').textContent = data.temperature;
+    const temp = parseFloat(data.temperature);
+    const tempEl = document.getElementById('temperature');
+    if (temp > 70) {
+        tempEl.style.color = 'var(--danger)';
+    } else if (temp > 60) {
+        tempEl.style.color = 'var(--warning)';
+    } else {
+        tempEl.style.color = 'var(--success)';
+    }
+
+    // Disk
+    if (data.disk) {
+        document.getElementById('disk-used').textContent = data.disk.used;
+        document.getElementById('disk-total').textContent = data.disk.total;
+        const diskPercent = parseFloat(data.disk.percent);
+        document.getElementById('disk-progress').style.width = diskPercent + '%';
+    }
+
+    // Uptime
+    document.getElementById('uptime').textContent = data.uptime;
+
+    // Services
+    updateServicesGrid(data.services);
+}
+
+/**
+ * Calcule et affiche l'état de santé global : vert / jaune / rouge
+ */
+function updateHealthStatus(data, card) {
+    const cpu = parseFloat(data.cpu.usage);
+    const mem = parseFloat(data.memory.percent);
+    const temp = parseFloat(data.temperature);
+    const disk = data.disk ? parseFloat(data.disk.percent) : 0;
+
+    let status = 'green';
+    let statusText = 'Système en bon état';
+    let statusIcon = '✅';
+    let details = [];
+
+    // Seuils rouge (critique)
+    if (cpu > 90) { status = 'red'; details.push('CPU très élevé'); }
+    if (mem > 90) { status = 'red'; details.push('Mémoire critique'); }
+    if (temp > 75) { status = 'red'; details.push('Température critique'); }
+    if (disk > 95) { status = 'red'; details.push('Stockage quasi plein'); }
+
+    // Seuils jaune (attention) — seulement si pas déjà rouge
+    if (status !== 'red') {
+        if (cpu > 70) { status = 'yellow'; details.push('CPU élevé'); }
+        if (mem > 75) { status = 'yellow'; details.push('Mémoire élevée'); }
+        if (temp > 60) { status = 'yellow'; details.push('Température élevée'); }
+        if (disk > 80) { status = 'yellow'; details.push('Stockage limité'); }
+    }
+
+    if (status === 'red') {
+        statusText = 'Problème détecté';
+        statusIcon = '🔴';
+    } else if (status === 'yellow') {
+        statusText = 'Attention requise';
+        statusIcon = '⚠️';
+    }
+
+    const detailsHtml = details.length > 0
+        ? '<div class="health-details-list">' + details.join(' • ') + '</div>'
+        : '';
+
+    const bodyEl = card.querySelector('.health-body');
+    if (bodyEl) {
+        bodyEl.innerHTML = ''
+            + '<div class="health-indicator health-' + status + '">'
+            + '  <span class="health-icon">' + statusIcon + '</span>'
+            + '  <div class="health-info">'
+            + '    <span class="health-text">' + statusText + '</span>'
+            + '    ' + detailsHtml
+            + '  </div>'
+            + '</div>'
+            + '<div class="health-uptime">'
+            + '  ⏱️ Uptime : <strong>' + (data.uptime || '--') + '</strong>'
+            + '</div>';
     }
 }
 
@@ -3880,6 +4211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initDropZone();
     updateTime();
     startConnectionMonitoring(); // Start connection monitoring
+    initMode(); // Initialize club/tech mode from localStorage
     loadDashboard();
     loadVersionLabel();
 
@@ -4090,6 +4422,9 @@ window.refreshTimeCategories = refreshTimeCategories;
 window.addCategory = addCategory;
 window.addTimeCategory = addTimeCategory;
 window.clearSelectedFiles = clearSelectedFiles;
+
+// Mode switcher
+window.toggleMode = toggleMode;
 
 // WiFi scanner functions
 window.loadWifiCurrent = loadWifiCurrent;

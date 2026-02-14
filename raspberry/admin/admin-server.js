@@ -88,6 +88,7 @@ const createNetworkRouter = require('./routes/network');
 const createBackupRouter = require('./routes/backup');
 const createEmailRouter = require('./routes/email');
 const createCacheRouter = require('./routes/cache');
+const createSyncStatusRouter = require('./routes/sync-status');
 
 const systemRouter = createSystemRouter({ systemService });
 const videosRouter = createVideosRouter({ videoService, videoProcessingService });
@@ -96,6 +97,7 @@ const networkRouter = createNetworkRouter({ networkService });
 const backupRouter = createBackupRouter({ backupService });
 const emailRouter = createEmailRouter(emailNotifier);
 const cacheRouter = createCacheRouter(cache, NAMESPACES);
+const syncStatusRouter = createSyncStatusRouter();
 
 // =============================================================================
 // EXPRESS APP
@@ -258,6 +260,7 @@ app.use(backupRouter);
 app.use(updateRouter);
 app.use(emailRouter);
 app.use(cacheRouter);
+app.use(syncStatusRouter);
 
 // =============================================================================
 // SERVER START
