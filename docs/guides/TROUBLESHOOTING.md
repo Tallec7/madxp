@@ -1125,6 +1125,19 @@ ssh pi@neopro.local 'sudo systemctl status neopro-sync-agent'
 ssh pi@neopro.local 'curl -I https://neopro-central-production.up.railway.app'
 ```
 
+### Le site affiche "0.0% uptime" alors qu'il est connecté
+
+**Symptômes :**
+
+- Dashboard affiche "0.0% uptime" sur la page de détail d'un site
+- Le site est bien connecté (indicateur vert) et "Il y a moins d'une minute"
+
+**Cause (corrigée en v3.24.1) :**
+
+L'uptime était hardcodé à `0` dans `site-detail.component.ts` lors de la construction de l'objet `connectionStatus` depuis l'API `/dashboard`. Le `heartbeat_24h.count` était bien récupéré mais jamais utilisé pour calculer l'uptime.
+
+**Formule :** `uptime24h = min(100, (heartbeatCount24h / 2880) * 100)` — 2880 = nombre de heartbeats attendus en 24h (un toutes les 30s).
+
 ### Le site affiche "Connexion instable" alors qu'il est connecté
 
 **Symptômes :**
