@@ -1,3 +1,9 @@
+## [3.26.2](https://github.com/Tallec7/neopro/compare/v3.26.1...v3.26.2) (2026-02-14)
+
+### Bug Fixes
+
+- **ota:** log scheduleReboot and autoRollback flags for deployment traceability ([5265bce](https://github.com/Tallec7/neopro/commit/5265bceb8c113fa941bf0f8ee28154fbab0eec82))
+
 ## [3.26.1](https://github.com/Tallec7/neopro/compare/v3.26.0...v3.26.1) (2026-02-14)
 
 ### Bug Fixes
