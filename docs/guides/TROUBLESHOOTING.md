@@ -974,7 +974,7 @@ ssh pi@neopro.local "grep 'path.join(sourcePath' /home/pi/neopro/sync-agent/src/
 
 ---
 
-### Mise à jour OTA échoue avec "permission denied, unlink VERSION" (v2.21.3)
+### Mise à jour OTA échoue avec "permission denied, unlink VERSION"
 
 **Symptôme** : La mise à jour depuis le dashboard échoue à 60% avec :
 
@@ -982,12 +982,14 @@ ssh pi@neopro.local "grep 'path.join(sourcePath' /home/pi/neopro/sync-agent/src/
 EACCES: permission denied, unlink '/home/pi/neopro/VERSION'
 ```
 
-**Cause** : Le fichier `/home/pi/neopro/VERSION` appartient à `root` (créé lors d'une installation initiale avec sudo). Le sync-agent qui tourne en tant que `pi` ne peut pas le supprimer/écraser avec `fs.copy()`.
+**Cause** : Le fichier `/home/pi/neopro/VERSION` appartient à `root:root` (créé par d'anciennes versions du sync-agent qui utilisaient `sudo cp/tee`). Le sync-agent actuel tourne en tant que `pi` et `fs.copy({ overwrite: true })` fait un `unlink` implicite → EACCES.
+
+Le fix `fixFileOwnership()` (v3.26.4) détecte les fichiers root et exécute `sudo chown` avant l'écriture. **Attention** : la commande doit utiliser `sudo chown -R pi:pi` (avec `-R`) pour matcher la règle sudoers (`/usr/bin/chown -R pi\:pi /home/pi/neopro/*`). Sans le `-R`, sudo refuse silencieusement la commande.
 
 **Diagnostic** :
 
 ```bash
-ssh pi@neopro.local "ls -la /home/pi/neopro/VERSION"
+ssh pi@neopro.local "ls -la /home/pi/neopro/VERSION /home/pi/neopro/release.json"
 # Si ça affiche "root root" → c'est le problème
 ```
 
@@ -999,13 +1001,7 @@ ssh pi@neopro.local "sudo chown pi:pi /home/pi/neopro/VERSION /home/pi/neopro/re
 
 Puis relancer la mise à jour depuis le dashboard.
 
-**Solution définitive** (mettre à jour update-software.js) :
-
-Le fix en v2.21.3 utilise `sudo cp` et `sudo chown` pour écrire ces fichiers. Pour les Pi bloqués :
-
-```bash
-cat raspberry/sync-agent/src/commands/update-software.js | ssh pi@<IP_DU_PI> 'cat > /home/pi/neopro/sync-agent/src/commands/update-software.js && sudo systemctl restart neopro-sync-agent'
-```
+**Solution définitive** : Déployer une version >= 3.27.1 qui utilise `sudo chown -R pi:pi` (matche le sudoers) et inclut `sudo rm -f` en fallback dans le sudoers pour les 3 fichiers version (VERSION, release.json, webapp/version.json).
 
 ---
 

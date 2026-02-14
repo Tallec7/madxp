@@ -12,6 +12,10 @@
 
 ## Unreleased
 
+### Bug Fixes
+
+- **ota:** fix sudoers mismatch in `fixFileOwnership()` — `sudo chown pi:pi` (sans `-R`) ne matchait pas la règle sudoers `chown -R pi:pi`, causant un échec silencieux et EACCES sur `/home/pi/neopro/VERSION`. Ajout de `-R` dans la commande et de `sudo rm -f` ciblé dans le sudoers comme fallback
+
 ### Features
 
 - **cloud-remote:** live view TV — player state monitoring + screenshot on demand from the cloud dashboard. The cloud remote now shows what the Pi TV is currently playing (video name, progress bar, phase, loop position, next video, errors) and allows capturing a JPEG screenshot of the TV screen at any time (with optional 5s auto-refresh). Architecture: Pi TV component → PlayerStateService → local Socket.IO → sync-agent heartbeat → central server (in-memory Map) → dashboard Socket.IO broadcast. Screenshot flow: dashboard HTTP POST → central → sync-agent (bidirectional ephemeral relay) → local server → TV canvas.drawImage() → JPEG 480p quality 0.5 (~30-50KB) relayed back

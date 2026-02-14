@@ -632,7 +632,7 @@ class SoftwareUpdateHandler {
       // uid 0 = root. Si le fichier appartient à root, reprendre l'ownership
       if (stat.uid === 0) {
         logger.info('Fixing root-owned file ownership', { filePath });
-        await execAsync(`sudo chown pi:pi ${filePath}`);
+        await execAsync(`sudo chown -R pi:pi ${filePath}`);
       }
     } catch (error) {
       // Fallback: si chown échoue, tenter sudo rm pour permettre la recréation

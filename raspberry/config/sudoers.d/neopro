@@ -52,6 +52,9 @@ pi ALL=(ALL) NOPASSWD: /usr/bin/rm -f /tmp/neopro-*
 
 # --- Permissions fichiers (chown pi:pi sur /home/pi/neopro/) ---
 pi ALL=(ALL) NOPASSWD: /usr/bin/chown -R pi\:pi /home/pi/neopro/*
+pi ALL=(ALL) NOPASSWD: /usr/bin/rm -f /home/pi/neopro/VERSION
+pi ALL=(ALL) NOPASSWD: /usr/bin/rm -f /home/pi/neopro/release.json
+pi ALL=(ALL) NOPASSWD: /usr/bin/rm -f /home/pi/neopro/webapp/version.json
 pi ALL=(ALL) NOPASSWD: /usr/sbin/usermod -a -G pi www-data
 
 # --- Logs (journalctl) ---
