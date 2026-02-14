@@ -192,7 +192,7 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
               Cette boucle est utilisée par défaut pour toutes les phases, sauf si une boucle spécifique est configurée ci-dessous.
             </p>
             <div class="items-list" *ngIf="config.sponsors.length > 0">
-              <div class="item-card" *ngFor="let sponsor of config.sponsors; let i = index" [class.empty-path]="!sponsor.path?.trim()">
+              <div class="item-card" *ngFor="let sponsor of config.sponsors; let i = index" [class.empty-path]="!sponsor.path.trim()">
                 <div class="item-header">
                   <span class="item-name">{{ sponsor.name || 'Nouvelle vidéo' }}</span>
                   <div class="ownership-controls inline">
@@ -552,7 +552,7 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
                     <div
                       class="loop-video-item"
                       *ngFor="let video of timeCategory.loopVideos; let vidIndex = index"
-                      [class.empty-path]="!video.path?.trim()"
+                      [class.empty-path]="!video.path.trim()"
                       draggable="true"
                       (dragstart)="onLoopDragStart($event, tcIndex, vidIndex)"
                       (dragover)="onLoopDragOver($event)"
@@ -797,7 +797,7 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
             Configuration synchronisée
           </span>
           <div class="deploy-warnings" *ngIf="validationResult?.warnings?.length">
-            <div class="deploy-warning" *ngFor="let warn of validationResult.warnings">
+            <div class="deploy-warning" *ngFor="let warn of validationResult?.warnings">
               <span class="warning-icon">⚠️</span>
               <span>{{ warn.message }}</span>
             </div>
