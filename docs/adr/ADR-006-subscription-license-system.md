@@ -23,11 +23,34 @@ Adopter un **système à 3 couches avec cache local et grace period** :
 Cloud (subscription.service.ts)     Pi (license-cache.js)     UI (license.service.ts)
        │                                    │                         │
        │ Calcule le statut licence          │                         │
-       │──── sync_local_state ─────────────>│                         │
+       │──── license_status (Socket.IO) ───>│                         │
        │                                    │ Cache dans JSON local   │
-       │                                    │──── /api/license ──────>│
+       │                                    │── license_update (WS) ─>│
        │                                    │                         │ Affiche état
 ```
+
+### Notification temps réel (février 2026)
+
+Lorsqu'un admin modifie l'abonnement depuis le dashboard (suspension, réactivation, prolongation, changement de plan), le serveur central **pousse immédiatement** le nouveau statut licence au Pi via Socket.IO, sans attendre le prochain `sync_local_state`.
+
+```
+Dashboard ── POST /api/sites/:id/subscription/suspend ──> Central Server
+                                                              │
+                                                    subscriptionService.suspendSite()
+                                                              │
+                                                    socketService.pushLicenseStatus(siteId)
+                                                              │
+                                                    sendLicenseStatus() ── license_status ──> Sync-Agent
+                                                                                                │
+                                                                               licenseCache.save() + notifyLocalApp()
+                                                                                                │
+                                                                               Local Server ── license_update ──> Angular
+                                                                                                                    │
+                                                                                                          isLicenseBlocked = true
+                                                                                                          → Écran maintenance
+```
+
+Le push est déclenché pour toutes les mutations d'abonnement : `suspendSite`, `reactivateSite`, `extendSubscription`, `changePlan`, `updateSubscription`. L'appel est fire-and-forget (`.catch()`) pour ne pas bloquer la réponse HTTP si le Pi est offline.
 
 ### Statuts de licence
 
@@ -113,8 +136,13 @@ Depuis février 2026, la Cloud Remote (`/remote/:siteId`) affiche les mêmes ét
 ## Références
 
 - `central-server/src/services/subscription.service.ts` — Calcul statut licence
+- `central-server/src/controllers/subscription.controller.ts` — Endpoints CRUD abonnement + push temps réel
+- `central-server/src/services/socket.service.ts` — `pushLicenseStatus()` — Push Socket.IO vers Pi
+- `central-server/src/handlers/license.handler.ts` — `sendLicenseStatus()` — Calcul et émission `license_status`
 - `central-server/src/controllers/remote.controller.ts` — Expose licence dans l'API remote publique
+- `raspberry/sync-agent/src/agent.js` — Réception `license_status` + relay vers serveur local
 - `raspberry/sync-agent/src/license-cache.js` — Cache local Pi
+- `raspberry/server/socket/handlers.js` — Relay `license_update` vers clients Angular
 - `raspberry/src/app/services/license.service.ts` — Service Angular UI (remote locale)
 - `central-dashboard/src/app/features/remote/components/license-banner.component.ts` — Bannière licence (cloud remote)
 - `central-dashboard/src/app/features/remote/components/license-block-remote.component.ts` — Écran blocage (cloud remote)

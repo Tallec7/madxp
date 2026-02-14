@@ -11,6 +11,7 @@
 import { Response } from 'express';
 import { subscriptionService } from '../services/subscription.service';
 import { auditService } from '../services/audit.service';
+import socketService from '../services/socket.service';
 import logger from '../config/logger';
 import {
   AuthRequest,
@@ -134,6 +135,11 @@ export const extendSubscription = async (req: AuthRequest, res: Response) => {
 
     await subscriptionService.extendSubscription(id, newEndDate, note || null, userId);
 
+    // Notifier le Pi en temps réel du changement de statut
+    socketService.pushLicenseStatus(id).catch((err) => {
+      logger.warn('Failed to push license status after extend', { siteId: id, error: (err as Error).message });
+    });
+
     // Audit
     auditService.log({
       action: 'SUBSCRIPTION_EXTENDED',
@@ -178,6 +184,11 @@ export const suspendSite = async (req: AuthRequest, res: Response) => {
 
     await subscriptionService.suspendSite(id, reason, note || null, userId);
 
+    // Notifier le Pi en temps réel du changement de statut
+    socketService.pushLicenseStatus(id).catch((err) => {
+      logger.warn('Failed to push license status after suspend', { siteId: id, error: (err as Error).message });
+    });
+
     // Audit
     auditService.log({
       action: 'SITE_SUSPENDED',
@@ -217,6 +228,11 @@ export const reactivateSite = async (req: AuthRequest, res: Response) => {
     }
 
     await subscriptionService.reactivateSite(id, newEndDate, note || null, userId);
+
+    // Notifier le Pi en temps réel du changement de statut
+    socketService.pushLicenseStatus(id).catch((err) => {
+      logger.warn('Failed to push license status after reactivate', { siteId: id, error: (err as Error).message });
+    });
 
     // Audit
     auditService.log({
@@ -259,6 +275,11 @@ export const changePlan = async (req: AuthRequest, res: Response) => {
     }
 
     await subscriptionService.changePlan(id, plan, note || null, userId);
+
+    // Notifier le Pi en temps réel du changement de statut
+    socketService.pushLicenseStatus(id).catch((err) => {
+      logger.warn('Failed to push license status after plan change', { siteId: id, error: (err as Error).message });
+    });
 
     // Audit
     auditService.log({
@@ -367,6 +388,11 @@ export const updateSubscription = async (req: AuthRequest, res: Response) => {
       note || null,
       userId
     );
+
+    // Notifier le Pi en temps réel du changement de statut
+    socketService.pushLicenseStatus(id).catch((err) => {
+      logger.warn('Failed to push license status after subscription update', { siteId: id, error: (err as Error).message });
+    });
 
     // Audit
     auditService.log({

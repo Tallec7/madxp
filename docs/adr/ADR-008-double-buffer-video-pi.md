@@ -70,18 +70,19 @@ fetch(video.path) → response.arrayBuffer() → discard (données restent en pa
 
 ### Règles critiques Pi
 
-**NE JAMAIS faire** (cause saccades) :
+**NE JAMAIS faire** (cause saccades ou bugs visuels) :
 
 - Transitions CSS opacity (repaints causent saccades)
 - Capture live dans `onVideoEnded()` (frame buffer déjà libéré)
 - `display: none` sur le freeze canvas (cause reflow layout complet)
 - Garder les buffers décodeur de l'ancien player après un switch (fuite mémoire → OOM)
+- Appeler `hideBlackOverlay()` depuis la boucle quand `isManualMode === true` (retire le masque protégeant la vidéo manuelle — invisible sur Pi/HW overlay mais casse l'affichage sur navigateur desktop)
 
 **TOUJOURS faire** :
 
 - Pré-capture périodique toutes les 500ms
 - `opacity: 0/1` uniquement pour montrer/cacher le canvas
-- Listener `timeupdate` throttlé (200ms) pour preload anticipé et early switch
+- Listener `timeupdate` throttlé (200ms) pour preload anticipé et early switch — avec garde `isManualMode` pour ne pas interférer avec les vidéos manuelles
 - Attendre `canplaythrough` avant de jouer
 - Détection de frame réel dans `switchPlayers()` (readyState + timeupdate, PAS timer fixe)
 - `cleanupInactivePlayer()` après chaque switch (libère décodeur GPU) — skip si vidéo < 5s

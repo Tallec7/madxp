@@ -603,6 +603,15 @@ class SocketService {
     return healthGetConnectionHealth(this.ctx, siteId);
   }
 
+  /**
+   * Send license status to a connected Pi in real-time.
+   * Used after subscription changes (suspend, reactivate, extend, plan change)
+   * to immediately notify the Pi without waiting for the next sync_local_state.
+   */
+  async pushLicenseStatus(siteId: string): Promise<void> {
+    return sendLicenseStatus(this.ctx, siteId);
+  }
+
   // ==========================================================================
   // INTERNAL HANDLER DELEGATION (used by tests via (service as any))
   // ==========================================================================

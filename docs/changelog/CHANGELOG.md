@@ -1,3 +1,10 @@
+## [3.26.4](https://github.com/Tallec7/neopro/compare/v3.26.3...v3.26.4) (2026-02-14)
+
+### Bug Fixes
+
+- **subscription:** push license status to Pi in real-time after suspend/reactivate/extend/plan change — previously the Pi only received the new status at the next heartbeat, so the local remote kept working after a dashboard suspension
+- **tv-manual:** fix manual videos not playing to completion on browser (neopro.local/tv) — the loop's early switch (`onTimeUpdate`) was triggering `hideBlackOverlay()` during manual playback, exposing the background loop on desktop browsers (Pi unaffected due to HW overlay compositing). Add `isManualMode` guard to `onTimeUpdate` and protect all `hideBlackOverlay()` calls in loop transition paths (regression from `efe15221` on 2026-02-07)
+
 ## [3.26.3](https://github.com/Tallec7/neopro/compare/v3.26.2...v3.26.3) (2026-02-14)
 
 ### Bug Fixes

@@ -2316,7 +2316,24 @@ sudo tail -50 /var/log/neopro-kiosk-watchdog.log
 
 **Note :** Les nouvelles installations (v2.24+) configurent automatiquement `gpu_mem=256` pour les Pi 4 et antérieurs via le script `install.sh`.
 
-### 7. Vidéos ne se chargent pas
+### 7. Vidéos manuelles coupées avant la fin sur navigateur PC (neopro.local/tv)
+
+**Symptômes :**
+
+- La vidéo manuelle (déclenchée par la télécommande) ne joue pas jusqu'au bout sur un navigateur PC
+- La boucle réapparaît derrière la vidéo manuelle avant sa fin
+- Pas de problème sur Chromium/Pi (le HW overlay masque le bug)
+
+**Cause racine (corrigée en v3.26.4) :**
+
+Le `onTimeUpdate()` de la boucle arrière-plan ne vérifiait pas `isManualMode`. Quand la boucle atteignait 0.5s de sa fin, l'early switch déclenchait `hideBlackOverlay()`, retirant le masque noir (z-index 5) qui protégeait la vidéo manuelle. Sur Chromium/Pi, le décodeur hardware compose les vidéos en HW overlay indépendamment des z-index CSS, donc le bug était invisible. Sur un navigateur desktop, le compositing CSS/DOM exposait la boucle derrière la vidéo manuelle.
+
+**Solution (v3.26.4) :**
+
+- Ajout de `if (this.isManualMode) return;` dans `onTimeUpdate()` pour bloquer l'early switch pendant les vidéos manuelles
+- Protection de tous les `hideBlackOverlay()` dans `switchPlayers()`, `playOnActivePlayer()` et `startSeamlessLoop()` avec `if (!this.isManualMode)`
+
+### 8. Vidéos ne se chargent pas
 
 **Cause :** Chemins incorrects dans configuration.json
 
