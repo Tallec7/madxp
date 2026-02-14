@@ -1,3 +1,9 @@
+## [3.26.5](https://github.com/Tallec7/neopro/compare/v3.26.4...v3.26.5) (2026-02-14)
+
+### Bug Fixes
+
+- **tv-manual:** protect black overlay during manual video on desktop browsers ([88e363f](https://github.com/Tallec7/neopro/commit/88e363fcf84df44d14d06d80cc2187ef3e128d63))
+
 ## [3.26.4](https://github.com/Tallec7/neopro/compare/v3.26.3...v3.26.4) (2026-02-14)
 
 ### Bug Fixes
