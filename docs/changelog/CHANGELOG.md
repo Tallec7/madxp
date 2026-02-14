@@ -1,3 +1,9 @@
+# [3.28.0](https://github.com/Tallec7/neopro/compare/v3.27.0...v3.28.0) (2026-02-14)
+
+### Features
+
+- **cloud-remote:** live view TV — player state monitoring + screenshot on demand ([e1f9dc9](https://github.com/Tallec7/neopro/commit/e1f9dc9b407d8b5dd2714fbb2ce3b6d27ea59e99))
+
 # [3.27.0](https://github.com/Tallec7/neopro/compare/v3.26.5...v3.27.0) (2026-02-14)
 
 ### Features
