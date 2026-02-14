@@ -1,3 +1,9 @@
+# [3.27.0](https://github.com/Tallec7/neopro/compare/v3.26.5...v3.27.0) (2026-02-14)
+
+### Features
+
+- **monitoring:** complete supervision gaps — 4 metrics, 3 alerts, kiosk Grafana, +4 smoke tests ([6840def](https://github.com/Tallec7/neopro/commit/6840def6676217021ab1ae231165af5b95661082))
+
 ## Unreleased
 
 ### Features
