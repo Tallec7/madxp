@@ -16,6 +16,7 @@
 ### Bug Fixes
 
 - **config-editor:** resolve TS2531 null check and NG8107 optional chain warnings ([e3d4907](https://github.com/Tallec7/neopro/commit/e3d4907fc4b9cd51cb69f2bff0602f07c80541af))
+- **kiosk:** disable GPU video decoder to prevent SharedImage crash loop on Pi 5 — Chromium's hardware video decoder fails to create SharedImage buffers (`Y_UV, 420` format) via V3D Mesa, causing `SharedImageBackingFactory` errors every ~5s and a watchdog restart loop (shows Linux desktop after 3 crashes). Fix: `--disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder` + `--disable-gpu-memory-buffer-video-frames` to use software decoding while keeping GPU compositing ([e3d4907](https://github.com/Tallec7/neopro/commit/e3d4907fc4b9cd51cb69f2bff0602f07c80541af))
 
 # [3.26.0](https://github.com/Tallec7/neopro/compare/v3.25.1...v3.26.0) (2026-02-14)
 

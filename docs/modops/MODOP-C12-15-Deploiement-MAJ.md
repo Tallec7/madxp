@@ -708,9 +708,9 @@ ssh pi@neopro.local 'cat /proc/device-tree/model'
 ssh pi@neopro.local 'vcgencmd get_mem gpu'
 # Doit afficher : gpu=256M
 
-# Pi 5 : vérifier V3D natif (aucun flag GPU custom)
-ssh pi@neopro.local 'pgrep -a chromium | grep -E "use-gl|use-angle|swiftshader"'
-# Aucun résultat = OK (V3D natif actif)
+# Pi 5 : vérifier que le décodage vidéo hardware est désactivé (v3.26.1+)
+ssh pi@neopro.local 'pgrep -a chromium | grep -o "disable-features=[^ ]*"'
+# Doit afficher: disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder
 ```
 
 ### Problèmes connus Pi 5

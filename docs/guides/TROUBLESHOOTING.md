@@ -2219,16 +2219,20 @@ Le Pi 5 (BCM2712) a **supprimé le décodeur H.264 hardware**. Seul H.265/HEVC e
 
 **Note :** Sur Pi 5, `vcgencmd get_mem gpu` retourne toujours `gpu=4M` - c'est une valeur legacy, pas un problème.
 
-**Solution : Driver V3D natif (v3.7.3+)**
+**Solution : V3D Mesa + décodage vidéo software (v3.26.1+)**
 
-Depuis la v3.7.3, le Pi 5 utilise le **driver V3D natif (Mesa)** — identique au navigateur normal. Les anciennes solutions (SwiftShader, EGL natif) ont été abandonnées car elles causaient des saccades ou des erreurs.
+Le Pi 5 utilise le **driver V3D natif (Mesa)** pour le compositing GPU, mais le **décodage vidéo hardware est désactivé**. Sans cette désactivation, Chromium tente de créer des `SharedImage` GPU pour les frames vidéo 1080p (format `Y_UV, 420`) via le backend `shared_memory`, ce que le driver V3D ne supporte pas — provoquant des erreurs `SharedImageBackingFactory` toutes les ~5s et un crash loop du watchdog.
+
+Le Pi 5 (quad Cortex-A76 2.4GHz) a largement la puissance pour décoder du 1080p en software.
 
 Le `kiosk-watchdog.sh` utilise les flags suivants pour Pi 5 :
 
 ```bash
-# Flags spécifiques Pi 5 (v3.7.3+) — aucun flag GPU custom
+# Flags spécifiques Pi 5 (v3.26.1+)
 --ignore-gpu-blocklist
 --enable-gpu-rasterization
+--disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder
+--disable-gpu-memory-buffer-video-frames
 
 # Flags communs (Pi 4 et Pi 5)
 --disable-dev-shm-usage
@@ -2237,21 +2241,24 @@ Le `kiosk-watchdog.sh` utilise les flags suivants pour Pi 5 :
 
 **Explication des flags Pi 5 :**
 
-| Flag                         | Effet                                                                      |
-| ---------------------------- | -------------------------------------------------------------------------- |
-| `--ignore-gpu-blocklist`     | Force l'utilisation du GPU même si le modèle est dans la blocklist         |
-| `--enable-gpu-rasterization` | Active la rastérisation GPU pour de meilleures performances                |
-| `--disable-dev-shm-usage`    | Utilise /tmp au lieu de /dev/shm (évite les problèmes de mémoire partagée) |
-| `--disable-checker-imaging`  | Désactive le décodage checker (réduit la charge CPU)                       |
+| Flag                                       | Effet                                                                      |
+| ------------------------------------------ | -------------------------------------------------------------------------- |
+| `--ignore-gpu-blocklist`                   | Force l'utilisation du GPU même si le modèle est dans la blocklist         |
+| `--enable-gpu-rasterization`               | Active la rastérisation GPU pour de meilleures performances                |
+| `--disable-features=VaapiVideoDecoder,…`   | Désactive le décodage vidéo hardware (cause des SharedImage errors)        |
+| `--disable-gpu-memory-buffer-video-frames` | Empêche l'allocation de GpuMemoryBuffer pour les frames vidéo              |
+| `--disable-dev-shm-usage`                  | Utilise /tmp au lieu de /dev/shm (évite les problèmes de mémoire partagée) |
+| `--disable-checker-imaging`                | Désactive le décodage checker (réduit la charge CPU)                       |
 
-**Historique des tentatives échouées :**
+**Historique des tentatives :**
 
-| Version | Solution             | Résultat                                                |
-| ------- | -------------------- | ------------------------------------------------------- |
-| v2.27   | SwiftShader          | Rendu CPU, stable mais vidéos saccadées en 1080p        |
-| v3.7.2  | EGL natif + Vulkan   | Erreurs SharedImageStub toutes les 5 secondes           |
-| v3.7.2  | Retour SwiftShader   | Toujours trop lent pour vidéo 1080p                     |
-| v3.7.3  | **V3D natif (Mesa)** | **Solution finale** — vidéos fluides, pas d'erreurs GPU |
+| Version | Solution                             | Résultat                                                           |
+| ------- | ------------------------------------ | ------------------------------------------------------------------ |
+| v2.27   | SwiftShader                          | Rendu CPU, stable mais vidéos saccadées en 1080p                   |
+| v3.7.2  | EGL natif + Vulkan                   | Erreurs SharedImageStub toutes les 5 secondes                      |
+| v3.7.2  | Retour SwiftShader                   | Toujours trop lent pour vidéo 1080p                                |
+| v3.7.3  | V3D natif (Mesa) sans flags          | Fonctionnel mais SharedImageBackingFactory crash loop en kiosk     |
+| v3.26.1 | **V3D Mesa + video decode software** | **Solution actuelle** — compositing GPU, décodage software, stable |
 
 **Mise à jour depuis une ancienne version :**
 
@@ -2262,15 +2269,19 @@ scp raspberry/scripts/kiosk-watchdog.sh pi@<IP>:/home/pi/neopro/scripts/
 ssh pi@<IP> 'sudo systemctl restart neopro-kiosk'
 ```
 
-**Vérifier que le driver V3D est actif (pas de flags SwiftShader/EGL) :**
+**Vérifier que les bons flags sont actifs :**
 
 ```bash
+# Vérifier que le décodage vidéo hardware est désactivé
+pgrep -a chromium | grep -o "disable-features=[^ ]*"
+# Doit afficher: disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder
+
+# Vérifier qu'il n'y a PAS de flags SwiftShader/EGL
 pgrep -a chromium | grep -E "use-gl|use-angle|swiftshader"
 # Aucun résultat = OK (V3D natif actif)
-# Si des flags apparaissent = ancienne version, mettre à jour kiosk-watchdog.sh
 ```
 
-**Note :** Le script `kiosk-watchdog.sh` détecte automatiquement le modèle de Pi et applique les bons flags (GPU hardware pour Pi 4, V3D natif pour Pi 5).
+**Note :** Le script `kiosk-watchdog.sh` détecte automatiquement le modèle de Pi et applique les bons flags (GPU hardware pour Pi 4, V3D Mesa + video decode software pour Pi 5).
 
 ---
 
