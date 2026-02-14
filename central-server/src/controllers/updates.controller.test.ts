@@ -453,6 +453,8 @@ describe('Updates Controller', () => {
           target_type: 'site',
           target_id: 'site-456',
           deployed_by: 'user-123',
+          schedule_reboot: false,
+          auto_rollback: true,
         });
         expect(res.status).toHaveBeenCalledWith(201);
         expect(res.json).toHaveBeenCalledWith(mockDeployment);
@@ -473,6 +475,8 @@ describe('Updates Controller', () => {
           target_type: 'site',
           target_id: 's1',
           deployed_by: 'user-123',
+          schedule_reboot: false,
+          auto_rollback: true,
         });
       });
 
