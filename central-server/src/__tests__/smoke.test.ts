@@ -68,6 +68,10 @@ jest.mock('../services/alerting.service', () => ({
     initialize: jest.fn().mockResolvedValue(undefined),
     cleanup: jest.fn(),
     clearMemoryCache: jest.fn(),
+    recordDisconnectEvent: jest.fn(),
+    recordVideoSafetyTimeouts: jest.fn(),
+    checkHourlyMetrics: jest.fn().mockResolvedValue(undefined),
+    evaluateMetric: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -739,6 +743,15 @@ describe('Service initialization wiring', () => {
     expect(alertingService.clearMemoryCache).toBeDefined();
   });
 
+  it('alerting service exposes hourly metric collection methods', async () => {
+    const { alertingService } = await import('../services/alerting.service');
+    // These methods feed data into evaluateMetric() for threshold-based alerting
+    expect(typeof alertingService.recordDisconnectEvent).toBe('function');
+    expect(typeof alertingService.recordVideoSafetyTimeouts).toBe('function');
+    expect(typeof alertingService.checkHourlyMetrics).toBe('function');
+    expect(typeof alertingService.evaluateMetric).toBe('function');
+  });
+
   it('realtime-stats service mock is wired and callable', async () => {
     const { realtimeStatsService } = await import('../services/realtime-stats.service');
     expect(realtimeStatsService.initialize).toBeDefined();
@@ -1408,5 +1421,59 @@ describe('Sync-agent command handler symmetry', () => {
     expect(usMatch).not.toBeNull();
     expect({ branch: 'update_software', emitsProgress100: /progress:\s*100/.test(usMatch![1]) })
       .toEqual({ branch: 'update_software', emitsProgress100: true });
+  });
+});
+
+// ----------------------------------------------------------
+// 29. Hourly metric alerting wiring
+// ----------------------------------------------------------
+describe('Hourly metric alerting wiring', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('heartbeat handler feeds video safety timeouts to alertingService', () => {
+    const heartbeatPath = path.join(repoRoot, 'central-server', 'src', 'handlers', 'heartbeat.handler.ts');
+    const content = fs.readFileSync(heartbeatPath, 'utf8');
+
+    expect({
+      importsAlertingService: content.includes("from '../services/alerting.service'"),
+      callsRecordVideoSafetyTimeouts: content.includes('alertingService.recordVideoSafetyTimeouts'),
+    }).toEqual({
+      importsAlertingService: true,
+      callsRecordVideoSafetyTimeouts: true,
+    });
+  });
+
+  it('socket service feeds disconnect events to alertingService', () => {
+    const socketPath = path.join(repoRoot, 'central-server', 'src', 'services', 'socket.service.ts');
+    const content = fs.readFileSync(socketPath, 'utf8');
+
+    expect({
+      importsAlertingService: content.includes("from './alerting.service'"),
+      callsRecordDisconnectEvent: content.includes('alertingService.recordDisconnectEvent'),
+    }).toEqual({
+      importsAlertingService: true,
+      callsRecordDisconnectEvent: true,
+    });
+  });
+
+  it('alerting service has checkHourlyMetrics wired into periodic check', () => {
+    const alertingPath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting.service.ts');
+    const content = fs.readFileSync(alertingPath, 'utf8');
+
+    expect({
+      hasCheckHourlyMetrics: content.includes('async checkHourlyMetrics'),
+      calledInPeriodicLoop: content.includes('this.checkHourlyMetrics()'),
+      queriesKioskCrashes: content.includes("alert_type = 'kiosk_crash'"),
+      evaluatesWsDisconnects: content.includes("'websocket_disconnects_1h'"),
+      evaluatesVideoTimeouts: content.includes("'video_safety_timeouts_1h'"),
+      evaluatesKioskCrashes: content.includes("'kiosk_crashes_1h'"),
+    }).toEqual({
+      hasCheckHourlyMetrics: true,
+      calledInPeriodicLoop: true,
+      queriesKioskCrashes: true,
+      evaluatesWsDisconnects: true,
+      evaluatesVideoTimeouts: true,
+      evaluatesKioskCrashes: true,
+    });
   });
 });

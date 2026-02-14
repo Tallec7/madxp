@@ -35,11 +35,13 @@
 - **cloud-remote:** live view TV — player state monitoring + screenshot on demand from the cloud dashboard. The cloud remote now shows what the Pi TV is currently playing (video name, progress bar, phase, loop position, next video, errors) and allows capturing a JPEG screenshot of the TV screen at any time (with optional 5s auto-refresh). Architecture: Pi TV component → PlayerStateService → local Socket.IO → sync-agent heartbeat → central server (in-memory Map) → dashboard Socket.IO broadcast. Screenshot flow: dashboard HTTP POST → central → sync-agent (bidirectional ephemeral relay) → local server → TV canvas.drawImage() → JPEG 480p quality 0.5 (~30-50KB) relayed back
 - **monitoring:** add 4 Prometheus metrics — `neopro_license_status_pushes_total`, `neopro_deploy_progress_events_total`, `neopro_ota_errors_total{error_type}`, `neopro_wifi_config_total` — for full supervision of recent fixes (license push, deploy progress, OTA errors categorized by type, WiFi client config)
 - **monitoring:** add 3 alert thresholds — WebSocket disconnects fréquents (>10/h warning, >30/h critical), trous noirs vidéo safety timeouts (>3/h, >10/h), crash kiosk Chromium (>1/h, >3/h)
+- **monitoring:** wire hourly metric aggregation into alerting periodic loop — `checkHourlyMetrics()` runs every 5 min, aggregates WS disconnects (in-memory), video safety timeouts (in-memory), kiosk crashes (DB) per site, and feeds them into `evaluateMetric()` for threshold-based alerting
 - **monitoring:** add dedicated Kiosk (Chromium) row to Grafana Business & Fleet dashboard with 3 panels (Status gauge, Crashes rate, Restart count)
 
 ### Tests
 
 - **smoke:** add 4 smoke tests (126 → 130) — 3 critical routes (`remote-pin`, `wifi-scan`, `wifi-connect`) + 1 Prometheus metric completeness check (9 critical metrics)
+- **smoke:** add 3 hourly metric wiring smoke tests (130 → 139) — verify heartbeat→alertingService safety timeout feed, socket→alertingService disconnect feed, checkHourlyMetrics wired in periodic loop + evaluates all 3 metrics
 
 ## [3.26.5](https://github.com/Tallec7/neopro/compare/v3.26.4...v3.26.5) (2026-02-14)
 

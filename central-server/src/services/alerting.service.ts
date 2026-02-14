@@ -283,6 +283,11 @@ class AlertingService {
   private lastAlertTime: Map<string, Date> = new Map();
   private checkInterval: NodeJS.Timeout | null = null;
 
+  // In-memory hourly counters for metrics not stored per-site in DB
+  // Key: siteId, Value: array of timestamps for each event
+  private wsDisconnectEvents: Map<string, number[]> = new Map();
+  private videoSafetyTimeoutEvents: Map<string, number[]> = new Map();
+
   /**
    * Initialise le service d'alerting
    */
@@ -291,6 +296,32 @@ class AlertingService {
     await this.loadDefaultThresholds();
     this.startPeriodicCheck();
     logger.info('Alerting service initialized');
+  }
+
+  /**
+   * Record a WebSocket disconnect event for a site (in-memory, for hourly aggregation).
+   */
+  recordDisconnectEvent(siteId: string): void {
+    if (!this.wsDisconnectEvents.has(siteId)) {
+      this.wsDisconnectEvents.set(siteId, []);
+    }
+    this.wsDisconnectEvents.get(siteId)!.push(Date.now());
+  }
+
+  /**
+   * Record video safety timeout events for a site (in-memory, for hourly aggregation).
+   * Called from heartbeat handler when transitionMetrics.safetyTimeoutCount > 0.
+   */
+  recordVideoSafetyTimeouts(siteId: string, count: number): void {
+    if (count <= 0) return;
+    if (!this.videoSafetyTimeoutEvents.has(siteId)) {
+      this.videoSafetyTimeoutEvents.set(siteId, []);
+    }
+    const events = this.videoSafetyTimeoutEvents.get(siteId)!;
+    const now = Date.now();
+    for (let i = 0; i < count; i++) {
+      events.push(now);
+    }
   }
 
   /**
@@ -966,11 +997,69 @@ class AlertingService {
     }
   }
 
+  /**
+   * Aggregate hourly metrics and feed them into evaluateMetric().
+   * - websocket_disconnects_1h: from in-memory disconnect events
+   * - video_safety_timeouts_1h: from in-memory safety timeout events
+   * - kiosk_crashes_1h: from alerts table (alert_type = 'kiosk_crash')
+   *
+   * Runs every 5 minutes to balance responsiveness vs DB load.
+   */
+  async checkHourlyMetrics(): Promise<void> {
+    try {
+      const oneHourAgo = Date.now() - 60 * 60 * 1000;
+
+      // 1. WebSocket disconnects (in-memory) — prune old events and evaluate
+      for (const [siteId, events] of this.wsDisconnectEvents.entries()) {
+        const recentEvents = events.filter(ts => ts > oneHourAgo);
+        this.wsDisconnectEvents.set(siteId, recentEvents);
+        if (recentEvents.length > 0) {
+          await this.evaluateMetric(siteId, 'websocket_disconnects_1h', recentEvents.length);
+        }
+      }
+
+      // 2. Video safety timeouts (in-memory) — prune old events and evaluate
+      for (const [siteId, events] of this.videoSafetyTimeoutEvents.entries()) {
+        const recentEvents = events.filter(ts => ts > oneHourAgo);
+        this.videoSafetyTimeoutEvents.set(siteId, recentEvents);
+        if (recentEvents.length > 0) {
+          await this.evaluateMetric(siteId, 'video_safety_timeouts_1h', recentEvents.length);
+        }
+      }
+
+      // 3. Kiosk crashes (from alerts table) — already stored by heartbeat handler
+      const kioskCrashes = await query<{ site_id: string; crash_count: number }>(
+        `SELECT site_id, COUNT(*) AS crash_count
+         FROM alerts
+         WHERE alert_type = 'kiosk_crash'
+           AND created_at > NOW() - INTERVAL '1 hour'
+         GROUP BY site_id`
+      );
+
+      for (const row of kioskCrashes.rows) {
+        await this.evaluateMetric(row.site_id, 'kiosk_crashes_1h', Number(row.crash_count));
+      }
+    } catch (error) {
+      // Don't crash the periodic loop if tables don't exist yet
+      if (error instanceof Error && error.message.includes('alerts')) {
+        return;
+      }
+      logger.error('Error checking hourly metrics:', error);
+    }
+  }
+
   private startPeriodicCheck(): void {
     // Vérifier l'escalade et les déploiements bloqués toutes les minutes
+    // Vérifier les métriques horaires toutes les 5 minutes
+    let tickCount = 0;
     this.checkInterval = setInterval(async () => {
+      tickCount++;
       await this.checkEscalations();
       await this.checkStuckDeployments();
+      // Run hourly metrics check every 5 minutes (every 5th tick)
+      if (tickCount % 5 === 0) {
+        await this.checkHourlyMetrics();
+      }
     }, 60 * 1000);
   }
 
@@ -1215,11 +1304,17 @@ class AlertingService {
   clearMemoryCache(): void {
     const historySize = this.metricHistory.size;
     const alertTimeSize = this.lastAlertTime.size;
+    const wsSize = this.wsDisconnectEvents.size;
+    const videoSize = this.videoSafetyTimeoutEvents.size;
     this.metricHistory.clear();
     this.lastAlertTime.clear();
+    this.wsDisconnectEvents.clear();
+    this.videoSafetyTimeoutEvents.clear();
     logger.info('Alerting service memory cache cleared', {
       clearedHistoryEntries: historySize,
       clearedAlertTimeEntries: alertTimeSize,
+      clearedWsDisconnectEntries: wsSize,
+      clearedVideoTimeoutEntries: videoSize,
     });
   }
 }

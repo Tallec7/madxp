@@ -48,6 +48,7 @@ import {
   getConnectionHealth as healthGetConnectionHealth,
   MAX_PONG_ENTRIES,
 } from '../handlers/health-monitor.handler';
+import { alertingService } from './alerting.service';
 
 // ============================================================================
 // Lazy service loaders (circular dependency avoidance)
@@ -489,6 +490,11 @@ class SocketService {
     const siteId = (socket as any).siteId as string | undefined;
     const clientType = siteId ? 'agent' : ((socket as any).clientType === 'dashboard' ? 'dashboard' : 'unknown');
     metricsService.recordSocketDisconnect(reason, clientType as 'agent' | 'dashboard' | 'unknown');
+
+    // Feed hourly disconnect counter for threshold-based alerting
+    if (siteId) {
+      alertingService.recordDisconnectEvent(siteId);
+    }
 
     // Remove all registered handlers to prevent memory leaks
     const handlers = (socket as any)._neoHandlers as Record<string, (...args: unknown[]) => void> | undefined;

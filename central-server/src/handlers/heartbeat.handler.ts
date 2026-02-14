@@ -13,6 +13,7 @@ import { HeartbeatMessage } from '../types';
 import logger from '../config/logger';
 import { alertService } from '../services/alert.service';
 import { metricsService } from '../services/metrics.service';
+import { alertingService } from '../services/alerting.service';
 import { SocketContext } from './socket-context';
 
 /**
@@ -97,6 +98,11 @@ export async function handleHeartbeat(
     // Record transition quality metrics (video double-buffer)
     if (message.transitionMetrics) {
       metricsService.recordTransitionMetrics(message.transitionMetrics);
+
+      // Feed hourly safety timeout counter for threshold-based alerting
+      if (message.transitionMetrics.safetyTimeoutCount > 0) {
+        alertingService.recordVideoSafetyTimeouts(siteId, message.transitionMetrics.safetyTimeoutCount);
+      }
     }
 
     await checkAlerts(siteId, message.metrics, message.kioskStatus);
