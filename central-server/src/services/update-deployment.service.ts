@@ -454,6 +454,7 @@ class UpdateDeploymentService {
         );
 
         metricsService.recordDeployment('failed', 'site');
+        metricsService.recordOtaError(this.categorizeOtaError(errorMessage));
         logger.error('Update deployment failed', { deploymentId, siteId, errorMessage });
       }
     } catch (error) {
@@ -489,7 +490,22 @@ class UpdateDeploymentService {
     );
 
     metricsService.recordDeployment('failed', 'site');
+    metricsService.recordOtaError(this.categorizeOtaError(errorMessage));
     logger.error('Update deployment failed', { deploymentId, errorMessage });
+  }
+
+  /**
+   * Categorize OTA error messages for Prometheus labeling
+   */
+  private categorizeOtaError(errorMessage?: string): string {
+    if (!errorMessage) return 'unknown';
+    const msg = errorMessage.toLowerCase();
+    if (msg.includes('eacces') || msg.includes('permission')) return 'permission';
+    if (msg.includes('timeout') || msg.includes('timed out')) return 'timeout';
+    if (msg.includes('network') || msg.includes('econnrefused') || msg.includes('enotfound')) return 'network';
+    if (msg.includes('disk') || msg.includes('enospc') || msg.includes('no space')) return 'disk_full';
+    if (msg.includes('annulé') || msg.includes('cancel')) return 'cancelled';
+    return 'other';
   }
 
   /**

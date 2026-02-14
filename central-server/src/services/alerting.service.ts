@@ -237,6 +237,42 @@ const DEFAULT_THRESHOLDS: Omit<AlertThreshold, 'id'>[] = [
     escalateAfterMinutes: 120,
     notifyChannels: ['email'],
   },
+  {
+    name: 'Déconnexions WebSocket fréquentes',
+    metric: 'websocket_disconnects_1h',
+    condition: 'gt',
+    warningValue: 10,  // >10 déconnexions en 1 heure
+    criticalValue: 30, // >30 déconnexions en 1 heure
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 60,
+    escalateAfterMinutes: 180,
+    notifyChannels: ['email'],
+  },
+  {
+    name: 'Trous noirs vidéo (safety timeouts)',
+    metric: 'video_safety_timeouts_1h',
+    condition: 'gt',
+    warningValue: 3,  // >3 safety timeouts en 1 heure
+    criticalValue: 10, // >10 safety timeouts en 1 heure
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 60,
+    escalateAfterMinutes: 180,
+    notifyChannels: ['email'],
+  },
+  {
+    name: 'Crash kiosk Chromium',
+    metric: 'kiosk_crashes_1h',
+    condition: 'gt',
+    warningValue: 1,  // >1 crash en 1 heure
+    criticalValue: 3, // >3 crashes en 1 heure
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 30,
+    escalateAfterMinutes: 60,
+    notifyChannels: ['email'],
+  },
 ];
 
 class AlertingService {

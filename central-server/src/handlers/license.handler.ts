@@ -10,6 +10,7 @@
 
 import { query } from '../config/database';
 import logger from '../config/logger';
+import { metricsService } from '../services/metrics.service';
 import { SocketContext } from './socket-context';
 
 // Lazy import to avoid circular dependency
@@ -77,6 +78,7 @@ export async function sendLicenseStatus(
 
     // Envoyer au Pi
     socket.emit('license_status', licenseStatus);
+    metricsService.recordLicenseStatusPush('success');
 
     logger.info('License status sent to site', {
       siteId,
@@ -117,6 +119,7 @@ export async function sendLicenseStatus(
       }
     }
   } catch (error) {
+    metricsService.recordLicenseStatusPush('failed');
     logger.error('Error sending license status:', { siteId, error });
   }
 }

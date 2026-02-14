@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { randomBytes, createHash } from 'crypto';
 import { AuthRequest, UserRole } from '../types';
 import logger from '../config/logger';
+import { metricsService } from '../services/metrics.service';
 import { auditService } from '../services/audit.service';
 import { formatPaginatedResponse } from '../middleware/pagination';
 import { commandQueueService } from '../services/command-queue.service';
@@ -1007,8 +1008,10 @@ export const scanWifiNetworks = async (req: AuthRequest, res: Response) => {
       30000 // 30 secondes pour le scan
     );
 
+    metricsService.recordWifiConfig('scan', 'success');
     res.json(result);
   } catch (error) {
+    metricsService.recordWifiConfig('scan', 'failed');
     logger.error('Scan WiFi networks error:', error);
     if (error instanceof HttpError) {
       return res.status(error.status).json({ error: error.message });
@@ -1037,8 +1040,10 @@ export const connectWifiClient = async (req: AuthRequest, res: Response) => {
       45000 // 45 secondes pour configuration + connexion
     );
 
+    metricsService.recordWifiConfig('connect', 'success');
     res.json(result);
   } catch (error) {
+    metricsService.recordWifiConfig('connect', 'failed');
     logger.error('Configure WiFi client error:', error);
     if (error instanceof HttpError) {
       return res.status(error.status).json({ error: error.message });

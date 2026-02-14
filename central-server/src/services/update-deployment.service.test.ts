@@ -52,13 +52,16 @@ jest.mock('./command-queue.service', () => ({
 }));
 
 const mockRecordDeployment = jest.fn();
+const mockRecordOtaError = jest.fn();
 jest.mock('./metrics.service', () => ({
   __esModule: true,
   default: {
     recordDeployment: (status: string, targetType: string) => mockRecordDeployment(status, targetType),
+    recordOtaError: (errorType: string) => mockRecordOtaError(errorType),
   },
   metricsService: {
     recordDeployment: (status: string, targetType: string) => mockRecordDeployment(status, targetType),
+    recordOtaError: (errorType: string) => mockRecordOtaError(errorType),
   },
 }));
 

@@ -393,6 +393,42 @@ const videoTransitionsTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques License Push =============
+
+const licenseStatusPushesTotal = new Counter({
+  name: 'neopro_license_status_pushes_total',
+  help: 'Total license status pushes to Pi sites',
+  labelNames: ['status'],
+  registers: [register],
+});
+
+// ============= Métriques Deploy Progress =============
+
+const deployProgressEventsTotal = new Counter({
+  name: 'neopro_deploy_progress_events_total',
+  help: 'Total deploy progress events received from Pi',
+  labelNames: ['type', 'status'],
+  registers: [register],
+});
+
+// ============= Métriques OTA Errors =============
+
+const otaErrorsTotal = new Counter({
+  name: 'neopro_ota_errors_total',
+  help: 'Total OTA deployment errors by error type',
+  labelNames: ['error_type'],
+  registers: [register],
+});
+
+// ============= Métriques WiFi Configuration =============
+
+const wifiConfigTotal = new Counter({
+  name: 'neopro_wifi_config_total',
+  help: 'Total WiFi client configuration operations',
+  labelNames: ['operation', 'status'],
+  registers: [register],
+});
+
 // ============= Métriques Kiosk =============
 
 const kioskStatusGauge = new Gauge({
@@ -676,6 +712,30 @@ class MetricsService {
 
   recordKioskCrash(): void {
     kioskCrashesTotal.inc();
+  }
+
+  // ============= Méthodes License Push =============
+
+  recordLicenseStatusPush(status: 'success' | 'failed'): void {
+    licenseStatusPushesTotal.inc({ status });
+  }
+
+  // ============= Méthodes Deploy Progress =============
+
+  recordDeployProgressEvent(type: 'content' | 'update', status: string): void {
+    deployProgressEventsTotal.inc({ type, status });
+  }
+
+  // ============= Méthodes OTA Errors =============
+
+  recordOtaError(errorType: string): void {
+    otaErrorsTotal.inc({ error_type: errorType });
+  }
+
+  // ============= Méthodes WiFi Configuration =============
+
+  recordWifiConfig(operation: 'scan' | 'connect', status: 'success' | 'failed'): void {
+    wifiConfigTotal.inc({ operation, status });
   }
 
   // ============= Méthodes Video Transition =============

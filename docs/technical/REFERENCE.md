@@ -1034,18 +1034,18 @@ Pi Analytics: 500 req/min     (impressions sponsors depuis les Pi - par IP)
 
 ### Services Backend Critiques
 
-| Service           | Fichier                     | Rôle                                                      |
-| ----------------- | --------------------------- | --------------------------------------------------------- |
-| **Socket**        | `socket.service.ts`         | Orchestrateur temps réel Pi ↔ Cloud (676 lignes)          |
-| **Storage**       | `storage.service.ts`        | Upload/download vidéos FTP (unifié)                       |
-| **Deployment**    | `deployment.service.ts`     | Orchestration déploiement vidéos                          |
-| **CommandQueue**  | `command-queue.service.ts`  | File d'attente commandes (offline/online)                 |
-| **MemoryManager** | `memory-manager.service.ts` | Monitoring heap, cleanup automatique                      |
-| **AdminOps**      | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire                |
-| **CronScheduler** | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)                       |
-| **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook)               |
-| **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready                          |
-| **Metrics**       | `metrics.service.ts`        | Export Prometheus (HTTP, WS, DB, disconnect, kiosk, etc.) |
+| Service           | Fichier                     | Rôle                                                                                                                                                     |
+| ----------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Socket**        | `socket.service.ts`         | Orchestrateur temps réel Pi ↔ Cloud (676 lignes)                                                                                                         |
+| **Storage**       | `storage.service.ts`        | Upload/download vidéos FTP (unifié)                                                                                                                      |
+| **Deployment**    | `deployment.service.ts`     | Orchestration déploiement vidéos                                                                                                                         |
+| **CommandQueue**  | `command-queue.service.ts`  | File d'attente commandes (offline/online)                                                                                                                |
+| **MemoryManager** | `memory-manager.service.ts` | Monitoring heap, cleanup automatique                                                                                                                     |
+| **AdminOps**      | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire                                                                                                               |
+| **CronScheduler** | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)                                                                                                                      |
+| **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook)                                                                                                              |
+| **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready                                                                                                                         |
+| **Metrics**       | `metrics.service.ts`        | Export Prometheus — 30 métriques `neopro_*` (HTTP, WS, DB, disconnect, kiosk, license push, deploy progress, OTA errors, WiFi config, video transitions) |
 
 ### Socket Handlers (`src/handlers/`)
 

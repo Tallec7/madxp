@@ -233,6 +233,25 @@ describe('Metrics endpoint', () => {
     const res = await request(app).get('/metrics');
     expect(res.headers['content-type']).toMatch(/text\/plain|text\/plain; version=/);
   });
+
+  it('GET /metrics includes all critical supervision metrics', async () => {
+    const res = await request(app).get('/metrics');
+    const criticalMetrics = [
+      'neopro_deployments_total',
+      'neopro_websocket_disconnects_total',
+      'neopro_kiosk_crashes_total',
+      'neopro_video_transition_safety_timeout_total',
+      'neopro_heartbeats_total',
+      'neopro_license_status_pushes_total',
+      'neopro_deploy_progress_events_total',
+      'neopro_ota_errors_total',
+      'neopro_wifi_config_total',
+    ];
+    for (const metric of criticalMetrics) {
+      expect({ metric, registered: res.text.includes(metric) })
+        .toEqual({ metric, registered: true });
+    }
+  });
 });
 
 // ----------------------------------------------------------
@@ -295,6 +314,11 @@ describe('Critical API routes are registered (not 404)', () => {
     { method: 'post' as const, path: '/api/assets/watermark/test-site-id' },
     // remote.routes
     { method: 'get' as const, path: '/api/remote/test-site-id/state' },
+    // sites.routes — remote-pin
+    { method: 'get' as const, path: '/api/sites/test-site-id/remote-pin' },
+    // sites.routes — wifi client
+    { method: 'get' as const, path: '/api/sites/test-site-id/wifi-scan' },
+    { method: 'post' as const, path: '/api/sites/test-site-id/wifi-connect' },
     // subscription.routes
     { method: 'get' as const, path: '/api/subscriptions' },
     // billing.routes

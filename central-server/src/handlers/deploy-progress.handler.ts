@@ -10,6 +10,7 @@
 
 import { query } from '../config/database';
 import logger from '../config/logger';
+import { metricsService } from '../services/metrics.service';
 import { SocketContext } from './socket-context';
 
 // Lazy import to avoid circular dependency
@@ -94,6 +95,8 @@ export async function handleDeployProgress(
       );
     }
 
+    metricsService.recordDeployProgressEvent('content', resolvedStatus);
+
     // Broadcast progress to dashboard
     const io = ctx.getIO();
     if (io) {
@@ -133,6 +136,8 @@ export async function handleUpdateProgress(
       error,
       version,
     });
+
+    metricsService.recordDeployProgressEvent('update', error ? 'failed' : completed ? 'completed' : 'in_progress');
 
     const updateService = await getUpdateDeploymentService();
     const isCompletedByProgress =
