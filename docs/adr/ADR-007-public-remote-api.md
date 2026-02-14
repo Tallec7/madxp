@@ -159,6 +159,17 @@ La commande `screenshot` a été ajoutée aux commandes valides. Elle demande au
 - `playerState` : État éphémère du player TV (15 champs : currentVideo, progress, phase, isPlaying, loopIndex, loopTotal, nextVideo, lastError, etc.), stocké en mémoire uniquement — pas de données sensibles
 - Commande `screenshot` : Retourne un JPEG via Socket.IO, pas de stockage persistant
 
+### Pending Config & Commands Indicator (v3.28+)
+
+L'endpoint `GET /state` retourne désormais `pendingConfigVersionId` (UUID de la version config en attente de déploiement, ou `null`) et `pendingCommandsCount` (nombre de commandes en file d'attente pour ce site). Ces champs permettent à la cloud remote d'afficher un indicateur lorsque le site est hors ligne et que des opérations sont en attente.
+
+À la reconnexion du Pi, `processPendingOnReconnect()` dans `socket.service.ts` traite automatiquement les commandes en queue puis appelle `triggerPendingConfigSync()` pour envoyer la config en attente. La déduplication est assurée par `hasActiveConfigCommand()` qui vérifie qu'aucune commande `update_config` active n'existe déjà.
+
+**Données publiques ajoutées** :
+
+- `pendingConfigVersionId` : UUID de la version config en attente (depuis `sites.pending_config_version_id`), ou `null`
+- `pendingCommandsCount` : Nombre de commandes en file d'attente (depuis table `pending_commands`)
+
 ## Références
 
 - [remote.controller.ts](../../central-server/src/controllers/remote.controller.ts) - Endpoints publics

@@ -276,7 +276,7 @@ Commandes:          ────────────────────
 
 | Événement                    | Direction          | Déclencheur                    | Action                                                            |
 | ---------------------------- | ------------------ | ------------------------------ | ----------------------------------------------------------------- |
-| **Connexion du Pi**          | Bidirectionnel     | Pi se connecte au central      | Échange état complet                                              |
+| **Connexion du Pi**          | Bidirectionnel     | Pi se connecte au central      | Échange état complet + traitement pending (queue + config)        |
 | **Déploiement vidéo NEOPRO** | Central → Local    | Admin NEOPRO clique "Déployer" | Download + merge config                                           |
 | **Modification locale**      | Local → Central    | Opérateur modifie via Admin UI | Upload état vers central                                          |
 | **sync_local_state**         | Local → Central    | Connexion + changement vidéos  | Config + liste vidéos + stockage                                  |
@@ -518,9 +518,11 @@ Depuis décembre 2025, les vidéos poussées depuis le central conservent leur n
 **Reconnexion (Semaine 5)** :
 
 1. Pi se connecte au central
-2. **Traitement automatique de la queue** :
-   - Le serveur détecte des commandes en attente
-   - Exécution séquentielle par priorité
+2. **`processPendingOnReconnect(siteId)`** s'exécute automatiquement :
+   - Commandes en queue (`pending_commands`) envoyées par priorité
+   - Déploiements de contenu en attente relancés
+   - Mises à jour logicielles en attente relancées
+   - **Config pending** (`pending_config_version_id`) envoyée via `triggerPendingConfigSync()`
    - La vidéo sponsor est déployée automatiquement
 3. Pi envoie son état complet (config + liste vidéos)
 4. Central compare avec son dernier miroir

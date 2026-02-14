@@ -297,26 +297,34 @@ GET /api/sites/queue/summary
 
 ### Traitement à la reconnexion
 
+`processPendingOnReconnect(siteId)` dans `socket.service.ts` orchestre 4 étapes séquentielles :
+
 ```
 1. Raspberry Pi se reconnecte (WebSocket connect)
    │
-2. socket.service.ts détecte la connexion
+2. socket.service.ts → processPendingOnReconnect(siteId)
    │
-3. Appelle commandQueueService.processPendingCommands(siteId)
+3. Étape 1 : commandQueueService.processPendingCommands(siteId)
+   │  Pour chaque commande en attente (triées par priorité) :
+   │  ├── Vérifie si le site est toujours connecté
+   │  ├── Incrémente le compteur de tentatives
+   │  ├── Crée une entrée dans remote_commands
+   │  ├── Envoie via WebSocket
+   │  │   ├── SUCCÈS → Supprime de pending_commands
+   │  │   └── ÉCHEC → Garde dans pending_commands (retry ultérieur)
+   │  └── Délai de 500ms entre chaque commande
    │
-4. Pour chaque commande en attente (triées par priorité) :
+4. Étape 2 : deploymentService.processPendingDeploymentsForSite(siteId)
    │
-   ├── Vérifie si le site est toujours connecté
-   ├── Incrémente le compteur de tentatives
-   ├── Crée une entrée dans remote_commands
-   ├── Envoie via WebSocket
-   │   │
-   │   ├── SUCCÈS → Supprime de pending_commands
-   │   │
-   │   └── ÉCHEC → Garde dans pending_commands (retry ultérieur)
+5. Étape 3 : updateDeploymentService.processPendingDeploymentsForSite(siteId)
    │
-   └── Délai de 500ms entre chaque commande
+6. Étape 4 : triggerPendingConfigSync(siteId)
+   │  Vérifie pending_config_version_id en base
+   │  Si une version est en attente ET pas de commande update_config active :
+   │  └── Envoie la config via WebSocket
 ```
+
+> Chaque étape est isolée dans un try/catch — un échec n'empêche pas les suivantes.
 
 ### Gestion des expirations
 
