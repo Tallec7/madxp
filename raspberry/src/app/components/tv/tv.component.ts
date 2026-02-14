@@ -1532,16 +1532,44 @@ export class TvComponent implements OnInit, OnDestroy {
 
           console.log(`[TV] Now playing video ${videoIndex} on ${this.activePlayer}`);
 
-          // Cacher le freeze-frame après 2×rAF + 300ms pour que le premier frame
-          // soit réellement composité sur le Pi (décodeur hardware VideoCore)
-          requestAnimationFrame(() => {
+          // Attendre que le player rende réellement des pixels avant de cacher le freeze-frame.
+          // Polling readyState + timeupdate au lieu d'un timer fixe de 300ms
+          let revealed = false;
+          const safetyTimeout = setTimeout(() => {
+            if (!revealed) {
+              revealed = true;
+              console.warn('[TV] playOnActivePlayer frame detection timeout, revealing');
+              this.hideFreezeFrame();
+              this.hideBlackOverlay();
+            }
+          }, 1500);
+
+          const reveal = () => {
+            if (revealed) return;
+            revealed = true;
+            clearTimeout(safetyTimeout);
+            player.removeEventListener('timeupdate', onFirstTimeUpdate);
             requestAnimationFrame(() => {
-              setTimeout(() => {
-                this.hideFreezeFrame();
-                this.hideBlackOverlay();
-              }, 300);
+              this.hideFreezeFrame();
+              this.hideBlackOverlay();
             });
-          });
+          };
+
+          const checkFrame = () => {
+            if (revealed) return;
+            if (player.readyState >= 4 && player.currentTime > 0) {
+              reveal();
+            } else {
+              requestAnimationFrame(checkFrame);
+            }
+          };
+
+          const onFirstTimeUpdate = () => {
+            reveal();
+          };
+          player.addEventListener('timeupdate', onFirstTimeUpdate, { once: true });
+
+          requestAnimationFrame(checkFrame);
         });
       }).catch(err => {
         console.error('[TV] Error playing video:', err, '- skipping to next');
@@ -1622,6 +1650,15 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Ne pas nettoyer si un preload est en cours sur ce player
     if (this.preloadReady || this.preloadedIndex !== null) return;
+
+    // Ne pas nettoyer si la vidéo active est courte (< 5s) — le preload va
+    // commencer bientôt et aura besoin de ce player. Le cleanup arriverait
+    // juste avant le preload, forçant un rechargement complet depuis le disque.
+    const activePlayer = this.getActivePlayer();
+    if (activePlayer?.duration && activePlayer.duration < 5) {
+      console.log('[TV] Skipping cleanup: active video is short, preload will need inactive player soon');
+      return;
+    }
 
     if (inactivePlayer.src) {
       inactivePlayer.pause();
@@ -1795,18 +1832,37 @@ export class TvComponent implements OnInit, OnDestroy {
 
     const onReady = () => {
       inactivePlayer.removeEventListener('canplaythrough', onReady);
+      clearInterval(readyCheckInterval);
       clearTimeout(safetyTimeout);
       this.preloadReady = true;
       doTriggerSwitch();
     };
     inactivePlayer.addEventListener('canplaythrough', onReady);
 
-    // Timeout de sécurité 3s — switch quand même si le préchargement traîne
+    // Polling actif du readyState — canplaythrough ne se déclenche pas toujours
+    // sur Pi avec erreurs GPU, mais readyState progresse quand même
+    const readyCheckInterval = setInterval(() => {
+      if (switchTriggered) {
+        clearInterval(readyCheckInterval);
+        return;
+      }
+      if (inactivePlayer.readyState >= 3) {
+        clearInterval(readyCheckInterval);
+        inactivePlayer.removeEventListener('canplaythrough', onReady);
+        clearTimeout(safetyTimeout);
+        this.preloadReady = true;
+        doTriggerSwitch();
+      }
+    }, 50); // Vérifier toutes les 50ms
+
+    // Timeout de sécurité 1.5s (réduit de 3s) — le freeze-frame couvre l'attente
+    // mais 3s est trop long pour l'utilisateur
     const safetyTimeout = setTimeout(() => {
+      clearInterval(readyCheckInterval);
       inactivePlayer.removeEventListener('canplaythrough', onReady);
       console.warn('[TV] Preload safety timeout in onVideoEnded, forcing switch');
       doTriggerSwitch();
-    }, 3000);
+    }, 1500);
   }
 
   /**
@@ -1830,61 +1886,103 @@ export class TvComponent implements OnInit, OnDestroy {
 
       // Démarrer la vidéo préchargée
       newPlayer.play().then(() => {
-        // Attendre que le premier frame soit réellement affiché sur le Pi
-        // 2x requestAnimationFrame + 150ms pour le décodeur hardware
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            setTimeout(() => {
-              // D'abord cacher l'ancien player (en dessous, à z-index 0)
-              this.setPlayerVisible(oldPlayer, false, 0);
+        // Attendre que la vidéo rende réellement des pixels avant de cacher le freeze-frame.
+        // On ne se fie PAS à un timer fixe (300ms) car sur Pi 5 avec erreurs GPU,
+        // le décodeur hardware peut prendre plus longtemps.
+        // Stratégie : polling rapide de readyState + timeupdate comme signal fiable
+        // que le décodeur produit des frames, avec un safety timeout.
+        const revealWhenReady = () => {
+          // D'abord cacher l'ancien player (en dessous, à z-index 0)
+          this.setPlayerVisible(oldPlayer, false, 0);
 
-              // Puis cacher le freeze-frame et le black overlay
-              // Le nouveau player (z-index 2, opacity 1) est déjà visible
-              this.hideFreezeFrame();
-              this.hideBlackOverlay();
+          // Puis cacher le freeze-frame et le black overlay
+          // Le nouveau player (z-index 2, opacity 1) est déjà visible
+          this.hideFreezeFrame();
+          this.hideBlackOverlay();
 
-              // Ramener le nouveau player au z-index standard (1) une fois l'ancien caché
-              newPlayer.style.zIndex = '1';
+          // Ramener le nouveau player au z-index standard (1) une fois l'ancien caché
+          newPlayer.style.zIndex = '1';
 
-              // Mettre à jour l'état
-              this.activePlayer = this.activePlayer === 'A' ? 'B' : 'A';
-              this.currentLoopIndex = nextVideoIndex;
-              this.preloadReady = false;
-              this.preloadedIndex = null;
+          // Mettre à jour l'état
+          this.activePlayer = this.activePlayer === 'A' ? 'B' : 'A';
+          this.currentLoopIndex = nextVideoIndex;
+          this.preloadReady = false;
+          this.preloadedIndex = null;
 
-              // Incrémenter le compteur pour le cleanup mémoire
-              this.incrementVideoPlayCount();
+          // Incrémenter le compteur pour le cleanup mémoire
+          this.incrementVideoPlayCount();
 
-              // Tracker (désactivé pour les slaves)
-              const video = this.currentLoopVideos[nextVideoIndex];
-              if (!this.isSlaveMode) {
-                this.analyticsService.trackVideoStart(video, 'auto');
-                this.sponsorAnalytics.trackSponsorStart(
-                  video,
-                  'auto',
-                  newPlayer.duration || 0
-                );
-              }
+          // Tracker (désactivé pour les slaves)
+          const video = this.currentLoopVideos[nextVideoIndex];
+          if (!this.isSlaveMode) {
+            this.analyticsService.trackVideoStart(video, 'auto');
+            this.sponsorAnalytics.trackSponsorStart(
+              video,
+              'auto',
+              newPlayer.duration || 0
+            );
+          }
 
-              // Émettre l'état de la boucle si master
-              if (this.tvRole === 'master') {
-                this.emitLoopState(nextVideoIndex, video.path, false);
-              }
+          // Émettre l'état de la boucle si master
+          if (this.tvRole === 'master') {
+            this.emitLoopState(nextVideoIndex, video.path, false);
+          }
 
-              console.log(`[TV] Switched to player ${this.activePlayer}, now playing index ${nextVideoIndex}`);
+          console.log(`[TV] Switched to player ${this.activePlayer}, now playing index ${nextVideoIndex}`);
 
-              // NE PAS précharger immédiatement après le switch
-              // Le préchargement sera déclenché par onTimeUpdate 1.5s avant la fin
-              // Cela évite de décoder 2 vidéos en parallèle
-              this.pendingSwitch = false;
-              this.switchTriggered = false; // Reset pour le prochain cycle
+          // NE PAS précharger immédiatement après le switch
+          // Le préchargement sera déclenché par onTimeUpdate 1.5s avant la fin
+          // Cela évite de décoder 2 vidéos en parallèle
+          this.pendingSwitch = false;
+          this.switchTriggered = false; // Reset pour le prochain cycle
 
-              // Nettoyer l'ancien player après stabilisation du nouveau
-              // Libère les buffers décodeur GPU (~30-50MB par vidéo)
-              setTimeout(() => this.cleanupInactivePlayer(), 500);
-            }, 300); // 300ms pour le décodeur hardware Pi (VideoCore VI/VII nécessite 200-400ms pour compositor le premier I-frame)
-          });
-        });
+          // Nettoyer l'ancien player après stabilisation du nouveau
+          // Libère les buffers décodeur GPU (~30-50MB par vidéo)
+          setTimeout(() => this.cleanupInactivePlayer(), 500);
+        };
+
+        // Polling: attendre que le player ait réellement des données décodées
+        // readyState 4 = HAVE_ENOUGH_DATA, currentTime > 0 = le décodeur a avancé
+        let revealed = false;
+        const safetyTimeout = setTimeout(() => {
+          if (!revealed) {
+            revealed = true;
+            console.warn('[TV] Frame detection safety timeout, revealing anyway');
+            revealWhenReady();
+          }
+        }, 1500); // Safety: max 1.5s d'attente (au lieu de 300ms fixe)
+
+        const checkFrame = () => {
+          if (revealed) return;
+          // Le player a décodé au moins un frame ET progresse dans le temps
+          if (newPlayer.readyState >= 4 && newPlayer.currentTime > 0) {
+            revealed = true;
+            clearTimeout(safetyTimeout);
+            // Un seul rAF pour synchroniser avec le prochain paint du compositor
+            requestAnimationFrame(() => {
+              revealWhenReady();
+            });
+          } else {
+            // Re-vérifier au prochain frame (~16ms à 60fps)
+            requestAnimationFrame(checkFrame);
+          }
+        };
+
+        // Aussi écouter timeupdate comme signal fiable (le décodeur produit des frames)
+        const onFirstTimeUpdate = () => {
+          newPlayer.removeEventListener('timeupdate', onFirstTimeUpdate);
+          if (!revealed) {
+            revealed = true;
+            clearTimeout(safetyTimeout);
+            requestAnimationFrame(() => {
+              revealWhenReady();
+            });
+          }
+        };
+        newPlayer.addEventListener('timeupdate', onFirstTimeUpdate);
+
+        // Démarrer le polling
+        requestAnimationFrame(checkFrame);
       }).catch(err => {
         console.error('[TV] Error switching to next video:', err);
         // Remettre le nouveau player en invisible (il n'a pas de frame affiché)

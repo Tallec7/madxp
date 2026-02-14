@@ -1,7 +1,7 @@
 # ADR-008: Double-Buffer Vidéo avec Freeze-Frame Pré-capturé
 
-**Date** : Janvier-Février 2026 (v2.24-v3.9.x)
-**Statut** : Accepté (itéré sur 5 commits majeurs + correctifs v3.9.x)
+**Date** : Janvier-Février 2026 (v2.24-v3.23.x)
+**Statut** : Accepté (itéré sur 5 commits majeurs + correctifs v3.9.x-v3.23.x)
 **Décideurs** : Équipe Neopro
 
 ---
@@ -27,7 +27,7 @@ z-index  5: Black overlay (bloque la boucle pendant transitions)
 z-index 1-2: Players boucle A/B (alternent pour la boucle continue)
 ```
 
-### Stratégie de transition (boucle) — v3.9.x
+### Stratégie de transition (boucle) — v3.23.x
 
 ```
 Pendant lecture :
@@ -39,11 +39,24 @@ Pendant lecture :
 À ended (fallback si early switch raté) :
   1. Affiche freeze-frame (opacity 1, PAS display:block)
   2. Charge vidéo suivante sur player inactif
-  3. Attend canplaythrough (timeout 3s)
-  4. switchPlayers() : nouveau z-index 2 → play → 2×rAF + 300ms → cache ancien
+  3. Attend canplaythrough + polling readyState>=3 /50ms (timeout 1.5s)
+  4. switchPlayers() : nouveau z-index 2 → play → détection frame réel → cache ancien
 Après switch :
   5. cleanupInactivePlayer() → libère buffers décodeur GPU (~30-50MB)
+     (skip si vidéo active < 5s pour éviter la race condition avec le preload)
 ```
+
+### Détection de frame réel (v3.23.x)
+
+Au lieu d'un timer fixe de 300ms pour cacher le freeze-frame après un switch,
+le système attend un **signal réel** que le décodeur produit des pixels :
+
+- Polling `readyState >= 4 && currentTime > 0` via `requestAnimationFrame`
+- Listener `timeupdate` comme signal de confirmation
+- Safety timeout 1.5s (ne devrait jamais être atteint en fonctionnement normal)
+
+Cela élimine les trous noirs sur Pi 5 où les erreurs GPU (SharedImageStub)
+ralentissent le décodeur au-delà des 300ms fixes.
 
 ### Disk cache warming (boucles 20-100+ vidéos) — v3.9.x
 
@@ -70,8 +83,8 @@ fetch(video.path) → response.arrayBuffer() → discard (données restent en pa
 - `opacity: 0/1` uniquement pour montrer/cacher le canvas
 - Listener `timeupdate` throttlé (200ms) pour preload anticipé et early switch
 - Attendre `canplaythrough` avant de jouer
-- Délai 300ms dans `switchPlayers()` pour le compositor GPU
-- `cleanupInactivePlayer()` après chaque switch (libère décodeur GPU)
+- Détection de frame réel dans `switchPlayers()` (readyState + timeupdate, PAS timer fixe)
+- `cleanupInactivePlayer()` après chaque switch (libère décodeur GPU) — skip si vidéo < 5s
 - `warmDiskCache()` via fetch() à mi-vidéo (prochaines 3 vidéos)
 
 ## Alternatives Considérées (et abandonnées)
@@ -121,11 +134,12 @@ fetch(video.path) → response.arrayBuffer() → discard (données restent en pa
 4. **Mémoire stable** : ~50-60MB Chromium constant quel que soit le nombre de vidéos
 5. **Vidéos manuelles fluides** : Le freeze-frame masque le chargement de la vidéo manuelle
 6. **Compatible Pi 4 et Pi 5** : Fonctionne avec VideoCore VI et VII
+7. **Robuste aux erreurs GPU** : Détection de frame réel tolère les ralentissements du décodeur
 
 ### Négatives
 
 1. **Complexité** : ~500 lignes de code pour la gestion des transitions
-2. **Légère pause** : ~300-500ms entre les vidéos de boucle (acceptable vs flash)
+2. **Légère pause** : Imperceptible en fonctionnement normal (détection de frame réel)
 3. **Mémoire canvas** : ~4.5MB pour le canvas 720p (réduit de 1080p pour économie)
 4. **Maintenance** : Toute modification du TV component nécessite des tests sur Pi réel
 

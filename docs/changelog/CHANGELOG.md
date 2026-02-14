@@ -61,6 +61,10 @@
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **tv-transitions:** fix black hole between videos on Pi 5 — replace fixed 300ms timer in `switchPlayers()` and `playOnActivePlayer()` with real frame detection (polling `readyState >= 4 && currentTime > 0` + `timeupdate` listener). The fixed timer was not enough on Pi 5 where GPU SharedImageStub errors slow down the hardware decoder beyond 300ms, causing the freeze-frame to be hidden before the new video renders its first frame. Also reduce `onVideoEnded` safety timeout from 3s to 1.5s with active `readyState` polling every 50ms instead of relying solely on `canplaythrough`. Fix cleanup/preload race condition for short videos (< 5s) where `cleanupInactivePlayer()` at 500ms would wipe the inactive player before `onTimeUpdate` triggers preload at 1.5s before end. ADR-008 + rules synced
+
 ### Features
 
 - **admin:** mode club/technicien + widget sync status — l'admin :8080 propose désormais deux modes : mode club (simplifié, pour le staff sportif bénévole) et mode technicien (complet). Le mode club affiche une carte santé globale (🟢/⚠️/🔴) au lieu des métriques détaillées, masque les onglets Logs/Système, et ne montre que la connexion WiFi actuelle dans Réseau. Un widget Sync Status en haut du dashboard (les deux modes) affiche l'état de connexion cloud, la dernière synchronisation, les commandes en attente et les erreurs dead-letter. Le mode est persisté dans localStorage. Nouvelle route backend `GET /api/sync-status` lisant les fichiers d'état du sync-agent. 3 fichiers créés (`routes/sync-status.js`, `modules/core/mode-switcher.js`, `modules/dashboard/sync-status.js`), 7 modifiés (admin-server, index.html, styles.css, dashboard/index.js, bootstrap.js, demo/index.js, build-admin.sh). 124 admin tests + 126 smoke tests OK
