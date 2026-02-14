@@ -1,3 +1,9 @@
+## [3.29.1](https://github.com/Tallec7/neopro/compare/v3.29.0...v3.29.1) (2026-02-14)
+
+### Bug Fixes
+
+- **ota:** fix pre-update migration chown and sed patterns on central server ([6b551e9](https://github.com/Tallec7/neopro/commit/6b551e954b042430be8d63af5f7d86b2e5faee0f))
+
 # [3.29.0](https://github.com/Tallec7/neopro/compare/v3.28.2...v3.29.0) (2026-02-14)
 
 ### Features
