@@ -1450,7 +1450,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
           },
           statistics: {
             heartbeats24h: data.connection.heartbeat_24h.count,
-            uptime24h: 0,
+            uptime24h: Math.min(100, (data.connection.heartbeat_24h.count / 2880) * 100),
             firstHeartbeat24h: data.connection.heartbeat_24h.firstAt,
             lastHeartbeat24h: data.connection.heartbeat_24h.lastAt
           },
