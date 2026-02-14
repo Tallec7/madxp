@@ -1,3 +1,9 @@
+## [3.28.2](https://github.com/Tallec7/neopro/compare/v3.28.1...v3.28.2) (2026-02-14)
+
+### Bug Fixes
+
+- **cloud-remote:** use analytics_category instead of non-existent category on LoopVideo ([a68ff27](https://github.com/Tallec7/neopro/commit/a68ff27b01a7bacbf64117608d25307068abd4fb))
+
 ## [3.28.1](https://github.com/Tallec7/neopro/compare/v3.28.0...v3.28.1) (2026-02-14)
 
 ### Bug Fixes
