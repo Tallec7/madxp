@@ -383,6 +383,8 @@ class UpdateDeploymentService {
       deploymentId,
       version: update.version,
       updateUrl: update.package_url,
+      scheduleReboot,
+      autoRollback,
     });
 
     // Utiliser sendOrQueue comme pour update_config

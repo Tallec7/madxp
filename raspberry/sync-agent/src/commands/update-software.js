@@ -17,7 +17,7 @@ class SoftwareUpdateHandler {
   async execute(data, progressCallback) {
     const { updateUrl, version, checksum, packageSize, scheduleReboot, autoRollback } = data;
 
-    logger.info('Starting software update', { version });
+    logger.info('Starting software update', { version, scheduleReboot: !!scheduleReboot, autoRollback: autoRollback !== false });
 
     try {
       progressCallback(2);
