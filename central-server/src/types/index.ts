@@ -264,6 +264,23 @@ export interface HeartbeatMessage {
     isManualOverride: boolean;
   } | null;
   transitionMetrics?: TransitionMetrics | null;
+  playerState?: {
+    currentVideo: string | null;
+    currentCategory: string | null;
+    progress: number;
+    duration: number;
+    currentTime: number;
+    phase: string;
+    isManualMode: boolean;
+    isPlaying: boolean;
+    loopIndex: number;
+    loopTotal: number;
+    nextVideo: string | null;
+    lastError: string | null;
+    lastTransitionAt: string | null;
+    overlayActive: boolean;
+    updatedAt: string;
+  } | null;
 }
 
 // ============================================================================

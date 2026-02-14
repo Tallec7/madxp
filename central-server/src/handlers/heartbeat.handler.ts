@@ -80,6 +80,20 @@ export async function handleHeartbeat(
       });
     }
 
+    // Update player state in memory (ephemeral — for cloud monitoring)
+    if (message.playerState) {
+      ctx.playerStates.set(siteId, message.playerState as import('./socket-context').PlayerState);
+
+      // Broadcast player state update to dashboard
+      const io = ctx.getIO();
+      if (io) {
+        io.to('dashboard').emit('player_state_updated', {
+          siteId,
+          playerState: message.playerState,
+        });
+      }
+    }
+
     // Record transition quality metrics (video double-buffer)
     if (message.transitionMetrics) {
       metricsService.recordTransitionMetrics(message.transitionMetrics);

@@ -1009,4 +1009,34 @@ describe('SocketService', () => {
       expect(connectedSites.size).toBe(0);
     });
   });
+
+  describe('processPendingOnReconnect', () => {
+    it('should call triggerPendingConfigSync after processing pending commands', async () => {
+      const triggerSpy = jest
+        .spyOn(socketService as any, 'triggerPendingConfigSync')
+        .mockResolvedValue(undefined);
+
+      await (socketService as any).processPendingOnReconnect('site-uuid-123');
+
+      expect(triggerSpy).toHaveBeenCalledWith('site-uuid-123');
+      triggerSpy.mockRestore();
+    });
+
+    it('should not throw if triggerPendingConfigSync fails', async () => {
+      const triggerSpy = jest
+        .spyOn(socketService as any, 'triggerPendingConfigSync')
+        .mockRejectedValue(new Error('Config sync failed'));
+
+      await expect(
+        (socketService as any).processPendingOnReconnect('site-uuid-123')
+      ).resolves.not.toThrow();
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error triggering pending config sync on connect:',
+        expect.objectContaining({ siteId: 'site-uuid-123' })
+      );
+
+      triggerSpy.mockRestore();
+    });
+  });
 });

@@ -14,6 +14,8 @@ import { DoubleBufferVideoService, DoubleBufferCallbacks } from '../../services/
 import { VideoErrorRecoveryService, ErrorRecoveryCallbacks } from '../../services/video-error-recovery.service';
 import { WatermarkService } from '../../services/watermark.service';
 import { LicenseService, LicenseState } from '../../services/license.service';
+import { PlayerStateService } from '../../services/player-state.service';
+import { ScreenshotService } from '../../services/screenshot.service';
 import { LicenseBlockComponent } from '../license-block/license-block.component';
 import { Video } from '../../interfaces/video.interface';
 import { Configuration, OverlayPosition, SportType, WatermarkScheduleRule } from '../../interfaces/configuration.interface';
@@ -55,6 +57,8 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly errorRecoveryService = inject(VideoErrorRecoveryService);
   private readonly watermarkService = inject(WatermarkService);
   private readonly licenseService = inject(LicenseService);
+  private readonly playerStateService = inject(PlayerStateService);
+  private readonly screenshotService = inject(ScreenshotService);
 
   private localBroadcastSubscriptions: Subscription[] = [];
 
@@ -396,6 +400,29 @@ export class TvComponent implements OnInit, OnDestroy {
     });
 
     // =========================================================================
+    // SCREENSHOT À LA DEMANDE (cloud dashboard → Pi)
+    // =========================================================================
+    this.socketService.on('screenshot-request', () => {
+      console.log('[TV] Screenshot request received');
+      const activeVideo = this.isManualMode
+        ? this.getActiveManualPlayer()
+        : this.getActivePlayer();
+      if (activeVideo) {
+        const data = this.screenshotService.captureScreenshot(activeVideo);
+        if (data) {
+          this.socketService.emit('screenshot-data', {
+            image: data,
+            timestamp: Date.now(),
+            currentVideo: PlayerStateService.filenameFromPath(activeVideo.src),
+            phase: this.activePhase,
+            isManualMode: this.isManualMode,
+          } as unknown as Command);
+          console.log('[TV] Screenshot sent');
+        }
+      }
+    });
+
+    // =========================================================================
     // COMMUNICATION LOCALE VIA BROADCASTCHANNEL
     // Permet à Remote et TV de communiquer directement sur le même appareil
     // sans passer par le serveur cloud
@@ -634,7 +661,54 @@ export class TvComponent implements OnInit, OnDestroy {
     return styles;
   }
 
+  // =========================================================================
+  // PLAYER STATE — Émet l'état du player pour le monitoring cloud
+  // =========================================================================
+
+  private playerStateInterval: ReturnType<typeof setInterval> | null = null;
+
+  /**
+   * Partial update of the player state and emit via Socket.IO.
+   * Called on every meaningful change (play, ended, error, phase, manual).
+   */
+  private emitPlayerState(partial: Partial<import('../../services/player-state.service').PlayerState>): void {
+    const state = this.playerStateService.update(partial);
+    this.socketService.emit('player-state', state as unknown as Command);
+  }
+
+  /**
+   * Start periodic progress updates (every 5 seconds).
+   * Lightweight: only updates currentTime/progress/duration, no Socket.IO emit
+   * (the heartbeat picks up the latest state every 30s).
+   */
+  private startPlayerStateProgressTracker(): void {
+    if (this.playerStateInterval) return;
+    this.playerStateInterval = setInterval(() => {
+      const player = this.isManualMode
+        ? this.getActiveManualPlayer()
+        : this.getActivePlayer();
+      if (player && player.duration > 0 && !player.paused) {
+        this.playerStateService.update({
+          currentTime: Math.floor(player.currentTime),
+          duration: Math.floor(player.duration),
+          progress: Math.round((player.currentTime / player.duration) * 100),
+          isPlaying: true,
+        });
+      }
+    }, 5000);
+  }
+
+  private stopPlayerStateProgressTracker(): void {
+    if (this.playerStateInterval) {
+      clearInterval(this.playerStateInterval);
+      this.playerStateInterval = null;
+    }
+  }
+
   public ngOnDestroy() {
+    // Arrêter le tracker de progression du player state
+    this.stopPlayerStateProgressTracker();
+
     // Terminer la session analytics (désactivé pour les slaves)
     if (!this.isSlaveMode) {
       this.analyticsService.endSession();
@@ -744,6 +818,18 @@ export class TvComponent implements OnInit, OnDestroy {
                   this.sponsorAnalytics.trackSponsorStart(video, 'manual', targetPlayer.duration || 0);
                 }
               }
+
+              // Mettre à jour l'état du player pour le monitoring cloud
+              this.emitPlayerState({
+                currentVideo: PlayerStateService.filenameFromPath(video.path),
+                currentCategory: null,
+                duration: targetPlayer.duration || 0,
+                currentTime: 0,
+                isManualMode: true,
+                isPlaying: true,
+                lastError: null,
+                lastTransitionAt: new Date().toISOString(),
+              });
 
               // Émettre l'état si master (vidéo manuelle)
               if (this.tvRole === 'master') {
@@ -926,6 +1012,9 @@ export class TvComponent implements OnInit, OnDestroy {
 
     this.activePhase = phase;
 
+    // Mettre à jour l'état du player pour le monitoring cloud
+    this.emitPlayerState({ phase });
+
     // Mapper la phase vers la période analytics
     const periodMap: Record<string, 'pre_match' | 'halftime' | 'post_match' | 'loop'> = {
       'neutral': 'loop',
@@ -1046,6 +1135,9 @@ export class TvComponent implements OnInit, OnDestroy {
     if (this.localOptions.overlay.scoreEnabled) {
       this.showScoreOverlay = true;
     }
+
+    // Mettre à jour l'état du player pour le monitoring cloud
+    this.emitPlayerState({ overlayActive: this.showScoreOverlay });
   }
 
   /**
@@ -1361,7 +1453,10 @@ export class TvComponent implements OnInit, OnDestroy {
     // Émettre les métriques de transition toutes les 30s (aligné avec heartbeat)
     this.transitionMetricsInterval = setInterval(() => this.emitTransitionMetrics(), 30000);
 
-    console.log('[TV] Double-buffer initialized (4 players) with error recovery + transition metrics');
+    // Démarrer le tracker de progression du player state (mise à jour toutes les 5s)
+    this.startPlayerStateProgressTracker();
+
+    console.log('[TV] Double-buffer initialized (4 players) with error recovery + transition metrics + player state');
   }
 
   /**
@@ -1574,6 +1669,22 @@ export class TvComponent implements OnInit, OnDestroy {
           }
 
           console.log(`[TV] Now playing video ${videoIndex} on ${this.activePlayer}`);
+
+          // Mettre à jour l'état du player pour le monitoring cloud
+          const nextIdx = (videoIndex + 1) % loopVideos.length;
+          this.emitPlayerState({
+            currentVideo: PlayerStateService.filenameFromPath(video.path),
+            currentCategory: video.category || null,
+            duration: player.duration || 0,
+            currentTime: 0,
+            isManualMode: false,
+            isPlaying: true,
+            loopIndex: videoIndex,
+            loopTotal: loopVideos.length,
+            nextVideo: PlayerStateService.filenameFromPath(loopVideos[nextIdx]?.path),
+            lastError: null,
+            lastTransitionAt: new Date().toISOString(),
+          });
 
           // Attendre que le player rende réellement des pixels avant de cacher le freeze-frame.
           // Polling readyState + timeupdate au lieu d'un timer fixe de 300ms
@@ -2562,6 +2673,12 @@ export class TvComponent implements OnInit, OnDestroy {
 
     this.consecutiveErrors++;
     this.transitionMetrics.videoErrorCount++;
+
+    // Mettre à jour l'état du player pour le monitoring cloud
+    this.emitPlayerState({
+      lastError: `[${which}] ${errorMessage} (code ${errorCode})`,
+      isPlaying: false,
+    });
 
     // Si trop d'erreurs consécutives, tenter un reset complet
     if (this.consecutiveErrors >= this.MAX_CONSECUTIVE_ERRORS) {

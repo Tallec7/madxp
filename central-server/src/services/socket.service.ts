@@ -124,6 +124,7 @@ class SocketService {
   private pendingCommands: Map<string, PendingCommand> = new Map();
   private lastPongReceived: Map<string, number> = new Map();
   private recordingStates: Map<string, { isRecording: boolean; isManualOverride: boolean; updatedAt: number }> = new Map();
+  private playerStates: Map<string, import('../handlers/socket-context').PlayerState> = new Map();
   private timeoutCheckInterval: NodeJS.Timeout | null = null;
   private connectionHealthCheckInterval: NodeJS.Timeout | null = null;
   private dbSyncInterval: NodeJS.Timeout | null = null;
@@ -138,6 +139,7 @@ class SocketService {
       pendingCommands: this.pendingCommands,
       lastPongReceived: this.lastPongReceived,
       recordingStates: this.recordingStates,
+      playerStates: this.playerStates,
     };
   }
 
@@ -419,6 +421,14 @@ class SocketService {
     socket.on('network_rollback', withMetrics('network_rollback', handlers.network_rollback));
     socket.on('recording-state', withMetrics('recording-state', handlers['recording-state']));
 
+    // Cloud monitoring: relay screenshot data from Pi to dashboard
+    socket.on('screenshot-data', (data: unknown) => {
+      logger.info('Screenshot data received from Pi', { siteId });
+      if (this.io) {
+        this.io.to('dashboard').emit('screenshot-data', { siteId, ...(data as Record<string, unknown>) });
+      }
+    });
+
     (socket as any)._neoHandlers = handlers;
 
     // Initialize pong timestamp
@@ -466,6 +476,12 @@ class SocketService {
       await updateService.processPendingDeploymentsForSite(siteId);
     } catch (error) {
       logger.error('Error processing pending update deployments on connect:', { siteId, error });
+    }
+
+    try {
+      await this.triggerPendingConfigSync(siteId);
+    } catch (error) {
+      logger.error('Error triggering pending config sync on connect:', { siteId, error });
     }
   }
 
@@ -518,6 +534,7 @@ class SocketService {
       this.connectedSites.delete(siteId);
       this.lastPongReceived.delete(siteId);
       this.recordingStates.delete(siteId);
+      this.playerStates.delete(siteId);
 
       query(
         'UPDATE sites SET status = $1, last_seen_at = NOW() WHERE id = $2',
@@ -563,6 +580,10 @@ class SocketService {
   getRecordingState(siteId: string): { isRecording: boolean; isManualOverride: boolean } | null {
     const state = this.recordingStates.get(siteId);
     return state ? { isRecording: state.isRecording, isManualOverride: state.isManualOverride } : null;
+  }
+
+  getPlayerState(siteId: string): import('../handlers/socket-context').PlayerState | null {
+    return this.playerStates.get(siteId) || null;
   }
 
   getConnectedSites(): string[] {
@@ -683,6 +704,7 @@ class SocketService {
     this.connectedSites.clear();
     this.lastPongReceived.clear();
     this.recordingStates.clear();
+    this.playerStates.clear();
 
     if (this.redisClient) {
       try {

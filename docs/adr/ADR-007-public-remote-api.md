@@ -22,7 +22,7 @@ Contraintes :
 Les endpoints `/api/remote/*` sont **volontairement publics** (pas d'authentification JWT) :
 
 ```
-GET  /api/remote/:siteId/state      → État du site + licence + recording state (public)
+GET  /api/remote/:siteId/state      → État du site + licence + recording state + player state (public)
 POST /api/remote/:siteId/verify-pin → Vérifier PIN → JWT token (public)
 POST /api/remote/:siteId/command    → Envoyer une commande (public, PIN-protégé si configuré)
 GET  /api/remote/:siteId/videos     → Liste vidéos (public, PIN-protégé si configuré)
@@ -39,6 +39,7 @@ GET  /api/remote/:siteId/videos     → Liste vidéos (public, PIN-protégé si 
 
 - `licenseStatus` : Toujours retourné (même sans PIN), expose uniquement le statut et les compteurs — pas de données sensibles
 - `recordingState` : État éphémère (isRecording, isManualOverride), stocké en mémoire uniquement
+- `playerState` : État éphémère du player TV (vidéo en cours, progression, phase), stocké en mémoire uniquement
 
 ## Alternatives Considérées
 
@@ -146,6 +147,17 @@ Les clubs peuvent configurer un PIN 4-6 chiffres pour protéger l'accès cloud r
 ### Licence + REC (v3.21+)
 
 L'endpoint `GET /state` retourne désormais `licenseStatus` (statut, daysLeft, messageRemote...) et `recordingState` (isRecording, isManualOverride). La commande `recording-toggle` a été ajoutée aux commandes valides. Le recording state est éphémère (Map en mémoire côté serveur), alimenté par le heartbeat du Pi.
+
+### Live View TV — Player State + Screenshot (v3.27+)
+
+L'endpoint `GET /state` retourne désormais `playerState` (état complet du player TV : vidéo en cours, progression, phase, position dans la boucle, prochaine vidéo, erreurs, etc.). Le player state est éphémère (Map `playerStates` en mémoire côté serveur), alimenté par le heartbeat du Pi (30s) et broadcasté en temps réel vers la room `dashboard` via Socket.IO (`player_state_updated`).
+
+La commande `screenshot` a été ajoutée aux commandes valides. Elle demande au Pi de capturer un screenshot JPEG 480p (quality 0.5, ~30-50KB) du player TV actif via `canvas.drawImage()`. Le screenshot est relayé de manière bidirectionnelle : central → sync-agent (persistent socket) → local server (broadcast) → TV component → screenshot-data → sync-agent (relay éphémère) → central → dashboard via Socket.IO (`screenshot-data`). Rate-limited à 1/seconde côté Pi.
+
+**Données publiques ajoutées** :
+
+- `playerState` : État éphémère du player TV (15 champs : currentVideo, progress, phase, isPlaying, loopIndex, loopTotal, nextVideo, lastError, etc.), stocké en mémoire uniquement — pas de données sensibles
+- Commande `screenshot` : Retourne un JPEG via Socket.IO, pas de stockage persistant
 
 ## Références
 

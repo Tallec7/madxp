@@ -18,6 +18,7 @@ import { createHash } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { siteRepository } from '../repositories';
 import socketService from '../services/socket.service';
+import { commandQueueService } from '../services/command-queue.service';
 import logger from '../config/logger';
 import { generateRemotePinToken } from '../middleware/remote-pin.middleware';
 import { LicenseStatusResponse, SiteSubscriptionInfo, SubscriptionPlan, SuspensionReason } from '../types';
@@ -108,6 +109,16 @@ export async function getRemoteState(req: Request, res: Response) {
     // Get recording state (ephemeral, in-memory)
     const recordingState = socketService.getRecordingState(siteId);
 
+    // Pending config and commands info
+    const pendingConfigVersionId = (site as Record<string, unknown>).pending_config_version_id || null;
+    let pendingCommandsCount = 0;
+    try {
+      const pendingCommands = await commandQueueService.getPendingCommands(siteId);
+      pendingCommandsCount = pendingCommands.length;
+    } catch {
+      // Non-blocking — pending_commands table may not exist yet
+    }
+
     // Réponse de base (toujours retournée)
     const response: Record<string, unknown> = {
       siteId,
@@ -131,6 +142,9 @@ export async function getRemoteState(req: Request, res: Response) {
         daysSinceCheck: licenseStatus.days_since_check ?? null,
       } : null,
       recordingState: recordingState || { isRecording: false, isManualOverride: false },
+      playerState: socketService.getPlayerState(siteId) || null,
+      pendingConfigVersionId,
+      pendingCommandsCount,
     };
 
     // Si pas de PIN ou PIN vérifié → retourner la config complète
@@ -268,6 +282,7 @@ export async function sendRemoteCommand(req: Request, res: Response) {
       'breaking-news',
       'match-config',
       'recording-toggle',
+      'screenshot',
     ];
 
     if (!validCommands.includes(type)) {
@@ -368,6 +383,11 @@ export async function sendRemoteCommand(req: Request, res: Response) {
       case 'recording-toggle':
         eventName = 'recording-toggle';
         payload = { timestamp };
+        break;
+
+      case 'screenshot':
+        eventName = 'screenshot-request';
+        payload = { timestamp, quality: data?.quality || 0.5 };
         break;
 
       default:

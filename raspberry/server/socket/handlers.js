@@ -303,6 +303,51 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
       io.emit('license_blocked', status);
     });
 
+    // =========================================================================
+    // CLOUD MONITORING — Player state + screenshots
+    // =========================================================================
+
+    /**
+     * Player state update (from TV component) — stores and broadcasts.
+     * Picked up by sync-agent for heartbeat relay to central server.
+     * @event player-state
+     * @param {object} data — PlayerState object (currentVideo, phase, progress, etc.)
+     */
+    socket.on('player-state', (data) => {
+      stateService.setPlayerState(data);
+      socket.broadcast.emit('player-state', data);
+    });
+
+    /**
+     * Get player state (from sync-agent via callback) — returns current state.
+     * @event get-player-state
+     */
+    socket.on('get-player-state', (callback) => {
+      const state = stateService.getPlayerState();
+      if (typeof callback === 'function') {
+        callback(state);
+      }
+    });
+
+    /**
+     * Screenshot request (from sync-agent/cloud) — broadcasts to TV component.
+     * @event screenshot-request
+     */
+    socket.on('screenshot-request', (data) => {
+      console.log('[Screenshot] Request received');
+      io.emit('screenshot-request', data);
+    });
+
+    /**
+     * Screenshot data (from TV component) — broadcasts to all (sync-agent picks it up).
+     * @event screenshot-data
+     * @param {object} data — `{ image: string (base64), timestamp: number, currentVideo: string }`
+     */
+    socket.on('screenshot-data', (data) => {
+      console.log('[Screenshot] Data received, relaying');
+      socket.broadcast.emit('screenshot-data', data);
+    });
+
     /**
      * Client disconnect — unregisters TV if applicable.
      * If the master disconnects, promotes the next slave to master.

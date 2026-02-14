@@ -43,4 +43,28 @@ export interface SocketContext {
 
   /** Map of siteId → recording state (ephemeral, in-memory) */
   readonly recordingStates: Map<string, { isRecording: boolean; isManualOverride: boolean; updatedAt: number }>;
+
+  /** Map of siteId → player state (ephemeral, in-memory — for cloud monitoring) */
+  readonly playerStates: Map<string, PlayerState>;
+}
+
+/**
+ * Describes the current state of a Pi TV player (sent via heartbeat).
+ */
+export interface PlayerState {
+  currentVideo: string | null;
+  currentCategory: string | null;
+  progress: number;
+  duration: number;
+  currentTime: number;
+  phase: string;
+  isManualMode: boolean;
+  isPlaying: boolean;
+  loopIndex: number;
+  loopTotal: number;
+  nextVideo: string | null;
+  lastError: string | null;
+  lastTransitionAt: string | null;
+  overlayActive: boolean;
+  updatedAt: string;
 }

@@ -21,6 +21,8 @@ import { RemoteService, RemoteState } from '../../core/services/remote.service';
 import { LicenseState, LicenseStatus } from '../../core/models/license.model';
 import { LicenseBannerComponent } from './components/license-banner.component';
 import { LicenseBlockRemoteComponent } from './components/license-block-remote.component';
+import { PlayerStatusComponent, PlayerState } from './components/player-status/player-status.component';
+import { ScreenshotViewerComponent } from './components/screenshot-viewer/screenshot-viewer.component';
 
 // Types locaux (identiques au Pi)
 type SportType = 'football' | 'basketball' | 'handball' | 'volleyball' | 'rugby' | 'hockey';
@@ -208,7 +210,7 @@ type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-v
 @Component({
   selector: 'app-cloud-remote',
   standalone: true,
-  imports: [CommonModule, FormsModule, LicenseBannerComponent, LicenseBlockRemoteComponent],
+  imports: [CommonModule, FormsModule, LicenseBannerComponent, LicenseBlockRemoteComponent, PlayerStatusComponent, ScreenshotViewerComponent],
   templateUrl: './cloud-remote.component.html',
   styleUrls: ['./cloud-remote.component.scss']
 })
@@ -224,6 +226,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public clubName: string = '';
   public isConnected = false;
   public connectionError: string | null = null;
+  public pendingConfigVersionId: string | null = null;
+  public pendingCommandsCount = 0;
 
   public configuration!: Configuration;
 
@@ -301,6 +305,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   // Recording
   public isRecording = false;
+
+  // Player state (from heartbeat)
+  public initialPlayerState: PlayerState | null = null;
 
   // Menu header
   public isHeaderMenuOpen = false;
@@ -439,9 +446,10 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         this.siteName = state.siteName;
         this.clubName = state.clubName;
         this.isConnected = state.isConnected && state.connectionHealth?.isHealthy;
+        this.pendingConfigVersionId = state.pendingConfigVersionId || null;
+        this.pendingCommandsCount = state.pendingCommandsCount || 0;
 
         if (!this.isConnected) {
-          this.connectionError = 'Le boîtier n\'est pas connecté au cloud. Vérifiez sa connexion Internet.';
           this.isLoading = false;
           return;
         }
@@ -466,6 +474,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         this.initializeWithConfiguration(this.configuration);
         this.updateLicenseState(state);
         this.updateRecordingState(state);
+        this.initialPlayerState = state.playerState || null;
         this.isLoading = false;
       },
       error: (err) => {
@@ -540,6 +549,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.remoteService.getState(this.siteId).subscribe({
       next: (state: RemoteState) => {
         this.isConnected = state.isConnected && state.connectionHealth?.isHealthy;
+        this.pendingConfigVersionId = state.pendingConfigVersionId || null;
+        this.pendingCommandsCount = state.pendingCommandsCount || 0;
 
         // Si PIN requis à nouveau (token expiré)
         if (state.pinRequired && !state.config) {
@@ -567,6 +578,10 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
         this.updateLicenseState(state);
         this.updateRecordingState(state);
+
+        if (state.playerState) {
+          this.initialPlayerState = state.playerState;
+        }
       },
       error: () => {
         // Silencieux pour le polling

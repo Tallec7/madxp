@@ -1,5 +1,6 @@
 import { Injectable } from "@angular/core";
 import { Command } from "../interfaces/command.interface";
+import { PlayerState } from "./player-state.service";
 import { environment } from "../../environments/environment";
 
 // Interfaces pour les nouveaux événements socket
@@ -133,7 +134,7 @@ export class SocketService {
     }
   }
 
-  public emit(action: string, data: Command | MatchConfig | ScoreUpdate | PhaseChange | RequestState | TimerUpdate | BreakingNews | OptionsUpdate | RecordingStateEvent | LoopState | TvRegister) {
+  public emit(action: string, data: Command | MatchConfig | ScoreUpdate | PhaseChange | RequestState | TimerUpdate | BreakingNews | OptionsUpdate | RecordingStateEvent | LoopState | TvRegister | PlayerState | Record<string, unknown>) {
     if (this.socket) {
       console.log('socket service : emit', action, data);
       this.socket.emit(action, data);

@@ -108,6 +108,27 @@ $dark-border: #4b5563;
   color: #f59e0b;
 }
 
+.pending-info {
+  margin: 1rem 0;
+  padding: 0.75rem 1.25rem;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+  text-align: center;
+
+  p {
+    margin: 0.25rem 0;
+    color: #b8860b;
+    font-size: 0.9rem;
+  }
+
+  .pending-hint {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    margin-top: 0.5rem;
+  }
+}
+
 .retry-btn {
   padding: 0.75rem 2rem;
   font-size: 1rem;

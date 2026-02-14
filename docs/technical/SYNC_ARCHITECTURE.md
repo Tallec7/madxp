@@ -274,19 +274,22 @@ Commandes:          ────────────────────
 
 ### 4.2 Événements de Synchronisation
 
-| Événement                    | Direction          | Déclencheur                    | Action                                             |
-| ---------------------------- | ------------------ | ------------------------------ | -------------------------------------------------- |
-| **Connexion du Pi**          | Bidirectionnel     | Pi se connecte au central      | Échange état complet                               |
-| **Déploiement vidéo NEOPRO** | Central → Local    | Admin NEOPRO clique "Déployer" | Download + merge config                            |
-| **Modification locale**      | Local → Central    | Opérateur modifie via Admin UI | Upload état vers central                           |
-| **sync_local_state**         | Local → Central    | Connexion + changement vidéos  | Config + liste vidéos + stockage                   |
-| **Heartbeat**                | Local → Central    | Timer 30s                      | Métriques système + statut kiosk + recording state |
-| **Commande admin**           | Central → Local    | Admin NEOPRO envoie commande   | Exécution sur Pi                                   |
-| **sync_profiles**            | Central → Local    | Admin déploie profils          | Écriture profiles/ + clubs.json                    |
-| **switch_profile**           | Central → Local    | Admin change profil actif      | Activation profil + merge config                   |
-| **profile-switch**           | Local (front→back) | Remote sélectionne un profil   | Activation profil + reload TV                      |
+| Événement                    | Direction          | Déclencheur                    | Action                                                            |
+| ---------------------------- | ------------------ | ------------------------------ | ----------------------------------------------------------------- |
+| **Connexion du Pi**          | Bidirectionnel     | Pi se connecte au central      | Échange état complet                                              |
+| **Déploiement vidéo NEOPRO** | Central → Local    | Admin NEOPRO clique "Déployer" | Download + merge config                                           |
+| **Modification locale**      | Local → Central    | Opérateur modifie via Admin UI | Upload état vers central                                          |
+| **sync_local_state**         | Local → Central    | Connexion + changement vidéos  | Config + liste vidéos + stockage                                  |
+| **Heartbeat**                | Local → Central    | Timer 30s                      | Métriques système + statut kiosk + recording state + player state |
+| **screenshot-request**       | Central → Local    | Dashboard cloud remote         | Capture JPEG du player TV via canvas.drawImage()                  |
+| **Commande admin**           | Central → Local    | Admin NEOPRO envoie commande   | Exécution sur Pi                                                  |
+| **sync_profiles**            | Central → Local    | Admin déploie profils          | Écriture profiles/ + clubs.json                                   |
+| **switch_profile**           | Central → Local    | Admin change profil actif      | Activation profil + merge config                                  |
+| **profile-switch**           | Local (front→back) | Remote sélectionne un profil   | Activation profil + reload TV                                     |
 
-> **Note** : Le heartbeat (30s) envoie les métriques système + le statut kiosk Chromium (lu depuis `/home/pi/neopro/data/kiosk-status.json`, écrit par `kiosk-watchdog.sh`) + le recording state analytics (`{ isRecording, isManualOverride }`, récupéré depuis le local server). Le recording state est stocké en mémoire côté central (Map éphémère) et exposé dans `GET /api/remote/:siteId/state` pour la cloud remote. La liste des vidéos est synchronisée via `sync_local_state` à la connexion et lors de changements détectés par le VideoWatcher.
+> **Note** : Le heartbeat (30s) envoie les métriques système + le statut kiosk Chromium (lu depuis `/home/pi/neopro/data/kiosk-status.json`, écrit par `kiosk-watchdog.sh`) + le recording state analytics (`{ isRecording, isManualOverride }`, récupéré depuis le local server) + le player state TV (`{ currentVideo, progress, phase, isPlaying, loopIndex, ... }`, récupéré depuis le local server via callback `get-player-state`). Le recording state et le player state sont stockés en mémoire côté central (Maps éphémères) et exposés dans `GET /api/remote/:siteId/state` pour la cloud remote. Le player state est aussi broadcasté en temps réel vers la room `dashboard` via l'événement `player_state_updated`. La liste des vidéos est synchronisée via `sync_local_state` à la connexion et lors de changements détectés par le VideoWatcher.
+>
+> **Screenshot à la demande** : Le dashboard cloud peut demander un screenshot de la TV via `POST /api/remote/:siteId/command` avec `type: 'screenshot'`. Le flux est : central → sync-agent → local server (broadcast) → TV component (canvas.drawImage, JPEG 480p quality 0.5, ~30-50KB) → local server → sync-agent (relay bidirectionnel éphémère) → central → dashboard room via Socket.IO `screenshot-data`. Rate-limited à 1 capture/seconde côté Pi.
 
 ### 4.3 Processus de Synchronisation Détaillé
 

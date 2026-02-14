@@ -8,6 +8,7 @@
 
 ### Features
 
+- **cloud-remote:** live view TV — player state monitoring + screenshot on demand from the cloud dashboard. The cloud remote now shows what the Pi TV is currently playing (video name, progress bar, phase, loop position, next video, errors) and allows capturing a JPEG screenshot of the TV screen at any time (with optional 5s auto-refresh). Architecture: Pi TV component → PlayerStateService → local Socket.IO → sync-agent heartbeat → central server (in-memory Map) → dashboard Socket.IO broadcast. Screenshot flow: dashboard HTTP POST → central → sync-agent (bidirectional ephemeral relay) → local server → TV canvas.drawImage() → JPEG 480p quality 0.5 (~30-50KB) relayed back
 - **monitoring:** add 4 Prometheus metrics — `neopro_license_status_pushes_total`, `neopro_deploy_progress_events_total`, `neopro_ota_errors_total{error_type}`, `neopro_wifi_config_total` — for full supervision of recent fixes (license push, deploy progress, OTA errors categorized by type, WiFi client config)
 - **monitoring:** add 3 alert thresholds — WebSocket disconnects fréquents (>10/h warning, >30/h critical), trous noirs vidéo safety timeouts (>3/h, >10/h), crash kiosk Chromium (>1/h, >3/h)
 - **monitoring:** add dedicated Kiosk (Chromium) row to Grafana Business & Fleet dashboard with 3 panels (Status gauge, Crashes rate, Restart count)

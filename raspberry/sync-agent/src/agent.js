@@ -114,6 +114,13 @@ class NeoproSyncAgent {
     this.socket.on('recording-toggle', (data) => this.relayToLocalServer('recording-toggle', data));
 
     // =========================================================================
+    // CLOUD MONITORING — Screenshot request-response
+    // Unlike one-way relay events, screenshots need a response (image data)
+    // from the local server back to the central server.
+    // =========================================================================
+    this.socket.on('screenshot-request', (data) => this.requestScreenshot(data));
+
+    // =========================================================================
     // LICENSE STATUS
     // Receive license status from server and cache it locally
     // This enables offline operation with periodic validation
@@ -192,6 +199,76 @@ class NeoproSyncAgent {
         connectionStatus.setConnected(false, 'ping_check_socket_dead');
       }
     }
+  }
+
+  /**
+   * Request a screenshot from the local TV component and relay the response to central.
+   * Unlike relayToLocalServer (fire-and-forget), this waits for a response.
+   * @param {object} data - Screenshot request payload (quality, timestamp)
+   */
+  requestScreenshot(data) {
+    logger.info('📸 Screenshot requested from cloud, relaying to local server');
+
+    const localSocket = io('http://localhost:3000', {
+      timeout: 10000,
+      reconnection: false,
+    });
+
+    const cleanupTimeout = setTimeout(() => {
+      logger.warn('Screenshot request timed out (10s)');
+      localSocket.disconnect();
+    }, 10000);
+
+    localSocket.on('connect', () => {
+      logger.debug('Connected to local server for screenshot request');
+      localSocket.emit('screenshot-request', data);
+    });
+
+    localSocket.on('screenshot-data', (screenshotData) => {
+      clearTimeout(cleanupTimeout);
+      logger.info('📸 Screenshot data received from local, forwarding to central');
+      this.socket.emit('screenshot-data', screenshotData);
+      localSocket.disconnect();
+    });
+
+    localSocket.on('connect_error', (err) => {
+      clearTimeout(cleanupTimeout);
+      logger.warn('Failed to connect to local server for screenshot', {
+        error: err.message,
+      });
+    });
+  }
+
+  /**
+   * Fetch player state from local Pi server (quick connection, callback-based).
+   * Used by heartbeat to include the current TV player state.
+   * @returns {Promise<object|null>}
+   */
+  fetchLocalPlayerState() {
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        localSocket.disconnect();
+        resolve(null);
+      }, 2000);
+
+      const localSocket = io('http://localhost:3000', {
+        timeout: 2000,
+        reconnection: false,
+      });
+
+      localSocket.on('connect', () => {
+        localSocket.emit('get-player-state', (state) => {
+          clearTimeout(timeout);
+          localSocket.disconnect();
+          resolve(state);
+        });
+      });
+
+      localSocket.on('connect_error', () => {
+        clearTimeout(timeout);
+        resolve(null);
+      });
+    });
   }
 
   /**
@@ -908,6 +985,9 @@ class NeoproSyncAgent {
         // Fetch transition metrics from local server (get + reset)
         const transitionMetrics = await this.fetchLocalTransitionMetrics();
 
+        // Fetch player state from local server (for cloud monitoring)
+        const playerState = await this.fetchLocalPlayerState();
+
         this.socket.emit('heartbeat', {
           siteId: config.site.id,
           timestamp: Date.now(),
@@ -917,6 +997,7 @@ class NeoproSyncAgent {
           kioskStatus,
           recordingState,
           transitionMetrics,
+          playerState,
         });
 
         // Enregistrer le succès du heartbeat

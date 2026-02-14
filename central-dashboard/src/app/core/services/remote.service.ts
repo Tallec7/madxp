@@ -76,6 +76,25 @@ export interface RemoteState {
     isRecording: boolean;
     isManualOverride: boolean;
   } | null;
+  playerState?: {
+    currentVideo: string | null;
+    currentCategory: string | null;
+    progress: number;
+    duration: number;
+    currentTime: number;
+    phase: string;
+    isManualMode: boolean;
+    isPlaying: boolean;
+    loopIndex: number;
+    loopTotal: number;
+    nextVideo: string | null;
+    lastError: string | null;
+    lastTransitionAt: string | null;
+    overlayActive: boolean;
+    updatedAt: string;
+  } | null;
+  pendingConfigVersionId?: string | null;
+  pendingCommandsCount?: number;
 }
 
 export interface RemoteVideos {
@@ -116,7 +135,8 @@ export type RemoteCommandType =
   | 'timer-update'
   | 'breaking-news'
   | 'match-config'
-  | 'recording-toggle';
+  | 'recording-toggle'
+  | 'screenshot';
 
 export interface ScoreData {
   homeTeam: string;
@@ -318,5 +338,12 @@ export class RemoteService {
    */
   toggleRecording(siteId: string): Observable<CommandResult> {
     return this.sendCommand(siteId, 'recording-toggle');
+  }
+
+  /**
+   * Demande un screenshot de l'écran TV du Pi
+   */
+  requestScreenshot(siteId: string): Observable<CommandResult> {
+    return this.sendCommand(siteId, 'screenshot', { quality: 0.5 });
   }
 }

@@ -58,6 +58,7 @@ Le score est conservé côté serveur pour éviter le reset lors du refresh de l
 
 - Score (équipe domicile/extérieur)
 - Phase du match (neutral, before, during, after)
+- Player state (vidéo en cours, progression, phase, boucle — pour monitoring cloud)
 
 ### 3. Analytics
 
@@ -69,21 +70,28 @@ Collecte et stockage des événements de lecture vidéo pour synchronisation ave
 
 ### Événements reçus du client
 
-| Événement      | Description                           | Payload                                                   |
-| -------------- | ------------------------------------- | --------------------------------------------------------- |
-| `command`      | Commande générale (play, pause, etc.) | `{ action: string, ... }`                                 |
-| `score-update` | Mise à jour du score                  | `{ homeTeam, awayTeam, homeScore, awayScore }`            |
-| `score-reset`  | Remise à zéro des scores              | -                                                         |
-| `phase-change` | Changement de phase du match          | `{ phase: 'neutral' \| 'before' \| 'during' \| 'after' }` |
+| Événement            | Description                            | Payload                                                   |
+| -------------------- | -------------------------------------- | --------------------------------------------------------- |
+| `command`            | Commande générale (play, pause, etc.)  | `{ action: string, ... }`                                 |
+| `score-update`       | Mise à jour du score                   | `{ homeTeam, awayTeam, homeScore, awayScore }`            |
+| `score-reset`        | Remise à zéro des scores               | -                                                         |
+| `phase-change`       | Changement de phase du match           | `{ phase: 'neutral' \| 'before' \| 'during' \| 'after' }` |
+| `player-state`       | État du player TV (vidéo, progression) | `PlayerState` (15 champs, cf. socket-context.ts)          |
+| `get-player-state`   | Récupérer l'état du player (callback)  | Callback → `PlayerState \| null`                          |
+| `screenshot-request` | Demande de capture écran TV            | `{ quality?: number }`                                    |
+| `screenshot-data`    | Données screenshot du player actif     | `{ image: string (base64), timestamp, currentVideo }`     |
 
 ### Événements émis vers les clients
 
-| Événement      | Description              | Quand                                |
-| -------------- | ------------------------ | ------------------------------------ |
-| `score-update` | État actuel du score     | À la connexion + à chaque changement |
-| `phase-change` | Phase actuelle du match  | À la connexion + à chaque changement |
-| `action`       | Broadcast d'une commande | Quand un client envoie `command`     |
-| `score-reset`  | Notification de reset    | Quand un client envoie `score-reset` |
+| Événement            | Description                   | Quand                                       |
+| -------------------- | ----------------------------- | ------------------------------------------- |
+| `score-update`       | État actuel du score          | À la connexion + à chaque changement        |
+| `phase-change`       | Phase actuelle du match       | À la connexion + à chaque changement        |
+| `action`             | Broadcast d'une commande      | Quand un client envoie `command`            |
+| `score-reset`        | Notification de reset         | Quand un client envoie `score-reset`        |
+| `player-state`       | État du player TV             | Quand le TV component met à jour son état   |
+| `screenshot-request` | Demande de capture vers le TV | Quand le sync-agent relaie la demande cloud |
+| `screenshot-data`    | Screenshot JPEG du player     | Quand le TV component capture l'écran       |
 
 ### Exemple de flux
 
@@ -209,4 +217,4 @@ sudo systemctl restart neopro-app
 
 ---
 
-**Dernière mise à jour :** 24 décembre 2025
+**Dernière mise à jour :** 14 février 2026

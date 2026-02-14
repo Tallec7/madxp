@@ -38,6 +38,9 @@ class StateService {
       lastUpdatedAt: null,
     };
 
+    // Player state (current video, phase, progress — for cloud monitoring)
+    this._playerState = null;
+
     // TV master-slave instances: socketId -> { role, connectedAt }
     this._tvInstances = new Map();
 
@@ -141,6 +144,16 @@ class StateService {
     this._transitionMetrics.videoErrorCount = 0;
     this._transitionMetrics.totalTransitions = 0;
     return metrics;
+  }
+
+  // --- Player State (cloud monitoring) ---
+  getPlayerState() {
+    return this._playerState ? { ...this._playerState } : null;
+  }
+
+  setPlayerState(data) {
+    this._playerState = { ...data };
+    return this.getPlayerState();
   }
 
   // --- Loop State ---

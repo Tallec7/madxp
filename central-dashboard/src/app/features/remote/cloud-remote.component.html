@@ -61,6 +61,17 @@
     </svg>
     <h2>Site hors ligne</h2>
     <p>Le boîtier n'est pas connecté au cloud.</p>
+    @if (pendingConfigVersionId || pendingCommandsCount > 0) {
+      <div class="pending-info">
+        @if (pendingConfigVersionId) {
+          <p>Configuration en attente de déploiement</p>
+        }
+        @if (pendingCommandsCount > 0) {
+          <p>{{ pendingCommandsCount }} commande(s) en file d'attente</p>
+        }
+        <p class="pending-hint">Sera appliqué à la prochaine connexion du boîtier.</p>
+      </div>
+    }
     <button class="retry-btn" (click)="retryConnection()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M23 4v6h-6M1 20v-6h6" />
@@ -558,6 +569,16 @@
       <!-- Vue principale - Accueil -->
       @if (currentView === 'home' && !isSearching) {
         <div class="view-home">
+          <!-- État du player TV + Screenshot -->
+          <app-player-status
+            [siteId]="siteId"
+            [initialPlayerState]="initialPlayerState"
+          ></app-player-status>
+          <app-screenshot-viewer
+            [siteId]="siteId"
+            [isConnected]="isConnected"
+          ></app-screenshot-viewer>
+
           <!-- Section vidéos récentes -->
           @if (recentVideos.length > 0) {
             <div class="recent-section">
