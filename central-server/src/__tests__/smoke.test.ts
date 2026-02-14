@@ -1248,9 +1248,109 @@ describe('Request body size limits', () => {
 });
 
 // ----------------------------------------------------------
-// 27. Sync-agent command handler symmetry
+// 27. ADR README ↔ file consistency
+// ----------------------------------------------------------
+// Vérifie que chaque ADR listé dans le README existe en tant que fichier,
+// et que chaque fichier ADR-*.md présent sur disque est référencé dans le README.
+describe('ADR README ↔ file consistency', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const adrDir = path.join(repoRoot, 'docs', 'adr');
+  const readmePath = path.join(adrDir, 'README.md');
+
+  it('README.md exists and is readable', () => {
+    expect(fs.existsSync(readmePath)).toBe(true);
+  });
+
+  it('every ADR file linked in README exists on disk', () => {
+    const readmeContent = fs.readFileSync(readmePath, 'utf8');
+    // Match markdown links like (ADR-001-edge-cloud-architecture.md)
+    const linkedFiles = [...readmeContent.matchAll(/\(ADR-\d{3}-[^)]+\.md\)/g)]
+      .map(m => m[0].slice(1, -1)); // Remove surrounding parens
+
+    expect(linkedFiles.length).toBeGreaterThan(0);
+
+    for (const file of linkedFiles) {
+      expect({
+        file,
+        exists: fs.existsSync(path.join(adrDir, file)),
+      }).toEqual({
+        file,
+        exists: true,
+      });
+    }
+  });
+
+  // Known orphan ADR files: duplicate numbering from legacy reorganization.
+  // TODO: renumber these to ADR-021+ or archive them during quarterly review.
+  const knownOrphanADRs = new Set([
+    'ADR-006-subscription-license-system.md',
+    'ADR-007-network-resilience-layers.md',
+    'ADR-008-double-buffer-video-pi.md',
+    'ADR-009-predictive-alerts.md',
+    'ADR-010-analytics-ui-removal.md',
+    'ADR-011-multi-tv-single-pi.md',
+    'ADR-012-tv-led-dual-output.md',
+    'ADR-013-stramatel-live-score.md',
+  ]);
+
+  it('every ADR-*.md file on disk is referenced in README (excluding known orphans)', () => {
+    const readmeContent = fs.readFileSync(readmePath, 'utf8');
+    const adrFiles = fs.readdirSync(adrDir)
+      .filter(f => /^ADR-\d{3}-.*\.md$/.test(f))
+      .filter(f => !knownOrphanADRs.has(f));
+
+    expect(adrFiles.length).toBeGreaterThan(0);
+
+    for (const file of adrFiles) {
+      expect({
+        file,
+        referencedInReadme: readmeContent.includes(file),
+      }).toEqual({
+        file,
+        referencedInReadme: true,
+      });
+    }
+  });
+
+  it('no new orphan ADR files appear (catches forgotten README updates)', () => {
+    const readmeContent = fs.readFileSync(readmePath, 'utf8');
+    const allAdrFiles = fs.readdirSync(adrDir)
+      .filter(f => /^ADR-\d{3}-.*\.md$/.test(f));
+    const newOrphans = allAdrFiles
+      .filter(f => !readmeContent.includes(f) && !knownOrphanADRs.has(f));
+
+    expect({
+      newOrphanFiles: newOrphans,
+      count: newOrphans.length,
+    }).toEqual({
+      newOrphanFiles: [],
+      count: 0,
+    });
+  });
+
+  it('ADR templates referenced in README exist', () => {
+    const readmeContent = fs.readFileSync(readmePath, 'utf8');
+    const templatesDir = path.join(repoRoot, 'docs', 'templates');
+    const templateLinks = [...readmeContent.matchAll(/\(\.\.\/templates\/(TEMPLATE_ADR[^)]+\.md)\)/g)]
+      .map(m => m[1]);
+
+    for (const template of templateLinks) {
+      expect({
+        template,
+        exists: fs.existsSync(path.join(templatesDir, template)),
+      }).toEqual({
+        template,
+        exists: true,
+      });
+    }
+  });
+});
+
+// ----------------------------------------------------------
+// 28. Sync-agent command handler symmetry
 // ----------------------------------------------------------
 // Bug prevention: agent.js must emit `completed: true` for BOTH deploy_video
+
 // and update_software commands. The omission of completed:true for update_software
 // caused OTA deployments to stay stuck at 0% for months (Dec 2025 → Feb 2026).
 // This smoke test prevents the asymmetry from recurring after any refactor.
