@@ -1258,6 +1258,23 @@ Les composants Angular s'abonnaient au socket avant que la connexion Socket.IO n
 2. Les événements sont désormais tamponnés dans `eventsSubject`, ce qui garantit la réception par les écrans même si l'abonnement est antérieur à la connexion réseau.
 3. Rafraîchir la page pour réinitialiser les abonnements et vérifier que la progression augmente en direct.
 
+### La barre de progression affiche 100 % mais « 0 / N sites »
+
+**Symptômes**
+
+- Dans **Mises à jour → Historique**, la barre de progression est pleine (100 %) mais le compteur affiche `0 / 1 sites`.
+- Un refresh de la page corrige l'affichage.
+
+**Cause**
+
+Le handler `deploy-progress.handler.ts` broadcastait les événements `deploy_progress` / `update_progress` vers le dashboard **sans les champs `deployedCount` et `status`**. Le frontend mettait à jour `progress` via WebSocket mais `deployed_count` restait à `0` (valeur par défaut) et `status` ne changeait pas.
+
+Au rechargement de la page, l'API REST retournait les bonnes valeurs car la requête SQL calcule `deployed_count` dynamiquement à partir du `status`.
+
+**Résolution**
+
+Corrigé dans la version incluant l'enrichissement du payload WebSocket dans `deploy-progress.handler.ts`. Le handler calcule maintenant `deployedCount` (depuis le type de cible) et `status` avant le broadcast, garantissant la cohérence temps réel entre la barre et le compteur.
+
 ### Déploiement vidéo échoue avec "Video checksum is required"
 
 **Symptômes**

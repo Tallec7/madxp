@@ -298,6 +298,8 @@ socket.emit('update_progress', {
   completed: false,
   error: null,
 });
+// Le handler enrichit l'événement avant de le broadcaster au dashboard :
+// → ajoute deployedCount (nombre de sites déployés) et status ('in_progress'|'completed'|'failed')
 ```
 
 ---
@@ -790,6 +792,8 @@ socket.emit('deploy_progress', {
   progress: 75,
   completed: false
 });
+// Le handler enrichit l'événement avant broadcast au dashboard :
+// → ajoute deployedCount et status
 
 // Résultat d'une commande
 socket.emit('command_result', {
@@ -832,9 +836,14 @@ socket.on('ping_check', () => {
 **Événements (Serveur → Dashboard via room 'dashboard') :**
 
 ```javascript
-// Progression déploiement
+// Progression déploiement contenu
 socket.on('deploy_progress', (data) => {
-  // data: { siteId, deploymentId, progress, ... }
+  // data: { siteId, deploymentId, progress, deployedCount, status, completed, error, ... }
+});
+
+// Progression mise à jour logicielle
+socket.on('update_progress', (data) => {
+  // data: { siteId, deploymentId, progress, deployedCount, status, completed, error, version }
 });
 
 // Commande complétée
@@ -1046,7 +1055,7 @@ Le service Socket.IO délègue le traitement des événements à 9 handlers spé
 | --------------------- | ------------------------------- | --------------------------------------------- |
 | **Heartbeat**         | `heartbeat.handler.ts`          | `heartbeat`, `pong_check`                     |
 | **ConfigSync**        | `config-sync.handler.ts`        | `sync_local_state`                            |
-| **DeployProgress**    | `deploy-progress.handler.ts`    | `deploy_progress`                             |
+| **DeployProgress**    | `deploy-progress.handler.ts`    | `deploy_progress`, `update_progress`          |
 | **CommandDispatch**   | `command-dispatch.handler.ts`   | `command_result`                              |
 | **HealthMonitor**     | `health-monitor.handler.ts`     | Zombie detection, DB sync, disconnect metrics |
 | **License**           | `license.handler.ts`            | `license_status`                              |

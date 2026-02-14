@@ -38,6 +38,9 @@ export async function handleDeployProgress(
   try {
     const { deploymentId, videoId, progress: progressValue, completed, error } = progress;
 
+    let resolvedStatus: string = 'in_progress';
+    let resolvedDeployedCount = 0;
+
     if (deploymentId) {
       if (error) {
         await query(
@@ -46,6 +49,7 @@ export async function handleDeployProgress(
            WHERE id = $2`,
           [error, deploymentId]
         );
+        resolvedStatus = 'failed';
       } else if (completed) {
         await query(
           `UPDATE content_deployments
@@ -53,6 +57,23 @@ export async function handleDeployProgress(
            WHERE id = $1`,
           [deploymentId]
         );
+        resolvedStatus = 'completed';
+        const depRow = await query<{ target_type: string; target_id: string }>(
+          `SELECT target_type, target_id FROM content_deployments WHERE id = $1`,
+          [deploymentId]
+        );
+        if (depRow.rows.length > 0) {
+          const { target_type, target_id } = depRow.rows[0];
+          if (target_type === 'site') {
+            resolvedDeployedCount = 1;
+          } else if (target_type === 'group') {
+            const countRow = await query<{ cnt: number }>(
+              `SELECT COUNT(*)::int as cnt FROM site_groups WHERE group_id = $1`,
+              [target_id]
+            );
+            resolvedDeployedCount = countRow.rows[0]?.cnt ?? 0;
+          }
+        }
       } else {
         await query(
           `UPDATE content_deployments
@@ -80,6 +101,8 @@ export async function handleDeployProgress(
         siteId,
         deploymentId,
         progress: progressValue,
+        deployedCount: resolvedDeployedCount,
+        status: resolvedStatus,
         completed,
         error,
         ...progress,
@@ -115,11 +138,32 @@ export async function handleUpdateProgress(
     const isCompletedByProgress =
       typeof progressValue === 'number' && Number.isFinite(progressValue) && progressValue >= 100;
 
+    let resolvedStatus: string = 'in_progress';
+    let resolvedDeployedCount = 0;
+
     if (deploymentId) {
       if (error) {
         await updateService.handleDeploymentResult(deploymentId as string, siteId, false, error as string);
+        resolvedStatus = 'failed';
       } else if (completed || isCompletedByProgress) {
         await updateService.handleDeploymentResult(deploymentId as string, siteId, true);
+        resolvedStatus = 'completed';
+        const depRow = await query<{ target_type: string; target_id: string }>(
+          `SELECT target_type, target_id FROM update_deployments WHERE id = $1`,
+          [deploymentId]
+        );
+        if (depRow.rows.length > 0) {
+          const { target_type, target_id } = depRow.rows[0];
+          if (target_type === 'site') {
+            resolvedDeployedCount = 1;
+          } else if (target_type === 'group') {
+            const countRow = await query<{ cnt: number }>(
+              `SELECT COUNT(*)::int as cnt FROM site_groups WHERE group_id = $1`,
+              [target_id]
+            );
+            resolvedDeployedCount = countRow.rows[0]?.cnt ?? 0;
+          }
+        }
       } else {
         await updateService.updateProgress(deploymentId as string, (progressValue as number) || 0);
       }
@@ -132,6 +176,8 @@ export async function handleUpdateProgress(
         siteId,
         deploymentId,
         progress: progressValue,
+        deployedCount: resolvedDeployedCount,
+        status: resolvedStatus,
         completed,
         error,
         version,
