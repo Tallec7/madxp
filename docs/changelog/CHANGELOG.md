@@ -1,3 +1,9 @@
+# [3.29.0](https://github.com/Tallec7/neopro/compare/v3.28.2...v3.29.0) (2026-02-14)
+
+### Features
+
+- **monitoring:** wire 3 hourly alert thresholds with data feeds ([e0d7d20](https://github.com/Tallec7/neopro/commit/e0d7d20e66934a3211ebf768460098c40067f0d2))
+
 ## [3.28.2](https://github.com/Tallec7/neopro/compare/v3.28.1...v3.28.2) (2026-02-14)
 
 ### Bug Fixes
