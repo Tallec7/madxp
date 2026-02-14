@@ -1393,6 +1393,7 @@ export class TvComponent implements OnInit, OnDestroy {
    */
   private onTimeUpdate(fromPlayer: 'A' | 'B'): void {
     if (!this.isLoopMode || fromPlayer !== this.activePlayer) return;
+    if (this.isManualMode) return; // Ne pas déclencher d'early switch pendant une vidéo manuelle
     if (this.switchTriggered || this.pendingSwitch) return;
 
     // Throttle: ne vérifier que toutes les 200ms max
@@ -1494,8 +1495,11 @@ export class TvComponent implements OnInit, OnDestroy {
       this.isLoopMode = false;
       this.isStartingLoop = false;
       // Cacher les overlays pour ne pas rester figé sur un écran noir/freeze
+      // SAUF le black overlay si une vidéo manuelle est en cours
       this.hideFreezeFrame();
-      this.hideBlackOverlay();
+      if (!this.isManualMode) {
+        this.hideBlackOverlay();
+      }
       return;
     }
 
@@ -1580,7 +1584,9 @@ export class TvComponent implements OnInit, OnDestroy {
               console.warn('[TV] playOnActivePlayer frame detection timeout, revealing');
               this.transitionMetrics.safetyTimeoutCount++;
               this.hideFreezeFrame();
-              this.hideBlackOverlay();
+              if (!this.isManualMode) {
+                this.hideBlackOverlay();
+              }
             }
           }, 1500);
 
@@ -1591,7 +1597,9 @@ export class TvComponent implements OnInit, OnDestroy {
             player.removeEventListener('timeupdate', onFirstTimeUpdate);
             requestAnimationFrame(() => {
               this.hideFreezeFrame();
-              this.hideBlackOverlay();
+              if (!this.isManualMode) {
+                this.hideBlackOverlay();
+              }
             });
           };
 
@@ -1615,7 +1623,9 @@ export class TvComponent implements OnInit, OnDestroy {
         console.error('[TV] Error playing video:', err, '- skipping to next');
         // En cas d'erreur, cacher quand même le freeze-frame
         this.hideFreezeFrame();
-        this.hideBlackOverlay();
+        if (!this.isManualMode) {
+          this.hideBlackOverlay();
+        }
         setTimeout(() => {
           const nextIndex = (videoIndex + 1) % this.currentLoopVideos.length;
           if (nextIndex !== videoIndex) {
@@ -1979,9 +1989,12 @@ export class TvComponent implements OnInit, OnDestroy {
           this.setPlayerVisible(oldPlayer, false, 0);
 
           // Puis cacher le freeze-frame et le black overlay
+          // SAUF si une vidéo manuelle est en cours (le black overlay protège la vidéo manuelle)
           // Le nouveau player (z-index 2, opacity 1) est déjà visible
           this.hideFreezeFrame();
-          this.hideBlackOverlay();
+          if (!this.isManualMode) {
+            this.hideBlackOverlay();
+          }
 
           // Ramener le nouveau player au z-index standard (1) une fois l'ancien caché
           newPlayer.style.zIndex = '1';
