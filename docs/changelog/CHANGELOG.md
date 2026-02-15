@@ -1,3 +1,9 @@
+## [3.30.3](https://github.com/Tallec7/neopro/compare/v3.30.2...v3.30.3) (2026-02-15)
+
+### Bug Fixes
+
+- **dashboard:** wire cloud video deletion from Bibliothèque Vidéo ([54128f6](https://github.com/Tallec7/neopro/commit/54128f638ccd08dc3299a8e4df3907d54c6ce03f))
+
 ## [3.30.2](https://github.com/Tallec7/neopro/compare/v3.30.1...v3.30.2) (2026-02-15)
 
 ### Bug Fixes
