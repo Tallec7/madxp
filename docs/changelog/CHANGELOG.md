@@ -1,3 +1,9 @@
+## [3.30.4](https://github.com/Tallec7/neopro/compare/v3.30.3...v3.30.4) (2026-02-15)
+
+### Bug Fixes
+
+- **dashboard:** handle all video deletion cases (Pi, cloud, both) ([6db1410](https://github.com/Tallec7/neopro/commit/6db1410f4d8f198f311b81504a6343860d0e361b))
+
 ## [3.30.3](https://github.com/Tallec7/neopro/compare/v3.30.2...v3.30.3) (2026-02-15)
 
 ### Bug Fixes
