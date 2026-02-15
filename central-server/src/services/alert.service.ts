@@ -256,6 +256,20 @@ class AlertService {
     });
   }
 
+  async networkFailure(siteId: string, siteName: string, issues: string[], recoveryAttempts: number): Promise<boolean> {
+    return this.sendAlert({
+      title: 'Échec recovery réseau',
+      message: `Le site *${siteName}* a échoué ${recoveryAttempts} tentatives de recovery réseau.\nProblèmes : ${issues.join(', ')}`,
+      severity: 'critical',
+      siteId,
+      siteName,
+      metadata: {
+        recoveryAttempts: String(recoveryAttempts),
+        issues: issues.join(', ')
+      },
+    });
+  }
+
   async kioskCrash(siteId: string, siteName: string, reason: string, restartCount: number): Promise<boolean> {
     return this.sendAlert({
       title: 'Kiosk Crash — TV hors service',

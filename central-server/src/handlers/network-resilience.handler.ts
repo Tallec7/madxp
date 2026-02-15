@@ -10,6 +10,7 @@
 
 import { query } from '../config/database';
 import logger from '../config/logger';
+import alertService from '../services/alert.service';
 import { metricsService } from '../services/metrics.service';
 import { SocketContext } from './socket-context';
 
@@ -39,19 +40,41 @@ export async function handleNetworkAlert(
       metricsService.recordNetworkRecoveryAttempts(recoveryAttempts);
     }
 
-    // Store alert in database
-    await query(
-      `INSERT INTO alerts (site_id, alert_type, severity, message, metadata, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        siteId,
-        `network_${type}`,
-        severity,
-        `Network issue: ${(issues as string[])?.join(', ') || 'unknown'}`,
-        JSON.stringify({ issues, recoveryAttempts, watchdogTimestamp: timestamp }),
-        new Date(),
-      ]
+    // Store alert in database (deduplicated: 1 per type/site/hour)
+    const alertType = `network_${type}`;
+    const existing = await query(
+      `SELECT id FROM alerts
+       WHERE site_id = $1 AND alert_type = $2 AND status = 'active'
+       AND created_at > NOW() - INTERVAL '1 hour'`,
+      [siteId, alertType]
     );
+
+    if (existing.rows.length === 0) {
+      await query(
+        `INSERT INTO alerts (site_id, alert_type, severity, message, metadata, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          siteId,
+          alertType,
+          severity,
+          `Network issue: ${(issues as string[])?.join(', ') || 'unknown'}`,
+          JSON.stringify({ issues, recoveryAttempts, watchdogTimestamp: timestamp }),
+          new Date(),
+        ]
+      );
+
+      // Send Slack notification (same dedup window as DB insert)
+      const siteResult = await query('SELECT club_name FROM sites WHERE id = $1', [siteId]);
+      const clubName: string = (siteResult.rows[0]?.club_name as string) || siteId;
+      alertService.networkFailure(
+        siteId,
+        clubName,
+        (issues as string[]) || [],
+        (recoveryAttempts as number) || 0
+      ).catch((_e) => {/* ignore */});
+
+      logger.warn('Network alert created + Slack sent', { siteId, alertType });
+    }
 
     // Emit to dashboard for real-time display
     const io = ctx.getIO();
