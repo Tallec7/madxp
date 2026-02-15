@@ -1,3 +1,9 @@
+## [3.35.1](https://github.com/Tallec7/neopro/compare/v3.35.0...v3.35.1) (2026-02-15)
+
+### Bug Fixes
+
+- **watchdog:** persist grace period to disk to survive OTA sync-agent restarts ([844e787](https://github.com/Tallec7/neopro/commit/844e787ac27eb96c96166ce721fc162f7d450877))
+
 # [3.35.0](https://github.com/Tallec7/neopro/compare/v3.34.1...v3.35.0) (2026-02-15)
 
 ### Features
