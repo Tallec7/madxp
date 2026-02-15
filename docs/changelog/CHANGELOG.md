@@ -1,3 +1,9 @@
+## [3.30.10](https://github.com/Tallec7/neopro/compare/v3.30.9...v3.30.10) (2026-02-15)
+
+### Bug Fixes
+
+- **wifi-usb:** prevent OTA-induced WiFi USB disconnection ([f09ab75](https://github.com/Tallec7/neopro/commit/f09ab75d500d00554c3832edbdc3fffdbba9f564))
+
 ## [3.30.9](https://github.com/Tallec7/neopro/compare/v3.30.8...v3.30.9) (2026-02-15)
 
 ### Bug Fixes
