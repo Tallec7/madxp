@@ -18,6 +18,8 @@ export interface VideoItem {
   source: 'cloud' | 'local';
   lastModified?: string;
   uploadedForSiteId?: string | null; // Site for which this video was uploaded
+  piCategory?: string | null;       // Category from Pi filesystem (for delete_video command)
+  piSubcategory?: string | null;    // Subcategory from Pi filesystem
 }
 
 export type VideoDeployStatus = 'idle' | 'deploying' | 'success' | 'error' | 'timeout';
@@ -1152,11 +1154,14 @@ export class VideoLibraryComponent implements OnChanges {
 
       // Try to find matching local video by checksum first, then by filename
       let isOnPi = false;
-      if (cloud.checksum && localByChecksum.has(cloud.checksum)) {
+      let localMatch = cloud.checksum ? localByChecksum.get(cloud.checksum) : undefined;
+      if (localMatch) {
         isOnPi = true;
-      } else if (localByFilename.has(filenameLower)) {
-        // Fallback to filename comparison
-        isOnPi = true;
+      } else {
+        localMatch = localByFilename.get(filenameLower);
+        if (localMatch) {
+          isOnPi = true;
+        }
       }
 
       cloudMapped.push({
@@ -1172,7 +1177,9 @@ export class VideoLibraryComponent implements OnChanges {
         owner: this.detectOwner(cloud.filename),
         source: 'cloud' as const,
         lastModified: cloud.updatedAt?.toString(),
-        uploadedForSiteId: cloud.uploadedForSiteId
+        uploadedForSiteId: cloud.uploadedForSiteId,
+        piCategory: localMatch?.category ?? null,
+        piSubcategory: localMatch?.subcategory ?? null
       });
     }
 

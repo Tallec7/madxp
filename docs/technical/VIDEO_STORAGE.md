@@ -376,7 +376,9 @@ L'administrateur peut supprimer une vidéo depuis la **Bibliothèque Vidéo** d'
    │
 3. Commande sendCommand(siteId, 'delete_video', { filename, category, subcategory })
    │  - Envoyée via Socket.IO au sync-agent
+   │  - category/subcategory proviennent des données Pi (piCategory), pas du cloud
    │  - Le sync-agent reconstruit le chemin : /home/pi/neopro/videos/{category}/{subcategory}/{filename}
+   │  - Si category est null (vidéo à la racine) : /home/pi/neopro/videos/{filename}
    │
 4. Sync-agent supprime le fichier + met à jour configuration.json
    │
@@ -516,6 +518,7 @@ Checksum mismatch: expected abc123, got def456
 | 1.0     | 2026-01-09 | Création initiale                                                |
 | 2.0     | 2026-02-10 | Suppression Supabase fallback, migration vers storage.service.ts |
 | 2.1     | 2026-02-15 | Ajout section suppression manuelle depuis le Dashboard           |
+| 2.2     | 2026-02-15 | Fix null category, piCategory, modal UX                          |
 
 ---
 

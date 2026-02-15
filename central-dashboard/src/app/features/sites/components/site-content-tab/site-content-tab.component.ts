@@ -3433,10 +3433,13 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     if (!video) return;
     this.showDeleteModal = false;
 
+    // Use Pi filesystem category/subcategory when available, fall back to cloud metadata
+    const piCat = video.piCategory ?? video.category;
+    const piSubcat = video.piSubcategory ?? video.subcategory;
     const deletePi$ = this.sitesService.sendCommand(this.siteId, 'delete_video', {
       filename: video.filename,
-      category: video.category || undefined,
-      subcategory: video.subcategory || undefined
+      category: piCat || undefined,
+      subcategory: piSubcat || undefined
     });
     const deleteCloud$ = this.sitesService.deleteCloudVideo(video.id!);
 
