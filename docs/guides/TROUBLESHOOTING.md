@@ -984,34 +984,49 @@ ssh pi@neopro.local "grep 'path.join(sourcePath' /home/pi/neopro/sync-agent/src/
 EACCES: permission denied, unlink '/home/pi/neopro/VERSION'
 ```
 
-**Cause** : Le fichier `/home/pi/neopro/VERSION` appartient à `root:root` (créé par d'anciennes versions du sync-agent qui utilisaient `sudo cp/tee`). Le sync-agent actuel tourne en tant que `pi` et `fs.copy({ overwrite: true })` fait un `unlink` implicite → EACCES.
+**Cause** : Le fichier `/home/pi/neopro/VERSION` appartient à `root:root` (créé par d'anciennes versions du sync-agent qui utilisaient `sudo cp/tee`). Le sync-agent tourne en tant que `pi` et `fs.copy({ overwrite: true })` fait un `fs.unlink()` implicite → EACCES.
 
-Le fix `fixFileOwnership()` (v3.26.4) détecte les fichiers root et exécute `sudo chown` avant l'écriture. **Attention** : la commande doit utiliser `sudo chown -R pi:pi` (avec `-R`) pour matcher la règle sudoers (`/usr/bin/chown -R pi\:pi /home/pi/neopro/*`). Sans le `-R`, sudo refuse silencieusement la commande.
+**Versions affectées** : Pi v3.10→v3.17 (`fs.copy` sans try/catch + `NoNewPrivileges=true` bloque sudo). Les Pi v3.20+ ont un try/catch non-bloquant.
 
 **Diagnostic** :
 
 ```bash
-ssh pi@neopro.local "ls -la /home/pi/neopro/VERSION /home/pi/neopro/release.json"
-# Si ça affiche "root root" → c'est le problème
+# Via SSH :
+ssh pi@neopro.local "stat -c '%U:%G %a' /home/pi/neopro/ /home/pi/neopro/VERSION /home/pi/neopro/release.json"
+# Si VERSION affiche "root:root" → fichier problématique
+# Si le DOSSIER affiche "root:root" → rm -f échouera aussi
+
+# Via remote_shell : la pré-migration logge un bloc "=== PRE-MIGRATION DIAG ==="
+# avec les permissions. Visible dans Railway logs.
 ```
 
-**Solution immédiate** (corriger les permissions) :
+**Solution immédiate** :
 
 ```bash
+# Si accès SSH :
 ssh pi@neopro.local "sudo chown pi:pi /home/pi/neopro/VERSION /home/pi/neopro/release.json 2>/dev/null; ls -la /home/pi/neopro/VERSION"
+
+# Si admin-server accessible (v3.32.1+) :
+curl -sf -X POST http://<pi-ip>:8080/api/system/fix-ownership
 ```
 
 Puis relancer la mise à jour depuis le dashboard.
 
-**Solution définitive** : Le fix est en deux parties :
+**Solution automatique** (pré-migration serveur) :
 
-1. **Côté Pi** (sync-agent `fixFileOwnership()`) : `sudo chown -R pi:pi` (avec `-R` pour matcher le sudoers) + `sudo rm -f` en fallback dans le sudoers
-2. **Côté central server** (`applyPreUpdateMigration()`) : la pré-migration envoyée via `remote_shell` avant chaque OTA utilise aussi `sudo chown -R pi:pi`. C'est ce qui débloque les Pi qui n'ont pas encore le fix local
+Le central server envoie un `remote_shell` avant chaque OTA (`applyPreUpdateMigration()`) :
+
+1. `rm -f` sans sudo — supprime le fichier root (marche si dossier parent `pi:pi`)
+2. `sudo chown pi:pi` — fallback si rm échoue (marche si `NoNewPrivileges=false`)
+3. `sudo rm -f` — dernier recours
+4. Diagnostic — logge les permissions pour debug
 
 **Pièges connus** :
 
-- La migration 2 (patch legacy code) faisait `s/sudo chown/chown/g` ce qui supprimait le `sudo` nécessaire dans `fixFileOwnership()`. Depuis la correction, seuls `sudo cp` et `sudo tee` sont remplacés
-- **Race condition** : la pré-migration et `update_software` étaient envoyées simultanément. Le Pi les exécutait en parallèle, donc le `chown` n'avait pas le temps de finir avant que `fs.copy()` tente l'unlink. Fix : délai de 5s entre la pré-migration et l'envoi de `update_software`
+- **`NoNewPrivileges=true`** (Pi v3.10→v3.17) bloque tous les sudo du sync-agent. Seul `rm -f` sans sudo fonctionne.
+- **Dossier root:root** : si `/home/pi/neopro/` est root, même `rm -f` échoue. Nécessite SSH ou admin-server `fix-ownership`.
+- **NE PAS appeler `apply-services`** dans la pré-migration — ça restart le sync-agent avant que `update_software` n'arrive
+- **Race condition** : délai de 3s entre pré-migration et `update_software` (commandes Pi en parallèle)
 
 ---
 

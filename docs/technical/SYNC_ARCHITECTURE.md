@@ -878,9 +878,9 @@ Le déploiement OTA est le seul flux qui met à jour le **code** du Pi (sync-age
 Dashboard ──POST /api/update-deployments──▶ Central Server
                                                │
                                                ├─ 1. applyPreUpdateMigration(siteId)
-                                               │      └─ remote_shell: sudo chown -R pi:pi VERSION/release.json
+                                               │      └─ remote_shell: rm -f VERSION + diagnostic
                                                │
-                                               ├─ 2. await delay(5s)  ← évite race condition
+                                               ├─ 2. await delay(3s)  ← commandes Pi en parallèle
                                                │
                                                └─ 3. sendOrQueue('update_software', { version, updateUrl, ... })
                                                       │
@@ -889,7 +889,7 @@ Dashboard ──POST /api/update-deployments──▶ Central Server
                                                ├─ Download .tar.gz depuis CDN
                                                ├─ Extraction dans /tmp
                                                ├─ fixFileOwnership(VERSION, release.json)
-                                               │      └─ sudo chown -R pi:pi (doit matcher sudoers -R)
+                                               │      └─ sudo chown -R pi:pi + try/catch non-bloquant
                                                ├─ fs.copy() des fichiers extraits
                                                ├─ npm install
                                                ├─ Installation sudoers + systemd services
@@ -899,22 +899,43 @@ Dashboard ──POST /api/update-deployments──▶ Central Server
 
 ### Pré-migration (serveur → Pi)
 
-Envoyée via `remote_shell` **avant** l'OTA pour corriger les problèmes hérités :
+Envoyée via `remote_shell` **avant** l'OTA pour supprimer les fichiers VERSION root:root hérités des anciennes versions (`sudo cp/tee`).
 
-| Migration        | Commande                                   | Objectif                                        |
-| ---------------- | ------------------------------------------ | ----------------------------------------------- |
-| 1. Fix ownership | `sudo chown -R pi:pi VERSION release.json` | Fichiers root:root → pi:pi (legacy sudo cp/tee) |
-| 2. Patch legacy  | `sed 's/sudo cp/cp/g; s/sudo tee/tee/g'`   | Retirer sudo cp/tee bloqués par NoNewPrivileges |
+**Stratégie en 4 niveaux** (par fichier VERSION/release.json/version.json) :
+
+| Niveau | Commande            | Condition de succès                         |
+| ------ | ------------------- | ------------------------------------------- |
+| 1      | `rm -f` (sans sudo) | Dossier parent `pi:pi` (cas standard)       |
+| 2      | `sudo chown pi:pi`  | `NoNewPrivileges=false` ET sudoers installé |
+| 3      | `sudo rm -f`        | `NoNewPrivileges=false`                     |
+| 4      | Diagnostic          | Toujours — logge permissions pour debug     |
 
 **Pièges connus :**
 
-- La commande `chown` doit utiliser `-R` pour matcher la règle sudoers (sinon refus silencieux)
-- La migration 2 ne doit **pas** remplacer `sudo chown` (nécessaire dans `fixFileOwnership()`)
-- Sans le délai de 5s, les deux commandes s'exécutent en parallèle côté Pi (race condition)
+- **NE PAS appeler `apply-services`** dans la pré-migration — ça restart le sync-agent et déconnecte le socket
+- **NE PAS utiliser `sed`** pour patcher le code du sync-agent — casse les `sudo cp` légitimes
+- Sans le délai de 3s, les commandes s'exécutent en parallèle côté Pi (race condition `socket.on('command')`)
+- **`NoNewPrivileges=true`** (Pi v3.10→v3.17) bloque tous les sudo du sync-agent
+
+**Versions Pi affectées :**
+
+| Plage       | VERSION copy                     | try/catch | NoNewPrivileges | Impact                  |
+| ----------- | -------------------------------- | --------- | --------------- | ----------------------- |
+| < v3.10     | `sudo cp`                        | Non       | Non installé    | OK                      |
+| v3.10→v3.17 | `fs.copy()` sans protection      | Non       | Actif           | **BLOQUÉ** (EACCES 60%) |
+| v3.20+      | `fs.copy()` + `fixFileOwnership` | Oui       | Retiré          | OK                      |
+
+> **TODO** : Supprimer `applyPreUpdateMigration()` une fois NLF Handball (v3.17.1) mis à jour.
+
+### Admin-server fix-ownership (v3.32.1+)
+
+Route `POST /api/system/fix-ownership` : corrige ownership dossiers + fichiers via sudo. Localhost sans auth.
 
 ### Monitoring
 
 Métrique Prometheus : `neopro_ota_errors_total{error_type}` avec labels `permission`, `timeout`, `network`, `disk_full`, `cancelled`, `other`.
+
+La pré-migration logge un bloc `=== PRE-MIGRATION DIAG ===` avec les permissions exactes. Visible dans Railway logs.
 
 ## Historique des Versions
 
@@ -928,6 +949,7 @@ Métrique Prometheus : `neopro_ota_errors_total{error_type}` avec labels `permis
 | 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config                     |
 | 1.6     | 2026-02-12 | Claude/NEOPRO | Ajout multi-config profiles (sync_profiles, switch_profile, profile-switch) |
 | 1.7     | 2026-02-15 | Claude/NEOPRO | Ajout section OTA : pré-migration, race condition, monitoring               |
+| 1.8     | 2026-02-15 | Claude/NEOPRO | Réécriture pré-migration : rm sans sudo, diagnostic, versions affectées     |
 
 ---
 
