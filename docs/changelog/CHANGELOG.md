@@ -1,3 +1,9 @@
+# [3.32.0](https://github.com/Tallec7/neopro/compare/v3.31.0...v3.32.0) (2026-02-15)
+
+### Features
+
+- **debug:** add dmesg kernel logs and lsusb to debug bundle ([37db75b](https://github.com/Tallec7/neopro/commit/37db75bf126b8c296b1b3d0c09e9ae3117c8b9cb))
+
 # [3.31.0](https://github.com/Tallec7/neopro/compare/v3.30.10...v3.31.0) (2026-02-15)
 
 ### Features
