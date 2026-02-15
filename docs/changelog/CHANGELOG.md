@@ -1,3 +1,9 @@
+## [3.30.9](https://github.com/Tallec7/neopro/compare/v3.30.8...v3.30.9) (2026-02-15)
+
+### Bug Fixes
+
+- **ota:** add 3s delay between pre-migration and update_software ([b3cf9a4](https://github.com/Tallec7/neopro/commit/b3cf9a4c42c63f0f77c878f3a4fcc0852230057e))
+
 ## [3.30.8](https://github.com/Tallec7/neopro/compare/v3.30.7...v3.30.8) (2026-02-15)
 
 ### Bug Fixes
