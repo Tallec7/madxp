@@ -1046,6 +1046,16 @@ POST   /sites/:siteId/profiles/:profileId/deploy - Déployer un profil vers le P
 POST   /sites/:siteId/profiles/sync         - Sync tous les profils vers le Pi
 ```
 
+**Endpoints Alertes :**
+
+```
+GET    /alerts                  - Liste paginée, filtres: type, active, severity, siteId
+GET    /alerts/stats            - Statistiques des alertes (admin+)
+POST   /alerts/test-slack       - Test webhook Slack (super_admin)
+POST   /alerts/:id/resolve      - Résoudre une alerte
+POST   /alerts/sites/:siteId/resolve - Résoudre toutes les alertes d'un site
+```
+
 **Endpoints Analytics :**
 
 ```
@@ -1085,6 +1095,7 @@ Pi Analytics: 500 req/min     (impressions sponsors depuis les Pi - par IP)
 | **AdminOps**      | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire                                                                                                                                                              |
 | **CronScheduler** | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)                                                                                                                                                                     |
 | **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook) — 18 seuils par défaut + `checkHourlyMetrics()` agrège WS disconnects, video safety timeouts, kiosk crashes et alimente `evaluateMetric()` toutes les 5 min |
+| **AlertService**  | `alert.service.ts`          | Notifications Slack (Block Kit) — méthodes pré-construites : `siteOffline`, `lowWifiSignal`, `networkFailure`, `info/warning/error/critical`                                                            |
 | **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready                                                                                                                                                                        |
 | **Metrics**       | `metrics.service.ts`        | Export Prometheus — 30 métriques `neopro_*` (HTTP, WS, DB, disconnect, kiosk, license push, deploy progress, OTA errors, WiFi config, video transitions)                                                |
 
@@ -1092,17 +1103,17 @@ Pi Analytics: 500 req/min     (impressions sponsors depuis les Pi - par IP)
 
 Le service Socket.IO délègue le traitement des événements à 9 handlers spécialisés :
 
-| Handler               | Fichier                         | Événements                                    |
-| --------------------- | ------------------------------- | --------------------------------------------- |
-| **Heartbeat**         | `heartbeat.handler.ts`          | `heartbeat`, `pong_check`                     |
-| **ConfigSync**        | `config-sync.handler.ts`        | `sync_local_state`                            |
-| **DeployProgress**    | `deploy-progress.handler.ts`    | `deploy_progress`, `update_progress`          |
-| **CommandDispatch**   | `command-dispatch.handler.ts`   | `command_result`                              |
-| **HealthMonitor**     | `health-monitor.handler.ts`     | Zombie detection, DB sync, disconnect metrics |
-| **License**           | `license.handler.ts`            | `license_status`                              |
-| **NetworkResilience** | `network-resilience.handler.ts` | `network_status`                              |
-| **ScoreUpdate**       | `score-update.handler.ts`       | `score_update`                                |
-| **MatchConfig**       | `match-config.handler.ts`       | `match_config`                                |
+| Handler               | Fichier                         | Événements                                               |
+| --------------------- | ------------------------------- | -------------------------------------------------------- |
+| **Heartbeat**         | `heartbeat.handler.ts`          | `heartbeat`, `pong_check`                                |
+| **ConfigSync**        | `config-sync.handler.ts`        | `sync_local_state`                                       |
+| **DeployProgress**    | `deploy-progress.handler.ts`    | `deploy_progress`, `update_progress`                     |
+| **CommandDispatch**   | `command-dispatch.handler.ts`   | `command_result`                                         |
+| **HealthMonitor**     | `health-monitor.handler.ts`     | Zombie detection, DB sync, disconnect metrics            |
+| **License**           | `license.handler.ts`            | `license_status`                                         |
+| **NetworkResilience** | `network-resilience.handler.ts` | `network_alert`, `network_rollback`, `network_recovered` |
+| **ScoreUpdate**       | `score-update.handler.ts`       | `score_update`                                           |
+| **MatchConfig**       | `match-config.handler.ts`       | `match_config`                                           |
 
 ### Repositories (`src/repositories/`)
 

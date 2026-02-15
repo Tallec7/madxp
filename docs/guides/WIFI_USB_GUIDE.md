@@ -504,9 +504,27 @@ Après 6 tentatives : cooldown 5 min, alerte `internet_failure` envoyée au cent
 
 > **Pourquoi cette progression ?** Un `wpa_cli reconfigure` immédiat causait des cascades de réassociations WiFi qui faisaient crasher le driver USB WiFi (brcmfmac). La recovery progressive essaie DHCP seul d'abord, ce qui suffit dans la majorité des cas sans toucher à l'association WiFi. Les phases 5-6 (v3.30) ajoutent une recovery hardware pour les cas où la clé USB est gelée au niveau kernel.
 
-### Grace period au boot
+### Grace period (boot + OTA)
 
 Le watchdog ne tente **aucune recovery pendant les 60 premières secondes** après le démarrage. Cela laisse le réseau se stabiliser (wlan1 met parfois 15-30s à obtenir une IP via DHCP).
+
+**Pendant une mise à jour OTA**, le sync-agent active une grace period de **120 secondes** avant le déploiement udev. Cette grace period est **persistée sur disque** (`/tmp/neopro-watchdog-grace.json`) car le sync-agent est redémarré pendant l'OTA. Au redémarrage, le watchdog restaure le timestamp et skip les checks tant que la grace period n'est pas expirée.
+
+Sans cette persistance, le nouveau process démarrait avec `gracePeriodUntil=0` et lançait une recovery agressive (modprobe, USB power-cycle) qui tuait la clé WiFi pendant la stabilisation post-OTA.
+
+### Notifications Slack réseau (v3.33+)
+
+Le watchdog et le central server génèrent des notifications Slack pour les événements réseau :
+
+| Événement                     | Source                   | Slack                                    | Déduplication               |
+| ----------------------------- | ------------------------ | ---------------------------------------- | --------------------------- |
+| Échec recovery (6 tentatives) | Pi → `network_alert`     | `alertService.networkFailure()` ⚠️       | 1/heure/site/type           |
+| Rollback config réseau        | Pi → `network_rollback`  | — (DB + dashboard)                       | —                           |
+| Connexion rétablie            | Pi → `network_recovered` | `alertService.info('Réseau rétabli')` ✅ | Seulement si alerte récente |
+
+**Configuration requise** : `SLACK_WEBHOOK_URL` + `SLACK_ALERTS_ENABLED=true` dans les variables d'environnement Railway.
+
+**Test** : `POST /api/alerts/test-slack` (super_admin) envoie un message de test.
 
 ### Rollback automatique
 

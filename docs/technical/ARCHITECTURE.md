@@ -372,9 +372,12 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 
 - Email (SMTP via emailService)
 - Webhook (POST JSON vers URL configurable)
-- Slack (Incoming Webhooks avec Block Kit)
+- Slack (Incoming Webhooks avec Block Kit) — `alert.service.ts` avec méthodes pré-construites
 - Escalade automatique vers superviseurs
 - **18 seuils par défaut** : 6 réactifs (CPU, mémoire, température, disque, site offline, deployment failure) + 9 prédictifs (inactivité, disk growth, déconnexions, WiFi signal, video errors, temperature trend, hotspot instability, subscription expiry, stuck deployments) + 3 nouveaux (WebSocket disconnects fréquents, trous noirs vidéo/safety timeouts, crash kiosk Chromium)
+- **Alertes réseau WiFi** (v3.33+) : `networkFailure()` (échec recovery watchdog), `info('Réseau rétabli')` (recovery confirmée) — dédupliquées 1/heure/site
+- **Test Slack** : `POST /api/alerts/test-slack` (super_admin) — vérifie la configuration webhook
+- **Variables d'environnement** : `SLACK_WEBHOOK_URL` + `SLACK_ALERTS_ENABLED=true`
 
 ---
 
