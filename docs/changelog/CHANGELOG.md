@@ -1,3 +1,9 @@
+## [3.34.1](https://github.com/Tallec7/neopro/compare/v3.34.0...v3.34.1) (2026-02-15)
+
+### Bug Fixes
+
+- **sync-agent:** handle null category in delete_video + use Pi path data ([995a34b](https://github.com/Tallec7/neopro/commit/995a34b8026340bb0cbe876bdd0b93d0c928595c))
+
 # [3.34.0](https://github.com/Tallec7/neopro/compare/v3.33.0...v3.34.0) (2026-02-15)
 
 ### Features
