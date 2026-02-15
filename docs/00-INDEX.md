@@ -13,6 +13,12 @@
 
 ---
 
+## 🗺️ Cartographie des outils
+
+**[Cartographie des outils Neopro](CARTOGRAPHIE_OUTILS.md)** — Vue complète des 12 outils, leur rôle, public cible et fonctionnalités 🆕
+
+---
+
 ## 📚 Documentation par Thème
 
 ### 📖 [Guides Utilisateur](guides/)
@@ -202,6 +208,6 @@ neopro/
 
 ---
 
-**Dernière mise à jour** : 12 janvier 2026 - Mise à jour docs installation (Pi 5, gpu_mem, Config Drafts)
+**Dernière mise à jour** : 15 février 2026 - Ajout cartographie des outils
 
-**Version** : 2.27.0
+**Version** : 3.37.0
