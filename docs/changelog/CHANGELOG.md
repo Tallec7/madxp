@@ -1,3 +1,9 @@
+## [3.36.1](https://github.com/Tallec7/neopro/compare/v3.36.0...v3.36.1) (2026-02-15)
+
+### Bug Fixes
+
+- **watchdog:** start network watchdog at boot before Socket.IO connection ([08f2ae7](https://github.com/Tallec7/neopro/commit/08f2ae742a4c59254d160350d9e85be9caca3daa))
+
 # [3.36.0](https://github.com/Tallec7/neopro/compare/v3.35.2...v3.36.0) (2026-02-15)
 
 ### Features
