@@ -7,6 +7,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import { alertRepository } from '../repositories/alert.repository';
+import alertService from '../services/alert.service';
 import logger from '../config/logger';
 
 /**
@@ -101,6 +102,34 @@ export const resolveAlert = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error('Error resolving alert:', error);
     return res.status(500).json({ error: 'Failed to resolve alert' });
+  }
+};
+
+/**
+ * Envoie une alerte Slack de test pour vérifier la configuration webhook.
+ * Réservé aux super_admin.
+ */
+export const testSlack = async (req: AuthRequest, res: Response) => {
+  try {
+    const success = await alertService.info(
+      '🔔 Test Slack — Neopro',
+      `Test envoyé par *${req.user?.email || 'unknown'}* depuis le dashboard.\nSi vous voyez ce message, les alertes Slack fonctionnent !`
+    );
+
+    logger.info('[Alerts] Test Slack alert sent', {
+      success,
+      sentBy: req.user?.email,
+    });
+
+    return res.json({
+      success,
+      message: success
+        ? 'Notification Slack envoyée avec succès'
+        : 'Échec — vérifiez SLACK_WEBHOOK_URL et SLACK_ALERTS_ENABLED',
+    });
+  } catch (error) {
+    logger.error('Error sending test Slack alert:', error);
+    return res.status(500).json({ error: 'Failed to send test Slack alert' });
   }
 };
 

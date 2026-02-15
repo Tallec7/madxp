@@ -16,6 +16,9 @@ router.get('/', authenticate, requireRole('operator'), alertsController.listAler
 // Get alert statistics
 router.get('/stats', authenticate, requireRole('admin'), alertsController.getAlertStats);
 
+// Test Slack webhook configuration (super_admin only)
+router.post('/test-slack', authenticate, requireRole('super_admin'), alertsController.testSlack);
+
 // Resolve single alert
 router.post('/:id/resolve', authenticate, requireRole('operator'), alertsController.resolveAlert);
 
