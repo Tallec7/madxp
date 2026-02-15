@@ -20,6 +20,7 @@ import { siteRepository } from '../repositories';
 import socketService from '../services/socket.service';
 import { commandQueueService } from '../services/command-queue.service';
 import logger from '../config/logger';
+import metricsService from '../services/metrics.service';
 import { generateRemotePinToken } from '../middleware/remote-pin.middleware';
 import { LicenseStatusResponse, SiteSubscriptionInfo, SubscriptionPlan, SuspensionReason } from '../types';
 
@@ -395,6 +396,7 @@ export async function sendRemoteCommand(req: Request, res: Response) {
     }
 
     io.to(siteId).emit(eventName, payload);
+    metricsService.recordCommand(type, 'sent');
 
     logger.info('Cloud remote command sent', {
       siteId,
@@ -410,6 +412,7 @@ export async function sendRemoteCommand(req: Request, res: Response) {
       timestamp,
     });
   } catch (error) {
+    metricsService.recordCommand(req.body?.type || 'unknown', 'error');
     logger.error('Error sending remote command:', { error, siteId: req.params.siteId });
     res.status(500).json({ error: 'Erreur serveur' });
   }

@@ -31,7 +31,7 @@ GET  /api/remote/:siteId/videos     → Liste vidéos (public, PIN-protégé si 
 **Sécurité sans JWT** :
 
 - **UUID du site** : 128 bits d'entropie, impossible à deviner par force brute
-- **Rate limiting** : 30 req/min par IP (sensitiveRateLimit)
+- **Rate limiting** : 60 req/min par IP (remoteRateLimit)
 - **Site online requis** : Les commandes ne sont relayées que si le Pi est connecté
 - **PIN optionnel** : 4-6 chiffres (SHA-256), protection brute-force (5 tentatives / 10 min), JWT token 24h après vérification
 
@@ -123,7 +123,7 @@ GET  /api/remote/:siteId/videos     → Liste vidéos (public, PIN-protégé si 
 | Risque                               | Mitigation                                 |
 | ------------------------------------ | ------------------------------------------ |
 | UUID dans les logs serveur           | Logs d'accès par IP, rate limiting         |
-| Abus externe                         | Rate limit 30 req/min par IP               |
+| Abus externe                         | Rate limit 60 req/min par IP               |
 | Spam de commandes                    | Le site doit être online pour recevoir     |
 | URL partagée sur les réseaux sociaux | Possibilité de régénérer l'API key du site |
 
@@ -169,6 +169,15 @@ L'endpoint `GET /state` retourne désormais `pendingConfigVersionId` (UUID de la
 
 - `pendingConfigVersionId` : UUID de la version config en attente (depuis `sites.pending_config_version_id`), ou `null`
 - `pendingCommandsCount` : Nombre de commandes en file d'attente (depuis table `pending_commands`)
+
+### Monitoring Prometheus (v3.37+)
+
+Toutes les commandes cloud remote sont instrumentées via les métriques Prometheus existantes :
+
+- `neopro_commands_total{type, status}` : Compteur par type de commande (`score-update`, `screenshot`, etc.) et statut (`sent`, `error`)
+- `neopro_command_latency_seconds{type}` : Histogramme de latence par type
+
+Ces métriques sont visibles dans Grafana (dashboard NeoPro Overview) et permettent de détecter une utilisation anormale (spam de commandes, erreurs récurrentes).
 
 ## Références
 

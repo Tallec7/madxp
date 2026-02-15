@@ -1,3 +1,17 @@
+# [3.37.1](https://github.com/Tallec7/neopro/compare/v3.37.0...v3.37.1) (2026-02-15)
+
+### Bug Fixes
+
+- **remote:** add `screenshot` to Joi validation schema — was handled in controller but rejected by middleware (400 Bad Request)
+
+### Monitoring
+
+- **remote:** wire `neopro_commands_total{type, status}` Prometheus metric on cloud remote commands (all 10 command types)
+
+### Documentation
+
+- **ADR-007:** fix stale rate limit (30 → 60 req/min), add Prometheus monitoring section
+
 # [3.37.0](https://github.com/Tallec7/neopro/compare/v3.36.1...v3.37.0) (2026-02-15)
 
 ### Features
