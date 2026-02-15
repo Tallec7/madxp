@@ -496,7 +496,7 @@ NetworkWatchdog (sync-agent)
 | 1 - Douce           | 1         | `dhclient wlan1` (DHCP seul)                           | 30s         | Suffit dans 80% des cas                                                       |
 | 2 - Normale         | 2         | `wpa_cli reconfigure` + `dhclient`                     | 60s         | Réassociation WiFi                                                            |
 | 3 - Moyenne         | 3         | `ip link set wlan1 down/up` + reconfigure              | 120s        | Reset interface                                                               |
-| 4 - Agressive       | 4         | `killall wpa_supplicant` + restart                     | 120s        | Restart complet wpa_supplicant                                                |
+| 4 - Agressive       | 4         | `systemctl restart wpa_supplicant@wlan1` (+ fallback)  | 120s        | Restart scoped via systemd (ne touche pas wlan0, tracking correct)            |
 | 5 - Nucléaire       | 5         | `modprobe -r` + `modprobe` driver + vérification wlan1 | 120s        | Rechargement driver kernel + fallback USB power-cycle si wlan1 ne revient pas |
 | 6 - USB power-cycle | 6         | Unbind/rebind USB via sysfs                            | —           | Dernier recours hardware, scan tous les devices WiFi USB                      |
 
