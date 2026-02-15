@@ -291,45 +291,67 @@ class UpdateDeploymentService {
   }
 
   /**
-   * Pré-migration avant OTA : corrige les fichiers VERSION/release.json root:root
+   * Pré-migration avant OTA : supprime les fichiers VERSION/release.json root:root
    * AVANT que le sync-agent n'exécute l'update.
    *
    * Problème : les anciennes versions du sync-agent créaient ces fichiers en root:root
-   * via "sudo cp/tee". Le process OTA tourne en pi, donc fs.copy() échoue avec EACCES
-   * en tentant d'unlink() le fichier root. L'erreur crashe l'OTA à 60%.
+   * via "sudo cp/tee". Le code OTA v3.17.1 (et antérieur) fait fs.copy(VERSION,
+   * { overwrite: true }) qui appelle fs.unlink() sur le fichier root → EACCES.
+   * Ce crash à 60% est un deadlock : le fix (try/catch non-bloquant) est dans le
+   * NOUVEAU code livré par l'OTA qui échoue.
    *
-   * Solution : supprimer les fichiers root:root avant l'OTA. Le sync-agent les recréera
-   * en pi:pi via writeVersionMetadata() ou fs.copy() depuis l'archive.
+   * Solution : SUPPRIMER les fichiers root:root avant l'OTA (pas chown, pas cp+mv).
+   * Un simple `rm -f` suffit si le dossier parent /home/pi/neopro/ est pi:pi (ce qui
+   * est le cas standard). Si le fichier n'existe plus, fs.copy() skip l'unlink et
+   * crée directement un nouveau fichier — pas d'EACCES.
    *
-   * Stratégie en 3 niveaux (chaque fichier VERSION/release.json/version.json) :
-   * 1. sudo chown -R pi:pi → utilise la règle sudoers ciblée
-   * 2. cp+mv → contournement sans sudo (copie contenu, rename remplace l'entrée)
-   * 3. sudo rm -f → dernier recours, suppression du fichier root:root
+   * Stratégie en 4 niveaux (pour chaque fichier) :
+   * 1. rm -f (sans sudo) → marche si le dossier parent est pi:pi (cas standard)
+   * 2. sudo chown pi:pi → marche si NoNewPrivileges=false ET sudoers installé
+   * 3. sudo rm -f → marche si NoNewPrivileges=false
+   * 4. Diagnostic → log les permissions pour debug futur
    *
-   * IMPORTANT : PAS de sed sur le code du sync-agent (trop fragile et dangereux —
-   * un sed 's/sudo cp/cp/g' cassait l'installation du sudoers et des services systemd).
-   * PAS de kill du sync-agent (inutile car la pré-migration s'exécute séquentiellement
-   * dans le même event handler que le update_software qui suit).
+   * IMPORTANT : NE PAS appeler apply-services ici — ça restart le sync-agent et
+   * déconnecte le socket avant que update_software n'arrive. Le fix des services
+   * systemd se fera APRÈS l'OTA via le nouveau code installé.
    */
   private applyPreUpdateMigration(siteId: string): boolean {
     if (!socketService.isConnected(siteId)) {
       return false;
     }
 
-    // Fixer l'ownership des fichiers VERSION qui peuvent être root:root
-    // Les commandes sont chaînées avec || pour tenter les niveaux successivement
-    const fixOwnershipCommand =
+    // Diagnostic : loguer les permissions du dossier et des fichiers pour comprendre
+    // les cas où rm -f échoue (ex: dossier parent root:root, immutable flag, etc.)
+    const diagnostic =
+      'echo "=== PRE-MIGRATION DIAG ==="; ' +
+      'stat -c "dir %n owner=%U:%G perms=%a" /home/pi/neopro/ 2>/dev/null; ' +
+      'stat -c "dir %n owner=%U:%G perms=%a" /home/pi/neopro/webapp/ 2>/dev/null; ' +
+      'for f in /home/pi/neopro/VERSION /home/pi/neopro/release.json /home/pi/neopro/webapp/version.json; do ' +
+      'stat -c "file %n owner=%U:%G perms=%a uid=%u" "$f" 2>/dev/null || echo "file $f ABSENT"; ' +
+      'done';
+
+    // Stratégie : supprimer les fichiers root:root pour que fs.copy() n'ait pas besoin
+    // d'appeler unlink() sur un fichier root. writeVersionMetadata() les recréera après.
+    const fixFiles =
       'for f in /home/pi/neopro/VERSION /home/pi/neopro/release.json /home/pi/neopro/webapp/version.json; do ' +
       'if [ -f "$f" ] && [ "$(stat -c %u "$f" 2>/dev/null)" = "0" ]; then ' +
-      // Niveau 1 : sudo chown -R (matche sudoers ciblé /usr/bin/chown -R pi:pi /home/pi/neopro/*)
-      'sudo chown -R pi:pi "$f" 2>/dev/null && echo "Fixed via chown: $f" || ' +
-      // Niveau 2 : contournement sans sudo — copie contenu dans nouveau fichier owned par pi
-      // rename() ne vérifie que les permissions du dossier parent (pi:pi), pas du fichier
-      '{ cp "$f" "$f.tmp" 2>/dev/null && mv -f "$f.tmp" "$f" 2>/dev/null && echo "Fixed via cp+mv: $f"; } || ' +
-      // Niveau 3 : suppression forcée — le fichier sera recréé par writeVersionMetadata()
-      '{ sudo rm -f "$f" 2>/dev/null && echo "Fixed via rm: $f"; } || ' +
-      'echo "WARN: cannot fix $f"; ' +
-      'fi; done; true';
+      // Niveau 1 : rm sans sudo (marche si dossier parent est pi:pi — cas standard)
+      'rm -f "$f" 2>/dev/null && echo "FIXED rm: $f" && continue; ' +
+      // Niveau 2 : sudo chown (marche si NoNewPrivileges=false)
+      'sudo chown pi:pi "$f" 2>/dev/null && echo "FIXED chown: $f" && continue; ' +
+      // Niveau 3 : sudo rm -f (dernier recours)
+      'sudo rm -f "$f" 2>/dev/null && echo "FIXED sudo-rm: $f" && continue; ' +
+      // Rien n'a marché — loguer les détails
+      'echo "FAIL: cannot fix $f (dir may be root:root or NoNewPrivileges)"; ' +
+      'fi; done; ' +
+      // Aussi fixer les dossiers si possible (pour les prochaines tentatives)
+      'for d in /home/pi/neopro /home/pi/neopro/webapp; do ' +
+      'if [ "$(stat -c %u "$d" 2>/dev/null)" = "0" ]; then ' +
+      'sudo chown pi:pi "$d" 2>/dev/null && echo "FIXED dir: $d" || echo "FAIL dir: $d"; ' +
+      'fi; done; ' +
+      'echo "=== PRE-MIGRATION DONE ==="; true';
+
+    const fixOwnershipCommand = `${diagnostic}; ${fixFiles}`;
 
     try {
       const commandId = uuidv4();
@@ -363,12 +385,12 @@ class UpdateDeploymentService {
   ): Promise<boolean> {
     logger.info('deployToSite called', { deploymentId, siteId, updateVersion: update.version });
 
-    // Pré-migration : fixer les fichiers VERSION root:root avant l'OTA
+    // Pré-migration : supprimer les fichiers VERSION/release.json root:root avant l'OTA
     // IMPORTANT : le handler socket.on('command') du Pi n'attend PAS la fin du
     // handleCommand() — les commandes s'exécutent en PARALLÈLE. Il faut donc
-    // attendre que le remote_shell (chown/rm) ait le temps de terminer avant
-    // d'envoyer update_software, sinon fs.copy() arrive avant le chown.
-    // La commande de fix est rapide (<1s), 3s de marge suffisent.
+    // attendre que le rm -f ait le temps de terminer avant d'envoyer update_software,
+    // sinon fs.copy() tente unlink() sur le fichier root → EACCES.
+    // Le rm est quasi-instantané, 3s de marge suffisent.
     const migrationSent = this.applyPreUpdateMigration(siteId);
     if (migrationSent) {
       await this.delay(3000);

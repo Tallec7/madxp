@@ -10,6 +10,7 @@
  * - POST /api/system/reboot             -> Redémarrer le système
  * - POST /api/system/shutdown           -> Arrêter le système
  * - POST /api/system/apply-services     -> Appliquer services systemd + sudoers
+ * - POST /api/system/fix-ownership      -> Fixer les permissions root:root avant OTA
  */
 
 const express = require('express');
@@ -80,6 +81,19 @@ module.exports = function createSystemRouter({ systemService }) {
   router.post('/api/system/apply-services', async (req, res) => {
     try {
       const result = await systemService.applySystemdServices();
+      res.json({ success: true, ...result });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // POST /api/system/fix-ownership
+  // Fix root:root ownership on /home/pi/neopro/ and VERSION files.
+  // Called by sync-agent pre-migration before OTA to prevent EACCES errors.
+  // The admin-server runs WITHOUT NoNewPrivileges, so sudo works here.
+  router.post('/api/system/fix-ownership', async (req, res) => {
+    try {
+      const result = await systemService.fixOwnership();
       res.json({ success: true, ...result });
     } catch (error) {
       res.status(500).json({ error: error.message });

@@ -422,6 +422,61 @@ class SystemService {
 
     return statuses;
   }
+
+  /**
+   * Fix root:root ownership on /home/pi/neopro/ directory and VERSION files.
+   * Called by sync-agent pre-migration before OTA to prevent EACCES errors.
+   * The admin-server runs WITHOUT NoNewPrivileges, so sudo works here.
+   */
+  async fixOwnership() {
+    const fixed = [];
+    const failed = [];
+
+    // Fix the root directory itself (critical — if root:root, pi can't unlink anything)
+    const dirs = [NEOPRO_DIR, path.join(NEOPRO_DIR, 'webapp')];
+    for (const dir of dirs) {
+      const result = await execCommand(`stat -c %u "${dir}" 2>/dev/null`);
+      if (result.success && result.output.trim() === '0') {
+        const chown = await execCommand(`sudo chown pi:pi "${dir}"`);
+        if (chown.success) {
+          fixed.push(dir);
+          console.log(`[fix-ownership] Fixed directory: ${dir}`);
+        } else {
+          failed.push(dir);
+          console.error(`[fix-ownership] Failed to fix directory: ${dir}`);
+        }
+      }
+    }
+
+    // Fix VERSION files
+    const files = [
+      path.join(NEOPRO_DIR, 'VERSION'),
+      path.join(NEOPRO_DIR, 'release.json'),
+      path.join(NEOPRO_DIR, 'webapp', 'version.json'),
+    ];
+    for (const file of files) {
+      const result = await execCommand(`stat -c %u "${file}" 2>/dev/null`);
+      if (result.success && result.output.trim() === '0') {
+        const chown = await execCommand(`sudo chown pi:pi "${file}"`);
+        if (chown.success) {
+          fixed.push(file);
+          console.log(`[fix-ownership] Fixed file: ${file}`);
+        } else {
+          // Fallback: remove the file (writeVersionMetadata will recreate it)
+          const rm = await execCommand(`sudo rm -f "${file}"`);
+          if (rm.success) {
+            fixed.push(`${file} (removed)`);
+            console.log(`[fix-ownership] Removed file: ${file}`);
+          } else {
+            failed.push(file);
+            console.error(`[fix-ownership] Failed to fix file: ${file}`);
+          }
+        }
+      }
+    }
+
+    return { fixed, failed };
+  }
 }
 
 module.exports = SystemService;
