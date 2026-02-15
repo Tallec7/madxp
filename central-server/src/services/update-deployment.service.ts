@@ -314,6 +314,10 @@ class UpdateDeploymentService {
    * IMPORTANT : NE PAS appeler apply-services ici — ça restart le sync-agent et
    * déconnecte le socket avant que update_software n'arrive. Le fix des services
    * systemd se fera APRÈS l'OTA via le nouveau code installé.
+   *
+   * TODO: Supprimer cette pré-migration une fois que NLF Handball (v3.17.1) aura
+   * reçu l'OTA avec succès. Le code v3.20+ a déjà le try/catch non-bloquant
+   * autour de fs.copy(VERSION), donc la pré-migration devient inutile.
    */
   private applyPreUpdateMigration(siteId: string): boolean {
     if (!socketService.isConnected(siteId)) {
