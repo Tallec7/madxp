@@ -867,6 +867,9 @@ async function internetWatchLoop() {
       return;
     }
 
+    const wasDown = !state.internet.healthy && state.internet.lastCheck !== null;
+    const hadRecoveryAttempts = state.internet.recoveryAttempts > 0;
+
     const health = await checkInternetHealth();
     state.internet.lastCheck = Date.now();
     state.internet.healthy = health.healthy;
@@ -874,6 +877,25 @@ async function internetWatchLoop() {
     state.internet.ipAddress = health.ipAddress;
     state.internet.gateway = health.gateway;
     state.internet.connectionType = health.connectionType;
+
+    // Notify central when internet recovers after a failure
+    if (health.healthy && (wasDown || hadRecoveryAttempts)) {
+      logger.info('NetworkWatchdog: Internet recovered', {
+        ip: health.ipAddress,
+        connectionType: health.connectionType,
+      });
+      state.internet.recoveryAttempts = 0;
+
+      if (socketRef && socketRef.connected) {
+        socketRef.emit('network_recovered', {
+          siteId: config.site.id,
+          type: 'internet',
+          connectionType: health.connectionType,
+          ip: health.ipAddress,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
 
     if (!health.healthy) {
       // If using Ethernet, don't try WiFi recovery

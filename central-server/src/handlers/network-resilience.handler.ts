@@ -155,3 +155,63 @@ export async function handleNetworkRollback(
     logger.error('Error handling network_rollback:', { siteId, error });
   }
 }
+
+/**
+ * Handle a network_recovered event from the Pi's NetworkWatchdog.
+ * Resolves active network alerts and sends Slack recovery notification.
+ */
+export async function handleNetworkRecovered(
+  ctx: SocketContext,
+  siteId: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  try {
+    const { type, connectionType, ip, timestamp } = payload;
+
+    logger.info('Network recovered on site', {
+      siteId,
+      type,
+      connectionType,
+      ip,
+    });
+
+    // Resolve active network alerts for this site
+    await query(
+      `UPDATE alerts SET status = 'resolved', resolved_at = NOW()
+       WHERE site_id = $1 AND alert_type LIKE 'network_%' AND status = 'active'`,
+      [siteId]
+    );
+
+    // Send Slack recovery notification (only if there was a recent failure alert)
+    const recentFailure = await query(
+      `SELECT id FROM alerts
+       WHERE site_id = $1 AND alert_type LIKE 'network_%' AND status = 'resolved'
+       AND resolved_at > NOW() - INTERVAL '1 minute'`,
+      [siteId]
+    );
+
+    if (recentFailure.rows.length > 0) {
+      const siteResult = await query('SELECT club_name FROM sites WHERE id = $1', [siteId]);
+      const clubName: string = (siteResult.rows[0]?.club_name as string) || siteId;
+      alertService.info(
+        'Réseau rétabli',
+        `Le site *${clubName}* a récupéré sa connexion ${connectionType || 'internet'} (${ip || 'IP inconnue'}).`,
+        { siteId, siteName: clubName }
+      ).catch((_e) => {/* ignore */});
+    }
+
+    // Emit to dashboard for real-time display
+    const io = ctx.getIO();
+    if (io) {
+      io.to('dashboard').emit('network_recovered', {
+        siteId,
+        type,
+        connectionType,
+        ip,
+        timestamp: timestamp || new Date().toISOString(),
+      });
+    }
+  } catch (error) {
+    logger.error('Error handling network_recovered:', { siteId, error });
+  }
+}

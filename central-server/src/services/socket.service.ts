@@ -40,7 +40,7 @@ import {
 } from '../handlers/config-sync.handler';
 import { handleDeployProgress, handleUpdateProgress } from '../handlers/deploy-progress.handler';
 import { sendLicenseStatus } from '../handlers/license.handler';
-import { handleNetworkAlert, handleNetworkRollback } from '../handlers/network-resilience.handler';
+import { handleNetworkAlert, handleNetworkRecovered, handleNetworkRollback } from '../handlers/network-resilience.handler';
 import { handleRecordingState, RecordingStateMessage } from '../handlers/recording-state.handler';
 import {
   checkConnectionHealth,
@@ -396,6 +396,7 @@ class SocketService {
       pong_check: () => this.lastPongReceived.set(siteId, Date.now()),
       network_alert: (alert: Record<string, unknown>) => handleNetworkAlert(ctx, siteId, alert),
       network_rollback: (rollback: Record<string, unknown>) => handleNetworkRollback(ctx, siteId, rollback),
+      network_recovered: (payload: Record<string, unknown>) => handleNetworkRecovered(ctx, siteId, payload),
       'recording-state': (message: RecordingStateMessage) => handleRecordingState(ctx, siteId, message),
     };
 
@@ -420,6 +421,7 @@ class SocketService {
     socket.on('pong_check', withMetrics('pong_check', handlers.pong_check));
     socket.on('network_alert', withMetrics('network_alert', handlers.network_alert));
     socket.on('network_rollback', withMetrics('network_rollback', handlers.network_rollback));
+    socket.on('network_recovered', withMetrics('network_recovered', handlers.network_recovered));
     socket.on('recording-state', withMetrics('recording-state', handlers['recording-state']));
 
     // Cloud monitoring: relay screenshot data from Pi to dashboard
@@ -510,6 +512,7 @@ class SocketService {
       socket.off('pong_check', handlers.pong_check);
       socket.off('network_alert', handlers.network_alert);
       socket.off('network_rollback', handlers.network_rollback);
+      socket.off('network_recovered', handlers.network_recovered);
       socket.off('recording-state', handlers['recording-state']);
       delete (socket as any)._neoHandlers;
     }
