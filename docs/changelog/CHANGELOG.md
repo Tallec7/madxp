@@ -1,3 +1,9 @@
+## [3.32.1](https://github.com/Tallec7/neopro/compare/v3.32.0...v3.32.1) (2026-02-15)
+
+### Bug Fixes
+
+- **ota:** use plain rm instead of sudo for pre-migration VERSION cleanup ([1172c89](https://github.com/Tallec7/neopro/commit/1172c8915eb3fd2fcae471310520ba5faf0ce598))
+
 # [3.32.0](https://github.com/Tallec7/neopro/compare/v3.31.0...v3.32.0) (2026-02-15)
 
 ### Features
