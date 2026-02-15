@@ -571,11 +571,27 @@ async function attemptUsbPowerCycleAll() {
 // =============================================================================
 
 /**
+ * Restart wpa_supplicant for wlan1 via systemd (scoped — doesn't touch wlan0).
+ * Falls back to raw daemon launch if systemd service is not available.
+ */
+async function restartWpaSupplicantWlan1() {
+  try {
+    // Prefer systemd: keeps service tracking correct, auto-restarts, scoped to wlan1
+    await execAsync('sudo systemctl restart wpa_supplicant@wlan1 2>/dev/null');
+    logger.info('NetworkWatchdog: wpa_supplicant@wlan1 restarted via systemd');
+  } catch {
+    // Fallback: raw daemon launch (older Pi without the systemd service)
+    logger.warn('NetworkWatchdog: systemd restart failed, falling back to raw wpa_supplicant');
+    await execAsync('sudo wpa_supplicant -B -i wlan1 -c /etc/wpa_supplicant/wpa_supplicant-wlan1.conf 2>/dev/null || true');
+  }
+}
+
+/**
  * Tente la récupération de la connexion internet avec phases progressives.
  *
  * Phase 1 (attempts 1-2): Gentle - wpa_cli reconfigure + dhclient
  * Phase 2 (attempt 3): Medium - interface down/up cycle
- * Phase 3 (attempt 4): Aggressive - wpa_supplicant restart
+ * Phase 3 (attempt 4): Aggressive - wpa_supplicant@wlan1 restart via systemd
  * Phase 4 (attempt 5): Modprobe - USB WiFi driver reload with verification
  * Phase 5 (attempt 6): USB power-cycle - hardware unbind/rebind
  */
@@ -618,11 +634,9 @@ async function attemptInternetRecovery() {
       await sleep(3000);
 
     } else if (attempt === 4) {
-      // Phase 3: Aggressive - kill and restart wpa_supplicant
-      logger.warn('NetworkWatchdog: Phase 3 - wpa_supplicant restart');
-      await execAsync('sudo killall wpa_supplicant 2>/dev/null || true');
-      await sleep(2000);
-      await execAsync('sudo wpa_supplicant -B -i wlan1 -c /etc/wpa_supplicant/wpa_supplicant-wlan1.conf 2>/dev/null || true');
+      // Phase 3: Aggressive - restart wpa_supplicant via systemd (wlan1 only)
+      logger.warn('NetworkWatchdog: Phase 3 - wpa_supplicant@wlan1 restart via systemd');
+      await restartWpaSupplicantWlan1();
       await sleep(5000);
       await execAsync('sudo dhclient wlan1 2>/dev/null || true');
       await sleep(3000);
@@ -672,7 +686,7 @@ async function attemptInternetRecovery() {
         }
 
         // Reconnect WiFi (whether modprobe or USB power-cycle brought it back)
-        await execAsync('sudo wpa_supplicant -B -i wlan1 -c /etc/wpa_supplicant/wpa_supplicant-wlan1.conf 2>/dev/null || true');
+        await restartWpaSupplicantWlan1();
         await sleep(5000);
         await execAsync('sudo dhclient wlan1 2>/dev/null || true');
         await sleep(3000);
@@ -693,7 +707,7 @@ async function attemptInternetRecovery() {
       await attemptUsbPowerCycleAll();
       await sleep(5000);
       // Try to reconnect after power-cycle
-      await execAsync('sudo wpa_supplicant -B -i wlan1 -c /etc/wpa_supplicant/wpa_supplicant-wlan1.conf 2>/dev/null || true');
+      await restartWpaSupplicantWlan1();
       await sleep(5000);
       await execAsync('sudo dhclient wlan1 2>/dev/null || true');
       await sleep(3000);
