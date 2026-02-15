@@ -2356,6 +2356,37 @@ cat /home/pi/neopro/webapp/configuration.json
 # "videoPath": "/videos/sponsors/sponsor1.mp4"
 ```
 
+### 9. Alerting crash "is not valid JSON" sur checkHourlyMetrics
+
+**Erreur :**
+
+```
+Error checking hourly metrics: Unexpected token 'e', "email" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at AlertingService.mapThresholdRow
+```
+
+**Cause :** La colonne `notify_channels` (JSONB) de la table `alert_thresholds` contient une chaîne brute (ex: `email`) au lieu d'un tableau JSON valide (ex: `["email"]`). Typiquement causé par une insertion SQL manuelle ou une migration incomplète.
+
+**Impact :** Le service d'alerting crashe sur `checkHourlyMetrics` — aucune alerte n'est évaluée tant que la donnée corrompue existe.
+
+**Solution :**
+
+```sql
+-- Identifier les lignes corrompues
+SELECT id, name, notify_channels
+FROM alert_thresholds
+WHERE notify_channels IS NOT NULL
+  AND jsonb_typeof(notify_channels) != 'array';
+
+-- Corriger les valeurs brutes en tableaux JSON
+UPDATE alert_thresholds
+SET notify_channels = jsonb_build_array(notify_channels #>> '{}')
+WHERE jsonb_typeof(notify_channels) != 'array';
+```
+
+**Prévention :** Depuis v3.31.0, `mapThresholdRow` utilise un parser défensif (`parseNotifyChannels`) qui gère les chaînes brutes, tableaux, null, et JSON strings sans crasher.
+
 ---
 
 ## Contact support

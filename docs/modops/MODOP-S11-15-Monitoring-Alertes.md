@@ -638,15 +638,16 @@ message:"Deployment failed"
 
 ### 8.3 Erreurs courantes et solutions
 
-| Erreur dans les logs | Cause                      | Solution                      |
-| -------------------- | -------------------------- | ----------------------------- |
-| `ECONNREFUSED`       | Service arrêté             | Redémarrer le service         |
-| `EADDRINUSE`         | Port déjà utilisé          | Tuer le processus, redémarrer |
-| `MODULE_NOT_FOUND`   | Dépendances npm manquantes | `npm install`                 |
-| `Permission denied`  | Permissions incorrectes    | Fix permissions (MODOP-S06)   |
-| `ETIMEDOUT`          | Timeout réseau             | Vérifier connectivité         |
-| `401 Unauthorized`   | API key invalide           | Réenregistrer le site         |
-| `502 Bad Gateway`    | neopro-app ne répond pas   | Redémarrer neopro-app         |
+| Erreur dans les logs                     | Cause                                              | Solution                                 |
+| ---------------------------------------- | -------------------------------------------------- | ---------------------------------------- |
+| `ECONNREFUSED`                           | Service arrêté                                     | Redémarrer le service                    |
+| `EADDRINUSE`                             | Port déjà utilisé                                  | Tuer le processus, redémarrer            |
+| `MODULE_NOT_FOUND`                       | Dépendances npm manquantes                         | `npm install`                            |
+| `Permission denied`                      | Permissions incorrectes                            | Fix permissions (MODOP-S06)              |
+| `ETIMEDOUT`                              | Timeout réseau                                     | Vérifier connectivité                    |
+| `401 Unauthorized`                       | API key invalide                                   | Réenregistrer le site                    |
+| `502 Bad Gateway`                        | neopro-app ne répond pas                           | Redémarrer neopro-app                    |
+| `is not valid JSON` (checkHourlyMetrics) | `notify_channels` corrompu dans `alert_thresholds` | Corriger en DB (voir TROUBLESHOOTING §9) |
 
 ### 8.4 Analyse proactive
 
