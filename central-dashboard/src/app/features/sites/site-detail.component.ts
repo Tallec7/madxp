@@ -1485,7 +1485,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         if (data.metrics.data.length > 0) {
           this.currentMetrics = data.metrics.data[0];
           // Extract WiFi status from network_status JSONB
-          const networkStatus = this.currentMetrics.network_status;
+          const networkStatus = this.currentMetrics?.network_status;
           if (networkStatus && typeof networkStatus === 'object' && 'connectionType' in networkStatus) {
             this.wifiStatus = networkStatus as typeof this.wifiStatus;
           }
