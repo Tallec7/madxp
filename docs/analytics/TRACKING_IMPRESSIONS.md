@@ -822,10 +822,12 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 - ✅ Guards dans `AnalyticsService.trackVideoStart/End()` : idem
 - ✅ Au boot : OFF (aucune donnée enregistrée)
 - ✅ Auto-ON quand la Remote change de phase (neutral → before/during/after)
-- ✅ Auto-OFF quand retour en neutral + timeout 15 min
-- ✅ Override manuel via bouton 🔴 REC sur la télécommande
+- ✅ Timer d'inactivité universel : 15 min sans interaction dans **toutes les phases** → popup warning 3 min → auto-OFF (remplace l'ancien auto-OFF neutral-only)
+- ✅ Popup d'avertissement sur la Remote avec décompte visuel et boutons Continuer / Arrêter
+- ✅ Override manuel via bouton 🔴 REC sur la télécommande (pas affecté par le timer d'inactivité)
 - ✅ Contexte sponsor automatique : la Remote wire eventType, period et audienceEstimate
 - ✅ TV second écran (slaves) : analytics désactivées automatiquement
+- ✅ Interactions significatives (changement phase, score, vidéo manuelle, timer, breaking news, etc.) reset le timer d'inactivité
 
 ### Version 1.1.0 - 28 Décembre 2025
 

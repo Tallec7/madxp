@@ -1,3 +1,21 @@
+## [3.38.0](https://github.com/Tallec7/neopro/compare/v3.37.2...v3.38.0) (2026-02-15)
+
+### Features
+
+- **remote:** recording inactivity warning popup with 3-minute countdown (ADR-021)
+  - Universal inactivity timer (15 min) across all phases (neutral, before, during, after)
+  - Modal popup on remote with visual countdown and progress bar
+  - "Continuer" button resets full cycle (15+3 min), "Arrêter" stops recording
+  - Auto-stop recording when countdown reaches 0
+  - All significant user interactions (phase change, score, video trigger, timer, breaking news, etc.) reset the inactivity timer
+  - Manual recording override not affected by inactivity timer
+  - Dark mode support
+
+### Documentation
+
+- **ADR-021:** Timer d'inactivité recording — replaces neutral-only auto-stop with universal inactivity-based approach
+- **TRACKING_IMPRESSIONS.md:** updated RecordingStateService behavior description
+
 ## [3.37.2](https://github.com/Tallec7/neopro/compare/v3.37.1...v3.37.2) (2026-02-15)
 
 ### Bug Fixes

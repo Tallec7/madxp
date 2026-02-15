@@ -125,6 +125,8 @@ export class RemoteComponent implements OnInit, OnDestroy {
 
   // État d'enregistrement analytics
   public isRecording = false;
+  public showRecordingWarning = false;
+  public warningSecondsRemaining = 0;
 
   // Loading state
   public isLoading = false;
@@ -230,6 +232,16 @@ export class RemoteComponent implements OnInit, OnDestroy {
       this.recordingState.isRecording$.subscribe((recording) => {
         this.ngZone.run(() => {
           this.isRecording = recording;
+        });
+      })
+    );
+
+    // S'abonner au warning d'inactivité recording
+    this.subscriptions.push(
+      this.recordingState.warning$.subscribe((warning) => {
+        this.ngZone.run(() => {
+          this.showRecordingWarning = warning.active;
+          this.warningSecondsRemaining = warning.secondsRemaining;
         });
       })
     );
@@ -410,6 +422,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
   // Actions
   public launchSponsors(): void {
     console.log('emit sponsors loop');
+    this.notifyUserActivity();
     // Communication locale (Remote ↔ TV sur le même Raspberry) - PRIORITAIRE
     this.localBroadcast.emitCommand({ type: 'sponsors' });
     // Communication cloud (pour monitoring/dashboard - optionnel)
@@ -418,6 +431,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
 
   public launchVideo(video: Video): void {
     console.log('emit video', video);
+    this.notifyUserActivity();
     // Tracker le déclenchement manuel
     this.analyticsService.trackManualTrigger(video);
 
@@ -667,6 +681,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
    * Sauvegarde les informations du match
    */
   public saveMatchInfo(): void {
+    this.notifyUserActivity();
     console.log('Match info saved:', this.matchInfo);
 
     // Créer une nouvelle session avec les infos du match
@@ -774,6 +789,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
    * Envoie le score à la TV via BroadcastChannel (local) + Socket (cloud)
    */
   public broadcastScore(): void {
+    this.notifyUserActivity();
     const scoreData = {
       homeTeam: this.currentScore.homeTeam,
       awayTeam: this.currentScore.awayTeam,
@@ -824,6 +840,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
   public switchPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
     this.activePhase = phase;
     console.log('Switching to phase:', phase);
+    this.notifyUserActivity();
 
     // Notifier le RecordingStateService (auto-start/stop analytics)
     this.recordingState.onPhaseChange(phase);
@@ -854,6 +871,28 @@ export class RemoteComponent implements OnInit, OnDestroy {
    */
   public toggleRecording(): void {
     this.recordingState.toggleRecording();
+  }
+
+  /** Prolonger l'enregistrement (bouton "Continuer" dans la popup warning) */
+  public extendRecording(): void {
+    this.recordingState.extendRecording();
+  }
+
+  /** Arrêter l'enregistrement depuis la popup warning */
+  public dismissRecordingWarning(): void {
+    this.recordingState.stopRecording(true);
+  }
+
+  /** Formate les secondes restantes en M:SS */
+  public formatWarningTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  /** Notifie le RecordingStateService d'une interaction utilisateur significative */
+  private notifyUserActivity(): void {
+    this.recordingState.resetInactivityTimer();
   }
 
   /**
@@ -1288,6 +1327,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
    * Nouveau match : réinitialise les équipes et logos
    */
   public startNewMatch(): void {
+    this.notifyUserActivity();
     this.localOptionsService.resetMatch();
     this.localOptions = this.localOptionsService.getOptions();
     this.currentScore = {
@@ -1449,6 +1489,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
    * Envoie une breaking news à la TV
    */
   public sendBreakingNews(message?: string): void {
+    this.notifyUserActivity();
     const text = message || this.breakingNewsMessage.trim();
     if (!text) return;
 
@@ -1484,6 +1525,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
    * Démarre ou met en pause le chronomètre
    */
   public toggleTimer(): void {
+    this.notifyUserActivity();
     if (this.timerIsRunning) {
       this.pauseTimer();
     } else {
@@ -1565,6 +1607,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
    * Réinitialise le chronomètre
    */
   public resetTimer(): void {
+    this.notifyUserActivity();
     this.pauseTimer();
 
     // Réinitialiser selon le mode

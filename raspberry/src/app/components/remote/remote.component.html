@@ -1808,6 +1808,51 @@
           </div>
         </div>
       }
+
+      <!-- Popup warning recording inactivité -->
+      @if (showRecordingWarning) {
+        <div class="recording-warning-overlay">
+          <div class="recording-warning-modal" (click)="$event.stopPropagation()">
+            <div class="recording-warning-header">
+              <div class="warning-icon-wrapper">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              </div>
+              <h2>Enregistrement bientôt arrêté</h2>
+            </div>
+
+            <div class="recording-warning-body">
+              <p>Aucune activité détectée depuis 15 minutes.</p>
+              <p>L'enregistrement des analytics s'arrêtera dans :</p>
+              <div class="warning-countdown">
+                <span class="countdown-time">{{ formatWarningTime(warningSecondsRemaining) }}</span>
+              </div>
+              <div class="warning-progress-bar">
+                <div
+                  class="warning-progress-fill"
+                  [style.width.%]="(warningSecondsRemaining / 180) * 100"
+                ></div>
+              </div>
+            </div>
+
+            <div class="recording-warning-footer">
+              <button class="btn btn-secondary" (click)="dismissRecordingWarning()">Arrêter</button>
+              <button class="btn btn-primary btn-continue" (click)="extendRecording()">
+                Continuer l'enregistrement
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   }
 }

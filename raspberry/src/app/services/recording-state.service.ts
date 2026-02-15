@@ -8,14 +8,19 @@ export interface RecordingStateEvent {
   isManualOverride: boolean;
 }
 
+export interface RecordingWarningState {
+  active: boolean;
+  secondsRemaining: number;
+}
+
 /**
  * Service de gestion de l'état d'enregistrement analytics.
  *
  * Comportement hybride :
  * - **Au boot : OFF** — aucune donnée analytics enregistrée
  * - **Auto ON** quand la télécommande change de phase (neutral → before/during/after)
- * - **Auto OFF** quand retour en neutral + timeout configurable (15 min)
- * - **Override manuel** : bouton sur la télécommande pour forcer start/stop
+ * - **Auto OFF** après 15 min d'inactivité (toutes phases) + 3 min de countdown warning
+ * - **Override manuel** : bouton sur la télécommande pour forcer start/stop (pas d'inactivité timer)
  *
  * L'état est synchronisé entre onglets via BroadcastChannel et entre instances via Socket.IO.
  */
@@ -24,17 +29,25 @@ export class RecordingStateService implements OnDestroy {
   private readonly localBroadcast = inject(LocalBroadcastService);
   private readonly socketService = inject(SocketService);
 
-  /** Délai avant auto-stop après retour en phase neutral (15 minutes) */
-  private readonly AUTO_STOP_DELAY = 15 * 60 * 1000;
+  /** Délai d'inactivité avant affichage du warning (15 minutes) */
+  private readonly INACTIVITY_DELAY = 15 * 60 * 1000;
+  /** Durée du countdown warning avant auto-stop (3 minutes en secondes) */
+  private readonly WARNING_COUNTDOWN = 3 * 60;
 
   private _isRecording = false;
   private _isManualOverride = false;
-  private _autoStopTimer: ReturnType<typeof setTimeout> | null = null;
+  private _inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+  private _warningCountdownTimer: ReturnType<typeof setInterval> | null = null;
+  private _warningSecondsRemaining = 0;
   private subscriptions: Subscription[] = [];
 
-  // Observable pour le binding UI
+  // Observable pour le binding UI du recording
   private readonly recordingSubject = new BehaviorSubject<boolean>(false);
   public readonly isRecording$: Observable<boolean> = this.recordingSubject.asObservable();
+
+  // Observable pour le warning d'inactivité
+  private readonly warningSubject = new BehaviorSubject<RecordingWarningState>({ active: false, secondsRemaining: 0 });
+  public readonly warning$: Observable<RecordingWarningState> = this.warningSubject.asObservable();
 
   /** Accès synchrone à l'état d'enregistrement (utilisé par les guards analytics) */
   public get isRecording(): boolean {
@@ -53,19 +66,15 @@ export class RecordingStateService implements OnDestroy {
 
   /**
    * Appelé par la Remote quand la phase change.
-   * Auto-start si on quitte neutral, auto-stop (avec timer) si retour neutral.
+   * Auto-start si on quitte neutral. Le changement de phase est une interaction.
    */
   public onPhaseChange(phase: 'neutral' | 'before' | 'during' | 'after'): void {
-    this.cancelAutoStop();
-
     if (phase !== 'neutral' && !this._isRecording) {
       // Auto-start : on entre dans une phase de match
       this.startRecording(false);
-    } else if (phase === 'neutral' && this._isRecording && !this._isManualOverride) {
-      // Auto-stop : retour en neutral, démarrer le timeout
-      this._autoStopTimer = setTimeout(() => {
-        this.stopRecording(false);
-      }, this.AUTO_STOP_DELAY);
+    } else if (this._isRecording && !this._isManualOverride) {
+      // Changement de phase = interaction utilisateur → reset le timer d'inactivité
+      this.resetInactivityTimer();
     }
   }
 
@@ -82,23 +91,90 @@ export class RecordingStateService implements OnDestroy {
   public startRecording(manual: boolean): void {
     this._isRecording = true;
     this._isManualOverride = manual;
-    this.cancelAutoStop();
+    this.cancelWarning();
+    this.cancelInactivityTimer();
     this.recordingSubject.next(true);
     this.broadcast();
+
+    // Démarrer le timer d'inactivité pour les enregistrements automatiques
+    if (!manual) {
+      this.resetInactivityTimer();
+    }
   }
 
   /** Forcer l'arrêt */
   public stopRecording(manual: boolean): void {
     this._isRecording = false;
     this._isManualOverride = manual;
-    this.cancelAutoStop();
+    this.cancelWarning();
+    this.cancelInactivityTimer();
     this.recordingSubject.next(false);
     this.broadcast();
+  }
+
+  /**
+   * Reset le timer d'inactivité. Appelé par la Remote sur toute interaction significative.
+   * Si le warning est actif, il est annulé et le cycle complet recommence.
+   */
+  public resetInactivityTimer(): void {
+    if (!this._isRecording || this._isManualOverride) {
+      return;
+    }
+
+    this.cancelWarning();
+    this.cancelInactivityTimer();
+
+    this._inactivityTimer = setTimeout(() => {
+      this.startWarningCountdown();
+    }, this.INACTIVITY_DELAY);
+  }
+
+  /**
+   * Prolonger l'enregistrement (bouton "Continuer" dans la popup).
+   * Annule le warning et relance le cycle complet d'inactivité.
+   */
+  public extendRecording(): void {
+    this.cancelWarning();
+    this.resetInactivityTimer();
   }
 
   // ============================================================================
   // PRIVATE
   // ============================================================================
+
+  /** Démarre le countdown de 3 minutes avant auto-stop */
+  private startWarningCountdown(): void {
+    this._warningSecondsRemaining = this.WARNING_COUNTDOWN;
+    this.warningSubject.next({ active: true, secondsRemaining: this._warningSecondsRemaining });
+
+    this._warningCountdownTimer = setInterval(() => {
+      this._warningSecondsRemaining--;
+      this.warningSubject.next({ active: true, secondsRemaining: this._warningSecondsRemaining });
+
+      if (this._warningSecondsRemaining <= 0) {
+        this.cancelWarning();
+        this.stopRecording(false);
+      }
+    }, 1000);
+  }
+
+  private cancelWarning(): void {
+    if (this._warningCountdownTimer) {
+      clearInterval(this._warningCountdownTimer);
+      this._warningCountdownTimer = null;
+    }
+    if (this._warningSecondsRemaining > 0 || this.warningSubject.value.active) {
+      this._warningSecondsRemaining = 0;
+      this.warningSubject.next({ active: false, secondsRemaining: 0 });
+    }
+  }
+
+  private cancelInactivityTimer(): void {
+    if (this._inactivityTimer) {
+      clearTimeout(this._inactivityTimer);
+      this._inactivityTimer = null;
+    }
+  }
 
   /** Broadcast l'état via BroadcastChannel ET Socket.IO */
   private broadcast(): void {
@@ -118,6 +194,10 @@ export class RecordingStateService implements OnDestroy {
         this._isRecording = state.isRecording;
         this._isManualOverride = state.isManualOverride;
         this.recordingSubject.next(this._isRecording);
+        if (!this._isRecording) {
+          this.cancelWarning();
+          this.cancelInactivityTimer();
+        }
       })
     );
 
@@ -126,19 +206,18 @@ export class RecordingStateService implements OnDestroy {
       this._isRecording = state.isRecording;
       this._isManualOverride = state.isManualOverride;
       this.recordingSubject.next(this._isRecording);
+      if (!this._isRecording) {
+        this.cancelWarning();
+        this.cancelInactivityTimer();
+      }
     });
   }
 
-  private cancelAutoStop(): void {
-    if (this._autoStopTimer) {
-      clearTimeout(this._autoStopTimer);
-      this._autoStopTimer = null;
-    }
-  }
-
   public ngOnDestroy(): void {
-    this.cancelAutoStop();
+    this.cancelWarning();
+    this.cancelInactivityTimer();
     this.subscriptions.forEach(s => s.unsubscribe());
     this.recordingSubject.complete();
+    this.warningSubject.complete();
   }
 }
