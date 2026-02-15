@@ -1,3 +1,9 @@
+# [3.33.0](https://github.com/Tallec7/neopro/compare/v3.32.1...v3.33.0) (2026-02-15)
+
+### Features
+
+- **alerting:** wire network_alert events to Slack notifications ([5f7862f](https://github.com/Tallec7/neopro/commit/5f7862f96aa5aed6843c420db652ddcfb675c326))
+
 ## [3.32.1](https://github.com/Tallec7/neopro/compare/v3.32.0...v3.32.1) (2026-02-15)
 
 ### Bug Fixes
