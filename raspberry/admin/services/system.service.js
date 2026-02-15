@@ -354,7 +354,7 @@ class SystemService {
 
       if (ruleFiles.length > 0) {
         await execCommand('sudo udevadm control --reload-rules');
-        await execCommand('sudo udevadm trigger');
+        await execCommand('sudo udevadm trigger --subsystem-match=net --action=add');
       }
     } catch {
       // config/udev/ directory not present, skip

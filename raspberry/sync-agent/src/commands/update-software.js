@@ -577,6 +577,17 @@ class SoftwareUpdateHandler {
         }
       }
 
+      // Enable watchdog grace period before network-sensitive operations (udev + service restart)
+      // Prevents the watchdog from triggering recovery during OTA udev deployment
+      try {
+        const networkWatchdog = require('../services/network-watchdog');
+        networkWatchdog.enableGracePeriod('internet', 120000); // 2 min
+        networkWatchdog.enableGracePeriod('hotspot', 120000);
+        logger.info('NetworkWatchdog grace period enabled for OTA (120s)');
+      } catch (e) {
+        logger.warn('Could not enable watchdog grace period', { error: e.message });
+      }
+
       // Deploy udev rules if present in the archive
       const udevDir = path.join(rootDir, 'config', 'udev');
       if (await fs.pathExists(udevDir)) {
@@ -587,8 +598,10 @@ class SoftwareUpdateHandler {
             logger.info(`Installed udev rule: ${rule}`);
           }
           if (ruleFiles.length > 0) {
-            await execAsync('sudo udevadm control --reload-rules && sudo udevadm trigger');
-            logger.info('Udev rules reloaded');
+            await execAsync(
+              'sudo udevadm control --reload-rules && sudo udevadm trigger --subsystem-match=net --action=add'
+            );
+            logger.info('Udev rules reloaded (filtered: net/add only)');
           }
         } catch (e) {
           logger.warn('Failed to install udev rules', { error: e.message });
