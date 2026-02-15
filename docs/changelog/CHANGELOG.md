@@ -1,3 +1,9 @@
+## [3.37.2](https://github.com/Tallec7/neopro/compare/v3.37.1...v3.37.2) (2026-02-15)
+
+### Bug Fixes
+
+- **metrics:** wire missing Grafana metrics + bound alerting memory Maps ([22ca0b1](https://github.com/Tallec7/neopro/commit/22ca0b14594387e87224844e440df37241804455))
+
 # [3.37.2](https://github.com/Tallec7/neopro/compare/v3.37.1...v3.37.2) (2026-02-15)
 
 ### Bug Fixes
