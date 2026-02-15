@@ -1,3 +1,9 @@
+## [3.35.2](https://github.com/Tallec7/neopro/compare/v3.35.1...v3.35.2) (2026-02-15)
+
+### Bug Fixes
+
+- **watchdog:** use systemctl restart wpa_supplicant@wlan1 instead of killall + raw daemon ([b329269](https://github.com/Tallec7/neopro/commit/b3292696dd098b204ddcc6ac9ddee738ee5b6a88))
+
 ## [3.35.1](https://github.com/Tallec7/neopro/compare/v3.35.0...v3.35.1) (2026-02-15)
 
 ### Bug Fixes
