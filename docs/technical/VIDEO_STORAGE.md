@@ -374,8 +374,9 @@ L'administrateur peut supprimer une vidéo depuis la **Bibliothèque Vidéo** d'
    │
 2. Confirmation utilisateur
    │
-3. Commande sendCommand(siteId, 'delete_video', { path, filename })
+3. Commande sendCommand(siteId, 'delete_video', { filename, category, subcategory })
    │  - Envoyée via Socket.IO au sync-agent
+   │  - Le sync-agent reconstruit le chemin : /home/pi/neopro/videos/{category}/{subcategory}/{filename}
    │
 4. Sync-agent supprime le fichier + met à jour configuration.json
    │
@@ -384,18 +385,18 @@ L'administrateur peut supprimer une vidéo depuis la **Bibliothèque Vidéo** d'
 
 ### Flux — Suppression des deux (Pi + cloud)
 
-Quand la vidéo est présente sur les deux, le dashboard propose un choix (1/2/3). Si l'utilisateur choisit « les deux », les deux appels sont lancés en parallèle via `forkJoin`.
+Quand la vidéo est présente sur les deux, le dashboard ouvre un modal avec des boutons colorés : **Supprimer du Pi** (amber), **Supprimer du cloud** (bleu), **Supprimer des deux** (rouge). Si l'utilisateur choisit « les deux », les deux appels sont lancés en parallèle via `forkJoin`.
 
 ### Fichiers impliqués (Dashboard → API)
 
-| Fichier                         | Rôle                                                    |
-| ------------------------------- | ------------------------------------------------------- |
-| `site-content-tab.component.ts` | Déclenche la suppression (onVideoDelete) + dialog choix |
-| `sites.service.ts`              | `deleteCloudVideo(id)` → API, `sendCommand` → Pi        |
-| `content.controller.ts`         | Orchestre suppression DB + FTP                          |
-| `video.repository.ts`           | `deleteAndReturn()` + `findStoragePath()`               |
-| `storage.service.ts`            | `deleteVideo()` → FTP                                   |
-| `delete-video.js` (sync-agent)  | Suppression fichier + update config sur le Pi           |
+| Fichier                         | Rôle                                                 |
+| ------------------------------- | ---------------------------------------------------- |
+| `site-content-tab.component.ts` | Modal de suppression (onVideoDelete → executeDelete) |
+| `sites.service.ts`              | `deleteCloudVideo(id)` → API, `sendCommand` → Pi     |
+| `content.controller.ts`         | Orchestre suppression DB + FTP                       |
+| `video.repository.ts`           | `deleteAndReturn()` + `findStoragePath()`            |
+| `storage.service.ts`            | `deleteVideo()` → FTP                                |
+| `delete-video.js` (sync-agent)  | Suppression fichier + update config sur le Pi        |
 
 ---
 
