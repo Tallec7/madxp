@@ -1,3 +1,10 @@
+## [3.37.1](https://github.com/Tallec7/neopro/compare/v3.37.0...v3.37.1) (2026-02-15)
+
+### Bug Fixes
+
+- **remote:** add screenshot to Joi validation schema ([0936844](https://github.com/Tallec7/neopro/commit/09368449b3dcef153061398ef6e15f84c882e6c7))
+- **remote:** add screenshot to validation, wire Prometheus metrics, sync docs ([057ee55](https://github.com/Tallec7/neopro/commit/057ee550bbc5d23beca01591738448a9cb2c8fff))
+
 # [3.37.1](https://github.com/Tallec7/neopro/compare/v3.37.0...v3.37.1) (2026-02-15)
 
 ### Bug Fixes
