@@ -868,6 +868,54 @@ function canDeleteVideo(video, category) {
 
 ---
 
+## Mise à jour OTA (Software Update)
+
+Le déploiement OTA est le seul flux qui met à jour le **code** du Pi (sync-agent, webapp, server, admin, config).
+
+### Flow complet
+
+```
+Dashboard ──POST /api/update-deployments──▶ Central Server
+                                               │
+                                               ├─ 1. applyPreUpdateMigration(siteId)
+                                               │      └─ remote_shell: sudo chown -R pi:pi VERSION/release.json
+                                               │
+                                               ├─ 2. await delay(5s)  ← évite race condition
+                                               │
+                                               └─ 3. sendOrQueue('update_software', { version, updateUrl, ... })
+                                                      │
+                                          Pi (sync-agent)
+                                               │
+                                               ├─ Download .tar.gz depuis CDN
+                                               ├─ Extraction dans /tmp
+                                               ├─ fixFileOwnership(VERSION, release.json)
+                                               │      └─ sudo chown -R pi:pi (doit matcher sudoers -R)
+                                               ├─ fs.copy() des fichiers extraits
+                                               ├─ npm install
+                                               ├─ Installation sudoers + systemd services
+                                               ├─ Restart services
+                                               └─ emit update_progress { progress: 100, completed: true }
+```
+
+### Pré-migration (serveur → Pi)
+
+Envoyée via `remote_shell` **avant** l'OTA pour corriger les problèmes hérités :
+
+| Migration        | Commande                                   | Objectif                                        |
+| ---------------- | ------------------------------------------ | ----------------------------------------------- |
+| 1. Fix ownership | `sudo chown -R pi:pi VERSION release.json` | Fichiers root:root → pi:pi (legacy sudo cp/tee) |
+| 2. Patch legacy  | `sed 's/sudo cp/cp/g; s/sudo tee/tee/g'`   | Retirer sudo cp/tee bloqués par NoNewPrivileges |
+
+**Pièges connus :**
+
+- La commande `chown` doit utiliser `-R` pour matcher la règle sudoers (sinon refus silencieux)
+- La migration 2 ne doit **pas** remplacer `sudo chown` (nécessaire dans `fixFileOwnership()`)
+- Sans le délai de 5s, les deux commandes s'exécutent en parallèle côté Pi (race condition)
+
+### Monitoring
+
+Métrique Prometheus : `neopro_ota_errors_total{error_type}` avec labels `permission`, `timeout`, `network`, `disk_full`, `cancelled`, `other`.
+
 ## Historique des Versions
 
 | Version | Date       | Auteur        | Modifications                                                               |
@@ -879,6 +927,7 @@ function canDeleteVideo(video, category) {
 | 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support)                    |
 | 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config                     |
 | 1.6     | 2026-02-12 | Claude/NEOPRO | Ajout multi-config profiles (sync_profiles, switch_profile, profile-switch) |
+| 1.7     | 2026-02-15 | Claude/NEOPRO | Ajout section OTA : pré-migration, race condition, monitoring               |
 
 ---
 

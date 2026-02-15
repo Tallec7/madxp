@@ -1008,7 +1008,10 @@ Puis relancer la mise à jour depuis le dashboard.
 1. **Côté Pi** (sync-agent `fixFileOwnership()`) : `sudo chown -R pi:pi` (avec `-R` pour matcher le sudoers) + `sudo rm -f` en fallback dans le sudoers
 2. **Côté central server** (`applyPreUpdateMigration()`) : la pré-migration envoyée via `remote_shell` avant chaque OTA utilise aussi `sudo chown -R pi:pi`. C'est ce qui débloque les Pi qui n'ont pas encore le fix local
 
-**Piège connu** : la migration 2 (patch legacy code) faisait `s/sudo chown/chown/g` ce qui supprimait le `sudo` nécessaire dans `fixFileOwnership()`. Depuis la correction, seuls `sudo cp` et `sudo tee` sont remplacés.
+**Pièges connus** :
+
+- La migration 2 (patch legacy code) faisait `s/sudo chown/chown/g` ce qui supprimait le `sudo` nécessaire dans `fixFileOwnership()`. Depuis la correction, seuls `sudo cp` et `sudo tee` sont remplacés
+- **Race condition** : la pré-migration et `update_software` étaient envoyées simultanément. Le Pi les exécutait en parallèle, donc le `chown` n'avait pas le temps de finir avant que `fs.copy()` tente l'unlink. Fix : délai de 5s entre la pré-migration et l'envoi de `update_software`
 
 ---
 

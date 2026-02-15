@@ -302,6 +302,30 @@ socket.emit('update_progress', {
 // → ajoute deployedCount (nombre de sites déployés) et status ('in_progress'|'completed'|'failed')
 ```
 
+**Pré-migration OTA (serveur → Pi, avant `update_software`) :**
+
+Avant chaque OTA, le serveur envoie une commande `remote_shell` de pré-migration via `applyPreUpdateMigration()` pour corriger les problèmes connus sur le Pi :
+
+1. **Fix ownership** : `sudo chown -R pi:pi` sur VERSION/release.json/version.json (fichiers potentiellement `root:root` à cause d'anciens scripts)
+2. **Patch legacy code** : remplace `sudo cp` et `sudo tee` par `cp`/`tee` dans le sync-agent (bloqués par NoNewPrivileges depuis v3.9.4)
+
+**IMPORTANT** : un délai de 5s est inséré entre la pré-migration et l'envoi de `update_software` pour éviter une race condition (les deux commandes s'exécutent en parallèle côté Pi).
+
+**Convention sudoers :** Les commandes `sudo` du sync-agent doivent **exactement** matcher les règles dans `raspberry/config/sudoers.d/neopro`. Exemples :
+
+- `sudo chown -R pi:pi /home/pi/neopro/VERSION` ✅ (matche `/usr/bin/chown -R pi\:pi /home/pi/neopro/*`)
+- `sudo chown pi:pi /home/pi/neopro/VERSION` ❌ (pas de `-R` → sudoers refuse silencieusement)
+
+**Monitoring OTA :** La métrique `neopro_ota_errors_total{error_type}` catégorise les erreurs :
+| error_type | Déclencheur |
+|-------------|-------------|
+| `permission` | EACCES, permission denied (fichier root, sudoers mismatch) |
+| `timeout` | Déploiement dépassant le timeout (15 min) |
+| `network` | Téléchargement du paquet échoue (ECONNREFUSED, ENOTFOUND) |
+| `disk_full` | ENOSPC, pas d'espace disque |
+| `cancelled` | Annulé manuellement depuis le dashboard |
+| `other` | Erreur non catégorisée |
+
 ---
 
 ## Authentification
