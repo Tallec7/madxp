@@ -311,12 +311,21 @@ class UpdateDeploymentService {
     }
 
     // Migration 1 : corriger l'ownership des fichiers VERSION/release.json
-    // Idempotent : si déjà pi:pi, chown est un no-op
-    // IMPORTANT : utiliser -R pour matcher la règle sudoers (/usr/bin/chown -R pi:pi /home/pi/neopro/*)
+    // Stratégie robuste en 3 niveaux pour contourner toutes les combinaisons :
+    // - Pi avec sudoers à jour : sudo chown -R fonctionne
+    // - Pi avec NoNewPrivileges : sudo bloqué → mv/cp contourne en recréant le fichier
+    // - Pi avec NOPASSWD:ALL (legacy) : sudo chown (sans -R) fonctionne aussi
     const fixOwnershipCommand =
       'for f in /home/pi/neopro/VERSION /home/pi/neopro/release.json /home/pi/neopro/webapp/version.json; do ' +
-      '[ -f "$f" ] && [ "$(stat -c %u "$f" 2>/dev/null)" = "0" ] && sudo chown -R pi:pi "$f" && echo "Fixed: $f"; ' +
-      'done; true';
+      'if [ -f "$f" ] && [ "$(stat -c %u "$f" 2>/dev/null)" = "0" ]; then ' +
+      // Niveau 1 : sudo chown -R (matche sudoers ciblé)
+      'sudo chown -R pi:pi "$f" 2>/dev/null && echo "Fixed via chown: $f" || ' +
+      // Niveau 2 : sudo chown sans -R (matche NOPASSWD:ALL legacy)
+      'sudo chown pi:pi "$f" 2>/dev/null && echo "Fixed via chown-noR: $f" || ' +
+      // Niveau 3 : contournement sans sudo — copie le contenu dans un nouveau fichier owned par pi
+      '{ cp "$f" "$f.tmp" 2>/dev/null && mv -f "$f.tmp" "$f" 2>/dev/null && echo "Fixed via cp+mv: $f"; } || ' +
+      'echo "WARN: cannot fix $f"; ' +
+      'fi; done; true';
 
     // Migration 2 : patcher le code legacy qui utilise sudo cp/tee
     // grep -q skip si déjà patché (0 impact)

@@ -428,30 +428,40 @@ class SoftwareUpdateHandler {
       // ce qui les rendait owner root:root. Le process tourne en pi, donc fs.copy
       // échoue avec EACCES en tentant d'unlink un fichier root.
       // Solution : sudo chown avant fs.copy pour reprendre l'ownership.
+      // IMPORTANT : ne PAS faire échouer l'OTA pour un échec de copy VERSION.
+      // writeVersionMetadata() en fin de process réécrira la version dans un try/catch séparé.
       const versionDest = path.join(rootDir, 'VERSION');
       const releaseDest = path.join(rootDir, 'release.json');
-      await this.fixFileOwnership(versionDest);
-      await this.fixFileOwnership(releaseDest);
 
-      const versionSource = await fs.pathExists(path.join(extractDir, 'VERSION'))
-        ? path.join(extractDir, 'VERSION')
-        : await fs.pathExists(path.join(sourcePath, 'VERSION'))
-          ? path.join(sourcePath, 'VERSION')
-          : null;
-      if (versionSource) {
-        await fs.copy(versionSource, versionDest, { overwrite: true });
+      try {
+        await this.fixFileOwnership(versionDest);
+        await this.fixFileOwnership(releaseDest);
+
+        const versionSource = await fs.pathExists(path.join(extractDir, 'VERSION'))
+          ? path.join(extractDir, 'VERSION')
+          : await fs.pathExists(path.join(sourcePath, 'VERSION'))
+            ? path.join(sourcePath, 'VERSION')
+            : null;
+        if (versionSource) {
+          await fs.copy(versionSource, versionDest, { overwrite: true });
+        }
+
+        const releaseSource = await fs.pathExists(path.join(extractDir, 'release.json'))
+          ? path.join(extractDir, 'release.json')
+          : await fs.pathExists(path.join(sourcePath, 'release.json'))
+            ? path.join(sourcePath, 'release.json')
+            : null;
+        if (releaseSource) {
+          await fs.copy(releaseSource, releaseDest, { overwrite: true });
+        }
+
+        logger.info('VERSION and release.json copied (ownership fixed if needed)');
+      } catch (versionCopyError) {
+        // Non-bloquant : writeVersionMetadata() réécrira après l'installation du sudoers
+        logger.warn('VERSION/release.json copy failed (will retry via writeVersionMetadata)', {
+          error: versionCopyError.message,
+        });
       }
-
-      const releaseSource = await fs.pathExists(path.join(extractDir, 'release.json'))
-        ? path.join(extractDir, 'release.json')
-        : await fs.pathExists(path.join(sourcePath, 'release.json'))
-          ? path.join(sourcePath, 'release.json')
-          : null;
-      if (releaseSource) {
-        await fs.copy(releaseSource, releaseDest, { overwrite: true });
-      }
-
-      logger.info('VERSION and release.json copied (ownership fixed if needed)');
 
       // npm install si nécessaire
       if (await fs.pathExists(path.join(rootDir, 'webapp', 'package.json'))) {

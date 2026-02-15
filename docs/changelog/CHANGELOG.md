@@ -45,6 +45,7 @@
 - **wifi-usb:** add Phase 6 (USB power-cycle) to NetworkWatchdog — scans all USB devices for WiFi dongles and attempts hardware unbind/rebind as last resort before cooldown
 - **wifi-usb:** add sudoers entries for `tee /sys/bus/usb/drivers/usb/*`, `cp udev rules`, `udevadm control/trigger`
 - **ota:** add 5s delay between pre-migration and update_software to prevent race condition — the `remote_shell` fix command and OTA were sent simultaneously, so `fixFileOwnership()` on the Pi hadn't run when `fs.copy()` started
+- **ota:** make VERSION/release.json copy non-blocking during OTA — `fs.copy` EACCES on root-owned files no longer aborts the entire update. The copy is wrapped in try/catch, and `writeVersionMetadata()` retries after sudoers installation. Also: multi-level pre-migration (sudo chown -R → sudo chown → cp+mv fallback)
 
 ## [3.29.1](https://github.com/Tallec7/neopro/compare/v3.29.0...v3.29.1) (2026-02-14)
 
