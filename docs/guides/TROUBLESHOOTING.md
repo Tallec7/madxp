@@ -14,6 +14,8 @@
 10. [Hotspot Watchdog (v2.34+)](#hotspot-watchdog-v234)
 11. [Blocage BSSID Lock en Mesh (v2.34+)](#blocage-bssid-lock-en-mesh-v234)
 
+> **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
+
 ---
 
 ## Problèmes SSH

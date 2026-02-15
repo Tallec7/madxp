@@ -59,6 +59,7 @@ cd central-server && npm run db:migrate
 - Sync-agent : `docs/technical/SYNC_ARCHITECTURE.md`
 - Schéma DB : `central-server/src/scripts/full-schema.sql`
 - Troubleshooting : `docs/guides/TROUBLESHOOTING.md`
+- WiFi USB (clé) : `docs/guides/WIFI_USB_GUIDE.md`
 - Onboarding : `docs/01-START-HERE.md`
 - Client critique NLF : `docs/clients/NLF.md`
 - Changelog : `docs/changelog/CHANGELOG.md`

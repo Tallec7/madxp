@@ -394,6 +394,7 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ## Références
 
+- [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md) — Guide complet clé WiFi USB (installation, diagnostic, pannes, recovery)
 - [TROUBLESHOOTING.md - Section 5b](./TROUBLESHOOTING.md#5b-connexion-wlan1-instable-en-environnement-mesh-wifi-répéteurs)
 - [Changelog fix-hotspot preservation](../changelog/2026-01-18_fix-hotspot-wlan1-preservation.md)
 - [hostapd documentation](https://w1.fi/hostapd/)

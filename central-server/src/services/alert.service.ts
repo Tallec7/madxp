@@ -224,6 +224,38 @@ class AlertService {
     });
   }
 
+  async lowWifiSignal(siteId: string, siteName: string, signal: number): Promise<boolean> {
+    return this.sendAlert({
+      title: 'Signal WiFi faible',
+      message: `Le signal WiFi du site *${siteName}* est de *${signal} dBm*.`,
+      severity: signal < -85 ? 'critical' : 'warning',
+      siteId,
+      siteName,
+      metadata: { signal: `${signal} dBm` }
+    });
+  }
+
+  async wlan1Missing(siteId: string, siteName: string): Promise<boolean> {
+    return this.sendAlert({
+      title: 'Clé WiFi USB non détectée',
+      message: `La clé WiFi USB (wlan1) n'est pas détectée sur le site *${siteName}*. Le Pi n'a pas de connexion Internet.`,
+      severity: 'critical',
+      siteId,
+      siteName,
+    });
+  }
+
+  async usbPowerIssue(siteId: string, siteName: string, throttled: string): Promise<boolean> {
+    return this.sendAlert({
+      title: 'Sous-tension USB détectée',
+      message: `Le site *${siteName}* a une alimentation insuffisante (throttled: ${throttled}). Cela peut causer des déconnexions de la clé WiFi USB.`,
+      severity: 'critical',
+      siteId,
+      siteName,
+      metadata: { throttled }
+    });
+  }
+
   async kioskCrash(siteId: string, siteName: string, reason: string, restartCount: number): Promise<boolean> {
     return this.sendAlert({
       title: 'Kiosk Crash — TV hors service',

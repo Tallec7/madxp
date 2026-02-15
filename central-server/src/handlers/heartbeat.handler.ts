@@ -34,8 +34,8 @@ export async function handleHeartbeat(
     metricsService.recordHeartbeat();
 
     await query(
-      `INSERT INTO metrics (site_id, cpu_usage, memory_usage, temperature, disk_usage, uptime, recorded_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+      `INSERT INTO metrics (site_id, cpu_usage, memory_usage, temperature, disk_usage, uptime, network_status, recorded_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
       [
         siteId,
         message.metrics.cpu,
@@ -43,6 +43,7 @@ export async function handleHeartbeat(
         message.metrics.temperature,
         message.metrics.disk,
         Math.floor(message.metrics.uptime),
+        message.wifiStatus ? JSON.stringify(message.wifiStatus) : null,
       ]
     );
 
@@ -95,6 +96,17 @@ export async function handleHeartbeat(
       }
     }
 
+    // Broadcast WiFi status to dashboard in real-time
+    if (message.wifiStatus) {
+      const io = ctx.getIO();
+      if (io) {
+        io.to('dashboard').emit('wifi_status_updated', {
+          siteId,
+          wifiStatus: message.wifiStatus,
+        });
+      }
+    }
+
     // Record transition quality metrics (video double-buffer)
     if (message.transitionMetrics) {
       metricsService.recordTransitionMetrics(message.transitionMetrics);
@@ -105,7 +117,7 @@ export async function handleHeartbeat(
       }
     }
 
-    await checkAlerts(siteId, message.metrics, message.kioskStatus);
+    await checkAlerts(siteId, message.metrics, message.kioskStatus, message.wifiStatus);
   } catch (error) {
     logger.error('Error handling heartbeat:', error);
   }
@@ -118,7 +130,8 @@ export async function handleHeartbeat(
 async function checkAlerts(
   siteId: string,
   metrics: HeartbeatMessage['metrics'],
-  kioskStatus?: HeartbeatMessage['kioskStatus']
+  kioskStatus?: HeartbeatMessage['kioskStatus'],
+  wifiStatus?: HeartbeatMessage['wifiStatus']
 ): Promise<void> {
   const alerts: Array<{ type: string; severity: string; message: string }> = [];
 
@@ -164,6 +177,36 @@ async function checkAlerts(
     });
   }
 
+  // WiFi / network alerts
+  if (wifiStatus) {
+    // Signal faible (seulement si connexion WiFi, pas Ethernet)
+    if (wifiStatus.connectionType === 'wifi' && wifiStatus.signal !== null && wifiStatus.signal < -75) {
+      alerts.push({
+        type: 'low_wifi_signal',
+        severity: wifiStatus.signal < -85 ? 'critical' : 'warning',
+        message: `Signal WiFi faible: ${wifiStatus.signal} dBm (${wifiStatus.ssid || 'inconnu'})`,
+      });
+    }
+
+    // Clé USB absente (seulement si pas en Ethernet — un Pi Ethernet sans clé est normal)
+    if (wifiStatus.connectionType !== 'ethernet' && wifiStatus.interface === null) {
+      alerts.push({
+        type: 'wlan1_missing',
+        severity: 'critical',
+        message: 'Clé WiFi USB non détectée (wlan1 absent)',
+      });
+    }
+
+    // Sous-tension USB (toujours alerter — affecte tout le système)
+    if (!wifiStatus.voltageOk) {
+      alerts.push({
+        type: 'usb_power_issue',
+        severity: 'critical',
+        message: `Sous-tension détectée (${wifiStatus.throttled}) — alimentation USB insuffisante`,
+      });
+    }
+  }
+
   // Update kiosk status metric
   if (kioskStatus) {
     metricsService.recordKioskStatus(kioskStatus.chromiumAlive ? 1 : 0, kioskStatus.restartCount);
@@ -194,6 +237,12 @@ async function checkAlerts(
         alertService.lowDiskSpace(siteId, clubName, metrics.disk).catch((_e) => {/* ignore */});
       } else if (alert.type === 'kiosk_crash') {
         alertService.kioskCrash(siteId, clubName, kioskStatus?.reason || 'GPU crash', kioskStatus?.restartCount || 0).catch((_e) => {/* ignore */});
+      } else if (alert.type === 'low_wifi_signal') {
+        alertService.lowWifiSignal(siteId, clubName, wifiStatus?.signal || 0).catch((_e) => {/* ignore */});
+      } else if (alert.type === 'wlan1_missing') {
+        alertService.wlan1Missing(siteId, clubName).catch((_e) => {/* ignore */});
+      } else if (alert.type === 'usb_power_issue') {
+        alertService.usbPowerIssue(siteId, clubName, wifiStatus?.throttled || '').catch((_e) => {/* ignore */});
       }
 
       logger.warn('Alert created', { siteId, ...alert });

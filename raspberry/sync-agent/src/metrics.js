@@ -47,12 +47,13 @@ class MetricsCollector {
   /** @returns {Promise<SystemMetrics>} */
   async collectAll() {
     try {
-      const [cpu, memory, temperature, disk, localIp] = await Promise.all([
+      const [cpu, memory, temperature, disk, localIp, wifiStatus] = await Promise.all([
         this.getCpuUsage(),
         this.getMemoryUsage(),
         this.getTemperature(),
         this.getDiskUsage(),
         this.getLocalIp(),
+        this.getWifiStatus(),
       ]);
 
       return {
@@ -62,6 +63,7 @@ class MetricsCollector {
         disk,
         uptime: os.uptime(),
         localIp,
+        wifiStatus,
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -147,6 +149,108 @@ class MetricsCollector {
       logger.error('Error getting disk usage:', error);
       return 0;
     }
+  }
+
+  /**
+   * Récupère l'état de la connexion réseau (WiFi USB / Ethernet) pour le heartbeat.
+   * Gère 3 scénarios : WiFi USB seul, Ethernet seul, dual (eth0 + wlan1).
+   */
+  async getWifiStatus() {
+    const status = {
+      interface: null,
+      connected: false,
+      ssid: null,
+      signal: null,
+      quality: null,
+      connectionType: 'none',
+      disconnectsLastHour: 0,
+      throttled: null,
+      voltageOk: true,
+    };
+
+    try {
+      // 1. Détecter Ethernet (prioritaire)
+      try {
+        const { stdout } = await execAsync('ip addr show eth0 2>/dev/null');
+        const hasIp = /inet\s+\d+\.\d+\.\d+\.\d+/.test(stdout);
+        const isUp = /state UP/.test(stdout);
+        if (hasIp && isUp) {
+          status.connectionType = 'ethernet';
+          status.connected = true;
+        }
+      } catch {
+        // eth0 n'existe pas — normal sur certains Pi
+      }
+
+      // 2. Détecter wlan1
+      try {
+        await execAsync('ip link show wlan1 2>/dev/null');
+        status.interface = 'wlan1';
+      } catch {
+        // wlan1 absent — normal si Ethernet uniquement
+      }
+
+      // 3. Signal WiFi (seulement si wlan1 existe)
+      if (status.interface === 'wlan1') {
+        try {
+          const { stdout: iwOut } = await execAsync('iwconfig wlan1 2>/dev/null');
+
+          const ssidMatch = iwOut.match(/ESSID:"([^"]*)"/);
+          if (ssidMatch && ssidMatch[1]) {
+            status.ssid = ssidMatch[1];
+            if (status.connectionType !== 'ethernet') {
+              status.connectionType = 'wifi';
+              status.connected = true;
+            }
+          }
+
+          const signalMatch = iwOut.match(/Signal level=(-?\d+)/);
+          if (signalMatch) {
+            status.signal = parseInt(signalMatch[1]);
+          }
+
+          const qualityMatch = iwOut.match(/Link Quality=(\d+)\/(\d+)/);
+          if (qualityMatch) {
+            status.quality = Math.round(
+              (parseInt(qualityMatch[1]) / parseInt(qualityMatch[2])) * 100
+            );
+          }
+        } catch {
+          // iwconfig non disponible ou wlan1 pas associé
+        }
+      }
+
+      // 4. Throttling (toujours — affecte tout le système)
+      try {
+        const { stdout: throttledOut } = await execAsync('vcgencmd get_throttled 2>/dev/null');
+        const match = throttledOut.match(/throttled=(0x[0-9a-fA-F]+)/);
+        if (match) {
+          status.throttled = match[1];
+          const value = parseInt(match[1], 16);
+          // Bits 0 (current) et 16 (occurred) = under-voltage
+          status.voltageOk = !(value & 0x10001);
+        }
+      } catch {
+        // vcgencmd non disponible (non-Raspberry Pi)
+      }
+
+      // 5. Déconnexions dernière heure (seulement si WiFi est la connexion principale)
+      if (status.interface === 'wlan1' && status.connectionType === 'wifi') {
+        try {
+          const { stdout: journalOut } = await execAsync(
+            'journalctl -u wpa_supplicant@wlan1 --since "1 hour ago" --no-pager -q 2>/dev/null | grep -c DISCONNECTED || echo 0',
+            { timeout: 5000 }
+          );
+          status.disconnectsLastHour = parseInt(journalOut.trim()) || 0;
+        } catch {
+          // journalctl non disponible
+        }
+      }
+    } catch (error) {
+      logger.error('Error getting WiFi status:', error);
+    }
+
+    return status;
   }
 
   async getNetworkStatus() {

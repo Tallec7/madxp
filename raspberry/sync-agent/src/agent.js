@@ -998,6 +998,7 @@ class NeoproSyncAgent {
           recordingState,
           transitionMetrics,
           playerState,
+          wifiStatus: metrics.wifiStatus || null,
         });
 
         // Enregistrer le succès du heartbeat

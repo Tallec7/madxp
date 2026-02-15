@@ -233,6 +233,17 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'subscription' | '
                     <div class="metric-value">{{ formatUptime(currentMetrics.uptime) }}</div>
                   </div>
                 </div>
+
+                <div class="metric" [class.warning]="wifiSignalWeak" [class.critical]="wifiSignalCritical" *ngIf="wifiStatus">
+                  <div class="metric-icon">{{ connectionIcon }}</div>
+                  <div class="metric-info">
+                    <div class="metric-label">Connexion</div>
+                    <div class="metric-value">{{ wifiSignalDisplay }}</div>
+                  </div>
+                  <div class="metric-bar" *ngIf="wifiStatus.connectionType === 'wifi'">
+                    <div class="metric-fill" [style.width.%]="wifiStatus.quality ?? 0"></div>
+                  </div>
+                </div>
               </div>
               <ng-template #noMetrics>
                 <p class="no-data">Aucune métrique disponible</p>
@@ -1331,6 +1342,19 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   // Active tab
   activeTab: TabId = 'status';
 
+  // WiFi / network status
+  wifiStatus: {
+    interface: string | null;
+    connected: boolean;
+    ssid: string | null;
+    signal: number | null;
+    quality: number | null;
+    connectionType: 'wifi' | 'ethernet' | 'none';
+    disconnectsLastHour: number;
+    throttled: string | null;
+    voltageOk: boolean;
+  } | null = null;
+
   // Connection
   connectionStatus: SiteConnectionStatus | null = null;
   isConnected = false;
@@ -1460,6 +1484,11 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         this.metricsHistory = data.metrics.data;
         if (data.metrics.data.length > 0) {
           this.currentMetrics = data.metrics.data[0];
+          // Extract WiFi status from network_status JSONB
+          const networkStatus = this.currentMetrics.network_status;
+          if (networkStatus && typeof networkStatus === 'object' && 'connectionType' in networkStatus) {
+            this.wifiStatus = networkStatus as typeof this.wifiStatus;
+          }
         }
         this.loadingDashboard = false;
       },
@@ -1919,5 +1948,38 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
    */
   dismissNetworkAlert(): void {
     this.networkAlertDismissed = true;
+  }
+
+  // WiFi / Connection getters for template
+  get wifiSignalDisplay(): string {
+    if (!this.wifiStatus) return 'N/A';
+    if (this.wifiStatus.connectionType === 'ethernet') return 'Ethernet';
+    if (this.wifiStatus.connectionType === 'none') return 'Déconnecté';
+    if (this.wifiStatus.interface === null) return 'Pas de clé USB';
+    if (this.wifiStatus.signal !== null) return `${this.wifiStatus.signal} dBm`;
+    return 'WiFi';
+  }
+
+  get wifiSignalWeak(): boolean {
+    return !!this.wifiStatus &&
+      this.wifiStatus.connectionType === 'wifi' &&
+      this.wifiStatus.signal !== null &&
+      this.wifiStatus.signal < -70;
+  }
+
+  get wifiSignalCritical(): boolean {
+    if (!this.wifiStatus) return false;
+    if (this.wifiStatus.connectionType === 'none') return true;
+    if (this.wifiStatus.interface === null && this.wifiStatus.connectionType !== 'ethernet') return true;
+    return this.wifiStatus.connectionType === 'wifi' &&
+      this.wifiStatus.signal !== null &&
+      this.wifiStatus.signal < -85;
+  }
+
+  get connectionIcon(): string {
+    if (!this.wifiStatus) return '📶';
+    if (this.wifiStatus.connectionType === 'ethernet') return '🔌';
+    if (this.wifiStatus.connectionType === 'none') return '❌';
+    return '📶';
   }
 }

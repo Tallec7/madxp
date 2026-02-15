@@ -335,6 +335,31 @@ class SystemService {
       // config/systemd/ directory not present, skip
     }
 
+    // 5. Deploy udev rules if present
+    const udevDir = path.join(NEOPRO_DIR, 'config', 'udev');
+    try {
+      await fs.access(udevDir);
+      const udevFiles = await fs.readdir(udevDir);
+      const ruleFiles = udevFiles.filter(f => f.endsWith('.rules'));
+
+      for (const rule of ruleFiles) {
+        const src = path.join(udevDir, rule);
+        const cpResult = await execCommand(`sudo cp ${src} /etc/udev/rules.d/${rule}`);
+        if (cpResult.success) {
+          applied.push(rule);
+        } else {
+          errors.push(`${rule}: ${cpResult.error}`);
+        }
+      }
+
+      if (ruleFiles.length > 0) {
+        await execCommand('sudo udevadm control --reload-rules');
+        await execCommand('sudo udevadm trigger');
+      }
+    } catch {
+      // config/udev/ directory not present, skip
+    }
+
     console.log(`[system] apply-services: applied=${applied.join(',')} errors=${errors.join(',')}`);
     return { applied, errors };
   }

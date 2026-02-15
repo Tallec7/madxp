@@ -1,3 +1,18 @@
+## Unreleased (v3.30)
+
+### Features
+
+- **wifi-usb:** boot initialization service `neopro-usb-wifi` — oneshot systemd service that runs before the sync-agent, waits for wlan1 (30s polling), attempts modprobe recovery and USB power-cycle if needed, exits 0 for Ethernet-only Pis
+- **wifi-usb:** udev rule `99-neopro-usb-wifi.rules` — disables USB autosuspend on wlan1 to prevent kernel from sleeping the WiFi dongle (deployed via OTA)
+- **wifi-usb:** OTA deployment of udev rules — `update-software.js` and `system.service.js` now deploy `.rules` files from `config/udev/` and reload udevadm
+- **dashboard:** WiFi status display on site detail page — shows connection type (WiFi/Ethernet/None), signal strength in dBm, and visual indicators for weak/critical signals
+
+### Bug Fixes
+
+- **wifi-usb:** NetworkWatchdog Phase 5 now verifies wlan1 reappears after `modprobe -r`/`modprobe` (3 polls, 3s apart) and falls back to USB power-cycle via sysfs unbind/rebind if wlan1 doesn't return
+- **wifi-usb:** add Phase 6 (USB power-cycle) to NetworkWatchdog — scans all USB devices for WiFi dongles and attempts hardware unbind/rebind as last resort before cooldown
+- **wifi-usb:** add sudoers entries for `tee /sys/bus/usb/drivers/usb/*`, `cp udev rules`, `udevadm control/trigger`
+
 ## [3.29.1](https://github.com/Tallec7/neopro/compare/v3.29.0...v3.29.1) (2026-02-14)
 
 ### Bug Fixes

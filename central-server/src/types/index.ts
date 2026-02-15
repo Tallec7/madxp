@@ -281,6 +281,17 @@ export interface HeartbeatMessage {
     overlayActive: boolean;
     updatedAt: string;
   } | null;
+  wifiStatus?: {
+    interface: string | null;
+    connected: boolean;
+    ssid: string | null;
+    signal: number | null;
+    quality: number | null;
+    connectionType: 'wifi' | 'ethernet' | 'none';
+    disconnectsLastHour: number;
+    throttled: string | null;
+    voltageOk: boolean;
+  } | null;
 }
 
 // ============================================================================

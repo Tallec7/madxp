@@ -1,0 +1,6 @@
+# Neopro — Désactiver USB autosuspend pour les clés WiFi USB
+# Empêche le kernel Linux d'endormir le device USB → évite les déconnexions en prod
+# Déployé automatiquement via OTA dans /etc/udev/rules.d/
+
+# Quand wlan1 apparaît, désactiver l'autosuspend sur son device USB parent
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="wlan1", RUN+="/bin/sh -c 'echo on > /sys$devpath/device/../power/control 2>/dev/null || true'"

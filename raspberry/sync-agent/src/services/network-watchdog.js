@@ -28,7 +28,7 @@ const execAsync = util.promisify(exec);
 const HOTSPOT_CHECK_INTERVAL = 30 * 1000; // 30 secondes
 const INTERNET_CHECK_INTERVAL = 60 * 1000; // 60 secondes
 const CLOUD_CHECK_INTERVAL = 30 * 1000; // 30 secondes
-const MAX_RECOVERY_ATTEMPTS = 5; // Increased from 3 to support aggressive phases
+const MAX_RECOVERY_ATTEMPTS = 6; // Phases: gentle(1-2), medium(3), aggressive(4), modprobe(5), USB power-cycle(6)
 const RECOVERY_COOLDOWN = 5 * 60 * 1000; // 5 minutes
 const ROLLBACK_TIMEOUT = 30 * 1000; // 30 secondes pour rollback
 const GRACE_PERIOD_DURATION = 60 * 1000; // 60s grace period after network operations
@@ -451,6 +451,69 @@ async function attemptHotspotRecovery() {
 }
 
 // =============================================================================
+// USB POWER-CYCLE HELPERS
+// =============================================================================
+
+/**
+ * Tente un USB unbind/rebind pour un device spécifique (ex: "1-1.2")
+ */
+async function attemptUsbPowerCycle(usbDevicePath) {
+  try {
+    logger.warn('NetworkWatchdog: USB power-cycle', { device: usbDevicePath });
+    await execAsync(`echo "${usbDevicePath}" | sudo tee /sys/bus/usb/drivers/usb/unbind 2>/dev/null || true`);
+    await sleep(3000);
+    await execAsync(`echo "${usbDevicePath}" | sudo tee /sys/bus/usb/drivers/usb/bind 2>/dev/null || true`);
+    await sleep(5000);
+
+    // Verify wlan1 reappeared
+    try {
+      await execAsync('ip link show wlan1 2>/dev/null');
+      logger.info('NetworkWatchdog: wlan1 recovered via USB power-cycle', { device: usbDevicePath });
+      return true;
+    } catch {
+      logger.error('NetworkWatchdog: wlan1 still missing after USB power-cycle', { device: usbDevicePath });
+      return false;
+    }
+  } catch (error) {
+    logger.error('NetworkWatchdog: USB power-cycle failed', { device: usbDevicePath, error: error.message });
+    return false;
+  }
+}
+
+/**
+ * Scan tous les devices USB et tente un power-cycle sur ceux qui ressemblent à du WiFi.
+ * Utilisé en dernier recours quand le device path n'est pas connu.
+ */
+async function attemptUsbPowerCycleAll() {
+  try {
+    // List USB devices and find wireless ones
+    const { stdout } = await execAsync(
+      'for d in /sys/bus/usb/devices/[0-9]*-[0-9]*; do ' +
+      'if [ -f "$d/product" ]; then echo "$(basename $d)|$(cat $d/product 2>/dev/null)"; fi; ' +
+      'done 2>/dev/null || true'
+    );
+
+    const lines = stdout.trim().split('\n').filter(Boolean);
+    for (const line of lines) {
+      const [devId, product] = line.split('|');
+      if (!product) continue;
+      const lower = product.toLowerCase();
+      if (lower.includes('wireless') || lower.includes('wifi') || lower.includes('wlan') || lower.includes('802.11')) {
+        logger.warn('NetworkWatchdog: Found WiFi USB device for power-cycle', { devId, product });
+        const recovered = await attemptUsbPowerCycle(devId);
+        if (recovered) return true;
+      }
+    }
+
+    logger.error('NetworkWatchdog: No WiFi USB device found for power-cycle');
+    return false;
+  } catch (error) {
+    logger.error('NetworkWatchdog: USB power-cycle scan failed', { error: error.message });
+    return false;
+  }
+}
+
+// =============================================================================
 // RECOVERY INTERNET
 // =============================================================================
 
@@ -460,7 +523,8 @@ async function attemptHotspotRecovery() {
  * Phase 1 (attempts 1-2): Gentle - wpa_cli reconfigure + dhclient
  * Phase 2 (attempt 3): Medium - interface down/up cycle
  * Phase 3 (attempt 4): Aggressive - wpa_supplicant restart
- * Phase 4 (attempt 5): Nuclear - USB WiFi driver reload (modprobe)
+ * Phase 4 (attempt 5): Modprobe - USB WiFi driver reload with verification
+ * Phase 5 (attempt 6): USB power-cycle - hardware unbind/rebind
  */
 async function attemptInternetRecovery() {
   state.internet.recoveryAttempts++;
@@ -471,7 +535,7 @@ async function attemptInternetRecovery() {
   logger.warn('NetworkWatchdog: Tentative récupération internet', {
     attempt,
     maxAttempts: MAX_RECOVERY_ATTEMPTS,
-    phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : 'nuclear',
+    phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : attempt === 5 ? 'modprobe' : 'usb-power-cycle',
   });
 
   try {
@@ -510,10 +574,19 @@ async function attemptInternetRecovery() {
       await execAsync('sudo dhclient wlan1 2>/dev/null || true');
       await sleep(3000);
 
-    } else {
-      // Phase 4: Nuclear - USB WiFi driver reload
-      // Detect the driver module used by wlan1
+    } else if (attempt === 5) {
+      // Phase 4: Nuclear - USB WiFi driver reload (modprobe) with verification
       logger.warn('NetworkWatchdog: Phase 4 - USB WiFi driver reload (modprobe)');
+
+      // Save USB device path BEFORE modprobe -r (needed for power-cycle fallback)
+      let savedUsbDevicePath = null;
+      try {
+        const { stdout: devPath } = await execAsync(
+          'readlink -f /sys/class/net/wlan1/device 2>/dev/null | xargs -I{} basename $(dirname {}) 2>/dev/null || echo ""'
+        );
+        savedUsbDevicePath = devPath.trim() || null;
+      } catch { /* wlan1 may already be gone */ }
+
       const driverResult = await execAsync(
         'readlink /sys/class/net/wlan1/device/driver 2>/dev/null | xargs basename 2>/dev/null || echo ""'
       ).catch(() => ({ stdout: '' }));
@@ -524,8 +597,28 @@ async function attemptInternetRecovery() {
         await execAsync(`sudo modprobe -r ${driverModule} 2>/dev/null || true`);
         await sleep(3000);
         await execAsync(`sudo modprobe ${driverModule} 2>/dev/null || true`);
-        await sleep(5000);
-        // Wait for interface to reappear
+
+        // Verify wlan1 reappeared (poll 3 times, 3s each)
+        let wlan1Back = false;
+        for (let i = 0; i < 3; i++) {
+          await sleep(3000);
+          try {
+            await execAsync('ip link show wlan1 2>/dev/null');
+            wlan1Back = true;
+            logger.info('NetworkWatchdog: wlan1 reappeared after modprobe', { waitSeconds: (i + 1) * 3 });
+            break;
+          } catch { /* wlan1 pas encore là */ }
+        }
+
+        if (!wlan1Back) {
+          logger.error('NetworkWatchdog: wlan1 did NOT reappear after modprobe — USB hardware issue likely');
+          // Try USB unbind/rebind as immediate fallback
+          if (savedUsbDevicePath) {
+            await attemptUsbPowerCycle(savedUsbDevicePath);
+          }
+        }
+
+        // Reconnect WiFi (whether modprobe or USB power-cycle brought it back)
         await execAsync('sudo wpa_supplicant -B -i wlan1 -c /etc/wpa_supplicant/wpa_supplicant-wlan1.conf 2>/dev/null || true');
         await sleep(5000);
         await execAsync('sudo dhclient wlan1 2>/dev/null || true');
@@ -540,6 +633,17 @@ async function attemptInternetRecovery() {
         await execAsync('sudo wpa_cli -i wlan1 reconfigure 2>/dev/null || true');
         await sleep(3000);
       }
+
+    } else {
+      // Phase 5: USB power-cycle — last resort hardware reset
+      logger.warn('NetworkWatchdog: Phase 5 - USB power-cycle (unbind/rebind)');
+      await attemptUsbPowerCycleAll();
+      await sleep(5000);
+      // Try to reconnect after power-cycle
+      await execAsync('sudo wpa_supplicant -B -i wlan1 -c /etc/wpa_supplicant/wpa_supplicant-wlan1.conf 2>/dev/null || true');
+      await sleep(5000);
+      await execAsync('sudo dhclient wlan1 2>/dev/null || true');
+      await sleep(3000);
     }
 
     // Vérification finale
@@ -548,7 +652,7 @@ async function attemptInternetRecovery() {
       logger.info('NetworkWatchdog: Internet récupéré avec succès', {
         ip: health.ipAddress,
         gateway: health.gateway,
-        phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : 'nuclear',
+        phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : attempt === 5 ? 'modprobe' : 'usb-power-cycle',
       });
       state.internet.recoveryAttempts = 0;
       state.internet.healthy = true;
@@ -559,7 +663,7 @@ async function attemptInternetRecovery() {
     } else {
       logger.error('NetworkWatchdog: Récupération internet échouée', {
         issues: health.issues,
-        phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : 'nuclear',
+        phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : attempt === 5 ? 'modprobe' : 'usb-power-cycle',
       });
       return { success: false, issues: health.issues, phase: attempt };
     }

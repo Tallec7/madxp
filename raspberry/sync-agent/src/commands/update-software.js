@@ -567,6 +567,24 @@ class SoftwareUpdateHandler {
         }
       }
 
+      // Deploy udev rules if present in the archive
+      const udevDir = path.join(rootDir, 'config', 'udev');
+      if (await fs.pathExists(udevDir)) {
+        try {
+          const ruleFiles = (await fs.readdir(udevDir)).filter(f => f.endsWith('.rules'));
+          for (const rule of ruleFiles) {
+            await execAsync(`sudo cp ${path.join(udevDir, rule)} /etc/udev/rules.d/${rule}`);
+            logger.info(`Installed udev rule: ${rule}`);
+          }
+          if (ruleFiles.length > 0) {
+            await execAsync('sudo udevadm control --reload-rules && sudo udevadm trigger');
+            logger.info('Udev rules reloaded');
+          }
+        } catch (e) {
+          logger.warn('Failed to install udev rules', { error: e.message });
+        }
+      }
+
       // Écrire les fichiers de version avec la version fournie par le dashboard central
       if (version) {
         await this.writeVersionMetadata(version);

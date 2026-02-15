@@ -40,6 +40,12 @@ pi ALL=(ALL) NOPASSWD: /sbin/ip link set wlan0 up
 pi ALL=(ALL) NOPASSWD: /sbin/modprobe *
 pi ALL=(ALL) NOPASSWD: /usr/bin/killall wpa_supplicant
 pi ALL=(ALL) NOPASSWD: /usr/sbin/hostapd_cli *
+pi ALL=(ALL) NOPASSWD: /usr/bin/tee /sys/bus/usb/drivers/usb/*
+
+# --- Déploiement udev rules (OTA) ---
+pi ALL=(ALL) NOPASSWD: /usr/bin/cp /home/pi/neopro/config/udev/*.rules /etc/udev/rules.d/*
+pi ALL=(ALL) NOPASSWD: /usr/sbin/udevadm control --reload-rules
+pi ALL=(ALL) NOPASSWD: /usr/sbin/udevadm trigger
 
 # --- Fichiers de config réseau ---
 pi ALL=(ALL) NOPASSWD: /usr/bin/cat /etc/wpa_supplicant/*
