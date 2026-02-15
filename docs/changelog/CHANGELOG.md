@@ -1,3 +1,9 @@
+# [3.38.0](https://github.com/Tallec7/neopro/compare/v3.37.2...v3.38.0) (2026-02-15)
+
+### Features
+
+- **remote:** popup avertissement inactivité recording avec décompte (ADR-021) ([306dbaa](https://github.com/Tallec7/neopro/commit/306dbaac16a0e1f7733ae5e3c0d4db392beda97d))
+
 ## [3.38.0](https://github.com/Tallec7/neopro/compare/v3.37.2...v3.38.0) (2026-02-15)
 
 ### Features
