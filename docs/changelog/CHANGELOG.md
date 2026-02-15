@@ -1,3 +1,9 @@
+# [3.36.0](https://github.com/Tallec7/neopro/compare/v3.35.2...v3.36.0) (2026-02-15)
+
+### Features
+
+- **debug:** extend log depth to 24h with smart cap per service verbosity ([f73b700](https://github.com/Tallec7/neopro/commit/f73b700f6d99299b579ef11fa809c10c16381420))
+
 ## [3.35.2](https://github.com/Tallec7/neopro/compare/v3.35.1...v3.35.2) (2026-02-15)
 
 ### Bug Fixes
