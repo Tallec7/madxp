@@ -671,17 +671,25 @@ node -e "
 "
 ```
 
-**Contenu du bundle (JSON) :**
+**Contenu du bundle (15 sections JSON) :**
 
 - Configuration (sanitisée)
 - Version logicielle
-- État de santé système (GPU, services, throttling)
-- Logs récents (100 lignes par service)
-- Diagnostics réseau
-- Diagnostics hotspot (clients connectés, scan WiFi, état hostapd/dnsmasq)
+- État de santé système (CPU, RAM, température, throttling)
+- Infos système (uptime, hostname, OS, modèle Pi)
+- Statut services systemd
+- Logs 24h (services verbeux cap 500 lignes, calmes complets)
+- Diagnostics réseau (internet, DNS, gateway, serveur central, WiFi, stabilité)
+- Espace disque
 - État des buffers analytics
+- Configuration hotspot (sans passphrase) + diagnostics (clients, canaux, rfkill)
 - Configuration boot (gpu_mem)
+- Métriques transition vidéo (read-only)
+- Messages kernel dmesg (200 dernières lignes — erreurs USB, filesystem, OOM)
+- Périphériques USB (lsusb)
 - Liste des vidéos locales
+
+> Référence complète : [sync-agent brick](../architecture/bricks/sync-agent.md#debug-bundle-export_debug_bundle)
 
 ---
 
