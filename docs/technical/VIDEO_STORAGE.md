@@ -337,14 +337,22 @@ if (downloadedChecksum !== expectedChecksum) {
 
 ## Suppression manuelle depuis le Dashboard
 
-L'administrateur peut supprimer une vidéo cloud directement depuis la **Bibliothèque Vidéo** d'un site (onglet Contenu).
+L'administrateur peut supprimer une vidéo depuis la **Bibliothèque Vidéo** d'un site (onglet Contenu). Le comportement dépend de l'emplacement de la vidéo :
 
-### Flux
+### Cas de suppression
+
+| Situation                                                  | Comportement                                           |
+| ---------------------------------------------------------- | ------------------------------------------------------ |
+| Vidéo uniquement sur le Pi (`isOnPi=true`, pas d'ID cloud) | Confirmation → commande `delete_video` vers le Pi      |
+| Vidéo uniquement dans le cloud (`isOnPi=false`, ID cloud)  | Confirmation → `DELETE /api/videos/:id`                |
+| Vidéo sur les deux (`isOnPi=true` + ID cloud)              | Dialog avec 3 choix : Pi seul, cloud seul, ou les deux |
+
+### Flux — Suppression cloud
 
 ```
 1. Clic "Supprimer" sur une vidéo cloud
    │
-2. Confirmation utilisateur (confirm dialog)
+2. Confirmation utilisateur
    │
 3. Appel DELETE /api/videos/:id
    │  - Authentification requise (admin)
@@ -359,15 +367,35 @@ L'administrateur peut supprimer une vidéo cloud directement depuis la **Bibliot
 6. Notification succès + rechargement du contenu
 ```
 
+### Flux — Suppression Pi
+
+```
+1. Clic "Supprimer" sur une vidéo Pi
+   │
+2. Confirmation utilisateur
+   │
+3. Commande sendCommand(siteId, 'delete_video', { path, filename })
+   │  - Envoyée via Socket.IO au sync-agent
+   │
+4. Sync-agent supprime le fichier + met à jour configuration.json
+   │
+5. Notification succès + rechargement du contenu
+```
+
+### Flux — Suppression des deux (Pi + cloud)
+
+Quand la vidéo est présente sur les deux, le dashboard propose un choix (1/2/3). Si l'utilisateur choisit « les deux », les deux appels sont lancés en parallèle via `forkJoin`.
+
 ### Fichiers impliqués (Dashboard → API)
 
-| Fichier                         | Rôle                                      |
-| ------------------------------- | ----------------------------------------- |
-| `site-content-tab.component.ts` | Déclenche la suppression (onVideoDelete)  |
-| `sites.service.ts`              | `deleteCloudVideo(id)` → API call         |
-| `content.controller.ts`         | Orchestre suppression DB + FTP            |
-| `video.repository.ts`           | `deleteAndReturn()` + `findStoragePath()` |
-| `storage.service.ts`            | `deleteVideo()` → FTP                     |
+| Fichier                         | Rôle                                                    |
+| ------------------------------- | ------------------------------------------------------- |
+| `site-content-tab.component.ts` | Déclenche la suppression (onVideoDelete) + dialog choix |
+| `sites.service.ts`              | `deleteCloudVideo(id)` → API, `sendCommand` → Pi        |
+| `content.controller.ts`         | Orchestre suppression DB + FTP                          |
+| `video.repository.ts`           | `deleteAndReturn()` + `findStoragePath()`               |
+| `storage.service.ts`            | `deleteVideo()` → FTP                                   |
+| `delete-video.js` (sync-agent)  | Suppression fichier + update config sur le Pi           |
 
 ---
 
