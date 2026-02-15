@@ -1,3 +1,9 @@
+## [3.30.1](https://github.com/Tallec7/neopro/compare/v3.30.0...v3.30.1) (2026-02-15)
+
+### Bug Fixes
+
+- **dashboard:** add null check on currentMetrics.network_status (TS2531) ([d59de61](https://github.com/Tallec7/neopro/commit/d59de61cfd8dda165e7d5acb5d8444c96c5e2ea5))
+
 # [3.30.0](https://github.com/Tallec7/neopro/compare/v3.29.1...v3.30.0) (2026-02-15)
 
 ### Features
