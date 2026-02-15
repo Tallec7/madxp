@@ -5,7 +5,7 @@
  * - L'envoi des commandes update_software aux Raspberry Pi
  * - Le suivi du progress et la completion des deploiements
  * - La reconciliation des deploiements lors de la reconnexion d'un Pi
- * - La pre-migration avant OTA (fix ownership, patch legacy code)
+ * - La pre-migration avant OTA (fix ownership fichiers VERSION root:root)
  *
  * Bugs couverts:
  * - OTA stuck en pending quand tous les sites echouent (fix: failDeployment)
@@ -85,8 +85,6 @@ describe('UpdateDeploymentService', () => {
     mockIsConnected.mockReset();
     mockSendCommand.mockReset();
     mockSendOrQueue.mockReset();
-    // Mock delay to avoid real setTimeout in tests
-    jest.spyOn(updateDeploymentService, 'delay').mockResolvedValue(undefined);
     mockSendOrQueue.mockImplementation((siteId: string) => {
       const isConnected = mockIsConnected(siteId);
       return Promise.resolve({

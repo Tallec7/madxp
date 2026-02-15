@@ -291,65 +291,45 @@ class UpdateDeploymentService {
   }
 
   /**
-   * Pré-migration avant OTA : corrige les problèmes connus sur le Pi AVANT
-   * que l'ancien code n'exécute l'update. Deux migrations idempotentes :
+   * Pré-migration avant OTA : corrige les fichiers VERSION/release.json root:root
+   * AVANT que le sync-agent n'exécute l'update.
    *
-   * 1. Fichiers VERSION/release.json owned par root → sudo chown -R pi:pi
-   *    (sinon fs.copy échoue avec EACCES car le process tourne en pi)
-   *    IMPORTANT : utiliser -R pour matcher la règle sudoers
+   * Problème : les anciennes versions du sync-agent créaient ces fichiers en root:root
+   * via "sudo cp/tee". Le process OTA tourne en pi, donc fs.copy() échoue avec EACCES
+   * en tentant d'unlink() le fichier root. L'erreur crashe l'OTA à 60%.
    *
-   * 2. Ancien code avec "sudo cp/tee" → remplacer par "cp/tee"
-   *    (bloqué par NoNewPrivileges=true depuis la 3.9.4)
-   *    + kill pour forcer un restart avec le code patché
-   *    IMPORTANT : ne PAS remplacer "sudo chown" (nécessaire dans fixFileOwnership)
+   * Solution : supprimer les fichiers root:root avant l'OTA. Le sync-agent les recréera
+   * en pi:pi via writeVersionMetadata() ou fs.copy() depuis l'archive.
    *
-   * TODO: Retirer la migration #2 quand toute la flotte est en >= 3.16.1
+   * Stratégie en 3 niveaux (chaque fichier VERSION/release.json/version.json) :
+   * 1. sudo chown -R pi:pi → utilise la règle sudoers ciblée
+   * 2. cp+mv → contournement sans sudo (copie contenu, rename remplace l'entrée)
+   * 3. sudo rm -f → dernier recours, suppression du fichier root:root
+   *
+   * IMPORTANT : PAS de sed sur le code du sync-agent (trop fragile et dangereux —
+   * un sed 's/sudo cp/cp/g' cassait l'installation du sudoers et des services systemd).
+   * PAS de kill du sync-agent (inutile car la pré-migration s'exécute séquentiellement
+   * dans le même event handler que le update_software qui suit).
    */
   private applyPreUpdateMigration(siteId: string): boolean {
     if (!socketService.isConnected(siteId)) {
       return false;
     }
 
-    // Migration 1 : corriger l'ownership des fichiers VERSION/release.json
-    // Stratégie robuste en 3 niveaux pour contourner toutes les combinaisons :
-    // - Pi avec sudoers à jour : sudo chown -R fonctionne
-    // - Pi avec NoNewPrivileges : sudo bloqué → mv/cp contourne en recréant le fichier
-    // - Pi avec NOPASSWD:ALL (legacy) : sudo chown (sans -R) fonctionne aussi
+    // Fixer l'ownership des fichiers VERSION qui peuvent être root:root
+    // Les commandes sont chaînées avec || pour tenter les niveaux successivement
     const fixOwnershipCommand =
       'for f in /home/pi/neopro/VERSION /home/pi/neopro/release.json /home/pi/neopro/webapp/version.json; do ' +
       'if [ -f "$f" ] && [ "$(stat -c %u "$f" 2>/dev/null)" = "0" ]; then ' +
-      // Niveau 1 : sudo chown -R (matche sudoers ciblé)
+      // Niveau 1 : sudo chown -R (matche sudoers ciblé /usr/bin/chown -R pi:pi /home/pi/neopro/*)
       'sudo chown -R pi:pi "$f" 2>/dev/null && echo "Fixed via chown: $f" || ' +
-      // Niveau 2 : sudo chown sans -R (matche NOPASSWD:ALL legacy)
-      'sudo chown pi:pi "$f" 2>/dev/null && echo "Fixed via chown-noR: $f" || ' +
-      // Niveau 3 : contournement sans sudo — copie le contenu dans un nouveau fichier owned par pi
+      // Niveau 2 : contournement sans sudo — copie contenu dans nouveau fichier owned par pi
+      // rename() ne vérifie que les permissions du dossier parent (pi:pi), pas du fichier
       '{ cp "$f" "$f.tmp" 2>/dev/null && mv -f "$f.tmp" "$f" 2>/dev/null && echo "Fixed via cp+mv: $f"; } || ' +
+      // Niveau 3 : suppression forcée — le fichier sera recréé par writeVersionMetadata()
+      '{ sudo rm -f "$f" 2>/dev/null && echo "Fixed via rm: $f"; } || ' +
       'echo "WARN: cannot fix $f"; ' +
       'fi; done; true';
-
-    // Migration 2 : patcher le code legacy qui utilise sudo cp/tee
-    // grep -q skip si déjà patché (0 impact)
-    // IMPORTANT : ne PAS remplacer "sudo chown" — il est nécessaire dans fixFileOwnership()
-    const targetFile = '/home/pi/neopro/sync-agent/src/commands/update-software.js';
-    const patchLegacySudo =
-      `grep -q "sudo cp" ${targetFile} ` +
-      `&& sed -i 's/sudo cp/cp/g; s/sudo tee/tee/g' ${targetFile} ` +
-      `&& sed -i '/sudo usermod/d' ${targetFile} ` +
-      '|| true';
-
-    // Migration 3 : rendre le copy VERSION non-bloquant sur les Pi qui n'ont pas le try/catch
-    // Cible la ligne "await fs.copy(versionSource, versionDest" qui n'est pas dans un try/catch
-    // On ajoute un ".catch(() => {})" pour absorber l'EACCES
-    // grep -q skip si déjà patché (le nouveau code a "versionCopyError" dans le catch)
-    const patchVersionCopy =
-      `grep -q "versionCopyError" ${targetFile} ` +
-      '|| sed -i \'s/await fs.copy(versionSource, versionDest, { overwrite: true });/await fs.copy(versionSource, versionDest, { overwrite: true }).catch(e => logger.warn("VERSION copy failed (non-blocking)", { error: e.message }));/g\' ' + targetFile + ' ' +
-      '&& sed -i \'s/await fs.copy(releaseSource, releaseDest, { overwrite: true });/await fs.copy(releaseSource, releaseDest, { overwrite: true }).catch(e => logger.warn("release.json copy failed (non-blocking)", { error: e.message }));/g\' ' + targetFile;
-
-    // Kill le sync-agent pour forcer un restart avec le code patché (Restart=always)
-    const restartAgent = 'kill $(pgrep -f agent.js) 2>/dev/null || true';
-
-    const migrateCommand = `${fixOwnershipCommand}; ${patchLegacySudo}; ${patchVersionCopy}; ${restartAgent}`;
 
     try {
       const commandId = uuidv4();
@@ -357,7 +337,7 @@ class UpdateDeploymentService {
       socketService.sendCommand(siteId, {
         id: commandId,
         type: 'remote_shell',
-        data: { command: migrateCommand, timeout: 15000 },
+        data: { command: fixOwnershipCommand, timeout: 10000 },
       });
 
       logger.info('Pre-update migration sent', { siteId });
@@ -383,14 +363,10 @@ class UpdateDeploymentService {
   ): Promise<boolean> {
     logger.info('deployToSite called', { deploymentId, siteId, updateVersion: update.version });
 
-    // Migration legacy : patch les Pi avec l'ancien sudo cp (idempotent, 0 impact si déjà OK)
-    // Si le Pi est patché, il va restart et recevoir l'update via la queue
-    // IMPORTANT : attendre que la pré-migration ait le temps de s'exécuter sur le Pi
-    // avant d'envoyer update_software (sinon les deux commandes se race)
-    const migrationSent = this.applyPreUpdateMigration(siteId);
-    if (migrationSent) {
-      await this.delay(5000);
-    }
+    // Pré-migration : fixer les fichiers VERSION root:root avant l'OTA
+    // La commande remote_shell et update_software sont traitées séquentiellement
+    // par le sync-agent (même event handler), pas besoin de delay
+    this.applyPreUpdateMigration(siteId);
 
     const commandData = {
       deploymentId,
@@ -584,12 +560,6 @@ class UpdateDeploymentService {
     }
   }
 
-  /**
-   * Délai asynchrone — méthode séparée pour permettre le mock dans les tests
-   */
-  delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
 }
 
 export const updateDeploymentService = new UpdateDeploymentService();

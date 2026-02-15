@@ -15,9 +15,9 @@ Règle critique : `chown` doit utiliser `-R` (`sudo chown -R pi:pi`) car le sudo
 
 ## Pre-migration (serveur)
 
-`applyPreUpdateMigration()` dans `update-deployment.service.ts` envoie un `remote_shell` AVANT `update_software`. Il y a un **délai de 5s** entre les deux pour éviter la race condition (les deux commandes s'exécutent en parallèle côté Pi).
+`applyPreUpdateMigration()` dans `update-deployment.service.ts` envoie un `remote_shell` AVANT `update_software`. Les commandes sont traitées **séquentiellement** par le sync-agent (même event handler async), donc pas besoin de délai.
 
-La migration 2 (sed) ne doit **jamais** remplacer `sudo chown` — seulement `sudo cp` et `sudo tee`.
+**INTERDIT** : utiliser `sed` pour patcher le code du sync-agent dans la pré-migration. Un `sed 's/sudo cp/cp/g'` global casse les `sudo cp` légitimes (installation sudoers dans `/etc/sudoers.d/`, services systemd dans `/etc/systemd/system/`). Utiliser uniquement des commandes shell pour corriger l'état du filesystem (chown, rm, cp, mv).
 
 ## fixFileOwnership() (Pi)
 
@@ -26,3 +26,13 @@ Dans `update-software.js`, cette méthode corrige les fichiers `root:root` avant
 ## Fichiers VERSION
 
 Les fichiers de version (`VERSION`, `release.json`, `webapp/version.json`) sont les plus fragiles : s'ils appartiennent à root, l'OTA échoue à 60%. Toujours vérifier l'ownership après toute modification de ces fichiers.
+
+La pré-migration supprime/fixe ces fichiers en 3 niveaux :
+
+1. `sudo chown -R pi:pi` (sudoers ciblé)
+2. `cp + mv` (contournement sans sudo — rename() vérifie les permissions du dossier parent, pas du fichier)
+3. `sudo rm -f` (dernier recours — le fichier sera recréé par `writeVersionMetadata()`)
+
+## Chicken-and-egg
+
+Les fixes dans le code du sync-agent ne sont livrés que via OTA. Si le code OLD du sync-agent crashe pendant l'OTA, le fix ne peut jamais être livré. La solution est de corriger l'**état du filesystem** (ownership des fichiers) via la pré-migration, pas de patcher le code.
