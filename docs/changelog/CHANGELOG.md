@@ -1,3 +1,9 @@
+## [3.30.5](https://github.com/Tallec7/neopro/compare/v3.30.4...v3.30.5) (2026-02-15)
+
+### Bug Fixes
+
+- **ota:** make VERSION copy non-blocking and add multi-level pre-migration ([df6299f](https://github.com/Tallec7/neopro/commit/df6299ffb4741d69311c1f68565f7914a2c8f17c))
+
 ## [3.30.4](https://github.com/Tallec7/neopro/compare/v3.30.3...v3.30.4) (2026-02-15)
 
 ### Bug Fixes
