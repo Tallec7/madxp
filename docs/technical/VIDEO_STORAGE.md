@@ -335,6 +335,42 @@ if (downloadedChecksum !== expectedChecksum) {
 - **Sécurité** : Empêche l'injection de fichiers malveillants
 - **Fiabilité** : Le Pi rejette automatiquement les fichiers corrompus
 
+## Suppression manuelle depuis le Dashboard
+
+L'administrateur peut supprimer une vidéo cloud directement depuis la **Bibliothèque Vidéo** d'un site (onglet Contenu).
+
+### Flux
+
+```
+1. Clic "Supprimer" sur une vidéo cloud
+   │
+2. Confirmation utilisateur (confirm dialog)
+   │
+3. Appel DELETE /api/videos/:id
+   │  - Authentification requise (admin)
+   │  - Récupération du storage_path en DB
+   │
+4. Suppression en base (videos table)
+   │  - CASCADE sur content_deployments
+   │
+5. Suppression du fichier FTP
+   │  - deleteVideo(storagePath) via storage.service
+   │
+6. Notification succès + rechargement du contenu
+```
+
+### Fichiers impliqués (Dashboard → API)
+
+| Fichier                         | Rôle                                      |
+| ------------------------------- | ----------------------------------------- |
+| `site-content-tab.component.ts` | Déclenche la suppression (onVideoDelete)  |
+| `sites.service.ts`              | `deleteCloudVideo(id)` → API call         |
+| `content.controller.ts`         | Orchestre suppression DB + FTP            |
+| `video.repository.ts`           | `deleteAndReturn()` + `findStoragePath()` |
+| `storage.service.ts`            | `deleteVideo()` → FTP                     |
+
+---
+
 ## Nettoyage automatique des fichiers temporaires
 
 Le middleware d'upload (`upload.ts`) effectue un nettoyage périodique des fichiers temporaires abandonnés :
@@ -450,6 +486,7 @@ Checksum mismatch: expected abc123, got def456
 | ------- | ---------- | ---------------------------------------------------------------- |
 | 1.0     | 2026-01-09 | Création initiale                                                |
 | 2.0     | 2026-02-10 | Suppression Supabase fallback, migration vers storage.service.ts |
+| 2.1     | 2026-02-15 | Ajout section suppression manuelle depuis le Dashboard           |
 
 ---
 

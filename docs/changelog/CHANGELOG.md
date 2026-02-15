@@ -27,6 +27,7 @@
 
 ### Bug Fixes
 
+- **dashboard:** wire cloud video deletion from Bibliothèque Vidéo — was showing "Suppression cloud non implémentée" warning instead of calling `DELETE /api/videos/:id`
 - **wifi-usb:** NetworkWatchdog Phase 5 now verifies wlan1 reappears after `modprobe -r`/`modprobe` (3 polls, 3s apart) and falls back to USB power-cycle via sysfs unbind/rebind if wlan1 doesn't return
 - **wifi-usb:** add Phase 6 (USB power-cycle) to NetworkWatchdog — scans all USB devices for WiFi dongles and attempts hardware unbind/rebind as last resort before cooldown
 - **wifi-usb:** add sudoers entries for `tee /sys/bus/usb/drivers/usb/*`, `cp udev rules`, `udevadm control/trigger`

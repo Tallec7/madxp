@@ -3329,7 +3329,16 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         });
       } else if (video.id) {
         // Delete from cloud via API
-        this.notificationService.warning('Suppression cloud non implémentée');
+        this.sitesService.deleteCloudVideo(video.id).subscribe({
+          next: () => {
+            this.notificationService.success(`"${video.filename}" supprimé du cloud`);
+            this.loadContent();
+          },
+          error: (error) => {
+            const message = ErrorExtractor.getMessage(error);
+            this.notificationService.error(`Erreur: ${message}`);
+          }
+        });
       }
     }
   }

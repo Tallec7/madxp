@@ -557,6 +557,11 @@ export class SitesService {
     return this.api.get(`/sites/${id}/timeline?limit=${limit}`);
   }
 
+  // Cloud video management
+  deleteCloudVideo(videoId: string): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(`/videos/${videoId}`);
+  }
+
   // Pending deployments management
   getPendingDeployments(siteId: string): Observable<PendingDeployment[]> {
     return this.api.get<PendingDeployment[]>('/deployments').pipe(
