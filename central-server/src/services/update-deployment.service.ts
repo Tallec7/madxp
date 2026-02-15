@@ -329,17 +329,27 @@ class UpdateDeploymentService {
 
     // Migration 2 : patcher le code legacy qui utilise sudo cp/tee
     // grep -q skip si déjà patché (0 impact)
-    // kill force un restart via systemd Restart=always
     // IMPORTANT : ne PAS remplacer "sudo chown" — il est nécessaire dans fixFileOwnership()
     const targetFile = '/home/pi/neopro/sync-agent/src/commands/update-software.js';
-    const patchCodeCommand =
+    const patchLegacySudo =
       `grep -q "sudo cp" ${targetFile} ` +
       `&& sed -i 's/sudo cp/cp/g; s/sudo tee/tee/g' ${targetFile} ` +
       `&& sed -i '/sudo usermod/d' ${targetFile} ` +
-      `&& kill $(pgrep -f agent.js) ` +
       '|| true';
 
-    const migrateCommand = `${fixOwnershipCommand}; ${patchCodeCommand}`;
+    // Migration 3 : rendre le copy VERSION non-bloquant sur les Pi qui n'ont pas le try/catch
+    // Cible la ligne "await fs.copy(versionSource, versionDest" qui n'est pas dans un try/catch
+    // On ajoute un ".catch(() => {})" pour absorber l'EACCES
+    // grep -q skip si déjà patché (le nouveau code a "versionCopyError" dans le catch)
+    const patchVersionCopy =
+      `grep -q "versionCopyError" ${targetFile} ` +
+      '|| sed -i \'s/await fs.copy(versionSource, versionDest, { overwrite: true });/await fs.copy(versionSource, versionDest, { overwrite: true }).catch(e => logger.warn("VERSION copy failed (non-blocking)", { error: e.message }));/g\' ' + targetFile + ' ' +
+      '&& sed -i \'s/await fs.copy(releaseSource, releaseDest, { overwrite: true });/await fs.copy(releaseSource, releaseDest, { overwrite: true }).catch(e => logger.warn("release.json copy failed (non-blocking)", { error: e.message }));/g\' ' + targetFile;
+
+    // Kill le sync-agent pour forcer un restart avec le code patché (Restart=always)
+    const restartAgent = 'kill $(pgrep -f agent.js) 2>/dev/null || true';
+
+    const migrateCommand = `${fixOwnershipCommand}; ${patchLegacySudo}; ${patchVersionCopy}; ${restartAgent}`;
 
     try {
       const commandId = uuidv4();
