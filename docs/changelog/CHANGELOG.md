@@ -1,3 +1,9 @@
+# [3.30.0](https://github.com/Tallec7/neopro/compare/v3.29.1...v3.30.0) (2026-02-15)
+
+### Features
+
+- **wifi-usb:** fix WiFi USB boot failures and production disconnects ([cc7a859](https://github.com/Tallec7/neopro/commit/cc7a859d8f971a37da617ca87549aaee121e50a0))
+
 ## Unreleased (v3.30)
 
 ### Features
