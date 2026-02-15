@@ -1,3 +1,9 @@
+## [3.30.6](https://github.com/Tallec7/neopro/compare/v3.30.5...v3.30.6) (2026-02-15)
+
+### Bug Fixes
+
+- **ota:** patch VERSION copy on Pi via pre-migration to break deadlock ([24e5d52](https://github.com/Tallec7/neopro/commit/24e5d52df030e75e0128333da2968e5a18e40d76))
+
 ## [3.30.5](https://github.com/Tallec7/neopro/compare/v3.30.4...v3.30.5) (2026-02-15)
 
 ### Bug Fixes
