@@ -243,7 +243,26 @@ async function exportDebugBundle() {
     bundle.sections.transitionMetrics = { error: error.message };
   }
 
-  // 13. Video list summary
+  // 13. Kernel messages (USB disconnects, fs errors, OOM, etc.)
+  try {
+    const { stdout } = await execAsync(
+      'sudo dmesg --time-format iso 2>/dev/null | tail -200 || sudo dmesg | tail -200 || echo ""',
+      { timeout: 10000 }
+    );
+    bundle.sections.dmesg = stdout.trim();
+  } catch (error) {
+    bundle.sections.dmesg = { error: error.message };
+  }
+
+  // 14. USB devices (WiFi dongles, etc.)
+  try {
+    const { stdout } = await execAsync('lsusb 2>/dev/null || echo "lsusb not available"', { timeout: 5000 });
+    bundle.sections.usbDevices = stdout.trim();
+  } catch (error) {
+    bundle.sections.usbDevices = { error: error.message };
+  }
+
+  // 15. Video list summary
   try {
     const videosPath = config.paths.root + '/videos';
     if (await fs.pathExists(videosPath)) {

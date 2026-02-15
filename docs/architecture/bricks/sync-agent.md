@@ -4,7 +4,7 @@
 
 - Statut: `active`
 - Owner: \u00e9quipe NEOPRO
-- Derni\u00e8re revue: 2026-02-13
+- Derni\u00e8re revue: 2026-02-15
 - Version: 3.20.0
 - D\u00e9pend de: Central Server (Socket.IO), Local Server (port 3000), Admin Server (port 8080)
 - Impacte: \u00c9tat de synchronisation du Pi, d\u00e9ploiements vid\u00e9o, analytics cloud
@@ -146,7 +146,7 @@ raspberry/sync-agent/
 \u2502   \u2502   \u251c\u2500\u2500 diagnostics.js           # Diagnostic syst\u00e8me complet
 \u2502   \u2502   \u251c\u2500\u2500 network-diagnostics.js   # Diagnostic r\u00e9seau
 \u2502   \u2502   \u251c\u2500\u2500 remote-shell.js          # Shell distant s\u00e9curis\u00e9
-\u2502   \u2502   \u251c\u2500\u2500 debug-bundle.js          # Bundle debug pour support
+\u2502   \u2502   \u251c\u2500\u2500 debug-bundle.js          # Bundle debug pour support (15 sections)
 \u2502   \u2502   \u251c\u2500\u2500 wifi-bssid.js            # Config WiFi BSSID
 \u2502   \u2502   \u251c\u2500\u2500 wifi-client.js           # Scan & connect WiFi client (wlan1)
 \u2502   \u2502   \u251c\u2500\u2500 hotspot.js               # Activation hotspot
@@ -177,6 +177,31 @@ raspberry/sync-agent/
 \u2502   \u2514\u2500\u2500 __tests__/                   # 173 tests Jest
 \u2514\u2500\u2500 package.json
 ```
+
+### Debug bundle (`export_debug_bundle`)
+
+Collecte 15 sections de diagnostic en une seule commande (timeout 60s) :
+
+| #   | Section               | Source                      | Contenu                                                                                                    |
+| --- | --------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 1   | `configuration`       | `configuration.json`        | Config Pi sanitisée (API key tronquée, password masqué)                                                    |
+| 2   | `version` / `release` | `VERSION`, `release.json`   | Version logicielle et métadonnées build                                                                    |
+| 3   | `health`              | `metrics.js`                | CPU, RAM, température, throttling, health score                                                            |
+| 4   | `systemInfo`          | `metrics.js`                | Uptime, hostname, OS, modèle Pi                                                                            |
+| 5   | `services`            | `metrics.js`                | Statut systemd de tous les services neopro-\*                                                              |
+| 6   | `logs`                | `journalctl`                | 100 dernières lignes × 6 services (sync-agent, app, kiosk, admin, nginx, hostapd)                          |
+| 7   | `network`             | `network-diagnostics.js`    | Internet (ping + perte paquets), DNS, gateway, serveur central (HTTP/SSL/port 443), WiFi signal, stabilité |
+| 8   | `diskUsage`           | `df -h`                     | Espace disque par partition                                                                                |
+| 9   | `buffers`             | `analytics-buffer.js`       | Statut buffers analytics et sponsors                                                                       |
+| 10a | `hotspotConfig`       | `hostapd.conf`              | Configuration hotspot (sans passphrase)                                                                    |
+| 10b | `hotspotDiagnostics`  | Commandes système           | Clients connectés, scan canaux WiFi, hostapd/dnsmasq status, rfkill, mode AP wlan0                         |
+| 11  | `bootConfig`          | `/boot/config.txt`          | Configuration boot (gpu_mem, etc.)                                                                         |
+| 12  | `transitionMetrics`   | Socket.IO local (read-only) | Métriques de transition vidéo (sans reset des compteurs)                                                   |
+| 13  | `dmesg`               | `dmesg` (kernel)            | 200 dernières lignes kernel — erreurs USB, filesystem, OOM                                                 |
+| 14  | `usbDevices`          | `lsusb`                     | Inventaire périphériques USB (clés WiFi, etc.)                                                             |
+| 15  | `videoFiles`          | Filesystem                  | Liste des fichiers vidéo déployés (max 50)                                                                 |
+
+Sécurité : chaque section a son propre try/catch (un échec n'empêche pas les autres). Les données sensibles sont systématiquement masquées.
 
 ## 11. Flux critiques
 

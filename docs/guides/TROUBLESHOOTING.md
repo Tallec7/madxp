@@ -1558,7 +1558,7 @@ free -h
 
 ### Script fix-fleet-pi.sh (v3.7.14+)
 
-Pour corriger les problèmes courants identifiés par un debug bundle, utiliser le script générique de réparation flotte :
+Pour corriger les problèmes courants identifiés par un debug bundle (15 sections : config, logs, réseau, dmesg kernel, périphériques USB, etc. — voir [sync-agent brick](../architecture/bricks/sync-agent.md#debug-bundle-export_debug_bundle)), utiliser le script générique de réparation flotte :
 
 ```bash
 # Copier et exécuter sur le Pi
