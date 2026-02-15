@@ -32,6 +32,7 @@ const MAX_RECOVERY_ATTEMPTS = 6; // Phases: gentle(1-2), medium(3), aggressive(4
 const RECOVERY_COOLDOWN = 5 * 60 * 1000; // 5 minutes
 const ROLLBACK_TIMEOUT = 30 * 1000; // 30 secondes pour rollback
 const GRACE_PERIOD_DURATION = 60 * 1000; // 60s grace period after network operations
+const GRACE_PERIOD_FILE = '/tmp/neopro-watchdog-grace.json'; // Persists across process restarts
 
 // Interfaces
 const HOTSPOT_INTERFACE = 'wlan0';
@@ -385,6 +386,58 @@ function enableGracePeriod(type, durationMs = GRACE_PERIOD_DURATION) {
       durationMs,
       until: new Date(stateObj.gracePeriodUntil).toISOString()
     });
+    // Persist to disk so the grace period survives sync-agent restarts (OTA)
+    persistGracePeriods();
+  }
+}
+
+/**
+ * Persist grace period timestamps to disk.
+ * Survives process restarts during OTA updates.
+ */
+function persistGracePeriods() {
+  try {
+    const data = {
+      hotspot: state.hotspot.gracePeriodUntil,
+      internet: state.internet.gracePeriodUntil,
+    };
+    fs.writeFileSync(GRACE_PERIOD_FILE, JSON.stringify(data));
+  } catch (e) {
+    logger.warn('NetworkWatchdog: Failed to persist grace periods', { error: e.message });
+  }
+}
+
+/**
+ * Restore grace period timestamps from disk (called at startup).
+ * Only restores if the timestamps are still in the future.
+ */
+function restoreGracePeriods() {
+  try {
+    if (!fs.existsSync(GRACE_PERIOD_FILE)) return;
+    const raw = fs.readFileSync(GRACE_PERIOD_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    const now = Date.now();
+
+    if (data.hotspot && data.hotspot > now) {
+      state.hotspot.gracePeriodUntil = data.hotspot;
+      logger.info('NetworkWatchdog: Restored hotspot grace period from disk', {
+        remainingMs: data.hotspot - now,
+        until: new Date(data.hotspot).toISOString()
+      });
+    }
+
+    if (data.internet && data.internet > now) {
+      state.internet.gracePeriodUntil = data.internet;
+      logger.info('NetworkWatchdog: Restored internet grace period from disk', {
+        remainingMs: data.internet - now,
+        until: new Date(data.internet).toISOString()
+      });
+    }
+
+    // Clean up the file
+    fs.unlinkSync(GRACE_PERIOD_FILE);
+  } catch (e) {
+    logger.warn('NetworkWatchdog: Failed to restore grace periods', { error: e.message });
   }
 }
 
@@ -977,10 +1030,15 @@ function cloudWatchLoop() {
  * Démarre le watchdog
  */
 function start() {
+  // Restore grace periods from disk (survives OTA sync-agent restarts)
+  restoreGracePeriods();
+
   logger.info('NetworkWatchdog: Démarrage', {
     hotspotInterval: HOTSPOT_CHECK_INTERVAL,
     internetInterval: INTERNET_CHECK_INTERVAL,
     cloudInterval: CLOUD_CHECK_INTERVAL,
+    hotspotGraceActive: isInGracePeriod('hotspot'),
+    internetGraceActive: isInGracePeriod('internet'),
   });
 
   // Première exécution immédiate
