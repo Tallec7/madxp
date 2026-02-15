@@ -980,50 +980,18 @@ class SoftwareUpdateHandler {
    * @param {number} durationMs Durée d'affichage en ms (optionnel)
    */
   async notifyUpcomingRestart(message, durationMs = 10000) {
-    try {
-      const io = require('socket.io-client');
-      const socket = io('http://localhost:3000', {
-        timeout: 5000,
-        reconnection: false,
-      });
-
-      return new Promise((resolve) => {
-        socket.on('connect', () => {
-          socket.emit('system_notification', {
-            type: 'warning',
-            title: 'Mise à jour système',
-            message,
-            duration: durationMs,
-            dismissible: false,
-          });
-
-          logger.info('User notified of upcoming restart', { message });
-
-          // Donner le temps au message d'être reçu
-          setTimeout(() => {
-            socket.close();
-            resolve();
-          }, 1000);
-        });
-
-        socket.on('connect_error', (error) => {
-          logger.warn('Could not notify user of restart (app may be down):', error.message);
-          socket.close();
-          resolve(); // Ne pas bloquer la mise à jour
-        });
-
-        // Timeout si pas de connexion après 3 secondes
-        setTimeout(() => {
-          if (!socket.connected) {
-            logger.warn('Timeout connecting to local socket for notification');
-            socket.close();
-            resolve();
-          }
-        }, 3000);
-      });
-    } catch (error) {
-      logger.warn('Failed to notify user of restart:', error.message);
-      // Ne pas bloquer la mise à jour en cas d'erreur
+    const localSocket = require('../services/local-socket');
+    const sent = localSocket.emit('system_notification', {
+      type: 'warning',
+      title: 'Mise à jour système',
+      message,
+      duration: durationMs,
+      dismissible: false,
+    });
+    if (sent) {
+      logger.info('User notified of upcoming restart', { message });
+    } else {
+      logger.warn('Could not notify user of restart (local server not connected)');
     }
   }
 }

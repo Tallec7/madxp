@@ -152,7 +152,7 @@ L'endpoint `GET /state` retourne désormais `licenseStatus` (statut, daysLeft, m
 
 L'endpoint `GET /state` retourne désormais `playerState` (état complet du player TV : vidéo en cours, progression, phase, position dans la boucle, prochaine vidéo, erreurs, etc.). Le player state est éphémère (Map `playerStates` en mémoire côté serveur), alimenté par le heartbeat du Pi (30s) et broadcasté en temps réel vers la room `dashboard` via Socket.IO (`player_state_updated`).
 
-La commande `screenshot` a été ajoutée aux commandes valides. Elle demande au Pi de capturer un screenshot JPEG 480p (quality 0.5, ~30-50KB) du player TV actif via `canvas.drawImage()`. Le screenshot est relayé de manière bidirectionnelle : central → sync-agent (persistent socket) → local server (broadcast) → TV component → screenshot-data → sync-agent (relay éphémère) → central → dashboard via Socket.IO (`screenshot-data`). Rate-limited à 1/seconde côté Pi.
+La commande `screenshot` a été ajoutée aux commandes valides. Elle demande au Pi de capturer un screenshot JPEG 480p (quality 0.5, ~30-50KB) du player TV actif via `canvas.drawImage()`. Le screenshot est relayé de manière bidirectionnelle via la connexion persistante `local-socket.js` : central → sync-agent → local server (broadcast) → TV component → screenshot-data → sync-agent (relay via connexion persistante) → central → dashboard via Socket.IO (`screenshot-data`). Rate-limited à 1/seconde côté Pi.
 
 **Données publiques ajoutées** :
 

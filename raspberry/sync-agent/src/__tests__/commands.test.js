@@ -24,14 +24,13 @@ jest.mock('child_process', () => {
     spawn: mockSpawn,
   };
 });
-jest.mock('socket.io-client', () => {
-  return jest.fn(() => ({
-    emit: jest.fn(),
-    close: jest.fn(),
-    on: jest.fn(),
-    connected: false,
-  }));
-});
+jest.mock('../services/local-socket', () => ({
+  emit: jest.fn(() => true),
+  request: jest.fn(() => Promise.resolve(null)),
+  isConnected: jest.fn(() => true),
+  connect: jest.fn(),
+  disconnect: jest.fn(),
+}));
 
 // Mock SafeNetworkOperations (used by hotspot module)
 const mockExecuteOperation = jest.fn();

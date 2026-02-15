@@ -227,32 +227,8 @@ async function exportDebugBundle() {
 
   // 12. Transition metrics (read-only, no reset)
   try {
-    const transitionMetrics = await new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        localSock.disconnect();
-        resolve(null);
-      }, 2000);
-
-      const ioClient = require('socket.io-client');
-      const localSock = ioClient('http://localhost:3000', {
-        timeout: 2000,
-        reconnection: false,
-      });
-
-      localSock.on('connect', () => {
-        // Use a read-only fetch — getTransitionMetrics (not getAndReset)
-        localSock.emit('get-transition-metrics-readonly', (metrics) => {
-          clearTimeout(timeout);
-          localSock.disconnect();
-          resolve(metrics);
-        });
-      });
-
-      localSock.on('connect_error', () => {
-        clearTimeout(timeout);
-        resolve(null);
-      });
-    });
+    const localSocket = require('../services/local-socket');
+    const transitionMetrics = await localSocket.request('get-transition-metrics-readonly', 2000);
     bundle.sections.transitionMetrics = transitionMetrics || { note: 'No data available' };
   } catch (error) {
     bundle.sections.transitionMetrics = { error: error.message };

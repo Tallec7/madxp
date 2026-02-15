@@ -178,18 +178,9 @@ class ExpirationChecker {
    * Notifie l'application locale des changements
    */
   async notifyLocalApp() {
-    try {
-      const io = require('socket.io-client');
-      const socket = io('http://localhost:3000', { timeout: 5000 });
-
-      socket.emit('config_updated', { reason: 'expired_videos_removed' });
-
-      setTimeout(() => socket.close(), 1000);
-
-      logger.debug('Local app notified of expired videos removal');
-    } catch (error) {
-      logger.warn('Could not notify local app of expiration changes:', error.message);
-    }
+    const localSocket = require('../services/local-socket');
+    localSocket.emit('config_updated', { reason: 'expired_videos_removed' });
+    logger.debug('Local app notified of expired videos removal');
   }
 
   /**

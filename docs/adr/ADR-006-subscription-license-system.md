@@ -42,7 +42,7 @@ Dashboard ── POST /api/sites/:id/subscription/suspend ──> Central Server
                                                               │
                                                     sendLicenseStatus() ── license_status ──> Sync-Agent
                                                                                                 │
-                                                                               licenseCache.save() + notifyLocalApp()
+                                                                               licenseCache.save() + localSocket.emit('license_update')
                                                                                                 │
                                                                                Local Server ── license_update ──> Angular
                                                                                                                     │

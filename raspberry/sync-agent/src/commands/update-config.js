@@ -138,28 +138,9 @@ function applyReplaceMode(localConfig, contentToApply) {
  * Notifie l'application locale du changement de configuration
  */
 async function notifyLocalApp() {
-  const io = require('socket.io-client');
-  const socket = io('http://localhost:3000', { timeout: 5000 });
-  let timeoutId = null;
-
-  socket.on('connect', () => {
-    if (timeoutId) clearTimeout(timeoutId);
-    logger.info('Connected to local server, sending config_updated notification');
-    socket.emit('config_updated');
-    setTimeout(() => socket.close(), 500);
-  });
-
-  socket.on('connect_error', (err) => {
-    if (timeoutId) clearTimeout(timeoutId);
-    logger.warn('Failed to connect to local server for config notification:', err.message);
-    socket.close();
-  });
-
-  timeoutId = setTimeout(() => {
-    if (socket.connected) return;
-    logger.warn('Timeout connecting to local server for config notification');
-    socket.close();
-  }, 5000);
+  const localSocket = require('../services/local-socket');
+  localSocket.emit('config_updated');
+  logger.info('Local server notified of config change');
 }
 
 /**

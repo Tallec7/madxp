@@ -274,14 +274,8 @@ const commands = {
       logger.info('Site settings updated successfully', { settings: siteConfig.settings });
 
       // Notifier l'application locale
-      try {
-        const io = require('socket.io-client');
-        const socket = io('http://localhost:3000', { timeout: 5000 });
-        socket.emit('settings_updated', siteConfig.settings);
-        setTimeout(() => socket.close(), 1000);
-      } catch (notifyError) {
-        logger.warn('Failed to notify local app of settings change:', { error: notifyError.message });
-      }
+      const localSocket = require('../services/local-socket');
+      localSocket.emit('settings_updated', siteConfig.settings);
 
       return {
         success: true,

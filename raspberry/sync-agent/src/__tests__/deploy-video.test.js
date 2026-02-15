@@ -17,15 +17,15 @@ const axios = require('axios');
 jest.mock('fs-extra');
 jest.mock('axios');
 
-// Mock socket.io-client with persistent mock functions
-const mockSocketEmit = jest.fn();
-const mockSocketClose = jest.fn();
-jest.mock('socket.io-client', () => {
-  return jest.fn(() => ({
-    emit: mockSocketEmit,
-    close: mockSocketClose,
-  }));
-});
+// Mock local-socket service
+const mockSocketEmit = jest.fn(() => true);
+jest.mock('../services/local-socket', () => ({
+  emit: mockSocketEmit,
+  request: jest.fn(() => Promise.resolve(null)),
+  isConnected: jest.fn(() => true),
+  connect: jest.fn(),
+  disconnect: jest.fn(),
+}));
 
 // Mock du logger
 jest.mock('../logger', () => ({
@@ -51,7 +51,7 @@ jest.mock('../config', () => ({
 // Import après les mocks
 const deployVideo = require('../commands/deploy-video');
 const logger = require('../logger');
-const io = require('socket.io-client');
+const localSocket = require('../services/local-socket');
 
 // Checksum de test valide (correspond au contenu 'test video content')
 const crypto = require('crypto');
@@ -62,7 +62,6 @@ describe('Deploy Video Handler', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSocketEmit.mockClear();
-    mockSocketClose.mockClear();
 
     // Setup default mocks
     fs.ensureDir.mockResolvedValue(undefined);
@@ -258,10 +257,8 @@ describe('Deploy Video Handler', () => {
 
       await deployVideo.execute(baseVideoData, jest.fn());
 
-      // Verify socket.io-client was called for local notification
-      // Note: The actual socket.emit call happens inside the dynamically required module
-      // which is properly mocked at module level
-      expect(io).toHaveBeenCalledWith('http://localhost:3000', { timeout: 5000 });
+      // Verify local-socket emit was called for local notification
+      expect(localSocket.emit).toHaveBeenCalledWith('config_updated');
     });
   });
 
@@ -538,30 +535,11 @@ describe('Deploy Video Handler', () => {
   });
 
   describe('notifyLocalApp', () => {
-    it('should connect to local socket and emit config_updated', async () => {
+    it('should emit config_updated via local-socket', async () => {
       await deployVideo.notifyLocalApp();
 
-      // Verify socket.io-client was called with correct parameters
-      expect(io).toHaveBeenCalledWith('http://localhost:3000', { timeout: 5000 });
-
-      // The socket emit and close are called, and info is logged
-      // Since the mock is set up at module level, we just verify the connection was made
-    });
-
-    it('should not throw on socket error', async () => {
-      // Make io throw an error
-      io.mockImplementationOnce(() => {
-        throw new Error('Socket error');
-      });
-
-      // Should not throw
-      await expect(deployVideo.notifyLocalApp()).resolves.not.toThrow();
-
-      // Should log warning
-      expect(logger.warn).toHaveBeenCalledWith(
-        'Could not notify local app:',
-        expect.any(String)
-      );
+      expect(localSocket.emit).toHaveBeenCalledWith('config_updated');
+      expect(logger.info).toHaveBeenCalledWith('Local app notified of configuration change');
     });
   });
 

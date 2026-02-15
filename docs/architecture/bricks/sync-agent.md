@@ -5,7 +5,7 @@
 - Statut: `active`
 - Owner: \u00e9quipe NEOPRO
 - Derni\u00e8re revue: 2026-02-15
-- Version: 3.20.0
+- Version: 3.36.1
 - D\u00e9pend de: Central Server (Socket.IO), Local Server (port 3000), Admin Server (port 8080)
 - Impacte: \u00c9tat de synchronisation du Pi, d\u00e9ploiements vid\u00e9o, analytics cloud
 
@@ -24,6 +24,7 @@ Agent Node.js r\u00e9sident sur le Raspberry Pi qui maintient la connexion Socke
 - **Analytics push** : pousse sessions TV, impressions sponsors, plays vid\u00e9o vers le cloud
 - **Surveillance fichiers** : VideoWatcher + ConfigWatcher d\u00e9tectent les changements locaux
 - **Gestion offline** : queue les commandes sortantes quand d\u00e9connect\u00e9
+- **Connexion locale persistante** : maintient Socket.IO vers localhost:3000 (singleton `local-socket.js`)
 - **Relai cloud remote** : transf\u00e8re les commandes t\u00e9l\u00e9commande cloud vers localhost:3000
 - **Expiration vid\u00e9os** : v\u00e9rifie et supprime les vid\u00e9os NEOPRO expir\u00e9es
 - **Backup local** : sauvegarde p\u00e9riodique de configuration.json
@@ -52,12 +53,22 @@ Agent Node.js r\u00e9sident sur le Raspberry Pi qui maintient la connexion Socke
 | `execute_command`             | `{ commandId, type, data }`                      | Dispatch vers command handler       |
 | `delete_video`                | `{ videoPath }`                                  | Suppression fichier + update config |
 
-### HTTP (relai vers serveur local)
+### Socket.IO (vers Local Server — connexion persistante)
 
-| Cible        | Port | M\u00e9thode   | Description                             |
-| ------------ | ---- | -------------- | --------------------------------------- |
-| Local Server | 3000 | Socket.IO emit | Relai \u00e9v\u00e9nements cloud remote |
-| Admin Server | 8080 | HTTP POST      | Notifications config change             |
+Depuis v3.36.1, le sync-agent maintient une **connexion Socket.IO persistante** vers `localhost:3000` via le singleton `local-socket.js` (au lieu de connexions \u00e9ph\u00e9m\u00e8res cr\u00e9\u00e9es/d\u00e9truites \u00e0 chaque op\u00e9ration). Cette connexion est \u00e9tablie au d\u00e9marrage et r\u00e9utilis\u00e9e pour tous les \u00e9changes locaux.
+
+| M\u00e9thode                    | Description                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------ |
+| `emit(eventName, data)`         | Fire-and-forget : relai cloud remote, config_updated, etc.                     |
+| `request(eventName, timeoutMs)` | Callback-based : get-player-state, get-transition-metrics                      |
+| `requestScreenshot(data)`       | Capture \u00e9cran TV via \u00e9v\u00e9nement s\u00e9par\u00e9 screenshot-data |
+| `getRecordingState()`           | Cache + fallback explicite get-recording-state                                 |
+
+### HTTP (relai vers Admin Server)
+
+| Cible        | Port | M\u00e9thode | Description                 |
+| ------------ | ---- | ------------ | --------------------------- |
+| Admin Server | 8080 | HTTP POST    | Notifications config change |
 
 ## 4. D\u00e9pendances entrantes
 
@@ -70,12 +81,12 @@ Agent Node.js r\u00e9sident sur le Raspberry Pi qui maintient la connexion Socke
 
 ## 5. D\u00e9pendances sortantes
 
-| Cible               | Protocole | Donn\u00e9es \u00e9mises                 | Tol\u00e9rance panne                                |
-| ------------------- | --------- | ---------------------------------------- | --------------------------------------------------- |
-| Central Server      | WSS       | Heartbeat, config, analytics             | Offline queue, reconnexion exp backoff              |
-| FTP Hostinger       | HTTPS     | Download vid\u00e9os d\u00e9ploy\u00e9es | Retry backoff, checksum validation                  |
-| Local Server (3000) | Socket.IO | Relai commandes cloud remote             | Doit \u00eatre up (localhost)                       |
-| Filesystem          | I/O       | Vid\u00e9os, configuration.json, backups | V\u00e9rification espace disque avant \u00e9criture |
+| Cible               | Protocole | Donn\u00e9es \u00e9mises                             | Tol\u00e9rance panne                                |
+| ------------------- | --------- | ---------------------------------------------------- | --------------------------------------------------- |
+| Central Server      | WSS       | Heartbeat, config, analytics                         | Offline queue, reconnexion exp backoff              |
+| FTP Hostinger       | HTTPS     | Download vid\u00e9os d\u00e9ploy\u00e9es             | Retry backoff, checksum validation                  |
+| Local Server (3000) | Socket.IO | Relai commandes cloud remote (connexion persistante) | Reconnexion auto (1-5s backoff)                     |
+| Filesystem          | I/O       | Vid\u00e9os, configuration.json, backups             | V\u00e9rification espace disque avant \u00e9criture |
 
 ## 6. Donn\u00e9es manipul\u00e9es
 
@@ -110,7 +121,7 @@ Agent Node.js r\u00e9sident sur le Raspberry Pi qui maintient la connexion Socke
 
 ## 9. Tests et validation
 
-- **Unitaires** : 173 tests Jest
+- **Unitaires** : 172 tests Jest
   - config-merge.test.js (merge intelligent)
   - deploy-video.test.js (download + checksum)
   - commands.test.js (dispatch commandes)
@@ -153,8 +164,9 @@ raspberry/sync-agent/
 \u2502   \u2502   \u251c\u2500\u2500 analytics-buffer.js      # Flush buffer analytics
 \u2502   \u2502   \u2514\u2500\u2500 sync-profiles.js         # Sync & switch profils multi-config
 \u2502   \u2502
-\u2502   \u251c\u2500\u2500 services/                    # 4 services
-\u2502   \u2502   \u251c\u2500\u2500 connection-status.js     # Track \u00e9tat connexion
+\u2502   \u251c\u2500\u2500 services/                    # 7 services
+\u2502   \u2502   \u251c\u2500\u2500 local-socket.js          # Connexion Socket.IO persistante vers localhost:3000
+\u2502   \u2502   \u251c\u2500\u2500 connection-status.js     # Track \u00e9tat connexion cloud
 \u2502   \u2502   \u251c\u2500\u2500 offline-queue.js         # Queue commandes offline
 \u2502   \u2502   \u251c\u2500\u2500 network-detector.js      # D\u00e9tection type r\u00e9seau
 \u2502   \u2502   \u251c\u2500\u2500 network-watchdog.js      # Surveillance connectivit\u00e9
@@ -174,7 +186,7 @@ raspberry/sync-agent/
 \u2502   \u2502   \u251c\u2500\u2500 config-validator.js      # Validation configuration
 \u2502   \u2502   \u2514\u2500\u2500 version-info.js          # Info version logicielle
 \u2502   \u2502
-\u2502   \u2514\u2500\u2500 __tests__/                   # 173 tests Jest
+\u2502   \u2514\u2500\u2500 __tests__/                   # 172 tests Jest
 \u2514\u2500\u2500 package.json
 ```
 
@@ -213,19 +225,20 @@ start()
   \u2502 4. Expiration checker
   \u2502 5. Local backup
   \u2502 6. Network watchdog (surveille wlan0/wlan1 d\u00e8s le boot)
-  \u2502 7. connect() \u2192 Socket.IO (async, reconnexion auto)
+  \u2502 7. localSocket.connect() \u2192 Socket.IO persistant vers localhost:3000
+  \u2502 8. connect() \u2192 Socket.IO cloud (async, reconnexion auto)
   \u25bc
 handleAuthenticated()
-  \u2502 8. Config/Video watchers
-  \u2502 9. Heartbeat (30s)
-  \u2502 10. Connection health check (60s)
-  \u2502 11. Network profile detection (1h)
-  \u2502 12. Binding pong events pour watchdog cloud
-  \u2502 13. Traitement offline queue
+  \u2502 9. Config/Video watchers
+  \u2502 10. Heartbeat (30s)
+  \u2502 11. Connection health check (60s)
+  \u2502 12. Network profile detection (1h)
+  \u2502 13. Binding pong events pour watchdog cloud
+  \u2502 14. Traitement offline queue
   \u25bc
 ```
 
-**Important :** Le watchdog r\u00e9seau (6) d\u00e9marre **avant** la connexion Socket.IO (7). Si le r\u00e9seau est coup\u00e9 au boot, le watchdog tente la recovery pendant que le sync-agent boucle sur les tentatives de connexion. Apr\u00e8s 10 \u00e9checs Socket.IO, le sync-agent attend 30s puis retente (pas de `process.exit`), laissant le watchdog actif en continu.
+**Important :** Le watchdog r\u00e9seau (6) d\u00e9marre **avant** les connexions Socket.IO (7-8). La connexion locale persistante (7) est \u00e9tablie avant la connexion cloud (8) pour que les relais soient imm\u00e9diatement op\u00e9rationnels d\u00e8s l'authentification. Si le r\u00e9seau est coup\u00e9 au boot, le watchdog tente la recovery pendant que le sync-agent boucle sur les tentatives de connexion. Apr\u00e8s 10 \u00e9checs Socket.IO, le sync-agent attend 30s puis retente (pas de `process.exit`), laissant le watchdog actif en continu.
 
 ## 12. Flux critiques
 

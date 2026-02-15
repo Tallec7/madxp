@@ -287,9 +287,9 @@ Commandes:          ────────────────────
 | **switch_profile**           | Central → Local    | Admin change profil actif      | Activation profil + merge config                                  |
 | **profile-switch**           | Local (front→back) | Remote sélectionne un profil   | Activation profil + reload TV                                     |
 
-> **Note** : Le heartbeat (30s) envoie les métriques système + le statut kiosk Chromium (lu depuis `/home/pi/neopro/data/kiosk-status.json`, écrit par `kiosk-watchdog.sh`) + le recording state analytics (`{ isRecording, isManualOverride }`, récupéré depuis le local server) + le player state TV (`{ currentVideo, progress, phase, isPlaying, loopIndex, ... }`, récupéré depuis le local server via callback `get-player-state`). Le recording state et le player state sont stockés en mémoire côté central (Maps éphémères) et exposés dans `GET /api/remote/:siteId/state` pour la cloud remote. Le player state est aussi broadcasté en temps réel vers la room `dashboard` via l'événement `player_state_updated`. La liste des vidéos est synchronisée via `sync_local_state` à la connexion et lors de changements détectés par le VideoWatcher.
+> **Note** : Le heartbeat (30s) envoie les métriques système + le statut kiosk Chromium (lu depuis `/home/pi/neopro/data/kiosk-status.json`, écrit par `kiosk-watchdog.sh`) + le recording state analytics (`{ isRecording, isManualOverride }`, récupéré depuis le local server via connexion persistante `local-socket.js`) + le player state TV (`{ currentVideo, progress, phase, isPlaying, loopIndex, ... }`, récupéré depuis le local server via callback `get-player-state` sur la connexion persistante). Le recording state et le player state sont stockés en mémoire côté central (Maps éphémères) et exposés dans `GET /api/remote/:siteId/state` pour la cloud remote. Le player state est aussi broadcasté en temps réel vers la room `dashboard` via l'événement `player_state_updated`. La liste des vidéos est synchronisée via `sync_local_state` à la connexion et lors de changements détectés par le VideoWatcher.
 >
-> **Screenshot à la demande** : Le dashboard cloud peut demander un screenshot de la TV via `POST /api/remote/:siteId/command` avec `type: 'screenshot'`. Le flux est : central → sync-agent → local server (broadcast) → TV component (canvas.drawImage, JPEG 480p quality 0.5, ~30-50KB) → local server → sync-agent (relay bidirectionnel éphémère) → central → dashboard room via Socket.IO `screenshot-data`. Rate-limited à 1 capture/seconde côté Pi.
+> **Screenshot à la demande** : Le dashboard cloud peut demander un screenshot de la TV via `POST /api/remote/:siteId/command` avec `type: 'screenshot'`. Le flux est : central → sync-agent → local server (broadcast via connexion persistante `local-socket.js`) → TV component (canvas.drawImage, JPEG 480p quality 0.5, ~30-50KB) → local server → sync-agent (relay via connexion persistante) → central → dashboard room via Socket.IO `screenshot-data`. Rate-limited à 1 capture/seconde côté Pi.
 
 ### 4.3 Processus de Synchronisation Détaillé
 
@@ -939,17 +939,18 @@ La pré-migration logge un bloc `=== PRE-MIGRATION DIAG ===` avec les permission
 
 ## Historique des Versions
 
-| Version | Date       | Auteur        | Modifications                                                               |
-| ------- | ---------- | ------------- | --------------------------------------------------------------------------- |
-| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                                           |
-| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                                      |
-| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos                          |
-| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix                      |
-| 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support)                    |
-| 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config                     |
-| 1.6     | 2026-02-12 | Claude/NEOPRO | Ajout multi-config profiles (sync_profiles, switch_profile, profile-switch) |
-| 1.7     | 2026-02-15 | Claude/NEOPRO | Ajout section OTA : pré-migration, race condition, monitoring               |
-| 1.8     | 2026-02-15 | Claude/NEOPRO | Réécriture pré-migration : rm sans sudo, diagnostic, versions affectées     |
+| Version | Date       | Auteur        | Modifications                                                                    |
+| ------- | ---------- | ------------- | -------------------------------------------------------------------------------- |
+| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                                                |
+| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                                           |
+| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos                               |
+| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix                           |
+| 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support)                         |
+| 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config                          |
+| 1.6     | 2026-02-12 | Claude/NEOPRO | Ajout multi-config profiles (sync_profiles, switch_profile, profile-switch)      |
+| 1.7     | 2026-02-15 | Claude/NEOPRO | Ajout section OTA : pré-migration, race condition, monitoring                    |
+| 1.8     | 2026-02-15 | Claude/NEOPRO | Réécriture pré-migration : rm sans sudo, diagnostic, versions affectées          |
+| 1.9     | 2026-02-15 | Claude/NEOPRO | Connexion locale persistante : relay screenshot et heartbeat via local-socket.js |
 
 ---
 

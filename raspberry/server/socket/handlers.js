@@ -330,6 +330,18 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
     });
 
     /**
+     * Get recording state (from sync-agent via callback) — returns current state.
+     * Needed by persistent connections that don't get the auto-emit on connect.
+     * @event get-recording-state
+     */
+    socket.on('get-recording-state', (callback) => {
+      const state = stateService.getRecordingState();
+      if (typeof callback === 'function') {
+        callback(state);
+      }
+    });
+
+    /**
      * Screenshot request (from sync-agent/cloud) — broadcasts to TV component.
      * @event screenshot-request
      */

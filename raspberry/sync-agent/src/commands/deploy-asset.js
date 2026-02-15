@@ -138,18 +138,9 @@ class AssetDeployHandler {
    * Notifie l'application locale (TV) qu'un asset a été déployé
    */
   async notifyLocalApp() {
-    try {
-      const io = require('socket.io-client');
-      const socket = io('http://localhost:3000', { timeout: 5000 });
-
-      socket.emit('config_updated');
-
-      setTimeout(() => socket.close(), 1000);
-
-      logger.info('[deploy-asset] Local app notified');
-    } catch (error) {
-      logger.warn('[deploy-asset] Could not notify local app', { error: error.message });
-    }
+    const localSocket = require('../services/local-socket');
+    localSocket.emit('config_updated');
+    logger.info('[deploy-asset] Local app notified');
   }
 }
 

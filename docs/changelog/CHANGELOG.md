@@ -1,3 +1,21 @@
+# [3.37.0](https://github.com/Tallec7/neopro/compare/v3.36.1...v3.37.0) (2026-02-15)
+
+### Features
+
+- **sync-agent:** replace ephemeral Socket.IO connections with persistent local socket singleton (`local-socket.js`)
+  - Single persistent connection to localhost:3000 with auto-reconnect (1-5s backoff)
+  - Eliminates ~120 connect/disconnect log lines per hour
+  - Refactored 6 methods in agent.js + 8 command/task files
+  - New `get-recording-state` server handler for explicit state fetch
+  - All relay, heartbeat data fetch, and screenshot operations use the shared connection
+
+### Documentation
+
+- **sync-agent:** update brick doc with persistent connection architecture, updated startup sequence
+- **sync-architecture:** update screenshot relay and heartbeat sections
+- **ADR-007:** update screenshot relay from ephemeral to persistent connection
+- **ADR-006:** update license notification flow diagram
+
 ## [3.36.1](https://github.com/Tallec7/neopro/compare/v3.36.0...v3.36.1) (2026-02-15)
 
 ### Bug Fixes

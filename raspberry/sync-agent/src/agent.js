@@ -24,6 +24,7 @@ const { networkDetector } = require('./services/network-detector');
 const { safeNetworkOperations } = require('./services/safe-network-operations');
 const networkWatchdog = require('./services/network-watchdog');
 const licenseCache = require('./license-cache');
+const localSocket = require('./services/local-socket');
 
 class NeoproSyncAgent {
   constructor() {
@@ -38,7 +39,6 @@ class NeoproSyncAgent {
     this.videoWatcher = null;
     this.lastSuccessfulHeartbeat = null;
     this.networkProfileInterval = null;
-    this._lastRecordingState = null;
     this.watchdogStarted = false;
   }
 
@@ -72,6 +72,9 @@ class NeoproSyncAgent {
     // Démarrer le watchdog réseau dès le boot (indépendant du WebSocket)
     // Surveille wlan0 (hotspot) et wlan1 (internet) même sans connexion cloud
     this.startNetworkWatchdog();
+
+    // Connexion persistante au serveur local (port 3000)
+    localSocket.connect();
 
     this.connect();
 
@@ -170,23 +173,7 @@ class NeoproSyncAgent {
    * @param {Object} data - Event data
    */
   notifyLocalApp(eventName, data) {
-    const localSocket = io('http://localhost:3000', {
-      timeout: 5000,
-      reconnection: false,
-    });
-
-    localSocket.on('connect', () => {
-      logger.debug('Connected to local server for notification', { eventName });
-      localSocket.emit(eventName, data);
-
-      setTimeout(() => {
-        localSocket.disconnect();
-      }, 500);
-    });
-
-    localSocket.on('connect_error', (error) => {
-      logger.debug('Could not connect to local server for notification', { eventName, error: error.message });
-    });
+    localSocket.emit(eventName, data);
   }
 
   handlePingCheck() {
@@ -214,69 +201,24 @@ class NeoproSyncAgent {
    * Unlike relayToLocalServer (fire-and-forget), this waits for a response.
    * @param {object} data - Screenshot request payload (quality, timestamp)
    */
-  requestScreenshot(data) {
+  async requestScreenshot(data) {
     logger.info('📸 Screenshot requested from cloud, relaying to local server');
-
-    const localSocket = io('http://localhost:3000', {
-      timeout: 10000,
-      reconnection: false,
-    });
-
-    const cleanupTimeout = setTimeout(() => {
-      logger.warn('Screenshot request timed out (10s)');
-      localSocket.disconnect();
-    }, 10000);
-
-    localSocket.on('connect', () => {
-      logger.debug('Connected to local server for screenshot request');
-      localSocket.emit('screenshot-request', data);
-    });
-
-    localSocket.on('screenshot-data', (screenshotData) => {
-      clearTimeout(cleanupTimeout);
+    const screenshotData = await localSocket.requestScreenshot(data);
+    if (screenshotData) {
       logger.info('📸 Screenshot data received from local, forwarding to central');
       this.socket.emit('screenshot-data', screenshotData);
-      localSocket.disconnect();
-    });
-
-    localSocket.on('connect_error', (err) => {
-      clearTimeout(cleanupTimeout);
-      logger.warn('Failed to connect to local server for screenshot', {
-        error: err.message,
-      });
-    });
+    } else {
+      logger.warn('Screenshot request failed or timed out');
+    }
   }
 
   /**
-   * Fetch player state from local Pi server (quick connection, callback-based).
+   * Fetch player state from local Pi server via persistent connection.
    * Used by heartbeat to include the current TV player state.
    * @returns {Promise<object|null>}
    */
   fetchLocalPlayerState() {
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        localSocket.disconnect();
-        resolve(null);
-      }, 2000);
-
-      const localSocket = io('http://localhost:3000', {
-        timeout: 2000,
-        reconnection: false,
-      });
-
-      localSocket.on('connect', () => {
-        localSocket.emit('get-player-state', (state) => {
-          clearTimeout(timeout);
-          localSocket.disconnect();
-          resolve(state);
-        });
-      });
-
-      localSocket.on('connect_error', () => {
-        clearTimeout(timeout);
-        resolve(null);
-      });
-    });
+    return localSocket.request('get-player-state', 2000);
   }
 
   /**
@@ -287,37 +229,8 @@ class NeoproSyncAgent {
    * @param {object} data - Event payload
    */
   relayToLocalServer(eventName, data) {
-    logger.info('☁️ Cloud remote event received, relaying to local server', { eventName, data });
-
-    const localSocket = io('http://localhost:3000', {
-      timeout: 5000,
-      reconnection: false,
-    });
-
-    localSocket.on('connect', () => {
-      logger.debug('Connected to local server for relay', { eventName });
-      localSocket.emit(eventName, data);
-
-      // Disconnect after a short delay to allow the event to be processed
-      setTimeout(() => {
-        localSocket.disconnect();
-        logger.debug('Disconnected from local server after relay', { eventName });
-      }, 500);
-    });
-
-    localSocket.on('connect_error', (err) => {
-      logger.warn('Failed to relay event to local server', {
-        eventName,
-        error: err.message,
-      });
-    });
-
-    localSocket.on('error', (err) => {
-      logger.warn('Local server relay error', {
-        eventName,
-        error: err.message,
-      });
-    });
+    logger.info('☁️ Cloud remote event received, relaying to local server', { eventName });
+    localSocket.emit(eventName, data);
   }
 
   handleConnect() {
@@ -875,72 +788,20 @@ class NeoproSyncAgent {
   }
 
   /**
-   * Fetch recording state from local Pi server (quick connection)
+   * Fetch recording state from local Pi server via persistent connection.
+   * Uses cached broadcast value with explicit-fetch fallback.
    * @returns {Promise<{isRecording: boolean, isManualOverride: boolean} | null>}
    */
   fetchLocalRecordingState() {
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        localSocket.disconnect();
-        resolve(this._lastRecordingState);
-      }, 2000);
-
-      const localSocket = io('http://localhost:3000', {
-        timeout: 2000,
-        reconnection: false,
-      });
-
-      localSocket.on('connect', () => {
-        // The local server emits 'recording-state' on connection
-        // (see raspberry/server/socket/handlers.js line 36)
-      });
-
-      localSocket.on('recording-state', (data) => {
-        clearTimeout(timeout);
-        this._lastRecordingState = {
-          isRecording: !!data.isRecording,
-          isManualOverride: !!data.isManualOverride,
-        };
-        localSocket.disconnect();
-        resolve(this._lastRecordingState);
-      });
-
-      localSocket.on('connect_error', () => {
-        clearTimeout(timeout);
-        resolve(this._lastRecordingState);
-      });
-    });
+    return localSocket.getRecordingState();
   }
 
   /**
-   * Fetch transition metrics from local Pi server (get + reset)
+   * Fetch transition metrics from local Pi server via persistent connection (get + reset).
    * @returns {Promise<{earlySwitchCount: number, safetyTimeoutCount: number, cleanupSkippedCount: number, videoErrorCount: number, totalTransitions: number} | null>}
    */
   fetchLocalTransitionMetrics() {
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        localSocket.disconnect();
-        resolve(null);
-      }, 2000);
-
-      const localSocket = io('http://localhost:3000', {
-        timeout: 2000,
-        reconnection: false,
-      });
-
-      localSocket.on('connect', () => {
-        localSocket.emit('get-transition-metrics', (metrics) => {
-          clearTimeout(timeout);
-          localSocket.disconnect();
-          resolve(metrics);
-        });
-      });
-
-      localSocket.on('connect_error', () => {
-        clearTimeout(timeout);
-        resolve(null);
-      });
-    });
+    return localSocket.request('get-transition-metrics', 2000);
   }
 
   async sendHeartbeat() {
@@ -1160,6 +1021,8 @@ class NeoproSyncAgent {
       }
     }
 
+    localSocket.disconnect();
+
     if (this.socket) {
       this.socket.disconnect();
     }
@@ -1180,4 +1043,5 @@ module.exports = {
   connectionStatus,
   networkDetector,
   networkWatchdog,
+  localSocket,
 };

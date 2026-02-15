@@ -418,18 +418,9 @@ class VideoDeployHandler {
   }
 
   async notifyLocalApp() {
-    try {
-      const io = require('socket.io-client');
-      const socket = io('http://localhost:3000', { timeout: 5000 });
-
-      socket.emit('config_updated');
-
-      setTimeout(() => socket.close(), 1000);
-
-      logger.info('Local app notified of configuration change');
-    } catch (error) {
-      logger.warn('Could not notify local app:', error.message);
-    }
+    const localSocket = require('../services/local-socket');
+    localSocket.emit('config_updated');
+    logger.info('Local app notified of configuration change');
   }
 }
 
