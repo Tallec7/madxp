@@ -364,9 +364,15 @@ class UpdateDeploymentService {
     logger.info('deployToSite called', { deploymentId, siteId, updateVersion: update.version });
 
     // Pré-migration : fixer les fichiers VERSION root:root avant l'OTA
-    // La commande remote_shell et update_software sont traitées séquentiellement
-    // par le sync-agent (même event handler), pas besoin de delay
-    this.applyPreUpdateMigration(siteId);
+    // IMPORTANT : le handler socket.on('command') du Pi n'attend PAS la fin du
+    // handleCommand() — les commandes s'exécutent en PARALLÈLE. Il faut donc
+    // attendre que le remote_shell (chown/rm) ait le temps de terminer avant
+    // d'envoyer update_software, sinon fs.copy() arrive avant le chown.
+    // La commande de fix est rapide (<1s), 3s de marge suffisent.
+    const migrationSent = this.applyPreUpdateMigration(siteId);
+    if (migrationSent) {
+      await this.delay(3000);
+    }
 
     const commandData = {
       deploymentId,
@@ -560,6 +566,12 @@ class UpdateDeploymentService {
     }
   }
 
+  /**
+   * Délai asynchrone — méthode séparée pour permettre le mock dans les tests
+   */
+  delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 }
 
 export const updateDeploymentService = new UpdateDeploymentService();

@@ -15,7 +15,7 @@ Règle critique : `chown` doit utiliser `-R` (`sudo chown -R pi:pi`) car le sudo
 
 ## Pre-migration (serveur)
 
-`applyPreUpdateMigration()` dans `update-deployment.service.ts` envoie un `remote_shell` AVANT `update_software`. Les commandes sont traitées **séquentiellement** par le sync-agent (même event handler async), donc pas besoin de délai.
+`applyPreUpdateMigration()` dans `update-deployment.service.ts` envoie un `remote_shell` AVANT `update_software`. **ATTENTION** : le handler `socket.on('command')` du Pi n'attend PAS la fin de `handleCommand()` — les commandes s'exécutent en **parallèle**. Il faut donc un **delay de 3s** entre la pré-migration et l'envoi de `update_software` pour que le chown ait le temps de terminer.
 
 **INTERDIT** : utiliser `sed` pour patcher le code du sync-agent dans la pré-migration. Un `sed 's/sudo cp/cp/g'` global casse les `sudo cp` légitimes (installation sudoers dans `/etc/sudoers.d/`, services systemd dans `/etc/systemd/system/`). Utiliser uniquement des commandes shell pour corriger l'état du filesystem (chown, rm, cp, mv).
 
