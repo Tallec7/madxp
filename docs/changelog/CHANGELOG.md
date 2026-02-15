@@ -1,3 +1,9 @@
+# [3.39.0](https://github.com/Tallec7/neopro/compare/v3.38.0...v3.39.0) (2026-02-15)
+
+### Features
+
+- **dashboard:** restructuration UX onglet Contenu (ADR-022, P0→P3) ([0a97b8b](https://github.com/Tallec7/neopro/commit/0a97b8b593db1bb58ba2448db29884660c8d1581))
+
 # [3.38.0](https://github.com/Tallec7/neopro/compare/v3.37.2...v3.38.0) (2026-02-15)
 
 ### Features
