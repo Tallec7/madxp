@@ -112,7 +112,8 @@ neopro/ (monorepo)
 │   │   │   └── sites/
 │   │   │       ├── site-detail.component.ts     # Page détail (5 onglets)
 │   │   │       └── components/
-│   │   │           ├── site-content-tab/        # Boucles vidéo par phase
+│   │   │           ├── site-content-tab/        # Pipeline contenu (bibliothèque → boucles → télécommande → analytics)
+│   │   │           ├── loop-manager/            # Gestion unifiée boucles (défaut + 3 phases)
 │   │   │           ├── site-settings-tab/       # Config réseau, hotspot
 │   │   │           ├── site-profiles-tab/       # Multi-config CRUD + deploy
 │   │   │           └── site-debug-tab/          # Logs, commandes

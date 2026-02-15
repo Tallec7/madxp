@@ -82,7 +82,8 @@ export type SortDirection = 'asc' | 'desc';
           placeholder="Rechercher..."
           class="search-input"
         />
-        <select [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()" class="filter-select">
+        <select [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()" class="filter-select"
+                title="Pertinentes = vidéos utilisées dans la config ou uploadées pour ce site. Sur le Pi = déjà présentes sur le boîtier. À déployer = dans le cloud, en attente de transfert.">
           <option value="relevant">🎯 Pertinentes</option>
           <option value="all">Tous les statuts</option>
           <option value="on_pi">✅ Sur le Pi</option>
@@ -1416,11 +1417,12 @@ export class VideoLibraryComponent implements OnChanges {
   }
 
   formatBytes(bytes: number | null | undefined): string {
-    if (bytes == null || isNaN(bytes) || bytes === 0) return '0 B';
+    if (bytes == null || !Number.isFinite(bytes) || bytes <= 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    const safeIndex = Math.min(Math.max(i, 0), sizes.length - 1);
+    return parseFloat((bytes / Math.pow(k, safeIndex)).toFixed(1)) + ' ' + sizes[safeIndex];
   }
 
   formatDate(dateStr: string): string {

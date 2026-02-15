@@ -40,14 +40,15 @@ Un ADR documente une décision technique importante avec :
 
 ### Roadmap (proposés)
 
-| ID                                                | Titre                                    | Statut  | Date     |
-| ------------------------------------------------- | ---------------------------------------- | ------- | -------- |
-| [ADR-016](ADR-016-video-template-engine.md)       | Moteur de templates vidéo                | Proposé | Fév 2026 |
-| [ADR-017](ADR-017-scheduling-local-vs-server.md)  | Planification horaire (local vs serveur) | Proposé | Fév 2026 |
-| [ADR-018](ADR-018-sponsor-self-service-portal.md) | Portail sponsor self-service             | Proposé | Fév 2026 |
-| [ADR-019](ADR-019-sponsor-rotation-algorithm.md)  | Rotation équitable des sponsors          | Proposé | Fév 2026 |
-| [ADR-020](ADR-020-content-expiration.md)          | Expiration automatique de contenu        | Proposé | Fév 2026 |
-| [ADR-021](ADR-021-recording-inactivity-timer.md)  | Timer d'inactivité recording             | Proposé | Fév 2026 |
+| ID                                                   | Titre                                    | Statut  | Date     |
+| ---------------------------------------------------- | ---------------------------------------- | ------- | -------- |
+| [ADR-016](ADR-016-video-template-engine.md)          | Moteur de templates vidéo                | Proposé | Fév 2026 |
+| [ADR-017](ADR-017-scheduling-local-vs-server.md)     | Planification horaire (local vs serveur) | Proposé | Fév 2026 |
+| [ADR-018](ADR-018-sponsor-self-service-portal.md)    | Portail sponsor self-service             | Proposé | Fév 2026 |
+| [ADR-019](ADR-019-sponsor-rotation-algorithm.md)     | Rotation équitable des sponsors          | Proposé | Fév 2026 |
+| [ADR-020](ADR-020-content-expiration.md)             | Expiration automatique de contenu        | Proposé | Fév 2026 |
+| [ADR-021](ADR-021-recording-inactivity-timer.md)     | Timer d'inactivité recording             | Proposé | Fév 2026 |
+| [ADR-022](ADR-022-content-tab-ux-restructuration.md) | Restructuration UX onglet Contenu        | Accepté | Fév 2026 |
 
 ## Statuts
 

@@ -8,6 +8,17 @@
 
 ### Features
 
+- **dashboard:** restructuration UX onglet Contenu — ADR-022, Option B (P0→P3)
+  - **P0:** fix NaN undefined dans la bibliothèque vidéo + warning boucle par défaut sans analytics
+  - **P1:** nouveau composant `loop-manager` (fusion boucle défaut + 3 phases avec tabs), bandeau de santé pipeline cliquable, warnings de validation avant déploiement, bouton "Répartir dans les 3 phases"
+  - **P2:** réordonnancement sections (pipeline logique : Bibliothèque → Catégories → Boucles → Télécommande → Analytics), auto-suggestion analytics par nom de catégorie, durées dans les boucles (par vidéo + total + rotations/heure), preview télécommande sticky (FAB + panneau latéral)
+  - **P3:** compteurs d'impact (vidéos trackées vs fallback), tooltips sur bandeau de santé et filtres bibliothèque
+
+### Documentation
+
+- **ADR-022:** Restructuration UX onglet Contenu — statut Proposé → Accepté
+- **ARCHITECTURE.md:** ajout `loop-manager/` dans l'arborescence dashboard
+
 - **remote:** recording inactivity warning popup with 3-minute countdown (ADR-021)
   - Universal inactivity timer (15 min) across all phases (neutral, before, during, after)
   - Modal popup on remote with visual countdown and progress bar
