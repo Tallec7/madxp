@@ -1,3 +1,9 @@
+## [3.30.8](https://github.com/Tallec7/neopro/compare/v3.30.7...v3.30.8) (2026-02-15)
+
+### Bug Fixes
+
+- **ota:** remove dangerous sed patches from pre-migration, fix ownership only ([65d73ae](https://github.com/Tallec7/neopro/commit/65d73aea8f28da6a3718835675ebfb9fe3e9302e))
+
 ## [3.30.7](https://github.com/Tallec7/neopro/compare/v3.30.6...v3.30.7) (2026-02-15)
 
 ### Bug Fixes
