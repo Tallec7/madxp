@@ -90,15 +90,15 @@ Agent Node.js r\u00e9sident sur le Raspberry Pi qui maintient la connexion Socke
 
 ## 7. Modes de panne et d\u00e9gradation
 
-| Incident                 | D\u00e9tection                        | Effet                             | Mitigation                                                | Runbook           |
-| ------------------------ | ------------------------------------- | --------------------------------- | --------------------------------------------------------- | ----------------- |
-| Internet coup\u00e9      | network-watchdog.js                   | Pas de sync cloud                 | Offline queue, reconnexion auto avec backoff exponentiel  | \u00c0 cr\u00e9er |
-| Central Server down      | Socket.IO disconnect                  | Pas de commandes cloud            | Reconnexion auto, fonctionnement local pr\u00e9serv\u00e9 | \u00c0 cr\u00e9er |
-| FTP download \u00e9choue | Erreur basic-ftp                      | Vid\u00e9o non d\u00e9ploy\u00e9e | Retry 3x avec backoff, report progress "failed"           | \u00c0 cr\u00e9er |
-| Checksum mismatch        | SHA256 v\u00e9rification              | Vid\u00e9o corrompue              | Re-download, alerte cloud                                 | \u00c0 cr\u00e9er |
-| Disque plein             | V\u00e9rification avant \u00e9criture | Impossible de sauver vid\u00e9o   | Rejet avec erreur, alerte cloud                           | \u00c0 cr\u00e9er |
-| Config corrompue         | config-validator.js                   | Merge impossible                  | Restauration depuis backup (local-backup.js)              | \u00c0 cr\u00e9er |
-| Agent crash              | systemd watchdog                      | Plus de sync                      | Restart auto systemd, alerte zombie c\u00f4t\u00e9 cloud  | \u00c0 cr\u00e9er |
+| Incident                 | D\u00e9tection                               | Effet                             | Mitigation                                                                                                    | Runbook           |
+| ------------------------ | -------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------- |
+| Internet coup\u00e9      | network-watchdog.js (actif d\u00e8s le boot) | Pas de sync cloud                 | Watchdog 6 phases recovery (reconfigure \u2192 modprobe \u2192 USB), cooldown 30s+retry (pas de process.exit) | \u00c0 cr\u00e9er |
+| Central Server down      | Socket.IO disconnect                         | Pas de commandes cloud            | Reconnexion auto avec cooldown 30s apr\u00e8s 10 \u00e9checs, fonctionnement local pr\u00e9serv\u00e9         | \u00c0 cr\u00e9er |
+| FTP download \u00e9choue | Erreur basic-ftp                             | Vid\u00e9o non d\u00e9ploy\u00e9e | Retry 3x avec backoff, report progress "failed"                                                               | \u00c0 cr\u00e9er |
+| Checksum mismatch        | SHA256 v\u00e9rification                     | Vid\u00e9o corrompue              | Re-download, alerte cloud                                                                                     | \u00c0 cr\u00e9er |
+| Disque plein             | V\u00e9rification avant \u00e9criture        | Impossible de sauver vid\u00e9o   | Rejet avec erreur, alerte cloud                                                                               | \u00c0 cr\u00e9er |
+| Config corrompue         | config-validator.js                          | Merge impossible                  | Restauration depuis backup (local-backup.js)                                                                  | \u00c0 cr\u00e9er |
+| Agent crash              | systemd watchdog                             | Plus de sync                      | Restart auto systemd, alerte zombie c\u00f4t\u00e9 cloud                                                      | \u00c0 cr\u00e9er |
 
 ## 8. Observabilit\u00e9
 
@@ -203,7 +203,31 @@ Collecte 15 sections de diagnostic en une seule commande (timeout 60s) :
 
 Sécurité : chaque section a son propre try/catch (un échec n'empêche pas les autres). Les données sensibles sont systématiquement masquées.
 
-## 11. Flux critiques
+## 11. S\u00e9quence de d\u00e9marrage
+
+```
+start()
+  \u2502 1. Validation configuration (exit si invalide)
+  \u2502 2. Analytics sync (HTTP, ind\u00e9pendant du WS)
+  \u2502 3. Sponsor impressions sync
+  \u2502 4. Expiration checker
+  \u2502 5. Local backup
+  \u2502 6. Network watchdog (surveille wlan0/wlan1 d\u00e8s le boot)
+  \u2502 7. connect() \u2192 Socket.IO (async, reconnexion auto)
+  \u25bc
+handleAuthenticated()
+  \u2502 8. Config/Video watchers
+  \u2502 9. Heartbeat (30s)
+  \u2502 10. Connection health check (60s)
+  \u2502 11. Network profile detection (1h)
+  \u2502 12. Binding pong events pour watchdog cloud
+  \u2502 13. Traitement offline queue
+  \u25bc
+```
+
+**Important :** Le watchdog r\u00e9seau (6) d\u00e9marre **avant** la connexion Socket.IO (7). Si le r\u00e9seau est coup\u00e9 au boot, le watchdog tente la recovery pendant que le sync-agent boucle sur les tentatives de connexion. Apr\u00e8s 10 \u00e9checs Socket.IO, le sync-agent attend 30s puis retente (pas de `process.exit`), laissant le watchdog actif en continu.
+
+## 12. Flux critiques
 
 ### D\u00e9ploiement vid\u00e9o (Cloud \u2192 Pi)
 
@@ -241,7 +265,7 @@ Central Server
 Dashboard voit l'\u00e9tat mis \u00e0 jour
 ```
 
-## 12. Open points
+## 13. Open points
 
 - Code en JavaScript (pas TypeScript) \u2014 migration envisag\u00e9e
 - Pas de tests d'int\u00e9gration automatis\u00e9s avec le Central Server

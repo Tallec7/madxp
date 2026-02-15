@@ -32,14 +32,14 @@ Couche 1: NetworkDetector (Pi)                   — Classification du profil r�
 
 Classifie automatiquement le réseau en 6 profils :
 
-| Profil | Conditions | Comportement |
-|--------|-----------|--------------|
-| `simple` | 1 AP, pas d'isolation | BSSID lock autorisé |
-| `mesh` | >1 AP même SSID | BSSID lock bloqué, bgscan activé |
-| `mesh_isolated` | >1 AP + isolation client | Remote Cloud recommandé |
-| `enterprise` | 802.1X détecté | Configuration IT requise |
-| `ethernet` | eth0 UP avec IP + route | Connexion stable, score 100 |
-| `unknown` | Détection échouée | Mode dégradé prudent |
+| Profil          | Conditions               | Comportement                     |
+| --------------- | ------------------------ | -------------------------------- |
+| `simple`        | 1 AP, pas d'isolation    | BSSID lock autorisé              |
+| `mesh`          | >1 AP même SSID          | BSSID lock bloqué, bgscan activé |
+| `mesh_isolated` | >1 AP + isolation client | Remote Cloud recommandé          |
+| `enterprise`    | 802.1X détecté           | Configuration IT requise         |
+| `ethernet`      | eth0 UP avec IP + route  | Connexion stable, score 100      |
+| `unknown`       | Détection échouée        | Mode dégradé prudent             |
 
 Fréquence : Au boot (après 30s) + toutes les heures.
 
@@ -47,26 +47,30 @@ Fréquence : Au boot (après 30s) + toutes les heures.
 
 Matrice de sécurité empêchant les opérations dangereuses selon le profil :
 
-| Opération | Simple | Mesh | Mesh Isolé | Enterprise | Ethernet |
-|-----------|--------|------|------------|------------|----------|
-| BSSID lock | ✅ | ❌ | ❌ | ❌ | N/A |
-| Hotspot update | restart | reboot | reboot | reboot | restart |
-| Restart hostapd | ✅ | ❌ | ❌ | ❌ | ✅ |
-| Configure bgscan | ✅ | ✅ | ✅ | ✅ | N/A |
+| Opération        | Simple  | Mesh   | Mesh Isolé | Enterprise | Ethernet |
+| ---------------- | ------- | ------ | ---------- | ---------- | -------- |
+| BSSID lock       | ✅      | ❌     | ❌         | ❌         | N/A      |
+| Hotspot update   | restart | reboot | reboot     | reboot     | restart  |
+| Restart hostapd  | ✅      | ❌     | ❌         | ❌         | ✅       |
+| Configure bgscan | ✅      | ✅     | ✅         | ✅         | N/A      |
 
 ### Couche 3 — NetworkWatchdog
 
-| Surveillance | Intervalle | Actions |
-|-------------|-----------|---------|
-| Hotspot (wlan0) | 30s | rfkill unblock, restart hostapd, max 3 tentatives |
-| Internet (wlan1) | 60s | wpa_cli reconfigure, dhclient |
-| Cloud (Socket.IO) | 30s | Détection zombie, force reconnect |
+**Cycle de vie :** Démarre dès le boot du sync-agent (avant connexion Socket.IO). Guard anti-double-démarrage. Le sync-agent ne fait plus `process.exit(1)` sur échec de connexion — il attend 30s puis retente, laissant le watchdog actif en continu.
 
-Rollback automatique : sauvegarde config avant opération risquée, restauration si perte connexion après 30s.
+| Surveillance      | Intervalle | Actions                                                                                     |
+| ----------------- | ---------- | ------------------------------------------------------------------------------------------- |
+| Hotspot (wlan0)   | 30s        | rfkill unblock, restart hostapd, max 6 tentatives                                           |
+| Internet (wlan1)  | 60s        | 6 phases : reconfigure → interface down/up → systemctl restart → modprobe → USB power-cycle |
+| Cloud (Socket.IO) | 30s        | Détection zombie, force reconnect                                                           |
+
+- Cooldown 5 min entre cycles de recovery, grace periods persistées sur disque
+- Rollback automatique : sauvegarde config avant opération risquée, restauration si perte connexion après 30s
 
 ### Couche 4 — NetworkAlerts (Serveur)
 
 Check toutes les 4 heures, génère des alertes pour :
+
 - BSSID lock en environnement mesh (critical)
 - Isolation client détectée (warning)
 - Score stabilité < 25 (critical) ou < 50 (warning)
@@ -89,12 +93,14 @@ Check toutes les 4 heures, génère des alertes pour :
 ### 3. Système multi-couches avec auto-recovery (choisi) ✅
 
 **Avantages** :
+
 - Détection automatique du contexte réseau
 - Blocage des opérations dangereuses selon le profil
 - Récupération automatique sans intervention humaine
 - Alertes centralisées pour le monitoring
 
 **Inconvénients** :
+
 - 4 services à maintenir et coordonner
 - Complexité de debug en cas de faux positifs
 
@@ -126,4 +132,4 @@ Check toutes les 4 heures, génère des alertes pour :
 
 ---
 
-*Créé le 9 février 2026*
+_Créé le 9 février 2026_

@@ -39,6 +39,7 @@ class NeoproSyncAgent {
     this.lastSuccessfulHeartbeat = null;
     this.networkProfileInterval = null;
     this._lastRecordingState = null;
+    this.watchdogStarted = false;
   }
 
   async start() {
@@ -68,6 +69,10 @@ class NeoproSyncAgent {
     // Démarrer le backup automatique quotidien
     localBackup.start();
 
+    // Démarrer le watchdog réseau dès le boot (indépendant du WebSocket)
+    // Surveille wlan0 (hotspot) et wlan1 (internet) même sans connexion cloud
+    this.startNetworkWatchdog();
+
     this.connect();
 
     process.on('SIGTERM', () => this.shutdown());
@@ -84,6 +89,9 @@ class NeoproSyncAgent {
       reconnectionDelayMax: 30000,
       timeout: 20000,
     });
+
+    // Injecter la référence au socket pour le watchdog cloud
+    networkWatchdog.setSocketRef(this.socket);
 
     this.socket.on('connect', () => this.handleConnect());
     this.socket.on('disconnect', (reason) => this.handleDisconnect(reason));
@@ -350,8 +358,11 @@ class NeoproSyncAgent {
     // Démarrer la détection périodique du profil réseau
     this.startNetworkProfileDetection();
 
-    // Démarrer le watchdog réseau (Phase 4 - auto-recovery)
-    this.startNetworkWatchdog();
+    // Mettre à jour la ref socket et binder les events pong pour le watchdog cloud
+    // (le watchdog tourne déjà depuis start(), on lui donne juste la socket authentifiée)
+    networkWatchdog.setSocketRef(this.socket);
+    this.socket.on('pong', () => networkWatchdog.updateLastPong());
+    this.socket.on('pong_response', () => networkWatchdog.updateLastPong());
 
     // Traiter les commandes en attente dans la queue offline
     this.processOfflineQueue();
@@ -627,8 +638,16 @@ class NeoproSyncAgent {
     });
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      logger.error('Max reconnection attempts reached. Exiting.');
-      process.exit(1);
+      logger.warn('Max reconnection attempts reached. Waiting 30s before retry cycle...', {
+        attempts: this.reconnectAttempts,
+        nextRetryIn: '30s',
+      });
+      this.reconnectAttempts = 0;
+      this.socket.disconnect();
+      setTimeout(() => {
+        logger.info('Retrying connection after cooldown...');
+        this.socket.connect();
+      }, 30000);
     }
   }
 
@@ -835,23 +854,14 @@ class NeoproSyncAgent {
    * Phase 4 de Network Resilience
    */
   startNetworkWatchdog() {
+    if (this.watchdogStarted) {
+      logger.debug('Network watchdog already running, skipping start');
+      return;
+    }
+
     logger.info('Starting network watchdog (Phase 4)');
-
-    // Injecter la référence au socket
-    networkWatchdog.setSocketRef(this.socket);
-
-    // Démarrer le watchdog
     networkWatchdog.start();
-
-    // Écouter les événements pong du serveur pour mettre à jour le timestamp
-    this.socket.on('pong', () => {
-      networkWatchdog.updateLastPong();
-    });
-
-    // Écouter également pong_response si utilisé
-    this.socket.on('pong_response', () => {
-      networkWatchdog.updateLastPong();
-    });
+    this.watchdogStarted = true;
   }
 
   startHeartbeat() {

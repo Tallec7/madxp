@@ -24,11 +24,23 @@ Service de surveillance réseau complet intégré au sync-agent.
 | Internet (wlan1) | 60 sec     | Interface up, IP obtenue, ping gateway/DNS    |
 | Connexion cloud  | 30 sec     | Socket.IO connecté, pong reçu récemment       |
 
-**Auto-recovery :**
+**Cycle de vie :** Le watchdog démarre dès le boot du sync-agent, **avant** la connexion Socket.IO au cloud. Il surveille wlan0/wlan1 même si le central server est injoignable. Un guard anti-double-démarrage empêche les instances multiples lors des reconnexions.
 
-- Max 3 tentatives de récupération par interface
-- Cooldown de 5 minutes entre les cycles
-- Compteurs réinitialisés si l'interface fonctionne pendant 5 minutes
+**Auto-recovery Internet (6 phases progressives) :**
+
+| Phase           | Tentative | Actions                                             |
+| --------------- | --------- | --------------------------------------------------- |
+| Gentle          | 1-2       | `wpa_cli reconfigure` + `dhclient`                  |
+| Medium          | 3         | Interface `down/up` + reconfigure + dhclient        |
+| Aggressive      | 4         | `systemctl restart wpa_supplicant@wlan1` + dhclient |
+| Modprobe        | 5         | Reload driver USB WiFi (`modprobe -r` / `modprobe`) |
+| USB power-cycle | 6         | Hardware unbind/rebind USB                          |
+
+- Cooldown de 5 minutes entre les cycles de recovery
+- Compteurs réinitialisés après le cooldown
+- Grace periods persistées sur disque (`/tmp/neopro-watchdog-grace.json`) pour survivre aux restarts OTA
+
+**Reconnexion cloud :** Le sync-agent ne fait plus `process.exit(1)` après 10 échecs de connexion Socket.IO. Il attend 30 secondes puis retente, ce qui laisse le watchdog actif en continu pour réparer le réseau.
 
 **Séquence de récupération hotspot :**
 
@@ -36,11 +48,6 @@ Service de surveillance réseau complet intégré au sync-agent.
 2. Configuration IP manuelle (`ip addr add 192.168.4.1/24`)
 3. Restart hostapd
 4. Restart dnsmasq
-
-**Séquence de récupération Internet :**
-
-1. `wpa_cli -i wlan1 reconfigure`
-2. `dhclient wlan1`
 
 ### 2. Rollback Automatique
 

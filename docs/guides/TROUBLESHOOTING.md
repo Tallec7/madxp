@@ -11,8 +11,9 @@
 7. [Diagnostic réseau à distance](#diagnostic-réseau-à-distance)
 8. [Diagnostic complet](#diagnostic-complet)
 9. [CI/CD et Release](#cicd-et-release)
-10. [Hotspot Watchdog (v2.34+)](#hotspot-watchdog-v234)
-11. [Blocage BSSID Lock en Mesh (v2.34+)](#blocage-bssid-lock-en-mesh-v234)
+10. [NetworkWatchdog — Auto-recovery réseau (v3.36+)](#networkwatchdog--auto-recovery-réseau-v336)
+11. [Hotspot Watchdog (v2.34+)](#hotspot-watchdog-v234)
+12. [Blocage BSSID Lock en Mesh (v2.34+)](#blocage-bssid-lock-en-mesh-v234)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 
@@ -2467,6 +2468,36 @@ gh api repos/Tallec7/neopro/rulesets
 4. Relancer le workflow : `gh run rerun <run_id> --repo Tallec7/neopro`
 
 > **Note** : Le `GITHUB_TOKEN` par défaut ne suffit pas pour semantic-release car il ne peut pas pusher de commits/tags sur `main`.
+
+---
+
+## NetworkWatchdog — Auto-recovery réseau (v3.36+)
+
+Depuis la v3.36, le NetworkWatchdog (intégré au sync-agent) démarre **dès le boot**, avant la connexion Socket.IO au cloud. Il surveille wlan0, wlan1 et la connexion cloud indépendamment.
+
+### Changements clés (v3.36+)
+
+- **Démarrage au boot** : le watchdog n'attend plus l'authentification cloud pour démarrer
+- **Pas de process.exit** : le sync-agent ne se tue plus après 10 échecs de connexion — il attend 30s puis retente, laissant le watchdog actif
+- **6 phases de recovery** pour wlan1 : reconfigure → interface down/up → systemctl restart → modprobe driver → USB power-cycle
+
+### Vérifier que le watchdog tourne
+
+```bash
+# Logs du watchdog réseau (dans les logs du sync-agent)
+journalctl -u neopro-sync-agent --since "1 hour ago" --no-pager | grep -i "watchdog\|recovery\|wlan1"
+
+# Vérifier le démarrage au boot
+journalctl -u neopro-sync-agent --since "boot" | grep "Starting network watchdog"
+```
+
+### Le watchdog ne tente pas de recovery ?
+
+Causes possibles :
+
+1. **Grace period active** : après un `wpa_cli reconfigure` ou un auto-optimize, le watchdog attend 60s avant de checker. Vérifier : `grep "grace period" /tmp/neopro-watchdog-grace.json`
+2. **Cooldown actif** : après 6 tentatives échouées, 5 min de cooldown. Vérifier les logs pour "Trop de tentatives"
+3. **Connexion Ethernet détectée** : si eth0 a une IP, le watchdog ne tente pas de recovery WiFi (problème physique)
 
 ---
 
