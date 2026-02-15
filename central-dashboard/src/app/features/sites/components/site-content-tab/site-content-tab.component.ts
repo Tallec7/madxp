@@ -595,6 +595,46 @@ interface HumanReadableDiff {
         </div>
       </div>
 
+      <!-- Delete Video Modal -->
+      <div class="modal" *ngIf="showDeleteModal" (click)="showDeleteModal = false">
+        <div class="modal-content modal-delete" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>Supprimer une vidéo</h2>
+            <button class="modal-close" (click)="showDeleteModal = false">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="delete-filename">"{{ deleteTarget?.displayName || deleteTarget?.filename }}"</p>
+
+            <!-- Only on Pi -->
+            <div *ngIf="deleteCanPi && !deleteCanCloud">
+              <p class="delete-description">Cette vidéo est uniquement sur le <strong>Pi</strong>.</p>
+            </div>
+
+            <!-- Only in cloud -->
+            <div *ngIf="!deleteCanPi && deleteCanCloud">
+              <p class="delete-description">Cette vidéo est uniquement dans le <strong>cloud</strong>.</p>
+            </div>
+
+            <!-- On both -->
+            <div *ngIf="deleteCanPi && deleteCanCloud" class="delete-choices">
+              <p class="delete-description">Cette vidéo est sur le <strong>Pi</strong> et dans le <strong>cloud</strong>. Que souhaitez-vous supprimer ?</p>
+            </div>
+          </div>
+          <div class="modal-footer delete-actions">
+            <button class="btn btn-secondary" (click)="showDeleteModal = false">Annuler</button>
+            <button *ngIf="deleteCanPi" class="btn btn-delete-pi" (click)="executeDelete('pi')">
+              Supprimer du Pi
+            </button>
+            <button *ngIf="deleteCanCloud" class="btn btn-delete-cloud" (click)="executeDelete('cloud')">
+              Supprimer du cloud
+            </button>
+            <button *ngIf="deleteCanPi && deleteCanCloud" class="btn btn-delete-both" (click)="executeDelete('both')">
+              Supprimer des deux
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Diff Preview Modal -->
       <div class="modal" *ngIf="showDiffModal" (click)="showDiffModal = false">
         <div class="modal-content modal-large" (click)="$event.stopPropagation()">
@@ -1628,6 +1668,72 @@ interface HumanReadableDiff {
       background: #f8fafc;
     }
 
+    /* Delete Modal */
+    .modal-delete {
+      max-width: 480px;
+    }
+
+    .delete-filename {
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: #1e293b;
+      margin: 0 0 0.75rem;
+      word-break: break-all;
+    }
+
+    .delete-description {
+      color: #64748b;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .delete-actions {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .btn-delete-pi {
+      background: #f59e0b;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .btn-delete-pi:hover {
+      background: #d97706;
+    }
+
+    .btn-delete-cloud {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .btn-delete-cloud:hover {
+      background: #2563eb;
+    }
+
+    .btn-delete-both {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .btn-delete-both:hover {
+      background: #dc2626;
+    }
+
     /* Diff Modal */
     .modal {
       position: fixed;
@@ -2445,6 +2551,12 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   lastSyncTime: Date | null = null;
   private refreshCommandId: string | null = null;
   private refreshPollSubscription: Subscription | null = null;
+
+  // Delete modal
+  showDeleteModal: boolean = false;
+  deleteTarget: VideoItem | null = null;
+  deleteCanPi: boolean = false;
+  deleteCanCloud: boolean = false;
 
   // Diff modal
   showDiffModal: boolean = false;
@@ -3310,36 +3422,21 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   onVideoDelete(video: VideoItem): void {
-    const canDeletePi = video.isOnPi;
-    const canDeleteCloud = !!video.id;
+    this.deleteTarget = video;
+    this.deleteCanPi = video.isOnPi;
+    this.deleteCanCloud = !!video.id;
+    this.showDeleteModal = true;
+  }
 
-    let choice: 'pi' | 'cloud' | 'both' | null = null;
-
-    if (canDeletePi && canDeleteCloud) {
-      // Video exists on both Pi and cloud — let the user choose
-      const answer = prompt(
-        `"${video.filename}" est sur le Pi ET dans le cloud.\n\n` +
-        `1 — Supprimer du Pi uniquement\n` +
-        `2 — Supprimer du cloud uniquement\n` +
-        `3 — Supprimer des deux\n\n` +
-        `Votre choix (1, 2 ou 3) :`
-      );
-      if (answer === '1') choice = 'pi';
-      else if (answer === '2') choice = 'cloud';
-      else if (answer === '3') choice = 'both';
-    } else if (canDeletePi) {
-      // Only on Pi (local-only video)
-      if (confirm(`Supprimer "${video.filename}" du Pi ?`)) choice = 'pi';
-    } else if (canDeleteCloud) {
-      // Only in cloud
-      if (confirm(`Supprimer "${video.filename}" du cloud ?`)) choice = 'cloud';
-    }
-
-    if (!choice) return;
+  executeDelete(choice: 'pi' | 'cloud' | 'both'): void {
+    const video = this.deleteTarget;
+    if (!video) return;
+    this.showDeleteModal = false;
 
     const deletePi$ = this.sitesService.sendCommand(this.siteId, 'delete_video', {
-      path: video.path,
-      filename: video.filename
+      filename: video.filename,
+      category: video.category || undefined,
+      subcategory: video.subcategory || undefined
     });
     const deleteCloud$ = this.sitesService.deleteCloudVideo(video.id!);
 
