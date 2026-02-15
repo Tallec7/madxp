@@ -1,3 +1,9 @@
+# [3.34.0](https://github.com/Tallec7/neopro/compare/v3.33.0...v3.34.0) (2026-02-15)
+
+### Features
+
+- **alerting:** add network_recovered event with Slack notification ([2309912](https://github.com/Tallec7/neopro/commit/23099125df9dad3ca966eb79493b9f956835abc0))
+
 # [3.33.0](https://github.com/Tallec7/neopro/compare/v3.32.1...v3.33.0) (2026-02-15)
 
 ### Features
