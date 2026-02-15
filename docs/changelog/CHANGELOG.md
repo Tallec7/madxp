@@ -1,3 +1,9 @@
+# [3.31.0](https://github.com/Tallec7/neopro/compare/v3.30.10...v3.31.0) (2026-02-15)
+
+### Features
+
+- **analytics:** add pitch deck metrics SQL script + fix alerting parser ([ad3dbeb](https://github.com/Tallec7/neopro/commit/ad3dbebfe4e5efc8e61409a296241b617139c185))
+
 ## [3.30.10](https://github.com/Tallec7/neopro/compare/v3.30.9...v3.30.10) (2026-02-15)
 
 ### Bug Fixes
