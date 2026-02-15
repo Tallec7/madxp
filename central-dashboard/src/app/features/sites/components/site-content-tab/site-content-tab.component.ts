@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, OnDestroy, SimpleChanges, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { interval, Subscription, filter, take } from 'rxjs';
+import { interval, Subscription, filter, take, forkJoin } from 'rxjs';
 import { SitesService, PendingDeployment } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
@@ -3310,36 +3310,72 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   onVideoDelete(video: VideoItem): void {
-    const location = video.isOnPi ? 'du Pi' : 'du cloud';
-    if (confirm(`Supprimer "${video.filename}" ${location} ?`)) {
-      if (video.isOnPi && video.source === 'local') {
-        // Delete from Pi via command
-        this.sitesService.sendCommand(this.siteId, 'delete_video', {
-          path: video.path,
-          filename: video.filename
-        }).subscribe({
-          next: () => {
-            this.notificationService.success(`"${video.filename}" supprimé du Pi`);
-            this.loadContent();
-          },
-          error: (error) => {
-            const message = ErrorExtractor.getMessage(error);
-            this.notificationService.error(`Erreur: ${message}`);
-          }
-        });
-      } else if (video.id) {
-        // Delete from cloud via API
-        this.sitesService.deleteCloudVideo(video.id).subscribe({
-          next: () => {
-            this.notificationService.success(`"${video.filename}" supprimé du cloud`);
-            this.loadContent();
-          },
-          error: (error) => {
-            const message = ErrorExtractor.getMessage(error);
-            this.notificationService.error(`Erreur: ${message}`);
-          }
-        });
-      }
+    const canDeletePi = video.isOnPi;
+    const canDeleteCloud = !!video.id;
+
+    let choice: 'pi' | 'cloud' | 'both' | null = null;
+
+    if (canDeletePi && canDeleteCloud) {
+      // Video exists on both Pi and cloud — let the user choose
+      const answer = prompt(
+        `"${video.filename}" est sur le Pi ET dans le cloud.\n\n` +
+        `1 — Supprimer du Pi uniquement\n` +
+        `2 — Supprimer du cloud uniquement\n` +
+        `3 — Supprimer des deux\n\n` +
+        `Votre choix (1, 2 ou 3) :`
+      );
+      if (answer === '1') choice = 'pi';
+      else if (answer === '2') choice = 'cloud';
+      else if (answer === '3') choice = 'both';
+    } else if (canDeletePi) {
+      // Only on Pi (local-only video)
+      if (confirm(`Supprimer "${video.filename}" du Pi ?`)) choice = 'pi';
+    } else if (canDeleteCloud) {
+      // Only in cloud
+      if (confirm(`Supprimer "${video.filename}" du cloud ?`)) choice = 'cloud';
+    }
+
+    if (!choice) return;
+
+    const deletePi$ = this.sitesService.sendCommand(this.siteId, 'delete_video', {
+      path: video.path,
+      filename: video.filename
+    });
+    const deleteCloud$ = this.sitesService.deleteCloudVideo(video.id!);
+
+    if (choice === 'both') {
+      forkJoin([deletePi$, deleteCloud$]).subscribe({
+        next: () => {
+          this.notificationService.success(`"${video.filename}" supprimé du Pi et du cloud`);
+          this.loadContent();
+        },
+        error: (error) => {
+          const message = ErrorExtractor.getMessage(error);
+          this.notificationService.error(`Erreur: ${message}`);
+        }
+      });
+    } else if (choice === 'pi') {
+      deletePi$.subscribe({
+        next: () => {
+          this.notificationService.success(`"${video.filename}" supprimé du Pi`);
+          this.loadContent();
+        },
+        error: (error) => {
+          const message = ErrorExtractor.getMessage(error);
+          this.notificationService.error(`Erreur: ${message}`);
+        }
+      });
+    } else {
+      deleteCloud$.subscribe({
+        next: () => {
+          this.notificationService.success(`"${video.filename}" supprimé du cloud`);
+          this.loadContent();
+        },
+        error: (error) => {
+          const message = ErrorExtractor.getMessage(error);
+          this.notificationService.error(`Erreur: ${message}`);
+        }
+      });
     }
   }
 
