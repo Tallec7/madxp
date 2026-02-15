@@ -1,3 +1,9 @@
+## [3.30.7](https://github.com/Tallec7/neopro/compare/v3.30.6...v3.30.7) (2026-02-15)
+
+### Bug Fixes
+
+- **dashboard:** proper delete modal UX + fix Pi deletion params ([5cbac15](https://github.com/Tallec7/neopro/commit/5cbac15155135156218ea2b544e08b83b2ea8269))
+
 ## [3.30.6](https://github.com/Tallec7/neopro/compare/v3.30.5...v3.30.6) (2026-02-15)
 
 ### Bug Fixes
