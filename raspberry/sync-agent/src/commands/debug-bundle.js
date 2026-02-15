@@ -80,16 +80,31 @@ async function exportDebugBundle() {
     bundle.sections.services = { error: error.message };
   }
 
-  // 6. Logs récents (dernières 100 lignes de chaque service)
+  // 6. Logs récents (24h, cap par service pour limiter la taille)
+  //    Services verbeux (heartbeat 30s) → dernières 500 lignes (~4-6h)
+  //    Services calmes → 24h complet
   try {
-    const services = ['neopro-sync-agent', 'neopro-app', 'neopro-kiosk', 'neopro-admin', 'nginx', 'hostapd'];
+    const verboseServices = ['neopro-sync-agent', 'neopro-app'];
+    const quietServices = ['neopro-kiosk', 'neopro-admin', 'nginx', 'hostapd'];
     bundle.sections.logs = {};
 
-    for (const service of services) {
+    for (const service of verboseServices) {
       try {
         const { stdout } = await execAsync(
-          `sudo journalctl -u ${service} -n 100 --no-pager -q 2>/dev/null || echo "No logs available"`,
-          { timeout: 10000 }
+          `sudo journalctl -u ${service} --since "24 hours ago" --no-pager -q 2>/dev/null | tail -500 || echo "No logs available"`,
+          { timeout: 15000 }
+        );
+        bundle.sections.logs[service] = stdout.trim();
+      } catch {
+        bundle.sections.logs[service] = 'Unable to retrieve logs';
+      }
+    }
+
+    for (const service of quietServices) {
+      try {
+        const { stdout } = await execAsync(
+          `sudo journalctl -u ${service} --since "24 hours ago" --no-pager -q 2>/dev/null || echo "No logs available"`,
+          { timeout: 15000 }
         );
         bundle.sections.logs[service] = stdout.trim();
       } catch {

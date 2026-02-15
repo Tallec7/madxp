@@ -189,7 +189,7 @@ Collecte 15 sections de diagnostic en une seule commande (timeout 60s) :
 | 3   | `health`              | `metrics.js`                | CPU, RAM, température, throttling, health score                                                            |
 | 4   | `systemInfo`          | `metrics.js`                | Uptime, hostname, OS, modèle Pi                                                                            |
 | 5   | `services`            | `metrics.js`                | Statut systemd de tous les services neopro-\*                                                              |
-| 6   | `logs`                | `journalctl`                | 100 dernières lignes × 6 services (sync-agent, app, kiosk, admin, nginx, hostapd)                          |
+| 6   | `logs`                | `journalctl`                | 24h × 6 services (sync-agent, app cap 500 lignes, kiosk, admin, nginx, hostapd)                            |
 | 7   | `network`             | `network-diagnostics.js`    | Internet (ping + perte paquets), DNS, gateway, serveur central (HTTP/SSL/port 443), WiFi signal, stabilité |
 | 8   | `diskUsage`           | `df -h`                     | Espace disque par partition                                                                                |
 | 9   | `buffers`             | `analytics-buffer.js`       | Statut buffers analytics et sponsors                                                                       |
