@@ -593,8 +593,22 @@ class AlertingService {
       enabled: row.enabled as boolean,
       cooldownMinutes: row.cooldown_minutes as number,
       escalateAfterMinutes: row.escalate_after_minutes as number,
-      notifyChannels: JSON.parse(row.notify_channels as string || '[]'),
+      notifyChannels: this.parseNotifyChannels(row.notify_channels),
     };
+  }
+
+  private parseNotifyChannels(value: unknown): string[] {
+    if (Array.isArray(value)) return value;
+    if (!value) return [];
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [String(parsed)];
+      } catch {
+        return [value];
+      }
+    }
+    return [];
   }
 
   private checkThresholdViolation(

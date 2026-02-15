@@ -541,6 +541,23 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-sync -n 50'
 
 > ℹ️ Besoin d’un build plus rapide sur macOS : ajoute `--skip-xattr` ou `SKIP_XATTR_CLEANUP=true` à `build-raspberry.sh` / `build-and-deploy.sh` pour sauter la purge des attributs étendus (gain ~30 s, mais tar peut afficher des warnings sur Linux).
 
+### Scripts Central Server (SQL)
+
+| Script                         | Emplacement                   | Description                                                  |
+| ------------------------------ | ----------------------------- | ------------------------------------------------------------ |
+| `full-schema.sql`              | `central-server/src/scripts/` | Schéma complet de la BDD (init nouveau environnement)        |
+| `pitch-deck-metrics.sql`       | `central-server/src/scripts/` | Extraction des métriques de traction pour pitch investisseur |
+| `analytics-tables.sql`         | `central-server/src/scripts/` | Création des tables analytics club                           |
+| `sponsor-analytics-tables.sql` | `central-server/src/scripts/` | Création des tables analytics sponsors                       |
+
+**Usage pitch-deck-metrics :**
+
+```bash
+source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts/pitch-deck-metrics.sql
+```
+
+> Ce script génère 15 sections de métriques : croissance flotte, engagement (lectures/screen time), abonnements, impressions publicitaires, déploiements, fiabilité, vélocité produit, rétention par cohorte, et un résumé exécutif.
+
 ### Scripts npm (à la racine du projet)
 
 ```json

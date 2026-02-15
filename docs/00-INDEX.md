@@ -72,6 +72,7 @@ Documentation business, stratégie et planification.
 - [Business Plan complet](business/BUSINESS_PLAN_COMPLET.md) (113K)
 - [Roadmap vers le 10/10](business/ROADMAP_10_SUR_10.md) (37K)
 - [Backlog](business/BACKLOG.md) - Sprint tracking (23K)
+- **[Métriques Pitch Deck](../central-server/src/scripts/pitch-deck-metrics.sql)** - Extraction SQL des KPIs traction investisseur 🆕
 
 ### 🔍 [Audits](audit/)
 

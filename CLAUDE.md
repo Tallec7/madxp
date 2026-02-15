@@ -29,6 +29,9 @@ docker compose up prometheus grafana  # Grafana (3000) + Prometheus (9090) — s
 
 # Base de données
 cd central-server && npm run db:migrate
+
+# Pitch deck / métriques de traction
+source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts/pitch-deck-metrics.sql
 ```
 
 ## Règles de code
@@ -63,5 +66,6 @@ cd central-server && npm run db:migrate
 - Onboarding : `docs/01-START-HERE.md`
 - Client critique NLF : `docs/clients/NLF.md`
 - Changelog : `docs/changelog/CHANGELOG.md`
+- Métriques pitch deck : `central-server/src/scripts/pitch-deck-metrics.sql`
 
 Les règles détaillées par domaine sont dans `.claude/rules/` et se chargent automatiquement selon les fichiers édités.
