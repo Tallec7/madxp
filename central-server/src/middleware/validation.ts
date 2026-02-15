@@ -147,7 +147,7 @@ export const schemas = {
     type: Joi.string().valid(
       'score-update', 'score-reset', 'phase-change', 'play-video',
       'play-sponsors', 'timer-update', 'breaking-news', 'match-config',
-      'recording-toggle'
+      'recording-toggle', 'screenshot'
     ).required(),
     data: Joi.object().optional().default({}),
   }),
