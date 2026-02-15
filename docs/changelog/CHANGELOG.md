@@ -1,3 +1,9 @@
+# [3.35.0](https://github.com/Tallec7/neopro/compare/v3.34.1...v3.35.0) (2026-02-15)
+
+### Features
+
+- **alerting:** add POST /api/alerts/test-slack endpoint for webhook verification ([76854f4](https://github.com/Tallec7/neopro/commit/76854f43ace07d8357081d6e50f30ca769a19a64))
+
 ## [3.34.1](https://github.com/Tallec7/neopro/compare/v3.34.0...v3.34.1) (2026-02-15)
 
 ### Bug Fixes
