@@ -366,7 +366,12 @@ class UpdateDeploymentService {
 
     // Migration legacy : patch les Pi avec l'ancien sudo cp (idempotent, 0 impact si déjà OK)
     // Si le Pi est patché, il va restart et recevoir l'update via la queue
-    this.applyPreUpdateMigration(siteId);
+    // IMPORTANT : attendre que la pré-migration ait le temps de s'exécuter sur le Pi
+    // avant d'envoyer update_software (sinon les deux commandes se race)
+    const migrationSent = this.applyPreUpdateMigration(siteId);
+    if (migrationSent) {
+      await this.delay(5000);
+    }
 
     const commandData = {
       deploymentId,
@@ -558,6 +563,13 @@ class UpdateDeploymentService {
       logger.error('Error manually retrying update deployment:', { deploymentId, error });
       return false;
     }
+  }
+
+  /**
+   * Délai asynchrone — méthode séparée pour permettre le mock dans les tests
+   */
+  delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 
