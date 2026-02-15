@@ -1,15 +1,29 @@
+# [3.37.2](https://github.com/Tallec7/neopro/compare/v3.37.1...v3.37.2) (2026-02-15)
+
+### Bug Fixes
+
+- **metrics:** wire `neopro_websocket_connections{type}` gauge — snapshot agent + dashboard counts on each `/metrics` scrape (was never recorded → Grafana "No data")
+- **metrics:** wire `neopro_deployment_duration_seconds` for OTA update deployments — `update-deployment.service.ts` now records duration like content deployments (was missing → Grafana "No data")
+
+### Performance
+
+- **alerting:** add memory bounds to all in-memory Maps to prevent unbounded heap growth (heap was at 92.8% on Railway 256MB plan)
+  - `metricHistory`: max 200 keys × 60 snapshots per key
+  - `wsDisconnectEvents` / `videoSafetyTimeoutEvents`: max 100 sites × 200 events per site
+  - `lastAlertTime`: periodic pruning of entries > 24h + hard cap at 500 entries
+- **socket:** add `getDashboardConnectionCount()` using Socket.IO room adapter for lightweight dashboard socket counting
+
+### Documentation
+
+- **ARCHITECTURE.md:** document memory safety bounds in Monitoring & Observability section
+- **MODOP-O05-08:** add WebSocket connections PromQL query, memory bounds supervision thresholds
+
 ## [3.37.1](https://github.com/Tallec7/neopro/compare/v3.37.0...v3.37.1) (2026-02-15)
 
 ### Bug Fixes
 
 - **remote:** add screenshot to Joi validation schema ([0936844](https://github.com/Tallec7/neopro/commit/09368449b3dcef153061398ef6e15f84c882e6c7))
 - **remote:** add screenshot to validation, wire Prometheus metrics, sync docs ([057ee55](https://github.com/Tallec7/neopro/commit/057ee550bbc5d23beca01591738448a9cb2c8fff))
-
-# [3.37.1](https://github.com/Tallec7/neopro/compare/v3.37.0...v3.37.1) (2026-02-15)
-
-### Bug Fixes
-
-- **remote:** add `screenshot` to Joi validation schema — was handled in controller but rejected by middleware (400 Bad Request)
 
 ### Monitoring
 

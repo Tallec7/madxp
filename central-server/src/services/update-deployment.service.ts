@@ -471,14 +471,19 @@ class UpdateDeploymentService {
 
         // Pour simplifier, on marque comme complété dès qu'un site réussit
         // Une implémentation plus complète suivrait chaque site individuellement
-        await query(
+        const durationResult = await query<{ duration_seconds: string }>(
           `UPDATE update_deployments
            SET status = 'completed', progress = 100, completed_at = NOW()
-           WHERE id = $1`,
+           WHERE id = $1
+           RETURNING EXTRACT(EPOCH FROM (NOW() - started_at)) as duration_seconds`,
           [deploymentId]
         );
 
         metricsService.recordDeployment('completed', deployment.rows[0].target_type);
+        const durationSeconds = parseFloat(durationResult.rows[0]?.duration_seconds);
+        if (!isNaN(durationSeconds)) {
+          metricsService.recordDeploymentDuration(deployment.rows[0].target_type, durationSeconds);
+        }
 
         logger.info('Update deployment completed', { deploymentId, siteId });
       } else {

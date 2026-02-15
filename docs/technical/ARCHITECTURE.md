@@ -364,7 +364,11 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 - **Smoke tests** : `npm run test:smoke` — 139 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types, métriques Prometheus critiques, hourly metric alerting wiring) + conventions Pi (systemd, sudoers)
 - Systemd journald logs
 - Winston structured logging with Correlation ID
-- Memory Manager Service (heap monitoring, pressure cleanup)
+- Memory Manager Service (heap monitoring, pressure cleanup at 93%/97%)
+- **Memory safety bounds** (v3.37.2) — bornes dures sur les Maps in-memory du service d'alerting pour éviter l'épuisement du heap sur Railway Hobby (256 MB) :
+  - `metricHistory` : max 200 clés × 60 snapshots/clé
+  - `wsDisconnectEvents` / `videoSafetyTimeoutEvents` : max 100 sites × 200 events/site
+  - `lastAlertTime` : pruning auto > 24h toutes les 5 min + hard cap 500 entrées
 - Health checks (/health, /live, /ready)
 - **Guide de lecture Grafana** : [Notion — Guide Grafana Support](https://www.notion.so/305c27de363881d1a95cc4891d6cd823) — seuils, arbres de diagnostic, matrice d'escalade
 

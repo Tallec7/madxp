@@ -272,6 +272,8 @@ app.get('/metrics', async (req: Request, res: Response) => {
   try {
     // Mettre à jour les métriques snapshot
     metricsService.recordConnectedSites(socketService.getConnectionCount());
+    metricsService.recordWebsocketConnection('agent', socketService.getConnectionCount());
+    metricsService.recordWebsocketConnection('dashboard', socketService.getDashboardConnectionCount());
 
     // Subscription stats snapshot (lightweight PostgreSQL view)
     try {

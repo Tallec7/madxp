@@ -607,6 +607,12 @@ class SocketService {
     return this.io;
   }
 
+  getDashboardConnectionCount(): number {
+    if (!this.io) return 0;
+    const room = this.io.sockets.adapter.rooms.get('dashboard');
+    return room ? room.size : 0;
+  }
+
   getDebugInfo(): {
     connectedSites: string[];
     lastPongReceived: Record<string, number>;

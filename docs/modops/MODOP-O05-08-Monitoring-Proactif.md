@@ -105,13 +105,13 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 
 **Rows à vérifier (uniquement si Overview montre un problème) :**
 
-| Row                   | Métriques clés                                      | Seuils critiques                                  |
-| --------------------- | --------------------------------------------------- | ------------------------------------------------- |
-| **API Performance**   | Request Rate, Duration p50/p95/p99, Status Codes    | p99 > 1s, 5xx visibles, Requests In Progress > 15 |
-| **Node.js Runtime**   | Heap Usage %, Event Loop Lag, Memory Pressure       | Heap > 93%, Event Loop > 100ms, emergency events  |
-| **Auth & Rate Limit** | Auth Attempts (success/fail), Rate Limit Violations | Pic massif de failures = bruteforce               |
-| **Database**          | Query Latency p95, Connection Pool active/idle      | p95 > 200ms, Pool 5/5 permanent                   |
-| **FTP / Storage**     | FTP Operations success/failed, Duration, Throughput | Failed > 0, p95 > 60s                             |
+| Row                   | Métriques clés                                      | Seuils critiques                                                                                                                                                                                          |
+| --------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API Performance**   | Request Rate, Duration p50/p95/p99, Status Codes    | p99 > 1s, 5xx visibles, Requests In Progress > 15                                                                                                                                                         |
+| **Node.js Runtime**   | Heap Usage %, Event Loop Lag, Memory Pressure       | Heap > 88% warning, > 93% critical, Event Loop > 100ms, emergency events. Les Maps in-memory du alerting service sont bornées (v3.37.2) mais un heap > 88% persistant indique une fuite mémoire ailleurs. |
+| **Auth & Rate Limit** | Auth Attempts (success/fail), Rate Limit Violations | Pic massif de failures = bruteforce                                                                                                                                                                       |
+| **Database**          | Query Latency p95, Connection Pool active/idle      | p95 > 200ms, Pool 5/5 permanent                                                                                                                                                                           |
+| **FTP / Storage**     | FTP Operations success/failed, Duration, Throughput | Failed > 0, p95 > 60s                                                                                                                                                                                     |
 
 #### Dashboard 3 : Business & Fleet (5 min)
 
@@ -264,7 +264,15 @@ sum by (status) (
 - Ajouter validation fichier avant déploiement
 - Alerter proactivement sur disque < 15%
 
-#### C. Métriques WebSocket (déconnexions)
+#### C. Métriques WebSocket (connexions et déconnexions)
+
+**Connexions WebSocket par type (agent Pi vs dashboard) :**
+
+```promql
+neopro_websocket_connections
+```
+
+> **Note (v3.37.2)** : Cette gauge est maintenant alimentée à chaque scrape `/metrics` avec les labels `type="agent"` (Pi connectés) et `type="dashboard"` (utilisateurs dashboard). Si `agent=0` mais `dashboard>0` → problème côté Pi, pas côté serveur.
 
 **Déconnexions par raison (7 jours) :**
 
@@ -646,15 +654,17 @@ curl https://neopro-central-production.up.railway.app/health
 
 ### Matrice de décision
 
-| Anomalie                  | Sévérité    | Action                   | Délai    |
-| ------------------------- | ----------- | ------------------------ | -------- |
-| Site hors ligne > 24h     | 🟡 Minor    | Email client             | 48h      |
-| CPU > 80%                 | 🟡 Minor    | Surveillance             | 24h      |
-| Disque > 90%              | 🟠 Major    | Nettoyage immédiat       | 4h       |
-| Serveur central CPU > 80% | 🔴 Critical | Investigation + escalade | 1h       |
-| PostgreSQL down           | 🔴 Critical | Intervention immédiate   | Immédiat |
-| Redis down                | 🔴 Critical | Intervention immédiate   | Immédiat |
-| > 10 sites hors ligne     | 🔴 Critical | Vérifier serveur central | Immédiat |
+| Anomalie                  | Sévérité    | Action                                                                                                                        | Délai    |
+| ------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Site hors ligne > 24h     | 🟡 Minor    | Email client                                                                                                                  | 48h      |
+| CPU > 80%                 | 🟡 Minor    | Surveillance                                                                                                                  | 24h      |
+| Heap Usage > 88%          | 🟡 Minor    | Vérifier Memory Pressure events, les Maps du alerting service se purgent auto (v3.37.2)                                       | 24h      |
+| Heap Usage > 93%          | 🟠 Major    | Le memory manager lance le cleanup auto. Si le heap reste > 93% après cleanup → fuite mémoire, investiguer avec heap snapshot | 4h       |
+| Disque > 90%              | 🟠 Major    | Nettoyage immédiat                                                                                                            | 4h       |
+| Serveur central CPU > 80% | 🔴 Critical | Investigation + escalade                                                                                                      | 1h       |
+| PostgreSQL down           | 🔴 Critical | Intervention immédiate                                                                                                        | Immédiat |
+| Redis down                | 🔴 Critical | Intervention immédiate                                                                                                        | Immédiat |
+| > 10 sites hors ligne     | 🔴 Critical | Vérifier serveur central                                                                                                      | Immédiat |
 
 ---
 

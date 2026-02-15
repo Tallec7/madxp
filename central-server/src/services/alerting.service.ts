@@ -275,6 +275,13 @@ const DEFAULT_THRESHOLDS: Omit<AlertThreshold, 'id'>[] = [
   },
 ];
 
+// Memory safety limits for in-memory Maps (Railway Hobby plan: 256MB heap)
+const MAX_METRIC_HISTORY_KEYS = 200; // Max unique siteId:metric combinations
+const MAX_METRIC_HISTORY_PER_KEY = 60; // Max snapshots per key (~10min at 10s intervals)
+const MAX_LAST_ALERT_TIME_ENTRIES = 500; // Max cooldown entries
+const MAX_EVENT_ENTRIES_PER_SITE = 200; // Max timestamps per site for disconnect/timeout events
+const MAX_EVENT_SITES = 100; // Max sites tracked for disconnect/timeout events
+
 class AlertingService {
   private tableName = 'alerts';
   private thresholdTable = 'alert_thresholds';
@@ -303,9 +310,19 @@ class AlertingService {
    */
   recordDisconnectEvent(siteId: string): void {
     if (!this.wsDisconnectEvents.has(siteId)) {
+      // Evict oldest site if map is full
+      if (this.wsDisconnectEvents.size >= MAX_EVENT_SITES) {
+        const oldestKey = this.wsDisconnectEvents.keys().next().value;
+        if (oldestKey) this.wsDisconnectEvents.delete(oldestKey);
+      }
       this.wsDisconnectEvents.set(siteId, []);
     }
-    this.wsDisconnectEvents.get(siteId)!.push(Date.now());
+    const events = this.wsDisconnectEvents.get(siteId)!;
+    events.push(Date.now());
+    // Hard cap per site to prevent unbounded growth
+    if (events.length > MAX_EVENT_ENTRIES_PER_SITE) {
+      this.wsDisconnectEvents.set(siteId, events.slice(-MAX_EVENT_ENTRIES_PER_SITE));
+    }
   }
 
   /**
@@ -315,12 +332,21 @@ class AlertingService {
   recordVideoSafetyTimeouts(siteId: string, count: number): void {
     if (count <= 0) return;
     if (!this.videoSafetyTimeoutEvents.has(siteId)) {
+      // Evict oldest site if map is full
+      if (this.videoSafetyTimeoutEvents.size >= MAX_EVENT_SITES) {
+        const oldestKey = this.videoSafetyTimeoutEvents.keys().next().value;
+        if (oldestKey) this.videoSafetyTimeoutEvents.delete(oldestKey);
+      }
       this.videoSafetyTimeoutEvents.set(siteId, []);
     }
     const events = this.videoSafetyTimeoutEvents.get(siteId)!;
     const now = Date.now();
     for (let i = 0; i < count; i++) {
       events.push(now);
+    }
+    // Hard cap per site to prevent unbounded growth
+    if (events.length > MAX_EVENT_ENTRIES_PER_SITE) {
+      this.videoSafetyTimeoutEvents.set(siteId, events.slice(-MAX_EVENT_ENTRIES_PER_SITE));
     }
   }
 
@@ -332,16 +358,23 @@ class AlertingService {
 
     // Stocker dans l'historique
     if (!this.metricHistory.has(key)) {
+      // Evict oldest key if map is full
+      if (this.metricHistory.size >= MAX_METRIC_HISTORY_KEYS) {
+        const oldestKey = this.metricHistory.keys().next().value;
+        if (oldestKey) this.metricHistory.delete(oldestKey);
+      }
       this.metricHistory.set(key, []);
     }
 
     const history = this.metricHistory.get(key)!;
     history.push({ siteId, metric, value, timestamp: new Date() });
 
-    // Garder seulement les 10 dernières minutes
+    // Garder seulement les 10 dernières minutes + hard cap
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
     const filtered = history.filter(h => h.timestamp > tenMinutesAgo);
-    this.metricHistory.set(key, filtered);
+    this.metricHistory.set(key, filtered.length > MAX_METRIC_HISTORY_PER_KEY
+      ? filtered.slice(-MAX_METRIC_HISTORY_PER_KEY)
+      : filtered);
 
     // Récupérer les seuils pour cette métrique
     const thresholds = await this.getThresholdsByMetric(metric);
@@ -1073,6 +1106,7 @@ class AlertingService {
       // Run hourly metrics check every 5 minutes (every 5th tick)
       if (tickCount % 5 === 0) {
         await this.checkHourlyMetrics();
+        this.pruneLastAlertTime();
       }
     }, 60 * 1000);
   }
@@ -1330,6 +1364,34 @@ class AlertingService {
       clearedWsDisconnectEntries: wsSize,
       clearedVideoTimeoutEntries: videoSize,
     });
+  }
+
+  /**
+   * Prune stale entries from lastAlertTime (entries older than 24h are useless for cooldowns)
+   * Called periodically to prevent unbounded Map growth.
+   */
+  private pruneLastAlertTime(): void {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    let pruned = 0;
+    for (const [key, date] of this.lastAlertTime.entries()) {
+      if (date < oneDayAgo) {
+        this.lastAlertTime.delete(key);
+        pruned++;
+      }
+    }
+    // Hard cap as safety net
+    if (this.lastAlertTime.size > MAX_LAST_ALERT_TIME_ENTRIES) {
+      const excess = this.lastAlertTime.size - MAX_LAST_ALERT_TIME_ENTRIES;
+      const iterator = this.lastAlertTime.keys();
+      for (let i = 0; i < excess; i++) {
+        const key = iterator.next().value;
+        if (key) this.lastAlertTime.delete(key);
+      }
+      pruned += excess;
+    }
+    if (pruned > 0) {
+      logger.debug('Pruned stale lastAlertTime entries', { pruned, remaining: this.lastAlertTime.size });
+    }
   }
 }
 
