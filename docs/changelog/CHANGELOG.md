@@ -2,6 +2,12 @@
 
 ### Features
 
+- **sync-agent:** replace ephemeral Socket.IO connections with persistent local socket ([92ac367](https://github.com/Tallec7/neopro/commit/92ac3679a92d60380380c76f4cb26003e9f90aa6))
+
+# [3.37.0](https://github.com/Tallec7/neopro/compare/v3.36.1...v3.37.0) (2026-02-15)
+
+### Features
+
 - **sync-agent:** replace ephemeral Socket.IO connections with persistent local socket singleton (`local-socket.js`)
   - Single persistent connection to localhost:3000 with auto-reconnect (1-5s backoff)
   - Eliminates ~120 connect/disconnect log lines per hour
