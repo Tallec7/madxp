@@ -1,3 +1,9 @@
+## [3.42.1](https://github.com/Tallec7/neopro/compare/v3.42.0...v3.42.1) (2026-02-16)
+
+### Bug Fixes
+
+- **dashboard:** fix 21 failing analytics-overview tests in CI ([742db92](https://github.com/Tallec7/neopro/commit/742db9207945722394eb9cbd60b872a52f31e1d1))
+
 # [3.42.0](https://github.com/Tallec7/neopro/compare/v3.41.0...v3.42.0) (2026-02-16)
 
 ### Features
