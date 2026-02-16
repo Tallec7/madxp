@@ -116,12 +116,18 @@ class HdmiService {
     ]);
 
     // Affiner le type d'écran en croisant CEC + EDID
+    // Un écran peut être connecté (HDMI hot-plug) sans EDID lisible
+    const screenDetected = display.connected || cec.tv_connected;
     if (display.display_type === 'unknown') {
       if (cec.devices_found > 0) {
         display.display_type = 'tv';
-      } else if (cec.cec_available && cec.devices_found === 0 && display.connected) {
+      } else if (cec.cec_available && cec.devices_found === 0 && screenDetected) {
         display.display_type = 'monitor';
       }
+    }
+    // Marquer l'écran comme connecté si détecté par CEC même sans EDID
+    if (!display.connected && cec.tv_connected) {
+      display.connected = true;
     }
 
     return { ...cec, displayInfo: display };

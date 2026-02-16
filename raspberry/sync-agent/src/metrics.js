@@ -797,11 +797,21 @@ class MetricsCollector {
       ]);
 
       // Affiner le type d'écran en croisant EDID + CEC
+      // Un écran peut être connecté (HDMI hot-plug detect) sans que l'EDID soit lisible
+      // (fichier edid de taille 0 sur certains moniteurs ou configs DRM Pi 5)
+      const screenDetected = displayInfo.connected || hdmiCecStatus.tv_connected;
       if (displayInfo.display_type === 'unknown') {
         if (hdmiCecStatus.devices_found > 0) {
           displayInfo.display_type = 'tv';
-        } else if (hdmiCecStatus.cec_available && hdmiCecStatus.devices_found === 0 && displayInfo.connected) {
+        } else if (hdmiCecStatus.cec_available && hdmiCecStatus.devices_found === 0 && screenDetected) {
           displayInfo.display_type = 'monitor';
+        }
+      }
+      // Marquer l'écran comme connecté si détecté par CEC même sans EDID
+      if (!displayInfo.connected && hdmiCecStatus.tv_connected) {
+        displayInfo.connected = true;
+        if (displayInfo.detection_method === 'none') {
+          displayInfo.detection_method = 'cec_hotplug';
         }
       }
 
