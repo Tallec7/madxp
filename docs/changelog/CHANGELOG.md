@@ -1,3 +1,9 @@
+## [3.43.1](https://github.com/Tallec7/neopro/compare/v3.43.0...v3.43.1) (2026-02-16)
+
+### Bug Fixes
+
+- **license-block:** remplacer emojis par SVG inline + améliorer référence site ([8bda037](https://github.com/Tallec7/neopro/commit/8bda037f3731b44b8cf7d16dc237f3dacdb791e7))
+
 ## [3.43.1] (2026-02-16)
 
 ### Bug Fixes
