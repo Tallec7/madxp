@@ -19,7 +19,7 @@ import { ScreenshotService } from '../../services/screenshot.service';
 import { RecordingStateService } from '../../services/recording-state.service';
 import { LicenseBlockComponent } from '../license-block/license-block.component';
 import { Video } from '../../interfaces/video.interface';
-import { Configuration, OverlayPosition, SportType, WatermarkScheduleRule } from '../../interfaces/configuration.interface';
+import { Configuration, OverlayPosition, ScoreOverlayPosition, SportType, WatermarkScheduleRule } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
 import { Sponsor } from '../../interfaces/sponsor.interface';
 import { environment } from '../../../environments/environment';
@@ -642,40 +642,6 @@ export class TvComponent implements OnInit, OnDestroy {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
-  /**
-   * Styles dynamiques pour l'overlay timer (standalone)
-   */
-  public getTimerOverlayStyles(): Record<string, string> {
-    const config = this.configuration?.scoreOverlay;
-    const position = config?.position || 'top-right';
-    const offsetX = (config?.offsetX ?? 20) + 'px';
-    const offsetY = (config?.offsetY ?? 20) + 'px';
-
-    const styles: Record<string, string> = {
-      'background': config?.backgroundColor || 'rgba(0, 0, 0, 0.85)',
-      'border-radius': (config?.borderRadius ?? 12) + 'px'
-    };
-
-    // Position dynamique (même logique que score overlay)
-    if (position.includes('top')) {
-      styles['top'] = offsetY;
-      styles['bottom'] = 'auto';
-    } else {
-      styles['bottom'] = offsetY;
-      styles['top'] = 'auto';
-    }
-
-    if (position.includes('right')) {
-      styles['right'] = offsetX;
-      styles['left'] = 'auto';
-    } else {
-      styles['left'] = offsetX;
-      styles['right'] = 'auto';
-    }
-
-    return styles;
-  }
-
   // =========================================================================
   // PLAYER STATE — Émet l'état du player pour le monitoring cloud
   // =========================================================================
@@ -1237,117 +1203,13 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Styles dynamiques pour l'overlay du score
-   * Utilise la configuration scoreOverlay si disponible, sinon valeurs par défaut
-   * Supporte les 9 positions: top/middle/bottom x left/center/right
+   * Position de l'overlay score/timer.
+   * Priorité : option locale → config centrale → défaut 'top-right'
    */
-  public getOverlayStyles(): Record<string, string> {
-    const config = this.configuration?.scoreOverlay;
-    // Position locale override la position du central si définie
-    const position: OverlayPosition = this.localOptions.overlay.position || config?.position || 'top-right';
-    const offsetX = (config?.offsetX ?? 20) + 'px';
-    const offsetY = (config?.offsetY ?? 20) + 'px';
-
-    // Couleurs: local override si useLocalColors est activé
-    const useLocal = this.localOptions.overlay.useLocalColors;
-    const backgroundColor = useLocal && this.localOptions.overlay.backgroundColor
-      ? this.localOptions.overlay.backgroundColor
-      : (config?.backgroundColor || 'rgba(0, 0, 0, 0.85)');
-
-    const styles: Record<string, string> = {
-      'background': backgroundColor,
-      'border-radius': (config?.borderRadius ?? 12) + 'px'
-    };
-
-    // Position verticale (top/middle/bottom)
-    if (position.includes('top')) {
-      styles['top'] = offsetY;
-      styles['bottom'] = 'auto';
-    } else if (position.includes('bottom')) {
-      styles['bottom'] = offsetY;
-      styles['top'] = 'auto';
-    } else {
-      // middle
-      styles['top'] = '50%';
-      styles['bottom'] = 'auto';
-      styles['transform'] = 'translateY(-50%)';
-    }
-
-    // Position horizontale (left/center/right)
-    if (position.includes('right')) {
-      styles['right'] = offsetX;
-      styles['left'] = 'auto';
-    } else if (position.includes('left')) {
-      styles['left'] = offsetX;
-      styles['right'] = 'auto';
-    } else {
-      // center
-      styles['left'] = '50%';
-      styles['right'] = 'auto';
-      if (position.includes('middle')) {
-        styles['transform'] = 'translate(-50%, -50%)';
-      } else {
-        styles['transform'] = 'translateX(-50%)';
-      }
-    }
-
-    return styles;
-  }
-
-  /**
-   * Styles dynamiques pour les scores
-   * Local override si useLocalColors est activé
-   */
-  public getScoreStyles(): Record<string, string> {
-    const config = this.configuration?.scoreOverlay;
-    const useLocal = this.localOptions.overlay.useLocalColors;
-    const scoreColor = useLocal && this.localOptions.overlay.scoreColor
-      ? this.localOptions.overlay.scoreColor
-      : (config?.scoreColor || '#4caf50');
-
-    return {
-      'color': scoreColor,
-      'font-size': (config?.scoreSize ?? 28) + 'px'
-    };
-  }
-
-  /**
-   * Styles dynamiques pour les noms d'équipe
-   * Local override si useLocalColors est activé
-   */
-  public getTeamNameStyles(): Record<string, string> {
-    const config = this.configuration?.scoreOverlay;
-    const useLocal = this.localOptions.overlay.useLocalColors;
-    const teamNameColor = useLocal && this.localOptions.overlay.teamNameColor
-      ? this.localOptions.overlay.teamNameColor
-      : (config?.teamNameColor || '#ffffff');
-
-    return {
-      'color': teamNameColor,
-      'font-size': (config?.teamNameSize ?? 16) + 'px'
-    };
-  }
-
-  /**
-   * Styles dynamiques pour le timer intégré au score
-   */
-  public getTimerStyles(): Record<string, string> {
-    const config = this.configuration?.scoreOverlay;
-    const useLocal = this.localOptions.overlay.useLocalColors;
-    const scoreColor = useLocal && this.localOptions.overlay.scoreColor
-      ? this.localOptions.overlay.scoreColor
-      : (config?.scoreColor || '#64b5f6');
-
-    return {
-      'color': scoreColor
-    };
-  }
-
-  /**
-   * Retourne la classe CSS du sport actuel
-   */
-  public getSportClass(): string {
-    return `sport-${this.localOptions.sport}`;
+  public getOverlayPosition(): ScoreOverlayPosition {
+    return this.localOptions.overlay.position
+      || this.configuration?.scoreOverlay?.position as ScoreOverlayPosition
+      || 'top-right';
   }
 
   // ============================================================================

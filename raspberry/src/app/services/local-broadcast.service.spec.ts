@@ -165,11 +165,11 @@ describe('LocalBroadcastService', () => {
 
   it('should receive options updates', (done) => {
     service.onOptionsUpdate().subscribe(event => {
-      expect((event as any).template).toBe('elegant');
+      expect((event as any).template).toBe('broadcast');
       done();
     });
 
-    simulateIncoming('options-update', { template: 'elegant' });
+    simulateIncoming('options-update', { template: 'broadcast' });
   });
 
   // ---------------------------------------------------------------------------

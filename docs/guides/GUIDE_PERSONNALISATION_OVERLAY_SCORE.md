@@ -21,7 +21,7 @@ Configuration centralisée, déployée sur le Raspberry Pi.
 2. Aller dans **Sites** → Cliquer sur le site
 3. Activer **"Score en Live"** dans Options Premium
 4. Cliquer sur **"Personnaliser l'apparence"**
-5. Ajuster les paramètres (9 positions disponibles), vérifier l'aperçu
+5. Choisir le **thème** (Broadcast ou Minimal) et la **position** (6 positions)
 6. Cliquer sur **"Déployer sur le boîtier"**
 
 ---
@@ -32,12 +32,11 @@ Configuration locale depuis la télécommande, stockée en localStorage.
 
 **Avantages** :
 
-- ✅ Modification instantanée sans déploiement
-- ✅ Fonctionne hors ligne
-- ✅ Parfait pour ajustements rapides pendant un match
-- ✅ Support multi-sport avec périodes automatiques
-- ✅ Logos d'équipes
-- ✅ Présets sauvegardables
+- Modification instantanée sans déploiement
+- Fonctionne hors ligne
+- Parfait pour ajustements rapides pendant un match
+- Support multi-sport avec périodes automatiques
+- Logos d'équipes
 
 **Accès** :
 
@@ -50,14 +49,10 @@ Configuration locale depuis la télécommande, stockée en localStorage.
 
 ### Paramètres communs (Central Dashboard + Télécommande)
 
-| Paramètre               | Description                             |
-| ----------------------- | --------------------------------------- |
-| **Position**            | 9 positions (matrice 3x3)               |
-| **Couleur du score**    | Couleur des chiffres du score           |
-| **Taille du score**     | Taille des chiffres (16-72px)           |
-| **Couleur des équipes** | Couleur des noms d'équipe               |
-| **Taille noms équipes** | Taille des noms (10-36px)               |
-| **Arrondi des coins**   | Courbure (0 = carré, 50 = très arrondi) |
+| Paramètre    | Description                                         |
+| ------------ | --------------------------------------------------- |
+| **Thème**    | Broadcast (style TV pro) ou Minimal (score discret) |
+| **Position** | 6 positions (haut/bas × gauche/centre/droite)       |
 
 ### Paramètres exclusifs télécommande
 
@@ -66,21 +61,53 @@ Configuration locale depuis la télécommande, stockée en localStorage.
 | **Sport**            | Football, Basketball, Handball, Volleyball, Rugby, Hockey |
 | **Période**          | Automatique selon le sport (mi-temps, quarts, sets...)    |
 | **Logos équipes**    | Upload depuis la télécommande (max 500KB)                 |
-| **Template**         | Style prédéfini (Sportif, Élégant, Minimal)               |
 | **Animation de but** | 3 styles : Popup, Fullscreen, Slide + son                 |
 | **Timer**            | Chronomètre intégré au score ou standalone                |
-| **Breaking News**    | Bandeau info avec 3 modes (scroll, truncate, multiline)   |
-| **Présets**          | Sauvegarder/charger des configurations                    |
+| **Breaking News**    | Bandeau info défilant (scroll)                            |
 
 ---
 
-## Templates disponibles (télécommande)
+## Thèmes disponibles
 
-| Template    | Style                                | Usage recommandé          |
-| ----------- | ------------------------------------ | ------------------------- |
-| **Sportif** | Gradient bleu, couleurs vives        | Matchs dynamiques         |
-| **Élégant** | Gradient gris, épuré                 | Événements formels        |
-| **Minimal** | Noir semi-transparent, ultra-discret | Contenu vidéo prioritaire |
+| Thème         | Style                                             | Usage recommandé          |
+| ------------- | ------------------------------------------------- | ------------------------- |
+| **Broadcast** | Style TV pro (ESPN/BeIN), fond sombre, grille CSS | Matchs en live, streaming |
+| **Minimal**   | Score discret, fond semi-transparent, ultra-léger | Contenu vidéo prioritaire |
+
+### Thème Broadcast
+
+Structure broadcast professionnelle en CSS Grid :
+
+- **Barre principale** : Nom domicile | Score | Nom extérieur
+- **Barre info** (sous le score) : Période + Timer
+- Logos d'équipes intégrés (si définis)
+- Fond `rgba(15,15,20,0.92)` avec backdrop-filter
+- Typographie tabular-nums pour alignement stable des chiffres
+
+### Thème Minimal
+
+Score ultra-discret :
+
+- Affichage `score - score` uniquement
+- Timer optionnel à côté du score
+- Fond semi-transparent `rgba(0,0,0,0.55)`
+
+---
+
+## Positions disponibles
+
+L'overlay peut être placé sur 6 positions de l'écran :
+
+| Position    | Code CSS        |
+| ----------- | --------------- |
+| Haut gauche | `top-left`      |
+| Haut centre | `top-center`    |
+| Haut droite | `top-right`     |
+| Bas gauche  | `bottom-left`   |
+| Bas centre  | `bottom-center` |
+| Bas droite  | `bottom-right`  |
+
+**Priorité** : Position télécommande > Position Central Dashboard > Défaut (`top-right`)
 
 ---
 
@@ -96,10 +123,9 @@ Configuration locale depuis la télécommande, stockée en localStorage.
 
 ### Breaking News
 
-- **Mode scroll** : Texte défile horizontalement (animation 15s)
-- **Mode truncate** : Texte tronqué avec "..."
-- **Mode multiline** : Texte multi-lignes
+- **Mode** : Texte défilant horizontalement (animation 15s)
 - **Position** : Haut ou bas de l'écran
+- **Messages rapides** : Messages prédéfinis pour envoi en un clic
 
 ### Animation de But (Goal Animation)
 
@@ -136,44 +162,18 @@ Changer le sport met automatiquement à jour les périodes et la durée du timer
 
 ---
 
-## Présets de configuration
+## Migration depuis l'ancienne version
 
-Sauvegardez vos configurations favorites pour les réutiliser :
+Si vous aviez configuré l'overlay avec l'ancienne version (v1), vos paramètres sont automatiquement migrés :
 
-1. Configurer l'overlay (sport, template, position, couleurs)
-2. **Options > Presets** : "Sauvegarder config actuelle"
-3. Nommer le preset (ex: "Match championnat")
-4. Réutiliser via "Appliquer"
-
-Les présets incluent : Sport, Template, Position, Couleurs personnalisées.
-
----
-
-## Valeurs recommandées
-
-### Pour un affichage discret
-
-- Position : Bas droite
-- Distance horizontale : 30px
-- Distance verticale : 30px
-- Taille du score : 24px
-- Taille noms équipes : 14px
-
-### Pour un affichage bien visible
-
-- Position : Haut droite
-- Distance horizontale : 20px
-- Distance verticale : 20px
-- Taille du score : 36px
-- Taille noms équipes : 20px
-
-### Couleurs populaires pour le score
-
-- Vert : `#4caf50`
-- Jaune : `#ffc107`
-- Rouge : `#f44336`
-- Bleu : `#2196f3`
-- Blanc : `#ffffff`
+| Ancien paramètre                  | Migration                        |
+| --------------------------------- | -------------------------------- |
+| Template `sportif` ou `elegant`   | → `broadcast`                    |
+| Template `minimal`                | Conservé tel quel                |
+| Couleurs personnalisées (overlay) | Supprimées (thèmes CSS intégrés) |
+| Présets sauvegardés               | Supprimés (plus nécessaires)     |
+| Mode breaking news `truncate`     | → `scroll`                       |
+| Positions `middle-*`              | → `top-right` (défaut)           |
 
 ---
 

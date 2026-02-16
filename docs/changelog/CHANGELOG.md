@@ -1,3 +1,34 @@
+# [3.50.0] (2026-02-16)
+
+### Features
+
+- **overlay:** simplify score overlay system — 2 CSS-only themes (Broadcast/Minimal) replace 3 templates (sportif/elegant/minimal), 6 positions replace 9, all runtime style computation replaced by pure CSS classes
+- **overlay:** broadcast theme — ESPN/BeIN-style lower-third with CSS Grid layout, backdrop-filter, tabular-nums typography, integrated period + timer info bar
+- **overlay:** minimal theme — ultra-discreet inline score with optional timer, semi-transparent background
+
+### Refactor
+
+- **overlay:** remove ~2000 lines of overlay plumbing — delete color pickers (3 inputs + useLocalColors toggle), preset system (save/load/delete), sport-specific CSS variants (basketball/handball/volleyball/rugby/hockey), inline style computation methods (getOverlayStyles, getScoreStyles, getTeamNameStyles, getTimerStyles, getSportClass, getTimerOverlayStyles)
+- **overlay:** simplify `ScoreOverlayConfig` from 9 fields (offsetX, borderRadius, scoreColor, scoreSize, teamNameColor, teamNameSize, backgroundColor, offsetY, theme) to 2 fields (theme + position)
+- **overlay:** simplify `LocalOptions.overlay` — remove useLocalColors, backgroundColor, scoreColor, teamNameColor; keep scoreEnabled + position only
+- **overlay:** add `ScoreOverlayPosition` type (6 positions) separate from `OverlayPosition` (9 positions, kept for watermark)
+- **overlay:** breaking news — remove truncate/multiline display modes, keep scroll only
+- **remote:** simplify Pi Remote + Cloud Remote overlay controls — 2 theme cards with visual preview, 6-position grid, no color pickers, no presets
+- **dashboard:** simplify site settings overlay config — theme cards + position selector replace 8-input form
+
+### Migration
+
+- **overlay:** automatic localStorage migration v1→v2 — sportif/elegant templates → broadcast, strip legacy color fields, strip presets, force scroll displayMode
+
+### Tests
+
+- **overlay:** update `local-options.service.spec.ts` — add 6 migration tests (template migration, legacy field stripping, displayMode forcing), remove preset tests, update type expectations
+- **overlay:** update `local-broadcast.service.spec.ts` — align template types with new system
+
+### Documentation
+
+- **overlay:** rewrite `GUIDE_PERSONNALISATION_OVERLAY_SCORE.md` — document 2 themes (Broadcast/Minimal), 6 positions, remove references to presets/colors/9 positions/3 templates, add migration table from v1
+
 ## [3.49.4](https://github.com/Tallec7/neopro/compare/v3.49.3...v3.49.4) (2026-02-16)
 
 ### Bug Fixes

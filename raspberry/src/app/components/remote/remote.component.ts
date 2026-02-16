@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
-import { Configuration, TimeCategory, SportType, OverlayPosition } from '../../interfaces/configuration.interface';
+import { Configuration, TimeCategory, SportType, ScoreOverlayPosition } from '../../interfaces/configuration.interface';
 import { Category } from '../../interfaces/category.interface';
 import { Video } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
@@ -17,7 +17,6 @@ import { LocalBroadcastService, TimerUpdateEvent } from '../../services/local-br
 import {
   LocalOptionsService,
   LocalOptions,
-  OverlayPreset,
   TeamConfig,
   SPORT_LABELS,
   SPORT_PERIODS,
@@ -143,14 +142,11 @@ export class RemoteComponent implements OnInit, OnDestroy {
   public readonly sportPeriods = SPORT_PERIODS;
   public readonly sportPeriodDurations = SPORT_PERIOD_DURATIONS;
 
-  // Positions overlay (9 positions)
-  public readonly overlayPositions: { value: OverlayPosition; label: string }[] = [
+  // Positions overlay (6 positions)
+  public readonly overlayPositions: { value: ScoreOverlayPosition; label: string }[] = [
     { value: 'top-left', label: 'Haut gauche' },
     { value: 'top-center', label: 'Haut centre' },
     { value: 'top-right', label: 'Haut droite' },
-    { value: 'middle-left', label: 'Milieu gauche' },
-    { value: 'middle-center', label: 'Centre' },
-    { value: 'middle-right', label: 'Milieu droite' },
     { value: 'bottom-left', label: 'Bas gauche' },
     { value: 'bottom-center', label: 'Bas centre' },
     { value: 'bottom-right', label: 'Bas droite' },
@@ -162,10 +158,6 @@ export class RemoteComponent implements OnInit, OnDestroy {
     { value: 'fullscreen', label: 'Plein écran' },
     { value: 'slide', label: 'Bandeau glissant' },
   ];
-
-  // Présets
-  public showPresetModal = false;
-  public newPresetName = '';
 
   // Swipe gesture tracking
   private touchStartX = 0;
@@ -1376,89 +1368,10 @@ export class RemoteComponent implements OnInit, OnDestroy {
   /**
    * Met à jour la position locale de l'overlay
    */
-  public setOverlayPosition(position: OverlayPosition | undefined): void {
+  public setOverlayPosition(position: ScoreOverlayPosition | undefined): void {
     this.localOptionsService.updateOverlayOptions({ position });
     this.localOptions = this.localOptionsService.getOptions();
     this.broadcastOptions();
-  }
-
-  /**
-   * Active/désactive les couleurs locales
-   */
-  public toggleLocalColors(useLocal: boolean): void {
-    this.localOptionsService.updateOverlayOptions({ useLocalColors: useLocal });
-    this.localOptions = this.localOptionsService.getOptions();
-    this.broadcastOptions();
-  }
-
-  /**
-   * Met à jour une couleur locale
-   */
-  public setLocalColor(colorType: 'backgroundColor' | 'scoreColor' | 'teamNameColor', color: string): void {
-    this.localOptionsService.updateOverlayOptions({ [colorType]: color });
-    this.localOptions = this.localOptionsService.getOptions();
-    this.broadcastOptions();
-  }
-
-  // ============================================================================
-  // PRESETS
-  // ============================================================================
-
-  /**
-   * Ouvre la modal de création de preset
-   */
-  public openPresetModal(): void {
-    this.showPresetModal = true;
-    this.newPresetName = '';
-  }
-
-  /**
-   * Ferme la modal de preset
-   */
-  public closePresetModal(): void {
-    this.showPresetModal = false;
-    this.newPresetName = '';
-  }
-
-  /**
-   * Sauvegarde un nouveau preset
-   */
-  public savePreset(): void {
-    if (!this.newPresetName.trim()) {
-      this.displayToast('Veuillez entrer un nom', 'info');
-      return;
-    }
-    this.localOptionsService.savePreset(this.newPresetName.trim());
-    this.localOptions = this.localOptionsService.getOptions();
-    this.closePresetModal();
-    this.displayToast('Preset sauvegardé', 'success');
-  }
-
-  /**
-   * Applique un preset
-   */
-  public applyPreset(presetId: string): void {
-    if (this.localOptionsService.applyPreset(presetId)) {
-      this.localOptions = this.localOptionsService.getOptions();
-      this.broadcastOptions();
-      this.displayToast('Preset appliqué', 'success');
-    }
-  }
-
-  /**
-   * Supprime un preset
-   */
-  public deletePreset(presetId: string): void {
-    this.localOptionsService.deletePreset(presetId);
-    this.localOptions = this.localOptionsService.getOptions();
-    this.displayToast('Preset supprimé', 'success');
-  }
-
-  /**
-   * Récupère tous les presets
-   */
-  public getPresets(): OverlayPreset[] {
-    return this.localOptionsService.getPresets();
   }
 
   /**

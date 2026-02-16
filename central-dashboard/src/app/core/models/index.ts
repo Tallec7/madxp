@@ -1,5 +1,10 @@
 /**
- * Positions disponibles pour l'overlay (9 positions)
+ * Thèmes d'overlay disponibles
+ */
+export type OverlayTheme = 'broadcast' | 'minimal';
+
+/**
+ * Positions disponibles pour les overlays (9 positions — utilisé par watermark)
  */
 export type OverlayPosition =
   | 'top-left' | 'top-center' | 'top-right'
@@ -7,28 +12,21 @@ export type OverlayPosition =
   | 'bottom-left' | 'bottom-center' | 'bottom-right';
 
 /**
- * Configuration de l'overlay du score affiché sur la TV
- * Permet de personnaliser la position, les couleurs et les tailles
+ * Positions disponibles pour l'overlay score (6 positions)
+ */
+export type ScoreOverlayPosition =
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+
+/**
+ * Configuration de l'overlay du score affiché sur la TV.
+ * Simplifié : thème broadcast/minimal + position.
  */
 export interface ScoreOverlayConfig {
-  /** Position de l'overlay (9 positions disponibles) */
-  position?: OverlayPosition;
-  /** Distance horizontale du bord (en pixels) */
-  offsetX?: number;
-  /** Distance verticale du bord (en pixels) */
-  offsetY?: number;
-  /** Couleur de fond (format CSS, ex: 'rgba(0, 0, 0, 0.85)') */
-  backgroundColor?: string;
-  /** Arrondi des coins (en pixels) */
-  borderRadius?: number;
-  /** Couleur du score (format CSS, ex: '#4caf50') */
-  scoreColor?: string;
-  /** Taille du score (en pixels) */
-  scoreSize?: number;
-  /** Couleur des noms d'équipe */
-  teamNameColor?: string;
-  /** Taille des noms d'équipe (en pixels) */
-  teamNameSize?: number;
+  /** Thème d'affichage : broadcast (style TV pro) ou minimal (score discret) */
+  theme?: OverlayTheme;
+  /** Position de l'overlay score (6 positions) */
+  position?: ScoreOverlayPosition;
 }
 
 export type UserRole = 'super_admin' | 'admin' | 'operator' | 'viewer' | 'advertiser' | 'sponsor' | 'agency';

@@ -8,7 +8,7 @@ import { LoggerService } from '../../../../core/services/logger.service';
 import { AssetService, WatermarkConfig, OverlayPosition as WmOverlayPosition, WatermarkAnimation, WatermarkScheduleRule } from '../../../../core/services/asset.service';
 import { ReportsService, GeneratedReport } from '../../../../core/services/reports.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
-import { Site, OverlayPosition } from '../../../../core/models';
+import { Site, OverlayTheme, ScoreOverlayPosition } from '../../../../core/models';
 import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-generator/qr-code-generator.component';
 
 @Component({
@@ -249,10 +249,27 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
           </button>
 
           <div class="overlay-form" *ngIf="showOverlayConfig">
-            <h5>Apparence de l'overlay</h5>
+            <h5>Thème</h5>
+            <div class="overlay-grid">
+              <button class="theme-card" [class.active]="overlayConfig.theme === 'broadcast'" (click)="overlayConfig.theme = 'broadcast'">
+                <div class="theme-preview broadcast">
+                  <span class="tp-team">DOM</span>
+                  <span class="tp-score">2 - 1</span>
+                  <span class="tp-team">EXT</span>
+                </div>
+                <span class="theme-label">Broadcast</span>
+              </button>
+              <button class="theme-card" [class.active]="overlayConfig.theme === 'minimal'" (click)="overlayConfig.theme = 'minimal'">
+                <div class="theme-preview minimal">
+                  <span class="tp-score">2 - 1</span>
+                </div>
+                <span class="theme-label">Minimal</span>
+              </button>
+            </div>
+
+            <h5>Position</h5>
             <div class="overlay-grid">
               <div class="form-group">
-                <label>Position</label>
                 <select [(ngModel)]="overlayConfig.position" class="form-input">
                   <option value="top-left">Haut gauche</option>
                   <option value="top-center">Haut centre</option>
@@ -262,53 +279,19 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
                   <option value="bottom-right">Bas droite</option>
                 </select>
               </div>
-              <div class="form-group">
-                <label>Décalage X (px)</label>
-                <input type="number" [(ngModel)]="overlayConfig.offsetX" min="0" max="200" class="form-input"/>
-              </div>
-              <div class="form-group">
-                <label>Décalage Y (px)</label>
-                <input type="number" [(ngModel)]="overlayConfig.offsetY" min="0" max="200" class="form-input"/>
-              </div>
-              <div class="form-group">
-                <label>Arrondi (px)</label>
-                <input type="number" [(ngModel)]="overlayConfig.borderRadius" min="0" max="50" class="form-input"/>
-              </div>
-              <div class="form-group">
-                <label>Couleur score</label>
-                <div class="color-input">
-                  <input type="color" [(ngModel)]="overlayConfig.scoreColor"/>
-                  <span>{{ overlayConfig.scoreColor }}</span>
-                </div>
-              </div>
-              <div class="form-group">
-                <label>Taille score (px)</label>
-                <input type="number" [(ngModel)]="overlayConfig.scoreSize" min="16" max="72" class="form-input"/>
-              </div>
-              <div class="form-group">
-                <label>Couleur équipes</label>
-                <div class="color-input">
-                  <input type="color" [(ngModel)]="overlayConfig.teamNameColor"/>
-                  <span>{{ overlayConfig.teamNameColor }}</span>
-                </div>
-              </div>
-              <div class="form-group">
-                <label>Taille équipes (px)</label>
-                <input type="number" [(ngModel)]="overlayConfig.teamNameSize" min="10" max="36" class="form-input"/>
-              </div>
             </div>
 
             <!-- Preview -->
             <div class="overlay-preview">
               <div class="preview-label">Aperçu</div>
               <div class="preview-container" [style.justify-content]="getJustify()" [style.align-items]="getAlign()">
-                <div class="preview-overlay"
-                  [style.border-radius.px]="overlayConfig.borderRadius"
-                  [style.margin]="overlayConfig.offsetY + 'px ' + overlayConfig.offsetX + 'px'"
-                >
-                  <span class="preview-team" [style.color]="overlayConfig.teamNameColor" [style.font-size.px]="overlayConfig.teamNameSize * 0.8">DOM</span>
-                  <span class="preview-score" [style.color]="overlayConfig.scoreColor" [style.font-size.px]="overlayConfig.scoreSize * 0.8">2 - 1</span>
-                  <span class="preview-team" [style.color]="overlayConfig.teamNameColor" [style.font-size.px]="overlayConfig.teamNameSize * 0.8">EXT</span>
+                <div class="preview-overlay" *ngIf="overlayConfig.theme === 'broadcast'">
+                  <span class="preview-team">DOM</span>
+                  <span class="preview-score">2 - 1</span>
+                  <span class="preview-team">EXT</span>
+                </div>
+                <div class="preview-overlay minimal" *ngIf="overlayConfig.theme === 'minimal'">
+                  <span class="preview-score">2 - 1</span>
                 </div>
               </div>
             </div>
@@ -840,31 +823,63 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
     }
 
     .overlay-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      display: flex;
       gap: 1rem;
       margin-bottom: 1rem;
     }
 
-    .color-input {
+    .theme-card {
+      flex: 1;
+      padding: 0.75rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+
+    .theme-card.active {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .theme-preview {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-    }
-
-    .color-input input[type="color"] {
-      width: 40px;
-      height: 32px;
-      border: 1px solid #e2e8f0;
+      justify-content: center;
+      gap: 0.25rem;
+      padding: 0.5rem;
+      background: rgba(0, 0, 0, 0.85);
       border-radius: 4px;
-      padding: 0;
-      cursor: pointer;
+      margin-bottom: 0.5rem;
     }
 
-    .color-input span {
+    .tp-team {
+      font-size: 0.625rem;
+      color: #fff;
+      font-weight: 500;
+    }
+
+    .tp-score {
       font-size: 0.75rem;
-      color: #64748b;
-      font-family: monospace;
+      color: #4caf50;
+      font-weight: 700;
+    }
+
+    .theme-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .theme-preview.minimal {
+      background: rgba(0, 0, 0, 0.55);
+      padding: 0.25rem 0.5rem;
+    }
+
+    .theme-preview.minimal .tp-score {
+      color: #fff;
     }
 
     /* Preview */
@@ -892,7 +907,14 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       align-items: center;
       gap: 0.5rem;
       padding: 0.5rem 1rem;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(15, 15, 20, 0.92);
+      border-radius: 6px;
+    }
+
+    .preview-overlay.minimal {
+      background: rgba(0, 0, 0, 0.55);
+      padding: 0.35rem 0.75rem;
+      border-radius: 4px;
     }
 
     .preview-team {
@@ -1429,16 +1451,9 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   savingLiveScore: boolean = false;
   showOverlayConfig: boolean = false;
   savingOverlay: boolean = false;
-  overlayConfig = {
-    position: 'top-right' as OverlayPosition,
-    offsetX: 20,
-    offsetY: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    borderRadius: 12,
-    scoreColor: '#4caf50',
-    scoreSize: 28,
-    teamNameColor: '#ffffff',
-    teamNameSize: 16
+  overlayConfig: { theme: OverlayTheme; position: ScoreOverlayPosition } = {
+    theme: 'broadcast',
+    position: 'top-right',
   };
 
 
@@ -1502,9 +1517,15 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
       this.loadHotspotInfo(this.site);
 
       // Charger la config scoreOverlay depuis local_config_mirror (synchronisé par le Pi)
-      const mirrorScoreOverlay = this.site.local_config_mirror?.['scoreOverlay'];
+      const mirrorScoreOverlay = this.site.local_config_mirror?.['scoreOverlay'] as Record<string, unknown> | undefined;
       if (mirrorScoreOverlay) {
-        this.overlayConfig = { ...this.overlayConfig, ...mirrorScoreOverlay };
+        if (mirrorScoreOverlay['theme'] === 'broadcast' || mirrorScoreOverlay['theme'] === 'minimal') {
+          this.overlayConfig.theme = mirrorScoreOverlay['theme'];
+        }
+        const pos = mirrorScoreOverlay['position'] as string | undefined;
+        if (pos && ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'].includes(pos)) {
+          this.overlayConfig.position = pos as ScoreOverlayPosition;
+        }
       }
 
       // Charger la config watermark existante depuis local_config_mirror (synchronisé par le Pi)
@@ -1553,9 +1574,15 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
       this.loadHotspotInfo(site);
 
       // Recharger scoreOverlay
-      const mirrorScoreOverlay = site.local_config_mirror?.['scoreOverlay'];
+      const mirrorScoreOverlay = site.local_config_mirror?.['scoreOverlay'] as Record<string, unknown> | undefined;
       if (mirrorScoreOverlay) {
-        this.overlayConfig = { ...this.overlayConfig, ...mirrorScoreOverlay };
+        if (mirrorScoreOverlay['theme'] === 'broadcast' || mirrorScoreOverlay['theme'] === 'minimal') {
+          this.overlayConfig.theme = mirrorScoreOverlay['theme'];
+        }
+        const pos = mirrorScoreOverlay['position'] as string | undefined;
+        if (pos && ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'].includes(pos)) {
+          this.overlayConfig.position = pos as ScoreOverlayPosition;
+        }
       }
 
       // Recharger watermark config

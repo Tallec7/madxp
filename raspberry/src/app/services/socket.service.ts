@@ -34,7 +34,7 @@ export interface BreakingNews {
   message: string;
   duration: number;
   position: 'top' | 'bottom';
-  displayMode: 'scroll' | 'truncate' | 'multiline';
+  displayMode: 'scroll';
 }
 
 export interface OptionsUpdate {
@@ -51,10 +51,10 @@ export interface OptionsUpdate {
     enabled: boolean;
     position: 'top' | 'bottom';
     defaultDuration: number;
-    displayMode: 'scroll' | 'truncate' | 'multiline';
+    displayMode: 'scroll';
     quickMessages: string[];
   };
-  template: 'sportif' | 'elegant' | 'minimal';
+  template: 'broadcast' | 'minimal';
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type

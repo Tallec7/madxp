@@ -55,7 +55,7 @@
   playsinline
 ></video>
 
-<!-- Overlay Score (position dynamique selon configuration) -->
+<!-- Overlay Score (broadcast-quality, CSS-only themes) -->
 <!-- Requiert: liveScoreEnabled (central) ET scoreEnabled (local) -->
 <div
   class="score-overlay"
@@ -65,71 +65,71 @@
     configuration?.liveScoreEnabled &&
     localOptions.overlay.scoreEnabled
   "
-  [ngStyle]="getOverlayStyles()"
-  [class.template-sportif]="localOptions.template === 'sportif'"
-  [class.template-elegant]="localOptions.template === 'elegant'"
-  [class.template-minimal]="localOptions.template === 'minimal'"
-  [ngClass]="getSportClass()"
+  [class.theme-broadcast]="localOptions.template === 'broadcast'"
+  [class.theme-minimal]="localOptions.template === 'minimal'"
+  [class.pos-top-left]="getOverlayPosition() === 'top-left'"
+  [class.pos-top-center]="getOverlayPosition() === 'top-center'"
+  [class.pos-top-right]="getOverlayPosition() === 'top-right'"
+  [class.pos-bottom-left]="getOverlayPosition() === 'bottom-left'"
+  [class.pos-bottom-center]="getOverlayPosition() === 'bottom-center'"
+  [class.pos-bottom-right]="getOverlayPosition() === 'bottom-right'"
 >
-  <div class="score-container">
-    <div class="team home-team">
-      <!-- Logo équipe domicile -->
-      <img
-        *ngIf="currentScore.homeLogo"
-        [src]="currentScore.homeLogo"
-        alt="Logo domicile"
-        class="team-logo"
-      />
-      <span class="team-name" [ngStyle]="getTeamNameStyles()">{{ currentScore.homeTeam }}</span>
-      <span class="team-score" [ngStyle]="getScoreStyles()">{{ currentScore.homeScore }}</span>
+  <!-- Broadcast Theme : style TV pro (ESPN/BeIN lower-third) -->
+  <ng-container *ngIf="localOptions.template === 'broadcast'">
+    <div class="broadcast-bar">
+      <div class="broadcast-team home">
+        <img
+          *ngIf="currentScore.homeLogo"
+          [src]="currentScore.homeLogo"
+          alt=""
+          class="broadcast-logo"
+        />
+        <span class="broadcast-name">{{ currentScore.homeTeam }}</span>
+      </div>
+      <div class="broadcast-scores">
+        <span class="broadcast-score home">{{ currentScore.homeScore }}</span>
+        <span class="broadcast-divider"></span>
+        <span class="broadcast-score away">{{ currentScore.awayScore }}</span>
+      </div>
+      <div class="broadcast-team away">
+        <span class="broadcast-name">{{ currentScore.awayTeam }}</span>
+        <img
+          *ngIf="currentScore.awayLogo"
+          [src]="currentScore.awayLogo"
+          alt=""
+          class="broadcast-logo"
+        />
+      </div>
     </div>
-    <div class="score-separator">-</div>
-    <div class="team away-team">
-      <span class="team-score" [ngStyle]="getScoreStyles()">{{ currentScore.awayScore }}</span>
-      <span class="team-name" [ngStyle]="getTeamNameStyles()">{{ currentScore.awayTeam }}</span>
-      <!-- Logo équipe extérieure -->
-      <img
-        *ngIf="currentScore.awayLogo"
-        [src]="currentScore.awayLogo"
-        alt="Logo extérieur"
-        class="team-logo"
-      />
-    </div>
-  </div>
-
-  <!-- Timer intégré au score (meilleure UX) -->
-  <div
-    class="score-timer-integrated"
-    *ngIf="localOptions.timer.enabled && localOptions.timer.integratedWithScore && timerIsRunning"
-  >
-    <span class="timer-value" [ngStyle]="getTimerStyles()">{{ formatTimerDisplay() }}</span>
-  </div>
-
-  <!-- Période et temps de match -->
-  <div
-    class="score-meta"
-    *ngIf="
-      currentScore.period ||
-      currentScore.matchTime ||
-      (localOptions.timer.enabled && timerIsRunning && !localOptions.timer.integratedWithScore)
-    "
-  >
-    <span class="period" *ngIf="currentScore.period">{{ currentScore.period }}</span>
-    <span
-      class="match-time"
+    <div
+      class="broadcast-info"
       *ngIf="
-        localOptions.timer.enabled && timerIsRunning && !localOptions.timer.integratedWithScore
+        currentScore.period ||
+        currentScore.matchTime ||
+        (localOptions.timer.enabled && timerIsRunning)
       "
     >
-      {{ formatTimerDisplay() }}
-    </span>
-    <span
-      class="match-time"
-      *ngIf="currentScore.matchTime && (!localOptions.timer.enabled || !timerIsRunning)"
-    >
-      {{ currentScore.matchTime }}
-    </span>
-  </div>
+      <span class="broadcast-period" *ngIf="currentScore.period">{{ currentScore.period }}</span>
+      <span class="broadcast-timer" *ngIf="localOptions.timer.enabled && timerIsRunning">{{
+        formatTimerDisplay()
+      }}</span>
+      <span
+        class="broadcast-timer"
+        *ngIf="currentScore.matchTime && (!localOptions.timer.enabled || !timerIsRunning)"
+        >{{ currentScore.matchTime }}</span
+      >
+    </div>
+  </ng-container>
+
+  <!-- Minimal Theme : score discret uniquement -->
+  <ng-container *ngIf="localOptions.template === 'minimal'">
+    <span class="minimal-score">{{ currentScore.homeScore }}</span>
+    <span class="minimal-divider">-</span>
+    <span class="minimal-score">{{ currentScore.awayScore }}</span>
+    <span class="minimal-timer" *ngIf="localOptions.timer.enabled && timerIsRunning">{{
+      formatTimerDisplay()
+    }}</span>
+  </ng-container>
 </div>
 
 <!-- Timer Overlay (standalone quand pas de score ou non intégré) -->
@@ -142,10 +142,12 @@
     timerIsRunning &&
     (!showScoreOverlay || !localOptions.timer.integratedWithScore)
   "
-  [ngStyle]="getTimerOverlayStyles()"
-  [class.template-sportif]="localOptions.template === 'sportif'"
-  [class.template-elegant]="localOptions.template === 'elegant'"
-  [class.template-minimal]="localOptions.template === 'minimal'"
+  [class.pos-top-left]="getOverlayPosition() === 'top-left'"
+  [class.pos-top-center]="getOverlayPosition() === 'top-center'"
+  [class.pos-top-right]="getOverlayPosition() === 'top-right'"
+  [class.pos-bottom-left]="getOverlayPosition() === 'bottom-left'"
+  [class.pos-bottom-center]="getOverlayPosition() === 'bottom-center'"
+  [class.pos-bottom-right]="getOverlayPosition() === 'bottom-right'"
 >
   <span class="timer-value">{{ formatTimerDisplay() }}</span>
 </div>
@@ -206,13 +208,10 @@
 
 <!-- Breaking News Banner -->
 <div
-  class="breaking-news-banner"
+  class="breaking-news-banner mode-scroll"
   *ngIf="showBreakingNews && currentBreakingNews"
   [class.position-top]="currentBreakingNews.position === 'top'"
   [class.position-bottom]="currentBreakingNews.position === 'bottom'"
-  [class.mode-scroll]="currentBreakingNews.displayMode === 'scroll'"
-  [class.mode-truncate]="currentBreakingNews.displayMode === 'truncate'"
-  [class.mode-multiline]="currentBreakingNews.displayMode === 'multiline'"
 >
   <div class="breaking-news-content">
     <span class="breaking-news-icon">

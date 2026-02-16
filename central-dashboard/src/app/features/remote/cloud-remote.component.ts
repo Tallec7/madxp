@@ -26,9 +26,9 @@ import { ScreenshotViewerComponent } from './components/screenshot-viewer/screen
 
 // Types locaux (identiques au Pi)
 type SportType = 'football' | 'basketball' | 'handball' | 'volleyball' | 'rugby' | 'hockey';
-type OverlayPosition =
+type OverlayTheme = 'broadcast' | 'minimal';
+type ScoreOverlayPosition =
   | 'top-left' | 'top-center' | 'top-right'
-  | 'middle-left' | 'middle-center' | 'middle-right'
   | 'bottom-left' | 'bottom-center' | 'bottom-right';
 
 interface Category {
@@ -77,18 +77,6 @@ interface GoalAnimationConfig {
   soundUrl?: string;
 }
 
-interface OverlayPreset {
-  id: string;
-  name: string;
-  sport: SportType;
-  position: OverlayPosition;
-  template: 'sportif' | 'elegant' | 'minimal';
-  backgroundColor?: string;
-  scoreColor?: string;
-  teamNameColor?: string;
-  createdAt: number;
-}
-
 interface LocalOptions {
   sport: SportType;
   match: {
@@ -99,11 +87,7 @@ interface LocalOptions {
   };
   overlay: {
     scoreEnabled: boolean;
-    position?: OverlayPosition;
-    useLocalColors: boolean;
-    backgroundColor?: string;
-    scoreColor?: string;
-    teamNameColor?: string;
+    position?: ScoreOverlayPosition;
   };
   goalAnimation: GoalAnimationConfig;
   timer: {
@@ -116,11 +100,10 @@ interface LocalOptions {
     enabled: boolean;
     position: 'top' | 'bottom';
     defaultDuration: number;
-    displayMode: 'scroll' | 'truncate' | 'multiline';
+    displayMode: 'scroll';
     quickMessages: string[];
   };
-  template: 'sportif' | 'elegant' | 'minimal';
-  presets: OverlayPreset[];
+  template: OverlayTheme;
 }
 
 // Constantes (identiques au Pi)
@@ -171,10 +154,6 @@ const DEFAULT_OPTIONS: LocalOptions = {
   overlay: {
     scoreEnabled: false,
     position: undefined,
-    useLocalColors: false,
-    backgroundColor: undefined,
-    scoreColor: undefined,
-    teamNameColor: undefined,
   },
   goalAnimation: {
     enabled: true,
@@ -201,8 +180,7 @@ const DEFAULT_OPTIONS: LocalOptions = {
       'Applaudissez vos joueurs !',
     ],
   },
-  template: 'sportif',
-  presets: [],
+  template: 'broadcast',
 };
 
 type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos' | 'options';
@@ -318,14 +296,11 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public readonly sportPeriods = SPORT_PERIODS;
   public readonly sportPeriodDurations = SPORT_PERIOD_DURATIONS;
 
-  // Positions overlay (9 positions)
-  public readonly overlayPositions: { value: OverlayPosition; label: string }[] = [
+  // Positions overlay (6 positions)
+  public readonly overlayPositions: { value: ScoreOverlayPosition; label: string }[] = [
     { value: 'top-left', label: 'Haut gauche' },
     { value: 'top-center', label: 'Haut centre' },
     { value: 'top-right', label: 'Haut droite' },
-    { value: 'middle-left', label: 'Milieu gauche' },
-    { value: 'middle-center', label: 'Centre' },
-    { value: 'middle-right', label: 'Milieu droite' },
     { value: 'bottom-left', label: 'Bas gauche' },
     { value: 'bottom-center', label: 'Bas centre' },
     { value: 'bottom-right', label: 'Bas droite' },
@@ -337,10 +312,6 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     { value: 'fullscreen', label: 'Plein écran' },
     { value: 'slide', label: 'Bandeau glissant' },
   ];
-
-  // Présets
-  public showPresetModal = false;
-  public newPresetName = '';
 
   // Swipe gesture tracking
   private touchStartX = 0;
@@ -1428,92 +1399,10 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   // POSITION OVERLAY
   // ============================================================================
 
-  public setOverlayPosition(position: OverlayPosition | undefined): void {
+  public setOverlayPosition(position: ScoreOverlayPosition | undefined): void {
     this.localOptions.overlay.position = position;
     this.saveLocalOptions();
     this.broadcastOptions();
-  }
-
-  public toggleLocalColors(useLocal: boolean): void {
-    this.localOptions.overlay.useLocalColors = useLocal;
-    this.saveLocalOptions();
-    this.broadcastOptions();
-  }
-
-  public setLocalColor(colorType: 'backgroundColor' | 'scoreColor' | 'teamNameColor', color: string): void {
-    this.localOptions.overlay[colorType] = color;
-    this.saveLocalOptions();
-    this.broadcastOptions();
-  }
-
-  // ============================================================================
-  // PRESETS
-  // ============================================================================
-
-  public openPresetModal(): void {
-    this.showPresetModal = true;
-    this.newPresetName = '';
-  }
-
-  public closePresetModal(): void {
-    this.showPresetModal = false;
-    this.newPresetName = '';
-  }
-
-  public savePreset(): void {
-    if (!this.newPresetName.trim()) {
-      this.displayToast('Veuillez entrer un nom', 'info');
-      return;
-    }
-
-    const preset: OverlayPreset = {
-      id: 'preset_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
-      name: this.newPresetName.trim(),
-      sport: this.localOptions.sport,
-      position: this.localOptions.overlay.position || 'top-right',
-      template: this.localOptions.template,
-      backgroundColor: this.localOptions.overlay.backgroundColor,
-      scoreColor: this.localOptions.overlay.scoreColor,
-      teamNameColor: this.localOptions.overlay.teamNameColor,
-      createdAt: Date.now(),
-    };
-
-    this.localOptions.presets.push(preset);
-    this.saveLocalOptions();
-    this.closePresetModal();
-    this.displayToast('Preset sauvegardé', 'success');
-  }
-
-  public applyPreset(presetId: string): void {
-    const preset = this.localOptions.presets.find(p => p.id === presetId);
-    if (!preset) return;
-
-    this.localOptions.sport = preset.sport;
-    this.localOptions.template = preset.template;
-    this.localOptions.overlay.position = preset.position;
-    this.localOptions.overlay.useLocalColors = !!(preset.backgroundColor || preset.scoreColor || preset.teamNameColor);
-    this.localOptions.overlay.backgroundColor = preset.backgroundColor;
-    this.localOptions.overlay.scoreColor = preset.scoreColor;
-    this.localOptions.overlay.teamNameColor = preset.teamNameColor;
-
-    const periods = SPORT_PERIODS[preset.sport];
-    this.localOptions.match.period = periods[0];
-    this.localOptions.match.periodIndex = 0;
-    this.localOptions.timer.periodDuration = SPORT_PERIOD_DURATIONS[preset.sport];
-
-    this.saveLocalOptions();
-    this.broadcastOptions();
-    this.displayToast('Preset appliqué', 'success');
-  }
-
-  public deletePreset(presetId: string): void {
-    this.localOptions.presets = this.localOptions.presets.filter(p => p.id !== presetId);
-    this.saveLocalOptions();
-    this.displayToast('Preset supprimé', 'success');
-  }
-
-  public getPresets(): OverlayPreset[] {
-    return [...this.localOptions.presets];
   }
 
   // ============================================================================

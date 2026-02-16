@@ -33,7 +33,7 @@ describe('LocalOptionsService', () => {
     expect(opts.sport).toBe('football');
     expect(opts.overlay.scoreEnabled).toBe(false);
     expect(opts.timer.enabled).toBe(false);
-    expect(opts.template).toBe('sportif');
+    expect(opts.template).toBe('broadcast');
     expect(opts.match.homeTeam.name).toBe('DOMICILE');
     expect(opts.match.awayTeam.name).toBe('EXTÉRIEUR');
   });
@@ -50,8 +50,8 @@ describe('LocalOptionsService', () => {
   // ---------------------------------------------------------------------------
 
   it('should update options partially', () => {
-    service.updateOptions({ template: 'elegant' });
-    expect(service.getOptions().template).toBe('elegant');
+    service.updateOptions({ template: 'minimal' });
+    expect(service.getOptions().template).toBe('minimal');
   });
 
   it('should deep merge nested options', () => {
@@ -59,8 +59,6 @@ describe('LocalOptionsService', () => {
     const opts = service.getOptions();
     // scoreEnabled should be updated
     expect(opts.overlay.scoreEnabled).toBe(true);
-    // Other overlay props should be preserved
-    expect(opts.overlay.useLocalColors).toBe(false);
   });
 
   it('should emit updated options via observable', (done) => {
@@ -77,7 +75,7 @@ describe('LocalOptionsService', () => {
   });
 
   it('should persist to localStorage', () => {
-    service.updateOptions({ template: 'elegant' });
+    service.updateOptions({ template: 'minimal' });
     expect(localStorage.setItem).toHaveBeenCalledWith('neopro-local-options', jasmine.any(String));
   });
 
@@ -86,10 +84,10 @@ describe('LocalOptionsService', () => {
   // ---------------------------------------------------------------------------
 
   it('should update overlay options', () => {
-    service.updateOverlayOptions({ scoreEnabled: true, backgroundColor: '#000' });
+    service.updateOverlayOptions({ scoreEnabled: true, position: 'bottom-left' });
     const opts = service.getOptions();
     expect(opts.overlay.scoreEnabled).toBe(true);
-    expect(opts.overlay.backgroundColor).toBe('#000');
+    expect(opts.overlay.position).toBe('bottom-left');
   });
 
   // ---------------------------------------------------------------------------
@@ -255,61 +253,19 @@ describe('LocalOptionsService', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Presets
-  // ---------------------------------------------------------------------------
-
-  it('should save and retrieve preset', () => {
-    service.setSport('basketball');
-    service.setTemplate('elegant');
-
-    const preset = service.savePreset('My Config');
-    expect(preset.name).toBe('My Config');
-    expect(preset.sport).toBe('basketball');
-    expect(preset.template).toBe('elegant');
-
-    expect(service.getPresets().length).toBe(1);
-  });
-
-  it('should apply preset', () => {
-    service.setSport('basketball');
-    service.setTemplate('elegant');
-    const preset = service.savePreset('Test');
-
-    // Changer les options
-    service.setSport('football');
-    service.setTemplate('minimal');
-
-    // Appliquer le preset
-    const result = service.applyPreset(preset.id);
-    expect(result).toBe(true);
-    expect(service.getOptions().sport).toBe('basketball');
-    expect(service.getOptions().template).toBe('elegant');
-  });
-
-  it('should return false for non-existent preset', () => {
-    expect(service.applyPreset('non-existent')).toBe(false);
-  });
-
-  it('should delete preset', () => {
-    const preset = service.savePreset('ToDelete');
-    service.deletePreset(preset.id);
-    expect(service.getPresets().length).toBe(0);
-  });
-
-  // ---------------------------------------------------------------------------
   // resetToDefaults
   // ---------------------------------------------------------------------------
 
   it('should reset all options to defaults', () => {
     service.setSport('rugby');
-    service.setTemplate('elegant');
+    service.setTemplate('minimal');
     service.updateOverlayOptions({ scoreEnabled: true });
 
     service.resetToDefaults();
 
     const opts = service.getOptions();
     expect(opts.sport).toBe('football');
-    expect(opts.template).toBe('sportif');
+    expect(opts.template).toBe('broadcast');
     expect(opts.overlay.scoreEnabled).toBe(false);
   });
 
@@ -335,5 +291,69 @@ describe('LocalOptionsService', () => {
     localStorageMock['neopro-local-options'] = 'not json!';
     const newService = new LocalOptionsService();
     expect(newService.getOptions().sport).toBe('football');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Migration v1 → v2
+  // ---------------------------------------------------------------------------
+
+  it('should migrate sportif template to broadcast', () => {
+    const saved = { sport: 'football', template: 'sportif' };
+    localStorageMock['neopro-local-options'] = JSON.stringify(saved);
+    const newService = new LocalOptionsService();
+    expect(newService.getOptions().template).toBe('broadcast');
+  });
+
+  it('should migrate elegant template to broadcast', () => {
+    const saved = { sport: 'football', template: 'elegant' };
+    localStorageMock['neopro-local-options'] = JSON.stringify(saved);
+    const newService = new LocalOptionsService();
+    expect(newService.getOptions().template).toBe('broadcast');
+  });
+
+  it('should keep minimal template as-is during migration', () => {
+    const saved = { sport: 'football', template: 'minimal' };
+    localStorageMock['neopro-local-options'] = JSON.stringify(saved);
+    const newService = new LocalOptionsService();
+    expect(newService.getOptions().template).toBe('minimal');
+  });
+
+  it('should strip legacy overlay color fields during migration', () => {
+    const saved = {
+      overlay: {
+        scoreEnabled: true,
+        useLocalColors: true,
+        backgroundColor: '#123',
+        scoreColor: '#456',
+        teamNameColor: '#789',
+      },
+    };
+    localStorageMock['neopro-local-options'] = JSON.stringify(saved);
+    const newService = new LocalOptionsService();
+    const opts = newService.getOptions();
+    expect(opts.overlay.scoreEnabled).toBe(true);
+    // Legacy fields should not survive migration
+    expect((opts.overlay as Record<string, unknown>)['useLocalColors']).toBeUndefined();
+    expect((opts.overlay as Record<string, unknown>)['backgroundColor']).toBeUndefined();
+    expect((opts.overlay as Record<string, unknown>)['scoreColor']).toBeUndefined();
+    expect((opts.overlay as Record<string, unknown>)['teamNameColor']).toBeUndefined();
+  });
+
+  it('should strip presets during migration', () => {
+    const saved = {
+      presets: [{ id: 'p1', name: 'test' }],
+    };
+    localStorageMock['neopro-local-options'] = JSON.stringify(saved);
+    const newService = new LocalOptionsService();
+    expect((newService.getOptions() as Record<string, unknown>)['presets']).toBeUndefined();
+  });
+
+  it('should force displayMode to scroll during migration', () => {
+    const saved = {
+      breakingNews: { displayMode: 'truncate' },
+    };
+    localStorageMock['neopro-local-options'] = JSON.stringify(saved);
+    const newService = new LocalOptionsService();
+    expect(newService.getOptions().breakingNews.displayMode).toBe('scroll');
   });
 });
