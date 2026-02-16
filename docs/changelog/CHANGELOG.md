@@ -1,3 +1,9 @@
+# [3.43.0](https://github.com/Tallec7/neopro/compare/v3.42.2...v3.43.0) (2026-02-16)
+
+### Features
+
+- **dashboard:** enrich config history with expandable detail and restore ([219541c](https://github.com/Tallec7/neopro/commit/219541cd6afc0bfb6f8d8b2837ea9892aecaf5a5))
+
 ## [3.42.2](https://github.com/Tallec7/neopro/compare/v3.42.1...v3.42.2) (2026-02-16)
 
 ### Bug Fixes
