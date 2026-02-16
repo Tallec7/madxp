@@ -270,6 +270,29 @@ describe('RecordingStateService', () => {
     expect(warningState!.active).toBe(false);
   }));
 
+  it('should emit inactivityExpired$ when countdown reaches 0', fakeAsync(() => {
+    let expired = false;
+    service.inactivityExpired$.subscribe(() => (expired = true));
+
+    service.onPhaseChange('during');
+    tick(INACTIVITY_DELAY);
+    tick(WARNING_COUNTDOWN * 1000);
+
+    expect(expired).toBe(true);
+  }));
+
+  it('should NOT emit inactivityExpired$ on manual stop', fakeAsync(() => {
+    let expired = false;
+    service.inactivityExpired$.subscribe(() => (expired = true));
+
+    service.onPhaseChange('during');
+    tick(INACTIVITY_DELAY);
+    // Manual stop pendant le warning (pas l'expiration du timer)
+    service.stopRecording(true);
+
+    expect(expired).toBe(false);
+  }));
+
   it('should cancel warning on extendRecording()', fakeAsync(() => {
     service.onPhaseChange('during');
     tick(INACTIVITY_DELAY);

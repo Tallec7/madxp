@@ -1,5 +1,5 @@
 import { Injectable, inject, OnDestroy } from '@angular/core';
-import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
 import { LocalBroadcastService } from './local-broadcast.service';
 import { SocketService } from './socket.service';
 
@@ -48,6 +48,10 @@ export class RecordingStateService implements OnDestroy {
   // Observable pour le warning d'inactivité
   private readonly warningSubject = new BehaviorSubject<RecordingWarningState>({ active: false, secondsRemaining: 0 });
   public readonly warning$: Observable<RecordingWarningState> = this.warningSubject.asObservable();
+
+  // Émis quand le timer d'inactivité expire → la Remote doit revenir en neutral
+  private readonly inactivityExpiredSubject = new Subject<void>();
+  public readonly inactivityExpired$: Observable<void> = this.inactivityExpiredSubject.asObservable();
 
   /** Accès synchrone à l'état d'enregistrement (utilisé par les guards analytics) */
   public get isRecording(): boolean {
@@ -158,6 +162,8 @@ export class RecordingStateService implements OnDestroy {
       if (this._warningSecondsRemaining <= 0) {
         this.cancelWarning();
         this.stopRecording(false);
+        // Signaler que l'inactivité a expiré → la Remote revient en boucle par défaut
+        this.inactivityExpiredSubject.next();
       }
     }, 1000);
   }
@@ -223,5 +229,6 @@ export class RecordingStateService implements OnDestroy {
     this.subscriptions.forEach(s => s.unsubscribe());
     this.recordingSubject.complete();
     this.warningSubject.complete();
+    this.inactivityExpiredSubject.complete();
   }
 }

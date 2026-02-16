@@ -1,3 +1,9 @@
+## [3.44.5] (2026-02-16)
+
+### Features
+
+- **recording:** retour automatique en boucle par défaut (neutral) quand le timer d'inactivité expire — la Remote fait `switchPhase('neutral')` via `inactivityExpired$`
+
 ## [3.44.4](https://github.com/Tallec7/neopro/compare/v3.44.3...v3.44.4) (2026-02-16)
 
 ### Bug Fixes

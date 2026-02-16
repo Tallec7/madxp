@@ -87,15 +87,16 @@ Remplacer le timer "retour neutral" par un **timer d'inactivite universel** qui 
 4. ~~Ajouter la popup HTML + styles SCSS (avec dark mode)~~ ✅ v3.38.0
 5. Auto-stop immediat au retour en neutral (plus de timer 15+3 min en boucle par defaut) ✅ v3.43.2
 6. Auto-start temporaire pour videos manuelles en neutral (le recording s'active le temps de la video) ✅ v3.43.2
+7. Retour automatique en boucle par defaut (neutral) quand le timer d'inactivite expire ✅ v3.44.5
 
 ### Criteres de validation
 
-- Tous les tests existants passent (29 recording-state + 38 analytics = 67 tests)
+- Tous les tests existants passent (31 recording-state + 38 analytics = 69 tests)
 - La popup apparait apres 15 min d'inactivite dans les phases non-neutral
 - Le retour en neutral coupe immediatement le recording (sauf override manuel)
 - Le lancement d'une video manuelle en neutral active temporairement le recording
 - Le bouton "Continuer" reset le cycle complet (15+3 min)
-- Le decompte de 0 arrete le recording
+- Le decompte de 0 arrete le recording **et revient en boucle par defaut**
 - Le recording manuel n'est pas affecte
 
 ## References

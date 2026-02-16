@@ -246,6 +246,18 @@ export class RemoteComponent implements OnInit, OnDestroy {
       })
     );
 
+    // Retour automatique en boucle par défaut quand le timer d'inactivité expire
+    this.subscriptions.push(
+      this.recordingState.inactivityExpired$.subscribe(() => {
+        this.ngZone.run(() => {
+          if (this.activePhase !== 'neutral') {
+            console.log('[Remote] Inactivity expired → returning to neutral');
+            this.switchPhase('neutral');
+          }
+        });
+      })
+    );
+
     this.isDemoMode = this.demoConfigService.isDemoMode();
 
     // Charger le dark mode depuis localStorage
