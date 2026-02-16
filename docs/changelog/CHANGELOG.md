@@ -1,3 +1,9 @@
+## [3.44.2](https://github.com/Tallec7/neopro/compare/v3.44.1...v3.44.2) (2026-02-16)
+
+### Bug Fixes
+
+- **kiosk:** masquer le curseur souris sur les écrans TV — triple protection ([bbdadf5](https://github.com/Tallec7/neopro/commit/bbdadf57f45053f6f3e5dd32ed17a148e3646129))
+
 ## [3.44.1](https://github.com/Tallec7/neopro/compare/v3.44.0...v3.44.1) (2026-02-16)
 
 ### Bug Fixes
