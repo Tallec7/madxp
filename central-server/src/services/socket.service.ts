@@ -375,6 +375,10 @@ class SocketService {
       ['online', siteId, clientIp]
     );
 
+    alertService.siteOnline(siteId, site.site_name).catch((error) => {
+      logger.error('Error sending online alert:', error);
+    });
+
     socket.emit('authenticated', {
       message: 'Authentification réussie',
       siteId,
