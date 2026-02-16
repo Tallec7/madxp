@@ -205,6 +205,29 @@ async function checkAlerts(
         message: `Sous-tension détectée (${wifiStatus.throttled}) — alimentation USB insuffisante`,
       });
     }
+
+    // WiFi power management still enabled (driver ignoring modprobe config)
+    if (wifiStatus.connectionType === 'wifi' && wifiStatus.powerManagement === 'on') {
+      alerts.push({
+        type: 'wifi_power_mgmt_on',
+        severity: 'warning',
+        message: 'WiFi power management activé sur wlan1 — risque de déconnexions',
+      });
+    }
+
+    // Hotspot co-channel interference with wlan1 (internet)
+    if (
+      wifiStatus.connectionType === 'wifi' &&
+      wifiStatus.channel != null &&
+      wifiStatus.hotspotChannel != null &&
+      wifiStatus.channel === wifiStatus.hotspotChannel
+    ) {
+      alerts.push({
+        type: 'wifi_channel_conflict',
+        severity: 'warning',
+        message: `Auto-interférence : hotspot et wlan1 sur canal ${wifiStatus.channel}`,
+      });
+    }
   }
 
   // Update kiosk status metric

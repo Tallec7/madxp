@@ -716,6 +716,10 @@ async function attemptInternetRecovery() {
     // Vérification finale
     const health = await checkInternetHealth();
     if (health.healthy) {
+      // Désactiver le power management WiFi après chaque recovery réussie
+      // Le driver rtl8xxxu peut réactiver le power save après un rechargement module
+      await execAsync('sudo iwconfig wlan1 power off 2>/dev/null || true').catch(() => {});
+
       logger.info('NetworkWatchdog: Internet récupéré avec succès', {
         ip: health.ipAddress,
         gateway: health.gateway,
@@ -947,6 +951,9 @@ async function internetWatchLoop() {
 
     // Notify central when internet recovers after a failure
     if (health.healthy && (wasDown || hadRecoveryAttempts)) {
+      // Ré-appliquer power management off après recovery
+      await execAsync('sudo iwconfig wlan1 power off 2>/dev/null || true').catch(() => {});
+
       logger.info('NetworkWatchdog: Internet recovered', {
         ip: health.ipAddress,
         connectionType: health.connectionType,
@@ -1054,6 +1061,11 @@ function start() {
     hotspotGraceActive: isInGracePeriod('hotspot'),
     internetGraceActive: isInGracePeriod('internet'),
   });
+
+  // Désactiver le WiFi power management au démarrage du watchdog
+  execAsync('sudo iwconfig wlan1 power off 2>/dev/null || true')
+    .then(() => logger.info('NetworkWatchdog: WiFi power management disabled on wlan1'))
+    .catch(() => {});
 
   // Première exécution immédiate
   setTimeout(() => hotspotWatchLoop(), 5000);

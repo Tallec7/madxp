@@ -66,6 +66,7 @@ Matrice de sécurité empêchant les opérations dangereuses selon le profil :
 
 - Cooldown 5 min entre cycles de recovery, grace periods persistées sur disque
 - Rollback automatique : sauvegarde config avant opération risquée, restauration si perte connexion après 30s
+- **Stabilisation WiFi (v3.41+)** : 4 couches complémentaires (modprobe driver config, udev rules, boot service, runtime watchdog) + anti-interférence hotspot canal
 
 ### Couche 4 — NetworkAlerts (Serveur)
 
@@ -126,10 +127,14 @@ Check toutes les 4 heures, génère des alertes pour :
 - `raspberry/sync-agent/src/services/network-detector.js` — Détection profil
 - `raspberry/sync-agent/src/services/safe-network-operations.js` — Garde-fous
 - `raspberry/sync-agent/src/services/network-watchdog.js` — Surveillance + recovery
+- `raspberry/config/modprobe.d/rtl8xxxu.conf` — Driver power management
+- `raspberry/scripts/hotspot-optimizer.sh` — Anti-interférence canal hotspot/wlan1
 - `central-server/src/services/network-alerts.service.ts` — Alertes serveur
+- `central-server/src/handlers/heartbeat.handler.ts` — Alertes WiFi power mgmt + canal conflict
 - `docs/clients/NLF.md` — Cas client déclencheur
+- `docs/guides/WIFI_USB_GUIDE.md` — Guide complet WiFi USB
 - `docs/guides/MESH_WIFI_ENVIRONMENTS.md` — Guide environnements mesh
 
 ---
 
-_Créé le 9 février 2026_
+_Créé le 9 février 2026 — Mis à jour le 16 février 2026_

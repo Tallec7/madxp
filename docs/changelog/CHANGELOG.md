@@ -1,3 +1,17 @@
+## [3.41.1] (2026-02-16)
+
+### Features
+
+- **wifi:** stabilisation RTL8192EU multi-couches — modprobe `rtw_power_mgnt=0`, udev 3 règles, boot `stabilize_wlan1()`, watchdog runtime
+- **wifi:** anti-interférence hotspot canal — hotspot-optimizer détecte et évite le canal de wlan1 (pénalité +100)
+- **monitoring:** alertes heartbeat `wifi_power_mgmt_on` et `wifi_channel_conflict`
+- **monitoring:** heartbeat envoie `powerManagement`, `channel`, `hotspotChannel` dans wifiStatus
+- **ota:** déploiement automatique des configs `modprobe.d/` via `update-software.js`
+
+### Documentation
+
+- **WIFI_USB_GUIDE.md:** stabilisation multi-couches, cause 3 (auto-interférence), cause 5 (v3.40), monitoring alertes, incident NTES/NARH
+
 # [3.41.0](https://github.com/Tallec7/neopro/compare/v3.40.0...v3.41.0) (2026-02-16)
 
 ### Features

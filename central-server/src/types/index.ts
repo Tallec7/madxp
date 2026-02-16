@@ -291,6 +291,9 @@ export interface HeartbeatMessage {
     disconnectsLastHour: number;
     throttled: string | null;
     voltageOk: boolean;
+    powerManagement?: 'on' | 'off' | null;
+    channel?: number | null;
+    hotspotChannel?: number | null;
   } | null;
 }
 

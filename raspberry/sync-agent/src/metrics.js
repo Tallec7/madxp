@@ -166,6 +166,9 @@ class MetricsCollector {
       disconnectsLastHour: 0,
       throttled: null,
       voltageOk: true,
+      powerManagement: null, // 'on' | 'off' | null (unknown)
+      channel: null,
+      hotspotChannel: null,
     };
 
     try {
@@ -215,9 +218,41 @@ class MetricsCollector {
               (parseInt(qualityMatch[1]) / parseInt(qualityMatch[2])) * 100
             );
           }
+
+          // Power Management status (should be 'off' after our stabilization)
+          const pmMatch = iwOut.match(/Power Management:(\w+)/);
+          if (pmMatch) {
+            status.powerManagement = pmMatch[1].toLowerCase();
+          }
         } catch {
           // iwconfig non disponible ou wlan1 pas associé
         }
+
+        // Channel detection via iw (more reliable than iwconfig for channel info)
+        try {
+          const { stdout: iwLink } = await execAsync('iw dev wlan1 link 2>/dev/null');
+          const freqMatch = iwLink.match(/freq: (\d+)/);
+          if (freqMatch) {
+            const freq = parseInt(freqMatch[1]);
+            // 2.4GHz band: 2412 = ch1, 2437 = ch6, 2462 = ch11, etc.
+            if (freq >= 2412 && freq <= 2484) {
+              status.channel = Math.round((freq - 2407) / 5);
+            }
+          }
+        } catch {
+          // iw non disponible
+        }
+      }
+
+      // Hotspot channel (wlan0)
+      try {
+        const { stdout: hostapd } = await execAsync('grep "^channel=" /etc/hostapd/hostapd.conf 2>/dev/null');
+        const chMatch = hostapd.match(/channel=(\d+)/);
+        if (chMatch) {
+          status.hotspotChannel = parseInt(chMatch[1]);
+        }
+      } catch {
+        // hostapd.conf not available
       }
 
       // 4. Throttling (toujours — affecte tout le système)

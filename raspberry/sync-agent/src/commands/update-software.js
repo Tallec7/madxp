@@ -608,6 +608,23 @@ class SoftwareUpdateHandler {
         }
       }
 
+      // Deploy modprobe.d configs if present (WiFi driver tuning, etc.)
+      const modprobeDir = path.join(rootDir, 'config', 'modprobe.d');
+      if (await fs.pathExists(modprobeDir)) {
+        try {
+          const confFiles = (await fs.readdir(modprobeDir)).filter(f => f.endsWith('.conf'));
+          for (const conf of confFiles) {
+            await execAsync(`sudo cp ${path.join(modprobeDir, conf)} /etc/modprobe.d/${conf}`);
+            logger.info(`Installed modprobe config: ${conf}`);
+          }
+          if (confFiles.length > 0) {
+            logger.info('Modprobe configs deployed (effective after next module reload or reboot)');
+          }
+        } catch (e) {
+          logger.warn('Failed to install modprobe configs', { error: e.message });
+        }
+      }
+
       // Écrire les fichiers de version avec la version fournie par le dashboard central
       if (version) {
         await this.writeVersionMetadata(version);

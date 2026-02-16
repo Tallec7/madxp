@@ -146,11 +146,25 @@ sudo systemctl status neopro-usb-wifi
 sudo journalctl -u neopro-usb-wifi -b
 ```
 
-### Anti-autosuspend USB (udev rule, v3.30+)
+### Stabilisation WiFi multi-couches (v3.30 → v3.40+)
 
-Une règle udev (`99-neopro-usb-wifi.rules`) désactive automatiquement l'autosuspend USB quand wlan1 apparaît. Cela empêche le kernel d'endormir la clé WiFi, ce qui causait des déconnexions aléatoires en production.
+La clé USB WiFi est stabilisée par **4 mécanismes complémentaires**, déployés automatiquement via OTA :
 
-Déployée automatiquement via OTA dans `/etc/udev/rules.d/`.
+| Couche                 | Fichier                                | Cible                                    | Quand                       |
+| ---------------------- | -------------------------------------- | ---------------------------------------- | --------------------------- |
+| **Driver (modprobe)**  | `config/modprobe.d/rtl8xxxu.conf`      | `rtw_power_mgnt=0 rtw_enusbss=0`         | Au chargement du module     |
+| **udev (3 règles)**    | `config/udev/99-neopro-usb-wifi.rules` | USB autosuspend off + iwconfig power off | À l'apparition de wlan1     |
+| **Boot (service)**     | `scripts/usb-wifi-init.sh`             | Attente + stabilisation wlan1            | Avant le sync-agent         |
+| **Runtime (watchdog)** | `network-watchdog.js`                  | iwconfig power off après chaque recovery | En continu (toutes les 60s) |
+
+**Pourquoi 4 couches ?** Le driver RTL8192EU peut réactiver le power save après un rechargement module (modprobe phase 5-6 du watchdog). Chaque couche est un filet de sécurité indépendant :
+
+1. **modprobe** (`/etc/modprobe.d/rtl8xxxu.conf`) — Désactive le power management **dans le driver** au chargement du module. C'est la couche la plus efficace car elle agit au niveau kernel.
+2. **udev** (`/etc/udev/rules.d/99-neopro-usb-wifi.rules`) — 3 règles déclenchées à l'apparition de wlan1 : USB autosuspend off, iwconfig power off, autosuspend=-1 au niveau du bus USB.
+3. **Boot** (`neopro-usb-wifi.service`) — Le script `usb-wifi-init.sh` appelle `stabilize_wlan1()` à chaque point de sortie (early, wait, modprobe recovery, USB power-cycle).
+4. **Runtime** — Le NetworkWatchdog appelle `iwconfig wlan1 power off` à son démarrage et après chaque recovery réussie.
+
+**Supervision** : le heartbeat envoie `powerManagement: 'on'|'off'` au central — si le power management est détecté actif, une alerte `wifi_power_mgmt_on` est générée automatiquement.
 
 ---
 
@@ -344,7 +358,7 @@ sudo journalctl -u wpa_supplicant@wlan1 --since "1 hour ago" | grep -i "error\|f
 | 7    | CLASS3_FRAME      | Trame de classe 3 non autorisée |
 | 8    | DISASSOC_STA_LEFT | Le client a quitté              |
 
-### Cause 3 : Canal WiFi saturé
+### Cause 3 : Canal WiFi saturé / auto-interférence hotspot
 
 **Symptômes :** Déconnexions fréquentes, débit très faible, latence élevée.
 
@@ -356,9 +370,16 @@ for ch in 1 6 11; do
   count=$(sudo iwlist wlan1 scan 2>/dev/null | grep -c "Channel:$ch$" || echo 0)
   echo "Canal $ch : $count réseaux"
 done
+
+# Vérifier l'auto-interférence hotspot ↔ wlan1
+echo "Hotspot (wlan0): canal $(grep '^channel=' /etc/hostapd/hostapd.conf | cut -d= -f2)"
+echo "Internet (wlan1): canal $(iw dev wlan1 link 2>/dev/null | grep freq | awk '{print $2}')"
+# Si les deux sont sur le même canal → auto-interférence
 ```
 
-**Seuil problématique :** Plus de 5 réseaux sur le même canal.
+**Seuil problématique :** Plus de 5 réseaux sur le même canal. Ou hotspot et wlan1 sur le même canal (auto-interférence).
+
+**Auto-interférence hotspot (v3.40+) :** Le hotspot (wlan0) émet à ~31 dBm. Si wlan1 est sur le même canal, le signal puissant du hotspot noie le signal faible du routeur. Le `hotspot-optimizer.sh` détecte désormais le canal de wlan1 et l'évite systématiquement lors du choix du canal hotspot. Une alerte `wifi_channel_conflict` est générée si le conflit persiste.
 
 **Solution :** Changer le canal du réseau du club n'est pas de notre ressort. Recommander au client un canal moins encombré, ou passer en Ethernet.
 
@@ -395,16 +416,16 @@ vcgencmd get_throttled
 
 **Symptôme :** La clé se met en veille et ne se réveille pas.
 
-**Depuis v3.30 :** L'autosuspend USB est désactivé automatiquement par une règle udev (`99-neopro-usb-wifi.rules`) et par le service `neopro-usb-wifi` au boot. Ce problème ne devrait plus se produire.
+**Depuis v3.40 :** La stabilisation WiFi est assurée par 4 couches complémentaires (voir section [Installation > Stabilisation WiFi multi-couches](#stabilisation-wifi-multi-couches-v330--v340)). Le heartbeat surveille l'état du power management et génère une alerte `wifi_power_mgmt_on` si le driver réactive le power save.
 
-**Diagnostic et fix (Pi pré-v3.30) :**
+**Diagnostic et fix (Pi pré-v3.40) :**
 
 ```bash
 # Vérifier le power management WiFi
 iwconfig wlan1 | grep "Power Management"
 # Si "Power Management:on" → problème
 
-# Désactiver
+# Désactiver (temporaire — perdu au prochain modprobe)
 sudo iwconfig wlan1 power off
 
 # Vérifier l'autosuspend USB
@@ -413,6 +434,10 @@ cat /sys/class/net/wlan1/device/../power/control
 
 # Désactiver l'autosuspend USB
 echo "on" | sudo tee /sys/class/net/wlan1/device/../power/control
+
+# Fix permanent : vérifier que le modprobe config est en place
+cat /etc/modprobe.d/rtl8xxxu.conf
+# Doit contenir : options rtl8xxxu rtw_power_mgnt=0 rtw_enusbss=0
 ```
 
 ---
@@ -463,13 +488,25 @@ sudo systemctl status dnsmasq
 
 ### Métriques clés à surveiller
 
-| Métrique           | Normal | Attention | Critique |
-| ------------------ | ------ | --------- | -------- |
-| Signal WiFi (dBm)  | > -60  | -60 à -75 | < -75    |
-| Link Quality       | > 70%  | 40-70%    | < 40%    |
-| Déconnexions/heure | 0      | 1-3       | > 3      |
-| `get_throttled`    | 0x0    | -         | Non-zéro |
-| Score stabilité    | > 75   | 50-75     | < 50     |
+| Métrique                    | Normal | Attention | Critique |
+| --------------------------- | ------ | --------- | -------- |
+| Signal WiFi (dBm)           | > -60  | -60 à -75 | < -75    |
+| Link Quality                | > 70%  | 40-70%    | < 40%    |
+| Déconnexions/heure          | 0      | 1-3       | > 3      |
+| `get_throttled`             | 0x0    | -         | Non-zéro |
+| Score stabilité             | > 75   | 50-75     | < 50     |
+| Power Management            | `off`  | -         | `on`     |
+| Canal hotspot = canal wlan1 | Non    | -         | Oui      |
+
+### Alertes automatiques heartbeat (v3.40+)
+
+| Type d'alerte           | Sévérité         | Condition                               |
+| ----------------------- | ---------------- | --------------------------------------- |
+| `low_wifi_signal`       | warning/critical | Signal < -75 dBm (critical si < -85)    |
+| `wlan1_missing`         | critical         | Interface wlan1 absente (hors Ethernet) |
+| `usb_power_issue`       | critical         | Sous-tension USB détectée               |
+| `wifi_power_mgmt_on`    | warning          | Power management actif sur wlan1        |
+| `wifi_channel_conflict` | warning          | Hotspot et wlan1 sur le même canal      |
 
 ---
 
@@ -536,12 +573,12 @@ Si la connexion cloud est perdue 30 secondes après un changement de configurati
 
 ### Services systemd associés
 
-| Service                    | Rôle                                    | Logs                                    |
-| -------------------------- | --------------------------------------- | --------------------------------------- |
-| `neopro-usb-wifi`          | Init wlan1 au boot (avant sync-agent)   | `journalctl -u neopro-usb-wifi`         |
-| `neopro-sync-agent`        | Watchdog réseau (wlan0 + wlan1 + cloud) | `journalctl -u neopro-sync-agent`       |
-| `neopro-hotspot-watchdog`  | Surveillance dédiée hostapd             | `/var/log/neopro-hotspot-watchdog.log`  |
-| `neopro-hotspot-optimizer` | Optimisation canal au boot              | `/var/log/neopro-hotspot-optimizer.log` |
+| Service                    | Rôle                                                 | Logs                                    |
+| -------------------------- | ---------------------------------------------------- | --------------------------------------- |
+| `neopro-usb-wifi`          | Init wlan1 au boot (avant sync-agent)                | `journalctl -u neopro-usb-wifi`         |
+| `neopro-sync-agent`        | Watchdog réseau (wlan0 + wlan1 + cloud)              | `journalctl -u neopro-sync-agent`       |
+| `neopro-hotspot-watchdog`  | Surveillance dédiée hostapd                          | `/var/log/neopro-hotspot-watchdog.log`  |
+| `neopro-hotspot-optimizer` | Optimisation canal au boot (anti-interférence wlan1) | `/var/log/neopro-hotspot-optimizer.log` |
 
 ---
 
@@ -603,19 +640,20 @@ Les environnements mesh (répéteurs, Ubiquiti, Google Nest WiFi, etc.) posent d
 
 ### Chronologie des problèmes et fixes (janvier-février 2026)
 
-| Date   | Version | Problème                                            | Cause racine                                                           | Fix                                                                                                        |
-| ------ | ------- | --------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| 16 jan | v2.28.5 | Install échoue si pas de clé USB                    | Script obligatoire                                                     | Rendu optionnel                                                                                            |
-| 18 jan | v2.34   | Perte connexion NLF après déploiement               | BSSID lock en mesh                                                     | BSSID lock bloqué en mesh, hotspot watchdog                                                                |
-| 7 fév  | v3.7    | NLF : coupures fréquentes                           | Signal -73 dBm, canal saturé                                           | Diagnostic → problème physique, Ethernet recommandé                                                        |
-| 8 fév  | v3.7.14 | Crash driver USB WiFi                               | 4x `wpa_cli reconfigure` en cascade                                    | Debounce 120s, recovery progressive                                                                        |
-| 8 fév  | v3.7.14 | TKIP éjecte les téléphones du hotspot               | hostapd en WPA-TKIP au lieu de CCMP                                    | Fix fleet script                                                                                           |
-| 9 fév  | v3.8    | Services systemd manquants sur le terrain           | OTA ne copiait pas `config/`                                           | Fix deploy-remote.sh                                                                                       |
-| 12 fév | v3.17.1 | Clé USB non détectée (firmware manquant)            | `firmware-realtek/ralink` absent                                       | Ajouté dans install.sh                                                                                     |
-| 13 fév | v3.20   | Config WiFi nécessite accès physique                | Pas de commande distante                                               | Scan + connect depuis dashboard                                                                            |
-| 13 fév | v3.20.1 | Commandes WiFi rejetées silencieusement             | Absent de `DEFAULT_ALLOWED_COMMANDS`                                   | Ajout au whitelist                                                                                         |
-| 14 fév | v3.29   | OTA bloqué par permissions fichiers                 | `chown` sans `-R`                                                      | Fix chown -R                                                                                               |
-| 15 fév | v3.30   | Clé USB non initialisée au boot / déconnexions prod | Pas d'init pré-sync-agent, autosuspend USB activé, recovery incomplète | Service boot `neopro-usb-wifi`, udev rule anti-autosuspend, Phase 5-6 USB power-cycle dans NetworkWatchdog |
+| Date   | Version | Problème                                             | Cause racine                                                           | Fix                                                                                                             |
+| ------ | ------- | ---------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 16 jan | v2.28.5 | Install échoue si pas de clé USB                     | Script obligatoire                                                     | Rendu optionnel                                                                                                 |
+| 18 jan | v2.34   | Perte connexion NLF après déploiement                | BSSID lock en mesh                                                     | BSSID lock bloqué en mesh, hotspot watchdog                                                                     |
+| 7 fév  | v3.7    | NLF : coupures fréquentes                            | Signal -73 dBm, canal saturé                                           | Diagnostic → problème physique, Ethernet recommandé                                                             |
+| 8 fév  | v3.7.14 | Crash driver USB WiFi                                | 4x `wpa_cli reconfigure` en cascade                                    | Debounce 120s, recovery progressive                                                                             |
+| 8 fév  | v3.7.14 | TKIP éjecte les téléphones du hotspot                | hostapd en WPA-TKIP au lieu de CCMP                                    | Fix fleet script                                                                                                |
+| 9 fév  | v3.8    | Services systemd manquants sur le terrain            | OTA ne copiait pas `config/`                                           | Fix deploy-remote.sh                                                                                            |
+| 12 fév | v3.17.1 | Clé USB non détectée (firmware manquant)             | `firmware-realtek/ralink` absent                                       | Ajouté dans install.sh                                                                                          |
+| 13 fév | v3.20   | Config WiFi nécessite accès physique                 | Pas de commande distante                                               | Scan + connect depuis dashboard                                                                                 |
+| 13 fév | v3.20.1 | Commandes WiFi rejetées silencieusement              | Absent de `DEFAULT_ALLOWED_COMMANDS`                                   | Ajout au whitelist                                                                                              |
+| 14 fév | v3.29   | OTA bloqué par permissions fichiers                  | `chown` sans `-R`                                                      | Fix chown -R                                                                                                    |
+| 15 fév | v3.30   | Clé USB non initialisée au boot / déconnexions prod  | Pas d'init pré-sync-agent, autosuspend USB activé, recovery incomplète | Service boot `neopro-usb-wifi`, udev rule anti-autosuspend, Phase 5-6 USB power-cycle dans NetworkWatchdog      |
+| 16 fév | v3.40   | Déconnexions WiFi RTL8192EU persistantes (NTES/NARH) | Power management driver non désactivé, auto-interférence hotspot canal | Modprobe config `rtw_power_mgnt=0`, stabilisation 4 couches, hotspot anti-interférence canal, alertes heartbeat |
 
 ### Leçons apprises
 
@@ -627,6 +665,8 @@ Les environnements mesh (répéteurs, Ubiquiti, Google Nest WiFi, etc.) posent d
 6. **La recovery WiFi doit être progressive** : DHCP d'abord, reconfigure en dernier recours
 7. **Documenter chaque incident** avec cause racine et fix pour construire la base de connaissances
 8. **La recovery logicielle ne suffit pas** : `modprobe` seul ne récupère pas une clé USB gelée — il faut vérifier que wlan1 revient et tenter un power-cycle USB hardware via sysfs en dernier recours
+9. **Le power management a 3 couches distinctes** : USB autosuspend (kernel), WiFi power save (driver rtw_power_mgnt), iwconfig power (firmware). Il faut toutes les désactiver.
+10. **L'auto-interférence hotspot est invisible** : le hotspot wlan0 sur le même canal que wlan1 noie le signal — le hotspot-optimizer doit détecter et éviter le canal de wlan1
 
 ---
 
@@ -692,4 +732,4 @@ Si ça ne suffit pas : `lsusb` pour identifier le chipset, puis chercher le pack
 
 ---
 
-**Dernière mise à jour :** 15 février 2026
+**Dernière mise à jour :** 16 février 2026

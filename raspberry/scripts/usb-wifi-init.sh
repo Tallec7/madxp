@@ -6,10 +6,20 @@
 MAX_WAIT=30
 INTERVAL=2
 
+# Fonction helper : stabiliser wlan1 après détection (USB autosuspend + WiFi power save)
+stabilize_wlan1() {
+  echo "on" > /sys/class/net/wlan1/device/../power/control 2>/dev/null || true
+  echo "-1" > /sys/class/net/wlan1/device/../power/autosuspend 2>/dev/null || true
+  # Attendre que l'interface soit prête avant iwconfig
+  sleep 1
+  iwconfig wlan1 power off 2>/dev/null || true
+  echo "neopro-usb-wifi: wlan1 stabilized (autosuspend=off, power_mgmt=off)"
+}
+
 # Early exit : si wlan1 existe déjà, juste s'assurer que l'autosuspend est off
 if ip link show wlan1 &>/dev/null; then
-  echo "neopro-usb-wifi: wlan1 already present — disabling autosuspend"
-  echo "on" > /sys/class/net/wlan1/device/../power/control 2>/dev/null || true
+  echo "neopro-usb-wifi: wlan1 already present — stabilizing"
+  stabilize_wlan1
   exit 0
 fi
 
@@ -19,8 +29,7 @@ echo "neopro-usb-wifi: Waiting for wlan1..."
 for i in $(seq 1 $((MAX_WAIT / INTERVAL))); do
   if ip link show wlan1 &>/dev/null; then
     echo "neopro-usb-wifi: wlan1 detected after $((i * INTERVAL))s"
-    # Désactiver autosuspend immédiatement
-    echo "on" > /sys/class/net/wlan1/device/../power/control 2>/dev/null || true
+    stabilize_wlan1
     exit 0
   fi
   sleep $INTERVAL
@@ -44,7 +53,7 @@ for module in rt2800usb ath9k_htc rtl8188eu rtl8192cu 8188eu; do
     sleep 5
     if ip link show wlan1 &>/dev/null; then
       echo "neopro-usb-wifi: wlan1 recovered via modprobe $module"
-      echo "on" > /sys/class/net/wlan1/device/../power/control 2>/dev/null || true
+      stabilize_wlan1
       exit 0
     fi
   fi
@@ -64,7 +73,7 @@ for usb_dev in /sys/bus/usb/devices/[0-9]*-[0-9]*; do
         sleep 5
         if ip link show wlan1 &>/dev/null; then
           echo "neopro-usb-wifi: wlan1 recovered via USB power cycle"
-          echo "on" > /sys/class/net/wlan1/device/../power/control 2>/dev/null || true
+          stabilize_wlan1
           exit 0
         fi
         ;;
