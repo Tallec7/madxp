@@ -1,3 +1,9 @@
+## [3.42.2](https://github.com/Tallec7/neopro/compare/v3.42.1...v3.42.2) (2026-02-16)
+
+### Bug Fixes
+
+- **socket:** détection connexions mortes plus rapide + fix MIME type fallback SPA Nginx ([fb0df2c](https://github.com/Tallec7/neopro/commit/fb0df2c43abcf5e3ed3656a511842af47965f520))
+
 ## [3.43.0] (2026-02-16)
 
 ### Bug Fixes
