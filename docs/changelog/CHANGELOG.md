@@ -1,3 +1,9 @@
+## [3.44.3](https://github.com/Tallec7/neopro/compare/v3.44.2...v3.44.3) (2026-02-16)
+
+### Bug Fixes
+
+- **kiosk:** scoper cursor: none à app-tv pour ne pas masquer le curseur sur /remote ([18e0aa1](https://github.com/Tallec7/neopro/commit/18e0aa1334e6c354d04b29a1466c6fa13fda8545))
+
 ## [3.44.2](https://github.com/Tallec7/neopro/compare/v3.44.1...v3.44.2) (2026-02-16)
 
 ### Bug Fixes
