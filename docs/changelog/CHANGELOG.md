@@ -1,3 +1,9 @@
+# [3.44.0](https://github.com/Tallec7/neopro/compare/v3.43.2...v3.44.0) (2026-02-16)
+
+### Features
+
+- **hdmi:** détection EDID pour identifier le type d'écran connecté (moniteur PC vs TV) ([87bc5ae](https://github.com/Tallec7/neopro/commit/87bc5ae1c9ba1af63f0f657ab8412a7f8234ec14))
+
 ## [3.44.0] (2026-02-16)
 
 ### Features
