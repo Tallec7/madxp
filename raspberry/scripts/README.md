@@ -147,12 +147,35 @@ Cette commande :
 ### 3. Diagnostic / Maintenance
 
 ```bash
-# Copier le script de diagnostic sur le Pi
-scp raspberry/scripts/diagnose-pi.sh pi@neopro.local:~/
+# Diagnostic interactif (sur le Pi ou via SSH)
+ssh pi@neopro.local '/home/pi/neopro/scripts/diagnose-pi.sh'
 
-# L'exécuter
-ssh pi@neopro.local './diagnose-pi.sh'
+# Diagnostic JSON (exploitable par le dashboard / OTA)
+ssh pi@neopro.local '/home/pi/neopro/scripts/diagnose-pi.sh --json'
 ```
+
+**Ce que vérifie `diagnose-pi.sh` :**
+
+- Version Node.js (v18+ requis)
+- Packages apt critiques (hostapd, dnsmasq, nginx, ffmpeg, avahi-daemon)
+- Packages apt recommandés (unclutter-xfixes, chromium, cec-utils, firmware-realtek)
+- Services systemd (état + installation)
+- Ports réseau (80, 3000, 8080)
+- Fichiers et répertoires critiques + node_modules
+- Configuration Nginx (syntaxe, routes, site-enabled)
+- Réseau WiFi (AP mode, SSID, IP statique)
+- Permissions (home, webapp owner, www-data group, club-config.json)
+- Configuration GPU (gpu_mem / Pi 5 V3D Mesa)
+- Espace disque
+- Tests HTTP (localhost, /tv, :8080)
+
+**Modes de sortie :**
+
+- `--json` : sortie JSON pour exploitation automatique (exit code = nombre d'erreurs)
+- `--quiet` : résumé uniquement
+- _(par défaut)_ : mode interactif avec couleurs et détails
+
+> **Note :** `deploy-remote.sh` exécute automatiquement `diagnose-pi.sh --json` après chaque déploiement. L'OTA (sync-agent) l'exécute aussi dans son rapport post-mise à jour.
 
 ---
 
@@ -176,7 +199,7 @@ ssh pi@neopro.local './diagnose-pi.sh'
 
 | Script                 | Emplacement          | Exécution | Description                                 |
 | ---------------------- | -------------------- | --------- | ------------------------------------------- |
-| `diagnose-pi.sh`       | `raspberry/scripts/` | Sur Pi    | Diagnostic complet                          |
+| `diagnose-pi.sh`       | `raspberry/scripts/` | Sur Pi    | Diagnostic complet (--json pour automation) |
 | `fix-hostname.sh`      | `raspberry/scripts/` | Sur Pi    | Corriger le hostname                        |
 | `setup-wifi-client.sh` | `raspberry/scripts/` | Sur Pi    | Configurer WiFi client (accès internet)     |
 | `cleanup-pi.sh`        | `raspberry/scripts/` | Sur Mac   | **Supprime ~/raspberry après installation** |

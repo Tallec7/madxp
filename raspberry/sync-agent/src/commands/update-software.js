@@ -930,6 +930,8 @@ class SoftwareUpdateHandler {
 
   /**
    * Génère un rapport post-mise à jour
+   * Exécute diagnose-pi.sh --json pour un diagnostic complet du Pi,
+   * puis enrichit avec les vérifications de services et HTTP.
    * @param {string} newVersion Nouvelle version installée
    * @returns {Promise<object>} Rapport détaillé
    */
@@ -942,9 +944,49 @@ class SoftwareUpdateHandler {
       diskUsage: null,
       errors: [],
       healthy: true,
+      diagnostic: null,
     };
 
-    // Vérifier chaque service
+    // Exécuter le diagnostic complet via diagnose-pi.sh --json
+    const diagScript = path.join(config.paths.root, 'scripts', 'diagnose-pi.sh');
+    try {
+      if (await fs.pathExists(diagScript)) {
+        const { stdout } = await execAsync(`bash ${diagScript} --json 2>/dev/null`, { timeout: 30000 });
+        try {
+          report.diagnostic = JSON.parse(stdout.trim());
+          if (report.diagnostic.errors > 0) {
+            report.errors.push(`diagnose-pi: ${report.diagnostic.errors} erreur(s) système détectée(s)`);
+            report.healthy = false;
+          }
+          logger.info('Full diagnostic completed', {
+            errors: report.diagnostic.errors,
+            warnings: report.diagnostic.warnings,
+            healthy: report.diagnostic.healthy,
+          });
+        } catch (parseError) {
+          logger.warn('Could not parse diagnostic JSON output', { error: parseError.message });
+        }
+      } else {
+        logger.info('diagnose-pi.sh not found, skipping full diagnostic');
+      }
+    } catch (diagError) {
+      // diagnose-pi.sh exits with error count as exit code — capture output anyway
+      if (diagError.stdout) {
+        try {
+          report.diagnostic = JSON.parse(diagError.stdout.trim());
+          if (report.diagnostic.errors > 0) {
+            report.errors.push(`diagnose-pi: ${report.diagnostic.errors} erreur(s) système détectée(s)`);
+            report.healthy = false;
+          }
+        } catch {
+          logger.warn('Could not parse diagnostic output after error', { error: diagError.message });
+        }
+      } else {
+        logger.warn('diagnose-pi.sh execution failed', { error: diagError.message });
+      }
+    }
+
+    // Vérifier chaque service (toujours fait, même si le diagnostic est disponible)
     const services = ['neopro-app', 'neopro-admin', 'neopro-sync-agent', 'nginx'];
 
     for (const service of services) {

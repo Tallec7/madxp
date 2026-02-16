@@ -1,3 +1,16 @@
+## [3.45.1] (2026-02-16)
+
+### Features
+
+- **diagnose-pi:** diagnostic complet du Pi avec 16 catégories de vérification (Node.js, apt packages, nginx routes, permissions, gpu, disk, etc.)
+- **diagnose-pi:** mode `--json` pour exploitation automatique par le dashboard et l'OTA (exit code = nombre d'erreurs)
+- **deploy-remote:** exécution automatique de `diagnose-pi.sh --json` après chaque déploiement SSH
+- **sync-agent:** rapport post-OTA enrichi avec le diagnostic complet du Pi (`diagnose-pi.sh --json`)
+
+### Documentation
+
+- **scripts/README:** documenter les 16 vérifications de diagnose-pi.sh et les modes de sortie (--json, --quiet)
+
 # [3.45.0](https://github.com/Tallec7/neopro/compare/v3.44.4...v3.45.0) (2026-02-16)
 
 ### Features
