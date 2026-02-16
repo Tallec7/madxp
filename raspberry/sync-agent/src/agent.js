@@ -13,6 +13,7 @@ const commands = require('./commands');
 const analyticsCollector = require('./analytics');
 const sponsorImpressionsCollector = require('./sponsor-impressions');
 const { calculateConfigHash } = require('./utils/config-merge');
+const { safeReadConfig } = require('./utils/safe-config-io');
 const ConfigWatcher = require('./watchers/config-watcher');
 const VideoWatcher = require('./watchers/video-watcher');
 const expirationChecker = require('./tasks/expiration-checker');
@@ -205,12 +206,18 @@ class NeoproSyncAgent {
   async requestScreenshot(data) {
     logger.info('📸 Screenshot requested from cloud, relaying to local server');
     const screenshotData = await localSocket.requestScreenshot(data);
-    if (screenshotData) {
-      logger.info('📸 Screenshot data received from local, forwarding to central');
-      this.socket.emit('screenshot-data', screenshotData);
-    } else {
-      logger.warn('Screenshot request failed or timed out');
+    if (!screenshotData) {
+      logger.warn('Screenshot request timed out (no response from local)');
+      this.socket.emit('screenshot-data', { error: 'timeout', timestamp: Date.now() });
+      return;
     }
+    if (screenshotData.error) {
+      logger.warn('Screenshot request failed', { error: screenshotData.error });
+      this.socket.emit('screenshot-data', screenshotData);
+      return;
+    }
+    logger.info('📸 Screenshot data received from local, forwarding to central');
+    this.socket.emit('screenshot-data', screenshotData);
   }
 
   /**
@@ -375,8 +382,7 @@ class NeoproSyncAgent {
         return;
       }
 
-      const configContent = await fs.readFile(configPath, 'utf8');
-      const localConfig = JSON.parse(configContent);
+      const localConfig = await safeReadConfig(configPath);
       const configHash = calculateConfigHash(localConfig);
 
       // Récupérer la liste des vidéos et les stats de stockage
@@ -645,6 +651,21 @@ class NeoproSyncAgent {
         error: error.message,
         stack: error.stack,
       });
+
+      // Notify server of deployment failure so dashboard shows 'failed' instead of stuck 'in_progress'
+      if (type === 'deploy_video' && data.deploymentId) {
+        this.socket.emit('deploy_progress', {
+          deploymentId: data.deploymentId,
+          videoId: data.videoId,
+          error: error.message,
+        });
+      } else if (type === 'update_software' && data.deploymentId) {
+        this.socket.emit('update_progress', {
+          deploymentId: data.deploymentId,
+          version: data.version,
+          error: error.message,
+        });
+      }
 
       this.socket.emit('command_result', {
         commandId: id,

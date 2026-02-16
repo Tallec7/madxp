@@ -426,9 +426,16 @@ class SocketService {
 
     // Cloud monitoring: relay screenshot data from Pi to dashboard
     socket.on('screenshot-data', (data: unknown) => {
-      logger.info('Screenshot data received from Pi', { siteId });
+      const payload = data as Record<string, unknown>;
+      if (payload.error) {
+        logger.warn('Screenshot failed on Pi', { siteId, error: payload.error });
+        metricsService.recordCommand('screenshot', 'pi_error');
+      } else {
+        logger.info('Screenshot data received from Pi', { siteId });
+        metricsService.recordCommand('screenshot', 'received');
+      }
       if (this.io) {
-        this.io.to('dashboard').emit('screenshot-data', { siteId, ...(data as Record<string, unknown>) });
+        this.io.to('dashboard').emit('screenshot-data', { siteId, ...payload });
       }
     });
 

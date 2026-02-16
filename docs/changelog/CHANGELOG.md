@@ -1,3 +1,31 @@
+## [3.49.0] (2026-02-16)
+
+### Features
+
+- **sync-agent:** atomic write for configuration.json via tmp + rename — prevents corruption on power loss ([ADR-028](../adr/ADR-028-atomic-config-write.md))
+- **sync-agent:** auto-recovery on corrupted configuration.json — truncate orphan data, fallback to encrypted backup, or start fresh
+- **sync-agent:** new shared utility `utils/safe-config-io.js` (`atomicWriteJson`, `safeReadConfig`, `tryTruncateJson`)
+
+### Bug Fixes
+
+- **sync-agent:** emit `deploy_progress` with error flag when `deploy_video` command fails — server now correctly marks deployment as `failed` instead of leaving it stuck in `in_progress`
+- **sync-agent:** migrate all configuration.json writers to atomic write (deploy-video, delete-video, update-config, expiration-checker, local-backup restore)
+- **sync-agent:** migrate all configuration.json readers to `safeReadConfig` with auto-recovery (agent syncLocalState, deploy-video, delete-video, update-config, expiration-checker)
+- **cloud-remote:** screenshot error response — le TV component et le sync-agent renvoient toujours une réponse `screenshot-data` avec champ `error` au lieu du silence (élimine le timeout de 10s côté dashboard)
+- **cloud-remote:** le dashboard affiche immédiatement le diagnostic d'échec (`no_active_video`, `capture_failed`, `timeout`) au lieu d'attendre le timeout générique
+
+### Monitoring
+
+- **cloud-remote:** ajout métriques Prometheus `neopro_commands_total{type="screenshot", status="received|pi_error"}` pour tracer le taux de succès des screenshots côté Pi
+
+### Documentation
+
+- **adr:** add ADR-028 atomic config write with incident post-mortem
+- **troubleshooting:** add section for corrupted configuration.json diagnostic and fix
+- **sync-architecture:** ajout événement `screenshot-data` dans la table des flux + section gestion d'erreur screenshot (v2.0)
+- **adr-007:** ajout détails error response screenshot et nouveaux statuts métriques Prometheus
+- **changelog:** document v3.49.0 changes
+
 ## [3.47.2](https://github.com/Tallec7/neopro/compare/v3.47.1...v3.47.2) (2026-02-16)
 
 ### Bug Fixes

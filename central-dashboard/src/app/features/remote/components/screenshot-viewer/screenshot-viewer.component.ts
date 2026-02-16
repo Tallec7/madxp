@@ -16,11 +16,12 @@ import { SocketService } from '../../../../core/services/socket.service';
 
 interface ScreenshotData {
   siteId: string;
-  image: string;
+  image?: string;
   timestamp: number;
   currentVideo?: string;
   phase?: string;
   isManualMode?: boolean;
+  error?: string;
 }
 
 @Component({
@@ -211,7 +212,20 @@ export class ScreenshotViewerComponent implements OnInit, OnDestroy {
     this.socketService.on<ScreenshotData>('screenshot-data')
       .pipe(takeUntil(this.destroy$))
       .subscribe((data) => {
-        if (data.siteId === this.siteId && data.image) {
+        if (data.siteId !== this.siteId) return;
+        if (data.error) {
+          this.isLoading = false;
+          this.error = data.error === 'no_active_video'
+            ? 'Aucune vidéo active sur le Pi'
+            : data.error === 'capture_failed'
+              ? 'Capture échouée (pas de frames décodées)'
+              : data.error === 'timeout'
+                ? 'Le Pi n\'a pas répondu'
+                : `Erreur : ${data.error}`;
+          this.clearLoadingTimeout();
+          return;
+        }
+        if (data.image) {
           this.screenshotUrl = data.image;
           this.screenshotVideo = data.currentVideo || null;
           this.screenshotTimestamp = data.timestamp || Date.now();

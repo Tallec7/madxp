@@ -157,7 +157,7 @@ La commande `screenshot` a été ajoutée aux commandes valides. Elle demande au
 **Données publiques ajoutées** :
 
 - `playerState` : État éphémère du player TV (15 champs : currentVideo, progress, phase, isPlaying, loopIndex, loopTotal, nextVideo, lastError, etc.), stocké en mémoire uniquement — pas de données sensibles
-- Commande `screenshot` : Retourne un JPEG via Socket.IO, pas de stockage persistant
+- Commande `screenshot` : Retourne un JPEG via Socket.IO, pas de stockage persistant. En cas d'échec, le Pi renvoie `{ error: 'no_active_video' | 'capture_failed' | 'timeout' }` pour un feedback immédiat au dashboard (v3.49+)
 
 ### Pending Config & Commands Indicator (v3.28+)
 
@@ -174,8 +174,10 @@ L'endpoint `GET /state` retourne désormais `pendingConfigVersionId` (UUID de la
 
 Toutes les commandes cloud remote sont instrumentées via les métriques Prometheus existantes :
 
-- `neopro_commands_total{type, status}` : Compteur par type de commande (`score-update`, `screenshot`, etc.) et statut (`sent`, `error`)
+- `neopro_commands_total{type, status}` : Compteur par type de commande (`score-update`, `screenshot`, etc.) et statut (`sent`, `error`, `received`, `pi_error`)
 - `neopro_command_latency_seconds{type}` : Histogramme de latence par type
+
+> **Note (v3.49+)** : Le statut `received` comptabilise les screenshots réussis (image reçue du Pi). Le statut `pi_error` comptabilise les échecs côté Pi (pas de vidéo active, capture canvas échouée, timeout local). La combinaison `sent` vs `received + pi_error` permet de détecter les pertes silencieuses (Pi déconnecté, Chromium crashé).
 
 Ces métriques sont visibles dans Grafana (dashboard NeoPro Overview) et permettent de détecter une utilisation anormale (spam de commandes, erreurs récurrentes).
 

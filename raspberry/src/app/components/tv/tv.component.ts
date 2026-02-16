@@ -410,19 +410,31 @@ export class TvComponent implements OnInit, OnDestroy {
       const activeVideo = this.isManualMode
         ? this.getActiveManualPlayer()
         : this.getActivePlayer();
-      if (activeVideo) {
-        const data = this.screenshotService.captureScreenshot(activeVideo);
-        if (data) {
-          this.socketService.emit('screenshot-data', {
-            image: data,
-            timestamp: Date.now(),
-            currentVideo: PlayerStateService.filenameFromPath(activeVideo.src),
-            phase: this.activePhase,
-            isManualMode: this.isManualMode,
-          } as unknown as Command);
-          console.log('[TV] Screenshot sent');
-        }
+      if (!activeVideo) {
+        console.warn('[TV] Screenshot failed: no active video element');
+        this.socketService.emit('screenshot-data', {
+          error: 'no_active_video',
+          timestamp: Date.now(),
+        } as unknown as Command);
+        return;
       }
+      const data = this.screenshotService.captureScreenshot(activeVideo);
+      if (!data) {
+        console.warn('[TV] Screenshot failed: capture returned empty');
+        this.socketService.emit('screenshot-data', {
+          error: 'capture_failed',
+          timestamp: Date.now(),
+        } as unknown as Command);
+        return;
+      }
+      this.socketService.emit('screenshot-data', {
+        image: data,
+        timestamp: Date.now(),
+        currentVideo: PlayerStateService.filenameFromPath(activeVideo.src),
+        phase: this.activePhase,
+        isManualMode: this.isManualMode,
+      } as unknown as Command);
+      console.log('[TV] Screenshot sent');
     });
 
     // =========================================================================
