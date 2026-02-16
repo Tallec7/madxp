@@ -9,6 +9,7 @@
 ## Contexte
 
 Aujourd'hui, les interactions sponsor passent systématiquement par la chargée de com' du club :
+
 1. Le sponsor envoie son visuel par email
 2. La chargée de com' l'uploade dans Neopro
 3. Le sponsor demande ses stats → elle génère un PDF et l'envoie
@@ -36,12 +37,14 @@ dashboard.neopro.tv/login → rôle advertiser → vue limitée :
 ```
 
 **Avantages** :
+
 - **Réutilise l'existant** : Auth, RLS, services Angular, API backend
 - Pas de nouvelle app à déployer
 - Le rôle `advertiser` et les tables `advertiser_videos`, `advertiser_sites` existent déjà
 - Maintenance : un seul codebase
 
 **Inconvénients** :
+
 - UX compromise : le dashboard est pensé pour les opérateurs, pas les sponsors
 - Risque de surcharger le dashboard avec des vues très différentes
 - Le sponsor voit la navigation "technique" même si la plupart des menus sont cachés
@@ -62,12 +65,14 @@ sponsor.neopro.tv → App Angular dédiée :
 ```
 
 **Avantages** :
+
 - **UX optimale** : Interface pensée pour un non-technicien
 - Branding possible (sponsors = clients payants, l'interface doit impressionner)
 - Séparation nette des responsabilités
 - Peut évoluer indépendamment du dashboard opérateur
 
 **Inconvénients** :
+
 - Nouveau codebase Angular à maintenir
 - Duplication partielle de services (auth, API calls)
 - Hébergement supplémentaire
@@ -88,11 +93,13 @@ neopro.tv/sponsor/{sponsorId}/{token} → Page statique :
 ```
 
 **Avantages** :
+
 - **Zéro friction** : Pas de login, accès par lien unique (comme ADR-007)
 - Ultra simple à développer (quelques pages)
 - Le sponsor reçoit le lien par email chaque mois
 
 **Inconvénients** :
+
 - Sécurité par token (si le lien fuite, accès aux données)
 - Fonctionnalités limitées
 - Pas de vraie gestion de compte
@@ -102,13 +109,13 @@ neopro.tv/sponsor/{sponsorId}/{token} → Page statique :
 
 ## Critères de décision
 
-| Critère | Poids | Option A (Dashboard) | Option B (App dédiée) | Option C (Landing) |
-|---------|-------|---------------------|----------------------|-------------------|
-| Effort dev | 25% | ✅ Faible | ❌ Élevé | ✅ Très faible |
-| UX sponsor | 30% | ⚠️ Moyenne | ✅ Excellente | ⚠️ Basique |
-| Maintenance | 20% | ✅ 1 codebase | ❌ 2 codebases | ✅ Minimal |
-| Évolutivité | 15% | ✅ Bonne | ✅ Excellente | ❌ Limitée |
-| Impression client | 10% | ⚠️ Technique | ✅ Pro | ⚠️ Simple |
+| Critère           | Poids | Option A (Dashboard) | Option B (App dédiée) | Option C (Landing) |
+| ----------------- | ----- | -------------------- | --------------------- | ------------------ |
+| Effort dev        | 25%   | ✅ Faible            | ❌ Élevé              | ✅ Très faible     |
+| UX sponsor        | 30%   | ⚠️ Moyenne           | ✅ Excellente         | ⚠️ Basique         |
+| Maintenance       | 20%   | ✅ 1 codebase        | ❌ 2 codebases        | ✅ Minimal         |
+| Évolutivité       | 15%   | ✅ Bonne             | ✅ Excellente         | ❌ Limitée         |
+| Impression client | 10%   | ⚠️ Technique         | ✅ Pro                | ⚠️ Simple          |
 
 ## Recommandation
 
@@ -132,4 +139,4 @@ La logique backend (API, RLS) sera identique dans les deux cas.
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_

@@ -32,11 +32,13 @@ ffmpeg -i sponsor.jpg -i logo_club.png \
 ```
 
 **Avantages** :
+
 - Déjà utilisé pour image-to-video (compétence existante)
 - Rendu serveur = résultat identique partout
 - Pas de dépendance navigateur
 
 **Inconvénients** :
+
 - **Mémoire** : Railway 512MB, ffmpeg gourmand (voir ADR-015)
 - Pas de prévisualisation live (render → preview → ajuster → re-render)
 - Animations limitées (ffmpeg ≠ After Effects)
@@ -58,12 +60,14 @@ ctx.fillText('PARTENAIRE OFFICIEL', 640, 680);
 ```
 
 **Avantages** :
+
 - **Prévisualisation live** : WYSIWYG, l'utilisateur voit le résultat en temps réel
 - Animations CSS/Canvas riches
 - Pas de charge serveur pour la preview
 - Expérience proche de Canva
 
 **Inconvénients** :
+
 - La capture vidéo depuis Canvas est complexe (codecs, performance)
 - Le rendu final doit quand même passer par le serveur (uniformité)
 - Plus de code frontend à maintenir
@@ -82,18 +86,20 @@ const result = await creatomate.render({
   modifications: {
     'sponsor-image': sponsorUrl,
     'club-logo': clubLogoUrl,
-    'club-name': 'FC Nantes'
-  }
+    'club-name': 'FC Nantes',
+  },
 });
 ```
 
 **Avantages** :
+
 - **Qualité pro** : Templates de qualité studio
 - Zéro infrastructure à gérer
 - Animations complexes possibles
 - Prévisualisation via API
 
 **Inconvénients** :
+
 - **Coût** : ~$0.10-0.50 par rendu → 1000 rendus/mois = $100-500/mois
 - Dépendance externe (SaaS)
 - Latence réseau pour le rendu
@@ -104,17 +110,18 @@ const result = await creatomate.render({
 
 ## Critères de décision
 
-| Critère | Poids | Option A (ffmpeg) | Option B (Canvas) | Option C (SaaS) |
-|---------|-------|-------------------|-------------------|-----------------|
-| Coût | 30% | ✅ Gratuit | ✅ Gratuit | ❌ $100-500/mois |
-| Qualité rendu | 25% | ⚠️ Basique | ✅ Riche | ✅ Pro |
-| Preview live | 20% | ❌ Non | ✅ Oui | ⚠️ Via API |
-| Effort dev | 15% | ⚠️ Moyen | ❌ Élevé | ✅ Faible |
-| Mémoire serveur | 10% | ❌ Risque 512MB | ✅ Client-side | ✅ Externe |
+| Critère         | Poids | Option A (ffmpeg) | Option B (Canvas) | Option C (SaaS)  |
+| --------------- | ----- | ----------------- | ----------------- | ---------------- |
+| Coût            | 30%   | ✅ Gratuit        | ✅ Gratuit        | ❌ $100-500/mois |
+| Qualité rendu   | 25%   | ⚠️ Basique        | ✅ Riche          | ✅ Pro           |
+| Preview live    | 20%   | ❌ Non            | ✅ Oui            | ⚠️ Via API       |
+| Effort dev      | 15%   | ⚠️ Moyen          | ❌ Élevé          | ✅ Faible        |
+| Mémoire serveur | 10%   | ❌ Risque 512MB   | ✅ Client-side    | ✅ Externe       |
 
 ## Recommandation
 
 **Option B (Canvas navigateur)** avec rendu final ffmpeg serveur :
+
 - Preview et édition dans le navigateur (zéro coût, UX riche)
 - Export des paramètres (positions, tailles, textes) vers le serveur
 - Rendu final ffmpeg avec les mêmes paramètres (uniformité)
@@ -127,4 +134,4 @@ const result = await creatomate.render({
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_

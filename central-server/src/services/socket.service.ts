@@ -715,6 +715,24 @@ class SocketService {
       clearInterval(this.dbSyncInterval);
       this.dbSyncInterval = null;
     }
+
+    // Notify all connected Pi devices that the server is shutting down,
+    // so they can reconnect gracefully instead of experiencing an abrupt drop.
+    if (this.io) {
+      logger.info('Notifying connected sites of server shutdown', {
+        connectedSites: this.connectedSites.size,
+      });
+      this.io.emit('server_shutdown', { reason: 'Server restarting, please reconnect.' });
+
+      // Give clients a brief moment to receive the notification before closing
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Close all Socket.IO connections and stop accepting new ones
+      this.io.disconnectSockets(true);
+      this.io.close();
+      this.io = null;
+    }
+
     this.pendingCommands.clear();
     this.connectedSites.clear();
     this.lastPongReceived.clear();

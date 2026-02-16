@@ -221,6 +221,36 @@ Voir ADR-013 pour le détail du merge intelligent.
 | `license_status`      | Cloud → Pi | `{ status, expiresAt, message }` | v2.47     |
 | `network_alert`       | Pi → Cloud | `{ type, severity, details }`    | v2.37     |
 | `network_rollback`    | Pi → Cloud | `{ operation, reason }`          | v2.37     |
+| `server_shutdown`     | Cloud → Pi | `{ reason }`                     | v3.48     |
+
+### Graceful shutdown et notification `server_shutdown` (v3.48)
+
+**Problème** : Lors d'un redéploiement Railway, le central-server envoyait `SIGTERM` mais ne fermait pas proprement les connexions Socket.IO. Les Pi subissaient une déconnexion brutale (`SIGKILL` après le grace period), provoquant des alertes Slack "Site Offline" en cascade pour tous les sites connectés.
+
+**Solution** :
+
+1. `socketService.cleanup()` exécuté **avant** `httpServer.close()` (Socket.IO a besoin du HTTP server actif pour émettre)
+2. Nouveau événement `server_shutdown` émis à tous les clients connectés avant fermeture
+3. `io.disconnectSockets(true)` + `io.close()` ferment proprement toutes les connexions
+4. Safety timeout de 10s sur `httpServer.close()` pour éviter le hang sur connexions persistantes
+5. Les Pi reçoivent un `disconnect` avec reason `io server disconnect` au lieu d'un drop brutal
+
+**Séquence de shutdown** :
+
+```
+SIGTERM reçu
+  → Stop schedulers, alerting, services
+  → socketService.cleanup()
+    → io.emit('server_shutdown', { reason })   // Notifie tous les Pi
+    → 500ms pause                              // Laisse le message arriver
+    → io.disconnectSockets(true)               // Ferme les sockets proprement
+    → io.close()                               // Stop le serveur Socket.IO
+    → Clear maps in-memory, ferme Redis
+  → httpServer.close()
+  → pool.end()
+  → process.exit(0)
+  → Safety net: setTimeout(10s) → process.exit(0) si hang
+```
 
 ### Métriques Prometheus pour les déconnexions (v3.18)
 
@@ -246,4 +276,4 @@ Voir ADR-013 pour le détail du merge intelligent.
 
 ---
 
-_Créé le 9 janvier 2026 — Mis à jour le 16 février 2026_
+_Créé le 9 janvier 2026 — Mis à jour le 17 février 2026_

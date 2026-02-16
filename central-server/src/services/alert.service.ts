@@ -43,13 +43,39 @@ const SEVERITY_EMOJIS: Record<AlertSeverity, string> = {
   critical: ':rotating_light:'
 };
 
+// Cooldown to avoid spamming Slack when sites flap (disconnect/reconnect rapidly)
+const SITE_STATUS_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_COOLDOWN_ENTRIES = 200;
+
 class AlertService {
   private webhookUrl: string | null;
   private enabled: boolean;
+  private siteStatusCooldown: Map<string, number> = new Map();
 
   constructor() {
     this.webhookUrl = process.env.SLACK_WEBHOOK_URL || null;
     this.enabled = process.env.SLACK_ALERTS_ENABLED === 'true';
+  }
+
+  /** Check if a site status alert is in cooldown. Returns true if alert should be skipped. */
+  private isInCooldown(key: string): boolean {
+    const lastSent = this.siteStatusCooldown.get(key);
+    if (lastSent && Date.now() - lastSent < SITE_STATUS_COOLDOWN_MS) {
+      return true;
+    }
+
+    // Prune old entries if map grows too large
+    if (this.siteStatusCooldown.size >= MAX_COOLDOWN_ENTRIES) {
+      const now = Date.now();
+      for (const [k, ts] of this.siteStatusCooldown) {
+        if (now - ts > SITE_STATUS_COOLDOWN_MS) {
+          this.siteStatusCooldown.delete(k);
+        }
+      }
+    }
+
+    this.siteStatusCooldown.set(key, Date.now());
+    return false;
   }
 
   private async sendSlackMessage(message: SlackMessage): Promise<boolean> {
@@ -159,8 +185,12 @@ class AlertService {
     return this.sendAlert({ title, message, severity: 'critical', ...options });
   }
 
-  // Pre-built alert types
+  // Pre-built alert types (with cooldown to prevent flapping spam)
   async siteOffline(siteId: string, siteName: string): Promise<boolean> {
+    if (this.isInCooldown(`offline:${siteId}`)) {
+      logger.debug('Skipping siteOffline alert (cooldown)', { siteId, siteName });
+      return false;
+    }
     return this.sendAlert({
       title: 'Site Offline',
       message: `Le site *${siteName}* est passé hors ligne.`,
@@ -171,6 +201,10 @@ class AlertService {
   }
 
   async siteOnline(siteId: string, siteName: string): Promise<boolean> {
+    if (this.isInCooldown(`online:${siteId}`)) {
+      logger.debug('Skipping siteOnline alert (cooldown)', { siteId, siteName });
+      return false;
+    }
     return this.sendAlert({
       title: 'Site Online',
       message: `Le site *${siteName}* est de nouveau en ligne.`,

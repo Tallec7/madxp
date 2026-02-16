@@ -48,12 +48,14 @@ getActiveSponsors(): Sponsor[] {
 ```
 
 **Avantages** :
+
 - **Fonctionne offline** : Le Pi retire la vidéo même sans Internet
 - Latence nulle : vérification à chaque cycle de boucle
 - Simple : un champ `expiresAt` par vidéo
 - Cohérent avec l'architecture edge (ADR-001)
 
 **Inconvénients** :
+
 - L'horloge du Pi doit être correcte (NTP requis)
 - La vidéo reste physiquement sur le Pi (juste pas jouée)
 - Pas de notification quand une vidéo expire
@@ -66,7 +68,8 @@ getActiveSponsors(): Sponsor[] {
 
 ```typescript
 // cron-scheduler.service.ts
-cron.schedule('0 0 * * *', async () => { // Minuit chaque jour
+cron.schedule('0 0 * * *', async () => {
+  // Minuit chaque jour
   const expiredVideos = await getExpiredSponsorVideos();
   for (const { siteId, videoId } of expiredVideos) {
     await removeVideoFromLoop(siteId, videoId);
@@ -76,11 +79,13 @@ cron.schedule('0 0 * * *', async () => { // Minuit chaque jour
 ```
 
 **Avantages** :
+
 - Contrôle centralisé
 - Notification possible (email au sponsor, alerte à l'opérateur)
 - Peut aussi supprimer le fichier du Pi
 
 **Inconvénients** :
+
 - **Ne fonctionne pas offline** : Si le Pi est déconnecté le jour de l'expiration, la vidéo continue
 - Charge serveur (vérification quotidienne × N sites × M vidéos)
 - Dépend de la connexion cloud
@@ -104,11 +109,13 @@ Serveur (cloud) :
 ```
 
 **Avantages** :
+
 - Fonctionne offline (Pi local)
 - Notifications proactives (serveur)
 - Le meilleur des deux mondes
 
 **Inconvénients** :
+
 - Deux systèmes à synchroniser
 - Légèrement plus complexe
 
@@ -117,6 +124,7 @@ Serveur (cloud) :
 ## Recommandation
 
 **Option C (hybride)** :
+
 1. **V1** : Champ `expiresAt` sur les vidéos dans `configuration.json` + filtre côté Pi
 2. **V1** : Champ `expiresAt` dans l'UI dashboard (date picker dans la config de boucle)
 3. **V2** : Cron serveur pour notifications (J-7, J-0) via email
@@ -124,12 +132,12 @@ Serveur (cloud) :
 
 ### Gestion de la vidéo expirée
 
-| Action | Quand | Qui |
-|--------|-------|-----|
-| Vidéo non jouée dans la boucle | `expiresAt` dépassé | Pi (automatique) |
-| Notification opérateur | J-7 et J-0 | Serveur (cron) |
-| Notification sponsor | J-0 | Serveur (email) |
-| Suppression du fichier vidéo | Manuel ou après 30 jours | Opérateur ou cron |
+| Action                         | Quand                    | Qui               |
+| ------------------------------ | ------------------------ | ----------------- |
+| Vidéo non jouée dans la boucle | `expiresAt` dépassé      | Pi (automatique)  |
+| Notification opérateur         | J-7 et J-0               | Serveur (cron)    |
+| Notification sponsor           | J-0                      | Serveur (email)   |
+| Suppression du fichier vidéo   | Manuel ou après 30 jours | Opérateur ou cron |
 
 ## Références
 
@@ -142,4 +150,4 @@ Serveur (cloud) :
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_

@@ -488,20 +488,30 @@ const startServer = async () => {
 };
 
 process.on('SIGTERM', async () => {
-  logger.info('SIGTERM signal received: closing HTTP server');
+  logger.info('SIGTERM signal received: graceful shutdown starting');
   schedulerService.stop();
   cronSchedulerService.stop();
   memoryManagerService.stop();
   // predictiveAlertsService.stop(); // DISABLED: see start() comment above
   alertingService.cleanup();
   adminOpsService.stopCleanup();
+
+  // Cleanup sockets BEFORE closing HTTP server — Socket.IO needs the HTTP
+  // server alive to send the shutdown notification to connected Pi devices.
+  await socketService.cleanup();
+
   httpServer.close(async () => {
     logger.info('HTTP server closed');
-    await socketService.cleanup();
     await pool.end();
     logger.info('Database pool closed');
     process.exit(0);
   });
+
+  // Safety net: force exit if httpServer.close() hangs on lingering connections
+  setTimeout(() => {
+    logger.warn('Graceful shutdown timeout — forcing exit');
+    process.exit(0);
+  }, 10000).unref();
 });
 
 process.on('unhandledRejection', (reason, promise) => {

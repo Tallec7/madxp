@@ -28,24 +28,24 @@ Ces métriques, présentées dans des graphiques professionnels (Chart.js), donn
 
 ### Supprimé (frontend)
 
-| Page | Route | LOC |
-|------|-------|-----|
-| Vue d'ensemble | `/analytics` | ~800 |
-| Comparaison multi-sites | `/analytics/comparison` | ~700 |
-| Dashboard temps réel | `/analytics/realtime` | ~600 |
-| Analytics par club | `/sites/:id/analytics` | ~700 |
-| Catégories analytics | `/admin/analytics-categories` | ~500 |
-| Analytics annonceur | `/advertisers/:id/analytics` | ~800 |
+| Page                    | Route                         | LOC  |
+| ----------------------- | ----------------------------- | ---- |
+| Vue d'ensemble          | `/analytics`                  | ~800 |
+| Comparaison multi-sites | `/analytics/comparison`       | ~700 |
+| Dashboard temps réel    | `/analytics/realtime`         | ~600 |
+| Analytics par club      | `/sites/:id/analytics`        | ~700 |
+| Catégories analytics    | `/admin/analytics-categories` | ~500 |
+| Analytics annonceur     | `/advertisers/:id/analytics`  | ~800 |
 
 ### Conservé (backend)
 
-| Service | Justification |
-|---------|---------------|
-| `realtime-stats.service.ts` | Compteurs connexion temps réel (dashboard principal) |
-| `excel-export.service.ts` | Export Excel pour billing mensuel |
-| `billing.service.ts` | Données de facturation par mois |
-| `cron-scheduler.service.ts` | Agrégation `club_daily_stats` et `advertiser_daily_stats` |
-| Endpoints `/api/analytics/*` | Usage programmatique et billing |
+| Service                      | Justification                                             |
+| ---------------------------- | --------------------------------------------------------- |
+| `realtime-stats.service.ts`  | Compteurs connexion temps réel (dashboard principal)      |
+| `excel-export.service.ts`    | Export Excel pour billing mensuel                         |
+| `billing.service.ts`         | Données de facturation par mois                           |
+| `cron-scheduler.service.ts`  | Agrégation `club_daily_stats` et `advertiser_daily_stats` |
+| Endpoints `/api/analytics/*` | Usage programmatique et billing                           |
 
 ### Conservé (dashboard)
 
@@ -71,12 +71,14 @@ Ces métriques, présentées dans des graphiques professionnels (Chart.js), donn
 ### 3. Supprimer l'UI, garder le backend (choisi) ✅
 
 **Avantages** :
+
 - Élimine le risque de mauvaises décisions basées sur des données incorrectes
 - Réduit la surface de maintenance (~4100 LOC)
 - Le backend reste disponible pour billing et futurs besoins
 - Permet de reconstruire l'UI proprement quand les données seront fiables
 
 **Inconvénients** :
+
 - Perte temporaire de la fonctionnalité analytics pour les utilisateurs
 - Les composants et routes sont encore référencés dans `app.routes.ts` (nettoyage partiel)
 
@@ -112,4 +114,4 @@ Ces métriques, présentées dans des graphiques professionnels (Chart.js), donn
 
 ---
 
-*Créé le 9 février 2026*
+_Créé le 9 février 2026_

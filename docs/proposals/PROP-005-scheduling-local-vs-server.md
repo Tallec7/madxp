@@ -9,6 +9,7 @@
 ## Contexte
 
 Les clubs veulent programmer leur contenu :
+
 - "La boucle sponsors tourne de 8h à 22h en semaine"
 - "Le week-end, c'est la boucle match-day"
 - "La pub de ce sponsor passe uniquement le mardi et jeudi"
@@ -44,12 +45,14 @@ Actuellement, les changements de boucle sont manuels (via télécommande ou dash
 ```
 
 **Avantages** :
+
 - **Fonctionne offline** : Le Pi exécute le planning même sans Internet
 - Latence nulle : le changement se fait localement
 - Cohérent avec l'architecture edge (ADR-001)
 - Pas de charge serveur supplémentaire
 
 **Inconvénients** :
+
 - Le Pi doit avoir une horloge fiable (NTP requis)
 - Modification du planning = redéploiement de la config
 - Logique de scheduling à implémenter dans le composant TV Angular
@@ -66,20 +69,22 @@ Actuellement, les changements de boucle sont manuels (via télécommande ou dash
 // cron-scheduler.service.ts
 cron.schedule('0 8 * * 1-5', () => {
   // 8h en semaine → pousser boucle sponsors
-  sites.forEach(site => {
+  sites.forEach((site) => {
     socketService.emit(site.id, 'update_config', {
-      activeLoop: 'sponsors_matin'
+      activeLoop: 'sponsors_matin',
     });
   });
 });
 ```
 
 **Avantages** :
+
 - Contrôle centralisé total
 - Changements de planning sans redéploiement
 - Logique de scheduling dans un seul endroit (serveur)
 
 **Inconvénients** :
+
 - **Ne fonctionne pas offline** : Si Internet coupe, pas de changement de boucle
 - Charge serveur : 50+ sites × N changements/jour = beaucoup de messages
 - Latence réseau pour chaque changement
@@ -101,11 +106,13 @@ cron.schedule('0 8 * * 1-5', () => {
 ```
 
 **Avantages** :
+
 - **Fonctionne offline** (planning local)
 - **Flexibilité** : Override depuis le dashboard pour les cas spéciaux
 - Meilleur des deux mondes
 
 **Inconvénients** :
+
 - Plus complexe à implémenter
 - Deux sources de vérité (planning local + override serveur)
 - Conflit possible entre planning et override
@@ -116,6 +123,7 @@ cron.schedule('0 8 * * 1-5', () => {
 ## Recommandation
 
 **Option A (Pi local)** pour la V1 :
+
 - Cohérent avec ADR-001 (autonomie edge)
 - Le planning est juste un champ `schedule` dans `configuration.json`
 - Le composant TV lit le planning et change de boucle automatiquement
@@ -131,4 +139,4 @@ Option C en V2 si le besoin d'override temps réel se confirme.
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_

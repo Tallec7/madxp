@@ -64,11 +64,11 @@ export async function handleNetworkAlert(
       );
 
       // Send Slack notification (same dedup window as DB insert)
-      const siteResult = await query('SELECT club_name FROM sites WHERE id = $1', [siteId]);
-      const clubName: string = (siteResult.rows[0]?.club_name as string) || siteId;
+      const siteResult = await query('SELECT site_name FROM sites WHERE id = $1', [siteId]);
+      const siteName: string = (siteResult.rows[0]?.site_name as string) || siteId;
       alertService.networkFailure(
         siteId,
-        clubName,
+        siteName,
         (issues as string[]) || [],
         (recoveryAttempts as number) || 0
       ).catch((_e) => {/* ignore */});
@@ -191,12 +191,12 @@ export async function handleNetworkRecovered(
     );
 
     if (recentFailure.rows.length > 0) {
-      const siteResult = await query('SELECT club_name FROM sites WHERE id = $1', [siteId]);
-      const clubName: string = (siteResult.rows[0]?.club_name as string) || siteId;
+      const siteResult = await query('SELECT site_name FROM sites WHERE id = $1', [siteId]);
+      const siteName: string = (siteResult.rows[0]?.site_name as string) || siteId;
       alertService.info(
         'Réseau rétabli',
-        `Le site *${clubName}* a récupéré sa connexion ${connectionType || 'internet'} (${ip || 'IP inconnue'}).`,
-        { siteId, siteName: clubName }
+        `Le site *${siteName}* a récupéré sa connexion ${connectionType || 'internet'} (${ip || 'IP inconnue'}).`,
+        { siteId, siteName }
       ).catch((_e) => {/* ignore */});
     }
 

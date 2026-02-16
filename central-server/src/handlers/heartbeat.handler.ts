@@ -251,21 +251,21 @@ async function checkAlerts(
       );
 
       // Send Slack alert for critical metrics
-      const siteResult = await query('SELECT club_name FROM sites WHERE id = $1', [siteId]);
-      const clubName: string = (siteResult.rows[0]?.club_name as string) || siteId;
+      const siteResult = await query('SELECT site_name FROM sites WHERE id = $1', [siteId]);
+      const siteName: string = (siteResult.rows[0]?.site_name as string) || siteId;
 
       if (alert.type === 'high_temperature') {
-        alertService.highTemperature(siteId, clubName, metrics.temperature).catch((_e) => {/* ignore */});
+        alertService.highTemperature(siteId, siteName, metrics.temperature).catch((_e) => {/* ignore */});
       } else if (alert.type === 'high_disk_usage') {
-        alertService.lowDiskSpace(siteId, clubName, metrics.disk).catch((_e) => {/* ignore */});
+        alertService.lowDiskSpace(siteId, siteName, metrics.disk).catch((_e) => {/* ignore */});
       } else if (alert.type === 'kiosk_crash') {
-        alertService.kioskCrash(siteId, clubName, kioskStatus?.reason || 'GPU crash', kioskStatus?.restartCount || 0).catch((_e) => {/* ignore */});
+        alertService.kioskCrash(siteId, siteName, kioskStatus?.reason || 'GPU crash', kioskStatus?.restartCount || 0).catch((_e) => {/* ignore */});
       } else if (alert.type === 'low_wifi_signal') {
-        alertService.lowWifiSignal(siteId, clubName, wifiStatus?.signal || 0).catch((_e) => {/* ignore */});
+        alertService.lowWifiSignal(siteId, siteName, wifiStatus?.signal || 0).catch((_e) => {/* ignore */});
       } else if (alert.type === 'wlan1_missing') {
-        alertService.wlan1Missing(siteId, clubName).catch((_e) => {/* ignore */});
+        alertService.wlan1Missing(siteId, siteName).catch((_e) => {/* ignore */});
       } else if (alert.type === 'usb_power_issue') {
-        alertService.usbPowerIssue(siteId, clubName, wifiStatus?.throttled || '').catch((_e) => {/* ignore */});
+        alertService.usbPowerIssue(siteId, siteName, wifiStatus?.throttled || '').catch((_e) => {/* ignore */});
       }
 
       logger.warn('Alert created', { siteId, ...alert });

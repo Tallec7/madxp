@@ -1,3 +1,21 @@
+## [3.48.0] (2026-02-17)
+
+### Features
+
+- **alerting:** cooldown anti-flapping de 5 min/site sur les alertes Slack `siteOffline`/`siteOnline` (`alert.service.ts`) — empêche le spam Slack lors de reconnexions rapides ou redéploiements Railway
+- **socket:** graceful shutdown Socket.IO — émet `server_shutdown` aux Pi connectés, appelle `io.disconnectSockets()` + `io.close()` avant la fermeture HTTP, avec safety timeout 10s
+
+### Bug Fixes
+
+- **alerting:** utiliser `site_name` au lieu de `club_name` dans les alertes heartbeat et réseau pour cohérence avec le reste du codebase (`heartbeat.handler.ts`, `network-resilience.handler.ts`)
+- **server:** exécuter `socketService.cleanup()` avant `httpServer.close()` dans le handler SIGTERM — Socket.IO a besoin du HTTP server actif pour émettre la notification de shutdown
+
+### Documentation
+
+- **adr:** documenter le graceful shutdown et l'événement `server_shutdown` dans ADR-002
+- **modops:** ajouter les cooldowns Slack et le diagnostic multi-sites offline dans MODOP-S11-15
+- **architecture:** documenter le cooldown anti-flapping et le graceful shutdown dans la section alerting
+
 ## [3.47.1](https://github.com/Tallec7/neopro/compare/v3.47.0...v3.47.1) (2026-02-16)
 
 ### Bug Fixes

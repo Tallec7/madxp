@@ -34,11 +34,13 @@ Cycle 3 : C → D → E → A → B
 ```
 
 **Avantages** :
+
 - Simple à implémenter
 - Prévisible
 - Chaque sponsor passe en première position à tour de rôle
 
 **Inconvénients** :
+
 - Ne compense pas les différences de durée (vidéo 30s vs 10s)
 - Ne tient pas compte des phases de match (mi-temps = plus de spectateurs)
 - Rotation mécanique visible (toujours le même pattern décalé)
@@ -56,11 +58,13 @@ Sponsor C : vidéo 20s → passe 3 fois = 60s
 ```
 
 **Avantages** :
+
 - **Temps d'affichage vraiment équitable**
 - Compense les différences de durée des vidéos
 - Justifiable auprès des sponsors
 
 **Inconvénients** :
+
 - Le sponsor avec une vidéo courte passe plus souvent (impression de surreprésentation)
 - Calcul à refaire si la boucle change
 - Le spectateur voit certains sponsors plus souvent que d'autres
@@ -78,11 +82,13 @@ Compteurs sur 1 heure :
 ```
 
 **Avantages** :
+
 - **Pas de pattern visible** pour les spectateurs
 - Équitable sur la durée
 - Adaptable : on peut pondérer (sponsor premium = 2× plus de passages)
 
 **Inconvénients** :
+
 - Plus complexe à implémenter
 - Nécessite un compteur persistant (localStorage ou fichier)
 - Résultat moins prévisible (plus difficile à expliquer au sponsor)
@@ -104,11 +110,13 @@ Compteurs sur 1 heure :
 ```
 
 **Avantages** :
+
 - Différenciation commerciale (packs Bronze/Silver/Gold)
 - Revenu supplémentaire (sponsor premium paie plus)
 - Compatible avec les autres options (rotation + pondération)
 
 **Inconvénients** :
+
 - Complexifie la configuration
 - Le sponsor standard peut se plaindre de voir moins sa pub
 - Nécessite un modèle commercial clair
@@ -118,6 +126,7 @@ Compteurs sur 1 heure :
 ## Recommandation
 
 **Option A (round-robin) + Option D (poids contrat)** pour la V1 :
+
 - Simple à implémenter et à expliquer
 - Le poids `weight` est un multiplicateur du nombre de passages dans la boucle
 - Rapport de preuve : "Votre vidéo a été diffusée X fois, position moyenne #Y dans la boucle"
@@ -146,4 +155,4 @@ Ce certificat est la vraie valeur ajoutée pour le commercial.
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_

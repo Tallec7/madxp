@@ -11,6 +11,7 @@
 Avec 50+ Raspberry Pi déployés, les incidents (disque plein, surchauffe, déconnexion) étaient détectés **après** impact utilisateur. Les opérateurs découvraient les problèmes via les plaintes des clubs ou en consultant manuellement le dashboard.
 
 Problèmes identifiés :
+
 1. **Réactivité insuffisante** : Un Pi peut remplir son disque en 48h si les vidéos s'accumulent
 2. **Surchauffe progressive** : La température monte graduellement avant un crash GPU
 3. **Déconnexions silencieuses** : Un Pi peut perdre sa connexion sans alerte
@@ -22,16 +23,16 @@ Implémenter un **service d'alertes prédictives** qui évalue 8 métriques tout
 
 ### Métriques évaluées
 
-| Métrique | Warning | Critical | Source |
-|----------|---------|----------|--------|
-| `days_since_last_video` | >7 jours | >14 jours | `video_plays` |
-| `disk_growth_rate` | >5%/h | >10%/h | `metrics` (disk) |
-| `disconnections_24h` | >5 | >10 | `metrics` (connexion) |
-| `wifi_signal_quality` | <50% | <25% | `metrics` (signal) |
-| `video_errors_24h` | >5 | >15 | `video_plays` (erreurs) |
-| `temperature_trend` | >5°C/h | >10°C/h | `metrics` (temp) |
-| `hotspot_restarts_24h` | >2 | >5 | `alerts` (hotspot) |
-| `days_until_subscription_end` | <30j | <7j | `sites` (subscription) |
+| Métrique                      | Warning  | Critical  | Source                  |
+| ----------------------------- | -------- | --------- | ----------------------- |
+| `days_since_last_video`       | >7 jours | >14 jours | `video_plays`           |
+| `disk_growth_rate`            | >5%/h    | >10%/h    | `metrics` (disk)        |
+| `disconnections_24h`          | >5       | >10       | `metrics` (connexion)   |
+| `wifi_signal_quality`         | <50%     | <25%      | `metrics` (signal)      |
+| `video_errors_24h`            | >5       | >15       | `video_plays` (erreurs) |
+| `temperature_trend`           | >5°C/h   | >10°C/h   | `metrics` (temp)        |
+| `hotspot_restarts_24h`        | >2       | >5        | `alerts` (hotspot)      |
+| `days_until_subscription_end` | <30j     | <7j       | `sites` (subscription)  |
 
 ### Architecture
 
@@ -70,12 +71,14 @@ Chargés au démarrage dans `alert_thresholds` (14 seuils : 6 réactifs + 8 pré
 ### 3. Seuils configurables avec tendances simples (choisi) ✅
 
 **Avantages** :
+
 - Détection précoce (heures/jours avant l'incident)
 - Seuils ajustables en DB sans redéploiement
 - Pas de dépendance ML
 - Requête SQL unique agrégeant toutes les sources
 
 **Inconvénients** :
+
 - Les seuils nécessitent un calibrage initial
 - Pas de détection d'anomalies contextuelles
 
@@ -105,4 +108,4 @@ Chargés au démarrage dans `alert_thresholds` (14 seuils : 6 réactifs + 8 pré
 
 ---
 
-*Créé le 9 février 2026*
+_Créé le 9 février 2026_

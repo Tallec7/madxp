@@ -11,6 +11,7 @@
 Neopro doit stocker des vidéos (10MB-500MB chacune) uploadées depuis le dashboard et téléchargées par les Pi. Le volume total est modéré (~50 clubs × ~20 vidéos = ~1000 fichiers, ~50GB).
 
 Contraintes :
+
 1. **Budget limité** : Startup, pas de budget CDN professionnel
 2. **Téléchargement direct par les Pi** : URL publique nécessaire
 3. **Fiabilité** : Les vidéos doivent être disponibles 24/7 pour les déploiements
@@ -43,11 +44,13 @@ function getVideoDownloadUrl(storagePath: string): string {
 ### 1. AWS S3 / Cloudflare R2
 
 **Avantages** :
+
 - Fiabilité enterprise
 - CDN intégré
 - API standard
 
 **Inconvénients** :
+
 - Coût : ~$0.023/GB/mois stockage + $0.09/GB transfert (S3)
 - 50GB stockage + transferts Pi = ~$15-30/mois
 - Configuration plus complexe
@@ -57,11 +60,13 @@ function getVideoDownloadUrl(storagePath: string): string {
 ### 2. Supabase Storage uniquement
 
 **Avantages** :
+
 - Déjà intégré (DB sur Supabase)
 - API simple
 - Tier gratuit 1GB
 
 **Inconvénients** :
+
 - Limite du tier gratuit dépassée rapidement (1GB)
 - Tier Pro requis (~$25/mois) pour le volume
 - Bandwidth limité
@@ -71,12 +76,14 @@ function getVideoDownloadUrl(storagePath: string): string {
 ### 3. FTP Hostinger ✅ (primaire)
 
 **Avantages** :
+
 - **Déjà payé** : Inclus dans l'hébergement Hostinger du dashboard
 - **Stockage illimité** : Plan Hostinger inclut stockage large
 - **URL publique** : `https://cdn.neopro.tv/filename.mp4`
 - **Coût : 0€ additionnel**
 
 **Inconvénients** :
+
 - API FTP basique (pas de metadata, pas de listing rapide)
 - Pas de CDN global (serveur unique)
 - Détection par convention de nommage (fragile)
@@ -117,4 +124,4 @@ Colonnes ajoutées : `upload_status`, `upload_verified_at`, `upload_verified_siz
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_
