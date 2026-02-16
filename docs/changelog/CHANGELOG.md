@@ -1,3 +1,9 @@
+## [3.44.4](https://github.com/Tallec7/neopro/compare/v3.44.3...v3.44.4) (2026-02-16)
+
+### Bug Fixes
+
+- **deploy:** harden install.sh, setup.sh and build-raspberry.sh scripts ([69379b8](https://github.com/Tallec7/neopro/commit/69379b856ec915443944a4b5f88d0b1e80f20a1e))
+
 ## [3.44.4] (2026-02-16)
 
 ### Hardening
