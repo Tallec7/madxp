@@ -32,12 +32,13 @@
 }
 
 // =============================================================================
-// KIOSK: Hide mouse cursor on TV displays
-// Triple protection: unclutter-xfixes (OS) + CSS (browser) + Chromium flag
+// KIOSK: Hide mouse cursor on TV displays only (/tv route)
+// Triple protection: unclutter-xfixes (OS) + CSS (browser) + xdotool fallback
+// Scoped to app-tv to avoid hiding cursor on /remote and other routes
 // =============================================================================
 
-html,
-html * {
+app-tv,
+app-tv * {
   cursor: none !important;
 }
 
