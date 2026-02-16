@@ -511,12 +511,31 @@ interface HumanReadableDiff {
           </div>
 
           <div class="history-list" *ngIf="!loadingHistory && configHistory.length > 0">
-            <div class="history-item" *ngFor="let entry of configHistory">
-              <div class="history-meta">
-                <span class="history-date">{{ entry.deployed_at | date:'dd/MM/yyyy HH:mm' }}</span>
-                <span class="history-author" *ngIf="entry.deployed_by_name || entry.deployed_by_email">
-                  par {{ entry.deployed_by_name || entry.deployed_by_email }}
-                </span>
+            <div class="history-item" *ngFor="let entry of configHistory; let entryIdx = index">
+              <div class="history-header-row">
+                <div class="history-meta">
+                  <span class="history-date">{{ entry.deployed_at | date:'dd/MM/yyyy HH:mm' }}</span>
+                  <span class="history-author" *ngIf="entry.deployed_by_name || entry.deployed_by_email">
+                    par {{ entry.deployed_by_name || entry.deployed_by_email }}
+                  </span>
+                </div>
+                <div class="history-entry-actions">
+                  <button
+                    class="btn-history-detail"
+                    *ngIf="entry.changes_summary && entry.changes_summary.length > 0"
+                    (click)="toggleHistoryDetail(entryIdx)"
+                    title="Voir le détail des changements"
+                  >
+                    {{ expandedHistoryItems[entryIdx] ? '▼' : '▶' }} Détails
+                  </button>
+                  <button
+                    class="btn-history-restore"
+                    (click)="restoreVersion(entry)"
+                    title="Restaurer cette version"
+                  >
+                    ↩ Restaurer
+                  </button>
+                </div>
               </div>
               <div class="history-comment" *ngIf="entry.comment">{{ entry.comment }}</div>
               <div class="history-changes" *ngIf="entry.changes_summary && entry.changes_summary.length > 0">
@@ -526,6 +545,33 @@ interface HumanReadableDiff {
                   <span class="change-pill changed" *ngIf="countChangeType(entry.changes_summary!, 'changed') as n">~{{ n }}</span>
                   <span class="change-pill removed" *ngIf="countChangeType(entry.changes_summary!, 'removed') as n">-{{ n }}</span>
                 </span>
+              </div>
+
+              <!-- Détail dépliable des changements -->
+              <div class="history-detail" *ngIf="expandedHistoryItems[entryIdx] && entry.changes_summary">
+                <div
+                  class="history-diff-row"
+                  *ngFor="let diff of entry.changes_summary"
+                  [class]="'diff-type-' + diff.type"
+                >
+                  <span class="diff-type-badge">
+                    <span *ngIf="diff.type === 'added'">+</span>
+                    <span *ngIf="diff.type === 'changed'">~</span>
+                    <span *ngIf="diff.type === 'removed'">−</span>
+                  </span>
+                  <span class="diff-path">{{ diff.path || diff.field }}</span>
+                  <span class="diff-values" *ngIf="diff.type === 'changed'">
+                    <span class="diff-old">{{ formatDiffValue(diff.oldValue) }}</span>
+                    →
+                    <span class="diff-new">{{ formatDiffValue(diff.newValue) }}</span>
+                  </span>
+                  <span class="diff-values" *ngIf="diff.type === 'added'">
+                    <span class="diff-new">{{ formatDiffValue(diff.newValue) }}</span>
+                  </span>
+                  <span class="diff-values" *ngIf="diff.type === 'removed'">
+                    <span class="diff-old">{{ formatDiffValue(diff.oldValue) }}</span>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -2836,6 +2882,136 @@ interface HumanReadableDiff {
       color: #991b1b;
     }
 
+    .history-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .history-entry-actions {
+      display: flex;
+      gap: 0.375rem;
+      flex-shrink: 0;
+    }
+
+    .btn-history-detail {
+      border: 1px solid #e2e8f0;
+      background: white;
+      color: #64748b;
+      font-size: 0.6875rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-history-detail:hover {
+      background: #f1f5f9;
+      color: #334155;
+    }
+
+    .btn-history-restore {
+      border: 1px solid #dbeafe;
+      background: #eff6ff;
+      color: #1e40af;
+      font-size: 0.6875rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-history-restore:hover {
+      background: #dbeafe;
+    }
+
+    /* History detail */
+    .history-detail {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: white;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .history-diff-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      padding: 0.25rem 0.375rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: ui-monospace, monospace;
+    }
+
+    .history-diff-row.diff-type-added {
+      background: #f0fdf4;
+    }
+
+    .history-diff-row.diff-type-changed {
+      background: #fffbeb;
+    }
+
+    .history-diff-row.diff-type-removed {
+      background: #fef2f2;
+    }
+
+    .diff-type-badge {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+      font-weight: 700;
+      font-size: 0.6875rem;
+      flex-shrink: 0;
+    }
+
+    .diff-type-added .diff-type-badge {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .diff-type-changed .diff-type-badge {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .diff-type-removed .diff-type-badge {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .diff-path {
+      color: #475569;
+      word-break: break-all;
+      min-width: 0;
+    }
+
+    .diff-values {
+      color: #64748b;
+      margin-left: auto;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 300px;
+    }
+
+    .diff-old {
+      color: #991b1b;
+      text-decoration: line-through;
+    }
+
+    .diff-new {
+      color: #166534;
+    }
+
     .history-actions {
       margin-top: 0.75rem;
       text-align: center;
@@ -2920,6 +3096,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   configHistoryTotal = 0;
   loadingHistory = false;
   showHistory = false;
+  expandedHistoryItems: Record<number, boolean> = {};
 
   /**
    * Getter qui calcule les IDs des vidéos avec déploiement en cours
@@ -3438,6 +3615,19 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   countChangeType(changes: ConfigDiff[], type: string): number {
     return changes.filter(c => c.type === type).length;
+  }
+
+  toggleHistoryDetail(index: number): void {
+    this.expandedHistoryItems[index] = !this.expandedHistoryItems[index];
+    this.cdr.markForCheck();
+  }
+
+  restoreVersion(entry: ConfigHistory): void {
+    if (!entry.configuration) return;
+    this.config = JSON.parse(JSON.stringify(entry.configuration));
+    this.markDirty();
+    this.notificationService.success('Configuration restaurée — déployez pour appliquer');
+    this.showHistory = false;
   }
 
   constructor(
