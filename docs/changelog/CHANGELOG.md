@@ -1,3 +1,9 @@
+# [3.41.0](https://github.com/Tallec7/neopro/compare/v3.40.0...v3.41.0) (2026-02-16)
+
+### Features
+
+- **analytics:** add traction metrics dashboard for business KPIs ([a4bfbd9](https://github.com/Tallec7/neopro/commit/a4bfbd9a0d68c1dfd97e1393d72f4e1c0fbe305d))
+
 # [3.40.0](https://github.com/Tallec7/neopro/compare/v3.39.1...v3.40.0) (2026-02-16)
 
 ### Features
