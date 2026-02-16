@@ -1,3 +1,9 @@
+# [3.48.0](https://github.com/Tallec7/neopro/compare/v3.47.3...v3.48.0) (2026-02-16)
+
+### Features
+
+- **sync-agent:** atomic write for configuration.json + auto-recovery ([d2ab770](https://github.com/Tallec7/neopro/commit/d2ab77051aa30bb8c5fe5505ff1e9ac88ea8e347))
+
 ## [3.47.3](https://github.com/Tallec7/neopro/compare/v3.47.2...v3.47.3) (2026-02-16)
 
 ### Bug Fixes
