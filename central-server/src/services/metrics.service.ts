@@ -449,6 +449,23 @@ const kioskCrashesTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Report Generation =============
+
+const reportGenerationsTotal = new Counter({
+  name: 'neopro_report_generations_total',
+  help: 'Total PDF report generation attempts',
+  labelNames: ['report_type', 'status'],
+  registers: [register],
+});
+
+const reportGenerationDuration = new Histogram({
+  name: 'neopro_report_generation_duration_seconds',
+  help: 'Duration of PDF report generation in seconds',
+  labelNames: ['report_type'],
+  buckets: [0.5, 1, 2, 5, 10, 30, 60],
+  registers: [register],
+});
+
 // ============= Service Class =============
 
 class MetricsService {
@@ -747,6 +764,15 @@ class MetricsService {
     if (metrics.cleanupSkippedCount) videoTransitionCleanupSkippedTotal.inc(metrics.cleanupSkippedCount);
     if (metrics.videoErrorCount) videoTransitionErrorTotal.inc(metrics.videoErrorCount);
     if (metrics.totalTransitions) videoTransitionsTotal.inc(metrics.totalTransitions);
+  }
+
+  // ============= Méthodes Report Generation =============
+
+  recordReportGeneration(reportType: 'club' | 'advertiser', status: 'success' | 'failed', durationSeconds?: number): void {
+    reportGenerationsTotal.inc({ report_type: reportType, status });
+    if (durationSeconds !== undefined) {
+      reportGenerationDuration.observe({ report_type: reportType }, durationSeconds);
+    }
   }
 
   /**

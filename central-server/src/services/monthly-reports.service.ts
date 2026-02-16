@@ -11,6 +11,7 @@
 import { query } from '../config/database';
 import { uploadAsset, getAssetUrl } from './storage.service';
 import { generateClubReport, generateAdvertiserReport } from './pdf-report.service';
+import { metricsService } from './metrics.service';
 import logger from '../config/logger';
 import * as crypto from 'crypto';
 
@@ -145,6 +146,7 @@ async function generateSingleClubReport(
   periodEnd: string,
   periodLabel: string
 ): Promise<ReportGenerationResult> {
+  const startTime = Date.now();
   try {
     // Vérifier si le rapport existe déjà
     const existingResult = await query(`
@@ -167,13 +169,15 @@ async function generateSingleClubReport(
     }
 
     // Créer l'entrée en DB avec statut 'generating'
+    // storage_path est NOT NULL en DB, on met un placeholder qui sera écrasé après upload
+    const storagePlaceholder = `reports/clubs/${siteId}/${periodStart.substring(0, 7)}.pdf`;
     const insertResult = await query(`
-      INSERT INTO generated_reports (report_type, site_id, period_start, period_end, period_label, status)
-      VALUES ('club', $1, $2, $3, $4, 'generating')
+      INSERT INTO generated_reports (report_type, site_id, period_start, period_end, period_label, storage_path, status)
+      VALUES ('club', $1, $2, $3, $4, $5, 'generating')
       ON CONFLICT (report_type, site_id, advertiser_id, period_start, period_end)
       DO UPDATE SET status = 'generating', error_message = NULL
       RETURNING id
-    `, [siteId, periodStart, periodEnd, periodLabel]);
+    `, [siteId, periodStart, periodEnd, periodLabel, storagePlaceholder]);
 
     const reportId = insertResult.rows[0].id as string;
 
@@ -204,9 +208,13 @@ async function generateSingleClubReport(
       WHERE id = $1
     `, [reportId, filename, storageUrl, pdfBuffer.length, checksum]);
 
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    metricsService.recordReportGeneration('club', 'success', durationSeconds);
+
     logger.info(`[MonthlyReports] Club report completed for ${siteId}`, {
       reportId,
       size: pdfBuffer.length,
+      durationSeconds,
     });
 
     return {
@@ -215,8 +223,11 @@ async function generateSingleClubReport(
       url: storageUrl,
     };
   } catch (error) {
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    metricsService.recordReportGeneration('club', 'failed', durationSeconds);
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`[MonthlyReports] Failed to generate club report for ${siteId}`, { error: errorMessage });
+    logger.error(`[MonthlyReports] Failed to generate club report for ${siteId}`, { error: errorMessage, durationSeconds });
 
     // Mettre à jour le statut en échec
     await query(`
@@ -280,6 +291,7 @@ async function generateSingleAdvertiserReport(
   periodEnd: string,
   periodLabel: string
 ): Promise<ReportGenerationResult> {
+  const startTime = Date.now();
   try {
     // Vérifier si le rapport existe déjà
     const existingResult = await query(`
@@ -302,13 +314,15 @@ async function generateSingleAdvertiserReport(
     }
 
     // Créer l'entrée en DB
+    // storage_path est NOT NULL en DB, on met un placeholder qui sera écrasé après upload
+    const storagePlaceholder = `reports/advertisers/${advertiserId}/${periodStart.substring(0, 7)}.pdf`;
     const insertResult = await query(`
-      INSERT INTO generated_reports (report_type, advertiser_id, period_start, period_end, period_label, status)
-      VALUES ('advertiser', $1, $2, $3, $4, 'generating')
+      INSERT INTO generated_reports (report_type, advertiser_id, period_start, period_end, period_label, storage_path, status)
+      VALUES ('advertiser', $1, $2, $3, $4, $5, 'generating')
       ON CONFLICT (report_type, site_id, advertiser_id, period_start, period_end)
       DO UPDATE SET status = 'generating', error_message = NULL
       RETURNING id
-    `, [advertiserId, periodStart, periodEnd, periodLabel]);
+    `, [advertiserId, periodStart, periodEnd, periodLabel, storagePlaceholder]);
 
     const reportId = insertResult.rows[0].id as string;
 
@@ -339,9 +353,13 @@ async function generateSingleAdvertiserReport(
       WHERE id = $1
     `, [reportId, filename, storageUrl, pdfBuffer.length, checksum]);
 
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    metricsService.recordReportGeneration('advertiser', 'success', durationSeconds);
+
     logger.info(`[MonthlyReports] Advertiser report completed for ${advertiserId}`, {
       reportId,
       size: pdfBuffer.length,
+      durationSeconds,
     });
 
     return {
@@ -350,8 +368,11 @@ async function generateSingleAdvertiserReport(
       url: storageUrl,
     };
   } catch (error) {
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    metricsService.recordReportGeneration('advertiser', 'failed', durationSeconds);
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`[MonthlyReports] Failed to generate advertiser report for ${advertiserId}`, { error: errorMessage });
+    logger.error(`[MonthlyReports] Failed to generate advertiser report for ${advertiserId}`, { error: errorMessage, durationSeconds });
 
     await query(`
       UPDATE generated_reports

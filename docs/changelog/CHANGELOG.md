@@ -1,38 +1,31 @@
+# [3.49.3] (2026-02-16)
+
+### Bug Fixes
+
+- **reports:** fix 500 error on `POST /api/reports/generate` — `INSERT INTO generated_reports` omitted `storage_path` (NOT NULL column) when creating a report with status `generating`, now uses pre-computed path placeholder
+- **storage:** fix FTP 550 error on watermark upload — `uploadFileToFtp()` now auto-creates subdirectories via `client.ensureDir()` before upload (e.g. `watermarks/`)
+
+### Monitoring
+
+- **reports:** add Prometheus metrics `neopro_report_generations_total{report_type, status}` and `neopro_report_generation_duration_seconds` for PDF report generation tracking
+
+### Documentation
+
+- **reports:** update PDF_REPORTS_GUIDE.md — add on-demand generation architecture (`POST /api/reports/generate`), storage flow via FTP, and `generated_reports` table lifecycle
+- **troubleshooting:** add section for 500 errors on report generation (NOT NULL constraint, canvas deps, schema mismatch)
+- **storage:** update VIDEO_STORAGE.md — add ensureDir behavior, FTP 550 troubleshooting section
+
 ## [3.49.2](https://github.com/Tallec7/neopro/compare/v3.49.1...v3.49.2) (2026-02-16)
 
 ### Bug Fixes
 
 - **alerting:** suppress Site Online alerts during 60s boot grace period ([9040902](https://github.com/Tallec7/neopro/commit/90409020bf04b84edfa4513dac385c60bc551eba))
 
-# [3.49.3] (2026-02-16)
-
-### Bug Fixes
-
-- **alerting:** suppress "Site Online" Slack alerts during 60s boot grace period — prevents false reconnection alerts after Railway deploy
-
-# [3.49.2] (2026-02-16)
-
-### Bug Fixes
-
-- **reports:** fix 500 error on `POST /api/reports/generate` — `INSERT INTO generated_reports` omitted `storage_path` (NOT NULL column) when creating a report with status `generating`, now uses pre-computed path placeholder
-
-### Documentation
-
-- **reports:** update PDF_REPORTS_GUIDE.md — add on-demand generation architecture (`POST /api/reports/generate`), storage flow via FTP, and `generated_reports` table lifecycle
-- **troubleshooting:** add section for 500 errors on report generation (NOT NULL constraint, canvas deps, schema mismatch)
-
 ## [3.49.1](https://github.com/Tallec7/neopro/compare/v3.49.0...v3.49.1) (2026-02-16)
 
 ### Bug Fixes
 
 - **analytics:** fix 500 errors on /api/analytics/traction and /api/analytics/comparison ([4b1c358](https://github.com/Tallec7/neopro/commit/4b1c358ae3dd7ffb305aa4658655026dd54725e2))
-
-# [3.49.1] (2026-02-16)
-
-### Bug Fixes
-
-- **analytics:** fix 500 error on `GET /api/analytics/traction` — `getAdvertiserMetrics()` referenced non-existent `completed` column on `advertiser_impressions` table, replaced with `AVG(completion_rate)` from `advertiser_daily_stats`
-- **analytics:** fix 500 error on `GET /api/analytics/comparison` — `getMultiSiteComparison()` referenced non-existent `completion_rate` column on `club_daily_stats` table, replaced with computed avg from `video_plays`
 
 # [3.49.0](https://github.com/Tallec7/neopro/compare/v3.48.0...v3.49.0) (2026-02-16)
 
@@ -52,57 +45,11 @@
 
 - **cloud-remote:** screenshot error response — feedback immédiat au lieu du timeout 10s ([92959cf](https://github.com/Tallec7/neopro/commit/92959cf4dd639b7539cc2cc713059f9e1497f666))
 
-## [3.49.0] (2026-02-16)
-
-### Features
-
-- **sync-agent:** atomic write for configuration.json via tmp + rename — prevents corruption on power loss ([ADR-028](../adr/ADR-028-atomic-config-write.md))
-- **sync-agent:** auto-recovery on corrupted configuration.json — truncate orphan data, fallback to encrypted backup, or start fresh
-- **sync-agent:** new shared utility `utils/safe-config-io.js` (`atomicWriteJson`, `safeReadConfig`, `tryTruncateJson`)
-
-### Bug Fixes
-
-- **sync-agent:** emit `deploy_progress` with error flag when `deploy_video` command fails — server now correctly marks deployment as `failed` instead of leaving it stuck in `in_progress`
-- **sync-agent:** migrate all configuration.json writers to atomic write (deploy-video, delete-video, update-config, expiration-checker, local-backup restore)
-- **sync-agent:** migrate all configuration.json readers to `safeReadConfig` with auto-recovery (agent syncLocalState, deploy-video, delete-video, update-config, expiration-checker)
-- **cloud-remote:** screenshot error response — le TV component et le sync-agent renvoient toujours une réponse `screenshot-data` avec champ `error` au lieu du silence (élimine le timeout de 10s côté dashboard)
-- **cloud-remote:** le dashboard affiche immédiatement le diagnostic d'échec (`no_active_video`, `capture_failed`, `timeout`) au lieu d'attendre le timeout générique
-
-### Monitoring
-
-- **cloud-remote:** ajout métriques Prometheus `neopro_commands_total{type="screenshot", status="received|pi_error"}` pour tracer le taux de succès des screenshots côté Pi
-
-### Documentation
-
-- **adr:** add ADR-028 atomic config write with incident post-mortem
-- **troubleshooting:** add section for corrupted configuration.json diagnostic and fix
-- **sync-architecture:** ajout événement `screenshot-data` dans la table des flux + section gestion d'erreur screenshot (v2.0)
-- **adr-007:** ajout détails error response screenshot et nouveaux statuts métriques Prometheus
-- **changelog:** document v3.49.0 changes
-
 ## [3.47.2](https://github.com/Tallec7/neopro/compare/v3.47.1...v3.47.2) (2026-02-16)
 
 ### Bug Fixes
 
 - **alerting:** anti-flapping cooldown Slack + graceful shutdown Socket.IO ([dc1f695](https://github.com/Tallec7/neopro/commit/dc1f695c339b224818b09c0e1891284efa5adaa9))
-
-## [3.48.0] (2026-02-17)
-
-### Features
-
-- **alerting:** cooldown anti-flapping de 5 min/site sur les alertes Slack `siteOffline`/`siteOnline` (`alert.service.ts`) — empêche le spam Slack lors de reconnexions rapides ou redéploiements Railway
-- **socket:** graceful shutdown Socket.IO — émet `server_shutdown` aux Pi connectés, appelle `io.disconnectSockets()` + `io.close()` avant la fermeture HTTP, avec safety timeout 10s
-
-### Bug Fixes
-
-- **alerting:** utiliser `site_name` au lieu de `club_name` dans les alertes heartbeat et réseau pour cohérence avec le reste du codebase (`heartbeat.handler.ts`, `network-resilience.handler.ts`)
-- **server:** exécuter `socketService.cleanup()` avant `httpServer.close()` dans le handler SIGTERM — Socket.IO a besoin du HTTP server actif pour émettre la notification de shutdown
-
-### Documentation
-
-- **adr:** documenter le graceful shutdown et l'événement `server_shutdown` dans ADR-002
-- **modops:** ajouter les cooldowns Slack et le diagnostic multi-sites offline dans MODOP-S11-15
-- **architecture:** documenter le cooldown anti-flapping et le graceful shutdown dans la section alerting
 
 ## [3.47.1](https://github.com/Tallec7/neopro/compare/v3.47.0...v3.47.1) (2026-02-16)
 

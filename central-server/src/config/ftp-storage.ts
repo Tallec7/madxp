@@ -1,6 +1,7 @@
 import * as ftp from 'basic-ftp';
 import { Readable } from 'stream';
 import { stat } from 'fs/promises';
+import path from 'path';
 import logger from './logger';
 
 // Lazy import to avoid circular dependency with metrics.service
@@ -87,11 +88,19 @@ export const uploadFileToFtp = async (
 
     logger.info('FTP connected, uploading file:', { filename, size: fileBuffer.length });
 
+    // Créer le dossier parent si le filename contient un sous-dossier (ex: watermarks/logo.png)
+    const dir = path.posix.dirname(filename);
+    if (dir && dir !== '.') {
+      logger.info('FTP ensuring directory exists:', { dir });
+      await client.ensureDir(dir);
+      await client.cd('/');
+    }
+
     // Convertir le buffer en stream lisible
     const stream = Readable.from(fileBuffer);
 
     const uploadStart = Date.now();
-    // Upload du fichier à la racine (le compte FTP est déjà dans /neopro-video)
+    // Upload du fichier (le compte FTP est déjà dans /neopro-video)
     await client.uploadFrom(stream, filename);
     const uploadDuration = (Date.now() - uploadStart) / 1000;
 

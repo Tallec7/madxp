@@ -4,7 +4,7 @@
 
 1. [Problèmes SSH](#problèmes-ssh)
 2. [Problèmes de connexion](#problèmes-de-connexion)
-3. [Erreurs 500](#erreurs-500)
+3. [Erreurs 500](#erreurs-500) (MIME type, Pi /tv /remote, **rapports PDF**)
 4. [Problèmes d'authentification](#problèmes-dauthentification)
 5. [Services qui ne démarrent pas](#services-qui-ne-démarrent-pas)
 6. [Problèmes de synchronisation](#problèmes-de-synchronisation)
@@ -372,6 +372,60 @@ Pour qu'nginx (qui tourne sous `www-data`) puisse accéder aux fichiers :
 1. `/home/pi` doit avoir les permissions 755
 2. Les fichiers webapp doivent appartenir à `www-data`
 3. L'application Angular doit être déployée dans `/home/pi/neopro/webapp/`
+
+---
+
+### Erreur 500 sur POST /api/reports/generate (v3.49+)
+
+#### Symptômes
+
+- Console navigateur : `POST /api/reports/generate 500 (Internal Server Error)`
+- Logs Railway : `[ReportsController] Error generating report`
+
+#### Causes possibles
+
+**1. NOT NULL constraint sur `storage_path`** (corrigé v3.49.2)
+
+```
+null value in column "storage_path" of relation "generated_reports" violates not-null constraint
+```
+
+Le `INSERT INTO generated_reports` avec `status='generating'` doit fournir un `storage_path` placeholder.
+
+**2. Dépendances canvas manquantes**
+
+`chartjs-node-canvas` requiert des libs système pour le rendu des graphiques :
+
+```bash
+# Vérifier dans les logs Railway
+Error: Cannot find module 'canvas'
+# Ou : libc error, libcairo not found
+
+# Fix dans le Dockerfile/Nixpacks
+apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+```
+
+**3. Colonne manquante dans les requêtes SQL**
+
+Le service `pdf-report.service.ts` fait des requêtes directes (pas via repository). Si le schéma DB a changé :
+
+```bash
+# Vérifier les colonnes utilisées
+# club_sessions: audience_estimate, videos_played, manual_triggers, auto_plays, duration_seconds
+# video_plays: category, duration_played, video_filename
+# advertiser_impressions: duration_played, site_id
+railway logs -n 50 -s neopro-central --filter "report"
+```
+
+#### Diagnostic
+
+```bash
+# Logs Railway filtrés
+railway logs -n 100 -s neopro-central --filter "MonthlyReports\|report\|pdf"
+
+# Vérifier les rapports en échec en DB
+psql "$DATABASE_URL" -c "SELECT id, report_type, status, error_message, created_at FROM generated_reports WHERE status = 'failed' ORDER BY created_at DESC LIMIT 10;"
+```
 
 ---
 

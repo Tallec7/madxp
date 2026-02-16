@@ -86,7 +86,10 @@ Toutes les opérations de stockage passent par `central-server/src/services/stor
 | `getAssetUrl()`         | Retourne l'URL publique d'un asset                |
 | `verifyFileExists()`    | Vérifie l'existence d'un fichier sur FTP          |
 
-**Comportement** : Si le FTP n'est pas configuré, le service lance une erreur explicite au lieu d'échouer silencieusement.
+**Comportement** :
+
+- Si le FTP n'est pas configuré, le service lance une erreur explicite au lieu d'échouer silencieusement.
+- Les sous-dossiers sont créés automatiquement sur le FTP via `ensureDir` avant l'upload (ex: `watermarks/` pour les assets watermark).
 
 ### Configuration FTP
 
@@ -464,6 +467,18 @@ FROM videos
 WHERE filename LIKE '%Decathlon%';
 ```
 
+### Erreur FTP 550 "No such file or directory" (watermark/asset upload)
+
+**Symptôme** :
+
+```
+FTPError: 550 watermarks/watermark_neopro.png: No such file or directory
+```
+
+**Cause** : Le sous-dossier (ex: `watermarks/`) n'existait pas sur le serveur FTP. `basic-ftp` `uploadFrom()` ne crée pas les dossiers intermédiaires.
+
+**Résolution** : Corrigé dans `ftp-storage.ts` — `client.ensureDir(dir)` est appelé automatiquement avant chaque upload si le chemin contient un sous-dossier. Si l'erreur réapparaît, vérifier les permissions FTP sur la création de dossiers.
+
 ### Erreur "Stockage vidéo (FTP) non configuré"
 
 **Symptôme** : Upload échoue avec erreur 500 et message indiquant que le FTP n'est pas configuré.
@@ -513,12 +528,13 @@ Checksum mismatch: expected abc123, got def456
 
 ## Historique des versions
 
-| Version | Date       | Modifications                                                    |
-| ------- | ---------- | ---------------------------------------------------------------- |
-| 1.0     | 2026-01-09 | Création initiale                                                |
-| 2.0     | 2026-02-10 | Suppression Supabase fallback, migration vers storage.service.ts |
-| 2.1     | 2026-02-15 | Ajout section suppression manuelle depuis le Dashboard           |
-| 2.2     | 2026-02-15 | Fix null category, piCategory, modal UX                          |
+| Version | Date       | Modifications                                                     |
+| ------- | ---------- | ----------------------------------------------------------------- |
+| 1.0     | 2026-01-09 | Création initiale                                                 |
+| 2.0     | 2026-02-10 | Suppression Supabase fallback, migration vers storage.service.ts  |
+| 2.1     | 2026-02-15 | Ajout section suppression manuelle depuis le Dashboard            |
+| 2.2     | 2026-02-15 | Fix null category, piCategory, modal UX                           |
+| 2.3     | 2026-02-16 | Auto-création sous-dossiers FTP (ensureDir) + troubleshooting 550 |
 
 ---
 
