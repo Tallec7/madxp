@@ -22,9 +22,13 @@
 - **sync-agent:** `getDisplayInfo()` avec cache 5 min, intégré dans `getHealthStatus()` sous la clé `displayInfo`
 - **hdmi-service:** `getFullStatus()` combine CEC + EDID avec croisement intelligent pour affiner le type d'écran
 
+### Bug Fixes
+
+- **hdmi:** fallback CEC hot-plug quand l'EDID est vide (Pi 5) — sur certains moniteurs PC, le fichier EDID a une taille de 0 octets ; le signal `tv_connected` du CEC est maintenant utilisé comme détection alternative de présence d'écran
+
 ### Documentation
 
-- **ADR-010:** mise à jour avec la détection EDID et l'heuristique de type d'écran
+- **ADR-010:** mise à jour avec la détection EDID, l'heuristique de type d'écran et le fallback CEC
 - **REFERENCE.md:** ajout section monitoring EDID/display info
 - **TROUBLESHOOTING.md:** ajout section dépannage écran/HDMI
 

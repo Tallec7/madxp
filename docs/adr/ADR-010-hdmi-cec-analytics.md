@@ -143,8 +143,10 @@ En complément du CEC, le Pi lit maintenant les données **EDID** (Extended Disp
 
 1. CEC devices > 0 → `tv` (CEC = protocole TV)
 2. CEA extension dans EDID (byte 128 = 0x02) → `tv`
-3. CEC disponible + 0 devices + écran connecté → `monitor`
+3. CEC disponible + 0 devices + écran connecté (EDID ou CEC hot-plug) → `monitor`
 4. Sinon → `unknown`
+
+> **Note (v3.44.0 fix)** : Sur certains moniteurs PC branchés au Pi 5, le fichier EDID dans `/sys/class/drm/` a une taille de 0 octets. Le signal `tv_connected` du CEC (HDMI hot-plug detect) est utilisé comme signal de présence alternatif pour inférer `connected=true` même sans EDID lisible. La `detection_method` est alors `cec_hotplug`.
 
 **Impact sur l'affichage dashboard :**
 
