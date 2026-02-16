@@ -1,15 +1,17 @@
-# ADR-013: Score Live depuis Tables de Marque — Architecture Multi-Constructeurs
+# PROP-003: Score Live depuis Tables de Marque — Architecture Multi-Constructeurs
+
+> _Anciennement ADR-013_
 
 **Date** : 2026-02-11
 **Statut** : Proposé
 **Décideurs** : Équipe Neopro
-**Lié à** : ADR-011 (Multi-TV), ADR-012 (TV + LED)
+**Lié à** : [PROP-001](./PROP-001-multi-tv-single-pi.md) (Multi-TV), [PROP-002](./PROP-002-tv-led-dual-output.md) (TV + LED)
 
 ---
 
 ## Contexte
 
-Les clubs sportifs utilisent des **tables de marque électroniques** pour gérer le score officiel pendant les matchs. Le prospect actuel utilise Stramatel, mais les clubs en France sont équipés de **constructeurs variés**. Le besoin est de récupérer le score **automatiquement en temps réel** depuis la table de marque, quel que soit le constructeur, et de l'afficher en overlay sur les TV et écrans LED (cf. ADR-012), **sans double saisie manuelle**.
+Les clubs sportifs utilisent des **tables de marque électroniques** pour gérer le score officiel pendant les matchs. Le prospect actuel utilise Stramatel, mais les clubs en France sont équipés de **constructeurs variés**. Le besoin est de récupérer le score **automatiquement en temps réel** depuis la table de marque, quel que soit le constructeur, et de l'afficher en overlay sur les TV et écrans LED (cf. PROP-002), **sans double saisie manuelle**.
 
 C'est un **deal breaker** pour le prospect : sans cette fonctionnalité, pas de signature.
 
@@ -39,7 +41,7 @@ C'est un **deal breaker** pour le prospect : sans cette fonctionnalité, pas de 
 - **Fallback** : en cas de panne du lien, retour automatique en saisie manuelle (système existant)
 - **Données riches** : score + chrono + période + fautes + temps morts + chrono de possession (24s basket)
 - **1 seul Pi** : le connecteur tourne sur le même Pi que l'affichage
-- **Remote comme couche d'enrichissement** : le score vient de la table de marque automatiquement, mais l'opérateur via la Remote déclenche les **faits de jeu** (animation de but, breaking news, changement de phase) qui produisent des réactions différenciées sur TV et LED (cf. ADR-012)
+- **Remote comme couche d'enrichissement** : le score vient de la table de marque automatiquement, mais l'opérateur via la Remote déclenche les **faits de jeu** (animation de but, breaking news, changement de phase) qui produisent des réactions différenciées sur TV et LED (cf. PROP-002)
 
 ### État actuel du système de score Neopro
 
@@ -114,7 +116,7 @@ Développer un **système de connecteurs enfichables (plugin architecture)** ave
 │              │           │           │                      │
 │              ↓           ↓           ↓                      │
 │         TV Overlay   LED Bandeau  Dashboard                 │
-│         (ADR-012)    (ADR-012)    (monitoring)             │
+│         (PROP-002)    (PROP-002)    (monitoring)             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -402,7 +404,7 @@ Avec un connecteur externe, le **score arrive automatiquement**. Mais la Remote 
 │   │         + événements faits de jeu                │      │
 │   └──────────┬─────────────────────────┬─────────────┘      │
 │              ↓                         ↓                    │
-│         TV (ADR-012)             LED (ADR-012)              │
+│         TV (PROP-002)             LED (PROP-002)              │
 │         • Overlay score          • Bandeau score            │
 │         • Animation but          • Flash LED but            │
 │         • Vidéo sponsor 16:9     • Vidéo sponsor bandeau   │
@@ -417,7 +419,7 @@ Avec un connecteur externe, le **score arrive automatiquement**. Mais la Remote 
 2. Le score arrive automatiquement de la table de marque → overlay mis à jour sur TV + LED
 3. Quand le score change, le TV component **détecte automatiquement le but** et déclenche l'animation (popup/fullscreen/slide + son)
 4. L'opérateur peut **enrichir** : lancer une vidéo de célébration, envoyer un breaking news ("⚽ But de Mbappé !"), etc.
-5. Les TV et LED réagissent chacun à leur façon (cf. ADR-012)
+5. Les TV et LED réagissent chacun à leur façon (cf. PROP-002)
 6. En cas de timeout Stramatel détecté (`timeoutActive: true`), le système peut automatiquement lancer le contenu timeout configuré
 7. La Remote affiche en permanence les données enrichies (fautes, temps morts, 24s) reçues du connecteur
 
@@ -590,7 +592,7 @@ L'opérateur peut à tout moment **corriger le score manuellement** depuis la Re
 
 1. **Remote** : affichage données enrichies en temps réel (fautes, temps morts, 24s)
 2. **Remote** : boutons de faits de jeu (BUT, carton, annonce, timeout, phase, vidéo)
-3. **Remote** : ces boutons déclenchent les réactions différenciées TV + LED (cf. ADR-012)
+3. **Remote** : ces boutons déclenchent les réactions différenciées TV + LED (cf. PROP-002)
 4. **Dashboard** : monitoring connecteur en temps réel par site
 5. **Dashboard** : config hardware par site (port série, IP Bodet, type de connecteur)
 
@@ -666,8 +668,8 @@ Chaque connecteur suit le même pattern : implémenter `ScoreboardConnector`, pa
 - `raspberry/server/socket/handlers.js` — Score relay + state management
 - `docs/technical/IMPLEMENTATION_GUIDE_AUDIENCE_SCORE.md` — Guide score existant
 - `docs/changelog/2025-12-28_overlay-local-system.md` — Recherche API externes (résultats négatifs)
-- ADR-011 — Multi-TV (combinaison avec splitter)
-- ADR-012 — TV + LED (faits de jeu différenciés par support)
+- [PROP-001](./PROP-001-multi-tv-single-pi.md) — Multi-TV (combinaison avec splitter)
+- [PROP-002](./PROP-002-tv-led-dual-output.md) — TV + LED (faits de jeu différenciés par support)
 
 ---
 

@@ -1,7 +1,7 @@
 # ADR-009: Suppression des Pages Analytics Dashboard
 
 **Date** : Février 2026
-**Statut** : Accepté
+**Statut** : ⚠️ Supersédé par [ADR-027](./ADR-027-analytics-ui-removal.md) — Version initiale moins détaillée, remplacée par l'ADR-027 qui couvre le même sujet avec plus de contexte.
 **Décideurs** : Équipe produit Neopro
 
 ---
@@ -9,6 +9,7 @@
 ## Contexte
 
 Le dashboard central proposait 6 pages d'analytics :
+
 - Vue d'ensemble (`/analytics`)
 - Comparaison multi-sites (`/analytics/comparison`)
 - Dashboard temps réel (`/analytics/realtime`)
@@ -20,13 +21,13 @@ Ces pages affichaient des métriques qui se sont révélées **incohérentes et 
 
 ## Problème
 
-| Métrique affichée | Ce qu'elle mesurait réellement | Problème |
-|-------------------|-------------------------------|----------|
-| "Temps de diffusion" | Somme (durée vidéo × nombre lectures) | ≠ temps écran réel. Un club affichait 1200h/jour |
-| "Taux de complétion" | Toujours 100% | Bug : `video_duration == duration_played` systématiquement |
-| "Disponibilité" | Connexion cloud du Pi | ≠ usage TV. Le Pi peut être connecté, TV éteinte |
-| "Vidéos jouées" | Toutes les lectures y compris TV éteinte | Données gonflées artificiellement |
-| Spikes de données | Vidage de buffers accumulés (Pi offline) | Créait des pics irréalistes dans les graphiques |
+| Métrique affichée    | Ce qu'elle mesurait réellement           | Problème                                                   |
+| -------------------- | ---------------------------------------- | ---------------------------------------------------------- |
+| "Temps de diffusion" | Somme (durée vidéo × nombre lectures)    | ≠ temps écran réel. Un club affichait 1200h/jour           |
+| "Taux de complétion" | Toujours 100%                            | Bug : `video_duration == duration_played` systématiquement |
+| "Disponibilité"      | Connexion cloud du Pi                    | ≠ usage TV. Le Pi peut être connecté, TV éteinte           |
+| "Vidéos jouées"      | Toutes les lectures y compris TV éteinte | Données gonflées artificiellement                          |
+| Spikes de données    | Vidage de buffers accumulés (Pi offline) | Créait des pics irréalistes dans les graphiques            |
 
 **Conclusion** : Mieux vaut pas de donnée que des données fausses présentées comme fiables.
 
@@ -42,23 +43,25 @@ Ces pages affichaient des métriques qui se sont révélées **incohérentes et 
 
 ### Conservé (backend)
 
-| Service | Raison |
-|---------|--------|
-| `realtime-stats.service.ts` | Utilisé pour le billing |
-| `excel-export.service.ts` | Export programmatique |
-| `billing.service.ts` | Facturation mensuelle |
-| Endpoints API `/api/analytics/*` | Usage programmatique possible |
-| Tables `video_plays`, `club_daily_stats` | Données brutes préservées |
+| Service                                  | Raison                        |
+| ---------------------------------------- | ----------------------------- |
+| `realtime-stats.service.ts`              | Utilisé pour le billing       |
+| `excel-export.service.ts`                | Export programmatique         |
+| `billing.service.ts`                     | Facturation mensuelle         |
+| Endpoints API `/api/analytics/*`         | Usage programmatique possible |
+| Tables `video_plays`, `club_daily_stats` | Données brutes préservées     |
 
 ## Alternatives Considérées
 
 ### 1. Corriger les métriques existantes
 
 **Avantages** :
+
 - Conserver la feature
 - Les utilisateurs s'attendaient à avoir des analytics
 
 **Inconvénients** :
+
 - Certaines métriques sont fondamentalement non mesurables sans changement hardware (temps écran réel)
 - Risque de corriger partiellement et garder des données douteuses
 - Effort significatif pour un résultat incertain
@@ -68,11 +71,13 @@ Ces pages affichaient des métriques qui se sont révélées **incohérentes et 
 ### 2. Supprimer les analytics et attendre des données fiables ✅
 
 **Avantages** :
+
 - Honnêteté : pas de données trompeuses
 - Permet de reconstruire sur des bases saines (HDMI-CEC, voir ADR-010)
 - Réduit la complexité du dashboard
 
 **Inconvénients** :
+
 - Les utilisateurs perdent une feature (même si elle était trompeuse)
 - Période sans analytics visuelles
 
@@ -81,10 +86,12 @@ Ces pages affichaient des métriques qui se sont révélées **incohérentes et 
 ### 3. Afficher avec des disclaimers
 
 **Avantages** :
+
 - Feature conservée
 - Transparence sur les limites
 
 **Inconvénients** :
+
 - Un disclaimer ne suffit pas : les utilisateurs lisent les chiffres, pas les avertissements
 - Les sponsors utilisent ces chiffres pour négocier
 
@@ -107,6 +114,7 @@ Ces pages affichaient des métriques qui se sont révélées **incohérentes et 
 ### Labels "activité" modifiés
 
 Pour compenser la suppression des analytics dans la liste des sites :
+
 - "Inactif" → "En veille" (couleur gris neutre au lieu de rouge)
 - "Faible" → "Peu actif"
 - Tooltip : "Aucune lecture sur les 30 derniers jours (pas de match ?)"
@@ -118,4 +126,4 @@ Pour compenser la suppression des analytics dans la liste des sites :
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_

@@ -1,9 +1,11 @@
-# ADR-011: Multi-TV — Diffusion sur Plusieurs Écrans depuis un Seul Raspberry Pi
+# PROP-001: Multi-TV — Diffusion sur Plusieurs Écrans depuis un Seul Raspberry Pi
+
+> _Anciennement ADR-011_
 
 **Date** : 2026-02-11
 **Statut** : Proposé
 **Décideurs** : Équipe Neopro
-**Lié à** : ADR-008 (Double-Buffer Vidéo), ADR-001 (Edge-Cloud Architecture)
+**Lié à** : [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) (Double-Buffer Vidéo), [ADR-001](../adr/ADR-001-edge-cloud-architecture.md) (Edge-Cloud Architecture)
 
 ---
 
@@ -367,8 +369,8 @@ Les Pi Zero kiosk n'utilisent pas l'`authGuard` (ils chargent directement `/tv?d
 - `raspberry/src/app/services/local-broadcast.service.ts` — BroadcastChannel dual-channel (274 lignes)
 - `raspberry/server/socket/handlers.js` — Gestion rôles TV + relay événements (234 lignes)
 - `raspberry/src/app/guards/auth.guard.ts` — Protection route `/remote`
-- ADR-008 — Double-Buffer Vidéo (contraintes GPU Pi)
-- ADR-001 — Architecture Edge-Cloud
+- [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) — Double-Buffer Vidéo (contraintes GPU Pi)
+- [ADR-001](../adr/ADR-001-edge-cloud-architecture.md) — Architecture Edge-Cloud
 
 ---
 

@@ -1,9 +1,11 @@
-# ADR-012: TV + LED — Contenus Différenciés par Type d'Écran depuis un Seul Pi
+# PROP-002: TV + LED — Contenus Différenciés par Type d'Écran depuis un Seul Pi
+
+> _Anciennement ADR-012_
 
 **Date** : 2026-02-11
 **Statut** : Proposé
 **Décideurs** : Équipe Neopro
-**Lié à** : ADR-011 (Multi-TV), ADR-008 (Double-Buffer Vidéo)
+**Lié à** : [PROP-001](./PROP-001-multi-tv-single-pi.md) (Multi-TV), [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) (Double-Buffer Vidéo)
 
 ---
 
@@ -21,9 +23,9 @@ Un même sujet (ex: sponsor X) peut avoir **2 versions** : une optimisée TV (19
 - **1 seul Pi** pour piloter les deux types d'écrans
 - **Contenus différents** sur TV et LED simultanément
 - **Formats vidéo différents** : résolution, ratio, orientation
-- **Score live** (ADR-013) visible sur les deux supports, mais formaté différemment
-- **Multi-TV possible** (ADR-011) : le signal TV peut être splitté vers N TV en plus
-- **GPU limité** : 2 flux vidéo simultanés sur Pi = contrainte forte (cf. ADR-008)
+- **Score live** ([PROP-003](./PROP-003-stramatel-live-score.md)) visible sur les deux supports, mais formaté différemment
+- **Multi-TV possible** ([PROP-001](./PROP-001-multi-tv-single-pi.md)) : le signal TV peut être splitté vers N TV en plus
+- **GPU limité** : 2 flux vidéo simultanés sur Pi = contrainte forte (cf. [ADR-008](../adr/ADR-008-double-buffer-video-pi.md))
 
 ### État actuel
 
@@ -331,7 +333,7 @@ La Remote reste l'interface unique :
 └──────────────────────────────────────────────┘
 ```
 
-**Différence clé avec ADR-011 (scénario C multi-TV)** : dans le multi-TV, on veut pouvoir cibler UNE TV spécifique (sélecteur de display). Ici, TV+LED, on broadcast TOUJOURS aux deux — pas de sélecteur nécessaire. L'intelligence est dans le **récepteur** (chaque instance interprète l'événement), pas dans l'**émetteur** (la Remote).
+**Différence clé avec PROP-001 (scénario C multi-TV)** : dans le multi-TV, on veut pouvoir cibler UNE TV spécifique (sélecteur de display). Ici, TV+LED, on broadcast TOUJOURS aux deux — pas de sélecteur nécessaire. L'intelligence est dans le **récepteur** (chaque instance interprète l'événement), pas dans l'**émetteur** (la Remote).
 
 ## Alternatives Considérées
 
@@ -351,7 +353,7 @@ La Remote reste l'interface unique :
 
 ### 3. Dual Chromium kiosk natif + variantes vidéo (choisi) ✅
 
-**Avantages** : Utilise les 2 HDMI natifs du Pi (pas de hardware supplémentaire côté Pi). Contenus totalement indépendants par type d'écran. Score overlay adapté à chaque format. Compatible avec le splitter HDMI du scénario multi-TV (ADR-011). Architecture extensible (nouveau display_type facile à ajouter).
+**Avantages** : Utilise les 2 HDMI natifs du Pi (pas de hardware supplémentaire côté Pi). Contenus totalement indépendants par type d'écran. Score overlay adapté à chaque format. Compatible avec le splitter HDMI du scénario multi-TV (PROP-001). Architecture extensible (nouveau display_type facile à ajouter).
 **Inconvénients** : 2 instances Chromium = plus de RAM (~150MB de plus). 2 décodages vidéo simultanés = contrainte GPU. Système de variantes vidéo à développer (upload, stockage, déploiement).
 **Verdict** : Accepté — seule solution répondant au besoin de contenus différenciés.
 
@@ -361,7 +363,7 @@ La Remote reste l'interface unique :
 
 1. **Contenus vraiment adaptés** à chaque support (format, résolution, ratio)
 2. **Score visible partout** mais formaté pour chaque type d'écran
-3. **Combinable avec ADR-011** : HDMI 0 → splitter → N TV, HDMI 1 → contrôleur LED
+3. **Combinable avec PROP-001** : HDMI 0 → splitter → N TV, HDMI 1 → contrôleur LED
 4. **Un seul Pi** gère tout : TV + LED + Stramatel
 5. **Modèle de variantes** réutilisable pour d'autres supports futurs (totem vertical, écran tactile, etc.)
 
@@ -458,9 +460,9 @@ La Remote reste l'interface unique :
 - `raspberry/src/app/services/local-options.service.ts` — GoalAnimationConfig, sport sounds, period labels
 - `raspberry/server/socket/handlers.js` — Relay événements (score-update, command, breaking-news, phase-change)
 - `central-server/src/scripts/full-schema.sql` — Schéma DB (table videos)
-- ADR-008 — Double-Buffer Vidéo (contraintes GPU)
-- ADR-011 — Multi-TV (combinaison splitter + dual output)
-- ADR-013 — Score Stramatel (source automatique des score-update)
+- [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) — Double-Buffer Vidéo (contraintes GPU)
+- [PROP-001](./PROP-001-multi-tv-single-pi.md) — Multi-TV (combinaison splitter + dual output)
+- [PROP-003](./PROP-003-stramatel-live-score.md) — Score Stramatel (source automatique des score-update)
 
 ---
 

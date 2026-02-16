@@ -1,9 +1,11 @@
-# ADR-023: Motion Design Personnalisé — Vidéos dynamiques avec données joueur
+# PROP-009: Motion Design Personnalisé — Vidéos dynamiques avec données joueur
+
+> _Anciennement ADR-023_
 
 **Date** : Février 2026
 **Statut** : Proposé
 **Décideurs** : Guillaume Le Tallec
-**Lié à** : ADR-016 (Moteur de Templates Vidéo — templates sponsors, cas différent)
+**Lié à** : [PROP-004](./PROP-004-video-template-engine.md) (Moteur de Templates Vidéo — templates sponsors, cas différent)
 
 ---
 
@@ -22,7 +24,7 @@ Un designer externe crée des animations motion design dans After Effects (annon
 - Les templates changent ~1 fois par an (début de saison)
 - Les personnalisations sont fréquentes (nouveaux joueurs, transferts, matchs)
 
-**Différence avec ADR-016** : L'ADR-016 traite de l'habillage d'images sponsors (image statique → vidéo avec logo club). Ici, on parle d'animations motion design complètes avec texte dynamique et effets riches sur les lettres.
+**Différence avec PROP-004** : Le PROP-004 traite de l'habillage d'images sponsors (image statique → vidéo avec logo club). Ici, on parle d'animations motion design complètes avec texte dynamique et effets riches sur les lettres.
 
 ## Décision
 
@@ -237,7 +239,7 @@ Justification : Lottie est gratuit, instantané, léger, sans dépendance. Plain
 
 ## Références
 
-- [ADR-016: Moteur de Templates Vidéo](./ADR-016-video-template-engine.md) — Templates sponsors (cas différent)
+- [PROP-004: Moteur de Templates Vidéo](./PROP-004-video-template-engine.md) — Templates sponsors (cas différent)
 - [Bodymovin — Fonctionnalités supportées](https://airbnb.io/lottie/#/supported-features)
 - [Plainly — Tarifs](https://www.plainlyvideos.com/pricing)
 - [Plainly — API Documentation](https://docs.plainlyvideos.com/)

@@ -1,4 +1,6 @@
-# ADR-020: Expiration Automatique de Contenu
+# PROP-008: Expiration Automatique de Contenu
+
+> _Anciennement ADR-020_
 
 **Date** : Février 2026
 **Statut** : Proposé
@@ -128,7 +130,7 @@ Serveur (cloud) :
 1. **V1** : Champ `expiresAt` sur les vidéos dans `configuration.json` + filtre côté Pi
 2. **V1** : Champ `expiresAt` dans l'UI dashboard (date picker dans la config de boucle)
 3. **V2** : Cron serveur pour notifications (J-7, J-0) via email
-4. **V2** : Alerte prédictive "contenu expirant bientôt" (extension ADR-010 alertes prédictives)
+4. **V2** : Alerte prédictive "contenu expirant bientôt" (extension ADR-026 alertes prédictives)
 
 ### Gestion de la vidéo expirée
 
@@ -145,8 +147,8 @@ Serveur (cloud) :
 - [config-merge.js](../../raspberry/sync-agent/src/utils/config-merge.js) - Structure configuration
 - [predictive-alerts.service.ts](../../central-server/src/services/predictive-alerts.service.ts) - Pattern alertes
 - ADR-001 : Architecture Edge + Cloud (autonomie Pi)
-- ADR-013 : Merge intelligent de configuration
-- ADR-017 : Planification horaire (même pattern local-first)
+- [ADR-013](../adr/ADR-013-config-merge-strategy.md) : Merge intelligent de configuration
+- [PROP-005](./PROP-005-scheduling-local-vs-server.md) : Planification horaire (même pattern local-first)
 
 ---
 

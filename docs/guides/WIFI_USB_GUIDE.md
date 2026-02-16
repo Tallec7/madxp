@@ -727,7 +727,7 @@ Si ça ne suffit pas : `lsusb` pour identifier le chipset, puis chercher le pack
 - [TROUBLESHOOTING.md — Sections 3b, 3c, 4, 5, 5b](TROUBLESHOOTING.md#3b-clé-wifi-usb-non-détectée-pas-de-wlan1) — Dépannage détaillé
 - [MESH_WIFI_ENVIRONMENTS.md](MESH_WIFI_ENVIRONMENTS.md) — Guide complet environnements mesh
 - [NLF.md](../clients/NLF.md) — Client critique NLF, historique incidents
-- [ADR-007](../adr/ADR-007-network-resilience-layers.md) — Architecture de résilience réseau
+- [ADR-024](../adr/ADR-024-network-resilience-layers.md) — Architecture de résilience réseau
 - [network.md](../../.claude/rules/network.md) — Règles de développement réseau
 
 ---

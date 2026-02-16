@@ -1,4 +1,6 @@
-# ADR-007: Résilience Réseau Multi-Couches
+# ADR-024: Résilience Réseau Multi-Couches
+
+> _Anciennement ADR-007. Renuméroté pour éliminer la collision avec ADR-007 (API Remote Publique)._
 
 **Date** : Janvier 2026 (v2.35-v2.37)
 **Statut** : Accepté

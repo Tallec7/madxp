@@ -1,4 +1,6 @@
-# ADR-016: Moteur de Templates Vidéo
+# PROP-004: Moteur de Templates Vidéo
+
+> _Anciennement ADR-016_
 
 **Date** : Février 2026
 **Statut** : Proposé

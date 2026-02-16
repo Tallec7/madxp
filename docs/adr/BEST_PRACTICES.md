@@ -29,21 +29,21 @@ La décision est-elle...
 
 ### Matrice détaillée
 
-| Type de décision | Exemple Neopro | Traçabilité |
-|---|---|---|
-| Choix d'architecture cross-composant | Edge + Cloud (ADR-001) | ADR complet |
-| Choix de technologie structurant | Socket.IO (ADR-002), PostgreSQL (ADR-003) | ADR complet |
-| Changement de stratégie produit | Suppression analytics (ADR-009) | ADR complet |
-| Contrainte infra découverte en prod | Railway Hobby (ADR-015), BSSID mesh (ADR-011) | ADR complet |
-| Choix d'implémentation avec trade-offs | Merge config vs overwrite | ADR léger |
-| Ajout d'une API avec impact sécurité | Remote publique sans JWT (ADR-007) | ADR complet |
-| Refactor interne à un service | Réorganiser les routes d'un controller | Commit message détaillé |
-| Fix de bug | Corriger un calcul d'analytics | Commit message + issue ref |
-| Choix cosmétique / style | Nommage d'une variable | Rien |
+| Type de décision                       | Exemple Neopro                                | Traçabilité                |
+| -------------------------------------- | --------------------------------------------- | -------------------------- |
+| Choix d'architecture cross-composant   | Edge + Cloud (ADR-001)                        | ADR complet                |
+| Choix de technologie structurant       | Socket.IO (ADR-002), PostgreSQL (ADR-003)     | ADR complet                |
+| Changement de stratégie produit        | Suppression analytics (ADR-027)               | ADR complet                |
+| Contrainte infra découverte en prod    | Railway Hobby (ADR-015), BSSID mesh (ADR-011) | ADR complet                |
+| Choix d'implémentation avec trade-offs | Merge config vs overwrite                     | ADR léger                  |
+| Ajout d'une API avec impact sécurité   | Remote publique sans JWT (ADR-007)            | ADR complet                |
+| Refactor interne à un service          | Réorganiser les routes d'un controller        | Commit message détaillé    |
+| Fix de bug                             | Corriger un calcul d'analytics                | Commit message + issue ref |
+| Choix cosmétique / style               | Nommage d'une variable                        | Rien                       |
 
 ### Question rapide (30 secondes)
 
-> *"Dans 6 mois, est-ce que quelqu'un se demandera pourquoi on a fait ce choix ?"*
+> _"Dans 6 mois, est-ce que quelqu'un se demandera pourquoi on a fait ce choix ?"_
 >
 > **Oui** → ADR (complet ou léger)
 > **Non** → Commit message suffit
@@ -118,6 +118,7 @@ Dans chaque ADR, une section `## Fichiers impactés` :
 
 ```markdown
 ## Fichiers impactés
+
 - `central-server/src/routes/remote.routes.ts` — routes sans auth
 - `raspberry/server/src/services/remote.service.ts` — handler local
 ```
@@ -130,12 +131,12 @@ Cela permet de retrouver rapidement le code concerné par une décision.
 
 ### Statuts
 
-| Statut | Signification |
-|---|---|
-| **Proposé** | En discussion, pas encore implémenté |
-| **Accepté** | Implémenté et en production |
-| **Déprécié** | Remplacé par un autre ADR (garder pour historique) |
-| **Rejeté** | Évalué mais non retenu (garder pour éviter de revisiter) |
+| Statut       | Signification                                            |
+| ------------ | -------------------------------------------------------- |
+| **Proposé**  | En discussion, pas encore implémenté                     |
+| **Accepté**  | Implémenté et en production                              |
+| **Déprécié** | Remplacé par un autre ADR (garder pour historique)       |
+| **Rejeté**   | Évalué mais non retenu (garder pour éviter de revisiter) |
 
 ### Revue trimestrielle
 
@@ -178,14 +179,14 @@ Celui qui prend ou implémente la décision. Un ADR n'a pas besoin d'être parfa
 
 ## Anti-patterns
 
-| Anti-pattern | Pourquoi c'est un problème | Alternative |
-|---|---|---|
-| ADR rédigé des semaines après la décision | Le contexte est perdu, l'ADR est incomplet | Rédiger dans les 24h, même en format léger |
-| ADR sans alternatives | Pas de preuve que d'autres options ont été évaluées | Toujours documenter au moins 1 alternative |
-| ADR qui décrit le "quoi" sans le "pourquoi" | Pas de valeur ajoutée par rapport au code | Se concentrer sur les contraintes et trade-offs |
-| ADR jamais mis à jour | Devient trompeur quand la réalité diverge | Revue trimestrielle |
-| Trop d'ADRs sur des détails mineurs | Bruit, personne ne les lit | Utiliser la grille de décision |
+| Anti-pattern                                | Pourquoi c'est un problème                          | Alternative                                     |
+| ------------------------------------------- | --------------------------------------------------- | ----------------------------------------------- |
+| ADR rédigé des semaines après la décision   | Le contexte est perdu, l'ADR est incomplet          | Rédiger dans les 24h, même en format léger      |
+| ADR sans alternatives                       | Pas de preuve que d'autres options ont été évaluées | Toujours documenter au moins 1 alternative      |
+| ADR qui décrit le "quoi" sans le "pourquoi" | Pas de valeur ajoutée par rapport au code           | Se concentrer sur les contraintes et trade-offs |
+| ADR jamais mis à jour                       | Devient trompeur quand la réalité diverge           | Revue trimestrielle                             |
+| Trop d'ADRs sur des détails mineurs         | Bruit, personne ne les lit                          | Utiliser la grille de décision                  |
 
 ---
 
-*Dernière mise à jour : 14 février 2026*
+_Dernière mise à jour : 14 février 2026_

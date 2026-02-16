@@ -1,4 +1,6 @@
-# ADR-017: Planification Horaire — Local (Pi) vs Serveur (Cloud)
+# PROP-005: Planification Horaire — Local (Pi) vs Serveur (Cloud)
+
+> _Anciennement ADR-017_
 
 **Date** : Février 2026
 **Statut** : Proposé

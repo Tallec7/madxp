@@ -398,4 +398,4 @@ Que le client soit dans un petit club avec un routeur box ou dans un gymnase ave
 **Auteur** : Équipe Produit Neopro
 **Statut** : Phases 1-4 implémentées (v2.34-v2.37, janvier-février 2026)
 **Prochaine étape** : Monitoring et optimisation continue
-**Voir aussi** : [ADR-007 — Network Resilience 4-Layer](../architecture/adr/ADR-007-network-resilience-4-layer.md)
+**Voir aussi** : [ADR-024 — Network Resilience 4-Layer](../adr/ADR-024-network-resilience-layers.md)

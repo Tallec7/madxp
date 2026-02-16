@@ -1,113 +1,113 @@
-# ADR-021: Timer d'inactivite recording
+# ADR-021: Timer d'inactivité recording
 
-**Date** : Fevrier 2026
-**Statut** : Accepte (mise a jour fevrier 2026)
-**Decideurs** : Guillaume Le Tallec
+**Date** : Février 2026
+**Statut** : Accepté (mise à jour février 2026)
+**Décideurs** : Guillaume Le Tallec
 
 ---
 
 ## Contexte
 
-Les analytics video (lectures, impressions sponsors) ne sont enregistrees que lorsque `RecordingStateService.isRecording === true` sur le Raspberry Pi. Actuellement :
+Les analytics vidéo (lectures, impressions sponsors) ne sont enregistrées que lorsque `RecordingStateService.isRecording === true` sur le Raspberry Pi. Actuellement :
 
 1. **Au boot** : recording = OFF
 2. **Changement de phase** (neutral -> before/during/after) : recording = ON automatiquement
-3. **Retour en neutral** : recording = OFF immediatement (auto-stop)
-4. **Video manuelle en neutral** : recording = ON temporaire (le temps de la video), puis OFF
-5. **Override manuel** : le club peut forcer ON/OFF via la telecommande
+3. **Retour en neutral** : recording = OFF immédiatement (auto-stop)
+4. **Vidéo manuelle en neutral** : recording = ON temporaire (le temps de la vidéo), puis OFF
+5. **Override manuel** : le club peut forcer ON/OFF via la télécommande
 
-**Problemes identifies** :
+**Problèmes identifiés** :
 
-- Les clubs qui restent en phase match (before/during/after) sans toucher la telecommande pendant longtemps n'ont aucun feedback -- le recording continue indefiniment et ne s'arrete jamais
-- Le timer de 15 min ne se declenche que sur retour en neutral, pas dans les autres phases
-- L'arret du recording est silencieux : aucune notification au club staff
-- Si les clubs ne configurent pas de boucles temporelles et restent sur la boucle par defaut, aucune analytics n'est jamais collectee
+- Les clubs qui restent en phase match (before/during/after) sans toucher la télécommande pendant longtemps n'ont aucun feedback — le recording continue indéfiniment et ne s'arrête jamais
+- Le timer de 15 min ne se déclenche que sur retour en neutral, pas dans les autres phases
+- L'arrêt du recording est silencieux : aucune notification au club staff
+- Si les clubs ne configurent pas de boucles temporelles et restent sur la boucle par défaut, aucune analytics n'est jamais collectée
 
-**Objectif** : Rendre l'arret du recording visible et controlable pour les clubs.
+**Objectif** : Rendre l'arrêt du recording visible et contrôlable pour les clubs.
 
-## Decision
+## Décision
 
-### Timer d'inactivite universel avec popup d'avertissement
+### Timer d'inactivité universel avec popup d'avertissement
 
-Remplacer le timer "retour neutral" par un **timer d'inactivite universel** qui fonctionne dans toutes les phases. Apres 15 minutes sans interaction sur la telecommande, une popup d'avertissement apparait avec un decompte de 3 minutes. Le club peut prolonger ou arreter le recording.
+Remplacer le timer "retour neutral" par un **timer d'inactivité universel** qui fonctionne dans toutes les phases. Après 15 minutes sans interaction sur la télécommande, une popup d'avertissement apparaît avec un décompte de 3 minutes. Le club peut prolonger ou arrêter le recording.
 
-> **Note** : La "boucle NEOPRO par defaut" est un sujet separe gere cote dashboard/central server via le systeme owner/lock existant dans `sponsors[]`. Ce n'est pas un champ Pi — c'est le central qui pousse les videos NEOPRO verrouillees dans la boucle par defaut lors du deploiement.
+> **Note** : La "boucle NEOPRO par défaut" est un sujet séparé géré côté dashboard/central server via le système owner/lock existant dans `sponsors[]`. Ce n'est pas un champ Pi — c'est le central qui pousse les vidéos NEOPRO verrouillées dans la boucle par défaut lors du déploiement.
 
-## Alternatives Considerees
+## Alternatives Considérées
 
 ### 1. Garder le timer neutral-only + ajouter un toast
 
 **Avantages** : Changement minimal, pas de refonte du timer
-**Inconvenients** : Ne resout pas l'absence de timeout en phase match, un toast est facilement rate
-**Verdict** : Rejete -- ne couvre pas le cas des clubs qui restent en phase match
+**Inconvénients** : Ne résout pas l'absence de timeout en phase match, un toast est facilement raté
+**Verdict** : Rejeté — ne couvre pas le cas des clubs qui restent en phase match
 
-### 2. Timer d'inactivite universel avec popup (choisie)
+### 2. Timer d'inactivité universel avec popup (choisie)
 
 **Avantages** :
 
 - Couvre toutes les phases (neutral, before, during, after)
-- Popup modale = impossible a rater pour le club staff
-- Decompte visuel donne le temps de reagir
+- Popup modale = impossible à rater pour le club staff
+- Décompte visuel donne le temps de réagir
 - Reset automatique sur toute interaction significative
-- Le recording manuel (override) n'est pas affecte
+- Le recording manuel (override) n'est pas affecté
 
-**Inconvenients** :
+**Inconvénients** :
 
-- Changement de comportement pour les clubs existants (le timer se declenche aussi en phase match)
-- Necessite d'instrumenter les methodes d'interaction de la telecommande
+- Changement de comportement pour les clubs existants (le timer se déclenche aussi en phase match)
+- Nécessite d'instrumenter les méthodes d'interaction de la télécommande
 
-**Verdict** : Accepte -- meilleur compromis UX/collecte de donnees
+**Verdict** : Accepté — meilleur compromis UX/collecte de données
 
-## Consequences
+## Conséquences
 
 ### Positives
 
-1. Les clubs voient quand le recording va s'arreter et peuvent prolonger
-2. Les analytics sont collectees de maniere plus fiable en match
-3. Le recording manuel (override) n'est pas affecte par le timer d'inactivite
+1. Les clubs voient quand le recording va s'arrêter et peuvent prolonger
+2. Les analytics sont collectées de manière plus fiable en match
+3. Le recording manuel (override) n'est pas affecté par le timer d'inactivité
 
-### Negatives
+### Négatives
 
-1. Les clubs habitues au recording indefini en phase match verront une popup apres 15 min d'inactivite
-2. L'instrumentation des methodes d'interaction ajoute un couplage entre `RemoteComponent` et `RecordingStateService`
+1. Les clubs habitués au recording indéfini en phase match verront une popup après 15 min d'inactivité
+2. L'instrumentation des méthodes d'interaction ajoute un couplage entre `RemoteComponent` et `RecordingStateService`
 
 ### Risques
 
 | Risque                                           | Mitigation                                                            |
 | ------------------------------------------------ | --------------------------------------------------------------------- |
-| Popup jugee intrusive par les clubs              | Le bouton "Continuer" est un seul clic, reset complet du cycle        |
-| Timer d'inactivite mal calibre (trop court/long) | 15 min est deja la valeur en prod, les clubs sont habitues            |
-| Interactions non detectees (scrolling, etc.)     | On instrumente uniquement les actions significatives, pas les scrolls |
+| Popup jugée intrusive par les clubs              | Le bouton "Continuer" est un seul clic, reset complet du cycle        |
+| Timer d'inactivité mal calibré (trop court/long) | 15 min est déjà la valeur en prod, les clubs sont habitués            |
+| Interactions non détectées (scrolling, etc.)     | On instrumente uniquement les actions significatives, pas les scrolls |
 
-## Plan d'implementation
+## Plan d'implémentation
 
-1. ~~Modifier `RecordingStateService` : remplacer le timer neutral-only par un timer d'inactivite universel + warning countdown~~ ✅ v3.38.0
-2. ~~Ecrire les tests unitaires (~10 cas)~~ ✅ v3.38.0
-3. ~~Modifier `RemoteComponent` : subscription au warning, appels `notifyUserActivity()` dans les methodes d'interaction~~ ✅ v3.38.0
+1. ~~Modifier `RecordingStateService` : remplacer le timer neutral-only par un timer d'inactivité universel + warning countdown~~ ✅ v3.38.0
+2. ~~Écrire les tests unitaires (~10 cas)~~ ✅ v3.38.0
+3. ~~Modifier `RemoteComponent` : subscription au warning, appels `notifyUserActivity()` dans les méthodes d'interaction~~ ✅ v3.38.0
 4. ~~Ajouter la popup HTML + styles SCSS (avec dark mode)~~ ✅ v3.38.0
-5. Auto-stop immediat au retour en neutral (plus de timer 15+3 min en boucle par defaut) ✅ v3.43.2
-6. Auto-start temporaire pour videos manuelles en neutral (le recording s'active le temps de la video) ✅ v3.43.2
-7. Retour automatique en boucle par defaut (neutral) quand le timer d'inactivite expire ✅ v3.44.5
+5. Auto-stop immédiat au retour en neutral (plus de timer 15+3 min en boucle par défaut) ✅ v3.43.2
+6. Auto-start temporaire pour vidéos manuelles en neutral (le recording s'active le temps de la vidéo) ✅ v3.43.2
+7. Retour automatique en boucle par défaut (neutral) quand le timer d'inactivité expire ✅ v3.44.5
 
-### Criteres de validation
+### Critères de validation
 
 - Tous les tests existants passent (31 recording-state + 38 analytics = 69 tests)
-- La popup apparait apres 15 min d'inactivite dans les phases non-neutral
-- Le retour en neutral coupe immediatement le recording (sauf override manuel)
-- Le lancement d'une video manuelle en neutral active temporairement le recording
+- La popup apparaît après 15 min d'inactivité dans les phases non-neutral
+- Le retour en neutral coupe immédiatement le recording (sauf override manuel)
+- Le lancement d'une vidéo manuelle en neutral active temporairement le recording
 - Le bouton "Continuer" reset le cycle complet (15+3 min)
-- Le decompte de 0 arrete le recording **et revient en boucle par defaut**
-- Le recording manuel n'est pas affecte
+- Le décompte de 0 arrête le recording **et revient en boucle par défaut**
+- Le recording manuel n'est pas affecté
 
-## References
+## Références
 
 - [recording-state.service.ts](../../raspberry/src/app/services/recording-state.service.ts) - Service de gestion du recording
-- [tv.component.ts](../../raspberry/src/app/components/tv/tv.component.ts) - Composant TV (auto-start temporaire pour videos manuelles)
-- [remote.component.ts](../../raspberry/src/app/components/remote/remote.component.ts) - Telecommande
+- [tv.component.ts](../../raspberry/src/app/components/tv/tv.component.ts) - Composant TV (auto-start temporaire pour vidéos manuelles)
+- [remote.component.ts](../../raspberry/src/app/components/remote/remote.component.ts) - Télécommande
 - ADR-001 : Architecture Edge + Cloud
-- ADR-010 : Detection HDMI-CEC pour analytics fiables
+- ADR-010 : Détection HDMI-CEC pour analytics fiables
 
 ---
 
-_Cree le 15 fevrier 2026_
-_Mis a jour le 16 fevrier 2026 : auto-stop neutral + auto-start videos manuelles_
+_Créé le 15 février 2026_
+_Mis à jour le 16 février 2026 : auto-stop neutral + auto-start vidéos manuelles_

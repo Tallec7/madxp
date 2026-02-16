@@ -1,4 +1,6 @@
-# ADR-018: Portail Sponsor Self-Service
+# PROP-006: Portail Sponsor Self-Service
+
+> _Anciennement ADR-018_
 
 **Date** : Février 2026
 **Statut** : Proposé

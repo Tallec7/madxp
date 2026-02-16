@@ -1,4 +1,6 @@
-# ADR-010: Suppression de l'UI Analytics Dashboard
+# ADR-027: Suppression de l'UI Analytics Dashboard
+
+> _Anciennement ADR-010. Renuméroté pour éliminer la collision avec ADR-010 (Détection HDMI-CEC Analytics)._
 
 **Date** : Février 2026 (v3.0)
 **Statut** : Accepté

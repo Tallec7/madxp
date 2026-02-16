@@ -1,4 +1,6 @@
-# ADR-008: Double Backend de Stockage FTP + Supabase
+# ADR-025: Double Backend de Stockage FTP + Supabase
+
+> _Anciennement ADR-008. Renuméroté pour éliminer la collision avec ADR-008 (Double-Buffer Vidéo Pi)._
 
 **Date** : Décembre 2024 (documenté rétroactivement)
 **Statut** : Accepté

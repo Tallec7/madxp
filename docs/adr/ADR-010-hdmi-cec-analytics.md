@@ -12,7 +12,7 @@ Les analytics Neopro comptaient toutes les lectures vidéo, y compris quand la T
 
 **Exemple réel** : Un club affichait 1200h/jour de "temps de diffusion" et 3000 vidéos jouées alors que la TV était débranchée depuis des semaines.
 
-Ce problème a conduit à la suppression des pages analytics (voir ADR-009).
+Ce problème a conduit à la suppression des pages analytics (voir ADR-027).
 
 ## Décision
 
@@ -48,7 +48,7 @@ trackVideoPlay(video, tvStatus);
 - Sponsors trompés par des chiffres gonflés
 - Impossible de construire un business de preuve de diffusion
 
-**Verdict** : Rejeté - A causé la suppression des analytics (ADR-009).
+**Verdict** : Rejeté - A causé la suppression des analytics (ADR-027).
 
 ### 2. Détection via luminosité ambiante (capteur)
 
@@ -174,7 +174,7 @@ En complément du CEC, le Pi lit maintenant les données **EDID** (Extended Disp
 - [add-tv-status-analytics.sql](../../central-server/src/scripts/migrations/add-tv-status-analytics.sql)
 - [hdmi.service.js](../../raspberry/server/services/hdmi.service.js) — Service EDID + CEC
 - [metrics.js](../../raspberry/sync-agent/src/metrics.js) — Collecte EDID pour health status
-- ADR-009 : Suppression des Analytics dashboard
+- ADR-027 : Suppression de l'UI Analytics dashboard
 
 ---
 

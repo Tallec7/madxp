@@ -1,4 +1,6 @@
-# ADR-019: Algorithme de Rotation Équitable des Sponsors
+# PROP-007: Algorithme de Rotation Équitable des Sponsors
+
+> _Anciennement ADR-019_
 
 **Date** : Février 2026
 **Statut** : Proposé

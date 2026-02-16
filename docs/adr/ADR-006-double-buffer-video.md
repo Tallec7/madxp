@@ -1,7 +1,7 @@
 # ADR-006: Double-Buffer Vidéo sans Préchargement
 
 **Date** : Janvier 2026 (documenté rétroactivement)
-**Statut** : Accepté
+**Statut** : ⚠️ Supersédé par [ADR-008](./ADR-008-double-buffer-video-pi.md) — Version initiale simplifiée, remplacée par la version itérée avec freeze-frame pré-capturé et disk cache warming.
 **Décideurs** : Équipe technique Neopro
 
 ---
@@ -11,6 +11,7 @@
 Le composant TV du Raspberry Pi doit lire des vidéos en boucle continue (5h+ par jour) avec des transitions fluides entre les vidéos. Le Pi dispose d'un décodeur vidéo hardware (VideoCore IV/VII) avec des limitations strictes.
 
 Problèmes rencontrés en production :
+
 1. **Flash blanc entre vidéos** : Quand un player HTML5 termine et le suivant démarre, l'écran flashe
 2. **Crash GPU après 2h** : `MEDIA_ERR_DECODE` (code 3) causé par la surchauffe du décodeur hardware
 3. **Saccades lors du préchargement** : Charger la vidéo suivante pendant la lecture de l'actuelle surcharge le GPU
@@ -33,10 +34,12 @@ z-index 1-2: Players boucle A/B (alternent pour la boucle continue)
 ### 1. Player unique avec préchargement
 
 **Avantages** :
+
 - Simple à implémenter
 - Transitions potentiellement plus rapides
 
 **Inconvénients** :
+
 - Flash blanc systématique entre chaque vidéo
 - Préchargement surcharge le GPU Pi
 
@@ -45,9 +48,11 @@ z-index 1-2: Players boucle A/B (alternent pour la boucle continue)
 ### 2. Double-buffer avec préchargement anticipé (timeupdate)
 
 **Avantages** :
+
 - Transitions instantanées (vidéo suivante prête en mémoire)
 
 **Inconvénients** :
+
 - Le décodeur hardware Pi ne supporte pas 2 décodages simultanés
 - L'événement `timeupdate` lui-même causait des micro-freezes même throttlé
 - Saccades visibles pendant la lecture
@@ -57,11 +62,13 @@ z-index 1-2: Players boucle A/B (alternent pour la boucle continue)
 ### 3. Double-buffer sans préchargement (at ended) ✅
 
 **Avantages** :
+
 - **Zéro saccade** : Une seule vidéo décode à la fois
 - **Pas de flash** : Le freeze-frame couvre la transition
 - Lecture fluide sur sessions longues (5h+)
 
 **Inconvénients** :
+
 - Légère pause entre vidéos (< 1s) le temps de charger la suivante
 - Complexité du système de layers (4 players + canvas + overlay)
 
@@ -98,11 +105,11 @@ Memory Cleanup (30min OU 50 vidéos) → clearRect canvas + clear buffers
 
 ## Ce qui a été désactivé (causait des saccades)
 
-| Feature | Pourquoi désactivée |
-|---------|-------------------|
-| `timeupdate` listener | Même throttlé, causait des micro-freezes |
-| Préchargement anticipé | Décodage parallèle surchargeait le GPU |
-| Transition CSS opacity | Repaints causaient des saccades |
+| Feature                | Pourquoi désactivée                      |
+| ---------------------- | ---------------------------------------- |
+| `timeupdate` listener  | Même throttlé, causait des micro-freezes |
+| Préchargement anticipé | Décodage parallèle surchargeait le GPU   |
+| Transition CSS opacity | Repaints causaient des saccades          |
 
 **Avertissement** : Ne pas réintroduire ces features sans tester sur un Pi physique avec une boucle de 2h+. Les tests courts ne révèlent pas les problèmes thermiques.
 
@@ -115,4 +122,4 @@ Memory Cleanup (30min OU 50 vidéos) → clearRect canvas + clear buffers
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_

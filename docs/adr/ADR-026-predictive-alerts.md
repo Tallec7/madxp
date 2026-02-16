@@ -1,4 +1,6 @@
-# ADR-009: Alertes Prédictives Multi-Métriques
+# ADR-026: Alertes Prédictives Multi-Métriques
+
+> _Anciennement ADR-009. Renuméroté pour éliminer la collision avec ADR-009 (Suppression Analytics)._
 
 **Date** : Février 2026 (v3.0)
 **Statut** : Accepté
