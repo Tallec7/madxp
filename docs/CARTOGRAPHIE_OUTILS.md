@@ -467,4 +467,294 @@
 
 ---
 
+## Fonctionnalités par domaine métier
+
+> Vue transversale — les mêmes fonctionnalités traversent plusieurs outils.
+
+### Diffusion vidéo
+
+| Fonctionnalité                                                 | Outils impliqués                   |
+| -------------------------------------------------------------- | ---------------------------------- |
+| Boucles vidéo par phase (avant/pendant/après match)            | Dashboard, Télécommande, TV Player |
+| Double-buffer seamless (preload + switch)                      | TV Player                          |
+| 6 sports supportés (foot, basket, hand, volley, rugby, hockey) | TV Player, Télécommande            |
+| Score overlay (9 positions, logos équipes, goal animations)    | TV Player, Télécommande            |
+| Watermark sponsor programmable                                 | TV Player, Dashboard               |
+| Timer de match                                                 | Télécommande, TV Player            |
+| Breaking news plein écran                                      | Télécommande, TV Player            |
+| Conversion image → vidéo (JPG/PNG/WEBP → MP4)                  | Dashboard, Central Server          |
+
+### Gestion de contenu
+
+| Fonctionnalité                                        | Outils impliqués                                    |
+| ----------------------------------------------------- | --------------------------------------------------- |
+| Upload vidéo cloud (50MB, SHA256, FTP)                | Dashboard, Central Server, FTP                      |
+| Upload vidéo locale                                   | Admin Panel Pi                                      |
+| Déploiement vers site ou groupe                       | Dashboard, Central Server, Sync Agent               |
+| Multi-config profiles (N profils par site)            | Dashboard, Central Server, Sync Agent, Télécommande |
+| Brouillons de configuration                           | Dashboard, Central Server                           |
+| File de commandes (offline → replay à la reconnexion) | Dashboard, Central Server, Sync Agent               |
+
+### Live & match
+
+| Fonctionnalité                              | Outils impliqués                           |
+| ------------------------------------------- | ------------------------------------------ |
+| Score temps réel                            | Télécommande → Pi Server → TV Player       |
+| Phases de match                             | Télécommande → Pi Server → TV Player       |
+| Configuration match (date, nom, audience)   | Télécommande → Central Server              |
+| Enregistrement (REC) + auto-stop inactivité | Télécommande, TV Player                    |
+| QR code accès télécommande                  | Dashboard (génération), Télécommande cloud |
+
+### Analytics & reporting
+
+| Fonctionnalité                         | Outils impliqués                             |
+| -------------------------------------- | -------------------------------------------- |
+| Tracking impressions sponsors          | TV Player → Sync Agent → Central Server      |
+| Tracking video plays                   | TV Player → Sync Agent → Central Server      |
+| Dashboard analytics club               | Dashboard                                    |
+| Rapports PDF / Excel / CSV             | Dashboard, Central Server, Portail Annonceur |
+| Stats annonceur par vidéo/site/période | Portail Annonceur, Portail Agence            |
+| Métriques traction (pitch deck)        | Central Server (SQL)                         |
+
+### Supervision & alerting
+
+| Fonctionnalité                                     | Outils impliqués                                 |
+| -------------------------------------------------- | ------------------------------------------------ |
+| Heartbeat Pi (CPU, RAM, temp, disque, kiosk)       | Sync Agent → Central Server                      |
+| 18 seuils d'alerte (réactifs + prédictifs + kiosk) | Central Server, Monitoring                       |
+| Notifications multi-canal (email, Slack, webhook)  | Central Server                                   |
+| Vue live TV + screenshot à distance                | Dashboard, Central Server, Sync Agent, TV Player |
+| Terminal distant (remote shell)                    | Dashboard, Central Server, Sync Agent            |
+| Grafana dashboards (3)                             | Monitoring                                       |
+
+### Mise à jour & maintenance
+
+| Fonctionnalité                                   | Outils impliqués                      |
+| ------------------------------------------------ | ------------------------------------- |
+| OTA (upload, canary, rollback, reboot programmé) | Dashboard, Central Server, Sync Agent |
+| Golden Image (clonage SD card)                   | Toolbox Déploiement                   |
+| Watchdogs (kiosk, sync-agent, network, hotspot)  | Watchdogs                             |
+| Backup / Restore configuration                   | Admin Panel Pi                        |
+| Diagnostic complet (debug bundle)                | Admin Panel Pi, Dashboard             |
+
+### Sécurité & accès
+
+| Fonctionnalité                      | Outils impliqués                   |
+| ----------------------------------- | ---------------------------------- |
+| Auth JWT + MFA TOTP                 | Dashboard, Central Server          |
+| RBAC 6 rôles                        | Dashboard, Central Server          |
+| PIN cloud remote (SHA-256, JWT 24h) | Télécommande cloud, Central Server |
+| API key par site (bcrypt)           | Sync Agent, Central Server         |
+| Rate limiting (9 niveaux)           | Central Server                     |
+| Row-Level Security (multi-tenant)   | Central Server, PostgreSQL         |
+
+### Gestion commerciale
+
+| Fonctionnalité                  | Outils impliqués                        |
+| ------------------------------- | --------------------------------------- |
+| Abonnements et licences         | Dashboard, Central Server               |
+| Push licence temps réel vers Pi | Central Server → Sync Agent → TV Player |
+| Blocage TV si licence expirée   | TV Player                               |
+| Facturation export (CSV/JSON)   | Dashboard, Central Server               |
+| Portail self-service annonceurs | Portail Annonceur                       |
+| Gestion multi-annonceurs        | Portail Agence                          |
+
+---
+
+## Parcours utilisateurs
+
+### Jour de match (bénévole)
+
+```
+Scan QR code → Télécommande cloud → PIN (si activé) → Chargement état site
+     │
+     ├─→ Configurer le match (date, équipes, audience estimée)
+     ├─→ Sélectionner phase "Avant-match" → TV bascule sur boucle avant-match
+     ├─→ Lancer le chrono
+     │
+     ├─→ Phase "Match" → TV bascule sur boucle match
+     │     ├─→ +1 Home / +1 Away → Score mis à jour en temps réel sur TV
+     │     ├─→ Goal → Animation popup sur TV (3 styles au choix)
+     │     └─→ Breaking news → Flash info plein écran
+     │
+     ├─→ Mi-temps → TV bascule sur boucle mi-temps
+     │
+     └─→ Phase "Après-match" → TV bascule sur boucle post-match
+           └─→ REC auto-stop si inactivité 15min
+```
+
+**Outils traversés** : Télécommande → Central Server API → Sync Agent → Pi Server Socket.IO → TV Player
+
+---
+
+### Déployer du contenu (opérateur)
+
+```
+Dashboard → Upload vidéo (ou conversion image → vidéo)
+     │
+     ├─→ Vidéo stockée sur FTP + checksum SHA256 calculé
+     │
+     ├─→ Sélectionner sites/groupe → "Déployer"
+     │     │
+     │     ├─→ Site en ligne : commande envoyée immédiatement via Socket.IO
+     │     └─→ Site offline : commande mise en file d'attente
+     │
+     ├─→ Sync Agent télécharge la vidéo depuis FTP
+     │     ├─→ Vérification checksum SHA256
+     │     └─→ Copie dans /home/pi/neopro/videos/{catégorie}/
+     │
+     ├─→ Configuration mise à jour → Pi Server notifie TV + Remote
+     │
+     └─→ Vidéo disponible dans la boucle TV et dans la télécommande
+```
+
+**Outils traversés** : Dashboard → Central Server → FTP → Sync Agent → Pi Filesystem → Pi Server → TV Player
+
+---
+
+### Installer un nouveau club (technicien)
+
+```
+Flash SD card → SSH sur le Pi → setup-new-club.sh
+     │
+     ├─→ Installation : Node.js, nginx, Chromium, services systemd
+     ├─→ Génération API key → stockée dans ~/.neopro-credentials
+     ├─→ Configuration hotspot WiFi (NEOPRO-CLUB)
+     │
+     ├─→ Enregistrement sur le Dashboard (saisie site + API key)
+     │     └─→ Central Server stocke le hash de l'API key
+     │
+     ├─→ Sync Agent se connecte → site passe "Online" sur le Dashboard
+     │     └─→ Commandes en attente traitées automatiquement
+     │
+     ├─→ Pousser la config initiale (catégories, logos, sponsors)
+     ├─→ Déployer les premières vidéos
+     │
+     └─→ Premier affichage TV → club opérationnel
+```
+
+**Outils traversés** : Toolbox Déploiement → Admin Panel Pi → Dashboard → Central Server → Sync Agent → TV Player
+
+---
+
+### Consulter ses stats (annonceur)
+
+```
+Login portail annonceur → Dashboard personnel
+     │
+     ├─→ Vue d'ensemble : impressions totales, vidéos actives, sites touchés
+     ├─→ Détail par vidéo / par site / par période
+     ├─→ Export CSV ou rapport PDF
+     │
+     │   (En arrière-plan, les impressions sont trackées ainsi :)
+     │
+     └─→ TV joue une vidéo sponsor → impression enregistrée localement
+           → Buffer fichier sur le Pi → envoi batch au cloud
+           → Agrégation quotidienne → visible dans le portail
+```
+
+**Outils traversés** : TV Player → Sync Agent → Central Server → Portail Annonceur
+
+---
+
+### Alerte critique (support)
+
+```
+Pi offline → Central Server détecte absence de heartbeat
+     │
+     ├─→ Après 5min : alerte "site_offline" créée (severity: critical)
+     ├─→ Notification email + Slack envoyée
+     │
+     ├─→ Support ouvre le Dashboard → voit 🔴 Offline
+     │     ├─→ Consulte dernières métriques connues (CPU, temp, disque)
+     │     └─→ Prépare commande debug bundle (sera exécutée à la reconnexion)
+     │
+     ├─→ Pi revient en ligne → Sync Agent se reconnecte
+     │     ├─→ Commandes en attente exécutées automatiquement
+     │     └─→ Déploiements en attente relancés
+     │
+     └─→ Support résout l'alerte manuellement dans le Dashboard
+```
+
+**Outils traversés** : Sync Agent → Central Server → Monitoring → Dashboard
+
+---
+
+### Mise à jour OTA (admin)
+
+```
+Dashboard → Upload package .tar.gz + changelog
+     │
+     ├─→ Package stocké sur FTP + checksum SHA256
+     │
+     ├─→ Sélectionner sites → "Déployer" (avec options : reboot, rollback auto)
+     │
+     ├─→ Sync Agent télécharge le package
+     │     ├─→ Backup version actuelle
+     │     ├─→ Vérification checksum
+     │     ├─→ Exécution pré-migrations
+     │     ├─→ Extraction et installation
+     │     └─→ Restart services (server, kiosk, sync-agent)
+     │
+     ├─→ Si succès : version mise à jour dans le Dashboard
+     ├─→ Si échec + rollback auto : restauration du backup
+     │
+     └─→ Dashboard affiche progression temps réel par site
+           (Téléchargement 45% → Installation... → ✅ Terminé v3.40)
+```
+
+**Outils traversés** : Dashboard → Central Server → FTP → Sync Agent → Systemd → Watchdogs (relance auto)
+
+---
+
+## Flux inter-outils
+
+### Comment les outils communiquent
+
+```
+┌────────────┐  HTTP/REST   ┌────────────────┐  Socket.IO   ┌────────────┐
+│  Dashboard │ ───────────→ │ Central Server │ ───────────→ │ Sync Agent │
+│  Portails  │ ←─────────── │     API        │ ←─────────── │   (Pi)     │
+└────────────┘  JSON/JWT    └────────────────┘  Events      └─────┬──────┘
+                                    │                              │
+                                    │ SQL                    Local Socket.IO
+                                    ↓                              │
+                             ┌──────────────┐              ┌──────┴──────┐
+                             │  PostgreSQL  │              │  Pi Server  │
+                             │  (Supabase)  │              │  Socket.IO  │
+                             └──────────────┘              └──────┬──────┘
+                                                                  │
+                                    ┌────────────────┐     ┌──────┴──────┐
+                                    │  FTP Storage   │     │  TV Player  │
+                                    │  (Hostinger)   │     │  + Remote   │
+                                    └────────────────┘     └─────────────┘
+```
+
+### Flux principaux
+
+| Flux                    | Chemin                                                              | Protocole                  |
+| ----------------------- | ------------------------------------------------------------------- | -------------------------- |
+| **Score update**        | Remote → (Central Server →) Sync Agent → Pi Server → TV             | Socket.IO                  |
+| **Déploiement vidéo**   | Dashboard → API → FTP ··· Sync Agent ← FTP → Pi disk → TV           | HTTP + FTP + Socket.IO     |
+| **Config change**       | Dashboard → API → Sync Agent → config.json → Pi Server → TV/Remote  | HTTP + Socket.IO + FS      |
+| **OTA update**          | Dashboard → API → FTP ··· Sync Agent → install → systemd restart    | HTTP + FTP + Socket.IO     |
+| **Heartbeat**           | Sync Agent → Central Server → DB + alerting                         | Socket.IO                  |
+| **Screenshot**          | Dashboard → API → Sync Agent → Pi Server → TV → (retour inverse)    | Socket.IO (bidirectionnel) |
+| **License push**        | Dashboard → API → Sync Agent → Pi Server → TV (bandeau/blocage)     | HTTP + Socket.IO           |
+| **Analytics**           | TV → buffer fichier → Sync Agent → batch upload → API → DB          | Fichier + HTTP             |
+| **Impressions sponsor** | TV → buffer local → Sync Agent → API → DB → Portail Annonceur       | Fichier + HTTP             |
+| **Commande offline**    | Dashboard → API → file DB ··· (Pi reconnexion) → Sync Agent exécute | HTTP + DB + Socket.IO      |
+
+### Modes de communication
+
+| Entre                       | Protocole                              | Latence    |
+| --------------------------- | -------------------------------------- | ---------- |
+| Dashboard ↔ Central Server  | HTTP REST + WebSocket                  | ~50-200ms  |
+| Central Server ↔ Sync Agent | Socket.IO (WebSocket persistant)       | ~100-500ms |
+| Sync Agent ↔ Pi Server      | Socket.IO local (singleton persistant) | <5ms       |
+| Remote locale ↔ TV Player   | Socket.IO local                        | <5ms       |
+| Remote cloud ↔ TV Player    | HTTP → Socket.IO × 3 relais            | ~500ms-2s  |
+
+---
+
 **Dernière mise à jour** : 16 février 2026
