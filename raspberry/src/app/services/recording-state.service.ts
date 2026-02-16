@@ -66,14 +66,18 @@ export class RecordingStateService implements OnDestroy {
 
   /**
    * Appelé par la Remote quand la phase change.
-   * Auto-start si on quitte neutral. Le changement de phase est une interaction.
+   * Auto-start si on quitte neutral. Auto-stop au retour en neutral.
+   * Le changement de phase est une interaction (reset inactivité).
    */
   public onPhaseChange(phase: 'neutral' | 'before' | 'during' | 'after'): void {
     if (phase !== 'neutral' && !this._isRecording) {
       // Auto-start : on entre dans une phase de match
       this.startRecording(false);
+    } else if (phase === 'neutral' && this._isRecording && !this._isManualOverride) {
+      // Auto-stop : retour en boucle par défaut → arrêter l'enregistrement
+      this.stopRecording(false);
     } else if (this._isRecording && !this._isManualOverride) {
-      // Changement de phase = interaction utilisateur → reset le timer d'inactivité
+      // Changement de phase (non-neutral → non-neutral) = interaction → reset timer
       this.resetInactivityTimer();
     }
   }

@@ -1,3 +1,15 @@
+## [3.43.2] (2026-02-16)
+
+### Bug Fixes
+
+- **recording:** auto-stop immédiat du recording au retour en boucle par défaut (neutral) — le recording restait ON pendant 15+3 min après une phase match
+- **recording:** les vidéos lancées manuellement depuis la télécommande en boucle par défaut sont maintenant enregistrées dans les analytics (auto-start temporaire du recording)
+
+### Documentation
+
+- **ADR-021:** mise à jour statut Accepté + ajout règles auto-stop neutral et auto-start vidéos manuelles
+- **TRACKING_IMPRESSIONS:** ajout version 1.3.0 avec corrections recording state
+
 ## [3.43.1](https://github.com/Tallec7/neopro/compare/v3.43.0...v3.43.1) (2026-02-16)
 
 ### Bug Fixes

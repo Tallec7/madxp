@@ -148,58 +148,44 @@ describe('RecordingStateService', () => {
     expect(mockLocalBroadcast.emitRecordingState).not.toHaveBeenCalled();
   });
 
-  it('should start inactivity timer on return to neutral (auto recording)', fakeAsync(() => {
+  it('should auto-stop recording on return to neutral (auto recording)', () => {
     service.onPhaseChange('during');
     expect(service.isRecording).toBe(true);
 
     service.onPhaseChange('neutral');
-    // Encore en enregistrement (le timer d'inactivité n'a pas expiré)
-    expect(service.isRecording).toBe(true);
-
-    // Avancer de 15 minutes → warning apparaît
-    tick(INACTIVITY_DELAY);
-
-    let warningState: RecordingWarningState | undefined;
-    service.warning$.subscribe(w => warningState = w);
-    expect(warningState!.active).toBe(true);
-    expect(warningState!.secondsRemaining).toBe(WARNING_COUNTDOWN);
-
-    // Avancer de 3 minutes → auto-stop
-    tick(WARNING_COUNTDOWN * 1000);
+    // Retour en boucle par défaut → recording coupé immédiatement
     expect(service.isRecording).toBe(false);
-  }));
+  });
 
-  it('should NOT auto-stop if manual override is active', fakeAsync(() => {
+  it('should NOT auto-stop on neutral if manual override is active', () => {
     service.startRecording(true); // manual = true
     service.onPhaseChange('neutral');
 
-    tick(INACTIVITY_DELAY);
-    tick(WARNING_COUNTDOWN * 1000);
     // Toujours en enregistrement car manual override
     expect(service.isRecording).toBe(true);
-  }));
+  });
 
-  it('should cancel inactivity timer on new phase change', fakeAsync(() => {
-    service.onPhaseChange('during');
+  it('should not change state when already OFF and neutral', () => {
+    expect(service.isRecording).toBe(false);
+    mockLocalBroadcast.emitRecordingState.calls.reset();
+
     service.onPhaseChange('neutral');
-    // Timer d'inactivité démarré
+    // Rien ne doit changer, pas de broadcast
+    expect(service.isRecording).toBe(false);
+    expect(mockLocalBroadcast.emitRecordingState).not.toHaveBeenCalled();
+  });
 
-    // Retour en phase match avant expiration
-    tick(5 * 60 * 1000);
+  it('should re-start recording on phase change after neutral auto-stop', () => {
     service.onPhaseChange('during');
-
-    // Même après 15 minutes, toujours en enregistrement (timer reset)
-    tick(INACTIVITY_DELAY);
-
-    let warningState: RecordingWarningState | undefined;
-    service.warning$.subscribe(w => warningState = w);
-    expect(warningState!.active).toBe(true);
-
-    // Mais recording est encore actif
     expect(service.isRecording).toBe(true);
 
-    discardPeriodicTasks();
-  }));
+    service.onPhaseChange('neutral');
+    expect(service.isRecording).toBe(false);
+
+    // Retour en phase match → auto-start à nouveau
+    service.onPhaseChange('during');
+    expect(service.isRecording).toBe(true);
+  });
 
   // ---------------------------------------------------------------------------
   // Timer d'inactivité — universel (toutes phases)

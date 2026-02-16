@@ -1,7 +1,7 @@
 # ADR-021: Timer d'inactivite recording
 
 **Date** : Fevrier 2026
-**Statut** : Propose
+**Statut** : Accepte (mise a jour fevrier 2026)
 **Decideurs** : Guillaume Le Tallec
 
 ---
@@ -12,8 +12,9 @@ Les analytics video (lectures, impressions sponsors) ne sont enregistrees que lo
 
 1. **Au boot** : recording = OFF
 2. **Changement de phase** (neutral -> before/during/after) : recording = ON automatiquement
-3. **Retour en neutral** : timer de 15 min, puis recording = OFF (silencieusement)
-4. **Override manuel** : le club peut forcer ON/OFF via la telecommande
+3. **Retour en neutral** : recording = OFF immediatement (auto-stop)
+4. **Video manuelle en neutral** : recording = ON temporaire (le temps de la video), puis OFF
+5. **Override manuel** : le club peut forcer ON/OFF via la telecommande
 
 **Problemes identifies** :
 
@@ -80,15 +81,19 @@ Remplacer le timer "retour neutral" par un **timer d'inactivite universel** qui 
 
 ## Plan d'implementation
 
-1. Modifier `RecordingStateService` : remplacer le timer neutral-only par un timer d'inactivite universel + warning countdown
-2. Ecrire les tests unitaires (~10 cas)
-3. Modifier `RemoteComponent` : subscription au warning, appels `notifyUserActivity()` dans les methodes d'interaction
-4. Ajouter la popup HTML + styles SCSS (avec dark mode)
+1. ~~Modifier `RecordingStateService` : remplacer le timer neutral-only par un timer d'inactivite universel + warning countdown~~ ✅ v3.38.0
+2. ~~Ecrire les tests unitaires (~10 cas)~~ ✅ v3.38.0
+3. ~~Modifier `RemoteComponent` : subscription au warning, appels `notifyUserActivity()` dans les methodes d'interaction~~ ✅ v3.38.0
+4. ~~Ajouter la popup HTML + styles SCSS (avec dark mode)~~ ✅ v3.38.0
+5. Auto-stop immediat au retour en neutral (plus de timer 15+3 min en boucle par defaut) ✅ v3.43.2
+6. Auto-start temporaire pour videos manuelles en neutral (le recording s'active le temps de la video) ✅ v3.43.2
 
 ### Criteres de validation
 
-- Tous les tests existants passent (`npm run test:central`)
-- La popup apparait apres 15 min d'inactivite dans toutes les phases
+- Tous les tests existants passent (29 recording-state + 38 analytics = 67 tests)
+- La popup apparait apres 15 min d'inactivite dans les phases non-neutral
+- Le retour en neutral coupe immediatement le recording (sauf override manuel)
+- Le lancement d'une video manuelle en neutral active temporairement le recording
 - Le bouton "Continuer" reset le cycle complet (15+3 min)
 - Le decompte de 0 arrete le recording
 - Le recording manuel n'est pas affecte
@@ -96,6 +101,7 @@ Remplacer le timer "retour neutral" par un **timer d'inactivite universel** qui 
 ## References
 
 - [recording-state.service.ts](../../raspberry/src/app/services/recording-state.service.ts) - Service de gestion du recording
+- [tv.component.ts](../../raspberry/src/app/components/tv/tv.component.ts) - Composant TV (auto-start temporaire pour videos manuelles)
 - [remote.component.ts](../../raspberry/src/app/components/remote/remote.component.ts) - Telecommande
 - ADR-001 : Architecture Edge + Cloud
 - ADR-010 : Detection HDMI-CEC pour analytics fiables
@@ -103,3 +109,4 @@ Remplacer le timer "retour neutral" par un **timer d'inactivite universel** qui 
 ---
 
 _Cree le 15 fevrier 2026_
+_Mis a jour le 16 fevrier 2026 : auto-stop neutral + auto-start videos manuelles_

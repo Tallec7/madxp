@@ -16,6 +16,7 @@ import { WatermarkService } from '../../services/watermark.service';
 import { LicenseService, LicenseState } from '../../services/license.service';
 import { PlayerStateService } from '../../services/player-state.service';
 import { ScreenshotService } from '../../services/screenshot.service';
+import { RecordingStateService } from '../../services/recording-state.service';
 import { LicenseBlockComponent } from '../license-block/license-block.component';
 import { Video } from '../../interfaces/video.interface';
 import { Configuration, OverlayPosition, SportType, WatermarkScheduleRule } from '../../interfaces/configuration.interface';
@@ -59,6 +60,7 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly licenseService = inject(LicenseService);
   private readonly playerStateService = inject(PlayerStateService);
   private readonly screenshotService = inject(ScreenshotService);
+  private readonly recordingState = inject(RecordingStateService);
 
   private localBroadcastSubscriptions: Subscription[] = [];
 
@@ -153,6 +155,7 @@ export class TvComponent implements OnInit, OnDestroy {
   private manualPlayerB: HTMLVideoElement;
   private activeManualPlayer: 'A' | 'B' = 'A'; // Quel player manuel est visible
   private isManualMode = false; // Est-on en train de jouer une vidéo manuelle ?
+  private _manualRecordingStarted = false; // Auto-start recording pour vidéo manuelle en neutral
 
   // Watchdog et récupération d'erreurs
   private watchdogInterval: ReturnType<typeof setInterval> | null = null;
@@ -813,6 +816,11 @@ export class TvComponent implements OnInit, OnDestroy {
 
               // Tracker (désactivé pour les slaves)
               if (!this.isSlaveMode) {
+                // Auto-start recording temporaire si OFF (ex: vidéo manuelle en boucle par défaut)
+                if (!this.recordingState.isRecording) {
+                  this.recordingState.startRecording(false);
+                  this._manualRecordingStarted = true;
+                }
                 this.analyticsService.trackVideoStart(video, 'manual');
                 if (isSponsor) {
                   this.sponsorAnalytics.trackSponsorStart(video, 'manual', targetPlayer.duration || 0);
@@ -898,6 +906,11 @@ export class TvComponent implements OnInit, OnDestroy {
         this.analyticsService.trackVideoEnd(true);
         if (isSponsor) {
           this.sponsorAnalytics.trackSponsorEnd(true);
+        }
+        // Auto-stop recording si on l'avait démarré pour cette vidéo manuelle
+        if (this._manualRecordingStarted) {
+          this.recordingState.stopRecording(false);
+          this._manualRecordingStarted = false;
         }
       }
 

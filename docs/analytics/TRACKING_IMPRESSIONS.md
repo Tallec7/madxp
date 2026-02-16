@@ -813,6 +813,17 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 
 ## 📝 Changelog
 
+### Version 1.3.0 - 16 Février 2026
+
+**Corrections recording state : auto-stop neutral + auto-start vidéos manuelles** :
+
+- ✅ Auto-stop immédiat du recording au retour en phase `neutral` (boucle par défaut) — remplace l'ancien comportement avec timer 15+3 min en neutral
+- ✅ Auto-start temporaire du recording pour les vidéos manuelles lancées depuis la télécommande en `neutral` (recording OFF)
+- ✅ Le recording s'arrête automatiquement à la fin de la vidéo manuelle si c'est lui qui l'a démarré
+- ✅ Le recording override manuel n'est pas affecté par l'auto-stop neutral
+- ✅ Si le recording était déjà ON (phase active), le lancement manuel ne le coupe pas à la fin
+- ✅ Tests mis à jour : 29 recording-state + 38 analytics = 67 tests passants
+
 ### Version 1.2.0 - 9 Février 2026
 
 **Contrôle d'enregistrement analytics (RecordingStateService)** :
