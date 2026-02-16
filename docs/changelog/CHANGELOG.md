@@ -1,3 +1,9 @@
+# [3.49.0](https://github.com/Tallec7/neopro/compare/v3.48.0...v3.49.0) (2026-02-16)
+
+### Features
+
+- **alerting:** send Slack "Site Online" notification on Pi reconnection ([ef3bcbc](https://github.com/Tallec7/neopro/commit/ef3bcbceb217898d22fd4cb9e599b9008b361b54))
+
 # [3.48.0](https://github.com/Tallec7/neopro/compare/v3.47.3...v3.48.0) (2026-02-16)
 
 ### Features
