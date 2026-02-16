@@ -1,3 +1,9 @@
+## [3.49.3](https://github.com/Tallec7/neopro/compare/v3.49.2...v3.49.3) (2026-02-16)
+
+### Bug Fixes
+
+- **reports:** fix 500 on POST /api/reports/generate + add Prometheus metrics ([4455026](https://github.com/Tallec7/neopro/commit/4455026c78a1bc13fd69ebae150ad7608be528c1))
+
 # [3.49.3] (2026-02-16)
 
 ### Bug Fixes
