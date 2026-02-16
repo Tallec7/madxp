@@ -1,3 +1,9 @@
+# [3.42.0](https://github.com/Tallec7/neopro/compare/v3.41.0...v3.42.0) (2026-02-16)
+
+### Features
+
+- **wifi:** stabilisation RTL8192EU multi-couches + anti-interférence hotspot canal ([3d09fd3](https://github.com/Tallec7/neopro/commit/3d09fd3b77c20fa1de55c043fc4fed1795f45feb))
+
 ## [3.41.1] (2026-02-16)
 
 ### Features
