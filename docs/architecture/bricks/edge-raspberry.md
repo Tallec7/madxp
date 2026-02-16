@@ -4,8 +4,8 @@
 
 - Statut: `active`
 - Owner: \u00e9quipe NEOPRO
-- Derni\u00e8re revue: 2026-02-10
-- Version: 3.9.0
+- Derni\u00e8re revue: 2026-02-16
+- Version: 3.9.1
 - D\u00e9pend de: Central Server (Socket.IO), stockage local
 - Impacte: TV (HDMI), t\u00e9l\u00e9commande locale, Admin UI locale
 
@@ -26,16 +26,16 @@ Bo\u00eetier Raspberry Pi 4 install\u00e9 dans chaque club sportif. Diffuse du c
 
 ### Local Server (port 3000) — Socket.IO
 
-| \u00c9v\u00e9nement | Direction            | Payload                             | Description                 |
-| ------------------- | -------------------- | ----------------------------------- | --------------------------- |
-| `tv-register`       | TV \u2192 Server     | `{}`                                | Enregistrement instance TV  |
-| `tv-role-assigned`  | Server \u2192 TV     | `{ role: 'master'\|'slave' }`       | R\u00f4le assign\u00e9      |
-| `tv-loop-update`    | Master \u2192 Server | `LoopState`                         | \u00c9tat boucle vid\u00e9o |
-| `tv-loop-state`     | Server \u2192 Slaves | `LoopState`                         | Relai \u00e9tat boucle      |
-| `recording-state`   | Remote \u2192 Server | `{ isRecording, isManualOverride }` | Contr\u00f4le analytics     |
-| `navigate`          | Remote \u2192 TV     | `{ category, subcategory }`         | Navigation cat\u00e9gories  |
-| `play-video`        | Remote \u2192 TV     | `{ videoPath }`                     | Lecture vid\u00e9o          |
-| `stop-video`        | Remote \u2192 TV     | `{}`                                | Arr\u00eat vid\u00e9o       |
+| \u00c9v\u00e9nement | Direction            | Payload                             | Description                                   |
+| ------------------- | -------------------- | ----------------------------------- | --------------------------------------------- |
+| `tv-register`       | TV \u2192 Server     | `{}`                                | Enregistrement instance TV                    |
+| `tv-role-assigned`  | Server \u2192 TV     | `{ role: 'master'\|'slave' }`       | R\u00f4le assign\u00e9                        |
+| `tv-loop-update`    | Master \u2192 Server | `LoopState`                         | \u00c9tat boucle vid\u00e9o                   |
+| `tv-loop-state`     | Server \u2192 Slaves | `LoopState`                         | Relai \u00e9tat boucle                        |
+| `recording-state`   | Remote \u2194 Server | `{ isRecording, isManualOverride }` | Contr\u00f4le analytics (sync bidirectionnel) |
+| `navigate`          | Remote \u2192 TV     | `{ category, subcategory }`         | Navigation cat\u00e9gories                    |
+| `play-video`        | Remote \u2192 TV     | `{ videoPath }`                     | Lecture vid\u00e9o                            |
+| `stop-video`        | Remote \u2192 TV     | `{}`                                | Arr\u00eat vid\u00e9o                         |
 
 ### Local Server (port 3000) — HTTP Routes
 
@@ -113,6 +113,12 @@ Bo\u00eetier Raspberry Pi 4 install\u00e9 dans chaque club sportif. Diffuse du c
 - **M\u00e9triques** : CPU, m\u00e9moire, temp\u00e9rature, espace disque \u2192 heartbeat toutes les 30s vers cloud
 - **Alertes** : D\u00e9tect\u00e9es c\u00f4t\u00e9 cloud via PredictiveAlerts (seuils configurables)
 - **Analytics** : Sessions TV, impressions sponsors, plays vid\u00e9o \u2192 buffer local + push cloud
+- **Recording State** : `RecordingStateService` contr\u00f4le quand les analytics sont actives (v3.38+)
+  - Auto-ON en phase match (before/during/after)
+  - Auto-OFF au retour en neutral
+  - Auto-start temporaire pour vid\u00e9os manuelles en neutral
+  - Timer d'inactivit\u00e9 15+3 min \u2192 auto-OFF + retour en neutral via `inactivityExpired$`
+  - Override manuel (bouton REC) non affect\u00e9 par le timer
 
 ## 9. Tests et validation
 

@@ -15,6 +15,7 @@
 11. [Hotspot Watchdog (v2.34+)](#hotspot-watchdog-v234)
 12. [Blocage BSSID Lock en Mesh (v2.34+)](#blocage-bssid-lock-en-mesh-v234)
 13. [Écran / HDMI (v3.44+)](#écran--hdmi-v344)
+14. [Recording Analytics (v3.38+)](#recording-analytics--état-denregistrement-v338)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 
@@ -2710,4 +2711,53 @@ cat /sys/class/drm/card1-HDMI-A-1/edid | edid-decode 2>/dev/null
 
 ---
 
-**Dernière mise à jour :** 16 février 2026 (v3.44.0 - ajout section Écran/HDMI EDID)
+## Recording Analytics — État d'enregistrement (v3.38+)
+
+Le tracking analytics (video plays + impressions sponsors) n'est actif que si `RecordingStateService.isRecording === true`. Depuis v3.43+, le recording se coupe automatiquement au retour en phase `neutral` et démarre temporairement pour les vidéos manuelles.
+
+### Le recording ne s'active pas en phase match
+
+**Symptôme :** `isRecording` reste `false` après le passage en phase `before`/`during`/`after`.
+
+**Diagnostic :**
+
+```bash
+# Dans la console navigateur (onglet /remote) :
+# Vérifier l'état du service RecordingStateService
+# L'indicateur REC devrait apparaître en haut de la télécommande
+```
+
+**Causes possibles :**
+
+- La télécommande n'appelle pas `RecordingStateService.onPhaseChange()`
+- Le BroadcastChannel ou Socket.IO ne synchronise pas l'état entre les onglets
+
+### Les analytics des vidéos manuelles ne sont pas enregistrées
+
+**Symptôme :** En neutral (boot), lancer une vidéo manuelle ne génère pas d'entrée analytics.
+
+**Diagnostic :**
+
+```bash
+# Vérifier le buffer analytics après la vidéo :
+cat ~/neopro/data/analytics_buffer.json
+cat ~/neopro/data/sponsor_impressions.json
+```
+
+**Solution (v3.43.2+) :** Le `TvComponent` démarre temporairement le recording dans `play()` et le coupe dans `onManualEnded()`. Vérifier que le build est à jour.
+
+### Le recording ne se coupe pas au retour en boucle par défaut
+
+**Symptôme :** Après une phase de match, le retour en `neutral` laisse le recording actif pendant 15+3 min.
+
+**Solution (v3.43.2+) :** `onPhaseChange('neutral')` appelle `stopRecording(false)` immédiatement (sauf override manuel). Vérifier la version du build.
+
+### La TV ne revient pas en boucle par défaut après inactivité
+
+**Symptôme :** Après 15+3 min sans interaction, le recording s'arrête mais la TV reste en phase match.
+
+**Solution (v3.44.5+) :** La `RemoteComponent` souscrit à `inactivityExpired$` et appelle `switchPhase('neutral')`. Vérifier que la Remote est ouverte (elle gère la phase active).
+
+---
+
+**Dernière mise à jour :** 16 février 2026 (v3.44.5 - ajout section Recording Analytics)

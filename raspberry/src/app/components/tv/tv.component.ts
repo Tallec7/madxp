@@ -818,6 +818,7 @@ export class TvComponent implements OnInit, OnDestroy {
               if (!this.isSlaveMode) {
                 // Auto-start recording temporaire si OFF (ex: vidéo manuelle en boucle par défaut)
                 if (!this.recordingState.isRecording) {
+                  console.log('[TV] Auto-start recording for manual video');
                   this.recordingState.startRecording(false);
                   this._manualRecordingStarted = true;
                 }
@@ -909,6 +910,7 @@ export class TvComponent implements OnInit, OnDestroy {
         }
         // Auto-stop recording si on l'avait démarré pour cette vidéo manuelle
         if (this._manualRecordingStarted) {
+          console.log('[TV] Auto-stop recording after manual video ended');
           this.recordingState.stopRecording(false);
           this._manualRecordingStarted = false;
         }

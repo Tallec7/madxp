@@ -165,7 +165,7 @@
 - Phases de match (échauffement, live, mi-temps, fin) avec dropdown de sélection
 - Timer (start, pause, reset)
 - Modal de configuration match : date, nom du match, estimation spectateurs (badge audience)
-- Indicateur d'enregistrement (REC) avec popup inactivité (timer 15min + countdown 3min, auto-stop)
+- Indicateur d'enregistrement (REC) avec popup inactivité (timer 15min + countdown 3min, auto-stop + retour en boucle par défaut)
 
 **Gestion vidéo :**
 
@@ -497,13 +497,13 @@
 
 ### Live & match
 
-| Fonctionnalité                              | Outils impliqués                           |
-| ------------------------------------------- | ------------------------------------------ |
-| Score temps réel                            | Télécommande → Pi Server → TV Player       |
-| Phases de match                             | Télécommande → Pi Server → TV Player       |
-| Configuration match (date, nom, audience)   | Télécommande → Central Server              |
-| Enregistrement (REC) + auto-stop inactivité | Télécommande, TV Player                    |
-| QR code accès télécommande                  | Dashboard (génération), Télécommande cloud |
+| Fonctionnalité                                               | Outils impliqués                           |
+| ------------------------------------------------------------ | ------------------------------------------ |
+| Score temps réel                                             | Télécommande → Pi Server → TV Player       |
+| Phases de match                                              | Télécommande → Pi Server → TV Player       |
+| Configuration match (date, nom, audience)                    | Télécommande → Central Server              |
+| Enregistrement (REC) + auto-stop inactivité + retour neutral | Télécommande, TV Player                    |
+| QR code accès télécommande                                   | Dashboard (génération), Télécommande cloud |
 
 ### Analytics & reporting
 
@@ -580,7 +580,7 @@ Scan QR code → Télécommande cloud → PIN (si activé) → Chargement état 
      ├─→ Mi-temps → TV bascule sur boucle mi-temps
      │
      └─→ Phase "Après-match" → TV bascule sur boucle post-match
-           └─→ REC auto-stop si inactivité 15min
+           └─→ REC auto-stop + retour boucle par défaut si inactivité 15+3min
 ```
 
 **Outils traversés** : Télécommande → Central Server API → Sync Agent → Pi Server Socket.IO → TV Player

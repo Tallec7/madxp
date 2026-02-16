@@ -97,6 +97,7 @@ export class RecordingStateService implements OnDestroy {
 
   /** Forcer le démarrage (manual = true si l'utilisateur a explicitement activé) */
   public startRecording(manual: boolean): void {
+    console.log(`[RecordingState] START recording (manual=${manual})`);
     this._isRecording = true;
     this._isManualOverride = manual;
     this.cancelWarning();
@@ -112,6 +113,7 @@ export class RecordingStateService implements OnDestroy {
 
   /** Forcer l'arrêt */
   public stopRecording(manual: boolean): void {
+    console.log(`[RecordingState] STOP recording (manual=${manual})`);
     this._isRecording = false;
     this._isManualOverride = manual;
     this.cancelWarning();
@@ -152,6 +154,7 @@ export class RecordingStateService implements OnDestroy {
 
   /** Démarre le countdown de 3 minutes avant auto-stop */
   private startWarningCountdown(): void {
+    console.log('[RecordingState] Inactivity warning started (countdown 3 min)');
     this._warningSecondsRemaining = this.WARNING_COUNTDOWN;
     this.warningSubject.next({ active: true, secondsRemaining: this._warningSecondsRemaining });
 
@@ -163,6 +166,7 @@ export class RecordingStateService implements OnDestroy {
         this.cancelWarning();
         this.stopRecording(false);
         // Signaler que l'inactivité a expiré → la Remote revient en boucle par défaut
+        console.log('[RecordingState] Inactivity expired → emitting inactivityExpired$');
         this.inactivityExpiredSubject.next();
       }
     }, 1000);

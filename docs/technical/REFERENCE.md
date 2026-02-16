@@ -970,6 +970,48 @@ Le serveur peut redémarrer/scaler sans que le Pi reçoive l'événement `discon
 
 Toutes les 2 minutes, le service vérifie et synchronise les statuts entre la base de données et les connexions WebSocket réelles. Si un site est marqué "online" en DB mais n'est plus connecté via WebSocket, il est automatiquement passé en "offline".
 
+### RecordingStateService (Angular — Raspberry Pi)
+
+Service Angular (`raspberry/src/app/services/recording-state.service.ts`) contrôlant l'activation du tracking analytics. Tous les appels `trackVideoStart()`/`trackVideoEnd()` dans `AnalyticsService` et `SponsorAnalyticsService` sont gardés par `isRecording`.
+
+**Cycle de vie du recording :**
+
+| Événement                                 | Comportement                                          |
+| ----------------------------------------- | ----------------------------------------------------- |
+| Boot                                      | OFF — aucune donnée enregistrée                       |
+| Phase neutral → before/during/after       | Auto-ON (recording automatique)                       |
+| Phase active → neutral                    | Auto-OFF immédiat (sauf override manuel)              |
+| Vidéo manuelle en neutral (recording OFF) | Auto-ON temporaire (durée de la vidéo)                |
+| 15 min d'inactivité (phases actives)      | Warning popup 3 min → auto-OFF + retour en neutral    |
+| Override manuel (bouton REC)              | Toggle ON/OFF (pas affecté par le timer d'inactivité) |
+
+**API publique :**
+
+```typescript
+// Observables
+isRecording$: Observable<boolean>; // État du recording
+warning$: Observable<RecordingWarningState>; // Warning inactivité
+inactivityExpired$: Observable<void>; // Timer expiré → retour neutral
+
+// Accès synchrone
+isRecording: boolean; // Getter pour les guards analytics
+
+// Méthodes
+onPhaseChange(phase); // Auto-start/stop selon la phase
+startRecording(manual); // Forcer le démarrage
+stopRecording(manual); // Forcer l'arrêt
+toggleRecording(); // Toggle manuel
+resetInactivityTimer(); // Reset sur interaction significative
+extendRecording(); // Bouton "Continuer" dans la popup warning
+```
+
+**Synchronisation multi-onglet/instance :**
+
+- `BroadcastChannel` (LocalBroadcastService) : entre onglets du même navigateur
+- `Socket.IO` (SocketService) : entre instances (ex: kiosk ↔ navigateur)
+
+> Voir [ADR-021](../adr/ADR-021-recording-inactivity-timer.md) pour l'historique des décisions.
+
 ### Analytics API (Raspberry Pi)
 
 Le serveur Socket.IO sur le Raspberry Pi expose également une API REST pour les analytics.
@@ -1381,4 +1423,4 @@ Voir **[docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ---
 
-**Dernière mise à jour :** 12 février 2026
+**Dernière mise à jour :** 16 février 2026

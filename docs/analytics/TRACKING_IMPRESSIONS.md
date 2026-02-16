@@ -1,7 +1,7 @@
 # Tracking des Impressions Annonceurs - Guide d'Implémentation
 
-**Date**: 28 Décembre 2025 (Mise à jour: 29 Décembre 2025)
-**Version**: 1.2
+**Date**: 28 Décembre 2025 (Mise à jour: 16 Février 2026)
+**Version**: 1.3
 **Conformité**: BP §13 - Analytics Annonceurs (95%)
 
 > **Note terminologique** : Depuis le 2025-12-29, la terminologie "Sponsor" a été remplacée par "Advertiser" (Annonceur). Ce document conserve certaines références à "sponsor" pour la rétrocompatibilité du code legacy. Voir [Migration Sponsor → Advertiser](../changelog/2025-12-29_sponsor-to-advertiser-migration.md).
@@ -815,14 +815,15 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 
 ### Version 1.3.0 - 16 Février 2026
 
-**Corrections recording state : auto-stop neutral + auto-start vidéos manuelles** :
+**Corrections recording state : auto-stop neutral + auto-start vidéos manuelles + retour neutral** :
 
 - ✅ Auto-stop immédiat du recording au retour en phase `neutral` (boucle par défaut) — remplace l'ancien comportement avec timer 15+3 min en neutral
 - ✅ Auto-start temporaire du recording pour les vidéos manuelles lancées depuis la télécommande en `neutral` (recording OFF)
 - ✅ Le recording s'arrête automatiquement à la fin de la vidéo manuelle si c'est lui qui l'a démarré
 - ✅ Le recording override manuel n'est pas affecté par l'auto-stop neutral
 - ✅ Si le recording était déjà ON (phase active), le lancement manuel ne le coupe pas à la fin
-- ✅ Tests mis à jour : 29 recording-state + 38 analytics = 67 tests passants
+- ✅ Retour automatique en boucle par défaut (neutral) quand le timer d'inactivité expire (15+3 min) — la Remote souscrit à `inactivityExpired$` et appelle `switchPhase('neutral')`
+- ✅ Tests mis à jour : 31 recording-state + 38 analytics = 69 tests passants
 
 ### Version 1.2.0 - 9 Février 2026
 
@@ -881,7 +882,7 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 ---
 
 **Auteur** : Claude Code + Équipe NEOPRO
-**Version** : 1.1.0
+**Version** : 1.3.0
 **Conformité** : 95% BP §13
-**Dernière mise à jour** : 28 Décembre 2025
+**Dernière mise à jour** : 16 Février 2026
 **Prochaine révision** : Tests terrain avec données réelles
