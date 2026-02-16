@@ -1,3 +1,9 @@
+## [3.43.2](https://github.com/Tallec7/neopro/compare/v3.43.1...v3.43.2) (2026-02-16)
+
+### Bug Fixes
+
+- **recording:** auto-stop neutral + auto-start vidéos manuelles ([9ebdabc](https://github.com/Tallec7/neopro/commit/9ebdabc4fa4b159cb95ba13464146105fccc766d))
+
 ## [3.43.2] (2026-02-16)
 
 ### Bug Fixes
