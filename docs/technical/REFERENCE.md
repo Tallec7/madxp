@@ -554,9 +554,9 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-sync -n 50'
 | `setup-new-club.sh`    | `raspberry/scripts/` | Configuration complète nouveau club (5-10 min) |
 | `build-raspberry.sh`   | `raspberry/scripts/` | Build Angular optimisé pour Pi                 |
 | `build-and-deploy.sh`  | `raspberry/scripts/` | Build + déploiement combinés                   |
-| `deploy-remote.sh`     | `raspberry/scripts/` | Déploiement SSH seul (transfert + permissions) |
+| `deploy-remote.sh`     | `raspberry/scripts/` | Déploiement SSH + diagnostic post-deploy auto  |
 | `copy-to-pi.sh`        | `raspberry/scripts/` | Copie des fichiers d'installation vers Pi      |
-| `diagnose-pi.sh`       | `raspberry/scripts/` | Diagnostic complet du Pi                       |
+| `diagnose-pi.sh`       | `raspberry/scripts/` | Diagnostic complet Pi (16 checks, `--json`)    |
 | `backup-club.sh`       | `raspberry/scripts/` | Sauvegarde configuration club                  |
 | `restore-club.sh`      | `raspberry/scripts/` | Restauration configuration club                |
 | `cleanup-pi.sh`        | `raspberry/scripts/` | Nettoyage ~/raspberry après install            |
@@ -1323,20 +1323,23 @@ Composant standalone pour gérer les profils de configuration d'un site :
 ### Diagnostic
 
 ```bash
-# Diagnostic complet
-ssh pi@neopro.local
-cd /home/pi/neopro
-./scripts/diagnose-pi.sh
+# Diagnostic complet (interactif, couleurs)
+ssh pi@neopro.local '/home/pi/neopro/scripts/diagnose-pi.sh'
+
+# Diagnostic JSON (exploitable par dashboard / OTA)
+ssh pi@neopro.local '/home/pi/neopro/scripts/diagnose-pi.sh --json'
 
 # Vérifier tous les services
 sudo systemctl status neopro-app
 sudo systemctl status neopro-admin
-sudo systemctl status neopro-sync
+sudo systemctl status neopro-sync-agent
 sudo systemctl status nginx
 
 # Logs en temps réel
 sudo journalctl -f
 ```
+
+> `diagnose-pi.sh` vérifie 16 catégories : Node.js version, packages apt, services systemd (état + installation), ports, fichiers critiques, node_modules, webapp, Nginx (syntaxe + routes), WiFi (AP + SSID + IP), permissions, GPU, espace disque, version, HTTP. En mode `--json`, le exit code = nombre d'erreurs (0 = Pi sain). `deploy-remote.sh` et l'OTA l'exécutent automatiquement après chaque déploiement.
 
 ### Maintenance
 

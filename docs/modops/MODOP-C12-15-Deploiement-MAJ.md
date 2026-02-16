@@ -173,6 +173,9 @@ Le wizard de déploiement propose deux options dans l'étape 3 :
 | VERSION + release.json    | ✅                         | ✅                       | ✅                                |
 | Restart nginx             | ✅                         | ✅                       | ✅                                |
 | Restart kiosk             | ✅                         | ✅                       | ✅                                |
+| Diagnostic post-deploy    | ✅ (`--json` dans report)  | ✅ (auto via SSH)        | ❌ (manuel)                       |
+
+> **v3.45.1+ :** `deploy-remote.sh` lance automatiquement `diagnose-pi.sh --json` après le déploiement et affiche un résumé (erreurs/warnings/healthy). `update-software.js` inclut le diagnostic dans le `postUpdateReport` remonté au central-server. Pour le chemin Admin `:8080`, lancer manuellement : `ssh pi@<ip> './scripts/diagnose-pi.sh'`.
 
 Avant la v3.8.1, chaque chemin avait des lacunes différentes (services systemd manquants, golden snapshot absent, nginx non redémarré, etc.), ce qui causait des divergences entre Pi selon la méthode de mise à jour utilisée.
 

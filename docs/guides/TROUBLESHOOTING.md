@@ -1515,18 +1515,32 @@ Le dashboard vérifie **en temps réel** si le boîtier est connecté via WebSoc
 ssh pi@neopro.local
 cd /home/pi/neopro
 ./scripts/diagnose-pi.sh
+
+# Mode JSON (pour automation ou parsing)
+./scripts/diagnose-pi.sh --json
+
+# Mode silencieux (erreurs uniquement)
+./scripts/diagnose-pi.sh --quiet
 ```
 
-**Ce script vérifie :**
+**Ce script vérifie (16 catégories, v3.45.1+) :**
 
-- ✅ Services systemd (neopro-app, neopro-admin, neopro-sync, nginx)
+- ✅ Version Node.js (v18+ requis)
+- ✅ Paquets apt critiques et recommandés
+- ✅ Services systemd (état + installation)
+- ✅ Masquage curseur (mode TV)
 - ✅ Ports ouverts (80, 3000, 8080)
-- ✅ Fichiers déployés
-- ✅ Permissions
-- ✅ Configuration
-- ✅ Connectivité réseau
+- ✅ Fichiers et répertoires déployés
+- ✅ node_modules (server, admin, sync-agent)
+- ✅ Webapp Angular (index.html, main-\*.js)
+- ✅ Config Nginx (syntaxe, routes, site-enabled)
+- ✅ WiFi AP (interface, mode, SSID, IP)
+- ✅ Permissions et propriétaires
+- ✅ Configuration GPU
 - ✅ Espace disque
-- ✅ Température CPU
+- ✅ Informations de version
+
+Le code de retour = nombre d'erreurs (0 = Pi sain). Le mode `--json` est automatiquement utilisé par `deploy-remote.sh` (post-déploiement) et `update-software.js` (rapport OTA).
 
 **Exemple de sortie :**
 
