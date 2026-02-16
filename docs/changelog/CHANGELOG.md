@@ -1,3 +1,9 @@
+## [3.39.1](https://github.com/Tallec7/neopro/compare/v3.39.0...v3.39.1) (2026-02-16)
+
+### Bug Fixes
+
+- **smoke:** add missing getDashboardConnectionCount mock to socket service ([e9a5e40](https://github.com/Tallec7/neopro/commit/e9a5e40e3c77ac365ffb11eb2424f71ec24382d0))
+
 # [3.39.0](https://github.com/Tallec7/neopro/compare/v3.38.0...v3.39.0) (2026-02-15)
 
 ### Features
