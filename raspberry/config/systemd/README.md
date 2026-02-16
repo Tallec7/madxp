@@ -9,7 +9,7 @@ Ce service lance automatiquement Chromium en mode kiosque sur `/tv` au démarrag
 - ✅ **Lancement automatique** au boot
 - ✅ **Plein écran** sans bordures ni barres d'outils
 - ✅ **Autoplay avec son** (flag `--autoplay-policy=no-user-gesture-required`)
-- ✅ **Curseur souris masqué** - triple protection : `unclutter-xfixes` (OS) + CSS `cursor: none` (navigateur) + `xdotool` fallback (watchdog)
+- ✅ **Curseur souris masqué** - triple protection : `unclutter-xfixes` (OS) + CSS `cursor: none` sur `app-tv` (navigateur, scopé `/tv`) + `xdotool` fallback (watchdog)
 - ✅ **Pas d'interaction requise** - parfait pour écran HDMI seul
 - ✅ **Redémarrage automatique** en cas de crash
 - ✅ **Mode incognito** - pas de cache ni cookies persistants

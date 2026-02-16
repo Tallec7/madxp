@@ -2603,7 +2603,7 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ## Curseur souris visible sur la TV
 
-Depuis la v3.45, le curseur est masqué par triple protection : `unclutter-xfixes` (OS), CSS `cursor: none` (navigateur), et fallback `xdotool` (watchdog).
+Depuis la v3.45, le curseur est masqué par triple protection : `unclutter-xfixes` (OS), CSS `cursor: none` sur `app-tv` (navigateur, scopé à la route `/tv` uniquement), et fallback `xdotool` (watchdog).
 
 ### Le curseur souris reste visible sur l'écran TV
 
@@ -2611,7 +2611,7 @@ Depuis la v3.45, le curseur est masqué par triple protection : `unclutter-xfixe
 
 1. `unclutter-xfixes` n'est pas installé (ancien paquet `unclutter` insuffisant sur Pi 4/5 + Bookworm)
 2. L'autostart LXDE ne contient pas la commande `@unclutter`
-3. L'application Angular n'a pas été re-déployée (manque `cursor: none` CSS)
+3. L'application Angular n'a pas été re-déployée (manque `cursor: none` CSS sur le composant `app-tv`)
 
 **Diagnostic :**
 
@@ -2648,7 +2648,7 @@ grep -q "unclutter" /home/pi/.config/lxsession/LXDE-pi/autostart || \
 sudo reboot
 ```
 
-> **Note :** Si seule la couche CSS est active (pas d'`unclutter`), le curseur sera invisible dans Chromium mais visible si on sort de la fenêtre navigateur (alt-tab accidentel). `unclutter-xfixes` le masque globalement au niveau X11.
+> **Note :** Le CSS `cursor: none` est scopé au composant `app-tv` (route `/tv` uniquement) pour ne pas masquer le curseur sur `/remote` et les autres routes. Si seule la couche CSS est active (pas d'`unclutter`), le curseur sera invisible sur `/tv` dans Chromium mais visible si on sort de la fenêtre navigateur (alt-tab accidentel). `unclutter-xfixes` le masque globalement au niveau X11.
 
 ---
 
