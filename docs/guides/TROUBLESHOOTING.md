@@ -288,6 +288,33 @@ Si les endpoints ne fonctionnent pas, consultez le guide complet : [ANDROID_HOTS
 
 ## Erreurs 500
 
+### Erreur MIME type "text/html" sur fichiers JavaScript (v3.43 corrigé)
+
+#### Symptômes
+
+- Console navigateur : `Failed to load module script: Expected a JavaScript module script but the server responded with a MIME type of "text/html"`
+- L'application Angular ne charge plus après un déploiement OTA
+- Les fichiers `.js` retournent du HTML (contenu de `index.html`)
+
+#### Cause
+
+Après un déploiement, les anciens fichiers `.js` hachés n'existent plus. La directive `try_files $uri $uri/ /index.html` de nginx renvoyait `index.html` (MIME `text/html`) au lieu d'un 404, ce qui cassait le chargement des modules ES.
+
+#### Solution (corrigé en v3.43)
+
+Les configs nginx (`nginx-captive-portal.conf` et `nginx/neopro-hls.conf`) séparent désormais les fichiers statiques (`.js`, `.css`, `.woff2`, images) du fallback SPA. Les fichiers statiques manquants retournent **404** au lieu du fallback HTML.
+
+**Si vous avez une ancienne version :**
+
+```bash
+# Copier les configs corrigées
+sudo cp /home/pi/neopro/config/nginx-captive-portal.conf /etc/nginx/sites-enabled/neopro-captive
+sudo cp /home/pi/neopro/config/nginx/neopro-hls.conf /etc/nginx/sites-enabled/neopro-hls
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+**Workaround temporaire :** un rafraîchissement forcé (Ctrl+Shift+R) résout le problème car le navigateur télécharge les nouveaux fichiers hachés.
+
 ### Erreur 500 sur /tv et /remote
 
 #### Symptômes
@@ -1232,13 +1259,19 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -n 50 --no-pager'
 ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
 ```
 
-**Solution permanente (v2.15+) :**
+**Solution permanente (v2.15+, améliorée v3.43) :**
 
 Depuis la version 2.15, le sync-agent inclut une détection automatique des connexions zombies :
 
 1. **Dans `sendHeartbeat()`** : Vérifie `socket.connected` avant d'envoyer
 2. **Dans `handlePingCheck()`** : Détecte si on reçoit un ping mais la socket est morte
-3. **Health check périodique (60s)** : Vérifie la cohérence entre le flag et la socket
+3. **Health check périodique (30s, réduit de 60s en v3.43)** : Vérifie la cohérence entre le flag et la socket
+
+**Améliorations v3.43 :**
+
+- **Côté sync-agent** : health check réduit à **30s** (au lieu de 60s), seuil stale **60s** (au lieu de 90s). Le health check force maintenant une **déconnexion + reconnexion propre** au lieu de simplement logger.
+- **Côté serveur** : `pingInterval` réduit à **10s**, `pingTimeout` à **20s** (détection en 30s vs 85s avant), health check serveur toutes les **15s**, seuil zombie **45s**.
+- **Anti-thundering herd** : `randomizationFactor: 0.5` empêche 50+ Pi de reconnecter simultanément après un redémarrage serveur.
 
 Si votre Pi a une version antérieure, mettez à jour le fichier `sync-agent/src/agent.js`.
 
@@ -1246,7 +1279,7 @@ Si votre Pi a une version antérieure, mettez à jour le fichier `sync-agent/src
 
 ```bash
 ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -n 20 | grep "health check"'
-# Doit afficher : "Starting connection health check"
+# Doit afficher : "Starting connection health check" avec interval: 30000
 ```
 
 **Pourquoi ça arrive :**

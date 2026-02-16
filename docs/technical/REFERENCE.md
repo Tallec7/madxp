@@ -433,7 +433,7 @@ if (isConnectedNow) {
 
 - Lors de l'événement `'authenticate'` (Pi se connecte) → `status = 'online'`
 - Lors de l'événement `'disconnect'` (Pi se déconnecte) → `status = 'offline'`
-- Lors de la détection de connexion zombie (90s sans pong) → `status = 'offline'`
+- Lors de la détection de connexion zombie (45s sans pong, réduit de 90s en v3.43) → `status = 'offline'`
 
 **Affichage dans le dashboard :**
 
@@ -746,6 +746,8 @@ sudo tail -f /home/pi/neopro/logs/nginx-error.log
 
 **Fichier :** `/etc/nginx/sites-enabled/neopro`
 
+**Fix MIME type v3.43 :** Les fichiers statiques (`.js`, `.css`, `.woff2`, images, etc.) retournent désormais **404** si manquants au lieu du fallback SPA `index.html`. Cela corrige l'erreur `Failed to load module script: Expected a JavaScript module script but the server responded with a MIME type of "text/html"` qui survenait quand un fichier JS n'existait plus après un déploiement. Configs impactées : `nginx-captive-portal.conf` et `nginx/neopro-hls.conf`.
+
 ---
 
 ## API et WebSocket
@@ -908,18 +910,22 @@ socket.on('site_config_updated', (data) => {
 - `siteId` : Chaque Pi rejoint une room avec son UUID pour broadcast ciblé
 - `'dashboard'` : Tous les dashboards admin rejoignent cette room pour recevoir les événements temps réel
 
-**Détection de connexion zombie :**
+**Détection de connexion zombie (v2.15+, améliorée v3.43) :**
 
 La détection des connexions zombies se fait à **deux niveaux** :
 
 1. **Côté serveur** (`socket.service.ts` + `handlers/health-monitor.handler.ts`) :
-   - Ping/pong toutes les 30s : si pas de `pong_check` après 90s, connexion déconnectée
+   - `pingInterval: 10s`, `pingTimeout: 20s` → détection d'une déconnexion en **30s** (vs 85s avant v3.43)
+   - Health check serveur toutes les **15s**, seuil zombie **45s** sans pong
    - Sync DB/WebSocket toutes les 2 minutes : si site "online" en DB mais absent de `connectedSites` Map, passage en "offline"
+   - Métrique Prometheus `neopro_websocket_disconnects_total{reason}` (zombie_timeout, zombie_cleanup)
 
-2. **Côté client** (`sync-agent/src/agent.js`, v2.15+) :
+2. **Côté client** (`sync-agent/src/agent.js`, v2.15+, amélioré v3.43) :
    - Vérification `socket.connected` avant chaque `sendHeartbeat()`
    - Si `this.connected = true` mais `socket.connected = false` → zombie détecté → auto-reconnexion
-   - Health check périodique (60s) qui vérifie la cohérence flag/socket
+   - Health check périodique (**30s**, réduit de 60s en v3.43), seuil stale **60s** (réduit de 90s)
+   - **v3.43** : force **déconnexion + reconnexion propre** quand heartbeats stale (au lieu de juste logger)
+   - `randomizationFactor: 0.5` sur la reconnexion — anti-thundering herd pour 50+ Pi
    - Détection dans `handlePingCheck()` : si ping reçu mais socket morte → auto-reconnexion
 
 **Pourquoi les deux ?**
