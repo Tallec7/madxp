@@ -14,7 +14,8 @@ import {
   LocalVideo,
   CloudVideo,
   LocalStorage,
-  ConfigDiff
+  ConfigDiff,
+  ConfigHistory
 } from '../../../../core/models';
 import { VideoLibraryComponent, VideoItem, VideoDeployState } from '../video-library/video-library.component';
 import { RemotePreviewComponent } from '../remote-preview/remote-preview.component';
@@ -489,6 +490,55 @@ interface HumanReadableDiff {
         </div>
         <div class="empty-state small" *ngIf="!config.categories || config.categories.length === 0">
           <p>Créez d'abord des catégories pour configurer les analytics</p>
+        </div>
+      </div>
+
+      <!-- Historique des modifications -->
+      <div class="section card" id="section-history">
+        <div class="section-header clickable" (click)="toggleHistory()">
+          <h4>
+            <span class="section-icon">📜</span>
+            Historique des modifications
+            <span class="history-count" *ngIf="configHistory.length > 0">({{ configHistoryTotal }})</span>
+          </h4>
+          <span class="expand-icon">{{ showHistory ? '▼' : '▶' }}</span>
+        </div>
+
+        <div class="history-content" *ngIf="showHistory">
+          <div class="loading-inline" *ngIf="loadingHistory">
+            <div class="spinner-small"></div>
+            <span>Chargement de l'historique...</span>
+          </div>
+
+          <div class="history-list" *ngIf="!loadingHistory && configHistory.length > 0">
+            <div class="history-item" *ngFor="let entry of configHistory">
+              <div class="history-meta">
+                <span class="history-date">{{ entry.deployed_at | date:'dd/MM/yyyy HH:mm' }}</span>
+                <span class="history-author" *ngIf="entry.deployed_by_name || entry.deployed_by_email">
+                  par {{ entry.deployed_by_name || entry.deployed_by_email }}
+                </span>
+              </div>
+              <div class="history-comment" *ngIf="entry.comment">{{ entry.comment }}</div>
+              <div class="history-changes" *ngIf="entry.changes_summary && entry.changes_summary.length > 0">
+                <span class="history-changes-count">{{ entry.changes_summary!.length }} changement(s)</span>
+                <span class="history-change-pills">
+                  <span class="change-pill added" *ngIf="countChangeType(entry.changes_summary!, 'added') as n">+{{ n }}</span>
+                  <span class="change-pill changed" *ngIf="countChangeType(entry.changes_summary!, 'changed') as n">~{{ n }}</span>
+                  <span class="change-pill removed" *ngIf="countChangeType(entry.changes_summary!, 'removed') as n">-{{ n }}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="empty-state small" *ngIf="!loadingHistory && configHistory.length === 0">
+            <p>Aucun historique disponible</p>
+          </div>
+
+          <div class="history-actions" *ngIf="!loadingHistory && configHistoryTotal > configHistory.length">
+            <button class="btn btn-sm btn-outline" (click)="loadMoreHistory()">
+              Voir plus ({{ configHistoryTotal - configHistory.length }} restant(s))
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2689,6 +2739,107 @@ interface HumanReadableDiff {
     .preview-close:hover {
       color: #334155;
     }
+
+    /* Historique des modifications */
+    .section-header.clickable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .section-header.clickable:hover {
+      opacity: 0.85;
+    }
+
+    .history-count {
+      font-size: 0.75rem;
+      color: #64748b;
+      font-weight: 400;
+    }
+
+    .history-content {
+      margin-top: 0.75rem;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .history-item {
+      padding: 0.75rem;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      border-left: 3px solid #3b82f6;
+    }
+
+    .history-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+    }
+
+    .history-date {
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .history-author {
+      color: #64748b;
+    }
+
+    .history-comment {
+      margin-top: 0.25rem;
+      font-size: 0.8125rem;
+      color: #475569;
+      font-style: italic;
+    }
+
+    .history-changes {
+      margin-top: 0.375rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .history-changes-count {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .history-change-pills {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .change-pill {
+      font-size: 0.625rem;
+      font-weight: 600;
+      padding: 0.0625rem 0.375rem;
+      border-radius: 4px;
+    }
+
+    .change-pill.added {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .change-pill.changed {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .change-pill.removed {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .history-actions {
+      margin-top: 0.75rem;
+      text-align: center;
+    }
   `]
 })
 export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
@@ -2763,6 +2914,12 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   // Remote preview panel
   showRemotePreview = false;
+
+  // Config history
+  configHistory: ConfigHistory[] = [];
+  configHistoryTotal = 0;
+  loadingHistory = false;
+  showHistory = false;
 
   /**
    * Getter qui calcule les IDs des vidéos avec déploiement en cours
@@ -3231,6 +3388,56 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   getFallbackVideoCount(): number {
     if (!this.config) return 0;
     return this.config.sponsors?.length || 0;
+  }
+
+  // === Config history ===
+
+  toggleHistory(): void {
+    this.showHistory = !this.showHistory;
+    if (this.showHistory && this.configHistory.length === 0) {
+      this.loadConfigHistory();
+    }
+  }
+
+  loadConfigHistory(): void {
+    this.loadingHistory = true;
+    this.cdr.markForCheck();
+    this.sitesService.getConfigHistory(this.siteId, 10, 0).subscribe({
+      next: (response) => {
+        this.configHistory = response.history || [];
+        this.configHistoryTotal = response.total || 0;
+        this.loadingHistory = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.configHistory = [];
+        this.configHistoryTotal = 0;
+        this.loadingHistory = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  loadMoreHistory(): void {
+    const offset = this.configHistory.length;
+    this.loadingHistory = true;
+    this.cdr.markForCheck();
+    this.sitesService.getConfigHistory(this.siteId, 10, offset).subscribe({
+      next: (response) => {
+        this.configHistory = [...this.configHistory, ...(response.history || [])];
+        this.configHistoryTotal = response.total || 0;
+        this.loadingHistory = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.loadingHistory = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  countChangeType(changes: ConfigDiff[], type: string): number {
+    return changes.filter(c => c.type === type).length;
   }
 
   constructor(

@@ -127,17 +127,17 @@ L'onglet Contenu de la page Site Detail est la page la plus dense du dashboard (
 | 🟠 P1    | Bandeau de santé + fusion boucles + bouton répartir auto + validation cohérence              | Restructuration page         | ✅ Implémenté |
 | 🟡 P2    | Preview sticky + auto-suggestion analytics + réordonnancement sections + durées dans boucles | Améliorations ciblées        | ✅ Implémenté |
 | 🟢 P3    | Compteurs d'impact + tooltips                                                                | Polish                       | ✅ Implémenté |
-| 🟢 P3    | Historique modifications                                                                     | Backend (central-server)     | ⏳ Différé    |
+| 🟢 P3    | Historique modifications                                                                     | UI (backend existait déjà)   | ✅ Implémenté |
 
 Chaque priorité est déployable indépendamment. P0 peut sortir en 1-2 jours. P1 en 1 semaine.
 
 ## Impact cross-composant
 
-| Composant         | Changements                                                                                                                                                                                                                                                 |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| central-dashboard | Restructuration du `site-content-tab.component`, nouveau `loop-manager.component` (fusion boucle défaut + phases), bandeau de santé, validation cohérence, compteurs d'impact, preview sticky FAB, auto-suggestion analytics, durées dans boucles, tooltips |
-| central-server    | Historique des modifications (P3, différé) : nouveau endpoint + table pour logger les changements de config                                                                                                                                                 |
-| raspberry         | Aucun impact — les boucles par phase et la boucle par défaut fonctionnent déjà côté Pi                                                                                                                                                                      |
+| Composant         | Changements                                                                                                                                                                                                                                                                               |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| central-dashboard | Restructuration du `site-content-tab.component`, nouveau `loop-manager.component` (fusion boucle défaut + phases), bandeau de santé, validation cohérence, compteurs d'impact, preview sticky FAB, auto-suggestion analytics, durées dans boucles, tooltips, historique des modifications |
+| central-server    | Backend déjà existant : table `config_history`, repository, controller, routes `/api/sites/:id/config-history`                                                                                                                                                                            |
+| raspberry         | Aucun impact — les boucles par phase et la boucle par défaut fonctionnent déjà côté Pi                                                                                                                                                                                                    |
 
 ## Références
 

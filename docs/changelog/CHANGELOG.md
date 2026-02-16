@@ -24,7 +24,7 @@
   - **P0:** fix NaN undefined dans la bibliothèque vidéo + warning boucle par défaut sans analytics
   - **P1:** nouveau composant `loop-manager` (fusion boucle défaut + 3 phases avec tabs), bandeau de santé pipeline cliquable, warnings de validation avant déploiement, bouton "Répartir dans les 3 phases"
   - **P2:** réordonnancement sections (pipeline logique : Bibliothèque → Catégories → Boucles → Télécommande → Analytics), auto-suggestion analytics par nom de catégorie, durées dans les boucles (par vidéo + total + rotations/heure), preview télécommande sticky (FAB + panneau latéral)
-  - **P3:** compteurs d'impact (vidéos trackées vs fallback), tooltips sur bandeau de santé et filtres bibliothèque
+  - **P3:** compteurs d'impact (vidéos trackées vs fallback), tooltips sur bandeau de santé et filtres bibliothèque, historique des modifications (panneau dépliable, pagination, pills ajout/modif/suppression)
 
 ### Documentation
 
