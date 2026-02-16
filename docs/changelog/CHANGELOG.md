@@ -1,3 +1,9 @@
+## [3.49.4](https://github.com/Tallec7/neopro/compare/v3.49.3...v3.49.4) (2026-02-16)
+
+### Bug Fixes
+
+- **alerting:** add siteOnline mock to socket.service tests ([3881784](https://github.com/Tallec7/neopro/commit/388178467348cb260dc7c6764ecf5c8b225278b9))
+
 ## [3.49.3](https://github.com/Tallec7/neopro/compare/v3.49.2...v3.49.3) (2026-02-16)
 
 ### Bug Fixes
