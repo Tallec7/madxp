@@ -1,3 +1,9 @@
+# [3.45.0](https://github.com/Tallec7/neopro/compare/v3.44.4...v3.45.0) (2026-02-16)
+
+### Features
+
+- **recording:** retour automatique en boucle par défaut après inactivité ([c323786](https://github.com/Tallec7/neopro/commit/c3237865b05ec82ece617922057bf1c6672e5e6d))
+
 ## [3.44.5] (2026-02-16)
 
 ### Features
