@@ -2,7 +2,9 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
-import { AnalyticsService } from '../../core/services/analytics.service';
+import { take } from 'rxjs/operators';
+import { AnalyticsService, TractionMetrics } from '../../core/services/analytics.service';
+import { AuthService } from '../../core/services/auth.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
 
@@ -69,6 +71,63 @@ interface OverviewData {
           <div class="kpi-content">
             <div class="kpi-value">{{ data.avg_availability.toFixed(1) }}%</div>
             <div class="kpi-label">Disponibilité moyenne</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Traction KPIs (admin only) -->
+      <div class="traction-section" *ngIf="traction">
+        <div class="traction-header">
+          <h2>Metriques de traction</h2>
+          <a routerLink="/analytics/traction" class="details-link">Voir details &rarr;</a>
+        </div>
+        <div class="kpi-grid traction-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon">📡</div>
+            <div class="kpi-content">
+              <div class="kpi-value">{{ traction.overview?.total_sites || '0' }}</div>
+              <div class="kpi-label">Boitiers deployes</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon">🎬</div>
+            <div class="kpi-content">
+              <div class="kpi-value">{{ traction.engagementTotals?.total_plays || '0' }}</div>
+              <div class="kpi-label">Lectures totales</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon">⏱️</div>
+            <div class="kpi-content">
+              <div class="kpi-value">{{ traction.engagementTotals?.screen_time_hours || '0' }}h</div>
+              <div class="kpi-label">Screen time</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon">📢</div>
+            <div class="kpi-content">
+              <div class="kpi-value">{{ traction.advertiserMetrics?.total_impressions || '0' }}</div>
+              <div class="kpi-label">Impressions sponsors</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon">🏢</div>
+            <div class="kpi-content">
+              <div class="kpi-value">{{ traction.advertiserMetrics?.active_advertisers || '0' }}</div>
+              <div class="kpi-label">Annonceurs actifs</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon">🔄</div>
+            <div class="kpi-content">
+              <div class="kpi-value">{{ calculateAvgRetention() }}%</div>
+              <div class="kpi-label">Retention</div>
+            </div>
           </div>
         </div>
       </div>
@@ -365,6 +424,39 @@ interface OverviewData {
       color: #94a3b8;
     }
 
+    /* Traction Section */
+    .traction-section {
+      margin-bottom: 2rem;
+    }
+
+    .traction-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .traction-header h2 {
+      margin: 0;
+      font-size: 1.125rem;
+      color: #0f172a;
+    }
+
+    .details-link {
+      font-size: 0.875rem;
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .details-link:hover {
+      text-decoration: underline;
+    }
+
+    .traction-grid {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
     @media (max-width: 768px) {
       .kpi-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -374,10 +466,12 @@ interface OverviewData {
 })
 export class AnalyticsOverviewComponent implements OnInit, OnDestroy {
   data: OverviewData | null = null;
+  traction: TractionMetrics | null = null;
   loading = false;
   lastUpdate: Date | null = null;
 
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly authService = inject(AuthService);
   private readonly logger = inject(LoggerService);
   private refreshSubscription?: Subscription;
 
@@ -408,5 +502,28 @@ export class AnalyticsOverviewComponent implements OnInit, OnDestroy {
         this.loading = false;
       }
     });
+
+    // Charger les metriques de traction en parallele (admin only)
+    this.authService.currentUser$.pipe(take(1)).subscribe(user => {
+      if (user?.role === 'super_admin' || user?.role === 'admin') {
+        this.analyticsService.getTractionMetrics().subscribe({
+          next: (data) => {
+            this.traction = data;
+          },
+          error: (err) => {
+            const message = ErrorExtractor.getMessage(err);
+            this.logger.warn('Failed to load traction metrics', { error: message });
+          }
+        });
+      }
+    });
+  }
+
+  calculateAvgRetention(): string {
+    if (!this.traction?.retentionCohorts?.length) return '0';
+    const total = this.traction.retentionCohorts.reduce(
+      (acc, c) => acc + parseFloat(c.retention_pct || '0'), 0
+    );
+    return (total / this.traction.retentionCohorts.length).toFixed(0);
   }
 }

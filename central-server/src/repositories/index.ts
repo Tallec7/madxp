@@ -222,4 +222,26 @@ export {
   type CreateUpdateDeploymentInput,
   type UpdateUpdateDeploymentFields,
 } from './software-update.repository';
+export {
+  pitchDeckRepository,
+  type TractionOverviewRow,
+  type UserStatsRow,
+  type FleetGrowthRow,
+  type EngagementTotalsRow,
+  type EngagementMonthlyRow,
+  type SubscriptionStatusRow,
+  type SubscriptionHistoryRow,
+  type AdvertiserMetricsRow,
+  type AdvertiserMonthlyRow,
+  type ContentLibraryRow,
+  type ContentGrowthRow,
+  type DeploymentStatsRow,
+  type ReliabilityRow,
+  type AlertStatsRow as PitchDeckAlertStatsRow,
+  type ProductVelocityRow,
+  type ReleaseAdoptionRow,
+  type RetentionCohortRow,
+  type SportDistributionRow,
+  type ContentMixRow,
+} from './pitch-deck.repository';
 export { BaseRepository } from './base.repository';

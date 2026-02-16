@@ -69,6 +69,188 @@ export interface ContentStats {
   }[];
 }
 
+// --------------------------------------------------------------------------
+// Traction Metrics (pitch deck / investor KPIs)
+// --------------------------------------------------------------------------
+
+export interface TractionOverview {
+  total_sites: string;
+  online_sites: string;
+  pct_online: string;
+  active_subscriptions: string;
+  trial_count: string;
+  standard_count: string;
+  premium_count: string;
+  first_site: string | null;
+  last_site: string | null;
+}
+
+export interface TractionUserStats {
+  total_users: string;
+  super_admins: string;
+  admins: string;
+  operators: string;
+  advertisers: string;
+  agencies: string;
+  active_30d: string;
+}
+
+export interface FleetGrowthEntry {
+  month: string;
+  new_sites: string;
+}
+
+export interface EngagementTotals {
+  total_plays: string;
+  screen_time_hours: string;
+  avg_completion: string;
+  sites_with_plays: string;
+}
+
+export interface EngagementMonthlyEntry {
+  month: string;
+  plays: string;
+  active_sites: string;
+  screen_time_hours: string;
+}
+
+export interface SubscriptionStatus {
+  active: string;
+  expiring_soon: string;
+  grace_period: string;
+  suspended: string;
+  trial_active: string;
+  standard_active: string;
+  premium_active: string;
+}
+
+export interface SubscriptionHistoryEntry {
+  month: string;
+  activations: string;
+  renewals: string;
+  plan_changes: string;
+  suspensions: string;
+  reactivations: string;
+  expirations: string;
+}
+
+export interface AdvertiserMetrics {
+  total_advertisers: string;
+  active_advertisers: string;
+  total_agencies: string;
+  active_agencies: string;
+  total_impressions: string;
+  sites_reached: string;
+  videos_diffused: string;
+  screen_time_hours: string;
+  completion_rate: string;
+}
+
+export interface AdvertiserMonthlyEntry {
+  month: string;
+  impressions: string;
+  sites: string;
+  videos: string;
+  screen_time_hours: string;
+}
+
+export interface ContentLibrary {
+  total_videos: string;
+  sponsor_videos: string;
+  storage_gb: string;
+  avg_duration_min: string;
+  distinct_uploaders: string;
+}
+
+export interface ContentGrowthEntry {
+  month: string;
+  videos_added: string;
+}
+
+export interface DeploymentStats {
+  total_deployments: string;
+  completed: string;
+  failed: string;
+  success_rate: string;
+  avg_duration_min: string;
+}
+
+export interface ReliabilityStats {
+  avg_uptime: string;
+  sites_monitored: string;
+  data_days: string;
+  avg_cpu: string;
+  avg_memory: string;
+  avg_temperature: string;
+}
+
+export interface AlertStats {
+  total_alerts: string;
+  resolved: string;
+  resolution_rate: string;
+  avg_ttr_hours: string;
+}
+
+export interface ProductVelocity {
+  total_releases: string;
+  critical_releases: string;
+  first_release: string | null;
+  last_release: string | null;
+}
+
+export interface ReleaseAdoptionEntry {
+  version: string;
+  release_date: string;
+  deployed_ok: string;
+  deploy_failed: string;
+  adoption_pct: string;
+}
+
+export interface RetentionCohortEntry {
+  cohort: string;
+  total_sites: string;
+  still_active: string;
+  retention_pct: string;
+  avg_age_months: string;
+}
+
+export interface SportDistributionEntry {
+  sport: string;
+  site_count: string;
+  pct: string;
+}
+
+export interface ContentMixEntry {
+  category: string;
+  plays: string;
+  pct: string;
+  avg_completion: string;
+}
+
+export interface TractionMetrics {
+  overview: TractionOverview | null;
+  userStats: TractionUserStats | null;
+  fleetGrowth: FleetGrowthEntry[];
+  engagementTotals: EngagementTotals | null;
+  engagementMonthly: EngagementMonthlyEntry[];
+  subscriptionStatus: SubscriptionStatus | null;
+  subscriptionHistory: SubscriptionHistoryEntry[];
+  advertiserMetrics: AdvertiserMetrics | null;
+  advertiserMonthly: AdvertiserMonthlyEntry[];
+  contentLibrary: ContentLibrary | null;
+  contentGrowth: ContentGrowthEntry[];
+  deploymentStats: DeploymentStats | null;
+  reliability: ReliabilityStats | null;
+  alertStats: AlertStats | null;
+  productVelocity: ProductVelocity | null;
+  releaseAdoption: ReleaseAdoptionEntry[];
+  retentionCohorts: RetentionCohortEntry[];
+  sportDistribution: SportDistributionEntry[];
+  contentMix: ContentMixEntry[];
+}
+
+// --------------------------------------------------------------------------
+
 export interface DashboardData {
   health: ClubHealthData;
   usage: UsageStats;
@@ -155,6 +337,14 @@ export class AnalyticsService {
     }[];
   }> {
     return this.api.get('/analytics/overview');
+  }
+
+  // ============================================================================
+  // Traction Metrics (croissance, engagement, revenue)
+  // ============================================================================
+
+  getTractionMetrics(): Observable<TractionMetrics> {
+    return this.api.get<TractionMetrics>('/analytics/traction');
   }
 
   // ============================================================================
