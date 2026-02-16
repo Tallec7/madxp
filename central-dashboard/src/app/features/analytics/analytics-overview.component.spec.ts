@@ -1,8 +1,10 @@
 import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of, throwError, delay } from 'rxjs';
 import { AnalyticsOverviewComponent } from './analytics-overview.component';
 import { AnalyticsService } from '../../core/services/analytics.service';
+import { AuthService } from '../../core/services/auth.service';
 import { LoggerService } from '../../core/services/logger.service';
 
 describe('AnalyticsOverviewComponent', () => {
@@ -43,15 +45,21 @@ describe('AnalyticsOverviewComponent', () => {
   };
 
   beforeEach(async () => {
-    const analyticsServiceMock = jasmine.createSpyObj('AnalyticsService', ['getAnalyticsOverview']);
+    const analyticsServiceMock = jasmine.createSpyObj('AnalyticsService', ['getAnalyticsOverview', 'getTractionMetrics']);
     analyticsServiceMock.getAnalyticsOverview.and.returnValue(of(mockOverviewData));
+    analyticsServiceMock.getTractionMetrics.and.returnValue(of(null));
 
     const loggerServiceMock = jasmine.createSpyObj('LoggerService', ['debug', 'info', 'warn', 'error', 'addBreadcrumb', 'setAuthenticated']);
 
+    const authServiceMock = jasmine.createSpyObj('AuthService', ['logout'], {
+      currentUser$: of({ id: 'u1', email: 'test@test.com', role: 'admin' }),
+    });
+
     await TestBed.configureTestingModule({
-      imports: [AnalyticsOverviewComponent, RouterTestingModule],
+      imports: [AnalyticsOverviewComponent, RouterTestingModule, HttpClientTestingModule],
       providers: [
         { provide: AnalyticsService, useValue: analyticsServiceMock },
+        { provide: AuthService, useValue: authServiceMock },
         { provide: LoggerService, useValue: loggerServiceMock },
       ],
     }).compileComponents();
@@ -64,7 +72,7 @@ describe('AnalyticsOverviewComponent', () => {
 
   afterEach(() => {
     // Clean up any pending subscriptions
-    component.ngOnDestroy();
+    component?.ngOnDestroy();
   });
 
   it('should create', () => {
