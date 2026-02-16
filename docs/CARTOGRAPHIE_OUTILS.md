@@ -35,7 +35,7 @@
   │              Télécommande (locale)                         │
   │              [staff club]                                  │
   │                                                            │
-  │              Watchdogs (kiosk, sync, hotspot)              │
+  │              Watchdogs (kiosk, sync, hotspot, network)     │
   └────────────────────────────────────────────────────────────┘
 
                       OUTILS OPS
@@ -57,17 +57,57 @@
 | **Public** | Super Admin, Admin, Opérateurs                                                |
 | **Accès**  | Web cloud — auth JWT + MFA                                                    |
 
-**Fonctionnalités :**
+**Gestion de flotte :**
 
-- Gestion de flotte : vue temps réel de 50+ sites (Connected / Unstable / Offline)
+- Vue temps réel de 50+ sites (Connected / Unstable / Offline)
+- Vue cartographique des sites (Leaflet)
 - Fiche site détaillée (5 onglets : État, Contenu, Paramètres, Profils, Debug)
+- WiFi status : type de connexion (WiFi/Ethernet/None), signal dBm, indicateurs visuels
+
+**Gestion de contenu :**
+
+- Déploiement vidéo : deploy vers un site ou un groupe, suivi progression temps réel
+- Retry / annulation de déploiements (boutons relancer/annuler)
+- Alertes déploiements bloqués (>30min warning, >60min critical)
+- Loop manager : bandeau santé pipeline, warnings validation, bouton "Répartir dans 3 phases"
+- Conversion image vers vidéo (JPG/PNG/WEBP → MP4, durée configurable 5-60s)
 - Multi-config profiles : N profils par site (Standard, Tournoi, Match Pro...)
-- Déploiement vidéo : deploy vers un site ou un groupe, suivi temps réel
-- Mises à jour OTA : upload de packages, déploiement canary, rollback auto
-- Vue live TV + screenshot à la demande (via télécommande cloud)
-- File de commandes : commandes en attente pour sites offline
+- Brouillons de configuration : préparer les configs à l'avance
+
+**Mises à jour OTA :**
+
+- Upload de packages, déploiement canary / orchestré
+- Rollback auto, reboot programmé
+- Pré-migrations avant installation
+
+**Télécommande cloud intégrée :**
+
+- Vue live TV + screenshot à la demande (JPEG 480p, ~30-50KB, auto-refresh 5s optionnel)
+- Preview télécommande sticky (FAB)
+- Indicateur de commandes en attente (si site offline)
+
+**Administration :**
+
 - Gestion utilisateurs : RBAC (6 rôles), MFA TOTP
-- Abonnements et facturation : suivi licences, export mensuel
+- Abonnements et facturation : suivi licences, push temps réel, export mensuel CSV/JSON
+- File de commandes : commandes en attente pour sites offline, réconciliation à la reconnexion
+- Terminal distant (remote shell) : exécution de commandes sur les Pi via WebSocket
+- Configuration WiFi remote : scan réseaux et configuration wlan1 depuis l'onglet Debug
+
+**Analytics :**
+
+- Analytics club : santé, disponibilité, historique alertes, usage, contenu
+- Analytics annonceurs : impressions, stats quotidiennes
+- Auto-suggestion mapping analytics par catégorie
+- Export rapports PDF (Chart.js) et Excel multi-feuilles
+- Comparaison multi-sites et dashboard temps réel
+
+**Alerting :**
+
+- 18 seuils d'alerte (6 réactifs, 9 prédictifs, 3 kiosk)
+- Multi-canal : email, Slack (Block Kit), webhook
+- Test Slack webhook intégré
+- Escalade vers superviseurs
 
 ---
 
@@ -81,10 +121,11 @@
 
 **Fonctionnalités :**
 
-- Dashboard personnel avec stats d'impressions
-- Upload et gestion de vidéos publicitaires
-- Consultation des statistiques par période
-- Export de rapports (PDF, Excel)
+- Dashboard personnel avec stats d'impressions par vidéo
+- Upload direct de vidéos publicitaires avec détection de doublons
+- Gestion du catalogue de vidéos (liste, suppression, association aux sites)
+- Consultation des statistiques par période (date range)
+- Export de rapports PDF et Excel
 
 ---
 
@@ -101,6 +142,7 @@
 - Vue consolidée multi-annonceurs
 - Gestion du portefeuille d'annonceurs
 - Stats agrégées et par annonceur
+- Dashboard avec sites gérés
 
 ---
 
@@ -117,20 +159,30 @@
 | **Locale** | `http://neopro.local/remote`                 | Mot de passe            | Hotspot du club (WiFi NEOPRO-xxx)     | Accès direct, zéro latence                    |
 | **Cloud**  | `https://dashboard.neopro.tv/remote/:siteId` | QR code + PIN optionnel | N'importe quel réseau (4G, WiFi lieu) | Mesh WiFi, isolation client, accès à distance |
 
-**Fonctionnalités (communes aux deux modes) :**
+**Contrôle de match :**
 
 - Gestion du score en temps réel (mise à jour, reset)
-- Phases de match (échauffement, live, mi-temps, fin)
-- Sélection de vidéos dans la boucle
+- Phases de match (échauffement, live, mi-temps, fin) avec dropdown de sélection
 - Timer (start, pause, reset)
-- Breaking news (flash info)
-- Indicateur d'enregistrement (REC)
+- Modal de configuration match : date, nom du match, estimation spectateurs (badge audience)
+- Indicateur d'enregistrement (REC) avec popup inactivité (timer 15min + countdown 3min, auto-stop)
+
+**Gestion vidéo :**
+
+- Sélection de vidéos dans la boucle
+- Recherche vidéos instantanée
+- Vue "Toutes les vidéos" (accès direct)
+- Boucles vidéo par phase : dropdown pour changer de phase (neutre/avant/pendant/après)
+
+**Autres :**
+
 - Sélecteur de profil de configuration
+- Breaking news (flash info)
 
 **Fonctionnalités spécifiques au mode cloud :**
 
-- Vue live de l'état du player TV (vidéo en cours, progression, phase)
-- Screenshot à la demande (JPEG 480p)
+- Vue live de l'état du player TV (vidéo en cours, progression, phase, prochaine vidéo)
+- Screenshot à la demande (JPEG 480p, auto-refresh optionnel)
 - Indicateur de commandes en attente (si site offline)
 
 ---
@@ -143,21 +195,43 @@
 | **Public** | Spectateurs (usage passif — ils regardent la TV)                                    |
 | **Accès**  | Chromium en mode kiosk sur le Raspberry Pi                                          |
 
-**Fonctionnalités :**
+**Lecteur vidéo :**
 
-- Lecteur vidéo double-buffer (transitions seamless, preload 1.5s, switch 0.5s avant fin)
-- Boucles vidéo par phase (avant / pendant / après match)
-- Score overlay en temps réel
+- Double-buffer : transitions seamless (preload 1.5s, switch 0.5s avant fin)
+- Disk cache warming : prefetch des 3 prochaines vidéos (support boucles 20-100+ vidéos)
+- Nettoyage GPU agressif : libération buffers decoder après chaque switch (~30-50MB stable)
+- Freeze-frame pre-capture (500ms) pour transitions sans flash
+- Hardware H.264 decode (Pi 4), software decode (Pi 5 avec flags spécifiques)
+- Récupération auto crash GPU / decoder
+
+**Boucles vidéo :**
+
+- Boucles par phase de match (avant / pendant / après)
+- Organisation par catégories
+- Navigation dans l'index de la boucle
+
+**Overlay score — 6 sports supportés :**
+
+- Football, Basketball, Handball, Volleyball, Rugby, Hockey
+- Périodes automatiques selon le sport
+- 9 positions overlay (matrice 3x3 : top/middle/bottom × left/center/right)
+- Logos d'équipes (upload base64, affichage dans overlay)
+- Goal popup animations : 3 styles (Popup, Fullscreen, Slide) avec son configurable
+
+**Affichage :**
+
 - Timer de match
 - Breaking news plein écran
-- Watermark sponsor programmable
+- Watermark sponsor programmable avec scheduling
 - Indicateur REC
 - Sélecteur de profil (caché si mono-config)
-- Bandeau licence (avertissement expiration, blocage si expiré)
-- Screenshot sur demande cloud (JPEG 480p)
-- Broadcast état player vers le cloud
-- Offline-first : fonctionne sans internet (tout est bundlé)
-- Récupération auto crash GPU / decoder
+- Bandeau licence (avertissement expiration, blocage complet si expiré/suspendu)
+
+**Cloud :**
+
+- Screenshot sur demande (JPEG 480p via canvas.drawImage)
+- Broadcast état player vers le cloud (vidéo, progression, phase, position boucle)
+- Offline-first : fonctionne sans internet (toutes ressources bundlées)
 
 ---
 
@@ -178,17 +252,19 @@
 
 - Upload de vidéos locales
 - Dashboard santé simplifié
-- Widget état de connexion cloud
+- Widget sync status : état connexion cloud, dernière sync, commandes en attente, erreurs dead-letter
 
 **Fonctionnalités mode Tech :**
 
 - Configuration complète (`configuration.json`)
-- Réseau : scan WiFi, connexion, hotspot, diagnostics
-- Système : CPU, disque, services, reboot, version, logs
-- Backup / Restore de configuration
-- Mises à jour OTA
+- Réseau : scan WiFi, connexion, hotspot, diagnostics réseau
+- Système : CPU, disque, services, reboot, version, logs (profondeur 24h)
+- Debug bundle : dmesg kernel logs, lsusb, smart cap par service
+- Backup / Restore de configuration avec auto-backup
+- Mises à jour OTA : upload .tar.gz, déploiement, pré-migrations
+- Traitement vidéo : compression, thumbnails, conversion
 - Cache management
-- Email configuration
+- Email configuration et test SMTP
 
 ---
 
@@ -202,18 +278,30 @@
 | **Public** | Dashboard, Pi, intégrations (pas d'utilisateur direct)                            |
 | **Accès**  | REST + WebSocket (port 443)                                                       |
 
-**Fonctionnalités clés :**
+**Auth et sécurité :**
 
-- Auth : JWT HttpOnly + Bearer, MFA TOTP, reset password
-- 21 repositories typés (Repository Pattern, ESLint enforced)
-- 9 handlers Socket.IO (heartbeat, config-sync, deploy-progress, command-dispatch, health-monitor, license, network-resilience, score-update, match-config)
-- Déploiement vidéo : orchestration upload FTP, distribution vers Pi
-- OTA : gestion versions, déploiement canary/orchestré, rollback
-- Alerting : 18 seuils (réactifs + prédictifs), multi-canal (email, Slack, webhook)
+- JWT HttpOnly cookie + Bearer token, MFA TOTP, reset password par email
+- RBAC 6 rôles avec Row-Level Security (Supabase)
+- Rate limiting intelligent : 9 niveaux par type d'endpoint (auth 10/15min, upload 10/h, API 100/min, Pi analytics 500/min)
+- API key par site (bcrypt hashé), PIN cloud remote (SHA-256, JWT 24h)
+
+**Architecture :**
+
+- 21 repositories typés (Repository Pattern, ESLint enforced, 0 query() direct)
+- 9 handlers Socket.IO extraits (heartbeat, config-sync, deploy-progress, command-dispatch, health-monitor, license, network-resilience, score-update, match-config)
+- Memory Manager : auto-cleanup à 93% heap, collections bornées, streaming uploads
+
+**Fonctionnalités métier :**
+
+- Déploiement vidéo : orchestration upload FTP, distribution vers Pi, queue system
+- OTA : gestion versions, déploiement canary/orchestré, rollback, reboot programmé, pré-migrations
+- Conversion image vers vidéo (ffmpeg : JPG/PNG/WEBP → MP4, 5-60s)
+- Remote shell : exécution commandes sur Pi, whitelist/blacklist par rôle
+- Subscription lifecycle : push temps réel du statut licence après suspend/reactivate/extend
+- Alerting : 18 seuils avec agrégation horaire, escalade superviseurs
 - Analytics : video plays, sessions, impressions sponsors, agrégation quotidienne
-- Rapports : PDF (Chart.js), Excel multi-feuilles, CSV
-- Rate limiting : 9 niveaux
-- Memory Manager : auto-cleanup à 93% heap
+- Rapports : PDF (Chart.js), Excel multi-feuilles, CSV, pitch deck metrics SQL
+- Billing : export mensuel CSV/JSON, summary multi-mois
 
 ---
 
@@ -225,18 +313,34 @@
 | **Public** | Système (automatisé, service systemd)                                          |
 | **Accès**  | Service `neopro-sync-agent.service`                                            |
 
-**Fonctionnalités :**
+**Synchronisation :**
 
-- Heartbeat toutes les 30s (CPU, RAM, temp, disque, uptime, kiosk, version, état player)
+- Heartbeat toutes les 30s (CPU, RAM, temp, disque, uptime, kiosk status, version, état player)
 - Config sync : polling + merge intelligent (union sponsors/catégories, champs protégés)
 - Profils : téléchargement et écriture de tous les profils sur disque
-- Déploiement vidéo : download FTP, vérification SHA256, organisation par catégorie
-- Analytics push : buffer local fichier, upload batch vers cloud
-- Impressions sponsor : tracking et envoi
-- OTA : download, backup, installation, migrations, rollback, reboot
+- Connexion Socket.IO locale persistante (singleton, auto-reconnect) — élimine ~120 connect/disconnect par heure
+
+**Déploiement :**
+
+- Download vidéos depuis FTP cloud, vérification SHA256, organisation par catégorie
+- OTA : download, backup, installation, pré-migrations, rollback, reboot
 - File de commandes : traitement des commandes en attente à la reconnexion
-- Détection zombie : vérification cohérence connected flag vs socket réel
+
+**Analytics :**
+
+- Buffer local fichier, upload batch vers cloud
+- Impressions sponsor : tracking et envoi
+
+**Résilience :**
+
+- Détection zombie : vérification cohérence connected flag vs socket réel, auto-reconnexion
+- Grace period persistence : sauvegarde sur disque (`/tmp/neopro-watchdog-grace.json`) pour survivre aux restarts OTA
+- Kiosk status JSON : lecture du fichier écrit par le watchdog, inclusion dans heartbeat
+
+**Cloud relay :**
+
 - Screenshot relay : relai bidirectionnel dashboard <-> TV
+- Player state relay : broadcast état player vers le cloud
 
 ---
 
@@ -250,15 +354,17 @@
 
 **Fonctionnalités :**
 
-- Relay commandes télécommande -> TV (18 événements)
+- Relay commandes télécommande -> TV (18 événements Socket.IO)
 - Gestion score (mise à jour, reset)
-- Phases de match
+- Phases de match (échauffement, live, mi-temps, fin)
 - Timer (start, pause, reset, update)
+- Options match (type, sport, configuration overlay)
 - Breaking news
 - Indicateur REC
-- Sync TV master/slave
+- Sync TV master/slave (rôles TV, synchronisation boucle)
 - HDMI CEC (allumer/éteindre TV)
 - Validation licence locale
+- Rechargement configuration à chaud
 
 ---
 
@@ -270,11 +376,12 @@
 | **Public** | Système (automatisé)                                                |
 | **Accès**  | Scripts bash lancés par systemd                                     |
 
-| Watchdog                | Surveille           | Action                                        |
-| ----------------------- | ------------------- | --------------------------------------------- |
-| **Kiosk Watchdog**      | Chromium (kiosk TV) | Auto-restart crash GPU, max 3 tentatives/5min |
-| **Sync-Agent Guardian** | Sync-agent          | Auto-recovery crash                           |
-| **Hotspot Watchdog**    | WiFi hotspot        | Monitoring et relance                         |
+| Watchdog                | Surveille              | Action                                                                                                        |
+| ----------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Kiosk Watchdog**      | Chromium (kiosk TV)    | Auto-détection Pi 4/5, GPU crash detection (>3 errors/2min), auto-restart max 3/5min, écrit kiosk-status.json |
+| **Sync-Agent Guardian** | Sync-agent             | Auto-recovery crash, détection fichiers corrompus, restauration depuis version "golden"                       |
+| **Network Watchdog**    | Connectivité réseau    | Recovery progressive 6 phases (Gentle → Medium → Aggressive → Modprobe → USB power-cycle), cooldown 5min      |
+| **Hotspot Watchdog**    | WiFi hotspot (hostapd) | Monitoring stabilité, relance automatique                                                                     |
 
 ---
 
@@ -288,16 +395,34 @@
 | **Public** | Équipe support et fondateurs                            |
 | **Accès**  | Grafana (port 3000) + Prometheus (port 9090)            |
 
-**Fonctionnalités :**
+**Métriques Prometheus (30+ custom `neopro_*`) :**
 
-- 30 métriques Prometheus custom (`neopro_*`) : HTTP, WebSocket, business, infra, kiosk
-- 3 dashboards Grafana :
-  - **Overview** : santé API, sites connectés, alertes, 5xx, latence p95
-  - **Infrastructure** : HTTP rate/latence, Node.js runtime, DB pool, FTP
-  - **Business & Fleet** : video uploads, heartbeats, déploiements, abonnements, kiosk
+- HTTP : requests total, duration p50/p95/p99 par route
+- WebSocket : connections par type (pi/dashboard), disconnects par raison, reconnects
+- Business : video uploads, deployments, subscription status
+- Infrastructure : DB pool (idle/active/waiting), query duration, FTP operations, memory heap
+- Kiosk : status, crashes, restarts
+- Réseau Pi : WiFi config, heartbeats, network stability
+
+**3 dashboards Grafana :**
+
+- **Overview** : santé API, sites connectés, alertes actives, 5xx rate, latence p95, memory RSS
+- **Infrastructure** : HTTP rate/latence par percentile, Node.js runtime (heap, event loop), auth, DB pool, FTP
+- **Business & Fleet** : video uploads, fleet Pi (WebSocket par type, heartbeats), transitions vidéo, déploiements, abonnements, kiosk Chromium
+
+**Alerting (18 seuils) :**
+
+- _Réactifs (6)_ : CPU >80/90%, RAM >80/90%, température >70/80°C, disque >80/90%, site offline >5/30min, échec déploiement
+- _Prédictifs (9)_ : inactivité >2h, tendance disque (<7j), déconnexions fréquentes >10/30h, WiFi faible <-70/-80dBm, erreurs vidéo >5/20h, tendance température >5°C/h, hotspot instable, abonnement <7/1j, déploiement bloqué >1h
+- _Kiosk (3)_ : WebSocket disconnects >10/30h, video safety timeouts >3/10h, Chromium crash >1/3h
+
+**Autres :**
+
 - Health endpoints : `/health`, `/live`, `/ready`
-- 18 seuils d'alerte (6 réactifs, 9 prédictifs, 3 kiosk)
-- Multi-canal : email, Slack, webhook
+- Agrégation horaire des métriques (toutes les 5min)
+- Multi-canal : email (SMTP), Slack (Block Kit), webhook (POST JSON)
+- Escalade vers superviseurs
+- Authentification Bearer sur `/metrics`
 
 ---
 
@@ -311,14 +436,15 @@
 
 **Scripts principaux :**
 
-| Catégorie        | Scripts                                                    | Usage                   |
-| ---------------- | ---------------------------------------------------------- | ----------------------- |
-| **Installation** | `setup.sh`, `setup-new-club.sh`, `setup-remote-club.sh`    | Setup initial Pi        |
-| **Déploiement**  | `build-and-deploy.sh`, `deploy-remote.sh`, `copy-to-pi.sh` | Build + deploy          |
-| **Golden Image** | `prepare-golden-image.sh`, `clone-sd-card.sh`              | Clonage rapide (10 min) |
-| **Diagnostic**   | `diagnose-pi.sh`, `backup-club.sh`, `restore-club.sh`      | Support technique       |
-| **Maintenance**  | `cleanup-pi.sh`, `fix-hostname.sh`, `fix-hotspot.sh`       | Correctifs              |
-| **Vidéo**        | `compress-video.sh`, `generate-thumbnail.sh`               | Traitement vidéo        |
+| Catégorie        | Scripts                                                    | Usage                        |
+| ---------------- | ---------------------------------------------------------- | ---------------------------- |
+| **Installation** | `setup.sh`, `setup-new-club.sh`, `setup-remote-club.sh`    | Setup initial Pi             |
+| **Déploiement**  | `build-and-deploy.sh`, `deploy-remote.sh`, `copy-to-pi.sh` | Build + deploy               |
+| **Golden Image** | `prepare-golden-image.sh`, `clone-sd-card.sh`              | Clonage rapide (10 min)      |
+| **Diagnostic**   | `diagnose-pi.sh`, `backup-club.sh`, `restore-club.sh`      | Support technique            |
+| **Maintenance**  | `cleanup-pi.sh`, `fix-hostname.sh`, `fix-hotspot.sh`       | Correctifs                   |
+| **Vidéo**        | `compress-video.sh`, `generate-thumbnail.sh`               | Traitement vidéo             |
+| **WiFi**         | `setup-wifi-client.sh`, `setup-auto-backup.sh`             | Configuration réseau, backup |
 
 ---
 
@@ -341,4 +467,4 @@
 
 ---
 
-**Dernière mise à jour** : 15 février 2026
+**Dernière mise à jour** : 16 février 2026
