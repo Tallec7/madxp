@@ -1,3 +1,9 @@
+# [3.46.0](https://github.com/Tallec7/neopro/compare/v3.45.0...v3.46.0) (2026-02-16)
+
+### Features
+
+- **deploy:** add comprehensive Pi health diagnostic with JSON mode ([7e40fd7](https://github.com/Tallec7/neopro/commit/7e40fd7a1679ef827dd67bb2711c459e034d19d4))
+
 ## [3.45.1] (2026-02-16)
 
 ### Features
