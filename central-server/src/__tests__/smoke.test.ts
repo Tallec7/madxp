@@ -19,6 +19,7 @@ jest.mock('../services/socket.service', () => ({
     initialize: jest.fn().mockResolvedValue(undefined),
     isRedisConnected: jest.fn().mockReturnValue(false),
     getConnectionCount: jest.fn().mockReturnValue(0),
+    getDashboardConnectionCount: jest.fn().mockReturnValue(0),
     getConnectedSites: jest.fn().mockReturnValue([]),
     isConnected: jest.fn().mockReturnValue(false),
     getIO: jest.fn().mockReturnValue(null),
