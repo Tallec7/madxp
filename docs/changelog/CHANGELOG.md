@@ -1,3 +1,10 @@
+# [3.49.1] (2026-02-16)
+
+### Bug Fixes
+
+- **analytics:** fix 500 error on `GET /api/analytics/traction` — `getAdvertiserMetrics()` referenced non-existent `completed` column on `advertiser_impressions` table, replaced with `AVG(completion_rate)` from `advertiser_daily_stats`
+- **analytics:** fix 500 error on `GET /api/analytics/comparison` — `getMultiSiteComparison()` referenced non-existent `completion_rate` column on `club_daily_stats` table, replaced with computed avg from `video_plays`
+
 # [3.49.0](https://github.com/Tallec7/neopro/compare/v3.48.0...v3.49.0) (2026-02-16)
 
 ### Features

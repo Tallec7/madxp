@@ -669,7 +669,13 @@ class AnalyticsRepositoryImpl {
         COUNT(DISTINCT cds.date)::integer as days_active,
         COALESCE(SUM(cds.videos_played), 0)::integer as total_videos,
         COALESCE(SUM(cds.screen_time_seconds), 0)::integer as total_screen_time,
-        COALESCE(AVG(cds.completion_rate), 0)::numeric(5,1) as avg_completion
+        COALESCE((
+          SELECT ROUND(AVG(CASE WHEN vp.video_duration > 0
+            THEN 100.0 * vp.duration_played / vp.video_duration ELSE NULL END), 1)
+          FROM video_plays vp
+          WHERE vp.site_id = s.id
+            AND vp.played_at > CURRENT_DATE - $2::interval
+        ), 0)::numeric(5,1) as avg_completion
        FROM sites s
        LEFT JOIN club_daily_stats cds ON cds.site_id = s.id
          AND cds.date > CURRENT_DATE - $2::interval

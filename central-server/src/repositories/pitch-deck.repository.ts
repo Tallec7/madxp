@@ -286,8 +286,7 @@ class PitchDeckRepositoryImpl {
         COUNT(DISTINCT site_id)::text                                         AS sites_reached,
         COUNT(DISTINCT video_id)::text                                        AS videos_diffused,
         (COALESCE(SUM(duration_played), 0) / 3600)::text                      AS screen_time_hours,
-        ROUND(100.0 * COUNT(*) FILTER (WHERE completed = true)
-          / NULLIF(COUNT(*), 0), 1)::text                                     AS completion_rate
+        COALESCE((SELECT ROUND(AVG(completion_rate), 1) FROM advertiser_daily_stats), 0)::text AS completion_rate
       FROM advertiser_impressions
     `);
     return result.rows[0] ?? null;
