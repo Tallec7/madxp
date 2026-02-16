@@ -1,3 +1,9 @@
+## [3.47.1](https://github.com/Tallec7/neopro/compare/v3.47.0...v3.47.1) (2026-02-16)
+
+### Bug Fixes
+
+- **hdmi:** utiliser DRM status au lieu de CEC tv_connected pour la détection physique d'écran ([6e6e877](https://github.com/Tallec7/neopro/commit/6e6e8777bb02ea8a272166d5e2ea2b8abb139176))
+
 # [3.47.0](https://github.com/Tallec7/neopro/compare/v3.46.0...v3.47.0) (2026-02-16)
 
 ### Features
