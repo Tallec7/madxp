@@ -1,3 +1,9 @@
+## [3.49.1](https://github.com/Tallec7/neopro/compare/v3.49.0...v3.49.1) (2026-02-16)
+
+### Bug Fixes
+
+- **analytics:** fix 500 errors on /api/analytics/traction and /api/analytics/comparison ([4b1c358](https://github.com/Tallec7/neopro/commit/4b1c358ae3dd7ffb305aa4658655026dd54725e2))
+
 # [3.49.1] (2026-02-16)
 
 ### Bug Fixes
