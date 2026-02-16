@@ -682,7 +682,7 @@ neopro/
 │       ├── middleware/      # Auth, RLS, rate-limit
 │       ├── services/        # Business logic
 │       ├── handlers/        # 9 Socket.IO event handlers
-│       └── repositories/    # 21 repositories (BaseRepository<T>)
+│       └── repositories/    # 22 repositories (BaseRepository<T>)
 ├── central-dashboard/   # Dashboard central
 └── docs/                # Documentation
 ```
@@ -1144,6 +1144,9 @@ POST   /alerts/sites/:siteId/resolve - Résoudre toutes les alertes d'un site
 GET    /analytics/overview      - Stats globales
 GET    /analytics/sites/:id     - Stats par site
 GET    /analytics/daily-stats   - Agrégation journalière
+GET    /analytics/traction      - Métriques de traction business (admin)
+GET    /analytics/comparison    - Comparaison multi-sites (admin/operator)
+GET    /analytics/realtime      - Stats temps réel dashboard live (admin/operator)
 GET    /advertiser-analytics/*  - Stats annonceurs
 ```
 
@@ -1225,6 +1228,7 @@ Tous les accès PostgreSQL passent par des repositories typés héritant de `Bas
 | `report`            | `reports`                                          |
 | `timeline`          | `timeline_events`                                  |
 | `email`             | Notifications email (templates)                    |
+| `pitch-deck`        | Vue agrégée multi-tables (métriques traction)      |
 
 ### Gestion Mémoire (Railway Hobby Plan)
 
@@ -1291,6 +1295,37 @@ Composant standalone pour gérer les profils de configuration d'un site :
 | `deleteProfile(siteId, profileId)`          | `DELETE /sites/:siteId/profiles/:profileId`      |
 | `deployProfile(siteId, profileId)`          | `POST /sites/:siteId/profiles/:profileId/deploy` |
 | `syncProfiles(siteId)`                      | `POST /sites/:siteId/profiles/sync`              |
+
+### Dashboard Central — Analytics (navigation par onglets)
+
+Le module Analytics est organisé en **4 onglets** accessibles via une navigation partagée (`AnalyticsNavComponent`) :
+
+| Onglet         | Route                   | Composant                      | Accès           |
+| -------------- | ----------------------- | ------------------------------ | --------------- |
+| **Fleet**      | `/analytics`            | `AnalyticsComponent`           | admin, operator |
+| **Traction**   | `/analytics/traction`   | `AnalyticsTractionComponent`   | admin           |
+| **Comparison** | `/analytics/comparison` | `AnalyticsComparisonComponent` | admin, operator |
+| **Realtime**   | `/analytics/realtime`   | `RealtimeDashboardComponent`   | admin, operator |
+
+**AnalyticsNavComponent** : Barre de navigation partagée injectée dans les 4 pages analytics. Affiche les onglets avec icônes, masque les tabs admin-only pour les operators. Responsive : labels masqués sur mobile, seules les icônes sont affichées.
+
+**AnalyticsTractionComponent** : Page dédiée aux métriques de traction business (investisseur), avec 11 sections :
+
+1. Résumé exécutif (8 KPI cards)
+2. Croissance flotte (tableau mensuel)
+3. Engagement mensuel (lectures, sites actifs, screen time)
+4. Abonnements (statut + historique)
+5. Annonceurs & Impressions
+6. Déploiements (taux succès)
+7. Fiabilité (uptime, alertes)
+8. Vélocité produit (releases, adoption)
+9. Rétention par cohorte
+10. Répartition sports
+11. Content mix
+
+**API Backend** : `GET /api/analytics/traction` — Agrège 19 requêtes SQL via `pitchDeckRepository` (Promise.all). Données : fleet growth, engagement, subscriptions, advertiser impressions, deployments, reliability, product velocity, retention cohorts, sport distribution, content mix.
+
+**Page Fleet enrichie** : L'onglet Fleet (`/analytics`) affiche désormais 6 KPI cards traction en haut (boîtiers déployés, lectures totales, screen time, impressions, annonceurs actifs, rétention) avec un lien vers la page Traction détaillée. Visible uniquement pour les admins.
 
 ---
 

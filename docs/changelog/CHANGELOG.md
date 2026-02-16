@@ -9,6 +9,15 @@
 ### Features
 
 - **analytics:** add tab navigation across all analytics pages ([e9077fd](https://github.com/Tallec7/neopro/commit/e9077fd4b7ceca5368a66a3d04e66bd2c50fa62c))
+  - Navigation partagée `AnalyticsNavComponent` avec 4 onglets (Fleet, Traction, Comparison, Realtime)
+  - Visibilité par rôle (onglets admin-only masqués pour operators)
+  - KPIs traction intégrés dans la page Fleet (6 cards : boîtiers, lectures, screen time, impressions, annonceurs, rétention)
+  - Suppression du composant orphelin `AnalyticsOverviewComponent` (jamais routé)
+  - Responsive : labels masqués sur mobile, icônes seules
+- **analytics:** add traction metrics dashboard for business KPIs ([a4bfbd9](https://github.com/Tallec7/neopro/commit/a4bfbd9a0d68c1dfd97e1393d72f4e1c0fbe305d))
+  - Backend : `pitchDeckRepository` (19 méthodes SQL) + endpoint `GET /api/analytics/traction`
+  - Frontend : page `/analytics/traction` avec 11 sections (fleet growth, engagement, subscriptions, advertisers, deployments, reliability, velocity, retention, sports, content mix)
+  - i18n complet (fr, en, es) — 26 clés ajoutées
 
 # [3.46.0](https://github.com/Tallec7/neopro/compare/v3.45.0...v3.46.0) (2026-02-16)
 

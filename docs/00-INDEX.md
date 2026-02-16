@@ -134,7 +134,7 @@ neopro/
 ├── central-server/                 # Cloud API backend (Node.js 20/Express/TypeScript)
 │   └── src/                        # Controllers, routes, middleware, services
 ├── central-dashboard/              # Cloud admin dashboard (Angular 20.3)
-│   └── src/app/features/sites/     # Gestion sites (4 tabs: État/Contenu/Params/Debug)
+│   └── src/app/features/           # Sites (5 tabs), Analytics (4 tabs), Users, etc.
 ├── raspberry/server/               # Cloud WebSocket server
 ├── e2e/                           # End-to-end tests (Playwright)
 │
@@ -208,6 +208,6 @@ neopro/
 
 ---
 
-**Dernière mise à jour** : 15 février 2026 - Ajout cartographie des outils
+**Dernière mise à jour** : 16 février 2026 - Analytics traction + navigation par onglets
 
 **Version** : 3.37.0
