@@ -7,27 +7,38 @@
 
 :root {
   // Sports colors
-  --neo-basket-light: #FF6AA7;
-  --neo-basket-dark: #CC384E;
-  --neo-futsal-light: #FE5949;
-  --neo-futsal-dark: #951D13;
-  --neo-volley-light: #FAE571;
-  --neo-volley-dark: #FDBE00;
-  --neo-hand-light: #51B28B;
-  --neo-hand-dark: #20473C;
-  --neo-hockey-light: #A3EFFD;
-  --neo-hockey-dark: #2022E9;
-  --neo-purple-light: #7863F6;
-  --neo-purple-dark: #3A0686;
+  --neo-basket-light: #ff6aa7;
+  --neo-basket-dark: #cc384e;
+  --neo-futsal-light: #fe5949;
+  --neo-futsal-dark: #951d13;
+  --neo-volley-light: #fae571;
+  --neo-volley-dark: #fdbe00;
+  --neo-hand-light: #51b28b;
+  --neo-hand-dark: #20473c;
+  --neo-hockey-light: #a3effd;
+  --neo-hockey-dark: #2022e9;
+  --neo-purple-light: #7863f6;
+  --neo-purple-dark: #3a0686;
 
   // Neutrals
   --neo-black: #000000;
-  --neo-beige: #FEECD8;
-  --neo-grey: #EBEFEE;
-  --neo-white: #FFFFFF;
+  --neo-beige: #feecd8;
+  --neo-grey: #ebefee;
+  --neo-white: #ffffff;
 
   // Typography - System fonts for better readability
-  --neo-font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --neo-font-body:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+// =============================================================================
+// KIOSK: Hide mouse cursor on TV displays
+// Triple protection: unclutter-xfixes (OS) + CSS (browser) + Chromium flag
+// =============================================================================
+
+html,
+html * {
+  cursor: none !important;
 }
 
 // =============================================================================

@@ -90,7 +90,7 @@ echo ""
 # Services
 echo -e "${BLUE}SERVICES${NC}"
 echo "────────"
-SERVICES=("neopro-app" "neopro-admin" "nginx" "hostapd" "dnsmasq" "avahi-daemon")
+SERVICES=("neopro-app" "neopro-admin" "neopro-kiosk" "nginx" "hostapd" "dnsmasq" "avahi-daemon")
 for service in "${SERVICES[@]}"; do
     if systemctl is-active --quiet "$service"; then
         print_ok "$service"
@@ -122,6 +122,25 @@ if systemctl is-active --quiet avahi-daemon; then
     print_ok "mDNS: neopro.local"
 else
     print_error "mDNS: non disponible"
+fi
+
+echo ""
+
+# Affichage TV
+echo -e "${BLUE}AFFICHAGE TV${NC}"
+echo "────────────"
+if dpkg -l unclutter-xfixes 2>/dev/null | grep -q "^ii"; then
+    print_ok "unclutter-xfixes installé (curseur masqué)"
+elif dpkg -l unclutter 2>/dev/null | grep -q "^ii"; then
+    print_warning "Ancien 'unclutter' — remplacer par 'unclutter-xfixes'"
+else
+    print_error "unclutter-xfixes manquant (curseur visible sur TV)"
+fi
+
+if pgrep -x unclutter > /dev/null 2>&1; then
+    print_ok "Processus unclutter actif"
+else
+    print_warning "Processus unclutter inactif"
 fi
 
 echo ""

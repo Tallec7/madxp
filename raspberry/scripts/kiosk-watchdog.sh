@@ -187,6 +187,15 @@ start_chromium() {
     CHROMIUM_PID=$!
     log "✓ Chromium lancé (PID: $CHROMIUM_PID)"
     write_kiosk_status "running"
+
+    # Masquer le curseur souris — ceinture et bretelles
+    # unclutter-xfixes (autostart LXDE) est la méthode principale,
+    # xdotool est un filet de sécurité si unclutter ne se lance pas
+    if command -v xdotool &> /dev/null; then
+        sleep 2
+        DISPLAY=:0 xdotool mousemove --window "$(xdotool search --name chromium 2>/dev/null | head -1)" 0 0 2>/dev/null || true
+        log "🖱️ Curseur déplacé hors écran (fallback)"
+    fi
 }
 
 # Vérifier si Chromium affiche une page d'erreur

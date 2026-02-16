@@ -2601,6 +2601,57 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ---
 
+## Curseur souris visible sur la TV
+
+Depuis la v3.45, le curseur est masqué par triple protection : `unclutter-xfixes` (OS), CSS `cursor: none` (navigateur), et fallback `xdotool` (watchdog).
+
+### Le curseur souris reste visible sur l'écran TV
+
+**Causes possibles :**
+
+1. `unclutter-xfixes` n'est pas installé (ancien paquet `unclutter` insuffisant sur Pi 4/5 + Bookworm)
+2. L'autostart LXDE ne contient pas la commande `@unclutter`
+3. L'application Angular n'a pas été re-déployée (manque `cursor: none` CSS)
+
+**Diagnostic :**
+
+```bash
+# Vérifier que unclutter-xfixes est installé (pas l'ancien unclutter)
+dpkg -l | grep unclutter
+# Attendu : ii  unclutter-xfixes  (PAS unclutter tout court)
+
+# Vérifier que le processus tourne
+pgrep -a unclutter
+# Attendu : unclutter -idle 0 -root
+
+# Vérifier l'autostart LXDE
+cat /home/pi/.config/lxsession/LXDE-pi/autostart | grep unclutter
+# Attendu : @unclutter -idle 0 -root
+
+# Vérifier le CSS dans le build Angular
+grep -r "cursor.*none" /home/pi/neopro/webapp/styles*.css 2>/dev/null
+# Attendu : cursor:none
+```
+
+**Solutions :**
+
+```bash
+# 1. Remplacer unclutter par unclutter-xfixes
+sudo apt-get remove -y unclutter 2>/dev/null
+sudo apt-get install -y unclutter-xfixes
+
+# 2. Corriger l'autostart LXDE
+grep -q "unclutter" /home/pi/.config/lxsession/LXDE-pi/autostart || \
+  echo "@unclutter -idle 0 -root" >> /home/pi/.config/lxsession/LXDE-pi/autostart
+
+# 3. Redémarrer pour appliquer
+sudo reboot
+```
+
+> **Note :** Si seule la couche CSS est active (pas d'`unclutter`), le curseur sera invisible dans Chromium mais visible si on sort de la fenêtre navigateur (alt-tab accidentel). `unclutter-xfixes` le masque globalement au niveau X11.
+
+---
+
 ## Écran / HDMI (v3.44+)
 
 Depuis la v3.44, le Pi détecte automatiquement l'écran connecté via EDID et adapte l'affichage dashboard en conséquence.

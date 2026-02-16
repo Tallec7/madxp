@@ -326,7 +326,7 @@ install_dependencies() {
         dhcpcd5 \
         iw \
         rfkill \
-        unclutter \
+        unclutter-xfixes \
         xdotool \
         x11-xserver-utils \
         chromium \
@@ -837,7 +837,7 @@ configure_gui() {
 @xset s off
 @xset -dpms
 @xset s noblank
-@unclutter -idle 0
+@unclutter -idle 0 -root
 EOF
 
     chown -R pi:pi /home/pi/.config

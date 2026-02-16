@@ -172,6 +172,7 @@ nginx hostapd dnsmasq nodejs npm chromium-browser...
 | `dnsmasq` | Gère les adresses IP du hotspot |
 | `nodejs` | Moteur JavaScript pour le serveur |
 | `chromium-browser` | Navigateur qui affiche l'app en mode kiosque |
+| `unclutter-xfixes` | Masque le curseur souris sur l'écran TV |
 | `firmware-realtek` / `firmware-ralink` | Drivers pour clés WiFi USB (nécessaire pour le dual WiFi) |
 
 ---

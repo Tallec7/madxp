@@ -136,6 +136,36 @@ check_service "hostapd" || SERVICES_OK=false
 check_service "dnsmasq" || SERVICES_OK=false
 check_service "avahi-daemon" || SERVICES_OK=false
 
+# 1b. Vérification du masquage curseur (mode TV)
+print_section "1b. Masquage curseur TV"
+CURSOR_OK=true
+
+if dpkg -l unclutter-xfixes 2>/dev/null | grep -q "^ii"; then
+    print_success "unclutter-xfixes installé"
+else
+    if dpkg -l unclutter 2>/dev/null | grep -q "^ii"; then
+        print_warning "Ancien paquet 'unclutter' détecté — remplacer par 'unclutter-xfixes'"
+        echo "  sudo apt-get remove -y unclutter && sudo apt-get install -y unclutter-xfixes"
+    else
+        print_error "unclutter-xfixes non installé (curseur visible sur TV)"
+        echo "  sudo apt-get install -y unclutter-xfixes"
+    fi
+    CURSOR_OK=false
+fi
+
+if pgrep -x unclutter > /dev/null 2>&1; then
+    print_success "Processus unclutter actif"
+else
+    print_warning "Processus unclutter non détecté (normal si X11 n'est pas lancé)"
+fi
+
+if grep -q "@unclutter" /home/pi/.config/lxsession/LXDE-pi/autostart 2>/dev/null; then
+    print_success "Autostart LXDE contient @unclutter"
+else
+    print_error "Autostart LXDE ne contient pas @unclutter"
+    CURSOR_OK=false
+fi
+
 # 2. Vérification des ports
 print_section "2. Ports réseau"
 PORTS_OK=true
@@ -256,6 +286,16 @@ fi
 
 if [ "$PORTS_OK" = false ]; then
     print_error "Problème avec les ports réseau"
+    ERRORS_FOUND=true
+fi
+
+if [ "$CURSOR_OK" = false ]; then
+    print_error "Curseur souris potentiellement visible sur TV"
+    echo -e "\n${YELLOW}SOLUTION :${NC}"
+    echo "  sudo apt-get remove -y unclutter 2>/dev/null"
+    echo "  sudo apt-get install -y unclutter-xfixes"
+    echo "  echo '@unclutter -idle 0 -root' >> /home/pi/.config/lxsession/LXDE-pi/autostart"
+    echo "  sudo reboot"
     ERRORS_FOUND=true
 fi
 
