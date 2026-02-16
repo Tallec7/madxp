@@ -77,6 +77,8 @@ Définis dans `central-server/src/services/alerting.service.ts:50-123`
 
 **Cooldowns Slack (v3.48)** : En plus des cooldowns par seuil ci-dessus, les alertes Slack "Site Offline" et "Site Online" ont un cooldown dédié de **5 minutes par site** dans `alert.service.ts`. Cela empêche le spam Slack quand un site se reconnecte/déconnecte rapidement (flapping), par exemple lors d'un redéploiement serveur.
 
+**Grace period au boot (v3.49.3)** : Les alertes "Site Online" sont supprimées pendant les **60 premières secondes** après le démarrage du serveur. Lors d'un redéploiement Railway, tous les Pi se reconnectent en ~2-5s — sans cette grace period, chaque reconnexion génère une fausse alerte Slack. Le cooldown en mémoire (Map) est perdu au redémarrage, donc la grace period au boot est nécessaire en complément.
+
 ### 3.4 Canaux de notification
 
 | Canal       | Configuration                  | Utilisation                     |
@@ -584,7 +586,8 @@ Support Neopro
 **Si plusieurs sites passent hors ligne simultanément :**
 
 - Probablement un **redéploiement du serveur central** (Railway) — pas un problème côté Pi
-- Les alertes Slack sont limitées à 1 par site toutes les 5 min (cooldown `alert.service.ts`)
+- Les alertes Slack "Site Online" sont **automatiquement supprimées** pendant les 60s après le boot (grace period v3.49.3)
+- En régime normal, les alertes Slack sont limitées à 1 par site toutes les 5 min (cooldown `alert.service.ts`)
 - Le serveur émet `server_shutdown` aux Pi avant de fermer, les Pi se reconnectent automatiquement
 - Vérifier le dashboard Railway pour confirmer un deploy récent
 

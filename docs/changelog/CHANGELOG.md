@@ -1,3 +1,20 @@
+# [3.49.3] (2026-02-16)
+
+### Bug Fixes
+
+- **alerting:** suppress "Site Online" Slack alerts during 60s boot grace period — prevents false reconnection alerts after Railway deploy
+
+# [3.49.2] (2026-02-16)
+
+### Bug Fixes
+
+- **reports:** fix 500 error on `POST /api/reports/generate` — `INSERT INTO generated_reports` omitted `storage_path` (NOT NULL column) when creating a report with status `generating`, now uses pre-computed path placeholder
+
+### Documentation
+
+- **reports:** update PDF_REPORTS_GUIDE.md — add on-demand generation architecture (`POST /api/reports/generate`), storage flow via FTP, and `generated_reports` table lifecycle
+- **troubleshooting:** add section for 500 errors on report generation (NOT NULL constraint, canvas deps, schema mismatch)
+
 ## [3.49.1](https://github.com/Tallec7/neopro/compare/v3.49.0...v3.49.1) (2026-02-16)
 
 ### Bug Fixes

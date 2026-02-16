@@ -46,11 +46,14 @@ const SEVERITY_EMOJIS: Record<AlertSeverity, string> = {
 // Cooldown to avoid spamming Slack when sites flap (disconnect/reconnect rapidly)
 const SITE_STATUS_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_COOLDOWN_ENTRIES = 200;
+// Grace period after server boot: suppress "Site Online" alerts while Pi reconnect post-deploy
+const BOOT_GRACE_PERIOD_MS = 60 * 1000; // 60 seconds
 
 class AlertService {
   private webhookUrl: string | null;
   private enabled: boolean;
   private siteStatusCooldown: Map<string, number> = new Map();
+  private readonly serverStartTime = Date.now();
 
   constructor() {
     this.webhookUrl = process.env.SLACK_WEBHOOK_URL || null;
@@ -201,6 +204,10 @@ class AlertService {
   }
 
   async siteOnline(siteId: string, siteName: string): Promise<boolean> {
+    if (Date.now() - this.serverStartTime < BOOT_GRACE_PERIOD_MS) {
+      logger.debug('Skipping siteOnline alert (boot grace period)', { siteId, siteName });
+      return false;
+    }
     if (this.isInCooldown(`online:${siteId}`)) {
       logger.debug('Skipping siteOnline alert (cooldown)', { siteId, siteName });
       return false;
