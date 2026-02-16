@@ -15,6 +15,11 @@ class MetricsCollector {
     // Cache du modèle Pi pour éviter de lire le fichier à chaque appel
     this._piModel = null;
     this._isPi5 = null;
+
+    // Cache EDID — l'écran change rarement, TTL 5 min
+    this._displayInfoCache = null;
+    this._displayInfoCacheTime = 0;
+    this._DISPLAY_CACHE_TTL = 300000; // 5 minutes
   }
 
   /**
@@ -525,6 +530,177 @@ class MetricsCollector {
   }
 
   /**
+   * Trouve le chemin du fichier EDID de l'écran HDMI connecté.
+   * Cherche dans /sys/class/drm/ les connecteurs HDMI avec un EDID non vide.
+   * @returns {string|null} Chemin vers le fichier EDID ou null
+   */
+  _findEdidPath() {
+    try {
+      const drmDir = '/sys/class/drm';
+      if (!fs.existsSync(drmDir)) return null;
+
+      const entries = fs.readdirSync(drmDir);
+      const hdmiEntries = entries.filter(e => e.includes('HDMI'));
+
+      for (const entry of hdmiEntries) {
+        const edidPath = `${drmDir}/${entry}/edid`;
+        try {
+          const stat = fs.statSync(edidPath);
+          if (stat.size > 0) {
+            return edidPath;
+          }
+        } catch {
+          // Fichier n'existe pas ou pas accessible
+        }
+      }
+    } catch (error) {
+      logger.debug('Could not scan DRM directory for EDID:', error.message);
+    }
+    return null;
+  }
+
+  /**
+   * Parse un buffer EDID brut (128+ bytes) pour extraire les informations d'affichage.
+   * @param {Buffer} edidBuffer - Buffer EDID brut lu depuis /sys/class/drm/
+   * @returns {{manufacturer: string|null, model: string|null, serial: string|null, resolution: string|null, hasCeaExtension: boolean}}
+   */
+  _parseEdid(edidBuffer) {
+    const result = {
+      manufacturer: null,
+      model: null,
+      serial: null,
+      resolution: null,
+      hasCeaExtension: false,
+    };
+
+    if (!edidBuffer || edidBuffer.length < 128) return result;
+
+    // Vérifier le header EDID (bytes 0-7: 00 FF FF FF FF FF FF 00)
+    const header = [0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
+    if (!header.every((b, i) => edidBuffer[i] === b)) return result;
+
+    try {
+      // Manufacturer ID (bytes 8-9, big-endian, 3 lettres sur 15 bits)
+      const mfgCode = (edidBuffer[8] << 8) | edidBuffer[9];
+      const char1 = String.fromCharCode(((mfgCode >> 10) & 0x1F) + 64);
+      const char2 = String.fromCharCode(((mfgCode >> 5) & 0x1F) + 64);
+      const char3 = String.fromCharCode((mfgCode & 0x1F) + 64);
+      result.manufacturer = char1 + char2 + char3;
+    } catch {
+      // Parsing fabricant échoué
+    }
+
+    // Résolution native depuis le premier Detailed Timing Descriptor (bytes 54-71)
+    try {
+      const hActive = ((edidBuffer[58] & 0xF0) << 4) | edidBuffer[56];
+      const vActive = ((edidBuffer[61] & 0xF0) << 4) | edidBuffer[59];
+      if (hActive > 0 && vActive > 0) {
+        result.resolution = `${hActive}x${vActive}`;
+      }
+    } catch {
+      // Parsing résolution échoué
+    }
+
+    // Parcourir les 4 descriptor blocks (18 bytes chacun, à partir de byte 54)
+    for (let i = 0; i < 4; i++) {
+      const offset = 54 + (i * 18);
+      if (offset + 18 > edidBuffer.length) break;
+
+      if (edidBuffer[offset] === 0 && edidBuffer[offset + 1] === 0) {
+        const tag = edidBuffer[offset + 3];
+
+        if (tag === 0xFC) {
+          // Monitor Name descriptor
+          try {
+            result.model = edidBuffer.slice(offset + 5, offset + 18)
+              .toString('ascii').replace(/[\n\r\0]/g, '').trim();
+          } catch {
+            // Parsing nom échoué
+          }
+        } else if (tag === 0xFF) {
+          // Serial Number descriptor
+          try {
+            result.serial = edidBuffer.slice(offset + 5, offset + 18)
+              .toString('ascii').replace(/[\n\r\0]/g, '').trim();
+          } catch {
+            // Parsing serial échoué
+          }
+        }
+      }
+    }
+
+    // CEA Extension Block (indice que c'est une TV)
+    if (edidBuffer[126] > 0 && edidBuffer.length >= 256 && edidBuffer[128] === 0x02) {
+      result.hasCeaExtension = true;
+    }
+
+    return result;
+  }
+
+  /**
+   * Récupère les informations de l'écran connecté via EDID.
+   * Permet de détecter le type d'écran (TV vs moniteur PC) et ses caractéristiques.
+   * @returns {Promise<{connected: boolean, manufacturer: string|null, model: string|null, serial: string|null, resolution: string|null, display_type: string, detection_method: string}>}
+   */
+  async getDisplayInfo() {
+    const now = Date.now();
+    if (this._displayInfoCache && (now - this._displayInfoCacheTime) < this._DISPLAY_CACHE_TTL) {
+      return this._displayInfoCache;
+    }
+
+    const displayInfo = {
+      connected: false,
+      manufacturer: null,
+      model: null,
+      serial: null,
+      resolution: null,
+      display_type: 'unknown',
+      detection_method: 'none',
+    };
+
+    try {
+      const edidPath = this._findEdidPath();
+
+      if (edidPath) {
+        displayInfo.connected = true;
+        try {
+          const edidBuffer = fs.readFileSync(edidPath);
+          const parsed = this._parseEdid(edidBuffer);
+          displayInfo.manufacturer = parsed.manufacturer;
+          displayInfo.model = parsed.model;
+          displayInfo.serial = parsed.serial;
+          displayInfo.resolution = parsed.resolution;
+          displayInfo.detection_method = 'edid_raw';
+
+          if (parsed.hasCeaExtension) {
+            displayInfo.display_type = 'tv';
+          }
+        } catch (error) {
+          logger.debug('Could not parse EDID file:', error.message);
+        }
+      } else {
+        try {
+          const drmDir = '/sys/class/drm';
+          if (fs.existsSync(drmDir)) {
+            const entries = fs.readdirSync(drmDir);
+            if (entries.some(e => e.includes('HDMI'))) {
+              displayInfo.detection_method = 'drm_status';
+            }
+          }
+        } catch {
+          // Pas de DRM disponible
+        }
+      }
+    } catch (error) {
+      logger.warn('Error getting display info:', error.message);
+    }
+
+    this._displayInfoCache = displayInfo;
+    this._displayInfoCacheTime = now;
+    return displayInfo;
+  }
+
+  /**
    * Récupère l'état de la TV via HDMI-CEC
    * Permet de savoir si la TV est allumée, en veille, ou déconnectée
    */
@@ -611,13 +787,23 @@ class MetricsCollector {
    */
   async getHealthStatus() {
     try {
-      const [metrics, gpuInfo, services, systemInfo, hdmiCecStatus] = await Promise.all([
+      const [metrics, gpuInfo, services, systemInfo, hdmiCecStatus, displayInfo] = await Promise.all([
         this.collectAll(),
         this.getGpuInfo(),
         this.getServicesStatus(),
         this.getSystemInfo(),
         this.getHdmiCecStatus(),
+        this.getDisplayInfo(),
       ]);
+
+      // Affiner le type d'écran en croisant EDID + CEC
+      if (displayInfo.display_type === 'unknown') {
+        if (hdmiCecStatus.devices_found > 0) {
+          displayInfo.display_type = 'tv';
+        } else if (hdmiCecStatus.cec_available && hdmiCecStatus.devices_found === 0 && displayInfo.connected) {
+          displayInfo.display_type = 'monitor';
+        }
+      }
 
       // Calculer un score de santé global
       let healthScore = 100;
@@ -719,8 +905,9 @@ class MetricsCollector {
         });
       }
 
-      // HDMI-CEC / TV Status
-      if (hdmiCecStatus.cec_available && !hdmiCecStatus.tv_connected) {
+      // HDMI-CEC / TV Status — ne pas alerter si c'est un moniteur PC (CEC non supporté)
+      const isMonitor = displayInfo.display_type === 'monitor';
+      if (hdmiCecStatus.cec_available && !hdmiCecStatus.tv_connected && !isMonitor) {
         issues.push({
           severity: 'warning',
           component: 'HDMI-CEC',
@@ -746,6 +933,7 @@ class MetricsCollector {
         services,
         metrics,
         hdmiCecStatus,
+        displayInfo,
         system: {
           hostname: systemInfo?.hostname,
           os: systemInfo?.os,

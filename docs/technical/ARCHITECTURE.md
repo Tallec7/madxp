@@ -81,7 +81,7 @@ neopro/ (monorepo)
 │   ├── server/                     # Socket.IO local server (Express modulaire)
 │   │   ├── server.js               #   Orchestrateur (~110 lignes)
 │   │   ├── helpers.js              #   Constantes partagées
-│   │   ├── services/               #   5 services (state, buffer, license, hdmi, auth)
+│   │   ├── services/               #   6 services (state, buffer, license, hdmi+edid, auth)
 │   │   ├── routes/                 #   6 contrôleurs HTTP minces
 │   │   ├── socket/                 #   Handlers Socket.IO (18 events)
 │   │   ├── __tests__/              #   Tests Jest (71 tests)

@@ -397,6 +397,7 @@ Si aucun mot de passe n'est configuré, un setup initial est requis au premier d
    - Espace disque
    - Uptime
    - Alertes automatiques
+   - **Détection écran EDID** (v3.44+) : fabricant, modèle, résolution, type (TV/moniteur)
 
 3. **Déploiement**
    - Mise à jour OTA
@@ -472,6 +473,37 @@ const uptime24h = Math.min(100, (heartbeatCount24h / 2880) * 100);
 ```
 
 Le endpoint `/api/sites/:id/dashboard` renvoie `heartbeat_24h.count`, et le frontend calcule l'uptime localement.
+
+### Détection écran EDID (v3.44+)
+
+Le Pi détecte automatiquement l'écran connecté via les données **EDID** (Extended Display Identification Data) lues depuis `/sys/class/drm/card*-HDMI-*/edid`.
+
+**Données collectées :**
+
+| Champ              | Description                                    | Exemple                          |
+| ------------------ | ---------------------------------------------- | -------------------------------- |
+| `manufacturer`     | Code fabricant 3 lettres (EDID bytes 8-9)      | `SAM`, `DEL`, `LGD`              |
+| `model`            | Nom du modèle (descriptor tag 0xFC)            | `DELL P2419H`                    |
+| `resolution`       | Résolution native (Detailed Timing Descriptor) | `1920x1080`                      |
+| `serial`           | Numéro de série (descriptor tag 0xFF)          | `H4ZN500001`                     |
+| `display_type`     | Type d'écran détecté                           | `tv`, `monitor`, `unknown`       |
+| `detection_method` | Méthode utilisée                               | `edid_raw`, `drm_status`, `none` |
+
+**Heuristique de type d'écran :**
+
+1. Réponse CEC (devices > 0) → `tv`
+2. CEA Extension Block dans EDID → `tv`
+3. CEC dispo + 0 devices + écran connecté → `monitor`
+4. Sinon → `unknown`
+
+**Intégration :**
+
+- `sync-agent/src/metrics.js` → `getDisplayInfo()` inclus dans `getHealthStatus()` sous la clé `displayInfo`
+- `server/services/hdmi.service.js` → `getFullStatus()` croise CEC + EDID
+- Route `/api/hdmi-status` retourne CEC + display info combinés
+- Cache EDID : 5 minutes (l'écran change rarement)
+
+**Impact dashboard :** La section HDMI-CEC s'adapte au type d'écran. Pour un moniteur PC, les métriques CEC sont masquées et un message explicatif est affiché.
 
 ### Enregistrement d'un site
 
@@ -595,7 +627,7 @@ npm run deploy:raspberry 192.168.4.1
 ├── server/              # Serveur Socket.IO (Express modulaire)
 │   ├── server.js        #   Orchestrateur (~110 lignes)
 │   ├── helpers.js       #   Constantes partagées
-│   ├── services/        #   5 services (state, buffer, license, hdmi, auth)
+│   ├── services/        #   6 services (state, buffer, license, hdmi+edid, auth)
 │   ├── routes/          #   6 contrôleurs HTTP minces
 │   ├── socket/          #   Handlers Socket.IO (18 events)
 │   ├── __tests__/       #   Tests Jest (71 tests)

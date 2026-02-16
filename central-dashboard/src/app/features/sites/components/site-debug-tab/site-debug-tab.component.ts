@@ -51,6 +51,16 @@ interface HdmiCecStatus {
   error: string | null;
 }
 
+interface DisplayInfo {
+  connected: boolean;
+  manufacturer: string | null;
+  model: string | null;
+  serial: string | null;
+  resolution: string | null;
+  display_type: 'tv' | 'monitor' | 'projector' | 'unknown';
+  detection_method: string;
+}
+
 interface HealthStatus {
   success: boolean;
   timestamp: string;
@@ -68,6 +78,7 @@ interface HealthStatus {
     localIp: string | null;
   } | null;
   hdmiCecStatus?: HdmiCecStatus;
+  displayInfo?: DisplayInfo;
   system: {
     hostname: string;
     os: string;
@@ -407,17 +418,48 @@ interface WifiScanResult {
               </div>
             </div>
 
-            <!-- HDMI-CEC TV Status -->
+            <!-- HDMI-CEC TV Status + Display Info -->
             <div class="health-section" *ngIf="healthStatus.hdmiCecStatus">
-              <h5>📺 État TV (HDMI-CEC)</h5>
-              <div class="health-grid">
+              <h5>{{ getDisplaySectionIcon(healthStatus.displayInfo) }} {{ getDisplaySectionTitle(healthStatus.displayInfo) }}</h5>
+
+              <!-- Display Info (from EDID) -->
+              <div class="health-grid" *ngIf="healthStatus.displayInfo?.connected">
+                <div class="health-metric metric-ok">
+                  <span class="metric-label">Écran</span>
+                  <span class="metric-value">
+                    {{ getDisplayName(healthStatus.displayInfo) }}
+                  </span>
+                </div>
+                <div class="health-metric" *ngIf="healthStatus.displayInfo?.resolution">
+                  <span class="metric-label">Résolution</span>
+                  <span class="metric-value">{{ healthStatus.displayInfo?.resolution }}</span>
+                </div>
+                <div class="health-metric">
+                  <span class="metric-label">Type</span>
+                  <span class="metric-value">{{ getDisplayTypeLabel(healthStatus.displayInfo?.display_type || 'unknown') }}</span>
+                </div>
+                <div class="health-metric" [class.metric-ok]="healthStatus.hdmiCecStatus.tv_connected" [class.metric-warning]="!healthStatus.hdmiCecStatus.tv_connected">
+                  <span class="metric-label">Connexion HDMI</span>
+                  <span class="metric-value">
+                    {{ healthStatus.hdmiCecStatus.tv_connected ? '✅ Connected' : '✅ Signal OK' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Monitor PC detected: simplified CEC info -->
+              <div class="monitor-notice" *ngIf="healthStatus.displayInfo?.display_type === 'monitor'">
+                <span class="metric-hint">🖥️ Moniteur PC détecté — le contrôle CEC (allumage/extinction automatique) n'est pas disponible sur ce type d'écran.</span>
+              </div>
+
+              <!-- TV CEC details (only for TVs or unknown displays) -->
+              <div class="health-grid" *ngIf="healthStatus.displayInfo?.display_type !== 'monitor'">
                 <div class="health-metric" [class.metric-warning]="healthStatus.hdmiCecStatus.tv_power === 'standby'" [class.metric-ok]="healthStatus.hdmiCecStatus.tv_power === 'on'">
                   <span class="metric-label">Alimentation TV</span>
                   <span class="metric-value">
                     {{ getTvPowerLabel(healthStatus.hdmiCecStatus.tv_power) }}
                   </span>
                 </div>
-                <div class="health-metric" [class.metric-ok]="healthStatus.hdmiCecStatus.tv_connected" [class.metric-warning]="!healthStatus.hdmiCecStatus.tv_connected">
+                <div class="health-metric" *ngIf="!healthStatus.displayInfo?.connected" [class.metric-ok]="healthStatus.hdmiCecStatus.tv_connected" [class.metric-warning]="!healthStatus.hdmiCecStatus.tv_connected">
                   <span class="metric-label">Connexion HDMI</span>
                   <span class="metric-value">
                     {{ healthStatus.hdmiCecStatus.tv_connected ? '✅ Connected' : '❌ Not detected' }}
@@ -437,7 +479,7 @@ interface WifiScanResult {
               <div class="cec-last-check" *ngIf="healthStatus.hdmiCecStatus.last_check_at">
                 <span class="metric-hint">Dernière vérification: {{ healthStatus.hdmiCecStatus.last_check_at | date:'HH:mm:ss' }}</span>
               </div>
-              <div class="cec-error" *ngIf="healthStatus.hdmiCecStatus.error">
+              <div class="cec-error" *ngIf="healthStatus.hdmiCecStatus.error && healthStatus.displayInfo?.display_type !== 'monitor'">
                 <span class="metric-hint metric-warning">⚠️ {{ healthStatus.hdmiCecStatus.error }}</span>
               </div>
             </div>
@@ -2163,6 +2205,16 @@ interface WifiScanResult {
       border-radius: 4px;
     }
 
+    .monitor-notice {
+      margin-top: 0.5rem;
+      padding: 0.75rem;
+      background: #eff6ff;
+      border-radius: 6px;
+      border-left: 3px solid #3b82f6;
+      font-size: 0.85rem;
+      color: #1e40af;
+    }
+
     /* Services grid */
     .services-grid {
       display: grid;
@@ -3864,6 +3916,43 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       case 'transitioning': return '⏳ Transition...';
       case 'unknown': return '❓ Inconnu';
       default: return '❓ Non détecté';
+    }
+  }
+
+  getDisplaySectionIcon(displayInfo?: DisplayInfo): string {
+    if (!displayInfo) return '📺';
+    switch (displayInfo.display_type) {
+      case 'monitor': return '🖥️';
+      case 'tv': return '📺';
+      case 'projector': return '📽️';
+      default: return '📺';
+    }
+  }
+
+  getDisplaySectionTitle(displayInfo?: DisplayInfo): string {
+    if (!displayInfo || !displayInfo.connected) return 'État TV (HDMI-CEC)';
+    switch (displayInfo.display_type) {
+      case 'monitor': return 'Écran (Moniteur PC)';
+      case 'tv': return 'État TV (HDMI-CEC)';
+      case 'projector': return 'Écran (Projecteur)';
+      default: return 'Écran connecté';
+    }
+  }
+
+  getDisplayName(displayInfo?: DisplayInfo): string {
+    if (!displayInfo) return 'Inconnu';
+    const parts: string[] = [];
+    if (displayInfo.manufacturer) parts.push(displayInfo.manufacturer);
+    if (displayInfo.model) parts.push(displayInfo.model);
+    return parts.length > 0 ? parts.join(' ') : 'Écran détecté';
+  }
+
+  getDisplayTypeLabel(displayType: string): string {
+    switch (displayType) {
+      case 'tv': return '📺 TV';
+      case 'monitor': return '🖥️ Moniteur PC';
+      case 'projector': return '📽️ Projecteur';
+      default: return '❓ Inconnu';
     }
   }
 

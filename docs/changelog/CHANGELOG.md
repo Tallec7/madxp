@@ -1,3 +1,21 @@
+## [3.44.0] (2026-02-16)
+
+### Features
+
+- **hdmi:** détection EDID pour identifier le type d'écran connecté (moniteur PC vs TV) — lecture binaire du fichier `/sys/class/drm/card*-HDMI-*/edid` sans dépendance externe
+- **hdmi:** extraction fabricant, modèle, résolution native et numéro de série depuis les données EDID brutes
+- **hdmi:** heuristique de détection du type d'écran : CEA extension block → TV, CEC devices → TV, CEC disponible sans réponse → moniteur PC
+- **dashboard:** section HDMI-CEC adaptative — affiche les infos écran (nom, résolution, type) et masque les métriques CEC non pertinentes pour les moniteurs PC
+- **dashboard:** message explicatif "Moniteur PC détecté — CEC non supporté" quand un moniteur est connecté au lieu de "❓ Non détecté"
+- **sync-agent:** `getDisplayInfo()` avec cache 5 min, intégré dans `getHealthStatus()` sous la clé `displayInfo`
+- **hdmi-service:** `getFullStatus()` combine CEC + EDID avec croisement intelligent pour affiner le type d'écran
+
+### Documentation
+
+- **ADR-010:** mise à jour avec la détection EDID et l'heuristique de type d'écran
+- **REFERENCE.md:** ajout section monitoring EDID/display info
+- **TROUBLESHOOTING.md:** ajout section dépannage écran/HDMI
+
 ## [3.43.2](https://github.com/Tallec7/neopro/compare/v3.43.1...v3.43.2) (2026-02-16)
 
 ### Bug Fixes

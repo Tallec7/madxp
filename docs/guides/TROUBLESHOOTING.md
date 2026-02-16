@@ -14,6 +14,7 @@
 10. [NetworkWatchdog — Auto-recovery réseau (v3.36+)](#networkwatchdog--auto-recovery-réseau-v336)
 11. [Hotspot Watchdog (v2.34+)](#hotspot-watchdog-v234)
 12. [Blocage BSSID Lock en Mesh (v2.34+)](#blocage-bssid-lock-en-mesh-v234)
+13. [Écran / HDMI (v3.44+)](#écran--hdmi-v344)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 
@@ -2600,4 +2601,62 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ---
 
-**Dernière mise à jour :** 12 février 2026 (v3.17.2 - ajout section CI/CD EGITNOPERMISSION)
+## Écran / HDMI (v3.44+)
+
+Depuis la v3.44, le Pi détecte automatiquement l'écran connecté via EDID et adapte l'affichage dashboard en conséquence.
+
+### Le dashboard affiche "❓ Non détecté" pour l'alimentation TV
+
+**Cause :** Le Pi est connecté à un **moniteur PC** qui ne supporte pas HDMI-CEC. C'est un comportement normal.
+
+**Vérification :**
+
+```bash
+# Vérifier le type d'écran détecté
+curl -s http://localhost:3000/api/hdmi-status | python3 -m json.tool
+# Chercher "display_type": "monitor" dans la réponse
+```
+
+**Résultat attendu (v3.44+) :** Le dashboard affiche "🖥️ Écran (Moniteur PC)" avec le nom du modèle, et masque les métriques CEC non pertinentes.
+
+### L'écran est connecté mais le dashboard affiche "Aucun écran détecté"
+
+**Causes possibles :**
+
+1. Le fichier EDID est vide (écran éteint ou câble HDMI défectueux)
+2. Le répertoire `/sys/class/drm/` ne contient pas d'entrée HDMI
+
+**Diagnostic :**
+
+```bash
+# Lister les connecteurs DRM
+ls /sys/class/drm/ | grep HDMI
+# Exemple attendu : card1-HDMI-A-1
+
+# Vérifier la taille du fichier EDID (> 0 = écran connecté)
+stat /sys/class/drm/card1-HDMI-A-1/edid
+# size: 256 → écran connecté, size: 0 → pas d'écran ou câble défectueux
+
+# Lire les données EDID brutes (si edid-decode est installé)
+cat /sys/class/drm/card1-HDMI-A-1/edid | edid-decode 2>/dev/null
+```
+
+**Solutions :**
+
+- Vérifier le câble HDMI (essayer un autre câble)
+- Vérifier que l'écran est allumé (l'EDID est envoyé uniquement quand l'écran est actif)
+- Sur Pi 5 : vérifier que le driver DRM est correctement chargé (`ls /sys/class/drm/`)
+
+### Le type d'écran est "unknown" au lieu de "tv" ou "monitor"
+
+**Cause :** L'heuristique n'a pas pu déterminer le type. Cela arrive si :
+
+- `cec-client` n'est pas installé (`sudo apt install cec-utils`)
+- L'EDID ne contient pas de CEA extension block (TV ancienne ou exotique)
+- CEC est désactivé dans les paramètres de la TV
+
+**Solution :** Installer `cec-utils` et vérifier que CEC est activé dans les réglages de la TV (souvent sous "Anynet+", "SimpLink", "Bravia Sync", "VIERA Link" selon le fabricant).
+
+---
+
+**Dernière mise à jour :** 16 février 2026 (v3.44.0 - ajout section Écran/HDMI EDID)
