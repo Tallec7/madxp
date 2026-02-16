@@ -1,3 +1,9 @@
+## [3.47.3](https://github.com/Tallec7/neopro/compare/v3.47.2...v3.47.3) (2026-02-16)
+
+### Bug Fixes
+
+- **cloud-remote:** screenshot error response — feedback immédiat au lieu du timeout 10s ([92959cf](https://github.com/Tallec7/neopro/commit/92959cf4dd639b7539cc2cc713059f9e1497f666))
+
 ## [3.49.0] (2026-02-16)
 
 ### Features
