@@ -2,7 +2,12 @@
 <app-license-block
   *ngIf="isLicenseBlocked && licenseState"
   [licenseState]="licenseState"
-  [siteReference]="configuration?.sync?.siteName || 'N/A'"
+  [siteReference]="
+    (configuration?.sync?.clubName || configuration?.sync?.siteName || 'N/A') +
+    (configuration?.sync?.clubName && configuration?.sync?.siteName
+      ? ' (' + configuration.sync.siteName + ')'
+      : '')
+  "
 ></app-license-block>
 
 <!-- Canvas freeze-frame pour transitions sans flash (z-index 20) -->
@@ -12,12 +17,36 @@
 <div #blackOverlay class="black-overlay" [hidden]="isLicenseBlocked"></div>
 
 <!-- Double-buffer vidéo pour la BOUCLE (z-index 1-2) -->
-<video #playerA class="double-buffer-player player-a" playsinline muted [hidden]="isLicenseBlocked"></video>
-<video #playerB class="double-buffer-player player-b" playsinline muted [hidden]="isLicenseBlocked"></video>
+<video
+  #playerA
+  class="double-buffer-player player-a"
+  playsinline
+  muted
+  [hidden]="isLicenseBlocked"
+></video>
+<video
+  #playerB
+  class="double-buffer-player player-b"
+  playsinline
+  muted
+  [hidden]="isLicenseBlocked"
+></video>
 
 <!-- Player vidéo MANUEL (z-index 10, au-dessus de la boucle et de l'overlay noir) -->
-<video #manualPlayerA class="manual-player manual-player-a" playsinline muted [hidden]="isLicenseBlocked"></video>
-<video #manualPlayerB class="manual-player manual-player-b" playsinline muted [hidden]="isLicenseBlocked"></video>
+<video
+  #manualPlayerA
+  class="manual-player manual-player-a"
+  playsinline
+  muted
+  [hidden]="isLicenseBlocked"
+></video>
+<video
+  #manualPlayerB
+  class="manual-player manual-player-b"
+  playsinline
+  muted
+  [hidden]="isLicenseBlocked"
+></video>
 
 <!-- Legacy Video.js player (gardé pour compatibilité mais caché) -->
 <video

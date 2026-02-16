@@ -2,7 +2,12 @@
 @if (isLicenseBlocked && licenseState) {
   <app-license-block-remote
     [licenseState]="licenseState"
-    [siteReference]="configuration?.sync?.siteName || ''"
+    [siteReference]="
+      (configuration?.sync?.clubName || configuration?.sync?.siteName || '') +
+      (configuration?.sync?.clubName && configuration?.sync?.siteName
+        ? ' (' + configuration.sync.siteName + ')'
+        : '')
+    "
   ></app-license-block-remote>
 } @else {
   <!-- Bannière d'avertissement licence (affichée en haut si warning) -->

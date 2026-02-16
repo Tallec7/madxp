@@ -1,3 +1,10 @@
+## [3.43.1] (2026-02-16)
+
+### Bug Fixes
+
+- **license-block:** remplacer les emojis par des icônes SVG inline dans les écrans de suspension — les emojis s'affichaient en rectangles sur les écrans TV / Raspberry Pi (police emoji absente)
+- **license-block:** améliorer la référence site affichée : `clubName (siteName)` au lieu de `siteName` seul — le support peut maintenant identifier le club et son identifiant technique
+
 # [3.43.0](https://github.com/Tallec7/neopro/compare/v3.42.2...v3.43.0) (2026-02-16)
 
 ### Features
