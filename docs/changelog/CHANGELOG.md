@@ -1,3 +1,9 @@
+## [3.47.2](https://github.com/Tallec7/neopro/compare/v3.47.1...v3.47.2) (2026-02-16)
+
+### Bug Fixes
+
+- **alerting:** anti-flapping cooldown Slack + graceful shutdown Socket.IO ([dc1f695](https://github.com/Tallec7/neopro/commit/dc1f695c339b224818b09c0e1891284efa5adaa9))
+
 ## [3.48.0] (2026-02-17)
 
 ### Features
