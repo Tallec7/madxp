@@ -266,7 +266,11 @@
     "retentionByCohort": "Retention by cohort",
     "sportDistribution": "Sport distribution",
     "contentMix": "Content mix",
-    "executiveSummary": "Executive summary"
+    "executiveSummary": "Executive summary",
+    "tabFleet": "Fleet",
+    "tabTraction": "Traction",
+    "tabComparison": "Comparison",
+    "tabRealtime": "Realtime"
   },
   "language": {
     "select": "Language",

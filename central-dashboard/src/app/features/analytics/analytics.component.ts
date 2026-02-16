@@ -3,8 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subscription, interval, forkJoin } from 'rxjs';
+import { take } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { CacheService } from '../../core/services/cache.service';
+import { AnalyticsService, TractionMetrics } from '../../core/services/analytics.service';
+import { AuthService } from '../../core/services/auth.service';
+import { AnalyticsNavComponent } from './analytics-nav.component';
 
 interface SiteStatus {
   id: string;
@@ -40,17 +44,19 @@ interface RecentActivity {
 @Component({
   selector: 'app-analytics',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, AnalyticsNavComponent],
   template: `
     <div class="analytics-container">
+      <app-analytics-nav></app-analytics-nav>
+
       <div class="page-header">
         <div class="header-content">
-          <h1>📈 Analytics</h1>
-          <p class="subtitle">Vue d'ensemble de la flotte - {{ stats.total }} sites</p>
+          <h1>Flotte</h1>
+          <p class="subtitle">Vue d'ensemble - {{ stats.total }} sites</p>
         </div>
         <div class="header-actions">
           <span class="last-update" *ngIf="lastUpdate">
-            Mis à jour: {{ lastUpdate | date:'HH:mm:ss' }}
+            Mis a jour: {{ lastUpdate | date:'HH:mm:ss' }}
           </span>
           <button class="btn btn-secondary btn-sm" (click)="loadData()" [disabled]="loading">
             {{ loading ? '⏳' : '🔄' }} Actualiser
@@ -237,6 +243,40 @@ interface RecentActivity {
           <ng-template #noOnlineSites>
             <div class="no-sites">Aucun site en ligne</div>
           </ng-template>
+        </div>
+      </div>
+
+      <!-- Traction KPIs (admin only) -->
+      <div class="traction-section" *ngIf="traction">
+        <div class="traction-header">
+          <h2>Traction</h2>
+          <a routerLink="/analytics/traction" class="details-link">Details &rarr;</a>
+        </div>
+        <div class="traction-grid">
+          <div class="traction-card">
+            <div class="traction-value">{{ traction.overview?.total_sites || '0' }}</div>
+            <div class="traction-label">Deployed</div>
+          </div>
+          <div class="traction-card">
+            <div class="traction-value">{{ traction.engagementTotals?.total_plays || '0' }}</div>
+            <div class="traction-label">Total plays</div>
+          </div>
+          <div class="traction-card">
+            <div class="traction-value">{{ traction.engagementTotals?.screen_time_hours || '0' }}h</div>
+            <div class="traction-label">Screen time</div>
+          </div>
+          <div class="traction-card">
+            <div class="traction-value">{{ traction.advertiserMetrics?.total_impressions || '0' }}</div>
+            <div class="traction-label">Impressions</div>
+          </div>
+          <div class="traction-card">
+            <div class="traction-value">{{ traction.advertiserMetrics?.active_advertisers || '0' }}</div>
+            <div class="traction-label">Advertisers</div>
+          </div>
+          <div class="traction-card">
+            <div class="traction-value">{{ calculateAvgRetention() }}%</div>
+            <div class="traction-label">Retention</div>
+          </div>
         </div>
       </div>
     </div>
@@ -626,6 +666,65 @@ interface RecentActivity {
       background: #cbd5e1;
     }
 
+    /* Traction Section */
+    .traction-section {
+      margin-top: 24px;
+    }
+
+    .traction-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .traction-header h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .details-link {
+      font-size: 13px;
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .details-link:hover {
+      text-decoration: underline;
+    }
+
+    .traction-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+    }
+
+    .traction-card {
+      background: white;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1px solid #e2e8f0;
+    }
+
+    .traction-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .traction-label {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
     /* Responsive */
     @media (max-width: 1200px) {
       .stats-grid {
@@ -635,6 +734,9 @@ interface RecentActivity {
         grid-template-columns: 1fr;
       }
       .sites-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .traction-grid {
         grid-template-columns: repeat(3, 1fr);
       }
     }
@@ -659,12 +761,15 @@ interface RecentActivity {
 export class AnalyticsComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private cache = inject(CacheService);
+  private analyticsService = inject(AnalyticsService);
+  private authService = inject(AuthService);
   private refreshSubscription?: Subscription;
 
   Math = Math; // Expose Math to template
 
   loading = false;
   lastUpdate: Date | null = null;
+  traction: TractionMetrics | null = null;
 
   stats: FleetStats = {
     total: 0,
@@ -774,6 +879,16 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         this.loading = false;
       }
     });
+
+    // Load traction metrics (admin only)
+    this.authService.currentUser$.pipe(take(1)).subscribe(user => {
+      if (user?.role === 'super_admin' || user?.role === 'admin') {
+        this.analyticsService.getTractionMetrics().subscribe({
+          next: (data) => { this.traction = data; },
+          error: () => { /* silently fail — non-critical */ }
+        });
+      }
+    });
   }
 
   generateRecentActivity(): void {
@@ -817,6 +932,14 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   getPercent(value: number): number {
     if (this.stats.total === 0) return 0;
     return Math.round((value / this.stats.total) * 100);
+  }
+
+  calculateAvgRetention(): string {
+    if (!this.traction?.retentionCohorts?.length) return '0';
+    const total = this.traction.retentionCohorts.reduce(
+      (acc, c) => acc + parseFloat(c.retention_pct || '0'), 0
+    );
+    return (total / this.traction.retentionCohorts.length).toFixed(0);
   }
 
   formatTime(timestamp: string): string {

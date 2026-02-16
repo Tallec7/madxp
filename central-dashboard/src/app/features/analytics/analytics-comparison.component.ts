@@ -7,6 +7,7 @@ import { ApiService } from '../../core/services/api.service';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Site } from '../../core/models';
+import { AnalyticsNavComponent } from './analytics-nav.component';
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -36,15 +37,14 @@ interface ComparisonData {
 @Component({
   selector: 'app-analytics-comparison',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, AnalyticsNavComponent],
   template: `
     <div class="page-container">
+      <app-analytics-nav></app-analytics-nav>
+
       <!-- Header -->
       <div class="page-header">
-        <div class="header-left">
-          <button class="btn btn-secondary" routerLink="/analytics">← Analytics</button>
-        </div>
-        <h1>📊 Comparaison multi-sites</h1>
+        <h1>Comparaison multi-sites</h1>
         <div class="header-actions">
           <select [(ngModel)]="selectedPeriod" (change)="loadComparison()" class="period-select">
             <option value="7">7 derniers jours</option>

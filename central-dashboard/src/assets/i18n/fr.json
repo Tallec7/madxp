@@ -266,7 +266,11 @@
     "retentionByCohort": "Retention par cohorte",
     "sportDistribution": "Repartition par sport",
     "contentMix": "Mix de contenu",
-    "executiveSummary": "Resume executif"
+    "executiveSummary": "Resume executif",
+    "tabFleet": "Flotte",
+    "tabTraction": "Traction",
+    "tabComparison": "Comparaison",
+    "tabRealtime": "Temps reel"
   },
   "language": {
     "select": "Langue",

@@ -27,16 +27,18 @@ import {
 } from '../../core/services/analytics.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
+import { AnalyticsNavComponent } from './analytics-nav.component';
 
 @Component({
   selector: 'app-analytics-traction',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, AnalyticsNavComponent],
   template: `
     <div class="page-container">
+      <app-analytics-nav></app-analytics-nav>
+
       <div class="page-header">
         <div class="header-left">
-          <a routerLink="/analytics" class="back-link">&larr; Analytics</a>
           <h1>Traction &amp; Croissance</h1>
         </div>
         <div class="header-info">
@@ -504,22 +506,6 @@ import { ErrorExtractor } from '../../core/utils/error-extractor';
       justify-content: space-between;
       align-items: flex-start;
       margin-bottom: 2rem;
-    }
-
-    .header-left {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .back-link {
-      font-size: 0.875rem;
-      color: #64748b;
-      text-decoration: none;
-    }
-
-    .back-link:hover {
-      color: #2563eb;
     }
 
     .page-header h1 {
