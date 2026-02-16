@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const logger = require('../logger');
 const { config } = require('../config');
 const { isLocked } = require('../utils/config-merge');
+const { atomicWriteJson, safeReadConfig } = require('../utils/safe-config-io');
 
 const DEFAULT_EXTENSION = '.mp4';
 const ILLEGAL_FILENAME_CHARS = /[<>:"/\\|?*\x00-\x1F]/g;
@@ -296,11 +297,7 @@ class VideoDeployHandler {
       // S'assurer que le répertoire parent existe
       await fs.ensureDir(path.dirname(configPath));
 
-      let configuration = {};
-      if (await fs.pathExists(configPath)) {
-        const content = await fs.readFile(configPath, 'utf-8');
-        configuration = JSON.parse(content);
-      }
+      let configuration = await safeReadConfig(configPath);
 
       if (!configuration.categories) {
         configuration.categories = [];
@@ -408,7 +405,7 @@ class VideoDeployHandler {
         }
       }
 
-      await fs.writeFile(configPath, JSON.stringify(configuration, null, 2));
+      await atomicWriteJson(configPath, configuration);
 
       logger.info('Configuration updated', { configPath });
     } catch (error) {

@@ -7,6 +7,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const logger = require('../logger');
 const { config } = require('../config');
+const { atomicWriteJson, safeReadConfig } = require('../utils/safe-config-io');
 
 class ExpirationChecker {
   constructor() {
@@ -56,8 +57,7 @@ class ExpirationChecker {
         return { checked: 0, removed: 0 };
       }
 
-      const content = await fs.readFile(configPath, 'utf-8');
-      const configuration = JSON.parse(content);
+      const configuration = await safeReadConfig(configPath);
 
       if (!configuration.categories || !Array.isArray(configuration.categories)) {
         return { checked: 0, removed: 0 };
@@ -106,7 +106,7 @@ class ExpirationChecker {
 
       // Sauvegarder la configuration si modifiée
       if (modified) {
-        await fs.writeFile(configPath, JSON.stringify(configuration, null, 2));
+        await atomicWriteJson(configPath, configuration);
         logger.info('Configuration updated after removing expired videos', { removed });
 
         // Notifier l'application locale

@@ -245,10 +245,15 @@ describe('Deploy Video Handler', () => {
 
       await deployVideo.execute(baseVideoData, jest.fn());
 
-      // Should write updated config (updateConfiguration is called internally)
+      // Should atomically write updated config (tmp + rename via safe-config-io)
       expect(fs.writeFile).toHaveBeenCalledWith(
-        expect.stringContaining('configuration.json'),
-        expect.any(String)
+        expect.stringContaining('.configuration.json.tmp'),
+        expect.any(String),
+        'utf-8'
+      );
+      expect(fs.rename).toHaveBeenCalledWith(
+        expect.stringContaining('.configuration.json.tmp'),
+        expect.stringContaining('configuration.json')
       );
     });
 

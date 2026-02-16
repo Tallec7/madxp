@@ -920,6 +920,41 @@ ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
 
 ---
 
+### configuration.json corrompu (SyntaxError: Unexpected string in JSON)
+
+**Symptômes :**
+
+- Tous les déploiements vidéo échouent en boucle sur un Pi
+- Le dashboard affiche "En cours 100%" mais ne passe jamais à "Complété"
+- Logs sync-agent : `Failed to update configuration: Unexpected string in JSON at position XXXXX`
+- `Failed to sync local state` répété en boucle
+
+**Cause :**
+
+Corruption du fichier `/home/pi/neopro/webapp/configuration.json` suite à une coupure de courant pendant une écriture `fs.writeFile()` (non atomique). Le fichier contient des données orphelines après la fin du JSON valide.
+
+**Diagnostic (remote shell) :**
+
+```bash
+node -e "JSON.parse(require('fs').readFileSync('/home/pi/neopro/webapp/configuration.json','utf-8')); console.log('JSON OK')"
+```
+
+**Solution immédiate :**
+
+```bash
+# Tronquer le fichier au premier objet JSON complet
+node -e "const fs=require('fs'); const c=fs.readFileSync('/home/pi/neopro/webapp/configuration.json','utf-8'); let d=0; let cut=0; for(let i=0;i<c.length;i++){if(c[i]==='{')d++;if(c[i]==='}'){d--;if(d===0){cut=i+1;break;}}} const t=c.substring(0,cut); JSON.parse(t); fs.writeFileSync('/home/pi/neopro/webapp/configuration.json',t); console.log('Fixed: '+cut+'/'+c.length)"
+
+# Redémarrer le sync-agent
+sudo systemctl restart neopro-sync-agent
+```
+
+**Solution permanente (v3.49+) :**
+
+Mise à jour vers v3.49+ qui implémente l'écriture atomique (tmp + rename) et l'auto-recovery depuis backup. Voir [ADR-028](../adr/ADR-028-atomic-config-write.md).
+
+---
+
 ### Dépendances npm manquantes après mise à jour (socket.io-client, axios, etc.)
 
 **Symptômes :**

@@ -44,6 +44,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-025](ADR-025-dual-storage-ftp-supabase.md)      | Double backend stockage FTP + Supabase    | Accepté                  | Déc 2024 |
 | [ADR-026](ADR-026-predictive-alerts.md)              | Alertes prédictives multi-métriques       | Accepté                  | Fév 2026 |
 | [ADR-027](ADR-027-analytics-ui-removal.md)           | Suppression de l'UI Analytics dashboard   | Accepté                  | Fév 2026 |
+| [ADR-028](ADR-028-atomic-config-write.md)            | Écriture atomique de configuration.json   | Accepté                  | Fév 2026 |
 
 ### Supersédés
 
@@ -80,7 +81,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-028**)
+3. Numéroter séquentiellement (prochain : **ADR-029**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
