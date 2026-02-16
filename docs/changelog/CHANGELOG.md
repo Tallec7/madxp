@@ -1,3 +1,9 @@
+# [3.50.0](https://github.com/Tallec7/neopro/compare/v3.49.4...v3.50.0) (2026-02-16)
+
+### Features
+
+- **overlay:** simplify score overlay to 2 CSS-only broadcast themes ([4bcb4be](https://github.com/Tallec7/neopro/commit/4bcb4be6f567bb928b5af4144602f88b8d2a4b07))
+
 # [3.50.0] (2026-02-16)
 
 ### Features
