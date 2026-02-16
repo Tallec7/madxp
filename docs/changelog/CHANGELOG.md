@@ -1,3 +1,9 @@
+## [3.44.1](https://github.com/Tallec7/neopro/compare/v3.44.0...v3.44.1) (2026-02-16)
+
+### Bug Fixes
+
+- **hdmi:** détecter écran connecté via CEC quand l'EDID est vide (Pi 5) ([c13c26c](https://github.com/Tallec7/neopro/commit/c13c26c2b8ac0a3f1f7c883f7e37d6085893de3e))
+
 # [3.44.0](https://github.com/Tallec7/neopro/compare/v3.43.2...v3.44.0) (2026-02-16)
 
 ### Features
