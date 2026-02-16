@@ -1,3 +1,9 @@
+## [3.49.2](https://github.com/Tallec7/neopro/compare/v3.49.1...v3.49.2) (2026-02-16)
+
+### Bug Fixes
+
+- **alerting:** suppress Site Online alerts during 60s boot grace period ([9040902](https://github.com/Tallec7/neopro/commit/90409020bf04b84edfa4513dac385c60bc551eba))
+
 # [3.49.3] (2026-02-16)
 
 ### Bug Fixes
