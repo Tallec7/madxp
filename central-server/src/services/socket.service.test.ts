@@ -36,6 +36,7 @@ jest.mock('../config/logger', () => mockLogger);
 
 const mockAlertService = {
   siteOffline: jest.fn().mockResolvedValue(undefined),
+  siteOnline: jest.fn().mockResolvedValue(undefined),
   highTemperature: jest.fn().mockResolvedValue(undefined),
   lowDiskSpace: jest.fn().mockResolvedValue(undefined),
 };
