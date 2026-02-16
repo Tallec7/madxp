@@ -1,3 +1,9 @@
+# [3.47.0](https://github.com/Tallec7/neopro/compare/v3.46.0...v3.47.0) (2026-02-16)
+
+### Features
+
+- **analytics:** add tab navigation across all analytics pages ([e9077fd](https://github.com/Tallec7/neopro/commit/e9077fd4b7ceca5368a66a3d04e66bd2c50fa62c))
+
 # [3.46.0](https://github.com/Tallec7/neopro/compare/v3.45.0...v3.46.0) (2026-02-16)
 
 ### Features
