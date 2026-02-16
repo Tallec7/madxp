@@ -220,9 +220,11 @@ Le numéro affiché correspond exactement au tag GitHub (`v2.4.0`, `v2.4.0+hotfi
 
 Script principal d'installation en ligne qui :
 
-- Télécharge tous les fichiers depuis GitHub (raw.githubusercontent.com)
+- **Valide les entrées** : CLUB_NAME (alphanumérique, max 25 chars pour SSID WiFi), mot de passe (8-63 chars), cohérence params WiFi client
+- Télécharge tous les fichiers depuis GitHub (raw.githubusercontent.com) avec `curl -sSLf` et `exit 1` pour les fichiers critiques
+- Utilise `mktemp -d` pour le répertoire temporaire (sécurisé)
 - Exécute `install.sh` avec les paramètres fournis
-- Nettoie les fichiers temporaires
+- Nettoie les fichiers temporaires (même en cas d'erreur via trap ERR)
 
 ### `.github/workflows/publish-install-scripts.yml`
 
@@ -286,6 +288,10 @@ Oui, car :
 - ✅ Télécharge uniquement depuis votre repository GitHub officiel
 - ✅ Utilise HTTPS pour tous les téléchargements
 - ✅ Code source visible et vérifiable
+- ✅ **Validation des entrées** : CLUB_NAME regex + longueur max, mot de passe 8-63 chars
+- ✅ **Téléchargements critiques protégés** : `curl -sSLf` + `exit 1` (pas de `|| true` silencieux sur install.sh, configs systemd, server.js)
+- ✅ **Répertoire temporaire sécurisé** : `mktemp -d` au lieu de chemin prévisible
+- ✅ **`set -eo pipefail`** : les erreurs dans les pipes ne sont pas masquées
 
 ### Bonnes pratiques
 
@@ -423,6 +429,6 @@ curl -sSL https://tallec7.github.io/neopro/install/setup.sh | less
 
 ---
 
-**Version :** 2.0.0
-**Date :** Janvier 2026
+**Version :** 2.1.0
+**Date :** Février 2026
 **Auteur :** Neopro / Kalon Partners

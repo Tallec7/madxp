@@ -203,11 +203,15 @@ sudo ./install.sh CESSON MyWiFiPass123
 
 **Ce qu'il fait :**
 
+- Valide les entrées (CLUB_NAME : alphanumérique, max 25 chars ; mot de passe WiFi : 8-63 chars, caractères spéciaux supportés)
 - Installe Node.js 18
 - Installe et configure nginx
 - Installe hostapd et dnsmasq (WiFi AP)
+- Copie automatiquement le build Angular (webapp/) s'il est présent
 - Crée les services systemd
 - Configure le réseau WiFi en point d'accès
+- Protège `club-config.json` (`chmod 600` — contient le mot de passe WiFi)
+- **Health check post-installation** : vérifie que les services critiques (nginx, hostapd, dnsmasq) sont actifs, que Nginx répond, et que le hotspot est en mode AP
 
 ---
 
@@ -318,7 +322,11 @@ SKIP_XATTR_CLEANUP=true ./raspberry/scripts/build-raspberry.sh
 
 **Ce qu'il fait :**
 
+- Vérifie Node.js v18+ et les prérequis
 - Compile l'application Angular en mode production
+- **Valide que le build Angular a réussi** (`dist/raspberry/browser/index.html` présent)
+- Inclut les `node_modules` de **server**, sync-agent et admin dans l'archive (pas de `npm install` requis au déploiement)
+- Vérifie l'intégrité de 19+ fichiers critiques + dépendances npm avant archivage
 - Crée l'archive `raspberry/neopro-raspberry-deploy.tar.gz`
 - Ajoute `deploy/VERSION` + `deploy/release.json` (version, commit, date) dans l'archive
 
@@ -530,9 +538,13 @@ ssh pi@neopro.local 'sudo systemctl restart neopro-app nginx'
 
 ### Sécurité
 
-- Les scripts ne stockent jamais les mots de passe en clair dans les logs
+- `CLUB_NAME` validé par regex (`^[a-zA-Z0-9_-]+$`, max 25 chars) dans `setup.sh` et `install.sh`
+- Les mots de passe WiFi sont échappés pour sed (caractères spéciaux `$`, `/`, `&`, `\` supportés)
+- `club-config.json` est protégé en `chmod 600` (seul l'utilisateur `pi` peut le lire)
 - Les configurations avec mots de passe sont dans `.gitignore`
 - Utilisez des mots de passe forts (12+ caractères)
+- `setup.sh` utilise `curl -sSLf` avec `exit 1` pour les fichiers critiques (pas de `|| true` silencieux)
+- Les fichiers temporaires utilisent `mktemp -d` (pas de chemin prévisible)
 
 ### Organisation
 

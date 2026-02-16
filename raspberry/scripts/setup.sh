@@ -22,7 +22,7 @@
 # Documentation complète : docs/ONLINE_INSTALLATION.md
 ################################################################################
 
-set -e
+set -eo pipefail
 
 # Couleurs
 RED='\033[0;31m'
@@ -76,8 +76,29 @@ check_parameters() {
         exit 1
     fi
 
+    # Valider le nom du club (caractères sûrs, longueur max pour SSID WiFi)
+    if [[ ! "$CLUB_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        print_error "CLUB_NAME ne doit contenir que des lettres, chiffres, tirets et underscores"
+        exit 1
+    fi
+    # SSID WiFi = "NEOPRO-" (7 chars) + CLUB_NAME → max 32 chars total
+    if [ ${#CLUB_NAME} -gt 25 ]; then
+        print_error "CLUB_NAME trop long (max 25 caractères pour respecter la limite SSID WiFi de 32 chars)"
+        exit 1
+    fi
+
     if [ ${#WIFI_PASSWORD} -lt 8 ]; then
         print_error "Le mot de passe WiFi doit faire au moins 8 caractères"
+        exit 1
+    fi
+    if [ ${#WIFI_PASSWORD} -gt 63 ]; then
+        print_error "Le mot de passe WiFi ne doit pas dépasser 63 caractères"
+        exit 1
+    fi
+
+    # Valider paramètres WiFi client : si SSID fourni, le password est requis
+    if [ -n "$CLIENT_WIFI_SSID" ] && [ -z "$CLIENT_WIFI_PASSWORD" ]; then
+        print_error "SSID WiFi client fourni sans mot de passe. Usage: ... CLUB PASS SSID_CLIENT PASS_CLIENT"
         exit 1
     fi
 }
@@ -93,24 +114,25 @@ download_installation_files() {
     GITHUB_RAW="https://raw.githubusercontent.com/Tallec7/neopro/main"
     GITHUB_API="https://api.github.com/repos/Tallec7/neopro/contents"
 
-    # Créer le répertoire temporaire
-    TEMP_DIR="/tmp/neopro-install-$$"
-    mkdir -p "$TEMP_DIR"
+    # Créer le répertoire temporaire (mktemp pour éviter les collisions)
+    TEMP_DIR=$(mktemp -d /tmp/neopro-install-XXXXXX)
     cd "$TEMP_DIR"
 
-    # Télécharger install.sh
+    # Télécharger install.sh (CRITIQUE)
     print_step "Téléchargement de install.sh..."
-    curl -sSL "$GITHUB_RAW/raspberry/install.sh" -o install.sh
+    curl -sSLf "$GITHUB_RAW/raspberry/install.sh" -o install.sh || { print_error "Échec du téléchargement de install.sh"; exit 1; }
     chmod +x install.sh
 
     # Télécharger la structure complète pour install.sh
     print_step "Téléchargement des configurations systemd..."
     mkdir -p config/systemd
-    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/hostapd.conf" -o config/systemd/hostapd.conf
-    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/dnsmasq.conf" -o config/systemd/dnsmasq.conf
-    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro.service" -o config/systemd/neopro.service
-    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-app.service" -o config/systemd/neopro-app.service
-    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-admin.service" -o config/systemd/neopro-admin.service
+    # Fichiers critiques (l'installation échoue sans eux)
+    curl -sSLf "$GITHUB_RAW/raspberry/config/systemd/hostapd.conf" -o config/systemd/hostapd.conf || { print_error "Échec: hostapd.conf"; exit 1; }
+    curl -sSLf "$GITHUB_RAW/raspberry/config/systemd/dnsmasq.conf" -o config/systemd/dnsmasq.conf || { print_error "Échec: dnsmasq.conf"; exit 1; }
+    curl -sSLf "$GITHUB_RAW/raspberry/config/systemd/neopro.service" -o config/systemd/neopro.service || { print_error "Échec: neopro.service"; exit 1; }
+    curl -sSLf "$GITHUB_RAW/raspberry/config/systemd/neopro-app.service" -o config/systemd/neopro-app.service || { print_error "Échec: neopro-app.service"; exit 1; }
+    curl -sSLf "$GITHUB_RAW/raspberry/config/systemd/neopro-admin.service" -o config/systemd/neopro-admin.service || { print_error "Échec: neopro-admin.service"; exit 1; }
+    # Fichiers optionnels (ajoutés dans des versions ultérieures)
     curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-kiosk.service" -o config/systemd/neopro-kiosk.service 2>/dev/null || true
     curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-sync-agent.service" -o config/systemd/neopro-sync-agent.service 2>/dev/null || true
     # Services ajoutés v2.28+ (watchdogs réseau)
@@ -121,13 +143,14 @@ download_installation_files() {
 
     print_step "Téléchargement du serveur Node.js..."
     mkdir -p server
-    curl -sSL "$GITHUB_RAW/raspberry/server/package.json" -o server/package.json
-    curl -sSL "$GITHUB_RAW/raspberry/server/server.js" -o server/server.js
+    curl -sSLf "$GITHUB_RAW/raspberry/server/package.json" -o server/package.json || { print_error "Échec: server/package.json"; exit 1; }
+    curl -sSLf "$GITHUB_RAW/raspberry/server/server.js" -o server/server.js || { print_error "Échec: server/server.js"; exit 1; }
 
     print_step "Téléchargement du serveur admin..."
     mkdir -p admin/public/fonts
-    curl -sSL "$GITHUB_RAW/raspberry/admin/package.json" -o admin/package.json
-    curl -sSL "$GITHUB_RAW/raspberry/admin/admin-server.js" -o admin/admin-server.js
+    curl -sSLf "$GITHUB_RAW/raspberry/admin/package.json" -o admin/package.json || { print_error "Échec: admin/package.json"; exit 1; }
+    curl -sSLf "$GITHUB_RAW/raspberry/admin/admin-server.js" -o admin/admin-server.js || { print_error "Échec: admin/admin-server.js"; exit 1; }
+    curl -sSL "$GITHUB_RAW/raspberry/admin/helpers.js" -o admin/helpers.js 2>/dev/null || true
 
     # Télécharger les fichiers public de l'admin (interface complète)
     curl -sSL "$GITHUB_RAW/raspberry/admin/public/index.html" -o admin/public/index.html 2>/dev/null || true
@@ -290,6 +313,10 @@ print_final_summary() {
 
 CLIENT_WIFI_SSID=""
 CLIENT_WIFI_PASSWORD=""
+TEMP_DIR=""
+
+# Gestion des erreurs (placé avant main pour garantir le nettoyage)
+trap 'cleanup; print_error "Installation échouée"' ERR
 
 main() {
     CLUB_NAME="$1"
@@ -311,8 +338,5 @@ main() {
     cleanup
     print_final_summary
 }
-
-# Gestion des erreurs
-trap 'cleanup; print_error "Installation échouée"' ERR
 
 main "$@"

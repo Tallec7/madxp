@@ -1,3 +1,30 @@
+## [3.44.4] (2026-02-16)
+
+### Hardening
+
+- **build-raspberry:** inclure `node_modules` du serveur Socket.IO dans l'archive (comme sync-agent et admin) — le serveur ne nécessite plus `npm install` au premier boot
+- **build-raspberry:** valider Node.js v18+ avant le build (Angular 20 requis)
+- **build-raspberry:** vérifier que `dist/raspberry/browser/index.html` existe après `ng build` — exit 1 si build Angular échoué
+- **build-raspberry:** ajouter `server/node_modules/` au check d'intégrité pré-archivage
+- **install:** valider CLUB*NAME (regex `^[a-zA-Z0-9*-]+$`, max 25 chars pour SSID WiFi 32 chars)
+- **install:** échapper les caractères spéciaux du mot de passe WiFi dans sed (`$`, `/`, `&`, `\`)
+- **install:** copier automatiquement le build Angular (`webapp/`) au lieu d'afficher un simple warning
+- **install:** protéger `club-config.json` en `chmod 600` (contient le mot de passe WiFi)
+- **install:** ajouter `verify_installation()` — health check post-install vérifiant services actifs, réponse Nginx, mode AP WiFi, fichiers critiques
+- **install:** utiliser `${SCRIPT_DIR}` pour les chemins dans `check_prerequisites()`
+- **install:** corriger appel à `print_info` inexistant (remplacé par `echo`)
+- **setup:** activer `set -eo pipefail` (erreurs dans les pipes détectées)
+- **setup:** valider CLUB_NAME, longueur mot de passe (8-63 chars), cohérence params WiFi client
+- **setup:** utiliser `curl -sSLf` + `exit 1` pour les téléchargements critiques (install.sh, configs systemd, server.js, admin-server.js)
+- **setup:** utiliser `mktemp -d` au lieu de `/tmp/neopro-install-$$` (chemin non prévisible)
+- **setup:** placer le trap ERR avant `main()` pour garantir le nettoyage en cas d'erreur
+
+### Documentation
+
+- **ONLINE_INSTALLATION:** documenter les validations et protections de setup.sh (v2.1.0)
+- **INSTALLATION_COMPLETE:** mettre à jour "Ce que fait install.sh" avec health check, validation, chmod 600
+- **scripts/README:** mettre à jour sections install.sh, build-raspberry.sh et sécurité
+
 ## [3.44.3](https://github.com/Tallec7/neopro/compare/v3.44.2...v3.44.3) (2026-02-16)
 
 ### Bug Fixes

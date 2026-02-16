@@ -133,13 +133,14 @@ sudo ./install.sh NANTES VotreMotDePasseWiFi123
 
 **Ce que fait install.sh :**
 
+- ✅ **Valide les entrées** (CLUB_NAME : alphanumérique max 25 chars, mot de passe : 8-63 chars avec caractères spéciaux)
 - ✅ Vérifie les prérequis (connexion Internet, espace disque, fichiers requis)
 - ✅ Met à jour le système
 - ✅ Installe Node.js, nginx, hostapd, dnsmasq, firmware WiFi USB (Realtek/Ralink)
 - ✅ Configure le hostname → `neopro.local`
-- ✅ Configure le WiFi hotspot → `NEOPRO-NANTES`
+- ✅ Configure le WiFi hotspot → `NEOPRO-NANTES` (mot de passe échappé pour sed)
 - ✅ Détecte une clé WiFi USB (`wlan1`) et propose/configure le WiFi client (Internet)
-- ✅ Installe l'application (server, admin, **sync-agent**)
+- ✅ Installe l'application (server, admin, **sync-agent**) + copie automatique du webapp si présent
 - ✅ Configure les services systemd (neopro-app, neopro-admin, neopro-sync-agent)
 - ✅ Configure nginx
 - ✅ **Détecte le modèle de Pi** et configure le GPU :
@@ -147,6 +148,8 @@ sudo ./install.sh NANTES VotreMotDePasseWiFi123
   - Pi 5 : V3D Mesa + décodage vidéo software (v3.26.1+)
 - ✅ **Installe le watchdog kiosk** pour récupération automatique des crashs Chromium
 - ✅ **Installe 3 services de protection** : hotspot-watchdog, sync-guardian, hotspot-optimizer
+- ✅ **Protège `club-config.json`** en `chmod 600` (contient le mot de passe WiFi)
+- ✅ **Health check post-installation** : vérifie services actifs, réponse Nginx, mode AP WiFi, fichiers critiques
 - ✅ Affiche la durée totale d'installation
 
 ### 1.5 Vérification

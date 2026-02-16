@@ -133,6 +133,14 @@ check_prerequisites() {
     if ! command -v node &> /dev/null; then
         print_error "Node.js n'est pas installé"
         ERRORS=$((ERRORS + 1))
+    else
+        # Vérifier la version Node.js (18+ requis pour Angular 20)
+        local NODE_MAJOR
+        NODE_MAJOR=$(node -v | sed 's/^v//' | cut -d. -f1)
+        if [ "$NODE_MAJOR" -lt 18 ] 2>/dev/null; then
+            print_error "Node.js v18+ requis (actuel: $(node -v))"
+            ERRORS=$((ERRORS + 1))
+        fi
     fi
 
     # Vérifier npm
@@ -242,6 +250,12 @@ verify_build_integrity() {
         ERRORS=$((ERRORS + 1))
     fi
 
+    # === VÉRIFIER NODE_MODULES SERVER ===
+    if [ ! -d "${DEPLOY_DIR}/server/node_modules" ]; then
+        print_error "MANQUANT: server/node_modules/"
+        ERRORS=$((ERRORS + 1))
+    fi
+
     # === FICHIERS DE VERSION ===
     if [ ! -f "${DEPLOY_DIR}/VERSION" ]; then
         print_warning "MANQUANT: VERSION (non critique)"
@@ -340,6 +354,10 @@ if command -v ng &> /dev/null; then
 else
     npx ng build raspberry --configuration=raspberry
 fi
+if [ ! -d "dist/raspberry/browser" ] || [ ! -f "dist/raspberry/browser/index.html" ]; then
+    print_error "Le build Angular a échoué: dist/raspberry/browser/index.html introuvable"
+    exit 1
+fi
 print_success "Build Angular terminé"
 
 print_step "Préparation du package de déploiement..."
@@ -357,7 +375,18 @@ cp -r dist/raspberry/browser/* ${DEPLOY_DIR}/webapp/
 
 # Copier le serveur Node.js (source de vérité: raspberry/server/)
 # Exclure les fichiers .md (documentation) du déploiement
-rsync -a --exclude='*.md' raspberry/server/ ${DEPLOY_DIR}/server/
+rsync -a --exclude='*.md' --exclude='node_modules' raspberry/server/ ${DEPLOY_DIR}/server/
+
+# Installer les dépendances du serveur pour les inclure dans l'archive
+if [ -f "${DEPLOY_DIR}/server/package.json" ]; then
+    print_step "Installation des dépendances server..."
+    cd ${DEPLOY_DIR}/server
+    npm install --production --silent 2>/dev/null || npm install --production
+    cd - > /dev/null
+    print_success "Server copié (avec node_modules)"
+else
+    print_success "Server copié"
+fi
 
 # Copier le sync-agent
 if [ -d "raspberry/sync-agent" ]; then
@@ -585,6 +614,7 @@ echo ""
 echo -e "${BLUE}Contenu de l'archive:${NC}"
 echo "  ├── webapp/          Angular app (TV/Remote/Login)"
 echo "  ├── server/          Socket.IO serveur local"
+echo "  │   └── node_modules/ ✓ Dépendances incluses"
 echo "  ├── sync-agent/      Agent de synchronisation cloud"
 echo "  │   └── node_modules/ ✓ Dépendances incluses"
 echo "  ├── admin/           Interface admin locale (port 8080)"
