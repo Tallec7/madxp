@@ -1,3 +1,9 @@
+# [3.40.0](https://github.com/Tallec7/neopro/compare/v3.39.1...v3.40.0) (2026-02-16)
+
+### Features
+
+- **dashboard:** historique des modifications dans onglet Contenu (P3-3) ([f1272dc](https://github.com/Tallec7/neopro/commit/f1272dc2f4f402f4d8f20f68838c278f2758f350))
+
 ## [3.39.1](https://github.com/Tallec7/neopro/compare/v3.39.0...v3.39.1) (2026-02-16)
 
 ### Bug Fixes
