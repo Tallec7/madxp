@@ -480,23 +480,23 @@ Le Pi détecte automatiquement l'écran connecté via les données **EDID** (Ext
 
 **Données collectées :**
 
-| Champ              | Description                                    | Exemple                                         |
-| ------------------ | ---------------------------------------------- | ----------------------------------------------- |
-| `manufacturer`     | Code fabricant 3 lettres (EDID bytes 8-9)      | `SAM`, `DEL`, `LGD`                             |
-| `model`            | Nom du modèle (descriptor tag 0xFC)            | `DELL P2419H`                                   |
-| `resolution`       | Résolution native (Detailed Timing Descriptor) | `1920x1080`                                     |
-| `serial`           | Numéro de série (descriptor tag 0xFF)          | `H4ZN500001`                                    |
-| `display_type`     | Type d'écran détecté                           | `tv`, `monitor`, `unknown`                      |
-| `detection_method` | Méthode utilisée                               | `edid_raw`, `drm_status`, `cec_hotplug`, `none` |
+| Champ              | Description                                    | Exemple                          |
+| ------------------ | ---------------------------------------------- | -------------------------------- |
+| `manufacturer`     | Code fabricant 3 lettres (EDID bytes 8-9)      | `SAM`, `DEL`, `LGD`              |
+| `model`            | Nom du modèle (descriptor tag 0xFC)            | `DELL P2419H`                    |
+| `resolution`       | Résolution native (Detailed Timing Descriptor) | `1920x1080`                      |
+| `serial`           | Numéro de série (descriptor tag 0xFF)          | `H4ZN500001`                     |
+| `display_type`     | Type d'écran détecté                           | `tv`, `monitor`, `unknown`       |
+| `detection_method` | Méthode utilisée                               | `edid_raw`, `drm_status`, `none` |
 
 **Heuristique de type d'écran :**
 
 1. Réponse CEC (devices > 0) → `tv`
 2. CEA Extension Block dans EDID → `tv`
-3. CEC dispo + 0 devices + écran connecté (EDID ou CEC hot-plug) → `monitor`
+3. CEC dispo + 0 devices + écran connecté (EDID ou DRM status) → `monitor`
 4. Sinon → `unknown`
 
-> **Fallback Pi 5** : Si l'EDID est vide (taille 0) mais que CEC détecte un hot-plug (`tv_connected=true`), l'écran est marqué `connected=true` avec `detection_method=cec_hotplug`.
+> **Détection physique :** La connexion d'un écran est vérifiée via EDID (taille > 0) ou le fichier DRM status (`/sys/class/drm/card*-HDMI-*/status` = `connected`). Le signal CEC `tv_connected` n'est **pas** utilisé car il génère des faux positifs sur Pi 5 (retourne `true` sans écran branché).
 
 **Intégration :**
 

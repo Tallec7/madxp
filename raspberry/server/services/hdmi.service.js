@@ -95,6 +95,28 @@ class HdmiService {
         if (parsed.hasCeaExtension) {
           displayInfo.display_type = 'tv';
         }
+      } else {
+        // Pas d'EDID lisible — vérifier le DRM status pour la connexion physique
+        try {
+          const drmDir = '/sys/class/drm';
+          if (fs.existsSync(drmDir)) {
+            const entries = fs.readdirSync(drmDir);
+            const hdmiEntry = entries.find(e => e.includes('HDMI'));
+            if (hdmiEntry) {
+              const statusPath = `${drmDir}/${hdmiEntry}/status`;
+              try {
+                const status = fs.readFileSync(statusPath, 'utf8').trim();
+                if (status === 'connected') {
+                  displayInfo.connected = true;
+                }
+              } catch {
+                // Fichier status inaccessible
+              }
+            }
+          }
+        } catch {
+          // Pas de DRM disponible
+        }
       }
     } catch (error) {
       console.warn('[HDMI] Display info error:', error.message);
@@ -116,18 +138,14 @@ class HdmiService {
     ]);
 
     // Affiner le type d'écran en croisant CEC + EDID
-    // Un écran peut être connecté (HDMI hot-plug) sans EDID lisible
-    const screenDetected = display.connected || cec.tv_connected;
+    // display.connected est fiable : basé sur EDID ou DRM status file
+    // Note : cec.tv_connected n'est PAS fiable (faux positif sans écran sur Pi 5)
     if (display.display_type === 'unknown') {
       if (cec.devices_found > 0) {
         display.display_type = 'tv';
-      } else if (cec.cec_available && cec.devices_found === 0 && screenDetected) {
+      } else if (cec.cec_available && cec.devices_found === 0 && display.connected) {
         display.display_type = 'monitor';
       }
-    }
-    // Marquer l'écran comme connecté si détecté par CEC même sans EDID
-    if (!display.connected && cec.tv_connected) {
-      display.connected = true;
     }
 
     return { ...cec, displayInfo: display };

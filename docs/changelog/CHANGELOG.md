@@ -106,7 +106,8 @@
 
 ### Bug Fixes
 
-- **hdmi:** fallback CEC hot-plug quand l'EDID est vide (Pi 5) — sur certains moniteurs PC, le fichier EDID a une taille de 0 octets ; le signal `tv_connected` du CEC est maintenant utilisé comme détection alternative de présence d'écran
+- **hdmi:** détection physique d'écran via DRM status file (`/sys/class/drm/card*-HDMI-*/status`) — remplace le signal CEC `tv_connected` qui est un faux positif sur Pi 5 sans écran branché
+- **hdmi:** corrige le faux positif "Moniteur PC détecté" quand aucun écran n'est connecté — `cec-client` retourne `power status: unknown` même câble HDMI débranché
 
 ### Documentation
 
