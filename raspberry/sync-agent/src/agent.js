@@ -90,6 +90,7 @@ class NeoproSyncAgent {
       reconnection: true,
       reconnectionDelay: 5000,
       reconnectionDelayMax: 30000,
+      randomizationFactor: 0.5,
       timeout: 20000,
     });
 
@@ -658,8 +659,8 @@ class NeoproSyncAgent {
    * Détecte les connexions zombies même si handleDisconnect n'est pas appelé
    */
   startConnectionHealthCheck() {
-    const HEALTH_CHECK_INTERVAL = 60000; // 60 secondes
-    const STALE_THRESHOLD = 90000; // 90 secondes sans heartbeat réussi = problème
+    const HEALTH_CHECK_INTERVAL = 30000; // 30 secondes
+    const STALE_THRESHOLD = 60000; // 60 secondes sans heartbeat réussi = forcer reconnexion
 
     logger.info('Starting connection health check', { interval: HEALTH_CHECK_INTERVAL });
 
@@ -687,12 +688,23 @@ class NeoproSyncAgent {
       if (this.connected && this.lastSuccessfulHeartbeat) {
         const timeSinceLastHeartbeat = Date.now() - this.lastSuccessfulHeartbeat;
         if (timeSinceLastHeartbeat > STALE_THRESHOLD) {
-          logger.warn('Health check: heartbeats not getting through', {
+          logger.warn('Health check: heartbeats stale, forcing reconnection', {
             timeSinceLastHeartbeat,
             threshold: STALE_THRESHOLD,
             socketConnected,
           });
-          // Ne pas déconnecter, juste logger - le serveur peut être lent
+          this.connected = false;
+          connectionStatus.setConnected(false, 'health_check_stale_heartbeat');
+
+          // Forcer déconnexion puis reconnexion propre
+          if (this.socket) {
+            this.socket.disconnect();
+            setTimeout(() => {
+              logger.info('Reconnecting after stale heartbeat detection...');
+              this.socket.connect();
+            }, 2000);
+          }
+          return;
         }
       }
 

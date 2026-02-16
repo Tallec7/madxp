@@ -119,10 +119,10 @@ sequenceDiagram
         WS->>WS: lastPongReceived.set(siteId, Date.now())
     end
 
-    Note over WS: Socket.IO natif: pingInterval=25s, pingTimeout=60s
+    Note over WS: Socket.IO natif: pingInterval=10s, pingTimeout=20s
 
-    loop Toutes les 30 secondes (health check)
-        WS->>WS: Pour chaque site connecte :<br/>now - lastPong > 60s ?
+    loop Toutes les 15 secondes (health check)
+        WS->>WS: Pour chaque site connecte :<br/>now - lastPong > 45s ?
         alt Connexion zombie detectee
             WS->>WS: socket.disconnect(true)
             WS->>DB: UPDATE sites SET status='offline'

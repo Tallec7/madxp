@@ -27,7 +27,7 @@ export const STALE_ONLINE_THRESHOLD_MS = 90000;
  */
 export function checkConnectionHealth(ctx: SocketContext): void {
   const now = Date.now();
-  const staleThresholdMs = 60000; // 60s sans pong = connexion zombie
+  const staleThresholdMs = 45000; // 45s sans pong = connexion zombie (3x pingInterval de 15s)
 
   for (const [siteId, socket] of ctx.connectedSites.entries()) {
     const lastPong = ctx.lastPongReceived.get(siteId);

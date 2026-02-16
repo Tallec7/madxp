@@ -178,8 +178,8 @@ class SocketService {
         credentials: hasAllowedOrigins,
       },
       transports: ['websocket', 'polling'],
-      pingInterval: 25000,
-      pingTimeout: 60000,
+      pingInterval: 10000,
+      pingTimeout: 20000,
     });
 
     logger.info('Socket.IO CORS configuration', {
@@ -200,7 +200,7 @@ class SocketService {
 
     this.connectionHealthCheckInterval = setInterval(() => {
       checkConnectionHealth(this.ctx);
-    }, 30000);
+    }, 15000);
 
     this.dbSyncInterval = setInterval(() => {
       syncDbWithWebSocketState(this.ctx);

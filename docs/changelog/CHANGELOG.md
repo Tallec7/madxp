@@ -1,3 +1,21 @@
+## [3.43.0] (2026-02-16)
+
+### Bug Fixes
+
+- **socket:** réduction pingInterval (10s) et pingTimeout (20s) — détection des connexions mortes en 30s au lieu de 85s
+- **socket:** health check serveur toutes les 15s, seuil zombie réduit à 45s
+- **sync-agent:** ajout `randomizationFactor: 0.5` — anti-thundering herd sur reconnexion des 50+ Pi
+- **sync-agent:** health check réduit à 30s, seuil stale 60s — force reconnexion au lieu de juste logger
+- **nginx:** fichiers statiques (.js, .css, etc.) retournent 404 au lieu du fallback SPA `index.html` — corrige l'erreur MIME type `text/html` pour les module scripts
+- **nginx:** même correction dans la config captive portal
+
+### Documentation
+
+- **ADR-002:** mise à jour timings Socket.IO et section connexions zombies (v3.43)
+- **diagrams:** mise à jour diagramme séquence sync Pi/Cloud (pingInterval, health check, seuils)
+- **PACK_TECHNICAL_DEEP_DIVE:** mise à jour config Socket.IO
+- **fixes/2025-12-18:** correction pingInterval dans l'exemple de réponse
+
 ## [3.42.1](https://github.com/Tallec7/neopro/compare/v3.42.0...v3.42.1) (2026-02-16)
 
 ### Bug Fixes

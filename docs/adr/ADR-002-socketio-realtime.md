@@ -138,8 +138,8 @@ socket.on('update_config', handleConfig);
 // Serveur (socket.service.ts)
 const io = new Server(server, {
   cors: { origin: ALLOWED_ORIGINS },
-  pingTimeout: 60000, // 60s timeout
-  pingInterval: 25000, // 25s ping
+  pingInterval: 10000, // 10s ping — détection rapide des connexions mortes
+  pingTimeout: 20000, // 20s timeout — total 30s pour détecter une déconnexion
   transports: ['websocket'],
 });
 
@@ -188,15 +188,22 @@ Cloud Remote (HTTP) → Central Server → Socket.IO room(siteId) → sync-agent
 
 **Distinction importante** : `cloud-remote-action` a été créé (au lieu de réutiliser `execute_command`) pour différencier les commandes télécommande des commandes système (deploy_video, update_config). Le sync-agent les traite différemment.
 
-### Connexions zombies et health checks (v2.15)
+### Connexions zombies et health checks (v2.15, amélioré v3.43)
 
 **Problème découvert** : Le sync-agent pouvait avoir `this.connected = true` alors que `this.socket.connected = false`. Les heartbeats étaient envoyés dans le vide.
 
-**Solution** :
+**Solution initiale (v2.15)** :
 
 - Vérification `socket.connected` dans `sendHeartbeat()` avant envoi
 - Health check périodique (60s) vérifiant la cohérence flag/socket
 - Auto-reconnexion si zombie détecté
+
+**Améliorations v3.43** :
+
+- Health check réduit de 60s à **30s** avec seuil stale **60s** (au lieu de 90s)
+- Le health check force maintenant une **déconnexion + reconnexion** au lieu de juste logger quand les heartbeats sont stale
+- Côté serveur : `pingInterval` réduit à **10s**, `pingTimeout` à **20s**, health check serveur toutes les **15s**, seuil zombie à **45s**
+- Anti-thundering herd : `randomizationFactor: 0.5` sur le sync-agent évite que 50+ Pi reconnectent simultanément
 
 ### Blocage sync_local_state après update_config (v2.42)
 
@@ -225,7 +232,7 @@ Voir ADR-013 pour le détail du merge intelligent.
 
 - `socket.service.ts` → `handleDisconnection()` : capture la raison Socket.IO native (`transport close`, `ping timeout`, `io server disconnect`, `io client disconnect`)
 - `socket.service.ts` → handler disconnect dashboard : idem pour les connexions dashboard
-- `health-monitor.handler.ts` → `checkConnectionHealth()` : reason `zombie_timeout` quand 60s sans pong
+- `health-monitor.handler.ts` → `checkConnectionHealth()` : reason `zombie_timeout` quand 45s sans pong
 - `health-monitor.handler.ts` → `cleanupZombieConnection()` : reason `zombie_cleanup` pour nettoyage manuel
 
 **Dashboards Grafana** : Deux panneaux dans "NeoPro Services" — ventilation par raison et par type de client.
@@ -239,4 +246,4 @@ Voir ADR-013 pour le détail du merge intelligent.
 
 ---
 
-_Créé le 9 janvier 2026 — Mis à jour le 12 février 2026_
+_Créé le 9 janvier 2026 — Mis à jour le 16 février 2026_
