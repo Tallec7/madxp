@@ -1,3 +1,9 @@
+## [3.53.2](https://github.com/Tallec7/neopro/compare/v3.53.1...v3.53.2) (2026-02-17)
+
+### Bug Fixes
+
+- **watermark:** remove config_updated emit from deploy_asset ([be5e519](https://github.com/Tallec7/neopro/commit/be5e51924225e767e35458f19b36452cd7c6979d))
+
 ## [3.53.2] (2026-02-17)
 
 ### Bug Fixes
