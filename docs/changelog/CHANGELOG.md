@@ -1,3 +1,9 @@
+# [3.56.0](https://github.com/Tallec7/neopro/compare/v3.55.4...v3.56.0) (2026-02-17)
+
+### Features
+
+- **content:** add server-side pagination to video listing page ([1712962](https://github.com/Tallec7/neopro/commit/1712962d966e2cb32f873692a29871b32cebee5b))
+
 ## [3.55.5] (2026-02-17)
 
 ### Features
