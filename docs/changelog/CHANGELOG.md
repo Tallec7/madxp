@@ -9,6 +9,7 @@
 ### Bug Fixes
 
 - **watermark:** auto-deploy watermark config after upload — `uploadWatermarkFile()` now calls `saveWatermarkConfig()` automatically so the Pi receives both the image file (`deploy_asset`) and the configuration update (`update_config`) in one flow, instead of requiring a manual "Deployer" click
+- **watermark:** persist watermark config in `local_config_mirror` immediately on `update_config` merge — dashboard no longer loses watermark config on page refresh during the 60s config lock window
 
 # [3.50.0](https://github.com/Tallec7/neopro/compare/v3.49.4...v3.50.0) (2026-02-16)
 

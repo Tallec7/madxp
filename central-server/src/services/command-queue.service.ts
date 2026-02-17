@@ -155,6 +155,30 @@ class CommandQueueService {
           [siteId]
         );
         logger.info('Config update pending lock set for 60s', { siteId, commandId });
+
+        // Merger immédiatement le contenu dans local_config_mirror
+        // pour que le dashboard affiche la config sans attendre la fin du lock 60s
+        const neoProContent = commandData.neoProContent as Record<string, unknown> | undefined;
+        if (neoProContent && commandData.mode === 'merge') {
+          const keys = Object.keys(neoProContent);
+          for (const key of keys) {
+            await query(
+              `UPDATE sites SET local_config_mirror = jsonb_set(
+                COALESCE(local_config_mirror, '{}'::jsonb),
+                $1::text[], $2::jsonb
+              ) WHERE id = $3`,
+              [
+                `{${key}}`,
+                JSON.stringify(neoProContent[key]),
+                siteId,
+              ]
+            );
+          }
+          logger.info('Merged update_config content into local_config_mirror', {
+            siteId,
+            keys,
+          });
+        }
       }
 
       const sent = socketService.sendCommand(siteId, {
