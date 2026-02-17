@@ -1,3 +1,9 @@
+## [3.57.1](https://github.com/Tallec7/neopro/compare/v3.57.0...v3.57.1) (2026-02-17)
+
+### Bug Fixes
+
+- **dashboard:** remove NEOPRO video lock from central dashboard ([09c776a](https://github.com/Tallec7/neopro/commit/09c776a34136bd5870ce5ed4bede841cdc6d5af0))
+
 # [3.57.0](https://github.com/Tallec7/neopro/compare/v3.56.0...v3.57.0) (2026-02-17)
 
 ### Features
