@@ -61,6 +61,15 @@ interface DisplayInfo {
   detection_method: string;
 }
 
+interface FanStatusInfo {
+  present: boolean;
+  type: string | null;
+  curState: number | null;
+  maxState: number | null;
+  speedPercent: number | null;
+  is_pi5: boolean;
+}
+
 interface HealthStatus {
   success: boolean;
   timestamp: string;
@@ -68,6 +77,7 @@ interface HealthStatus {
   healthStatus: 'healthy' | 'degraded' | 'critical';
   issues: HealthIssue[];
   gpu: GpuInfo;
+  fanStatus?: FanStatusInfo;
   services: ServiceStatus[];
   metrics: {
     cpu: number;
@@ -416,6 +426,38 @@ interface WifiScanResult {
               <div class="throttle-flags" *ngIf="healthStatus.gpu.throttled_flags && healthStatus.gpu.throttled_flags.length > 0">
                 <span class="flag-item" *ngFor="let flag of healthStatus.gpu.throttled_flags">{{ flag }}</span>
               </div>
+            </div>
+
+            <!-- Fan Status -->
+            <div class="health-section" *ngIf="healthStatus.fanStatus?.present">
+              <h5>🌀 Ventilateur {{ healthStatus.fanStatus.is_pi5 ? '(Pi 5 Active Cooler)' : '(Fan HAT)' }}</h5>
+              <div class="health-grid">
+                <div class="health-metric">
+                  <span class="metric-label">Type</span>
+                  <span class="metric-value">{{ healthStatus.fanStatus.type || 'N/A' }}</span>
+                </div>
+                <div class="health-metric" [class.metric-warning]="healthStatus.fanStatus.curState === 0 && (healthStatus.metrics?.temperature ?? 0) > 70">
+                  <span class="metric-label">État</span>
+                  <span class="metric-value">
+                    {{ healthStatus.fanStatus.curState }}/{{ healthStatus.fanStatus.maxState }}
+                    <span *ngIf="healthStatus.fanStatus.speedPercent !== null">({{ healthStatus.fanStatus.speedPercent }}%)</span>
+                  </span>
+                </div>
+                <div class="health-metric">
+                  <span class="metric-label">Vitesse</span>
+                  <span class="metric-value">
+                    <span *ngIf="healthStatus.fanStatus.curState === 0">Arrêté</span>
+                    <span *ngIf="healthStatus.fanStatus.curState !== null && healthStatus.fanStatus.curState > 0 && healthStatus.fanStatus.curState <= 1">Faible</span>
+                    <span *ngIf="healthStatus.fanStatus.curState !== null && healthStatus.fanStatus.curState > 1 && healthStatus.fanStatus.curState <= 2">Moyen</span>
+                    <span *ngIf="healthStatus.fanStatus.curState !== null && healthStatus.fanStatus.curState > 2">Fort</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="health-section" *ngIf="healthStatus.fanStatus && !healthStatus.fanStatus.present">
+              <h5>🌀 Ventilateur</h5>
+              <p class="muted">Aucun ventilateur détecté (refroidissement passif)</p>
             </div>
 
             <!-- HDMI-CEC TV Status + Display Info -->

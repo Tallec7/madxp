@@ -356,11 +356,11 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 
 ### 7. Monitoring & Observability
 
-- **Prometheus metrics** (Port 9090) — 30 métriques custom `neopro_*` (dont 3 kiosk, 4 nouvelles : `neopro_license_status_pushes_total`, `neopro_deploy_progress_events_total`, `neopro_ota_errors_total{error_type}`, `neopro_wifi_config_total`) + métriques Node.js par défaut
+- **Prometheus metrics** (Port 9090) — 33+ métriques custom `neopro_*` (dont 3 kiosk, 3 fan : `neopro_fan_present`, `neopro_fan_state`, `neopro_fan_failures_total` + `neopro_license_status_pushes_total`, `neopro_deploy_progress_events_total`, `neopro_ota_errors_total{error_type}`, `neopro_wifi_config_total`) + métriques Node.js par défaut
 - **Grafana dashboards** (Port 3000) — 3 dashboards (local) + 3 dashboards cloud :
   - _NeoPro Overview_ : API Health, sites connectés, alertes actives, taux 5xx, latence p95, mémoire RSS
   - _NeoPro Infrastructure_ : HTTP rate/latence par percentile, Node.js runtime (heap, event loop lag, memory pressure), auth & rate limiting, DB pool & latency, FTP storage
-  - _NeoPro Business & Fleet_ : content pipeline (video uploads), fleet Pi (WebSocket par type, heartbeats, network stability, socket disconnects), video transitions, deployments (canary, sync, drift), subscriptions & predictive alerts, **kiosk Chromium** (status, crashes, restarts)
+  - _NeoPro Business & Fleet_ : content pipeline (video uploads), fleet Pi (WebSocket par type, heartbeats, network stability, socket disconnects), video transitions, deployments (canary, sync, drift), subscriptions & predictive alerts, **kiosk Chromium** (status, crashes, restarts), **Fan Pi** (présence, état, failures)
 - **Scrape targets** : Docker local, `host.docker.internal:3001` (dev), Railway HTTPS (prod)
 - **Smoke tests** : `npm run test:smoke` — 139 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types, métriques Prometheus critiques, hourly metric alerting wiring) + conventions Pi (systemd, sudoers)
 - Systemd journald logs
@@ -380,7 +380,7 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 - Slack (Incoming Webhooks avec Block Kit) — `alert.service.ts` avec méthodes pré-construites et **cooldown anti-flapping** (5 min/site pour `siteOffline`/`siteOnline`) + **shutdown mode** (v3.50.3 : `enterShutdownMode()` sur SIGTERM supprime les faux offline)
 - Escalade automatique vers superviseurs
 - **Graceful shutdown** (v3.48+) : `server_shutdown` émis aux Pi avant fermeture, `io.disconnectSockets()` + `io.close()`, safety timeout 10s — **v3.50.3** : `alertService.enterShutdownMode()` appelé avant déconnexion des sockets + boot grace period 90s (online + offline)
-- **18 seuils par défaut** : 6 réactifs (CPU, mémoire, température, disque, site offline, deployment failure) + 9 prédictifs (inactivité, disk growth, déconnexions, WiFi signal, video errors, temperature trend, hotspot instability, subscription expiry, stuck deployments) + 3 nouveaux (WebSocket disconnects fréquents, trous noirs vidéo/safety timeouts, crash kiosk Chromium)
+- **19 seuils par défaut** : 7 réactifs (CPU, mémoire, température, disque, site offline, deployment failure, **fan failure**) + 9 prédictifs (inactivité, disk growth, déconnexions, WiFi signal, video errors, temperature trend, hotspot instability, subscription expiry, stuck deployments) + 3 nouveaux (WebSocket disconnects fréquents, trous noirs vidéo/safety timeouts, crash kiosk Chromium)
 - **Alertes réseau WiFi** (v3.33+) : `networkFailure()` (échec recovery watchdog), `info('Réseau rétabli')` (recovery confirmée) — dédupliquées 1/heure/site ; **alertes signal WiFi** (v3.50.3) : `lowWifiSignal()` avec cooldown 6h/site + `wifiSignalRecovered()` auto quand signal > -70 dBm
 - **Test Slack** : `POST /api/alerts/test-slack` (super_admin) — vérifie la configuration webhook
 - **Variables d'environnement** : `SLACK_WEBHOOK_URL` + `SLACK_ALERTS_ENABLED=true`

@@ -429,6 +429,26 @@ const wifiConfigTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Fan Pi =============
+
+const fanPresentGauge = new Gauge({
+  name: 'neopro_fan_present',
+  help: 'Whether a fan cooling device is detected on Pi (1=yes, 0=no)',
+  registers: [register],
+});
+
+const fanStateGauge = new Gauge({
+  name: 'neopro_fan_state',
+  help: 'Current fan cooling state (0=off, max depends on model)',
+  registers: [register],
+});
+
+const fanFailuresTotal = new Counter({
+  name: 'neopro_fan_failures_total',
+  help: 'Total fan failure alerts (fan off at high temperature)',
+  registers: [register],
+});
+
 // ============= Métriques Kiosk =============
 
 const kioskStatusGauge = new Gauge({
@@ -729,6 +749,19 @@ class MetricsService {
 
   recordKioskCrash(): void {
     kioskCrashesTotal.inc();
+  }
+
+  // ============= Méthodes Fan Pi =============
+
+  recordFanStatus(present: boolean, curState: number | null): void {
+    fanPresentGauge.set(present ? 1 : 0);
+    if (curState !== null) {
+      fanStateGauge.set(curState);
+    }
+  }
+
+  recordFanFailure(): void {
+    fanFailuresTotal.inc();
   }
 
   // ============= Méthodes License Push =============

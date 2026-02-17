@@ -1,3 +1,19 @@
+## [3.52.0] (2026-02-17)
+
+### Features
+
+- **fan-monitoring:** end-to-end fan monitoring for official Pi GPIO fans (Pi 5 Active Cooler / Pi 4 Fan HAT) — reads `/sys/class/thermal/cooling_device0/{type,cur_state,max_state}`, calculates speed %, sends via heartbeat, stores as `fan_status JSONB` in metrics table
+- **fan-monitoring:** dashboard Status tab shows fan speed bar with warning styling when fan stops at >70°C
+- **fan-monitoring:** Debug tab health status section displays fan type, state (cur/max), speed label (Arrêté/Faible/Moyen/Fort), with passive cooling message when no fan detected
+- **fan-monitoring:** health score penalty (-15 pts) when fan present but stopped at temperature >70°C
+- **fan-monitoring:** Slack alerts for fan failure — `fan_failure` alert type with warning (70-80°C) / critical (>80°C) severity, deduplicated 1/hour like other alerts
+- **fan-monitoring:** 3 Prometheus metrics — `neopro_fan_present` (gauge), `neopro_fan_state` (gauge), `neopro_fan_failures_total` (counter)
+- **fan-monitoring:** backward compatible — old Pi agents without fan support send `fanStatus: undefined` → stored as NULL → dashboard hides fan card
+
+### Database
+
+- **migration:** `add-fan-status.sql` — adds `fan_status JSONB DEFAULT NULL` column to `metrics` table (idempotent)
+
 # [3.51.0](https://github.com/Tallec7/neopro/compare/v3.50.4...v3.51.0) (2026-02-17)
 
 ### Features

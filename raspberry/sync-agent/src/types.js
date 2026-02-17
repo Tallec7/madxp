@@ -38,6 +38,7 @@
  * @property {number} uptime
  * @property {string} pi_model
  * @property {boolean} is_pi5
+ * @property {{present: boolean, type: string|null, curState: number|null, maxState: number|null, speedPercent: number|null, is_pi5: boolean}|null} fanStatus
  */
 
 // ---------------------------------------------------------------------------

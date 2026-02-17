@@ -367,6 +367,20 @@ class AlertService {
     });
   }
 
+  async fanFailure(siteId: string, siteName: string, temperature: number, curState: number, maxState: number): Promise<boolean> {
+    return this.sendAlert({
+      title: 'Ventilateur en panne',
+      message: `Le ventilateur du site *${siteName}* est arrêté alors que la température est de *${temperature.toFixed(1)}°C*. État: ${curState}/${maxState}.`,
+      severity: temperature > 80 ? 'critical' : 'warning',
+      siteId,
+      siteName,
+      metadata: {
+        temperature: `${temperature.toFixed(1)}°C`,
+        fanState: `${curState}/${maxState}`,
+      }
+    });
+  }
+
   async kioskCrash(siteId: string, siteName: string, reason: string, restartCount: number): Promise<boolean> {
     return this.sendAlert({
       title: 'Kiosk Crash — TV hors service',

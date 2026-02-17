@@ -398,6 +398,7 @@ Si aucun mot de passe n'est configuré, un setup initial est requis au premier d
    - Uptime
    - Alertes automatiques
    - **Détection écran EDID** (v3.44+) : fabricant, modèle, résolution, type (TV/moniteur)
+   - **Monitoring ventilateur** (v3.52+) : état, vitesse %, type, alertes si arrêté à haute température
 
 3. **Déploiement**
    - Mise à jour OTA
@@ -506,6 +507,45 @@ Le Pi détecte automatiquement l'écran connecté via les données **EDID** (Ext
 - Cache EDID : 5 minutes (l'écran change rarement)
 
 **Impact dashboard :** La section HDMI-CEC s'adapte au type d'écran. Pour un moniteur PC, les métriques CEC sont masquées et un message explicatif est affiché.
+
+### Monitoring ventilateur (v3.52+)
+
+Le Pi détecte automatiquement le ventilateur officiel GPIO via **sysfs** (`/sys/class/thermal/cooling_device0/`).
+
+**Données collectées :**
+
+| Champ          | Description                                      | Exemple   |
+| -------------- | ------------------------------------------------ | --------- |
+| `present`      | Ventilateur détecté (cooling_device0 existe)     | `true`    |
+| `type`         | Type sysfs du ventilateur                        | `pwm-fan` |
+| `curState`     | État courant (0 = arrêté)                        | `3`       |
+| `maxState`     | État maximum (Pi 5 = 4, Pi 4 = 1)                | `4`       |
+| `speedPercent` | Pourcentage de vitesse (curState/maxState × 100) | `75`      |
+| `is_pi5`       | Modèle Raspberry Pi 5 détecté                    | `true`    |
+
+**Matériel supporté :**
+
+- **Pi 5 Active Cooler** : 5 niveaux (0=off, 1-4=low→full), régulation thermique automatique
+- **Pi 4 Fan HAT** : 2 niveaux (0=off, 1=on), via GPIO
+
+**Alertes :**
+
+| Condition                          | Type          | Sévérité                                |
+| ---------------------------------- | ------------- | --------------------------------------- |
+| Fan présent + arrêté + temp > 70°C | `fan_failure` | `warning` (70-80°C), `critical` (>80°C) |
+
+**Pipeline :**
+
+```
+Pi: getFanStatus() → collectAll() → heartbeat { fanStatus }
+  → Central: INSERT metrics.fan_status (JSONB) → checkAlerts() → fan_failure → Slack
+  → Dashboard: Status tab (carte ventilateur) + Debug tab (section santé)
+  → Prometheus: neopro_fan_present, neopro_fan_state, neopro_fan_failures_total
+```
+
+**Impact santé :** Le health score perd 15 points si le ventilateur est installé mais arrêté à >70°C.
+
+**Rétrocompatibilité :** Les Pi sans mise à jour envoient `fanStatus: undefined` → stocké NULL → carte masquée dans le dashboard.
 
 ### Enregistrement d'un site
 
@@ -860,6 +900,14 @@ socket.emit('heartbeat', {
     lastEvent: '2026-02-13T10:00:00.000Z',
     reason: null,           // ex: 'GPU process exited'
     pid: 1234
+  },
+  fanStatus: {              // optionnel (v3.52+) — null si cooling_device0 absent
+    present: true,          // true si /sys/class/thermal/cooling_device0/ existe
+    type: 'pwm-fan',        // type du ventilateur (sysfs type file)
+    curState: 3,            // état courant (Pi 5: 0-4, Pi 4: 0-1)
+    maxState: 4,            // état maximum
+    speedPercent: 75,       // curState/maxState * 100
+    is_pi5: true
   }
 });
 
@@ -1266,13 +1314,13 @@ GET /ready     - Readiness probe (prêt pour le trafic)
 
 Le site-detail est organisé en **5 onglets** avec des composants Angular standalone :
 
-| Onglet         | Composant                  | Fonctionnalités                                  |
-| -------------- | -------------------------- | ------------------------------------------------ |
-| **État**       | `site-detail.component.ts` | Métriques, connexion temps réel, alertes         |
-| **Contenu**    | `SiteContentTabComponent`  | Boucles par phase, catégories, mapping analytics |
-| **Paramètres** | `SiteSettingsTabComponent` | Config réseau, hotspot, paramètres site          |
-| **Profils**    | `SiteProfilesTabComponent` | Multi-config CRUD, déploiement, synchronisation  |
-| **Debug**      | `SiteDebugTabComponent`    | Logs, commandes, diagnostics                     |
+| Onglet         | Composant                  | Fonctionnalités                                       |
+| -------------- | -------------------------- | ----------------------------------------------------- |
+| **État**       | `site-detail.component.ts` | Métriques, connexion temps réel, alertes, ventilateur |
+| **Contenu**    | `SiteContentTabComponent`  | Boucles par phase, catégories, mapping analytics      |
+| **Paramètres** | `SiteSettingsTabComponent` | Config réseau, hotspot, paramètres site               |
+| **Profils**    | `SiteProfilesTabComponent` | Multi-config CRUD, déploiement, synchronisation       |
+| **Debug**      | `SiteDebugTabComponent`    | Logs, commandes, diagnostics, santé ventilateur       |
 
 #### SiteProfilesTabComponent (multi-config)
 

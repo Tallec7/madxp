@@ -52,13 +52,14 @@ class MetricsCollector {
   /** @returns {Promise<SystemMetrics>} */
   async collectAll() {
     try {
-      const [cpu, memory, temperature, disk, localIp, wifiStatus] = await Promise.all([
+      const [cpu, memory, temperature, disk, localIp, wifiStatus, fanStatus] = await Promise.all([
         this.getCpuUsage(),
         this.getMemoryUsage(),
         this.getTemperature(),
         this.getDiskUsage(),
         this.getLocalIp(),
         this.getWifiStatus(),
+        this.getFanStatus(),
       ]);
 
       return {
@@ -69,6 +70,7 @@ class MetricsCollector {
         uptime: os.uptime(),
         localIp,
         wifiStatus,
+        fanStatus,
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -374,6 +376,76 @@ class MetricsCollector {
       logger.error('Error getting system info:', error);
       return null;
     }
+  }
+
+  /**
+   * Récupère l'état du ventilateur depuis /sys/class/thermal/cooling_device0/
+   * Pi 5 Active Cooler: cur_state 0-4 (off, low, medium, high, full)
+   * Pi 4 Fan HAT: cur_state 0 ou 1 (off/on)
+   * Retourne present: false si aucun ventilateur détecté (pas d'alerte)
+   *
+   * @returns {Promise<{present: boolean, type: string|null, curState: number|null, maxState: number|null, speedPercent: number|null, is_pi5: boolean}>}
+   */
+  async getFanStatus() {
+    const { isPi5 } = await this.detectPiModel();
+
+    const fanStatus = {
+      present: false,
+      type: null,
+      curState: null,
+      maxState: null,
+      speedPercent: null,
+      is_pi5: isPi5,
+    };
+
+    const basePath = '/sys/class/thermal/cooling_device0';
+
+    try {
+      if (!fs.existsSync(basePath)) {
+        return fanStatus;
+      }
+
+      fanStatus.present = true;
+
+      // Type du ventilateur (ex: "pwm-fan")
+      try {
+        const typePath = `${basePath}/type`;
+        if (fs.existsSync(typePath)) {
+          fanStatus.type = fs.readFileSync(typePath, 'utf8').trim();
+        }
+      } catch {
+        // type file not readable
+      }
+
+      // État courant
+      try {
+        const curStatePath = `${basePath}/cur_state`;
+        if (fs.existsSync(curStatePath)) {
+          fanStatus.curState = parseInt(fs.readFileSync(curStatePath, 'utf8').trim(), 10);
+        }
+      } catch {
+        // cur_state not readable
+      }
+
+      // État maximum
+      try {
+        const maxStatePath = `${basePath}/max_state`;
+        if (fs.existsSync(maxStatePath)) {
+          fanStatus.maxState = parseInt(fs.readFileSync(maxStatePath, 'utf8').trim(), 10);
+        }
+      } catch {
+        // max_state not readable
+      }
+
+      // Pourcentage de vitesse
+      if (fanStatus.curState !== null && fanStatus.maxState !== null && fanStatus.maxState > 0) {
+        fanStatus.speedPercent = Math.round((fanStatus.curState / fanStatus.maxState) * 100);
+      }
+    } catch (error) {
+      logger.warn('Error reading fan status:', error.message);
+    }
+
+    return fanStatus;
   }
 
   /**
@@ -798,13 +870,14 @@ class MetricsCollector {
    */
   async getHealthStatus() {
     try {
-      const [metrics, gpuInfo, services, systemInfo, hdmiCecStatus, displayInfo] = await Promise.all([
+      const [metrics, gpuInfo, services, systemInfo, hdmiCecStatus, displayInfo, fanStatus] = await Promise.all([
         this.collectAll(),
         this.getGpuInfo(),
         this.getServicesStatus(),
         this.getSystemInfo(),
         this.getHdmiCecStatus(),
         this.getDisplayInfo(),
+        this.getFanStatus(),
       ]);
 
       // Affiner le type d'écran en croisant EDID + CEC
@@ -844,6 +917,17 @@ class MetricsCollector {
           component: 'Temperature',
           message: `Température élevée: ${gpuInfo.temperature}°C`,
           fix: 'Améliorer la ventilation ou ajouter un dissipateur thermique',
+        });
+      }
+
+      // Ventilateur (alerter uniquement si installé et arrêté à haute température)
+      if (fanStatus.present && metrics && metrics.temperature > 70 && fanStatus.curState === 0) {
+        healthScore -= 15;
+        issues.push({
+          severity: 'warning',
+          component: 'Fan',
+          message: `Ventilateur arrêté alors que la température est de ${metrics.temperature}°C`,
+          fix: 'Vérifier la connexion du ventilateur ou les paramètres de refroidissement',
         });
       }
 
@@ -944,6 +1028,7 @@ class MetricsCollector {
         healthStatus: healthScore >= 80 ? 'healthy' : healthScore >= 50 ? 'degraded' : 'critical',
         issues,
         gpu: gpuInfo,
+        fanStatus,
         services,
         metrics,
         hdmiCecStatus,

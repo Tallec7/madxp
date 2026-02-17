@@ -34,8 +34,8 @@ export async function handleHeartbeat(
     metricsService.recordHeartbeat();
 
     await query(
-      `INSERT INTO metrics (site_id, cpu_usage, memory_usage, temperature, disk_usage, uptime, network_status, recorded_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+      `INSERT INTO metrics (site_id, cpu_usage, memory_usage, temperature, disk_usage, uptime, network_status, fan_status, recorded_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
       [
         siteId,
         message.metrics.cpu,
@@ -44,6 +44,7 @@ export async function handleHeartbeat(
         message.metrics.disk,
         Math.floor(message.metrics.uptime),
         message.wifiStatus ? JSON.stringify(message.wifiStatus) : null,
+        message.fanStatus ? JSON.stringify(message.fanStatus) : null,
       ]
     );
 
@@ -117,7 +118,7 @@ export async function handleHeartbeat(
       }
     }
 
-    await checkAlerts(siteId, message.metrics, message.kioskStatus, message.wifiStatus);
+    await checkAlerts(siteId, message.metrics, message.kioskStatus, message.wifiStatus, message.fanStatus);
   } catch (error) {
     logger.error('Error handling heartbeat:', error);
   }
@@ -131,7 +132,8 @@ async function checkAlerts(
   siteId: string,
   metrics: HeartbeatMessage['metrics'],
   kioskStatus?: HeartbeatMessage['kioskStatus'],
-  wifiStatus?: HeartbeatMessage['wifiStatus']
+  wifiStatus?: HeartbeatMessage['wifiStatus'],
+  fanStatus?: HeartbeatMessage['fanStatus']
 ): Promise<void> {
   const alerts: Array<{ type: string; severity: string; message: string }> = [];
 
@@ -237,6 +239,21 @@ async function checkAlerts(
     }
   }
 
+  // Fan failure detection (only alert if fan is installed but not running at high temp)
+  if (fanStatus && fanStatus.present && metrics.temperature > 70 && fanStatus.curState === 0) {
+    alerts.push({
+      type: 'fan_failure',
+      severity: metrics.temperature > 80 ? 'critical' : 'warning',
+      message: `Ventilateur arrêté à ${metrics.temperature.toFixed(1)}°C (état: ${fanStatus.curState}/${fanStatus.maxState})`,
+    });
+    metricsService.recordFanFailure();
+  }
+
+  // Record fan status metrics for Prometheus
+  if (fanStatus) {
+    metricsService.recordFanStatus(fanStatus.present, fanStatus.curState);
+  }
+
   // Update kiosk status metric
   if (kioskStatus) {
     metricsService.recordKioskStatus(kioskStatus.chromiumAlive ? 1 : 0, kioskStatus.restartCount);
@@ -273,6 +290,8 @@ async function checkAlerts(
         alertService.wlan1Missing(siteId, siteName).catch((_e) => {/* ignore */});
       } else if (alert.type === 'usb_power_issue') {
         alertService.usbPowerIssue(siteId, siteName, wifiStatus?.throttled || '').catch((_e) => {/* ignore */});
+      } else if (alert.type === 'fan_failure') {
+        alertService.fanFailure(siteId, siteName, metrics.temperature, fanStatus?.curState ?? 0, fanStatus?.maxState ?? 0).catch((_e) => {/* ignore */});
       }
 
       logger.warn('Alert created', { siteId, ...alert });

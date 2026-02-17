@@ -903,6 +903,7 @@ class NeoproSyncAgent {
           transitionMetrics,
           playerState,
           wifiStatus: metrics.wifiStatus || null,
+          fanStatus: metrics.fanStatus || null,
         });
 
         // Enregistrer le succès du heartbeat

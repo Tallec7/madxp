@@ -12,6 +12,7 @@ export interface MetricRow extends QueryResultRow {
   memory_usage: number | null;
   temperature: number | null;
   disk_usage: number | null;
+  fan_status: Record<string, unknown> | null;
   recorded_at: Date;
 }
 
