@@ -1,3 +1,9 @@
+## [3.50.2](https://github.com/Tallec7/neopro/compare/v3.50.1...v3.50.2) (2026-02-17)
+
+### Bug Fixes
+
+- **watermark:** persist config in local_config_mirror on update_config merge ([1bcfd6f](https://github.com/Tallec7/neopro/commit/1bcfd6fbc3f82d87f88ff2810f19ae72e865608a))
+
 ## [3.50.1](https://github.com/Tallec7/neopro/compare/v3.50.0...v3.50.1) (2026-02-17)
 
 ### Bug Fixes
