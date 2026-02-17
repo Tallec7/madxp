@@ -1,3 +1,9 @@
+# [3.51.0](https://github.com/Tallec7/neopro/compare/v3.50.4...v3.51.0) (2026-02-17)
+
+### Features
+
+- **hostname:** dynamic Pi hostname derived from club_name ([5412863](https://github.com/Tallec7/neopro/commit/541286396fcb42a7108a44d2ba5e69286b01e60c))
+
 ## [3.51.0] (2026-02-17)
 
 ### Features
