@@ -1,4 +1,8 @@
-# Avancement Analytics Sponsors - 25 Décembre 2025 (100% Complet)
+# Avancement Analytics Sponsors - 17 Février 2026
+
+> **Note** : Ce document couvre le module advertiser analytics legacy (annonceurs réseau NEOPRO). Depuis février 2026, le modèle unifié `site_sponsors` a été implémenté (Paliers P0-P5). Voir [ADR-SITE-SPONSORS-ANALYTICS.md](ADR-SITE-SPONSORS-ANALYTICS.md) pour le modèle actuel.
+
+## Ancien modèle : Advertiser Analytics - 25 Décembre 2025 (100% Complet)
 
 ## ✅ RÉALISÉ (Backend + Frontend + Tracking Boîtiers + PDF Graphiques + Finitions)
 

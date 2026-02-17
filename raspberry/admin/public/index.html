@@ -23,11 +23,11 @@
     <link rel="preconnect" href="//neopro.local" />
 
     <!-- Preload Critical Resources -->
-    <link rel="preload" href="/styles.css?v=3.45.0" as="style" />
-    <link rel="preload" href="/app.js?v=3.45.0" as="script" />
+    <link rel="preload" href="/styles.css?v=3.52.0" as="style" />
+    <link rel="preload" href="/app.js?v=3.52.0" as="script" />
 
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css?v=3.45.0" />
+    <link rel="stylesheet" href="styles.css?v=3.52.0" />
   </head>
   <body>
     <div class="container" role="application" aria-label="Interface d'administration Neopro">
@@ -80,6 +80,14 @@
         </button>
         <button class="nav-btn" data-tab="videos" aria-pressed="false" aria-controls="tab-videos">
           <span aria-hidden="true">🎬</span> Vidéos
+        </button>
+        <button
+          class="nav-btn"
+          data-tab="sponsors"
+          aria-pressed="false"
+          aria-controls="tab-sponsors"
+        >
+          <span aria-hidden="true">🤝</span> Sponsors
         </button>
         <button class="nav-btn" data-tab="network" aria-pressed="false" aria-controls="tab-network">
           <span aria-hidden="true">📡</span> Réseau
@@ -318,6 +326,23 @@
                       </select>
                     </div>
                   </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="upload-sponsor">Sponsor associé (optionnel)</label>
+                      <select id="upload-sponsor" name="sponsorLocalId">
+                        <option value="">-- Aucun sponsor --</option>
+                      </select>
+                    </div>
+                    <div
+                      class="form-group"
+                      style="display: flex; align-items: flex-end; padding-bottom: 8px"
+                    >
+                      <label style="display: flex; align-items: center; gap: 8px; cursor: pointer">
+                        <input type="checkbox" id="upload-add-to-loop" checked />
+                        Ajouter à la boucle
+                      </label>
+                    </div>
+                  </div>
                   <button type="submit" class="btn btn-primary" id="upload-btn">📤 Upload</button>
                 </form>
                 <div id="upload-progress" class="upload-progress" style="display: none">
@@ -385,6 +410,112 @@
                   ➕ Ajouter un bloc temps
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Sponsors -->
+        <div id="tab-sponsors" class="tab-content" role="tabpanel" aria-labelledby="nav-sponsors">
+          <h2>Sponsors locaux</h2>
+
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 16px;
+            "
+          >
+            <p style="margin: 0; color: var(--neo-text-secondary); font-size: 14px">
+              Gérez vos sponsors locaux et ajoutez-les à la boucle vidéo.
+            </p>
+            <button class="btn btn-primary" onclick="openSponsorModal()">
+              ➕ Ajouter un sponsor
+            </button>
+          </div>
+
+          <div id="sponsors-list">
+            <div class="loading">Chargement...</div>
+          </div>
+        </div>
+
+        <!-- Sponsor Create/Edit Modal -->
+        <div id="sponsor-modal" class="modal" style="display: none">
+          <div class="modal-content" style="max-width: 500px">
+            <div class="modal-header">
+              <h3 id="sponsor-modal-title">Ajouter un sponsor</h3>
+              <button class="close-btn" onclick="closeSponsorModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+              <input type="hidden" id="sponsor-edit-id" value="" />
+              <div class="form-group">
+                <label for="sponsor-name">Nom du sponsor *</label>
+                <input
+                  type="text"
+                  id="sponsor-name"
+                  placeholder="Ex: Boulangerie Dupont"
+                  required
+                  class="form-control"
+                />
+              </div>
+              <div class="form-group">
+                <label for="sponsor-email">Email de contact</label>
+                <input
+                  type="email"
+                  id="sponsor-email"
+                  placeholder="contact@exemple.fr"
+                  class="form-control"
+                />
+              </div>
+              <div class="form-group">
+                <label for="sponsor-phone">Téléphone</label>
+                <input
+                  type="tel"
+                  id="sponsor-phone"
+                  placeholder="06 12 34 56 78"
+                  class="form-control"
+                />
+              </div>
+              <div class="form-group">
+                <label for="sponsor-videos">Vidéos associées</label>
+                <select id="sponsor-videos" multiple class="form-control" style="min-height: 100px">
+                  <!-- Populated by JS -->
+                </select>
+                <small style="color: var(--neo-text-secondary)"
+                  >Maintenez Ctrl/Cmd pour sélectionner plusieurs vidéos</small
+                >
+              </div>
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="sponsor-add-to-loop" checked />
+                  Ajouter les vidéos à la boucle sponsors
+                </label>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn" onclick="closeSponsorModal()">Annuler</button>
+              <button class="btn btn-primary" onclick="saveSponsor()">Enregistrer</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sponsor Delete Confirmation Modal -->
+        <div id="sponsor-delete-modal" class="modal" style="display: none">
+          <div class="modal-content" style="max-width: 400px">
+            <div class="modal-header">
+              <h3>Supprimer le sponsor</h3>
+              <button class="close-btn" onclick="closeSponsorDeleteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+              <p>Êtes-vous sûr de vouloir supprimer <strong id="sponsor-delete-name"></strong> ?</p>
+              <p style="color: var(--neo-text-secondary); font-size: 14px">
+                Les vidéos liées seront retirées de la boucle mais ne seront pas supprimées du
+                disque.
+              </p>
+            </div>
+            <div class="modal-footer">
+              <button class="btn" onclick="closeSponsorDeleteModal()">Annuler</button>
+              <button class="btn btn-danger" id="sponsor-delete-confirm-btn">Supprimer</button>
             </div>
           </div>
         </div>
@@ -737,6 +868,6 @@
       </div>
     </div>
 
-    <script src="app.js?v=3.45.0"></script>
+    <script src="app.js?v=3.52.0"></script>
   </body>
 </html>

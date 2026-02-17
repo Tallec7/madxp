@@ -1,0 +1,160 @@
+# Prometheus alert rules for NeoPro
+# Alerts fire locally → Alertmanager → Slack/email
+#
+# Metrics reference: central-server/src/services/metrics.service.ts
+
+groups:
+  # =============================================
+  # Server Health
+  # =============================================
+  - name: server_health
+    rules:
+      # Central server unreachable (scrape target down)
+      - alert: CentralServerDown
+        expr: up{job=~"neopro.*"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Central Server is DOWN"
+          description: "Prometheus cannot scrape {{ $labels.job }} for 2 minutes. Railway may have crashed or is redeploying."
+
+      # Server responding but unhealthy
+      - alert: CentralServerUnhealthy
+        expr: neopro_health_status == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Central Server health check failing"
+          description: "Health endpoint returns unhealthy for 3 minutes."
+
+      # High memory usage (OOM risk)
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / (256 * 1024 * 1024) > 0.88
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Memory usage above 88%"
+          description: "Heap is at {{ $value | humanizePercentage }} of 256MB limit. Risk of OOM."
+
+      # High CPU (event loop saturation)
+      - alert: HighCpuUsage
+        expr: rate(process_cpu_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage sustained above 80% for 5 minutes."
+
+  # =============================================
+  # WebSocket & Pi Connectivity
+  # =============================================
+  - name: websocket_connectivity
+    rules:
+      # No heartbeats at all (all Pi disconnected or server issue)
+      - alert: ZeroHeartbeats
+        expr: rate(neopro_heartbeats_total[5m]) == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Zero Pi heartbeats for 5 minutes"
+          description: "No heartbeats received. Either all Pi are disconnected or WebSocket is broken."
+
+      # No WebSocket connections (agent)
+      - alert: NoAgentConnections
+        expr: neopro_websocket_connections{type="agent"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No Pi agents connected"
+          description: "Zero agent WebSocket connections for 5 minutes."
+
+      # Sudden drop in connected sites (fleet issue)
+      - alert: ConnectedSitesDrop
+        expr: neopro_connected_sites_total < (neopro_connected_sites_total offset 10m) * 0.5 and neopro_connected_sites_total offset 10m > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Connected sites dropped by 50%+"
+          description: "Currently {{ $value }} sites connected, was {{ $value | humanize }} 10 minutes ago."
+
+      # High WebSocket disconnect rate
+      - alert: HighDisconnectRate
+        expr: rate(neopro_websocket_disconnects_total[5m]) > 0.5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High WebSocket disconnect rate"
+          description: "More than 0.5 disconnections/sec over 5 minutes. Possible network instability."
+
+  # =============================================
+  # Database
+  # =============================================
+  - name: database
+    rules:
+      # Pool saturation (approaching max connections)
+      - alert: DbPoolSaturation
+        expr: neopro_db_connections{state="active"} / neopro_db_connections{state="total"} > 0.8
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DB pool saturation above 80%"
+          description: "Active connections: {{ $value | humanizePercentage }} of pool. Risk of exhaustion."
+
+      # Slow queries
+      - alert: SlowDbQueries
+        expr: histogram_quantile(0.95, rate(neopro_db_query_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 DB query latency above 2s"
+          description: "95th percentile query time is {{ $value | humanizeDuration }}."
+
+  # =============================================
+  # HTTP / API
+  # =============================================
+  - name: http_api
+    rules:
+      # High error rate (5xx)
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status_code=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HTTP 5xx error rate above 5%"
+          description: "{{ $value | humanizePercentage }} of requests are returning 5xx."
+
+      # API latency degradation
+      - alert: HighApiLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 API latency above 3s"
+          description: "95th percentile response time is {{ $value | humanizeDuration }}."
+
+  # =============================================
+  # Alerts (meta-alerting)
+  # =============================================
+  - name: alerts_meta
+    rules:
+      # Too many active alerts (something is very wrong)
+      - alert: TooManyActiveAlerts
+        expr: neopro_active_alerts > 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $value }} active alerts"
+          description: "More than 10 active alerts for 10 minutes. Possible fleet-wide issue."

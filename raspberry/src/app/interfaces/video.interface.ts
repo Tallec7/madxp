@@ -20,4 +20,6 @@ export interface Video {
      * Catégorie analytics : sponsor, jingle, ambiance, other
      */
     analytics_category?: string;
+    /** UUID du site_sponsor unifié (P1 — tracking granulaire par site) */
+    site_sponsor_id?: string;
 }

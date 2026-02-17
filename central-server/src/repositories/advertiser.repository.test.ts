@@ -278,7 +278,8 @@ describe('AdvertiserRepository', () => {
       mockQuery.mockResolvedValue({ rowCount: 1 });
 
       const count = await advertiserRepository.recordImpressions([{
-        siteId: 's1', videoId: 'v1', playedAt: '2024-01-15T10:00:00Z',
+        eventId: 'e1', siteSponsorId: 'ss1', siteId: 's1', videoId: 'v1',
+        playedAt: '2024-01-15T10:00:00Z',
         durationPlayed: 30, videoDuration: 60, completed: false,
         interruptedAt: null, eventType: null, period: 'loop',
         triggerType: 'auto', positionInLoop: 1, audienceEstimate: 50,
@@ -287,7 +288,10 @@ describe('AdvertiserRepository', () => {
       expect(count).toBe(1);
       const sql = mockQuery.mock.calls[0][0] as string;
       expect(sql).toContain('INSERT INTO advertiser_impressions');
-      expect(mockQuery.mock.calls[0][1]).toHaveLength(12);
+      expect(sql).toContain('event_id');
+      expect(sql).toContain('site_sponsor_id');
+      expect(sql).toContain('ON CONFLICT (event_id)');
+      expect(mockQuery.mock.calls[0][1]).toHaveLength(14);
     });
 
     it('should return 0 for empty array', async () => {

@@ -27,6 +27,11 @@ export const routes: Routes = [
     path: 'remote/:siteId',
     loadComponent: () => import('./features/remote/cloud-remote.component').then(m => m.CloudRemoteComponent)
   },
+  // Portail sponsor magic link (accessible SANS authentification via token)
+  {
+    path: 'sponsor-access',
+    loadComponent: () => import('./features/sponsor-portal/site-sponsor-portal.component').then(m => m.SiteSponsorPortalComponent)
+  },
   {
     path: '',
     canActivate: [authGuard],
@@ -117,6 +122,12 @@ export const routes: Routes = [
       {
         path: 'advertisers/:id/videos',
         loadComponent: () => import('./features/sponsors/sponsor-videos.component').then(m => m.SponsorVideosComponent)
+      },
+      {
+        path: 'advertisers/:id/analytics',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'operator', 'advertiser'] },
+        loadComponent: () => import('./features/sponsors/sponsor-analytics.component').then(m => m.SponsorAnalyticsComponent)
       },
       // Routes legacy sponsors (redirection vers advertisers pour retrocompatibilite)
       {

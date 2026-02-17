@@ -139,6 +139,9 @@ class NeoproSyncAgent {
     // This enables offline operation with periodic validation
     // =========================================================================
     this.socket.on('license_status', (status) => this.handleLicenseStatus(status));
+
+    // P3: Receive resolved sponsor IDs from central after local sponsors sync
+    this.socket.on('sponsor_ids_resolved', (mapping) => this.handleSponsorIdsResolved(mapping));
   }
 
   /**
@@ -166,6 +169,65 @@ class NeoproSyncAgent {
         messageTv: status.message_tv,
         canAutoUnblock: status.can_auto_unblock
       });
+    }
+  }
+
+  /**
+   * Handle resolved sponsor IDs from central server.
+   * Updates localSponsors[].centralId and sponsors[].site_sponsor_id in config.
+   * @param {Object} mapping - { localId: centralUUID, ... }
+   */
+  async handleSponsorIdsResolved(mapping) {
+    if (!mapping || typeof mapping !== 'object' || Object.keys(mapping).length === 0) {
+      return;
+    }
+
+    logger.info('🤝 Sponsor IDs resolved from central', {
+      count: Object.keys(mapping).length,
+      mapping,
+    });
+
+    try {
+      const configPath = config.paths.config;
+      const localConfig = await safeReadConfig(configPath);
+
+      if (!localConfig.localSponsors || localConfig.localSponsors.length === 0) {
+        return;
+      }
+
+      let changed = false;
+
+      // Update centralId on localSponsors
+      for (const sponsor of localConfig.localSponsors) {
+        const centralId = mapping[sponsor.localId];
+        if (centralId && sponsor.centralId !== centralId) {
+          sponsor.centralId = centralId;
+          sponsor.syncedAt = new Date().toISOString();
+          changed = true;
+          logger.info('🤝 Sponsor resolved:', { localId: sponsor.localId, centralId, name: sponsor.name });
+        }
+      }
+
+      // Update site_sponsor_id on sponsors[] (loop entries)
+      if (localConfig.sponsors && Array.isArray(localConfig.sponsors)) {
+        for (const entry of localConfig.sponsors) {
+          if (entry._sponsorLocalId && mapping[entry._sponsorLocalId]) {
+            const newId = mapping[entry._sponsorLocalId];
+            if (entry.site_sponsor_id !== newId) {
+              entry.site_sponsor_id = newId;
+              changed = true;
+            }
+          }
+        }
+      }
+
+      if (changed) {
+        const { atomicWriteJson } = require('./utils/safe-config-io');
+        await atomicWriteJson(configPath, localConfig);
+        logger.info('🤝 Config updated with resolved sponsor IDs');
+      }
+    } catch (error) {
+      logger.error('Failed to update sponsor IDs in config', { error: error.message });
     }
   }
 
@@ -451,6 +513,7 @@ class NeoproSyncAgent {
         hotspotSsid: hotspotInfo.ssid, // Rétrocompatibilité
         hotspotInfo, // Nouvelles infos complètes
         networkProfile, // Profil réseau détecté
+        localSponsors: localConfig.localSponsors || [], // P3: sponsors locaux
         timestamp: new Date().toISOString(),
       });
 
@@ -458,6 +521,7 @@ class NeoproSyncAgent {
         configHash,
         categoriesCount: localConfig.categories?.length || 0,
         videosCount: videoState.videos.length,
+        localSponsorsCount: (localConfig.localSponsors || []).length,
       });
 
       // Enregistrer la synchronisation réussie

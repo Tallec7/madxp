@@ -1,10 +1,12 @@
 # Tracking des Impressions Annonceurs - Guide d'Implémentation
 
-**Date**: 28 Décembre 2025 (Mise à jour: 16 Février 2026)
-**Version**: 1.3
+**Date**: 28 Décembre 2025 (Mise à jour: 17 Février 2026)
+**Version**: 1.4
 **Conformité**: BP §13 - Analytics Annonceurs (95%)
 
 > **Note terminologique** : Depuis le 2025-12-29, la terminologie "Sponsor" a été remplacée par "Advertiser" (Annonceur). Ce document conserve certaines références à "sponsor" pour la rétrocompatibilité du code legacy. Voir [Migration Sponsor → Advertiser](../changelog/2025-12-29_sponsor-to-advertiser-migration.md).
+
+> **Modèle unifié site_sponsors (P0-P5)** : Depuis février 2026, les impressions dans `advertiser_impressions` portent également un `site_sponsor_id` optionnel. Ce champ permet l'attribution des impressions aux sponsors locaux des clubs (modèle `site_sponsors`). Voir [ADR-SITE-SPONSORS-ANALYTICS.md](ADR-SITE-SPONSORS-ANALYTICS.md) pour le modèle complet.
 
 ---
 

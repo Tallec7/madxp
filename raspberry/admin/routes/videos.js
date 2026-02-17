@@ -43,8 +43,9 @@ const { NotFoundError, LockedError, ValidationError } = require('../services/err
  * @param {Object} deps
  * @param {import('../services/video.service')} deps.videoService
  * @param {import('../services/video-processing.service')} deps.videoProcessingService
+ * @param {import('../services/sponsor.service')} [deps.sponsorService]
  */
-module.exports = function createVideosRouter({ videoService, videoProcessingService }) {
+module.exports = function createVideosRouter({ videoService, videoProcessingService, sponsorService }) {
   const router = express.Router();
 
   // ===========================================================================
@@ -128,7 +129,20 @@ module.exports = function createVideosRouter({ videoService, videoProcessingServ
         size: req.file.size,
         category: req.body.category,
         subcategory: req.body.subcategory,
+        sponsorLocalId: req.body.sponsorLocalId || null,
       });
+
+      // Link video to sponsor if specified
+      if (req.body.sponsorLocalId && sponsorService) {
+        try {
+          await sponsorService.linkVideo(req.body.sponsorLocalId, req.file.filename);
+          if (req.body.addToLoop === 'true') {
+            await sponsorService.addToLoop(req.body.sponsorLocalId);
+          }
+        } catch (err) {
+          console.warn('[admin] Failed to link video to sponsor:', err.message);
+        }
+      }
 
       res.json({
         success: true,
@@ -157,7 +171,22 @@ module.exports = function createVideosRouter({ videoService, videoProcessingServ
 
       console.log('[admin] POST /api/videos/upload-multiple complete', {
         total, success: results.length, failed: errors.length,
+        sponsorLocalId: req.body.sponsorLocalId || null,
       });
+
+      // Link uploaded videos to sponsor if specified
+      if (req.body.sponsorLocalId && sponsorService && results.length > 0) {
+        try {
+          for (const r of results) {
+            await sponsorService.linkVideo(req.body.sponsorLocalId, r.name);
+          }
+          if (req.body.addToLoop === 'true') {
+            await sponsorService.addToLoop(req.body.sponsorLocalId);
+          }
+        } catch (err) {
+          console.warn('[admin] Failed to link videos to sponsor:', err.message);
+        }
+      }
 
       res.json({
         success: errors.length === 0,

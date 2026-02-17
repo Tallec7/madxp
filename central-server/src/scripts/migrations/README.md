@@ -485,6 +485,98 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/add-is-critical-to-s
 
 ---
 
-**Dernière mise à jour:** 22 décembre 2025
+### 7. add-site-sponsors.sql ✅ **P0 Site Sponsors Analytics**
+
+**Date:** 2026-02-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 2 secondes
+
+**Description:**
+Crée les tables `site_sponsors` et `site_sponsor_videos` pour le modèle unifié de sponsors par site.
+
+**Ce que fait cette migration:**
+
+- Crée `site_sponsors` (UUID, site_id, advertiser_id optionnel, name, source, contact, contrat, logo, metadata)
+- Crée `site_sponsor_videos` (UUID, site_sponsor_id, video_id optionnel, video_filename, is_primary)
+- Ajoute `site_sponsor_id UUID` à `advertiser_impressions` avec index + FK
+- Crée les index nécessaires
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/add-site-sponsors.sql
+```
+
+---
+
+### 8. add-site-sponsor-reports.sql ✅ **P3 Site Sponsor Reports**
+
+**Date:** 2026-02-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Ajoute la table `site_sponsor_reports` pour stocker les rapports PDF générés par sponsor et période.
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/add-site-sponsor-reports.sql
+```
+
+---
+
+### 9. fix-advertiser-impressions-idempotence.sql ✅ **P4 Fix Idempotence**
+
+**Date:** 2026-02-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Corrige l'idempotence de l'enregistrement des impressions annonceurs pour éviter les doublons lors des retries du sync-agent.
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/fix-advertiser-impressions-idempotence.sql
+```
+
+---
+
+### 10. add-site-branding.sql ✅ **P5 Branding Club PDF**
+
+**Date:** 2026-02-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Ajoute les colonnes de branding club sur la table `sites` : `logo_url`, `color_primary`, `color_secondary`. Utilisées dans les rapports PDF sponsor pour personnaliser les couleurs du club.
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/add-site-branding.sql
+```
+
+---
+
+### 11. add-sponsor-access-tokens.sql ✅ **P5 Magic Link Sponsor**
+
+**Date:** 2026-02-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Crée la table `sponsor_access_tokens` pour les magic links d'accès sponsor. Tokens hashés SHA-256, expiration 30 jours. Nettoyage automatique par le cron scheduler.
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/add-sponsor-access-tokens.sql
+```
+
+---
+
+**Dernière mise à jour:** 17 février 2026
 **Auteur:** Claude Code
-**Version migrations:** 1.2
+**Version migrations:** 2.0

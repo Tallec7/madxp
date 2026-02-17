@@ -87,6 +87,7 @@ class VideoDeployHandler {
       videoId,
       sponsorId,
       analyticsCategory,
+      siteSponsorId,
     } = data;
 
     // CHECKSUM OBLIGATOIRE - Garantit l'intégrité des vidéos déployées
@@ -339,6 +340,7 @@ class VideoDeployHandler {
         video_id: videoData.videoId || null,
         sponsor_id: videoData.sponsorId || null,
         analytics_category: videoData.analyticsCategory || null,
+        site_sponsor_id: videoData.siteSponsorId || null,
       };
 
       // Ajouter la date d'expiration si présente
@@ -393,6 +395,7 @@ class VideoDeployHandler {
           video_id: videoData.videoId || null,
           sponsor_id: videoData.sponsorId || null,
           analytics_category: 'sponsor',
+          site_sponsor_id: videoData.siteSponsorId || null,
         };
 
         const existingSponsorIndex = configuration.sponsors.findIndex(s => s.path === relativePath);

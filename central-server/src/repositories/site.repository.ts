@@ -82,6 +82,10 @@ export interface UpdateSiteInput {
   live_score_enabled?: boolean;
   remote_pin_hash?: string | null;
   hostname_slug?: string;
+  // P5: Branding club pour les rapports PDF
+  logo_url?: string | null;
+  color_primary?: string | null;
+  color_secondary?: string | null;
 }
 
 export interface SiteConnectionRow extends QueryResultRow {

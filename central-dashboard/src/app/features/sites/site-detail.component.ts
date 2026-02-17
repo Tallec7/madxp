@@ -17,8 +17,9 @@ import { SiteDebugTabComponent } from './components/site-debug-tab/site-debug-ta
 import { SiteSubscriptionTabComponent } from './components/site-subscription-tab/site-subscription-tab.component';
 import { SiteProfilesTabComponent } from './components/site-profiles-tab/site-profiles-tab.component';
 import { SiteBenchmarkComponent } from './components/site-benchmark/site-benchmark.component';
+import { SiteSponsorsTabComponent } from './components/site-sponsors-tab/site-sponsors-tab.component';
 
-type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'subscription' | 'debug';
+type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subscription' | 'debug';
 
 @Component({
   selector: 'app-site-detail',
@@ -34,7 +35,8 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'subscription' | '
     SiteDebugTabComponent,
     SiteSubscriptionTabComponent,
     SiteProfilesTabComponent,
-    SiteBenchmarkComponent
+    SiteBenchmarkComponent,
+    SiteSponsorsTabComponent
   ],
   template: `
     <div class="page-container" *ngIf="site; else loading">
@@ -107,6 +109,14 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'subscription' | '
         >
           <span class="tab-icon">📑</span>
           <span class="tab-label">Profils</span>
+        </button>
+        <button
+          class="tab-btn"
+          [class.active]="activeTab === 'sponsors'"
+          (click)="activeTab = 'sponsors'"
+        >
+          <span class="tab-icon">💼</span>
+          <span class="tab-label">Sponsors</span>
         </button>
         <button
           class="tab-btn"
@@ -455,6 +465,14 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'subscription' | '
             [isConnected]="isConnected"
             (profileDeployed)="onConfigDeployed()"
           ></app-site-profiles-tab>
+        </div>
+
+        <!-- TAB: Sponsors -->
+        <div *ngIf="activeTab === 'sponsors'" class="tab-panel">
+          <app-site-sponsors-tab
+            [siteId]="siteId"
+            [site]="site"
+          ></app-site-sponsors-tab>
         </div>
 
         <!-- TAB: Abonnement -->

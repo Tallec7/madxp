@@ -6,8 +6,9 @@
 
 import { Response } from 'express';
 import { AuthRequest } from '../types';
-import { getClubReports, getAdvertiserReports, getReportById, generateReportOnDemand } from '../services/monthly-reports.service';
+import { getClubReports, getAdvertiserReports, getSiteSponsorReports, getReportById, generateReportOnDemand } from '../services/monthly-reports.service';
 import { siteRepository, advertiserRepository } from '../repositories';
+import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { reportRepository } from '../repositories/report.repository';
 import logger from '../config/logger';
 
@@ -52,6 +53,26 @@ export const listAdvertiserReports = async (req: AuthRequest, res: Response): Pr
 };
 
 /**
+ * Liste les rapports d'un sponsor local (site_sponsor)
+ */
+export const listSiteSponsorReports = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { siteSponsorId } = req.params;
+    const limit = parseInt(req.query.limit as string) || 12;
+
+    const reports = await getSiteSponsorReports(siteSponsorId, limit);
+
+    res.json({
+      success: true,
+      data: reports,
+    });
+  } catch (error) {
+    logger.error('[ReportsController] Error listing site sponsor reports', { error });
+    res.status(500).json({ error: 'Erreur lors de la récupération des rapports' });
+  }
+};
+
+/**
  * Récupère un rapport par son ID
  */
 export const getReport = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -87,8 +108,8 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    if (!['club', 'advertiser'].includes(type)) {
-      res.status(400).json({ error: 'Type de rapport invalide. Utilisez "club" ou "advertiser"' });
+    if (!['club', 'advertiser', 'site_sponsor'].includes(type)) {
+      res.status(400).json({ error: 'Type de rapport invalide. Utilisez "club", "advertiser" ou "site_sponsor"' });
       return;
     }
 
@@ -97,6 +118,12 @@ export const generateReport = async (req: AuthRequest, res: Response): Promise<v
       const siteExists = await siteRepository.exists(entityId);
       if (!siteExists) {
         res.status(404).json({ error: 'Site non trouvé' });
+        return;
+      }
+    } else if (type === 'site_sponsor') {
+      const sponsor = await siteSponsorRepository.findById(entityId);
+      if (!sponsor) {
+        res.status(404).json({ error: 'Sponsor local non trouvé' });
         return;
       }
     } else {
@@ -152,7 +179,7 @@ export const listAllReports = async (req: AuthRequest, res: Response): Promise<v
     const offset = parseInt(req.query.offset as string) || 0;
     const type = req.query.type as string | undefined;
 
-    const validType = type && ['club', 'advertiser'].includes(type) ? type : undefined;
+    const validType = type && ['club', 'advertiser', 'site_sponsor'].includes(type) ? type : undefined;
 
     const { rows, total } = await reportRepository.findAllWithEntityName({
       type: validType,

@@ -5,6 +5,7 @@ import logger from '../config/logger';
 import metricsService from './metrics.service';
 import { getVideoUrl, deleteVideo } from './storage.service';
 import { uploadVerificationService } from './upload-verification.service';
+import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 
 // Configuration du retry
 const RETRY_CONFIG = {
@@ -312,6 +313,14 @@ class DeploymentService {
       throw new Error('Video checksum is required for deployment');
     }
 
+    // Résoudre le site_sponsor_id pour ce couple vidéo/site (P1 — modèle unifié)
+    let siteSponsorId: string | null = null;
+    try {
+      siteSponsorId = await siteSponsorRepository.resolveSiteSponsorId(videoId, siteId);
+    } catch {
+      // Non-bloquant : si la table n'existe pas encore, on continue sans
+    }
+
     const commandData = {
       deploymentId,
       videoId,
@@ -325,6 +334,7 @@ class DeploymentService {
       // Métadonnées pour le tracking analytics
       sponsorId: deployment.advertiser_id || null,
       analyticsCategory: deployment.analytics_category || null,
+      siteSponsorId,
     };
 
     logger.info('Sending deploy_video command via sendOrQueue', {

@@ -913,6 +913,25 @@ CREATE TABLE IF NOT EXISTS site_sponsor_videos (
 CREATE INDEX IF NOT EXISTS idx_site_sponsor_videos_sponsor ON site_sponsor_videos(site_sponsor_id);
 CREATE INDEX IF NOT EXISTS idx_site_sponsor_videos_filename ON site_sponsor_videos(video_filename);
 
+-- P5: Branding club pour les rapports PDF
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS logo_url TEXT DEFAULT NULL;
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS color_primary VARCHAR(7) DEFAULT NULL;
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS color_secondary VARCHAR(7) DEFAULT NULL;
+
+-- P5: Magic link pour acces sponsor autonome
+CREATE TABLE IF NOT EXISTS sponsor_access_tokens (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  site_sponsor_id UUID NOT NULL REFERENCES site_sponsors(id) ON DELETE CASCADE,
+  token_hash VARCHAR(64) NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sat_token_hash ON sponsor_access_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_sat_site_sponsor_id ON sponsor_access_tokens(site_sponsor_id);
+CREATE INDEX IF NOT EXISTS idx_sat_expires_at ON sponsor_access_tokens(expires_at);
+
 -- Ajouter video_id et sponsor_id aux tables analytics
 ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS video_id UUID REFERENCES videos(id) ON DELETE SET NULL;
 ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS sponsor_id UUID REFERENCES advertisers(id) ON DELETE SET NULL;

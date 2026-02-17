@@ -35,6 +35,8 @@ import updatesRoutes from './routes/updates.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import advertiserAnalyticsRoutes from './routes/advertiser-analytics.routes';
 import advertiserSitesRoutes from './routes/advertiser-sites.routes';
+import siteSponsorRoutes from './routes/site-sponsor.routes';
+import sponsorPortalRoutes from './routes/sponsor-portal.routes';
 import auditRoutes from './routes/audit.routes';
 import canaryRoutes from './routes/canary.routes';
 import adminRoutes from './routes/admin.routes';
@@ -386,6 +388,8 @@ app.use('/api', updatesRoutes); // Mises à jour - rate limits per-route dans up
 app.use('/api/analytics', apiRateLimit, analyticsRoutes);
 app.use('/api/analytics', advertiserAnalyticsRoutes); // Analytics annonceurs - rate limits per-route (piAnalyticsRateLimit for /impressions, apiRateLimit for the rest)
 app.use('/api', apiRateLimit, advertiserSitesRoutes); // Gestion associations annonceurs <-> sites (+ backward compat)
+app.use('/api/sites', apiRateLimit, siteSponsorRoutes); // Sponsors par site (modèle unifié)
+app.use('/api/sponsor-portal', apiRateLimit, sponsorPortalRoutes); // Portail sponsor (public, token-based)
 app.use('/api/audit', apiRateLimit, auditRoutes);
 app.use('/api/canary', sensitiveRateLimit, canaryRoutes); // Déploiements canary - sensible
 app.use('/api/admin', adminRateLimit, adminRoutes);

@@ -11,6 +11,7 @@ export interface GeneratedReportRow extends QueryResultRow {
   report_type: string;
   site_id: string | null;
   advertiser_id: string | null;
+  site_sponsor_id: string | null;
   period_start: string;
   period_end: string;
   period_label: string;
@@ -63,7 +64,7 @@ class ReportRepositoryImpl extends BaseRepository<GeneratedReportRow> {
     const params: (string | number)[] = [];
     let whereClause = '';
 
-    if (type && ['club', 'advertiser'].includes(type)) {
+    if (type && ['club', 'advertiser', 'site_sponsor'].includes(type)) {
       whereClause = 'WHERE report_type = $1';
       params.push(type);
     }
@@ -74,10 +75,12 @@ class ReportRepositoryImpl extends BaseRepository<GeneratedReportRow> {
         CASE
           WHEN gr.report_type = 'club' THEN s.site_name
           WHEN gr.report_type = 'advertiser' THEN a.name
+          WHEN gr.report_type = 'site_sponsor' THEN ss.name
         END as entity_name
       FROM generated_reports gr
       LEFT JOIN sites s ON gr.site_id = s.id
       LEFT JOIN advertisers a ON gr.advertiser_id = a.id
+      LEFT JOIN site_sponsors ss ON gr.site_sponsor_id = ss.id
       ${whereClause}
       ORDER BY gr.created_at DESC
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}

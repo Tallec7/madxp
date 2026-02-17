@@ -13,6 +13,18 @@ import { CommandMessage } from '../types';
 import logger from '../config/logger';
 import { metricsService } from '../services/metrics.service';
 import { SocketContext } from './socket-context';
+import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
+
+/** Payload shape for a local sponsor sent from Pi */
+interface LocalSponsorPayload {
+  localId: string;
+  centralId: string | null;
+  name: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  videoFilenames?: string[];
+  isActive?: boolean;
+}
 
 /** Track network type counts across all connected sites for Prometheus */
 const networkTypeCounts: Record<string, Record<string, string>> = {};
@@ -214,6 +226,29 @@ export async function handleSyncLocalState(
 
     // Send license status to Pi
     await sendLicenseStatusFn(ctx, siteId);
+
+    // P3: Resolve local sponsors → create/match site_sponsors in DB
+    const localSponsors = (state.localSponsors as LocalSponsorPayload[]) || [];
+    if (localSponsors.length > 0) {
+      try {
+        const mapping = await resolveLocalSponsors(siteId, localSponsors);
+        if (Object.keys(mapping).length > 0) {
+          const socket = ctx.connectedSites.get(siteId);
+          if (socket?.connected) {
+            socket.emit('sponsor_ids_resolved', mapping);
+            logger.info('🤝 Sponsor IDs resolved and sent to Pi', {
+              siteId,
+              count: Object.keys(mapping).length,
+            });
+          }
+        }
+      } catch (sponsorError) {
+        logger.error('Error resolving local sponsors (non-fatal):', {
+          siteId,
+          error: (sponsorError as Error).message,
+        });
+      }
+    }
   } catch (error) {
     logger.error('Error handling sync_local_state:', error);
     metricsService.recordSyncOperation('local_state', 'failed');
@@ -364,4 +399,61 @@ async function sendPendingConfigCommand(
      WHERE id = $1`,
     [commandId]
   );
+}
+
+/**
+ * Resolve local sponsors from Pi into site_sponsors table.
+ * For each sponsor without a centralId: find or create in DB.
+ * Returns a mapping of { localId: centralUUID }.
+ */
+async function resolveLocalSponsors(
+  siteId: string,
+  sponsors: LocalSponsorPayload[]
+): Promise<Record<string, string>> {
+  const mapping: Record<string, string> = {};
+
+  for (const sponsor of sponsors) {
+    // Skip already-resolved sponsors
+    if (sponsor.centralId) {
+      continue;
+    }
+
+    try {
+      // Try to find an existing local sponsor with matching name
+      const existing = await siteSponsorRepository.findByNameAndSite(sponsor.name, siteId);
+
+      if (existing) {
+        mapping[sponsor.localId] = existing.id;
+        logger.debug('🤝 Local sponsor matched existing:', {
+          localId: sponsor.localId,
+          centralId: existing.id,
+          name: sponsor.name,
+        });
+      } else {
+        // Create a new site_sponsors entry
+        const created = await siteSponsorRepository.create({
+          siteId,
+          name: sponsor.name,
+          contactEmail: sponsor.contactEmail || undefined,
+          contactPhone: sponsor.contactPhone || undefined,
+          source: 'local',
+          metadata: { local_id: sponsor.localId },
+        });
+        mapping[sponsor.localId] = created.id;
+        logger.info('🤝 Local sponsor created in central:', {
+          localId: sponsor.localId,
+          centralId: created.id,
+          name: sponsor.name,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to resolve local sponsor:', {
+        localId: sponsor.localId,
+        name: sponsor.name,
+        error: (error as Error).message,
+      });
+    }
+  }
+
+  return mapping;
 }

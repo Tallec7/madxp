@@ -244,4 +244,5 @@ export {
   type SportDistributionRow,
   type ContentMixRow,
 } from './pitch-deck.repository';
+export { siteSponsorRepository } from './site-sponsor.repository';
 export { BaseRepository } from './base.repository';

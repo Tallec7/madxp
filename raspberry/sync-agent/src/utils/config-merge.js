@@ -23,6 +23,7 @@ const LOCAL_ONLY_SETTINGS = [
   'apiKey',          // Clé API du boîtier
   'hotspot',         // Configuration WiFi hotspot (SSID, etc.) - si jamais stocké ici
   'localNetwork',    // Configuration réseau locale
+  'localSponsors',   // Sponsors créés localement par le bénévole (P3)
 ];
 
 /**

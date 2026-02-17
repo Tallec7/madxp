@@ -32,6 +32,7 @@ MODULES=(
   "modules/videos/editor.js"
   "modules/videos/bulk.js"
   "modules/videos/drag-drop.js"
+  "modules/sponsors/index.js"
   "modules/network/wifi.js"
   "modules/network/hotspot.js"
   "modules/logs/index.js"

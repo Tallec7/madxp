@@ -801,7 +801,7 @@ class MetricsService {
 
   // ============= Méthodes Report Generation =============
 
-  recordReportGeneration(reportType: 'club' | 'advertiser', status: 'success' | 'failed', durationSeconds?: number): void {
+  recordReportGeneration(reportType: 'club' | 'advertiser' | 'site_sponsor', status: 'success' | 'failed', durationSeconds?: number): void {
     reportGenerationsTotal.inc({ report_type: reportType, status });
     if (durationSeconds !== undefined) {
       reportGenerationDuration.observe({ report_type: reportType }, durationSeconds);

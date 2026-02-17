@@ -191,6 +191,9 @@ function switchTab(tab) {
             loadTimeCategories();
             loadCategoriesForManager();
             break;
+        case 'sponsors':
+            loadSponsors();
+            break;
         case 'network':
             loadNetwork();
             loadWifiCurrent();
@@ -234,3 +237,12 @@ window.selectWifiNetwork = selectWifiNetwork;
 window.cancelWifiConnect = cancelWifiConnect;
 window.connectToWifi = connectToWifi;
 window.removeBssidLock = removeBssidLock;
+
+// Sponsor functions
+window.loadSponsors = loadSponsors;
+window.openSponsorModal = openSponsorModal;
+window.closeSponsorModal = closeSponsorModal;
+window.saveSponsor = saveSponsor;
+window.confirmDeleteSponsor = confirmDeleteSponsor;
+window.closeSponsorDeleteModal = closeSponsorDeleteModal;
+window.toggleSponsorLoop = toggleSponsorLoop;

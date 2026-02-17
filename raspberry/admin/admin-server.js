@@ -60,6 +60,7 @@ const VideoProcessingService = require('./services/video-processing.service');
 const SystemService = require('./services/system.service');
 const NetworkService = require('./services/network.service');
 const BackupService = require('./services/backup.service');
+const SponsorService = require('./services/sponsor.service');
 
 // Instantiate services (ordered by dependency)
 const configService = new ConfigurationService({ cache, NAMESPACES });
@@ -68,6 +69,7 @@ const videoService = new VideoService({ configService, cache, NAMESPACES });
 const systemService = new SystemService();
 const networkService = new NetworkService();
 const backupService = new BackupService();
+const sponsorService = new SponsorService({ configService });
 
 // =============================================================================
 // ROUTES
@@ -89,15 +91,17 @@ const createBackupRouter = require('./routes/backup');
 const createEmailRouter = require('./routes/email');
 const createCacheRouter = require('./routes/cache');
 const createSyncStatusRouter = require('./routes/sync-status');
+const createSponsorsRouter = require('./routes/sponsors');
 
 const systemRouter = createSystemRouter({ systemService });
-const videosRouter = createVideosRouter({ videoService, videoProcessingService });
+const videosRouter = createVideosRouter({ videoService, videoProcessingService, sponsorService });
 const configRouter = createConfigRouter({ configService });
 const networkRouter = createNetworkRouter({ networkService });
 const backupRouter = createBackupRouter({ backupService });
 const emailRouter = createEmailRouter(emailNotifier);
 const cacheRouter = createCacheRouter(cache, NAMESPACES);
 const syncStatusRouter = createSyncStatusRouter();
+const sponsorsRouter = createSponsorsRouter({ sponsorService });
 
 // =============================================================================
 // EXPRESS APP
@@ -261,6 +265,7 @@ app.use(updateRouter);
 app.use(emailRouter);
 app.use(cacheRouter);
 app.use(syncStatusRouter);
+app.use(sponsorsRouter);
 
 // =============================================================================
 // SERVER START

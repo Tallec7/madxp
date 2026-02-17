@@ -15,7 +15,8 @@ import {
   CloudVideo,
   LocalStorage,
   ConfigDiff,
-  ConfigHistory
+  ConfigHistory,
+  SiteSponsor
 } from '../../../../core/models';
 import { VideoLibraryComponent, VideoItem, VideoDeployState } from '../video-library/video-library.component';
 import { RemotePreviewComponent } from '../remote-preview/remote-preview.component';
@@ -373,6 +374,7 @@ interface HumanReadableDiff {
           [cloudVideoPaths]="cloudVideoPaths"
           [localVideos]="localVideos"
           [videoDurations]="videoDurations"
+          [siteSponsors]="siteSponsors"
           (configChanged)="markDirty()"
         ></app-loop-manager>
       </div>
@@ -3088,6 +3090,9 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   // Video durations lookup (path → seconds) — passed to loop-manager
   videoDurations: Map<string, number> = new Map();
 
+  // Site sponsors — passed to loop-manager for sponsor_id dropdown
+  siteSponsors: SiteSponsor[] = [];
+
   // Remote preview panel
   showRemotePreview = false;
 
@@ -3642,12 +3647,14 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   ngOnInit(): void {
     this.loadContent();
     this.loadDraft();
+    this.loadSiteSponsors();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['siteId'] && !changes['siteId'].firstChange) {
       this.loadContent();
       this.loadDraft();
+      this.loadSiteSponsors();
     }
   }
 
@@ -3765,6 +3772,24 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
           // Ignorer les erreurs de polling, on réessaie
         }
       });
+    });
+  }
+
+  /**
+   * Charge les sponsors du site pour le dropdown dans le loop manager
+   */
+  private loadSiteSponsors(): void {
+    if (!this.siteId) return;
+    this.sitesService.listSiteSponsors(this.siteId).subscribe({
+      next: (response) => {
+        this.siteSponsors = (response.sponsors || []).filter(s => s.status === 'active');
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        // Non-bloquant : le dropdown sponsor reste vide
+        this.siteSponsors = [];
+        this.cdr.markForCheck();
+      }
     });
   }
 

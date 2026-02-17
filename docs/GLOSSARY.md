@@ -89,6 +89,16 @@ Structure qui **gère plusieurs annonceurs**. Vue consolidée des statistiques d
 
 Rôle en **lecture seule** : peut voir les sites et statistiques mais ne peut rien modifier.
 
+### Site Sponsor
+
+**Sponsor local d'un club** — entité unifiée représentant un sponsor (local ou réseau NEOPRO) pour un site donné. Table `site_sponsors`. Chaque site_sponsor a un `source` (`local` ou `neopro`), des vidéos associées (`site_sponsor_videos`), et peut recevoir des impressions trackées. Permet la génération de rapports PDF par sponsor.
+
+**Voir aussi** : Advertiser, Magic Link
+
+### Magic Link
+
+**Lien d'accès token-based** permettant à un sponsor d'accéder à ses statistiques de visibilité sans compte utilisateur. Généré par l'opérateur via `POST /api/sites/:siteId/sponsors/:sponsorId/access-link`. Le token est hashé (SHA-256) et stocké dans `sponsor_access_tokens` avec une expiration de 30 jours. URL : `/sponsor-access?token=xxx`.
+
 ---
 
 ## Termes Techniques
@@ -273,4 +283,4 @@ Classe abstraite générique fournissant les opérations CRUD communes (findById
 
 ---
 
-_Dernière mise à jour : 12 février 2026_
+_Dernière mise à jour : 17 février 2026_

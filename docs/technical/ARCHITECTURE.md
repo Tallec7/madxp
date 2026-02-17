@@ -103,20 +103,22 @@ neopro/ (monorepo)
 │   │   ├── middleware/             # Auth, RLS, rate-limit, error-handler
 │   │   ├── services/              # Business logic (socket, deployment, alerting…)
 │   │   ├── handlers/              # 9 Socket.IO event handlers (extraits de socket.service)
-│   │   └── repositories/          # 21 repos (BaseRepository<T> + implémentations)
+│   │   └── repositories/          # 22 repos (BaseRepository<T> + implémentations)
 │   └── package.json
 │
 ├── central-dashboard/              # Cloud admin dashboard
 │   ├── src/app/
 │   │   ├── features/
-│   │   │   └── sites/
-│   │   │       ├── site-detail.component.ts     # Page détail (5 onglets)
-│   │   │       └── components/
-│   │   │           ├── site-content-tab/        # Pipeline contenu (bibliothèque → boucles → télécommande → analytics)
-│   │   │           ├── loop-manager/            # Gestion unifiée boucles (défaut + 3 phases)
-│   │   │           ├── site-settings-tab/       # Config réseau, hotspot
-│   │   │           ├── site-profiles-tab/       # Multi-config CRUD + deploy
-│   │   │           └── site-debug-tab/          # Logs, commandes
+│   │   │   ├── sites/
+│   │   │   │   ├── site-detail.component.ts     # Page détail (6 onglets)
+│   │   │   │   └── components/
+│   │   │   │       ├── site-content-tab/        # Pipeline contenu (bibliothèque → boucles → télécommande → analytics)
+│   │   │   │       ├── loop-manager/            # Gestion unifiée boucles (défaut + 3 phases)
+│   │   │   │       ├── site-sponsors-tab/       # Sponsors locaux : CRUD, KPIs, vidéos, magic link
+│   │   │   │       ├── site-settings-tab/       # Config réseau, hotspot, branding club
+│   │   │   │       ├── site-profiles-tab/       # Multi-config CRUD + deploy
+│   │   │   │       └── site-debug-tab/          # Logs, commandes
+│   │   │   └── sponsor-portal/                  # Page publique portail sponsor (token-based)
 │   │   ├── core/                                # Models, services, guards
 │   │   └── shared/                              # Composants réutilisables
 │   └── package.json
@@ -185,7 +187,7 @@ Merge local + remote config
 Angular frontend (reload config)
 ```
 
-### 2. Analytics tracking
+### 2. Analytics tracking (advertiser + site_sponsor)
 
 ```
 TV Frontend (impression sponsor)
@@ -199,11 +201,24 @@ Sync Agent (buffer + batch)
          ▼
 Central Server API (/api/sponsor-analytics/impressions)
          │
+         ├── advertiser_impressions (annonceurs réseau)
          ▼
 PostgreSQL (sponsor_impressions table)
          │
          ▼
 Dashboard Analytics (Chart.js graphs)
+
+Site Sponsor flow (local sponsors) :
+  site_sponsors → site_sponsor_videos → advertiser_impressions (site_sponsor_id)
+         │
+         ▼
+  Site detail > Sponsors tab (KPIs, Chart.js trends)
+         │
+         ▼
+  PDF Report (branding club : couleurs + logo)
+         │
+         ▼
+  Sponsor Portal (/sponsor-access?token=xxx) — public, token-based
 ```
 
 ### 3. Remote control
@@ -331,11 +346,11 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 
 - Accès base de données exclusivement via repositories typés (`siteRepository`, `alertRepository`, etc.)
 - `BaseRepository<T>` générique (CRUD, pagination, exists)
-- 21 repositories couvrant 100% des accès PostgreSQL :
+- 22 repositories couvrant 100% des accès PostgreSQL :
   `site`, `user`, `video`, `group`, `alert`, `analytics`, `sponsor`, `config-history`,
   `deployment`, `advertising`, `subscription`, `agency`, `metrics`, `objective`,
   `playlist-schedule`, `remote-command`, `report`, `timeline`, `advertiser-portal`,
-  `software-update`, `email` (notification)
+  `software-update`, `email` (notification), `site-sponsor`
 - Règle ESLint `no-restricted-imports` bloquant **tout** import de `../config/database` dans les controllers
 - Requêtes SQL paramétrées uniquement (`$1`, `$2`, etc.)
 
@@ -624,5 +639,5 @@ Résultat : 1 586 tests / 75 suites, 0 failures.
 
 ---
 
-**Dernière mise à jour** : 10 février 2026
-**Version** : 3.9.0
+**Dernière mise à jour** : 17 février 2026
+**Version** : 3.52.0

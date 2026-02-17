@@ -8,6 +8,7 @@ import {
   advertiserRepository,
   type ImpressionBatchItem,
 } from '../repositories';
+import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 
 // ============================================================================
 // ADVERTISER CRUD
@@ -511,6 +512,8 @@ export const recordImpressions = async (req: SiteAuthRequest, res: Response): Pr
 
     for (const imp of impressions) {
       const {
+        event_id,
+        site_sponsor_id,
         video_id,
         played_at,
         duration_played,
@@ -537,7 +540,27 @@ export const recordImpressions = async (req: SiteAuthRequest, res: Response): Pr
         continue;
       }
 
+      // Si event_id est fourni, le valider
+      if (event_id && !validateUuid(event_id)) {
+        skippedCount++;
+        continue;
+      }
+
+      // Valider site_sponsor_id si fourni, sinon résoudre via video_id+site_id
+      let resolvedSiteSponsorId: string | null = null;
+      if (site_sponsor_id && typeof site_sponsor_id === 'string' && validateUuid(site_sponsor_id)) {
+        resolvedSiteSponsorId = site_sponsor_id;
+      } else if (video_id) {
+        try {
+          resolvedSiteSponsorId = await siteSponsorRepository.resolveSiteSponsorId(video_id as string, authenticatedSiteId);
+        } catch {
+          // Non-bloquant : si la résolution échoue, on continue sans
+        }
+      }
+
       validItems.push({
+        eventId: (event_id as string) || null,
+        siteSponsorId: resolvedSiteSponsorId,
         siteId: authenticatedSiteId,
         videoId: video_id || null,
         playedAt: played_at as string,

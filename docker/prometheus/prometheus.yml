@@ -12,6 +12,16 @@ global:
   external_labels:
     monitor: 'neopro-monitor'
 
+# Alert rules
+rule_files:
+  - /etc/prometheus/rules.yml
+
+# Alertmanager
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
 scrape_configs:
   # Prometheus itself
   - job_name: 'prometheus'

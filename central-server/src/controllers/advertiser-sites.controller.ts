@@ -4,6 +4,7 @@ import logger from '../config/logger';
 import { validate as validateUuid } from 'uuid';
 import { advertiserRepository } from '../repositories';
 import { advertiserPortalRepository } from '../repositories/advertiser-portal.repository';
+import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { siteRepository } from '../repositories';
 
 // =============================================================================
@@ -148,6 +149,36 @@ export const addSitesToAdvertiser = async (req: AuthRequest, res: Response): Pro
 
     // Insérer les associations avec UPSERT
     await advertiserPortalRepository.addSites(id, site_ids, contractStartDate, contractEndDate);
+
+    // Auto-créer les site_sponsors correspondants (modèle unifié)
+    const advertiser = await advertiserRepository.findByIdFull(id);
+    if (advertiser) {
+      const siteSponsorIds: string[] = [];
+      for (const siteId of site_ids) {
+        try {
+          const ssId = await siteSponsorRepository.upsertForAdvertiserSite(
+            id,
+            siteId,
+            advertiser.name,
+            advertiser.contact_name,
+            advertiser.contact_email,
+            contractStartDate,
+            contractEndDate
+          );
+          siteSponsorIds.push(ssId);
+        } catch (upsertError) {
+          logger.warn('Failed to upsert site_sponsor for advertiser-site', {
+            advertiserId: id,
+            siteId,
+            error: upsertError instanceof Error ? upsertError.message : 'Unknown error',
+          });
+        }
+      }
+      logger.info('Site sponsors auto-created', {
+        advertiserId: id,
+        siteSponsorCount: siteSponsorIds.length,
+      });
+    }
 
     logger.info('Sites added to advertiser', {
       advertiserId: id,

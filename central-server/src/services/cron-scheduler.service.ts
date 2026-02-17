@@ -374,11 +374,12 @@ class CronSchedulerService {
       'recurring_schedule_executions': 'started_at',
       'audit_logs': 'created_at',
       'video_plays': 'played_at',
-      'sponsor_impressions': 'played_at',
+      'advertiser_impressions': 'played_at',
       'metrics': 'recorded_at',
       'remote_commands': 'created_at',
       'alerts': 'created_at',
       'config_history': 'deployed_at', // Special handling below
+      'sponsor_access_tokens': 'expires_at', // P5: magic link tokens cleanup
     };
 
     for (const table of tables) {

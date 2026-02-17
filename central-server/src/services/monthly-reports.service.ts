@@ -10,7 +10,8 @@
 
 import { query } from '../config/database';
 import { uploadAsset, getAssetUrl } from './storage.service';
-import { generateClubReport, generateAdvertiserReport } from './pdf-report.service';
+import { generateClubReport, generateAdvertiserReport, generateSiteSponsorReport } from './pdf-report.service';
+import emailService from './email.service';
 import { metricsService } from './metrics.service';
 import logger from '../config/logger';
 import * as crypto from 'crypto';
@@ -18,9 +19,10 @@ import * as crypto from 'crypto';
 // Types
 interface GeneratedReport {
   id: string;
-  report_type: 'club' | 'advertiser' | 'fleet';
+  report_type: 'club' | 'advertiser' | 'fleet' | 'site_sponsor';
   site_id: string | null;
   advertiser_id: string | null;
+  site_sponsor_id: string | null;
   period_start: string;
   period_end: string;
   period_label: string;
@@ -76,6 +78,10 @@ export async function generateMonthlyReports(): Promise<{
   // 2. Générer les rapports annonceurs
   const advertiserResults = await generateAdvertiserReports(periodStart, periodEnd, periodLabel);
   results.push(...advertiserResults);
+
+  // 3. Générer les rapports sponsors locaux (site_sponsors)
+  const siteSponsorResults = await generateSiteSponsorReports(periodStart, periodEnd, periodLabel);
+  results.push(...siteSponsorResults);
 
   const success = results.filter(r => r.success).length;
   const failed = results.filter(r => !r.success).length;
@@ -388,6 +394,176 @@ async function generateSingleAdvertiserReport(
 }
 
 /**
+ * Génère les rapports pour tous les sponsors locaux actifs (site_sponsors)
+ */
+async function generateSiteSponsorReports(
+  periodStart: string,
+  periodEnd: string,
+  periodLabel: string
+): Promise<ReportGenerationResult[]> {
+  const results: ReportGenerationResult[] = [];
+
+  // Récupérer tous les site_sponsors avec des impressions sur la période
+  const sponsorsResult = await query(`
+    SELECT DISTINCT ss.id, ss.name, ss.contact_email, ss.site_id,
+           s.club_name
+    FROM site_sponsors ss
+    JOIN sites s ON s.id = ss.site_id
+    JOIN advertiser_impressions ai ON ai.site_sponsor_id = ss.id
+    WHERE ai.played_at >= $1::date
+      AND ai.played_at <= $2::date
+      AND ss.status = 'active'
+    ORDER BY ss.name
+  `, [periodStart, periodEnd]);
+
+  logger.info(`[MonthlyReports] Found ${sponsorsResult.rowCount} site_sponsors to generate reports for`);
+
+  for (const sponsor of sponsorsResult.rows) {
+    const result = await generateSingleSiteSponsorReport(
+      sponsor.id as string,
+      sponsor.site_id as string,
+      sponsor.contact_email as string | null,
+      sponsor.name as string,
+      sponsor.club_name as string,
+      periodStart,
+      periodEnd,
+      periodLabel
+    );
+    results.push(result);
+
+    await sleep(500);
+  }
+
+  return results;
+}
+
+/**
+ * Génère un rapport pour un sponsor local (site_sponsor) spécifique
+ */
+async function generateSingleSiteSponsorReport(
+  siteSponsorId: string,
+  siteId: string,
+  contactEmail: string | null,
+  sponsorName: string,
+  clubName: string,
+  periodStart: string,
+  periodEnd: string,
+  periodLabel: string
+): Promise<ReportGenerationResult> {
+  const startTime = Date.now();
+  try {
+    // Vérifier si le rapport existe déjà
+    const existingResult = await query(`
+      SELECT id, storage_url, status
+      FROM generated_reports
+      WHERE report_type = 'site_sponsor'
+        AND site_sponsor_id = $1
+        AND period_start = $2
+        AND period_end = $3
+        AND status = 'completed'
+    `, [siteSponsorId, periodStart, periodEnd]);
+
+    if (existingResult.rowCount && existingResult.rowCount > 0) {
+      logger.info(`[MonthlyReports] Site sponsor report already exists for ${siteSponsorId}`);
+      return {
+        success: true,
+        reportId: existingResult.rows[0].id as string,
+        url: existingResult.rows[0].storage_url as string,
+      };
+    }
+
+    // Créer l'entrée en DB avec statut 'generating'
+    const storagePlaceholder = `reports/site-sponsors/${siteSponsorId}/${periodStart.substring(0, 7)}.pdf`;
+    const insertResult = await query(`
+      INSERT INTO generated_reports (report_type, site_id, site_sponsor_id, period_start, period_end, period_label, storage_path, status)
+      VALUES ('site_sponsor', $1, $2, $3, $4, $5, $6, 'generating')
+      ON CONFLICT (report_type, site_id, advertiser_id, site_sponsor_id, period_start, period_end)
+      DO UPDATE SET status = 'generating', error_message = NULL
+      RETURNING id
+    `, [siteId, siteSponsorId, periodStart, periodEnd, periodLabel, storagePlaceholder]);
+
+    const reportId = insertResult.rows[0].id as string;
+
+    // Générer le PDF
+    logger.info(`[MonthlyReports] Generating site sponsor report for ${siteSponsorId} (${sponsorName})`);
+    const pdfBuffer = await generateSiteSponsorReport(siteSponsorId, periodStart, periodEnd);
+
+    // Calculer checksum
+    const checksum = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+
+    // Upload via storage service
+    const filename = `reports/site-sponsors/${siteSponsorId}/${periodStart.substring(0, 7)}.pdf`;
+    await uploadAsset(pdfBuffer, filename, 'application/pdf');
+    const storageUrl = getAssetUrl(filename);
+
+    // Mettre à jour l'entrée en DB
+    await query(`
+      UPDATE generated_reports
+      SET status = 'completed',
+          storage_path = $2,
+          storage_url = $3,
+          file_size_bytes = $4,
+          checksum = $5,
+          completed_at = NOW()
+      WHERE id = $1
+    `, [reportId, filename, storageUrl, pdfBuffer.length, checksum]);
+
+    // Envoyer par email si contact_email est défini
+    if (contactEmail) {
+      try {
+        const pdfFilename = `rapport-${sponsorName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-${periodStart.substring(0, 7)}.pdf`;
+        await emailService.sendSponsorReport(contactEmail, {
+          sponsorName,
+          clubName,
+          period: periodLabel,
+          pdfBuffer,
+          pdfFilename,
+        });
+        logger.info(`[MonthlyReports] Sponsor report emailed to ${contactEmail}`, { siteSponsorId });
+      } catch (emailError) {
+        // L'email n'est pas bloquant — le rapport est quand même généré
+        const emailMsg = emailError instanceof Error ? emailError.message : 'Unknown email error';
+        logger.warn(`[MonthlyReports] Failed to email sponsor report for ${siteSponsorId}`, { error: emailMsg, contactEmail });
+      }
+    }
+
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    metricsService.recordReportGeneration('site_sponsor', 'success', durationSeconds);
+
+    logger.info(`[MonthlyReports] Site sponsor report completed for ${siteSponsorId}`, {
+      reportId,
+      size: pdfBuffer.length,
+      durationSeconds,
+      emailed: !!contactEmail,
+    });
+
+    return {
+      success: true,
+      reportId,
+      url: storageUrl,
+    };
+  } catch (error) {
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    metricsService.recordReportGeneration('site_sponsor', 'failed', durationSeconds);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(`[MonthlyReports] Failed to generate site sponsor report for ${siteSponsorId}`, { error: errorMessage, durationSeconds });
+
+    // Mettre à jour le statut en échec
+    await query(`
+      UPDATE generated_reports
+      SET status = 'failed', error_message = $2
+      WHERE site_sponsor_id = $1 AND period_start = $3 AND period_end = $4
+    `, [siteSponsorId, errorMessage, periodStart, periodEnd]).catch(() => {});
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
  * Récupère la liste des rapports pour un club
  */
 export async function getClubReports(
@@ -428,6 +604,26 @@ export async function getAdvertiserReports(
 }
 
 /**
+ * Récupère la liste des rapports pour un sponsor local (site_sponsor)
+ */
+export async function getSiteSponsorReports(
+  siteSponsorId: string,
+  limit: number = 12
+): Promise<GeneratedReport[]> {
+  const result = await query(`
+    SELECT *
+    FROM generated_reports
+    WHERE report_type = 'site_sponsor'
+      AND site_sponsor_id = $1
+      AND status = 'completed'
+    ORDER BY period_start DESC
+    LIMIT $2
+  `, [siteSponsorId, limit]);
+
+  return result.rows as unknown as GeneratedReport[];
+}
+
+/**
  * Récupère un rapport par son ID
  */
 export async function getReportById(reportId: string): Promise<GeneratedReport | null> {
@@ -444,7 +640,7 @@ export async function getReportById(reportId: string): Promise<GeneratedReport |
  * Génère un rapport à la demande (non planifié)
  */
 export async function generateReportOnDemand(
-  type: 'club' | 'advertiser',
+  type: 'club' | 'advertiser' | 'site_sponsor',
   entityId: string,
   periodStart: string,
   periodEnd: string,
@@ -454,6 +650,32 @@ export async function generateReportOnDemand(
 
   if (type === 'club') {
     return generateSingleClubReport(entityId, periodStart, periodEnd, periodLabel);
+  } else if (type === 'site_sponsor') {
+    // Pour site_sponsor, on a besoin du site_id et des infos pour l'email
+    // On les récupère depuis la DB
+    const sponsorResult = await query(`
+      SELECT ss.id, ss.site_id, ss.contact_email, ss.name,
+             s.club_name
+      FROM site_sponsors ss
+      JOIN sites s ON s.id = ss.site_id
+      WHERE ss.id = $1
+    `, [entityId]);
+
+    if (!sponsorResult.rowCount || sponsorResult.rowCount === 0) {
+      return { success: false, error: `Site sponsor ${entityId} not found` };
+    }
+
+    const sponsor = sponsorResult.rows[0];
+    return generateSingleSiteSponsorReport(
+      sponsor.id as string,
+      sponsor.site_id as string,
+      sponsor.contact_email as string | null,
+      sponsor.name as string,
+      sponsor.club_name as string,
+      periodStart,
+      periodEnd,
+      periodLabel
+    );
   } else {
     return generateSingleAdvertiserReport(entityId, periodStart, periodEnd, periodLabel);
   }
@@ -483,6 +705,7 @@ export default {
   generateMonthlyReports,
   getClubReports,
   getAdvertiserReports,
+  getSiteSponsorReports,
   getReportById,
   generateReportOnDemand,
 };

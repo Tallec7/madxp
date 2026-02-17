@@ -4,6 +4,69 @@
 
 - **dashboard:** resolve TypeScript strict null errors breaking build ([1cbf764](https://github.com/Tallec7/neopro/commit/1cbf764250c3d42b7ceb49ac54b7cb0c8564a875))
 
+# Site Sponsors Analytics — Paliers P0-P5 (2026-02-17)
+
+## Refonte Analytics Sponsors : Modèle Unifié `site_sponsors`
+
+### P0 — Fondation (schéma + repository + CRUD)
+
+- **site-sponsors:** migration `add-site-sponsors.sql` — tables `site_sponsors`, `site_sponsor_videos`, colonne `site_sponsor_id` sur `advertiser_impressions`
+- **site-sponsors:** repository `site-sponsor.repository.ts` (BaseRepository) — CRUD, getStatsSummary, getDailyTrends, getVideos, getReports
+- **site-sponsors:** controller + routes CRUD complets sur `/api/sites/:siteId/sponsors/*`
+- **site-sponsors:** tab Angular `site-sponsors-tab.component.ts` dans site-detail (liste, CRUD, detail expand)
+
+### P1 — Attribution impressions (filename → site_sponsor_id)
+
+- **analytics:** attribution automatique des impressions aux site_sponsors via `video_filename` match dans `advertiser_impressions`
+- **analytics:** enrichissement batch INSERT avec `site_sponsor_id` résolu depuis `site_sponsor_videos`
+
+### P2 — KPIs & Charts
+
+- **dashboard:** 4 KPI cards dans le detail sponsor (impressions, reach, jours actifs, temps écran)
+- **dashboard:** Chart.js trend line 30j dans le detail expand sponsor
+- **dashboard:** association vidéos avec bouton ajouter/retirer
+
+### P3 — Rapports PDF par sponsor de site
+
+- **pdf:** `generateSiteSponsorReport()` dans `pdf-report.service.ts` — rapport 4 pages (garde, KPIs, graphiques, certificat)
+- **pdf:** migration `add-site-sponsor-reports.sql` — table `site_sponsor_reports` pour stocker les rapports générés
+- **pdf:** endpoint `GET /api/sites/:siteId/sponsors/:sponsorId/report` + téléchargement depuis dashboard
+
+### P4 — Fiabilité tracking (idempotence + tests)
+
+- **analytics:** migration `fix-advertiser-impressions-idempotence.sql` — prévention doublons sur retry sync-agent
+- **tests:** 1471 tests serveur, 139 smoke, 528 Angular — tous passent
+
+### P5 — Branding Club PDF + Magic Link Sponsor
+
+- **branding:** migration `add-site-branding.sql` — colonnes `logo_url`, `color_primary`, `color_secondary` sur `sites`
+- **branding:** injection couleurs club dans PDF sponsor avec fallback NEOPRO (#1e3a8a / #3b82f6)
+- **branding:** téléchargement logo club depuis URL + insertion dans header PDF (fallback silencieux)
+- **branding:** section "Branding Club" dans site-settings-tab (logo URL, color pickers, preview gradient)
+- **magic-link:** migration `add-sponsor-access-tokens.sql` — table tokens hashés SHA-256, expiration 30j
+- **magic-link:** service `sponsor-access.service.ts` (calqué sur password-reset) — createAccessLink, verifyToken, cleanupExpiredTokens
+- **magic-link:** endpoints publics `/api/sponsor-portal/{verify,stats,report}` (token-based, pas de JWT)
+- **magic-link:** email template "Voir mes statistiques" via `sendSponsorAccessLink()`
+- **magic-link:** composant Angular `site-sponsor-portal.component.ts` — page publique `/sponsor-access?token=xxx` avec KPIs, Chart.js, PDF download
+- **magic-link:** bouton "Envoyer lien d'accès" dans site-sponsors-tab (email auto ou lien copiable)
+- **monitoring:** ajout `sponsor_access_tokens` au cron cleanup (nettoyage tokens expirés)
+
+### Database
+
+- **migration:** `add-site-sponsors.sql` — tables site_sponsors + site_sponsor_videos + site_sponsor_id FK
+- **migration:** `add-site-sponsor-reports.sql` — table site_sponsor_reports
+- **migration:** `fix-advertiser-impressions-idempotence.sql` — dédoublonnage impressions
+- **migration:** `add-site-branding.sql` — colonnes branding sur sites
+- **migration:** `add-sponsor-access-tokens.sql` — table magic link tokens
+
+### Tests
+
+- **server:** 1471+ tests Jest (central-server)
+- **smoke:** 139 tests (wiring API, conventions)
+- **angular:** 528+ tests Karma (central-dashboard, dont 8 nouveaux pour sponsor-portal)
+
+---
+
 # [3.52.0](https://github.com/Tallec7/neopro/compare/v3.51.0...v3.52.0) (2026-02-17)
 
 ### Features

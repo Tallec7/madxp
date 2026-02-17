@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SiteConfiguration, LoopVideoConfig, LocalVideo } from '../../../../core/models';
+import { SiteConfiguration, LoopVideoConfig, LocalVideo, SiteSponsor } from '../../../../core/models';
 
 interface LoopTab {
   id: string;
@@ -93,6 +93,17 @@ interface LoopTab {
               </select>
               <span class="cloud-hint" *ngIf="isCloudVideo(video.path)">⏳ Sera déployée</span>
               <span class="error-hint" *ngIf="!video.path">Vidéo requise</span>
+              <select
+                *ngIf="siteSponsors.length > 0"
+                [(ngModel)]="video.sponsor_id"
+                (ngModelChange)="onChanged()"
+                class="sponsor-select"
+              >
+                <option [ngValue]="undefined">— Sans sponsor —</option>
+                <option *ngFor="let sp of siteSponsors" [value]="sp.id">
+                  {{ sp.source === 'neopro' ? '📡 ' : '🏠 ' }}{{ sp.name }}
+                </option>
+              </select>
             </div>
             <span class="video-duration" *ngIf="getVideoDuration(video.path) as dur">{{ formatDuration(dur) }}</span>
             <div class="video-owner">
@@ -147,6 +158,17 @@ interface LoopTab {
                   </optgroup>
                 </select>
                 <span class="cloud-badge" *ngIf="isCloudVideo(video.path)" title="Sera déployée automatiquement">⏳</span>
+                <select
+                  *ngIf="siteSponsors.length > 0"
+                  [ngModel]="video.sponsor_id"
+                  (ngModelChange)="updatePhaseVideo(i, 'sponsor_id', $event)"
+                  class="sponsor-select"
+                >
+                  <option [ngValue]="undefined">— Sans sponsor —</option>
+                  <option *ngFor="let sp of siteSponsors" [value]="sp.id">
+                    {{ sp.source === 'neopro' ? '📡 ' : '🏠 ' }}{{ sp.name }}
+                  </option>
+                </select>
               </div>
               <span class="video-duration" *ngIf="getVideoDuration(video.path) as dur">{{ formatDuration(dur) }}</span>
               <button class="btn-remove-sm" (click)="removePhaseVideo(i)">×</button>
@@ -396,6 +418,16 @@ interface LoopTab {
       color: #92400e;
     }
 
+    .sponsor-select {
+      width: 180px;
+      padding: 0.375rem 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: #475569;
+      background: white;
+    }
+
     .error-hint {
       font-size: 0.6875rem;
       color: #dc2626;
@@ -561,6 +593,7 @@ export class LoopManagerComponent implements OnInit, OnChanges {
   @Input() cloudVideoPaths: Set<string> = new Set();
   @Input() localVideos: LocalVideo[] = [];
   @Input() videoDurations: Map<string, number> = new Map();
+  @Input() siteSponsors: SiteSponsor[] = [];
   @Output() configChanged = new EventEmitter<void>();
 
   activeTab = 'default';
@@ -660,10 +693,13 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     this.onChanged();
   }
 
-  updatePhaseVideo(index: number, field: 'name' | 'path', value: string): void {
+  updatePhaseVideo(index: number, field: 'name' | 'path' | 'sponsor_id', value: string): void {
     const tc = this.config.timeCategories?.find(t => t.id === this.activeTab);
     if (!tc?.loopVideos?.[index]) return;
-    tc.loopVideos[index][field] = value;
+    const video = tc.loopVideos[index];
+    if (field === 'name') video.name = value;
+    else if (field === 'path') video.path = value;
+    else if (field === 'sponsor_id') video.sponsor_id = value || undefined;
 
     // Auto-remplir le nom si on change le path et que le nom est vide
     if (field === 'path' && value && !tc.loopVideos[index].name) {

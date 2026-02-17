@@ -1198,6 +1198,28 @@ GET    /analytics/realtime      - Stats temps réel dashboard live (admin/operat
 GET    /advertiser-analytics/*  - Stats annonceurs
 ```
 
+**Endpoints Site Sponsors (auth JWT, montés sur /api/sites) :**
+
+```
+GET    /sites/:siteId/sponsors                           - Liste sponsors d'un site (admin, operator)
+GET    /sites/:siteId/sponsors/:sponsorId                - Détail d'un sponsor (admin, operator)
+POST   /sites/:siteId/sponsors                           - Créer un sponsor local (admin, operator)
+PUT    /sites/:siteId/sponsors/:sponsorId                - Modifier un sponsor (admin, operator)
+DELETE /sites/:siteId/sponsors/:sponsorId                - Supprimer un sponsor (admin)
+GET    /sites/:siteId/sponsors/:sponsorId/stats          - Stats sponsor sur période (admin, operator)
+POST   /sites/:siteId/sponsors/:sponsorId/videos         - Associer une vidéo à un sponsor (admin, operator)
+DELETE /sites/:siteId/sponsors/:sponsorId/videos/:fname  - Retirer une vidéo (admin, operator)
+POST   /sites/:siteId/sponsors/:sponsorId/access-link    - Générer magic link d'accès (admin, operator)
+```
+
+**Endpoints Sponsor Portal (public, token-based, montés sur /api/sponsor-portal) :**
+
+```
+GET    /sponsor-portal/verify   - Vérifie un magic link token → { valid, sponsor }
+GET    /sponsor-portal/stats    - Stats sponsor via token (période configurable)
+GET    /sponsor-portal/report   - Téléchargement rapport PDF via token
+```
+
 **Authentification :** JWT HttpOnly cookie + Bearer token
 
 **Rate Limiting :**
@@ -1212,6 +1234,7 @@ Remote Cloud: 60 req/min      (télécommande cloud - PUBLIC, par IP)
 Upload:       10 req/hour     (video uploads)
 Admin:        200 req/min     (dashboard ops)
 Pi Analytics: 500 req/min     (impressions sponsors depuis les Pi - par IP)
+Sponsor Portal: rate limité par apiRateLimit (100 req/min par IP, endpoints publics)
 ```
 
 **Note** : Les rate limits sont basés sur le `user_id` (et non sur l'IP) en production, sauf Remote Cloud et Pi Analytics qui sont par IP (endpoints publics).
@@ -1277,6 +1300,7 @@ Tous les accès PostgreSQL passent par des repositories typés héritant de `Bas
 | `timeline`          | `timeline_events`                                  |
 | `email`             | Notifications email (templates)                    |
 | `pitch-deck`        | Vue agrégée multi-tables (métriques traction)      |
+| `site-sponsor`      | `site_sponsors`, `site_sponsor_videos`             |
 
 ### Gestion Mémoire (Railway Hobby Plan)
 
@@ -1312,15 +1336,16 @@ GET /ready     - Readiness probe (prêt pour le trafic)
 
 ### Dashboard Central — Composants Site Detail
 
-Le site-detail est organisé en **5 onglets** avec des composants Angular standalone :
+Le site-detail est organisé en **6 onglets** avec des composants Angular standalone :
 
-| Onglet         | Composant                  | Fonctionnalités                                       |
-| -------------- | -------------------------- | ----------------------------------------------------- |
-| **État**       | `site-detail.component.ts` | Métriques, connexion temps réel, alertes, ventilateur |
-| **Contenu**    | `SiteContentTabComponent`  | Boucles par phase, catégories, mapping analytics      |
-| **Paramètres** | `SiteSettingsTabComponent` | Config réseau, hotspot, paramètres site               |
-| **Profils**    | `SiteProfilesTabComponent` | Multi-config CRUD, déploiement, synchronisation       |
-| **Debug**      | `SiteDebugTabComponent`    | Logs, commandes, diagnostics, santé ventilateur       |
+| Onglet         | Composant                  | Fonctionnalités                                                         |
+| -------------- | -------------------------- | ----------------------------------------------------------------------- |
+| **État**       | `site-detail.component.ts` | Métriques, connexion temps réel, alertes, ventilateur                   |
+| **Contenu**    | `SiteContentTabComponent`  | Boucles par phase, catégories, mapping analytics                        |
+| **Sponsors**   | `SiteSponsorsTabComponent` | CRUD sponsors locaux, KPIs, Chart.js trends, vidéos, magic link d'accès |
+| **Paramètres** | `SiteSettingsTabComponent` | Config réseau, hotspot, branding club (logo, couleurs)                  |
+| **Profils**    | `SiteProfilesTabComponent` | Multi-config CRUD, déploiement, synchronisation                         |
+| **Debug**      | `SiteDebugTabComponent`    | Logs, commandes, diagnostics, santé ventilateur                         |
 
 #### SiteProfilesTabComponent (multi-config)
 
@@ -1509,4 +1534,4 @@ Voir **[docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ---
 
-**Dernière mise à jour :** 16 février 2026
+**Dernière mise à jour :** 17 février 2026

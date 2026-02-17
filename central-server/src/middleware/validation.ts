@@ -70,6 +70,7 @@ export const schemas = {
     sports: Joi.array().items(Joi.string()).optional(),
     status: Joi.string().valid('online', 'offline', 'maintenance', 'error').optional(),
     live_score_enabled: Joi.boolean().optional(),
+    avg_spectators: Joi.number().integer().min(0).max(100000).optional(),
   }),
 
   createGroup: Joi.object({

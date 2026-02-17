@@ -88,8 +88,11 @@ services:
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - alertmanager
     volumes:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/rules.yml:/etc/prometheus/rules.yml:ro
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -97,6 +100,21 @@ services:
       - '--web.enable-lifecycle'
     ports:
       - "9090:9090"
+
+  # ============================================
+  # Alertmanager (Alert routing & notifications)
+  # ============================================
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: neopro-alertmanager
+    restart: unless-stopped
+    volumes:
+      - ./docker/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "9093:9093"
 
   # ============================================
   # Grafana (Dashboards)

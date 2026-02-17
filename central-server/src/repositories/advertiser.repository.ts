@@ -108,6 +108,8 @@ export interface AdvertiserImpressionExportRow extends QueryResultRow {
 }
 
 export interface ImpressionBatchItem {
+  eventId: string | null;
+  siteSponsorId: string | null;
   siteId: string;
   videoId: string | null;
   playedAt: string;
@@ -427,20 +429,21 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
 
     for (const imp of items) {
       values.push(
-        `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11})`
+        `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11}, $${paramIndex + 12}, $${paramIndex + 13})`
       );
       params.push(
-        imp.siteId, imp.videoId, imp.playedAt, imp.durationPlayed,
-        imp.videoDuration, imp.completed, imp.interruptedAt, imp.eventType,
-        imp.period, imp.triggerType, imp.positionInLoop, imp.audienceEstimate
+        imp.eventId, imp.siteSponsorId, imp.siteId, imp.videoId, imp.playedAt,
+        imp.durationPlayed, imp.videoDuration, imp.completed, imp.interruptedAt,
+        imp.eventType, imp.period, imp.triggerType, imp.positionInLoop, imp.audienceEstimate
       );
-      paramIndex += 12;
+      paramIndex += 14;
     }
 
     await query(
       `INSERT INTO advertiser_impressions
-       (site_id, video_id, played_at, duration_played, video_duration, completed, interrupted_at, event_type, period, trigger_type, position_in_loop, audience_estimate)
-       VALUES ${values.join(', ')}`,
+       (event_id, site_sponsor_id, site_id, video_id, played_at, duration_played, video_duration, completed, interrupted_at, event_type, period, trigger_type, position_in_loop, audience_estimate)
+       VALUES ${values.join(', ')}
+       ON CONFLICT (event_id) WHERE event_id IS NOT NULL DO NOTHING`,
       params
     );
 

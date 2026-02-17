@@ -26,6 +26,8 @@ export interface LoopVideo {
      * Categorie analytics (ex: 'advertiser', 'annonce', 'animation')
      */
     analytics_category?: string;
+    /** UUID du site_sponsor unifie (P1 — tracking granulaire par site) */
+    site_sponsor_id?: string;
 }
 
 /**

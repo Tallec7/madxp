@@ -125,6 +125,17 @@ export interface Site {
   network_profile?: NetworkProfile;
   network_profile_updated_at?: Date;
 
+  /** Nombre moyen de spectateurs par match (pour calcul du reach sponsor) */
+  avg_spectators?: number | null;
+
+  // === Branding fields (P5) ===
+  /** URL du logo du club (pour rapports PDF) */
+  logo_url?: string | null;
+  /** Couleur primaire du club (hex #RRGGBB) */
+  color_primary?: string | null;
+  /** Couleur secondaire du club (hex #RRGGBB) */
+  color_secondary?: string | null;
+
   // === Subscription fields ===
   /** Date de début d'abonnement */
   subscription_start?: string | null;
@@ -660,6 +671,76 @@ export interface UpdateSubscriptionRequest {
   subscription_end?: string | null;
   subscription_plan?: SubscriptionPlan | null;
   note?: string;
+}
+
+// ============================================================================
+// Site Sponsors (P4 — Sponsor analytics par site)
+// ============================================================================
+
+export interface SiteSponsor {
+  id: string;
+  site_id: string;
+  advertiser_id: string | null;
+  name: string;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  logo_url: string | null;
+  contract_amount: number | null;
+  contract_start: string | null;
+  contract_end: string | null;
+  source: 'local' | 'neopro';
+  status: 'active' | 'expired' | 'paused';
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  // Joined fields from listBySite
+  video_count?: number;
+  total_impressions?: number;
+}
+
+export interface SiteSponsorVideo {
+  id: string;
+  site_sponsor_id: string;
+  video_id: string | null;
+  video_filename: string;
+  is_primary: boolean;
+  added_at: string;
+}
+
+export interface SiteSponsorStats {
+  total_impressions: number;
+  total_screen_time_seconds: number;
+  completion_rate: number;
+  estimated_reach: number;
+  active_days: number;
+}
+
+export interface SiteSponsorDailyTrend {
+  date: string;
+  impressions: number;
+  screen_time: number;
+}
+
+export interface SiteSponsorStatsResponse {
+  sponsor: SiteSponsor;
+  period: { from: string; to: string };
+  summary: SiteSponsorStats;
+  daily_trends: SiteSponsorDailyTrend[];
+  videos: SiteSponsorVideo[];
+}
+
+export interface GeneratedReport {
+  id: string;
+  report_type: 'club' | 'advertiser' | 'fleet' | 'site_sponsor';
+  site_sponsor_id: string | null;
+  period_start: string;
+  period_end: string;
+  period_label: string;
+  storage_url: string | null;
+  status: 'pending' | 'generating' | 'completed' | 'failed';
+  created_at: string;
+  completed_at: string | null;
 }
 
 // Re-export site config models
