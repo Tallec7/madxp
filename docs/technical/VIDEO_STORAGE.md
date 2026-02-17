@@ -563,6 +563,7 @@ Checksum mismatch: expected abc123, got def456
 | 2.2     | 2026-02-15 | Fix null category, piCategory, modal UX                           |
 | 2.3     | 2026-02-16 | Auto-création sous-dossiers FTP (ensureDir) + troubleshooting 550 |
 | 2.4     | 2026-02-17 | Flux déploiement watermark, fix race condition deploy_asset       |
+| 2.5     | 2026-02-17 | Re-deploy image on save, Pi-side retry with backoff               |
 | 3.0     | 2026-02-17 | Fix encodage multer latin1→UTF-8, sanitization NFD, métriques     |
 
 ---
@@ -605,6 +606,31 @@ Dashboard                 Central Server              Raspberry Pi
 - Le dashboard appelle `saveWatermarkConfig()` automatiquement après un upload réussi (pas besoin de clic manuel).
 - Pendant le lock de 60s (`config_update_pending_until`), la config watermark est immédiatement mergée dans `local_config_mirror` via `jsonb_set` pour éviter la perte au refresh dashboard.
 
+### Re-deploy image sur "Deployer le watermark" (v3.54.3+)
+
+`saveWatermarkConfig()` envoie désormais **les deux commandes** à chaque déploiement :
+
+1. `update_config` — met à jour la section watermark dans `configuration.json`
+2. `deploy_asset` — re-télécharge l'image depuis `cloudUrl` vers le Pi
+
+Cela garantit que même si le premier `deploy_asset` a échoué (Pi offline, timeout réseau, etc.), l'image est re-déployée à chaque clic sur "Deployer le watermark".
+
+### Retry côté Pi (v3.54.3+)
+
+Si l'image watermark ne charge pas (fichier pas encore présent après `deploy_asset`), le `WatermarkService` retente automatiquement :
+
+| Tentative | Délai |
+| --------- | ----- |
+| 1         | 5s    |
+| 2         | 10s   |
+| 3         | 30s   |
+| 4         | 60s   |
+| 5         | 120s  |
+
+- Un **cache-buster** (`?_cb=timestamp`) est ajouté au `src` de l'image pour éviter les 404 en cache navigateur.
+- Le retry state est **réinitialisé** à chaque nouvelle configuration (`setConfiguration()` / `init()`).
+- Après 5 échecs, le service abandonne et log une erreur console.
+
 ### Structure de la configuration watermark
 
 ```json
@@ -628,6 +654,8 @@ Le watermark s'affiche si les 3 conditions sont remplies :
 1. `showWatermark` = `true` (via `WatermarkService.checkVisibility()`)
 2. `configuration.watermark.enabled` = `true`
 3. `configuration.watermark.imagePath` est défini et non vide
+
+> **Note (v3.54.3+) :** Si l'image échoue au chargement (`<img (error)>`), le service ne désactive plus définitivement le watermark. Il programme un retry avec backoff (5 tentatives). L'image `src` utilise `getImageSrc()` avec cache-buster pour les retries.
 
 ---
 

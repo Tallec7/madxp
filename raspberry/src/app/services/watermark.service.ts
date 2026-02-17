@@ -14,6 +14,12 @@ export class WatermarkService {
   private scheduleInterval: ReturnType<typeof setInterval> | null = null;
   private _showWatermark = false;
 
+  /** Retry state for image load failures */
+  private imageRetryCount = 0;
+  private readonly MAX_IMAGE_RETRIES = 5;
+  private readonly RETRY_DELAYS_MS = [5000, 10000, 30000, 60000, 120000];
+  private retryTimeout: ReturnType<typeof setTimeout> | null = null;
+
   /**
    * Observable-like getter pour l'état de visibilité
    */
@@ -26,6 +32,7 @@ export class WatermarkService {
    */
   init(configuration: Configuration): void {
     this.configuration = configuration;
+    this.resetRetryState();
     this.checkVisibility();
 
     // Si scheduling actif, vérifier toutes les minutes
@@ -46,6 +53,8 @@ export class WatermarkService {
       this.startScheduleCheck();
     }
 
+    // Reset retry state on new config (image may have been deployed since last attempt)
+    this.resetRetryState();
     this.checkVisibility();
   }
 
@@ -205,11 +214,57 @@ export class WatermarkService {
   }
 
   /**
-   * Gère les erreurs de chargement de l'image watermark
+   * Retourne le chemin de l'image avec cache-buster pour forcer le rechargement
+   * lors des retries (évite que le navigateur serve un 404 depuis le cache)
+   */
+  getImageSrc(): string | null {
+    const imagePath = this.configuration?.watermark?.imagePath;
+    if (!imagePath) return null;
+    if (this.imageRetryCount === 0) return imagePath;
+    const separator = imagePath.includes('?') ? '&' : '?';
+    return `${imagePath}${separator}_cb=${Date.now()}`;
+  }
+
+  /**
+   * Gère les erreurs de chargement de l'image watermark.
+   * Au lieu de désactiver définitivement le watermark, programme un retry
+   * avec backoff exponentiel. Cela couvre le cas où deploy_asset arrive
+   * après update_config (race condition).
    */
   onImageError(): void {
-    console.warn('[WatermarkService] Watermark image failed to load');
     this._showWatermark = false;
+
+    if (this.imageRetryCount < this.MAX_IMAGE_RETRIES) {
+      const delay = this.RETRY_DELAYS_MS[this.imageRetryCount] ?? this.RETRY_DELAYS_MS[this.RETRY_DELAYS_MS.length - 1];
+      this.imageRetryCount++;
+      console.warn(`[WatermarkService] Watermark image failed to load, retry ${this.imageRetryCount}/${this.MAX_IMAGE_RETRIES} in ${delay / 1000}s`);
+
+      this.clearRetryTimeout();
+      this.retryTimeout = setTimeout(() => {
+        console.info(`[WatermarkService] Retrying watermark image (attempt ${this.imageRetryCount}/${this.MAX_IMAGE_RETRIES})`);
+        this.checkVisibility();
+      }, delay);
+    } else {
+      console.error(`[WatermarkService] Watermark image failed to load after ${this.MAX_IMAGE_RETRIES} retries, giving up`);
+    }
+  }
+
+  /**
+   * Reset retry state (called on init/setConfiguration)
+   */
+  private resetRetryState(): void {
+    this.imageRetryCount = 0;
+    this.clearRetryTimeout();
+  }
+
+  /**
+   * Clear pending retry timeout
+   */
+  private clearRetryTimeout(): void {
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+      this.retryTimeout = null;
+    }
   }
 
   /**
@@ -217,5 +272,6 @@ export class WatermarkService {
    */
   destroy(): void {
     this.stopScheduleCheck();
+    this.clearRetryTimeout();
   }
 }

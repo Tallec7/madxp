@@ -231,7 +231,7 @@
   [ngClass]="getWatermarkAnimationClass()"
 >
   <img
-    [src]="configuration.watermark.imagePath"
+    [src]="getWatermarkImageSrc()"
     alt="Watermark"
     class="watermark-image"
     (error)="onWatermarkError()"

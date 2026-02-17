@@ -1231,6 +1231,13 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Retourne le src de l'image watermark avec cache-buster pour les retries
+   */
+  public getWatermarkImageSrc(): string | null {
+    return this.watermarkService.getImageSrc();
+  }
+
+  /**
    * Gère les erreurs de chargement de l'image watermark (délégué au service)
    */
   public onWatermarkError(): void {

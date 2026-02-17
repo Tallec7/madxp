@@ -1544,6 +1544,27 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -n 50 | grep watermark
 
 **Si le fichier image n'existe pas :** Le `deploy_asset` a échoué. Vérifier les logs sync-agent pour l'erreur de téléchargement.
 
+### Image manquante sur le Pi malgré config watermark OK (v3.54.3)
+
+**Symptôme :** `configuration.json` contient bien `watermark.enabled: true` et `watermark.imagePath`, mais le dossier `assets/watermarks/` est vide et les logs sync-agent ne montrent aucune trace de `deploy_asset`.
+
+**Cause racine (< v3.54.3) :** Le bouton "Deployer le watermark" n'envoyait que `update_config` (la configuration JSON). La commande `deploy_asset` (téléchargement de l'image) n'était envoyée qu'une seule fois lors de l'upload initial. Si cette première commande échouait ou n'atteignait pas le Pi, l'image n'était jamais re-déployée.
+
+**Fix (v3.54.3) :**
+
+1. **Dashboard** : `saveWatermarkConfig()` envoie désormais `update_config` + `deploy_asset` (re-téléchargement de l'image depuis `cloudUrl`).
+2. **Pi** : `WatermarkService.onImageError()` retente le chargement 5 fois avec backoff progressif (5s, 10s, 30s, 60s, 120s) et cache-buster pour éviter les 404 en cache.
+
+**Solution immédiate :** Cliquer sur "Deployer le watermark" dans le dashboard (v3.54.3+). L'image sera re-déployée automatiquement.
+
+**Solution manuelle (versions antérieures) :**
+
+```bash
+# Sur le Pi — télécharger manuellement l'image depuis le cloud
+mkdir -p /home/pi/neopro/webapp/assets/watermarks/
+wget -O /home/pi/neopro/webapp/assets/watermarks/IMAGE_NAME.png "CLOUD_URL"
+```
+
 ---
 
 ## Diagnostic réseau à distance

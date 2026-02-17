@@ -2253,17 +2253,54 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   saveWatermarkConfig(): void {
     this.savingWatermark = true;
 
+    // 1. Toujours envoyer la config (update_config)
     this.sitesService.sendCommand(this.siteId, 'update_config', {
       neoProContent: { watermark: this.watermarkConfig },
       mode: 'merge'
     }).subscribe({
       next: (response: { queued?: boolean }) => {
-        this.savingWatermark = false;
-        this.notificationService.success(
-          response.queued
-            ? 'Configuration mise en file d\'attente'
-            : 'Configuration du watermark déployée!'
-        );
+        // 2. Re-déployer l'image si cloudUrl est disponible
+        // Cela garantit que l'image est présente sur le Pi même si le premier
+        // deploy_asset a échoué ou n'a jamais été reçu
+        if (this.watermarkConfig.cloudUrl && this.watermarkConfig.imagePath) {
+          const filename = this.watermarkConfig.imagePath.split('/').pop() || 'watermark.png';
+          this.assetService.deployAsset(
+            this.siteId,
+            this.watermarkConfig.cloudUrl,
+            filename,
+            this.watermarkConfig.imagePath,
+            undefined,
+            'watermark'
+          ).subscribe({
+            next: () => {
+              this.savingWatermark = false;
+              this.notificationService.success(
+                response.queued
+                  ? 'Configuration et image mises en file d\'attente'
+                  : 'Watermark déployé (config + image)!'
+              );
+            },
+            error: () => {
+              // L'image n'a pas pu être re-déployée, mais la config est OK
+              this.savingWatermark = false;
+              this.notificationService.success(
+                response.queued
+                  ? 'Configuration mise en file d\'attente'
+                  : 'Configuration du watermark déployée!'
+              );
+              this.notificationService.warning(
+                'L\'image n\'a pas pu être re-déployée. Si le watermark ne s\'affiche pas, essayez de re-uploader l\'image.'
+              );
+            }
+          });
+        } else {
+          this.savingWatermark = false;
+          this.notificationService.success(
+            response.queued
+              ? 'Configuration mise en file d\'attente'
+              : 'Configuration du watermark déployée!'
+          );
+        }
       },
       error: (error) => {
         this.savingWatermark = false;

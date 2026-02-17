@@ -1,3 +1,15 @@
+## [3.55.1] (2026-02-17)
+
+### Bug Fixes
+
+- **watermark:** fix image never deployed — "Deployer le watermark" button now sends both `update_config` + `deploy_asset` (previously only sent config, not the image file)
+- **watermark:** add retry with backoff in `WatermarkService` when image fails to load — 5 retries (5s, 10s, 30s, 60s, 120s) with cache-buster to handle `deploy_asset` arriving after `update_config`
+
+### Documentation
+
+- **troubleshooting:** add "Image manquante malgré config OK" watermark scenario with root cause and fix reference
+- **video-storage:** document `saveWatermarkConfig()` re-deploy behavior and Pi-side image retry mechanism
+
 # [3.55.0](https://github.com/Tallec7/neopro/compare/v3.54.1...v3.55.0) (2026-02-17)
 
 ### Features
