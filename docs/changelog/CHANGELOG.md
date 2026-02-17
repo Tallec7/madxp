@@ -10,6 +10,12 @@
 
 - **upload:** fix corrupted filenames with accented characters ([ebfa94c](https://github.com/Tallec7/neopro/commit/ebfa94cb5e4e149fc0a04e21e6f6811db9753c23))
 
+## [3.53.6] (2026-02-17)
+
+### Bug Fixes
+
+- **cloud-remote:** add error handlers to 4 timer `updateTimer()` subscribe calls — prevents cascade of "Unhandled error Object" in console after socket disconnect (timer retries silently on next 30s sync)
+
 ## [3.53.5] (2026-02-17)
 
 ### Bug Fixes

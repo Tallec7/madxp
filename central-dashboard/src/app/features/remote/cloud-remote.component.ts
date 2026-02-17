@@ -1466,7 +1466,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.remoteService.updateTimer(this.siteId, {
       action: 'start',
       time: this.timerCurrentTime
-    }).subscribe();
+    }).subscribe({ error: () => { /* Silencieux — retry au prochain sync */ } });
 
     this.timerInterval = setInterval(() => {
       if (this.localOptions.timer.countDown) {
@@ -1508,7 +1508,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.remoteService.updateTimer(this.siteId, {
       action: 'pause',
       time: this.timerCurrentTime
-    }).subscribe();
+    }).subscribe({ error: () => { /* Silencieux — retry au prochain sync */ } });
 
     this.displayToast('Chronomètre en pause', 'info');
   }
@@ -1525,7 +1525,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.remoteService.updateTimer(this.siteId, {
       action: 'reset',
       time: this.timerCurrentTime
-    }).subscribe();
+    }).subscribe({ error: () => { /* Silencieux — retry au prochain sync */ } });
 
     this.displayToast('Chronomètre réinitialisé', 'success');
   }
@@ -1534,7 +1534,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.remoteService.updateTimer(this.siteId, {
       action: 'sync',
       time: this.timerCurrentTime
-    }).subscribe();
+    }).subscribe({ error: () => { /* Silencieux — retry au prochain sync */ } });
   }
 
   public formatTime(seconds: number): string {
