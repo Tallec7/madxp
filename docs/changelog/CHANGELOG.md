@@ -1,3 +1,9 @@
+# [3.55.0](https://github.com/Tallec7/neopro/compare/v3.54.1...v3.55.0) (2026-02-17)
+
+### Features
+
+- **infra:** add migration runner and OTA checksum retry ([f59e795](https://github.com/Tallec7/neopro/commit/f59e79520f55d826f5c82f9d62d40080c4d6fcfa))
+
 ## [3.54.2] (2026-02-17)
 
 ### Features
