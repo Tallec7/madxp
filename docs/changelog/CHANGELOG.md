@@ -1,3 +1,9 @@
+## [3.57.2](https://github.com/Tallec7/neopro/compare/v3.57.1...v3.57.2) (2026-02-17)
+
+### Bug Fixes
+
+- **tests:** align test assertions with server-side pagination and rate limiting ([d83b4e9](https://github.com/Tallec7/neopro/commit/d83b4e96fcde88dcb2ec6f26e5d68cee7fc99a62))
+
 ## [3.57.1](https://github.com/Tallec7/neopro/compare/v3.57.0...v3.57.1) (2026-02-17)
 
 ### Bug Fixes
