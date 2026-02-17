@@ -1,3 +1,9 @@
+## [3.50.1](https://github.com/Tallec7/neopro/compare/v3.50.0...v3.50.1) (2026-02-17)
+
+### Bug Fixes
+
+- **watermark:** auto-deploy config after upload ([ad852d5](https://github.com/Tallec7/neopro/commit/ad852d5c1629407bb3107b18d6aedefd3d22cb4c))
+
 # [3.50.1] (2026-02-17)
 
 ### Bug Fixes
