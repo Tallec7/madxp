@@ -1,3 +1,9 @@
+## [3.53.1](https://github.com/Tallec7/neopro/compare/v3.53.0...v3.53.1) (2026-02-17)
+
+### Bug Fixes
+
+- **lint:** resolve CI lint errors in central-server and central-dashboard ([#402](https://github.com/Tallec7/neopro/issues/402)) ([b40a196](https://github.com/Tallec7/neopro/commit/b40a196bd6aa644704a8e7891446a1b253fb8a67))
+
 # [3.53.0](https://github.com/Tallec7/neopro/compare/v3.52.1...v3.53.0) (2026-02-17)
 
 ### Features
