@@ -33,7 +33,7 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 
 **URL** : `http://localhost:3000` — sélectionner `neopro-production` dans le dropdown "Environment"
 
-**Démarrage** : `docker compose up prometheus grafana` (scrape local + prod Railway)
+**Démarrage** : `docker compose up prometheus alertmanager grafana` (scrape local + prod Railway + alerting Slack)
 
 **Login** :
 
@@ -161,7 +161,33 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 | **CPU serveur**     | Utilisation        | < 60%    | 60-80%         | > 80%          |
 | **Mémoire serveur** | Utilisation        | < 70%    | 70-85%         | > 85%          |
 
-### 3.4 Rapport quotidien (template)
+### 3.4 Vérifier les alertes Prometheus / Grafana Cloud
+
+**En local** : Ouvrir `http://localhost:9093` (Alertmanager UI) — vérifier qu'aucune alerte n'est en `firing`.
+
+**En prod (Grafana Cloud)** : Alerting → Alert rules → Folder "NeoPro Alerts" — vérifier l'état des 11 rules.
+
+**Alertes critiques (action immédiate si firing)** :
+
+| Alerte               | Signification                       | Action                                            |
+| -------------------- | ----------------------------------- | ------------------------------------------------- |
+| `CentralServerDown`  | Serveur inaccessible depuis 2+ min  | Vérifier Railway (crash, redéploiement)           |
+| `ZeroHeartbeats`     | Aucun Pi ne communique depuis 5 min | Vérifier WebSocket, restart serveur si nécessaire |
+| `NoAgentConnections` | 0 agent WS connecté depuis 5 min    | Même diagnostic que ZeroHeartbeats                |
+
+**Alertes warning (surveillance)** :
+
+| Alerte                | Signification        | Action                                        |
+| --------------------- | -------------------- | --------------------------------------------- |
+| `HighErrorRate`       | > 5% de 5xx          | Vérifier logs Railway, DB latence             |
+| `DbPoolSaturation`    | Pool PG > 80%        | Vérifier requêtes longues, connexions leakées |
+| `HighMemoryUsage`     | RSS > 88% de 256MB   | Risk OOM, vérifier heap, restart préventif    |
+| `HighDisconnectRate`  | > 0.5 déconnexions/s | Instabilité réseau fleet-wide                 |
+| `TooManyActiveAlerts` | > 10 alertes actives | Incident fleet-wide probable                  |
+
+> **Config** : Rules Prometheus dans `docker/prometheus/rules.yml`, rules Grafana Cloud dans `docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`
+
+### 3.5 Rapport quotidien (template)
 
 ```markdown
 # Rapport Monitoring Quotidien - [Date]

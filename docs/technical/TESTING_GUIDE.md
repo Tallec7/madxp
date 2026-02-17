@@ -7,7 +7,7 @@ Ce document décrit la stratégie de tests pour le projet NEOPRO, couvrant le ce
 | Composant         | Framework     | Couverture | Tests |
 | ----------------- | ------------- | ---------- | ----- |
 | central-server    | Jest          | ~90%       | 1 586 |
-| central-dashboard | Karma/Jasmine | N/A        | ~150  |
+| central-dashboard | Karma/Jasmine | N/A        | 528   |
 | sync-agent        | Jest          | ~50%       | 89    |
 
 ### Seuils de couverture (central-server)
@@ -286,12 +286,25 @@ describe('Real-World Scenarios', () => {
 
 | Catégorie               | Tests | Statut                          |
 | ----------------------- | ----- | ------------------------------- |
-| Components (standalone) | ~80   | ✅ Tests de rendu, interactions |
-| Services                | ~40   | ✅ Appels API, état             |
-| Guards / Interceptors   | ~15   | ✅ Auth, erreurs                |
-| Pipes / Directives      | ~15   | ✅ Formatage, conditions        |
+| Components (standalone) | ~400  | ✅ Tests de rendu, interactions |
+| Services                | ~70   | ✅ Appels API, état             |
+| Guards / Interceptors   | ~30   | ✅ Auth, erreurs                |
+| Pipes / Directives      | ~28   | ✅ Formatage, conditions        |
 
-> **Note** : Le dashboard Angular utilise Karma/Jasmine. La couverture n'est pas mesurée automatiquement en CI mais les composants critiques (login, sites-list, content-management, site-detail) sont testés.
+> **Note** : Le dashboard Angular utilise Karma/Jasmine. La couverture n'est pas mesurée automatiquement en CI mais les composants critiques (login, sites-list, content-management, site-detail, site-sponsors-tab) sont testés.
+
+#### Pattern `TranslateModule` pour les composants standalone
+
+Les composants standalone qui importent `TranslateModule` nécessitent `TranslateModule.forRoot()` dans le `TestBed` :
+
+```typescript
+await TestBed.configureTestingModule({
+  imports: [MyStandaloneComponent, FormsModule, TranslateModule.forRoot()],
+  providers: [{ provide: MyService, useValue: myServiceMock }],
+}).compileComponents();
+```
+
+> **Piège courant** : oublier `TranslateModule.forRoot()` provoque `NG0201: No provider for TranslateService` sur **tous** les tests du composant.
 
 ### Central Server (Jest)
 

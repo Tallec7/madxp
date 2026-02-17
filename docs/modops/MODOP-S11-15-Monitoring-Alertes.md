@@ -91,6 +91,34 @@ Définis dans `central-server/src/services/alerting.service.ts:50-123`
 | **Webhook** | https://hooks.neopro.fr/alerts | Intégration avec systèmes tiers |
 | **Slack**   | #alerts-neopro                 | Alertes critiques (temps réel)  |
 
+### 3.5 Alertes Prometheus / Grafana Cloud (infrastructure serveur)
+
+En complément des alertes métier Pi (section 3.3), des alertes infrastructure surveillent le **serveur central** lui-même :
+
+**Local** : Prometheus rules (`docker/prometheus/rules.yml`) → Alertmanager (`localhost:9093`) → Slack
+**Prod** : Grafana Cloud managed alerts (`docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`) → Contact point Slack
+
+| Alerte                | Condition               | Délai  | Sévérité | Action                            |
+| --------------------- | ----------------------- | ------ | -------- | --------------------------------- |
+| `CentralServerDown`   | Scrape fail (`up == 0`) | 2 min  | critical | Vérifier Railway, restart         |
+| `ZeroHeartbeats`      | `rate(heartbeats) == 0` | 5 min  | critical | WebSocket cassé ou serveur bloqué |
+| `NoAgentConnections`  | WS agents == 0          | 5 min  | critical | Même diagnostic                   |
+| `HighErrorRate`       | 5xx > 5%                | 5 min  | warning  | Logs Railway, DB latence          |
+| `DbPoolSaturation`    | Pool > 80%              | 3 min  | warning  | Requêtes longues, leaks           |
+| `HighMemoryUsage`     | RSS > 88% de 256MB      | 5 min  | warning  | OOM risk, vérifier heap           |
+| `HighApiLatency`      | P95 > 3s                | 5 min  | warning  | DB lente, charge élevée           |
+| `SlowDbQueries`       | P95 queries > 2s        | 5 min  | warning  | Index manquants                   |
+| `HighDisconnectRate`  | > 0.5/s                 | 3 min  | warning  | Instabilité réseau                |
+| `ConnectedSitesDrop`  | -50% en 10 min          | 5 min  | warning  | Incident fleet-wide               |
+| `TooManyActiveAlerts` | > 10 alertes            | 10 min | warning  | Problème généralisé               |
+
+**Inhibition** : Quand `CentralServerDown` est actif, toutes les alertes `warning` sont supprimées (inutile d'alerter sur la latence si le serveur est mort).
+
+**Routing Slack** :
+
+- `critical` → notification immédiate, repeat 1h
+- `warning` → groupé 30s, repeat 4h
+
 ---
 
 ## 4. MODOP-S11 : ALERTES CPU/MÉMOIRE

@@ -400,6 +400,36 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 - **Test Slack** : `POST /api/alerts/test-slack` (super_admin) — vérifie la configuration webhook
 - **Variables d'environnement** : `SLACK_WEBHOOK_URL` + `SLACK_ALERTS_ENABLED=true`
 
+### 9. Prometheus Alerting (Alertmanager + Grafana Cloud)
+
+Alertes infrastructure côté serveur, complémentaires aux alertes métier Pi (section 8).
+
+- **Alertmanager** (Port 9093) — routing Slack avec 2 niveaux :
+  - `critical` → notification immédiate, repeat 1h
+  - `warning` → groupé 30s, repeat 4h
+  - Inhibition : si `CentralServerDown` actif, les warnings par-métrique sont supprimés
+- **Prometheus rules** (`docker/prometheus/rules.yml`) — 14 alert rules locales :
+
+| Groupe        | Alerte                   | Condition               | Seuil (for) | Sévérité |
+| ------------- | ------------------------ | ----------------------- | ----------- | -------- |
+| Server Health | `CentralServerDown`      | `up == 0`               | 2 min       | critical |
+| Server Health | `CentralServerUnhealthy` | health check fail       | 3 min       | critical |
+| Server Health | `HighMemoryUsage`        | RSS > 88% of 256MB      | 5 min       | warning  |
+| Server Health | `HighCpuUsage`           | CPU > 80%               | 5 min       | warning  |
+| Connectivity  | `ZeroHeartbeats`         | `rate(heartbeats) == 0` | 5 min       | critical |
+| Connectivity  | `NoAgentConnections`     | WS agents == 0          | 5 min       | critical |
+| Connectivity  | `ConnectedSitesDrop`     | -50% en 10 min          | 5 min       | warning  |
+| Connectivity  | `HighDisconnectRate`     | > 0.5/s                 | 3 min       | warning  |
+| Database      | `DbPoolSaturation`       | active/total > 80%      | 3 min       | warning  |
+| Database      | `SlowDbQueries`          | P95 > 2s                | 5 min       | warning  |
+| HTTP          | `HighErrorRate`          | 5xx > 5%                | 5 min       | warning  |
+| HTTP          | `HighApiLatency`         | P95 > 3s                | 5 min       | warning  |
+| Meta          | `TooManyActiveAlerts`    | > 10 alertes actives    | 10 min      | warning  |
+
+- **Grafana Cloud alerts** (`docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`) — 11 managed alert rules (même logique, format Grafana Cloud provisioning) pour la production sur `grafanacloud-tallec7-prom`
+- **Stack local** : `docker compose up prometheus alertmanager grafana`
+- **Stack prod** : Import YAML dans Grafana Cloud → Alerting → Alert rules + configurer Contact point Slack
+
 ---
 
 ## Sécurité

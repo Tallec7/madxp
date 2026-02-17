@@ -277,7 +277,7 @@ docker compose --profile full up -d    # Stack complète (DB + Redis + API + mon
 **Option 4 : Monitoring seul (sans builder l'API)**
 
 ```bash
-docker compose up prometheus grafana   # Scrape local (port 3001) + prod (Railway)
+docker compose up prometheus alertmanager grafana   # Scrape local (port 3001) + alerting Slack
 ```
 
 Ouvrir Grafana : `http://localhost:3000` (admin/admin) — sélectionner l'environnement dans le dropdown.
@@ -287,7 +287,9 @@ Dashboards provisionnés automatiquement :
 - **NeoPro Overview** : HTTP rate, latence, WebSocket, déploiements, CPU/RAM, event loop lag
 - **NeoPro Services** : DB, auth, commandes Pi, alertes réseau Pi, stabilité réseau, heartbeats, déconnexions socket (par raison et type de client)
 
-Services : PostgreSQL (5432), Redis (6379), API (3001), Prometheus (9090), Grafana (3000)
+**Alerting** : 14 Prometheus alert rules (server down, zero heartbeats, pool saturation, error rate...) → Alertmanager → Slack. Voir `docker/prometheus/rules.yml`. Pour la prod, les rules Grafana Cloud sont dans `docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`.
+
+Services : PostgreSQL (5432), Redis (6379), API (3001), Prometheus (9090), Alertmanager (9093), Grafana (3000)
 
 ### Commandes npm
 

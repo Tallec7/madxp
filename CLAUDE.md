@@ -25,7 +25,7 @@ cd e2e && npx playwright test      # E2E
 npm run lint                       # ESLint
 
 # Monitoring
-docker compose up prometheus grafana  # Grafana (3000) + Prometheus (9090) — scrape local + prod
+docker compose up prometheus alertmanager grafana  # Grafana (3000) + Prometheus (9090) + Alertmanager (9093)
 
 # Base de données
 cd central-server && npm run db:migrate

@@ -1,8 +1,22 @@
-## [3.53.2](https://github.com/Tallec7/neopro/compare/v3.53.1...v3.53.2) (2026-02-17)
+## [3.53.4] (2026-02-17)
+
+### Features
+
+- **monitoring:** add Prometheus Alertmanager + Grafana Cloud alert rules for downtime detection — 14 Prometheus rules (local) + 11 Grafana Cloud managed alerts covering server health (`CentralServerDown`, `ZeroHeartbeats`, `NoAgentConnections`), performance (`HighErrorRate`, `HighApiLatency`, `SlowDbQueries`), resources (`HighMemoryUsage`, `DbPoolSaturation`), and fleet stability (`ConnectedSitesDrop`, `HighDisconnectRate`). Critical alerts fire within 2-5 min via Slack. Alertmanager inhibits warning noise when server is fully down.
+- **monitoring:** add Alertmanager service to docker-compose (port 9093) with Slack routing (critical → immediate, warning → grouped 5 min)
+
+### Documentation
+
+- **docs:** update ARCHITECTURE.md with new section 9 (Prometheus Alerting)
+- **docs:** update MODOP-O05-08 with Prometheus/Grafana Cloud alert verification checklist
+- **docs:** update MODOP-S11-15 with infrastructure alert rules reference table
+- **docs:** update README.md and CLAUDE.md monitoring commands to include Alertmanager
+
+## [3.53.3] (2026-02-17)
 
 ### Bug Fixes
 
-- **watermark:** remove config_updated emit from deploy_asset ([be5e519](https://github.com/Tallec7/neopro/commit/be5e51924225e767e35458f19b36452cd7c6979d))
+- **cloud-remote:** fix `Cannot read properties of undefined (reading 'length')` crash — `deepMerge` now clones arrays instead of passing references, `quickMessages` accesses use safe navigation (`?.length`, `?? []`), and `getCategoriesForTimeCategory` guards against undefined `configuration.categories` during socket reconnection
 
 ## [3.53.2] (2026-02-17)
 
@@ -13,6 +27,8 @@
 ## [3.53.1](https://github.com/Tallec7/neopro/compare/v3.53.0...v3.53.1) (2026-02-17)
 
 ### Bug Fixes
+
+- **dashboard:** add missing `TranslateModule.forRoot()` to `SiteSponsorsTabComponent` tests — fixes 29 Karma failures (`NG0201: No provider for TranslateService`)
 
 - **lint:** resolve CI lint errors in central-server and central-dashboard ([#402](https://github.com/Tallec7/neopro/issues/402)) ([b40a196](https://github.com/Tallec7/neopro/commit/b40a196bd6aa644704a8e7891446a1b253fb8a67))
 
