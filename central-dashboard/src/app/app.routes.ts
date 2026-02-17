@@ -129,6 +129,12 @@ export const routes: Routes = [
         data: { roles: ['super_admin', 'admin', 'operator', 'advertiser'] },
         loadComponent: () => import('./features/sponsors/sponsor-analytics.component').then(m => m.SponsorAnalyticsComponent)
       },
+      {
+        path: 'network/advertisers/:id/analytics',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'operator', 'advertiser'] },
+        loadComponent: () => import('./features/network-analytics/network-sponsor-stats.component').then(m => m.NetworkSponsorStatsComponent)
+      },
       // Routes legacy sponsors (redirection vers advertisers pour retrocompatibilite)
       {
         path: 'sponsors',

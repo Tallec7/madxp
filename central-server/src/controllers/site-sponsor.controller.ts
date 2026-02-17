@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { validate as validateUuid } from 'uuid';
-import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
+import { siteSponsorRepository, NetworkSiteBreakdownRow, NetworkDailyTrendRow, NetworkEventTypeRow, SiteBenchmarkRow, SiteSponsorListRow } from '../repositories/site-sponsor.repository';
 import { siteRepository } from '../repositories';
 import { sponsorAccessService } from '../services/sponsor-access.service';
 import { emailService } from '../services/email.service';
@@ -272,6 +272,13 @@ export const getSiteSponsorStats = async (req: AuthRequest, res: Response): Prom
       siteSponsorRepository.getVideos(sponsorId),
     ]);
 
+    // P6.3: CPI calculation
+    const contractAmount = sponsor.contract_amount ? Number(sponsor.contract_amount) : null;
+    const totalImpressions = Number(summary.total_impressions) || 0;
+    const cpi = contractAmount && totalImpressions > 0
+      ? contractAmount / totalImpressions
+      : null;
+
     res.json({
       success: true,
       data: {
@@ -285,6 +292,8 @@ export const getSiteSponsorStats = async (req: AuthRequest, res: Response): Prom
         summary,
         daily_trends: dailyTrends,
         videos,
+        cpi,
+        contract_amount: contractAmount,
       },
     });
   } catch (error: unknown) {
@@ -445,5 +454,151 @@ export const createAccessLink = async (req: AuthRequest, res: Response): Promise
   } catch (error: unknown) {
     logger.error('Error creating sponsor access link:', error);
     res.status(500).json({ success: false, error: 'Failed to create access link' });
+  }
+};
+
+// =============================================================================
+// GET /api/network/advertisers/:advertiserId/stats
+// Stats reseau agregees cross-club pour un annonceur NEOPRO
+// =============================================================================
+
+export const getNetworkSponsorStats = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { advertiserId } = req.params;
+    const from = (req.query.from as string) || new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    const to = (req.query.to as string) || new Date().toISOString().split('T')[0];
+
+    if (!validateUuid(advertiserId)) {
+      res.status(400).json({ success: false, error: 'Invalid advertiser ID' });
+      return;
+    }
+
+    const [summaryRow, bySite, dailyTrends, byEventType] = await Promise.all([
+      siteSponsorRepository.getNetworkStatsSummary(advertiserId, from, to),
+      siteSponsorRepository.getNetworkStatsBySite(advertiserId, from, to),
+      siteSponsorRepository.getNetworkDailyTrends(advertiserId, from, to),
+      siteSponsorRepository.getNetworkStatsByEventType(advertiserId, from, to),
+    ]);
+
+    const summary = summaryRow.rows[0] || {
+      total_impressions: '0', total_screen_time_seconds: '0',
+      completion_rate: '0', estimated_reach: '0', active_sites: '0', active_days: '0',
+    };
+
+    // P6.3: CPI reseau — somme des contract_amount / total impressions
+    const sponsorRows = await siteSponsorRepository.listByAdvertiser(advertiserId);
+    const totalContractAmount = sponsorRows.reduce((sum: number, s: SiteSponsorListRow) => {
+      return sum + (s.contract_amount ? Number(s.contract_amount) : 0);
+    }, 0);
+    const totalImpressions = Number(summary.total_impressions) || 0;
+    const cpi = totalContractAmount > 0 && totalImpressions > 0
+      ? totalContractAmount / totalImpressions
+      : null;
+
+    res.json({
+      success: true,
+      data: {
+        advertiser_id: advertiserId,
+        period: { from, to },
+        summary: {
+          total_impressions: Number(summary.total_impressions) || 0,
+          total_screen_time_seconds: Number(summary.total_screen_time_seconds) || 0,
+          completion_rate: Number(summary.completion_rate) || 0,
+          estimated_reach: Number(summary.estimated_reach) || 0,
+          active_sites: Number(summary.active_sites) || 0,
+          active_days: Number(summary.active_days) || 0,
+          cpi,
+        },
+        by_site: bySite.rows.map((r: NetworkSiteBreakdownRow) => ({
+          site_id: r.site_id,
+          site_name: r.site_name,
+          club_name: r.club_name,
+          impressions: Number(r.impressions) || 0,
+          screen_time_seconds: Number(r.screen_time_seconds) || 0,
+          completion_rate: Number(r.completion_rate) || 0,
+        })),
+        daily_trends: dailyTrends.rows.map((r: NetworkDailyTrendRow) => ({
+          date: r.date,
+          impressions: Number(r.impressions) || 0,
+          screen_time: Number(r.screen_time) || 0,
+        })),
+        by_event_type: byEventType.rows.map((r: NetworkEventTypeRow) => ({
+          event_type: r.event_type,
+          count: Number(r.count) || 0,
+          total_screen_time: Number(r.total_screen_time) || 0,
+        })),
+      },
+    });
+  } catch (error: unknown) {
+    logger.error('Error fetching network sponsor stats:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch network sponsor stats' });
+  }
+};
+
+// =============================================================================
+// GET /api/sites/:siteId/sponsors/benchmark
+// Benchmark intra-club : comparaison des sponsors d'un meme site
+// =============================================================================
+
+export const getSiteSponsorBenchmark = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { siteId } = req.params;
+    const from = (req.query.from as string) || new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    const to = (req.query.to as string) || new Date().toISOString().split('T')[0];
+
+    if (!validateUuid(siteId)) {
+      res.status(400).json({ success: false, error: 'Invalid site ID' });
+      return;
+    }
+
+    const result = await siteSponsorRepository.getBenchmark(siteId, from, to);
+    const sponsors = result.rows.map((r: SiteBenchmarkRow, idx: number) => {
+      const impressions = Number(r.impressions) || 0;
+      const contractAmount = r.contract_amount ? Number(r.contract_amount) : null;
+      const cpi = contractAmount && impressions > 0 ? contractAmount / impressions : null;
+      return {
+        site_sponsor_id: r.site_sponsor_id,
+        sponsor_name: r.sponsor_name,
+        impressions,
+        screen_time_seconds: Number(r.screen_time_seconds) || 0,
+        completion_rate: Number(r.completion_rate) || 0,
+        active_days: Number(r.active_days) || 0,
+        contract_amount: contractAmount,
+        cpi,
+        rank: idx + 1,
+      };
+    });
+
+    // Calculate averages
+    type BenchmarkEntry = typeof sponsors[number];
+    const total = sponsors.length || 1;
+    const avgImpressions = sponsors.reduce((s: number, e: BenchmarkEntry) => s + e.impressions, 0) / total;
+    const avgScreenTime = sponsors.reduce((s: number, e: BenchmarkEntry) => s + e.screen_time_seconds, 0) / total;
+    const avgCompletion = sponsors.reduce((s: number, e: BenchmarkEntry) => s + e.completion_rate, 0) / total;
+    const avgActiveDays = sponsors.reduce((s: number, e: BenchmarkEntry) => s + e.active_days, 0) / total;
+    const sponsorsWithCpi = sponsors.filter((e: BenchmarkEntry) => e.cpi !== null);
+    const avgCpi = sponsorsWithCpi.length > 0
+      ? sponsorsWithCpi.reduce((s: number, e: BenchmarkEntry) => s + (e.cpi || 0), 0) / sponsorsWithCpi.length
+      : null;
+
+    res.json({
+      success: true,
+      data: {
+        site_id: siteId,
+        period: { from, to },
+        sponsors,
+        averages: {
+          impressions: avgImpressions,
+          screen_time_seconds: avgScreenTime,
+          completion_rate: avgCompletion,
+          active_days: avgActiveDays,
+          cpi: avgCpi,
+        },
+        total_sponsors: sponsors.length,
+      },
+    });
+  } catch (error: unknown) {
+    logger.error('Error fetching site sponsor benchmark:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch benchmark data' });
   }
 };

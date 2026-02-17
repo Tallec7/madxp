@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, BehaviorSubject, tap, map } from 'rxjs';
 import { ApiService } from './api.service';
 import { CacheService } from './cache.service';
-import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus, LocalVideo, LocalStorage, CloudVideo, FleetHealthData, MatchHistoryData, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, ProfilesListResponse, DeployProfileResponse, SyncProfilesResponse, SiteSponsor, SiteSponsorVideo, SiteSponsorStatsResponse, GeneratedReport } from '../models';
+import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus, LocalVideo, LocalStorage, CloudVideo, FleetHealthData, MatchHistoryData, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, ProfilesListResponse, DeployProfileResponse, SyncProfilesResponse, SiteSponsor, SiteSponsorVideo, SiteSponsorStatsResponse, GeneratedReport, NetworkSponsorStatsResponse, SiteSponsorBenchmarkResponse } from '../models';
 
 /** Wrapper backend standard { success: boolean; data: T } */
 interface ApiResponse<T> { success: boolean; data: T }
@@ -698,6 +698,24 @@ export class SitesService {
   getSponsorReports(sponsorId: string): Observable<GeneratedReport[]> {
     return this.api.get<ApiResponse<GeneratedReport[]>>(
       `/reports/site-sponsors/${sponsorId}`
+    ).pipe(map(r => r.data));
+  }
+
+  getNetworkSponsorStats(advertiserId: string, from?: string, to?: string): Observable<NetworkSponsorStatsResponse> {
+    const params: Record<string, string> = {};
+    if (from) params['from'] = from;
+    if (to) params['to'] = to;
+    return this.api.get<ApiResponse<NetworkSponsorStatsResponse>>(
+      `/network/advertisers/${advertiserId}/stats`, params
+    ).pipe(map(r => r.data));
+  }
+
+  getSiteSponsorBenchmark(siteId: string, from?: string, to?: string): Observable<SiteSponsorBenchmarkResponse> {
+    const params: Record<string, string> = {};
+    if (from) params['from'] = from;
+    if (to) params['to'] = to;
+    return this.api.get<ApiResponse<SiteSponsorBenchmarkResponse>>(
+      `/sites/${siteId}/sponsors/benchmark`, params
     ).pipe(map(r => r.data));
   }
 

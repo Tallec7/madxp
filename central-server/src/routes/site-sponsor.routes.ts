@@ -7,6 +7,7 @@ import {
   updateSiteSponsor,
   deleteSiteSponsor,
   getSiteSponsorStats,
+  getSiteSponsorBenchmark,
   addVideoToSiteSponsor,
   removeVideoFromSiteSponsor,
   createAccessLink,
@@ -34,6 +35,20 @@ router.get(
   authenticate,
   requireRole('admin', 'operator'),
   listSiteSponsors
+);
+
+/**
+ * GET /api/sites/:siteId/sponsors/benchmark
+ * Benchmark intra-club : classement des sponsors actifs d'un site.
+ * AVANT /:sponsorId pour eviter capture de "benchmark" comme UUID.
+ *
+ * Auth: admin, operator
+ */
+router.get(
+  '/:siteId/sponsors/benchmark',
+  authenticate,
+  requireRole('admin', 'operator'),
+  getSiteSponsorBenchmark
 );
 
 /**

@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError, delay } from 'rxjs';
 import { SiteSponsorsTabComponent } from './site-sponsors-tab.component';
 import { SitesService } from '../../../../core/services/sites.service';
@@ -98,6 +99,8 @@ describe('SiteSponsorsTabComponent', () => {
     videos: [
       { id: 'v1', site_sponsor_id: 'sp1', video_id: null, video_filename: 'sponsor-a.mp4', is_primary: true, added_at: '2024-01-01T00:00:00Z' },
     ],
+    cpi: 0.067,
+    contract_amount: 100,
   };
 
   const mockReports: GeneratedReport[] = [
@@ -125,6 +128,7 @@ describe('SiteSponsorsTabComponent', () => {
       'getSiteSponsorStats',
       'generateSponsorReport',
       'getSponsorReports',
+      'getSiteSponsorBenchmark',
     ]);
     sitesServiceMock.listSiteSponsors.and.returnValue(of(mockListResponse));
     sitesServiceMock.getSiteSponsorStats.and.returnValue(of(mockStatsResponse));
@@ -133,11 +137,20 @@ describe('SiteSponsorsTabComponent', () => {
     sitesServiceMock.updateSiteSponsor.and.returnValue(of(mockSponsors[0]));
     sitesServiceMock.deleteSiteSponsor.and.returnValue(of(undefined));
     sitesServiceMock.generateSponsorReport.and.returnValue(of({ reportId: 'r2', url: 'https://example.com/report2.pdf' }));
+    sitesServiceMock.getSiteSponsorBenchmark.and.returnValue(of({
+      site_id: 's1',
+      period: { from: '2024-01-01', to: '2024-01-31' },
+      sponsors: [
+        { site_sponsor_id: 'sp1', sponsor_name: 'Sponsor A', impressions: 1500, screen_time_seconds: 3600, completion_rate: 0.95, active_days: 28, contract_amount: 100, cpi: 0.067 },
+        { site_sponsor_id: 'sp2', sponsor_name: 'Sponsor B', impressions: 800, screen_time_seconds: 1800, completion_rate: 0.88, active_days: 20, contract_amount: null, cpi: null },
+      ],
+      averages: { impressions: 1150, screen_time_seconds: 2700, completion_rate: 0.915, active_days: 24, cpi: 0.067 },
+    }));
 
     const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
 
     await TestBed.configureTestingModule({
-      imports: [SiteSponsorsTabComponent, FormsModule],
+      imports: [SiteSponsorsTabComponent, FormsModule, TranslateModule.forRoot()],
       providers: [
         { provide: SitesService, useValue: sitesServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },

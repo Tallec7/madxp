@@ -103,6 +103,54 @@ export interface SiteSponsorEventTypeRow extends QueryResultRow {
   total_screen_time: string;
 }
 
+// P6 — Network stats, Benchmark, Match breakdown
+export interface NetworkStatsSummary extends QueryResultRow {
+  total_impressions: string;
+  total_screen_time_seconds: string;
+  completion_rate: string;
+  estimated_reach: string;
+  active_sites: string;
+  active_days: string;
+}
+
+export interface NetworkSiteBreakdownRow extends QueryResultRow {
+  site_id: string;
+  site_name: string;
+  club_name: string;
+  impressions: string;
+  screen_time_seconds: string;
+  completion_rate: string;
+}
+
+export interface NetworkDailyTrendRow extends QueryResultRow {
+  date: string;
+  impressions: string;
+  screen_time: string;
+}
+
+export interface NetworkEventTypeRow extends QueryResultRow {
+  event_type: string;
+  count: string;
+  total_screen_time: string;
+}
+
+export interface SiteBenchmarkRow extends QueryResultRow {
+  site_sponsor_id: string;
+  sponsor_name: string;
+  impressions: string;
+  screen_time_seconds: string;
+  completion_rate: string;
+  active_days: string;
+  contract_amount: string | null;
+}
+
+export interface MatchDayBreakdownRow extends QueryResultRow {
+  match_date: string;
+  impressions: string;
+  screen_time_seconds: string;
+  audience_estimate: string;
+}
+
 // --------------------------------------------------------------------------
 // Repository
 // --------------------------------------------------------------------------
@@ -524,6 +572,150 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
       [siteSponsorId, from, to]
     );
     return parseInt(result.rows[0]?.count || '0');
+  }
+
+  // =========================================================================
+  // P6.1 — Network stats (cross-club pour annonceurs NEOPRO)
+  // =========================================================================
+
+  async getNetworkStatsSummary(
+    advertiserId: string, from: string, to: string
+  ): Promise<{ rows: NetworkStatsSummary[] }> {
+    return query<NetworkStatsSummary>(
+      `SELECT
+         COUNT(*)::text AS total_impressions,
+         COALESCE(SUM(ai.duration_played), 0)::text AS total_screen_time_seconds,
+         CASE WHEN COUNT(*) > 0
+           THEN ROUND(SUM(CASE WHEN ai.completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text
+           ELSE '0' END AS completion_rate,
+         COALESCE(SUM(ai.audience_estimate), 0)::text AS estimated_reach,
+         COUNT(DISTINCT ss.site_id)::text AS active_sites,
+         COUNT(DISTINCT DATE(ai.played_at))::text AS active_days
+       FROM advertiser_impressions ai
+       JOIN site_sponsors ss ON ss.id = ai.site_sponsor_id
+       WHERE ss.advertiser_id = $1
+         AND ai.played_at >= $2::date
+         AND ai.played_at < ($3::date + INTERVAL '1 day')`,
+      [advertiserId, from, to]
+    );
+  }
+
+  async getNetworkStatsBySite(
+    advertiserId: string, from: string, to: string
+  ): Promise<{ rows: NetworkSiteBreakdownRow[] }> {
+    return query<NetworkSiteBreakdownRow>(
+      `SELECT
+         ss.site_id,
+         s.site_name,
+         s.club_name,
+         COUNT(*)::text AS impressions,
+         COALESCE(SUM(ai.duration_played), 0)::text AS screen_time_seconds,
+         CASE WHEN COUNT(*) > 0
+           THEN ROUND(SUM(CASE WHEN ai.completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text
+           ELSE '0' END AS completion_rate
+       FROM advertiser_impressions ai
+       JOIN site_sponsors ss ON ss.id = ai.site_sponsor_id
+       JOIN sites s ON s.id = ss.site_id
+       WHERE ss.advertiser_id = $1
+         AND ai.played_at >= $2::date
+         AND ai.played_at < ($3::date + INTERVAL '1 day')
+       GROUP BY ss.site_id, s.site_name, s.club_name
+       ORDER BY impressions DESC`,
+      [advertiserId, from, to]
+    );
+  }
+
+  async getNetworkDailyTrends(
+    advertiserId: string, from: string, to: string
+  ): Promise<{ rows: NetworkDailyTrendRow[] }> {
+    return query<NetworkDailyTrendRow>(
+      `SELECT
+         DATE(ai.played_at)::text AS date,
+         COUNT(*)::text AS impressions,
+         COALESCE(SUM(ai.duration_played), 0)::text AS screen_time
+       FROM advertiser_impressions ai
+       JOIN site_sponsors ss ON ss.id = ai.site_sponsor_id
+       WHERE ss.advertiser_id = $1
+         AND ai.played_at >= $2::date
+         AND ai.played_at < ($3::date + INTERVAL '1 day')
+       GROUP BY DATE(ai.played_at)
+       ORDER BY date ASC`,
+      [advertiserId, from, to]
+    );
+  }
+
+  async getNetworkStatsByEventType(
+    advertiserId: string, from: string, to: string
+  ): Promise<{ rows: NetworkEventTypeRow[] }> {
+    return query<NetworkEventTypeRow>(
+      `SELECT
+         ai.event_type,
+         COUNT(*)::text AS count,
+         COALESCE(SUM(ai.duration_played), 0)::text AS total_screen_time
+       FROM advertiser_impressions ai
+       JOIN site_sponsors ss ON ss.id = ai.site_sponsor_id
+       WHERE ss.advertiser_id = $1
+         AND ai.played_at >= $2::date
+         AND ai.played_at < ($3::date + INTERVAL '1 day')
+       GROUP BY ai.event_type
+       ORDER BY count DESC`,
+      [advertiserId, from, to]
+    );
+  }
+
+  // =========================================================================
+  // P6.2 — Benchmark intra-club
+  // =========================================================================
+
+  async getBenchmark(
+    siteId: string, from: string, to: string
+  ): Promise<{ rows: SiteBenchmarkRow[] }> {
+    return query<SiteBenchmarkRow>(
+      `SELECT
+         ss.id AS site_sponsor_id,
+         ss.name AS sponsor_name,
+         COUNT(ai.id)::text AS impressions,
+         COALESCE(SUM(ai.duration_played), 0)::text AS screen_time_seconds,
+         CASE WHEN COUNT(ai.id) > 0
+           THEN ROUND(SUM(CASE WHEN ai.completed THEN 1 ELSE 0 END)::numeric / COUNT(ai.id) * 100, 1)::text
+           ELSE '0' END AS completion_rate,
+         COUNT(DISTINCT DATE(ai.played_at))::text AS active_days,
+         ss.contract_amount::text AS contract_amount
+       FROM site_sponsors ss
+       LEFT JOIN advertiser_impressions ai
+         ON ai.site_sponsor_id = ss.id
+         AND ai.played_at >= $2::date
+         AND ai.played_at < ($3::date + INTERVAL '1 day')
+       WHERE ss.site_id = $1
+         AND ss.status = 'active'
+       GROUP BY ss.id
+       ORDER BY impressions DESC`,
+      [siteId, from, to]
+    );
+  }
+
+  // =========================================================================
+  // P6.4 — Match-by-match breakdown
+  // =========================================================================
+
+  async getMatchDayBreakdown(
+    siteSponsorId: string, from: string, to: string
+  ): Promise<{ rows: MatchDayBreakdownRow[] }> {
+    return query<MatchDayBreakdownRow>(
+      `SELECT
+         DATE(played_at)::text AS match_date,
+         COUNT(*)::text AS impressions,
+         COALESCE(SUM(duration_played), 0)::text AS screen_time_seconds,
+         COALESCE(SUM(audience_estimate), 0)::text AS audience_estimate
+       FROM advertiser_impressions
+       WHERE site_sponsor_id = $1
+         AND event_type = 'match'
+         AND played_at >= $2::date
+         AND played_at < ($3::date + INTERVAL '1 day')
+       GROUP BY DATE(played_at)
+       ORDER BY match_date ASC`,
+      [siteSponsorId, from, to]
+    );
   }
 }
 

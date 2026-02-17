@@ -20,6 +20,7 @@ import logger from '../config/logger';
 import PDFDocument from 'pdfkit';
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
 import * as crypto from 'crypto';
+import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 
 // Types
 interface ReportData {
@@ -1565,6 +1566,7 @@ interface SiteSponsorReportData {
     explanation: string;
   };
   byEventType: Array<{ eventType: string; count: number; screenTime: number }>;
+  matchBreakdown: Array<{ matchDate: string; impressions: number; screenTimeSeconds: number; audienceEstimate: number }>;
 }
 
 /**
@@ -1678,6 +1680,18 @@ export async function generateSiteSponsorReport(
 
     const label = periodLabel || `${new Date(from).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
 
+    // 6. Match-by-match breakdown (P6.4 — conditionnelle si matchSessionCount > 0)
+    let matchBreakdown: SiteSponsorReportData['matchBreakdown'] = [];
+    if (matchSessionCount > 0) {
+      const breakdownResult = await siteSponsorRepository.getMatchDayBreakdown(siteSponsorId, from, to);
+      matchBreakdown = breakdownResult.rows.map((r: { match_date: string; impressions: string; screen_time_seconds: string; audience_estimate: string }) => ({
+        matchDate: String(r.match_date),
+        impressions: parseInt(r.impressions as string) || 0,
+        screenTimeSeconds: parseInt(r.screen_time_seconds as string) || 0,
+        audienceEstimate: parseInt(r.audience_estimate as string) || 0,
+      }));
+    }
+
     const reportData: SiteSponsorReportData = {
       sponsor: {
         id: String(sponsor.id),
@@ -1707,6 +1721,7 @@ export async function generateSiteSponsorReport(
         explanation: reachExplanation,
       },
       byEventType,
+      matchBreakdown,
     };
 
     return await generateSiteSponsorPdf(reportData);
@@ -2043,6 +2058,133 @@ async function generateSiteSponsorPdf(data: SiteSponsorReportData): Promise<Buff
         .fontSize(7)
         .fillColor(COLORS.border)
         .text(`Ref: ${signature}`, 40, y);
+
+      // ====================================================================
+      // PAGE 2 — DÉTAIL PAR JOURNÉE DE MATCH (conditionnelle)
+      // ====================================================================
+      if (data.matchBreakdown.length > 0) {
+        doc.addPage();
+        let y2 = 40;
+
+        // Header page 2
+        doc
+          .rect(0, 0, doc.page.width, 60)
+          .fill(COLORS.primary);
+
+        doc
+          .fontSize(16)
+          .fillColor('#FFFFFF')
+          .font('Helvetica-Bold')
+          .text('DETAIL PAR JOURNEE DE MATCH', 40, 20, { width: pageWidth });
+
+        y2 = 75;
+
+        // Tableau match breakdown
+        const colWidths = [120, 90, 110, 100, 95];
+        const headers = ['Date', 'Passages', 'Temps ecran', 'Audience est.', 'Moy/passage'];
+        const tableLeft = 40;
+
+        // Header row
+        doc
+          .rect(tableLeft, y2, pageWidth, 22)
+          .fill(COLORS.primary);
+
+        let colX = tableLeft + 8;
+        headers.forEach((header, i) => {
+          doc
+            .fontSize(9)
+            .fillColor('#FFFFFF')
+            .font('Helvetica-Bold')
+            .text(header, colX, y2 + 6, { width: colWidths[i] - 8 });
+          colX += colWidths[i];
+        });
+
+        y2 += 22;
+
+        // Data rows
+        let totalImpressions = 0;
+        let totalScreenTime = 0;
+        let totalAudience = 0;
+
+        data.matchBreakdown.forEach((row, idx) => {
+          const isEven = idx % 2 === 0;
+          if (isEven) {
+            doc
+              .rect(tableLeft, y2, pageWidth, 20)
+              .fill('#F8FAFC');
+          }
+
+          const avgPerImpression = row.impressions > 0 ? Math.round(row.screenTimeSeconds / row.impressions) : 0;
+          const dateFormatted = new Date(row.matchDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+          const values = [
+            dateFormatted,
+            formatNumber(row.impressions),
+            `${Math.floor(row.screenTimeSeconds / 60)} min`,
+            formatNumber(row.audienceEstimate),
+            `${avgPerImpression}s`,
+          ];
+
+          colX = tableLeft + 8;
+          values.forEach((val, i) => {
+            doc
+              .fontSize(9)
+              .fillColor(COLORS.text)
+              .font('Helvetica')
+              .text(val, colX, y2 + 5, { width: colWidths[i] - 8 });
+            colX += colWidths[i];
+          });
+
+          totalImpressions += row.impressions;
+          totalScreenTime += row.screenTimeSeconds;
+          totalAudience += row.audienceEstimate;
+
+          y2 += 20;
+
+          // Saut de page si nécessaire
+          if (y2 > doc.page.height - 80) {
+            doc.addPage();
+            y2 = 40;
+          }
+        });
+
+        // Ligne totaux
+        const avgPerImpressionTotal = totalImpressions > 0 ? Math.round(totalScreenTime / totalImpressions) : 0;
+
+        doc
+          .rect(tableLeft, y2, pageWidth, 22)
+          .fill(COLORS.primary);
+
+        const totals = [
+          'TOTAL',
+          formatNumber(totalImpressions),
+          `${Math.floor(totalScreenTime / 60)} min`,
+          formatNumber(totalAudience),
+          `${avgPerImpressionTotal}s`,
+        ];
+
+        colX = tableLeft + 8;
+        totals.forEach((val, i) => {
+          doc
+            .fontSize(9)
+            .fillColor('#FFFFFF')
+            .font('Helvetica-Bold')
+            .text(val, colX, y2 + 6, { width: colWidths[i] - 8 });
+          colX += colWidths[i];
+        });
+
+        y2 += 35;
+
+        // Footer note
+        doc
+          .fontSize(8)
+          .fillColor(COLORS.border)
+          .font('Helvetica')
+          .text(
+            'Donnees limitees aux journees avec event_type = match',
+            40, y2, { width: pageWidth }
+          );
+      }
 
       doc.end();
     } catch (error) {

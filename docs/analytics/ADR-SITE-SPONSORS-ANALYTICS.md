@@ -1004,10 +1004,10 @@ L'expérience dashboard pour le suivi.
 
 ### Palier 6 — Stats Réseau & Régie (post-MVP)
 
-- [ ] Stats réseau agrégées pour la régie NEOPRO
-- [ ] Comparaison sponsor vs autres sponsors du club
-- [ ] CPI (coût par impression)
-- [ ] Concept de "match" lié aux impressions (tableau match par match dans le PDF)
+- [x] Stats réseau agrégées pour la régie NEOPRO (P6.1 — `getNetworkStatsSummary`, `NetworkSponsorStatsComponent`, route `/network/advertisers/:id/analytics`)
+- [x] Comparaison sponsor vs autres sponsors du club (P6.2 — `getBenchmark`, panneau benchmark dans `site-sponsors-tab.component.ts`)
+- [x] CPI (coût par impression) (P6.3 — calcul applicatif `contract_amount / impressions`, KPI card + colonne benchmark + réseau)
+- [x] Concept de "match" lié aux impressions (P6.4 — `getMatchDayBreakdown`, page 2 conditionnelle dans `pdf-report.service.ts`)
 
 ---
 

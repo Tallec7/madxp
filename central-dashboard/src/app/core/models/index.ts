@@ -728,6 +728,72 @@ export interface SiteSponsorStatsResponse {
   summary: SiteSponsorStats;
   daily_trends: SiteSponsorDailyTrend[];
   videos: SiteSponsorVideo[];
+  cpi: number | null;
+  contract_amount: number | null;
+}
+
+export interface NetworkSponsorSiteBreakdown {
+  site_id: string;
+  site_name: string;
+  club_name: string;
+  impressions: number;
+  screen_time_seconds: number;
+  completion_rate: number;
+}
+
+export interface NetworkSponsorDailyTrend {
+  date: string;
+  impressions: number;
+  screen_time: number;
+}
+
+export interface NetworkSponsorEventType {
+  event_type: string;
+  count: number;
+  total_screen_time: number;
+}
+
+export interface NetworkSponsorStatsResponse {
+  advertiser_id: string;
+  period: { from: string; to: string };
+  summary: {
+    total_impressions: number;
+    total_screen_time_seconds: number;
+    completion_rate: number;
+    estimated_reach: number;
+    active_sites: number;
+    active_days: number;
+    cpi: number | null;
+  };
+  by_site: NetworkSponsorSiteBreakdown[];
+  daily_trends: NetworkSponsorDailyTrend[];
+  by_event_type: NetworkSponsorEventType[];
+}
+
+export interface SiteSponsorBenchmarkEntry {
+  site_sponsor_id: string;
+  sponsor_name: string;
+  impressions: number;
+  screen_time_seconds: number;
+  completion_rate: number;
+  active_days: number;
+  contract_amount: number | null;
+  cpi: number | null;
+  rank: number;
+}
+
+export interface SiteSponsorBenchmarkResponse {
+  site_id: string;
+  period: { from: string; to: string };
+  sponsors: SiteSponsorBenchmarkEntry[];
+  averages: {
+    impressions: number;
+    screen_time_seconds: number;
+    completion_rate: number;
+    active_days: number;
+    cpi: number | null;
+  };
+  total_sponsors: number;
 }
 
 export interface GeneratedReport {

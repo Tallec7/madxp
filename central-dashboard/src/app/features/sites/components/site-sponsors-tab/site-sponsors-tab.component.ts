@@ -7,7 +7,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
-import { Site, SiteSponsor, SiteSponsorVideo, SiteSponsorStatsResponse, SiteSponsorDailyTrend, GeneratedReport } from '../../../../core/models';
+import { Site, SiteSponsor, SiteSponsorVideo, SiteSponsorStatsResponse, SiteSponsorDailyTrend, GeneratedReport, SiteSponsorBenchmarkResponse } from '../../../../core/models';
 
 Chart.register(...registerables);
 
@@ -110,7 +110,7 @@ Chart.register(...registerables);
 
                 <div class="detail-panel" *ngIf="!detailLoading && detailStats">
                   <!-- KPI Cards -->
-                  <div class="kpi-grid-4">
+                  <div class="kpi-grid-5">
                     <div class="kpi-card accent-blue">
                       <div class="kpi-value">{{ detailStats.summary.total_impressions | number }}</div>
                       <div class="kpi-label">Passages</div>
@@ -127,6 +127,11 @@ Chart.register(...registerables);
                     <div class="kpi-card accent-orange">
                       <div class="kpi-value">{{ formatScreenTime(detailStats.summary.total_screen_time_seconds) }}</div>
                       <div class="kpi-label">Temps d'écran</div>
+                    </div>
+                    <div class="kpi-card accent-teal" *ngIf="detailStats.cpi !== null && detailStats.cpi !== undefined">
+                      <div class="kpi-value">{{ detailStats.cpi | number:'1.2-2' }} &euro;</div>
+                      <div class="kpi-label">CPI</div>
+                      <div class="kpi-sub">Cout par impression</div>
                     </div>
                   </div>
 
@@ -190,6 +195,56 @@ Chart.register(...registerables);
                         </a>
                       </div>
                     </div>
+                  </div>
+
+                  <!-- Benchmark intra-club (P6.2) -->
+                  <div class="benchmark-section" *ngIf="benchmarkData">
+                    <h4>Benchmark intra-club</h4>
+                    <p class="benchmark-subtitle">Classement des {{ benchmarkData.total_sponsors }} sponsors actifs du club</p>
+                    <table class="benchmark-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Sponsor</th>
+                          <th>Passages</th>
+                          <th>Temps ecran</th>
+                          <th>Completion</th>
+                          <th>Jours actifs</th>
+                          <th *ngIf="benchmarkHasCpi">CPI</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let entry of benchmarkData.sponsors"
+                            [class.benchmark-highlight]="entry.site_sponsor_id === expandedSponsorId"
+                            [class.benchmark-above-avg]="entry.impressions > benchmarkData!.averages.impressions">
+                          <td class="rank-cell">{{ entry.rank }}</td>
+                          <td>
+                            {{ entry.sponsor_name }}
+                            <span class="you-badge" *ngIf="entry.site_sponsor_id === expandedSponsorId">VOUS</span>
+                          </td>
+                          <td>{{ entry.impressions | number }}</td>
+                          <td>{{ formatScreenTime(entry.screen_time_seconds) }}</td>
+                          <td>{{ entry.completion_rate | number:'1.0-0' }}%</td>
+                          <td>{{ entry.active_days }}</td>
+                          <td *ngIf="benchmarkHasCpi">{{ entry.cpi !== null ? (entry.cpi | number:'1.2-2') + ' EUR' : '---' }}</td>
+                        </tr>
+                      </tbody>
+                      <tfoot>
+                        <tr class="benchmark-avg-row">
+                          <td></td>
+                          <td><em>Moyenne</em></td>
+                          <td>{{ benchmarkData.averages.impressions | number:'1.0-0' }}</td>
+                          <td>{{ formatScreenTime(benchmarkData.averages.screen_time_seconds) }}</td>
+                          <td>{{ benchmarkData.averages.completion_rate | number:'1.0-0' }}%</td>
+                          <td>{{ benchmarkData.averages.active_days | number:'1.0-0' }}</td>
+                          <td *ngIf="benchmarkHasCpi">{{ benchmarkData.averages.cpi !== null ? (benchmarkData.averages.cpi | number:'1.2-2') + ' EUR' : '---' }}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                  <div class="benchmark-loading" *ngIf="benchmarkLoading">
+                    <div class="spinner"></div>
+                    <p>Chargement du benchmark...</p>
                   </div>
                 </div>
               </td>
@@ -388,9 +443,9 @@ Chart.register(...registerables);
     }
 
     /* KPI Grid */
-    .kpi-grid-4 {
+    .kpi-grid-4, .kpi-grid-5 {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
@@ -405,6 +460,7 @@ Chart.register(...registerables);
     .kpi-card.accent-green { border-left-color: #22c55e; }
     .kpi-card.accent-purple { border-left-color: #8b5cf6; }
     .kpi-card.accent-orange { border-left-color: #f59e0b; }
+    .kpi-card.accent-teal { border-left-color: #14b8a6; }
     .kpi-value {
       font-size: 1.5rem;
       font-weight: 800;
@@ -490,6 +546,22 @@ Chart.register(...registerables);
       font-weight: 500;
     }
     .report-download:hover { text-decoration: underline; }
+
+    /* Benchmark */
+    .benchmark-section { margin-top: 1.5rem; background: white; padding: 1rem; border-radius: 8px; }
+    .benchmark-section h4 { margin: 0 0 0.25rem; font-size: 0.9rem; color: #334155; }
+    .benchmark-subtitle { font-size: 0.8rem; color: #94a3b8; margin: 0 0 0.75rem; }
+    .benchmark-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .benchmark-table th { padding: 0.5rem 0.65rem; text-align: left; font-weight: 600; color: #64748b; font-size: 0.7rem; text-transform: uppercase; background: #f8fafc; border-bottom: 2px solid #e2e8f0; }
+    .benchmark-table td { padding: 0.45rem 0.65rem; border-bottom: 1px solid #f1f5f9; }
+    .benchmark-table tbody tr:hover { background: #f8fafc; }
+    .benchmark-highlight { background: #eff6ff !important; font-weight: 600; }
+    .benchmark-above-avg td { color: #166534; }
+    .rank-cell { font-weight: 700; color: #64748b; width: 2rem; text-align: center; }
+    .you-badge { display: inline-block; background: #3b82f6; color: white; font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: 3px; margin-left: 0.35rem; vertical-align: middle; }
+    .benchmark-avg-row { background: #f8fafc; border-top: 2px solid #e2e8f0; }
+    .benchmark-avg-row td { font-style: italic; color: #64748b; font-weight: 500; }
+    .benchmark-loading { display: flex; flex-direction: column; align-items: center; padding: 1rem; color: #64748b; font-size: 0.8rem; }
 
     /* Modal */
     .modal-overlay {
@@ -616,6 +688,11 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     status: string;
   } = { name: '', contact_name: '', contact_email: '', contact_phone: '', status: 'active' };
 
+  // Benchmark (P6.2)
+  benchmarkData: SiteSponsorBenchmarkResponse | null = null;
+  benchmarkLoading = false;
+  benchmarkHasCpi = false;
+
   // Report generation
   generatingReportId: string | null = null;
 
@@ -660,6 +737,8 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
       this.expandedSponsor = null;
       this.detailStats = null;
       this.reports = [];
+      this.benchmarkData = null;
+      this.benchmarkHasCpi = false;
       this.accessLinkUrl = null;
       this.accessLinkCopied = false;
       this.destroyChart();
@@ -672,11 +751,13 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.detailLoading = true;
     this.detailStats = null;
     this.reports = [];
+    this.benchmarkData = null;
+    this.benchmarkHasCpi = false;
     this.accessLinkUrl = null;
     this.accessLinkCopied = false;
     this.cdr.markForCheck();
 
-    // Load stats + reports in parallel
+    // Load stats + reports + benchmark in parallel
     this.sitesService.getSiteSponsorStats(this.siteId, sponsor.id).subscribe({
       next: (stats) => {
         this.detailStats = stats;
@@ -700,6 +781,20 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.reportsLoading = false;
+        this.cdr.markForCheck();
+      },
+    });
+
+    this.benchmarkLoading = true;
+    this.sitesService.getSiteSponsorBenchmark(this.siteId).subscribe({
+      next: (benchmark) => {
+        this.benchmarkData = benchmark;
+        this.benchmarkHasCpi = benchmark.sponsors.some(s => s.cpi !== null);
+        this.benchmarkLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.benchmarkLoading = false;
         this.cdr.markForCheck();
       },
     });
