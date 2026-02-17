@@ -1,3 +1,9 @@
+# [3.54.0](https://github.com/Tallec7/neopro/compare/v3.53.4...v3.54.0) (2026-02-17)
+
+### Features
+
+- **analytics:** add P6 — network stats, benchmark, CPI, match breakdown PDF ([58451c4](https://github.com/Tallec7/neopro/commit/58451c4c30c86c585cdedea9d612f49f1730ef0b))
+
 ## [3.53.4](https://github.com/Tallec7/neopro/compare/v3.53.3...v3.53.4) (2026-02-17)
 
 ### Bug Fixes
