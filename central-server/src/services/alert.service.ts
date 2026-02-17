@@ -50,8 +50,6 @@ const MAX_COOLDOWN_ENTRIES = 200;
 const BOOT_GRACE_PERIOD_MS = 90 * 1000; // 90 seconds (covers Socket.IO reconnection cycle)
 // WiFi alert cooldown: avoid repeating the same low-signal alert every hour
 const WIFI_ALERT_COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 hours
-// WiFi signal recovery threshold (must be clearly above -75 trigger to avoid flapping)
-const WIFI_RECOVERY_THRESHOLD_DBM = -70;
 
 class AlertService {
   private webhookUrl: string | null;

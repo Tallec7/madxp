@@ -2037,7 +2037,7 @@ async function generateSiteSponsorPdf(data: SiteSponsorReportData): Promise<Buff
       // Signature numerique
       y += 14;
       const signatureData = `${data.sponsor.id}|${data.period.from}|${data.period.to}|${data.kpis.totalImpressions}`;
-      const signature = require('crypto').createHash('sha256').update(signatureData).digest('hex').substring(0, 16);
+      const signature = crypto.createHash('sha256').update(signatureData).digest('hex').substring(0, 16);
 
       doc
         .fontSize(7)
