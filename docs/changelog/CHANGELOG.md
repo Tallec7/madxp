@@ -4,6 +4,19 @@
 
 - **content:** add server-side pagination to video listing page ([1712962](https://github.com/Tallec7/neopro/commit/1712962d966e2cb32f873692a29871b32cebee5b))
 
+## [3.55.6] (2026-02-17)
+
+### Features
+
+- **watermark:** add watermark selector dropdown on Dashboard — `GET /api/assets/watermarks` lists available watermarks from FTP, users select from a dropdown instead of uploading each time
+- **watermark:** new FTP directory listing capability (`listFtpDirectory`, `listAssets`) filters image files and enriches with CDN URLs and Pi paths
+- **watermark:** upload new watermark button still available below the dropdown, auto-refreshes the list after upload
+
+### Documentation
+
+- **video-storage:** document `listAssets()` function, watermark selector flow, and Prometheus metrics for FTP list operations
+- **cloud-api:** update assets routes table with `GET /api/assets/watermarks`
+
 ## [3.55.5] (2026-02-17)
 
 ### Features

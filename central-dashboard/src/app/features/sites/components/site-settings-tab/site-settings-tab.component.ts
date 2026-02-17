@@ -5,7 +5,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
-import { AssetService, WatermarkConfig, OverlayPosition as WmOverlayPosition, WatermarkAnimation, WatermarkScheduleRule } from '../../../../core/services/asset.service';
+import { AssetService, WatermarkConfig, WatermarkFileInfo, OverlayPosition as WmOverlayPosition, WatermarkAnimation, WatermarkScheduleRule } from '../../../../core/services/asset.service';
 import { ReportsService, GeneratedReport } from '../../../../core/services/reports.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import { Site, OverlayTheme, ScoreOverlayPosition } from '../../../../core/models';
@@ -420,43 +420,56 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
           Ajoutez un logo ou une image qui s'affichera en permanence sur la TV (ex: logo du club, sponsor principal).
         </p>
 
-        <!-- Upload zone -->
-        <div class="watermark-upload" *ngIf="!watermarkConfig.imagePath">
-          <label class="upload-zone" [class.dragging]="isDraggingWatermark">
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
-              (change)="onWatermarkFileSelected($event)"
-              hidden
-            />
-            <span class="upload-icon">📤</span>
-            <span class="upload-text">Cliquez ou glissez une image ici</span>
-            <span class="upload-hint">PNG, JPEG, GIF, WebP ou SVG (max 5 MB)</span>
-          </label>
+        <!-- Watermark selector dropdown -->
+        <div class="watermark-selector">
+          <div class="form-group">
+            <label>Image watermark</label>
+            <div class="selector-row">
+              <select
+                class="form-input"
+                [(ngModel)]="selectedWatermarkName"
+                (ngModelChange)="onWatermarkSelected($event)"
+                [disabled]="loadingWatermarks"
+              >
+                <option value="">-- Aucun watermark --</option>
+                <option *ngFor="let wm of availableWatermarks" [value]="wm.name">
+                  {{ wm.name }}
+                </option>
+              </select>
+              <button
+                class="btn btn-secondary btn-sm"
+                (click)="loadAvailableWatermarks()"
+                [disabled]="loadingWatermarks"
+                title="Rafraichir la liste"
+              >
+                {{ loadingWatermarks ? '...' : 'Rafraichir' }}
+              </button>
+            </div>
+          </div>
         </div>
 
-        <!-- Current watermark preview -->
+        <!-- Preview of selected watermark -->
         <div class="watermark-current" *ngIf="watermarkConfig.imagePath">
           <div class="watermark-preview-box">
             <img [src]="getWatermarkPreviewUrl()" alt="Watermark" class="watermark-img" (error)="onWatermarkImageError($event)"/>
           </div>
           <div class="watermark-info">
             <span class="watermark-path">{{ getWatermarkFilename() }}</span>
-            <div class="watermark-actions">
-              <label class="btn btn-secondary btn-sm">
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
-                  (change)="onWatermarkFileSelected($event)"
-                  hidden
-                />
-                Changer l'image
-              </label>
-              <button class="btn btn-danger btn-sm" (click)="removeWatermark()">
-                Supprimer
-              </button>
-            </div>
           </div>
+        </div>
+
+        <!-- Upload new watermark -->
+        <div class="watermark-upload-new">
+          <label class="upload-zone-compact">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+              (change)="onWatermarkFileSelected($event)"
+              hidden
+            />
+            Uploader un nouveau watermark
+          </label>
+          <span class="upload-hint-inline">PNG, JPEG, GIF, WebP ou SVG (max 5 MB)</span>
         </div>
 
         <!-- Watermark config form -->
@@ -1198,6 +1211,50 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
     }
 
     /* Watermark styles */
+    .watermark-selector {
+      margin-bottom: 1rem;
+    }
+
+    .selector-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .selector-row select {
+      flex: 1;
+    }
+
+    .watermark-upload-new {
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .upload-zone-compact {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border: 1px dashed #475569;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #94a3b8;
+      font-size: 0.85rem;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .upload-zone-compact:hover {
+      border-color: #60a5fa;
+      color: #60a5fa;
+    }
+
+    .upload-hint-inline {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
     .watermark-upload {
       margin-bottom: 1rem;
     }
@@ -1601,6 +1658,11 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   uploadProgressText: string = '';
   savingWatermark: boolean = false;
 
+  // Watermark selector
+  availableWatermarks: WatermarkFileInfo[] = [];
+  loadingWatermarks: boolean = false;
+  selectedWatermarkName: string = '';
+
   // Options pour les selects
   positionOptions: { value: WmOverlayPosition; label: string }[] = [];
   animationOptions: { value: WatermarkAnimation; label: string }[] = [];
@@ -1661,6 +1723,9 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
           imagePath: mirrorWatermark.imagePath
         });
       }
+
+      // Charger la liste des watermarks disponibles
+      this.loadAvailableWatermarks();
 
       // Charger les rapports du club
       this.loadClubReports();
@@ -2102,6 +2167,61 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   // Watermark methods
   // ============================================================================
 
+  loadAvailableWatermarks(): void {
+    this.loadingWatermarks = true;
+    this.assetService.listWatermarks().subscribe({
+      next: (response) => {
+        this.availableWatermarks = response.watermarks;
+        this.loadingWatermarks = false;
+
+        // Pre-select the current watermark if one is configured
+        if (this.watermarkConfig.imagePath) {
+          const currentFilename = this.watermarkConfig.imagePath.split('/').pop() || '';
+          const match = this.availableWatermarks.find(w => w.name === currentFilename);
+          if (match) {
+            this.selectedWatermarkName = match.name;
+          }
+        }
+      },
+      error: () => {
+        this.loadingWatermarks = false;
+        this.notificationService.error('Erreur lors du chargement des watermarks');
+      }
+    });
+  }
+
+  onWatermarkSelected(name: string): void {
+    if (!name) {
+      // Option "Aucun" selectionnee — supprimer le watermark
+      this.watermarkConfig = {
+        ...this.watermarkConfig,
+        enabled: false,
+        imagePath: '',
+        cloudUrl: undefined,
+      };
+      this.watermarkPreviewUrl = null;
+      this.selectedWatermarkFile = null;
+      this.selectedWatermarkName = '';
+      this.saveWatermarkConfig();
+      return;
+    }
+
+    const watermark = this.availableWatermarks.find(w => w.name === name);
+    if (!watermark) return;
+
+    this.selectedWatermarkName = name;
+    this.watermarkPreviewUrl = null;
+    this.selectedWatermarkFile = null;
+
+    // Mettre a jour la config avec le watermark selectionne
+    this.watermarkConfig = {
+      ...this.watermarkConfig,
+      imagePath: watermark.localPath,
+      cloudUrl: watermark.url,
+      enabled: true,
+    };
+  }
+
   onWatermarkFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
@@ -2168,6 +2288,9 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
         // L'image a été déployée via deploy_asset, mais configuration.json
         // doit aussi être mis à jour pour que le watermark s'affiche
         this.saveWatermarkConfig();
+
+        // Rafraichir la liste des watermarks pour inclure le nouveau fichier
+        this.loadAvailableWatermarks();
       },
       error: (error) => {
         this.uploadingWatermark = false;
@@ -2192,6 +2315,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     };
     this.watermarkPreviewUrl = null;
     this.selectedWatermarkFile = null;
+    this.selectedWatermarkName = '';
 
     // Déployer la config sans watermark
     this.saveWatermarkConfig();

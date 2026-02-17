@@ -112,6 +112,25 @@ export const validateWatermarkConfig = async (req: AuthRequest, res: Response) =
 };
 
 /**
+ * Liste les watermarks disponibles sur le stockage FTP
+ * GET /api/assets/watermarks
+ */
+export const listWatermarks = async (_req: AuthRequest, res: Response) => {
+  try {
+    const watermarks = await assetService.listWatermarks();
+
+    res.json({
+      success: true,
+      watermarks,
+      count: watermarks.length,
+    });
+  } catch (error) {
+    logger.error('Error listing watermarks', { error });
+    res.status(500).json({ error: 'Erreur lors de la récupération des watermarks' });
+  }
+};
+
+/**
  * Déploie un asset existant vers un site
  * POST /api/assets/deploy/:siteId
  */

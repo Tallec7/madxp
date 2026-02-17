@@ -94,6 +94,21 @@ export interface DeployAssetResponse {
   commandId?: string;
 }
 
+export interface WatermarkFileInfo {
+  name: string;
+  url: string;
+  size: number;
+  modifiedAt: string | null;
+  localPath: string;
+  storagePath: string;
+}
+
+export interface ListWatermarksResponse {
+  success: boolean;
+  watermarks: WatermarkFileInfo[];
+  count: number;
+}
+
 // ============================================================================
 // Service
 // ============================================================================
@@ -117,6 +132,16 @@ export class AssetService {
     return this.http.post<UploadWatermarkResponse>(
       `${this.apiUrl}/assets/watermark/${siteId}`,
       formData,
+      { withCredentials: true }
+    );
+  }
+
+  /**
+   * Liste les watermarks disponibles sur le serveur FTP
+   */
+  listWatermarks(): Observable<ListWatermarksResponse> {
+    return this.http.get<ListWatermarksResponse>(
+      `${this.apiUrl}/assets/watermarks`,
       { withCredentials: true }
     );
   }

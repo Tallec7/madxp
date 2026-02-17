@@ -14,6 +14,7 @@ jest.mock('./storage.service', () => ({
   getAssetUrl: jest.fn(),
   verifyFileExists: jest.fn().mockResolvedValue({ exists: true, size: 15 }),
   isStorageConfigured: jest.fn().mockReturnValue(true),
+  listAssets: jest.fn().mockResolvedValue([]),
 }));
 jest.mock('../config/logger', () => ({
   info: jest.fn(),
@@ -22,7 +23,7 @@ jest.mock('../config/logger', () => ({
   debug: jest.fn(),
 }));
 
-import { uploadAsset as storageUploadAsset, getAssetUrl, verifyFileExists, isStorageConfigured } from './storage.service';
+import { uploadAsset as storageUploadAsset, getAssetUrl, verifyFileExists, isStorageConfigured, listAssets } from './storage.service';
 
 const mockCommandQueue = commandQueueService as jest.Mocked<typeof commandQueueService>;
 const mockStorageUploadAsset = storageUploadAsset as jest.MockedFunction<typeof storageUploadAsset>;
@@ -423,6 +424,93 @@ describe('AssetService', () => {
         const result = assetService.validateWatermarkConfig({ animation } as any);
         expect(result.valid).toBe(true);
       }
+    });
+  });
+
+  describe('listWatermarks', () => {
+    const mockListAssets = listAssets as jest.MockedFunction<typeof listAssets>;
+
+    it('should list watermarks from storage and enrich with URLs', async () => {
+      // Arrange
+      mockListAssets.mockResolvedValue([
+        { name: 'logo.png', size: 1024, modifiedAt: new Date('2025-01-01') },
+        { name: 'sponsor.jpg', size: 2048, modifiedAt: new Date('2025-02-01') },
+      ]);
+      mockGetAssetUrl.mockImplementation((path: string) => `https://cdn.example.com/${path}`);
+
+      // Act
+      const result = await assetService.listWatermarks();
+
+      // Assert
+      expect(result).toHaveLength(2);
+      expect(result[0].name).toBe('logo.png');
+      expect(result[0].url).toBe('https://cdn.example.com/watermarks/logo.png');
+      expect(result[0].localPath).toBe('assets/watermarks/logo.png');
+      expect(result[0].storagePath).toBe('watermarks/logo.png');
+      expect(result[1].name).toBe('sponsor.jpg');
+    });
+
+    it('should filter non-image files', async () => {
+      // Arrange
+      mockListAssets.mockResolvedValue([
+        { name: 'logo.png', size: 1024, modifiedAt: new Date() },
+        { name: 'readme.txt', size: 100, modifiedAt: new Date() },
+        { name: 'data.json', size: 200, modifiedAt: new Date() },
+      ]);
+      mockGetAssetUrl.mockImplementation((path: string) => `https://cdn.example.com/${path}`);
+
+      // Act
+      const result = await assetService.listWatermarks();
+
+      // Assert
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('logo.png');
+    });
+
+    it('should return empty array when no watermarks exist', async () => {
+      // Arrange
+      mockListAssets.mockResolvedValue([]);
+
+      // Act
+      const result = await assetService.listWatermarks();
+
+      // Assert
+      expect(result).toHaveLength(0);
+    });
+
+    it('should sort watermarks alphabetically', async () => {
+      // Arrange
+      mockListAssets.mockResolvedValue([
+        { name: 'zebra.png', size: 100, modifiedAt: undefined },
+        { name: 'alpha.png', size: 200, modifiedAt: undefined },
+        { name: 'middle.jpg', size: 300, modifiedAt: undefined },
+      ]);
+      mockGetAssetUrl.mockImplementation((path: string) => `https://cdn.example.com/${path}`);
+
+      // Act
+      const result = await assetService.listWatermarks();
+
+      // Assert
+      expect(result.map(w => w.name)).toEqual(['alpha.png', 'middle.jpg', 'zebra.png']);
+    });
+
+    it('should accept all valid image extensions', async () => {
+      // Arrange
+      mockListAssets.mockResolvedValue([
+        { name: 'a.png', size: 100, modifiedAt: undefined },
+        { name: 'b.jpg', size: 100, modifiedAt: undefined },
+        { name: 'c.jpeg', size: 100, modifiedAt: undefined },
+        { name: 'd.gif', size: 100, modifiedAt: undefined },
+        { name: 'e.webp', size: 100, modifiedAt: undefined },
+        { name: 'f.svg', size: 100, modifiedAt: undefined },
+      ]);
+      mockGetAssetUrl.mockImplementation((path: string) => `https://cdn.example.com/${path}`);
+
+      // Act
+      const result = await assetService.listWatermarks();
+
+      // Assert
+      expect(result).toHaveLength(6);
     });
   });
 });

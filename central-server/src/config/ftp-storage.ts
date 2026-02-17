@@ -652,3 +652,68 @@ export const uploadUpdateToFtpWithVerification = async (
 
   return null;
 };
+
+// ============================================================================
+// DIRECTORY LISTING
+// ============================================================================
+
+export interface FtpFileInfo {
+  name: string;
+  size: number;
+  modifiedAt: Date | undefined;
+}
+
+/**
+ * Liste les fichiers dans un répertoire FTP.
+ * Retourne uniquement les fichiers (pas les sous-dossiers).
+ */
+export const listFtpDirectory = async (
+  directory: string
+): Promise<FtpFileInfo[]> => {
+  if (!isFtpConfigured()) {
+    logger.error('FTP not configured');
+    return [];
+  }
+
+  const client = new ftp.Client();
+  client.ftp.verbose = process.env.NODE_ENV === 'development';
+
+  try {
+    await client.access({
+      host: ftpConfig.host,
+      port: ftpConfig.port,
+      user: ftpConfig.user,
+      password: ftpConfig.password,
+      secure: ftpConfig.secure,
+    });
+
+    const listStart = Date.now();
+    const list = await client.list(directory);
+    const listDuration = (Date.now() - listStart) / 1000;
+
+    const files = list
+      .filter(f => f.type === ftp.FileType.File)
+      .map(f => ({
+        name: f.name,
+        size: f.size,
+        modifiedAt: f.modifiedAt,
+      }));
+
+    logger.info('FTP directory listing successful', {
+      directory,
+      fileCount: files.length,
+      duration: listDuration,
+    });
+
+    getMetricsService()?.recordFtpOperation('list', 'success', 'video', listDuration);
+
+    return files;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown FTP error';
+    logger.error('Error listing FTP directory', { directory, error: errorMessage });
+    getMetricsService()?.recordFtpOperation('list', 'failed', 'video');
+    return [];
+  } finally {
+    client.close();
+  }
+};

@@ -20,7 +20,9 @@ import {
   uploadUpdateToFtpWithVerification,
   deleteUpdateFromFtp,
   verifyFtpFileExists,
+  listFtpDirectory,
 } from '../config/ftp-storage';
+export type { FtpFileInfo } from '../config/ftp-storage';
 import logger from '../config/logger';
 
 // =============================================================================
@@ -168,6 +170,19 @@ export const uploadAsset = async (
 export const getAssetUrl = (storagePath: string): string => {
   ensureVideoStorageConfigured();
   return getFtpPublicUrl(storagePath);
+};
+
+// =============================================================================
+// DIRECTORY LISTING
+// =============================================================================
+
+/**
+ * List files in a storage directory (e.g., 'watermarks').
+ * Returns file info objects with name, size, and modification date.
+ */
+export const listAssets = async (directory: string): Promise<import('../config/ftp-storage').FtpFileInfo[]> => {
+  ensureVideoStorageConfigured();
+  return listFtpDirectory(directory);
 };
 
 // =============================================================================

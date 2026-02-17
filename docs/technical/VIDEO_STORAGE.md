@@ -76,16 +76,17 @@ Toutes les opérations de stockage passent par `central-server/src/services/stor
 
 **Fonctions principales** :
 
-| Fonction                | Description                                       |
-| ----------------------- | ------------------------------------------------- |
-| `uploadVideo()`         | Upload vidéo depuis un buffer mémoire             |
-| `uploadVideoFromDisk()` | Upload vidéo depuis un fichier disque (streaming) |
-| `deleteVideo()`         | Supprime un fichier vidéo du stockage             |
-| `getVideoUrl()`         | Retourne l'URL publique d'une vidéo               |
-| `uploadUpdate()`        | Upload un package de mise à jour                  |
-| `uploadAsset()`         | Upload un asset (watermark, logo, rapport)        |
-| `getAssetUrl()`         | Retourne l'URL publique d'un asset                |
-| `verifyFileExists()`    | Vérifie l'existence d'un fichier sur FTP          |
+| Fonction                | Description                                               |
+| ----------------------- | --------------------------------------------------------- |
+| `uploadVideo()`         | Upload vidéo depuis un buffer mémoire                     |
+| `uploadVideoFromDisk()` | Upload vidéo depuis un fichier disque (streaming)         |
+| `deleteVideo()`         | Supprime un fichier vidéo du stockage                     |
+| `getVideoUrl()`         | Retourne l'URL publique d'une vidéo                       |
+| `uploadUpdate()`        | Upload un package de mise à jour                          |
+| `uploadAsset()`         | Upload un asset (watermark, logo, rapport)                |
+| `getAssetUrl()`         | Retourne l'URL publique d'un asset                        |
+| `listAssets(directory)` | Liste les fichiers d'un répertoire FTP (ex: `watermarks`) |
+| `verifyFileExists()`    | Vérifie l'existence d'un fichier sur FTP                  |
 
 **Comportement** :
 
@@ -555,17 +556,18 @@ Checksum mismatch: expected abc123, got def456
 
 ## Historique des versions
 
-| Version | Date       | Modifications                                                     |
-| ------- | ---------- | ----------------------------------------------------------------- |
-| 1.0     | 2026-01-09 | Création initiale                                                 |
-| 2.0     | 2026-02-10 | Suppression Supabase fallback, migration vers storage.service.ts  |
-| 2.1     | 2026-02-15 | Ajout section suppression manuelle depuis le Dashboard            |
-| 2.2     | 2026-02-15 | Fix null category, piCategory, modal UX                           |
-| 2.3     | 2026-02-16 | Auto-création sous-dossiers FTP (ensureDir) + troubleshooting 550 |
-| 2.4     | 2026-02-17 | Flux déploiement watermark, fix race condition deploy_asset       |
-| 2.5     | 2026-02-17 | Re-deploy image on save, Pi-side retry with backoff               |
-| 2.6     | 2026-02-17 | Cache-buster systématique pour bypass nginx immutable (30j)       |
-| 3.0     | 2026-02-17 | Fix encodage multer latin1→UTF-8, sanitization NFD, métriques     |
+| Version | Date       | Modifications                                                      |
+| ------- | ---------- | ------------------------------------------------------------------ |
+| 1.0     | 2026-01-09 | Création initiale                                                  |
+| 2.0     | 2026-02-10 | Suppression Supabase fallback, migration vers storage.service.ts   |
+| 2.1     | 2026-02-15 | Ajout section suppression manuelle depuis le Dashboard             |
+| 2.2     | 2026-02-15 | Fix null category, piCategory, modal UX                            |
+| 2.3     | 2026-02-16 | Auto-création sous-dossiers FTP (ensureDir) + troubleshooting 550  |
+| 2.4     | 2026-02-17 | Flux déploiement watermark, fix race condition deploy_asset        |
+| 2.5     | 2026-02-17 | Re-deploy image on save, Pi-side retry with backoff                |
+| 2.6     | 2026-02-17 | Cache-buster systématique pour bypass nginx immutable (30j)        |
+| 3.0     | 2026-02-17 | Fix encodage multer latin1→UTF-8, sanitization NFD, métriques      |
+| 3.1     | 2026-02-17 | Liste déroulante watermark, GET /api/assets/watermarks, listAssets |
 
 ---
 
@@ -666,6 +668,23 @@ Le watermark s'affiche si les 3 conditions sont remplies :
 3. `configuration.watermark.imagePath` est défini et non vide
 
 > **Note (v3.54.3+) :** Si l'image échoue au chargement (`<img (error)>`), le service ne désactive plus définitivement le watermark. Il programme un retry avec backoff (5 tentatives). L'image `src` utilise `getImageSrc()` avec cache-buster systématique (v3.55.4+) pour contourner le cache nginx immutable.
+
+### Sélection watermark depuis le Dashboard (v3.55.6+)
+
+Le Dashboard propose une **liste déroulante** des watermarks disponibles sur le FTP, au lieu de forcer un upload à chaque fois.
+
+**Endpoint** : `GET /api/assets/watermarks` (admin, operator)
+
+**Flux** :
+
+1. Le Dashboard appelle `GET /api/assets/watermarks` au chargement du tab Settings
+2. L'API liste le dossier `watermarks/` sur le FTP via `listAssets('watermarks')`
+3. Filtre les fichiers image (.png, .jpg, .jpeg, .gif, .webp, .svg)
+4. Enrichit chaque fichier avec `url` (CDN), `localPath` (chemin Pi), `storagePath` (chemin FTP)
+5. L'utilisateur sélectionne un watermark dans la dropdown → `update_config` + `deploy_asset` vers le Pi
+6. L'upload d'un nouveau watermark reste possible (zone upload compacte), rafraîchit la liste après succès
+
+**Monitoring** : L'opération FTP `list` est instrumentée via `recordFtpOperation('list', status, 'video', duration)` — visible dans les métriques Prometheus `ftp_operations_total{operation="list"}` et `ftp_operation_duration_seconds{operation="list"}`.
 
 ---
 

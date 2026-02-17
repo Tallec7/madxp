@@ -316,6 +316,7 @@ describe('Critical API routes are registered (not 404)', () => {
     // logs.routes
     { method: 'post' as const, path: '/api/logs/frontend' },
     // assets.routes
+    { method: 'get' as const, path: '/api/assets/watermarks' },
     { method: 'post' as const, path: '/api/assets/watermark/test-site-id' },
     // remote.routes
     { method: 'get' as const, path: '/api/remote/test-site-id/state' },

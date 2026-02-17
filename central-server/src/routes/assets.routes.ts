@@ -23,6 +23,14 @@ const uploadImage = multer({
 });
 
 // Watermark routes
+// GET /api/assets/watermarks - Liste les watermarks disponibles sur le FTP
+router.get(
+  '/watermarks',
+  authenticate,
+  requireRole('admin', 'operator'),
+  assetsController.listWatermarks
+);
+
 // POST /api/assets/watermark/:siteId - Upload et déploie un watermark
 router.post(
   '/watermark/:siteId',

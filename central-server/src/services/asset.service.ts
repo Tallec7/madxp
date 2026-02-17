@@ -1,12 +1,25 @@
 import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
-import { uploadAsset as storageUploadAsset, getAssetUrl, verifyFileExists } from './storage.service';
+import { uploadAsset as storageUploadAsset, getAssetUrl, verifyFileExists, listAssets } from './storage.service';
 import crypto from 'crypto';
 import {
   WatermarkConfig,
   OverlayPosition,
   WatermarkAnimation,
 } from '../types';
+
+export interface WatermarkFileInfo {
+  name: string;
+  url: string;
+  size: number;
+  modifiedAt: Date | undefined;
+  /** Chemin utilisé sur le Pi : assets/watermarks/{name} */
+  localPath: string;
+  /** Chemin sur le FTP : watermarks/{name} */
+  storagePath: string;
+}
+
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
 /**
  * Service de gestion des assets (images watermark, logos, etc.)
@@ -167,6 +180,31 @@ class AssetService {
     );
 
     return { uploadResult, deployResult };
+  }
+
+  /**
+   * Liste les watermarks disponibles sur le stockage FTP.
+   * Filtre les fichiers image et enrichit avec les URLs publiques.
+   */
+  async listWatermarks(): Promise<WatermarkFileInfo[]> {
+    const files = await listAssets('watermarks');
+
+    return files
+      .filter(f => {
+        const ext = f.name.lastIndexOf('.') >= 0
+          ? f.name.substring(f.name.lastIndexOf('.')).toLowerCase()
+          : '';
+        return IMAGE_EXTENSIONS.includes(ext);
+      })
+      .map(f => ({
+        name: f.name,
+        url: getAssetUrl(`watermarks/${f.name}`),
+        size: f.size,
+        modifiedAt: f.modifiedAt,
+        localPath: `assets/watermarks/${f.name}`,
+        storagePath: `watermarks/${f.name}`,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   /**
