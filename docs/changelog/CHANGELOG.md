@@ -1,3 +1,9 @@
+## [3.55.1](https://github.com/Tallec7/neopro/compare/v3.55.0...v3.55.1) (2026-02-17)
+
+### Bug Fixes
+
+- **watermark:** re-deploy image on save + retry with backoff on Pi ([29fbcc8](https://github.com/Tallec7/neopro/commit/29fbcc81d1a8dc561a87bf41e66c0f92420c5901))
+
 ## [3.55.1] (2026-02-17)
 
 ### Bug Fixes
