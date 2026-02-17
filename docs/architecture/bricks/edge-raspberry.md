@@ -88,13 +88,13 @@ Bo\u00eetier Raspberry Pi 4 install\u00e9 dans chaque club sportif. Diffuse du c
 
 ## 6. Donn\u00e9es manipul\u00e9es
 
-| Entit\u00e9        | CRUD | Source de v\u00e9rit\u00e9 | R\u00e8gles d'acc\u00e8s                       |
-| ------------------ | ---- | -------------------------- | ---------------------------------------------- |
-| configuration.json | CRUD | Locale (Pi)                | Merge NEOPRO content=cloud, Club content=local |
-| /videos/           | CRD  | Locale                     | Lock sur vid\u00e9os NEOPRO (non supprimables) |
-| analytics buffer   | CR   | Locale                     | Push vers cloud quand connect\u00e9            |
-| licence            | R    | Cloud (cache local)        | V\u00e9rifi\u00e9e \u00e0 la connexion         |
-| sync history       | CR   | Locale                     | Historique des syncs r\u00e9ussies             |
+| Entit\u00e9        | CRUD | Source de v\u00e9rit\u00e9 | R\u00e8gles d'acc\u00e8s                                                     |
+| ------------------ | ---- | -------------------------- | ---------------------------------------------------------------------------- |
+| configuration.json | CRUD | Locale (Pi)                | Merge NEOPRO content=cloud, Club content=local                               |
+| /videos/           | CRD  | Locale                     | Lock sur vid\u00e9os NEOPRO c\u00f4t\u00e9 Pi (non supprimables par le club) |
+| analytics buffer   | CR   | Locale                     | Push vers cloud quand connect\u00e9                                          |
+| licence            | R    | Cloud (cache local)        | V\u00e9rifi\u00e9e \u00e0 la connexion                                       |
+| sync history       | CR   | Locale                     | Historique des syncs r\u00e9ussies                                           |
 
 ## 7. Modes de panne et d\u00e9gradation
 

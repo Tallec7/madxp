@@ -63,7 +63,7 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 │  │ ADMIN UI LOCALE (port 8080)                               │ │
 │  │ • Voit tout le contenu                                    │ │
 │  │ • Modifie uniquement les catégories "Club"                │ │
-│  │ • ANNONCES NEOPRO = lecture seule, non supprimable        │ │
+│  │ • ANNONCES NEOPRO = lecture seule côté Pi (non supprimable par le club) │ │
 │  └───────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -171,8 +171,8 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 
 - Catégorie dédiée : `ANNONCES_NEOPRO` (ou nom configurable)
 - Flag `locked: true` dans la configuration
-- L'admin UI affiche ces éléments en lecture seule
-- Icône cadenas visible pour l'opérateur
+- L'admin UI **côté Pi** affiche ces éléments en lecture seule (cadenas visible pour l'opérateur club)
+- Le **Dashboard Central** a un accès complet (suppression, modification) — c'est l'outil de gestion NEOPRO
 
 **Structure dans configuration.json** :
 
@@ -442,10 +442,12 @@ Le dashboard central propose deux modes de déploiement :
 2. La catégorie club est renommée automatiquement (ajout suffixe `_club`)
 3. L'opérateur est notifié du changement
 
-**Conflit de suppression** : Si l'opérateur tente de supprimer du contenu NEOPRO :
+**Conflit de suppression** : Si l'opérateur club tente de supprimer du contenu NEOPRO depuis l'admin Pi :
 
-1. L'action est bloquée côté Admin UI
+1. L'action est bloquée côté Admin UI du Pi
 2. Message d'erreur : "Ce contenu est géré par NEOPRO et ne peut pas être supprimé"
+
+> **Note** : Cette protection s'applique uniquement côté Pi (clubs). Le Dashboard Central permet la suppression de tout contenu, y compris NEOPRO.
 
 ### 5.6 Nommage des vidéos déployées
 
@@ -773,10 +775,10 @@ socket.emit('neopro_sync', {
 });
 ```
 
-### 7.3 Admin UI - Gestion des Verrous
+### 7.3 Admin UI Pi - Gestion des Verrous (côté club uniquement)
 
 ```typescript
-// admin-server.js - Vérification avant modification
+// raspberry/admin - Vérification avant modification (Pi uniquement)
 
 function canModifyCategory(category, user) {
   if (category.locked && category.owner === 'neopro') {

@@ -90,14 +90,14 @@ Depuis v3.36.1, le sync-agent maintient une **connexion Socket.IO persistante** 
 
 ## 6. Donn\u00e9es manipul\u00e9es
 
-| Entit\u00e9        | CRUD | Source de v\u00e9rit\u00e9      | R\u00e8gles d'acc\u00e8s               |
-| ------------------ | ---- | ------------------------------- | -------------------------------------- |
-| configuration.json | CRUD | Locale (merge cloud+local)      | Lock cat\u00e9gories NEOPRO            |
-| /videos/           | CRD  | Locale                          | Download cloud, upload local admin     |
-| offline-queue      | CR   | Locale (m\u00e9moire + fichier) | Replay \u00e0 la reconnexion           |
-| sync-history       | CR   | Locale                          | Historique des syncs                   |
-| analytics buffer   | CR   | Locale                          | Push vers cloud p\u00e9riodique        |
-| licence cache      | RU   | Cloud (TTL 24h)                 | V\u00e9rifi\u00e9e \u00e0 la connexion |
+| Entit\u00e9        | CRUD | Source de v\u00e9rit\u00e9      | R\u00e8gles d'acc\u00e8s                        |
+| ------------------ | ---- | ------------------------------- | ----------------------------------------------- |
+| configuration.json | CRUD | Locale (merge cloud+local)      | Lock cat\u00e9gories NEOPRO (c\u00f4t\u00e9 Pi) |
+| /videos/           | CRD  | Locale                          | Download cloud, upload local admin              |
+| offline-queue      | CR   | Locale (m\u00e9moire + fichier) | Replay \u00e0 la reconnexion                    |
+| sync-history       | CR   | Locale                          | Historique des syncs                            |
+| analytics buffer   | CR   | Locale                          | Push vers cloud p\u00e9riodique                 |
+| licence cache      | RU   | Cloud (TTL 24h)                 | V\u00e9rifi\u00e9e \u00e0 la connexion          |
 
 ## 7. Modes de panne et d\u00e9gradation
 

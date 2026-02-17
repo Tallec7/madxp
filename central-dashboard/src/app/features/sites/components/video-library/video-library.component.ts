@@ -164,14 +164,13 @@ export type SortDirection = 'asc' | 'desc';
           class="video-item"
           *ngFor="let video of filteredVideos"
           [class.selected]="selectedPath === video.path || isSelected(video)"
-          [class.neopro]="video.owner === 'neopro'"
           [class.to-deploy]="!video.isOnPi"
           (click)="selectVideo(video)"
         >
           <span class="col-checkbox" *ngIf="selectionMode" (click)="$event.stopPropagation()">
             <input type="checkbox" [checked]="isSelected(video)" (change)="toggleSelection(video, $event)" />
           </span>
-          <span class="col-lock">{{ video.owner === 'neopro' ? '🔒' : '' }}</span>
+          <span class="col-lock"></span>
           <span class="col-name video-name" [title]="video.filename">
             {{ video.displayName }}
             <span class="video-subcat" *ngIf="video.subcategory">{{ video.subcategory }}</span>
@@ -231,7 +230,6 @@ export type SortDirection = 'asc' | 'desc';
               class="action-btn delete"
               (click)="onDelete(video, $event)"
               [title]="'common.delete' | translate"
-              *ngIf="video.owner !== 'neopro'"
             >
               🗑️
             </button>
@@ -251,7 +249,6 @@ export type SortDirection = 'asc' | 'desc';
       <div class="library-legend">
         <span class="legend-item"><span class="legend-icon">✅</span> Sur le Pi</span>
         <span class="legend-item"><span class="legend-icon">⏳</span> À déployer</span>
-        <span class="legend-item"><span class="legend-icon">🔒</span> NEOPRO (non modifiable)</span>
       </div>
 
       <!-- Video Preview Popup -->
@@ -624,14 +621,6 @@ export type SortDirection = 'asc' | 'desc';
       background: #eff6ff;
       border-left: 3px solid #2563eb;
       padding-left: calc(0.75rem - 3px);
-    }
-
-    .video-item.neopro {
-      background: #fefce8;
-    }
-
-    .video-item.neopro:hover {
-      background: #fef9c3;
     }
 
     .video-item.to-deploy {
@@ -1397,7 +1386,7 @@ export class VideoLibraryComponent implements OnChanges {
   }
 
   getSelectedToDelete(): VideoItem[] {
-    return this.getSelectedVideos().filter(v => v.owner !== 'neopro');
+    return this.getSelectedVideos();
   }
 
   onBulkDeploy(): void {
