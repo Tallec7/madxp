@@ -1,3 +1,9 @@
+## [3.54.1](https://github.com/Tallec7/neopro/compare/v3.54.0...v3.54.1) (2026-02-17)
+
+### Bug Fixes
+
+- **cloud-remote:** add error handlers to timer subscribe calls ([e5fd962](https://github.com/Tallec7/neopro/commit/e5fd962af41674447eb6cb34a8c82e4fc3af2823))
+
 # [3.54.0](https://github.com/Tallec7/neopro/compare/v3.53.4...v3.54.0) (2026-02-17)
 
 ### Features
