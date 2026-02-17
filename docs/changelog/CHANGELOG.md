@@ -16,6 +16,12 @@
 
 - **hostname:** 17 unit tests for `deriveHostnameSlug()` and `deriveHostnameWithSuffix()` — accents (Béziers, Saint-Étienne), spaces, special chars, 63-char limit, collisions, edge cases (empty, whitespace-only, real French club names)
 
+## [3.50.4](https://github.com/Tallec7/neopro/compare/v3.50.3...v3.50.4) (2026-02-17)
+
+### Bug Fixes
+
+- **license:** fix misleading VALID undefined log on Pi + add NARH night analysis ([e745f0a](https://github.com/Tallec7/neopro/commit/e745f0a677c5b1340727ecb7bded6377be9e0d65))
+
 ## [3.50.3](https://github.com/Tallec7/neopro/compare/v3.50.2...v3.50.3) (2026-02-17)
 
 ### Bug Fixes
