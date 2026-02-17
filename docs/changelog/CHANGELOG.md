@@ -1,3 +1,9 @@
+## [3.55.2](https://github.com/Tallec7/neopro/compare/v3.55.1...v3.55.2) (2026-02-17)
+
+### Bug Fixes
+
+- **tests:** resolve mockLogger redeclaration error in CI ([698dd01](https://github.com/Tallec7/neopro/commit/698dd015dabb8654ae443a6d24aff862cac89282))
+
 ## [3.55.1](https://github.com/Tallec7/neopro/compare/v3.55.0...v3.55.1) (2026-02-17)
 
 ### Bug Fixes
