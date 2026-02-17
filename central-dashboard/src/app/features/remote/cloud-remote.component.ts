@@ -753,7 +753,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   public getCategoriesForTimeCategory(timeCategory: TimeCategory): Category[] {
-    const filteredCategories = this.configuration.categories.filter(cat =>
+    const filteredCategories = (this.configuration?.categories ?? []).filter(cat =>
       timeCategory.categoryIds?.includes(cat.id)
     );
     return this.sortByName(filteredCategories);
@@ -1241,6 +1241,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   public addQuickMessage(message: string): void {
+    if (!this.localOptions.breakingNews.quickMessages) {
+      this.localOptions.breakingNews.quickMessages = [];
+    }
     if (message.trim() && !this.localOptions.breakingNews.quickMessages.includes(message.trim())) {
       this.localOptions.breakingNews.quickMessages.push(message.trim());
       this.saveLocalOptions();
@@ -1248,7 +1251,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   public removeQuickMessage(index: number): void {
-    this.localOptions.breakingNews.quickMessages.splice(index, 1);
+    this.localOptions.breakingNews.quickMessages?.splice(index, 1);
     this.saveLocalOptions();
   }
 
@@ -1596,7 +1599,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
             sourceValue as object
           );
         } else if (sourceValue !== undefined) {
-          (result as Record<string, unknown>)[key] = sourceValue;
+          (result as Record<string, unknown>)[key] = Array.isArray(sourceValue)
+            ? [...sourceValue]
+            : sourceValue;
         }
       }
     }
