@@ -1,3 +1,15 @@
+## [3.55.5] (2026-02-17)
+
+### Features
+
+- **content:** add server-side pagination to video listing page — dashboard now passes `?page=X&limit=20&search=` to `GET /api/content/videos`, displays pagination controls (prev/next, page numbers with ellipsis), and shows "X–Y sur Z vidéos" counter
+- **content:** server-side search with 300ms debounce replaces client-side `filteredVideos()` — search resets to page 1 automatically
+
+### Documentation
+
+- **reference:** update content endpoints in `REFERENCE.md` — document full CRUD routes for videos and deployments with pagination parameters
+- **cloud-api:** update content routes description in architecture brick
+
 ## [3.55.4](https://github.com/Tallec7/neopro/compare/v3.55.3...v3.55.4) (2026-02-17)
 
 ### Bug Fixes

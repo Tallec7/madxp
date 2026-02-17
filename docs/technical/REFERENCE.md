@@ -1158,10 +1158,20 @@ DELETE /sites/:id/remote-pin    - Supprimer PIN télécommande cloud
 **Endpoints Contenu :**
 
 ```
-POST   /content/upload          - Upload vidéo (multipart/form-data)
-GET    /content/videos          - Liste vidéos
-DELETE /content/videos/:id      - Supprimer vidéo
-POST   /content/deploy          - Déployer vidéo vers site/groupe
+GET    /content/videos                  - Liste vidéos (paginé: ?page=1&limit=20&search=&category=)
+GET    /content/videos/:id              - Détails d'une vidéo
+GET    /content/videos/:id/deployments  - Historique des déploiements d'une vidéo
+GET    /content/videos/for-site/:siteId - Vidéos prioritaires pour un site (paginé)
+POST   /content/videos                  - Upload vidéo (multipart/form-data)
+POST   /content/videos/bulk             - Upload multiple (max 20 fichiers)
+PUT    /content/videos/:id              - Modifier métadonnées vidéo
+DELETE /content/videos/:id              - Supprimer vidéo
+POST   /content/image-to-video          - Convertir image en vidéo MP4
+GET    /content/deployments             - Liste des déploiements
+GET    /content/deployments/:id         - Détails d'un déploiement
+POST   /content/deployments             - Créer un déploiement vers site/groupe
+PUT    /content/deployments/:id         - Mettre à jour un déploiement
+DELETE /content/deployments/:id         - Supprimer un déploiement
 ```
 
 **Endpoints Config Profiles (multi-config) :**

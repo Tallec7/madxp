@@ -22,6 +22,15 @@ interface Video {
   url?: string;
 }
 
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 interface Deployment {
   id: string;
   video_id: string;
@@ -67,7 +76,7 @@ interface VideoDeploymentHistory {
           [class.active]="activeTab === 'videos'"
           (click)="activeTab = 'videos'"
         >
-          📹 Vidéos ({{ videos.length }})
+          📹 Vidéos ({{ videoPagination.total || videos.length }})
         </button>
         <button
           class="tab"
@@ -93,6 +102,7 @@ interface VideoDeploymentHistory {
               type="text"
               [placeholder]="'content.searchVideo' | translate"
               [(ngModel)]="videoSearch"
+              (input)="onSearchDebounce()"
               class="search-input"
             />
           </div>
@@ -106,8 +116,8 @@ interface VideoDeploymentHistory {
           </div>
         </div>
 
-        <div class="videos-grid" *ngIf="filteredVideos().length > 0 else noVideos">
-          <div class="video-card card" *ngFor="let video of filteredVideos()">
+        <div class="videos-grid" *ngIf="videos.length > 0 else noVideos">
+          <div class="video-card card" *ngFor="let video of videos">
             <div class="video-thumbnail">
               <span class="video-icon">🎬</span>
             </div>
@@ -137,6 +147,39 @@ interface VideoDeploymentHistory {
               </button>
             </div>
           </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="videoPagination.totalPages > 1">
+          <button
+            class="btn btn-secondary btn-sm"
+            [disabled]="!videoPagination.hasPrev"
+            (click)="goToPage(videoPagination.page - 1)"
+          >
+            ← Précédent
+          </button>
+          <div class="pagination-pages">
+            <button
+              *ngFor="let p of getPageNumbers()"
+              class="pagination-page"
+              [class.active]="p === videoPagination.page"
+              [class.ellipsis]="p === -1"
+              [disabled]="p === -1"
+              (click)="p !== -1 && goToPage(p)"
+            >
+              {{ p === -1 ? '…' : p }}
+            </button>
+          </div>
+          <button
+            class="btn btn-secondary btn-sm"
+            [disabled]="!videoPagination.hasNext"
+            (click)="goToPage(videoPagination.page + 1)"
+          >
+            Suivant →
+          </button>
+        </div>
+        <div class="pagination-info" *ngIf="videoPagination.total > 0">
+          {{ (videoPagination.page - 1) * videoPagination.limit + 1 }}–{{ videoPagination.page * videoPagination.limit > videoPagination.total ? videoPagination.total : videoPagination.page * videoPagination.limit }} sur {{ videoPagination.total }} vidéos
         </div>
 
         <ng-template #noVideos>
@@ -1052,6 +1095,61 @@ interface VideoDeploymentHistory {
       border-top: 1px solid #e2e8f0;
     }
 
+    /* Pagination */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 2rem;
+    }
+
+    .pagination-pages {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .pagination-page {
+      min-width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background: white;
+      color: #334155;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .pagination-page:hover:not(.active):not(.ellipsis) {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    .pagination-page.active {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: white;
+      font-weight: 600;
+    }
+
+    .pagination-page.ellipsis {
+      border: none;
+      background: none;
+      cursor: default;
+      color: #94a3b8;
+    }
+
+    .pagination-info {
+      text-align: center;
+      font-size: 0.8125rem;
+      color: #64748b;
+      margin-top: 0.75rem;
+    }
+
     .empty-state {
       text-align: center;
       padding: 4rem 2rem;
@@ -1725,6 +1823,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   groups: Group[] = [];
 
   videoSearch = '';
+  videoPagination: PaginationInfo = { page: 1, limit: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false };
   showUploadModal = false;
   showHistoryModal = false;
   showImageModal = false;
@@ -1775,6 +1874,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   private readonly notificationService = inject(NotificationService);
   private readonly logger = inject(LoggerService);
   private subscriptions = new Subscription();
+  private searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.loadVideos();
@@ -1786,17 +1886,66 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
   }
 
   loadVideos(): void {
-    this.apiService.get<{ data: Video[] }>('/videos').subscribe({
+    const params: Record<string, string> = {
+      page: this.videoPagination.page.toString(),
+      limit: this.videoPagination.limit.toString(),
+    };
+    if (this.videoSearch) {
+      params['search'] = this.videoSearch;
+    }
+
+    const query = new URLSearchParams(params).toString();
+    this.apiService.get<{ data: Video[]; pagination: PaginationInfo }>(`/videos?${query}`).subscribe({
       next: (response) => {
         this.videos = response.data || [];
+        if (response.pagination) {
+          this.videoPagination = response.pagination;
+        }
       },
       error: (error) => {
         this.logger.warn('Failed to load videos', { error: ErrorExtractor.getMessage(error) });
       }
     });
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.videoPagination.totalPages) return;
+    this.videoPagination.page = page;
+    this.loadVideos();
+  }
+
+  onSearchChange(): void {
+    this.videoPagination.page = 1;
+    this.loadVideos();
+  }
+
+  onSearchDebounce(): void {
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+    this.searchTimeout = setTimeout(() => this.onSearchChange(), 300);
+  }
+
+  getPageNumbers(): number[] {
+    const { page, totalPages } = this.videoPagination;
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages: number[] = [1];
+    if (page > 3) pages.push(-1); // ellipsis
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
+      pages.push(i);
+    }
+    if (page < totalPages - 2) pages.push(-1); // ellipsis
+    pages.push(totalPages);
+    return pages;
   }
 
   loadDeployments(): void {
@@ -1843,15 +1992,6 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
       }
     });
     this.subscriptions.add(sub);
-  }
-
-  filteredVideos(): Video[] {
-    if (!this.videoSearch) return this.videos;
-    const search = this.videoSearch.toLowerCase();
-    return this.videos.filter(v =>
-      v.title.toLowerCase().includes(search) ||
-      v.filename.toLowerCase().includes(search)
-    );
   }
 
   formatFileSize(bytes: number): string {

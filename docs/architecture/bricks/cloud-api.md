@@ -33,7 +33,7 @@ Serveur central cloud qui orchestre la flotte de Raspberry Pi, expose l'API REST
 | ---------------------- | ----------------------------------------------------- | ------------------------------------------------------------------- | --------------------------- |
 | Auth                   | `auth.routes.ts`, `mfa.routes.ts`                     | POST /login, /register, /mfa/setup, /mfa/verify                     | Public + JWT                |
 | Sites                  | `sites.routes.ts`                                     | CRUD /api/sites, GET /api/sites/:id/status                          | JWT (super_admin, operator) |
-| Contenu                | `content.routes.ts`                                   | CRUD /api/videos, POST /api/deployments                             | JWT (super_admin, operator) |
+| Contenu                | `content.routes.ts`                                   | CRUD /api/videos (paginé), CRUD /api/deployments, image-to-video    | JWT (super_admin, operator) |
 | Utilisateurs           | `users.routes.ts`                                     | CRUD /api/users                                                     | JWT (super_admin)           |
 | Analytics              | `analytics.routes.ts`                                 | GET /api/analytics/dashboard, /api/analytics/sites/:id              | JWT                         |
 | Rapports               | `reports.routes.ts`                                   | GET /api/reports/pdf, /api/reports/excel                            | JWT                         |
