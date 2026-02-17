@@ -430,26 +430,26 @@ interface WifiScanResult {
 
             <!-- Fan Status -->
             <div class="health-section" *ngIf="healthStatus.fanStatus?.present">
-              <h5>🌀 Ventilateur {{ healthStatus.fanStatus.is_pi5 ? '(Pi 5 Active Cooler)' : '(Fan HAT)' }}</h5>
+              <h5>🌀 Ventilateur {{ healthStatus.fanStatus?.is_pi5 ? '(Pi 5 Active Cooler)' : '(Fan HAT)' }}</h5>
               <div class="health-grid">
                 <div class="health-metric">
                   <span class="metric-label">Type</span>
-                  <span class="metric-value">{{ healthStatus.fanStatus.type || 'N/A' }}</span>
+                  <span class="metric-value">{{ healthStatus.fanStatus?.type || 'N/A' }}</span>
                 </div>
-                <div class="health-metric" [class.metric-warning]="healthStatus.fanStatus.curState === 0 && (healthStatus.metrics?.temperature ?? 0) > 70">
+                <div class="health-metric" [class.metric-warning]="healthStatus.fanStatus?.curState === 0 && (healthStatus.metrics?.temperature ?? 0) > 70">
                   <span class="metric-label">État</span>
                   <span class="metric-value">
-                    {{ healthStatus.fanStatus.curState }}/{{ healthStatus.fanStatus.maxState }}
-                    <span *ngIf="healthStatus.fanStatus.speedPercent !== null">({{ healthStatus.fanStatus.speedPercent }}%)</span>
+                    {{ healthStatus.fanStatus?.curState }}/{{ healthStatus.fanStatus?.maxState }}
+                    <span *ngIf="healthStatus.fanStatus?.speedPercent !== null">({{ healthStatus.fanStatus?.speedPercent }}%)</span>
                   </span>
                 </div>
                 <div class="health-metric">
                   <span class="metric-label">Vitesse</span>
                   <span class="metric-value">
-                    <span *ngIf="healthStatus.fanStatus.curState === 0">Arrêté</span>
-                    <span *ngIf="healthStatus.fanStatus.curState !== null && healthStatus.fanStatus.curState > 0 && healthStatus.fanStatus.curState <= 1">Faible</span>
-                    <span *ngIf="healthStatus.fanStatus.curState !== null && healthStatus.fanStatus.curState > 1 && healthStatus.fanStatus.curState <= 2">Moyen</span>
-                    <span *ngIf="healthStatus.fanStatus.curState !== null && healthStatus.fanStatus.curState > 2">Fort</span>
+                    <span *ngIf="healthStatus.fanStatus?.curState === 0">Arrêté</span>
+                    <span *ngIf="(healthStatus.fanStatus?.curState ?? -1) > 0 && (healthStatus.fanStatus?.curState ?? 0) <= 1">Faible</span>
+                    <span *ngIf="(healthStatus.fanStatus?.curState ?? 0) > 1 && (healthStatus.fanStatus?.curState ?? 0) <= 2">Moyen</span>
+                    <span *ngIf="(healthStatus.fanStatus?.curState ?? 0) > 2">Fort</span>
                   </span>
                 </div>
               </div>

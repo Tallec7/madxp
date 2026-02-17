@@ -128,7 +128,7 @@ import { AnalyticsNavComponent } from './analytics-nav.component';
             <div class="kpi-card accent-red">
               <div class="kpi-value">{{ calculateAverageRetention() }}%</div>
               <div class="kpi-label">Retention moyenne</div>
-              <div class="kpi-sub">{{ metrics.retentionCohorts?.length || 0 }} cohortes</div>
+              <div class="kpi-sub">{{ metrics.retentionCohorts.length || 0 }} cohortes</div>
             </div>
 
           </div>
