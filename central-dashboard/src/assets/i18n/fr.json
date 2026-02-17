@@ -446,6 +446,14 @@
     "connectWifi": "Connecter",
     "connectingWifi": "Connexion en cours..."
   },
+  "siteSettings": {
+    "saveBranding": "Enregistrer le branding"
+  },
+  "siteSponsors": {
+    "statusActive": "Actif",
+    "statusPaused": "Pause",
+    "statusExpired": "Expire"
+  },
   "profiles": {
     "title": "Profils de configuration",
     "create": "Nouveau profil",

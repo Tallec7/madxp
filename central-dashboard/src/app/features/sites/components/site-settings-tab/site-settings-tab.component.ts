@@ -42,6 +42,110 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
         </button>
       </div>
 
+      <!-- Spectateurs moyens -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <span class="settings-icon">👥</span>
+          <h4>Audience</h4>
+        </div>
+        <p class="settings-desc">
+          Nombre moyen de spectateurs par match. Utilisé pour calculer le reach des sponsors dans les rapports PDF.
+        </p>
+        <div class="settings-grid">
+          <div class="form-group">
+            <label>Spectateurs moyens par match</label>
+            <input
+              type="number"
+              [(ngModel)]="avgSpectators"
+              placeholder="Ex: 200"
+              min="0"
+              max="100000"
+              class="form-input"
+            />
+            <small class="form-hint">Estimation moyenne. Sera mentionnée dans les rapports sponsors.</small>
+          </div>
+        </div>
+        <button
+          class="btn btn-primary"
+          (click)="saveAvgSpectators()"
+          [disabled]="savingAvgSpectators || avgSpectators === null || avgSpectators === undefined"
+        >
+          {{ savingAvgSpectators ? ('common.saving' | translate) : ('common.save' | translate) }}
+        </button>
+      </div>
+
+      <!-- Branding Club (P5) -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <span class="settings-icon">🎨</span>
+          <h4>Branding Club</h4>
+        </div>
+        <p class="settings-desc">
+          Logo et couleurs du club. Utilisés pour personnaliser les rapports PDF sponsors.
+        </p>
+        <div class="settings-grid">
+          <div class="form-group">
+            <label>URL du logo</label>
+            <input
+              type="url"
+              [(ngModel)]="logoUrl"
+              placeholder="https://example.com/logo.png"
+              class="form-input"
+            />
+            <small class="form-hint">Image PNG, JPEG ou SVG. S'affiche dans l'en-tête du rapport PDF.</small>
+            <div *ngIf="logoUrl" class="logo-preview" style="margin-top: 8px;">
+              <img [src]="logoUrl" alt="Logo preview" style="max-height: 48px; max-width: 200px; border-radius: 4px; background: #f3f4f6; padding: 4px;" (error)="logoUrl && onLogoError()"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Couleur primaire</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input
+                type="color"
+                [(ngModel)]="colorPrimary"
+                style="width: 40px; height: 32px; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; padding: 2px;"
+              />
+              <input
+                type="text"
+                [(ngModel)]="colorPrimary"
+                placeholder="#1e3a8a"
+                maxlength="7"
+                class="form-input"
+                style="width: 120px;"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Couleur secondaire</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input
+                type="color"
+                [(ngModel)]="colorSecondary"
+                style="width: 40px; height: 32px; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; padding: 2px;"
+              />
+              <input
+                type="text"
+                [(ngModel)]="colorSecondary"
+                placeholder="#3b82f6"
+                maxlength="7"
+                class="form-input"
+                style="width: 120px;"
+              />
+            </div>
+          </div>
+        </div>
+        <div *ngIf="colorPrimary || colorSecondary" class="branding-preview" style="margin: 12px 0; padding: 12px; border-radius: 8px; background: linear-gradient(135deg, {{colorPrimary || '#1e3a8a'}} 0%, {{colorSecondary || '#3b82f6'}} 100%); color: white; font-size: 0.85rem; text-align: center;">
+          Aperçu bandeau rapport
+        </div>
+        <button
+          class="btn btn-primary"
+          (click)="saveBranding()"
+          [disabled]="brandingSaving"
+        >
+          {{ brandingSaving ? ('common.saving' | translate) : ('siteSettings.saveBranding' | translate) }}
+        </button>
+      </div>
+
       <!-- PIN Télécommande Cloud -->
       <div class="settings-card">
         <div class="settings-header">
@@ -1428,6 +1532,17 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   remotePassword: string = '';
   savingClubAuth: boolean = false;
 
+  // Audience
+  avgSpectators: number | null = null;
+  savingAvgSpectators: boolean = false;
+
+  // Branding (P5)
+  logoUrl: string = '';
+  colorPrimary: string = '';
+  colorSecondary: string = '';
+  brandingSaving: boolean = false;
+  logoError: boolean = false;
+
   // Remote PIN
   remotePin: string = '';
   remotePinEnabled: boolean = false;
@@ -1512,6 +1627,11 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
     if (this.site) {
       this.clubName = this.site.club_name || '';
+      this.avgSpectators = this.site.avg_spectators ?? null;
+      // P5: Branding
+      this.logoUrl = this.site.logo_url || '';
+      this.colorPrimary = this.site.color_primary || '';
+      this.colorSecondary = this.site.color_secondary || '';
 
       // Charger les infos hotspot depuis local_config_mirror (synchronisé par le Pi)
       this.loadHotspotInfo(this.site);
@@ -1716,6 +1836,50 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
         this.notificationService.error(`Erreur déploiement: ${message}`);
       }
     });
+  }
+
+  saveAvgSpectators(): void {
+    if (this.avgSpectators === null || this.avgSpectators === undefined) return;
+
+    this.savingAvgSpectators = true;
+    this.sitesService.updateSite(this.siteId, { avg_spectators: this.avgSpectators }).subscribe({
+      next: (updatedSite) => {
+        this.savingAvgSpectators = false;
+        this.notificationService.success('Spectateurs moyens mis à jour');
+        this.siteUpdated.emit(updatedSite);
+      },
+      error: (error) => {
+        this.savingAvgSpectators = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+      }
+    });
+  }
+
+  // P5: Branding
+  saveBranding(): void {
+    this.brandingSaving = true;
+    const data: Record<string, string | null> = {
+      logo_url: this.logoUrl || null,
+      color_primary: this.colorPrimary || null,
+      color_secondary: this.colorSecondary || null,
+    };
+    this.sitesService.updateSite(this.siteId, data).subscribe({
+      next: (updatedSite) => {
+        this.brandingSaving = false;
+        this.notificationService.success('Branding du club mis à jour');
+        this.siteUpdated.emit(updatedSite);
+      },
+      error: (error) => {
+        this.brandingSaving = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+      }
+    });
+  }
+
+  onLogoError(): void {
+    this.logoError = true;
   }
 
   saveRemotePin(): void {
