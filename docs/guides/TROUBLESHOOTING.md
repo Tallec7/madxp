@@ -1547,6 +1547,20 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -n 50 | grep watermark
 
 **Si le fichier image n'existe pas :** Le `deploy_asset` a échoué. Vérifier les logs sync-agent pour l'erreur de téléchargement.
 
+### Watermark pas mis à jour après changement d'image (v3.55.4)
+
+**Symptôme :** L'image existe sur le Pi et la config est correcte, mais le watermark affiché est l'ancienne version (après remplacement avec le même nom de fichier).
+
+**Cause (< v3.55.4) :** nginx sert les fichiers statiques avec `Cache-Control: public, immutable` et `expires 30d`. Si l'image est remplacée avec le même nom de fichier, Chromium sert l'ancienne version depuis son cache.
+
+**Fix (v3.55.4) :** `WatermarkService.getImageSrc()` ajoute systématiquement un cache-buster `?_v=<timestamp>` à l'URL de l'image. Le timestamp change à chaque reload de configuration, forçant Chromium à charger la nouvelle version.
+
+**Solution immédiate (versions antérieures) :** Redémarrer Chromium sur le Pi pour vider le cache :
+
+```bash
+sudo systemctl restart chromium
+```
+
 ### Image manquante sur le Pi malgré config watermark OK (v3.54.3)
 
 **Symptôme :** `configuration.json` contient bien `watermark.enabled: true` et `watermark.imagePath`, mais le dossier `assets/watermarks/` est vide et les logs sync-agent ne montrent aucune trace de `deploy_asset`.

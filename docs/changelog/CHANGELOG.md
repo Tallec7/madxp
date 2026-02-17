@@ -3,6 +3,7 @@
 ### Bug Fixes
 
 - **watermark:** bypass nginx immutable cache on image reload ([9404771](https://github.com/Tallec7/neopro/commit/9404771ab2e83f4589c3328b8ad2dbcb530f72e9))
+- **watermark:** bypass nginx `Cache-Control: immutable` (30j) on Pi — `getImageSrc()` now always appends `?_v=<configVersion>` cache-buster, ensuring Chromium loads the latest file after image replacement or config reload
 
 ## [3.55.3](https://github.com/Tallec7/neopro/compare/v3.55.2...v3.55.3) (2026-02-17)
 

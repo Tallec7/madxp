@@ -564,6 +564,7 @@ Checksum mismatch: expected abc123, got def456
 | 2.3     | 2026-02-16 | Auto-création sous-dossiers FTP (ensureDir) + troubleshooting 550 |
 | 2.4     | 2026-02-17 | Flux déploiement watermark, fix race condition deploy_asset       |
 | 2.5     | 2026-02-17 | Re-deploy image on save, Pi-side retry with backoff               |
+| 2.6     | 2026-02-17 | Cache-buster systématique pour bypass nginx immutable (30j)       |
 | 3.0     | 2026-02-17 | Fix encodage multer latin1→UTF-8, sanitization NFD, métriques     |
 
 ---
@@ -627,9 +628,18 @@ Si l'image watermark ne charge pas (fichier pas encore présent après `deploy_a
 | 4         | 60s   |
 | 5         | 120s  |
 
-- Un **cache-buster** (`?_cb=timestamp`) est ajouté au `src` de l'image pour éviter les 404 en cache navigateur.
+- Un **cache-buster** (`?_v=<timestamp>`) est ajouté au `src` de l'image (voir section ci-dessous).
 - Le retry state est **réinitialisé** à chaque nouvelle configuration (`setConfiguration()` / `init()`).
 - Après 5 échecs, le service abandonne et log une erreur console.
+
+### Cache-buster nginx (v3.55.4+)
+
+nginx sur le Pi sert les fichiers statiques avec `Cache-Control: public, immutable` et `expires 30d` (cf. `raspberry/config/nginx/neopro-hls.conf`). Sans cache-buster, Chromium ne rechargerait jamais une image watermark remplacée avec le même nom de fichier.
+
+`WatermarkService.getImageSrc()` ajoute **systématiquement** un paramètre `?_v=<timestamp>` :
+
+- **Affichage normal** : `?_v=<configVersion>` — timestamp fixé au dernier `setConfiguration()`. L'image est cachée tant que la config ne change pas.
+- **Pendant les retries** : `?_v=<Date.now()>` — timestamp unique à chaque tentative, forçant un rechargement frais même si le fichier vient d'être déployé.
 
 ### Structure de la configuration watermark
 
@@ -655,7 +665,7 @@ Le watermark s'affiche si les 3 conditions sont remplies :
 2. `configuration.watermark.enabled` = `true`
 3. `configuration.watermark.imagePath` est défini et non vide
 
-> **Note (v3.54.3+) :** Si l'image échoue au chargement (`<img (error)>`), le service ne désactive plus définitivement le watermark. Il programme un retry avec backoff (5 tentatives). L'image `src` utilise `getImageSrc()` avec cache-buster pour les retries.
+> **Note (v3.54.3+) :** Si l'image échoue au chargement (`<img (error)>`), le service ne désactive plus définitivement le watermark. Il programme un retry avec backoff (5 tentatives). L'image `src` utilise `getImageSrc()` avec cache-buster systématique (v3.55.4+) pour contourner le cache nginx immutable.
 
 ---
 
