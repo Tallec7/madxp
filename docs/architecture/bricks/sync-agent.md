@@ -57,12 +57,12 @@ Agent Node.js r\u00e9sident sur le Raspberry Pi qui maintient la connexion Socke
 
 Depuis v3.36.1, le sync-agent maintient une **connexion Socket.IO persistante** vers `localhost:3000` via le singleton `local-socket.js` (au lieu de connexions \u00e9ph\u00e9m\u00e8res cr\u00e9\u00e9es/d\u00e9truites \u00e0 chaque op\u00e9ration). Cette connexion est \u00e9tablie au d\u00e9marrage et r\u00e9utilis\u00e9e pour tous les \u00e9changes locaux.
 
-| M\u00e9thode                    | Description                                                                    |
-| ------------------------------- | ------------------------------------------------------------------------------ |
-| `emit(eventName, data)`         | Fire-and-forget : relai cloud remote, config_updated, etc.                     |
-| `request(eventName, timeoutMs)` | Callback-based : get-player-state, get-transition-metrics                      |
-| `requestScreenshot(data)`       | Capture \u00e9cran TV via \u00e9v\u00e9nement s\u00e9par\u00e9 screenshot-data |
-| `getRecordingState()`           | Cache + fallback explicite get-recording-state                                 |
+| M\u00e9thode                    | Description                                                                                                                            |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `emit(eventName, data)`         | Fire-and-forget : relai cloud remote, config_updated, etc.                                                                             |
+| `request(eventName, timeoutMs)` | Callback-based : get-player-state, get-transition-metrics                                                                              |
+| `requestScreenshot(data)`       | Capture \u00e9cran TV via \u00e9v\u00e9nement s\u00e9par\u00e9 screenshot-data (relay\u00e9 au central via HTTP response depuis v3.58) |
+| `getRecordingState()`           | Cache + fallback explicite get-recording-state                                                                                         |
 
 ### HTTP (relai vers Admin Server)
 

@@ -3,26 +3,14 @@
  *
  * Features:
  * - "Capture" button sends a screenshot request to the Pi
- * - Displays the JPEG image when received via Socket.IO
+ * - Screenshot is returned directly via HTTP response (not Socket.IO)
  * - "Auto refresh" toggle re-captures every 5 seconds
- * - Loading state with timeout (10s)
+ * - Loading state with spinner
  */
 
-import { Component, Input, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, Input, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subject, takeUntil } from 'rxjs';
 import { RemoteService } from '../../../../core/services/remote.service';
-import { SocketService } from '../../../../core/services/socket.service';
-
-interface ScreenshotData {
-  siteId: string;
-  image?: string;
-  timestamp: number;
-  currentVideo?: string;
-  phase?: string;
-  isManualMode?: boolean;
-  error?: string;
-}
 
 @Component({
   selector: 'app-screenshot-viewer',
@@ -181,13 +169,11 @@ interface ScreenshotData {
     }
   `]
 })
-export class ScreenshotViewerComponent implements OnInit, OnDestroy {
+export class ScreenshotViewerComponent implements OnDestroy {
   @Input() siteId = '';
   @Input() isConnected = false;
 
   private readonly remoteService = inject(RemoteService);
-  private readonly socketService = inject(SocketService);
-  private readonly destroy$ = new Subject<void>();
 
   isLoading = false;
   autoRefresh = false;
@@ -197,7 +183,6 @@ export class ScreenshotViewerComponent implements OnInit, OnDestroy {
   error: string | null = null;
 
   private autoRefreshInterval: ReturnType<typeof setInterval> | null = null;
-  private loadingTimeout: ReturnType<typeof setTimeout> | null = null;
 
   get screenshotTimeAgo(): string {
     if (!this.screenshotTimestamp) return '';
@@ -207,40 +192,8 @@ export class ScreenshotViewerComponent implements OnInit, OnDestroy {
     return `il y a ${Math.floor(seconds / 60)}min`;
   }
 
-  ngOnInit(): void {
-    // Listen for screenshot data via Socket.IO
-    this.socketService.on<ScreenshotData>('screenshot-data')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((data) => {
-        if (data.siteId !== this.siteId) return;
-        if (data.error) {
-          this.isLoading = false;
-          this.error = data.error === 'no_active_video'
-            ? 'Aucune vidéo active sur le Pi'
-            : data.error === 'capture_failed'
-              ? 'Capture échouée (pas de frames décodées)'
-              : data.error === 'timeout'
-                ? 'Le Pi n\'a pas répondu'
-                : `Erreur : ${data.error}`;
-          this.clearLoadingTimeout();
-          return;
-        }
-        if (data.image) {
-          this.screenshotUrl = data.image;
-          this.screenshotVideo = data.currentVideo || null;
-          this.screenshotTimestamp = data.timestamp || Date.now();
-          this.isLoading = false;
-          this.error = null;
-          this.clearLoadingTimeout();
-        }
-      });
-  }
-
   ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
     this.stopAutoRefresh();
-    this.clearLoadingTimeout();
   }
 
   captureScreenshot(): void {
@@ -249,20 +202,28 @@ export class ScreenshotViewerComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.error = null;
 
-    // Timeout after 10 seconds
-    this.clearLoadingTimeout();
-    this.loadingTimeout = setTimeout(() => {
-      if (this.isLoading) {
-        this.isLoading = false;
-        this.error = 'Timeout — le Pi n\'a pas répondu (10s)';
-      }
-    }, 10000);
-
     this.remoteService.requestScreenshot(this.siteId).subscribe({
+      next: (result) => {
+        if (result.image) {
+          this.screenshotUrl = result.image;
+          this.screenshotVideo = result.currentVideo || null;
+          this.screenshotTimestamp = result.timestamp || Date.now();
+          this.error = null;
+        }
+        this.isLoading = false;
+      },
       error: (err) => {
         this.isLoading = false;
-        this.error = err.error?.message || 'Erreur lors de la capture';
-        this.clearLoadingTimeout();
+        const serverError = err.error?.error;
+        if (serverError === 'timeout') {
+          this.error = 'Le Pi n\'a pas répondu (timeout)';
+        } else if (serverError === 'no_active_video') {
+          this.error = 'Aucune vidéo active sur le Pi';
+        } else if (serverError === 'capture_failed') {
+          this.error = 'Capture échouée (pas de frames décodées)';
+        } else {
+          this.error = err.error?.message || 'Erreur lors de la capture';
+        }
       }
     });
   }
@@ -285,13 +246,6 @@ export class ScreenshotViewerComponent implements OnInit, OnDestroy {
     if (this.autoRefreshInterval) {
       clearInterval(this.autoRefreshInterval);
       this.autoRefreshInterval = null;
-    }
-  }
-
-  private clearLoadingTimeout(): void {
-    if (this.loadingTimeout) {
-      clearTimeout(this.loadingTimeout);
-      this.loadingTimeout = null;
     }
   }
 }

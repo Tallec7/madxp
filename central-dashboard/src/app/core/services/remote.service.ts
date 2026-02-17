@@ -126,6 +126,16 @@ export interface CommandResult {
   timestamp: string;
 }
 
+export interface ScreenshotResult {
+  success: boolean;
+  commandType: string;
+  image: string;
+  timestamp: number;
+  currentVideo?: string;
+  phase?: string;
+  isManualMode?: boolean;
+}
+
 export type RemoteCommandType =
   | 'score-update'
   | 'score-reset'
@@ -341,9 +351,15 @@ export class RemoteService {
   }
 
   /**
-   * Demande un screenshot de l'écran TV du Pi
+   * Demande un screenshot de l'écran TV du Pi.
+   * Le serveur attend la réponse du Pi et retourne l'image dans la réponse HTTP.
    */
-  requestScreenshot(siteId: string): Observable<CommandResult> {
-    return this.sendCommand(siteId, 'screenshot', { quality: 0.5 });
+  requestScreenshot(siteId: string): Observable<ScreenshotResult> {
+    const options = this.getHeaders(siteId);
+    return this.http.post<ScreenshotResult>(
+      `${this.apiUrl}/remote/${siteId}/command`,
+      { type: 'screenshot', data: { quality: 0.5 } },
+      options
+    );
   }
 }

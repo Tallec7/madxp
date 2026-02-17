@@ -428,15 +428,17 @@ class SocketService {
     socket.on('network_recovered', withMetrics('network_recovered', handlers.network_recovered));
     socket.on('recording-state', withMetrics('recording-state', handlers['recording-state']));
 
-    // Cloud monitoring: relay screenshot data from Pi to dashboard
+    // Cloud monitoring: relay screenshot data from Pi to dashboard (legacy Socket.IO path).
+    // Since v3.58, the primary screenshot path is HTTP request-response in remote.controller.ts.
+    // This relay is kept for backward compatibility and as a fallback.
     socket.on('screenshot-data', (data: unknown) => {
+      metricsService.recordWebsocketMessage('inbound', 'screenshot-data');
       const payload = data as Record<string, unknown>;
       if (payload.error) {
         logger.warn('Screenshot failed on Pi', { siteId, error: payload.error });
-        metricsService.recordCommand('screenshot', 'pi_error');
       } else {
-        logger.info('Screenshot data received from Pi', { siteId });
-        metricsService.recordCommand('screenshot', 'received');
+        const imageSize = typeof payload.image === 'string' ? (payload.image as string).length : 0;
+        logger.info('Screenshot data received from Pi (Socket.IO relay)', { siteId, imageSize });
       }
       if (this.io) {
         this.io.to('dashboard').emit('screenshot-data', { siteId, ...payload });
@@ -595,6 +597,10 @@ class SocketService {
 
   isConnected(siteId: string): boolean {
     return this.connectedSites.has(siteId);
+  }
+
+  getConnectedSocket(siteId: string): Socket | null {
+    return this.connectedSites.get(siteId) || null;
   }
 
   getRecordingState(siteId: string): { isRecording: boolean; isManualOverride: boolean } | null {

@@ -1,3 +1,22 @@
+## [3.58.0](https://github.com/Tallec7/neopro/compare/v3.57.2...v3.58.0) (2026-02-17)
+
+### Bug Fixes
+
+- **cloud-remote:** fix screenshot timeout — replace Socket.IO room relay with HTTP request-response pattern; Socket.IO polling transport silently dropped large base64 payloads (~60 KB), causing systematic 10s timeouts on the dashboard
+- **cloud-remote:** screenshot controller now waits for Pi response (8s timeout) and returns image directly in HTTP response (200/502/504)
+
+### Features
+
+- **monitoring:** add `neopro_command_latency_seconds{type="screenshot"}` histogram for end-to-end screenshot latency tracking
+- **monitoring:** add `screenshot` `timeout` status to `neopro_commands_total` counter for non-response detection
+- **monitoring:** log screenshot image size and round-trip duration on success/failure
+
+### Documentation
+
+- **sync-architecture:** update screenshot flow to document HTTP response pattern (v3.58+) and historical Socket.IO relay issue
+- **ADR-007:** update screenshot section with new HTTP response codes (200/502/504) and latency metric
+- **sync-agent brick:** note HTTP response relay for screenshot-data
+
 ## [3.57.2](https://github.com/Tallec7/neopro/compare/v3.57.1...v3.57.2) (2026-02-17)
 
 ### Bug Fixes

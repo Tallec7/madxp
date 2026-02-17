@@ -386,10 +386,65 @@ export async function sendRemoteCommand(req: Request, res: Response) {
         payload = { timestamp };
         break;
 
-      case 'screenshot':
-        eventName = 'screenshot-request';
-        payload = { timestamp, quality: data?.quality || 0.5 };
-        break;
+      case 'screenshot': {
+        // Screenshot uses request-response HTTP pattern (v3.58+):
+        // The controller waits for the Pi's screenshot-data response via Socket.IO,
+        // then returns the image directly in the HTTP response.
+        // This replaces the previous Socket.IO room relay which silently dropped
+        // large base64 payloads (~60 KB) when the dashboard used polling transport.
+        const piSocket = socketService.getConnectedSocket(siteId);
+        if (!piSocket) {
+          return res.status(503).json({ error: 'Socket du Pi non trouvé' });
+        }
+
+        const screenshotStart = Date.now();
+        const screenshotTimeout = 8000; // 8s (before dashboard's 10s UI timeout)
+        const screenshotData = await new Promise<Record<string, unknown> | null>((resolve) => {
+          const timer = setTimeout(() => {
+            piSocket.off('screenshot-data', handler);
+            resolve(null);
+          }, screenshotTimeout);
+
+          const handler = (responseData: unknown) => {
+            clearTimeout(timer);
+            piSocket.off('screenshot-data', handler);
+            resolve(responseData as Record<string, unknown>);
+          };
+
+          piSocket.on('screenshot-data', handler);
+          io.to(siteId).emit('screenshot-request', { timestamp, quality: data?.quality || 0.5 });
+        });
+
+        const durationSeconds = (Date.now() - screenshotStart) / 1000;
+        metricsService.recordCommand('screenshot', 'sent');
+        metricsService.recordCommandLatency('screenshot', durationSeconds);
+        logger.info('Cloud remote command sent', { siteId, commandType: type, eventName: 'screenshot-request', ip: req.ip });
+
+        if (!screenshotData) {
+          metricsService.recordCommand('screenshot', 'timeout');
+          logger.warn('Screenshot timeout', { siteId, durationSeconds });
+          return res.status(504).json({ error: 'timeout', message: 'Le Pi n\'a pas répondu (8s)' });
+        }
+
+        if (screenshotData.error) {
+          metricsService.recordCommand('screenshot', 'pi_error');
+          logger.warn('Screenshot Pi error', { siteId, error: screenshotData.error, durationSeconds });
+          return res.status(502).json({ error: screenshotData.error, message: 'Erreur capture sur le Pi' });
+        }
+
+        const imageSize = typeof screenshotData.image === 'string' ? (screenshotData.image as string).length : 0;
+        metricsService.recordCommand('screenshot', 'received');
+        logger.info('Screenshot captured successfully', { siteId, durationSeconds, imageSize });
+        return res.json({
+          success: true,
+          commandType: type,
+          image: screenshotData.image,
+          timestamp: screenshotData.timestamp,
+          currentVideo: screenshotData.currentVideo,
+          phase: screenshotData.phase,
+          isManualMode: screenshotData.isManualMode,
+        });
+      }
 
       default:
         return res.status(400).json({ error: 'Type de commande non géré' });

@@ -152,12 +152,18 @@ L'endpoint `GET /state` retourne désormais `licenseStatus` (statut, daysLeft, m
 
 L'endpoint `GET /state` retourne désormais `playerState` (état complet du player TV : vidéo en cours, progression, phase, position dans la boucle, prochaine vidéo, erreurs, etc.). Le player state est éphémère (Map `playerStates` en mémoire côté serveur), alimenté par le heartbeat du Pi (30s) et broadcasté en temps réel vers la room `dashboard` via Socket.IO (`player_state_updated`).
 
-La commande `screenshot` a été ajoutée aux commandes valides. Elle demande au Pi de capturer un screenshot JPEG 480p (quality 0.5, ~30-50KB) du player TV actif via `canvas.drawImage()`. Le screenshot est relayé de manière bidirectionnelle via la connexion persistante `local-socket.js` : central → sync-agent → local server (broadcast) → TV component → screenshot-data → sync-agent (relay via connexion persistante) → central → dashboard via Socket.IO (`screenshot-data`). Rate-limited à 1/seconde côté Pi.
+La commande `screenshot` demande au Pi de capturer un screenshot JPEG 480p (quality 0.5, ~30-50KB) du player TV actif via `canvas.drawImage()`. Depuis v3.58, le controller utilise un **pattern request-response HTTP** : il attend la réponse `screenshot-data` du Pi directement sur le socket (timeout 8s) et retourne l'image dans la réponse HTTP. Ce pattern remplace le relay via la room Socket.IO `dashboard` qui perdait silencieusement les payloads base64 en mode polling. Rate-limited à 1/seconde côté Pi.
+
+**Réponse HTTP screenshot** (v3.58+) :
+
+- Succès : `200 { success, commandType, image, timestamp, currentVideo, phase, isManualMode }`
+- Erreur Pi : `502 { error: 'no_active_video' | 'capture_failed', message }`
+- Timeout : `504 { error: 'timeout', message }`
 
 **Données publiques ajoutées** :
 
 - `playerState` : État éphémère du player TV (15 champs : currentVideo, progress, phase, isPlaying, loopIndex, loopTotal, nextVideo, lastError, etc.), stocké en mémoire uniquement — pas de données sensibles
-- Commande `screenshot` : Retourne un JPEG via Socket.IO, pas de stockage persistant. En cas d'échec, le Pi renvoie `{ error: 'no_active_video' | 'capture_failed' | 'timeout' }` pour un feedback immédiat au dashboard (v3.49+)
+- Commande `screenshot` : Retourne un JPEG dans la réponse HTTP, pas de stockage persistant. En cas d'échec, le controller retourne directement l'erreur avec le code HTTP approprié (502/504)
 
 ### Pending Config & Commands Indicator (v3.28+)
 
@@ -177,7 +183,7 @@ Toutes les commandes cloud remote sont instrumentées via les métriques Prometh
 - `neopro_commands_total{type, status}` : Compteur par type de commande (`score-update`, `screenshot`, etc.) et statut (`sent`, `error`, `received`, `pi_error`)
 - `neopro_command_latency_seconds{type}` : Histogramme de latence par type
 
-> **Note (v3.49+)** : Le statut `received` comptabilise les screenshots réussis (image reçue du Pi). Le statut `pi_error` comptabilise les échecs côté Pi (pas de vidéo active, capture canvas échouée, timeout local). La combinaison `sent` vs `received + pi_error` permet de détecter les pertes silencieuses (Pi déconnecté, Chromium crashé).
+> **Note (v3.58+)** : Le statut `received` comptabilise les screenshots réussis (image reçue du Pi). Le statut `pi_error` comptabilise les échecs côté Pi (pas de vidéo active, capture canvas échouée). Le statut `timeout` comptabilise les non-réponses (Pi déconnecté, Chromium crashé). La latence est mesurée via `neopro_command_latency_seconds{type="screenshot"}` (temps total request → response, incluant le relay sync-agent ↔ local server ↔ TV component).
 
 Ces métriques sont visibles dans Grafana (dashboard NeoPro Overview) et permettent de détecter une utilisation anormale (spam de commandes, erreurs récurrentes).
 
