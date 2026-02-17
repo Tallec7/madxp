@@ -5,6 +5,7 @@
  * - WiFi alert cooldown (6h dedup) and recovery pattern
  * - Existing cooldown behavior
  */
+export {};
 
 // Mock logger before importing
 const mockLogger = {
