@@ -1,3 +1,9 @@
+## [3.52.1](https://github.com/Tallec7/neopro/compare/v3.52.0...v3.52.1) (2026-02-17)
+
+### Bug Fixes
+
+- **dashboard:** resolve TypeScript strict null errors breaking build ([1cbf764](https://github.com/Tallec7/neopro/commit/1cbf764250c3d42b7ceb49ac54b7cb0c8564a875))
+
 # [3.52.0](https://github.com/Tallec7/neopro/compare/v3.51.0...v3.52.0) (2026-02-17)
 
 ### Features
