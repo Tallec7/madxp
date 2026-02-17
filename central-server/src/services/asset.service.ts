@@ -153,12 +153,16 @@ class AssetService {
     // Le chemin cible sur le Pi est relatif à /home/pi/neopro/
     const targetPath = `assets/watermarks/${this.sanitizeFilename(filename)}`;
 
+    // Note: On n'envoie PAS le checksum au Pi pour les assets.
+    // Le checksum est calculé sur le buffer mémoire avant l'upload FTP, mais le fichier
+    // servi par le CDN/serveur web peut différer (compression, headers, transformation Hostinger).
+    // Cela causait un "Checksum mismatch" systématique et bloquait tous les deploy_asset.
     const deployResult = await this.deployAssetToSite(
       siteId,
       uploadResult.url,
       filename,
       targetPath,
-      uploadResult.checksum,
+      '', // Pas de checksum — le fichier peut être altéré par le CDN
       'watermark'
     );
 

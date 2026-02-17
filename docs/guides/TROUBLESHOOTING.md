@@ -1480,10 +1480,13 @@ Mettre à jour `central-server` vers v2.21.x+ où le fix est inclus dans `conten
 
 **Causes possibles :**
 
-1. **Config non envoyée** (< v3.50.1) : `uploadWatermarkFile()` n'appelait pas `saveWatermarkConfig()` automatiquement. L'utilisateur devait cliquer manuellement sur "Deployer le watermark".
+1. **Checksum mismatch** (< v3.55.3) : Le `deploy_asset` échouait systématiquement car le checksum était calculé sur le buffer mémoire avant l'upload FTP, mais le CDN/Hostinger servait un contenu binaire différent. Vérifiable via `SELECT * FROM remote_commands WHERE command_type = 'deploy_asset' ORDER BY created_at DESC LIMIT 5;`.
+   - **Fix :** Le central-server n'envoie plus de checksum pour les assets CDN (v3.55.3). Le Pi traite le mismatch comme un warning non-bloquant.
+
+2. **Config non envoyée** (< v3.50.1) : `uploadWatermarkFile()` n'appelait pas `saveWatermarkConfig()` automatiquement. L'utilisateur devait cliquer manuellement sur "Deployer le watermark".
    - **Fix :** Mis à jour en v3.50.1 — auto-deploy après upload.
 
-2. **Race condition deploy_asset** (< v3.53.2) : `deploy_asset` émettait `config_updated` avant que `update_config` n'ait écrit la section watermark dans `configuration.json`. L'app Angular recevait une config sans watermark.
+3. **Race condition deploy_asset** (< v3.53.2) : `deploy_asset` émettait `config_updated` avant que `update_config` n'ait écrit la section watermark dans `configuration.json`. L'app Angular recevait une config sans watermark.
    - **Fix :** `deploy_asset` n'émet plus `config_updated` depuis v3.53.2. Seul `update_config` (qui écrit réellement dans `configuration.json`) émet l'événement.
 
 **Diagnostic côté Pi :**

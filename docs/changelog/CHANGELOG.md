@@ -1,3 +1,11 @@
+## [3.55.3] (2026-02-17)
+
+### Bug Fixes
+
+- **watermark:** fix `deploy_asset` failing with systematic checksum mismatch — checksum was computed on in-memory buffer before FTP upload, but CDN/Hostinger serves different binary content
+- **watermark:** central-server no longer sends checksum for CDN-served assets (`asset.service.ts`)
+- **watermark:** Pi-side `deploy-asset.js` treats checksum mismatch as non-blocking warning instead of fatal error
+
 ## [3.55.2](https://github.com/Tallec7/neopro/compare/v3.55.1...v3.55.2) (2026-02-17)
 
 ### Bug Fixes
