@@ -1,3 +1,9 @@
+# [3.57.0](https://github.com/Tallec7/neopro/compare/v3.56.0...v3.57.0) (2026-02-17)
+
+### Features
+
+- **watermark:** add watermark selector dropdown on Dashboard ([7448bba](https://github.com/Tallec7/neopro/commit/7448bbaace34928effde358735106d1d9e4f1306))
+
 # [3.56.0](https://github.com/Tallec7/neopro/compare/v3.55.4...v3.56.0) (2026-02-17)
 
 ### Features
