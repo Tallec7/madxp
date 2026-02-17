@@ -16,59 +16,19 @@
 
 - **upload:** fix corrupted filenames with accented characters ([ebfa94c](https://github.com/Tallec7/neopro/commit/ebfa94cb5e4e149fc0a04e21e6f6811db9753c23))
 
-## [3.53.6] (2026-02-17)
-
-### Bug Fixes
-
-- **cloud-remote:** add error handlers to 4 timer `updateTimer()` subscribe calls — prevents cascade of "Unhandled error Object" in console after socket disconnect (timer retries silently on next 30s sync)
-
-## [3.53.5] (2026-02-17)
-
-### Bug Fixes
-
-- **upload:** fix corrupted filenames with accented characters — multer 1.4.x decodes `Content-Disposition` as latin1, `fixMulterEncoding()` re-encodes to UTF-8 ("Soirée" no longer becomes "Soirèe")
-- **upload:** replace manual accent regex with `normalize('NFD')` for universal diacritics handling in `sanitizeFilename()`
-
-### Monitoring
-
-- **metrics:** add `neopro_filename_encoding_corrections_total` Prometheus counter
-- **alerting:** add `HighUploadFailureRate` and `FrequentEncodingCorrections` Prometheus alert rules
-
-### Documentation
-
-- **VIDEO_STORAGE.md:** document `fixMulterEncoding()`, updated sanitization and upload sequence flow (v3.0)
-
 ## [3.53.3](https://github.com/Tallec7/neopro/compare/v3.53.2...v3.53.3) (2026-02-17)
 
 ### Bug Fixes
 
 - **cloud-remote:** resolve TypeError crash on undefined quickMessages and categories ([bef5d6c](https://github.com/Tallec7/neopro/commit/bef5d6ce8bb4705e723590e3a002a98b60cfabdf))
+- **cloud-remote:** add error handlers to 4 timer `updateTimer()` subscribe calls — prevents cascade of "Unhandled error Object" in console after socket disconnect (timer retries silently on next 30s sync)
+- **cloud-remote:** `deepMerge` clones arrays instead of passing references, `quickMessages` uses safe navigation (`?.length`, `?? []`), `getCategoriesForTimeCategory` guards against undefined `configuration.categories`
 
-## [3.53.4] (2026-02-17)
-
-### Features
-
-- **monitoring:** add Prometheus Alertmanager + Grafana Cloud alert rules for downtime detection — 14 Prometheus rules (local) + 11 Grafana Cloud managed alerts covering server health (`CentralServerDown`, `ZeroHeartbeats`, `NoAgentConnections`), performance (`HighErrorRate`, `HighApiLatency`, `SlowDbQueries`), resources (`HighMemoryUsage`, `DbPoolSaturation`), and fleet stability (`ConnectedSitesDrop`, `HighDisconnectRate`). Critical alerts fire within 2-5 min via Slack. Alertmanager inhibits warning noise when server is fully down.
-- **monitoring:** add Alertmanager service to docker-compose (port 9093) with Slack routing (critical → immediate, warning → grouped 5 min)
-
-### Documentation
-
-- **docs:** update ARCHITECTURE.md with new section 9 (Prometheus Alerting)
-- **docs:** update MODOP-O05-08 with Prometheus/Grafana Cloud alert verification checklist
-- **docs:** update MODOP-S11-15 with infrastructure alert rules reference table
-- **docs:** update README.md and CLAUDE.md monitoring commands to include Alertmanager
-
-## [3.53.3] (2026-02-17)
+## [3.53.2](https://github.com/Tallec7/neopro/compare/v3.53.1...v3.53.2) (2026-02-17)
 
 ### Bug Fixes
 
-- **cloud-remote:** fix `Cannot read properties of undefined (reading 'length')` crash — `deepMerge` now clones arrays instead of passing references, `quickMessages` accesses use safe navigation (`?.length`, `?? []`), and `getCategoriesForTimeCategory` guards against undefined `configuration.categories` during socket reconnection
-
-## [3.53.2] (2026-02-17)
-
-### Bug Fixes
-
-- **watermark:** fix race condition preventing watermark display on Pi — `deploy_asset` no longer emits `config_updated` (only deploys the image file); only `update_config` emits the reload event after writing the watermark section into `configuration.json`
+- **watermark:** remove config_updated emit from deploy_asset ([be5e519](https://github.com/Tallec7/neopro/commit/be5e51924225e767e35458f19b36452cd7c6979d))
 
 ## [3.53.1](https://github.com/Tallec7/neopro/compare/v3.53.0...v3.53.1) (2026-02-17)
 
