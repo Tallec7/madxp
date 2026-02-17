@@ -1,3 +1,9 @@
+## [3.50.3](https://github.com/Tallec7/neopro/compare/v3.50.2...v3.50.3) (2026-02-17)
+
+### Bug Fixes
+
+- **alerting:** suppress false Slack alerts on server restart + reduce WiFi spam ([043560a](https://github.com/Tallec7/neopro/commit/043560a0f8b64e38a700f509ec94144ae43cc5a7))
+
 ## [3.50.3] (2026-02-17)
 
 ### Bug Fixes
