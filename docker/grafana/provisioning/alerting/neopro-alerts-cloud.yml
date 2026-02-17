@@ -1,0 +1,424 @@
+# Grafana Cloud Alert Rules for NeoPro
+#
+# Import method:
+#   Grafana Cloud UI → Alerting → Alert rules → Import
+#   OR use Grafana provisioning API:
+#   curl -X POST https://<instance>.grafana.net/api/v1/provisioning/alert-rules \
+#     -H "Authorization: Bearer $GRAFANA_SA_TOKEN" \
+#     -H "Content-Type: application/json" \
+#     -d @<rule.json>
+#
+# Datasource: grafanacloud-tallec7-prom
+# Contact point: Configure Slack webhook in Grafana Cloud → Alerting → Contact points
+
+apiVersion: 1
+
+groups:
+  # =============================================
+  # CRITICAL — Server & Connectivity
+  # =============================================
+  - orgId: 1
+    name: NeoPro - Critical
+    folder: NeoPro Alerts
+    interval: 1m
+    rules:
+      # Central Server unreachable
+      - uid: neopro-server-down
+        title: Central Server Down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: up{job=~"neopro.*"}
+              instant: true
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+              refId: C
+        for: 2m
+        labels:
+          severity: critical
+          team: neopro
+        annotations:
+          summary: "Central Server is DOWN"
+          description: "Prometheus cannot scrape the central server for 2 minutes. Check Railway deployment."
+
+      # Zero Pi heartbeats
+      - uid: neopro-zero-heartbeats
+        title: Zero Pi Heartbeats
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(neopro_heartbeats_total[5m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [0.001]
+              refId: C
+        for: 5m
+        labels:
+          severity: critical
+          team: neopro
+        annotations:
+          summary: "Zero Pi heartbeats for 5 minutes"
+          description: "No heartbeats received. All Pi disconnected or WebSocket is broken."
+
+      # No agent WebSocket connections
+      - uid: neopro-no-agents
+        title: No Pi Agents Connected
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: neopro_websocket_connections{type="agent"}
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+              refId: C
+        for: 5m
+        labels:
+          severity: critical
+          team: neopro
+        annotations:
+          summary: "No Pi agents connected"
+          description: "Zero agent WebSocket connections for 5 minutes."
+
+  # =============================================
+  # WARNING — Performance & Resources
+  # =============================================
+  - orgId: 1
+    name: NeoPro - Warnings
+    folder: NeoPro Alerts
+    interval: 1m
+    rules:
+      # High HTTP error rate
+      - uid: neopro-high-error-rate
+        title: High HTTP 5xx Error Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: sum(rate(http_requests_total{status_code=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.05]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "HTTP 5xx error rate above 5%"
+          description: "More than 5% of API requests are returning server errors."
+
+      # High API latency
+      - uid: neopro-high-latency
+        title: High API Latency (P95)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [3]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "P95 API latency above 3s"
+          description: "95th percentile response time exceeds 3 seconds."
+
+      # High memory usage
+      - uid: neopro-high-memory
+        title: High Memory Usage
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: process_resident_memory_bytes / (256 * 1024 * 1024)
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.88]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Memory usage above 88%"
+          description: "Heap approaching 256MB limit. OOM risk."
+
+      # DB pool saturation
+      - uid: neopro-db-pool-saturation
+        title: DB Pool Saturation
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: neopro_db_connections{state="active"} / neopro_db_connections{state="total"}
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.8]
+              refId: C
+        for: 3m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "DB pool saturation above 80%"
+          description: "Active connections approaching pool limit. Risk of exhaustion."
+
+      # Slow DB queries
+      - uid: neopro-slow-queries
+        title: Slow DB Queries (P95)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: histogram_quantile(0.95, rate(neopro_db_query_duration_seconds_bucket[5m]))
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [2]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "P95 DB query latency above 2s"
+          description: "Database queries are slow. Check for missing indexes or heavy queries."
+
+      # High WebSocket disconnect rate
+      - uid: neopro-high-disconnects
+        title: High WebSocket Disconnect Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(neopro_websocket_disconnects_total[5m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.5]
+              refId: C
+        for: 3m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "High WebSocket disconnect rate"
+          description: "More than 0.5 disconnections/sec. Possible network instability."
+
+      # Too many active alerts
+      - uid: neopro-too-many-alerts
+        title: Too Many Active Alerts
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: neopro_active_alerts
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [10]
+              refId: C
+        for: 10m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "More than 10 active alerts"
+          description: "Possible fleet-wide issue. Check Pi fleet status."
