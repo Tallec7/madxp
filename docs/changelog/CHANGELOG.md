@@ -1,3 +1,9 @@
+## [3.55.3](https://github.com/Tallec7/neopro/compare/v3.55.2...v3.55.3) (2026-02-17)
+
+### Bug Fixes
+
+- **watermark:** resolve deploy_asset checksum mismatch blocking all deployments ([afde700](https://github.com/Tallec7/neopro/commit/afde70075717abfa8318ba5560fc34d5486e5df6))
+
 ## [3.55.3] (2026-02-17)
 
 ### Bug Fixes
