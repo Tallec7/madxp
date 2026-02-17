@@ -1,7 +1,7 @@
 # Stockage Vidéo - Architecture et Déploiement
 
 > **Document de référence technique**
-> Version 2.0 - 10 Février 2026
+> Version 2.4 - 17 Février 2026
 
 ---
 
@@ -15,6 +15,7 @@
 6. [Nommage des fichiers](#6-nommage-des-fichiers)
 7. [Intégrité des fichiers](#7-intégrité-des-fichiers)
 8. [Dépannage](#8-dépannage)
+9. [Flux de déploiement watermark (v3.50+)](#9-flux-de-déploiement-watermark-v350)
 
 ---
 
@@ -535,6 +536,71 @@ Checksum mismatch: expected abc123, got def456
 | 2.1     | 2026-02-15 | Ajout section suppression manuelle depuis le Dashboard            |
 | 2.2     | 2026-02-15 | Fix null category, piCategory, modal UX                           |
 | 2.3     | 2026-02-16 | Auto-création sous-dossiers FTP (ensureDir) + troubleshooting 550 |
+| 2.4     | 2026-02-17 | Flux déploiement watermark, fix race condition deploy_asset       |
+
+---
+
+## 9. Flux de déploiement watermark (v3.50+)
+
+Le déploiement d'un watermark suit un flux en **deux commandes séquentielles** :
+
+```
+Dashboard                 Central Server              Raspberry Pi
+   │                           │                           │
+   │ POST /api/assets/         │                           │
+   │   watermark/:siteId       │                           │
+   │ ─────────────────────────>│                           │
+   │                           │ 1) Upload FTP             │
+   │                           │    watermarks/logo.png    │
+   │                           │                           │
+   │                           │ 2) deploy_asset command   │
+   │                           │ ─────────────────────────>│
+   │                           │    → Download image       │
+   │                           │    → Save to webapp/      │
+   │                           │      assets/watermarks/   │
+   │                           │                           │
+   │ saveWatermarkConfig()     │                           │
+   │ ─────────────────────────>│                           │
+   │                           │ 3) update_config command  │
+   │                           │    (mode: merge)          │
+   │                           │ ─────────────────────────>│
+   │                           │    → Merge watermark      │
+   │                           │      into configuration   │
+   │                           │    → Emit config_updated  │
+   │                           │    → Angular reloads      │
+   │                           │      watermark overlay    │
+```
+
+### Points clés
+
+- **`deploy_asset`** ne touche PAS à `configuration.json` et n'émet PAS `config_updated`. Il ne fait que déposer le fichier image.
+- **`update_config`** (mode merge) met à jour `configuration.json` avec la section `watermark` et émet `config_updated` pour recharger l'app Angular.
+- Le dashboard appelle `saveWatermarkConfig()` automatiquement après un upload réussi (pas besoin de clic manuel).
+- Pendant le lock de 60s (`config_update_pending_until`), la config watermark est immédiatement mergée dans `local_config_mirror` via `jsonb_set` pour éviter la perte au refresh dashboard.
+
+### Structure de la configuration watermark
+
+```json
+{
+  "watermark": {
+    "enabled": true,
+    "imagePath": "assets/watermarks/watermark_neopro.png",
+    "position": "top-right",
+    "size": 15,
+    "opacity": 80,
+    "fullscreen": true,
+    "imageUrl": "https://cdn.neopro.tv/watermarks/watermark_neopro.png"
+  }
+}
+```
+
+### Conditions d'affichage (Angular Pi)
+
+Le watermark s'affiche si les 3 conditions sont remplies :
+
+1. `showWatermark` = `true` (via `WatermarkService.checkVisibility()`)
+2. `configuration.watermark.enabled` = `true`
+3. `configuration.watermark.imagePath` est défini et non vide
 
 ---
 

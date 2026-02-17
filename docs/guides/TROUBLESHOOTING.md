@@ -8,14 +8,15 @@
 4. [Problèmes d'authentification](#problèmes-dauthentification)
 5. [Services qui ne démarrent pas](#services-qui-ne-démarrent-pas)
 6. [Problèmes de synchronisation](#problèmes-de-synchronisation)
-7. [Diagnostic réseau à distance](#diagnostic-réseau-à-distance)
-8. [Diagnostic complet](#diagnostic-complet)
-9. [CI/CD et Release](#cicd-et-release)
-10. [NetworkWatchdog — Auto-recovery réseau (v3.36+)](#networkwatchdog--auto-recovery-réseau-v336)
-11. [Hotspot Watchdog (v2.34+)](#hotspot-watchdog-v234)
-12. [Blocage BSSID Lock en Mesh (v2.34+)](#blocage-bssid-lock-en-mesh-v234)
-13. [Écran / HDMI (v3.44+)](#écran--hdmi-v344)
-14. [Recording Analytics (v3.38+)](#recording-analytics--état-denregistrement-v338)
+7. [Problèmes de watermark (v3.50+)](#problèmes-de-watermark-v350)
+8. [Diagnostic réseau à distance](#diagnostic-réseau-à-distance)
+9. [Diagnostic complet](#diagnostic-complet)
+10. [CI/CD et Release](#cicd-et-release)
+11. [NetworkWatchdog — Auto-recovery réseau (v3.36+)](#networkwatchdog--auto-recovery-réseau-v336)
+12. [Hotspot Watchdog (v2.34+)](#hotspot-watchdog-v234)
+13. [Blocage BSSID Lock en Mesh (v2.34+)](#blocage-bssid-lock-en-mesh-v234)
+14. [Écran / HDMI (v3.44+)](#écran--hdmi-v344)
+15. [Recording Analytics (v3.38+)](#recording-analytics--état-denregistrement-v338)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 
@@ -1451,6 +1452,97 @@ SELECT id, filename, checksum FROM videos WHERE checksum IS NULL;
 **Prévention**
 
 Mettre à jour `central-server` vers v2.21.x+ où le fix est inclus dans `content.controller.ts`.
+
+---
+
+## Problèmes de watermark (v3.50+)
+
+> **Référence architecture :** Voir [VIDEO_STORAGE.md § Flux de déploiement watermark](../technical/VIDEO_STORAGE.md#9-flux-de-déploiement-watermark-v350)
+
+### Upload watermark échoue (500 Internal Server Error)
+
+**Symptôme :** Erreur 500 sur `POST /api/assets/watermark/:siteId`.
+
+**Cause probable :** Le sous-dossier `watermarks/` n'existe pas sur le FTP Hostinger.
+
+**Diagnostic :**
+
+```bash
+# Logs Railway — chercher :
+# "FTPError: 550 watermarks/watermark_neopro.png: No such file or directory"
+```
+
+**Solution :** Corrigé en v3.49.4 — `ftp-storage.ts` appelle `client.ensureDir(dir)` automatiquement avant chaque upload. Si l'erreur réapparaît, vérifier les permissions FTP.
+
+### Watermark uploadé mais pas déployé sur le Pi
+
+**Symptôme :** L'upload réussit dans le dashboard mais le watermark n'apparaît pas sur la TV.
+
+**Causes possibles :**
+
+1. **Config non envoyée** (< v3.50.1) : `uploadWatermarkFile()` n'appelait pas `saveWatermarkConfig()` automatiquement. L'utilisateur devait cliquer manuellement sur "Deployer le watermark".
+   - **Fix :** Mis à jour en v3.50.1 — auto-deploy après upload.
+
+2. **Race condition deploy_asset** (< v3.53.2) : `deploy_asset` émettait `config_updated` avant que `update_config` n'ait écrit la section watermark dans `configuration.json`. L'app Angular recevait une config sans watermark.
+   - **Fix :** `deploy_asset` n'émet plus `config_updated` depuis v3.53.2. Seul `update_config` (qui écrit réellement dans `configuration.json`) émet l'événement.
+
+**Diagnostic côté Pi :**
+
+```bash
+# Vérifier que l'image existe
+ls -la /home/pi/neopro/webapp/assets/watermarks/
+
+# Vérifier que configuration.json contient la section watermark
+node -e "const c=JSON.parse(require('fs').readFileSync('/home/pi/neopro/webapp/configuration.json','utf-8')); console.log(JSON.stringify(c.watermark, null, 2))"
+
+# Logs sync-agent (vérifier deploy_asset + update_config)
+sudo journalctl -u neopro-sync-agent -n 100 | grep -E 'deploy-asset|update_config|watermark'
+```
+
+### Watermark perdu au refresh du dashboard
+
+**Symptôme :** Le watermark est configuré et déployé, mais disparaît quand on rafraîchit la page du dashboard.
+
+**Cause :** Pendant le lock de 60 secondes (`config_update_pending_until`), `sync_local_state` ne met à jour que les métadonnées dans `local_config_mirror`, pas la config complète. Si le Pi renvoie son état pendant cette fenêtre, la config watermark est écrasée.
+
+**Fix (v3.50.2+) :** `command-queue.service.ts` merge immédiatement le contenu `neoProContent` (watermark, sponsors, etc.) dans `local_config_mirror` via `jsonb_set` au moment de l'envoi de la commande `update_config`. Le dashboard voit ainsi la config à jour même pendant le lock.
+
+**Diagnostic SQL :**
+
+```sql
+-- Vérifier la section watermark dans local_config_mirror
+SELECT
+  name,
+  local_config_mirror->'watermark' as watermark,
+  config_update_pending_until
+FROM sites
+WHERE id = 'SITE_ID';
+```
+
+### Le watermark ne s'affiche pas sur l'écran TV (Angular)
+
+**Conditions d'affichage :** Les 3 conditions suivantes doivent être remplies :
+
+1. `configuration.watermark.enabled` = `true`
+2. `configuration.watermark.imagePath` non vide
+3. Le fichier image existe dans `/home/pi/neopro/webapp/assets/watermarks/`
+
+**Diagnostic rapide :**
+
+```bash
+# 1. Vérifier configuration.json
+ssh pi@neopro.local 'node -e "const c=JSON.parse(require(\"fs\").readFileSync(\"/home/pi/neopro/webapp/configuration.json\",\"utf-8\")); console.log(\"enabled:\", c.watermark?.enabled, \"path:\", c.watermark?.imagePath)"'
+
+# 2. Vérifier que le fichier image existe
+ssh pi@neopro.local 'ls -la /home/pi/neopro/webapp/assets/watermarks/'
+
+# 3. Vérifier les logs pour errors
+ssh pi@neopro.local 'sudo journalctl -u neopro-sync-agent -n 50 | grep watermark'
+```
+
+**Si `imagePath` est vide mais l'image existe :** Le `update_config` n'a pas été envoyé ou a échoué. Redéployer depuis le dashboard (onglet Paramètres > Watermark).
+
+**Si le fichier image n'existe pas :** Le `deploy_asset` a échoué. Vérifier les logs sync-agent pour l'erreur de téléchargement.
 
 ---
 
