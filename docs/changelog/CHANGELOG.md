@@ -1,3 +1,9 @@
+# [3.52.0](https://github.com/Tallec7/neopro/compare/v3.51.0...v3.52.0) (2026-02-17)
+
+### Features
+
+- **fan-monitoring:** end-to-end Pi fan monitoring with alerts, Prometheus & Grafana ([6eaeac5](https://github.com/Tallec7/neopro/commit/6eaeac5843da332a1d36020b894ab1e4d8527c6a))
+
 ## [3.52.0] (2026-02-17)
 
 ### Features
