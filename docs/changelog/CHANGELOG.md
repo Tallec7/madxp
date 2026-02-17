@@ -1,3 +1,9 @@
+## [3.53.4](https://github.com/Tallec7/neopro/compare/v3.53.3...v3.53.4) (2026-02-17)
+
+### Bug Fixes
+
+- **upload:** fix corrupted filenames with accented characters ([ebfa94c](https://github.com/Tallec7/neopro/commit/ebfa94cb5e4e149fc0a04e21e6f6811db9753c23))
+
 ## [3.53.5] (2026-02-17)
 
 ### Bug Fixes
