@@ -115,7 +115,7 @@ describe('ContentManagementComponent', () => {
       fixture.detectChanges();
       tick();
 
-      expect(apiService.get).toHaveBeenCalledWith('/videos');
+      expect(apiService.get).toHaveBeenCalledWith('/videos?page=1&limit=20');
       expect(apiService.get).toHaveBeenCalledWith('/deployments');
       expect(sitesService.loadSites).toHaveBeenCalled();
       expect(groupsService.loadGroups).toHaveBeenCalled();
@@ -171,30 +171,37 @@ describe('ContentManagementComponent', () => {
     });
   });
 
-  describe('filteredVideos', () => {
-    beforeEach(() => {
-      component.videos = mockVideos;
-    });
-
-    it('should return all videos when no search', () => {
+  describe('server-side video search', () => {
+    it('should load videos without search param when videoSearch is empty', () => {
       component.videoSearch = '';
-      expect(component.filteredVideos().length).toBe(2);
+      component.loadVideos();
+      const callArg = apiService.get.calls.mostRecent().args[0] as string;
+      expect(callArg).not.toContain('search=');
     });
 
-    it('should filter by title', () => {
+    it('should include search param when videoSearch is set', () => {
       component.videoSearch = 'Test';
-      expect(component.filteredVideos().length).toBe(1);
-      expect(component.filteredVideos()[0].title).toBe('Video Test');
+      component.loadVideos();
+      const callArg = apiService.get.calls.mostRecent().args[0] as string;
+      expect(callArg).toContain('search=Test');
     });
 
-    it('should filter by filename', () => {
-      component.videoSearch = 'another';
-      expect(component.filteredVideos().length).toBe(1);
+    it('should reset to page 1 on search change', () => {
+      component.videoPagination.page = 3;
+      component.videoSearch = 'query';
+      component.onSearchChange();
+      expect(component.videoPagination.page).toBe(1);
     });
 
-    it('should be case insensitive', () => {
-      component.videoSearch = 'VIDEO';
-      expect(component.filteredVideos().length).toBe(2);
+    it('should populate videos from API response', () => {
+      const mockResponse = {
+        data: mockVideos,
+        pagination: { page: 1, limit: 20, total: 2, totalPages: 1, hasNext: false, hasPrev: false },
+      };
+      apiService.get.and.returnValue(of(mockResponse));
+      component.loadVideos();
+      expect(component.videos.length).toBe(2);
+      expect(component.videos[0].title).toBe('Video Test');
     });
   });
 

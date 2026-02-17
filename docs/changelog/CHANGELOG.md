@@ -3,6 +3,13 @@
 ### Bug Fixes
 
 - **dashboard:** remove NEOPRO video lock from central dashboard ([09c776a](https://github.com/Tallec7/neopro/commit/09c776a34136bd5870ce5ed4bede841cdc6d5af0))
+- **tests:** fix smoke test RBAC assertions — operator/viewer tests now accept 403 or 429 (rate limiter runs before auth middleware in test, accumulates on shared IP)
+- **tests:** fix dashboard content-management tests — replace obsolete `filteredVideos()` tests with server-side search/pagination tests, update expected API URL to `/videos?page=1&limit=20`
+
+### Documentation
+
+- **reference:** sync rate limiting table with actual code values (Admin 200→400, Auth 10/15min→60/min)
+- **reference:** document `filteredVideos()` removal in favor of server-side search
 
 # [3.57.0](https://github.com/Tallec7/neopro/compare/v3.56.0...v3.57.0) (2026-02-17)
 
