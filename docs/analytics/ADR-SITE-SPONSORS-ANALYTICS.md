@@ -1107,24 +1107,24 @@ L'expérience dashboard pour le suivi.
 
 ## 10. Critères d'Acceptance
 
-### Palier 0 (Bugs) — Done quand :
+### Palier 0 (Bugs) — ✅ Done
 
-- [ ] Les impressions arrivent avec `video_id` non-NULL (vérifiable en DB)
-- [ ] Les event_id sont uniques, pas de doublons après resync
-- [ ] Le PDF affiche un `completion_rate` réaliste (pas 100%)
-- [ ] Le PDF affiche un `estimated_reach` non-nul (si audience renseignée)
-- [ ] La route `/advertisers/:id/analytics` fonctionne dans le dashboard
-- [ ] L'export Excel ne crashe pas
-- [ ] Les smoke tests passent
+- [x] Les impressions arrivent avec `video_id` non-NULL (fix `video.video_id || video.id`)
+- [x] Les event_id sont uniques, pas de doublons après resync (`ON CONFLICT (event_id) DO NOTHING`)
+- [x] Le PDF affiche un `completion_rate` réaliste (pas 100%)
+- [x] Le PDF affiche un `estimated_reach` non-nul (si audience renseignée)
+- [x] La route `/advertisers/:id/analytics` fonctionne dans le dashboard
+- [x] L'export Excel ne crashe pas (3 méthodes corrigées)
+- [x] Les smoke tests passent (139/139)
 
-### Palier 1 (Fondations) — Done quand :
+### Palier 1 (Fondations) — ✅ Done
 
-- [ ] Table `site_sponsors` créée et peuplée depuis les données existantes
-- [ ] L'API CRUD `/api/sites/:siteId/sponsors` fonctionne
-- [ ] Le déploiement d'une vidéo annonceur crée automatiquement un `site_sponsor`
-- [ ] Les impressions Pi contiennent `site_sponsor_id` et `event_id`
-- [ ] Les impressions en DB ont `site_sponsor_id` renseigné (pour les vidéos identifiées)
-- [ ] Les tests unitaires et d'intégration passent
+- [x] Table `site_sponsors` créée et peuplée depuis les données existantes (migration `add-site-sponsors.sql`)
+- [x] L'API CRUD `/api/sites/:siteId/sponsors` fonctionne (8 routes)
+- [x] Le déploiement d'une vidéo annonceur crée automatiquement un `site_sponsor` (`upsertForAdvertiserSite()`)
+- [x] Les impressions Pi contiennent `site_sponsor_id` et `event_id` (`generateEventId()`)
+- [x] Les impressions en DB ont `site_sponsor_id` renseigné (`resolveSiteSponsorId()` dans deployment)
+- [x] Les tests unitaires et d'intégration passent (1472 server + 139 smoke)
 
 ### Palier 2 (Rapports) — Done quand : ✅
 
@@ -1180,22 +1180,43 @@ L'expérience dashboard pour le suivi.
 
 ## Annexes
 
-### A. Fichiers impactés — inventaire complet
+### A. Fichiers impactés — inventaire complet (mis à jour 17/02/2026)
 
 **Central Server (backend)** :
 
-- `src/scripts/migrations/add-site-sponsors.sql` (nouveau)
+- `src/scripts/migrations/add-site-sponsors.sql` (nouveau — P0/P1)
+- `src/scripts/migrations/add-site-sponsor-reports.sql` (nouveau — P2)
+- `src/scripts/migrations/fix-advertiser-impressions-idempotence.sql` (nouveau — P0)
+- `src/scripts/migrations/add-site-branding.sql` (nouveau — P5)
+- `src/scripts/migrations/add-sponsor-access-tokens.sql` (nouveau — P5)
 - `src/repositories/site-sponsor.repository.ts` (nouveau)
 - `src/controllers/site-sponsor.controller.ts` (nouveau)
 - `src/routes/site-sponsor.routes.ts` (nouveau)
+- `src/controllers/sponsor-portal.controller.ts` (nouveau — P5)
+- `src/controllers/sponsor-portal.controller.test.ts` (nouveau — P5)
+- `src/routes/sponsor-portal.routes.ts` (nouveau — P5)
+- `src/services/sponsor-access.service.ts` (nouveau — P5)
+- `src/services/sponsor-access.service.test.ts` (nouveau — P5)
 - `src/repositories/advertiser.repository.ts` (modifié)
+- `src/repositories/advertiser.repository.test.ts` (modifié)
+- `src/repositories/report.repository.ts` (modifié)
+- `src/repositories/index.ts` (modifié — re-export siteSponsorRepository)
 - `src/controllers/advertiser-analytics.controller.ts` (modifié)
+- `src/controllers/advertiser-sites.controller.ts` (modifié — auto-upsert site_sponsor)
+- `src/controllers/reports.controller.ts` (modifié)
+- `src/controllers/sites.controller.ts` (modifié — avg_spectators)
+- `src/routes/reports.routes.ts` (modifié)
+- `src/middleware/validation.ts` (modifié — avg_spectators)
 - `src/services/pdf-report.service.ts` (modifié)
 - `src/services/monthly-reports.service.ts` (modifié)
 - `src/services/email.service.ts` (modifié)
 - `src/services/deployment.service.ts` (modifié)
 - `src/services/cron-scheduler.service.ts` (modifié)
 - `src/services/excel-export.service.ts` (modifié)
+- `src/services/metrics.service.ts` (modifié)
+- `src/handlers/config-sync.handler.ts` (modifié — resolveLocalSponsors)
+- `src/server.ts` (modifié — montage routes)
+- `src/scripts/full-schema.sql` (modifié)
 
 **Raspberry Pi** :
 
@@ -1207,22 +1228,42 @@ L'expérience dashboard pour le suivi.
 - `sync-agent/src/commands/deploy-video.js` (modifié)
 - `sync-agent/src/types.js` (modifié)
 - `sync-agent/src/sponsor-impressions.js` (modifié)
-- `sync-agent/src/utils/config-merge.js` (modifié)
+- `sync-agent/src/utils/config-merge.js` (modifié — LOCAL_ONLY_SETTINGS)
+- `sync-agent/src/__tests__/config-merge.test.js` (modifié — 4 tests localSponsors)
+- `sync-agent/src/agent.js` (modifié — sync localSponsors inline, pas de module séparé)
 - `admin/routes/sponsors.js` (nouveau)
 - `admin/routes/videos.js` (modifié)
-- `admin/services/video.service.js` (modifié)
-- `admin/helpers.js` (modifié)
-- `admin/public/modules/sponsors/` (nouveau)
-- `sync-agent/src/local-sponsors.js` (nouveau)
+- `admin/services/sponsor.service.js` (nouveau)
+- `admin/admin-server.js` (modifié — instanciation + montage)
+- `admin/public/index.html` (modifié — nav + modals + UI)
+- `admin/public/modules/sponsors/index.js` (nouveau)
+- `admin/public/modules/bootstrap.js` (modifié — switchTab sponsors)
+- `admin/public/modules/upload/index.js` (modifié — dropdown sponsor)
+- `admin/public/build-admin.sh` (modifié — module sponsors)
+- `admin/__tests__/sponsor.service.test.js` (nouveau — 22 tests)
 
 **Dashboard Central** :
 
-- `src/app/core/services/site-sponsor.service.ts` (nouveau)
-- `src/app/features/sites/site-sponsors/` (nouveau)
-- `src/app/features/sites/config-editor/config-editor.component.ts` (modifié)
-- `src/app/features/sites/site-detail.component.ts` (modifié)
-- `src/app/app.routes.ts` (modifié)
-- `src/app/features/layout/layout.component.ts` (modifié)
+- `src/app/core/services/sites.service.ts` (modifié — 10 méthodes sponsors intégrées, pas de service séparé)
+- `src/app/core/services/sponsor-access.service.ts` (nouveau — P5, service API portail magic link)
+- `src/app/core/models/index.ts` (modifié — interfaces SiteSponsor, stats, reports, avg_spectators)
+- `src/app/features/sites/components/site-sponsors-tab/site-sponsors-tab.component.ts` (nouveau)
+- `src/app/features/sites/components/site-sponsors-tab/site-sponsors-tab.component.spec.ts` (nouveau)
+- `src/app/features/sites/components/site-settings-tab/site-settings-tab.component.ts` (modifié — branding + avg_spectators)
+- `src/app/features/sites/components/site-content-tab/site-content-tab.component.ts` (modifié — charge siteSponsors)
+- `src/app/features/sites/components/loop-manager/loop-manager.component.ts` (modifié — dropdown sponsor)
+- `src/app/features/sites/site-detail.component.ts` (modifié — tab sponsors)
+- `src/app/features/sponsor-portal/site-sponsor-portal.component.ts` (nouveau — P5)
+- `src/app/features/sponsor-portal/site-sponsor-portal.component.spec.ts` (nouveau — P5)
+- `src/app/app.routes.ts` (modifié — routes sponsors + portail)
+- `src/assets/i18n/en.json` (modifié — clés sponsors)
+- `src/assets/i18n/fr.json` (modifié)
+- `src/assets/i18n/es.json` (modifié)
+
+**Monitoring** :
+
+- `docker/prometheus/rules.yml` (nouveau — alerting rules fleet + API)
+- `docker/alertmanager/alertmanager.yml` (nouveau — notification config)
 
 ### B. Références
 
