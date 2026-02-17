@@ -109,8 +109,10 @@ class AssetDeployHandler {
         size: buffer.length,
       });
 
-      // Notifier l'application locale du changement
-      await this.notifyLocalApp();
+      // Note: PAS de notification config_updated ici.
+      // deploy_asset dépose un fichier image, il ne modifie pas configuration.json.
+      // C'est update_config (envoyé séparément) qui met à jour la config
+      // et émet config_updated pour recharger l'app Angular.
 
       return {
         success: true,
@@ -134,14 +136,6 @@ class AssetDeployHandler {
     }
   }
 
-  /**
-   * Notifie l'application locale (TV) qu'un asset a été déployé
-   */
-  async notifyLocalApp() {
-    const localSocket = require('../services/local-socket');
-    localSocket.emit('config_updated');
-    logger.info('[deploy-asset] Local app notified');
-  }
 }
 
 module.exports = new AssetDeployHandler();

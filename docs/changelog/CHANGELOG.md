@@ -1,3 +1,9 @@
+## [3.53.2] (2026-02-17)
+
+### Bug Fixes
+
+- **watermark:** fix race condition preventing watermark display on Pi — `deploy_asset` no longer emits `config_updated` (only deploys the image file); only `update_config` emits the reload event after writing the watermark section into `configuration.json`
+
 ## [3.53.1](https://github.com/Tallec7/neopro/compare/v3.53.0...v3.53.1) (2026-02-17)
 
 ### Bug Fixes
