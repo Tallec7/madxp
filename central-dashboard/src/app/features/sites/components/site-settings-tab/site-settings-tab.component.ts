@@ -1999,6 +1999,11 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
           localPath: response.localPath,
           checksum: response.checksum
         });
+
+        // Auto-déployer la config watermark vers le Pi
+        // L'image a été déployée via deploy_asset, mais configuration.json
+        // doit aussi être mis à jour pour que le watermark s'affiche
+        this.saveWatermarkConfig();
       },
       error: (error) => {
         this.uploadingWatermark = false;
