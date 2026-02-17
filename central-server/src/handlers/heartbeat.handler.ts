@@ -188,6 +188,13 @@ async function checkAlerts(
       });
     }
 
+    // WiFi signal recovery: if signal is back above -70 dBm, resolve active alert
+    if (wifiStatus.connectionType === 'wifi' && wifiStatus.signal !== null && wifiStatus.signal >= -70) {
+      const siteResult = await query('SELECT site_name FROM sites WHERE id = $1', [siteId]);
+      const siteName: string = (siteResult.rows[0]?.site_name as string) || siteId;
+      alertService.wifiSignalRecovered(siteId, siteName, wifiStatus.signal).catch((_e) => {/* ignore */});
+    }
+
     // Clé USB absente (seulement si pas en Ethernet — un Pi Ethernet sans clé est normal)
     if (wifiStatus.connectionType !== 'ethernet' && wifiStatus.interface === null) {
       alerts.push({

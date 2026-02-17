@@ -239,6 +239,7 @@ Voir ADR-013 pour le détail du merge intelligent.
 
 ```
 SIGTERM reçu
+  → alertService.enterShutdownMode()           // Supprime les faux "Site Offline" (v3.50.3)
   → Stop schedulers, alerting, services
   → socketService.cleanup()
     → io.emit('server_shutdown', { reason })   // Notifie tous les Pi
@@ -251,6 +252,8 @@ SIGTERM reçu
   → process.exit(0)
   → Safety net: setTimeout(10s) → process.exit(0) si hang
 ```
+
+> **Note (v3.50.3)** : `enterShutdownMode()` est appelé en tout premier dans le handler SIGTERM, avant même l'arrêt des schedulers. Cela garantit que les déconnexions Socket.IO déclenchées par `socketService.cleanup()` ne génèrent aucune alerte Slack "Site Offline". Au redémarrage, la **boot grace period de 90s** prend le relais pour supprimer les alertes online/offline le temps que tous les Pi se reconnectent.
 
 ### Métriques Prometheus pour les déconnexions (v3.18)
 

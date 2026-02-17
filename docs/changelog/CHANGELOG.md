@@ -1,3 +1,19 @@
+## [3.50.3] (2026-02-17)
+
+### Bug Fixes
+
+- **alerting:** suppress false "Site Offline" alerts during server restart — `alertService.enterShutdownMode()` called on SIGTERM before disconnecting sockets, prevents flood of offline alerts during Railway redeploy
+- **alerting:** extend boot grace period from 60s to 90s and apply to **both** `siteOnline` and `siteOffline` alerts (previously only covered `siteOnline`)
+- **alerting:** reduce WiFi signal alert spam — add 6h cooldown per site in `lowWifiSignal()` (was 1h in DB only, repeated every heartbeat cycle)
+
+### Features
+
+- **alerting:** add `wifiSignalRecovered()` notification — sends "Signal WiFi rétabli" Slack alert when signal returns above -70 dBm, clears the active alert cooldown so new degradation is detected immediately
+
+### Tests
+
+- **alerting:** add 17 unit tests for `alert.service.ts` covering shutdown mode, boot grace period (online + offline), WiFi cooldown (6h), WiFi recovery pattern, and existing cooldown behavior
+
 ## [3.50.2](https://github.com/Tallec7/neopro/compare/v3.50.1...v3.50.2) (2026-02-17)
 
 ### Bug Fixes

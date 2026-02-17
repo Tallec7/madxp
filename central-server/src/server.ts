@@ -19,6 +19,7 @@ import memoryManagerService from './services/memory-manager.service';
 import networkAlertsService from './services/network-alerts.service';
 import { adminOpsService } from './services/admin-ops.service';
 import { alertingService } from './services/alerting.service';
+import { alertService } from './services/alert.service';
 import { realtimeStatsService } from './services/realtime-stats.service';
 // predictiveAlertsService disabled — see startServices() comments
 // import { predictiveAlertsService } from './services/predictive-alerts.service';
@@ -489,6 +490,11 @@ const startServer = async () => {
 
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM signal received: graceful shutdown starting');
+
+  // Suppress site online/offline alerts BEFORE disconnecting sockets
+  // to prevent false "Site Offline" flood on redeploy
+  alertService.enterShutdownMode();
+
   schedulerService.stop();
   cronSchedulerService.stop();
   memoryManagerService.stop();

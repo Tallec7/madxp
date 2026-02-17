@@ -545,6 +545,8 @@ Après 6 tentatives : cooldown 5 min, alerte `internet_failure` envoyée au cent
 
 Le watchdog ne tente **aucune recovery pendant les 60 premières secondes** après le démarrage. Cela laisse le réseau se stabiliser (wlan1 met parfois 15-30s à obtenir une IP via DHCP).
 
+> **Côté serveur central (v3.50.3)** : La boot grace period des alertes Slack est de **90 secondes** et couvre à la fois les alertes "Site Online" et "Site Offline". Les alertes WiFi faible ont un cooldown Slack de **6 heures** par site (au lieu d'1h en DB). Quand le signal remonte au-dessus de **-70 dBm**, une notification "Signal WiFi rétabli" est envoyée automatiquement.
+
 **Pendant une mise à jour OTA**, le sync-agent active une grace period de **120 secondes** avant le déploiement udev. Cette grace period est **persistée sur disque** (`/tmp/neopro-watchdog-grace.json`) car le sync-agent est redémarré pendant l'OTA. Au redémarrage, le watchdog restaure le timestamp et skip les checks tant que la grace period n'est pas expirée.
 
 Sans cette persistance, le nouveau process démarrait avec `gracePeriodUntil=0` et lançait une recovery agressive (modprobe, USB power-cycle) qui tuait la clé WiFi pendant la stabilisation post-OTA.

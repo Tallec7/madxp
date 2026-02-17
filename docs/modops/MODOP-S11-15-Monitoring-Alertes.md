@@ -77,7 +77,11 @@ Définis dans `central-server/src/services/alerting.service.ts:50-123`
 
 **Cooldowns Slack (v3.48)** : En plus des cooldowns par seuil ci-dessus, les alertes Slack "Site Offline" et "Site Online" ont un cooldown dédié de **5 minutes par site** dans `alert.service.ts`. Cela empêche le spam Slack quand un site se reconnecte/déconnecte rapidement (flapping), par exemple lors d'un redéploiement serveur.
 
-**Grace period au boot (v3.49.3)** : Les alertes "Site Online" sont supprimées pendant les **60 premières secondes** après le démarrage du serveur. Lors d'un redéploiement Railway, tous les Pi se reconnectent en ~2-5s — sans cette grace period, chaque reconnexion génère une fausse alerte Slack. Le cooldown en mémoire (Map) est perdu au redémarrage, donc la grace period au boot est nécessaire en complément.
+**Grace period au boot (v3.50.3)** : Les alertes "Site Online" **et "Site Offline"** sont supprimées pendant les **90 premières secondes** après le démarrage du serveur. Lors d'un redéploiement Railway, tous les Pi se déconnectent puis reconnectent en ~2-30s — sans cette grace period, chaque déconnexion/reconnexion génère une fausse alerte Slack. Le cooldown en mémoire (Map) est perdu au redémarrage, donc la grace period au boot est nécessaire en complément.
+
+**Shutdown mode (v3.50.3)** : Lors d'un `SIGTERM` (redéploiement Railway), `alertService.enterShutdownMode()` est appelé **avant** la déconnexion des sockets. Toutes les alertes "Site Offline" et "Site Online" sont supprimées pendant le shutdown. Cela élimine les faux positifs en cascade (N sites × 2 alertes) qui polluaient le canal Slack à chaque redéploiement.
+
+**Cooldown WiFi (v3.50.3)** : Les alertes "Signal WiFi faible" ont un cooldown Slack dédié de **6 heures par site**. Quand le signal remonte au-dessus de **-70 dBm**, une alerte "Signal WiFi rétabli" est envoyée et le cooldown est réinitialisé (prêt à re-alerter si le signal redescend). Ce pattern "alerte unique + résolution" remplace le spam horaire précédent.
 
 ### 3.4 Canaux de notification
 
