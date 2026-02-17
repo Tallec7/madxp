@@ -39,7 +39,13 @@ class SoftwareUpdateHandler {
       progressCallback(35);
 
       if (checksum) {
-        await this.verifyChecksum(packagePath, checksum);
+        const verified = await this.verifyChecksumWithRetry(packagePath, checksum, packageSize, {
+          updateUrl,
+          progressCallback,
+        });
+        if (!verified) {
+          throw new Error('Checksum verification failed after retry');
+        }
       }
 
       progressCallback(40);
@@ -149,19 +155,73 @@ class SoftwareUpdateHandler {
     }
   }
 
-  async verifyChecksum(filePath, expectedChecksum) {
-    try {
-      const { stdout } = await execAsync(`sha256sum ${filePath}`);
-      const actualChecksum = stdout.split(' ')[0];
+  /**
+   * Verify checksum with one retry on failure.
+   * On mismatch: logs diagnostics, re-downloads once, and retries.
+   */
+  async verifyChecksumWithRetry(filePath, expectedChecksum, expectedSize, { updateUrl, progressCallback }) {
+    const firstResult = await this.verifyChecksum(filePath, expectedChecksum, expectedSize);
+    if (firstResult.match) {
+      return true;
+    }
 
-      if (actualChecksum !== expectedChecksum) {
-        throw new Error('Checksum verification failed');
+    logger.warn('Checksum mismatch on first attempt, will retry download', {
+      expectedChecksum,
+      actualChecksum: firstResult.actualChecksum,
+      expectedSize,
+      actualSize: firstResult.actualSize,
+      sizeMismatch: expectedSize && firstResult.actualSize !== expectedSize,
+    });
+
+    // Re-download
+    logger.info('Re-downloading update package for retry...');
+    await fs.remove(filePath);
+    await this.downloadPackage(updateUrl, filePath, (progress) => {
+      if (progressCallback) {
+        progressCallback(35 + progress * 0.03);
+      }
+    });
+
+    const secondResult = await this.verifyChecksum(filePath, expectedChecksum, expectedSize);
+    if (secondResult.match) {
+      logger.info('Checksum verified on retry');
+      return true;
+    }
+
+    logger.error('Checksum verification failed after retry', {
+      expectedChecksum,
+      actualChecksum: secondResult.actualChecksum,
+      expectedSize,
+      actualSize: secondResult.actualSize,
+    });
+    return false;
+  }
+
+  async verifyChecksum(filePath, expectedChecksum, expectedSize) {
+    try {
+      const stats = await fs.stat(filePath);
+      const actualSize = stats.size;
+
+      if (expectedSize && actualSize !== expectedSize) {
+        logger.warn('Downloaded file size mismatch', {
+          expected: expectedSize,
+          actual: actualSize,
+          diff: actualSize - expectedSize,
+        });
       }
 
-      logger.info('Checksum verified successfully');
+      const { stdout } = await execAsync(`sha256sum ${filePath}`);
+      const actualChecksum = stdout.split(' ')[0];
+      const match = actualChecksum === expectedChecksum;
+
+      if (match) {
+        logger.info('Checksum verified successfully');
+      }
+
+      return { match, actualChecksum, actualSize };
     } catch (error) {
-      logger.error('Checksum verification failed:', error);
-      throw error;
+      logger.error('Checksum computation failed:', error);
+      return { match: false, actualChecksum: null, actualSize: null };
     }
   }
 

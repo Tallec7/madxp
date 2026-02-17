@@ -1,5 +1,32 @@
 # Migrations Base de Données NEOPRO
 
+## Utilisation
+
+Toutes les migrations sont gérées via le runner `migrate.ts` :
+
+```bash
+cd central-server
+
+# Appliquer les migrations en attente
+npm run db:migrate
+
+# Voir le statut de toutes les migrations
+npm run db:migrate -- --status
+
+# Marquer toutes les migrations comme appliquées (sans les exécuter)
+npm run db:migrate -- --mark-all-applied
+```
+
+Le runner utilise une table `schema_migrations` pour tracker les migrations appliquées. Chaque migration `.sql` est exécutée dans une transaction (ROLLBACK automatique en cas d'erreur).
+
+Les migrations sont idempotentes (`IF NOT EXISTS`, `DO $`) et peuvent aussi être appliquées manuellement si nécessaire :
+
+```bash
+source .env && psql "$DATABASE_URL" -f src/scripts/migrations/<migration>.sql
+```
+
+---
+
 ## 📋 Liste des Migrations
 
 ### 0. 00-create-rls-functions.sql ⚠️ (Optionnel - Troubleshooting)
@@ -577,6 +604,47 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/add-sponsor-access-t
 
 ---
 
+### 12. add-fan-status.sql ✅ **Fix heartbeat errors**
+
+**Date:** 2026-02-17
+**Statut:** ✅ **REQUIS** - Corrige l'erreur `column "fan_status" of relation "metrics" does not exist`
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Ajoute la colonne `fan_status JSONB DEFAULT NULL` à la table `metrics` pour permettre au heartbeat handler de stocker l'état des ventilateurs des Pi.
+
+**Symptômes du problème:**
+
+- Erreur répétée à chaque heartbeat : `column "fan_status" of relation "metrics" does not exist`
+- Logs Railway spammés par des erreurs INSERT
+
+**Commande:**
+
+```bash
+npm run db:migrate
+# ou manuellement :
+psql $DATABASE_URL -f central-server/src/scripts/migrations/add-fan-status.sql
+```
+
+---
+
+### 13. add-hostname-slug.sql ✅ **mDNS Pi hostname**
+
+**Date:** 2026-02-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 2 secondes
+
+**Description:**
+Ajoute `hostname_slug VARCHAR(63)` à la table `sites` pour distinguer les Pi sur le même réseau local via mDNS (ex: `neopro-usap.local`). Backfill automatique depuis `club_name` avec gestion des collisions.
+
+**Commande:**
+
+```bash
+npm run db:migrate
+```
+
+---
+
 **Dernière mise à jour:** 17 février 2026
 **Auteur:** Claude Code
-**Version migrations:** 2.0
+**Version migrations:** 3.0

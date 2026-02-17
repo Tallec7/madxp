@@ -1,3 +1,19 @@
+## [3.54.2] (2026-02-17)
+
+### Features
+
+- **db:** create `migrate.ts` runner — `npm run db:migrate` with `--status` and `--mark-all-applied` flags, `schema_migrations` tracking table
+- **ota:** add checksum retry logic in sync-agent `update-software.js` — re-downloads and retries SHA256 verification once on mismatch (fixes FTP corruption failures)
+
+### Bug Fixes
+
+- **heartbeat:** apply `add-fan-status.sql` migration to production — resolves `column "fan_status" of relation "metrics" does not exist` error spamming every heartbeat
+
+### Documentation
+
+- **migrations:** add usage section with `npm run db:migrate` commands, document `add-fan-status.sql` and `add-hostname-slug.sql` entries
+- **sync-architecture:** document OTA checksum retry flow and monitoring
+
 ## [3.54.1](https://github.com/Tallec7/neopro/compare/v3.54.0...v3.54.1) (2026-02-17)
 
 ### Bug Fixes

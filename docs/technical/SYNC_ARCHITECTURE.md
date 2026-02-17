@@ -890,6 +890,7 @@ Dashboard ──POST /api/update-deployments──▶ Central Server
                                           Pi (sync-agent)
                                                │
                                                ├─ Download .tar.gz depuis CDN
+                                               ├─ SHA256 checksum verify (retry 1x on mismatch)
                                                ├─ Extraction dans /tmp
                                                ├─ fixFileOwnership(VERSION, release.json)
                                                │      └─ sudo chown -R pi:pi + try/catch non-bloquant
@@ -934,9 +935,20 @@ Envoyée via `remote_shell` **avant** l'OTA pour supprimer les fichiers VERSION 
 
 Route `POST /api/system/fix-ownership` : corrige ownership dossiers + fichiers via sudo. Localhost sans auth.
 
+### Vérification checksum avec retry
+
+Le sync-agent vérifie le SHA256 du package téléchargé avant extraction. En cas de mismatch (corruption FTP, download partiel), il re-télécharge et retente une fois :
+
+1. **Premier essai** : `sha256sum` + comparaison taille fichier
+2. **Mismatch** : log warn avec diagnostics (checksum attendu/reçu, taille attendue/réelle), suppression du fichier corrompu
+3. **Retry** : re-download complet + seconde vérification
+4. **Échec final** : log error, abort OTA
+
+Code : `raspberry/sync-agent/src/commands/update-software.js` → `verifyChecksumWithRetry()`
+
 ### Monitoring
 
-Métrique Prometheus : `neopro_ota_errors_total{error_type}` avec labels `permission`, `timeout`, `network`, `disk_full`, `cancelled`, `other`.
+Métrique Prometheus : `neopro_ota_errors_total{error_type}` avec labels `permission`, `timeout`, `network`, `disk_full`, `cancelled`, `other`. Le retry côté Pi réduit les erreurs checksum remontées au serveur central.
 
 La pré-migration logge un bloc `=== PRE-MIGRATION DIAG ===` avec les permissions exactes. Visible dans Railway logs.
 
@@ -955,6 +967,7 @@ La pré-migration logge un bloc `=== PRE-MIGRATION DIAG ===` avec les permission
 | 1.8     | 2026-02-15 | Claude/NEOPRO | Réécriture pré-migration : rm sans sudo, diagnostic, versions affectées             |
 | 1.9     | 2026-02-15 | Claude/NEOPRO | Connexion locale persistante : relay screenshot et heartbeat via local-socket.js    |
 | 2.0     | 2026-02-16 | Claude/NEOPRO | Screenshot error response : réponse immédiate en cas d'échec + métriques Prometheus |
+| 2.1     | 2026-02-17 | Claude/NEOPRO | OTA checksum retry : re-download + vérification 1x en cas de mismatch SHA256        |
 
 ---
 
