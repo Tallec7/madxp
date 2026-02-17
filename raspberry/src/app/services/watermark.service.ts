@@ -14,6 +14,9 @@ export class WatermarkService {
   private scheduleInterval: ReturnType<typeof setInterval> | null = null;
   private _showWatermark = false;
 
+  /** Cache-buster: updated on every config change to bypass nginx immutable cache */
+  private configVersion = Date.now();
+
   /** Retry state for image load failures */
   private imageRetryCount = 0;
   private readonly MAX_IMAGE_RETRIES = 5;
@@ -46,6 +49,7 @@ export class WatermarkService {
    */
   setConfiguration(configuration: Configuration): void {
     this.configuration = configuration;
+    this.configVersion = Date.now();
 
     // Restart schedule check if needed
     this.stopScheduleCheck();
@@ -214,15 +218,17 @@ export class WatermarkService {
   }
 
   /**
-   * Retourne le chemin de l'image avec cache-buster pour forcer le rechargement
-   * lors des retries (évite que le navigateur serve un 404 depuis le cache)
+   * Retourne le chemin de l'image avec cache-buster pour contourner le cache
+   * nginx immutable (30j). Le cache-buster change à chaque reload de config
+   * et à chaque retry, garantissant que le navigateur charge toujours la
+   * dernière version du fichier.
    */
   getImageSrc(): string | null {
     const imagePath = this.configuration?.watermark?.imagePath;
     if (!imagePath) return null;
-    if (this.imageRetryCount === 0) return imagePath;
+    const cacheBuster = this.imageRetryCount > 0 ? Date.now() : this.configVersion;
     const separator = imagePath.includes('?') ? '&' : '?';
-    return `${imagePath}${separator}_cb=${Date.now()}`;
+    return `${imagePath}${separator}_v=${cacheBuster}`;
   }
 
   /**
