@@ -211,14 +211,18 @@ Dashboard Analytics (Chart.js graphs)
 Site Sponsor flow (local sponsors) :
   site_sponsors → site_sponsor_videos → advertiser_impressions (site_sponsor_id)
          │
-         ▼
-  Site detail > Sponsors tab (KPIs, Chart.js trends)
+         ├── Site detail > Sponsors tab (KPIs, Chart.js trends, CPI)
+         │         │
+         │         └── Benchmark panel (P6.2 — sponsor vs site average)
          │
-         ▼
-  PDF Report (branding club : couleurs + logo)
+         ├── Network Stats (P6.1 — cross-club via site_sponsors.advertiser_id)
+         │         GET /api/network/advertisers/:id/stats
+         │         → trends, by_site, by_event_type, CPI réseau
          │
-         ▼
-  Sponsor Portal (/sponsor-access?token=xxx) — public, token-based
+         ├── PDF Report (branding club : couleurs + logo)
+         │         └── Page 2 conditionnelle (P6.4 — match-by-match breakdown)
+         │
+         └── Sponsor Portal (/sponsor-access?token=xxx) — public, token-based
 ```
 
 ### 3. Remote control

@@ -715,7 +715,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.error = '';
     this.sitesService.listSiteSponsors(this.siteId, true).subscribe({
       next: (res) => {
-        this.sponsors = res.sponsors;
+        this.sponsors = res?.sponsors ?? [];
         this.loading = false;
         this.cdr.markForCheck();
       },

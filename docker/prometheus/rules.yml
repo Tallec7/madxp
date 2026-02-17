@@ -183,3 +183,38 @@ groups:
         annotations:
           summary: "{{ $value }} active alerts"
           description: "More than 10 active alerts for 10 minutes. Possible fleet-wide issue."
+
+  # =============================================
+  # Sponsor Analytics (P6)
+  # =============================================
+  - name: sponsor_analytics
+    rules:
+      # Network stats cross-club query latency (P6.1 — heavy aggregation)
+      - alert: SlowNetworkSponsorStats
+        expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/network/advertisers/.*/stats"}[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 network sponsor stats latency above 5s"
+          description: "Cross-club aggregation queries are slow. P95 latency: {{ $value | humanizeDuration }}. Consider adding indexes or caching."
+
+      # Benchmark query latency (P6.2 — full site sponsor scan)
+      - alert: SlowBenchmarkQuery
+        expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/sites/.*/sponsors/benchmark"}[5m])) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 sponsor benchmark latency above 3s"
+          description: "Benchmark query scanning all site sponsors is slow. P95: {{ $value | humanizeDuration }}."
+
+      # PDF report generation failures (P6.4 — match breakdown page 2)
+      - alert: HighReportFailureRate
+        expr: rate(neopro_report_generations_total{report_type="site_sponsor",status="failed"}[15m]) > 0.02
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High site_sponsor PDF report failure rate"
+          description: "More than 1 PDF generation failure per minute. Possible issue with match breakdown data."

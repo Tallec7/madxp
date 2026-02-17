@@ -98,19 +98,22 @@ En complément des alertes métier Pi (section 3.3), des alertes infrastructure 
 **Local** : Prometheus rules (`docker/prometheus/rules.yml`) → Alertmanager (`localhost:9093`) → Slack
 **Prod** : Grafana Cloud managed alerts (`docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`) → Contact point Slack
 
-| Alerte                | Condition               | Délai  | Sévérité | Action                            |
-| --------------------- | ----------------------- | ------ | -------- | --------------------------------- |
-| `CentralServerDown`   | Scrape fail (`up == 0`) | 2 min  | critical | Vérifier Railway, restart         |
-| `ZeroHeartbeats`      | `rate(heartbeats) == 0` | 5 min  | critical | WebSocket cassé ou serveur bloqué |
-| `NoAgentConnections`  | WS agents == 0          | 5 min  | critical | Même diagnostic                   |
-| `HighErrorRate`       | 5xx > 5%                | 5 min  | warning  | Logs Railway, DB latence          |
-| `DbPoolSaturation`    | Pool > 80%              | 3 min  | warning  | Requêtes longues, leaks           |
-| `HighMemoryUsage`     | RSS > 88% de 256MB      | 5 min  | warning  | OOM risk, vérifier heap           |
-| `HighApiLatency`      | P95 > 3s                | 5 min  | warning  | DB lente, charge élevée           |
-| `SlowDbQueries`       | P95 queries > 2s        | 5 min  | warning  | Index manquants                   |
-| `HighDisconnectRate`  | > 0.5/s                 | 3 min  | warning  | Instabilité réseau                |
-| `ConnectedSitesDrop`  | -50% en 10 min          | 5 min  | warning  | Incident fleet-wide               |
-| `TooManyActiveAlerts` | > 10 alertes            | 10 min | warning  | Problème généralisé               |
+| Alerte                    | Condition                 | Délai  | Sévérité | Action                                        |
+| ------------------------- | ------------------------- | ------ | -------- | --------------------------------------------- |
+| `CentralServerDown`       | Scrape fail (`up == 0`)   | 2 min  | critical | Vérifier Railway, restart                     |
+| `ZeroHeartbeats`          | `rate(heartbeats) == 0`   | 5 min  | critical | WebSocket cassé ou serveur bloqué             |
+| `NoAgentConnections`      | WS agents == 0            | 5 min  | critical | Même diagnostic                               |
+| `HighErrorRate`           | 5xx > 5%                  | 5 min  | warning  | Logs Railway, DB latence                      |
+| `DbPoolSaturation`        | Pool > 80%                | 3 min  | warning  | Requêtes longues, leaks                       |
+| `HighMemoryUsage`         | RSS > 88% de 256MB        | 5 min  | warning  | OOM risk, vérifier heap                       |
+| `HighApiLatency`          | P95 > 3s                  | 5 min  | warning  | DB lente, charge élevée                       |
+| `SlowDbQueries`           | P95 queries > 2s          | 5 min  | warning  | Index manquants                               |
+| `HighDisconnectRate`      | > 0.5/s                   | 3 min  | warning  | Instabilité réseau                            |
+| `ConnectedSitesDrop`      | -50% en 10 min            | 5 min  | warning  | Incident fleet-wide                           |
+| `TooManyActiveAlerts`     | > 10 alertes              | 10 min | warning  | Problème généralisé                           |
+| `SlowNetworkSponsorStats` | P95 network stats > 5s    | 5 min  | warning  | Agrégation cross-club lente, indexes ou cache |
+| `SlowBenchmarkQuery`      | P95 benchmark > 3s        | 5 min  | warning  | Scan sponsors site lent                       |
+| `HighReportFailureRate`   | PDF sponsor fails > 1/min | 10 min | warning  | Match breakdown data issue                    |
 
 **Inhibition** : Quand `CentralServerDown` est actif, toutes les alertes `warning` sont supprimées (inutile d'alerter sur la latence si le serveur est mort).
 

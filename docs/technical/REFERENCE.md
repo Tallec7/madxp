@@ -1206,18 +1206,27 @@ GET    /sites/:siteId/sponsors/:sponsorId                - Détail d'un sponsor 
 POST   /sites/:siteId/sponsors                           - Créer un sponsor local (admin, operator)
 PUT    /sites/:siteId/sponsors/:sponsorId                - Modifier un sponsor (admin, operator)
 DELETE /sites/:siteId/sponsors/:sponsorId                - Supprimer un sponsor (admin)
-GET    /sites/:siteId/sponsors/:sponsorId/stats          - Stats sponsor sur période (admin, operator)
+GET    /sites/:siteId/sponsors/benchmark                  - Benchmark sponsors du site (admin, operator) [P6.2]
+GET    /sites/:siteId/sponsors/:sponsorId/stats          - Stats sponsor sur période + CPI (admin, operator) [P6.3: +cpi, +contract_amount]
 POST   /sites/:siteId/sponsors/:sponsorId/videos         - Associer une vidéo à un sponsor (admin, operator)
 DELETE /sites/:siteId/sponsors/:sponsorId/videos/:fname  - Retirer une vidéo (admin, operator)
 POST   /sites/:siteId/sponsors/:sponsorId/access-link    - Générer magic link d'accès (admin, operator)
 ```
+
+**Endpoints Network Sponsors (auth JWT, montés sur /api/network) — P6.1 :**
+
+```
+GET    /network/advertisers/:advertiserId/stats   - Stats réseau cross-club d'un annonceur (admin, operator, advertiser)
+```
+
+> Agrège impressions, temps d'écran, reach, sites actifs, CPI, tendances quotidiennes, répartition par event_type et performance par club. Requêtes cross-club via `site_sponsors.advertiser_id`.
 
 **Endpoints Sponsor Portal (public, token-based, montés sur /api/sponsor-portal) :**
 
 ```
 GET    /sponsor-portal/verify   - Vérifie un magic link token → { valid, sponsor }
 GET    /sponsor-portal/stats    - Stats sponsor via token (période configurable)
-GET    /sponsor-portal/report   - Téléchargement rapport PDF via token
+GET    /sponsor-portal/report   - Téléchargement rapport PDF via token (page 2 conditionnelle match-by-match si matchs) [P6.4]
 ```
 
 **Authentification :** JWT HttpOnly cookie + Bearer token

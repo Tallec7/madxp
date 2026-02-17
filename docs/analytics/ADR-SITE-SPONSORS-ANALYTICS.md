@@ -1,7 +1,7 @@
 # ADR — Refonte Analytics Sponsors : Modèle Unifié `site_sponsors`
 
 > **Date** : 17 Février 2026
-> **Statut** : TERMINÉ — Paliers P0 à P5 complétés (17 Février 2026)
+> **Statut** : TERMINÉ — Paliers P0 à P6 complétés (17 Février 2026)
 > **Auteurs** : Équipe Dev + PO
 > **Priorité** : P0 — Prérequis monétisation réseau publicitaire
 > **Objectif livraison MVP** : Rapports PDF fonctionnels pour 4 clubs beta — fin Mars 2026
@@ -1004,10 +1004,13 @@ L'expérience dashboard pour le suivi.
 
 ### Palier 6 — Stats Réseau & Régie (post-MVP)
 
-- [x] Stats réseau agrégées pour la régie NEOPRO (P6.1 — `getNetworkStatsSummary`, `NetworkSponsorStatsComponent`, route `/network/advertisers/:id/analytics`)
+- [x] Stats réseau agrégées pour la régie NEOPRO (P6.1 — `getNetworkStatsSummary`, `NetworkSponsorStatsComponent`, route `GET /api/network/advertisers/:advertiserId/stats`)
 - [x] Comparaison sponsor vs autres sponsors du club (P6.2 — `getBenchmark`, panneau benchmark dans `site-sponsors-tab.component.ts`)
 - [x] CPI (coût par impression) (P6.3 — calcul applicatif `contract_amount / impressions`, KPI card + colonne benchmark + réseau)
 - [x] Concept de "match" lié aux impressions (P6.4 — `getMatchDayBreakdown`, page 2 conditionnelle dans `pdf-report.service.ts`)
+
+**Fichiers** : 2 nouveaux, 12 modifiés
+**Tests** : 533 Karma, 1487 Jest (server), 139 smoke — tous pass
 
 ---
 
