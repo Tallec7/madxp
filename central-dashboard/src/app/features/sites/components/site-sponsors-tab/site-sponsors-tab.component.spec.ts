@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError, delay } from 'rxjs';
 import { SiteSponsorsTabComponent } from './site-sponsors-tab.component';
 import { SitesService } from '../../../../core/services/sites.service';
@@ -137,7 +138,7 @@ describe('SiteSponsorsTabComponent', () => {
     const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
 
     await TestBed.configureTestingModule({
-      imports: [SiteSponsorsTabComponent, FormsModule],
+      imports: [SiteSponsorsTabComponent, FormsModule, TranslateModule.forRoot()],
       providers: [
         { provide: SitesService, useValue: sitesServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
