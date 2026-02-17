@@ -1,3 +1,9 @@
+## [3.55.4](https://github.com/Tallec7/neopro/compare/v3.55.3...v3.55.4) (2026-02-17)
+
+### Bug Fixes
+
+- **watermark:** bypass nginx immutable cache on image reload ([9404771](https://github.com/Tallec7/neopro/commit/9404771ab2e83f4589c3328b8ad2dbcb530f72e9))
+
 ## [3.55.3](https://github.com/Tallec7/neopro/compare/v3.55.2...v3.55.3) (2026-02-17)
 
 ### Bug Fixes
