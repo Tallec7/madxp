@@ -289,7 +289,7 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
      * @param {object} status — `{ status: string, reason?: string, expiresAt?: string }`
      */
     socket.on('license_update', (status) => {
-      console.log('[License] Status update received:', status?.status, status?.reason);
+      console.log('[License] Status update received:', status?.status, status?.days_left != null ? `${status.days_left}d left` : status?.reason);
       io.emit('license_update', status);
     });
 

@@ -11,6 +11,7 @@
 - **alerting:** suppress false "Site Offline" alerts during server restart — `alertService.enterShutdownMode()` called on SIGTERM before disconnecting sockets, prevents flood of offline alerts during Railway redeploy
 - **alerting:** extend boot grace period from 60s to 90s and apply to **both** `siteOnline` and `siteOffline` alerts (previously only covered `siteOnline`)
 - **alerting:** reduce WiFi signal alert spam — add 6h cooldown per site in `lowWifiSignal()` (was 1h in DB only, repeated every heartbeat cycle)
+- **license:** fix misleading `[License] Status update received: VALID undefined` log on Pi — `handlers.js` now displays `days_left` instead of absent `reason` field
 
 ### Features
 
