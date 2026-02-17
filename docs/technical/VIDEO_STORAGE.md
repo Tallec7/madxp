@@ -1,7 +1,7 @@
 # Stockage Vidéo - Architecture et Déploiement
 
 > **Document de référence technique**
-> Version 2.4 - 17 Février 2026
+> Version 3.0 - 17 Février 2026
 
 ---
 
@@ -155,35 +155,65 @@ Decathlon_FOCUS_Partenaire.mp4
    │  Multer écrit le fichier sur disque (/tmp/neopro-uploads/)
    │  PAS de chargement en mémoire (évite OOM sur fichiers > 256MB)
    │
-2. Génération du nom de fichier sanitisé
-   │ - Suppression des accents
+2. Correction encodage multer (latin1 → UTF-8)
+   │  fixMulterEncoding() re-encode le nom de fichier
+   │  Multer 1.4.x décode Content-Disposition en latin1
+   │
+3. Génération du nom de fichier sanitisé
+   │ - Normalisation Unicode NFD + suppression diacritiques
    │ - Remplacement des espaces par _
    │ - Suppression des caractères spéciaux
    │ - Ajout de suffixe numérique si doublon
    │
-3. Calcul du checksum SHA256 (streaming depuis le disque)
+4. Calcul du checksum SHA256 (streaming depuis le disque)
    │
-4. Upload vers FTP via storage.service
+5. Upload vers FTP via storage.service
    │ - uploadVideoFromDisk() → basic-ftp.uploadFrom(filePath)
    │ - Stream direct disque → FTP
    │ - Vérification post-upload (taille, existence)
    │
-5. Enregistrement en base de données
+6. Enregistrement en base de données
    │ - filename: nom sanitisé
-   │ - original_name: nom original
+   │ - original_name: nom original (corrigé UTF-8)
    │ - storage_path: chemin de stockage
    │ - checksum: SHA256 pour vérification
    │
-6. Nettoyage du fichier temporaire (finally)
+7. Nettoyage du fichier temporaire (finally)
    │ - Cleanup immédiat après traitement
    │ - Nettoyage périodique des fichiers abandonnés (> 1h, toutes les 30 min)
    │
-7. Retour de la réponse avec l'ID vidéo
+8. Retour de la réponse avec l'ID vidéo
 ```
 
 > **Note** : Les images (< 50MB, conversion image→vidéo) restent en memory storage car leur taille est compatible avec le heap.
 
+### Correction de l'encodage multer (latin1 → UTF-8)
+
+Multer 1.4.x décode le header `Content-Disposition` en latin1 au lieu d'UTF-8, ce qui corrompt les caractères accentués. `fixMulterEncoding()` détecte et corrige ce problème :
+
+```typescript
+// Entrée (corrompu par multer) : "SoirÃ©e_Club.mp4"
+// Sortie (corrigé)             : "Soirée_Club.mp4"
+
+function fixMulterEncoding(filename: string): string {
+  try {
+    const fixed = Buffer.from(filename, 'latin1').toString('utf8');
+    if (!fixed.includes('\ufffd') && fixed !== filename) {
+      metricsService.recordFilenameEncodingCorrection();
+      return fixed;
+    }
+  } catch {
+    // En cas d'erreur, retourner l'original
+  }
+  return filename;
+}
+```
+
+> **Métrique Prometheus** : `neopro_filename_encoding_corrections_total` comptabilise les corrections pour détecter les tendances côté client.
+
 ### Sanitization des noms de fichiers
+
+Utilise la normalisation Unicode NFD pour gérer universellement tous les diacritiques (accents, cédilles, tildes, etc.) :
 
 ```typescript
 // Entrée : "Décathlon FOCUS Partenaire (2024).mp4"
@@ -194,15 +224,11 @@ function sanitizeFilename(filename: string): string {
   const name = path.basename(filename, ext);
 
   const sanitized = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Supprime les diacritiques
     .replace(/\s+/g, '_') // Espaces → underscores
-    .replace(/[àáâãäå]/gi, 'a') // Accents
-    .replace(/[èéêë]/gi, 'e')
-    .replace(/[ìíîï]/gi, 'i')
-    .replace(/[òóôõö]/gi, 'o')
-    .replace(/[ùúûü]/gi, 'u')
-    .replace(/[ç]/gi, 'c')
-    .replace(/[ñ]/gi, 'n')
     .replace(/[^a-zA-Z0-9_-]/g, '') // Caractères non autorisés
+    .replace(/_+/g, '_') // Évite les underscores multiples
     .substring(0, 100); // Limite longueur
 
   return sanitized + ext.toLowerCase();
@@ -537,6 +563,7 @@ Checksum mismatch: expected abc123, got def456
 | 2.2     | 2026-02-15 | Fix null category, piCategory, modal UX                           |
 | 2.3     | 2026-02-16 | Auto-création sous-dossiers FTP (ensureDir) + troubleshooting 550 |
 | 2.4     | 2026-02-17 | Flux déploiement watermark, fix race condition deploy_asset       |
+| 3.0     | 2026-02-17 | Fix encodage multer latin1→UTF-8, sanitization NFD, métriques     |
 
 ---
 

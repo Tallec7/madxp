@@ -41,27 +41,39 @@ function calculateChecksumFromFile(filePath: string): Promise<string> {
 }
 
 /**
- * Sanitize un nom de fichier pour le stockage
- * - Remplace les espaces par des underscores
- * - Supprime les caractères spéciaux dangereux
- * - Conserve uniquement lettres, chiffres, tirets, underscores et points
+ * Corrige l'encodage latin1 de multer pour les noms de fichiers UTF-8.
+ * Multer 1.4.x décode le header Content-Disposition en latin1 au lieu d'UTF-8,
+ * ce qui corrompt les caractères accentués (ex: "Soirée" → "SoirÃ©e").
+ */
+function fixMulterEncoding(filename: string): string {
+  try {
+    const fixed = Buffer.from(filename, 'latin1').toString('utf8');
+    if (!fixed.includes('\ufffd') && fixed !== filename) {
+      metricsService.recordFilenameEncodingCorrection();
+      logger.info('Fixed multer latin1 encoding', { original: filename, fixed });
+      return fixed;
+    }
+  } catch {
+    // En cas d'erreur, retourner l'original
+  }
+  return filename;
+}
+
+/**
+ * Sanitize un nom de fichier pour le stockage.
+ * Utilise la normalisation Unicode NFD pour gérer correctement tous les accents.
  */
 function sanitizeFilename(filename: string): string {
   const ext = path.extname(filename);
   const name = path.basename(filename, ext);
 
-  // Sanitize: remplacer espaces par _, supprimer caractères spéciaux
   const sanitized = name
-    .replace(/\s+/g, '_')           // Espaces → underscores
-    .replace(/[àáâãäå]/gi, 'a')     // Accents a
-    .replace(/[èéêë]/gi, 'e')       // Accents e
-    .replace(/[ìíîï]/gi, 'i')       // Accents i
-    .replace(/[òóôõö]/gi, 'o')      // Accents o
-    .replace(/[ùúûü]/gi, 'u')       // Accents u
-    .replace(/[ç]/gi, 'c')          // Cédille
-    .replace(/[ñ]/gi, 'n')          // Tilde
-    .replace(/[^a-zA-Z0-9_-]/g, '') // Supprimer tout caractère non autorisé
-    .substring(0, 100);              // Limiter la longueur
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // Supprime les diacritiques (accents)
+    .replace(/\s+/g, '_')             // Espaces → underscores
+    .replace(/[^a-zA-Z0-9_-]/g, '')   // Supprime les caractères spéciaux
+    .replace(/_+/g, '_')              // Évite les underscores multiples
+    .substring(0, 100);               // Limiter la longueur
 
   return sanitized + ext.toLowerCase();
 }
@@ -213,8 +225,11 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    // Corriger l'encodage multer latin1 → UTF-8
+    const correctedOriginalname = fixMulterEncoding(file.originalname);
+
     // Générer un nom de fichier unique basé sur le nom original
-    const filename = await generateUniqueFilename(file.originalname);
+    const filename = await generateUniqueFilename(correctedOriginalname);
 
     // Calculer le checksum SHA256 en streaming depuis le disque (pas de chargement en mémoire)
     const checksum = tempFilePath
@@ -239,8 +254,8 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     const uploadStatus: UploadStatus = uploadResult.verified ? 'ready' : 'failed';
 
     // Utiliser le titre fourni ou le nom original du fichier
-    const videoTitle = title || file.originalname;
-    const original_name = file.originalname;
+    const videoTitle = title || correctedOriginalname;
+    const original_name = correctedOriginalname;
     const file_size = file.size;
     const mime_type = file.mimetype;
 
@@ -328,10 +343,11 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
 
     for (const file of files) {
       const tempFilePath = file.path;
+      const correctedOriginalname = fixMulterEncoding(file.originalname);
 
       try {
         // Générer un nom de fichier unique basé sur le nom original
-        const filename = await generateUniqueFilename(file.originalname);
+        const filename = await generateUniqueFilename(correctedOriginalname);
 
         // Upload vers le stockage en streaming depuis le disque
         logger.info('Uploading video to storage (bulk):', { filename, size: file.size });
@@ -342,15 +358,15 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
 
         if (!uploadResult) {
           errors.push({
-            name: file.originalname,
+            name: correctedOriginalname,
             error: 'Erreur lors de l\'upload vers le stockage. Vérifiez la configuration FTP.'
           });
           continue;
         }
 
         // Utiliser le nom original comme titre
-        const videoTitle = file.originalname;
-        const original_name = file.originalname;
+        const videoTitle = correctedOriginalname;
+        const original_name = correctedOriginalname;
         const file_size = file.size;
         const mime_type = file.mimetype;
 
@@ -384,8 +400,8 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
         logger.info('Video created (bulk):', { id: video.id, filename, title: videoTitle, siteId: site_id });
       } catch (fileError) {
         const errorMessage = fileError instanceof Error ? fileError.message : 'Erreur inconnue';
-        errors.push({ name: file.originalname, error: errorMessage });
-        logger.error('Error creating video in bulk:', { filename: file.originalname, error: fileError });
+        errors.push({ name: correctedOriginalname, error: errorMessage });
+        logger.error('Error creating video in bulk:', { filename: correctedOriginalname, error: fileError });
       } finally {
         // Nettoyer chaque fichier temporaire après traitement
         if (tempFilePath) {
@@ -690,8 +706,11 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Corriger l'encodage multer latin1 → UTF-8
+    const correctedOriginalname = fixMulterEncoding(file.originalname);
+
     logger.info('Starting image to video conversion', {
-      originalFilename: file.originalname,
+      originalFilename: correctedOriginalname,
       duration,
       imageSize: file.size,
       siteId: site_id,
@@ -699,7 +718,7 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
     });
 
     // Convertir l'image en vidéo
-    const result = await imageToVideoService.convert(file.buffer, file.originalname, {
+    const result = await imageToVideoService.convert(file.buffer, correctedOriginalname, {
       duration,
       blurBackground,
     });
@@ -724,7 +743,7 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
     const uploadStatus: UploadStatus = uploadResult.verified ? 'ready' : 'failed';
 
     // Utiliser le nom original de l'image comme titre
-    const imageBaseName = path.basename(file.originalname, path.extname(file.originalname));
+    const imageBaseName = path.basename(correctedOriginalname, path.extname(correctedOriginalname));
     const videoTitle = imageBaseName;
 
     // Insérer en base de données
@@ -737,7 +756,7 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
       mime_type: result.mimetype,
       storage_path: uploadResult.path,
       checksum,
-      metadata: { title: videoTitle, convertedFromImage: true, originalImage: file.originalname },
+      metadata: { title: videoTitle, convertedFromImage: true, originalImage: correctedOriginalname },
       uploaded_by: req.user?.id || null,
       uploaded_for_site_id: site_id || null,
       upload_status: uploadStatus,
@@ -752,7 +771,7 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
       id: videoResponse.id,
       filename,
       title: videoTitle,
-      originalImage: file.originalname,
+      originalImage: correctedOriginalname,
       duration,
       videoSize: result.size,
       siteId: site_id,

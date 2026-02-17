@@ -1,3 +1,19 @@
+## [3.53.5] (2026-02-17)
+
+### Bug Fixes
+
+- **upload:** fix corrupted filenames with accented characters — multer 1.4.x decodes `Content-Disposition` as latin1, `fixMulterEncoding()` re-encodes to UTF-8 ("Soirée" no longer becomes "Soirèe")
+- **upload:** replace manual accent regex with `normalize('NFD')` for universal diacritics handling in `sanitizeFilename()`
+
+### Monitoring
+
+- **metrics:** add `neopro_filename_encoding_corrections_total` Prometheus counter
+- **alerting:** add `HighUploadFailureRate` and `FrequentEncodingCorrections` Prometheus alert rules
+
+### Documentation
+
+- **VIDEO_STORAGE.md:** document `fixMulterEncoding()`, updated sanitization and upload sequence flow (v3.0)
+
 ## [3.53.3](https://github.com/Tallec7/neopro/compare/v3.53.2...v3.53.3) (2026-02-17)
 
 ### Bug Fixes

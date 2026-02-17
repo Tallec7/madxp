@@ -81,6 +81,12 @@ const videoUploadSize = new Summary({
   registers: [register],
 });
 
+const filenameEncodingCorrections = new Counter({
+  name: 'neopro_filename_encoding_corrections_total',
+  help: 'Total number of filename encoding corrections (multer latin1 to UTF-8)',
+  registers: [register],
+});
+
 const alertsTotal = new Counter({
   name: 'neopro_alerts_total',
   help: 'Total number of alerts generated',
@@ -560,6 +566,10 @@ class MetricsService {
     if (sizeBytes) {
       videoUploadSize.observe(sizeBytes);
     }
+  }
+
+  recordFilenameEncodingCorrection(): void {
+    filenameEncodingCorrections.inc();
   }
 
   recordAlert(severity: string, type: string): void {

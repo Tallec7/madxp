@@ -145,6 +145,31 @@ groups:
           description: "95th percentile response time is {{ $value | humanizeDuration }}."
 
   # =============================================
+  # Video Uploads
+  # =============================================
+  - name: video_uploads
+    rules:
+      # High upload failure rate
+      - alert: HighUploadFailureRate
+        expr: rate(neopro_video_uploads_total{status="failed"}[10m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High video upload failure rate"
+          description: "More than 3 upload failures per minute over 10 minutes."
+
+      # Frequent filename encoding corrections (indicates client-side issue)
+      - alert: FrequentEncodingCorrections
+        expr: rate(neopro_filename_encoding_corrections_total[1h]) > 0.1
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "Frequent filename encoding corrections"
+          description: "{{ $value | humanize }}/sec encoding corrections. Many uploads have non-ASCII filenames being corrected."
+
+  # =============================================
   # Alerts (meta-alerting)
   # =============================================
   - name: alerts_meta
