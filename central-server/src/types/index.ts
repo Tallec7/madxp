@@ -84,6 +84,7 @@ export interface Site {
   updated_at: Date;
   pending_config_version_id: string | null;
   remote_pin_hash: string | null;
+  hostname_slug: string | null;
 }
 
 // Group types
@@ -178,6 +179,16 @@ export interface RemoteCommand {
   completed_at: Date | null;
 }
 
+// Fan status types
+export interface FanStatus {
+  present: boolean;
+  type: string | null;
+  curState: number | null;
+  maxState: number | null;
+  speedPercent: number | null;
+  is_pi5: boolean;
+}
+
 // Metrics types
 export interface Metrics {
   id: string;
@@ -188,6 +199,7 @@ export interface Metrics {
   disk_usage: number | null;
   uptime: number | null;
   network_status: Record<string, any> | null;
+  fan_status: FanStatus | null;
   recorded_at: Date;
 }
 
@@ -295,6 +307,7 @@ export interface HeartbeatMessage {
     channel?: number | null;
     hotspotChannel?: number | null;
   } | null;
+  fanStatus?: FanStatus | null;
 }
 
 // ============================================================================

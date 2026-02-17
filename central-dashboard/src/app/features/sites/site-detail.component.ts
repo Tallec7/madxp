@@ -7,7 +7,7 @@ import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
-import { Site, Metrics, SiteConnectionStatus, ConnectionHealth, MatchHistoryData, Match } from '../../core/models';
+import { Site, Metrics, FanStatus, SiteConnectionStatus, ConnectionHealth, MatchHistoryData, Match } from '../../core/models';
 import { formatVersion } from './utils/version';
 import { Subscription, interval } from 'rxjs';
 import { ConnectionIndicatorComponent } from '../../shared/components/connection-indicator.component';
@@ -147,6 +147,12 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'subscription' | '
                   <span class="label">Club:</span>
                   <span class="value">{{ site.club_name }}</span>
                 </div>
+                @if (site.hostname_slug) {
+                  <div class="info-row">
+                    <span class="label">Hostname:</span>
+                    <span class="value monospace">{{ site.hostname_slug }}.local</span>
+                  </div>
+                }
                 <div class="info-row">
                   <span class="label">Localisation:</span>
                   <span class="value">{{ getLocation() }}</span>
@@ -242,6 +248,17 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'subscription' | '
                   </div>
                   <div class="metric-bar" *ngIf="wifiStatus.connectionType === 'wifi'">
                     <div class="metric-fill" [style.width.%]="wifiStatus.quality ?? 0"></div>
+                  </div>
+                </div>
+
+                <div class="metric" [class.warning]="fanWarning" *ngIf="fanStatus?.present">
+                  <div class="metric-icon">🌀</div>
+                  <div class="metric-info">
+                    <div class="metric-label">Ventilateur</div>
+                    <div class="metric-value">{{ fanStatusDisplay }}</div>
+                  </div>
+                  <div class="metric-bar">
+                    <div class="metric-fill" [style.width.%]="fanStatus?.speedPercent ?? 0"></div>
                   </div>
                 </div>
               </div>
@@ -1355,6 +1372,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     voltageOk: boolean;
   } | null = null;
 
+  // Fan status
+  fanStatus: FanStatus | null = null;
+
   // Connection
   connectionStatus: SiteConnectionStatus | null = null;
   isConnected = false;
@@ -1488,6 +1508,11 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
           const networkStatus = this.currentMetrics?.network_status;
           if (networkStatus && typeof networkStatus === 'object' && 'connectionType' in networkStatus) {
             this.wifiStatus = networkStatus as typeof this.wifiStatus;
+          }
+          // Extract fan status from fan_status JSONB
+          const fanData = this.currentMetrics?.fan_status;
+          if (fanData && typeof fanData === 'object' && 'present' in fanData) {
+            this.fanStatus = fanData as FanStatus;
           }
         }
         this.loadingDashboard = false;
@@ -1981,5 +2006,18 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     if (this.wifiStatus.connectionType === 'ethernet') return '🔌';
     if (this.wifiStatus.connectionType === 'none') return '❌';
     return '📶';
+  }
+
+  get fanWarning(): boolean {
+    if (!this.fanStatus?.present) return false;
+    return this.fanStatus.curState === 0 && (this.currentMetrics?.temperature ?? 0) > 70;
+  }
+
+  get fanStatusDisplay(): string {
+    if (!this.fanStatus?.present) return 'N/A';
+    if (this.fanStatus.speedPercent !== null) {
+      return `${this.fanStatus.speedPercent}%`;
+    }
+    return `${this.fanStatus.curState ?? '?'}/${this.fanStatus.maxState ?? '?'}`;
   }
 }

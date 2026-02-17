@@ -135,6 +135,7 @@ describe('Analytics Controller', () => {
         updated_at: new Date(),
         pending_config_version_id: null,
         remote_pin_hash: null,
+        hostname_slug: null,
       });
 
       mockedAnalytics.getLatestMetrics.mockResolvedValueOnce({

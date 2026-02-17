@@ -81,6 +81,7 @@ export interface UpdateSiteInput {
   status?: string;
   live_score_enabled?: boolean;
   remote_pin_hash?: string | null;
+  hostname_slug?: string;
 }
 
 export interface SiteConnectionRow extends QueryResultRow {
@@ -473,6 +474,26 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
       [name, `^${escapedName}-\\d+$`]
     );
     return result.rows;
+  }
+
+  /**
+   * Returns all existing hostname_slug values (for collision detection).
+   */
+  async findExistingHostnames(): Promise<string[]> {
+    const result = await query<{ hostname_slug: string }>(
+      'SELECT hostname_slug FROM sites WHERE hostname_slug IS NOT NULL'
+    );
+    return result.rows.map(r => r.hostname_slug);
+  }
+
+  /**
+   * Updates the hostname_slug for a site.
+   */
+  async updateHostnameSlug(id: string, slug: string): Promise<void> {
+    await query(
+      'UPDATE sites SET hostname_slug = $1, updated_at = NOW() WHERE id = $2',
+      [slug, id]
+    );
   }
 
   /**

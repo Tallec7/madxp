@@ -526,10 +526,19 @@ configure_mdns() {
         sed -i '/^\[server\]/a allow-interfaces=eth0,wlan0,wlan1' /etc/avahi/avahi-daemon.conf
     fi
 
+    # Hostname dynamique : lire HOSTNAME_SLUG depuis site.conf, fallback "neopro"
+    SITE_HOSTNAME="neopro"
+    if [ -f /etc/neopro/site.conf ]; then
+        CONFIGURED_HOSTNAME=$(grep "^HOSTNAME_SLUG=" /etc/neopro/site.conf | cut -d'=' -f2)
+        if [ -n "${CONFIGURED_HOSTNAME}" ]; then
+            SITE_HOSTNAME="${CONFIGURED_HOSTNAME}"
+        fi
+    fi
+
     # Changement du hostname
-    hostnamectl set-hostname neopro
-    echo "neopro" > /etc/hostname
-    sed -i 's/127.0.1.1.*/127.0.1.1\tneopro.local neopro/' /etc/hosts
+    hostnamectl set-hostname "${SITE_HOSTNAME}"
+    echo "${SITE_HOSTNAME}" > /etc/hostname
+    sed -i "s/127.0.1.1.*/127.0.1.1\t${SITE_HOSTNAME}.local ${SITE_HOSTNAME}/" /etc/hosts
 
     # Empêcher cloud-init de réinitialiser le hostname (si présent)
     if [ -f /etc/cloud/cloud.cfg ]; then
@@ -542,11 +551,11 @@ configure_mdns() {
 
     ensure_service_running avahi-daemon
     CURRENT_HOSTNAME=$(hostnamectl --static)
-    if [ "${CURRENT_HOSTNAME}" != "neopro" ]; then
-        print_warning "Hostname actuel (${CURRENT_HOSTNAME}) différent de neopro. Reboot nécessaire."
+    if [ "${CURRENT_HOSTNAME}" != "${SITE_HOSTNAME}" ]; then
+        print_warning "Hostname actuel (${CURRENT_HOSTNAME}) différent de ${SITE_HOSTNAME}. Reboot nécessaire."
     fi
 
-    print_success "mDNS configuré: neopro.local (hostname ${CURRENT_HOSTNAME})"
+    print_success "mDNS configuré: ${SITE_HOSTNAME}.local (hostname ${CURRENT_HOSTNAME})"
 }
 
 ################################################################################

@@ -44,6 +44,8 @@ const DEFAULT_ALLOWED_COMMANDS = [
   // WiFi client configuration - v3.20
   'scan_wifi_networks',
   'configure_wifi_client',
+  // Hostname customization - v3.51
+  'update_hostname',
 ];
 
 const buildAllowedCommands = () => {

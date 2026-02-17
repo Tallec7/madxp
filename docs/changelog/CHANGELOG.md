@@ -1,3 +1,21 @@
+## [3.51.0] (2026-02-17)
+
+### Features
+
+- **hostname:** dynamic Pi hostname derived from club_name — each Pi now gets a unique mDNS hostname (e.g., `neopro-usap.local`) instead of the shared `neopro.local`, making fleet support with multiple Pi on the same network possible
+- **hostname:** automatic derivation on site create/update — `deriveHostnameSlug()` strips accents, lowercases, enforces Linux hostname rules (max 63 chars), handles collisions with `-2`, `-3` suffixes
+- **hostname:** OTA `update_hostname` command — when club_name changes in the dashboard, the new hostname is pushed to the Pi via `commandQueueService.sendOrQueue()`, applying `/etc/hostname`, `/etc/hosts`, `hostnamectl`, and restarting `avahi-daemon`
+- **hostname:** boot persistence via `HOSTNAME_SLUG` in `/etc/neopro/site.conf` — `fix-hostname.sh` and `install.sh` now read this variable (fallback: `neopro`) so hostname survives reboots
+- **dashboard:** display `hostname_slug.local` in site detail Status tab alongside Club name
+
+### Database
+
+- **migration:** `add-hostname-slug.sql` — adds `hostname_slug VARCHAR(63)` with unique partial index, backfills all existing sites via PL/pgSQL with collision handling
+
+### Tests
+
+- **hostname:** 17 unit tests for `deriveHostnameSlug()` and `deriveHostnameWithSuffix()` — accents (Béziers, Saint-Étienne), spaces, special chars, 63-char limit, collisions, edge cases (empty, whitespace-only, real French club names)
+
 ## [3.50.3](https://github.com/Tallec7/neopro/compare/v3.50.2...v3.50.3) (2026-02-17)
 
 ### Bug Fixes

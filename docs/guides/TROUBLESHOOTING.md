@@ -67,12 +67,16 @@ Si vous gérez plusieurs Raspberry Pi Neopro, consultez la section **Configurati
 
 ## Problèmes de connexion
 
-### Le boîtier ne répond pas (neopro.local inaccessible)
+### Le boîtier ne répond pas (hostname.local inaccessible)
+
+> **Note (v3.51+)** : Le hostname mDNS est désormais dérivé du club_name (ex: `neopro-usap.local`). Consultez le dashboard (onglet Status du site) pour connaître le hostname de chaque Pi. L'ancien `neopro.local` reste le fallback pour les Pi non encore mis à jour.
 
 #### 1. Vérifier que le Pi est allumé et connecté
 
 ```bash
-# Tester la connexion
+# Tester la connexion (remplacer par le hostname du Pi)
+ping neopro-usap.local
+# ou l'ancien hostname pour les Pi non mis à jour
 ping neopro.local
 ```
 

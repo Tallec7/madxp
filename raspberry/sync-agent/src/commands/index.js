@@ -43,6 +43,7 @@ const {
   scanWifiNetworks,
   configureWifiClient,
 } = require('./wifi-client');
+const { updateHostname } = require('./hostname');
 
 // === Dépendances ===
 const { exec } = require('child_process');
@@ -104,6 +105,9 @@ const commands = {
   // === WiFi Client Configuration (module: wifi-client.js) ===
   scan_wifi_networks: scanWifiNetworks,
   configure_wifi_client: configureWifiClient,
+
+  // === Hostname (module: hostname.js) ===
+  update_hostname: updateHostname,
 
   // === Commandes simples (inline) ===
 

@@ -43,6 +43,7 @@ export const COMMAND_TIMEOUTS: Record<string, number> = {
   network_diagnostics: 30 * 1000,     // 30 secondes pour les tests réseau
   scan_wifi_networks: 30 * 1000,     // 30 secondes pour le scan WiFi
   configure_wifi_client: 45 * 1000,  // 45 secondes pour config + connexion WiFi
+  update_hostname: 30 * 1000,        // 30 secondes pour hostname + avahi restart
   default: 2 * 60 * 1000,             // 2 minutes par défaut
 };
 

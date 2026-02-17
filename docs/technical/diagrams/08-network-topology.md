@@ -165,7 +165,7 @@ graph TB
         end
 
         subgraph LAYER_DNS["Couche DNS/mDNS"]
-            AVAHI_CFG["avahi-daemon<br/>hostname=neopro<br/>→ neopro.local"]
+            AVAHI_CFG["avahi-daemon<br/>hostname=HOSTNAME_SLUG<br/>→ neopro-&lt;club&gt;.local"]
         end
     end
 

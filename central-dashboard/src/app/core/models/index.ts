@@ -77,6 +77,8 @@ export interface Site {
    * Option premium activable par NEOPRO
    */
   live_score_enabled?: boolean;
+  /** Hostname mDNS dérivé du club_name (ex: neopro-usap) */
+  hostname_slug?: string;
   /**
    * Configuration NEOPRO déployée sur le site
    * Contient les paramètres gérés centralement (catégories, vidéos, etc.)
@@ -242,6 +244,15 @@ export interface LocalStorage {
   free: number;
 }
 
+export interface FanStatus {
+  present: boolean;
+  type: string | null;
+  curState: number | null;
+  maxState: number | null;
+  speedPercent: number | null;
+  is_pi5: boolean;
+}
+
 export interface Metrics {
   id: string;
   site_id: string;
@@ -251,6 +262,7 @@ export interface Metrics {
   disk_usage: number | null;
   uptime: number | null;
   network_status: Record<string, unknown> | null;
+  fan_status: FanStatus | null;
   recorded_at: Date;
 }
 

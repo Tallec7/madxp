@@ -41,9 +41,9 @@
 ### Architecture locale (Raspberry Pi)
 
 ```
-Raspberry Pi (neopro.local / 192.168.4.1)
+Raspberry Pi (neopro-<club>.local / 192.168.4.1)
 ├── WiFi Hotspot: NEOPRO-[CLUB]
-├── mDNS: neopro.local
+├── mDNS: neopro-<club>.local (dérivé du club_name, ex: neopro-usap.local)
 │
 ├── Port 80 (nginx)
 │   └── Application Angular (dist/neopro/browser/)
@@ -549,19 +549,19 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-sync -n 50'
 
 ### Scripts d'automatisation
 
-| Script                 | Emplacement          | Description                                    |
-| ---------------------- | -------------------- | ---------------------------------------------- |
-| `setup-new-club.sh`    | `raspberry/scripts/` | Configuration complète nouveau club (5-10 min) |
-| `build-raspberry.sh`   | `raspberry/scripts/` | Build Angular optimisé pour Pi                 |
-| `build-and-deploy.sh`  | `raspberry/scripts/` | Build + déploiement combinés                   |
-| `deploy-remote.sh`     | `raspberry/scripts/` | Déploiement SSH + diagnostic post-deploy auto  |
-| `copy-to-pi.sh`        | `raspberry/scripts/` | Copie des fichiers d'installation vers Pi      |
-| `diagnose-pi.sh`       | `raspberry/scripts/` | Diagnostic complet Pi (16 checks, `--json`)    |
-| `backup-club.sh`       | `raspberry/scripts/` | Sauvegarde configuration club                  |
-| `restore-club.sh`      | `raspberry/scripts/` | Restauration configuration club                |
-| `cleanup-pi.sh`        | `raspberry/scripts/` | Nettoyage ~/raspberry après install            |
-| `setup-wifi-client.sh` | `raspberry/scripts/` | Configuration WiFi client (accès internet)     |
-| `fix-hostname.sh`      | `raspberry/scripts/` | Correction hostname après reboot               |
+| Script                 | Emplacement          | Description                                                                             |
+| ---------------------- | -------------------- | --------------------------------------------------------------------------------------- |
+| `setup-new-club.sh`    | `raspberry/scripts/` | Configuration complète nouveau club (5-10 min)                                          |
+| `build-raspberry.sh`   | `raspberry/scripts/` | Build Angular optimisé pour Pi                                                          |
+| `build-and-deploy.sh`  | `raspberry/scripts/` | Build + déploiement combinés                                                            |
+| `deploy-remote.sh`     | `raspberry/scripts/` | Déploiement SSH + diagnostic post-deploy auto                                           |
+| `copy-to-pi.sh`        | `raspberry/scripts/` | Copie des fichiers d'installation vers Pi                                               |
+| `diagnose-pi.sh`       | `raspberry/scripts/` | Diagnostic complet Pi (16 checks, `--json`)                                             |
+| `backup-club.sh`       | `raspberry/scripts/` | Sauvegarde configuration club                                                           |
+| `restore-club.sh`      | `raspberry/scripts/` | Restauration configuration club                                                         |
+| `cleanup-pi.sh`        | `raspberry/scripts/` | Nettoyage ~/raspberry après install                                                     |
+| `setup-wifi-client.sh` | `raspberry/scripts/` | Configuration WiFi client (accès internet)                                              |
+| `fix-hostname.sh`      | `raspberry/scripts/` | Correction hostname au boot (lit `HOSTNAME_SLUG` depuis `site.conf`, fallback `neopro`) |
 
 > `setup-wifi-client.sh` met à jour `/etc/wpa_supplicant/wpa_supplicant.conf`, crée le lien `wpa_supplicant-wlan1.conf`, active `wpa_supplicant@wlan1.service` et relance `dhcpcd` afin que la connexion WiFi du club survive aux redémarrages.
 

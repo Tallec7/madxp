@@ -9,6 +9,7 @@ import { formatPaginatedResponse } from '../middleware/pagination';
 import { commandQueueService } from '../services/command-queue.service';
 import { getVideoUrl } from '../services/storage.service';
 import { validateShellCommand, getAllowedCommandsForRole } from '../middleware/remote-shell-security';
+import { deriveHostnameSlug, deriveHostnameWithSuffix } from '../utils/hostname';
 import { memoryCache } from '../services/memory-cache.service';
 import {
   siteRepository,
@@ -149,6 +150,20 @@ export const createSite = async (req: AuthRequest, res: Response) => {
       apiKeyHash: api_key_hash,
     });
 
+    // Derive hostname from club_name
+    try {
+      const baseHostname = deriveHostnameSlug(club_name);
+      const existingHostnames = await siteRepository.findExistingHostnames();
+      const hostname = deriveHostnameWithSuffix(baseHostname, existingHostnames);
+      await siteRepository.updateHostnameSlug(id, hostname);
+      logger.info('Hostname slug assigned', { siteId: id, hostname });
+    } catch (hostnameError) {
+      logger.warn('Failed to assign hostname slug (non-blocking)', {
+        siteId: id,
+        error: hostnameError instanceof Error ? hostnameError.message : String(hostnameError),
+      });
+    }
+
     logger.info('Site created', { siteId: id, siteName: uniqueSiteName, createdBy: req.user?.email });
 
     // Auto-creer un profil de configuration par defaut
@@ -210,6 +225,36 @@ export const updateSite = async (req: AuthRequest, res: Response) => {
 
     if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    // Re-derive hostname when club_name changes
+    if (club_name !== undefined) {
+      try {
+        const baseHostname = deriveHostnameSlug(club_name);
+        const existingHostnames = await siteRepository.findExistingHostnames();
+        const otherHostnames = existingHostnames.filter(h => h !== site.hostname_slug);
+        const newHostname = deriveHostnameWithSuffix(baseHostname, otherHostnames);
+
+        if (newHostname !== site.hostname_slug) {
+          await siteRepository.updateHostnameSlug(id, newHostname);
+
+          // Push hostname update to Pi
+          await commandQueueService.sendOrQueue(id, 'update_hostname', {
+            hostname: newHostname,
+          });
+
+          logger.info('Hostname updated and command queued', {
+            siteId: id,
+            oldHostname: site.hostname_slug,
+            newHostname,
+          });
+        }
+      } catch (hostnameError) {
+        logger.warn('Failed to update hostname slug (non-blocking)', {
+          siteId: id,
+          error: hostnameError instanceof Error ? hostnameError.message : String(hostnameError),
+        });
+      }
     }
 
     logger.info('Site updated', { siteId: id, updatedBy: req.user?.email });
