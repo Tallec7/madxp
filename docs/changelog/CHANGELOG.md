@@ -1,3 +1,9 @@
+## [3.57.3](https://github.com/Tallec7/neopro/compare/v3.57.2...v3.57.3) (2026-02-17)
+
+### Bug Fixes
+
+- **cloud-remote:** replace Socket.IO screenshot relay with HTTP request-response ([59f9673](https://github.com/Tallec7/neopro/commit/59f9673d9cfbb75220d6b45f01f693c48d46cc25))
+
 ## [3.58.0](https://github.com/Tallec7/neopro/compare/v3.57.2...v3.58.0) (2026-02-17)
 
 ### Bug Fixes
