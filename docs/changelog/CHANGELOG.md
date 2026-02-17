@@ -1,3 +1,9 @@
+## [3.53.3](https://github.com/Tallec7/neopro/compare/v3.53.2...v3.53.3) (2026-02-17)
+
+### Bug Fixes
+
+- **cloud-remote:** resolve TypeError crash on undefined quickMessages and categories ([bef5d6c](https://github.com/Tallec7/neopro/commit/bef5d6ce8bb4705e723590e3a002a98b60cfabdf))
+
 ## [3.53.4] (2026-02-17)
 
 ### Features
