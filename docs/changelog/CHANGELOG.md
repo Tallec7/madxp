@@ -1,3 +1,10 @@
+# [3.53.0](https://github.com/Tallec7/neopro/compare/v3.52.1...v3.53.0) (2026-02-17)
+
+### Features
+
+- **site-sponsors:** complete P0-P5 site sponsors analytics, branding & magic links ([642910a](https://github.com/Tallec7/neopro/commit/642910aef2c432491ec3949a2c526a736cd1d253))
+- **site-sponsors:** implement P0-P5 site sponsors analytics with branding & magic links ([a3d01d0](https://github.com/Tallec7/neopro/commit/a3d01d06732a9d9a2d8df27ef311f3b75e6deaf9))
+
 ## [3.52.1](https://github.com/Tallec7/neopro/compare/v3.52.0...v3.52.1) (2026-02-17)
 
 ### Bug Fixes
