@@ -9,7 +9,7 @@ Le module de génération de rapports PDF permet de créer des rapports professi
 ### Flux 2 : Generation on-demand avec stockage (v3.49+)
 
 ```
-POST /api/reports/generate { type: "club"|"advertiser", entityId, periodStart, periodEnd }
+POST /api/reports/generate { type: "club"|"advertiser"|"site_sponsor", entityId, periodStart, periodEnd }
     │
     ▼
 ┌─────────────────────────┐     ┌──────────────────┐     ┌──────────────┐
@@ -93,9 +93,53 @@ POST /api/reports/generate { type: "club"|"advertiser", entityId, periodStart, p
   - Basée sur : sponsor ID, période, impressions, timestamp
   - Non falsifiable
 
-## API Endpoint
+## API Endpoints
 
-### Générer un rapport sponsor
+### Flux 2 : Génération on-demand avec stockage (recommandé)
+
+```http
+POST /api/reports/generate
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "type": "club" | "advertiser" | "site_sponsor",
+  "entityId": "uuid",
+  "periodStart": "YYYY-MM-DD",
+  "periodEnd": "YYYY-MM-DD"
+}
+```
+
+**Paramètres (body JSON, camelCase obligatoire) :**
+
+| Paramètre     | Type   | Requis | Description                                  |
+| ------------- | ------ | ------ | -------------------------------------------- |
+| `type`        | string | ✅     | `"club"`, `"advertiser"` ou `"site_sponsor"` |
+| `entityId`    | UUID   | ✅     | ID du site, annonceur ou sponsor local       |
+| `periodStart` | string | ✅     | Date début (YYYY-MM-DD)                      |
+| `periodEnd`   | string | ✅     | Date fin (YYYY-MM-DD)                        |
+
+> ⚠️ Les clés doivent être en **camelCase**. `entity_id` / `period_start` / `period_end` seront rejetés avec erreur 400.
+
+**Réponse succès (200) :**
+
+```json
+{
+  "success": true,
+  "data": {
+    "reportId": "uuid",
+    "url": "https://storage.neopro.fr/reports/..."
+  }
+}
+```
+
+**Réponse erreur (400) :**
+
+```json
+{ "error": "Paramètres manquants: type, entityId, periodStart, periodEnd" }
+```
+
+### Flux 1 : Rapport direct legacy (download immédiat)
 
 ```http
 GET /api/sponsors/:sponsorId/report?from=YYYY-MM-DD&to=YYYY-MM-DD&signature=true
@@ -418,6 +462,20 @@ Pour de gros rapports avec beaucoup de graphiques :
 node --max-old-space-size=4096 dist/server.js
 ```
 
+### Erreur : "Paramètres manquants: type, entityId, periodStart, periodEnd"
+
+Le payload doit utiliser le **camelCase** pour les clés. Erreur courante : utiliser `snake_case` (`entity_id`, `period_start`, `period_end`) au lieu de `entityId`, `periodStart`, `periodEnd`.
+
+```typescript
+// ❌ FAUX — snake_case
+{ type: 'site_sponsor', entity_id: sponsorId, period_start: '2026-01-01', period_end: '2026-01-31' }
+
+// ✅ CORRECT — camelCase
+{ type: 'site_sponsor', entityId: sponsorId, periodStart: '2026-01-01', periodEnd: '2026-01-31' }
+```
+
+> **Historique** : Ce bug a touché `sites.service.ts > generateSponsorReport()` (fix P7, feb 2026). Le `reports.service.ts` utilisait déjà le bon format. Alerte Prometheus `ReportValidationErrors` ajoutée pour détecter ce type de mismatch en production.
+
 ### Graphiques ne s'affichent pas
 
 Vérifier que les données ne sont pas vides :
@@ -485,6 +543,6 @@ Pour toute question ou problème :
 
 ---
 
-**Derniere mise a jour** : 2026-02-16
-**Version** : 1.1.0 (on-demand generation + FTP storage)
+**Dernière mise à jour** : 2026-02-18
+**Version** : 1.2.0 (site_sponsor on-demand + camelCase fix + monitoring)
 **Conformité BP §13.4** : 95%

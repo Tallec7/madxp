@@ -1233,6 +1233,18 @@ GET    /network/advertisers/:advertiserId/stats   - Stats réseau cross-club d'u
 
 > Agrège impressions, temps d'écran, reach, sites actifs, CPI, tendances quotidiennes, répartition par event_type et performance par club. Requêtes cross-club via `site_sponsors.advertiser_id`.
 
+**Endpoints Reports (auth JWT, admin/super_admin, montés sur /api/reports) :**
+
+```
+POST   /reports/generate                        - Génération on-demand (body: {type, entityId, periodStart, periodEnd}) ⚠️ camelCase obligatoire
+GET    /reports/clubs/:siteId                    - Rapports d'un club
+GET    /reports/advertisers/:advertiserId         - Rapports d'un annonceur
+GET    /reports/site-sponsors/:siteSponsorId      - Rapports d'un sponsor local
+GET    /reports/stats                            - Statistiques des rapports (admin)
+```
+
+> **⚠️ Convention payload** : `POST /reports/generate` attend des clés **camelCase** (`entityId`, `periodStart`, `periodEnd`). Les clés snake_case (`entity_id`, `period_start`) sont rejetées 400.
+
 **Endpoints Sponsor Portal (public, token-based, montés sur /api/sponsor-portal) :**
 
 ```
@@ -1317,7 +1329,7 @@ Tous les accès PostgreSQL passent par des repositories typés héritant de `Bas
 | `objective`         | `objectives`                                       |
 | `playlist-schedule` | `playlist_schedules`                               |
 | `remote-command`    | `remote_commands`, `pending_commands`              |
-| `report`            | `reports`                                          |
+| `report`            | `reports`, `generated_reports`                     |
 | `timeline`          | `timeline_events`                                  |
 | `email`             | Notifications email (templates)                    |
 | `pitch-deck`        | Vue agrégée multi-tables (métriques traction)      |

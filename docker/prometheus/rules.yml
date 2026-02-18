@@ -218,3 +218,13 @@ groups:
         annotations:
           summary: "High site_sponsor PDF report failure rate"
           description: "More than 1 PDF generation failure per minute. Possible issue with match breakdown data."
+
+      # Report endpoint validation errors (P7 — frontend/backend payload mismatch)
+      - alert: ReportValidationErrors
+        expr: rate(http_requests_total{method="POST",path="/reports/generate",status_code="400"}[10m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Repeated 400 errors on POST /reports/generate"
+          description: "{{ $value | humanize }}/sec validation failures on report generation. Likely frontend sending wrong parameter format (snake_case vs camelCase)."

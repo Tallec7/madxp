@@ -19,6 +19,7 @@ Permettre aux clubs sportifs de **mesurer précisément la visibilité de leurs 
 ### État actuel
 
 ✅ **95% de conformité Business Plan §13**
+
 - Backend API complet (12 endpoints)
 - Frontend Dashboard Angular complet
 - Tracking boîtiers TV fonctionnel
@@ -183,12 +184,17 @@ curl http://localhost:4000/api/sponsors \
 ### PDF Generation
 
 ```bash
-# Générer PDF rapport sponsor
+# Flux 1 (legacy) — Téléchargement direct
 curl "http://localhost:4000/api/sponsors/SPONSOR_ID/report?from=2025-01-01&to=2025-01-31&signature=true" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   --output rapport.pdf
 
-# Ouvrir rapport.pdf → Devrait voir 4 pages avec graphiques
+# Flux 2 (v3.49+) — Génération on-demand avec stockage FTP
+# ⚠️ Les clés DOIVENT être en camelCase (entityId, periodStart, periodEnd)
+curl -X POST "http://localhost:3001/api/reports/generate" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"site_sponsor","entityId":"SPONSOR_UUID","periodStart":"2026-01-01","periodEnd":"2026-01-31"}'
 ```
 
 ---
@@ -290,12 +296,14 @@ npm list chart.js
 ### Ajouter un nouveau champ au sponsor
 
 1. **Backend** :
+
    ```sql
    -- Migration SQL
    ALTER TABLE sponsors ADD COLUMN new_field VARCHAR(255);
    ```
 
 2. **Controller** :
+
    ```typescript
    // sponsor-analytics.controller.ts
    // Ajouter champ dans validation et requêtes
@@ -310,6 +318,7 @@ npm list chart.js
 ### Ajouter un nouveau graphique
 
 1. **Backend - Données** :
+
    ```typescript
    // sponsor-analytics.controller.ts
    // Ajouter requête SQL pour nouvelles données
@@ -317,6 +326,7 @@ npm list chart.js
    ```
 
 2. **Frontend - Chart.js** :
+
    ```typescript
    // sponsor-analytics.component.ts
    const ctx = this.chartRef.nativeElement;
@@ -456,6 +466,7 @@ PDFKit + Chart.js Node Canvas génèrent PDF côté serveur :
 **Description** : [Décrire le bug]
 
 **Étapes reproduction** :
+
 1. ...
 2. ...
 3. ...
@@ -466,7 +477,9 @@ PDFKit + Chart.js Node Canvas génèrent PDF côté serveur :
 
 **Logs** :
 ```
+
 [Coller logs pertinents]
+
 ```
 
 **Environnement** :
@@ -502,18 +515,21 @@ Cocher au fur et à mesure:
 Idées de premières tâches pour se familiariser (par difficulté) :
 
 ### Facile (1-2h)
+
 - [ ] Ajouter tooltip sur graphique Chart.js
 - [ ] Modifier couleurs charte NEOPRO dans PDF
 - [ ] Ajouter validation email sponsor
 - [ ] Améliorer texte certificat PDF (FR/EN)
 
 ### Moyen (4-6h)
+
 - [ ] Ajouter filtre statut dans liste sponsors
 - [ ] Créer graphique "Top 5 sponsors par impressions"
 - [ ] Ajouter export Excel (en plus de CSV)
 - [ ] Tests unitaires service PDF (Jest)
 
 ### Avancé (1-2 jours)
+
 - [ ] Cache Redis pour graphiques PDF
 - [ ] Upload logo sponsor personnalisé
 - [ ] Rapport comparatif multi-sponsors
@@ -524,6 +540,7 @@ Idées de premières tâches pour se familiariser (par difficulté) :
 ## 📖 Ressources externes
 
 ### Technologies utilisées
+
 - **Angular** : https://angular.dev/
 - **Chart.js** : https://www.chartjs.org/docs/
 - **PDFKit** : http://pdfkit.org/
@@ -532,6 +549,7 @@ Idées de premières tâches pour se familiariser (par difficulté) :
 - **TypeScript** : https://www.typescriptlang.org/docs/
 
 ### Patterns et bonnes pratiques
+
 - Offline-First : https://offlinefirst.org/
 - REST API Design : https://restfulapi.net/
 - TypeScript Best Practices : https://typescript-eslint.io/

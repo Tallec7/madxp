@@ -12,6 +12,18 @@
 - **sponsors:** filtrage automatique des vidéos déjà associées, refresh après add/remove
 - **tests:** 8 tests Karma pour l'association vidéo (load, add, remove, errors, cancel, cleanup) — 541 total
 
+### Bug Fixes
+
+- **reports:** fix `generateSponsorReport()` payload — `sites.service.ts` envoyait des clés `snake_case` (`entity_id`, `period_start`, `period_end`) au lieu du `camelCase` attendu par `reports.controller.ts` (`entityId`, `periodStart`, `periodEnd`), causant systématiquement une 400 "Paramètres manquants"
+
+### Monitoring
+
+- **prometheus:** ajout alerte `ReportValidationErrors` — détecte les 400 répétées sur `POST /api/reports/generate` (mismatch frontend/backend payload)
+
+### Documentation
+
+- **reports:** mise à jour `PDF_REPORTS_GUIDE.md` — ajout type `site_sponsor` dans l'API on-demand, documentation complète de l'endpoint `POST /api/reports/generate` avec table des paramètres camelCase, troubleshooting mismatch snake_case/camelCase
+
 ## [3.58.2](https://github.com/Tallec7/neopro/compare/v3.58.1...v3.58.2) (2026-02-18)
 
 ### Bug Fixes
