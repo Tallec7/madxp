@@ -2,7 +2,7 @@
 
 > _Du moment où un sponsor veut de la visibilité jusqu'au rapport de ROI entre ses mains._
 
-**Source Notion** : [OVS2 Canvas](https://www.notion.so/30bc27de3638814db77df0880d35613d)
+**Notion** : [OVS2 Canvas](https://www.notion.so/30bc27de3638814db77df0880d35613d)
 
 ---
 

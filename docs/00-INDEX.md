@@ -89,7 +89,7 @@ Framework SAFe Essential pour le pilotage produit structuré. 🆕
 - [🟠 OVS2 — Sponsor to Impression](safe/OVS2-SPONSOR-TO-IMPRESSION.md) - Flux sponsor → rapport ROI
 - [🟣 DVS-1 — Neopro Platform](safe/DVS1-NEOPRO-PLATFORM.md) - Value Proposition, stack, budget, WSJF
 - [📊 Portfolio SAFe](safe/PORTFOLIO.md) - Roadmap Gantt, architecture, métriques ARR
-- **Source de vérité Notion** : [SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
+- **Notion (visualisation)** : [SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
 
 ### 🔍 [Audits](audit/)
 

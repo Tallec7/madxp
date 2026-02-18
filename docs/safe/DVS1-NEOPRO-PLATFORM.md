@@ -2,7 +2,7 @@
 
 > _Le Development Value Stream unique qui alimente les deux OVS._
 
-**Source Notion** : [DVS-1 Canvas](https://www.notion.so/30bc27de363881b2945ae69ea554816b)
+**Notion** : [DVS-1 Canvas](https://www.notion.so/30bc27de363881b2945ae69ea554816b)
 
 ---
 

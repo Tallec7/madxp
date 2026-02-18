@@ -3,7 +3,7 @@
 > **Dernière mise à jour** : 18 Février 2026
 > **Framework** : SAFe Essential (simplifié)
 > **Cadence PI** : 6 semaines (3 sprints de 2 semaines)
-> **Source de vérité** : [Notion — SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
+> **Notion (visualisation)** : [SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
 
 ---
 
@@ -117,17 +117,18 @@ Chaque Epic a des **Leading Indicators** (prédictifs) et **Lagging Indicators**
 ## Migration depuis BACKLOG.md
 
 L'ancien `BACKLOG.md` (sprint tracking décembre 2025) est désormais archivé.
-Le pilotage produit se fait exclusivement dans **Notion SAFe** :
+Le pilotage produit se fait dans **`docs/safe/`** (source de vérité) :
 
 - Les **Features terminées** de BACKLOG.md sont dans le code (changelogs)
-- Les **Features en développement** sont des Epics/Features dans Notion
-- Le **sprint tracking** est dans le Sprint Tracker Notion
+- Les **Epics, Features, User Stories** sont dans `docs/safe/README.md`
+- Le **sprint tracking** est dans le Sprint Tracker (Notion pour la visualisation dynamique)
 
 ---
 
 ## Liens
 
-- **Source de vérité** : [Notion — SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
+- **Source de vérité** : `docs/safe/README.md` (ce repo)
+- **Notion (visualisation)** : [SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
 - **OKR 2026** : [Notion — OKR](https://www.notion.so/2ddc27de363880c9931af8f16684916d)
 - **Changelog code** : `docs/changelog/CHANGELOG.md`
 

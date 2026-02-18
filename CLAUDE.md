@@ -68,6 +68,6 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Changelog : `docs/changelog/CHANGELOG.md`
 - Métriques pitch deck : `central-server/src/scripts/pitch-deck-metrics.sql`
 - **SAFe Pilotage Produit** : `docs/safe/README.md` (Epics, Features, US, Sprint Tracker, Value Streams)
-- **SAFe Notion (source de vérité)** : https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5
+- **SAFe Notion (visualisation)** : https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5
 
 Les règles détaillées par domaine sont dans `.claude/rules/` et se chargent automatiquement selon les fichiers édités.

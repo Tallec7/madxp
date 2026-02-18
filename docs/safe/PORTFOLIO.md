@@ -2,7 +2,7 @@
 
 > _Vision complète du portefeuille produit, de la stratégie aux User Stories._
 
-**Source Notion** : [Portfolio SAFe](https://www.notion.so/30bc27de363881538a17cf41f3c402f3)
+**Notion** : [Portfolio SAFe](https://www.notion.so/30bc27de363881538a17cf41f3c402f3)
 
 ---
 

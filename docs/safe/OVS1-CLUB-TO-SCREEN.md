@@ -2,7 +2,7 @@
 
 > _Du moment où un club signe jusqu'à ce que le contenu tourne sur l'écran du gymnase._
 
-**Source Notion** : [OVS1 Canvas](https://www.notion.so/30bc27de363881399568db3d78b4b774)
+**Notion** : [OVS1 Canvas](https://www.notion.so/30bc27de363881399568db3d78b4b774)
 
 ---
 
