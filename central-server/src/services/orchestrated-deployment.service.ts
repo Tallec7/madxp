@@ -11,6 +11,7 @@ import logger from '../config/logger';
 import { commandQueueService } from './command-queue.service';
 import { draftService } from './draft.service';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
+import metricsService from './metrics.service';
 import {
   OrchestratedDeployment,
   OrchestratedDeploymentStatus,
@@ -214,6 +215,8 @@ class OrchestratedDeploymentService {
       siteId,
       sponsorCount: siteSponsors.length,
     });
+
+    metricsService.recordSponsorSync('included', siteSponsors.length);
 
     await commandQueueService.queueCommand(
       siteId,

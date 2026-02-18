@@ -1,3 +1,23 @@
+## P8 — Sync sponsors Dashboard → Pi (2026-02-18)
+
+### Features
+
+- **sponsors:** sync dashboard sponsors to Pi during orchestrated deployment — sponsors created in `site_sponsors` table are now included in the `neoProContent.siteSponsors` payload sent to the Pi
+- **sync-agent:** new `mergeSiteSponsors()` function in config-merge — intelligent merge of central sponsors into Pi's `localSponsors[]` with `centralId` linkage and name-based deduplication
+- **types:** new `SiteSponsorDeployment` interface for deployment payload, `site_sponsor_id` and `display_name` added to `SponsorVideo`
+
+### Monitoring
+
+- **prometheus:** new metric `neopro_sponsor_sync_total` + `neopro_sponsor_sync_count` — tracks sponsor sync operations per deployment
+- **prometheus:** new alert `SponsorSyncMissing` — warns when deployments complete without sponsor sync data
+
+### Documentation
+
+- **sync-architecture:** added sponsor sync flow section (Central → Pi) with merge algorithm documentation
+- **adr-sponsors:** added "Sync vers le Pi" section documenting deployment payload and merge strategy
+
+---
+
 ## [3.59.1](https://github.com/Tallec7/neopro/compare/v3.59.0...v3.59.1) (2026-02-18)
 
 ### Bug Fixes
