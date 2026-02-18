@@ -24,6 +24,12 @@
 
 ---
 
+# [3.60.0](https://github.com/Tallec7/neopro/compare/v3.59.1...v3.60.0) (2026-02-18)
+
+### Features
+
+- sync dashboard sponsors to Pi during deployment (P8) ([#403](https://github.com/Tallec7/neopro/issues/403)) ([8e77116](https://github.com/Tallec7/neopro/commit/8e771168167f29e47d42037221c50d8fb88c6c91))
+
 ## P8 — Sync sponsors Dashboard → Pi (2026-02-18)
 
 ### Features
