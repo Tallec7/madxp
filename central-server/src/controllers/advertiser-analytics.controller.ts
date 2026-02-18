@@ -9,6 +9,7 @@ import {
   type ImpressionBatchItem,
 } from '../repositories';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
+import metricsService from '../services/metrics.service';
 
 // ============================================================================
 // ADVERTISER CRUD
@@ -549,23 +550,36 @@ export const recordImpressions = async (req: SiteAuthRequest, res: Response): Pr
 
       // Valider site_sponsor_id si fourni, sinon résoudre via video_id ou video_filename
       let resolvedSiteSponsorId: string | null = null;
+      let resolutionMethod: 'site_sponsor_id' | 'video_id' | 'filename' | 'unresolved' = 'unresolved';
+
       if (site_sponsor_id && typeof site_sponsor_id === 'string' && validateUuid(site_sponsor_id)) {
         resolvedSiteSponsorId = site_sponsor_id;
+        resolutionMethod = 'site_sponsor_id';
       } else if (video_id) {
         try {
           resolvedSiteSponsorId = await siteSponsorRepository.resolveSiteSponsorId(video_id as string, authenticatedSiteId);
-        } catch {
-          // Non-bloquant : si la résolution échoue, on continue sans
+          if (resolvedSiteSponsorId) resolutionMethod = 'video_id';
+        } catch (err) {
+          logger.warn('Sponsor resolution via video_id failed', {
+            siteId: authenticatedSiteId, videoId: video_id, error: (err as Error).message,
+          });
+          metricsService.recordSponsorResolutionFailure('resolve_impression');
         }
       }
       // Fallback par filename si video_id absent (sponsors locaux, ancien firmware)
       if (!resolvedSiteSponsorId && video_filename && typeof video_filename === 'string') {
         try {
           resolvedSiteSponsorId = await siteSponsorRepository.resolveSiteSponsorIdByFilename(video_filename as string, authenticatedSiteId);
-        } catch {
-          // Non-bloquant
+          if (resolvedSiteSponsorId) resolutionMethod = 'filename';
+        } catch (err) {
+          logger.warn('Sponsor resolution via filename failed', {
+            siteId: authenticatedSiteId, videoFilename: video_filename, error: (err as Error).message,
+          });
+          metricsService.recordSponsorResolutionFailure('resolve_impression');
         }
       }
+
+      metricsService.recordImpressionResolution(resolutionMethod);
 
       validItems.push({
         eventId: (event_id as string) || null,

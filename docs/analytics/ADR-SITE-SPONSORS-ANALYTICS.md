@@ -1,7 +1,7 @@
 # ADR — Refonte Analytics Sponsors : Modèle Unifié `site_sponsors`
 
 > **Date** : 17 Février 2026
-> **Statut** : TERMINÉ — Paliers P0 à P6 complétés (17 Février 2026)
+> **Statut** : TERMINÉ — Paliers P0 à P9 complétés (18 Février 2026)
 > **Auteurs** : Équipe Dev + PO
 > **Priorité** : P0 — Prérequis monétisation réseau publicitaire
 > **Objectif livraison MVP** : Rapports PDF fonctionnels pour 4 clubs beta — fin Mars 2026
@@ -1059,6 +1059,63 @@ configuration.json → localSponsors[] enrichi avec centralId
 
 **Fichiers** : 0 nouveau, 6 modifiés
 **Tests** : 1497 Jest (server), 142 smoke, 52 config-merge, 22 sponsor.service — tous pass
+
+### Palier 9 — Sync bidirectionnelle Dashboard ↔ Pi + Monitoring ✅ COMPLÉTÉ (18/02/2026)
+
+8 corrections adressant les gaps identifiés dans l'audit du lien bidirectionnel Dashboard ↔ Pi.
+
+**Problèmes corrigés :**
+
+1. **Loop manager** : le champ `sponsor_id` dans le template Angular ne correspondait pas à `site_sponsor_id` attendu par le Pi — les attributions sponsor n'étaient jamais transmises
+2. **`mergeSiteSponsors()`** ne propageait pas le champ `source` → le Pi ne pouvait pas distinguer sponsors dashboard (read-only) des sponsors locaux (éditables)
+3. **Pi admin** ne protégeait pas les sponsors du dashboard → le bénévole pouvait modifier/supprimer les sponsors NEOPRO
+4. **`handleSponsorIdsResolved()`** ne mettait à jour que `sponsors[]` (boucle par défaut) mais ignorait `timeCategories[].loopVideos[]` → les boucles par phase n'avaient pas de `site_sponsor_id`
+5. **`recordImpressions()`** n'avait aucun fallback quand `video_id` absent → sponsors locaux impossibles à attribuer
+6. **Aucune sync** entre le JSON config et la table `site_sponsor_videos` → fallback `video_filename` impossible
+
+**Flux bidirectionnel complet :**
+
+```
+Dashboard → Pi :
+  Dashboard crée site_sponsor → DB
+    ↓ déploiement orchestré
+  Pi reçoit siteSponsors[] avec source:'neopro'
+    ↓ mergeSiteSponsors()
+  localSponsors[] enrichi (centralId + source)
+    ↓ sponsor.service.js
+  Admin Pi affiche en section NEOPRO (lecture seule + LockedError)
+
+Pi → Dashboard :
+  Bénévole crée sponsor local → localSponsors[] (source:'local')
+    ↓ sync_local_state
+  Central crée site_sponsors(source='local') via resolveLocalSponsors()
+    ↓ sponsor_ids_resolved
+  Pi reçoit centralId → sponsors[] + timeCategories[].loopVideos[] mis à jour
+    ↓ trackSponsorStart()
+  Impression avec site_sponsor_id → rapport PDF attribué
+```
+
+**Monitoring ajouté :**
+
+- Métriques : `neopro_impression_resolution_total{method}` (site_sponsor_id / video_id / filename / unresolved)
+- Métriques : `neopro_sponsor_resolution_failures_total{operation}` (resolve_local / resolve_impression / sync_videos)
+- Alertes : `SponsorResolutionFailures` (>0.05/s pendant 10min), `ImpressionSponsorUnresolved` (>50% non attribuées pendant 15min)
+
+**Fichiers modifiés :** 12 (8 code + 4 docs)
+
+- `central-dashboard/src/app/core/models/site-config.model.ts` — `site_sponsor_id` sur `LoopVideoConfig`
+- `central-dashboard/.../loop-manager.component.ts` — `sponsor_id` → `site_sponsor_id`
+- `central-server/src/controllers/advertiser-analytics.controller.ts` — fallback `video_filename` + métriques + logging
+- `central-server/src/services/orchestrated-deployment.service.ts` — `syncSponsorVideoAssociations()`
+- `central-server/src/services/metrics.service.ts` — 2 nouvelles métriques
+- `central-server/src/handlers/config-sync.handler.ts` — métrique échec résolution
+- `raspberry/admin/services/sponsor.service.js` — source dynamique + `LockedError` guards
+- `raspberry/src/app/services/sponsor-analytics.service.ts` — fallback `sponsor_id`
+- `raspberry/sync-agent/src/agent.js` — `timeCategories[].loopVideos[]` dans `handleSponsorIdsResolved`
+- `raspberry/sync-agent/src/utils/config-merge.js` — `source` dans `mergeSiteSponsors()`
+- `docker/prometheus/rules.yml` — 2 nouvelles alertes
+
+**Tests :** 1497 Jest (server), 142 smoke, 146 admin, 52 config-merge, 22 sponsor — tous pass
 
 ---
 

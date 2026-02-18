@@ -229,6 +229,7 @@ class OrchestratedDeploymentService {
           synced++;
         } catch {
           // Non-fatal : le sponsor_id peut ne pas exister en DB (UUID invalide dans le config)
+          metricsService.recordSponsorResolutionFailure('sync_videos');
         }
       }
     }

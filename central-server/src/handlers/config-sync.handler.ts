@@ -247,6 +247,7 @@ export async function handleSyncLocalState(
           siteId,
           error: (sponsorError as Error).message,
         });
+        metricsService.recordSponsorResolutionFailure('resolve_local');
       }
     }
   } catch (error) {
