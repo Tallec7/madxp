@@ -83,6 +83,16 @@ export interface SiteSponsorVideoRow extends QueryResultRow {
   thumbnail_url: string | null;
 }
 
+export interface SiteSponsorDeploymentRow extends QueryResultRow {
+  id: string;
+  name: string;
+  contact_email: string | null;
+  contact_phone: string | null;
+  logo_url: string | null;
+  source: string;
+  video_filenames: string[];
+}
+
 export interface SiteSponsorStatsSummary extends QueryResultRow {
   total_impressions: string;
   total_screen_time_seconds: string;
@@ -661,6 +671,37 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
        ORDER BY count DESC`,
       [advertiserId, from, to]
     );
+  }
+
+  // =========================================================================
+  // Deployment — Données sponsors pour le Pi
+  // =========================================================================
+
+  /**
+   * Récupère les sponsors actifs d'un site avec leurs vidéos associées,
+   * formatés pour le déploiement vers le Pi.
+   */
+  async getSponsorsForDeployment(siteId: string): Promise<SiteSponsorDeploymentRow[]> {
+    const result = await query<SiteSponsorDeploymentRow>(
+      `SELECT
+        ss.id,
+        ss.name,
+        ss.contact_email,
+        ss.contact_phone,
+        ss.logo_url,
+        ss.source,
+        COALESCE(
+          array_agg(ssv.video_filename) FILTER (WHERE ssv.video_filename IS NOT NULL),
+          '{}'
+        ) as video_filenames
+       FROM site_sponsors ss
+       LEFT JOIN site_sponsor_videos ssv ON ssv.site_sponsor_id = ss.id
+       WHERE ss.site_id = $1 AND ss.status = 'active'
+       GROUP BY ss.id
+       ORDER BY ss.name ASC`,
+      [siteId]
+    );
+    return result.rows;
   }
 
   // =========================================================================

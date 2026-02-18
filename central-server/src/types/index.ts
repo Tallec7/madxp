@@ -410,6 +410,23 @@ export interface SponsorVideo {
   owner?: 'neopro' | 'club';
   locked?: boolean;
   expiresAt?: string;
+  site_sponsor_id?: string;
+  display_name?: string;
+}
+
+/**
+ * Données d'un sponsor de site envoyées au Pi lors du déploiement.
+ * Permet au Pi de connaître les sponsors du dashboard central.
+ */
+export interface SiteSponsorDeployment {
+  id: string;
+  name: string;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  logoUrl: string | null;
+  source: 'local' | 'neopro';
+  videoFilenames: string[];
+  isActive: boolean;
 }
 
 export interface CategoryVideo {
