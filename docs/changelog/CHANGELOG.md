@@ -1,3 +1,9 @@
+## [3.59.1](https://github.com/Tallec7/neopro/compare/v3.59.0...v3.59.1) (2026-02-18)
+
+### Bug Fixes
+
+- **content:** deploy tab shows all videos instead of paginated subset ([dd9124f](https://github.com/Tallec7/neopro/commit/dd9124fe554abfc388fed11399fc538e6e47ee92))
+
 # [3.59.0](https://github.com/Tallec7/neopro/compare/v3.58.2...v3.59.0) (2026-02-18)
 
 ### Features
