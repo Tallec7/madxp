@@ -44,6 +44,7 @@ cd raspberry/admin/public
 bash build-admin.sh
 
 # Le fichier app.js est regenere automatiquement
+# Le header inclut le git hash (deterministe : pas de diff si le code n'a pas change)
 ```
 
 ## Convention

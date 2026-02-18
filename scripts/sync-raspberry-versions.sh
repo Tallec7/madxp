@@ -24,7 +24,7 @@ for pkg in "${SUBPACKAGES[@]}"; do
     fi
 done
 
-# Rebuild admin app.js (met à jour le timestamp de build)
+# Rebuild admin app.js (inclut le git hash du commit courant)
 if [ -f "raspberry/admin/public/build-admin.sh" ]; then
     (cd raspberry/admin/public && bash build-admin.sh)
 fi
