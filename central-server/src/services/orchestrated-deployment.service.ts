@@ -10,10 +10,13 @@ import { query } from '../config/database';
 import logger from '../config/logger';
 import { commandQueueService } from './command-queue.service';
 import { draftService } from './draft.service';
+import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
+import metricsService from './metrics.service';
 import {
   OrchestratedDeployment,
   OrchestratedDeploymentStatus,
   SiteConfiguration,
+  SiteSponsorDeployment,
   Video,
 } from '../types';
 
@@ -169,6 +172,23 @@ class OrchestratedDeploymentService {
   }
 
   /**
+   * Récupère les sponsors du site formatés pour le déploiement Pi
+   */
+  private async getSiteSponsorsForDeployment(siteId: string): Promise<SiteSponsorDeployment[]> {
+    const rows = await siteSponsorRepository.getSponsorsForDeployment(siteId);
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      contactEmail: row.contact_email,
+      contactPhone: row.contact_phone,
+      logoUrl: row.logo_url,
+      source: row.source as 'local' | 'neopro',
+      videoFilenames: row.video_filenames || [],
+      isActive: true,
+    }));
+  }
+
+  /**
    * Queue la mise à jour de configuration
    */
   private async queueConfigUpdate(
@@ -177,6 +197,9 @@ class OrchestratedDeploymentService {
     configuration: SiteConfiguration,
     userId: string
   ): Promise<void> {
+    // Récupérer les sponsors du site pour les envoyer au Pi
+    const siteSponsors = await this.getSiteSponsorsForDeployment(siteId);
+
     // Préparer le payload pour update_config
     const neoProContent = {
       sponsors: configuration.sponsors,
@@ -185,7 +208,15 @@ class OrchestratedDeploymentService {
       categoryMappings: configuration.categoryMappings,
       liveScoreEnabled: configuration.liveScoreEnabled,
       scoreOverlay: configuration.scoreOverlay,
+      siteSponsors,
     };
+
+    logger.info('Including site sponsors in deployment', {
+      siteId,
+      sponsorCount: siteSponsors.length,
+    });
+
+    metricsService.recordSponsorSync('included', siteSponsors.length);
 
     await commandQueueService.queueCommand(
       siteId,

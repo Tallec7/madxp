@@ -477,6 +477,20 @@ const kioskCrashesTotal = new Counter({
 
 // ============= Métriques Report Generation =============
 
+const sponsorSyncTotal = new Counter({
+  name: 'neopro_sponsor_sync_total',
+  help: 'Total sponsor sync operations included in config deployments',
+  labelNames: ['status'],
+  registers: [register],
+});
+
+const sponsorSyncCount = new Histogram({
+  name: 'neopro_sponsor_sync_count',
+  help: 'Number of sponsors synced per deployment',
+  buckets: [0, 1, 2, 5, 10, 20, 50],
+  registers: [register],
+});
+
 const reportGenerationsTotal = new Counter({
   name: 'neopro_report_generations_total',
   help: 'Total PDF report generation attempts',
@@ -559,6 +573,11 @@ class MetricsService {
 
   recordDeploymentDuration(targetType: string, durationSeconds: number): void {
     deploymentDuration.observe({ target_type: targetType }, durationSeconds);
+  }
+
+  recordSponsorSync(status: string, count: number): void {
+    sponsorSyncTotal.inc({ status });
+    sponsorSyncCount.observe(count);
   }
 
   recordVideoUpload(status: string, sizeBytes?: number): void {

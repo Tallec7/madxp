@@ -731,21 +731,23 @@ WHERE ai.video_id = ssv.video_id
 
 ### 6.1 Central Server (Backend API)
 
-| Composant                                | Impact                                                                              | Effort |
-| ---------------------------------------- | ----------------------------------------------------------------------------------- | ------ |
-| **Nouveau** `site-sponsor.repository.ts` | CRUD site_sponsors, liaison vidéos, stats, report queries                           | 3j     |
-| **Nouveau** `site-sponsor.controller.ts` | Endpoints CRUD + stats + PDF par site_sponsor                                       | 2j     |
-| **Nouveau** `site-sponsor.routes.ts`     | Routes `/api/sites/:siteId/sponsors/...`                                            | 0.5j   |
-| `advertiser.repository.ts`               | Ajouter auto-création `site_sponsors` sur `addSites()`                              | 0.5j   |
-| `advertiser-analytics.controller.ts`     | `recordImpressions()` : résoudre `site_sponsor_id` via `video_filename` + `site_id` | 1j     |
-| `pdf-report.service.ts`                  | Refonte template PDF commercial + fix bugs (reach, completion)                      | 2j     |
-| `monthly-reports.service.ts`             | Générer par `site_sponsor` au lieu de `advertiser` uniquement                       | 1j     |
-| `email.service.ts`                       | Ajouter support `attachments` (pièces jointes PDF)                                  | 0.5j   |
-| `deployment.service.ts`                  | Résoudre et injecter `site_sponsor_id` dans le payload Pi                           | 0.5j   |
-| `cron-scheduler.service.ts`              | Fix ref `sponsor_impressions` + ajouter job email mensuel                           | 0.5j   |
-| `excel-export.service.ts`                | Fix query `advertiser_daily_stats`                                                  | 0.5j   |
-| **Migration SQL**                        | Tables + indexes + migration données                                                | 1j     |
-| **Tests**                                | Tests unitaires + intégration nouveau repository/controller                         | 2j     |
+| Composant                                | Impact                                                                                | Effort |
+| ---------------------------------------- | ------------------------------------------------------------------------------------- | ------ |
+| **Nouveau** `site-sponsor.repository.ts` | CRUD site_sponsors, liaison vidéos, stats, report queries                             | 3j     |
+| **Nouveau** `site-sponsor.controller.ts` | Endpoints CRUD + stats + PDF par site_sponsor                                         | 2j     |
+| **Nouveau** `site-sponsor.routes.ts`     | Routes `/api/sites/:siteId/sponsors/...`                                              | 0.5j   |
+| `advertiser.repository.ts`               | Ajouter auto-création `site_sponsors` sur `addSites()`                                | 0.5j   |
+| `advertiser-analytics.controller.ts`     | `recordImpressions()` : résoudre `site_sponsor_id` via `video_filename` + `site_id`   | 1j     |
+| `pdf-report.service.ts`                  | Refonte template PDF commercial + fix bugs (reach, completion)                        | 2j     |
+| `monthly-reports.service.ts`             | Générer par `site_sponsor` au lieu de `advertiser` uniquement                         | 1j     |
+| `email.service.ts`                       | Ajouter support `attachments` (pièces jointes PDF)                                    | 0.5j   |
+| `deployment.service.ts`                  | Résoudre et injecter `site_sponsor_id` dans le payload Pi                             | 0.5j   |
+| `orchestrated-deployment.service.ts`     | ✅ **FAIT (P8)** — Inclut `siteSponsors` dans le payload `neoProContent` envoyé au Pi | 0.5j   |
+| `metrics.service.ts`                     | ✅ **FAIT (P8)** — Métrique `neopro_sponsor_sync_total` + `neopro_sponsor_sync_count` | 0.2j   |
+| `cron-scheduler.service.ts`              | Fix ref `sponsor_impressions` + ajouter job email mensuel                             | 0.5j   |
+| `excel-export.service.ts`                | Fix query `advertiser_daily_stats`                                                    | 0.5j   |
+| **Migration SQL**                        | Tables + indexes + migration données                                                  | 1j     |
+| **Tests**                                | Tests unitaires + intégration nouveau repository/controller                           | 2j     |
 
 **Sous-total backend : ~15j**
 
@@ -766,7 +768,7 @@ WHERE ai.video_id = ssv.video_id
 | `admin/services/video.service.js`           | `createVideoEntry()` enrichi avec métadonnées sponsor                                           | 0.5j   |
 | `admin/helpers.js`                          | `createVideoEntry()` accepte `site_sponsor_id`, `analytics_category`                            | 0.2j   |
 | **Sync-agent — remontée sponsors locaux**   | Nouveau module : sync `site_sponsors` locaux vers central                                       | 2j     |
-| `sync-agent/utils/config-merge.js`          | Merger `timeCategories[].loopVideos[]` (préserver club)                                         | 1j     |
+| `sync-agent/utils/config-merge.js`          | ✅ **FAIT (P8)** — `mergeSiteSponsors()` fusionne sponsors central dans `localSponsors[]` du Pi | 1j     |
 | **Tests**                                   | Tests unitaires tracking, tests sync                                                            | 1.5j   |
 
 **Sous-total Pi : ~11j**
@@ -1030,6 +1032,34 @@ L'expérience dashboard pour le suivi.
 **Fichiers** : 0 nouveau, 2 modifiés (`site-sponsors-tab.component.ts`, `site-sponsors-tab.component.spec.ts`)
 **Tests** : 541 Karma (+8), 1487 Jest (server), 142 smoke — tous pass
 
+### Palier 8 — Sync sponsors Dashboard → Pi ✅ COMPLÉTÉ (18/02/2026)
+
+Les sponsors créés dans le dashboard central (`site_sponsors`) n'étaient jamais inclus dans le payload de déploiement envoyé au Pi. Le Pi avait sa propre gestion de sponsors locaux (`localSponsors[]`) complètement indépendante. Ce palier comble cette lacune.
+
+**Flux implémenté** :
+
+```
+Dashboard (CRUD site_sponsors)
+  ↓
+site_sponsors table (PostgreSQL)
+  ↓ getSponsorsForDeployment(siteId)
+orchestrated-deployment.service.ts
+  ↓ neoProContent.siteSponsors = [...]
+Pi (sync-agent update_config)
+  ↓ mergeSiteSponsors(localSponsors, centralSponsors)
+configuration.json → localSponsors[] enrichi avec centralId
+```
+
+- [x] `site-sponsor.repository.ts` : nouvelle méthode `getSponsorsForDeployment()` — requête SQL `site_sponsors JOIN site_sponsor_videos`, retourne sponsors actifs avec `video_filenames[]`
+- [x] `orchestrated-deployment.service.ts` : récupère et inclut `siteSponsors` dans le payload `neoProContent` de chaque déploiement
+- [x] `types/index.ts` : nouveau type `SiteSponsorDeployment` + champs `site_sponsor_id` et `display_name` sur `SponsorVideo`
+- [x] `config-merge.js` : nouvelle fonction `mergeSiteSponsors()` — merge intelligent par `centralId` puis par nom (case-insensitive), préservation des sponsors purement locaux, union des `videoFilenames`
+- [x] `metrics.service.ts` : métriques `neopro_sponsor_sync_total` et `neopro_sponsor_sync_count`
+- [x] `docker/prometheus/rules.yml` : alerte `SponsorSyncMissing`
+
+**Fichiers** : 0 nouveau, 6 modifiés
+**Tests** : 1497 Jest (server), 142 smoke, 52 config-merge, 22 sponsor.service — tous pass
+
 ---
 
 ## 8. Liste de Tâches Détaillée
@@ -1234,7 +1264,8 @@ L'expérience dashboard pour le suivi.
 - `src/services/deployment.service.ts` (modifié)
 - `src/services/cron-scheduler.service.ts` (modifié)
 - `src/services/excel-export.service.ts` (modifié)
-- `src/services/metrics.service.ts` (modifié)
+- `src/services/metrics.service.ts` (modifié — P8 : `neopro_sponsor_sync_total` + `neopro_sponsor_sync_count`)
+- `src/services/orchestrated-deployment.service.ts` (modifié — P8 : `getSiteSponsorsForDeployment()` + inclusion `siteSponsors` dans payload)
 - `src/handlers/config-sync.handler.ts` (modifié — resolveLocalSponsors)
 - `src/server.ts` (modifié — montage routes)
 - `src/scripts/full-schema.sql` (modifié)
@@ -1251,6 +1282,7 @@ L'expérience dashboard pour le suivi.
 - `sync-agent/src/sponsor-impressions.js` (modifié)
 - `sync-agent/src/utils/config-merge.js` (modifié — LOCAL_ONLY_SETTINGS)
 - `sync-agent/src/__tests__/config-merge.test.js` (modifié — 4 tests localSponsors)
+- `sync-agent/src/utils/config-merge.js` (modifié — P8 : `mergeSiteSponsors()` + export)
 - `sync-agent/src/agent.js` (modifié — sync localSponsors inline, pas de module séparé)
 - `admin/routes/sponsors.js` (nouveau)
 - `admin/routes/videos.js` (modifié)
@@ -1283,7 +1315,7 @@ L'expérience dashboard pour le suivi.
 
 **Monitoring** :
 
-- `docker/prometheus/rules.yml` (nouveau — alerting rules fleet + API)
+- `docker/prometheus/rules.yml` (modifié — P8 : alerte `SponsorSyncMissing`)
 - `docker/alertmanager/alertmanager.yml` (nouveau — notification config)
 
 ### B. Références

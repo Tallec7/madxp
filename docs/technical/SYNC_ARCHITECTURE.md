@@ -287,6 +287,7 @@ Commandes:          ────────────────────
 | **sync_profiles**            | Central → Local    | Admin déploie profils          | Écriture profiles/ + clubs.json                                   |
 | **switch_profile**           | Central → Local    | Admin change profil actif      | Activation profil + merge config                                  |
 | **profile-switch**           | Local (front→back) | Remote sélectionne un profil   | Activation profil + reload TV                                     |
+| **update_config (sponsors)** | Central → Local    | Déploiement orchestré          | Merge `siteSponsors` dans `localSponsors[]` du Pi                 |
 
 > **Note** : Le heartbeat (30s) envoie les métriques système + le statut kiosk Chromium (lu depuis `/home/pi/neopro/data/kiosk-status.json`, écrit par `kiosk-watchdog.sh`) + le recording state analytics (`{ isRecording, isManualOverride }`, récupéré depuis le local server via connexion persistante `local-socket.js`) + le player state TV (`{ currentVideo, progress, phase, isPlaying, loopIndex, ... }`, récupéré depuis le local server via callback `get-player-state` sur la connexion persistante). Le recording state et le player state sont stockés en mémoire côté central (Maps éphémères) et exposés dans `GET /api/remote/:siteId/state` pour la cloud remote. Le player state est aussi broadcasté en temps réel vers la room `dashboard` via l'événement `player_state_updated`. La liste des vidéos est synchronisée via `sync_local_state` à la connexion et lors de changements détectés par le VideoWatcher.
 >
@@ -353,8 +354,18 @@ function mergeConfigurations(localConfig, neoProContent) {
     result.categories = mergeCategories(localConfig.categories, neoProContent.categories);
   }
 
+  // 4b. Fusionner les métadonnées sponsors (P8 — dashboard → Pi)
+  if (neoProContent.siteSponsors !== undefined) {
+    result.localSponsors = mergeSiteSponsors(
+      localConfig.localSponsors || [],
+      neoProContent.siteSponsors,
+    );
+  }
+
   // 5. Restaurer les paramètres locaux protégés
+  //    (sauf localSponsors si siteSponsors présent — déjà fusionné en 4b)
   for (const [key, value] of Object.entries(preservedLocalSettings)) {
+    if (key === 'localSponsors' && neoProContent.siteSponsors !== undefined) continue;
     result[key] = value;
   }
 
@@ -393,6 +404,46 @@ function mergeSponsors(localSponsors, centralSponsors) {
 }
 ```
 
+#### Merge des Métadonnées Sponsors (Dashboard → Pi)
+
+Depuis P8, le payload de déploiement inclut un champ `siteSponsors` contenant les métadonnées des sponsors du site (nom, contact, vidéos associées). Ces données sont fusionnées dans `localSponsors[]` du Pi :
+
+```javascript
+// Payload envoyé par le central (dans neoProContent)
+siteSponsors: [
+  {
+    id: 'uuid-site-sponsor', // ID central (site_sponsors.id)
+    name: 'Boulangerie Dupont',
+    contactEmail: 'jean@dupont.fr',
+    contactPhone: '06 12 34 56 78',
+    logoUrl: null,
+    source: 'local', // 'local' ou 'neopro'
+    videoFilenames: ['dupont_spot.mp4', 'dupont_banniere.mp4'],
+    isActive: true,
+  },
+];
+
+// Algorithme de merge (config-merge.js → mergeSiteSponsors)
+// 1. Pour chaque sponsor central :
+//    a) Chercher par centralId (lien existant)
+//    b) Sinon chercher par nom (case-insensitive) pour lier un sponsor local
+//    c) Sinon créer une nouvelle entrée locale avec centralId
+// 2. Préserver les sponsors purement locaux (sans centralId, nom non matché)
+// 3. Fusionner les videoFilenames (union des deux listes)
+```
+
+**Règles de merge** :
+
+| Situation                                    | Résultat                                                 |
+| -------------------------------------------- | -------------------------------------------------------- |
+| Sponsor central avec `centralId` déjà lié    | Mise à jour nom, contact, vidéos                         |
+| Sponsor central avec même nom qu'un local    | Liaison via `centralId` + mise à jour                    |
+| Nouveau sponsor central                      | Création entrée locale avec `centralId`                  |
+| Sponsor local sans match central             | Préservé intact                                          |
+| Sponsor central supprimé (absent du payload) | Entrée locale conservée (pas de suppression destructive) |
+
+**Monitoring** : Métrique `neopro_sponsor_sync_total{status="included"}` à chaque déploiement, `neopro_sponsor_sync_count` pour le nombre de sponsors inclus. Alerte `SponsorSyncMissing` si des déploiements se font sans données sponsors.
+
 ---
 
 ## 5. Règles de Merge
@@ -415,14 +466,15 @@ Le dashboard central propose deux modes de déploiement :
 
 ### 5.3 Tableau des Règles par Champ
 
-| Champ              | Comportement en mode `merge`                           |
-| ------------------ | ------------------------------------------------------ |
-| `sponsors`         | Central = source de vérité + sponsors locaux préservés |
-| `categories`       | Fusion NEOPRO/Club (locked prend le dessus)            |
-| `timeCategories`   | Remplacement complet par le central                    |
-| `categoryMappings` | Remplacement complet par le central                    |
-| `settings`         | **JAMAIS écrasé** - Protégé localement                 |
-| `siteId`, `apiKey` | **JAMAIS écrasé** - Identifiants du boîtier            |
+| Champ              | Comportement en mode `merge`                                   |
+| ------------------ | -------------------------------------------------------------- |
+| `sponsors`         | Central = source de vérité + sponsors locaux préservés         |
+| `siteSponsors`     | Fusionné dans `localSponsors[]` via `mergeSiteSponsors()` (P8) |
+| `categories`       | Fusion NEOPRO/Club (locked prend le dessus)                    |
+| `timeCategories`   | Remplacement complet par le central                            |
+| `categoryMappings` | Remplacement complet par le central                            |
+| `settings`         | **JAMAIS écrasé** - Protégé localement                         |
+| `siteId`, `apiKey` | **JAMAIS écrasé** - Identifiants du boîtier                    |
 
 ### 5.4 Tableau des Règles pour les Catégories
 
@@ -958,21 +1010,22 @@ La pré-migration logge un bloc `=== PRE-MIGRATION DIAG ===` avec les permission
 
 ## Historique des Versions
 
-| Version | Date       | Auteur        | Modifications                                                                             |
-| ------- | ---------- | ------------- | ----------------------------------------------------------------------------------------- |
-| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                                                         |
-| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                                                    |
-| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos                                        |
-| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix                                    |
-| 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support)                                  |
-| 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config                                   |
-| 1.6     | 2026-02-12 | Claude/NEOPRO | Ajout multi-config profiles (sync_profiles, switch_profile, profile-switch)               |
-| 1.7     | 2026-02-15 | Claude/NEOPRO | Ajout section OTA : pré-migration, race condition, monitoring                             |
-| 1.8     | 2026-02-15 | Claude/NEOPRO | Réécriture pré-migration : rm sans sudo, diagnostic, versions affectées                   |
-| 1.9     | 2026-02-15 | Claude/NEOPRO | Connexion locale persistante : relay screenshot et heartbeat via local-socket.js          |
-| 2.0     | 2026-02-16 | Claude/NEOPRO | Screenshot error response : réponse immédiate en cas d'échec + métriques Prometheus       |
-| 2.1     | 2026-02-17 | Claude/NEOPRO | OTA checksum retry : re-download + vérification 1x en cas de mismatch SHA256              |
-| 2.2     | 2026-02-17 | Claude/NEOPRO | Screenshot HTTP response : remplacement du relay Socket.IO room par request-response HTTP |
+| Version | Date       | Auteur        | Modifications                                                                                                        |
+| ------- | ---------- | ------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                                                                                    |
+| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                                                                               |
+| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos                                                                   |
+| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix                                                               |
+| 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support)                                                             |
+| 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config                                                              |
+| 1.6     | 2026-02-12 | Claude/NEOPRO | Ajout multi-config profiles (sync_profiles, switch_profile, profile-switch)                                          |
+| 1.7     | 2026-02-15 | Claude/NEOPRO | Ajout section OTA : pré-migration, race condition, monitoring                                                        |
+| 1.8     | 2026-02-15 | Claude/NEOPRO | Réécriture pré-migration : rm sans sudo, diagnostic, versions affectées                                              |
+| 1.9     | 2026-02-15 | Claude/NEOPRO | Connexion locale persistante : relay screenshot et heartbeat via local-socket.js                                     |
+| 2.0     | 2026-02-16 | Claude/NEOPRO | Screenshot error response : réponse immédiate en cas d'échec + métriques Prometheus                                  |
+| 2.1     | 2026-02-17 | Claude/NEOPRO | OTA checksum retry : re-download + vérification 1x en cas de mismatch SHA256                                         |
+| 2.2     | 2026-02-17 | Claude/NEOPRO | Screenshot HTTP response : remplacement du relay Socket.IO room par request-response HTTP                            |
+| 2.3     | 2026-02-18 | Claude/NEOPRO | Sync sponsors Dashboard → Pi : `siteSponsors` dans payload déploiement, `mergeSiteSponsors()`, monitoring Prometheus |
 
 ---
 

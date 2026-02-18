@@ -219,6 +219,16 @@ groups:
           summary: "High site_sponsor PDF report failure rate"
           description: "More than 1 PDF generation failure per minute. Possible issue with match breakdown data."
 
+      # Sponsor sync deployment monitoring (P8 — dashboard→Pi sponsor sync)
+      - alert: SponsorSyncMissing
+        expr: rate(neopro_sponsor_sync_total{status="included"}[1h]) == 0 and rate(neopro_deployments_total{status="completed"}[1h]) > 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Config deployments happening without sponsor sync"
+          description: "Deployments are completing but no sponsor data is being synced. Check orchestrated-deployment.service.ts."
+
       # Report endpoint validation errors (P7 — frontend/backend payload mismatch)
       - alert: ReportValidationErrors
         expr: rate(http_requests_total{method="POST",path="/reports/generate",status_code="400"}[10m]) > 0.01
