@@ -1,3 +1,9 @@
+# [3.58.0](https://github.com/Tallec7/neopro/compare/v3.57.4...v3.58.0) (2026-02-18)
+
+### Features
+
+- **wifi:** fast recovery (~2min vs ~5min), fix boot init, add recovery monitoring ([fff3918](https://github.com/Tallec7/neopro/commit/fff3918302328097430525de064f09ccfb5a047f))
+
 # [3.59.0](https://github.com/Tallec7/neopro/compare/v3.58.0...v3.59.0) (2026-02-18)
 
 ### Bug Fixes
