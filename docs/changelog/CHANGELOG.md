@@ -1,3 +1,9 @@
+## [3.57.4](https://github.com/Tallec7/neopro/compare/v3.57.3...v3.57.4) (2026-02-18)
+
+### Bug Fixes
+
+- **sponsors:** add null-safety guards on template property access ([b39432d](https://github.com/Tallec7/neopro/commit/b39432d480069e6b12087bdbe8395ed4cf90f13b))
+
 ## [3.57.3](https://github.com/Tallec7/neopro/compare/v3.57.2...v3.57.3) (2026-02-17)
 
 ### Bug Fixes
