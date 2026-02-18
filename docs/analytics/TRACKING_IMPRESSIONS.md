@@ -815,6 +815,38 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 
 ## 📝 Changelog
 
+### Version 1.4.0 - 18 Février 2026
+
+**Attribution sponsor complète : `site_sponsor_id` + fallback `video_filename`** :
+
+- ✅ Loop manager (dashboard) utilise `site_sponsor_id` au lieu de `sponsor_id` — alignement avec le type `LoopVideo` côté Pi
+- ✅ Pi tracking fallback : `video.site_sponsor_id || video.sponsor_id` — rétrocompatibilité configs existantes
+- ✅ `recordImpressions()` (central) : résolution en cascade `site_sponsor_id` → `video_id` → `video_filename` avec métriques par méthode
+- ✅ Nouvelle méthode `syncSponsorVideoAssociations()` dans le déploiement — extrait les couples sponsor-vidéo du config JSON et upsert dans `site_sponsor_videos`
+- ✅ `handleSponsorIdsResolved()` met à jour `timeCategories[].loopVideos[]` en plus de `sponsors[]`
+- ✅ `mergeSiteSponsors()` propage le champ `source` ('neopro'/'local')
+- ✅ Pi admin protège les sponsors dashboard (lecture seule + `LockedError`)
+
+**Résolution sponsor lors de l'enregistrement d'une impression** :
+
+```
+Impression reçue par le central
+  ↓
+site_sponsor_id fourni et UUID valide ?
+  → OUI : utiliser directement (méthode 'site_sponsor_id')
+  → NON : résoudre via video_id
+      ↓
+  video_id → JOIN site_sponsor_videos → site_sponsors.id
+    → TROUVÉ : utiliser (méthode 'video_id')
+    → NON TROUVÉ : fallback par video_filename
+        ↓
+    video_filename → JOIN site_sponsor_videos (par filename) → site_sponsors.id
+      → TROUVÉ : utiliser (méthode 'filename')
+      → NON TROUVÉ : impression sans attribution sponsor (méthode 'unresolved')
+```
+
+**Monitoring** : métriques `neopro_impression_resolution_total{method}` et `neopro_sponsor_resolution_failures_total{operation}`
+
 ### Version 1.3.0 - 16 Février 2026
 
 **Corrections recording state : auto-stop neutral + auto-start vidéos manuelles + retour neutral** :

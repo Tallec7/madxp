@@ -1,3 +1,29 @@
+## P9 — Sync bidirectionnelle Dashboard ↔ Pi complète + monitoring (2026-02-18)
+
+### Features
+
+- **loop-manager:** champ `sponsor_id` → `site_sponsor_id` dans le template et la méthode `updatePhaseVideo()` — le champ correspondait pas au type `LoopVideo` côté Pi, les attributions sponsor n'étaient jamais transmises
+- **config-merge:** `mergeSiteSponsors()` propage le champ `source` ('neopro' / 'local') — permet au Pi de distinguer sponsors du dashboard (read-only) des sponsors locaux (éditables)
+- **pi-admin:** `sponsor.service.js` détecte `centralId + source='neopro'` pour marquer les sponsors du dashboard en lecture seule — guards `LockedError` sur update/delete
+- **sync-agent:** `handleSponsorIdsResolved()` met à jour `timeCategories[].loopVideos[]` en plus de `sponsors[]` — les boucles par phase reçoivent maintenant leur `site_sponsor_id` résolu
+- **impressions:** fallback résolution `video_filename` dans `recordImpressions()` quand `video_id` absent — couvre les sponsors locaux et anciens firmwares
+- **deploy:** nouvelle méthode `syncSponsorVideoAssociations()` extrait les couples sponsor-vidéo du JSON config et upsert dans `site_sponsor_videos` à chaque déploiement
+- **types:** ajout `site_sponsor_id` sur `LoopVideoConfig` (dashboard Angular)
+
+### Monitoring
+
+- **prometheus:** nouvelles métriques `neopro_impression_resolution_total{method}` et `neopro_sponsor_resolution_failures_total{operation}`
+- **prometheus:** nouvelles alertes `SponsorResolutionFailures` et `ImpressionSponsorUnresolved`
+- **logging:** `advertiser-analytics.controller.ts` log les échecs de résolution sponsor (avant : silencieux)
+
+### Documentation
+
+- **tracking-impressions:** section fallback résolution `video_filename` + `site_sponsor_id`
+- **sync-architecture:** section Sync Sponsors Bidirectionnelle avec flux complet et diagramme
+- **adr-sponsors:** palier P9 avec flux implémenté et fichiers modifiés
+
+---
+
 # [3.60.0](https://github.com/Tallec7/neopro/compare/v3.59.1...v3.60.0) (2026-02-18)
 
 ### Features

@@ -229,6 +229,26 @@ groups:
           summary: "Config deployments happening without sponsor sync"
           description: "Deployments are completing but no sponsor data is being synced. Check orchestrated-deployment.service.ts."
 
+      # Sponsor resolution failures: Pi local sponsors failing to resolve or impressions unmatched
+      - alert: SponsorResolutionFailures
+        expr: rate(neopro_sponsor_resolution_failures_total[15m]) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elevated sponsor resolution failures ({{ $labels.operation }})"
+          description: "{{ $value | humanize }}/sec sponsor resolution failures for {{ $labels.operation }}. Check config-sync.handler or advertiser-analytics.controller."
+
+      # Impression tracking: too many impressions without sponsor attribution
+      - alert: ImpressionSponsorUnresolved
+        expr: rate(neopro_impression_resolution_total{method="unresolved"}[30m]) / rate(neopro_impression_resolution_total[30m]) > 0.5
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Over 50% of impressions without sponsor attribution"
+          description: "{{ $value | humanizePercentage }} of impressions are unresolved. Check site_sponsor_videos table and loop manager config."
+
       # Report endpoint validation errors (P7 — frontend/backend payload mismatch)
       - alert: ReportValidationErrors
         expr: rate(http_requests_total{method="POST",path="/reports/generate",status_code="400"}[10m]) > 0.01

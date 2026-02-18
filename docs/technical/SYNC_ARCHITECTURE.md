@@ -287,7 +287,8 @@ Commandes:          ────────────────────
 | **sync_profiles**            | Central → Local    | Admin déploie profils          | Écriture profiles/ + clubs.json                                   |
 | **switch_profile**           | Central → Local    | Admin change profil actif      | Activation profil + merge config                                  |
 | **profile-switch**           | Local (front→back) | Remote sélectionne un profil   | Activation profil + reload TV                                     |
-| **update_config (sponsors)** | Central → Local    | Déploiement orchestré          | Merge `siteSponsors` dans `localSponsors[]` du Pi                 |
+| **update_config (sponsors)** | Central → Local    | Déploiement orchestré          | Merge `siteSponsors` dans `localSponsors[]` du Pi (P8)            |
+| **sponsor_ids_resolved**     | Central → Local    | Réponse à sync_local_state     | Mapping `{ localId: centralUUID }` pour sponsors locaux (P3/P9)   |
 
 > **Note** : Le heartbeat (30s) envoie les métriques système + le statut kiosk Chromium (lu depuis `/home/pi/neopro/data/kiosk-status.json`, écrit par `kiosk-watchdog.sh`) + le recording state analytics (`{ isRecording, isManualOverride }`, récupéré depuis le local server via connexion persistante `local-socket.js`) + le player state TV (`{ currentVideo, progress, phase, isPlaying, loopIndex, ... }`, récupéré depuis le local server via callback `get-player-state` sur la connexion persistante). Le recording state et le player state sont stockés en mémoire côté central (Maps éphémères) et exposés dans `GET /api/remote/:siteId/state` pour la cloud remote. Le player state est aussi broadcasté en temps réel vers la room `dashboard` via l'événement `player_state_updated`. La liste des vidéos est synchronisée via `sync_local_state` à la connexion et lors de changements détectés par le VideoWatcher.
 >
@@ -443,6 +444,57 @@ siteSponsors: [
 | Sponsor central supprimé (absent du payload) | Entrée locale conservée (pas de suppression destructive) |
 
 **Monitoring** : Métrique `neopro_sponsor_sync_total{status="included"}` à chaque déploiement, `neopro_sponsor_sync_count` pour le nombre de sponsors inclus. Alerte `SponsorSyncMissing` si des déploiements se font sans données sponsors.
+
+#### Sync Sponsors Bidirectionnelle (P9)
+
+Depuis P9, la synchronisation des sponsors est **bidirectionnelle** et chaque direction a son propre mécanisme :
+
+```
+┌──────────────────────┐                          ┌──────────────────────┐
+│   Dashboard Central  │                          │    Raspberry Pi      │
+│                      │   orchestrated deploy    │                      │
+│  site_sponsors (DB)  │ ──── siteSponsors[] ──►  │  localSponsors[]     │
+│  source: 'neopro'    │    neoProContent.        │  source: 'neopro'    │
+│                      │    siteSponsors          │  (lecture seule)     │
+│                      │                          │                      │
+│  site_sponsors (DB)  │ ◄─── localSponsors[] ──  │  localSponsors[]     │
+│  source: 'local'     │    sync_local_state      │  source: 'local'     │
+│                      │                          │  (éditable bénévole) │
+│                      │ ──── mapping{} ────────► │                      │
+│                      │    sponsor_ids_resolved   │  centralId = uuid    │
+└──────────────────────┘                          └──────────────────────┘
+```
+
+**Direction Dashboard → Pi** (déploiement) :
+
+1. Opérateur crée un sponsor dans le dashboard (`site_sponsors` avec `source='neopro'`)
+2. Au déploiement, `getSponsorsForDeployment(siteId)` récupère les sponsors avec `videoFilenames[]`
+3. `syncSponsorVideoAssociations()` extrait les couples sponsor-vidéo du config et upsert dans `site_sponsor_videos`
+4. Le payload `neoProContent.siteSponsors[]` est envoyé au Pi
+5. `mergeSiteSponsors()` fusionne dans `localSponsors[]` avec `source: 'neopro'`
+6. Le Pi admin affiche ces sponsors en section NEOPRO (lecture seule, `LockedError` sur edit/delete)
+
+**Direction Pi → Dashboard** (sync-agent) :
+
+1. Bénévole crée un sponsor local depuis l'admin Pi (`source: 'local'`)
+2. `sync_local_state` envoie `localSponsors[]` au central
+3. `resolveLocalSponsors()` crée/matche des `site_sponsors(source='local')` en DB
+4. Le central émet `sponsor_ids_resolved` avec le mapping `{ localId: centralUUID }`
+5. Le Pi met à jour `centralId` dans `localSponsors[]` et `site_sponsor_id` dans `sponsors[]` + `timeCategories[].loopVideos[]`
+6. Les impressions sont attribuées via `site_sponsor_id` → rapport PDF possible
+
+**Résolution impression (3 niveaux)** :
+
+1. `site_sponsor_id` fourni directement par le Pi (cas nominal)
+2. Fallback `video_id` → JOIN `site_sponsor_videos` → `site_sponsors.id`
+3. Fallback `video_filename` → JOIN `site_sponsor_videos` (par filename) → `site_sponsors.id`
+
+**Monitoring P9** :
+
+- `neopro_impression_resolution_total{method}` — compteur par méthode de résolution (site_sponsor_id, video_id, filename, unresolved)
+- `neopro_sponsor_resolution_failures_total{operation}` — compteur d'échecs (resolve_local, resolve_impression, sync_videos)
+- Alerte `SponsorResolutionFailures` — >0.05/s pendant 10 min
+- Alerte `ImpressionSponsorUnresolved` — >50% non attribuées pendant 15 min
 
 ---
 

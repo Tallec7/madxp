@@ -491,6 +491,20 @@ const sponsorSyncCount = new Histogram({
   registers: [register],
 });
 
+const impressionResolutionTotal = new Counter({
+  name: 'neopro_impression_resolution_total',
+  help: 'Impression sponsor resolution attempts by method',
+  labelNames: ['method'],  // 'site_sponsor_id' | 'video_id' | 'filename' | 'unresolved'
+  registers: [register],
+});
+
+const sponsorResolutionFailuresTotal = new Counter({
+  name: 'neopro_sponsor_resolution_failures_total',
+  help: 'Failed sponsor resolution attempts (sync or impressions)',
+  labelNames: ['operation'],  // 'resolve_local' | 'resolve_impression' | 'sync_videos'
+  registers: [register],
+});
+
 const reportGenerationsTotal = new Counter({
   name: 'neopro_report_generations_total',
   help: 'Total PDF report generation attempts',
@@ -578,6 +592,14 @@ class MetricsService {
   recordSponsorSync(status: string, count: number): void {
     sponsorSyncTotal.inc({ status });
     sponsorSyncCount.observe(count);
+  }
+
+  recordImpressionResolution(method: 'site_sponsor_id' | 'video_id' | 'filename' | 'unresolved'): void {
+    impressionResolutionTotal.inc({ method });
+  }
+
+  recordSponsorResolutionFailure(operation: 'resolve_local' | 'resolve_impression' | 'sync_videos'): void {
+    sponsorResolutionFailuresTotal.inc({ operation });
   }
 
   recordVideoUpload(status: string, sizeBytes?: number): void {

@@ -160,7 +160,8 @@ export class SponsorAnalyticsService {
     this.currentVideoStart = new Date();
     this.currentImpression = {
       event_id: generateEventId(),
-      site_sponsor_id: (video as unknown as { site_sponsor_id?: string }).site_sponsor_id || undefined,
+      site_sponsor_id: (video as unknown as { site_sponsor_id?: string; sponsor_id?: string }).site_sponsor_id
+        || (video as unknown as { sponsor_id?: string }).sponsor_id || undefined,
       site_id: this.siteId || undefined,
       video_id: video.video_id || video.id || undefined,
       video_filename: this.getFilename(video.path),

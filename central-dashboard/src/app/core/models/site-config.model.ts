@@ -37,7 +37,9 @@ export interface LoopVideoConfig {
   owner?: ContentOwner; // 'neopro' ou 'club'
   locked?: boolean;    // true = non modifiable par le club
   video_id?: string;   // UUID de la vidéo dans la table videos (pour tracking analytics)
-  sponsor_id?: string; // UUID du sponsor associé (si applicable, pour filtrage contrat)
+  /** @deprecated Utiliser site_sponsor_id */
+  sponsor_id?: string; // Ancien champ — conservé pour rétrocompatibilité configs existantes
+  site_sponsor_id?: string; // UUID du site_sponsor unifié (tracking granulaire par site)
 }
 
 /**

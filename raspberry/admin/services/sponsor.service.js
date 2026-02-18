@@ -34,7 +34,8 @@ class SponsorService {
     const config = await this._configService.loadConfig();
     const localSponsors = (config.localSponsors || []).map(s => ({
       ...s,
-      source: 'local',
+      // Sponsors avec centralId et source 'neopro' = créés depuis le dashboard (lecture seule)
+      source: (s.centralId && s.source === 'neopro') ? 'neopro' : 'local',
       inLoop: this._isSponsorInLoop(config, s),
     }));
 
@@ -133,6 +134,11 @@ class SponsorService {
 
     const sponsor = config.localSponsors[sponsorIndex];
 
+    // Protéger les sponsors NEOPRO (créés depuis le dashboard central)
+    if (sponsor.centralId && sponsor.source === 'neopro') {
+      throw new LockedError('Ce sponsor est géré depuis le dashboard NEOPRO et ne peut pas être modifié ici');
+    }
+
     // Mise à jour du nom — vérifier unicité
     if (updates.name !== undefined) {
       const trimmedName = (updates.name || '').trim();
@@ -183,6 +189,11 @@ class SponsorService {
     }
 
     const sponsor = config.localSponsors[sponsorIndex];
+
+    // Protéger les sponsors NEOPRO (créés depuis le dashboard central)
+    if (sponsor.centralId && sponsor.source === 'neopro') {
+      throw new LockedError('Ce sponsor est géré depuis le dashboard NEOPRO et ne peut pas être supprimé ici');
+    }
 
     // Retirer les entries de la boucle sponsors[]
     this._removeFromLoopInternal(config, sponsor);
