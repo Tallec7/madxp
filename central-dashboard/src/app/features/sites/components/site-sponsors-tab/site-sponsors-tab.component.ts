@@ -136,17 +136,17 @@ Chart.register(...registerables);
                   </div>
 
                   <!-- Chart -->
-                  <div class="chart-section" *ngIf="detailStats.daily_trends.length > 0">
+                  <div class="chart-section" *ngIf="detailStats.daily_trends?.length">
                     <h4>Tendance des passages (30 jours)</h4>
                     <canvas #trendsChart></canvas>
                   </div>
 
-                  <div class="chart-empty" *ngIf="!detailStats.daily_trends.length">
+                  <div class="chart-empty" *ngIf="!detailStats.daily_trends?.length">
                     <p>Aucune donnée de tendance pour cette période</p>
                   </div>
 
                   <!-- Videos -->
-                  <div class="videos-section" *ngIf="detailStats.videos.length > 0">
+                  <div class="videos-section" *ngIf="detailStats.videos?.length">
                     <h4>Vidéos associées ({{ detailStats.videos.length }})</h4>
                     <div class="video-chips">
                       <span class="video-chip" *ngFor="let v of detailStats.videos">
@@ -182,10 +182,10 @@ Chart.register(...registerables);
                   <div class="reports-section">
                     <h4>Rapports générés</h4>
                     <div class="reports-loading" *ngIf="reportsLoading">Chargement...</div>
-                    <div class="reports-empty" *ngIf="!reportsLoading && !reports.length">
+                    <div class="reports-empty" *ngIf="!reportsLoading && !reports?.length">
                       Aucun rapport — cliquez sur 📥 pour en générer un.
                     </div>
-                    <div class="reports-list" *ngIf="reports.length">
+                    <div class="reports-list" *ngIf="reports?.length">
                       <div class="report-item" *ngFor="let r of reports">
                         <span class="report-period">{{ r.period_label || (r.period_start | date:'MMM yyyy') }}</span>
                         <span class="report-status" [ngClass]="'report-' + r.status">{{ r.status }}</span>
@@ -789,7 +789,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.sitesService.getSiteSponsorBenchmark(this.siteId).subscribe({
       next: (benchmark) => {
         this.benchmarkData = benchmark;
-        this.benchmarkHasCpi = benchmark.sponsors.some(s => s.cpi !== null);
+        this.benchmarkHasCpi = benchmark?.sponsors?.some(s => s.cpi !== null) ?? false;
         this.benchmarkLoading = false;
         this.cdr.markForCheck();
       },
@@ -805,7 +805,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   // =========================================================================
 
   private renderTrendsChart(): void {
-    if (!this.trendsChartRef || !this.detailStats?.daily_trends.length) return;
+    if (!this.trendsChartRef || !this.detailStats?.daily_trends?.length) return;
     this.destroyChart();
 
     const trends = this.detailStats.daily_trends;
