@@ -1,3 +1,9 @@
+# [3.59.0](https://github.com/Tallec7/neopro/compare/v3.58.2...v3.59.0) (2026-02-18)
+
+### Features
+
+- **sponsors:** add video-sponsor association UI with add/remove controls ([76aea7f](https://github.com/Tallec7/neopro/commit/76aea7fd8b638d6497bbf336be8aaf04d5787f56))
+
 ## P7 — Association vidéos sponsors (2026-02-18)
 
 ### Features
