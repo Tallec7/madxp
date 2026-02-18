@@ -1223,6 +1223,8 @@ DELETE /sites/:siteId/sponsors/:sponsorId/videos/:fname  - Retirer une vidéo (a
 POST   /sites/:siteId/sponsors/:sponsorId/access-link    - Générer magic link d'accès (admin, operator)
 ```
 
+> **Magic Link URL (v3.59+) :** L'URL du lien d'accès sponsor utilise `FRONTEND_URL` > `CENTRAL_DASHBOARD_URL` > `https://admin-neopro.kalonpartners.bzh` (fallback prod).
+
 **Endpoints Network Sponsors (auth JWT, montés sur /api/network) — P6.1 :**
 
 ```

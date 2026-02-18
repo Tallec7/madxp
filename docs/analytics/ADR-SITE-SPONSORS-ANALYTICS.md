@@ -1012,6 +1012,12 @@ L'expérience dashboard pour le suivi.
 **Fichiers** : 2 nouveaux, 12 modifiés
 **Tests** : 533 Karma, 1487 Jest (server), 139 smoke — tous pass
 
+**Hotfixes post-P6 :**
+
+- **v3.57.4** — Null-safety guards sur `detailStats.daily_trends?.length`, `videos?.length`, `reports?.length`, `benchmark?.sponsors?.some()` pour éviter le crash en boucle TypeError si le backend retourne des champs manquants
+- **v3.58.1** — Suppression de la route backward-compat `GET /api/sites/:id/sponsors` dans `advertiser-sites.routes.ts` qui masquait le listing `site-sponsor.routes.ts` (retournait `{ advertisers: [] }` au lieu de `{ sponsors: [] }`). Smoke test ajouté pour prévenir la régression
+- **v3.59.1** — Fallback URL prod (`https://admin-neopro.kalonpartners.bzh`) pour les magic links sponsors au lieu de `localhost:4300`
+
 ---
 
 ## 8. Liste de Tâches Détaillée

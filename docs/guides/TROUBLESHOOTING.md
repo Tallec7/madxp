@@ -1323,6 +1323,31 @@ L'uptime était hardcodé à `0` dans `site-detail.component.ts` lors de la cons
 
 **Formule :** `uptime24h = min(100, (heartbeatCount24h / 2880) * 100)` — 2880 = nombre de heartbeats attendus en 24h (un toutes les 30s).
 
+### L'onglet Sponsors affiche "Aucun sponsor" alors que des sponsors existent
+
+**Symptômes :**
+
+- L'onglet Sponsors d'un site affiche "Aucun sponsor pour ce club"
+- Les sponsors ont bien été créés via le dashboard
+- La console navigateur peut afficher `Cannot read properties of undefined (reading 'length')` en boucle
+
+**Causes possibles :**
+
+1. **Route shadowing (corrigé en v3.58.1) :** Une route backward-compat `GET /api/sites/:id/sponsors` dans `advertiser-sites.routes.ts` masquait le handler `site-sponsor.routes.ts`, retournant `{ advertisers: [] }` au lieu de `{ sponsors: [] }`
+2. **Frontend obsolète :** Le build Angular déployé sur Hostinger ne contient pas les derniers correctifs null-safety (v3.57.4+)
+3. **Lien sponsor en localhost :** Le magic link affiche `localhost:4300` au lieu de l'URL prod → vérifier que `FRONTEND_URL` est configuré sur Railway ou que le backend est en v3.59.1+
+
+**Vérification API :**
+
+```bash
+curl -s https://neopro-central-production.up.railway.app/api/sites/[SITE_ID]/sponsors \
+  -H "Authorization: Bearer [TOKEN]" | jq '.data.sponsors | length'
+```
+
+Si la réponse contient `advertisers` au lieu de `sponsors`, mettre à jour le backend.
+
+**Fix :** Mettre à jour vers v3.58.1+ (backend) et redéployer le dashboard Angular sur Hostinger.
+
 ### Le site affiche "Connexion instable" alors qu'il est connecté
 
 **Symptômes :**
