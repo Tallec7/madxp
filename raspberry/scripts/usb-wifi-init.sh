@@ -35,16 +35,30 @@ for i in $(seq 1 $((MAX_WAIT / INTERVAL))); do
   sleep $INTERVAL
 done
 
-# Vérifier si on est en Ethernet — dans ce cas, pas de clé USB = normal
-if ip addr show eth0 2>/dev/null | grep -q "inet " && ip addr show eth0 2>/dev/null | grep -q "state UP"; then
-  echo "neopro-usb-wifi: wlan1 absent but eth0 is UP — Ethernet-only Pi, skipping recovery"
-  exit 0
+# Vérifier si un device USB WiFi est physiquement présent
+# Si aucun device WiFi USB n'est détecté ET Ethernet est UP → Pi Ethernet-only, skip
+usb_wifi_present=false
+for usb_dev in /sys/bus/usb/devices/[0-9]*-[0-9]*; do
+  if [ -f "$usb_dev/product" ]; then
+    product=$(cat "$usb_dev/product" 2>/dev/null)
+    case "$product" in
+      *[Ww]ireless*|*[Ww]ifi*|*[Ww]LAN*|*802.11*) usb_wifi_present=true; break ;;
+    esac
+  fi
+done
+
+if [ "$usb_wifi_present" = false ]; then
+  if ip addr show eth0 2>/dev/null | grep -q "inet " && ip addr show eth0 2>/dev/null | grep -q "state UP"; then
+    echo "neopro-usb-wifi: No USB WiFi dongle detected and eth0 is UP — Ethernet-only Pi, skipping recovery"
+    exit 0
+  fi
 fi
 
 echo "neopro-usb-wifi: wlan1 not found after ${MAX_WAIT}s — attempting USB recovery"
 
 # Étape 2 : Tenter modprobe des modules WiFi USB connus
-for module in rt2800usb ath9k_htc rtl8188eu rtl8192cu 8188eu; do
+# rtl8xxxu en premier — c'est le driver principal RTL8192EU en prod
+for module in rtl8xxxu rt2800usb ath9k_htc rtl8188eu rtl8192cu 8188eu; do
   if modinfo "$module" &>/dev/null; then
     echo "neopro-usb-wifi: Reloading module $module"
     modprobe -r "$module" 2>/dev/null || true

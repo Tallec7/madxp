@@ -133,10 +133,11 @@ Sur le Raspberry Pi 4 :
 Le service `neopro-usb-wifi.service` s'exécute **avant** le sync-agent pour s'assurer que wlan1 est prêt :
 
 1. Attend wlan1 jusqu'à 30 secondes (polling toutes les 2s)
-2. Si wlan1 n'apparaît pas et que `eth0` est UP → sort proprement (Pi Ethernet-only)
-3. Sinon, tente `modprobe -r` / `modprobe` des modules WiFi USB connus (rt2800usb, ath9k_htc, rtl8188eu, etc.)
-4. En dernier recours, power-cycle USB via sysfs `unbind`/`rebind`
-5. Toujours `exit 0` pour ne pas bloquer le boot
+2. Scanne `/sys/bus/usb/devices/` pour détecter si un dongle WiFi USB est physiquement présent
+3. Si aucun dongle détecté et `eth0` est UP → sort proprement (Pi Ethernet-only)
+4. Sinon, tente `modprobe -r` / `modprobe` des modules WiFi USB connus (`rtl8xxxu` en priorité, puis rt2800usb, ath9k_htc, rtl8188eu, etc.)
+5. En dernier recours, power-cycle USB via sysfs `unbind`/`rebind`
+6. Toujours `exit 0` pour ne pas bloquer le boot
 
 ```bash
 # Vérifier le service
@@ -526,20 +527,35 @@ NetworkWatchdog (sync-agent)
     └── Vérifie : connexion active, dernier pong
 ```
 
-### Séquence de recovery Internet (progressive, v3.7.14+ / v3.30+)
+### Séquence de recovery Internet (progressive, v3.7.14+ / v3.30+ / v3.59+)
 
-| Phase               | Tentative | Action                                                 | Délai après | Pourquoi                                                                      |
-| ------------------- | --------- | ------------------------------------------------------ | ----------- | ----------------------------------------------------------------------------- |
-| 1 - Douce           | 1         | `dhclient wlan1` (DHCP seul)                           | 30s         | Suffit dans 80% des cas                                                       |
-| 2 - Normale         | 2         | `wpa_cli reconfigure` + `dhclient`                     | 60s         | Réassociation WiFi                                                            |
-| 3 - Moyenne         | 3         | `ip link set wlan1 down/up` + reconfigure              | 120s        | Reset interface                                                               |
-| 4 - Agressive       | 4         | `systemctl restart wpa_supplicant@wlan1` (+ fallback)  | 120s        | Restart scoped via systemd (ne touche pas wlan0, tracking correct)            |
-| 5 - Nucléaire       | 5         | `modprobe -r` + `modprobe` driver + vérification wlan1 | 120s        | Rechargement driver kernel + fallback USB power-cycle si wlan1 ne revient pas |
-| 6 - USB power-cycle | 6         | Unbind/rebind USB via sysfs                            | —           | Dernier recours hardware, scan tous les devices WiFi USB                      |
+| Phase               | Tentative | Action                                                 | Temps phase | Délai avant retry | Pourquoi                                                                      |
+| ------------------- | --------- | ------------------------------------------------------ | ----------- | ----------------- | ----------------------------------------------------------------------------- |
+| 1 - Douce           | 1         | `wpa_cli reconfigure` + `dhclient`                     | ~5s         | 10s (fast retry)  | Suffit dans 80% des cas                                                       |
+| 2 - Douce           | 2         | `wpa_cli reconfigure` + `dhclient`                     | ~5s         | 10s               | Deuxième tentative douce                                                      |
+| 3 - Moyenne         | 3         | `ip link set wlan1 down/up` + reconfigure              | ~10s        | 10s               | Reset interface                                                               |
+| 4 - Agressive       | 4         | `systemctl restart wpa_supplicant@wlan1` (+ fallback)  | ~5s         | 10s               | Restart scoped via systemd (ne touche pas wlan0, tracking correct)            |
+| 5 - Nucléaire       | 5         | `modprobe -r` + `modprobe` driver + vérification wlan1 | ~21s        | 10s               | Rechargement driver kernel + fallback USB power-cycle si wlan1 ne revient pas |
+| 6 - USB power-cycle | 6         | Unbind/rebind USB via sysfs                            | ~13s        | —                 | Dernier recours hardware, scan tous les devices WiFi USB                      |
+
+**Temps total pire cas (6 phases) : ~110s (~1min50)** au lieu de ~5min20 avant v3.59.
 
 Après 6 tentatives : cooldown 5 min, alerte `internet_failure` envoyée au central.
 
+> **Fast retry (v3.59+) :** Après chaque échec de recovery, le watchdog re-vérifie l'état dans **10 secondes** au lieu d'attendre le prochain tick de 60s. Le check toutes les 60s reste actif en routine quand tout va bien. Le gain principal vient de l'élimination de l'attente inter-phases.
+
 > **Pourquoi cette progression ?** Un `wpa_cli reconfigure` immédiat causait des cascades de réassociations WiFi qui faisaient crasher le driver USB WiFi (brcmfmac). La recovery progressive essaie DHCP seul d'abord, ce qui suffit dans la majorité des cas sans toucher à l'association WiFi. Les phases 5-6 (v3.30) ajoutent une recovery hardware pour les cas où la clé USB est gelée au niveau kernel.
+
+### Monitoring recovery (v3.59+)
+
+L'événement `network_recovered` émis au central inclut désormais :
+
+| Champ                | Type   | Description                                                |
+| -------------------- | ------ | ---------------------------------------------------------- |
+| `recoveryDurationMs` | number | Durée totale de la panne en ms (de la détection au retour) |
+| `maxPhaseReached`    | number | Phase la plus élevée atteinte (1=douce, 6=USB power-cycle) |
+
+Ces données sont loguées côté Pi et transmises au central pour suivi de la qualité réseau par site.
 
 ### Grace period (boot + OTA)
 
@@ -642,20 +658,21 @@ Les environnements mesh (répéteurs, Ubiquiti, Google Nest WiFi, etc.) posent d
 
 ### Chronologie des problèmes et fixes (janvier-février 2026)
 
-| Date   | Version | Problème                                             | Cause racine                                                           | Fix                                                                                                             |
-| ------ | ------- | ---------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| 16 jan | v2.28.5 | Install échoue si pas de clé USB                     | Script obligatoire                                                     | Rendu optionnel                                                                                                 |
-| 18 jan | v2.34   | Perte connexion NLF après déploiement                | BSSID lock en mesh                                                     | BSSID lock bloqué en mesh, hotspot watchdog                                                                     |
-| 7 fév  | v3.7    | NLF : coupures fréquentes                            | Signal -73 dBm, canal saturé                                           | Diagnostic → problème physique, Ethernet recommandé                                                             |
-| 8 fév  | v3.7.14 | Crash driver USB WiFi                                | 4x `wpa_cli reconfigure` en cascade                                    | Debounce 120s, recovery progressive                                                                             |
-| 8 fév  | v3.7.14 | TKIP éjecte les téléphones du hotspot                | hostapd en WPA-TKIP au lieu de CCMP                                    | Fix fleet script                                                                                                |
-| 9 fév  | v3.8    | Services systemd manquants sur le terrain            | OTA ne copiait pas `config/`                                           | Fix deploy-remote.sh                                                                                            |
-| 12 fév | v3.17.1 | Clé USB non détectée (firmware manquant)             | `firmware-realtek/ralink` absent                                       | Ajouté dans install.sh                                                                                          |
-| 13 fév | v3.20   | Config WiFi nécessite accès physique                 | Pas de commande distante                                               | Scan + connect depuis dashboard                                                                                 |
-| 13 fév | v3.20.1 | Commandes WiFi rejetées silencieusement              | Absent de `DEFAULT_ALLOWED_COMMANDS`                                   | Ajout au whitelist                                                                                              |
-| 14 fév | v3.29   | OTA bloqué par permissions fichiers                  | `chown` sans `-R`                                                      | Fix chown -R                                                                                                    |
-| 15 fév | v3.30   | Clé USB non initialisée au boot / déconnexions prod  | Pas d'init pré-sync-agent, autosuspend USB activé, recovery incomplète | Service boot `neopro-usb-wifi`, udev rule anti-autosuspend, Phase 5-6 USB power-cycle dans NetworkWatchdog      |
-| 16 fév | v3.40   | Déconnexions WiFi RTL8192EU persistantes (NTES/NARH) | Power management driver non désactivé, auto-interférence hotspot canal | Modprobe config `rtw_power_mgnt=0`, stabilisation 4 couches, hotspot anti-interférence canal, alertes heartbeat |
+| Date   | Version | Problème                                                        | Cause racine                                                                                                           | Fix                                                                                                                                                                        |
+| ------ | ------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 16 jan | v2.28.5 | Install échoue si pas de clé USB                                | Script obligatoire                                                                                                     | Rendu optionnel                                                                                                                                                            |
+| 18 jan | v2.34   | Perte connexion NLF après déploiement                           | BSSID lock en mesh                                                                                                     | BSSID lock bloqué en mesh, hotspot watchdog                                                                                                                                |
+| 7 fév  | v3.7    | NLF : coupures fréquentes                                       | Signal -73 dBm, canal saturé                                                                                           | Diagnostic → problème physique, Ethernet recommandé                                                                                                                        |
+| 8 fév  | v3.7.14 | Crash driver USB WiFi                                           | 4x `wpa_cli reconfigure` en cascade                                                                                    | Debounce 120s, recovery progressive                                                                                                                                        |
+| 8 fév  | v3.7.14 | TKIP éjecte les téléphones du hotspot                           | hostapd en WPA-TKIP au lieu de CCMP                                                                                    | Fix fleet script                                                                                                                                                           |
+| 9 fév  | v3.8    | Services systemd manquants sur le terrain                       | OTA ne copiait pas `config/`                                                                                           | Fix deploy-remote.sh                                                                                                                                                       |
+| 12 fév | v3.17.1 | Clé USB non détectée (firmware manquant)                        | `firmware-realtek/ralink` absent                                                                                       | Ajouté dans install.sh                                                                                                                                                     |
+| 13 fév | v3.20   | Config WiFi nécessite accès physique                            | Pas de commande distante                                                                                               | Scan + connect depuis dashboard                                                                                                                                            |
+| 13 fév | v3.20.1 | Commandes WiFi rejetées silencieusement                         | Absent de `DEFAULT_ALLOWED_COMMANDS`                                                                                   | Ajout au whitelist                                                                                                                                                         |
+| 14 fév | v3.29   | OTA bloqué par permissions fichiers                             | `chown` sans `-R`                                                                                                      | Fix chown -R                                                                                                                                                               |
+| 15 fév | v3.30   | Clé USB non initialisée au boot / déconnexions prod             | Pas d'init pré-sync-agent, autosuspend USB activé, recovery incomplète                                                 | Service boot `neopro-usb-wifi`, udev rule anti-autosuspend, Phase 5-6 USB power-cycle dans NetworkWatchdog                                                                 |
+| 16 fév | v3.40   | Déconnexions WiFi RTL8192EU persistantes (NTES/NARH)            | Power management driver non désactivé, auto-interférence hotspot canal                                                 | Modprobe config `rtw_power_mgnt=0`, stabilisation 4 couches, hotspot anti-interférence canal, alertes heartbeat                                                            |
+| 18 fév | v3.59   | Clé USB ne démarre pas au boot (NARH), recovery ~5min trop lent | `rtl8xxxu` absent de la liste modprobe du boot script, skip Ethernet trop agressif, 60s entre chaque phase de recovery | Ajout `rtl8xxxu` en 1ère position dans boot script, détection dongle USB avant skip Ethernet, fast retry 10s entre phases, sleeps réduits, monitoring durée/phase recovery |
 
 ### Leçons apprises
 
@@ -669,6 +686,9 @@ Les environnements mesh (répéteurs, Ubiquiti, Google Nest WiFi, etc.) posent d
 8. **La recovery logicielle ne suffit pas** : `modprobe` seul ne récupère pas une clé USB gelée — il faut vérifier que wlan1 revient et tenter un power-cycle USB hardware via sysfs en dernier recours
 9. **Le power management a 3 couches distinctes** : USB autosuspend (kernel), WiFi power save (driver rtw_power_mgnt), iwconfig power (firmware). Il faut toutes les désactiver.
 10. **L'auto-interférence hotspot est invisible** : le hotspot wlan0 sur le même canal que wlan1 noie le signal — le hotspot-optimizer doit détecter et éviter le canal de wlan1
+11. **Le driver en prod doit être dans la liste modprobe du boot script** : `rtl8xxxu` manquait dans `usb-wifi-init.sh` alors que c'est le driver utilisé pour RTL8192EU — le script tentait les vieux drivers (`rtl8192cu`, `rtl8188eu`) sans succès
+12. **Un Pi avec Ethernet ET WiFi USB existe** : le skip « eth0 UP → pas de recovery » bloquait le modprobe de la clé USB quand un câble Ethernet était aussi branché — il faut scanner `/sys/bus/usb/` pour détecter la présence physique du dongle avant de skipper
+13. **Le temps inter-phases tue le recovery** : 60s d'attente entre chaque phase = 5 minutes en pire cas — le fast retry (10s) réduit ça à ~2min sans changer la logique
 
 ---
 
@@ -734,4 +754,4 @@ Si ça ne suffit pas : `lsusb` pour identifier le chipset, puis chercher le pack
 
 ---
 
-**Dernière mise à jour :** 16 février 2026
+**Dernière mise à jour :** 18 février 2026

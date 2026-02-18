@@ -1,3 +1,22 @@
+# [3.59.0](https://github.com/Tallec7/neopro/compare/v3.58.0...v3.59.0) (2026-02-18)
+
+### Bug Fixes
+
+- **wifi-boot:** add `rtl8xxxu` (production RTL8192EU driver) as first module in `usb-wifi-init.sh` boot recovery — was missing, causing boot failures on USB WiFi dongles
+- **wifi-boot:** detect USB WiFi dongle presence via sysfs before skipping recovery on Ethernet-connected Pi — Pi with both Ethernet and USB WiFi no longer skips WiFi init
+
+### Features
+
+- **wifi-recovery:** add fast retry (10s) between recovery phases instead of waiting full 60s interval — reduces worst-case recovery from ~5min20 to ~1min50
+- **wifi-recovery:** reduce sleep durations in gentle/medium/aggressive phases (wpa_cli 5s→3s, dhclient 3s→2s, link up 5s→3s) — hardware sleeps unchanged
+- **wifi-monitoring:** emit `recoveryDurationMs` and `maxPhaseReached` in `network_recovered` event for recovery quality tracking per site
+
+### Documentation
+
+- **wifi-usb-guide:** update recovery timing table with v3.59 fast retry timings and monitoring fields
+- **wifi-usb-guide:** update boot init sequence to reflect USB dongle detection and `rtl8xxxu` priority
+- **wifi-usb-guide:** add incident entry (18 feb) and lessons learned (#11-#13)
+
 ## [3.57.4](https://github.com/Tallec7/neopro/compare/v3.57.3...v3.57.4) (2026-02-18)
 
 ### Bug Fixes

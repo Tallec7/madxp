@@ -30,6 +30,7 @@ const INTERNET_CHECK_INTERVAL = 60 * 1000; // 60 secondes
 const CLOUD_CHECK_INTERVAL = 30 * 1000; // 30 secondes
 const MAX_RECOVERY_ATTEMPTS = 6; // Phases: gentle(1-2), medium(3), aggressive(4), modprobe(5), USB power-cycle(6)
 const RECOVERY_COOLDOWN = 5 * 60 * 1000; // 5 minutes
+const FAST_RETRY_DELAY = 10 * 1000; // 10s fast retry between recovery phases (instead of waiting 60s)
 const ROLLBACK_TIMEOUT = 30 * 1000; // 30 secondes pour rollback
 const GRACE_PERIOD_DURATION = 60 * 1000; // 60s grace period after network operations
 const GRACE_PERIOD_FILE = '/tmp/neopro-watchdog-grace.json'; // Persists across process restarts
@@ -53,6 +54,7 @@ const state = {
     lastCheck: null,
     recoveryAttempts: 0,
     lastRecoveryTime: 0,
+    recoveryStartedAt: 0, // Timestamp when first failure was detected (for duration tracking)
     issues: [],
     ipAddress: null,
     gateway: null,
@@ -954,11 +956,19 @@ async function internetWatchLoop() {
       // Ré-appliquer power management off après recovery
       await execAsync('sudo iwconfig wlan1 power off 2>/dev/null || true').catch(() => {});
 
+      const recoveryDurationMs = state.internet.recoveryStartedAt
+        ? Date.now() - state.internet.recoveryStartedAt
+        : null;
+      const maxPhaseReached = state.internet.recoveryAttempts;
+
       logger.info('NetworkWatchdog: Internet recovered', {
         ip: health.ipAddress,
         connectionType: health.connectionType,
+        recoveryDurationMs,
+        maxPhaseReached,
       });
       state.internet.recoveryAttempts = 0;
+      state.internet.recoveryStartedAt = 0;
 
       if (socketRef && socketRef.connected) {
         socketRef.emit('network_recovered', {
@@ -966,6 +976,8 @@ async function internetWatchLoop() {
           type: 'internet',
           connectionType: health.connectionType,
           ip: health.ipAddress,
+          recoveryDurationMs,
+          maxPhaseReached,
           timestamp: new Date().toISOString(),
         });
       }
@@ -981,12 +993,21 @@ async function internetWatchLoop() {
         return;
       }
 
+      // Track when the outage started (first failure detection)
+      if (!state.internet.recoveryStartedAt) {
+        state.internet.recoveryStartedAt = Date.now();
+      }
+
       logger.warn('NetworkWatchdog: Problèmes internet détectés', {
         issues: health.issues,
       });
 
       if (canAttemptRecovery('internet')) {
-        await attemptInternetRecovery();
+        const result = await attemptInternetRecovery();
+        if (!result.success) {
+          // Fast retry: re-check in 10s instead of waiting the full 60s interval
+          setTimeout(() => internetWatchLoop(), FAST_RETRY_DELAY);
+        }
       } else {
         logger.error('NetworkWatchdog: Trop de tentatives de récupération internet', {
           attempts: state.internet.recoveryAttempts,
