@@ -1,3 +1,10 @@
+## [3.58.2](https://github.com/Tallec7/neopro/compare/v3.58.1...v3.58.2) (2026-02-18)
+
+### Bug Fixes
+
+- **admin:** use git hash instead of timestamp in build-admin.sh ([bc9a5ff](https://github.com/Tallec7/neopro/commit/bc9a5ffcd968a08efcceac3a6924f96f43a8beb0))
+- **sponsors:** use prod URL as fallback for sponsor access links ([3150a29](https://github.com/Tallec7/neopro/commit/3150a29bb0381c68af986ca40ce7a6c4c18186f6))
+
 ## [3.58.1](https://github.com/Tallec7/neopro/compare/v3.58.0...v3.58.1) (2026-02-18)
 
 ### Bug Fixes
