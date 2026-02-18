@@ -210,7 +210,7 @@ interface VideoDeploymentHistory {
               [(ngModel)]="deployForm.videoIds"
               class="form-select"
             >
-              <option *ngFor="let video of videos" [ngValue]="video.id">
+              <option *ngFor="let video of allVideos" [ngValue]="video.id">
                 {{ video.title }} ({{ formatFileSize(video.file_size) }})
               </option>
             </select>
@@ -1818,6 +1818,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   activeTab: 'videos' | 'deploy' | 'history' = 'videos';
 
   videos: Video[] = [];
+  allVideos: Video[] = [];
   deployments: Deployment[] = [];
   sites: Site[] = [];
   groups: Group[] = [];
@@ -1878,6 +1879,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadVideos();
+    this.loadAllVideos();
     this.loadDeployments();
     this.loadSites();
     this.loadGroups();
@@ -1910,6 +1912,17 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.logger.warn('Failed to load videos', { error: ErrorExtractor.getMessage(error) });
+      }
+    });
+  }
+
+  loadAllVideos(): void {
+    this.apiService.get<{ data: Video[]; pagination: PaginationInfo }>('/videos?limit=500').subscribe({
+      next: (response) => {
+        this.allVideos = response.data || [];
+      },
+      error: (error) => {
+        this.logger.warn('Failed to load all videos for deploy', { error: ErrorExtractor.getMessage(error) });
       }
     });
   }
@@ -2095,6 +2108,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
           this.isUploading = false;
           this.notificationService.success('Vidéo uploadée avec succès !');
           this.loadVideos();
+          this.loadAllVideos();
         },
         error: (error) => {
           const message = ErrorExtractor.getMessage(error);
@@ -2144,6 +2158,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
           }
 
           this.loadVideos();
+          this.loadAllVideos();
         },
         error: (error) => {
           const message = ErrorExtractor.getMessage(error);
@@ -2163,6 +2178,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
       this.apiService.delete(`/videos/${video.id}`).subscribe({
         next: () => {
           this.videos = this.videos.filter(v => v.id !== video.id);
+          this.allVideos = this.allVideos.filter(v => v.id !== video.id);
         },
         error: (error) => {
           const message = ErrorExtractor.getMessage(error);
@@ -2234,7 +2250,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   }
 
   getVideoTitleById(videoId: string): string {
-    return this.videos.find(v => v.id === videoId)?.title || 'Vidéo inconnue';
+    return this.allVideos.find(v => v.id === videoId)?.title || 'Vidéo inconnue';
   }
 
   removeSelectedVideo(videoId: string): void {
@@ -2414,6 +2430,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
         };
         this.notificationService.success(response.message || 'Image convertie en vidéo !');
         this.loadVideos();
+        this.loadAllVideos();
       },
       error: (error) => {
         clearInterval(progressInterval);

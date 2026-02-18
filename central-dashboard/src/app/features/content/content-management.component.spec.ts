@@ -363,12 +363,12 @@ describe('ContentManagementComponent', () => {
     });
 
     it('should get video title by id', () => {
-      component.videos = mockVideos;
+      component.allVideos = mockVideos;
       expect(component.getVideoTitleById('1')).toBe('Video Test');
     });
 
     it('should return unknown for missing video', () => {
-      component.videos = mockVideos;
+      component.allVideos = mockVideos;
       expect(component.getVideoTitleById('999')).toBe('Vidéo inconnue');
     });
 

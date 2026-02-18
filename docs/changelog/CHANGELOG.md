@@ -4,6 +4,14 @@
 
 - **sponsors:** add video-sponsor association UI with add/remove controls ([76aea7f](https://github.com/Tallec7/neopro/commit/76aea7fd8b638d6497bbf336be8aaf04d5787f56))
 
+### Bug Fixes
+
+- **content:** le sélecteur de vidéos de l'onglet Déployer n'affichait que 20 vidéos (page courante) au lieu de toutes — ajout d'un chargement dédié `allVideos` avec `limit=500`, maxLimit backend relevé de 100 à 500 sur `GET /content/videos`
+
+### Documentation
+
+- **reference:** mise à jour pagination `GET /content/videos` — max limit 500
+
 ## P7 — Association vidéos sponsors (2026-02-18)
 
 ### Features

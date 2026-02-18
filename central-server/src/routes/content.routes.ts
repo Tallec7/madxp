@@ -2,12 +2,12 @@ import { Router } from 'express';
 import * as contentController from '../controllers/content.controller';
 import { authenticate, requireRole } from '../middleware/auth';
 import { uploadVideo, uploadImage } from '../middleware/upload';
-import { paginationMiddleware } from '../middleware/pagination';
+import { paginationMiddleware, createPaginationMiddleware } from '../middleware/pagination';
 
 const router = Router();
 
 // Video routes
-router.get('/videos', authenticate, paginationMiddleware, contentController.getVideos);
+router.get('/videos', authenticate, createPaginationMiddleware(20, 500), contentController.getVideos);
 router.get('/videos/for-site/:siteId', authenticate, paginationMiddleware, contentController.getVideosForSite);  // Vidéos priorisées pour un site
 router.get('/videos/:id', authenticate, contentController.getVideo);
 router.get('/videos/:id/deployments', authenticate, contentController.getVideoDeployments);
