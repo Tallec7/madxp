@@ -80,6 +80,17 @@ Documentation business, stratégie et planification.
 - [Backlog](business/BACKLOG.md) - Sprint tracking (23K)
 - **[Métriques Pitch Deck](../central-server/src/scripts/pitch-deck-metrics.sql)** - Extraction SQL des KPIs traction investisseur 🆕
 
+### 🎯 [SAFe — Pilotage Produit](safe/)
+
+Framework SAFe Essential pour le pilotage produit structuré. 🆕
+
+- **[README SAFe](safe/README.md)** - Hub principal : Epics, Features, User Stories, Sprint Tracker
+- [🟢 OVS1 — Club to Screen](safe/OVS1-CLUB-TO-SCREEN.md) - Flux club → écran TV
+- [🟠 OVS2 — Sponsor to Impression](safe/OVS2-SPONSOR-TO-IMPRESSION.md) - Flux sponsor → rapport ROI
+- [🟣 DVS-1 — Neopro Platform](safe/DVS1-NEOPRO-PLATFORM.md) - Value Proposition, stack, budget, WSJF
+- [📊 Portfolio SAFe](safe/PORTFOLIO.md) - Roadmap Gantt, architecture, métriques ARR
+- **Source de vérité Notion** : [SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
+
 ### 🔍 [Audits](audit/)
 
 Rapports d'audit techniques et de conformité.
@@ -208,6 +219,6 @@ neopro/
 
 ---
 
-**Dernière mise à jour** : 16 février 2026 - Analytics traction + navigation par onglets
+**Dernière mise à jour** : 18 février 2026 - SAFe Framework + pilotage produit structuré
 
 **Version** : 3.37.0

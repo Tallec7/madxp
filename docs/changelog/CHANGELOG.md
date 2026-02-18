@@ -1,3 +1,26 @@
+## SAFe Framework — Pilotage Produit structuré (2026-02-18)
+
+### Documentation
+
+- **safe/README.md:** hub SAFe complet — 14 Epics, 23 Features, 41 User Stories, Sprint Tracker, PI Planning, métriques DVS, Team Topologies
+- **safe/OVS1-CLUB-TO-SCREEN.md:** canvas OVS1 — flux club → écran, segments clients, lead times, KPIs 2026/2028
+- **safe/OVS2-SPONSOR-TO-IMPRESSION.md:** canvas OVS2 — flux sponsor → rapport ROI, 2 modèles de revenus (local + régie), KPIs
+- **safe/DVS1-NEOPRO-PLATFORM.md:** canvas DVS-1 — value proposition, stack technique, unit economics (marge ~90%), WSJF quadrant chart
+- **safe/PORTFOLIO.md:** vue d'ensemble portfolio — architecture SAFe Mermaid, Gantt roadmap 2026, trajectoire ARR, croissance clubs
+- **business/SAFE_FRAMEWORK.md:** document pont entre codebase et Notion SAFe
+- **00-INDEX.md:** ajout section SAFe dans la documentation
+- **01-START-HERE.md:** ajout parcours PO/PM avec SAFe, mise à jour parcours 3
+- **CLAUDE.md:** ajout référence SAFe dans l'architecture détaillée
+
+### Notion SAFe (source de vérité)
+
+- 6 databases : Value Streams, Business Pillars, Epics, Features, User Stories, Sprint Tracker
+- 4 pages visuelles : Portfolio, OVS1 Canvas, OVS2 Canvas, DVS-1 Canvas
+- 14 Epics répartis sur 3 PI (Fév→Juil 2026) avec WSJF scoring
+- 4 Thèmes Stratégiques alignés OKR 2026
+
+---
+
 ## P9 — Sync bidirectionnelle Dashboard ↔ Pi complète + monitoring (2026-02-18)
 
 ### Features
