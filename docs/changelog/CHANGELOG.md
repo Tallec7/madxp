@@ -1,3 +1,9 @@
+## [3.58.1](https://github.com/Tallec7/neopro/compare/v3.58.0...v3.58.1) (2026-02-18)
+
+### Bug Fixes
+
+- **sponsors:** remove backward-compat route that shadowed site-sponsor listing ([3f6086e](https://github.com/Tallec7/neopro/commit/3f6086e6409d8b17d3dd121762964834acb697e2))
+
 # [3.58.0](https://github.com/Tallec7/neopro/compare/v3.57.4...v3.58.0) (2026-02-18)
 
 ### Features
