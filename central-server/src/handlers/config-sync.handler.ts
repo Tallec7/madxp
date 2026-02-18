@@ -353,9 +353,40 @@ async function sendPendingConfigCommand(
     return;
   }
 
+  // Inclure les sponsors du site dans le payload pour la sync automatique
+  let siteSponsors: Array<Record<string, unknown>> = [];
+  try {
+    const rows = await siteSponsorRepository.getSponsorsForDeployment(siteId);
+    siteSponsors = rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      contactEmail: row.contact_email,
+      contactPhone: row.contact_phone,
+      logoUrl: row.logo_url,
+      source: row.source,
+      videoFilenames: row.video_filenames || [],
+      isActive: true,
+    }));
+    if (siteSponsors.length > 0) {
+      logger.info('Including site sponsors in pending config sync', {
+        siteId,
+        sponsorCount: siteSponsors.length,
+      });
+    }
+  } catch (sponsorError) {
+    logger.error('Failed to fetch sponsors for pending config sync (non-fatal):', {
+      siteId,
+      error: (sponsorError as Error).message,
+    });
+  }
+
+  const configWithSponsors = siteSponsors.length > 0
+    ? { ...configuration, siteSponsors }
+    : configuration;
+
   const commandId = uuidv4();
   const commandPayload = {
-    configuration,
+    configuration: configWithSponsors,
     configVersionId: versionId,
   };
 
