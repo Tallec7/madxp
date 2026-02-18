@@ -439,6 +439,8 @@ function mergeSiteSponsors(localSponsors, centralSponsors) {
 
     if (existing) {
       // Mettre à jour le sponsor existant avec les données du central
+      // Source héritée du central : 'neopro' si annonceur réseau, sinon préserver la source locale
+      const effectiveSource = central.source === 'neopro' ? 'neopro' : (existing.source || 'local');
       result.push({
         ...existing,
         centralId: central.id,
@@ -447,6 +449,7 @@ function mergeSiteSponsors(localSponsors, centralSponsors) {
         contactPhone: central.contactPhone || existing.contactPhone || '',
         videoFilenames: mergeVideoFilenames(existing.videoFilenames || [], central.videoFilenames || []),
         isActive: central.isActive !== undefined ? central.isActive : existing.isActive,
+        source: effectiveSource,
         syncedAt: new Date().toISOString(),
       });
       processedCentralIds.add(central.id);
@@ -465,6 +468,7 @@ function mergeSiteSponsors(localSponsors, centralSponsors) {
         contactPhone: central.contactPhone || '',
         videoFilenames: central.videoFilenames || [],
         isActive: central.isActive !== undefined ? central.isActive : true,
+        source: central.source || 'neopro',
         createdAt: new Date().toISOString(),
         syncedAt: new Date().toISOString(),
       });

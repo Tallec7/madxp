@@ -515,6 +515,7 @@ export const recordImpressions = async (req: SiteAuthRequest, res: Response): Pr
         event_id,
         site_sponsor_id,
         video_id,
+        video_filename,
         played_at,
         duration_played,
         video_duration,
@@ -546,7 +547,7 @@ export const recordImpressions = async (req: SiteAuthRequest, res: Response): Pr
         continue;
       }
 
-      // Valider site_sponsor_id si fourni, sinon résoudre via video_id+site_id
+      // Valider site_sponsor_id si fourni, sinon résoudre via video_id ou video_filename
       let resolvedSiteSponsorId: string | null = null;
       if (site_sponsor_id && typeof site_sponsor_id === 'string' && validateUuid(site_sponsor_id)) {
         resolvedSiteSponsorId = site_sponsor_id;
@@ -555,6 +556,14 @@ export const recordImpressions = async (req: SiteAuthRequest, res: Response): Pr
           resolvedSiteSponsorId = await siteSponsorRepository.resolveSiteSponsorId(video_id as string, authenticatedSiteId);
         } catch {
           // Non-bloquant : si la résolution échoue, on continue sans
+        }
+      }
+      // Fallback par filename si video_id absent (sponsors locaux, ancien firmware)
+      if (!resolvedSiteSponsorId && video_filename && typeof video_filename === 'string') {
+        try {
+          resolvedSiteSponsorId = await siteSponsorRepository.resolveSiteSponsorIdByFilename(video_filename as string, authenticatedSiteId);
+        } catch {
+          // Non-bloquant
         }
       }
 

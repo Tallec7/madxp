@@ -208,7 +208,7 @@ class NeoproSyncAgent {
         }
       }
 
-      // Update site_sponsor_id on sponsors[] (loop entries)
+      // Update site_sponsor_id on sponsors[] (default loop entries)
       if (localConfig.sponsors && Array.isArray(localConfig.sponsors)) {
         for (const entry of localConfig.sponsors) {
           if (entry._sponsorLocalId && mapping[entry._sponsorLocalId]) {
@@ -216,6 +216,23 @@ class NeoproSyncAgent {
             if (entry.site_sponsor_id !== newId) {
               entry.site_sponsor_id = newId;
               changed = true;
+            }
+          }
+        }
+      }
+
+      // Update site_sponsor_id on timeCategories[].loopVideos[] (phase loop entries)
+      if (localConfig.timeCategories && Array.isArray(localConfig.timeCategories)) {
+        for (const tc of localConfig.timeCategories) {
+          if (tc.loopVideos && Array.isArray(tc.loopVideos)) {
+            for (const entry of tc.loopVideos) {
+              if (entry._sponsorLocalId && mapping[entry._sponsorLocalId]) {
+                const newId = mapping[entry._sponsorLocalId];
+                if (entry.site_sponsor_id !== newId) {
+                  entry.site_sponsor_id = newId;
+                  changed = true;
+                }
+              }
             }
           }
         }

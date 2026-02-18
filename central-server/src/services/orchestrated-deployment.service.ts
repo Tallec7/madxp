@@ -189,6 +189,56 @@ class OrchestratedDeploymentService {
   }
 
   /**
+   * Extrait les associations sponsor-vidéo depuis le config JSON (sponsors[] + timeCategories[].loopVideos[])
+   * et les synchronise dans la table site_sponsor_videos pour maintenir la cohérence.
+   */
+  private async syncSponsorVideoAssociations(siteId: string, configuration: SiteConfiguration): Promise<void> {
+    const associations = new Map<string, Set<string>>(); // site_sponsor_id → Set<video_path>
+
+    // Extraire depuis sponsors[] (boucle par défaut)
+    for (const video of (configuration.sponsors || [])) {
+      if (video.site_sponsor_id && video.path) {
+        if (!associations.has(video.site_sponsor_id)) {
+          associations.set(video.site_sponsor_id, new Set());
+        }
+        const filename = video.path.split('/').pop() || video.path;
+        associations.get(video.site_sponsor_id)!.add(filename);
+      }
+    }
+
+    // Extraire depuis timeCategories[].loopVideos[] (boucles par phase)
+    for (const tc of (configuration.timeCategories || [])) {
+      for (const video of (tc.loopVideos || [])) {
+        if (video.site_sponsor_id && video.path) {
+          if (!associations.has(video.site_sponsor_id)) {
+            associations.set(video.site_sponsor_id, new Set());
+          }
+          const filename = video.path.split('/').pop() || video.path;
+          associations.get(video.site_sponsor_id)!.add(filename);
+        }
+      }
+    }
+
+    if (associations.size === 0) return;
+
+    let synced = 0;
+    for (const [sponsorId, filenames] of associations) {
+      for (const filename of filenames) {
+        try {
+          await siteSponsorRepository.addVideo(sponsorId, null, filename);
+          synced++;
+        } catch {
+          // Non-fatal : le sponsor_id peut ne pas exister en DB (UUID invalide dans le config)
+        }
+      }
+    }
+
+    if (synced > 0) {
+      logger.info('Synced sponsor-video associations from config', { siteId, synced });
+    }
+  }
+
+  /**
    * Queue la mise à jour de configuration
    */
   private async queueConfigUpdate(
@@ -217,6 +267,9 @@ class OrchestratedDeploymentService {
     });
 
     metricsService.recordSponsorSync('included', siteSponsors.length);
+
+    // Synchroniser les associations sponsor-vidéo depuis la config vers site_sponsor_videos
+    await this.syncSponsorVideoAssociations(siteId, configuration);
 
     await commandQueueService.queueCommand(
       siteId,
