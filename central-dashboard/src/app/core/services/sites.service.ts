@@ -691,7 +691,7 @@ export class SitesService {
   generateSponsorReport(siteId: string, sponsorId: string, periodStart: string, periodEnd: string): Observable<{ reportId: string; url: string }> {
     return this.api.post<ApiResponse<{ reportId: string; url: string }>>(
       '/reports/generate',
-      { type: 'site_sponsor', entity_id: sponsorId, site_id: siteId, period_start: periodStart, period_end: periodEnd }
+      { type: 'site_sponsor', entityId: sponsorId, siteId, periodStart, periodEnd }
     ).pipe(map(r => r.data));
   }
 

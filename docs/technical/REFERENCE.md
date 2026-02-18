@@ -1359,14 +1359,14 @@ GET /ready     - Readiness probe (prêt pour le trafic)
 
 Le site-detail est organisé en **6 onglets** avec des composants Angular standalone :
 
-| Onglet         | Composant                  | Fonctionnalités                                                         |
-| -------------- | -------------------------- | ----------------------------------------------------------------------- |
-| **État**       | `site-detail.component.ts` | Métriques, connexion temps réel, alertes, ventilateur                   |
-| **Contenu**    | `SiteContentTabComponent`  | Boucles par phase, catégories, mapping analytics                        |
-| **Sponsors**   | `SiteSponsorsTabComponent` | CRUD sponsors locaux, KPIs, Chart.js trends, vidéos, magic link d'accès |
-| **Paramètres** | `SiteSettingsTabComponent` | Config réseau, hotspot, branding club (logo, couleurs)                  |
-| **Profils**    | `SiteProfilesTabComponent` | Multi-config CRUD, déploiement, synchronisation                         |
-| **Debug**      | `SiteDebugTabComponent`    | Logs, commandes, diagnostics, santé ventilateur                         |
+| Onglet         | Composant                  | Fonctionnalités                                                                                             |
+| -------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **État**       | `site-detail.component.ts` | Métriques, connexion temps réel, alertes, ventilateur                                                       |
+| **Contenu**    | `SiteContentTabComponent`  | Boucles par phase, catégories, mapping analytics                                                            |
+| **Sponsors**   | `SiteSponsorsTabComponent` | CRUD sponsors locaux, KPIs, Chart.js trends, association vidéos (add/remove), magic link d'accès, benchmark |
+| **Paramètres** | `SiteSettingsTabComponent` | Config réseau, hotspot, branding club (logo, couleurs)                                                      |
+| **Profils**    | `SiteProfilesTabComponent` | Multi-config CRUD, déploiement, synchronisation                                                             |
+| **Debug**      | `SiteDebugTabComponent`    | Logs, commandes, diagnostics, santé ventilateur                                                             |
 
 #### SiteProfilesTabComponent (multi-config)
 

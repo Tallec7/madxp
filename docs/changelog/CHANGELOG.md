@@ -1,3 +1,11 @@
+## P7 — Association vidéos sponsors (2026-02-18)
+
+### Features
+
+- **sponsors:** UI d'association vidéo-sponsor dans le panneau détail expand — dropdown sélection vidéo + bouton "Associer", bouton ✕ pour retirer
+- **sponsors:** filtrage automatique des vidéos déjà associées, refresh après add/remove
+- **tests:** 8 tests Karma pour l'association vidéo (load, add, remove, errors, cancel, cleanup) — 541 total
+
 ## [3.58.2](https://github.com/Tallec7/neopro/compare/v3.58.1...v3.58.2) (2026-02-18)
 
 ### Bug Fixes

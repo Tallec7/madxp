@@ -7,7 +7,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
-import { Site, SiteSponsor, SiteSponsorVideo, SiteSponsorStatsResponse, SiteSponsorDailyTrend, GeneratedReport, SiteSponsorBenchmarkResponse } from '../../../../core/models';
+import { Site, SiteSponsor, SiteSponsorVideo, SiteSponsorStatsResponse, SiteSponsorDailyTrend, GeneratedReport, SiteSponsorBenchmarkResponse, CloudVideo } from '../../../../core/models';
 
 Chart.register(...registerables);
 
@@ -146,13 +146,32 @@ Chart.register(...registerables);
                   </div>
 
                   <!-- Videos -->
-                  <div class="videos-section" *ngIf="detailStats.videos?.length">
-                    <h4>Vidéos associées ({{ detailStats.videos.length }})</h4>
-                    <div class="video-chips">
+                  <div class="videos-section">
+                    <h4>Vidéos associées ({{ detailStats.videos?.length || 0 }})</h4>
+                    <div class="video-chips" *ngIf="detailStats.videos?.length">
                       <span class="video-chip" *ngFor="let v of detailStats.videos">
                         🎬 {{ v.video_filename }}
                         <span class="chip-primary" *ngIf="v.is_primary">Principal</span>
+                        <button class="chip-remove" title="Retirer cette vidéo" (click)="removeVideo(v.video_filename)"
+                                [disabled]="removingVideoFilename === v.video_filename">
+                          {{ removingVideoFilename === v.video_filename ? '⏳' : '✕' }}
+                        </button>
                       </span>
+                    </div>
+                    <div class="video-empty" *ngIf="!detailStats.videos?.length">
+                      <p>Aucune vidéo associée</p>
+                    </div>
+                    <!-- Add video -->
+                    <div class="video-add-row">
+                      <select class="video-select" [(ngModel)]="selectedVideoFilename" name="videoSelect"
+                              [disabled]="addingVideo || availableVideosLoading">
+                        <option value="">{{ availableVideosLoading ? 'Chargement...' : 'Sélectionner une vidéo...' }}</option>
+                        <option *ngFor="let v of availableVideos" [value]="v.filename">{{ v.filename }}</option>
+                      </select>
+                      <button class="btn btn-sm btn-primary" (click)="addVideo()"
+                              [disabled]="!selectedVideoFilename || addingVideo">
+                        {{ addingVideo ? '⏳' : '+ Associer' }}
+                      </button>
                     </div>
                   </div>
 
@@ -516,6 +535,43 @@ Chart.register(...registerables);
       border-radius: 3px;
       font-weight: 600;
     }
+    .chip-remove {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 0.75rem;
+      padding: 0 0.15rem;
+      line-height: 1;
+      border-radius: 3px;
+      transition: all 0.15s;
+    }
+    .chip-remove:hover:not(:disabled) { color: #ef4444; background: #fef2f2; }
+    .chip-remove:disabled { opacity: 0.5; cursor: default; }
+    .video-empty {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      padding: 0.25rem 0;
+    }
+    .video-empty p { margin: 0; }
+    .video-add-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 0.75rem;
+    }
+    .video-select {
+      flex: 1;
+      max-width: 360px;
+      padding: 0.4rem 0.65rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      background: white;
+      color: #334155;
+    }
+    .video-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+    .video-select:disabled { background: #f1f5f9; color: #94a3b8; }
 
     /* Reports */
     .reports-section h4 { margin: 0 0 0.5rem; font-size: 0.9rem; color: #334155; }
@@ -696,6 +752,13 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   // Report generation
   generatingReportId: string | null = null;
 
+  // Video association
+  availableVideos: CloudVideo[] = [];
+  availableVideosLoading = false;
+  selectedVideoFilename = '';
+  addingVideo = false;
+  removingVideoFilename: string | null = null;
+
   // Access link (P5)
   expandedSponsor: SiteSponsor | null = null;
   creatingAccessLink = false;
@@ -741,6 +804,8 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
       this.benchmarkHasCpi = false;
       this.accessLinkUrl = null;
       this.accessLinkCopied = false;
+      this.availableVideos = [];
+      this.selectedVideoFilename = '';
       this.destroyChart();
       this.cdr.markForCheck();
       return;
@@ -755,6 +820,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.benchmarkHasCpi = false;
     this.accessLinkUrl = null;
     this.accessLinkCopied = false;
+    this.selectedVideoFilename = '';
     this.cdr.markForCheck();
 
     // Load stats + reports + benchmark in parallel
@@ -765,6 +831,8 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
         // Render chart after next tick
         setTimeout(() => this.renderTrendsChart(), 50);
+        // Load available videos after stats (to filter already-associated ones)
+        this.loadAvailableVideos();
       },
       error: () => {
         this.detailLoading = false;
@@ -1031,6 +1099,99 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
         this.accessLinkCopied = false;
         this.cdr.markForCheck();
       }, 2000);
+    });
+  }
+
+  // =========================================================================
+  // Video association
+  // =========================================================================
+
+  private loadAvailableVideos(): void {
+    this.availableVideosLoading = true;
+    this.availableVideos = [];
+    this.cdr.markForCheck();
+
+    this.sitesService.getLocalContent(this.siteId).subscribe({
+      next: (content) => {
+        // Use cloud videos as the available pool, filter out already-associated ones
+        const associatedFilenames = new Set(
+          (this.detailStats?.videos ?? []).map(v => v.video_filename)
+        );
+        this.availableVideos = (content.cloudVideos ?? [])
+          .filter(v => !associatedFilenames.has(v.filename));
+        this.availableVideosLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.availableVideosLoading = false;
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  addVideo(): void {
+    if (!this.selectedVideoFilename || !this.expandedSponsorId) return;
+
+    this.addingVideo = true;
+    this.cdr.markForCheck();
+
+    this.sitesService.addVideoToSiteSponsor(
+      this.siteId, this.expandedSponsorId, this.selectedVideoFilename
+    ).subscribe({
+      next: () => {
+        this.notification.success('Vidéo associée au sponsor');
+        this.addingVideo = false;
+        this.selectedVideoFilename = '';
+        // Refresh stats (includes videos) + available videos
+        this.refreshSponsorDetail();
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.notification.error('Erreur lors de l\'association de la vidéo');
+        this.addingVideo = false;
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  removeVideo(filename: string): void {
+    if (!this.expandedSponsorId) return;
+    if (!confirm(`Retirer la vidéo "${filename}" de ce sponsor ?`)) return;
+
+    this.removingVideoFilename = filename;
+    this.cdr.markForCheck();
+
+    this.sitesService.removeVideoFromSiteSponsor(
+      this.siteId, this.expandedSponsorId, filename
+    ).subscribe({
+      next: () => {
+        this.notification.success('Vidéo retirée du sponsor');
+        this.removingVideoFilename = null;
+        // Refresh stats (includes videos) + available videos
+        this.refreshSponsorDetail();
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.notification.error('Erreur lors de la suppression');
+        this.removingVideoFilename = null;
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private refreshSponsorDetail(): void {
+    if (!this.expandedSponsorId) return;
+    const sponsorId = this.expandedSponsorId;
+
+    this.sitesService.getSiteSponsorStats(this.siteId, sponsorId).subscribe({
+      next: (stats) => {
+        this.detailStats = stats;
+        this.cdr.markForCheck();
+        // Refresh available videos with updated association list
+        this.loadAvailableVideos();
+        // Also refresh the sponsor list (video_count in table)
+        this.loadSponsors();
+      },
     });
   }
 

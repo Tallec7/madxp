@@ -1018,6 +1018,18 @@ L'expérience dashboard pour le suivi.
 - **v3.58.1** — Suppression de la route backward-compat `GET /api/sites/:id/sponsors` dans `advertiser-sites.routes.ts` qui masquait le listing `site-sponsor.routes.ts` (retournait `{ advertisers: [] }` au lieu de `{ sponsors: [] }`). Smoke test ajouté pour prévenir la régression
 - **v3.59.1** — Fallback URL prod (`https://admin-neopro.kalonpartners.bzh`) pour les magic links sponsors au lieu de `localhost:4300`
 
+### Palier 7 — Association vidéos sponsors (UI)
+
+- [x] UI d'association vidéo-sponsor dans `site-sponsors-tab.component.ts` :
+  - Dropdown sélection vidéo (cloud videos du site via `getLocalContent()`) + bouton "Associer"
+  - Bouton ✕ sur chaque chip vidéo pour retirer l'association
+  - Filtrage automatique des vidéos déjà associées dans le dropdown
+  - Refresh automatique après add/remove (stats + liste + vidéos disponibles)
+- [x] 8 tests Karma dédiés (`Video Association` describe block) : load, add, remove, errors, cancel, cleanup
+
+**Fichiers** : 0 nouveau, 2 modifiés (`site-sponsors-tab.component.ts`, `site-sponsors-tab.component.spec.ts`)
+**Tests** : 541 Karma (+8), 1487 Jest (server), 142 smoke — tous pass
+
 ---
 
 ## 8. Liste de Tâches Détaillée

@@ -286,7 +286,7 @@ describe('Real-World Scenarios', () => {
 
 | Catégorie               | Tests | Statut                          |
 | ----------------------- | ----- | ------------------------------- |
-| Components (standalone) | ~400  | ✅ Tests de rendu, interactions |
+| Components (standalone) | ~410  | ✅ Tests de rendu, interactions |
 | Services                | ~70   | ✅ Appels API, état             |
 | Guards / Interceptors   | ~30   | ✅ Auth, erreurs                |
 | Pipes / Directives      | ~28   | ✅ Formatage, conditions        |

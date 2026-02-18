@@ -114,7 +114,7 @@ neopro/ (monorepo)
 │   │   │   │   └── components/
 │   │   │   │       ├── site-content-tab/        # Pipeline contenu (bibliothèque → boucles → télécommande → analytics)
 │   │   │   │       ├── loop-manager/            # Gestion unifiée boucles (défaut + 3 phases)
-│   │   │   │       ├── site-sponsors-tab/       # Sponsors locaux : CRUD, KPIs, vidéos, magic link
+│   │   │   │       ├── site-sponsors-tab/       # Sponsors locaux : CRUD, KPIs, association vidéos, benchmark, magic link
 │   │   │   │       ├── site-settings-tab/       # Config réseau, hotspot, branding club
 │   │   │   │       ├── site-profiles-tab/       # Multi-config CRUD + deploy
 │   │   │   │       └── site-debug-tab/          # Logs, commandes

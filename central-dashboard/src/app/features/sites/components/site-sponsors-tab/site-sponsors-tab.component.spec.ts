@@ -129,6 +129,10 @@ describe('SiteSponsorsTabComponent', () => {
       'generateSponsorReport',
       'getSponsorReports',
       'getSiteSponsorBenchmark',
+      'getLocalContent',
+      'addVideoToSiteSponsor',
+      'removeVideoFromSiteSponsor',
+      'createSponsorAccessLink',
     ]);
     sitesServiceMock.listSiteSponsors.and.returnValue(of(mockListResponse));
     sitesServiceMock.getSiteSponsorStats.and.returnValue(of(mockStatsResponse));
@@ -137,6 +141,19 @@ describe('SiteSponsorsTabComponent', () => {
     sitesServiceMock.updateSiteSponsor.and.returnValue(of(mockSponsors[0]));
     sitesServiceMock.deleteSiteSponsor.and.returnValue(of(undefined));
     sitesServiceMock.generateSponsorReport.and.returnValue(of({ reportId: 'r2', url: 'https://example.com/report2.pdf' }));
+    sitesServiceMock.getLocalContent.and.returnValue(of({
+      siteId: 's1', siteName: 'Site Test', clubName: 'Club Test',
+      hasContent: true, lastSync: null, configHash: null, configuration: null,
+      localVideos: [], localStorage: null, lastVideoSync: null, hotspotInfo: null,
+      cloudVideos: [
+        { id: 'cv1', filename: 'sponsor-a.mp4', originalName: 'sponsor-a.mp4', title: 'Sponsor A Video', category: 'sponsor', subcategory: null, size: 1024, duration: 30, checksum: null, url: 'https://example.com/sponsor-a.mp4', uploadedForSiteId: 's1', createdAt: new Date(), updatedAt: new Date() },
+        { id: 'cv2', filename: 'sponsor-b.mp4', originalName: 'sponsor-b.mp4', title: 'Sponsor B Video', category: 'sponsor', subcategory: null, size: 2048, duration: 45, checksum: null, url: 'https://example.com/sponsor-b.mp4', uploadedForSiteId: 's1', createdAt: new Date(), updatedAt: new Date() },
+        { id: 'cv3', filename: 'promo.mp4', originalName: 'promo.mp4', title: 'Promo', category: 'sponsor', subcategory: null, size: 3072, duration: 60, checksum: null, url: 'https://example.com/promo.mp4', uploadedForSiteId: null, createdAt: new Date(), updatedAt: new Date() },
+      ],
+    }));
+    sitesServiceMock.addVideoToSiteSponsor.and.returnValue(of(undefined));
+    sitesServiceMock.removeVideoFromSiteSponsor.and.returnValue(of(undefined));
+    sitesServiceMock.createSponsorAccessLink.and.returnValue(of({ accessUrl: 'https://example.com/access/abc', expiresAt: '2024-06-01T00:00:00Z', emailSent: false, sentTo: null }));
     sitesServiceMock.getSiteSponsorBenchmark.and.returnValue(of({
       site_id: 's1',
       period: { from: '2024-01-01', to: '2024-01-31' },
@@ -458,6 +475,92 @@ describe('SiteSponsorsTabComponent', () => {
 
       expect(notificationService.error).toHaveBeenCalledWith('Erreur lors de la génération du rapport');
       expect(component.generatingReportId).toBeNull();
+    }));
+  });
+
+  describe('Video Association', () => {
+    beforeEach(fakeAsync(() => {
+      fixture.detectChanges();
+      tick();
+      // Expand sponsor detail
+      component.toggleDetail(mockSponsors[0]);
+      tick(100);
+      fixture.detectChanges();
+    }));
+
+    it('should load available videos when expanding sponsor detail', () => {
+      expect(sitesService.getLocalContent).toHaveBeenCalledWith('s1');
+      // sponsor-a.mp4 is already associated, so only sponsor-b.mp4 and promo.mp4 should be available
+      expect(component.availableVideos.length).toBe(2);
+      expect(component.availableVideos.map(v => v.filename)).toEqual(['sponsor-b.mp4', 'promo.mp4']);
+    });
+
+    it('should add a video to the sponsor', fakeAsync(() => {
+      component.selectedVideoFilename = 'sponsor-b.mp4';
+      component.addVideo();
+      tick();
+
+      expect(sitesService.addVideoToSiteSponsor).toHaveBeenCalledWith('s1', 'sp1', 'sponsor-b.mp4');
+      expect(notificationService.success).toHaveBeenCalledWith('Vidéo associée au sponsor');
+      expect(component.selectedVideoFilename).toBe('');
+      expect(component.addingVideo).toBe(false);
+    }));
+
+    it('should not add video when no filename selected', fakeAsync(() => {
+      component.selectedVideoFilename = '';
+      component.addVideo();
+      tick();
+
+      expect(sitesService.addVideoToSiteSponsor).not.toHaveBeenCalled();
+    }));
+
+    it('should handle add video error', fakeAsync(() => {
+      sitesService.addVideoToSiteSponsor.and.returnValue(throwError(() => new Error('fail')));
+      component.selectedVideoFilename = 'sponsor-b.mp4';
+      component.addVideo();
+      tick();
+
+      expect(notificationService.error).toHaveBeenCalledWith("Erreur lors de l'association de la vidéo");
+      expect(component.addingVideo).toBe(false);
+    }));
+
+    it('should remove a video from the sponsor', fakeAsync(() => {
+      spyOn(window, 'confirm').and.returnValue(true);
+      component.removeVideo('sponsor-a.mp4');
+      tick();
+
+      expect(sitesService.removeVideoFromSiteSponsor).toHaveBeenCalledWith('s1', 'sp1', 'sponsor-a.mp4');
+      expect(notificationService.success).toHaveBeenCalledWith('Vidéo retirée du sponsor');
+      expect(component.removingVideoFilename).toBeNull();
+    }));
+
+    it('should not remove video when confirmation cancelled', fakeAsync(() => {
+      spyOn(window, 'confirm').and.returnValue(false);
+      component.removeVideo('sponsor-a.mp4');
+      tick();
+
+      expect(sitesService.removeVideoFromSiteSponsor).not.toHaveBeenCalled();
+    }));
+
+    it('should handle remove video error', fakeAsync(() => {
+      spyOn(window, 'confirm').and.returnValue(true);
+      sitesService.removeVideoFromSiteSponsor.and.returnValue(throwError(() => new Error('fail')));
+      component.removeVideo('sponsor-a.mp4');
+      tick();
+
+      expect(notificationService.error).toHaveBeenCalledWith('Erreur lors de la suppression');
+      expect(component.removingVideoFilename).toBeNull();
+    }));
+
+    it('should clear video state on collapse', fakeAsync(() => {
+      component.availableVideos = [{ filename: 'test.mp4' } as any];
+      component.selectedVideoFilename = 'test.mp4';
+
+      component.toggleDetail(mockSponsors[0]); // collapse
+      tick();
+
+      expect(component.availableVideos.length).toBe(0);
+      expect(component.selectedVideoFilename).toBe('');
     }));
   });
 
