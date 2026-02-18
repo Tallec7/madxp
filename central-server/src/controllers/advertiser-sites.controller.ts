@@ -397,5 +397,5 @@ export const getSiteAdvertisers = async (req: AuthRequest, res: Response): Promi
 export const getSponsorSites = getAdvertiserSites;
 export const addSitesToSponsor = addSitesToAdvertiser;
 export const updateSponsorSite = updateAdvertiserSite;
+// getSiteSponsors backward-compat alias removed — replaced by site-sponsor.routes.ts
 export const removeSiteFromSponsor = removeSiteFromAdvertiser;
-export const getSiteSponsors = getSiteAdvertisers;

@@ -116,13 +116,11 @@ import {
   addSitesToSponsor,
   updateSponsorSite,
   removeSiteFromSponsor,
-  getSiteSponsors,
 } from '../controllers/advertiser-sites.controller';
 
 router.get('/sponsors/:id/sites', authenticate, requireRole('admin', 'operator'), getSponsorSites);
 router.post('/sponsors/:id/sites', authenticate, requireRole('admin', 'operator'), addSitesToSponsor);
 router.put('/sponsors/:sponsorId/sites/:siteId', authenticate, requireRole('admin', 'operator'), updateSponsorSite);
 router.delete('/sponsors/:sponsorId/sites/:siteId', authenticate, requireRole('admin', 'operator'), removeSiteFromSponsor);
-router.get('/sites/:id/sponsors', authenticate, requireRole('admin', 'operator'), getSiteSponsors);
 
 export default router;

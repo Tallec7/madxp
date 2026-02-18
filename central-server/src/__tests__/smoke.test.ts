@@ -1161,6 +1161,38 @@ describe('Route file consistency', () => {
 });
 
 // ----------------------------------------------------------
+// 22b. No backward-compat route shadows site-sponsor routes
+// ----------------------------------------------------------
+describe('Site-sponsor route conflict guard', () => {
+  it('advertiser-sites.routes.ts must NOT declare GET /sites/:id/sponsors (shadowed by site-sponsor.routes.ts)', () => {
+    const repoRoot = path.resolve(__dirname, '..', '..', '..');
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'routes', 'advertiser-sites.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    // This backward-compat route was removed because it shadowed the new
+    // site-sponsor.routes.ts handler and returned { advertisers } instead
+    // of { sponsors }, making the sponsors list always empty on the dashboard.
+    expect({
+      hasShadowingRoute: /router\.(get|all)\(\s*['"]\/sites\/:id\/sponsors['"]/m.test(content),
+    }).toEqual({
+      hasShadowingRoute: false,
+    });
+  });
+
+  it('site-sponsor.routes.ts declares GET /:siteId/sponsors', () => {
+    const repoRoot = path.resolve(__dirname, '..', '..', '..');
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'routes', 'site-sponsor.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    expect({
+      hasListRoute: /router\.get\(\s*['"]\/:siteId\/sponsors['"]/m.test(content),
+    }).toEqual({
+      hasListRoute: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
 // 23. Handler file count consistency
 // ----------------------------------------------------------
 describe('Handler file consistency', () => {

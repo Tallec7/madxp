@@ -4,6 +4,13 @@
 
 - **wifi:** fast recovery (~2min vs ~5min), fix boot init, add recovery monitoring ([fff3918](https://github.com/Tallec7/neopro/commit/fff3918302328097430525de064f09ccfb5a047f))
 
+## [3.59.1](https://github.com/Tallec7/neopro/compare/v3.59.0...v3.59.1) (2026-02-18)
+
+### Bug Fixes
+
+- **sponsors:** fix empty sponsors list — backward-compat route `GET /api/sites/:id/sponsors` in `advertiser-sites.routes.ts` shadowed the new `site-sponsor.routes.ts` handler; old handler returned `{ advertisers }` instead of `{ sponsors }`, causing Angular to always show an empty list
+- **sponsors:** add smoke test to detect Express route conflicts on `/api/sites/:id/sponsors`
+
 # [3.59.0](https://github.com/Tallec7/neopro/compare/v3.58.0...v3.59.0) (2026-02-18)
 
 ### Bug Fixes
