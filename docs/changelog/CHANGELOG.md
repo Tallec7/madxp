@@ -1,3 +1,9 @@
+# [3.62.0](https://github.com/Tallec7/neopro/compare/v3.61.1...v3.62.0) (2026-02-19)
+
+### Features
+
+- **safe:** align export-to-excel.py with vTravail (11→13 sheets) ([0f9ffe1](https://github.com/Tallec7/neopro/commit/0f9ffe15e80d7ce61fcf9583a79443b21df30440))
+
 ## [3.61.1](https://github.com/Tallec7/neopro/compare/v3.61.0...v3.61.1) (2026-02-19)
 
 ### Bug Fixes
