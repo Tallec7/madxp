@@ -18,7 +18,7 @@
 | Features         | 37 Features avec acceptance criteria                         |
 | User Stories     | 40 US (19 PI-1 + 12 PI-2 + 9 PI-3)                           |
 | Sprint Tracker   | Vélocité par sprint, formules automatiques                   |
-| Implemented      | 130 features livrées (13 domaines), traçabilité git complète |
+| Implemented      | 176 features livrées (13 domaines), traçabilité git complète |
 
 ---
 
@@ -213,9 +213,41 @@ Le **Sprint Tracker** (database Notion) capture automatiquement :
 
 ## Backlog Complet
 
-| Page                                             | Description                                             |
-| ------------------------------------------------ | ------------------------------------------------------- |
-| [✅ Implemented Backlog](IMPLEMENTED-BACKLOG.md) | 75 features livrées avec traçabilité code (10 domaines) |
+| Page                                             | Description                                              |
+| ------------------------------------------------ | -------------------------------------------------------- |
+| [✅ Implemented Backlog](IMPLEMENTED-BACKLOG.md) | 176 features livrées avec traçabilité code (13 domaines) |
+
+## Tooling & Automatisation
+
+### Pipeline SAFe → Excel
+
+Les fichiers `.md` dans `docs/safe/` sont la **source de vérité**. Un pipeline automatique maintient la cohérence :
+
+```
+docs/safe/*.md  →  pre-commit hook  →  export-to-excel.py  →  NEOPRO_SAFe_Portfolio.xlsx
+                                                                (11 onglets, formules WSJF)
+```
+
+| Outil           | Fichier                                | Rôle                                                                                                     |
+| --------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Export Excel    | `docs/safe/scripts/export-to-excel.py` | Génère le `.xlsx` avec 11 onglets (Dashboard, Epics, Features, Sprint Tracker, ROAM, Flow Metrics, etc.) |
+| Recalc helper   | `docs/safe/scripts/recalc.py`          | Force le recalcul des formules Excel                                                                     |
+| Pre-commit hook | `.husky/pre-commit`                    | Détecte les changements `docs/safe/*.md` et régénère l'Excel automatiquement                             |
+| Règle Claude    | `.claude/rules/safe-update.md`         | Checklist pour que Claude mette à jour les `.md` SAFe à chaque `feat`/`fix` commit                       |
+
+### Mise à jour automatique des .md SAFe
+
+Quand Claude effectue un commit `feat(scope)` ou `fix(scope)` qui implémente une Feature SAFe, la règle `.claude/rules/safe-update.md` s'active et met à jour :
+
+1. **FEATURES.md** — Statut Feature (`⏳ Backlog` → `✅ Done`), sprint
+2. **IMPLEMENTED-BACKLOG.md** — Nouvelle ligne `IMP-XXX-NN` si feature complète
+3. **Compteurs** — PORTFOLIO.md et README.md si nécessaire
+4. **Dates** — `Dernière mise à jour` sur tous les `.md` modifiés
+5. **Excel** — Régénéré automatiquement par le hook pre-commit
+
+> Le mapping `scope → Epic → Feature` est documenté dans `.claude/rules/safe-update.md`.
+
+---
 
 ## Références
 

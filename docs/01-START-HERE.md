@@ -99,7 +99,7 @@ Puis selon vos besoins :
 
 → **[SAFe Neopro](safe/README.md)** - Framework SAFe Essential complet 🆕
 
-- 14 Epics, 23 Features, 41 User Stories avec WSJF
+- 21 Epics, 37 Features, 40 User Stories avec WSJF
 - Roadmap PI (3 incréments de 6 semaines)
 - Value Streams : [OVS1 Club to Screen](safe/OVS1-CLUB-TO-SCREEN.md) · [OVS2 Sponsor to Impression](safe/OVS2-SPONSOR-TO-IMPRESSION.md)
 - [Portfolio visuel](safe/PORTFOLIO.md) avec Gantt, trajectoire ARR, croissance clubs
@@ -355,7 +355,7 @@ Cochez au fur et à mesure :
 
 ---
 
-**Dernière mise à jour** : 8 Janvier 2026
+**Dernière mise à jour** : 19 Février 2026
 **Maintenu par** : Équipe NEOPRO
 **Feedback** : GitHub Issues
 
