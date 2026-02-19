@@ -29,15 +29,15 @@ flowchart TB
 
 ## Development Value Stream Canvas
 
-### 🎯 Value Proposition
+### 🎯 Proposition de Valeur
 
-> **FOR** clubs sportifs amateurs et sponsors locaux
-> **WHO** veulent professionnaliser leur image et prouver leur ROI
-> **THE** Neopro Platform
-> **IS AN** solution all-inclusive boîtier + logiciel + support
-> **THAT** transforme les écrans de gymnases en outils de valorisation pro
-> **UNLIKE** PowerPoint, Canva, boucles USB qui ne génèrent aucun revenu
-> **OUR SOLUTION** offre un pilotage smartphone, des rapports auto, et un réseau publicitaire
+> **POUR** les clubs sportifs amateurs et sponsors locaux
+> **QUI** veulent professionnaliser leur image et prouver leur ROI
+> **LA** Plateforme Neopro
+> **EST UNE** solution tout-en-un boîtier + logiciel + support
+> **QUI** transforme les écrans de gymnases en outils de valorisation pro
+> **CONTRAIREMENT À** PowerPoint, Canva, boucles USB qui ne génèrent aucun revenu
+> **NOTRE SOLUTION** offre un pilotage smartphone, des rapports auto, et un réseau publicitaire
 
 ### 🛠️ Solutions développées
 
@@ -61,7 +61,7 @@ flowchart TB
 | Annonceur régie    | Portail web self-service                             |
 | Super admin NEOPRO | Dashboard central, monitoring flotte                 |
 
-### 👥 People & Locations
+### 👥 Équipe & Localisation
 
 ```mermaid
 flowchart LR
@@ -110,7 +110,7 @@ flowchart LR
 | Notion    | SAFe, backlog, docs               |
 | Slack     | Communication équipe              |
 
-## Budget & Unit Economics
+## Budget & Économie Unitaire
 
 | Poste                  | Coût               | Notes                    |
 | ---------------------- | ------------------ | ------------------------ |
@@ -128,23 +128,23 @@ flowchart LR
 | KPI                      | Cible        | Mesure                    |
 | ------------------------ | ------------ | ------------------------- |
 | Vélocité                 | 27 SP/sprint | Sprint Tracker            |
-| Cycle Time               | < 3 jours    | PR open → merged          |
+| Temps de cycle           | < 3 jours    | PR ouverte → fusionnée    |
 | Couverture tests         | > 80%        | Jest (1487) + Karma (541) |
 | Uptime production        | > 98.5%      | Prometheus                |
 | Déploiement              | < 30 min     | Pipeline CI/CD            |
 | Incidents critiques / PI | < 2          | Alerting                  |
 
-## Economic Framework (WSJF)
+## Priorisation Économique (WSJF)
 
 ```mermaid
 quadrantChart
-    title WSJF Prioritization (Business Value vs Effort)
-    x-axis Low Effort --> High Effort
-    y-axis Low Value --> High Value
-    quadrant-1 Do First
-    quadrant-2 Plan Carefully
-    quadrant-3 Quick Wins
-    quadrant-4 Deprioritize
+    title Priorisation WSJF (Valeur Business vs Effort)
+    x-axis Effort Faible --> Effort Élevé
+    y-axis Valeur Faible --> Valeur Élevée
+    quadrant-1 Faire en premier
+    quadrant-2 Planifier soigneusement
+    quadrant-3 Gains rapides
+    quadrant-4 Déprioriser
     E-06 Onboarding: [0.3, 0.85]
     E-03 Analytics: [0.4, 0.9]
     E-01 Portail Sponsor: [0.5, 0.8]

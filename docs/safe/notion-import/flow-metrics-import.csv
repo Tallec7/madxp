@@ -1,0 +1,7 @@
+Name,PI,Sprint,Flow Velocity (items),Flow Time (jours),Flow Load (WIP),Flow Efficiency (%),Flow Distribution,Cycle Time PR (jours)
+PI-1 Sprint 1,PI-1,Sprint 1,4,10,3,30%,"60% Feature, 15% Enabler, 15% Defect, 10% Debt",
+PI-1 Sprint 2,PI-1,Sprint 2,5,10,4,30%,"60% Feature, 15% Enabler, 15% Defect, 10% Debt",
+PI-1 Sprint 3,PI-1,Sprint 3,8,10,5,30%,"60% Feature, 15% Enabler, 15% Defect, 10% Debt",
+OVS1 - Club to Screen,PI-1,Global,4,10,3,30%,"74% Feature (E-04, E-06), 26% Enabler (E-07)",
+OVS2 - Sponsor to Impression,PI-1,Global,5,10,4,30%,"100% Feature (E-01, E-02, E-03)",
+DVS-1 - Neopro Platform Development,PI-1,Global,,10,5,30%,"50% Feature (E-01, E-02, E-03, E-04), 40% Enabler (E-06, E-07, E-08, E-10), 4% Defect, 6% Debt (E-09)",

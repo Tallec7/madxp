@@ -104,13 +104,16 @@ flowchart TD
 
 ## Epics alignés
 
-| Epic                           | PI   | Statut  |
-| ------------------------------ | ---- | ------- |
-| E-04 Profils Config Match      | PI-1 | Backlog |
-| E-06 Onboarding Automatisé     | PI-1 | Backlog |
-| E-07 Résilience WiFi V2        | PI-1 | Backlog |
-| E-12 Multi-Écrans Synchronisés | PI-3 | Backlog |
-| E-13 Marque Blanche Club       | PI-3 | Backlog |
+| Epic                            | PI   | Statut                    |
+| ------------------------------- | ---- | ------------------------- |
+| E-04 Profils Config Match       | Done | ✅ Done                   |
+| E-06 Onboarding Automatisé      | PI-1 | Backlog                   |
+| E-07 Résilience WiFi V2         | Done | ⚠️ Partiel (F-07.3 reste) |
+| E-12 Multi-Écrans Synchronisés  | PI-3 | Backlog                   |
+| E-13 Marque Blanche Club        | PI-3 | Backlog                   |
+| E-15 Score Live Phase 2         | PI-2 | Backlog                   |
+| E-18 Intégrations Billetterie   | PI-3 | Backlog                   |
+| E-19 Capteurs Présence Hardware | PI-3 | Backlog                   |
 
 ## KPIs
 

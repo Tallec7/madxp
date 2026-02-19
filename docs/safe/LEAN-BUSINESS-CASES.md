@@ -1,0 +1,791 @@
+# Lean Business Cases — Epics NEOPRO
+
+> **Dernière mise à jour** : 18 Février 2026
+> **PI actuel** : PI-1 (Février - Mars 2026)
+> Chaque Epic dispose d'un Lean Business Case conforme SAFe : problème, solution, hypothèses, coût, bénéfice, KPIs, et critère Go/No-Go.
+
+---
+
+## PI-1 Epics
+
+---
+
+### E-01 — Portail Sponsor Self-Service
+
+| Champ                 | Détail                      |
+| --------------------- | --------------------------- |
+| **Value Stream**      | VS2 — Sponsor to Impression |
+| **Thème Stratégique** | TS1 — Monétisation          |
+| **WSJF**              | 13                          |
+
+**Problème** : L'onboarding d'un nouveau sponsor est entièrement manuel (email, transfert fichier, config manuelle). Lead time de 1 à 2 semaines. Ne scale pas au-delà de 10 sponsors. Aucune autonomie pour l'annonceur.
+
+**Solution** : Portail web self-service où le sponsor peut créer un compte, uploader ses vidéos, sélectionner ses gymnases cibles, et suivre ses diffusions. Validation admin avant diffusion.
+
+**Hypothèses**
+
+- Les sponsors locaux sont capables d'uploader une vidéo de 15-30s au bon format
+- Le taux de conversion démo → inscription augmente de 20% avec un portail autonome
+- Le support NEOPRO réduit de 60% le temps consacré aux sponsors
+
+**Coût estimé** : 15 SP (≈ 2 semaines dev)
+
+**Bénéfice attendu**
+
+- Lead time onboarding sponsor : 1-2 sem → < 1 jour
+- Réduction support : -60% temps dédié sponsors
+- Enabler pour E-11 (Régie Publicitaire)
+
+**Indicateurs avancés** : Nombre d'inscriptions self-service, taux de complétion du formulaire
+**Indicateurs retardés** : Lead time onboarding sponsor, taux de churn sponsor
+
+**MVP** : Page inscription + upload vidéo + sélection gymnase + validation admin
+**Go/No-Go** : Go si ≥ 3 sponsors intéressés identifiés avant fin Sprint 1
+
+---
+
+### E-02 — Rotation Sponsors
+
+| Champ                 | Détail                      |
+| --------------------- | --------------------------- |
+| **Value Stream**      | VS2 — Sponsor to Impression |
+| **Thème Stratégique** | TS1 — Monétisation          |
+| **WSJF**              | 10                          |
+
+**Problème** : Les spots sponsors sont diffusés manuellement ou en boucle fixe. Aucune équité de rotation entre sponsors, aucune garantie de passage. Les sponsors n'ont pas de preuve de diffusion.
+
+**Solution** : Algorithme de rotation automatique garantissant un nombre minimum de passages par match pour chaque sponsor actif, avec pondération selon la formule (Essentiel/Autonomie/Premium).
+
+**Hypothèses**
+
+- Un match moyen dure 1h30 avec ~90 créneaux de diffusion spot (1 toutes les minutes)
+- Chaque sponsor a besoin d'au moins 20 passages/match pour que ce soit perçu comme "visible"
+- La rotation équitable augmente le taux de renouvellement sponsor de 15%
+
+**Coût estimé** : 8 SP (≈ 1 semaine dev)
+
+**Bénéfice attendu**
+
+- Garantie contractuelle de passages → argument commercial
+- Taux de renouvellement sponsor : 40% → 60%
+- Enabler pour E-03 (Analytics) et E-11 (Régie)
+
+**Indicateurs avancés** : Nombre moyen de passages/match/sponsor
+**Indicateurs retardés** : Taux de renouvellement sponsor, NPS sponsor
+
+**MVP** : Algorithme round-robin avec minimum garanti + compteur de passages
+**Go/No-Go** : Go (dépendance bloquante pour E-03)
+
+---
+
+### E-03 — Analytics Sponsors Avancé
+
+| Champ                 | Détail                      |
+| --------------------- | --------------------------- |
+| **Value Stream**      | VS2 — Sponsor to Impression |
+| **Thème Stratégique** | TS1 — Monétisation          |
+| **WSJF**              | 20 (priorité maximale)      |
+
+**Problème** : Aucun rapport de diffusion pour les sponsors. Impossible de prouver le ROI. Les sponsors renouvellent au "feeling", sans data. Frein majeur à l'acquisition de nouveaux sponsors et à la régie publicitaire.
+
+**Solution** : Dashboard analytics sponsor avec compteur d'impressions temps réel, heatmap de diffusion par gymnase, tendances temporelles, et export rapport PDF/CSV mensuel automatisé.
+
+**Hypothèses**
+
+- Un rapport mensuel avec preuves d'impressions augmente le renouvellement de 25%
+- Les sponsors régionaux exigent des rapports avant de signer (condition sine qua non pour la régie)
+- Le coût d'un rapport manuel est ~2h/sponsor/mois → non scalable
+
+**Coût estimé** : 13 SP (≈ 1.5 semaines dev)
+
+**Bénéfice attendu**
+
+- Taux de renouvellement sponsor : 60% → 85%
+- Argument commercial N°1 pour la régie régionale (E-11)
+- Réduction du support reporting : -100% (automatisé)
+
+**Indicateurs avancés** : Taux de consultation du dashboard sponsor, nombre de rapports générés
+**Indicateurs retardés** : Taux de renouvellement sponsor, ARR régie
+
+**MVP** : Dashboard impressions + export PDF mensuel
+**Go/No-Go** : Go (WSJF max, critique pour VS2)
+
+---
+
+### E-04 — Profils Config Match
+
+| Champ                 | Détail                 |
+| --------------------- | ---------------------- |
+| **Value Stream**      | VS1 — Club to Screen   |
+| **Thème Stratégique** | TS2 — Expérience Match |
+| **WSJF**              | 8                      |
+
+**Problème** : La configuration de l'écran est la même avant, pendant et après le match. Pas de différenciation d'ambiance. L'opérateur doit changer manuellement les paramètres à chaque phase.
+
+**Solution** : Système de profils prédéfinis (Avant-Match, Match, Mi-Temps, Après-Match) avec transitions automatiques ou manuelles. Chaque profil configure : playlist, overlay, luminosité, volume.
+
+**Hypothèses**
+
+- Les clubs valorisent une expérience différenciée par phase de match (+NPS)
+- La transition automatique réduit la charge opérateur de 80%
+- Feature différenciante vs concurrence (aucune solution amateur ne propose ça)
+
+**Coût estimé** : 10 SP (≈ 1.5 semaines dev)
+
+**Bénéfice attendu**
+
+- NPS club : +10 points (expérience pro)
+- Charge opérateur réduite de 80% par match
+- Argument premium pour la formule à 3 000€/an
+
+**Indicateurs avancés** : Nombre de profils créés par club, taux d'utilisation des transitions auto
+**Indicateurs retardés** : NPS club, taux d'upgrade vers Premium
+
+**MVP** : 3 profils (Avant-Match, Match, Après-Match) + switch manuel
+**Go/No-Go** : Go si ≥ 2 clubs demandent la feature
+
+---
+
+### E-06 — Onboarding Automatisé
+
+| Champ                 | Détail                          |
+| --------------------- | ------------------------------- |
+| **Value Stream**      | VS1 — Club to Screen            |
+| **Thème Stratégique** | TS3 — Acquisition & Déploiement |
+| **WSJF**              | 20 (priorité maximale)          |
+
+**Problème** : Chaque nouveau club nécessite une configuration SSH manuelle du Raspberry Pi (2-3 jours). C'est le bottleneck N°1 de VS1. Ne scale pas au-delà de 15 clubs sans recrutement.
+
+**Solution** : Wizard d'onboarding automatisé : le club branche le Pi, scanne un QR code, le Pi se connecte au cloud, télécharge sa config, et est opérationnel en < 30 minutes. Zero-touch provisioning.
+
+**Hypothèses**
+
+- 90% des installations peuvent être automatisées (WiFi standard, pas de proxy entreprise)
+- Le temps d'onboarding cible de 30 min est réaliste (bootstrap + sync initiale)
+- Chaque jour gagné par onboarding = 1 club supplémentaire déployable par semaine
+
+**Coût estimé** : 13 SP (≈ 1.5 semaines dev)
+
+**Bénéfice attendu**
+
+- Lead time onboarding : 2-3 jours → 30 minutes
+- Capacité de déploiement : 1 club/semaine → 5 clubs/semaine
+- Suppression du bottleneck N°1 de VS1
+
+**Indicateurs avancés** : Taux de succès wizard (% de Pi auto-provisionnés), temps moyen onboarding
+**Indicateurs retardés** : Nombre de clubs déployés/mois, coût marginal par club
+
+**MVP** : QR code → auto-registration → download config → ready
+**Go/No-Go** : Go (bottleneck critique, WSJF max)
+
+---
+
+### E-07 — Résilience WiFi V2
+
+| Champ                 | Détail                          |
+| --------------------- | ------------------------------- |
+| **Value Stream**      | VS1 — Club to Screen            |
+| **Thème Stratégique** | TS3 — Acquisition & Déploiement |
+| **WSJF**              | 12                              |
+
+**Problème** : Les gymnases ont un WiFi instable (murs épais, beaucoup de monde le soir de match). Les déconnexions perturbent la diffusion et génèrent des alertes fausses-positives. Source N°1 de tickets support.
+
+**Solution** : Mode résilience WiFi avancé : cache local étendu (48h de contenu), reconnexion agressive (backoff exponentiel), monitoring signal WiFi, support clé USB WiFi externe, fallback 4G optionnel.
+
+**Hypothèses**
+
+- 70% des incidents support actuels sont liés au WiFi
+- Un cache de 48h couvre 99% des cas d'utilisation (un match par semaine max)
+- La clé USB WiFi externe résout les cas de signal faible
+
+**Coût estimé** : 10 SP (≈ 1.5 semaines dev)
+
+**Bénéfice attendu**
+
+- Tickets support WiFi : -70%
+- Uptime perçu : 95% → 99%
+- Réduction du churn lié aux problèmes techniques
+
+**Indicateurs avancés** : Taux de reconnexion automatique, durée moyenne de déconnexion
+**Indicateurs retardés** : Tickets support/mois, uptime moyen flotte, churn technique
+
+**MVP** : Cache 48h + reconnexion agressive + monitoring signal
+**Go/No-Go** : Go (dépendance E-06 pour le déploiement massif)
+
+---
+
+### E-08 — Alertes Prédictives Dashboard
+
+| Champ                 | Détail                          |
+| --------------------- | ------------------------------- |
+| **Value Stream**      | Transverse                      |
+| **Thème Stratégique** | TS4 — Excellence Opérationnelle |
+| **WSJF**              | 10                              |
+
+**Problème** : Les alertes actuelles sont réactives (le Pi est déjà tombé). Aucune anticipation des pannes. Le super admin découvre les problèmes en même temps que le club.
+
+**Solution** : Alertes prédictives basées sur les tendances : dégradation du signal WiFi, espace disque diminuant, température CPU anormale, latence de sync croissante. Notification avant la panne.
+
+**Hypothèses**
+
+- 60% des pannes sont précédées de signaux détectables (WiFi dégradé, CPU chaud)
+- Une alerte 24h avant la panne permet d'intervenir à distance dans 80% des cas
+- Réduction des interventions physiques de 50%
+
+**Coût estimé** : 8 SP (≈ 1 semaine dev)
+
+**Bénéfice attendu**
+
+- Incidents critiques évités : 60% des pannes anticipées
+- Temps de résolution moyen : 24h → 2h (intervention préventive)
+- NPS club : +5 points (fiabilité perçue)
+
+**Indicateurs avancés** : Taux de détection préventive, nombre d'alertes prédictives déclenchées
+**Indicateurs retardés** : MTTR (Mean Time To Repair), incidents critiques/PI
+
+**MVP** : 3 règles prédictives (WiFi, disque, température) + notification dashboard
+**Go/No-Go** : Go (améliore la fiabilité perçue pour tous les clubs)
+
+---
+
+### E-09 — Architecture Audit
+
+| Champ                 | Détail                          |
+| --------------------- | ------------------------------- |
+| **Value Stream**      | Transverse                      |
+| **Thème Stratégique** | TS4 — Excellence Opérationnelle |
+| **WSJF**              | 6                               |
+
+**Problème** : Certains controllers accèdent directement à la base de données (bypass du repository pattern). Dette technique accumulée qui freine le développement de nouvelles features et rend le code difficile à tester.
+
+**Solution** : Audit systématique des controllers, migration vers le repository pattern, ajout de règles ESLint bloquantes, et amélioration de la couverture de tests.
+
+**Hypothèses**
+
+- ~15 controllers doivent être migrés
+- Chaque migration prend 2-4h (refactor + tests)
+- La productivité dev augmente de 20% après l'audit (moins de bugs, code plus lisible)
+
+**Coût estimé** : 8 SP (≈ 1 semaine dev)
+
+**Bénéfice attendu**
+
+- 100% des controllers sur repository pattern
+- Couverture tests : 80% → 85%
+- Temps de développement par feature : -20%
+
+**Indicateurs avancés** : Nombre de controllers migrés, warnings ESLint restants
+**Indicateurs retardés** : Couverture tests, temps moyen de développement d'une US
+
+**MVP** : Migration des 5 controllers les plus critiques + règle ESLint bloquante
+**Go/No-Go** : Go (enabler technique, faible risque)
+
+---
+
+### E-10 — Monitoring Fleet
+
+| Champ                 | Détail                          |
+| --------------------- | ------------------------------- |
+| **Value Stream**      | Transverse                      |
+| **Thème Stratégique** | TS4 — Excellence Opérationnelle |
+| **WSJF**              | 8                               |
+
+**Problème** : Le monitoring actuel est basique (heartbeat + uptime). Pas de vue agrégée de la flotte, pas de tendances, pas de comparaison entre sites. Impossible de piloter 50+ Pi sans vue globale.
+
+**Solution** : Dashboard de monitoring flotte avec carte Leaflet (localisation des Pi), statuts temps réel, métriques agrégées (CPU, RAM, disque, signal WiFi), et tendances sur 30 jours.
+
+**Hypothèses**
+
+- Au-delà de 15 clubs, un monitoring individuel n'est plus gérable
+- La vue cartographique permet d'identifier les clusters de problèmes (zone géographique)
+- Le monitoring proactif réduit le churn technique de 30%
+
+**Coût estimé** : 10 SP (≈ 1.5 semaines dev)
+
+**Bénéfice attendu**
+
+- Temps de diagnostic : 30 min → 5 min (vue globale)
+- Identification de patterns géographiques (FAI, gymnases problématiques)
+- Scalabilité ops : 15 clubs → 50+ clubs sans recrutement ops
+
+**Indicateurs avancés** : Taux d'adoption du dashboard monitoring, fréquence de consultation
+**Indicateurs retardés** : MTTR, churn technique, nombre d'interventions physiques/mois
+
+**MVP** : Carte Leaflet + statuts Pi + métriques CPU/RAM/disque
+**Go/No-Go** : Go (indispensable pour le scaling PI-2/PI-3)
+
+---
+
+## PI-2 Epics
+
+---
+
+### E-05 — Motion Design Personnalisé
+
+| Champ                 | Détail                      |
+| --------------------- | --------------------------- |
+| **Value Stream**      | VS2 — Sponsor to Impression |
+| **Thème Stratégique** | TS2 — Expérience Match      |
+| **WSJF**              | 7                           |
+
+**Problème** : Les animations d'écran sont statiques et identiques pour tous les clubs. Pas de personnalisation visuelle. Les clubs premium attendent une identité visuelle sur mesure.
+
+**Solution** : Bibliothèque de templates motion design personnalisables (couleurs club, logo, typographie) avec aperçu temps réel. Possibilité d'uploader des animations custom (Lottie/MP4).
+
+**Hypothèses**
+
+- 40% des clubs Premium paieraient un supplément pour des animations personnalisées
+- Le motion design augmente le "wow factor" perçu par les sponsors (+15% renouvellement)
+- Gabin (co-fondateur, créa) peut produire 5 templates/mois
+
+**Coût estimé** : 13 SP (≈ 1.5 semaines dev)
+
+**Bénéfice attendu**
+
+- Upsell motion design : +500€/an pour les clubs Premium
+- Différenciation vs concurrence
+- Argument commercial pour la régie (E-11)
+
+**Indicateurs avancés** : Nombre de templates créés, taux d'adoption par les clubs Premium
+**Indicateurs retardés** : Revenu upsell motion design, NPS club Premium
+
+**MVP** : 3 templates personnalisables (couleurs + logo) + preview temps réel
+**Go/No-Go** : Go si ≥ 5 clubs actifs en fin de PI-1
+
+---
+
+### E-11 — Régie Publicitaire Régionale
+
+| Champ                 | Détail                      |
+| --------------------- | --------------------------- |
+| **Value Stream**      | VS2 — Sponsor to Impression |
+| **Thème Stratégique** | TS1 — Monétisation          |
+| **WSJF**              | 18                          |
+
+**Problème** : Aujourd'hui, seuls les sponsors locaux (liés à un club) peuvent diffuser. Aucun moyen pour un annonceur régional (chaîne de magasins, banque) de toucher plusieurs gymnases. Pas de revenus passifs pour NEOPRO.
+
+**Solution** : Marketplace publicitaire où des annonceurs régionaux achètent des "packs gymnases" (5, 10, 50 gymnases) avec ciblage géographique, scheduling automatique et reporting consolidé. Revenue split : 90% NEOPRO, 10% club.
+
+**Hypothèses**
+
+- Le prix de 300€/mois pour 5 gymnases est acceptable pour un annonceur régional
+- Il faut ≥ 15 clubs actifs pour que la régie soit attractive
+- 3-6 annonceurs régionaux atteignables en 6 mois post-lancement
+- Le revenue split de 10% motive les clubs à rejoindre le réseau
+
+**Coût estimé** : 20 SP (≈ 2.5 semaines dev)
+
+**Bénéfice attendu**
+
+- Nouveau flux de revenus récurrents (ARR régie)
+- Revenus passifs pour les clubs (fidélisation)
+- ARR cible régie 2027 : 350K€
+
+**Indicateurs avancés** : Nombre d'annonceurs inscrits, taux de remplissage des créneaux
+**Indicateurs retardés** : ARR régie, revenue partagé aux clubs, CPM moyen
+
+**MVP** : Portail annonceur + sélection pack gymnases + Stripe + reporting mensuel
+**Go/No-Go** : Go si ≥ 15 clubs actifs et E-01/E-02/E-03 terminés
+
+---
+
+## PI-3 Epics
+
+---
+
+### E-12 — Multi-Écrans Synchronisés
+
+| Champ                 | Détail                 |
+| --------------------- | ---------------------- |
+| **Value Stream**      | VS1 — Club to Screen   |
+| **Thème Stratégique** | TS2 — Expérience Match |
+| **WSJF**              | 8                      |
+
+**Problème** : Chaque club n'a qu'un seul écran. Certains gymnases multi-salles ou clubs semi-pro veulent 2-4 écrans synchronisés (entrée, buvette, tribune, terrain).
+
+**Solution** : Support multi-Pi par site avec synchronisation des playlists et des overlays. Un Pi "master" orchestre les Pi "slaves" via WebSocket local.
+
+**Hypothèses**
+
+- 15% des clubs cibles ont besoin de 2+ écrans
+- L'upsell multi-écran justifie un supplément de 50€/mois par écran supplémentaire
+- La synchronisation WebSocket local est fiable en réseau local (< 100ms de latence)
+
+**Coût estimé** : 15 SP (≈ 2 semaines dev)
+
+**Bénéfice attendu**
+
+- Upsell : +600€/an par écran supplémentaire
+- Pénétration des clubs semi-pro (segment Premium)
+- Différenciation massive vs concurrence
+
+**Indicateurs avancés** : Nombre de clubs multi-écrans, latence de synchronisation
+**Indicateurs retardés** : ARR upsell multi-écrans, NPS clubs semi-pro
+
+**MVP** : 2 écrans synchronisés (master/slave) + playlist unifiée
+**Go/No-Go** : Go si ≥ 3 clubs demandent multi-écrans
+
+---
+
+### E-13 — Marque Blanche Club
+
+| Champ                 | Détail                 |
+| --------------------- | ---------------------- |
+| **Value Stream**      | VS1 — Club to Screen   |
+| **Thème Stratégique** | TS2 — Expérience Match |
+| **WSJF**              | 6                      |
+
+**Problème** : L'interface affiche le branding NEOPRO. Les clubs premium veulent que l'écran porte leurs couleurs, leur logo, et leur identité. Les sponsors aussi préfèrent un branding "du club" plutôt que "d'un prestataire".
+
+**Solution** : Système de thématisation par club : logo, palette de couleurs, police, écran d'accueil personnalisé. Le branding NEOPRO est optionnel (mention "Powered by NEOPRO" en petit).
+
+**Hypothèses**
+
+- Les clubs Premium (3 000€/an) considèrent la marque blanche comme un must-have
+- Le branding personnalisé augmente le sentiment d'appropriation du club (+NPS)
+- Faible coût de développement (CSS variables + config)
+
+**Coût estimé** : 8 SP (≈ 1 semaine dev)
+
+**Bénéfice attendu**
+
+- Argument de vente pour la formule Premium
+- NPS club Premium : +10 points
+- Réduction du churn Premium
+
+**Indicateurs avancés** : Taux d'activation marque blanche, nombre de thèmes créés
+**Indicateurs retardés** : Taux de rétention Premium, NPS club Premium
+
+**MVP** : Logo + couleurs + écran d'accueil personnalisé par club
+**Go/No-Go** : Go si ≥ 5 clubs Premium actifs
+
+---
+
+### E-14 — Fonds de Solidarité Sport
+
+| Champ                 | Détail                          |
+| --------------------- | ------------------------------- |
+| **Value Stream**      | Transverse                      |
+| **Thème Stratégique** | TS3 — Acquisition & Déploiement |
+| **WSJF**              | 5                               |
+
+**Problème** : Le sport amateur manque de financement. Les clubs les plus modestes ne peuvent pas se payer NEOPRO. Pas de mécanisme de solidarité entre clubs riches et clubs modestes.
+
+**Solution** : Fonds de solidarité alimenté par un % des revenus régie (1-2%). Les clubs éligibles (critères sociaux) reçoivent un abonnement NEOPRO subventionné. Dashboard de suivi des contributions et bénéficiaires.
+
+**Hypothèses**
+
+- 2% des revenus régie suffisent pour subventionner 2-3 clubs/an
+- L'impact RSE est un argument commercial pour les annonceurs régionaux
+- Le fonds de solidarité génère une couverture presse locale positive
+
+**Coût estimé** : 5 SP (≈ 0.5 semaine dev)
+
+**Bénéfice attendu**
+
+- Impact RSE : différenciation vs concurrence
+- Couverture presse locale → acquisition organique
+- Fidélisation annonceurs (impact social prouvé)
+
+**Indicateurs avancés** : Montant du fonds, nombre de candidatures reçues
+**Indicateurs retardés** : Clubs subventionnés, couverture presse, ARR induit
+
+**MVP** : Page "Fonds de Solidarité" + formulaire candidature + dashboard contributions
+**Go/No-Go** : Go si ARR régie > 50K€
+
+---
+
+## Récapitulatif WSJF
+
+| Rang | Epic                              | WSJF | PI   | Statut  |
+| ---- | --------------------------------- | ---- | ---- | ------- |
+| 1    | E-03 Analytics Sponsors Avancé    | 20   | PI-1 | Backlog |
+| 1    | E-06 Onboarding Automatisé        | 20   | PI-1 | Backlog |
+| 3    | E-11 Régie Publicitaire Régionale | 18   | PI-2 | Backlog |
+| 4    | E-01 Portail Sponsor Self-Service | 13   | PI-1 | Backlog |
+| 5    | E-07 Résilience WiFi V2           | 12   | PI-1 | Backlog |
+| 6    | E-02 Rotation Sponsors            | 10   | PI-1 | Backlog |
+| 6    | E-08 Alertes Prédictives          | 10   | PI-1 | Backlog |
+| 8    | E-04 Profils Config Match         | 8    | PI-1 | Backlog |
+| 8    | E-10 Monitoring Fleet             | 8    | PI-1 | Backlog |
+| 8    | E-12 Multi-Écrans Synchronisés    | 8    | PI-3 | Backlog |
+| 11   | E-05 Motion Design Personnalisé   | 7    | PI-2 | Backlog |
+| 12   | E-09 Architecture Audit           | 6    | PI-1 | Backlog |
+| 12   | E-13 Marque Blanche Club          | 6    | PI-3 | Backlog |
+| 14   | E-14 Fonds de Solidarité          | 5    | PI-3 | Backlog |
+
+---
+
+## PI-2 Epics (transférés du Legacy Backlog)
+
+---
+
+### E-15 — Score en Live Phase 2 (API Fédérations)
+
+| Champ                 | Détail                 |
+| --------------------- | ---------------------- |
+| **Value Stream**      | VS1 — Club to Screen   |
+| **Thème Stratégique** | TS2 — Expérience Match |
+| **WSJF**              | 9                      |
+
+**Problème** : Le score en live (Phase 1) nécessite une saisie manuelle depuis la télécommande. Charge cognitive pour l'opérateur de table de marque, risque d'erreur, et pas de mise à jour automatique.
+
+**Solution** : Intégration des API fédérations sportives (FFHB, FFVB, FFBB) pour récupérer le score en temps réel par polling toutes les 30 secondes. Fallback automatique sur la saisie manuelle si l'API est indisponible.
+
+**Hypothèses**
+
+- Les API fédérations sont accessibles publiquement (au moins pour les matchs officiels)
+- Le polling toutes les 30s est suffisant pour une mise à jour perçue comme "temps réel"
+- 60% des matchs sont des matchs officiels couverts par les fédérations
+
+**Coût estimé** : 11 SP (≈ 1.5 semaines dev)
+
+**Bénéfice attendu**
+
+- Suppression de la charge opérateur pour le score (-100% saisie manuelle)
+- Score plus fiable (source fédération officielle)
+- Feature différenciante unique sur le marché amateur
+
+**Indicateurs avancés** : Taux de matchs avec score automatique, latence de mise à jour
+**Indicateurs retardés** : NPS club (facilité d'utilisation), taux d'erreur score
+
+**MVP** : Intégration FFHB (handball, sport le plus représenté) + fallback manuel
+**Go/No-Go** : Go si API FFHB accessible et ≥ 5 clubs handball actifs
+
+---
+
+### E-16 — Rapports Email Automatiques
+
+| Champ                 | Détail                          |
+| --------------------- | ------------------------------- |
+| **Value Stream**      | Transverse                      |
+| **Thème Stratégique** | TS4 — Excellence Opérationnelle |
+| **WSJF**              | 10                              |
+
+**Problème** : Les rapports PDF existent mais doivent être téléchargés manuellement depuis le dashboard. Les clubs oublient de consulter leurs analytics. Le suivi mensuel est inexistant.
+
+**Solution** : Envoi automatique du rapport PDF mensuel par email en début de mois. Liste de diffusion configurable par site avec opt-in/opt-out.
+
+**Hypothèses**
+
+- 80% des clubs consulteraient un rapport reçu par email (vs 30% qui le téléchargent)
+- Le coût d'envoi (SendGrid) est négligeable (< 1€/mois pour 50 clubs)
+- Le rapport mensuel augmente l'engagement et réduit le churn
+
+**Coût estimé** : 8 SP (≈ 1 semaine dev)
+
+**Bénéfice attendu**
+
+- Consultation rapports : 30% → 80%
+- Réduction churn : les clubs voient la valeur mensuelle
+- Base pour E-16 (rapports sponsor automatiques)
+
+**Indicateurs avancés** : Taux d'ouverture email, taux de clics sur le rapport
+**Indicateurs retardés** : Churn mensuel, NPS club
+
+**MVP** : Cron mensuel + PDF auto-généré + email avec pièce jointe
+**Go/No-Go** : Go (dépendance légère, faible risque, fort impact)
+
+---
+
+### E-17 — A/B Testing Créas Sponsors
+
+| Champ                 | Détail                      |
+| --------------------- | --------------------------- |
+| **Value Stream**      | VS2 — Sponsor to Impression |
+| **Thème Stratégique** | TS1 — Monétisation          |
+| **WSJF**              | 7                           |
+
+**Problème** : Les sponsors diffusent un seul spot sans savoir s'il est efficace. Pas de moyen de comparer plusieurs créations. Les décisions sont prises au "feeling".
+
+**Solution** : Système de campagnes A/B Testing permettant de tester 2-3 variantes d'un spot avec allocation de trafic configurable. Détermination statistique du gagnant (test χ²).
+
+**Hypothèses**
+
+- Les sponsors régionaux sont sensibles à l'optimisation de leurs créas
+- Un test A/B nécessite ≥ 500 impressions par variante pour être significatif
+- La feature justifie un surcoût de 50€/mois (option premium)
+
+**Coût estimé** : 13 SP (≈ 1.5 semaines dev)
+
+**Bénéfice attendu**
+
+- Upsell A/B Testing : +600€/an par sponsor actif
+- Augmentation taux de complétion moyen de 10-15%
+- Argument commercial pour la régie (E-11)
+
+**Indicateurs avancés** : Nombre de campagnes A/B créées, nombre de variantes testées
+**Indicateurs retardés** : Amélioration taux de complétion moyen, ARR upsell
+
+**MVP** : Campagne 2 variantes + allocation 50/50 + résultats
+**Go/No-Go** : Go si ≥ 5 sponsors actifs et E-02 (rotation) livré
+
+---
+
+## PI-3 Epics (transférés du Legacy Backlog)
+
+---
+
+### E-18 — Intégrations Billetterie
+
+| Champ                 | Détail                 |
+| --------------------- | ---------------------- |
+| **Value Stream**      | VS1 — Club to Screen   |
+| **Thème Stratégique** | TS2 — Expérience Match |
+| **WSJF**              | 6                      |
+
+**Problème** : L'estimation d'audience est manuelle et approximative. Les sponsors veulent des chiffres d'audience fiables pour mesurer leur ROI.
+
+**Solution** : Intégration des APIs de billetterie (Weezevent, Eventbrite) pour injecter automatiquement l'audience réelle (billets vendus) dans les analytics.
+
+**Hypothèses**
+
+- 30% des clubs amateurs utilisent une billetterie en ligne
+- L'audience réelle est 15-20% différente de l'estimation manuelle
+- L'audience certifiée augmente la confiance des sponsors (+renouvellement)
+
+**Coût estimé** : 8 SP (≈ 1 semaine dev par intégration)
+
+**Bénéfice attendu**
+
+- Données d'audience fiables → meilleur argumentaire sponsor
+- Automatisation complète du pipeline analytics
+
+**Indicateurs avancés** : Nombre de clubs connectés à une billetterie
+**Indicateurs retardés** : Précision audience, taux de renouvellement sponsor
+
+**MVP** : Intégration Weezevent (leader français événementiel amateur)
+**Go/No-Go** : Go si ≥ 3 clubs utilisent Weezevent
+
+---
+
+### E-19 — Capteurs Présence Hardware
+
+| Champ                 | Détail                 |
+| --------------------- | ---------------------- |
+| **Value Stream**      | VS1 — Club to Screen   |
+| **Thème Stratégique** | TS2 — Expérience Match |
+| **WSJF**              | 4                      |
+
+**Problème** : Les clubs sans billetterie n'ont aucun moyen fiable de compter les spectateurs. Le WiFi tracking est approximatif.
+
+**Solution** : Capteur infrarouge ou caméra connecté au Pi pour compter les entrées/sorties. Comptage automatique avec calibration initiale.
+
+**Hypothèses**
+
+- Un capteur infrarouge coûte 30-50€ (compatible avec le budget club)
+- La précision de comptage est > 90% après calibration
+- 20% des clubs seraient intéressés par cette option
+
+**Coût estimé** : 13 SP (≈ 2 semaines dev, inclut hardware)
+
+**Bénéfice attendu**
+
+- Audience 100% automatisée sans billetterie
+- Upsell hardware : +10€/mois location capteur
+
+**Indicateurs avancés** : Nombre de capteurs installés, précision comptage
+**Indicateurs retardés** : Satisfaction clubs, réduction écart estimation/réel
+
+**MVP** : Capteur infrarouge USB + driver Pi + dashboard
+**Go/No-Go** : Go si ≥ 20 clubs actifs et ROI capteur validé
+
+---
+
+### E-20 — Analytics Prédictives ML
+
+| Champ                 | Détail                          |
+| --------------------- | ------------------------------- |
+| **Value Stream**      | Transverse                      |
+| **Thème Stratégique** | TS4 — Excellence Opérationnelle |
+| **WSJF**              | 5                               |
+
+**Problème** : Les alertes prédictives (E-08) détectent les dégradations techniques. Mais il n'y a pas de prédiction de l'engagement club ni de recommandations automatiques pour améliorer l'utilisation.
+
+**Solution** : Modèle de machine learning (time-series forecasting) pour prédire l'engagement futur, détecter les anomalies, et générer des recommandations actionables.
+
+**Hypothèses**
+
+- 6 mois de données historiques suffisent pour un modèle fiable
+- Les recommandations automatiques augmentent l'engagement de 20%
+- Un modèle simple (ARIMA/Prophet) suffit pour le MVP
+
+**Coût estimé** : 13 SP (≈ 2 semaines dev)
+
+**Bénéfice attendu**
+
+- Réduction churn proactif (identifier les clubs à risque)
+- Augmentation engagement moyen (+20%)
+- Feature premium différenciante
+
+**Indicateurs avancés** : Précision du modèle, nombre de recommandations générées
+**Indicateurs retardés** : Churn réduit, engagement moyen
+
+**MVP** : Forecasting engagement 30j + anomaly detection + 3 recommandations types
+**Go/No-Go** : Go si ≥ 15 clubs avec 6 mois d'historique
+
+---
+
+### E-21 — API Partenaires OAuth
+
+| Champ                 | Détail             |
+| --------------------- | ------------------ |
+| **Value Stream**      | Transverse         |
+| **Thème Stratégique** | TS1 — Monétisation |
+| **WSJF**              | 5                  |
+
+**Problème** : Les partenaires externes (agences, sponsors multi-clubs) n'ont pas d'accès programmatique aux données NEOPRO. Tout passe par le dashboard ou des exports manuels.
+
+**Solution** : API RESTful sécurisée par OAuth 2.0 avec scopes granulaires, rate limiting, et portail développeurs.
+
+**Hypothèses**
+
+- 3-5 agences/partenaires utiliseraient l'API dès le lancement
+- L'API génère un revenu récurrent (49€/mois Pro, sur-mesure Enterprise)
+- L'API accélère les intégrations tierces (billetterie, CRM, etc.)
+
+**Coût estimé** : 13 SP (≈ 2 semaines dev)
+
+**Bénéfice attendu**
+
+- Nouveau flux de revenus (API payante)
+- Écosystème partenaires → lock-in positif
+- Accélération des intégrations futures
+
+**Indicateurs avancés** : Nombre de clients API, requêtes/jour
+**Indicateurs retardés** : ARR API, nombre d'intégrations tierces
+
+**MVP** : OAuth 2.0 + 3 scopes (read:analytics, read:sponsor, admin:goals) + portail doc
+**Go/No-Go** : Go si ≥ 3 partenaires demandent un accès API
+
+---
+
+## Récapitulatif WSJF (mis à jour)
+
+| Rang | Epic                              | WSJF | PI   | Statut                    |
+| ---- | --------------------------------- | ---- | ---- | ------------------------- |
+| 1    | E-03 Analytics Sponsors Avancé    | 20   | PI-1 | Backlog                   |
+| 1    | E-06 Onboarding Automatisé        | 20   | PI-1 | Backlog                   |
+| 3    | E-11 Régie Publicitaire Régionale | 18   | PI-2 | Backlog                   |
+| 4    | E-01 Portail Sponsor Self-Service | 13   | PI-1 | Backlog                   |
+| 5    | E-07 Résilience WiFi V2           | 12   | PI-1 | ⚠️ Partiel (F-07.3 reste) |
+| 6    | E-02 Rotation Sponsors            | 10   | PI-1 | Backlog                   |
+| 6    | E-08 Alertes Prédictives          | 10   | PI-1 | ✅ Done                   |
+| 6    | E-16 Rapports Email Auto          | 10   | PI-2 | Backlog (nouveau)         |
+| 9    | E-15 Score Live Phase 2           | 9    | PI-2 | Backlog (nouveau)         |
+| 10   | E-04 Profils Config Match         | 8    | PI-1 | ✅ Done                   |
+| 10   | E-10 Monitoring Fleet             | 8    | PI-1 | ⚠️ Partiel (F-10.1 reste) |
+| 10   | E-12 Multi-Écrans Synchronisés    | 8    | PI-3 | Backlog                   |
+| 13   | E-05 Motion Design Personnalisé   | 7    | PI-2 | Backlog                   |
+| 13   | E-17 A/B Testing                  | 7    | PI-2 | Backlog (nouveau)         |
+| 15   | E-09 Architecture Audit           | 6    | PI-1 | ✅ Done                   |
+| 15   | E-13 Marque Blanche Club          | 6    | PI-3 | Backlog                   |
+| 15   | E-18 Billetterie                  | 6    | PI-3 | Backlog (nouveau)         |
+| 18   | E-14 Fonds de Solidarité          | 5    | PI-3 | Backlog                   |
+| 18   | E-20 Analytics ML                 | 5    | PI-3 | Backlog (nouveau)         |
+| 18   | E-21 API OAuth                    | 5    | PI-3 | Backlog (nouveau)         |
+| 21   | E-19 Capteurs Présence            | 4    | PI-3 | Backlog (nouveau)         |
+
+---
+
+**Retour** : [SAFe Neopro](README.md) · [Portfolio](PORTFOLIO.md) · [Implemented Backlog](IMPLEMENTED-BACKLOG.md)

@@ -127,6 +127,7 @@ flowchart LR
 | E-03 Analytics Sponsors Avancé    | PI-1 | Backlog |
 | E-05 Motion Design Personnalisé   | PI-2 | Backlog |
 | E-11 Régie Publicitaire Régionale | PI-2 | Backlog |
+| E-17 A/B Testing Créas            | PI-2 | Backlog |
 
 ## KPIs
 

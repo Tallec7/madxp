@@ -30,3 +30,10 @@ raspberry/deploy/
 cookies.txt
 *.cookies
 .git-backup/
+
+# Excel lock/temp files
+~$*.xlsx
+.~lock.*#
+
+# Excel working copies at root (source of truth in docs/safe/)
+/NEOPRO_SAFe_Portfolio*.xlsx
