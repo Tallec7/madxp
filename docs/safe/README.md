@@ -225,15 +225,15 @@ Les fichiers `.md` dans `docs/safe/` sont la **source de vérité**. Un pipeline
 
 ```
 docs/safe/*.md  →  pre-commit hook  →  export-to-excel.py  →  NEOPRO_SAFe_Portfolio.xlsx
-                                                                (11 onglets, formules WSJF)
+                                                                (13 onglets, formules WSJF)
 ```
 
-| Outil           | Fichier                                | Rôle                                                                                                     |
-| --------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Export Excel    | `docs/safe/scripts/export-to-excel.py` | Génère le `.xlsx` avec 11 onglets (Dashboard, Epics, Features, Sprint Tracker, ROAM, Flow Metrics, etc.) |
-| Recalc helper   | `docs/safe/scripts/recalc.py`          | Force le recalcul des formules Excel                                                                     |
-| Pre-commit hook | `.husky/pre-commit`                    | Détecte les changements `docs/safe/*.md` et régénère l'Excel automatiquement                             |
-| Règle Claude    | `.claude/rules/safe-update.md`         | Checklist pour que Claude mette à jour les `.md` SAFe à chaque `feat`/`fix` commit                       |
+| Outil           | Fichier                                | Rôle                                                                                                                                |
+| --------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Export Excel    | `docs/safe/scripts/export-to-excel.py` | Génère le `.xlsx` avec 13 onglets (Dashboard, Epics, Features, Sprint Tracker, ROAM, Flow Metrics, User Stories, \_ChartData, etc.) |
+| Recalc helper   | `docs/safe/scripts/recalc.py`          | Force le recalcul des formules Excel                                                                                                |
+| Pre-commit hook | `.husky/pre-commit`                    | Détecte les changements `docs/safe/*.md` et régénère l'Excel automatiquement                                                        |
+| Règle Claude    | `.claude/rules/safe-update.md`         | Checklist pour que Claude mette à jour les `.md` SAFe à chaque `feat`/`fix` commit                                                  |
 
 ### Mise à jour automatique des .md SAFe
 
