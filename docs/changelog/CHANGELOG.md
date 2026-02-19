@@ -1,3 +1,42 @@
+## fix(infra): Supabase Session Mode → Transaction Mode (2026-02-19)
+
+### Problème
+
+Le central-server utilisait le **Supabase Session Mode pooler** (port 5432). En Session Mode, chaque connexion du pool Node.js réserve une connexion PgBouncer pour toute la durée de la session. Lors d'un restart Railway, l'ancien et le nouveau process coexistaient brièvement, doublant les connexions requises et saturant le pool Supabase :
+
+```
+MaxClientsInSessionMode: max clients reached - in Session mode max clients are limited to pool_size
+```
+
+**Impact observé (2026-02-18)** :
+
+- De 13:45 à 13:56 : boucle connect/disconnect de tous les agents (11 min de chaos)
+- 14:07 : rate limit Railway atteint (500 logs/sec, 1589 messages droppés)
+- 14:13 : `connectedSites: 0` — tous les Pi déconnectés
+- NLF Handball affiché "Connexion instable" avec 93.2% uptime malgré Ethernet
+
+### Changements
+
+| Paramètre     | Avant                 | Après                     | Effet                                                                      |
+| ------------- | --------------------- | ------------------------- | -------------------------------------------------------------------------- |
+| Port Supabase | `5432` (Session Mode) | `6543` (Transaction Mode) | Connexions partagées par transaction, plus de saturation lors des restarts |
+| `DB_POOL_MAX` | `15`                  | `5`                       | Suffisant en Transaction Mode, réduit la pression sur PgBouncer            |
+
+### Monitoring ajouté
+
+- Log périodique (5 min) de la santé du pool DB : utilisation, saturation, mode pooler
+- Warning automatique si utilisation > 80% ou pool saturé
+
+### Fichiers modifiés
+
+- `central-server/src/config/database.ts` — commentaires Transaction Mode + monitoring pool
+- `docs/adr/ADR-003-postgresql-supabase.md` — section Transaction Mode
+- `docs/adr/ADR-015-railway-hobby-constraints.md` — mise à jour pool config
+- `docs/clients/NLF.md` — diagnostic session 2026-02-19
+- `docs/guides/TROUBLESHOOTING.md` — section MaxClientsInSessionMode
+
+---
+
 ## Hotspot Watchdog — nginx + avahi-daemon monitoring + guide iOS (2026-02-19)
 
 ### Monitoring

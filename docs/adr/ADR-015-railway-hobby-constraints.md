@@ -23,21 +23,21 @@ Le serveur était régulièrement OOM-killed avant les optimisations.
 
 Optimiser tous les composants pour tenir dans **~40MB de heap** avec des seuils de sécurité :
 
-| Paramètre | Avant | Après | Économie |
-|-----------|-------|-------|----------|
-| Pool DB (`max`) | 20 | **5** | ~60MB RAM |
-| Logs Winston | 10MB × 5 fichiers | **2MB × 2** | ~46MB disque |
-| Pending commands Socket.IO | 500 | **100** | Mémoire variable |
-| Pong entries map | 200 | **50** | Mémoire variable |
-| Image-to-video résolution | 1080p | **720p** | Mémoire ffmpeg |
-| Image-to-video preset | medium | **ultrafast** | Mémoire ffmpeg |
+| Paramètre                  | Avant             | Après                               | Économie         |
+| -------------------------- | ----------------- | ----------------------------------- | ---------------- |
+| Pool DB (`max`)            | 20                | **5** (Transaction Mode, port 6543) | ~60MB RAM        |
+| Logs Winston               | 10MB × 5 fichiers | **2MB × 2**                         | ~46MB disque     |
+| Pending commands Socket.IO | 500               | **100**                             | Mémoire variable |
+| Pong entries map           | 200               | **50**                              | Mémoire variable |
+| Image-to-video résolution  | 1080p             | **720p**                            | Mémoire ffmpeg   |
+| Image-to-video preset      | medium            | **ultrafast**                       | Mémoire ffmpeg   |
 
 ### Seuils mémoire
 
 ```typescript
-const MEMORY_WARNING = 0.88;    // 88% → log warning
-const MEMORY_CRITICAL = 0.93;   // 93% → force GC si disponible
-const MEMORY_EMERGENCY = 0.97;  // 97% → cleanup agressif
+const MEMORY_WARNING = 0.88; // 88% → log warning
+const MEMORY_CRITICAL = 0.93; // 93% → force GC si disponible
+const MEMORY_EMERGENCY = 0.97; // 97% → cleanup agressif
 ```
 
 ## Alternatives Considérées
@@ -45,10 +45,12 @@ const MEMORY_EMERGENCY = 0.97;  // 97% → cleanup agressif
 ### 1. Upgrader vers Railway Pro ($20/mois, 8GB RAM)
 
 **Avantages** :
+
 - Résout le problème immédiatement
 - Pas de compromis techniques
 
 **Inconvénients** :
+
 - Coût ×4 pour une startup early-stage
 - Masque les problèmes d'efficacité
 - 50 sites ne justifient pas 8GB de RAM
@@ -58,10 +60,12 @@ const MEMORY_EMERGENCY = 0.97;  // 97% → cleanup agressif
 ### 2. Migrer vers Fly.io / Render
 
 **Avantages** :
+
 - Plus de mémoire pour le même prix
 - Options de scaling
 
 **Inconvénients** :
+
 - Migration infrastructure
 - Risque de régression
 - Temps de migration non justifié
@@ -71,11 +75,13 @@ const MEMORY_EMERGENCY = 0.97;  // 97% → cleanup agressif
 ### 3. Optimiser pour 512MB ✅
 
 **Avantages** :
+
 - **Coût minimal** : $5/mois
 - **Code efficient** : Force de bonnes pratiques
 - **Scalabilité future** : Si ça tient dans 512MB, un upgrade sera confortable
 
 **Inconvénients** :
+
 - Pool DB limité à 5 connexions (goulet d'étranglement possible à 100+ sites)
 - ffmpeg contraint (720p au lieu de 1080p)
 - Marge de manœuvre réduite pour nouvelles features
@@ -99,6 +105,7 @@ const MEMORY_EMERGENCY = 0.97;  // 97% → cleanup agressif
 ### Seuil de migration
 
 Envisager l'upgrade Railway Pro quand :
+
 - 100+ sites connectés simultanément
 - Pool DB régulièrement saturé (queue de connexions > 2s)
 - Mémoire régulièrement au-dessus de 93%
@@ -113,4 +120,4 @@ Envisager l'upgrade Railway Pro quand :
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_
