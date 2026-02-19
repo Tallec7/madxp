@@ -1,3 +1,23 @@
+## fix(analytics): validation FK complète sur video_plays — plus de perte de batch (2026-02-19)
+
+### Bug Fixes
+
+- **analytics video-plays FK validation:** le `POST /api/analytics/video-plays` validait uniquement le format UUID des colonnes `sponsor_id`, `video_id` et `session_id` mais ne vérifiait pas que les enregistrements référencés existaient en base. Un seul `sponsor_id` pointant vers un advertiser supprimé rejetait le batch entier (100 plays perdues). Désormais, les 3 FK sont vérifiées en parallèle avant l'INSERT : les références orphelines sont nullifiées au lieu de provoquer une erreur (`analytics.controller.ts`)
+- **advertiser.repository:** ajout `findExistingIds(ids)` — vérifie l'existence de plusieurs advertisers en un seul `SELECT IN`
+- **video.repository:** ajout `findExistingIds(ids)` — idem pour la table `videos`
+- **analytics.repository:** ajout `findExistingSessionIds(ids)` — idem pour `club_sessions`
+
+### Monitoring
+
+- **Prometheus:** nouvelle métrique `neopro_video_plays_fk_fallback_total{column}` — compteur des plays dont une FK a été nullifiée (labels : `sponsor_id`, `video_id`, `session_id`)
+- **Prometheus:** nouvelle alerte `HighVideoPlaysFkFallbackRate` — se déclenche si le taux de fallback FK dépasse 0.1/s pendant 15 min, indiquant que les Pi envoient des références obsolètes en masse
+
+### Documentation
+
+- **TROUBLESHOOTING.md:** ajout section diagnostic pour l'erreur FK constraint sur video_plays (symptômes, cause, correction, diagnostic)
+
+---
+
 # [3.61.0](https://github.com/Tallec7/neopro/compare/v3.60.2...v3.61.0) (2026-02-19)
 
 ### Features

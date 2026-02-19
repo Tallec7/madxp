@@ -267,7 +267,17 @@ groups:
           severity: warning
         annotations:
           summary: "High 500 error rate on analytics video-plays endpoint"
-          description: "{{ $value | humanize }}/sec 500 errors on POST /api/analytics/video-plays. Check DB schema (tv_status column) and pool connections."
+          description: "{{ $value | humanize }}/sec 500 errors on POST /api/analytics/video-plays. Check DB schema and pool connections."
+
+      # FK fallback: video_plays rows with nullified FK references (deleted sponsors/videos/sessions)
+      - alert: HighVideoPlaysFkFallbackRate
+        expr: rate(neopro_video_plays_fk_fallback_total[30m]) > 0.1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elevated FK fallback rate on video_plays ({{ $labels.column }})"
+          description: "{{ $value | humanize }}/sec video plays have {{ $labels.column }} nullified because the target row is missing. Pi may be sending stale references to deleted records."
 
       # Report endpoint validation errors (P7 — frontend/backend payload mismatch)
       - alert: ReportValidationErrors

@@ -6,9 +6,11 @@ import {
   analyticsRepository,
   siteRepository,
   advertiserRepository,
+  videoRepository,
   type ClubAlertRow,
   type VideoPlaysBatchItem,
 } from '../repositories';
+import { metricsService } from '../services/metrics.service';
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -259,6 +261,58 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
         siteId: site_id,
         invalidSessions,
       });
+    }
+
+    // Validate FK references exist to avoid FK constraint violations on batch insert.
+    // A single missing reference would reject the entire batch (up to 100 plays lost).
+    // Pattern: collect unique IDs → bulk check existence → nullify missing → log + metric.
+    const uniqueSponsorIds = [...new Set(validPlays.map(p => p.sponsorId).filter((id): id is string => id !== null))];
+    const uniqueVideoIds = [...new Set(validPlays.map(p => p.videoId).filter((id): id is string => id !== null))];
+    const uniqueSessionIds = [...new Set(validPlays.map(p => p.sessionId).filter((id): id is string => id !== null))];
+
+    const [existingSponsorIds, existingVideoIds, existingSessionIds] = await Promise.all([
+      uniqueSponsorIds.length > 0 ? advertiserRepository.findExistingIds(uniqueSponsorIds) : Promise.resolve(new Set<string>()),
+      uniqueVideoIds.length > 0 ? videoRepository.findExistingIds(uniqueVideoIds) : Promise.resolve(new Set<string>()),
+      uniqueSessionIds.length > 0 ? analyticsRepository.findExistingSessionIds(uniqueSessionIds) : Promise.resolve(new Set<string>()),
+    ]);
+
+    const missingSponsorIds = uniqueSponsorIds.filter(id => !existingSponsorIds.has(id));
+    const missingVideoIds = uniqueVideoIds.filter(id => !existingVideoIds.has(id));
+    const missingSessionIds = uniqueSessionIds.filter(id => !existingSessionIds.has(id));
+
+    if (missingSponsorIds.length > 0 || missingVideoIds.length > 0 || missingSessionIds.length > 0) {
+      const missingFks: Record<string, string[]> = {};
+      if (missingSponsorIds.length > 0) missingFks.sponsor_id = missingSponsorIds;
+      if (missingVideoIds.length > 0) missingFks.video_id = missingVideoIds;
+      if (missingSessionIds.length > 0) missingFks.session_id = missingSessionIds;
+
+      logger.warn('Video plays reference non-existent FK targets, falling back to null', {
+        siteId: site_id,
+        missingFks,
+      });
+
+      let sponsorNulled = 0;
+      let videoNulled = 0;
+      let sessionNulled = 0;
+
+      for (const play of validPlays) {
+        if (play.sponsorId !== null && !existingSponsorIds.has(play.sponsorId)) {
+          play.sponsorId = null;
+          sponsorNulled++;
+        }
+        if (play.videoId !== null && !existingVideoIds.has(play.videoId)) {
+          play.videoId = null;
+          videoNulled++;
+        }
+        if (play.sessionId !== null && !existingSessionIds.has(play.sessionId)) {
+          play.sessionId = null;
+          sessionNulled++;
+        }
+      }
+
+      if (sponsorNulled > 0) metricsService.recordVideoPlaysFkFallback('sponsor_id', sponsorNulled);
+      if (videoNulled > 0) metricsService.recordVideoPlaysFkFallback('video_id', videoNulled);
+      if (sessionNulled > 0) metricsService.recordVideoPlaysFkFallback('session_id', sessionNulled);
     }
 
     // Batch insert via repository (handles batching internally)

@@ -529,6 +529,15 @@ const reportGenerationDuration = new Histogram({
   registers: [register],
 });
 
+// ============= Métriques FK Fallback (video_plays) =============
+
+const videoPlaysFkFallbackTotal = new Counter({
+  name: 'neopro_video_plays_fk_fallback_total',
+  help: 'Video plays where a FK reference was nullified because the target row was missing',
+  labelNames: ['column'],  // 'sponsor_id' | 'video_id' | 'session_id'
+  registers: [register],
+});
+
 // ============= Service Class =============
 
 class MetricsService {
@@ -609,6 +618,10 @@ class MetricsService {
 
   recordSponsorResolutionFailure(operation: 'resolve_local' | 'resolve_impression' | 'sync_videos'): void {
     sponsorResolutionFailuresTotal.inc({ operation });
+  }
+
+  recordVideoPlaysFkFallback(column: 'sponsor_id' | 'video_id' | 'session_id', count: number): void {
+    videoPlaysFkFallbackTotal.inc({ column }, count);
   }
 
   recordVideoUpload(status: string, sizeBytes?: number): void {

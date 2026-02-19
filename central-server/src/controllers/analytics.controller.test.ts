@@ -22,6 +22,7 @@ jest.mock('../repositories', () => {
     getDashboardTopVideos: jest.fn(),
     getDashboardAlerts: jest.fn(),
     recordVideoPlays: jest.fn(),
+    findExistingSessionIds: jest.fn(),
     startSession: jest.fn(),
     endSession: jest.fn(),
     calculateDailyStats: jest.fn(),
@@ -39,9 +40,19 @@ jest.mock('../repositories', () => {
     exists: jest.fn(),
   };
 
+  const mockAdvertiserRepository = {
+    findExistingIds: jest.fn(),
+  };
+
+  const mockVideoRepository = {
+    findExistingIds: jest.fn(),
+  };
+
   return {
     analyticsRepository: mockAnalyticsRepository,
     siteRepository: mockSiteRepository,
+    advertiserRepository: mockAdvertiserRepository,
+    videoRepository: mockVideoRepository,
   };
 });
 
@@ -50,6 +61,12 @@ jest.mock('../config/logger', () => ({
   warn: jest.fn(),
   error: jest.fn(),
   debug: jest.fn(),
+}));
+
+jest.mock('../services/metrics.service', () => ({
+  metricsService: {
+    recordVideoPlaysFkFallback: jest.fn(),
+  },
 }));
 
 /**
@@ -82,11 +99,13 @@ import {
   calculateDailyStats,
   getAnalyticsOverview,
 } from './analytics.controller';
-import { analyticsRepository, siteRepository } from '../repositories';
+import { analyticsRepository, siteRepository, advertiserRepository, videoRepository } from '../repositories';
 
 // Type the mocked repositories for convenience
 const mockedAnalytics = analyticsRepository as jest.Mocked<typeof analyticsRepository>;
 const mockedSite = siteRepository as unknown as jest.Mocked<Pick<typeof siteRepository, 'findById' | 'exists'>>;
+const mockedAdvertiser = advertiserRepository as unknown as jest.Mocked<Pick<typeof advertiserRepository, 'findExistingIds'>>;
+const mockedVideo = videoRepository as unknown as jest.Mocked<Pick<typeof videoRepository, 'findExistingIds'>>;
 
 // Helper to create mock response
 const createMockResponse = (): Response => {
@@ -359,6 +378,90 @@ describe('Analytics Controller', () => {
       // (invalid UUIDs are replaced with null to avoid PG "invalid input syntax for type uuid" error)
       const callArgs = mockedAnalytics.recordVideoPlays.mock.calls[0][0];
       expect(callArgs[0].sessionId).toBeNull();
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true })
+      );
+    });
+
+    it('should null out non-existent sponsor_ids before insert', async () => {
+      const validSponsorId = '11111111-1111-4111-a111-111111111111';
+      const missingSponsorId = '22222222-2222-4222-a222-222222222222';
+      const req = createAuthRequest({
+        body: {
+          site_id: 'site-123',
+          plays: [
+            { video_filename: 'v1.mp4', category: 'sponsors', sponsor_id: validSponsorId },
+            { video_filename: 'v2.mp4', category: 'sponsors', sponsor_id: missingSponsorId },
+          ],
+        },
+      });
+      const res = createMockResponse();
+
+      mockedSite.exists.mockResolvedValueOnce(true);
+      mockedAdvertiser.findExistingIds.mockResolvedValueOnce(new Set([validSponsorId]));
+      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce(undefined);
+
+      await recordVideoPlays(req, res);
+
+      const callArgs = mockedAnalytics.recordVideoPlays.mock.calls[0][0];
+      expect(callArgs[0].sponsorId).toBe(validSponsorId);
+      expect(callArgs[1].sponsorId).toBeNull();
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true })
+      );
+    });
+
+    it('should null out non-existent video_ids before insert', async () => {
+      const validVideoId = '33333333-3333-4333-a333-333333333333';
+      const missingVideoId = '44444444-4444-4444-a444-444444444444';
+      const req = createAuthRequest({
+        body: {
+          site_id: 'site-123',
+          plays: [
+            { video_filename: 'v1.mp4', category: 'sponsors', video_id: validVideoId },
+            { video_filename: 'v2.mp4', category: 'sponsors', video_id: missingVideoId },
+          ],
+        },
+      });
+      const res = createMockResponse();
+
+      mockedSite.exists.mockResolvedValueOnce(true);
+      mockedVideo.findExistingIds.mockResolvedValueOnce(new Set([validVideoId]));
+      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce(undefined);
+
+      await recordVideoPlays(req, res);
+
+      const callArgs = mockedAnalytics.recordVideoPlays.mock.calls[0][0];
+      expect(callArgs[0].videoId).toBe(validVideoId);
+      expect(callArgs[1].videoId).toBeNull();
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true })
+      );
+    });
+
+    it('should null out non-existent session_ids before insert', async () => {
+      const validSessionId = '55555555-5555-4555-a555-555555555555';
+      const missingSessionId = '66666666-6666-4666-a666-666666666666';
+      const req = createAuthRequest({
+        body: {
+          site_id: 'site-123',
+          plays: [
+            { video_filename: 'v1.mp4', category: 'sponsors', session_id: validSessionId },
+            { video_filename: 'v2.mp4', category: 'sponsors', session_id: missingSessionId },
+          ],
+        },
+      });
+      const res = createMockResponse();
+
+      mockedSite.exists.mockResolvedValueOnce(true);
+      mockedAnalytics.findExistingSessionIds.mockResolvedValueOnce(new Set([validSessionId]));
+      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce(undefined);
+
+      await recordVideoPlays(req, res);
+
+      const callArgs = mockedAnalytics.recordVideoPlays.mock.calls[0][0];
+      expect(callArgs[0].sessionId).toBe(validSessionId);
+      expect(callArgs[1].sessionId).toBeNull();
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ success: true })
       );
