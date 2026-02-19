@@ -2901,6 +2901,25 @@ En cas de problème, il tente une récupération automatique (max 3 tentatives, 
 
 **Installation :** Depuis la v3.7.14, `install.sh` enregistre automatiquement le service `neopro-hotspot-watchdog` ainsi que `neopro-sync-guardian` et `neopro-hotspot-optimizer`. Pour les Pi installés avant cette version, utiliser `fix-fleet-pi.sh` pour installer les services manquants.
 
+### Auto-optimisation canal WiFi (v3.61+)
+
+Le sync-agent optimise automatiquement le canal du hotspot au boot (30s après démarrage) et toutes les heures. Il scanne les réseaux WiFi visibles et bascule vers le canal le moins congestionné (1, 6 ou 11).
+
+**Seuils :** Congestion ≥ 5 réseaux sur le canal actuel, amélioration ≥ 3 réseaux vs meilleur canal.
+
+**Diagnostic :**
+
+```bash
+# Vérifier si l'auto-optimisation a agi
+journalctl -u neopro-sync-agent --since "1 hour ago" | grep -i "hotspot channel"
+
+# Canal actuel
+grep "^channel=" /etc/hostapd/hostapd.conf
+
+# Scan des réseaux par canal
+sudo iwlist wlan0 scan 2>/dev/null | grep "Channel:" | sort | uniq -c | sort -rn
+```
+
 ### Commandes utiles
 
 ```bash

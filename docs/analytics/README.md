@@ -454,19 +454,20 @@ npm test
 
 ## Changelog
 
-| Version | Date       | Description                                                                                                 |
-| ------- | ---------- | ----------------------------------------------------------------------------------------------------------- |
-| 1.3.0   | 2025-12-28 | **Tracking site_id** : Les impressions sponsors incluent désormais le site_id pour une attribution correcte |
-| 1.2.0   | 2025-12-20 | Propagation video_id/sponsor_id/analytics_category dans le déploiement et tracking                          |
-| 1.1.0   | 2025-12-15 | Phase 4 - Tests automatisés (39 tests) - 98% conformité BP §13                                              |
-| 1.0.0   | 2025-12-14 | Release initiale - 95% conformité BP §13                                                                    |
-| 0.3.0   | 2025-12-14 | Semaine 3 - PDF graphiques avec Chart.js                                                                    |
-| 0.2.0   | 2025-12-14 | Semaine 2 - Tracking boîtiers TV                                                                            |
-| 0.1.0   | 2025-12-14 | Semaine 1 - Backend + Frontend dashboard                                                                    |
+| Version | Date       | Description                                                                                                                                                                  |
+| ------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.4.0   | 2026-02-19 | **Fix daily stats** : Correction `screen_time_minutes` → `screen_time_seconds` dans `calculate_daily_stats()`. Meilleur logging erreurs 500 sur `/api/analytics/video-plays` |
+| 1.3.0   | 2025-12-28 | **Tracking site_id** : Les impressions sponsors incluent désormais le site_id pour une attribution correcte                                                                  |
+| 1.2.0   | 2025-12-20 | Propagation video_id/sponsor_id/analytics_category dans le déploiement et tracking                                                                                           |
+| 1.1.0   | 2025-12-15 | Phase 4 - Tests automatisés (39 tests) - 98% conformité BP §13                                                                                                               |
+| 1.0.0   | 2025-12-14 | Release initiale - 95% conformité BP §13                                                                                                                                     |
+| 0.3.0   | 2025-12-14 | Semaine 3 - PDF graphiques avec Chart.js                                                                                                                                     |
+| 0.2.0   | 2025-12-14 | Semaine 2 - Tracking boîtiers TV                                                                                                                                             |
+| 0.1.0   | 2025-12-14 | Semaine 1 - Backend + Frontend dashboard                                                                                                                                     |
 
 ---
 
-**Dernière mise à jour** : 16 Février 2026
+**Dernière mise à jour** : 19 Février 2026
 **Mainteneur** : Équipe Développement NEOPRO
 **Licence** : Propriétaire
 **Contact** : [Voir BUSINESS_PLAN_COMPLET.md pour contacts]

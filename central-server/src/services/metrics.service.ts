@@ -435,6 +435,15 @@ const wifiConfigTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Pi Agent Auth =============
+
+const piAgentAuthTotal = new Counter({
+  name: 'neopro_pi_agent_auth_total',
+  help: 'Total Pi agent authentication attempts via WebSocket',
+  labelNames: ['status', 'reason'],
+  registers: [register],
+});
+
 // ============= Métriques Fan Pi =============
 
 const fanPresentGauge = new Gauge({
@@ -831,6 +840,12 @@ class MetricsService {
 
   recordOtaError(errorType: string): void {
     otaErrorsTotal.inc({ error_type: errorType });
+  }
+
+  // ============= Méthodes Pi Agent Auth =============
+
+  recordPiAgentAuth(status: 'success' | 'failure', reason?: string): void {
+    piAgentAuthTotal.inc({ status, reason: reason || 'none' });
   }
 
   // ============= Méthodes WiFi Configuration =============

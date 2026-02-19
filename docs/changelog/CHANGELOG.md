@@ -1,3 +1,29 @@
+## Résilience sync-agent + hotspot auto-optimize + fix analytics daily stats (2026-02-19)
+
+### Bug Fixes
+
+- **sync-agent auth retry:** `handleAuthError()` ne fait plus `process.exit(1)` sur erreur transitoire (timeout DB, surcharge serveur). Retry jusqu'à 5 tentatives via reconnexion Socket.IO. Les erreurs permanentes (clé API invalide, site non trouvé) continuent d'exit immédiatement (`agent.js`)
+- **analytics daily stats:** nouvelle migration `fix-daily-stats-column-name.sql` corrigeant `screen_time_minutes` → `screen_time_seconds` dans `calculate_daily_stats()`. La migration `add-tv-status-analytics` avait remplacé la fonction avec un mauvais nom de colonne, cassant le calcul des stats quotidiennes
+- **analytics error logging:** la réponse HTTP 500 de `/api/analytics/video-plays` inclut désormais les détails de l'erreur (`details: errorMessage`) pour faciliter le debug côté Pi (`analytics.controller.ts`)
+
+### Features
+
+- **hotspot auto-optimize channel:** `autoOptimize()` dans `safe-network-operations.js` scanne désormais les réseaux WiFi environnants et bascule automatiquement le hotspot vers le canal le moins congestionné (1, 6 ou 11). Seuils conservateurs : congestion ≥ 5 réseaux sur le canal actuel, amélioration ≥ 3 réseaux. S'applique à tous les profils réseau (le hotspot wlan0 est indépendant de la connexion wlan1)
+
+### Monitoring
+
+- **Prometheus:** nouvelle alerte `HighAuthFailureRate` — détecte un taux élevé d'échecs d'authentification Pi (>0.1/s pendant 5 min), indicateur de problème serveur transitoire
+- **Prometheus:** nouvelle alerte `HighAnalytics500Rate` — détecte un taux élevé d'erreurs 500 sur l'endpoint analytics video-plays (>0.02/s pendant 10 min)
+
+### Documentation
+
+- **SYNC_ARCHITECTURE.md:** ajout section auto-optimisation canal hotspot + comportement auth retry dans le diagramme de connexion
+- **sync-agent README.md:** ajout feature auto-optimisation canal + section erreurs transitoires dans le troubleshooting auth
+- **TROUBLESHOOTING.md:** ajout diagnostic auto-optimisation canal dans section Hotspot Watchdog + mise à jour section erreur auth
+- **analytics README.md:** ajout entrée changelog pour le fix `screen_time_seconds`
+
+---
+
 ## [3.60.2](https://github.com/Tallec7/neopro/compare/v3.60.1...v3.60.2) (2026-02-19)
 
 ### Bug Fixes

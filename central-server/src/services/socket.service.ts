@@ -313,9 +313,11 @@ class SocketService {
       clearTimeout(authTimeout);
       try {
         await this.authenticateAgent(socket, data);
+        metricsService.recordPiAgentAuth('success');
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
         logger.error('Agent authentication failed:', { error: errorMessage, siteId: data?.siteId });
+        metricsService.recordPiAgentAuth('failure', errorMessage);
         socket.emit('auth_error', { message: `Authentification échouée: ${errorMessage}` });
         socket.disconnect();
       }

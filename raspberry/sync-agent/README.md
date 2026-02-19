@@ -12,6 +12,7 @@ Agent de synchronisation pour les boîtiers Raspberry Pi NEOPRO. Permet la gesti
 - ✅ **Commandes à distance** (reboot, restart services, logs, etc.)
 - ✅ **Backup automatique** avant chaque mise à jour
 - ✅ **Reconnexion automatique** en cas de perte réseau
+- ✅ **Auto-optimisation canal hotspot** (scan WiFi, bascule vers canal le moins congestionné)
 
 ## 📦 Installation
 
@@ -538,6 +539,16 @@ Le message d'erreur détaillé indique la cause :
 | `Clé API invalide`       | API key locale ≠ API key serveur    | Resync avec `npm run resync`           |
 | `Identifiants manquants` | SITE_ID ou SITE_API_KEY vide        | Vérifier `/etc/neopro/site.conf`       |
 
+**Comportement des erreurs transitoires (v3.61+) :**
+
+Les erreurs **non permanentes** (timeout DB, surcharge serveur, pool saturé) ne tuent plus le processus. Le sync-agent retente jusqu'à 5 fois via la reconnexion Socket.IO automatique. Les logs indiquent :
+
+```
+Auth failed (attempt 2/5), will retry on reconnect
+```
+
+Seules les erreurs permanentes (clé invalide, site non trouvé, identifiants manquants) provoquent un `process.exit(1)` immédiat.
+
 **Diagnostic rapide :**
 
 ```bash
@@ -632,5 +643,5 @@ Pour toute question ou problème, contacter l'équipe NEOPRO.
 
 ---
 
-**Version :** 1.0.1
-**Dernière mise à jour :** Février 2026
+**Version :** 1.1.0
+**Dernière mise à jour :** 19 Février 2026
