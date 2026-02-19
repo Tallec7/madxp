@@ -58,6 +58,13 @@ Après switch:
   5. cleanupInactivePlayer() (skip si vidéo active < 5s)
 ```
 
+## Reprise boucle après vidéo manuelle
+
+- `play()` sauvegarde `currentLoopIndex` dans `_savedLoopIndex` avant `isManualMode = true`
+- `onManualEnded()` passe `_savedLoopIndex + 1` à `startSeamlessLoop()` pour reprendre à la vidéo suivante
+- `startSeamlessLoop(resumeIndex?)` clampe l'index via modulo — ne jamais hardcoder `0`
+- Seuls `performFullReset()` (dernier recours) et un appel sans argument (changement de phase) démarrent à l'index 0
+
 ## Système de récupération d'erreurs
 
 | Erreurs consécutives | Action                       |

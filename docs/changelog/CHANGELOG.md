@@ -2,7 +2,36 @@
 
 ### Bug Fixes
 
+- **raspberry:** preserve loop position when resuming after manual video ([2801e81](https://github.com/Tallec7/neopro/commit/2801e81))
 - **infra:** switch Supabase from Session Mode to Transaction Mode ([71737f7](https://github.com/Tallec7/neopro/commit/71737f7207b4896c8f610fc0e1aa84d46d16f449))
+
+## fix(raspberry): Boucle vidéo reprend à la bonne position après vidéo manuelle (2026-02-19)
+
+### Problème
+
+Quand une vidéo manuelle était déclenchée depuis la télécommande, la boucle de sponsors reprenait systématiquement à l'index 0 (le logo Neopro) au lieu de reprendre là où elle en était. Cause : `startSeamlessLoop()` faisait `currentLoopIndex = 0` inconditionnellement, et `onVideoEnded()` bloque les transitions pendant `isManualMode` → la boucle meurt → `onManualEnded()` appelait `startSeamlessLoop()` sans index de reprise.
+
+### Changements
+
+| Fichier           | Modification                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------- |
+| `tv.component.ts` | Ajout `_savedLoopIndex` — sauvegarde la position avant mode manuel                            |
+| `tv.component.ts` | `startSeamlessLoop(resumeIndex?)` — accepte un index de reprise optionnel (clampé via modulo) |
+| `tv.component.ts` | `onManualEnded()` — passe `_savedLoopIndex + 1` pour reprendre à la vidéo suivante            |
+
+### Monitoring
+
+Le `PlayerState` (remonté au central via heartbeat) reflète désormais correctement le `loopIndex` après reprise — plus de retour systématique à `loopIndex: 0` après chaque vidéo manuelle. Observable dans le dashboard monitoring du site.
+
+### Fichiers modifiés
+
+- `raspberry/src/app/components/tv/tv.component.ts` — logique de reprise boucle
+- `docs/changelog/CHANGELOG.md` — cette entrée
+- `docs/guides/TROUBLESHOOTING.md` — nouvelle section diagnostic
+- `docs/adr/ADR-008-double-buffer-video-pi.md` — documentation `resumeIndex`
+- `.claude/rules/raspberry-tv.md` — règle de reprise boucle
+
+---
 
 ## fix(infra): Supabase Session Mode → Transaction Mode (2026-02-19)
 
