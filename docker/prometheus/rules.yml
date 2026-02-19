@@ -249,6 +249,26 @@ groups:
           summary: "Over 50% of impressions without sponsor attribution"
           description: "{{ $value | humanizePercentage }} of impressions are unresolved. Check site_sponsor_videos table and loop manager config."
 
+      # Pi agent authentication failures (transient DB errors, pool exhaustion)
+      - alert: HighPiAuthFailureRate
+        expr: rate(neopro_pi_agent_auth_total{status="failure"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Pi agent auth failure rate"
+          description: "More than 0.1 Pi auth failures/sec for 5 minutes. Possible DB pool exhaustion or server overload. Reason: {{ $labels.reason }}."
+
+      # Analytics video-plays endpoint returning 500 errors
+      - alert: HighAnalytics500Rate
+        expr: rate(http_requests_total{method="POST",path="/api/analytics/video-plays",status_code="500"}[10m]) > 0.02
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High 500 error rate on analytics video-plays endpoint"
+          description: "{{ $value | humanize }}/sec 500 errors on POST /api/analytics/video-plays. Check DB schema (tv_status column) and pool connections."
+
       # Report endpoint validation errors (P7 — frontend/backend payload mismatch)
       - alert: ReportValidationErrors
         expr: rate(http_requests_total{method="POST",path="/reports/generate",status_code="400"}[10m]) > 0.01

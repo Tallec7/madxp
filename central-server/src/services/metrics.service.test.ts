@@ -160,6 +160,16 @@ describe('MetricsService', () => {
     });
   });
 
+  describe('recordPiAgentAuth', () => {
+    it('should track Pi agent auth attempts with reason', async () => {
+      metricsService.recordPiAgentAuth('success');
+      metricsService.recordPiAgentAuth('failure', 'Clé API invalide');
+
+      const metrics = await metricsService.getMetrics();
+      expect(metrics).toContain('neopro_pi_agent_auth_total');
+    });
+  });
+
   describe('recordWebsocketMessage', () => {
     it('should track websocket messages', async () => {
       metricsService.recordWebsocketMessage('inbound', 'heartbeat');

@@ -308,7 +308,7 @@ Pi                                              Central
 │  ──── WebSocket connect + auth ────────────────►  │
 │       (siteId, apiKey)                            │
 │                                                    │
-│  ◄──── Authentification OK ────────────────────   │
+│  ◄──── Authentification OK ────────────────────   │  → authRetries = 0
 │                                                    │
 │  ──── État local complet ──────────────────────►  │
 │       (configuration.json, liste vidéos)          │
@@ -319,6 +319,17 @@ Pi                                              Central
 │  ──── Confirmation sync terminée ──────────────►  │
 │                                                    │
 ```
+
+**Gestion des erreurs d'authentification (v3.61+) :**
+
+Le sync-agent distingue les erreurs d'auth permanentes des erreurs transitoires :
+
+| Type d'erreur   | Exemples                                                  | Comportement                                       |
+| --------------- | --------------------------------------------------------- | -------------------------------------------------- |
+| **Permanente**  | Clé API invalide, Site non trouvé, Identifiants manquants | `process.exit(1)` immédiat                         |
+| **Transitoire** | Timeout DB, surcharge serveur, pool connexions saturé     | Retry via reconnexion Socket.IO (max 5 tentatives) |
+
+Le compteur `authRetries` est incrémenté à chaque erreur transitoire et remis à 0 après une authentification réussie. Après 5 échecs consécutifs, le processus quitte (relancé par systemd).
 
 #### Étape 2 : Merge de la Configuration
 
@@ -1060,6 +1071,53 @@ Métrique Prometheus : `neopro_ota_errors_total{error_type}` avec labels `permis
 
 La pré-migration logge un bloc `=== PRE-MIGRATION DIAG ===` avec les permissions exactes. Visible dans Railway logs.
 
+## Auto-optimisation canal hotspot (v3.61+)
+
+Depuis la v3.61, le sync-agent optimise automatiquement le canal WiFi du hotspot au boot (30s après démarrage, puis toutes les heures).
+
+### Fonctionnement
+
+`SafeNetworkOperations.autoOptimize()` exécute `_scanAndGetBestChannel()` :
+
+1. Lit le canal actuel depuis `/etc/hostapd/hostapd.conf`
+2. Scanne les réseaux WiFi visibles via `sudo iwlist wlan0 scan`
+3. Répartit les réseaux sur les 3 canaux non-overlapping (1, 6, 11) :
+   - Canal 1 : réseaux sur canaux 1-3
+   - Canal 6 : réseaux sur canaux 4-8
+   - Canal 11 : réseaux sur canaux 9-13
+4. Compare le canal actuel avec le meilleur canal
+
+### Seuils de déclenchement
+
+| Paramètre              | Valeur | Description                                                   |
+| ---------------------- | ------ | ------------------------------------------------------------- |
+| `CONGESTION_THRESHOLD` | 5      | Nombre minimum de réseaux sur le canal actuel pour déclencher |
+| `MIN_IMPROVEMENT`      | 3      | Différence minimum de réseaux entre canal actuel et meilleur  |
+
+**Exemple** : Canal 1 avec 9 réseaux, Canal 6 avec 3 → switch (9 ≥ 5 ET 9-3 ≥ 3)
+
+### Application
+
+L'opération utilise la matrice de sécurité du `SafeNetworkOperations` :
+
+| Profil réseau       | Action                                 |
+| ------------------- | -------------------------------------- |
+| SIMPLE, ETHERNET    | Restart hostapd direct                 |
+| MESH, MESH_ISOLATED | Reboot différé (évite de couper wlan1) |
+| ENTERPRISE          | Restart hostapd direct                 |
+
+### Logs
+
+```
+# Changement de canal
+SafeNetworkOperations: hotspot channel congested, optimizing { currentChannel: 1, currentCount: 9, bestChannel: 6, bestCount: 3 }
+
+# Canal OK, pas de changement
+SafeNetworkOperations: hotspot channel OK { currentChannel: 6, currentCount: 2, bestChannel: 6 }
+```
+
+---
+
 ## Historique des Versions
 
 | Version | Date       | Auteur        | Modifications                                                                                                        |
@@ -1078,6 +1136,7 @@ La pré-migration logge un bloc `=== PRE-MIGRATION DIAG ===` avec les permission
 | 2.1     | 2026-02-17 | Claude/NEOPRO | OTA checksum retry : re-download + vérification 1x en cas de mismatch SHA256                                         |
 | 2.2     | 2026-02-17 | Claude/NEOPRO | Screenshot HTTP response : remplacement du relay Socket.IO room par request-response HTTP                            |
 | 2.3     | 2026-02-18 | Claude/NEOPRO | Sync sponsors Dashboard → Pi : `siteSponsors` dans payload déploiement, `mergeSiteSponsors()`, monitoring Prometheus |
+| 2.4     | 2026-02-19 | Claude/NEOPRO | Auth retry transitoire (5 tentatives), auto-optimisation canal hotspot, fix daily stats `screen_time_seconds`        |
 
 ---
 
