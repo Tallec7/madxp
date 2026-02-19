@@ -1,3 +1,11 @@
+# [3.61.0](https://github.com/Tallec7/neopro/compare/v3.60.2...v3.61.0) (2026-02-19)
+
+### Features
+
+- **safe:** add Claude rule for auto-updating SAFe .md on feat/fix commits ([6bab93b](https://github.com/Tallec7/neopro/commit/6bab93ba0132962aff62cd05d172628d1b8fa692))
+- **safe:** add export-to-excel.py generator for SAFe portfolio ([067b3f0](https://github.com/Tallec7/neopro/commit/067b3f026e18495c492cb832685a016bdd120d62))
+- **safe:** auto-regenerate Excel on docs/safe/\*.md commit ([a629fb1](https://github.com/Tallec7/neopro/commit/a629fb1925825d78b6060533f5c03513f45bb13c))
+
 ## SAFe tooling : export Excel, auto-regen hook, Claude rule auto-update (2026-02-19)
 
 ### Features
