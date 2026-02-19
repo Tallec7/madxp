@@ -1,3 +1,9 @@
+## [3.60.1](https://github.com/Tallec7/neopro/compare/v3.60.0...v3.60.1) (2026-02-19)
+
+### Bug Fixes
+
+- **infra:** switch Supabase from Session Mode to Transaction Mode ([71737f7](https://github.com/Tallec7/neopro/commit/71737f7207b4896c8f610fc0e1aa84d46d16f449))
+
 ## fix(infra): Supabase Session Mode → Transaction Mode (2026-02-19)
 
 ### Problème
