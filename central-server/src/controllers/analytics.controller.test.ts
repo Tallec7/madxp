@@ -39,9 +39,14 @@ jest.mock('../repositories', () => {
     exists: jest.fn(),
   };
 
+  const mockAdvertiserRepository = {
+    findExistingIds: jest.fn(),
+  };
+
   return {
     analyticsRepository: mockAnalyticsRepository,
     siteRepository: mockSiteRepository,
+    advertiserRepository: mockAdvertiserRepository,
   };
 });
 
@@ -82,11 +87,12 @@ import {
   calculateDailyStats,
   getAnalyticsOverview,
 } from './analytics.controller';
-import { analyticsRepository, siteRepository } from '../repositories';
+import { analyticsRepository, siteRepository, advertiserRepository } from '../repositories';
 
 // Type the mocked repositories for convenience
 const mockedAnalytics = analyticsRepository as jest.Mocked<typeof analyticsRepository>;
 const mockedSite = siteRepository as unknown as jest.Mocked<Pick<typeof siteRepository, 'findById' | 'exists'>>;
+const mockedAdvertiser = advertiserRepository as unknown as jest.Mocked<Pick<typeof advertiserRepository, 'findExistingIds'>>;
 
 // Helper to create mock response
 const createMockResponse = (): Response => {
@@ -359,6 +365,34 @@ describe('Analytics Controller', () => {
       // (invalid UUIDs are replaced with null to avoid PG "invalid input syntax for type uuid" error)
       const callArgs = mockedAnalytics.recordVideoPlays.mock.calls[0][0];
       expect(callArgs[0].sessionId).toBeNull();
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true })
+      );
+    });
+
+    it('should null out non-existent sponsor_ids before insert', async () => {
+      const validSponsorId = '11111111-1111-4111-a111-111111111111';
+      const missingSponsorId = '22222222-2222-4222-a222-222222222222';
+      const req = createAuthRequest({
+        body: {
+          site_id: 'site-123',
+          plays: [
+            { video_filename: 'v1.mp4', category: 'sponsors', sponsor_id: validSponsorId },
+            { video_filename: 'v2.mp4', category: 'sponsors', sponsor_id: missingSponsorId },
+          ],
+        },
+      });
+      const res = createMockResponse();
+
+      mockedSite.exists.mockResolvedValueOnce(true);
+      mockedAdvertiser.findExistingIds.mockResolvedValueOnce(new Set([validSponsorId]));
+      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce(undefined);
+
+      await recordVideoPlays(req, res);
+
+      const callArgs = mockedAnalytics.recordVideoPlays.mock.calls[0][0];
+      expect(callArgs[0].sponsorId).toBe(validSponsorId);
+      expect(callArgs[1].sponsorId).toBeNull();
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ success: true })
       );

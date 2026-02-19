@@ -261,6 +261,24 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Validate sponsor_ids exist in advertisers table to avoid FK violation
+    const uniqueSponsorIds = [...new Set(validPlays.map(p => p.sponsorId).filter((id): id is string => id !== null))];
+    if (uniqueSponsorIds.length > 0) {
+      const existingIds = await advertiserRepository.findExistingIds(uniqueSponsorIds);
+      const missingIds = uniqueSponsorIds.filter(id => !existingIds.has(id));
+      if (missingIds.length > 0) {
+        logger.warn('Received video plays with non-existent sponsor_id, falling back to null', {
+          siteId: site_id,
+          missingSponsorIds: missingIds,
+        });
+        for (const play of validPlays) {
+          if (play.sponsorId !== null && !existingIds.has(play.sponsorId)) {
+            play.sponsorId = null;
+          }
+        }
+      }
+    }
+
     // Batch insert via repository (handles batching internally)
     await analyticsRepository.recordVideoPlays(validPlays);
 
