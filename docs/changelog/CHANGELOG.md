@@ -1,3 +1,9 @@
+## [3.60.2](https://github.com/Tallec7/neopro/compare/v3.60.1...v3.60.2) (2026-02-19)
+
+### Bug Fixes
+
+- **raspberry:** preserve loop position when resuming after manual video ([#406](https://github.com/Tallec7/neopro/issues/406)) ([06ebc56](https://github.com/Tallec7/neopro/commit/06ebc56454e06d7e12deda6c2d3016c341d3b66f))
+
 ## [3.60.1](https://github.com/Tallec7/neopro/compare/v3.60.0...v3.60.1) (2026-02-19)
 
 ### Bug Fixes
